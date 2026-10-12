@@ -11,8 +11,7 @@ syntax (name := checkdef) "#checkdef " ident : command
 @[command_elab checkdef]
 meta def checkDefCore : CommandElab
   | `(#checkdef $decl) => do
-    let env ← getEnv
-    let some (.defnInfo info) := env.constants.find? (decl.getId) | throwError "bad constant"
+    let some (.defnInfo info) := (← getEnv).constants.find? decl.getId | throwError "bad constant"
     let .regular u := info.hints | throwError "not a regular definition"
     let .safe := info.safety | throwError "not safe"
     logInfo s!"Declaration {decl} is a definition\n\
@@ -22,7 +21,6 @@ meta def checkDefCore : CommandElab
                value: {info.value}\n\
                reducibility hint height: {u}\n\
                safe"
-    return ()
   | _ => throwUnsupportedSyntax
 
 end

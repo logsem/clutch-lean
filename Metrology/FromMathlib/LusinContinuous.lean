@@ -10,56 +10,11 @@ public import Mathlib.MeasureTheory.Measure.Tight
 /-!
 # Lusin's theorem
 
-Copied from mathlib4 PR #37976 (https://github.com/leanprover-community/mathlib4/pull/37976),
-file `Mathlib/MeasureTheory/Function/LusinContinuous.Lean` at commit
-`7057d8fc3e6c2fe9f7b132af312e6703b67f61bb`. Changes for our Mathlib (v4.34.0): dropped the
-helper lemmas `Set.iInter_eq_empty_of_eq_empty`, `Set.iUnion_symmDiff_iUnion_subset`,
-`isTopologicalBasis_empty`, `TopologicalSpace.exists_seq_basis` and
-`TopologicalSpace.IsTopologicalBasis.continuousOn_iff` (already in Mathlib), removed `#lint` and
-`#min_imports`, and repaired two proofs. Delete this file once the PR lands in our Mathlib.
-
-There are many different versions of Lusin's theorem. All of them roughly say that a measurable
-function is continuous on nearly all its domain. Different ways of proving Lusin's theorem can be
-classified into roughly two types. The first type considers measures that can be approximated
-(from inside) by closed/compact sets and relies on Egoroff's theorem. The second type considers
-measures that can be approximated by open sets and the proof does not rely on Egoroff's theorem.
-The second type yields more general results as it proves Lusin's theorem for functions taking values
-in an arbitrary second countable space. In order to prove them, we introduce the concept of smooth
-measures, which in particular are satisfied by every outer regular σ-finite measures and every
-finite measures defined on a perfectly normal space.
-
-## Main results
-
-### Global versions (`∃ s, p s ∧ μ sᶜ ≤ ε ∧ ContinuousOn f s`)
-* `Measurable.exists_continuous_restrict`: measurable `s`, requires `Smooth μ`.
-* `AEMeasurable.exists_continuous_restrict`: null-measurable `s`, for a.e. measurable functions.
-* `Measurable.exists_isClosed_restrict`: closed `s`, requires `InternallySmoothClosed μ`.
-* `Measurable.exists_isCompact_restrict`: compact `s`, requires `InternallySmoothCompact μ` and
-  `T2Space`.
-
-### Localized versions (`∃ K ⊆ A, p K ∧ ContinuousOn f K ∧ μ (A \ K) < ε`)
-* `Measurable.exists_isClosed_continuousOn`: closed `K`, requires `InternallySmoothClosed μ`.
-* `Measurable.exists_isCompact_continuousOn`: compact `K`, requires `InternallySmoothCompact μ`
-  and `T2Space`.
-
-## TODO
-
-In some literatures, it is also mentioned that Lusin's theorem holds for functions taking values
-in a arbitrary metric space (without the second countability condition). Prove this version.
-
-## References
-*
-*
-* On the continuity of measurable functions in Neighborhood Spaces by HM Schaerf
-
-## Tags
-
-Lusin's theorem
-
+Copied from mathlib4 PR #37976 (commit `7057d8fc`), minus helpers already in our Mathlib.
+Delete this file once the PR lands.
 -/
 
 @[expose] public section
-
 
 noncomputable section
 
@@ -78,7 +33,6 @@ can be approximated from inside by sets that satisfy `p`. -/
 def InternallySmooth (p : Set α → Prop) (μ : Measure α) : Prop :=
   ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r → ∃ K ⊆ A, p K ∧ μ (A \ K) < r
 
-/-- Using nonstrict inequality results in an equivalent definition. -/
 theorem internallySmooth_iff :
     μ.InternallySmooth p ↔
       ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r → ∃ K ⊆ A, p K ∧ μ (A \ K) ≤ r where
@@ -112,7 +66,6 @@ theorem InternallySmooth.innerRegularWRT (hp : μ.InternallySmooth p) :
       <;> exact ne_top_of_lt hr
   exact this.false
 
-/-- For a finite measure, `InnerRegularWRT` is equivalent with `InternallySmooth`. -/
 theorem InnerRegularWRT.internallySmooth [IsFiniteMeasure μ] (hp : p ∅)
     (hpm : ∀ s, p s → MeasurableSet s) (hm : μ.InnerRegularWRT p MeasurableSet) :
     μ.InternallySmooth p := by
@@ -202,8 +155,6 @@ theorem InternallySmoothClosed.internallySmoothCompact_of_isTightMeasureSet
 
 instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
     μ.InternallySmoothClosed := by
-  refine ⟨internallySmooth_iff.2 fun A hA r hr => ?_⟩
-  have hm : m = borel α := BorelSpace.measurable_eq (α := α)
   have hApprox :
       ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r →
         ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r := by
@@ -212,46 +163,37 @@ instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
         ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r)
     · exact BorelSpace.measurable_eq.trans (borel_eq_generateFrom_isClosed (α := α))
     · exact isPiSystem_isClosed
-    · intro r hr
-      refine ⟨∅, ∅, isClosed_empty, isOpen_empty, empty_subset _, empty_subset _, ?_⟩
-      simp [hr]
+    · exact fun r hr =>
+        ⟨∅, ∅, isClosed_empty, isOpen_empty, empty_subset _, empty_subset _, by simp [hr]⟩
     · intro A hA r hr
       have hA : IsClosed A := by simpa using hA
-      by_cases htop : r = ∞
-      · refine ⟨A, univ, hA, isOpen_univ, subset_rfl, subset_univ _, ?_⟩
-        simpa [htop] using measure_lt_top μ (univ \ A)
-      · obtain ⟨f, ho, hf⟩ := hA.isGδ.eq_iInter_nat
-        rw [← iInter_dissipate] at hf
-        have hμ : μ A = ⨅ n, μ (dissipate f n) := by
-          rw [hf]
-          refine Antitone.measure_iInter antitone_dissipate (fun n => ?_) ⟨0, by finiteness⟩
-          refine (MeasurableSet.iInter fun k => MeasurableSet.iInter fun hk => ?_).nullMeasurableSet
-          simpa [hm] using (ho k).measurableSet
-        obtain ⟨n, hn⟩ : ∃ n, μ (dissipate f n) < μ A + r := by
-          rw [hμ]
-          refine iInf_lt_iff.1 (ENNReal.lt_add_right (lt_top_iff_ne_top.1 ?_) hr.ne')
-          apply (iInf_le _ 0).trans_lt
-          finiteness
-        have hsub : A ⊆ dissipate f n := by
-          grw [hf, iInter_subset]
-        refine ⟨A, dissipate f n, hA, ?_, subset_rfl, hsub, ?_⟩
-        · have := biInter_eq_iInter {y | y ≤ n} (fun y hy => f y)
-          simp_all only [dissipate, mem_setOf_eq]
-          exact isOpen_iInter_of_finite fun x => ho x.1
-        · calc
-            μ (dissipate f n \ A) = μ (dissipate f n) - μ A := by
-              rw [measure_diff hsub hA.measurableSet.nullMeasurableSet (by finiteness)]
-            _ < r := (ENNReal.sub_lt_iff_lt_right (by finiteness) (measure_mono hsub)).2 <|
-              by simpa [add_comm] using hn
+      obtain ⟨f, ho, hf⟩ := hA.isGδ.eq_iInter_nat
+      rw [← iInter_dissipate] at hf
+      have hμ : μ A = ⨅ n, μ (dissipate f n) := by
+        rw [hf]
+        refine Antitone.measure_iInter antitone_dissipate (fun n => ?_) ⟨0, by finiteness⟩
+        exact (MeasurableSet.iInter fun k =>
+          MeasurableSet.iInter fun _ => (ho k).measurableSet).nullMeasurableSet
+      obtain ⟨n, hn⟩ : ∃ n, μ (dissipate f n) < μ A + r := by
+        rw [hμ]
+        refine iInf_lt_iff.1 (ENNReal.lt_add_right (lt_top_iff_ne_top.1 ?_) hr.ne')
+        apply (iInf_le _ 0).trans_lt
+        finiteness
+      have hsub : A ⊆ dissipate f n := by grw [hf, iInter_subset]
+      refine ⟨A, dissipate f n, hA, ?_, subset_rfl, hsub, ?_⟩
+      · have := biInter_eq_iInter {y | y ≤ n} (fun y hy => f y)
+        simp_all only [dissipate, mem_setOf_eq]
+        exact isOpen_iInter_of_finite fun x => ho x.1
+      · calc
+          μ (dissipate f n \ A) = μ (dissipate f n) - μ A :=
+            measure_diff hsub hA.measurableSet.nullMeasurableSet (by finiteness)
+          _ < r := (ENNReal.sub_lt_iff_lt_right (by finiteness) (measure_mono hsub)).2 <|
+            by simpa [add_comm] using hn
     · intro A hA hA' r hr
-      by_cases htop : r = ∞
-      · refine ⟨∅, univ, isClosed_empty, isOpen_univ, empty_subset _, subset_univ _, ?_⟩
-        simpa [htop] using measure_lt_top μ univ
       obtain ⟨F, U, hF, hU, hFA, hAU, hμ⟩ := hA' r hr
-      refine ⟨Uᶜ, Fᶜ, hU.isClosed_compl, hF.isOpen_compl, ?_, ?_, ?_⟩
-      · exact compl_subset_compl.mpr hAU
-      · exact compl_subset_compl.mpr hFA
-      · simpa [diff_eq, inter_assoc, inter_left_comm, inter_comm] using hμ
+      refine ⟨Uᶜ, Fᶜ, hU.isClosed_compl, hF.isOpen_compl, compl_subset_compl.mpr hAU,
+        compl_subset_compl.mpr hFA, ?_⟩
+      simpa [diff_eq, inter_assoc, inter_left_comm, inter_comm] using hμ
     · intro f hf hfm hA r hr
       by_cases htop : r = ∞
       · refine ⟨∅, univ, isClosed_empty, isOpen_univ, empty_subset _, subset_univ _, ?_⟩
@@ -259,82 +201,53 @@ instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
       choose F U hF hU hFA hAU hμ using fun n =>
         hA n (r * 2 ^ (-1 - n : ℤ))
           (ENNReal.mul_pos hr.ne' (ENNReal.zpow_pos (by simp) (by simp) (-1 - n)).ne')
-      have hFacc : ∀ n, IsClosed (Set.accumulate F n) := by
-        intro n
+      have hFacc (n : ℕ) : IsClosed (Set.accumulate F n) := by
         induction n with
-        | zero =>
-            simpa [Set.accumulate_zero_nat] using hF 0
-        | succ n ih =>
-            simpa [Set.accumulate_succ] using ih.union (hF (n + 1))
-      have hlt :
-          μ ((⋃ n, U n) \ ⋃ n, F n) < r := by
-        have hsum_eq : (∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ)) = r := by
-          simp [ENNReal.tsum_mul_left, ENNReal.tsum_two_zpow_neg_add_one]
-        have hsum_lt :
-            (∑' n, μ (U n \ F n)) < ∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ) := by
-          have hg_ne_top : (∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ)) ≠ ∞ := by
-            simpa [hsum_eq] using htop
-          apply ENNReal.tsum_lt_tsum
-          · exact ne_top_of_le_ne_top hg_ne_top <| ENNReal.tsum_le_tsum fun n => (hμ n).le
-          · exact fun n => (hμ n).le
-          · exact hμ 0
-        calc
-          μ ((⋃ n, U n) \ ⋃ n, F n) ≤ μ (⋃ n, U n \ F n) := by
-            apply measure_mono
-            intro x hx
-            rcases mem_iUnion.1 hx.1 with ⟨n, hn⟩
-            exact mem_iUnion.2 ⟨n, ⟨hn, fun hxF => hx.2 <| mem_iUnion.2 ⟨n, hxF⟩⟩⟩
-          _ ≤ ∑' n, μ (U n \ F n) := measure_iUnion_le _
-          _ < ∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ) := hsum_lt
-          _ = r := hsum_eq
-      have hInter :
-          (⋂ i, (⋃ n, U n) \ F i) = (⋃ n, U n) \ ⋃ n, F n := by
+        | zero => simpa [Set.accumulate_zero_nat] using hF 0
+        | succ n ih => simpa [Set.accumulate_succ] using ih.union (hF (n + 1))
+      have hsum_eq : ∑' n : ℕ, r * 2 ^ (-1 - n : ℤ) = r := by
+        simp [ENNReal.tsum_mul_left, ENNReal.tsum_two_zpow_neg_add_one]
+      have hlt : μ ((⋃ n, U n) \ ⋃ n, F n) < r := calc
+        μ ((⋃ n, U n) \ ⋃ n, F n) ≤ μ (⋃ n, U n \ F n) := by
+          apply measure_mono
+          intro x hx
+          rcases mem_iUnion.1 hx.1 with ⟨n, hn⟩
+          exact mem_iUnion.2 ⟨n, ⟨hn, fun hxF => hx.2 <| mem_iUnion.2 ⟨n, hxF⟩⟩⟩
+        _ ≤ ∑' n, μ (U n \ F n) := measure_iUnion_le _
+        _ < ∑' n : ℕ, r * 2 ^ (-1 - n : ℤ) := by
+          refine ENNReal.tsum_lt_tsum ?_ (fun n => (hμ n).le) (hμ 0)
+          exact ne_top_of_le_ne_top (by simpa [hsum_eq] using htop) <|
+            ENNReal.tsum_le_tsum fun n => (hμ n).le
+        _ = r := hsum_eq
+      have hInter : ⋂ i, (⋃ n, U n) \ F i = (⋃ n, U n) \ ⋃ n, F n := by
         ext x
         simp only [mem_iInter, mem_diff, mem_iUnion]
-        constructor
-        · intro h
-          refine ⟨(h 0).1, ?_⟩
-          rintro ⟨i, hxi⟩
-          exact (h i).2 hxi
-        · intro h i
-          exact ⟨h.1, fun hxi => h.2 ⟨i, hxi⟩⟩
-      have hlt' : μ (⋂ i, (⋃ n, U n) \ F i) < r := by simpa [hInter] using hlt
+        exact ⟨fun h => ⟨(h 0).1, fun ⟨i, hxi⟩ => (h i).2 hxi⟩,
+          fun h i => ⟨h.1, fun hxi => h.2 ⟨i, hxi⟩⟩⟩
+      have hAccum (n : ℕ) :
+          ⋂ j ≤ n, (⋃ i, U i) \ F j = (⋃ i, U i) \ Set.accumulate F n := by
+        ext x
+        simp only [Set.accumulate, mem_iInter, mem_diff, mem_iUnion, exists_prop]
+        exact ⟨fun h => ⟨(h 0 (Nat.zero_le _)).1, fun ⟨i, hi, hxi⟩ => (h i hi).2 hxi⟩,
+          fun h i hi => ⟨h.1, fun hxi => h.2 ⟨i, hi, hxi⟩⟩⟩
       have hlim :
           Tendsto (fun n ↦ μ (⋂ j ≤ n, (⋃ i, U i) \ F j)) atTop
             (𝓝 (μ (⋂ i, (⋃ n, U n) \ F i))) :=
-        tendsto_measure_iInter_le
-          (s := fun n => (⋃ i, U i) \ F n)
+        tendsto_measure_iInter_le (s := fun n => (⋃ i, U i) \ F n)
           (fun n => ((isOpen_iUnion hU).measurableSet.diff (hF n).measurableSet).nullMeasurableSet)
           ⟨0, by finiteness⟩
-      have h_event : ∀ᶠ n in atTop, μ ((⋃ i, U i) \ Set.accumulate F n) < r :=
-        by
-          have hIntern (n : ℕ) :
-              (⋂ j ≤ n, (⋃ i, U i) \ F j) = (⋃ i, U i) \ Set.accumulate F n := by
-            ext x
-            simp only [Set.accumulate, mem_iInter, mem_diff, mem_iUnion, exists_prop]
-            constructor
-            · intro h
-              refine ⟨(h 0 (Nat.zero_le _)).1, ?_⟩
-              rintro ⟨i, hi, hxi⟩
-              exact (h i hi).2 hxi
-            · intro h i hi
-              exact ⟨h.1, fun hxi => h.2 ⟨i, hi, hxi⟩⟩
-          have h_event' : ∀ᶠ n in atTop, μ (⋂ j ≤ n, (⋃ i, U i) \ F j) < r :=
-            hlim (Iio_mem_nhds hlt')
-          filter_upwards [h_event'] with n hn
-          simpa [hIntern n] using hn
-      obtain ⟨n, hn⟩ := h_event.exists
-      refine ⟨Set.accumulate F n, ⋃ i, U i, hFacc n, isOpen_iUnion hU, ?_, ?_, hn⟩
+      have hev : ∀ᶠ n in atTop, μ (⋂ j ≤ n, (⋃ i, U i) \ F j) < r :=
+        hlim (Iio_mem_nhds (by simpa [hInter] using hlt))
+      obtain ⟨n, hn⟩ := hev.exists
+      refine ⟨Set.accumulate F n, ⋃ i, U i, hFacc n, isOpen_iUnion hU, ?_, iUnion_mono hAU, ?_⟩
       · intro x hx
         simp only [Set.accumulate, mem_iUnion, exists_prop] at hx
         rcases hx with ⟨i, hi, hx⟩
         exact mem_iUnion.2 ⟨i, hFA i hx⟩
-      · exact iUnion_mono hAU
-  by_cases htop : r = ∞
-  · obtain ⟨F, U, hF, hU, hFA, hAU, hμ⟩ := hApprox hA 1 zero_lt_one
-    exact ⟨F, hFA, hF, by simpa [htop] using (le_top : μ (A \ F) ≤ ∞)⟩
-  · obtain ⟨F, U, hF, hU, hFA, hAU, hμ⟩ := hApprox hA r hr
-    exact ⟨F, hFA, hF, ((measure_mono <| diff_subset_diff_left hAU).trans_lt hμ).le⟩
+      · simpa [hAccum n] using hn
+  refine ⟨fun A hA r hr => ?_⟩
+  obtain ⟨F, U, hF, -, hFA, hAU, hμ⟩ := hApprox hA r hr
+  exact ⟨F, hFA, hF, (measure_mono <| diff_subset_diff_left hAU).trans_lt hμ⟩
 
 instance [IsCompletelyPseudoMetrizableSpace α] [SecondCountableTopology α] [BorelSpace α]
     [IsFiniteMeasure μ] :
@@ -395,60 +308,8 @@ end Measure
 
 variable [TopologicalSpace α] [TopologicalSpace β]
 
-/-- A finite borel measure on a perfectly normal space is always smooth. -/
-instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] : μ.Smooth where
-  smooth := by
-    have (A : Set α) (hA : IsClosed A) (r : ℝ≥0∞) (hr : 0 < r) : ∃ U, IsOpen U ∧ μ (U ∆ A) ≤ r := by
-      -- Gδ is the intersection of a decreasing sequence of open sets
-      obtain ⟨f, ho, hf⟩ := hA.isGδ.eq_iInter_nat
-      rw [← iInter_dissipate] at hf
-      have : μ A = ⨅ n, μ (dissipate f n) := by
-        rw [hf]
-        refine Antitone.measure_iInter antitone_dissipate (fun n => ?_) ⟨0, by finiteness⟩
-        refine (MeasurableSet.iInter fun m => MeasurableSet.iInter fun h => ?_).nullMeasurableSet
-        exact (ho m).measurableSet
-      obtain ⟨n, hn⟩ : ∃ n, μ (dissipate f n) < μ A + r := by
-        rw [this]
-        refine iInf_lt_iff.1 (ENNReal.lt_add_right (lt_top_iff_ne_top.1 ?_) hr.ne.symm)
-        apply (iInf_le _ 0).trans_lt
-        finiteness
-      -- dissipate open lemma
-      refine ⟨dissipate f n, ?_, ?_⟩
-      · have := biInter_eq_iInter {y | y ≤ n} (fun y hy => f y)
-        simp_all only [dissipate, mem_setOf_eq]
-        exact isOpen_iInter_of_finite fun x => ho x.1
-      · have : A ⊆ dissipate f n := by grw [hf, iInter_subset]
-        calc
-        _ = μ (dissipate f n \ A) := by
-          congr
-          -- turn this into a lemma
-          simpa [symmDiff] using subset_union_of_subset_left this _
-        _ = μ (dissipate f n) - μ A :=
-          measure_diff this hA.measurableSet.nullMeasurableSet (by finiteness)
-        _ ≤ r := ((ENNReal.sub_lt_iff_lt_left (by finiteness) (measure_mono this)).2 hn).le
-    apply MeasurableSpace.induction_on_inter
-    · exact isPiSystem_isClosed
-    · exact fun r hr => ⟨∅, by simp⟩
-    · exact this
-    · intro A hA h r hr
-      obtain ⟨U, ho, _⟩ := h (r / 2) (ENNReal.div_pos hr.ne.symm (by simp))
-      obtain ⟨V, ho, _⟩ := this Uᶜ ho.isClosed_compl (r / 2) (ENNReal.div_pos hr.ne.symm (by simp))
-      refine ⟨V, ho, ?_⟩
-      calc
-      _ ≤ μ (V ∆ Uᶜ ∪ Uᶜ ∆ Aᶜ) := measure_mono (by grind)
-      _ ≤ μ (V ∆ Uᶜ) + μ (Uᶜ ∆ Aᶜ) := measure_union_le _ _
-      _ ≤ r / 2 + r / 2 := by rw [compl_symmDiff_compl]; gcongr
-      _ = _ := by norm_num
-    · intro f hf hfm hp r hr
-      choose U ho hl using fun n => hp n (r * 2 ^ (-1 - n : ℤ))
-        (ENNReal.mul_pos hr.ne.symm (ENNReal.zpow_pos (by simp) (by simp) _).ne.symm)
-      refine ⟨⋃ n, U n, isOpen_iUnion ho, ?_⟩
-      calc
-      _ ≤ μ (⋃ n, U n ∆ f n) := measure_mono iUnion_symmDiff_iUnion_subset
-      _ ≤ ∑' n, μ (U n ∆ f n) := measure_iUnion_le _
-      _ ≤ ∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ) := by gcongr; exact hl _
-      _ = _ := by simp [ENNReal.tsum_mul_left, ENNReal.tsum_two_zpow_neg_add_one]
-    · simp [BorelSpace.measurable_eq, borel_eq_generateFrom_isClosed]
+instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] : μ.Smooth :=
+  inferInstance
 
 theorem _root_.PerfectlyNormalSpace.smooth_of_finiteSpanningSetsInOpen [PerfectlyNormalSpace α]
     [BorelSpace α] (hs : μ.FiniteSpanningSetsIn IsOpen) :
@@ -477,9 +338,7 @@ theorem _root_.PerfectlyNormalSpace.smooth_of_finiteSpanningSetsInOpen [Perfectl
     _ ≤ ∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ) := by gcongr; apply hle
     _ = _ := by simp [ENNReal.tsum_mul_left, ENNReal.tsum_two_zpow_neg_add_one]
 
-/-- **Lusin's theorem**: if `f : α → β` is a measurable function, `μ` is smooth, and `β` is second
-countable, then for all `ε > 0`, there exists a measurable set `s` such that `μ sᶜ ≤ ε` and the
-restriction of `f` onto `s` is continuous. -/
+/-- **Lusin's theorem** -/
 theorem Measurable.exists_continuous_restrict (μ : Measure α) [μ.Smooth]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f) {ε : ℝ≥0∞} (hε : 0 < ε) :
@@ -506,33 +365,23 @@ theorem Measurable.exists_continuous_restrict (μ : Measure α) [μ.Smooth]
     · simp [symmDiff, ← inter_left_comm]
     · simp [symmDiff, ← inter_assoc]
 
-/-- **Lusin's theorem**: if `f : α → β` is a.e. measurable with respect to `μ`, `μ` is smooth, and
-`β` is second countable, then for all `ε > 0`, there exists a null measurable set `s` such that
-`μ sᶜ ≤ ε` and the restriction of `f` onto `s` is continuous. -/
+/-- **Lusin's theorem** for a.e. measurable functions. -/
 theorem AEMeasurable.exists_continuous_restrict [μ.Smooth] {f : α → β}
     [SecondCountableTopology β] [MeasurableSpace β] [MeasurableEq β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : AEMeasurable f μ) {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ s, NullMeasurableSet s μ ∧ (μ sᶜ ≤ ε) ∧ ContinuousOn f s := by
-  have := hf
-  obtain ⟨g, hg⟩ := hf
-  obtain ⟨s, hs, hle, hc⟩ := hg.1.exists_continuous_restrict μ hε
-  refine ⟨s ∩ {x | f x = g x}, ?_, ?_, ?_⟩
-  · exact hs.nullMeasurableSet.inter (nullMeasurableSet_eq_fun this hg.1.aemeasurable)
+  obtain ⟨s, hs, hle, hc⟩ := hf.measurable_mk.exists_continuous_restrict μ hε
+  refine ⟨s ∩ {x | f x = hf.mk f x}, ?_, ?_, ?_⟩
+  · exact hs.nullMeasurableSet.inter (nullMeasurableSet_eq_fun hf hf.measurable_mk.aemeasurable)
   · calc
-    _ ≤ μ sᶜ + μ {x | f x = g x}ᶜ := by grw [compl_inter, measure_union_le]
+    _ ≤ μ sᶜ + μ {x | f x = hf.mk f x}ᶜ := by grw [compl_inter, measure_union_le]
     _ ≤ ε := by
-      suffices μ {x | f x = g x}ᶜ = 0 from by simp_all
-      simpa [EventuallyEq, ae_iff, ← compl_setOf] using hg.2
+      suffices μ {x | f x = hf.mk f x}ᶜ = 0 from by simp_all
+      simpa [EventuallyEq, ae_iff, ← compl_setOf] using hf.ae_eq_mk
   · exact (hc.mono inter_subset_left).congr fun x hx => hx.2
 
-/-! ### Lusin's theorem: closed and compact versions
+/-! ### Lusin's theorem: closed and compact versions -/
 
-We provide both **global** versions (matching the shape of `exists_continuous_restrict`:
-`∃ s, p s ∧ μ sᶜ ≤ ε ∧ ContinuousOn f s`) and **localized** versions (restricting to a measurable
-set `A` of finite measure: `∃ K ⊆ A, p K ∧ ContinuousOn f K ∧ μ (A \ K) < ε`). -/
-
-/-- Helper for global closed/compact Lusin: combines `exists_continuous_restrict` with inner
-approximation by sets satisfying `p`. -/
 private theorem Measurable.exists_restrict_of_approx (μ : Measure α) [μ.Smooth]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f) {ε : ℝ≥0∞} (hε : 0 < ε)
@@ -549,29 +398,21 @@ private theorem Measurable.exists_restrict_of_approx (μ : Measure α) [μ.Smoot
     _ ≤ ε / 2 + ε / 2 := add_le_add hsμ hKμ.le
     _ = ε := ENNReal.add_halves ε
 
-/-- **Lusin's theorem** (global, closed): if `f : α → β` is a measurable function, `μ` is
-internally smooth with respect to closed sets, and `β` is second countable, then for all `ε > 0`,
-there exists a closed set `s` such that `μ sᶜ ≤ ε` and the restriction of `f` onto `s` is
-continuous. -/
+/-- **Lusin's theorem** (global, closed) -/
 theorem Measurable.exists_isClosed_restrict (μ : Measure α) [μ.InternallySmoothClosed]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f) {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ s, IsClosed s ∧ μ sᶜ ≤ ε ∧ ContinuousOn f s :=
   hf.exists_restrict_of_approx μ hε Measure.InternallySmoothClosed.internally_smooth_closed
 
-/-- **Lusin's theorem** (global, compact): if `f : α → β` is a measurable function, `μ` is
-internally smooth with respect to compact sets, `α` is T₂, and `β` is second countable, then for
-all `ε > 0`, there exists a compact set `s` such that `μ sᶜ ≤ ε` and the restriction of `f` onto
-`s` is continuous. -/
+/-- **Lusin's theorem** (global, compact) -/
 theorem Measurable.exists_isCompact_restrict (μ : Measure α) [T2Space α] [μ.InternallySmoothCompact]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f) {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ s, IsCompact s ∧ μ sᶜ ≤ ε ∧ ContinuousOn f s :=
   hf.exists_restrict_of_approx μ hε Measure.InternallySmoothCompact.internally_smooth_compact
 
-/-- Helper for localized closed/compact Lusin: combines `exists_continuous_restrict` with inner
-approximation on a finite-measure set. -/
-private theorem Measurable.exists_continuousOn_of_approx[μ.Smooth]
+private theorem Measurable.exists_continuousOn_of_approx [μ.Smooth]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f)
     {A : Set α} (hA : MeasurableSet A) (hAμ : μ A ≠ ⊤) {ε : ℝ≥0∞} (hε : 0 < ε)
@@ -595,10 +436,7 @@ private theorem Measurable.exists_continuousOn_of_approx[μ.Smooth]
           (ne_top_of_le_ne_top (ENNReal.div_ne_top hε_fin (by positivity)) hsμ) hsμ hKμ
       _ = ε := ENNReal.add_halves ε
 
-/-- **Lusin's theorem** (localized, closed): if `f : α → β` is a measurable function, `μ` is
-internally smooth with respect to closed sets, and `β` is second countable, then for any measurable
-set `A` of finite measure and all `ε > 0`, there exists a closed set `K ⊆ A` such that
-`μ (A \ K) < ε` and the restriction of `f` onto `K` is continuous. -/
+/-- **Lusin's theorem** (localized, closed) -/
 theorem Measurable.exists_isClosed_continuousOn (μ : Measure α) [μ.InternallySmoothClosed]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]
     [OpensMeasurableSpace β] (hf : Measurable f)
@@ -607,10 +445,7 @@ theorem Measurable.exists_isClosed_continuousOn (μ : Measure α) [μ.Internally
   hf.exists_continuousOn_of_approx hA hAμ hε
     Measure.InternallySmoothClosed.internally_smooth_closed
 
-/-- **Lusin's theorem** (localized, compact): if `f : α → β` is a measurable function, `μ` is
-internally smooth with respect to compact sets, `α` is T₂, and `β` is second countable, then for
-any measurable set `A` of finite measure and all `ε > 0`, there exists a compact set `K ⊆ A` such
-that `μ (A \ K) < ε` and the restriction of `f` onto `K` is continuous. -/
+/-- **Lusin's theorem** (localized, compact) -/
 theorem Measurable.exists_isCompact_continuousOn (μ : Measure α) [T2Space α]
     [μ.InternallySmoothCompact]
     {f : α → β} [SecondCountableTopology β] [MeasurableSpace β] [OpensMeasurableSpace α]

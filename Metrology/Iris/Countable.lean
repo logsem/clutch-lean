@@ -13,9 +13,6 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Approxi
 
 namespace ProbLang
 
-
-variable {rT : Type _} [LawfulProbLangℝ rT]
-
 /-! ## `Pos.Countable` instances for namespace indexing -/
 
 theorem Pos.toNat_succ (p : Pos) : p.succ.toNat = p.toNat + 1 := by
@@ -32,9 +29,7 @@ theorem Pos.toNat_ofNat (n : Nat) : (Pos.ofNat n).toNat = n + 1 := by
 instance : Pos.Countable Nat where
   encode n := Pos.ofNat n
   decode p := some (p.toNat - 1)
-  decode_encode n := by
-    congr 1
-    rw [Pos.toNat_ofNat]; omega
+  decode_encode n := by simp [Pos.toNat_ofNat]
 
 /-- Encode `Int` into `Nat` via the standard zigzag: `n ≥ 0 ↦ 2n`, `n < 0 ↦ -2n - 1`. -/
 instance : Pos.Countable Int where
@@ -44,28 +39,16 @@ instance : Pos.Countable Int where
   decode p := (Pos.Countable.decode (A := Nat) p).bind fun k =>
     some (if k % 2 = 0 then (k / 2 : Int) else -((k - 1) / 2 : Int) - 1)
   decode_encode z := by
-    rw [Pos.Countable.decode_encode]
-    rw [Option.bind_some]
+    rw [Pos.Countable.decode_encode, Option.bind_some]
     by_cases hz : 0 ≤ z
-    · rw [ite_eq_left hz]
-      have hmod : (2 * z.toNat) % 2 = 0 := Nat.mul_mod_right 2 _
-      rw [ite_eq_left hmod]
-      have htn : (z.toNat : Int) = z := Int.toNat_of_nonneg hz
-      have : (((2 * z.toNat : Nat) : Int) / 2) = z := by
-        push_cast; rw [Int.mul_ediv_cancel_left _ (by decide : (2 : Int) ≠ 0)]; exact htn
-      rw [this]
-    · rw [ite_eq_right hz]
-      have hmod : (2 * (-z - 1).toNat + 1) % 2 ≠ 0 := by
-        intro h; omega
-      rw [ite_eq_right hmod]
-      have hnn : (0 : Int) ≤ -z - 1 := by omega
-      have htn : ((-z - 1).toNat : Int) = -z - 1 := Int.toNat_of_nonneg hnn
-      have hd : ((((2 * (-z - 1).toNat + 1 : Nat) : Int) - 1) / 2) = -z - 1 := by
-        push_cast
-        rw [show (2 * ((-z - 1).toNat : Int) + 1 - 1) = 2 * (-z - 1) by rw [htn]; ring]
-        rw [Int.mul_ediv_cancel_left _ (by decide : (2 : Int) ≠ 0)]
-      rw [hd]
-      congr 1; omega
+    · rw [ite_eq_left hz, ite_eq_left (Nat.mul_mod_right 2 _)]
+      push_cast
+      rw [Int.mul_ediv_cancel_left _ (by decide), Int.toNat_of_nonneg hz]
+    · have hmod : (2 * (-z - 1).toNat + 1) % 2 ≠ 0 := by omega
+      have := Int.toNat_of_nonneg (show 0 ≤ -z - 1 by omega)
+      rw [ite_eq_right hz, ite_eq_right hmod]
+      congr 1
+      omega
 
 instance {A B : Type} [Pos.Countable A] [Pos.Countable B] : Pos.Countable (A × B) where
   encode p := Pos.flatten [Pos.Countable.encode p.1, Pos.Countable.encode p.2]

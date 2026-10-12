@@ -63,7 +63,7 @@ instance {ε : ErrorCredit} : CMRA.Cancelable ε where
     refine (ENNReal.add_right_inj ?_).mp H2
     rintro rfl; simp at H1
 
-theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' <= ε₂)
+theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
   rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, CMRA.op]
   · rintro H rfl
@@ -132,9 +132,6 @@ theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ +
   icombine H1 H2 as Hε
   iexact Hε
 
-/-- Lets `icombine` fold two error credits into their sum: `icombine H₁ H₂ as H`
-turns `↯ε₁` and `↯ε₂` into `↯(ε₁ + ε₂)`. Mirrors the later-credit instance
-`CombineSepAs (£ n) (£ m) (£ (n + m))`. -/
 instance {ε₁ ε₂} : Iris.ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯ε₂) (↯(ε₁ + ε₂)) where
   combine_sep_as := combine
 
@@ -146,8 +143,7 @@ theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ �
   icombine Hs Hε gives Hv
   ihave %hv := internalCmraValid_discrete $$ Hv
   ipureintro
-  obtain ⟨hinc, _⟩ := Auth.auth_both_valid.mp hv
-  exact ErrorCredit.includedN_iff.mp (hinc 0)
+  exact includedN_iff.mp ((Auth.auth_both_valid.mp hv).1 0)
 
 theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ |==> ●↯ (εₛ - ε) := by
   iintro Hs Hε
@@ -167,17 +163,15 @@ theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
     simp only [CMRA.Valid, CMRA.op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
     exact fun _ => ⟨h, add_comm _ _⟩
   iintro Hε
-  ihave H := iOwn_update Hupd $$ Hε
-  imod H
+  imod (iOwn_update Hupd) $$ Hε with H
   imodintro
   iapply iOwn_op
   iexact H
 
 theorem weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ := by
   iintro Hε
-  have hsplit : ε₁ = (ε₁ - ε₂) + ε₂ := (tsub_add_cancel_of_le h).symm
-  rw [hsplit]
-  ihave ⟨_, H⟩ := split $$ Hε
+  rw [← tsub_add_cancel_of_le h]
+  ihave ⟨-, H⟩ := split $$ Hε
   iexact H
 
 theorem valid {ε : ℝ≥0∞} : ↯ε ⊢@{IProp GF} ⌜ε < 1⌝ := by
@@ -226,34 +220,34 @@ theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk
     □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
   suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε' -∗ P by
     iapply haux _ le_rfl
-  iintro %ε' %Hhle #Hamp Hε
-  obtain ⟨n, Hn⟩ := err_amp_mult hε Hhle hk
-  iinduction n generalizing %ε' %Hhle %Hn Hε with
+  iintro %ε' %hle #Hamp Hε
+  obtain ⟨n, hn⟩ := err_amp_mult hε hle hk
+  iinduction n generalizing %ε' %hle %hn Hε with
   | zero =>
     iexfalso
-    simp at Hn
-    iapply contradict Hn $$ Hε
+    simp at hn
+    iapply contradict hn $$ Hε
   | succ n IH =>
     have hk1 : (1 : ℝ≥0∞) ≤ (k : ℝ≥0∞) := by exact_mod_cast hk.le
-    have Hkε : (k : ℝ≥0∞) * ε = ((k : ℝ≥0∞) - 1) * ε + ε := by
+    have hkε : (k : ℝ≥0∞) * ε = ((k : ℝ≥0∞) - 1) * ε + ε := by
       conv_lhs => rw [← tsub_add_cancel_of_le hk1, add_mul, one_mul]
-    have Hεeq : ε' = (ε' - ε) + ε := (tsub_add_cancel_of_le Hhle).symm
+    have hε' : ε' = (ε' - ε) + ε := (tsub_add_cancel_of_le hle).symm
     set ε'' : ℝ≥0∞ := ε' + ((k : ℝ≥0∞) - 1) * ε
-    have Hε''eq : (ε' - ε) + (k : ℝ≥0∞) * ε = ε'' := by
-      rw [Hkε, ← add_assoc, add_right_comm, ← Hεeq]
-    have Hn' : 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε'' := by
-      refine Hn.trans (Std.le_of_eq ?_)
+    have hε'' : (ε' - ε) + (k : ℝ≥0∞) * ε = ε'' := by
+      rw [hkε, ← add_assoc, add_right_comm, ← hε']
+    have hn' : 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε'' := by
+      refine hn.trans (Std.le_of_eq ?_)
       show _ = _ * _ + (ε' + _)
       rw [Nat.cast_add, Nat.cast_one, add_mul, one_mul, add_mul,
           add_assoc, add_comm (_ * ε) ε', ← add_assoc]
-    rw [Hεeq]
+    rw [hε']
     ihave ⟨Hε₁, Hε₂⟩ := split $$ Hε
     iapply Hamp
-    isplitr [Hε₂] <;> try · iexact Hε₂
+    iframe Hε₂
     iintro Hε
     icombine Hε₁ Hε as Hε₃
-    iapply IH $$ %ε'' %(Hhle.trans le_self_add) %Hn'
-    iapply ext Hε''eq $$ Hε₃
+    iapply IH $$ %ε'' %(hle.trans le_self_add) %hn'
+    iapply ext hε'' $$ Hε₃
 
 theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k)
     (hamp : (↯(k * ε) -∗ P) ∗ ↯ε ⊢ P) : ↯ε ⊢ P := by
@@ -264,44 +258,39 @@ theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 
 theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hε' : ε < ε') :
     □ ((↯ε' -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
   iintro #Hamp Hε
-  ihave %hε'' := valid $$ Hε
   let k' : ℝ≥0∞ := ε' / ε
   have hk1 : 1 < k' := ENNReal.lt_div_iff_mul_lt (by simp) (by simp) |>.mpr (by simp [hε'])
-  have Hk' : k' ≠ ∞ := ENNReal.div_ne_top ENNReal.coe_ne_top (Std.ne_of_lt hε).symm
-  have Hkeq : ε' = k' * ε := by
+  have hk' : k' ≠ ∞ := ENNReal.div_ne_top ENNReal.coe_ne_top (Std.ne_of_lt hε).symm
+  have hkeq : ε' = k' * ε := by
     dsimp [k']
-    have Hε : ε / ε = 1 := ENNReal.div_self (Std.ne_of_lt hε).symm (LT.lt.ne_top hε')
-    simp [ENNReal.mul_comm_div, Hε]
-  lift k' to ℝ≥0 using Hk' with k
-  have Hk : 1 < k := ENNReal.one_lt_coe_iff.mp hk1
-  iapply simple hε Hk $$ [] Hε
-  imodintro
-  iintro ⟨Hc, Hε⟩
+    have hεε : ε / ε = 1 := ENNReal.div_self (Std.ne_of_lt hε).symm (LT.lt.ne_top hε')
+    simp [ENNReal.mul_comm_div, hεε]
+  lift k' to ℝ≥0 using hk' with k
+  have hk : 1 < k := ENNReal.one_lt_coe_iff.mp hk1
+  iapply simple hε hk $$ [] Hε
+  iintro !> ⟨Hc, Hε⟩
   iapply Hamp
-  isplitr [Hε]
-  · iintro Hε
-    iapply Hc
-    iapply ext $$ Hε
-    exact Hkeq
-  · iexact Hε
+  iframe Hε
+  iintro Hε
+  iapply Hc
+  iapply ext hkeq $$ Hε
 
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P)
     ⊢@{IProp GF} ↯ε -∗ P := by
   iintro #Hamp Hε
-  obtain ⟨n, Hn⟩ := err_amp_power hε hk
-  iinduction n generalizing %ε %hε %Hn Hε with
+  obtain ⟨n, hn⟩ := err_amp_power hε hk
+  iinduction n generalizing %ε %hε %hn Hε with
   | zero =>
     iexfalso
-    simp at Hn
-    iapply contradict Hn $$ Hε
-  | succ n ih =>
+    simp at hn
+    iapply contradict hn $$ Hε
+  | succ n IH =>
     iapply Hamp $$ %_ %hε [] Hε
-    imodintro
-    iintro Hε
-    iapply ih $$ %(k * ε)
+    iintro !> Hε
+    iapply IH $$ %(k * ε)
       %(ENNReal.mul_pos_iff.mpr ⟨ENNReal.coe_pos.mpr (pos_of_gt hk), pos_of_gt hε⟩)
-      %(Hn.trans (_root_.le_of_eq (by ring))) Hε
+      %(hn.trans (_root_.le_of_eq (by ring))) Hε
 
 theorem amp_external {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF}
     (hε : 0 < ε) (hk : 1 < k)

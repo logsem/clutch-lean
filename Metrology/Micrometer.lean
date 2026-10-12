@@ -8,12 +8,8 @@ import all Metrology.Meta.Projections
 
 @[expose] public section
 
--- Operational semantics of continuous PPL
-
 open Set
 
-/-- Sigma algebra on `Option` values obtained by lifting the sigma algebra on `some` values,
-    as well as the singleton `none` set. -/
 local instance instMeasurableSpaceOption_micrometer [MeasurableSpace α] : MeasurableSpace (Option α) :=
   .generateFrom <| {{ none }} ∪ ((some '' ·) '' MeasurableSet)
 
@@ -32,25 +28,20 @@ theorem measurableSet_some {S : Set α} (HS : MeasurableSet S) : MeasurableSet (
 theorem measurableSet_range_some : MeasurableSet (range (some (α := α))) :=
   image_univ ▸ measurableSet_some .univ
 
-/-- When proving the measurability of a set in Option, it suffices to only prove the
-    measurability of the terms which are `some`. -/
-theorem measurableSet_iff_int_some_measurableSet {S : Set (Option α)} :
+theorem measurableSet_iff_inter_range_some {S : Set (Option α)} :
     MeasurableSet S ↔ MeasurableSet (S ∩ range some) := by
-  refine ⟨fun H => ?_, fun H => ?_⟩
-  · exact MeasurableSet.inter H measurableSet_range_some
-  · rw [show S = (S ∩ range some) ∪ (S ∩ { none }) by simp [← inter_union_distrib_left]]
-    refine MeasurableSet.union H ?_
-    have HSdisj' : S ∩ { none } = ∅ ∨ S ∩ { none } = { none } := by simp [em' (none ∈ S)]
-    rcases HSdisj' with (h|h) <;> rw [h]
-    · exact MeasurableSet.empty
-    · exact measurableSet_none
+  refine ⟨(MeasurableSet.inter · measurableSet_range_some), fun H => ?_⟩
+  rw [show S = (S ∩ range some) ∪ (S ∩ { none }) by simp [← inter_union_distrib_left]]
+  refine H.union ?_
+  obtain h | h : S ∩ { none } = ∅ ∨ S ∩ { none } = { none } := by simp [em' (none ∈ S)]
+  · rw [h]; exact .empty
+  · rw [h]; exact measurableSet_none
 
 end Option
 
 abbrev Ident : Type _ := String
 
--- /- Typeclass containing all of the information necessary to perform the cylinder
---     construction on syntax. -/
+/-- The data needed to perform the cylinder construction on syntax. -/
 class MeasurableSyntax (Syntax : Type _) (Gen : outParam (Type _)) where
   base : Set Gen
   flatten : Gen → Set Syntax
@@ -68,9 +59,7 @@ inductive LitSyntax (R Z B : Type _) where
 | int (z : Z)
 | bool (b : B)
 
--- Derive: A higher-kinded functor
--- LitSyntax R Z B → LitSyntax R' Z' B'
-
+-- TODO: derive the higher-kinded functor `LitSyntax R Z B → LitSyntax R' Z' B'`.
 
 def LitSyntax.flatten : LitSyntax (Set R) (Set Z) (Set B) → Set (LitSyntax R Z B)
 | .real S => real.ι '' S
@@ -101,7 +90,6 @@ inductive ExprSyntax R Z B where
 | var (x : Ident)
 | app (rator rand : ExprSyntax R Z B)
 | lam (x : Ident) (body : ExprSyntax R Z B)
-
 
 def ExprSyntax.flatten : ExprSyntax (Set R) (Set Z) (Set B) → Set (ExprSyntax R Z B)
 | rand => rand.ι '' { () }

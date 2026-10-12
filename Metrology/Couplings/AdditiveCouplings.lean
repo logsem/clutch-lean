@@ -30,12 +30,8 @@ variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [Measur
 def AddCoupl (ε : ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) : Prop :=
   ARCoupling (· + ε) Φ μₗ μᵣ
 
-/-- Expectation ("Kantorovich dual") form of an additive coupling with variable cost `E₂`:
-every pair of `[0,1]`-bounded measurable test functions satisfying `h₁ a ≤ h₂ b + E₂ a b`
-pointwise also satisfies the matching bound on expectations, with slack `ε`.
-
-This is the side condition that `AddCoupl.bind_adv_kanto` consumes and that the Approxis
-lifting and coupling rules carry around; naming it keeps those statements to one line.
+/-- Kantorovich-dual form of an additive coupling with variable cost `E₂`: the side condition
+of `AddCoupl.bind_adv_kanto`.
 Reducible, so an `ExpCoupl` hypothesis still applies directly to its six arguments. -/
 @[reducible] def ExpCoupl (ε : ENNReal) (E₂ : α → β → ENNReal)
     (μ₁ : Measure α) (μ₂ : Measure β) : Prop :=
@@ -45,40 +41,28 @@ Reducible, so an `ExpCoupl` hypothesis still applies directly to its six argumen
 
 namespace AddCoupl
 
-/-- Reflexivity of `ARcoupl` at the equality relation. -/
 theorem refl {ε : ENNReal} (μ : Measure α) : AddCoupl ε (fun v => v.1 = v.2) μ μ :=
   ARCoupling.refl μ le_self_add
 
-/-- Dirac coupling: two point masses are `ARcoupl ε`-related for any `ε` as long as the
-relation holds on the points. -/
 theorem dirac {ε : ENNReal} {a : α} {b : β} (S : Set (α × β)) (H : S (a, b)) :
     AddCoupl ε S (.dirac a) (.dirac b) :=
   ARCoupling.dirac le_self_add S H
 
-/-- Enlarging the relation weakens the coupling. -/
 theorem mono_rel {ε : ENNReal} {S S' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (HS : S ⊆ S') (H : AddCoupl ε S μₗ μᵣ) : AddCoupl ε S' μₗ μᵣ :=
   ARCoupling.mono_rel HS H
 
-/-- Enlarging the error slack weakens the coupling. -/
 theorem mono_grading {ε ε' : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (Hε : ε ≤ ε') (H : AddCoupl ε S μₗ μᵣ) : AddCoupl ε' S μₗ μᵣ :=
   ARCoupling.mono_F (fun x => by gcongr) H
 
-/-- The zero measure is trivially coupled on the left. -/
 theorem zero_left {ε : ENNReal} (S : Set (α × β)) (μᵣ : Measure β) : AddCoupl ε S 0 μᵣ :=
   ARCoupling.zero_left S μᵣ
 
-/-- Coupling against the zero measure on the right requires `μₗ .univ ≤ ε`. -/
 theorem zero_right {ε : ENNReal} (S : Set (α × β)) {μₗ : Measure α} (Hε : μₗ .univ ≤ ε) :
     AddCoupl ε S μₗ 0 :=
   ARCoupling.zero_right S (by simpa using Hε)
 
-/-- Monad bind for `ARcoupl`: the error slacks add.
-
-Given `ARcoupl ε` between `μₗ` and `μᵣ`, and `ARcoupl ε'` between `f a` and `g b` whenever
-`S (a, b)`, we get `ARcoupl (ε + ε')` between the bound measures `μₗ.bind f` and `μᵣ.bind g`,
-provided `μₗ` and each `f a` are sub-probability measures. -/
 theorem bind {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}{μₗ : Measure α} {μᵣ : Measure β}
     {f : α → Measure α'} {g : β → Measure β'}
     (Hfm : Measurable f) (Hgm : Measurable g)
@@ -87,29 +71,21 @@ theorem bind {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}{μ�
     (Hbind : ∀ {a b}, S (a, b) → AddCoupl ε' T (f a) (g b)) :
     AddCoupl (ε + ε') T (μₗ.bind f) (μᵣ.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-  have HFle a :=
-    calc ∫⁻ y, f' y ∂f a
-      _ ≤ (f a) .univ := lintegral_le_meas Hf'b (by simp)
-      _ ≤ 1 := Hfsprob _
+  have HFle a : ∫⁻ y, f' y ∂f a ≤ 1 := (lintegral_le_meas Hf'b (by simp)).trans (Hfsprob a)
   let Fh : CouplingFunction α := .mk (fun a => ∫⁻ y, f' y ∂(f a) - ε') ⟨?Fm, fun a => ?Fb⟩
   case Fm => exact (measurable_lintegral Hf'm |>.comp Hfm).sub measurable_const
   case Fb => exact (tsub_le_self).trans (HFle a)
   let Gh : CouplingFunction β := .mk (fun b => (∫⁻ y, g' y ∂(g b)) ⊓ 1) ⟨?Gm, fun b => ?Gb⟩
   case Gm => exact (measurable_lintegral Hg'm |>.comp Hgm).inf measurable_const
   case Gb => exact inf_le_right
-  /- The key pointwise inequality on `S`: `Fh a ≤ Gh b`. -/
   have HFhGh {a b} (HS : S (a, b)) : Fh.1 a ≤ Gh.1 b := by
-    have Hinner : ∫⁻ y, f' y ∂(f a) ≤ ∫⁻ y, g' y ∂(g b) + ε' :=
-      Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-    simp only [ Gh, le_inf_iff]
-    refine ⟨tsub_le_iff_right.mpr Hinner, ?_⟩
-    exact tsub_le_iff_right.mpr ((HFle a).trans le_self_add)
-  /- Main inequality. -/
+    simp only [Gh, le_inf_iff]
+    exact ⟨tsub_le_iff_right.mpr (Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'),
+      tsub_le_iff_right.mpr ((HFle a).trans le_self_add)⟩
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   calc  ∫⁻ a, ∫⁻ x, f' x ∂(f a) ∂μₗ
-      _ ≤ ∫⁻ a, Fh.1 a + ε' ∂μₗ := by
-            refine lintegral_mono (fun a => ?_); exact le_tsub_add
+      _ ≤ ∫⁻ a, Fh.1 a + ε' ∂μₗ := lintegral_mono fun _ => le_tsub_add
       _ = ∫⁻ a, Fh.1 a ∂μₗ + ε' * μₗ .univ := by
             rw [lintegral_add_right _ measurable_const, lintegral_const, mul_comm]
       _ ≤ ∫⁻ a, Fh.1 a ∂μₗ + ε' := by
@@ -124,14 +100,8 @@ theorem bind {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}{μ�
       _ = ∫⁻ b, ∫⁻ x, g' x ∂(g b) ∂μᵣ + (ε + ε') := by
             rw [add_assoc]
 
-/-- **Advanced-composition bind**: the continuation's slack is allowed to
-depend on the RHS sample, and the final slack is bounded by the expected
-value of the variable slack plus the outer slack.
-
-Compared to `bind`, the key difference is that the continuation hypothesis
-`Hbind` provides `AddCoupl (E₂ b) T (f a) (g b)` with `E₂ b` depending on
-the RHS sample, and we only need `∫⁻ b, E₂ b ∂μᵣ ≤ ε'` (the expected
-slack). This is weaker than requiring a pointwise bound. -/
+/-- Advanced-composition bind: the continuation's slack `E₂ b` may depend on the RHS sample,
+and only its expectation `∫⁻ b, E₂ b ∂μᵣ ≤ ε'` is charged. -/
 theorem bind_adv {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β}
     {f : α → Measure α'} {g : β → Measure β'} {E₂ : β → ENNReal}
@@ -142,29 +112,16 @@ theorem bind_adv {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
     (Hbind : ∀ {a b}, S (a, b) → AddCoupl (E₂ b) T (f a) (g b)) :
     AddCoupl (ε + ε') T (μₗ.bind f) (μᵣ.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-  have HFle a :=
-    calc ∫⁻ y, f' y ∂f a
-      _ ≤ (f a) .univ := lintegral_le_meas Hf'b (by simp)
-      _ ≤ 1 := Hfsprob _
-  -- Core idea: define Fh a := ∫ f' ∂(f a), Gh b := (∫ g' ∂(g b)) + E₂ b,
-  -- capped at 1. Then `S a b → Fh a ≤ Gh b` because the inner coupling
-  -- gives `∫ f' ∂(f a) ≤ ∫ g' ∂(g b) + E₂ b`. We use `Hcpl` to get
-  -- `∫ Fh ∂μₗ ≤ ∫ Gh ∂μᵣ + ε`. The RHS expands to `∫ (∫ g') ∂μᵣ + ∫ E₂ ∂μᵣ + ε`,
-  -- which is bounded by the target `∫ (∫ g') ∂μᵣ + (ε + ε')` via `HE₂sum`.
+  have HFle a : ∫⁻ y, f' y ∂f a ≤ 1 := (lintegral_le_meas Hf'b (by simp)).trans (Hfsprob a)
   let Fh : CouplingFunction α := .mk (fun a => ∫⁻ y, f' y ∂(f a)) ⟨?Fm, fun a => ?Fb⟩
   case Fm => exact (measurable_lintegral Hf'm |>.comp Hfm)
   case Fb => exact HFle a
   let Gh : CouplingFunction β := .mk (fun b => (∫⁻ y, g' y ∂(g b) + E₂ b) ⊓ 1) ⟨?Gm, fun b => ?Gb⟩
-  case Gm =>
-    refine Measurable.inf ?_ measurable_const
-    exact ((measurable_lintegral Hg'm).comp Hgm).add HE₂m
+  case Gm => exact (((measurable_lintegral Hg'm).comp Hgm).add HE₂m).inf measurable_const
   case Gb => exact inf_le_right
   have HFhGh {a b} (HS : S (a, b)) : Fh.1 a ≤ Gh.1 b := by
-    have Hinner : ∫⁻ y, f' y ∂(f a) ≤ ∫⁻ y, g' y ∂(g b) + E₂ b :=
-      Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-    simp only [ Gh, le_inf_iff]
-    exact ⟨Hinner, (HFle a).trans (by simp)⟩
-  -- Apply the outer coupling to Fh, Gh.
+    simp only [Gh, le_inf_iff]
+    exact ⟨Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g', (HFle a).trans (by simp)⟩
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   calc ∫⁻ a, ∫⁻ x, f' x ∂(f a) ∂μₗ
@@ -180,11 +137,7 @@ theorem bind_adv {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
       _ = ∫⁻ b, ∫⁻ x, g' x ∂(g b) ∂μᵣ + (ε + ε') := by
             rw [add_assoc, add_comm ε' ε]
 
-/-- Advanced-composition bind with **LHS-indexed variable slack**: the
-continuation's slack `E₂` depends on the LHS sample `a`, and the final
-slack is bounded by `ε + ε'` where `∫⁻ a, E₂ a ∂μₗ ≤ ε'`.
-
-This is the LHS-symmetric companion of `bind_adv`. -/
+/-- `bind_adv` with the continuation's slack `E₂ a` indexed by the LHS sample. -/
 theorem bind_adv_lhs {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β}
     {f : α → Measure α'} {g : β → Measure β'} {E₂ : α → ENNReal}
@@ -195,13 +148,7 @@ theorem bind_adv_lhs {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β
     (Hbind : ∀ {a b}, S (a, b) → AddCoupl (E₂ a) T (f a) (g b)) :
     AddCoupl (ε + ε') T (μₗ.bind f) (μᵣ.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-  have HFle a :=
-    calc ∫⁻ y, f' y ∂f a
-      _ ≤ (f a) .univ := lintegral_le_meas Hf'b (by simp)
-      _ ≤ 1 := Hfsprob _
-  -- Define Fh a := max(0, ∫ f' ∂f a - E₂ a) so that the inner coupling
-  -- `∫ f' ∂(f a) ≤ ∫ g' ∂(g b) + E₂ a` gives `Fh a ≤ ∫ g' ∂(g b)`.
-  -- For the outer `Hcpl` application, we take Gh b := ∫ g' ∂g b (capped at 1).
+  have HFle a : ∫⁻ y, f' y ∂f a ≤ 1 := (lintegral_le_meas Hf'b (by simp)).trans (Hfsprob a)
   let Fh : CouplingFunction α := .mk (fun a => ∫⁻ y, f' y ∂(f a) - E₂ a)
     ⟨?Fm, fun a => ?Fb⟩
   case Fm => exact ((measurable_lintegral Hf'm |>.comp Hfm)).sub HE₂m
@@ -210,17 +157,13 @@ theorem bind_adv_lhs {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β
   case Gm => exact (measurable_lintegral Hg'm |>.comp Hgm).inf measurable_const
   case Gb => exact inf_le_right
   have HFhGh {a b} (HS : S (a, b)) : Fh.1 a ≤ Gh.1 b := by
-    have Hinner : ∫⁻ y, f' y ∂(f a) ≤ ∫⁻ y, g' y ∂(g b) + E₂ a :=
-      Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-    simp only [ Gh, le_inf_iff]
-    refine ⟨?_, ?_⟩
-    · exact tsub_le_iff_right.mpr Hinner
-    · exact (tsub_le_self).trans (HFle a)
+    simp only [Gh, le_inf_iff]
+    exact ⟨tsub_le_iff_right.mpr (Hbind HS ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'),
+      (tsub_le_self).trans (HFle a)⟩
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   calc ∫⁻ a, ∫⁻ x, f' x ∂(f a) ∂μₗ
-      _ ≤ ∫⁻ a, Fh.1 a + E₂ a ∂μₗ := by
-            refine lintegral_mono (fun a => ?_); exact le_tsub_add
+      _ ≤ ∫⁻ a, Fh.1 a + E₂ a ∂μₗ := lintegral_mono fun _ => le_tsub_add
       _ = ∫⁻ a, Fh.1 a ∂μₗ + ∫⁻ a, E₂ a ∂μₗ := by
             rw [lintegral_add_right _ HE₂m]
       _ ≤ ∫⁻ a, Fh.1 a ∂μₗ + ε' := by gcongr
@@ -233,16 +176,8 @@ theorem bind_adv_lhs {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β
       _ = ∫⁻ b, ∫⁻ x, g' x ∂(g b) ∂μᵣ + (ε + ε') := by
             rw [add_assoc]
 
-/-- **Kantorovich-style bind, plain variant**: advanced composition with
-bilateral variable slack `E₂ : α → β → ENNReal`. Mirrors Rocq
-`ARcoupl_dbind_adv_kanto_plain` (couplings_app.v:114–221).
-
-The outer distributions are coupled by a *test-function expectation bound*
-rather than by a separate `AddCoupl`: for every pair of `[0,1]`-bounded
-measurable `h₁, h₂` satisfying `h₁ a ≤ h₂ b + E₂ a b` pointwise, the
-expectations satisfy `∫⁻ h₁ ∂μ₁ ≤ ∫⁻ h₂ ∂μ₂ + ε`. Together with inner
-couplings `AddCoupl (E₂ a b) S (f a) (g b)` at every pair, this yields
-`AddCoupl ε S (μ₁.bind f) (μ₂.bind g)`. -/
+/-- Kantorovich-style bind with bilateral variable slack `E₂ a b`.
+Rocq: `ARcoupl_dbind_adv_kanto_plain` (couplings_app.v:114–221). -/
 theorem bind_adv_kanto {ε : ENNReal} {S : Set (α' × β')}
     {μ₁ : Measure α} {μ₂ : Measure β}
     {f : α → Measure α'} {g : β → Measure β'} {E₂ : α → β → ENNReal}
@@ -252,38 +187,22 @@ theorem bind_adv_kanto {ε : ENNReal} {S : Set (α' × β')}
     (Hcont : ∀ a b, AddCoupl (E₂ a b) S (f a) (g b)) :
     AddCoupl ε S (μ₁.bind f) (μ₂.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-  -- Define the inner-integral functions X a := ∫ f' ∂f a, Y b := ∫ g' ∂g b.
-  -- Both are `[0,1]`-bounded thanks to subprobability of f a / g b.
   let X : α → ENNReal := fun a => ∫⁻ x, f' x ∂(f a)
   let Y : β → ENNReal := fun b => ∫⁻ y, g' y ∂(g b)
   have HXm : Measurable X := (measurable_lintegral Hf'm).comp Hfm
   have HYm : Measurable Y := (measurable_lintegral Hg'm).comp Hgm
-  have HXb : ∀ a, X a ≤ 1 := fun a =>
-    (lintegral_le_meas Hf'b (by simp)).trans (Hfsprob a)
-  have HYb : ∀ b, Y b ≤ 1 := fun b =>
-    (lintegral_le_meas Hg'b (by simp)).trans (Hgsprob b)
-  -- Pointwise: X a ≤ Y b + E₂ a b, from the inner couplings at (a, b).
-  have HXY : ∀ a b, X a ≤ Y b + E₂ a b := fun a b =>
-    Hcont a b ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
-  -- Apply the expectation hypothesis to X, Y — this closes the outer integral.
-  have Hmain : ∫⁻ a, X a ∂μ₁ ≤ ∫⁻ b, Y b ∂μ₂ + ε :=
-    Hexp X Y HXm HYm HXb HYb HXY
-  -- Push the bind through the outer integrals.
+  have HXb a : X a ≤ 1 := (lintegral_le_meas Hf'b (by simp)).trans (Hfsprob a)
+  have HYb b : Y b ≤ 1 := (lintegral_le_meas Hg'b (by simp)).trans (Hgsprob b)
+  have HXY a b : X a ≤ Y b + E₂ a b := Hcont a b ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
-  exact Hmain
+  exact Hexp X Y HXm HYm HXb HYb HXY
 
-/-- Mass comparison: `ARcoupl ε` bounds the total mass of `μₗ` by that of `μᵣ` plus `ε`.
-Obtained by testing against the constant-`1` coupling function. -/
 theorem mass_leq {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (H : AddCoupl ε S μₗ μᵣ) : μₗ .univ ≤ μᵣ .univ + ε := by
   let oneA : CouplingFunction α := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
   let oneB : CouplingFunction β := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
-  have h := H oneA oneB (fun _ => le_refl _)
-  rwa [show (∫⁻ _, oneA.1 _ ∂μₗ) = μₗ .univ from by
-        simp [oneA],
-      show (∫⁻ _, oneB.1 _ ∂μᵣ) = μᵣ .univ from by
-        simp [oneB]] at h
+  simpa [oneA, oneB] using H oneA oneB (fun _ => le_refl _)
 
 theorem set_leq_zero {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} {T : Set α}
     {T' : Set β} (hT : MeasurableSet T) (hT' : MeasurableSet T') (Hcpl : AddCoupl 0 S μₗ μᵣ)
@@ -299,57 +218,31 @@ theorem set_leq_zero {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure 
     · simp [fInd, Set.indicator_of_notMem ha]
   simpa [fInd, gInd, lintegral_indicator_one hT, lintegral_indicator_one hT'] using hMain
 
-/-- Left transitivity with an equality-coupling: chain an exact-equality coupling into an
-arbitrary coupling, adding the error slacks. -/
 theorem eq_trans_l {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ μ₂ : Measure α} {μ₃ : Measure β}
     (Heq : AddCoupl ε₁ (fun v => v.1 = v.2) μ₁ μ₂) (HR : AddCoupl ε₂ R μ₂ μ₃) :
     AddCoupl (ε₁ + ε₂) R μ₁ μ₃ := by
   intro f g Hfg
-  -- Chain: ∫⁻ f dμ₁ ≤ ∫⁻ f dμ₂ + ε₁ ≤ (∫⁻ g dμ₃ + ε₂) + ε₁ = ∫⁻ g dμ₃ + (ε₁ + ε₂)
-  have step1 : ∫⁻ x, f.1 x ∂μ₁ ≤ ∫⁻ x, f.1 x ∂μ₂ + ε₁ :=
-    Heq f f (fun {a b} (h : a = b) => h ▸ le_refl _)
-  have step2 : ∫⁻ x, f.1 x ∂μ₂ ≤ ∫⁻ x, g.1 x ∂μ₃ + ε₂ := HR f g Hfg
   calc ∫⁻ x, f.1 x ∂μ₁
-      _ ≤ ∫⁻ x, f.1 x ∂μ₂ + ε₁ := step1
-      _ ≤ (∫⁻ x, g.1 x ∂μ₃ + ε₂) + ε₁ := by gcongr
+      _ ≤ ∫⁻ x, f.1 x ∂μ₂ + ε₁ := Heq f f (fun {a b} (h : a = b) => h ▸ le_refl _)
+      _ ≤ (∫⁻ x, g.1 x ∂μ₃ + ε₂) + ε₁ := by gcongr; exact HR f g Hfg
       _ = ∫⁻ x, g.1 x ∂μ₃ + (ε₁ + ε₂) := by rw [add_assoc, add_comm ε₂ ε₁]
 
-/-- Right transitivity with an equality-coupling: chain an arbitrary coupling into an
-exact-equality coupling, adding the error slacks. -/
 theorem eq_trans_r {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ : Measure α} {μ₂ μ₃ : Measure β}
     (HR : AddCoupl ε₁ R μ₁ μ₂) (Heq : AddCoupl ε₂ (fun v => v.1 = v.2) μ₂ μ₃) :
     AddCoupl (ε₁ + ε₂) R μ₁ μ₃ := by
   intro f g Hfg
-  have step1 : ∫⁻ x, f.1 x ∂μ₁ ≤ ∫⁻ x, g.1 x ∂μ₂ + ε₁ := HR f g Hfg
-  have step2 : ∫⁻ x, g.1 x ∂μ₂ ≤ ∫⁻ x, g.1 x ∂μ₃ + ε₂ :=
-    Heq g g (fun {a b} (h : a = b) => h ▸ le_refl _)
   calc ∫⁻ x, f.1 x ∂μ₁
-      _ ≤ ∫⁻ x, g.1 x ∂μ₂ + ε₁ := step1
-      _ ≤ (∫⁻ x, g.1 x ∂μ₃ + ε₂) + ε₁ := by gcongr
+      _ ≤ ∫⁻ x, g.1 x ∂μ₂ + ε₁ := HR f g Hfg
+      _ ≤ (∫⁻ x, g.1 x ∂μ₃ + ε₂) + ε₁ := by
+            gcongr; exact Heq g g (fun {a b} (h : a = b) => h ▸ le_refl _)
       _ = ∫⁻ x, g.1 x ∂μ₃ + (ε₁ + ε₂) := by rw [add_assoc, add_comm ε₂ ε₁]
 
-/-! ### Stubs — lemmas needed by Approxis, to be proved on demand.
-
-These parallel the Rocq `couplings_app.v` / `couplings_kanto.v` API. Grouped by
-tier of priority for unblocking the Approxis port. -/
-
-section Stubs
-
-variable {α β α' β' : Type _}
-variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [MeasurableSpace β']
-
-/-! #### Tier 1 — core plumbing (blocks `app_weakestpre`, `adequacy`). -/
-
 omit [MeasurableSpace α] [MeasurableSpace β] in
-/-- Pointed `dret`/`dirac` variant: if `R (f a) (g b)` then the pushforward Diracs are
-coupled. Specialization of `AddCoupl.dirac`. -/
 theorem dret {ε : ENNReal} {R : α' → β' → Prop} {a : α} {b : β}
     (f : α → α') (g : β → β') (H : R (f a) (g b)) :
     AddCoupl ε (fun v => R v.1 v.2) (Measure.dirac (f a)) (Measure.dirac (g b)) :=
   AddCoupl.dirac _ H
 
-/-- Push an `AddCoupl` through measurable maps. The Rocq form is
-`ARcoupl_map : ARcoupl μ₁ μ₂ R ε → ARcoupl (dmap f μ₁) (dmap g μ₂) (λ a' b', ∃ a b, ...) ε`. -/
 theorem map {ε : ENNReal} {S : Set (α × β)} {R : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β} (f : α → α') (g : β → β')
     (Hfm : Measurable f) (Hgm : Measurable g)
@@ -359,21 +252,13 @@ theorem map {ε : ENNReal} {S : Set (α × β)} {R : Set (α' × β')}
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hle
   let F : CouplingFunction α := .mk (f' ∘ f) ⟨Hf'm.comp Hfm, fun _ => Hf'b _⟩
   let G : CouplingFunction β := .mk (g' ∘ g) ⟨Hg'm.comp Hgm, fun _ => Hg'b _⟩
-  have HFG {a b} (HS : S (a, b)) : F.1 a ≤ G.1 b := Hle (HR HS)
   rw [lintegral_map Hf'm Hfm, lintegral_map Hg'm Hgm]
-  exact H F G HFG
+  exact H F G fun HS => Hle (HR HS)
 
-/-- **Left limit principle.** An `AddCoupl` only inspects `μₗ` through the left
-lintegrals `∫⁻ f ∂μₗ` of measurable `f ≤ 1`. So if every such integral is dominated
-by the supremum of the corresponding integrals against a family `ν i`, each of which
-is `AddCoupl ε S`-related to `μᵣ`, then `μₗ` is too.
-
-This is the countability-free way to pass to a limit on the left, and unlike
-`AddCoupl.map_inv` it survives a pushforward: for `F` measurable,
-`∫⁻ f ∂((ν i).map F) = ∫⁻ (f ∘ F) ∂(ν i)`, so an increasing limit of measures can be
-mapped forward *before* the limit is taken and this lemma still applies. The naive
-route — pull the coupling back along `F` with `map_inv`, take the limit, push forward
-again with `map` — needs `F`'s codomain to carry a discrete σ-algebra. -/
+/-- Left limit principle: `AddCoupl` sees `μₗ` only through `∫⁻ f ∂μₗ`, so a `μₗ` dominated by
+a family of coupled `ν i` is coupled too.
+Unlike `map_inv`, this survives a pushforward, so it takes limits under `map` with no
+discreteness assumption on the codomain. -/
 theorem iSup_left {ι : Sort _} {ε : ENNReal} {S : Set (α × β)}
     {μₗ : Measure α} {ν : ι → Measure α} {μᵣ : Measure β}
     (hle : ∀ f : α → ENNReal, Measurable f → ∫⁻ a, f a ∂μₗ ≤ ⨆ i, ∫⁻ a, f a ∂(ν i))
@@ -382,25 +267,10 @@ theorem iSup_left {ι : Sort _} {ε : ENNReal} {S : Set (α × β)}
   rintro ⟨f, hfm, hfb⟩ G hfg
   exact (hle f hfm).trans (iSup_le fun i => H i ⟨f, hfm, hfb⟩ G hfg)
 
-/-- Inverse of `AddCoupl.map`: pulling back along measurable maps.
-
-**This needs a discrete σ-algebra on the codomains, and that is not an artefact of the
-proof.** The argument lifts the left test function fiberwise,
-`fT a' := ⨆_{a : f a = a'} f' a`, and the right one dually,
-`gT b' := (⨅_{b : g b = b'} g' b) ⊓ 1`. Those are the only choices that transport the
-relation `R`, and a fiberwise sup/inf over an arbitrary measurable fibre is not
-measurable in general. `DiscreteMeasurableSpace α'` — which
-`Countable α' + MeasurableSingletonClass α'` supplies, and which is the form this lemma
-is now stated in — makes *every* function out of `α'` measurable, which is exactly and
-only what the proof uses.
-
-No diffuse generalization is available: an `AddCoupl` sees `μₗ` only through
-`μₗ ∘ f⁻¹` on *measurable* sets of `α'`, and replacing `f '' A` by a measurable hull
-can strictly enlarge its `R`-image, so the transfer is lossy precisely when `f '' A`
-fails to be measurable. Repairing that needs descriptive-set-theoretic input
-(analytic sets are universally measurable), not a measurability side condition.
-Consumers that only need to take a limit under a pushforward should use
-`AddCoupl.iSup_left`, which has no such requirement. -/
+/-- Inverse of `map`.
+The discrete σ-algebras are essential: the fibrewise sup/inf lifts of the test functions are
+not measurable in general, and no diffuse generalization holds without analytic-set input.
+To take a limit under a pushforward, use `iSup_left` instead. -/
 theorem map_inv [DiscreteMeasurableSpace α'] [DiscreteMeasurableSpace β']
     {ε : ENNReal} {R : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β} (f : α → α') (g : β → β')
@@ -408,191 +278,111 @@ theorem map_inv [DiscreteMeasurableSpace α'] [DiscreteMeasurableSpace β']
     (H : AddCoupl ε R (μₗ.map f) (μᵣ.map g)) :
     AddCoupl ε (fun v => R (f v.1, g v.2)) μₗ μᵣ := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hle
-  -- Lift f' to α' via supremum over the fiber; g' via infimum capped at 1.
   let fT : α' → ENNReal := fun a' => ⨆ (a : α) (_ : f a = a'), f' a
   let gT : β' → ENNReal := fun b' => (⨅ (b : β) (_ : g b = b'), g' b) ⊓ 1
   have HfTm : Measurable fT := .of_discrete
   have HgTm : Measurable gT := .of_discrete
-  have HfTb : ∀ a', fT a' ≤ 1 := fun a' =>
-    iSup_le fun a => iSup_le fun _ => Hf'b a
-  have HgTb : ∀ b', gT b' ≤ 1 := fun b' => inf_le_right
+  have HfTb a' : fT a' ≤ 1 := iSup_le fun a => iSup_le fun _ => Hf'b a
   let FT : CouplingFunction α' := ⟨fT, HfTm, HfTb⟩
-  let GT : CouplingFunction β' := ⟨gT, HgTm, HgTb⟩
-  -- Relation: R(a',b') → fT(a') ≤ gT(b').
-  have HFG : ∀ {a' b'}, R (a', b') → FT.1 a' ≤ GT.1 b' := by
-    intro a' b' HR
+  let GT : CouplingFunction β' := ⟨gT, HgTm, fun _ => inf_le_right⟩
+  have HFG {a' b'} (HR : R (a', b')) : FT.1 a' ≤ GT.1 b' := by
     simp only [FT, GT, gT, le_inf_iff]
     refine ⟨?_, HfTb a'⟩
-    refine iSup_le fun a => iSup_le fun Ha => ?_
-    refine le_iInf fun b => le_iInf fun Hb => ?_
-    -- R(fa, gb) since fa = a', gb = b', and R(a', b').
-    exact Hle (by subst Ha; subst Hb; exact HR)
-  -- Pointwise: f' a ≤ fT (f a)
-  have Hf'_le : ∀ a, f' a ≤ fT (f a) := fun a => by
-    simp only [fT]; exact le_iSup_of_le a (le_iSup_of_le rfl le_rfl)
-  -- Pointwise: gT (g b) ≤ g' b
-  have HgT_le : ∀ b, gT (g b) ≤ g' b := fun b => by
-    simp only [gT]
+    refine iSup_le fun a => iSup_le fun Ha => le_iInf fun b => le_iInf fun Hb => ?_
+    subst Ha Hb
+    exact Hle HR
+  have Hf'_le a : f' a ≤ fT (f a) := le_iSup₂_of_le a rfl le_rfl
+  have HgT_le b : gT (g b) ≤ g' b :=
     calc (⨅ (b' : β) (_ : g b' = g b), g' b') ⊓ 1
         ≤ (⨅ (b' : β) (_ : g b' = g b), g' b') := inf_le_left
       _ ≤ g' b := iInf_le_of_le b (iInf_le_of_le rfl le_rfl)
-  -- Assemble: ∫ f' dμₗ ≤ ∫ fT∘f dμₗ = ∫ fT d(μₗ.map f) ≤ ∫ gT d(μᵣ.map g) + ε
-  --                                  = ∫ gT∘g dμᵣ + ε ≤ ∫ g' dμᵣ + ε.
   calc ∫⁻ a, f' a ∂μₗ
       ≤ ∫⁻ a, fT (f a) ∂μₗ := lintegral_mono Hf'_le
     _ = ∫⁻ a', fT a' ∂(μₗ.map f) := (lintegral_map HfTm Hfm).symm
     _ ≤ ∫⁻ b', gT b' ∂(μᵣ.map g) + ε := H FT GT HFG
-    _ = ∫⁻ b, gT (g b) ∂μᵣ + ε := by
-          rw [lintegral_map HgTm Hgm]
-    _ ≤ ∫⁻ b, g' b ∂μᵣ + ε := by
-          gcongr
-          · exact HgT_le _
+    _ = ∫⁻ b, gT (g b) ∂μᵣ + ε := by rw [lintegral_map HgTm Hgm]
+    _ ≤ ∫⁻ b, g' b ∂μᵣ + ε := by gcongr; exact HgT_le _
 
-
-/-- Refine the RHS relation of an additive coupling to a `μᵣ`-concentrated set.
-
-Countability-free analogue of the RHS half of `pos_R`: if `μᵣ` lives on a
-measurable set `T` (`μᵣ Tᶜ = 0`), the coupling relation may be strengthened with
-`v.2 ∈ T`. For `μᵣ = dirac b` and `T = {b}` this recovers "the RHS sample is `b`"
-with no atom enumeration, which is exactly what the deterministic/dret step rules
-need. Mirrors `pos_R`'s proof but modifies only `g` (to `1` off `T`) and uses the
-a.e.-equality `g =ᵐ[μᵣ] g'` instead of a countable singleton decomposition. -/
+/-- Strengthen the relation with `v.2 ∈ T` for a set `T` carrying all of `μᵣ`.
+Countability-free: for `μᵣ = dirac b`, `T = {b}` pins the RHS sample with no atom enumeration. -/
 theorem concentrated_R {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     {T : Set β} (hT : MeasurableSet T) (hconc : μᵣ Tᶜ = 0)
     (H : AddCoupl ε S μₗ μᵣ) :
     AddCoupl ε (fun v => S v ∧ v.2 ∈ T) μₗ μᵣ := by
   classical
   rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ Hle
-  -- Modify `g` to be `1` off `T`; it agrees with `g` `μᵣ`-a.e. since `μᵣ Tᶜ = 0`.
   let g' : β → ENNReal := fun b => if b ∈ T then g b else 1
   have Hg'm : Measurable g' := Measurable.ite hT Hgm measurable_const
-  have Hg'b : ∀ b, g' b ≤ 1 := fun b => by
+  have Hg'b b : g' b ≤ 1 := by
     simp only [g']; split_ifs
-    · exact Hgb b
-    · exact le_refl _
+    exacts [Hgb b, le_refl _]
   let G : CouplingFunction β := ⟨g', Hg'm, Hg'b⟩
-  -- `f ≤ g'` on the *original* `S`: on `T` use the refined hypothesis, off `T`
-  -- use `g' = 1 ≥ f`.
-  have HFG : ∀ {a b}, S (a, b) → f a ≤ G.1 b := by
-    intro a b HS
+  have HFG {a b} (HS : S (a, b)) : f a ≤ G.1 b := by
     simp only [G, g']
     split_ifs with hbT
-    · exact Hle ⟨HS, hbT⟩
-    · exact Hfb a
+    exacts [Hle ⟨HS, hbT⟩, Hfb a]
   have hae : g =ᶠ[ae μᵣ] g' := by
     rw [Filter.EventuallyEq, ae_iff]
-    refine measure_mono_null ?_ hconc
-    intro b hb
+    refine measure_mono_null (fun b hb => ?_) hconc
     simp only [Set.mem_compl_iff]
     intro hbT
     exact hb (by simp only [g', ite_eq_left hbT])
-  have Hgeq : ∫⁻ b, g b ∂μᵣ = ∫⁻ b, g' b ∂μᵣ := lintegral_congr_ae hae
-  rw [Hgeq]
+  rw [lintegral_congr_ae hae]
   exact H ⟨f, Hfm, Hfb⟩ G HFG
 
-/-- Refine the LHS relation of an additive coupling to a `μₗ`-concentrated set.
-
-Countability-free analogue of the LHS half of `pos_R`. Mirrors `concentrated_R`,
-modifying only `f` (to `0` off `T`, which is safe because `f` appears on the
-*small* side of the inequality) and using the a.e.-equality `f =ᵐ[μₗ] f'`. -/
+/-- Strengthen the relation with `v.1 ∈ T` for a set `T` carrying all of `μₗ`. -/
 theorem concentrated_L {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     {T : Set α} (hT : MeasurableSet T) (hconc : μₗ Tᶜ = 0)
     (H : AddCoupl ε S μₗ μᵣ) :
     AddCoupl ε (fun v => S v ∧ v.1 ∈ T) μₗ μᵣ := by
   classical
   rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ Hle
-  -- Modify `f` to be `0` off `T`; it agrees with `f` `μₗ`-a.e. since `μₗ Tᶜ = 0`.
   let f' : α → ENNReal := fun a => if a ∈ T then f a else 0
   have Hf'm : Measurable f' := Measurable.ite hT Hfm measurable_const
-  have Hf'b : ∀ a, f' a ≤ 1 := fun a => by
+  have Hf'b a : f' a ≤ 1 := by
     simp only [f']; split_ifs
-    · exact Hfb a
-    · exact zero_le_one
+    exacts [Hfb a, zero_le_one]
   let F : CouplingFunction α := ⟨f', Hf'm, Hf'b⟩
-  -- `f' ≤ g` on the *original* `S`: on `T` use the refined hypothesis, off `T`
-  -- use `f' = 0`.
-  have HFG : ∀ {a b}, S (a, b) → F.1 a ≤ g b := by
-    intro a b HS
+  have HFG {a b} (HS : S (a, b)) : F.1 a ≤ g b := by
     simp only [F, f']
     split_ifs with haT
-    · exact Hle ⟨HS, haT⟩
-    · exact zero_le
+    exacts [Hle ⟨HS, haT⟩, zero_le]
   have hae : f =ᶠ[ae μₗ] f' := by
     rw [Filter.EventuallyEq, ae_iff]
-    refine measure_mono_null ?_ hconc
-    intro a ha
+    refine measure_mono_null (fun a ha => ?_) hconc
     simp only [Set.mem_compl_iff]
     intro haT
     exact ha (by simp only [f', ite_eq_left haT])
-  have Hfeq : ∫⁻ a, f a ∂μₗ = ∫⁻ a, f' a ∂μₗ := lintegral_congr_ae hae
-  rw [Hfeq]
+  rw [lintegral_congr_ae hae]
   exact H F ⟨g, Hgm, Hgb⟩ HFG
 
-/-- Strengthen the relation to its intersection with the product of supports.
+private theorem measure_compl_atoms_null [Countable α] (μ : Measure α) :
+    μ {a | μ {a} ≠ 0}ᶜ = 0 := by
+  rw [show {a | μ {a} ≠ 0}ᶜ = ⋃ a ∈ {a | μ {a} = 0}, ({a} : Set α) by ext; simp,
+    measure_biUnion_null_iff (Set.to_countable _)]
+  exact fun _ ha => ha
 
-Specialized to countable discrete measurable spaces, matching Rocq's setting. In general
-measure-theoretic land this statement is false for continuous measures (every singleton
-has measure zero) — which is the whole reason `concentrated_L` / `concentrated_R` exist.
-
-This is now a *corollary* of those two: a countable space's atom set is measurable, and
-its complement is a countable union of null singletons, hence null. So countability is
-confined to establishing that one concentration fact, rather than being baked into the
-coupling argument itself. -/
+/-- Strengthen the relation to the product of supports.
+False for diffuse measures, hence the countability; a corollary of `concentrated_L/R`. -/
 theorem pos_R [Countable α] [Countable β]
     [MeasurableSingletonClass α] [MeasurableSingletonClass β]
     {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (H : AddCoupl ε S μₗ μᵣ) :
-    AddCoupl ε (fun v => S v ∧ μₗ {v.1} ≠ 0 ∧ μᵣ {v.2} ≠ 0) μₗ μᵣ := by
-  classical
-  -- In a countable space every set is measurable, and the co-atom set is a
-  -- countable union of null singletons.
-  have hmL : MeasurableSet {a : α | μₗ {a} ≠ 0} := (Set.to_countable _).measurableSet
-  have hmR : MeasurableSet {b : β | μᵣ {b} ≠ 0} := (Set.to_countable _).measurableSet
-  have hnullL : μₗ ({a : α | μₗ {a} ≠ 0}ᶜ) = 0 := by
-    have hcompl : ({a : α | μₗ {a} ≠ 0}ᶜ) = {a : α | μₗ {a} = 0} := by
-      ext a; simp
-    rw [hcompl, show {a : α | μₗ {a} = 0} = ⋃ a ∈ {a : α | μₗ {a} = 0}, ({a} : Set α) by
-      ext a; simp]
-    rw [measure_biUnion_null_iff (Set.to_countable _)]
-    exact fun a ha => ha
-  have hnullR : μᵣ ({b : β | μᵣ {b} ≠ 0}ᶜ) = 0 := by
-    have hcompl : ({b : β | μᵣ {b} ≠ 0}ᶜ) = {b : β | μᵣ {b} = 0} := by
-      ext b; simp
-    rw [hcompl, show {b : β | μᵣ {b} = 0} = ⋃ b ∈ {b : β | μᵣ {b} = 0}, ({b} : Set β) by
-      ext b; simp]
-    rw [measure_biUnion_null_iff (Set.to_countable _)]
-    exact fun b hb => hb
-  refine AddCoupl.mono_rel ?_ (concentrated_R hmR hnullR (concentrated_L hmL hnullL H))
-  rintro ⟨a, b⟩ ⟨⟨hS, haL⟩, hbR⟩
-  exact ⟨hS, haL, hbR⟩
+    AddCoupl ε (fun v => S v ∧ μₗ {v.1} ≠ 0 ∧ μᵣ {v.2} ≠ 0) μₗ μᵣ :=
+  mono_rel (by rintro ⟨a, b⟩ ⟨⟨hS, haL⟩, hbR⟩; exact ⟨hS, haL, hbR⟩) <|
+    concentrated_R (Set.to_countable _).measurableSet (measure_compl_atoms_null μᵣ) <|
+    concentrated_L (Set.to_countable _).measurableSet (measure_compl_atoms_null μₗ) H
 
-/-- **Eliminating a coupling at equality.** An `AddCoupl ε (=) μ ν` bounds `μ`
-by `ν` on every measurable set, up to `ε`.
-
-This is the Rocq `ARcoupl_eq_elim`, in measure-theoretic form: instantiate the
-Kantorovich-dual with `f = g = 1_S`, which satisfies the relational premise
-because the relation is equality. Applying it in both directions at `ε = 0`
-yields equality of the two measures (`AddCoupl.eq_of_eq_zero`). -/
+/-- Rocq `ARcoupl_eq_elim`. -/
 theorem eq_elim {ε : ENNReal} {μ ν : Measure α}
     (h : AddCoupl ε {p : α × α | p.1 = p.2} μ ν) {S : Set α} (hS : MeasurableSet S) :
     μ S ≤ ν S + ε := by
-  have hind : Measurable (S.indicator (1 : α → ENNReal)) :=
-    measurable_one.indicator hS
+  have hind : Measurable (S.indicator (1 : α → ENNReal)) := measurable_one.indicator hS
   have hb : BoundedFunction (S.indicator (1 : α → ENNReal)) :=
-    fun a => Set.indicator_apply_le' (fun _ => le_rfl) (fun _ => zero_le)
-  have key := h ⟨_, hind, hb⟩ ⟨_, hind, hb⟩ (fun {a b} hab => by
-    have heq : a = b := hab
-    rw [heq])
-  have hμ : ∫⁻ a, S.indicator (1 : α → ENNReal) a ∂μ = μ S :=
-    lintegral_indicator_one hS
-  have hν : ∫⁻ a, S.indicator (1 : α → ENNReal) a ∂ν = ν S :=
-    lintegral_indicator_one hS
-  rw [hμ, hν] at key
-  exact key
+    fun _ => Set.indicator_apply_le' (fun _ => le_rfl) (fun _ => zero_le)
+  have key := h ⟨_, hind, hb⟩ ⟨_, hind, hb⟩ fun {a b} (hab : a = b) => hab ▸ le_rfl
+  rwa [lintegral_indicator_one hS, lintegral_indicator_one hS] at key
 
-/-- Two measures coupled at equality with **zero** error in both directions are
-equal. This is the sense in which a pair of mutual refinements is an
-*equivalence*: the two programs induce literally the same distribution. -/
 theorem eq_of_eq_zero {μ ν : Measure α}
     (h₁ : AddCoupl 0 {p : α × α | p.1 = p.2} μ ν)
     (h₂ : AddCoupl 0 {p : α × α | p.1 = p.2} ν μ) :
@@ -601,138 +391,77 @@ theorem eq_of_eq_zero {μ ν : Measure α}
   · simpa using eq_elim h₁ hS
   · simpa using eq_elim h₂ hS
 
-/-- Exact couplings embed into approximate couplings at any `ε`. -/
 theorem of_RelCoupl {ε : ENNReal} {S : Set (α × β)}
     {μₗ : Measure α} {μᵣ : Measure β}
     (H : ARCoupling (fun x => x) S μₗ μᵣ) :
     AddCoupl ε S μₗ μᵣ :=
   ARCoupling.mono_F (fun _ => le_self_add) H
 
-/-- Limit/closure: an `AddCoupl` at every `ε + δ` (for `δ > 0`) implies one at `ε`. -/
 theorem limit {ε : ENNReal} {S : Set (α × β)}
     {μₗ : Measure α} {μᵣ : Measure β}
     (H : ∀ δ : ENNReal, 0 < δ → AddCoupl (ε + δ) S μₗ μᵣ) :
     AddCoupl ε S μₗ μᵣ := by
   intro f g Hfg
-  have Hδ : ∀ δ : ENNReal, 0 < δ → ∫⁻ x, f x ∂μₗ ≤ (∫⁻ x, g x ∂μᵣ + ε) + δ := by
-    intro δ Hδpos
-    have := H δ Hδpos f g Hfg
-    rw [show (∫⁻ x, g x ∂μᵣ + ε) + δ = ∫⁻ x, g x ∂μᵣ + (ε + δ) by ring]
-    exact this
-  exact ENNReal.le_of_forall_pos_le_add (fun δ Hδpos _ =>
-    Hδ δ (by exact_mod_cast Hδpos))
+  refine ENNReal.le_of_forall_pos_le_add fun δ Hδ _ => ?_
+  rw [add_assoc]
+  exact H δ (by exact_mod_cast Hδ) f g Hfg
 
-/-- Zero-measure couplings on the right when the slack absorbs the LHS mass. -/
 theorem dzero {ε : ENNReal} (S : Set (α × β)) (μᵣ : Measure β) :
     AddCoupl ε S (0 : Measure α) μᵣ :=
   AddCoupl.zero_left S μᵣ
 
-/-- Two zero measures are coupled at any relation and slack. -/
 theorem dzero_dzero {ε : ENNReal} (S : Set (α × β)) :
     AddCoupl ε S (0 : Measure α) (0 : Measure β) :=
   AddCoupl.zero_left S 0
 
-/-- Inverse direction: coupling to zero forces the LHS mass bound. -/
 theorem dzero_r_inv {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
     (H : AddCoupl ε S μₗ (0 : Measure β)) : μₗ .univ ≤ ε := by
-  have := AddCoupl.mass_leq H
-  simpa using this
+  simpa using AddCoupl.mass_leq H
 
-/-- Antisymmetry: mutual `AddCoupl 0` at equality implies measure equality. -/
 theorem antisym {μ₁ μ₂ : Measure α}
     (H₁ : AddCoupl 0 (fun v => v.1 = v.2) μ₁ μ₂)
-    (H₂ : AddCoupl 0 (fun v => v.1 = v.2) μ₂ μ₁) : μ₁ = μ₂ := by
-  refine Measure.ext fun A HA => ?_
-  -- Test with the indicator of A. Indicator values are in {0,1} ⊆ [0,1].
-  let χ : CouplingFunction α :=
-    ⟨A.indicator (fun _ => 1), Measurable.indicator measurable_const HA, fun a => by
-      simp only [Set.indicator]; split_ifs
-      · exact le_refl _
-      · exact zero_le⟩
-  have Hle : ∀ {a b : α}, a = b → χ.1 a ≤ χ.1 b := fun h => h ▸ le_refl _
-  have H12 := H₁ χ χ Hle
-  have H21 := H₂ χ χ Hle
-  simp only [add_zero] at H12 H21
-  have Hχint : ∀ μ : Measure α, ∫⁻ x, χ.1 x ∂μ = μ A := fun μ => by
-    simp only [χ, lintegral_indicator HA, lintegral_const,
-      Measure.restrict_apply, MeasurableSet.univ, Set.univ_inter, one_mul]
-  rw [Hχint μ₁, Hχint μ₂] at H12
-  rw [Hχint μ₂, Hχint μ₁] at H21
-  exact le_antisymm H12 H21
+    (H₂ : AddCoupl 0 (fun v => v.1 = v.2) μ₂ μ₁) : μ₁ = μ₂ :=
+  eq_of_eq_zero H₁ H₂
 
-/-- Swap the arguments of an `AddCoupl`. Requires equal total masses and both measures
-sub-probability — without those the asymmetric inequality cannot flip. Standard proof
-tests the original coupling against `(1-g, 1-f)` and uses `∫(1-h) = μ.univ - ∫h`. -/
+/-- Requires equal, finite total masses: the proof tests `H` against `(1 - g, 1 - f)`. -/
 theorem swap {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (Hmass : μₗ .univ = μᵣ .univ) (HμₗP : μₗ .univ ≤ 1) (HμᵣP : μᵣ .univ ≤ 1)
     (H : AddCoupl ε S μₗ μᵣ) :
     AddCoupl ε (fun v => S (v.2, v.1)) μᵣ μₗ := by
   rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ Hle
-  -- Apply H at F := (fun a => 1 - g a), G := (fun b => 1 - f b).
   let F : CouplingFunction α :=
     ⟨fun a => 1 - g a, measurable_const.sub Hgm, fun _ => tsub_le_self⟩
   let G : CouplingFunction β :=
     ⟨fun b => 1 - f b, measurable_const.sub Hfm, fun _ => tsub_le_self⟩
-  have HFG : ∀ {a b}, S (a, b) → F.1 a ≤ G.1 b := fun HS =>
-    tsub_le_tsub_left (Hle HS) 1
-  have Hcpl := H F G HFG
-  -- ∫(1-h) dμ = μ.univ - ∫h dμ  (when ∫h ≤ μ.univ < ∞).
-  have Hgint_le : (∫⁻ a, g a ∂μₗ) ≤ μₗ .univ := lintegral_le_meas Hgb (by simp)
-  have Hfint_le : (∫⁻ b, f b ∂μᵣ) ≤ μᵣ .univ := lintegral_le_meas Hfb (by simp)
+  have Hcpl := H F G fun HS => tsub_le_tsub_left (Hle HS) 1
+  have Hgint_le : ∫⁻ a, g a ∂μₗ ≤ μₗ .univ := lintegral_le_meas Hgb (by simp)
+  have Hfint_le : ∫⁻ b, f b ∂μᵣ ≤ μᵣ .univ := lintegral_le_meas Hfb (by simp)
   have HμL_ne : μₗ .univ ≠ ⊤ := ne_top_of_le_ne_top (by simp) HμₗP
   have HμR_ne : μᵣ .univ ≠ ⊤ := ne_top_of_le_ne_top (by simp) HμᵣP
   have HFint : ∫⁻ a, (1 - g a) ∂μₗ = μₗ .univ - ∫⁻ a, g a ∂μₗ := by
-    rw [lintegral_sub Hgm (ne_of_lt (lt_of_le_of_lt Hgint_le HμL_ne.lt_top))
-      (ae_of_all _ Hgb)]
+    rw [lintegral_sub Hgm (Hgint_le.trans_lt HμL_ne.lt_top).ne (ae_of_all _ Hgb)]
     simp
   have HGint : ∫⁻ b, (1 - f b) ∂μᵣ = μᵣ .univ - ∫⁻ b, f b ∂μᵣ := by
-    rw [lintegral_sub Hfm (ne_of_lt (lt_of_le_of_lt Hfint_le HμR_ne.lt_top))
-      (ae_of_all _ Hfb)]
+    rw [lintegral_sub Hfm (Hfint_le.trans_lt HμR_ne.lt_top).ne (ae_of_all _ Hfb)]
     simp
-  rw [HFint, HGint] at Hcpl
-  -- Hcpl : μₗ.univ - ∫g ≤ (μᵣ.univ - ∫f) + ε
-  -- Goal: ∫f dμᵣ ≤ ∫g dμₗ + ε
-  -- Using Hmass, substitute μᵣ.univ → μₗ.univ, then use ENNReal.sub_le_sub_iff_right / add arithmetic.
-  rw [← Hmass] at Hcpl
-  -- Hcpl : μₗ.univ - ∫g ≤ (μₗ.univ - ∫f) + ε
-  -- Since ∫f, ∫g ≤ μₗ.univ < ∞, this is equivalent to ∫f ≤ ∫g + ε.
-  have Hfint_le' : (∫⁻ b, f b ∂μᵣ) ≤ μₗ .univ := Hmass ▸ Hfint_le
-  -- Rearrange: add ∫g dμₗ to both sides of Hcpl: μₗ.univ ≤ (μₗ.univ - ∫f) + ε + ∫g.
-  --            Then use tsub_le_iff_left: ∫f ≤ (something).
-  -- Cleanest: ENNReal arithmetic via `tsub_le_iff_right` and `le_tsub_add`.
-  -- Equivalent formulation: μₗ.univ + (∫f + 0) ≤ μₗ.univ + (∫g + ε).
-  -- Use add_le_add_iff_left (requires finiteness).
-  -- Name the integrals for legibility.
-  set IF := ∫⁻ b, f b ∂μᵣ with hIF
-  set IG := ∫⁻ a, g a ∂μₗ with hIG
-  set M := μₗ .univ with hM
-  -- Hcpl : M - IG ≤ (M - IF) + ε. Goal: IF ≤ IG + ε.
-  -- Step 1: add IG to both sides → M ≤ (M - IF) + ε + IG (using IG ≤ M)
-  have Step1 : M ≤ (M - IF) + ε + IG := by
+  rw [HFint, HGint, ← Hmass] at Hcpl
+  rw [← Hmass] at Hfint_le
+  set IF := ∫⁻ b, f b ∂μᵣ
+  set IG := ∫⁻ a, g a ∂μₗ
+  set M := μₗ .univ
+  have hM : M ≤ (M - IF) + ε + IG :=
     calc M = (M - IG) + IG := (tsub_add_cancel_of_le Hgint_le).symm
-      _ ≤ ((M - IF) + ε) + IG := by gcongr
-  -- Step 2: add IF both sides → M + IF ≤ M + ε + IG
-  have Step2 : M + IF ≤ M + ε + IG := by
-    calc M + IF ≤ ((M - IF) + ε + IG) + IF := by gcongr
-      _ = ((M - IF) + IF) + (ε + IG) := by ring_nf
-      _ = M + (ε + IG) := by rw [tsub_add_cancel_of_le Hfint_le']
-      _ = M + ε + IG := by ring_nf
-  -- Step 3: cancel M on the left.
-  have Step3 : IF ≤ ε + IG := ENNReal.le_of_add_le_add_left HμL_ne (by
-    calc M + IF ≤ M + ε + IG := Step2
-      _ = M + (ε + IG) := by ring_nf)
-  calc IF ≤ ε + IG := Step3
-    _ = IG + ε := by ring_nf
+      _ ≤ (M - IF) + ε + IG := by gcongr
+  refine ENNReal.le_of_add_le_add_left HμL_ne ?_
+  calc M + IF ≤ (M - IF) + ε + IG + IF := by gcongr
+    _ = (M - IF + IF) + (IG + ε) := by ac_rfl
+    _ = M + (IG + ε) := by rw [tsub_add_cancel_of_le Hfint_le]
 
-end Stubs
-
-/-- Trivial coupling: if the LHS has mass at most 1 and `1 ≤ ε`, then any
-`AddCoupl` claim holds — the LHS mass is absorbed by the slack alone.
-Rocq analogue: `ARcoupl_1`. -/
+/-- Rocq: `ARcoupl_1`. -/
 theorem trivial_of_one_le {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
     {μᵣ : Measure β} (Hε : 1 ≤ ε) (Hmass : μₗ Set.univ ≤ 1) :
     AddCoupl ε S μₗ μᵣ := by
-  rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ _Hle
+  rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ _
   calc ∫⁻ x, f x ∂μₗ
       _ ≤ μₗ Set.univ := lintegral_le_meas Hfb (by simp)
       _ ≤ 1 := Hmass

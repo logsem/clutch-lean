@@ -13,7 +13,6 @@ namespace ProbLang
 namespace TotalEris
 namespace Examples
 
-/-- The geometric sampler. -/
 @[pl_names]
 def geometric {rT : Type _} : Exp rT :=
   pl% rec geo n :=

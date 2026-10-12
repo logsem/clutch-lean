@@ -35,7 +35,6 @@ variable {α α' β β' Φ Φ' : Type _}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace Φ]
 variable [MeasurableSpace α'] [MeasurableSpace β'] [MeasurableSpace Φ']
 
-/-- The product span -/
 def Span.prod (s₁ : Span α β Φ) (s₂ : Span α' β' Φ') : Span (α × α') (β × β') (Φ × Φ') where
   left := fun ⟨p, p'⟩ => ⟨s₁.left p, s₂.left p'⟩
   right := fun ⟨p, p'⟩ => ⟨s₁.right p, s₂.right p'⟩

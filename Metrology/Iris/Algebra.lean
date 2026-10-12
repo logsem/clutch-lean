@@ -38,17 +38,14 @@ instance [MeasurableSpace α] : CMRA (Measure α) where
   pcore_op_left := by simp
   pcore_idem := by simp
   pcore_op_mono {_ _} := by
-    rintro ⟨rfl⟩ Y
+    rintro ⟨rfl⟩ _
     exact ⟨0, Option.some_inj.mpr (zero_add 0).symm⟩
   extend {_ _ y1 y2} _ := (⟨y1, y2, ·, rfl, rfl⟩)
 
 instance [MeasurableSpace α] : UCMRA (Measure α) where
   unit := 0
   unit_valid := by simp [CMRA.Valid]
-  unit_left_id := by
-    intro μ
-    refine (zero_add _)
+  unit_left_id := zero_add _
   pcore_unit := by simp [CMRA.pcore]
-
 
 end

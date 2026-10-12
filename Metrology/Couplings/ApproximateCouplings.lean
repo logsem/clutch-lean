@@ -38,7 +38,6 @@ variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
 
 open MeasureTheory
 
-/-- Approximate relational coupling between μₗ and μᵣ on the set Φ. -/
 def ARCoupling (F : ENNReal → ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) :=
   ∀ (f : CouplingFunction α) (g : CouplingFunction β),
     (∀ {a b}, Φ (a, b) → f a ≤ g b) →
@@ -60,23 +59,17 @@ theorem dirac {a : α} {b : β} (HF : ∀ {x}, x ≤ F x) (Φ : Set (α × β)) 
   rw [lintegral_dirac' _ Hf, lintegral_dirac' _ Hg]
   exact Hle H
 
-/-- Enlarging the output bound `F` weakens the coupling: if `F ≤ F'` pointwise then any
-`ARCoupling F S` is also an `ARCoupling F' S`. -/
 theorem mono_F {Φ : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (HF : ∀ x, F x ≤ F' x) (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F' Φ μₗ μᵣ :=
   fun f g Hle => (H f g Hle).trans (HF _)
 
-/-- Enlarging the relation `S` weakens the coupling: coupling under the smaller relation
-implies coupling under the larger one. -/
 theorem mono_rel {Φ Φ' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} (HS : Φ ⊆ Φ')
     (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F Φ' μₗ μᵣ :=
   fun f g Hle => H f g fun hab => Hle (HS hab)
 
-/-- The zero measure is trivially coupled on the left: `∫⁻ f ∂0 = 0 ≤ F _`. -/
-theorem zero_left {F : ENNReal → ENNReal} (S : Set (α × β)) (μᵣ : Measure β) :
+theorem zero_left (S : Set (α × β)) (μᵣ : Measure β) :
     ARCoupling F S 0 μᵣ := by intro _ _ _; simp
 
-/-- Coupling against the zero measure on the right. -/
 theorem zero_right (S : Set (α × β)) {μₗ : Measure α}
     (HF : μₗ .univ ≤ F 0) : ARCoupling F S μₗ (0 : Measure β) := by
   refine fun ⟨f, _, Hfb⟩ g Hle => ?_
@@ -85,8 +78,7 @@ theorem zero_right (S : Set (α × β)) {μₗ : Measure α}
     _ ≤ F 0 := HF
     _ ≤ F (∫⁻ (x : β), g x ∂0) := by simp
 
--- TODO: Perhaps show that couplings lift when two things are measure_eq
--- Define follow lintergal_map for this proof
+-- TODO: couplings transport along measure equalities (follow `lintegral_map`)
 
 end ARCoupling
 end ApproximateCoupling

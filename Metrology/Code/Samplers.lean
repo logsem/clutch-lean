@@ -7,9 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Sampler programs
 
-The programs behind `TotalEris/Examples/Samplers`, listed bottom-up. Their
-specifications live next to the proofs there, at `rT = ℝ`. The programs are generic in the
-reals, so that `#sample` can also run them at `rT = Float`. -/
+Specified in `TotalEris/Examples/Samplers` at `rT = ℝ`; generic in the reals so that
+`#sample` can also run them at `rT = Float`. -/
 
 namespace ProbLang
 namespace TotalEris
@@ -39,7 +38,6 @@ def DecrTrial {rT : Type _} : Exp rT := pl%
 def LeHalf {rT : Type _} [ProbLangℝ rT] : Exp rT :=
   pl% fun x, x <= #(.real (ProbLangℝ.realOfRat (1 / 2)))
 
-/-- Unbiased coin: `urand ≤ ½`. -/
 @[pl_fold]
 def FairCoin {rT : Type _} [ProbLangℝ rT] : Exp rT := pl%
   fun _u,

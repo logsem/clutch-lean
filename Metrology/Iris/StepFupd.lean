@@ -36,8 +36,8 @@ theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
   · imod HwP $$ %hp with HfP
     iintro !> -
     iexact HfP
-  · iintro !> %HS
-    exact absurd HS hp
+  · iintro !> %hp'
+    exact absurd hp' hp
 
 theorem step_fupdN_pure_wand_intro (E : CoPset) (n : Nat) {p q : Prop} : iprop%
     (⌜p⌝ -∗ |={E}[E]▷=>^[n] ⌜q⌝) ⊢@{PROP} |={E}[E]▷=>^[n] (⌜p⌝ -∗ ⌜q⌝) := by

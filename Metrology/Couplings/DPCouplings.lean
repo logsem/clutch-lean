@@ -34,9 +34,7 @@ abbrev ARCoupling.DP (S : Set (α × β)) := ARCoupling (DPF ε δ) S
 theorem ARCoupling.DP.trivial_δ {μₗ : Measure α} {μᵣ : Measure β} {S} (Hδ : μₗ .univ ≤ δ) :
     ARCoupling.DP ε δ S μₗ μᵣ := by
   refine fun ⟨f, _, Hf⟩ _ _ => ?_
-  refine lintegral_le_meas Hf (fun _ => (·.elim trivial)) |>.trans ?_
-  refine Hδ.trans ?_
-  exact le_add_self
+  exact (lintegral_le_meas Hf fun _ => (·.elim trivial)).trans (Hδ.trans le_add_self)
 
 theorem ARCoupling.DP.dirac {a : α} {b : β} (S : Set (α × β)) :
     S (a, b) → ARCoupling.DP ε δ S (.dirac a) (.dirac b) := by
@@ -58,7 +56,6 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     refine (lintegral_le_iSup_mul (f := f')).trans ?_
     exact Left.mul_le_one (iSup_le (Hf'b ·)) Hfsprob
 
-  /- Set up the reduction -/
   let F : CouplingFunction α := .mk (max 0 <| ∫⁻ y, f' y ∂ f · - δ') ⟨?Fm, fun a => ?Fb⟩
   case Fm =>
     refine measurable_const.max ?_
@@ -72,7 +69,6 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     exact measurable_lintegral Hg'm |>.comp Hgm
   case Gb => exact min_le_left _ _
 
-  /- The main inequality -/
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   calc  ∫⁻ a, ∫⁻ (x : α'), f' x ∂f a ∂μₗ
@@ -93,8 +89,8 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
   · rw [add_assoc]; refine add_le_add (le_refl _) ?_
     rw [add_comm]
     refine Hcpl F G (fun {a b} HS => ?_)
-    simp only [ G]
-    refine max_le (zero_le) (le_min ?_ ?_)
+    simp only [G]
+    refine max_le zero_le (le_min ?_ ?_)
     · exact Hf'le _
     · refine tsub_le_iff_left.mpr ?_
       rw [add_comm]; exact Hbind HS ⟨f', ⟨Hf'm, Hf'b⟩⟩ ⟨g', ⟨Hg'm, Hg'b⟩⟩ Hf'g'
@@ -102,10 +98,9 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     refine (ENNReal.mul_le_mul_iff_right (by simp) (by simp [Hε])).mpr ?_
     refine lintegral_mono (fun b => ?_)
     exact min_le_right _ _
-  · simp [ exp_add, add_comm, mul_assoc]
+  · simp [exp_add, add_comm, mul_assoc]
     refine le_of_eq ?_
     congr
     exact lintegral_const_mul (exp ε') (measurable_lintegral Hg'm |>.comp Hgm)
 
 end DPCoupling
-

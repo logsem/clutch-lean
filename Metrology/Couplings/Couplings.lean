@@ -21,13 +21,12 @@ public import Metrology.Couplings.AdditiveCouplings
 
 section Couplings
 
-
 variable {α β α' β' : Type _}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [MeasurableSpace β']
 
 open MeasureTheory Measure
 
-/-- Exact relational coupling: the zero-slack case of `ARcoupl`. -/
+/-- Exact relational coupling: the zero-slack case of `ARCoupling`. -/
 def RelCoupl (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) : Prop :=
   ARCoupling id Φ μₗ μᵣ
 
@@ -42,7 +41,6 @@ theorem relCoupl_addCoupl {Φ : Set (α × β)} {μₗ : Measure α} {μᵣ : Me
 theorem refl_zero (μ : Measure α) : RelCoupl (fun v => v.1 = v.2) μ μ :=
   ARCoupling.refl μ (refl _)
 
-/-- Any measure `μ` is `Rcoupl`-coupled to its pushforward `μ.map h` along the graph of `h`. -/
 theorem map {h : α → β} (hm : Measurable h) (μ : Measure α) :
     RelCoupl (fun v => v.2 = h v.1) μ (μ.map h) := by
   erw [relCoupl_addCoupl]
@@ -53,27 +51,18 @@ theorem map {h : α → β} (hm : Measurable h) (μ : Measure α) :
       _ ≤ ∫⁻ a, g (h a) ∂μ := lintegral_mono fun a => Hfg rfl
       _ = ∫⁻ b, g b ∂(μ.map h) := (lintegral_map gm hm).symm
 
-/-- A measure-preserving map `h : α → β` gives an exact coupling of the source measure with
-any target measure it preserves. In particular, with `α = β` and `h` a measurable permutation
-that fixes `μ` (i.e. `μ.map h = μ`), this gives `Rcoupl` of `μ` with itself along `h`. -/
 theorem map_of_measurePreserving {h : α → β} {μ : Measure α} {ν : Measure β}
     (hp : MeasurePreserving h μ ν) :
     RelCoupl (fun v => v.2 = h v.1) μ ν := by
   rw [← hp.map_eq]
   exact map hp.measurable μ
 
-/-- Specialization: a measure is exactly self-coupled along any permutation that preserves
-it. This is the measure-theoretic analogue of Clutch's `ARcoupl_dunif`: if `h : α → α`
-preserves `μ` (e.g. `μ` is uniform on a finite type and `h` is a bijection), then
-`Rcoupl (fun (a, a') => a' = h a) μ μ`. -/
+/-- Measure-theoretic analogue of Clutch's `ARcoupl_dunif`. -/
 theorem self_of_measurePreserving {h : α → α} {μ : Measure α}
     (hp : MeasurePreserving h μ μ) :
     RelCoupl (fun v => v.2 = h v.1) μ μ :=
   map_of_measurePreserving hp
 
-/-- Two probability measures are exactly coupled under the universal relation, provided
-every test function `f` is pointwise ≤ every test function `g`. The argument threads
-through the sup of `f` and the inf of `g`: `∫⁻ f dμ ≤ ⨆ f ≤ ⨅ g ≤ ∫⁻ g dμ'`. -/
 theorem trivial {μₗ : Measure α} {μᵣ : Measure β}
     (Hμₗ : μₗ .univ = 1) (Hμᵣ : μᵣ .univ = 1) :
     RelCoupl Set.univ μₗ μᵣ := by
@@ -81,22 +70,17 @@ theorem trivial {μₗ : Measure α} {μᵣ : Measure β}
   intro ⟨f, _, Hfb⟩ ⟨g, _, Hgb⟩ Hfg
   show ∫⁻ a, f a ∂μₗ ≤ ∫⁻ b, g b ∂μᵣ + 0
   rw [add_zero]
-  have hf_le_sup : ∫⁻ a, f a ∂μₗ ≤ ⨆ a, f a :=
-    (lintegral_le_iSup_mul f).trans (by rw [Hμₗ, mul_one])
-  have hlt : ⨆ a, f a ≤ ⨅ b, g b :=
-    iSup_le fun a => le_iInf fun b => Hfg (Set.mem_univ (a, b))
-  have hg_ge_inf : ⨅ b, g b ≤ ∫⁻ b, g b ∂μᵣ :=
-    (by rw [Hμᵣ, mul_one] : (⨅ b, g b) * μᵣ .univ = ⨅ b, g b) ▸ iInf_mul_le_lintegral g
-  exact hf_le_sup.trans (hlt.trans hg_ge_inf)
+  calc ∫⁻ a, f a ∂μₗ
+      _ ≤ ⨆ a, f a := (lintegral_le_iSup_mul f).trans (by rw [Hμₗ, mul_one])
+      _ ≤ ⨅ b, g b := iSup_le fun a => le_iInf fun b => Hfg (Set.mem_univ (a, b))
+      _ ≤ ∫⁻ b, g b ∂μᵣ :=
+        (by rw [Hμᵣ, mul_one] : (⨅ b, g b) * μᵣ .univ = ⨅ b, g b) ▸ iInf_mul_le_lintegral g
 
-/-- Exact coupling implies approximate coupling for any `ε`: just use `mono_ε`. -/
 theorem exact {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (H : RelCoupl S μₗ μᵣ) : AddCoupl ε S μₗ μᵣ := by
-  refine AddCoupl.mono_grading (zero_le) ?_
+  refine AddCoupl.mono_grading zero_le ?_
   rwa [← relCoupl_addCoupl]
 
-/-- Limit lemma: if the coupling holds for every `ε' > ε`, it holds at `ε` itself.
-Equivalently, `ε` is an infimum of achievable slacks. -/
 theorem limit {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (H : ∀ ε', ε < ε' → AddCoupl ε' S μₗ μᵣ) : AddCoupl ε S μₗ μᵣ := by
   intro f g Hfg

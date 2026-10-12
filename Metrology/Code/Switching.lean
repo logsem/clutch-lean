@@ -8,18 +8,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Programs for the PRF/PRP switching lemma
 
-Ports the object-language code behind `clutch/theories/approxis/examples/prp_prf_weak.v`:
-
-* association-list maps in one heap cell (`initMap`/`getMap`/`setMap`), storing a pure
-  assoc-list *value* rather than clutch's linked heap cells — observationally the same
-  interface, far less heap reasoning;
-* the idealised random function (`randomFunction`): memoise a fresh `rand N` per query;
-* the idealised random permutation (`randomPermutation`): a map of past queries plus a
-  ref holding the list of unsampled values, sampling uniformly from the remainder;
-* the "weak" games `wPRF`/`wPRP`: query the oracle `Q` times at uniform inputs and
-  return the list of (input, output) pairs.
-
-Verified in `Metrology/Approxis/Examples/`. -/
+Ports `clutch/theories/approxis/examples/prp_prf_weak.v`. Maps store a pure assoc-list value
+in one heap cell instead of clutch's linked cells: same interface, far less heap reasoning. -/
 
 namespace ProbLang
 
@@ -31,19 +21,17 @@ namespace Switching
 
 A list value is `inl ()` (nil) or `inr (x, rest)` (cons). -/
 
-/-- The value of a list of integers. -/
 def intListVal : List Int → Val rT
   | [] => .inl .unit
   | n :: l => .inr (.pair (.int n) (intListVal l))
 
-/-- The value of an integer association list (leftmost binding wins). -/
+/-- Leftmost binding wins. -/
 def assocVal : List (Int × Int) → Val rT
   | [] => .inl .unit
   | (k, y) :: m => .inr (.pair (.pair (.int k) (.int y)) (assocVal m))
 
 /-! ## List programs -/
 
-/-- Length of a list value. -/
 @[pl_fold] def listLength : Exp rT := pl%
   rec len l :=
     case! l
@@ -64,34 +52,28 @@ def assocVal : List (Int × Int) → Val rT
 
 /-! ## Association-list maps in a single cell -/
 
-/-- Look up key `k` in an assoc-list value (leftmost match wins). -/
 @[pl_fold] def findList : Exp rT := pl%
   rec find l k :=
     case! l
     | inl(_u) => inl(#.unit)
     | inr(p) => if fst(fst(p)) = k then inr(snd(fst(p))) else find (snd(p)) k
 
-/-- Allocate an empty map. -/
 def initMap : Exp rT := pl% fun _u, alloc(inl(#.unit))
 
-/-- `getMap m k`: `SOME v` if `k ↦ v` is in the map, else `NONE`. -/
+/-- `SOME v` if `k ↦ v` is in the map, else `NONE`. -/
 @[pl_fold] def getMap : Exp rT := pl% fun m k, &findList (!m) k
 
-/-- `setMap m k v`: bind `k ↦ v` (shadowing any previous binding). -/
 @[pl_fold] def setMap : Exp rT := pl% fun m k v, m ← inr(((k, v), !m))
 
 /-! ## The idealised random function -/
 
-/-- The query closure of the random function over map location `ℓ`: on a fresh
-input draw `rand N`, memoise it, and return it; on a repeat input return the
-memoised answer. -/
+/-- The query closure of `randomFunction N` once its map is allocated at `ℓ`. -/
 def rfQuery (N : Int) (ℓ : Loc) : Exp rT := pl%
   fun x,
     case! (&getMap #(.loc ℓ) x)
     | inl(_u) => (let y := rand(#(.int N), #.unit); &setMap #(.loc ℓ) x y; y)
     | inr(y) => y
 
-/-- An idealised random function with output space `[0, N)`. -/
 def randomFunction (N : Int) : Exp rT := pl%
   let m := &initMap #.unit;
   fun x,
@@ -101,9 +83,8 @@ def randomFunction (N : Int) : Exp rT := pl%
 
 /-! ## The idealised random permutation -/
 
-/-- The query closure of the random permutation over map location `ℓm` and
-fresh-values location `ℓfv`: on a fresh input, sample an index into the list of
-unsampled values, remove it, and memoise it. -/
+/-- The query closure of `randomPermutation N` once its map is at `ℓm` and its list of
+unsampled values at `ℓfv`. -/
 def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
   fun x,
     case! (&getMap #(.loc ℓm) x)
@@ -115,8 +96,6 @@ def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
        | inr(p) => (&setMap #(.loc ℓm) x (fst(p)); #(.loc ℓfv) ← snd(p); fst(p)))
     | inr(y) => y
 
-/-- An idealised random permutation of `[0, N)`: the fresh-values list starts as
-`[0, …, N-1]`. -/
 def randomPermutation (N : Int) : Exp rT := pl%
   let fv := alloc({(intListVal ((List.range N.toNat).map Int.ofNat)).1});
   let m := &initMap #.unit;
@@ -134,9 +113,6 @@ def randomPermutation (N : Int) : Exp rT := pl%
 
 Query the oracle at `Q` uniform inputs, collecting the (input, output) pairs. -/
 
-/-- The query loop of the weak games: `wLoop N f res i` queries the oracle `f` at
-`i` uniform inputs from `[0, N)`, consing each (input, output) pair onto the
-accumulator location `res`. -/
 @[pl_fold] def wLoop (N : Int) : Exp rT := pl%
   rec loop f res i :=
     if i = #0 then #.unit
@@ -146,16 +122,12 @@ accumulator location `res`. -/
        res ← inr(((x, y), !res));
        loop f res (i - #1))
 
-/-- The weak PRF game: `Q` queries to an idealised random function at uniform
-inputs, returning the list of (input, output) pairs. -/
 def wPRF (N Q : Int) : Exp rT := pl%
   let f := {randomFunction N};
   let res := alloc(inl(#.unit));
   {wLoop N} f res #(.int Q);
   !res
 
-/-- The weak PRP game: `Q` queries to an idealised random permutation at uniform
-inputs, returning the list of (input, output) pairs. -/
 def wPRP (N Q : Int) : Exp rT := pl%
   let f := {randomPermutation N};
   let res := alloc(inl(#.unit));
@@ -164,10 +136,9 @@ def wPRP (N Q : Int) : Exp rT := pl%
 
 /-! ## `openRec`/`closeRec` erasure (`pl_step_simp`)
 
-The library constants are closed programs, so `openRec`/`closeRec` on them are the
-identity. Registering the identities in `pl_step_simp` lets the step tactics erase
-the stuck wrappers that β-substitution leaves around a constant referenced under
-binders, instead of forcing every later `whnf` to re-evaluate the constant's body. -/
+The constants are closed, so `openRec`/`closeRec` fix them. As `pl_step_simp` lemmas they let the
+step tactics erase the wrappers β-substitution leaves around constants under binders, instead of
+every later `whnf` re-evaluating the constant's body. -/
 
 theorem findList_fv : (findList : Exp rT).fv = ∅ := rfl
 theorem listLength_fv : (listLength : Exp rT).fv = ∅ := rfl
