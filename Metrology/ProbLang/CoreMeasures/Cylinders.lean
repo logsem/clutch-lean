@@ -2,8 +2,6 @@ module
 
 public import Metrology.ProbLang.Measure
 
-meta import Metrology.Meta
-
 @[expose] public section
 
 noncomputable section ProbLangMeasures
@@ -12,7 +10,8 @@ open Classical MeasureTheory ProbabilityTheory Measure
 /-! # Shared cylinder lemmas
 
 Generic lemmas behind `cylinder_defs` (`CylinderGen.lean`), over the cylinder type `Cyl`, the
-underlying type `T` and the shape type `Shp`. See `STAMPING.md`. -/
+underlying type `T` and the shape type `Shp`. The sections follow the order of the generated code.
+-/
 
 /-- The generated `flatten`, `shape`, `Cylinder.shape`, `Shape.cylinder` and `cover.*` equations. -/
 register_simp_attr cylinder_simp
@@ -22,12 +21,38 @@ namespace Cylinders
 variable {Cyl T Shp : Type _}
   {flatten : Cyl → Set T} {shape : T → Shp} {cShape : Cyl → Shp}
 
+/-! ### Measurable cylinders (for `flatten_measurable`) -/
+
+theorem flatten_measurable {HML : Cyl → Prop} [m : MeasurableSpace T]
+    (hgen : m = .generateFrom (flatten '' {c : Cyl | HML c}))
+    {c : Cyl} (hc : HML c) : MeasurableSet (flatten c) := by
+  subst hgen
+  exact MeasurableSpace.measurableSet_generateFrom ⟨c, hc, rfl⟩
+
+/-! ### Shapes (for `Cylinder.flatten_disjoint_of_shape_ne` and `Shape.cylinder_preimage_shape`) -/
+
 theorem flatten_disjoint_of_shape_ne
     (shape_of_mem : ∀ {c : Cyl} {p : T}, p ∈ flatten c → shape p = cShape c)
     {c₁ c₂ : Cyl} (h : cShape c₁ ≠ cShape c₂) :
     flatten c₁ ∩ flatten c₂ = ∅ :=
   Set.eq_empty_of_forall_notMem fun _ ⟨hp₁, hp₂⟩ =>
     h ((shape_of_mem hp₁).symm.trans (shape_of_mem hp₂))
+
+/-- `mem_self` is proved per type by induction on `p` alone, which keeps the proof linear in the
+number of constructors (no casing on `s`). -/
+theorem cylinder_preimage_shape {sCyl : Shp → Cyl}
+    (shape_of_mem : ∀ {c : Cyl} {p : T}, p ∈ flatten c → shape p = cShape c)
+    (cShape_sCyl : ∀ s : Shp, cShape (sCyl s) = s)
+    (mem_self : ∀ p : T, p ∈ flatten (sCyl (shape p)))
+    (s : Shp) : flatten (sCyl s) = shape ⁻¹' {s} := by
+  ext p
+  simp only [Set.mem_preimage, Set.mem_singleton_iff]
+  constructor
+  · intro hp; rw [shape_of_mem hp, cShape_sCyl]
+  · rintro rfl; exact mem_self p
+
+/-! ### The generating family (for `Cylinder.flatten_inter_some`, `Cylinder.flatten_isPiSystem`
+and `Cylinder.flatten_isCountablySpanning`) -/
 
 theorem flatten_inter_some {inter? : Cyl → Cyl → Option Cyl}
     (flatten_inter : ∀ c₁ c₂ : Cyl,
@@ -67,51 +92,11 @@ theorem flatten_isCountablySpanning [Countable Shp] {HML : Cyl → Prop} {sCyl :
     rw [enc.encodek]
     simp [preimage_shape]
 
-theorem flatten_measurable {HML : Cyl → Prop} [m : MeasurableSpace T]
-    (hgen : m = .generateFrom (flatten '' {c : Cyl | HML c}))
-    {c : Cyl} (hc : HML c) : MeasurableSet (flatten c) := by
-  subst hgen
-  exact MeasurableSpace.measurableSet_generateFrom ⟨c, hc, rfl⟩
+/-! ### Base fields (for `c.measurableEmbedding`)
 
-theorem measurableSet_singleton {HML : Cyl → Prop} [m : MeasurableSpace T]
-    (hgen : m = .generateFrom (flatten '' {c : Cyl | HML c}))
-    {sCylP : T → Cyl}
-    (sCylP_flatten : ∀ p : T, flatten (sCylP p) = {p})
-    (sCylP_hML : ∀ p : T, HML (sCylP p))
-    (p : T) : MeasurableSet ({p} : Set T) := by
-  rw [← sCylP_flatten p]
-  subst hgen
-  exact MeasurableSpace.measurableSet_generateFrom ⟨sCylP p, sCylP_hML p, rfl⟩
+The generating family of a countable type with measurable singletons. A rectangle with a singleton
+at each base field is the image of one cylinder; with `∅`, it is empty. -/
 
-/-- `mem_self` is proved per type by induction on `p` alone, which keeps the proof linear in the
-number of constructors (no casing on `s`). -/
-theorem cylinder_preimage_shape {sCyl : Shp → Cyl}
-    (shape_of_mem : ∀ {c : Cyl} {p : T}, p ∈ flatten c → shape p = cShape c)
-    (cShape_sCyl : ∀ s : Shp, cShape (sCyl s) = s)
-    (mem_self : ∀ p : T, p ∈ flatten (sCyl (shape p)))
-    (s : Shp) : flatten (sCyl s) = shape ⁻¹' {s} := by
-  ext p
-  simp only [Set.mem_preimage, Set.mem_singleton_iff]
-  constructor
-  · intro hp; rw [shape_of_mem hp, cShape_sCyl]
-  · rintro rfl; exact mem_self p
-
-/-- The projection `π` of a constructor with uncurried form `g` is its partial inverse. -/
-theorem proj_measurable {A : Type _} [MeasurableSpace A] [MeasurableSpace T]
-    {π : T → Option A} {g : A → T}
-    (hemb : MeasurableEmbedding g)
-    (h_none : π ⁻¹' ({none} : Set (Option A)) = (Set.range g)ᶜ)
-    (h_some : ∀ S : Set A, π ⁻¹' (some '' S) = g '' S) :
-    Measurable π :=
-  Measurable.option_of_cov hemb.measurableSet_range h_none
-    (fun S hS => by rw [h_some S]; exact hemb.measurableSet_image' hS)
-
-theorem measurableSet_of_forall_notMem {X : Type _} [MeasurableSpace X] {s : Set X}
-    (h : ∀ x, x ∉ s) : MeasurableSet s := by
-  rw [Set.eq_empty_of_forall_notMem h]; exact .empty
-
-/-- A generating π-system for a countable discrete type. A rectangle with a singleton at each base
-field is the image of one cylinder; with `∅`, it is empty. -/
 def points (X : Type _) : Set (Set X) := insert ∅ (Set.range ({·}))
 
 theorem points_isPiSystem {X : Type _} : IsPiSystem (points X) := by
@@ -135,7 +120,35 @@ theorem points_generateFrom {X : Type _} [Countable X] [MeasurableSpace X]
   · rw [← Set.biUnion_of_singleton s]
     exact .biUnion s.to_countable fun x _ => MeasurableSpace.measurableSet_generateFrom (.inr ⟨x, rfl⟩)
 
-/-! ### Generic cells for structural recursion
+/-! ### Constructors (for `c.ι.measurable` and `c.π.measurable`) -/
+
+theorem measurableSet_of_forall_notMem {X : Type _} [MeasurableSpace X] {s : Set X}
+    (h : ∀ x, x ∉ s) : MeasurableSet s := by
+  rw [Set.eq_empty_of_forall_notMem h]; exact .empty
+
+/-- The projection `π` of a constructor with uncurried form `g` is its partial inverse. -/
+theorem proj_measurable {A : Type _} [MeasurableSpace A] [MeasurableSpace T]
+    {π : T → Option A} {g : A → T}
+    (hemb : MeasurableEmbedding g)
+    (h_none : π ⁻¹' ({none} : Set (Option A)) = (Set.range g)ᶜ)
+    (h_some : ∀ S : Set A, π ⁻¹' (some '' S) = g '' S) :
+    Measurable π :=
+  Measurable.option_of_cov hemb.measurableSet_range h_none
+    (fun S hS => by rw [h_some S]; exact hemb.measurableSet_image' hS)
+
+/-! ### Singletons (for `instMeasurableSingletonClass`) -/
+
+theorem measurableSet_singleton {HML : Cyl → Prop} [m : MeasurableSpace T]
+    (hgen : m = .generateFrom (flatten '' {c : Cyl | HML c}))
+    {sCylP : T → Cyl}
+    (sCylP_flatten : ∀ p : T, flatten (sCylP p) = {p})
+    (sCylP_hML : ∀ p : T, HML (sCylP p))
+    (p : T) : MeasurableSet ({p} : Set T) := by
+  rw [← sCylP_flatten p]
+  subst hgen
+  exact MeasurableSpace.measurableSet_generateFrom ⟨sCylP p, sCylP_hML p, rfl⟩
+
+/-! ### Structural recursion (for `measurable_struct_rec*`)
 
 `StructRec.measurable_of_cells` reduces measurability of a structurally recursive function to its
 cells `{p | shape p = s ∧ f p ∈ U}`. On the cell of a constructor `ι : A → T`, `f ∘ ι` is some
