@@ -406,15 +406,12 @@ def genShape (ctx : Ctx) : CommandElabM Command := do
     let ns := ctx.ownNames c "s"
     let bs ← c.keys.mapM fun i => do `(bracketedBinder| ($(ns[i]!):ident : $(← shapeFieldType c.fields[i]!)))
     `(Parser.Command.ctor| | $c.ident:ident $bs*)
+  let shape ← `(/-- Shapes: values with data fields forgotten, so that `Shape` is countable. -/
+    inductive Shape $ctors:ctor* deriving Countable)
   let n := ctx.ctors.size
   -- `deriving Countable` is quadratic in the number of constructors
-  if n ≤ 30 then
-    `(/-- Shapes: values with data fields forgotten, so that `Shape` is countable. -/
-      inductive Shape $ctors:ctor* deriving Countable)
-  else
-    `(set_option maxHeartbeats $(Syntax.mkNumLit (toString (200000 * (n * n / 900 + 1)))) in
-      /-- Shapes: values with data fields forgotten, so that `Shape` is countable. -/
-      inductive Shape $ctors:ctor* deriving Countable)
+  if n ≤ 30 then return shape
+  `(set_option maxHeartbeats $(Syntax.mkNumLit (toString (200000 * (n * n / 900 + 1)))) in $shape:command)
 
 /-- The equations of `fn` on a type `dom`, as one conjunction proved by `rfl`: Lean's own equation
 lemmas are slow to generate. `arm c` gives the fields of `c` and the right-hand side. -/
@@ -476,19 +473,20 @@ def Ctor.shapeOf (c : Ctor) (ns : Array Ident) (self : Ident) : CommandElabM Ter
 /-- `T.shape` (`ofValue`) or `Cylinder.shape`: the same arms, on values or on cylinders. -/
 def genShapeOf (ctx : Ctx) (ofValue : Bool) : CommandElabM (Array Command) := do
   let (self, dom) := if ofValue then (ctx.T `shape, ctx.ty) else (mkIdent `Cylinder.shape, ctx.cyl)
+  let owner := if ofValue then `_root_ ++ ctx.spec.name else `Cylinder
   let alts ← ctx.ctors.mapM fun c => do
     let ns ← c.fieldVars
     let pats ← c.fields.mapIdxM fun i f => if f.kind == .data then `(_) else return ns[i]!
     matchAlt #[← c.dot pats] (← c.shapeOf ns self)
-  let eqs ← ctx.eqs (if ofValue then mkIdent (`_root_ ++ ctx.spec.name ++ `shape_eqs) else mkIdent `Cylinder.shape_eqs)
-    (fun x => `($self $x)) dom fun c => do
-      let ns ← c.fieldVars
-      return (ns, ← c.shapeOf ns self)
+  let eqs ← ctx.eqs (mkIdent (owner ++ `shape_eqs)) (fun x => `($self $x)) dom fun c => do
+    let ns ← c.fieldVars
+    return (ns, ← c.shapeOf ns self)
+  let name := mkIdent (owner ++ `shape)
   if ofValue then
     return #[← `(/-- The shape of a value. -/
-      def $(mkIdent (`_root_ ++ ctx.spec.name ++ `shape)):ident $ctx.implicits* : $dom → Shape $alts:matchAlt*), eqs]
+      def $name:ident $ctx.implicits* : $dom → Shape $alts:matchAlt*), eqs]
   return #[← `(/-- The shape of a cylinder. -/
-    def Cylinder.shape $ctx.implicits* : $dom → Shape $alts:matchAlt*), eqs]
+    def $name:ident $ctx.implicits* : $dom → Shape $alts:matchAlt*), eqs]
 
 def genShapeCylinder (ctx : Ctx) : CommandElabM (Array Command) := do
   let rhs (c : Ctor) (ns : Array Ident) : CommandElabM Term := do
@@ -701,12 +699,9 @@ def Ctor.gate (c : Ctor) (ns ns' : Array Ident) (loc : Option Ident) (neg : Tact
     CommandElabM (Array Tactic) := do
   let some cond ← c.cond ns ns' | return #[]
   let rfls ← tuplePat (Array.replicate c.bases.size (← `(rcasesPat| rfl)))
-  match loc with
-  | none => return #[← `(tactic| by_cases hb : $cond), ← `(tactic| case neg => rw [ite_eq_right hb]; $neg),
-      ← `(tactic| rw [ite_eq_left hb]), ← `(tactic| obtain $rfls:rcasesPat := hb)]
-  | some h => return #[← `(tactic| by_cases hb : $cond),
-      ← `(tactic| case neg => rw [ite_eq_right hb] at $h:ident; $neg),
-      ← `(tactic| rw [ite_eq_left hb] at $h:ident), ← `(tactic| obtain $rfls:rcasesPat := hb)]
+  let loc ← loc.mapM fun h => `(Parser.Tactic.location| at $h:ident)
+  return #[← `(tactic| by_cases hb : $cond), ← `(tactic| case neg => rw [ite_eq_right hb] $[$loc]?; $neg),
+    ← `(tactic| rw [ite_eq_left hb] $[$loc]?), ← `(tactic| obtain $rfls:rcasesPat := hb)]
 
 /-- Cases on the `inter?` of each recursive field, rewriting `at_ i`; the `none` cases are closed
 right away by `close`, so this makes one goal per field rather than 2^fields. -/

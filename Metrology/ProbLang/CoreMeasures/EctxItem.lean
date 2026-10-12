@@ -11,74 +11,27 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
-/-## ProbLang Measure theory -/
-
--- TODO move this to the semantics file once we have that (leave here until then though,
--- during drop-in step, so we can prove discreteness assuming discrete R type)
-
--- NOTE Tecnically speaking this is a strict extension: we can instanstiate the reals type
--- with Unit and then I guess also make the ops trivial? Perhaps I need a class with
--- all of this stuff. I do NOT want to have to do the whole thing at once, so I need
--- the option to take the discrete measure over whatever the reals type is
-
--- NOTE This actually could be a good thing to be honest, since I can also instanstiate
--- reals with floats? Pog?
+-- TODO move this to the semantics file once we have that.
 
 noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-# Measure space on evaluation-context items. -/
+/-! # Measure space on evaluation-context items -/
 
 namespace ProbLang.EctxItem
 
-/-! ### Cylinder definitions
-
-`<ctor>.ι.inj`, `Cylinder`, `Shape`, `Cylinder.flatten`, `Cylinder.HasMeasurableLeaves`, the
-σ-algebra instance, the shape maps, `Cylinder.inter?`, `cover.<ctor>`, `decompCell(_param)`,
-`singletonCyl`, `Shape.cylinder_hasMeasurableLeaves`, `flatten_measurable` and the
-`measurability` aesop rules, generated from the constructors by `cylinder_defs`
-(`Metrology/ProbLang/CoreMeasures/CylinderGen.lean`). -/
+/-! `cylinder_defs` generates the cylinder σ-algebra, measurable constructors, embeddings and
+projections, and the `casesOn` keystones `measurable_rec` / `measurable_rec_param`. -/
 
 cylinder_defs EctxItem
 
-/-! ### Cylinder intersection. -/
+/-! ### Smoke tests
 
-/-! ### The cylinder flatten family is a π-system that spans `EctxItem α`. -/
+`EctxItem` is not recursive, so each test goes through `measurable_rec` or `measurable_rec_param`
+and exercises all 21 constructor slots. -/
 
-/-! ### Measurability of the per-constructor covers. -/
-
-/-! ### Measurable constructors. -/
-
-/-! ### Raw-constructor `fun_prop` lemmas. Nullary ctors are constants and don't
-need lemmas; arity-1 ctors get a `Measurable f` form; arity-2 get `Function.uncurry`. -/
-
-/-! ### Measurable embeddings. -/
-
-/-! ### Uncurried-projection measurability. One `EctxItem.<ctor>.π.measurable` per
-field-carrying constructor (the 7 nullary frames `fst`/`snd`/`inl`/`inr`/`alloc`/`load`/
-`tape` have no projection). Each is the generic `Cylinders.proj_measurable` instantiated at
-that constructor's embedding; `Function.uncurry`-based (binary) embeddings add
-`Function.uncurry, Prod.exists`. -/
-
-/-! ### Param-threaded one-level dispatch.
-
-`measurable_rec_param` is the joint analogue of `measurable_rec`: continuations
-take both the constructor payload AND an external `β` parameter, and the result
-is joint-measurable in `(K, b) : EctxItem α × β`. Built directly from
-`casesOn_preimage_decomp_param` via `Prod.map`-style embeddings.
-
-This is the analogue of `Exp.measurable_rec_param`; the only difference is the
-21-way constructor list of `EctxItem`. -/
-
-/-! ### Synthetic smoke-test battery
-
-`EctxItem` is non-recursive, so there is no struct-rec keystone; the battery is
-phrased through the `casesOn` keystones `measurable_rec` / `measurable_rec_param`,
-modelled on `BaseLit.lean`. Each test exercises all 21 constructor slots. -/
-
-/-- Test 1: discrete codomain (`tagDepth : EctxItem α → Nat`, one tag per constructor;
-ignores all payloads). -/
+/-- Discrete codomain. -/
 @[simp] def tagDepth : EctxItem α → Nat
   | .appL _    => 0
   | .appR _    => 1
@@ -123,8 +76,7 @@ theorem tagDepth.measurable [MeasurableSpace α] :
     (f_randL := fun _ => 18) (f_randR := fun _ => 19) (f_scrut := fun _ => 20)
   all_goals fun_prop
 
-/-- Test 2: data-leaf dependent (`countLeaves : EctxItem α → Nat`, returns 1 for the
-constructors that carry a payload and 0 for the nullary ones). -/
+/-- Depends on whether a constructor carries a payload. -/
 @[simp] def countLeaves : EctxItem α → Nat
   | .appL _    => 1
   | .appR _    => 1
@@ -169,10 +121,7 @@ theorem countLeaves.measurable [MeasurableSpace α] :
     (f_randL := fun _ => 1) (f_randR := fun _ => 1) (f_scrut := fun _ => 1)
   all_goals fun_prop
 
-/-- Test 3: endo-map (`endoMap : EctxItem α → EctxItem α`, non-discrete codomain). The
-`appR` branch genuinely transforms its `Exp α` data leaf through the measurable map
-`Exp.fst`, so the obligation closes through `Exp.fst.measurable` composed with the
-`appR` embedding; all other constructors are relabelled to themselves. -/
+/-- Non-discrete codomain; only `appR` transforms its payload. -/
 @[simp] def endoMap : EctxItem α → EctxItem α
   | .appL v    => .appL v
   | .appR e    => .appR (Exp.fst e)
@@ -226,8 +175,7 @@ theorem endoMap.measurable [MeasurableSpace α] :
     (f_scrut := EctxItem.scrut)
   all_goals fun_prop
 
-/-- Test 4: param-threaded (`addAcc : Nat → EctxItem α → Nat`, a `Nat` accumulator carried
-alongside via `measurable_rec_param`). -/
+/-- Threads a parameter through `measurable_rec_param`. -/
 @[simp] def addAcc : Nat → EctxItem α → Nat
   | acc, .appL _    => acc + 1
   | acc, .appR _    => acc + 1
@@ -237,25 +185,12 @@ theorem addAcc.measurable [MeasurableSpace α] :
     Measurable (fun p : EctxItem α × Nat => addAcc p.2 p.1) := by
   have heq : (fun p : EctxItem α × Nat => addAcc p.2 p.1)
     = (fun p : EctxItem α × Nat => EctxItem.casesOn (motive := fun _ => Nat) p.1
-        (fun v => (fun q : Nat × Val α => q.1 + 1) (p.2, v))
-        (fun e => (fun q : Nat × Exp α => q.1 + 1) (p.2, e))
-        (fun u => (fun q : Nat × UnOp => q.1) (p.2, u))
-        (fun op v => (fun q : Nat × BinOp × Val α => q.1) (p.2, op, v))
-        (fun op e => (fun q : Nat × BinOp × Exp α => q.1) (p.2, op, e))
-        (fun e₁ e₂ => (fun q : Nat × Exp α × Exp α => q.1) (p.2, e₁, e₂))
-        (fun v => (fun q : Nat × Val α => q.1) (p.2, v))
-        (fun e => (fun q : Nat × Exp α => q.1) (p.2, e))
-        ((fun q : Nat × Unit => q.1) (p.2, ())) ((fun q : Nat × Unit => q.1) (p.2, ()))
-        ((fun q : Nat × Unit => q.1) (p.2, ())) ((fun q : Nat × Unit => q.1) (p.2, ()))
-        (fun e₁ e₂ => (fun q : Nat × Exp α × Exp α => q.1) (p.2, e₁, e₂))
-        ((fun q : Nat × Unit => q.1) (p.2, ())) ((fun q : Nat × Unit => q.1) (p.2, ()))
-        (fun v => (fun q : Nat × Val α => q.1) (p.2, v))
-        (fun e => (fun q : Nat × Exp α => q.1) (p.2, e))
-        ((fun q : Nat × Unit => q.1) (p.2, ()))
-        (fun v => (fun q : Nat × Val α => q.1) (p.2, v))
-        (fun e => (fun q : Nat × Exp α => q.1) (p.2, e))
-        (fun pat => (fun q : Nat × Pat α => q.1) (p.2, pat))) := by
-    funext p; obtain ⟨K, x⟩ := p; cases K <;> rfl
+        (fun _ => p.2 + 1) (fun _ => p.2 + 1) (fun _ => p.2)
+        (fun _ _ => p.2) (fun _ _ => p.2) (fun _ _ => p.2)
+        (fun _ => p.2) (fun _ => p.2)
+        p.2 p.2 p.2 p.2 (fun _ _ => p.2) p.2 p.2
+        (fun _ => p.2) (fun _ => p.2) p.2 (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)) := by
+    funext ⟨K, _⟩; cases K <;> rfl
   rw [heq]
   apply measurable_rec_param
     (c_appL := fun q : Nat × Val α => q.1 + 1) (c_appR := fun q : Nat × Exp α => q.1 + 1)
@@ -273,9 +208,3 @@ theorem addAcc.measurable [MeasurableSpace α] :
     (c_randL := fun q : Nat × Val α => q.1) (c_randR := fun q : Nat × Exp α => q.1)
     (c_scrut := fun q : Nat × Pat α => q.1)
   all_goals fun_prop
-
-/-! ### Singleton-class for `EctxItem α` (lifted from `MeasurableSingletonClass α`).
-
-Was previously in `Discrete.lean`; moved here so every stamped file carries its own
-singleton section (matching `BaseLit.lean`/`Pat.lean`/`Exp.lean`). -/
-

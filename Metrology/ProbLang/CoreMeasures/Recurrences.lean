@@ -7,25 +7,10 @@ public import Metrology.ProbLang.CoreMeasures.EctxItem
 @[expose] public section
 
 /-!
-# Measurability stamps for recursive functions on `Exp`
+# Measurability of recursive functions on `Exp`
 
-This file contains real-implementation stamps: applications of the recursive
-measurability keystone (`Exp.measurable_struct_rec` / `Exp.measurable_struct_rec_param`,
-from `CoreMeasures.Exp`) to actual ProbLang functions defined in `Syntax`.
-
-Each stamp follows a uniform pattern:
-
-```
-theorem foo.measurable : Measurable (uncurried foo) := by
-  apply measurable_struct_rec_param (g := ...)
-    (c_X := ...)  -- 22 combinators, one per Exp constructor
-    ...
-  all_goals first | (intros; rfl) | fun_prop
-```
-
-Only param-dependent combinators (those that genuinely use the threaded `b`)
-require manual measurability work. Everything else closes by `fun_prop` using
-the `@[fun_prop]`-tagged raw-constructor measurability lemmas in `CoreMeasures.Exp`.
+Most proofs apply `Exp.measurable_struct_rec(_param)` with one combinator per constructor
+and close the side goals by `rfl` or `fun_prop`.
 -/
 
 noncomputable section ProbLangMeasures
@@ -34,9 +19,7 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 namespace ProbLang.Exp
 
-/-! ### Smoke test: `Exp.height` is measurable.
-
-Discrete codomain (`Nat`); all combinators close by `fun_prop`. -/
+/-! ### `Exp.height` -/
 
 theorem height.measurable [MeasurableSpace rT] :
     Measurable (Exp.height : Exp rT → Nat) := by
@@ -66,11 +49,7 @@ theorem height.measurable [MeasurableSpace rT] :
     (c_scrut := fun n _ => 1 + n)
   all_goals first | (intros; rfl) | fun_prop
 
-/-! ### `Exp.subst` — fixed-parameter version.
-
-`Exp.subst e x sub` recurses on `e` with `(x, sub)` carried unchanged. For fixed
-`(x, sub)`, this is plain structural recursion — directly applicable to the
-non-param keystone with codomain `Exp rT` (non-discrete). -/
+/-! ### `Exp.subst` -/
 
 theorem subst.measurable_fixed [MeasurableSpace rT] (x : Var) (sub : Exp rT) :
     Measurable (fun e : Exp rT => Exp.subst e x sub) := by
@@ -100,12 +79,6 @@ theorem subst.measurable_fixed [MeasurableSpace rT] (x : Var) (sub : Exp rT) :
     (c_scrut := fun e p => Exp.scrut e p)
   all_goals first | (intros; rfl) | fun_prop
 
-/-! ### `Exp.subst` — joint measurability.
-
-Stamped via `measurable_struct_rec_param` with `β := Var × Exp rT`. The `(x, sub)`
-pair is carried through every recursive call. Only `c_fvar` actually uses `b` to
-embed `sub`; all other combinators ignore `b` and just rebuild constructors. -/
-
 theorem subst.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Var × Exp rT) × Exp rT) => Exp.subst q.2 q.1.1 q.1.2) := by
   apply measurable_struct_rec_param (g := fun (b : Var × Exp rT) (e : Exp rT) => Exp.subst e b.1 b.2)
@@ -132,8 +105,6 @@ theorem subst.measurable [MeasurableSpace rT] :
     (c_fail  := fun _ => Exp.fail)
     (c_urand := fun _ => Exp.urand)
     (c_scrut := fun _ e' p => Exp.scrut e' p)
-  -- All 22 equations close by rfl. All combinator measurabilities close by fun_prop
-  -- EXCEPT c_fvar which has a Var-dependent if. We discharge it manually.
   case h_fvar =>
     have : Function.uncurry (fun (b : Var × Exp rT) (y : Var) =>
               if b.1 = y then b.2 else (Exp.fvar y : Exp rT))
@@ -153,7 +124,7 @@ theorem subst.measurable [MeasurableSpace rT] :
       (fun (p : (Var × Exp rT) × Var) => ((p.1.1, p.2), p.1.2)))
   all_goals first | (intros; rfl) | fun_prop
 
-/-! ### `Exp.isValueR` — Prop-valued recursive value predicate. -/
+/-! ### `Exp.isValueR`, `Exp.lcb`, `Exp.fv` -/
 
 theorem isValueR.measurable [MeasurableSpace rT] :
     Measurable (Exp.isValueR : Exp rT → Prop) := by
@@ -182,8 +153,6 @@ theorem isValueR.measurable [MeasurableSpace rT] :
     (c_urand := False)
     (c_scrut := fun _ _ => False)
   all_goals first | (intros; rfl) | fun_prop
-
-/-! ### `Exp.lcb` — decidable local-closedness check (level-indexed). -/
 
 theorem lcb.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Nat × Exp rT) => Exp.lcb q.1 q.2) := by
@@ -214,23 +183,17 @@ theorem lcb.measurable [MeasurableSpace rT] :
     (c_scrut := fun _ b' _ => b')
     (t_lam   := fun b => b + 1)
     (t_fix   := fun b => b + 1)
-  case h_bvar =>
-    -- `decide (j < b)` : `Nat × Nat → Bool` is measurable (countable domain).
-    exact measurable_of_countable _
+  case h_bvar => exact measurable_of_countable _
   case ht_lam => fun_prop
   case ht_fix => fun_prop
   all_goals first | (intros; rfl) | fun_prop
 
-/-- The set of locally-closed expressions (`lcb 0 e = true`) is measurable. -/
 theorem lcb_zero.measurableSet [MeasurableSpace rT] :
     MeasurableSet {e : Exp rT | Exp.lcb 0 e = true} := by
   have hm : Measurable (fun e : Exp rT => Exp.lcb 0 e) :=
     lcb.measurable.comp (by fun_prop : Measurable (fun e : Exp rT => ((0 : Nat), e)))
   exact hm (measurableSet_singleton true)
 
-/-! ### `Exp.fv` — free variables. Discrete codomain (`Finset Var`). -/
-
-/-- Discrete σ-algebra on `Finset Var` (since `Var` and `Finset` are countable). -/
 instance : MeasurableSpace (Finset Var) := ⊤
 
 theorem fv.measurable [MeasurableSpace rT] : Measurable (Exp.fv : Exp rT → Finset Var) := by
@@ -260,262 +223,111 @@ theorem fv.measurable [MeasurableSpace rT] : Measurable (Exp.fv : Exp rT → Fin
     (c_scrut := fun s _ => s)
   all_goals first | (intros; rfl) | fun_prop
 
-/-! ### `UnOp.eval`, `BinOp.eval` — nested non-recursive pattern matches.
+/-! ### `UnOp.eval` -/
 
-`UnOp` and `BinOp` are discrete (`⊤` σ-algebras), so splitting over them via
-`measurable_from_prod_countable_left` is easy. The wrinkle: each fiber is a
-function `Exp α → Option (Exp α)` that pattern-matches not just on the outer `Exp`
-constructor but ALSO on the inner `BaseLit` constructor (e.g., `neg (Exp.lit
-(.bool b)) = some ...`). That's a **chained two-level pattern match** that needs
-`Exp.measurable_rec` composed with `BaseLit.measurable_rec` at the `lit` branch.
-
-The composition isn't quite mechanical because the inner `measurable_rec` lives
-under a constructor-projection. Doable but real work; left as stub. -/
-
-/-- Top σ-algebra trivially has measurable singletons. -/
 instance instMeasurableSingletonClassUnOp : MeasurableSingletonClass UnOp where
   measurableSet_singleton _ := trivial
 
-/-- Top σ-algebra trivially has measurable singletons. -/
 instance instMeasurableSingletonClassBinOp : MeasurableSingletonClass BinOp where
   measurableSet_singleton _ := trivial
 
-/-- For each fixed `op : UnOp`, the function `v ↦ UnOp.eval op v` is measurable.
-This is a nested two-level pattern match: outer on `v : Exp rT` via
-`Exp.measurable_rec`, inner on `BaseLit rT` (in the `.lit` branch) via
-`BaseLit.measurable_rec`. -/
+private theorem measurable_of_lit_only [MeasurableSpace rT] {α : Type _} [MeasurableSpace α]
+    {g : Exp rT → α} (z : α) {f : BaseLit rT → α} (hf : Measurable f)
+    (hg : ∀ v, g v = match v with | .lit l => f l | _ => z) : Measurable g := by
+  have hrw : g = fun v => Exp.casesOn (motive := fun _ => α) v
+      (fun _ => z) (fun _ => z) f (fun _ => z) (fun _ => z) (fun _ _ => z)
+      (fun _ _ => z) (fun _ _ _ => z) (fun _ _ _ => z)
+      (fun _ _ => z) (fun _ => z) (fun _ => z) (fun _ => z) (fun _ => z)
+      (fun _ _ _ => z) (fun _ => z) (fun _ => z) (fun _ _ => z)
+      (fun _ => z) (fun _ _ => z) z z (fun _ _ => z) := by
+    funext v; rw [hg]; cases v <;> rfl
+  rw [hrw]
+  refine Exp.measurable_rec
+    (f_bvar := fun _ => z) (f_fvar := fun _ => z) (f_lit := f)
+    (f_lam := fun _ => z) (f_fix := fun _ => z) (f_app := fun _ => z)
+    (f_unop := fun _ => z) (f_binop := fun _ => z) (f_cond := fun _ => z)
+    (f_pair := fun _ => z) (f_fst := fun _ => z) (f_snd := fun _ => z)
+    (f_inl := fun _ => z) (f_inr := fun _ => z) (f_case := fun _ => z)
+    (f_alloc := fun _ => z) (f_load := fun _ => z) (f_store := fun _ => z)
+    (f_tape := fun _ => z) (f_rand := fun _ => z) (f_fail := fun _ => z)
+    (f_urand := fun _ => z) (f_scrut := fun _ => z)
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · exact hf
+  all_goals exact measurable_const
+
 theorem UnOp.eval_op_measurable [LawfulProbLangℝ rT] (op : UnOp) :
     Measurable (fun v : Exp rT => UnOp.eval op v) := by
-  -- Unfold `UnOp.eval op` into `Exp.casesOn` form, then apply `measurable_rec`.
-  -- The only non-constant branches are `.lit`, which inner-recurses on `BaseLit`.
   cases op with
   | neg =>
-    have heq : (fun v : Exp rT => UnOp.eval .neg v) = fun v : Exp rT =>
-        Exp.casesOn (motive := fun _ => Option (Exp rT)) v
-          (fun _ => none) (fun _ => none)
-          (fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
-            (fun _ => none) (fun b => some (.lit (.bool ¬b))) none
-            (fun _ => none) (fun _ => none) (fun _ => none))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun u e => (fun _ : UnOp × Exp rT => none) (u, e))
-          (fun b e1 e2 => (fun _ : BinOp × Exp rT × Exp rT => none) (b, e1, e2))
-          (fun ec et ef => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, et, ef))
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-          (fun ec el er => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, el, er))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          ((fun _ : Unit => none) ())
-          ((fun _ : Unit => none) ())
-          (fun e p => (fun _ : Exp rT × Pat rT => none) (e, p)) := by
-      funext v
-      cases v <;> simp [UnOp.eval]
-      rename_i b; cases b <;> simp
-    rw [heq]
-    apply Exp.measurable_rec (rT := rT)
-      (f_bvar := fun _ => none) (f_fvar := fun _ => none)
-      (f_lit := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
+    refine measurable_of_lit_only none
+      (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun _ => none) (fun b => some (Exp.lit (.bool ¬b))) none
-        (fun _ => none) (fun _ => none) (fun _ => none))
-      (f_lam := fun _ => none) (f_fix := fun _ => none)
-      (f_app := fun _ => none) (f_unop := fun _ => none) (f_binop := fun _ => none)
-      (f_cond := fun _ => none) (f_pair := fun _ => none)
-      (f_fst := fun _ => none) (f_snd := fun _ => none)
-      (f_inl := fun _ => none) (f_inr := fun _ => none)
-      (f_case := fun _ => none)
-      (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-      (f_tape := fun _ => none) (f_rand := fun _ => none)
-      (f_fail := fun _ => none) (f_urand := fun _ => none) (f_scrut := fun _ => none)
-    · apply BaseLit.measurable_rec
-        (f_int := fun _ => none) (f_bool := fun b => some (Exp.lit (.bool ¬b)))
-        (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
-        (f_real := fun _ => none)
-      exact measurable_const
-    all_goals exact measurable_const
+        (fun _ => none) (fun _ => none) (fun _ => none)) ?_
+      fun v => by
+        cases v <;> simp [UnOp.eval]
+        rename_i b; cases b <;> simp
+    apply BaseLit.measurable_rec
+      (f_int := fun _ => none) (f_bool := fun b => some (Exp.lit (.bool ¬b)))
+      (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
+      (f_real := fun _ => none)
+    exact measurable_const
   | minus =>
-    have heq : (fun v : Exp rT => UnOp.eval .minus v) = fun v : Exp rT =>
-        Exp.casesOn (motive := fun _ => Option (Exp rT)) v
-          (fun _ => none) (fun _ => none)
-          (fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
-            (fun z => some (.lit (.int z.neg))) (fun _ => none) none
-            (fun _ => none) (fun _ => none)
-            (fun r => some (.lit (.real (ProbLangℝ.realNeg r)))))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun u e => (fun _ : UnOp × Exp rT => none) (u, e))
-          (fun b e1 e2 => (fun _ : BinOp × Exp rT × Exp rT => none) (b, e1, e2))
-          (fun ec et ef => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, et, ef))
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-          (fun ec el er => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, el, er))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          ((fun _ : Unit => none) ())
-          ((fun _ : Unit => none) ())
-          (fun e p => (fun _ : Exp rT × Pat rT => none) (e, p)) := by
-      funext v
-      cases v <;> simp [UnOp.eval]
-      rename_i b; cases b <;> simp
-    rw [heq]
-    apply Exp.measurable_rec (rT := rT)
-      (f_bvar := fun _ => none) (f_fvar := fun _ => none)
-      (f_lit := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
+    refine measurable_of_lit_only none
+      (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun z => some (Exp.lit (.int z.neg))) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (Exp.lit (.real (ProbLangℝ.realNeg r)))))
-      (f_lam := fun _ => none) (f_fix := fun _ => none)
-      (f_app := fun _ => none) (f_unop := fun _ => none) (f_binop := fun _ => none)
-      (f_cond := fun _ => none) (f_pair := fun _ => none)
-      (f_fst := fun _ => none) (f_snd := fun _ => none)
-      (f_inl := fun _ => none) (f_inr := fun _ => none)
-      (f_case := fun _ => none)
-      (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-      (f_tape := fun _ => none) (f_rand := fun _ => none)
-      (f_fail := fun _ => none) (f_urand := fun _ => none) (f_scrut := fun _ => none)
-    · apply BaseLit.measurable_rec
-        (f_int := fun z => some (Exp.lit (.int z.neg))) (f_bool := fun _ => none)
-        (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
-        (f_real := fun r => some (Exp.lit (.real (ProbLangℝ.realNeg r))))
-      exact MeasurableEmbedding.some_mk.measurable.comp
-        (Exp.lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realNeg))
-    all_goals exact measurable_const
-
+        (fun r => some (Exp.lit (.real (ProbLangℝ.realNeg r))))) ?_
+      fun v => by
+        cases v <;> simp [UnOp.eval]
+        rename_i b; cases b <;> simp
+    apply BaseLit.measurable_rec
+      (f_int := fun z => some (Exp.lit (.int z.neg))) (f_bool := fun _ => none)
+      (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
+      (f_real := fun r => some (Exp.lit (.real (ProbLangℝ.realNeg r))))
+    exact MeasurableEmbedding.some_mk.measurable.comp
+      (Exp.lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realNeg))
   | toReal =>
-    have heq : (fun v : Exp rT => UnOp.eval .toReal v) = fun v : Exp rT =>
-        Exp.casesOn (motive := fun _ => Option (Exp rT)) v
-          (fun _ => none) (fun _ => none)
-          (fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
-            (fun z => some (.lit (.real (ProbLangℝ.realOfInt z)))) (fun _ => none) none
-            (fun _ => none) (fun _ => none)
-            (fun r => some (.lit (.real r))))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun u e => (fun _ : UnOp × Exp rT => none) (u, e))
-          (fun b e1 e2 => (fun _ : BinOp × Exp rT × Exp rT => none) (b, e1, e2))
-          (fun ec et ef => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, et, ef))
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-          (fun ec el er => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, el, er))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          ((fun _ : Unit => none) ())
-          ((fun _ : Unit => none) ())
-          (fun e p => (fun _ : Exp rT × Pat rT => none) (e, p)) := by
-      funext v
-      cases v <;> simp [UnOp.eval]
-      rename_i l; cases l <;> simp
-    rw [heq]
-    apply Exp.measurable_rec (rT := rT)
-      (f_bvar := fun _ => none) (f_fvar := fun _ => none)
-      (f_lit := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
+    refine measurable_of_lit_only none
+      (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun z => some (Exp.lit (.real (ProbLangℝ.realOfInt z)))) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (Exp.lit (.real r))))
-      (f_lam := fun _ => none) (f_fix := fun _ => none)
-      (f_app := fun _ => none) (f_unop := fun _ => none) (f_binop := fun _ => none)
-      (f_cond := fun _ => none) (f_pair := fun _ => none)
-      (f_fst := fun _ => none) (f_snd := fun _ => none)
-      (f_inl := fun _ => none) (f_inr := fun _ => none)
-      (f_case := fun _ => none)
-      (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-      (f_tape := fun _ => none) (f_rand := fun _ => none)
-      (f_fail := fun _ => none) (f_urand := fun _ => none) (f_scrut := fun _ => none)
-    · apply BaseLit.measurable_rec
-        (f_int := fun z => some (Exp.lit (.real (ProbLangℝ.realOfInt z))))
-        (f_bool := fun _ => none)
-        (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
-        (f_real := fun r => some (Exp.lit (.real r)))
-      exact MeasurableEmbedding.some_mk.measurable.comp
-        (Exp.lit.measurable.comp BaseLit.real.measurable)
-    all_goals exact measurable_const
-
+        (fun r => some (Exp.lit (.real r)))) ?_
+      fun v => by
+        cases v <;> simp [UnOp.eval]
+        rename_i l; cases l <;> simp
+    apply BaseLit.measurable_rec
+      (f_int := fun z => some (Exp.lit (.real (ProbLangℝ.realOfInt z))))
+      (f_bool := fun _ => none)
+      (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
+      (f_real := fun r => some (Exp.lit (.real r)))
+    exact MeasurableEmbedding.some_mk.measurable.comp
+      (Exp.lit.measurable.comp BaseLit.real.measurable)
   | frac =>
-    have heq : (fun v : Exp rT => UnOp.eval .frac v) = fun v : Exp rT =>
-        Exp.casesOn (motive := fun _ => Option (Exp rT)) v
-          (fun _ => none) (fun _ => none)
-          (fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
-            (fun _ => none) (fun _ => none) none
-            (fun _ => none) (fun _ => none)
-            (fun r => some (.lit (.real (ProbLangℝ.realFrac r)))))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun u e => (fun _ : UnOp × Exp rT => none) (u, e))
-          (fun b e1 e2 => (fun _ : BinOp × Exp rT × Exp rT => none) (b, e1, e2))
-          (fun ec et ef => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, et, ef))
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-          (fun ec el er => (fun _ : Exp rT × Exp rT × Exp rT => none) (ec, el, er))
-          (fun _ => none) (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          (fun _ => none)
-          (fun e1 e2 => (fun _ : Exp rT × Exp rT => none) (e1, e2))
-          ((fun _ : Unit => none) ())
-          ((fun _ : Unit => none) ())
-          (fun e p => (fun _ : Exp rT × Pat rT => none) (e, p)) := by
-      funext v
-      cases v <;> simp [UnOp.eval]
-      rename_i l; cases l <;> simp
-    rw [heq]
-    apply Exp.measurable_rec (rT := rT)
-      (f_bvar := fun _ => none) (f_fvar := fun _ => none)
-      (f_lit := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
+    refine measurable_of_lit_only none
+      (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun _ => none) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (Exp.lit (.real (ProbLangℝ.realFrac r)))))
-      (f_lam := fun _ => none) (f_fix := fun _ => none)
-      (f_app := fun _ => none) (f_unop := fun _ => none) (f_binop := fun _ => none)
-      (f_cond := fun _ => none) (f_pair := fun _ => none)
-      (f_fst := fun _ => none) (f_snd := fun _ => none)
-      (f_inl := fun _ => none) (f_inr := fun _ => none)
-      (f_case := fun _ => none)
-      (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-      (f_tape := fun _ => none) (f_rand := fun _ => none)
-      (f_fail := fun _ => none) (f_urand := fun _ => none) (f_scrut := fun _ => none)
-    · apply BaseLit.measurable_rec
-        (f_int := fun _ => none)
-        (f_bool := fun _ => none)
-        (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
-        (f_real := fun r => some (Exp.lit (.real (ProbLangℝ.realFrac r))))
-      exact MeasurableEmbedding.some_mk.measurable.comp
-        (Exp.lit.measurable.comp
-          (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
-    all_goals exact measurable_const
+        (fun r => some (Exp.lit (.real (ProbLangℝ.realFrac r))))) ?_
+      fun v => by
+        cases v <;> simp [UnOp.eval]
+        rename_i l; cases l <;> simp
+    apply BaseLit.measurable_rec
+      (f_int := fun _ => none) (f_bool := fun _ => none)
+      (f_unit := fun _ => none) (f_loc := fun _ => none) (f_lbl := fun _ => none)
+      (f_real := fun r => some (Exp.lit (.real (ProbLangℝ.realFrac r))))
+    exact MeasurableEmbedding.some_mk.measurable.comp
+      (Exp.lit.measurable.comp
+        (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
 
 theorem UnOp_eval.measurable [LawfulProbLangℝ rT] :
     Measurable (Function.uncurry (UnOp.eval (α := rT))) := by
-  -- `UnOp × Exp rT → Option (Exp rT)`. `UnOp` is Countable + has `⊤` σ-alg
-  -- (hence `MeasurableSingletonClass`). Split over it via `_right` form.
   apply measurable_from_prod_countable_right
-  intro op
-  exact UnOp.eval_op_measurable op
+  exact UnOp.eval_op_measurable
 
-/-! (`BinOp_eval.measurable` is proved below in this file, after the
-`liftII`/`liftBB`/`liftIB`/`liftEq` family is in scope.) -/
-
-/-! ### `EctxItem.fillItem` — joint measurability over `EctxItem × Exp`.
-
-`EctxItem.fillItem Ki e` does a `casesOn` on `Ki` (one-level), wrapping `e` (and
-possibly an existing payload) in a fresh `Exp` constructor. Since `EctxItem`
-carries non-discrete payloads (`Val α`, `Exp α`), we cannot split over `EctxItem`
-discretely. Instead we'd need a `param`-style joint keystone on `EctxItem` —
-analogous to `measurable_struct_rec_param` on `Exp`, but for `EctxItem`'s
-non-recursive structure.
-
-**Status**: stubbed pending a joint `EctxItem`-based keystone (or, equivalently,
-using `cell_*_param` helpers from `Measure.lean` directly on `EctxItem.shape`). -/
+/-! ### `EctxItem.fillItem`, `Ectx.fill` -/
 
 theorem fillItem.measurable [MeasurableSpace rT] :
     Measurable (fun (q : EctxItem rT × Exp rT) => q.1.fillItem q.2) := by
-  -- Apply the joint param keystone with `β := Exp rT`, parameter = `q.2`.
-  -- Each `f_<ctor>` is built from measurable Exp constructors + `Val.fst`/`Exp.ofVal`.
-  -- First rewrite `fillItem` as the explicit `casesOn` form expected by the keystone.
   have heq : (fun q : EctxItem rT × Exp rT => q.1.fillItem q.2) = fun p : EctxItem rT × Exp rT =>
       EctxItem.casesOn (motive := fun _ => Exp rT) p.1
         (fun v => (fun pp : Exp rT × Val rT => Exp.app pp.1 (Exp.ofVal pp.2)) (p.2, v))
@@ -565,98 +377,43 @@ theorem fillItem.measurable [MeasurableSpace rT] :
     (c_randR := fun p => Exp.rand p.2 p.1)
     (c_scrut := fun p => Exp.scrut p.1 p.2)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  -- appL
   · show Measurable (fun p : Exp rT × Val rT => Function.uncurry Exp.app (p.1, Exp.ofVal p.2))
-    refine Exp.app.measurable.comp ?_
-    exact measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd
-  -- appR
+    exact Exp.app.measurable.comp (measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd)
   · fun_prop
-  -- unop
   · fun_prop
-  -- binopL
   · show Measurable (fun p : Exp rT × BinOp × Val rT =>
         (fun (q : BinOp × Exp rT × Exp rT) => Exp.binop q.1 q.2.1 q.2.2)
           (p.2.1, p.1, Exp.ofVal p.2.2))
     refine Exp.binop.measurable.comp ?_
     refine (measurable_fst.comp measurable_snd).prodMk ?_
     exact measurable_fst.prodMk <| Val.fst.measurable.comp <| measurable_snd.comp measurable_snd
-  -- binopR
   · fun_prop
-  -- condC
   · fun_prop
-  -- pairL
   · show Measurable (fun p : Exp rT × Val rT => Function.uncurry Exp.pair (p.1, Exp.ofVal p.2))
-    refine Exp.pair.measurable.comp ?_
-    exact measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd
-  -- pairR
-  · fun_prop
-  -- fst, snd, inl, inr (all Unit-typed)
-  · fun_prop
-  · fun_prop
-  · fun_prop
-  · fun_prop
-  -- case
-  · fun_prop
-  -- alloc, load
-  · fun_prop
-  · fun_prop
-  -- storeL
+    exact Exp.pair.measurable.comp (measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd)
+  iterate 8 fun_prop
   · show Measurable (fun p : Exp rT × Val rT => Function.uncurry Exp.store (p.1, Exp.ofVal p.2))
-    refine Exp.store.measurable.comp ?_
-    exact measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd
-  -- storeR
-  · fun_prop
-  -- tape
-  · fun_prop
-  -- randL
+    exact Exp.store.measurable.comp (measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd)
+  iterate 2 fun_prop
   · show Measurable (fun p : Exp rT × Val rT => Function.uncurry Exp.rand (p.1, Exp.ofVal p.2))
-    refine Exp.rand.measurable.comp ?_
-    exact measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd
-  -- randR
-  · fun_prop
-  -- scrut
-  · fun_prop
-
-/-! ### `Ectx.fill` — `List.foldl` over `EctxItem.fillItem`.
-
-Measurable once `EctxItem.fillItem`'s joint version is. Standard `List.foldl`
-measurability argument; mechanical extension once the input is measurable. -/
+    exact Exp.rand.measurable.comp (measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd)
+  iterate 2 fun_prop
 
 @[fun_prop]
 theorem Ectx_fill.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Ectx rT × Exp rT) => Ectx.fill q.1 q.2) := by
-  -- `Ectx.fill K e = K.foldl (flip EctxItem.fillItem) e`.
-  -- Apply the generic `List.measurable_foldl` keystone (stubbed in Measure.lean)
-  -- with `f := flip EctxItem.fillItem`. Joint measurability of `f` reduces to
-  -- the stubbed `fillItem.measurable` composed with `Prod.swap`.
   have hflip : Measurable (Function.uncurry (flip (EctxItem.fillItem (α := rT)))) := by
-    -- Function.uncurry (flip fillItem) (e, Ki) = Ki.fillItem e = Function.uncurry fillItem (Ki, e)
     have hrw : Function.uncurry (flip (EctxItem.fillItem (α := rT)))
         = (fun q : EctxItem rT × Exp rT => q.1.fillItem q.2) ∘ Prod.swap := rfl
     rw [hrw]
     exact Exp.fillItem.measurable.comp measurable_swap
   exact List.measurable_foldl hflip
 
-/-! ### `Exp.openRec` — binder-shifting recursion.
-
-`Exp.openRec i sub e` recurses on `e` with `(i, sub)` carried through, but the `i`
-component is *incremented* at `lam` and `fix` binders. This is **binder-transforming
-param-threading**, which the current keystone (`measurable_struct_rec_param`) does
-not support — it carries `b` unchanged through every recursive call.
-
-To stamp `openRec`, the keystone needs an extension allowing per-constructor
-parameter transformers `t_X : β → β`. The proof structure is identical to the
-current keystone with one extra `t_X b`-precomposition at each constructor.
-
-**Status**: stubbed pending the binder-transforming variant. -/
+/-! ### `Exp.openRec`, `Exp.closeRec` -/
 
 @[fun_prop]
 theorem openRec.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Nat × Exp rT) × Exp rT) => Exp.openRec q.1.1 q.1.2 q.2) := by
-  -- Apply `measurable_struct_rec_param_shift` with β = (Nat × Exp rT) and shift
-  -- `t_lam = t_fix = fun b => (b.1 + 1, b.2)` for binders. All other ctors are
-  -- rebuild-only (ignore b in the combinator) except c_bvar which uses b for the
-  -- if-then-else substitution.
   apply measurable_struct_rec_param_shift
     (g := fun (b : Nat × Exp rT) (e : Exp rT) => Exp.openRec b.1 b.2 e)
     (c_bvar  := fun b j => if b.1 = j then b.2 else (Exp.bvar j : Exp rT))
@@ -684,8 +441,6 @@ theorem openRec.measurable [MeasurableSpace rT] :
     (c_scrut := fun _ e' p => Exp.scrut e' p)
     (t_lam   := fun b => (b.1 + 1, b.2))
     (t_fix   := fun b => (b.1 + 1, b.2))
-  -- All 22 equations close by rfl (openRec's defining equations).
-  -- c_bvar has the Nat-dependent if; discharge manually via measurable_from_prod_countable_right.
   case h_bvar =>
     have hrw : Function.uncurry (fun (b : Nat × Exp rT) (j : Nat) =>
               if b.1 = j then b.2 else (Exp.bvar j : Exp rT))
@@ -709,14 +464,11 @@ theorem openRec.measurable [MeasurableSpace rT] :
 
 theorem open'.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Exp rT × Exp rT) => Exp.open' q.1 q.2) := by
-  -- `open' e sub = openRec 0 sub e`. Compose with the (stubbed) keystone
-  -- `openRec.measurable` via the packaging map `q ↦ ((0, q.2), q.1)`.
   have hpack : Measurable (fun q : Exp rT × Exp rT => ((0, q.2), q.1)) := by fun_prop
   exact Exp.openRec.measurable (rT := rT) |>.comp hpack
 
 theorem closeRec.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Nat × Var) × Exp rT) => Exp.closeRec q.1.1 q.1.2 q.2) := by
-  -- Same shape as openRec but with c_fvar carrying the if-then-else instead of c_bvar.
   apply measurable_struct_rec_param_shift
     (g := fun (b : Nat × Var) (e : Exp rT) => Exp.closeRec b.1 b.2 e)
     (c_bvar  := fun _ j => Exp.bvar j)
@@ -744,7 +496,6 @@ theorem closeRec.measurable [MeasurableSpace rT] :
     (c_scrut := fun _ e' p => Exp.scrut e' p)
     (t_lam   := fun b => (b.1 + 1, b.2))
     (t_fix   := fun b => (b.1 + 1, b.2))
-  -- c_fvar has the Var-dependent if; discharge manually.
   case h_fvar =>
     have hrw : Function.uncurry (fun (b : Nat × Var) (y : Var) =>
               if b.2 = y then (Exp.bvar b.1 : Exp rT) else Exp.fvar y)
@@ -768,43 +519,23 @@ theorem closeRec.measurable [MeasurableSpace rT] :
 
 theorem close.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Exp rT × Var) => Exp.close q.1 q.2) := by
-  -- `close e x = closeRec 0 x e`. Compose with the (stubbed) keystone
-  -- `closeRec.measurable` via the packaging map `q ↦ ((0, q.2), q.1)`.
   have hpack : Measurable (fun q : Exp rT × Var => ((0, q.2), q.1)) := by fun_prop
   exact Exp.closeRec.measurable (rT := rT) |>.comp hpack
 
--- Local instances for stub statements (these likely already exist downstream;
--- duplicated here to make the stub theorems type-check).
 attribute [local instance] Classical.propDecidable
 
 instance instLocalOption [MeasurableSpace α] : MeasurableSpace (Option α) :=
   MeasurableSpace.comap (Equiv.optionEquivSumPUnit.{0, _} α) inferInstance
 
-/-! ### `IsVal.check?` — dependently-typed recursion.
+/-! ### `Exp.toVal?`
 
-`IsVal.check? : (e : Exp rT) → Option (IsVal e)` has a return type that depends on
-the input. The keystone framework requires a fixed codomain `α`, so it doesn't apply.
-
-**Workarounds**: (a) prove `Exp.toVal? : Exp rT → Option (Val rT)` directly via
-structural recursion (codomain *is* fixed) without going through `IsVal.check?`;
-(b) construct an ad-hoc proof using the fact that `IsVal e` is a subsingleton.
-
-**Status**: stubbed; needs a bespoke argument outside the keystone. -/
-
-/-! ### `Exp.toVal?` — depends on `IsVal.check?`.
-
-Defined as a one-step destruct on `IsVal.check?`'s output, not structurally recursive
-on `Exp` itself. Could be re-derived as a structural fold returning `Option (Val rT)`,
-which would fit the keystone — but the existing definition routes through
-`IsVal.check?`, so its measurability is contingent.
-
-**Status**: stubbed; needs either (a) the re-derivation, or (b) `IsVal.check?` measurable. -/
+`IsVal.check?` has a dependent codomain, so `toVal?` is handled through its value set
+`{e | e.isValue}` rather than the recursion keystone. -/
 
 theorem toVal_question.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (Val rT)) := instLocalOption
     Measurable (Exp.toVal? : Exp rT → Option (Val rT)) := by
   intro mOpt
-  -- Step 1: rewrite `toVal?` as a `dite`.
   have hrw : (Exp.toVal? : Exp rT → Option (Val rT)) =
       fun e => if h : e.isValue then some (Val.mk e (Classical.choice h) (Classical.choice h).lc) else none := by
     funext e
@@ -817,25 +548,12 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
       simp only [hnone, dite_eq_right h]
   rw [hrw]
   intro S hS
-  -- Step 2: decompose S via `optionEquivSumPUnit`. `S` is measurable in `instLocalOption`
-  -- iff `S = (optionEquivSumPUnit) ⁻¹' Ssum` for some sum-measurable `Ssum`. Extract
-  -- `Tval : Set (Val rT)` (measurable) and `Tnone : Set PUnit` from `Ssum`.
   obtain ⟨Ssum, hSsum, hSeq⟩ := hS
-  -- `Ssum : Set (Val rT ⊕ PUnit)`; measurable iff inl/inr preimages are.
   have hTval_meas : MeasurableSet (Sum.inl ⁻¹' Ssum : Set (Val rT)) :=
     measurable_inl hSsum
-  -- Pull back to `Exp rT` via `Val.fst`.
   obtain ⟨Uval, hUval, hUval_eq⟩ : ∃ U : Set (Exp rT), MeasurableSet U ∧
       Val.fst ⁻¹' U = (Sum.inl ⁻¹' Ssum : Set (Val rT)) :=
     MeasurableSpace.measurableSet_comap.mp hTval_meas
-  -- Now compute the preimage.
-  -- For value `e` (so `h : e.isValue`): the map sends `e` to `some ⟨e, (Classical.choice h)⟩`,
-  -- and `some v ∈ S` iff `optionEquivSumPUnit (some v) = .inl v ∈ Ssum` iff
-  -- `v ∈ Sum.inl ⁻¹' Ssum = Val.fst ⁻¹' Uval` iff `v.fst ∈ Uval`.
-  -- So for value `e`: `e ∈ preimage` iff `e ∈ Uval`.
-  -- For non-value `e`: the map sends `e` to `none`; `none ∈ S` iff
-  -- `optionEquivSumPUnit none = .inr () ∈ Ssum` iff `() ∈ Sum.inr ⁻¹' Ssum`.
-  -- That's a constant boolean depending on `Ssum`, so either `univ` or `∅` for non-values.
   have hMset : MeasurableSet {e : Exp rT | e.isValue} := by
     have heq : {e : Exp rT | e.isValue} = {e | e.isValueR} ∩ {e | Exp.lcb 0 e = true} := by
       ext e; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
@@ -891,12 +609,8 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
   · exact hMset.compl
   · exact MeasurableSet.empty
 
-/-! ### `Exp.decompItem` — depends on `Exp.toVal?`. -/
+/-! ### Eliminating `Option` measurably -/
 
-/-- **Helper: measurability of `Option.elim`-form decomposition.**
-For measurable `f : α → Option β` (under `instLocalOption` on the codomain),
-measurable `default : α → γ` and `some_branch : α × β → γ`:
-`(a ↦ (f a).elim (default a) (fun b => some_branch (a, b)))` is measurable. -/
 theorem _root_.Option.measurable_elim_param
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     {f : α → Option β} (hf : @Measurable _ _ _ instLocalOption f)
@@ -931,10 +645,6 @@ theorem _root_.Option.measurable_elim_param
     rw [heq]
     exact MeasurableEmbedding.id.prodMap MeasurableEmbedding.some_mk
 
-/-- **Zero-default variant** of `Option.measurable_elim_param`.
-For measurable `f : α → Option β` and measurable `some_branch : α × β → γ` where
-`γ` has a `Zero`, `(a ↦ (f a).elim 0 (some_branch (a, ·)))` is measurable.
-The default is automatically `fun _ => 0`. -/
 theorem _root_.Option.measurable_elim_param_zero
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
     [Zero γ] [MeasurableSpace γ]
@@ -943,13 +653,6 @@ theorem _root_.Option.measurable_elim_param_zero
     Measurable (fun a => Option.casesOn (motive := fun _ => γ) (f a) 0 (fun b => some_branch (a, b))) :=
   Option.measurable_elim_param hf measurable_const hsome
 
-/-- **Bind-form variant** of `Option.measurable_elim_param`.
-For measurable `f : α → Option β` (under `instLocalOption`) and measurable
-`some_branch : α × β → Option γ` (under `instLocalOption`),
-`(a ↦ (f a).bind (fun b => some_branch (a, b)))` is measurable.
-
-Use this when the lifter naturally reads as a `bind` chain — avoids the
-per-call `funext; cases o <;> rfl` rewrite from `bind` to `casesOn`. -/
 theorem _root_.Option.measurable_bind_param
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
     [_mγ : MeasurableSpace (Option γ)]
@@ -963,15 +666,8 @@ theorem _root_.Option.measurable_bind_param
   rw [hrw]
   exact Option.measurable_elim_param hf measurable_const hsome
 
-/-! ### Default-`Zero` `Exp.measurable_rec_param` for stamping `headStep` continuations.
+/-! ### `measurable_rec_param` with every arm defaulting to `0` -/
 
-All `headStep.c_*` proofs share the same shape:
-- α := `Measure (Cfg rT)` (has `Zero`).
-- The reshape is `Exp.casesOn` on the inner Exp with all-but-a-few branches → `0`.
-- The non-trivial branches use the threaded `β` parameter (State, possibly with more).
-
-`Exp.measurable_rec_param_zero` defaults every continuation to `fun _ => 0` and every
-measurability obligation to `measurable_const`. Stamps the boilerplate. -/
 theorem _root_.ProbLang.Exp.measurable_rec_param_zero
     {rT : Type _} [MeasurableSpace rT]
     {α : Type _} [Zero α] [MeasurableSpace α]
@@ -1043,8 +739,6 @@ theorem _root_.ProbLang.Exp.measurable_rec_param_zero
     h_bvar h_fvar h_lit h_lam h_fix h_app h_unop h_binop h_cond h_pair h_fst h_snd
     h_inl h_inr h_case h_alloc h_load h_store h_tape h_rand h_fail h_urand h_scrut
 
-/-- BaseLit analogue: defaults each continuation to `fun _ => 0` and discharges
-its measurability via `measurable_const`. -/
 theorem _root_.ProbLang.BaseLit.measurable_rec_param_zero
     {rT : Type _} [MeasurableSpace rT] [Inhabited rT]
     {α : Type _} [Zero α] [MeasurableSpace α]
@@ -1068,30 +762,13 @@ theorem _root_.ProbLang.BaseLit.measurable_rec_param_zero
   BaseLit.measurable_rec_param c_int c_bool c_unit c_loc c_lbl c_real
     h_int h_bool h_unit h_loc h_lbl h_real
 
-/-! ### Stamping macros for `headStep.c_*.measurable` proofs.
+/-! ### Macros for `headStep` continuations
 
-The `_zero` theorems above use Lean's `:= default` mechanism, which times out
-inside `HeadStep.lean` because the elaborator iterates through 21 `Measure 0`
-default substitutions in section context. The following **macros** sidestep
-that by emitting the explicit form at the call site — purely syntactic
-substitution, no elaborator overhead.
+The `_zero` theorems above time out in `HeadStep.lean`: elaborating 21 `Measure 0`
+defaults is too slow there. These macros emit the explicit arguments instead; each
+takes the live continuations and their measurability proofs. -/
 
-Each macro covers a specific "which constructor is live" pattern. The user
-supplies the live continuations and their measurability proofs; the macro
-fills in `fun _ => 0` and `exact measurable_const` for the rest.
-
-Patterns covered (matching `headStep` continuations):
-- `exp_zero_lit_apply` — `.lit` live (used by `c_load`, `c_tape`'s outer).
-- `exp_zero_pair_apply` — `.pair` live (used by `c_fst`, `c_snd`).
-- `exp_zero_app_apply` — `.lam` + `.fix` live (used by `c_app`).
-- `exp_zero_case_apply` — `.inl` + `.inr` live (used by `c_case`).
-- `baseLit_zero_int_apply` — `.int` live (used by `c_tape`'s inner).
-- `baseLit_zero_loc_apply` — `.loc` live (used by `c_load`'s inner).
-
-All macros take the live continuation expression and its measurability proof. -/
-
-/-- Stamp for "only `.lit` arm live" Exp dispatch. Takes the live continuation
-and its measurability positionally. -/
+/-- Only the `.lit` arm is live. -/
 macro "exp_zero_lit_apply " ct:term ", " ht:term : tactic =>
   `(tactic|
     exact Exp.measurable_rec_param
@@ -1115,7 +792,7 @@ macro "exp_zero_lit_apply " ct:term ", " ht:term : tactic =>
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
-/-- Stamp for "only `.pair` arm live" Exp dispatch. -/
+/-- Only the `.pair` arm is live. -/
 macro "exp_zero_pair_apply " ct:term ", " ht:term : tactic =>
   `(tactic|
     exact Exp.measurable_rec_param
@@ -1140,7 +817,7 @@ macro "exp_zero_pair_apply " ct:term ", " ht:term : tactic =>
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
-/-- Stamp for "`.lam` and `.fix` arms live" Exp dispatch (c_app pattern). -/
+/-- Only the `.lam` and `.fix` arms are live. -/
 macro "exp_zero_app_apply "
     clamt:term ", " hlamt:term ", " cfixt:term ", " hfixt:term : tactic =>
   `(tactic|
@@ -1165,7 +842,7 @@ macro "exp_zero_app_apply "
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
-/-- Stamp for "`.inl` and `.inr` arms live" Exp dispatch (c_case pattern). -/
+/-- Only the `.inl` and `.inr` arms are live. -/
 macro "exp_zero_case_apply "
     cinlt:term ", " hinlt:term ", " cinrt:term ", " hinrt:term : tactic =>
   `(tactic|
@@ -1190,7 +867,7 @@ macro "exp_zero_case_apply "
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
-/-- Stamp for "only `.int` arm live" BaseLit dispatch. -/
+/-- Only the `.int` arm is live. -/
 macro "baseLit_zero_int_apply " ct:term ", " ht:term : tactic =>
   `(tactic|
     apply BaseLit.measurable_rec_param
@@ -1200,7 +877,7 @@ macro "baseLit_zero_int_apply " ct:term ", " ht:term : tactic =>
         (h_unit := measurable_const) (h_loc := measurable_const)
         (h_lbl := measurable_const) (h_real := measurable_const))
 
-/-- Stamp for "only `.loc` arm live" BaseLit dispatch. -/
+/-- Only the `.loc` arm is live. -/
 macro "baseLit_zero_loc_apply " ct:term ", " ht:term : tactic =>
   `(tactic|
     apply BaseLit.measurable_rec_param
@@ -1210,7 +887,7 @@ macro "baseLit_zero_loc_apply " ct:term ", " ht:term : tactic =>
         (h_unit := measurable_const) (h_loc := $ht)
         (h_lbl := measurable_const) (h_real := measurable_const))
 
-/-- Stamp for "only `.bool` arm live" BaseLit dispatch (c_cond pattern). -/
+/-- Only the `.bool` arm is live. -/
 macro "baseLit_zero_bool_apply " ct:term ", " ht:term : tactic =>
   `(tactic|
     apply BaseLit.measurable_rec_param
@@ -1220,12 +897,7 @@ macro "baseLit_zero_bool_apply " ct:term ", " ht:term : tactic =>
         (h_unit := measurable_const) (h_loc := measurable_const)
         (h_lbl := measurable_const) (h_real := measurable_const))
 
-/-! ### Swap helper for `(β × BaseLit)` ↔ `(BaseLit × β)` dispatch.
-
-`BaseLit.measurable_rec_param`'s conclusion is `Measurable (fun p : BaseLit × β => ...)`,
-but in many `headStep.c_*` proofs the caller has `(β × BaseLit)`-shaped continuations
-(because outer `Exp.measurable_rec_param` calls `c_lit` with `(β, BaseLit)` argument
-order). This helper does the swap. -/
+/-- Adapts `BaseLit.measurable_rec_param` to the `(β, BaseLit)` argument order of `c_lit`. -/
 theorem _root_.ProbLang.BaseLit.measurable_param_swap
     {rT : Type _} [MeasurableSpace rT] [Inhabited rT]
     {α : Type _} [MeasurableSpace α]
@@ -1234,11 +906,12 @@ theorem _root_.ProbLang.BaseLit.measurable_param_swap
     Measurable (fun q : β × BaseLit rT => f (q.2, q.1)) :=
   hf.comp (measurable_snd.prodMk measurable_fst)
 
+/-! ### `Exp.decompItem`, `Exp.decomp` -/
+
 theorem decompItem.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (EctxItem rT × Exp rT)) := instLocalOption
     Measurable (Exp.decompItem : Exp rT → Option (EctxItem rT × Exp rT)) := by
   intro mOpt
-  -- Rewrite `decompItem` as a `casesOn` form and apply `Exp.measurable_rec`.
   have hrw : (Exp.decompItem : Exp rT → Option (EctxItem rT × Exp rT)) = fun e =>
       Exp.casesOn (motive := fun _ => Option (EctxItem rT × Exp rT)) e
         (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
@@ -1277,7 +950,6 @@ theorem decompItem.measurable [MeasurableSpace rT] :
   rw [hrw]
   have htv : @Measurable (Exp rT) (Option (Val rT)) _ instLocalOption Exp.toVal? :=
     toVal_question.measurable
-  -- Unary helper: for `(b : β)` projecting an Exp rT, the focus-or-none pattern.
   have hunary : ∀ {β : Type _} [MeasurableSpace β] (K : β → EctxItem rT) (proj : β → Exp rT),
       Measurable K → Measurable proj →
       @Measurable β (Option (EctxItem rT × Exp rT)) _ instLocalOption
@@ -1353,100 +1025,74 @@ theorem decompItem.measurable [MeasurableSpace rT] :
     (f_scrut := fun (q : Exp rT × Pat rT) =>
       q.1.toVal?.casesOn (some (EctxItem.scrut q.2, q.1)) fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · exact measurable_const  -- h_lit
-  · exact measurable_const  -- h_lam
-  · exact measurable_const  -- h_fix
-  · -- h_app
-    exact hbinary
+  iterate 3 exact measurable_const
+  · exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.appR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.appL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.appR.ι.measurable.comp measurable_fst)
       (EctxItem.appL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · -- h_unop
-    exact hunary (β := UnOp × Exp rT)
+  · exact hunary (β := UnOp × Exp rT)
       (K := fun q => EctxItem.unop q.1) (proj := fun q => q.2)
       (EctxItem.unop.ι.measurable.comp measurable_fst) measurable_snd
-  · -- h_binop
-    exact hbinary
+  · exact hbinary
       (KR := fun q : BinOp × Exp rT × Exp rT => EctxItem.binopR q.1 q.2.1)
       (KL := fun (q : (BinOp × Exp rT × Exp rT) × Val rT) => EctxItem.binopL q.1.1 q.2)
       (projL := fun q => q.2.1) (projR := fun q => q.2.2)
       (EctxItem.binopR.ι.measurable.comp (measurable_fst.prodMk (measurable_fst.comp measurable_snd)))
       (EctxItem.binopL.ι.measurable.comp ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
       (measurable_fst.comp measurable_snd) (measurable_snd.comp measurable_snd)
-  · -- h_cond
-    exact hunary (β := Exp rT × Exp rT × Exp rT)
+  · exact hunary (β := Exp rT × Exp rT × Exp rT)
       (K := fun q => EctxItem.condC q.2.1 q.2.2)
       (proj := fun q => q.1)
       (EctxItem.condC.ι.measurable.comp ((measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)))
       measurable_fst
-  · -- h_pair
-    exact hbinary
+  · exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.pairR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.pairL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.pairR.ι.measurable.comp measurable_fst)
       (EctxItem.pairL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · -- h_fst
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.fst) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.fst) (proj := id)
       measurable_const measurable_id
-  · -- h_snd
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.snd) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.snd) (proj := id)
       measurable_const measurable_id
-  · -- h_inl
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.inl) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.inl) (proj := id)
       measurable_const measurable_id
-  · -- h_inr
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.inr) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.inr) (proj := id)
       measurable_const measurable_id
-  · -- h_case
-    exact hunary (β := Exp rT × Exp rT × Exp rT)
+  · exact hunary (β := Exp rT × Exp rT × Exp rT)
       (K := fun q => EctxItem.case q.2.1 q.2.2) (proj := fun q => q.1)
       (EctxItem.case.ι.measurable.comp ((measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)))
       measurable_fst
-  · -- h_alloc
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.alloc) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.alloc) (proj := id)
       measurable_const measurable_id
-  · -- h_load
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.load) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.load) (proj := id)
       measurable_const measurable_id
-  · -- h_store
-    exact hbinary
+  · exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.storeR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.storeL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.storeR.ι.measurable.comp measurable_fst)
       (EctxItem.storeL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · -- h_tape
-    exact hunary (β := Exp rT) (K := fun _ => EctxItem.tape) (proj := id)
+  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.tape) (proj := id)
       measurable_const measurable_id
-  · -- h_rand
-    exact hbinary
+  · exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.randR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.randL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.randR.ι.measurable.comp measurable_fst)
       (EctxItem.randL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · -- h_scrut
-    exact hunary (β := Exp rT × Pat rT)
+  · exact hunary (β := Exp rT × Pat rT)
       (K := fun q => EctxItem.scrut q.2) (proj := fun q => q.1)
       (EctxItem.scrut.ι.measurable.comp measurable_snd)
       measurable_fst
 
-/-! ### `Exp.decomp` — well-founded recursion.
-
-`Exp.decomp` uses `decreasing_by Exp.decompItem_height`. Not structural recursion;
-outside the keystone's scope. Standard approach: induct on `Exp.height ≤ n` and
-take a union over `n`.
-
-**Status**: stubbed pending a well-founded-recursion measurability lemma. -/
-
-/-- Iterated `decompItem` with explicit fuel `n`. Equals `Exp.decomp` once `n ≥ e.height`. -/
+/-- `Exp.decomp` with explicit fuel; agrees with it once `n ≥ e.height`. -/
 private def decompN {α : Type _} : ℕ → Exp α → Ectx α × Exp α
   | 0, e => ([], e)
   | n+1, e =>
@@ -1490,7 +1136,6 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
     show Measurable (fun e : Exp rT => (([], e) : Ectx rT × Exp rT))
     exact measurable_const.prodMk measurable_id
   | succ n ih =>
-    -- Unfold decompN at n+1.
     have hrw : (decompN (n+1) : Exp rT → Ectx rT × Exp rT)
         = fun e => Option.casesOn (motive := fun _ => Ectx rT × Exp rT) e.decompItem
             (([], e) : Ectx rT × Exp rT)
@@ -1499,19 +1144,14 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
       funext e
       show decompN (n+1) e = _
       rw [decompN]
-      rcases e.decompItem with _ | ⟨Ki, e'⟩
-      · rfl
-      · rfl
+      rcases e.decompItem with _ | ⟨Ki, e'⟩ <;> rfl
     rw [hrw]
-    -- Apply `Option.measurable_elim_param`.
     refine @Option.measurable_elim_param _ _ _ _ _ _ _ decompItem.measurable
       (default := fun e => ([], e)) ?_
       (some_branch := fun q : Exp rT × (EctxItem rT × Exp rT) =>
         ((decompN n q.2.2).1 ++ [q.2.1], (decompN n q.2.2).2)) ?_
-    · -- default measurable
-      exact measurable_const.prodMk measurable_id
-    · -- some_branch measurable
-      have h_decompN : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
+    · exact measurable_const.prodMk measurable_id
+    · have h_decompN : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
           decompN n q.2.2) :=
         ih.comp (measurable_snd.comp measurable_snd)
       have h_decompN_fst : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
@@ -1523,7 +1163,6 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
       have h_Ki : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) => q.2.1) :=
         measurable_fst.comp measurable_snd
       refine Measurable.prodMk ?_ h_decompN_snd
-      -- (q ↦ (decompN n q.2.2).1 ++ [q.2.1]) = List.measurable_append_singleton ∘ ⟨...⟩
       exact List.measurable_append_singleton.comp (h_decompN_fst.prodMk h_Ki)
 
 @[fun_prop]
@@ -1532,46 +1171,23 @@ theorem decomp.measurable [MeasurableSpace rT] :
   have hrw : (Exp.decomp : Exp rT → Ectx rT × Exp rT) = fun e => decompN e.height e := by
     funext e; exact (decompN_eq_decomp e.height e (Nat.le_refl _)).symm
   rw [hrw]
-  -- (fun e => decompN e.height e) factors through (height, id) : Exp → ℕ × Exp.
-  -- Use measurable_from_prod_countable_right.
   have hjoint : Measurable (fun p : ℕ × Exp rT => decompN p.1 p.2) := by
     apply measurable_from_prod_countable_right
     intro n
     exact decompN_measurable n
   exact hjoint.comp (height.measurable.prodMk measurable_id)
 
-/-! ### `Pat.tryMatch` — 2D joint recursion.
+/-! ### Constructor extractors -/
 
-`Pat.tryMatch p e` recurses on BOTH `p : Pat rT` AND `e : Exp rT` simultaneously
-(it matches paired constructors `(.pair p1 p2, .pair e1 e2)` etc.). The keystone
-recursesonly on the first inductive; this is a "product-recursion" we don't yet
-support.
-
-**Workaround**: define `tryMatch` as recursion on `p` alone with `e` as a parameter,
-then it fits the param keystone. The current definition pattern-matches on both
-simultaneously, so this would need restating.
-
-**Status**: stubbed pending the restatement or a joint-recursion keystone. -/
-
-/-! #### Exp-shape extraction helpers for `tryMatch.measurable`.
-
-`tryMatch` recurses on `p : Pat rT` and at each `pair`/`inl`/`inr`/`lit` case
-extracts subterms or a literal from `e : Exp rT`. We need measurability of
-these extractions as `Option`-valued maps into `instLocalOption`. -/
-
-/-- Extract the literal from `e = .lit b`, else `none`. -/
 def litExtract (e : Exp rT) : Option (BaseLit rT) :=
   match e with | .lit b => some b | _ => none
 
-/-- Extract the two children from `e = .pair e1 e2`, else `none`. -/
 def pairExtract (e : Exp rT) : Option (Exp rT × Exp rT) :=
   match e with | .pair e1 e2 => some (e1, e2) | _ => none
 
-/-- Extract the child from `e = .inl e'`, else `none`. -/
 def inlExtract (e : Exp rT) : Option (Exp rT) :=
   match e with | .inl e' => some e' | _ => none
 
-/-- Extract the child from `e = .inr e'`, else `none`. -/
 def inrExtract (e : Exp rT) : Option (Exp rT) :=
   match e with | .inr e' => some e' | _ => none
 
@@ -1579,29 +1195,8 @@ theorem litExtract.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (BaseLit rT)) := instLocalOption
     Measurable (Exp.litExtract : Exp rT → Option (BaseLit rT)) := by
   intro _
-  have hrw : Exp.litExtract (rT := rT) = fun e =>
-      Exp.casesOn (motive := fun _ => Option (BaseLit rT)) e
-        (fun _ => none) (fun _ => none) (fun b => some b)
-        (fun _ => none) (fun _ => none) (fun _ _ => none)
-        (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-        (fun _ _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-        (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-        (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-    funext e; cases e <;> rfl
-  rw [hrw]
-  refine Exp.measurable_rec
-    (f_bvar := fun _ => none) (f_fvar := fun _ => none) (f_lit := fun b => some b)
-    (f_lam := fun _ => none) (f_fix := fun _ => none) (f_app := fun _ => none)
-    (f_unop := fun _ => none) (f_binop := fun _ => none) (f_cond := fun _ => none)
-    (f_pair := fun _ => none) (f_fst := fun _ => none) (f_snd := fun _ => none)
-    (f_inl := fun _ => none) (f_inr := fun _ => none) (f_case := fun _ => none)
-    (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-    (f_tape := fun _ => none) (f_rand := fun _ => none) (f_fail := fun _ => none)
-    (f_urand := fun _ => none)
-    (f_scrut := fun _ => none)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · exact MeasurableEmbedding.some_mk.measurable
-  all_goals exact measurable_const
+  exact measurable_of_lit_only none (f := fun b => some b)
+    MeasurableEmbedding.some_mk.measurable fun e => by cases e <;> rfl
 
 theorem pairExtract.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (Exp rT × Exp rT)) := instLocalOption
@@ -1628,15 +1223,7 @@ theorem pairExtract.measurable [MeasurableSpace rT] :
     (f_urand := fun _ => none)
     (f_scrut := fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · exact measurable_const  -- h_lit
-  · exact measurable_const  -- h_lam
-  · exact measurable_const  -- h_fix
-  · exact measurable_const  -- h_app
-  · exact measurable_const  -- h_unop
-  · exact measurable_const  -- h_binop
-  · exact measurable_const  -- h_cond
-  · exact MeasurableEmbedding.some_mk.measurable  -- h_pair
-  all_goals exact measurable_const
+  all_goals first | exact measurable_const | exact MeasurableEmbedding.some_mk.measurable
 
 theorem inlExtract.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
@@ -1663,18 +1250,7 @@ theorem inlExtract.measurable [MeasurableSpace rT] :
     (f_urand := fun _ => none)
     (f_scrut := fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · exact measurable_const  -- h_lit
-  · exact measurable_const  -- h_lam
-  · exact measurable_const  -- h_fix
-  · exact measurable_const  -- h_app
-  · exact measurable_const  -- h_unop
-  · exact measurable_const  -- h_binop
-  · exact measurable_const  -- h_cond
-  · exact measurable_const  -- h_pair
-  · exact measurable_const  -- h_fst
-  · exact measurable_const  -- h_snd
-  · exact MeasurableEmbedding.some_mk.measurable  -- h_inl
-  all_goals exact measurable_const
+  all_goals first | exact measurable_const | exact MeasurableEmbedding.some_mk.measurable
 
 theorem inrExtract.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
@@ -1701,30 +1277,11 @@ theorem inrExtract.measurable [MeasurableSpace rT] :
     (f_urand := fun _ => none)
     (f_scrut := fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · exact measurable_const  -- h_lit
-  · exact measurable_const  -- h_lam
-  · exact measurable_const  -- h_fix
-  · exact measurable_const  -- h_app
-  · exact measurable_const  -- h_unop
-  · exact measurable_const  -- h_binop
-  · exact measurable_const  -- h_cond
-  · exact measurable_const  -- h_pair
-  · exact measurable_const  -- h_fst
-  · exact measurable_const  -- h_snd
-  · exact measurable_const  -- h_inl
-  · exact MeasurableEmbedding.some_mk.measurable  -- h_inr
-  all_goals exact measurable_const
+  all_goals first | exact measurable_const | exact MeasurableEmbedding.some_mk.measurable
 
-/-! ### `BaseLit` extractors for `liftXY`-style measurability.
-
-Direct analogues of `Exp.litExtract` etc.: project an `Int` (resp. `Bool`) out of
-`BaseLit.int` (resp. `.bool`), returning `none` on any other constructor. -/
-
-/-- Extract the `Int` from `.int z`, else `none`. -/
 def _root_.ProbLang.BaseLit.intExtract (l : BaseLit rT) : Option Int :=
   match l with | .int z => some z | _ => none
 
-/-- Extract the `Bool` from `.bool b`, else `none`. -/
 def _root_.ProbLang.BaseLit.boolExtract (l : BaseLit rT) : Option Bool :=
   match l with | .bool b => some b | _ => none
 
@@ -1760,8 +1317,6 @@ theorem _root_.ProbLang.BaseLit.boolExtract.measurable
     ?_
   exact measurable_const
 
-/-- Extract the real payload from `.real r`, else `none`. Unlike `intExtract`/
-`boolExtract` this lands in the (non-discrete) real type `rT`. -/
 def _root_.ProbLang.BaseLit.realExtract (l : BaseLit rT) : Option rT :=
   match l with | .real r => some r | _ => none
 
@@ -1780,14 +1335,9 @@ theorem _root_.ProbLang.BaseLit.realExtract.measurable
     (f_loc := fun _ => none) (f_lbl := fun _ => none) (f_real := fun r => some r) ?_
   exact MeasurableEmbedding.some_mk.measurable
 
-/-! ### `liftBin` — generic homogeneous binary lifter.
+/-! ### `BinOp.eval` as a dispatch over lifted literal operations -/
 
-Most `BinOp.eval` arms have the same shape: extract a literal from each side,
-extract a payload via a discrete extractor (`intExtract` or `boolExtract`), and
-wrap the result as a `BaseLit`. We capture this once and instantiate per op. -/
-
-/-- Lift a binary op on a discrete payload (`Int` or `Bool`) to operate on a
-pair of `Exp` values via literal extraction. -/
+/-- Lifts an operation on literal payloads to a pair of `Exp` literals. -/
 def liftBin {β : Type _} (extr : BaseLit rT → Option β)
     (mkResult : β → β → BaseLit rT) (p : Exp rT × Exp rT) : Option (Exp rT) :=
   ((Exp.litExtract p.1).bind extr).bind fun x1 =>
@@ -1830,18 +1380,12 @@ theorem liftBin.measurable [MeasurableSpace rT] [Inhabited rT]
       refine Exp.lit.measurable.comp ?_
       exact hmk.comp ((measurable_snd.comp measurable_fst).prodMk measurable_snd)
 
-/-- Lift `Int → Int → Int` ops (`plus`, `minus`, …): both inputs integer literals,
-output integer literal. -/
 @[reducible] def liftII (f : Int → Int → Int) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.intExtract (fun z1 z2 => .int (f z1 z2))
 
-/-- Lift `Bool → Bool → Bool` ops (`and`, `or`, `xor`): both inputs boolean
-literals, output boolean literal. -/
 @[reducible] def liftBB (f : Bool → Bool → Bool) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.boolExtract (fun b1 b2 => .bool (f b1 b2))
 
-/-- Lift `Int → Int → Bool` ops (`lt`, `le`): both inputs integer literals,
-output boolean literal. -/
 @[reducible] def liftIB (f : Int → Int → Bool) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.intExtract (fun z1 z2 => .bool (f z1 z2))
 
@@ -1863,8 +1407,6 @@ theorem liftIB.measurable [MeasurableSpace rT] [Inhabited rT] (f : Int → Int �
     (Measurable.of_discrete.comp (Measurable.of_discrete (α := Int × Int) (β := Bool)
       (f := Function.uncurry f)))
 
-/-- Lift a real comparison `rT → rT → Bool` (`.lt`/`.le` on real literals):
-both inputs real literals, output boolean literal. -/
 @[reducible] def liftRB (f : rT → rT → Bool) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.realExtract (fun r1 r2 => .bool (f r1 r2))
 
@@ -1875,8 +1417,6 @@ theorem liftRB.measurable [MeasurableSpace rT] [Inhabited rT] (f : rT → rT →
   show Measurable (Function.uncurry (fun r1 r2 : rT => BaseLit.bool (f r1 r2)))
   exact BaseLit.bool.measurable.comp hf
 
-/-- Lift a real binary operation `rT → rT → rT` (`.plus` on real literals):
-both inputs real literals, output real literal. -/
 @[reducible] def liftRR (f : rT → rT → rT) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.realExtract (fun r1 r2 => .real (f r1 r2))
 
@@ -1887,9 +1427,6 @@ theorem liftRR.measurable [MeasurableSpace rT] [Inhabited rT] (f : rT → rT →
   show Measurable (Function.uncurry (fun r1 r2 : rT => BaseLit.real (f r1 r2)))
   exact BaseLit.real.measurable.comp hf
 
-/-- Arithmetic lifter for `.plus`: dispatches on integer *or* real literal
-operands — integers via `liftII`, reals via `liftRR`. Same `orElse` pattern as
-`liftLtLe`; the two literal shapes are disjoint. -/
 @[reducible] def liftIIorRR (fi : Int → Int → Int) (f : rT → rT → rT) :
     Exp rT × Exp rT → Option (Exp rT) :=
   fun p => (liftII fi p).orElse (fun _ => liftRR f p)
@@ -1907,9 +1444,6 @@ theorem liftIIorRR.measurable [MeasurableSpace rT] [Inhabited rT]
   exact Option.measurable_elim_param (liftII.measurable fi) (liftRR.measurable f hf)
     (MeasurableEmbedding.some_mk.measurable.comp measurable_snd)
 
-/-- Comparison lifter for `.lt`/`.le`: dispatches on integer *or* real literal
-operands — integers via `liftIB`, reals via `liftRB`. The two are disjoint
-(a literal is never both), so `orElse` picks whichever fires. -/
 @[reducible] def liftLtLe (fi : Int → Int → Bool) (f : rT → rT → Bool) :
     Exp rT × Exp rT → Option (Exp rT) :=
   fun p => (liftIB fi p).orElse (fun _ => liftRB f p)
@@ -1927,12 +1461,6 @@ theorem liftLtLe.measurable [MeasurableSpace rT] [Inhabited rT]
   exact Option.measurable_elim_param (liftIB.measurable fi) (liftRB.measurable f hf)
     (MeasurableEmbedding.some_mk.measurable.comp measurable_snd)
 
-/-! ### `liftEq` — bespoke lifter for `.eq` (5 patterns). -/
-
-/-- The `eq` op fires on five `(v1, v2)` shapes: `(lit, lit)`, `(inl-lit, inl-lit)`,
-`(inr-lit, inr-lit)`, `(inl-lit, inr-lit)`, `(inr-lit, inl-lit)`. We decompose
-via `litExtract` directly, then `inlExtract`/`inrExtract` chained with
-`litExtract` on each side. -/
 def liftEq (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .lit l2 => some (Exp.lit (.bool (decide (l1 = l2))))
@@ -1942,55 +1470,46 @@ def liftEq (p : Exp rT × Exp rT) : Option (Exp rT) :=
   | .inr (.lit _), .inl (.lit _) => some (Exp.lit (.bool false))
   | _, _ => none
 
-/-! ### `liftEq.measurable` infrastructure.
+/-! `liftEq` splits on the first operand into one continuation per live shape
+(`.lit`, `.inl`, `.inr`); a direct `cases` on both operands is too large. -/
 
-`liftEq` has 5 live patterns; raw `cases` explosion is infeasible. We decompose
-via three helpers (one per live outer shape: `lit`, `inl (lit _)`, `inr (lit _)`)
-that consume `(l1 : BaseLit, v2 : Exp)` and emit `Option Exp`, then prove
-`liftEq` measurable as a single `Exp.measurable_rec_param` with `v2` as the param. -/
-
-/-- For `v1 = .lit l1`, `liftEq` is `match v2 with | .lit l2 => some (.bool (l1=l2)) | _ => none`.
-We expose this as a function of `(v2, l1) : Exp × BaseLit` for joint measurability. -/
+/-- `liftEq (.lit l1, v2)`, taking `(v2, l1)`. -/
 def liftEq_litK [DecidableEq (BaseLit rT)] (p : Exp rT × BaseLit rT) : Option (Exp rT) :=
   match p.1 with
   | .lit l2 => some (Exp.lit (.bool (decide (p.2 = l2))))
   | _ => none
 
-/-- For `v1 = .inl e1'`, `liftEq` is `match e1', v2 with | .lit l1, .lit l2 => ... | .lit _, .inr (.lit _) => false | _ => none`.
-Treat as a function of `(e1', v2)` and split on `e1'`'s `.lit` shape via `litExtract`. -/
+/-- `liftEq (.inl e1', v2)`, taking `(e1', v2)`. -/
 def liftEq_inlK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inl (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
   | .lit _, .inr (.lit _) => some (Exp.lit (.bool false))
   | _, _ => none
 
+/-- `liftEq (.inr e1', v2)`, taking `(e1', v2)`. -/
 def liftEq_inrK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inr (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
   | .lit _, .inl (.lit _) => some (Exp.lit (.bool false))
   | _, _ => none
 
-/-- Instance: `MeasurableEq (BaseLit rT)` lifted from `MeasurableEq rT`.
+private theorem measurableSet_range_diag {X Y : Type _} [MeasurableSpace X]
+    [MeasurableSpace Y] [MeasurableEq X] {ι : X → Y} (hι : MeasurableEmbedding ι) :
+    MeasurableSet (Set.range fun x => (ι x, ι x)) := by
+  have hrw : Set.range (fun x => (ι x, ι x)) = Prod.map ι ι '' Set.diagonal X := by
+    ext ⟨a, b⟩; constructor
+    · rintro ⟨x, hx⟩; exact ⟨(x, x), rfl, hx⟩
+    · rintro ⟨⟨x, y⟩, hxy, hx⟩
+      obtain rfl : x = y := hxy
+      exact ⟨x, hx⟩
+  rw [hrw]
+  exact (hι.prodMap hι).measurableSet_image' MeasurableEq.measurableSet_diagonal
 
-`MeasurableEq α` is the typeclass `MeasurableSet (Set.diagonal α)` — the diagonal
-`{(a,a) | a : α}` is measurable in `α × α`. It's the natural condition under
-which `decide`-equality `α × α → Bool` is measurable.
-
-`BaseLit rT`'s diagonal is a disjoint union of 6 pieces, one per constructor:
-the `.int`/`.bool`/`.unit`/`.loc`/`.lbl` pieces use discrete σ-algebras
-(singletons measurable; diagonal trivially measurable), and the `.real` piece
-needs `MeasurableEq rT`. So the BaseLit-diagonal is measurable iff
-`MeasurableEq rT` holds.
-
-This instance lets us prove `BinOp_eval.measurable` (which has a `.eq` arm
-doing literal-equality on BaseLits) without requiring discrete `rT`. -/
+/-- Lets `BinOp.eval .eq` compare literals without requiring a discrete `rT`. -/
 instance _root_.ProbLang.BaseLit.instMeasurableEq
     {rT : Type _} [MeasurableSpace rT] [Inhabited rT] [MeasurableEq rT] :
     MeasurableEq (BaseLit rT) := by
   refine MeasurableEq.mk ?_
-  -- The diagonal is `{(b, b) | b : BaseLit rT}`. Decompose by constructor: each
-  -- piece `Pᵢ = {(ctor x, ctor x) | x : Xᵢ}` is the image of the `Xᵢ`-diagonal under
-  -- a product of `ctor` embeddings. Union of 6 measurable sets is measurable.
   let Pi (z : Int) : BaseLit rT × BaseLit rT := (.int z, .int z)
   let Pb (b : Bool) : BaseLit rT × BaseLit rT := (.bool b, .bool b)
   let Pl (l : Loc) : BaseLit rT × BaseLit rT := (.loc l, .loc l)
@@ -2013,65 +1532,14 @@ instance _root_.ProbLang.BaseLit.instMeasurableEq
       | real r => exact .inr ⟨r, rfl⟩
     · rintro ((((((⟨_, h⟩) | ⟨_, h⟩) | h) | ⟨_, h⟩) | ⟨_, h⟩) | ⟨_, h⟩) <;> cases h <;> rfl
   rw [hdecomp]
-  -- Each `Set.range Pᵢ` is the image of `Set.diagonal Xᵢ` under a product-of-ctors map.
-  -- Per-arm: each `Set.range fun x => (ι x, ι x)` rewrites to `Prod.map ι ι '' Set.diagonal X`,
-  -- then is measurable as the image of a measurable set under a measurable embedding.
-  have hrw_int : Set.range Pi = (Prod.map BaseLit.int BaseLit.int) '' Set.diagonal Int := by
-    ext ⟨a, b⟩; constructor
-    · rintro ⟨x, hx⟩; refine ⟨(x, x), rfl, ?_⟩; simp only [Prod.map_apply, ← hx, Pi]
-    · rintro ⟨⟨x1, x2⟩, hdiag, himg⟩
-      simp only [Set.mem_diagonal_iff] at hdiag
-      simp only [Prod.map_apply, Prod.mk.injEq] at himg
-      refine ⟨x1, ?_⟩; simp only [Pi]; simp only [← himg.1, ← himg.2, hdiag]
-  have hrw_bool : Set.range Pb = (Prod.map BaseLit.bool BaseLit.bool) '' Set.diagonal Bool := by
-    ext ⟨a, b⟩; constructor
-    · rintro ⟨x, hx⟩; refine ⟨(x, x), rfl, ?_⟩; simp only [Prod.map_apply, ← hx, Pb]
-    · rintro ⟨⟨x1, x2⟩, hdiag, himg⟩
-      simp only [Set.mem_diagonal_iff] at hdiag
-      simp only [Prod.map_apply, Prod.mk.injEq] at himg
-      refine ⟨x1, ?_⟩; simp only [Pb]; simp only [← himg.1, ← himg.2, hdiag]
-  have hrw_loc : Set.range Pl = (Prod.map BaseLit.loc BaseLit.loc) '' Set.diagonal Loc := by
-    ext ⟨a, b⟩; constructor
-    · rintro ⟨x, hx⟩; refine ⟨(x, x), rfl, ?_⟩; simp only [Prod.map_apply, ← hx, Pl]
-    · rintro ⟨⟨x1, x2⟩, hdiag, himg⟩
-      simp only [Set.mem_diagonal_iff] at hdiag
-      simp only [Prod.map_apply, Prod.mk.injEq] at himg
-      refine ⟨x1, ?_⟩; simp only [Pl]; simp only [← himg.1, ← himg.2, hdiag]
-  have hrw_lbl : Set.range Pll = (Prod.map BaseLit.lbl BaseLit.lbl) '' Set.diagonal Lbl := by
-    ext ⟨a, b⟩; constructor
-    · rintro ⟨x, hx⟩; refine ⟨(x, x), rfl, ?_⟩; simp only [Prod.map_apply, ← hx, Pll]
-    · rintro ⟨⟨x1, x2⟩, hdiag, himg⟩
-      simp only [Set.mem_diagonal_iff] at hdiag
-      simp only [Prod.map_apply, Prod.mk.injEq] at himg
-      refine ⟨x1, ?_⟩; simp only [Pll]; simp only [← himg.1, ← himg.2, hdiag]
-  have hrw_real : Set.range Pr = (Prod.map BaseLit.real BaseLit.real) '' Set.diagonal rT := by
-    ext ⟨a, b⟩; constructor
-    · rintro ⟨x, hx⟩; refine ⟨(x, x), rfl, ?_⟩; simp only [Prod.map_apply, ← hx, Pr]
-    · rintro ⟨⟨x1, x2⟩, hdiag, himg⟩
-      simp only [Set.mem_diagonal_iff] at hdiag
-      simp only [Prod.map_apply, Prod.mk.injEq] at himg
-      refine ⟨x1, ?_⟩; simp only [Pr]; simp only [← himg.1, ← himg.2, hdiag]
   refine ((((MeasurableSet.union ?_ ?_).union ?_).union ?_).union ?_).union ?_
-  · rw [hrw_int]; exact (BaseLit.int.measurableEmbedding.prodMap
-      BaseLit.int.measurableEmbedding).measurableSet_image'
-      MeasurableEq.measurableSet_diagonal
-  · rw [hrw_bool]; exact (BaseLit.bool.measurableEmbedding.prodMap
-      BaseLit.bool.measurableEmbedding).measurableSet_image'
-      MeasurableEq.measurableSet_diagonal
+  · exact measurableSet_range_diag BaseLit.int.measurableEmbedding
+  · exact measurableSet_range_diag BaseLit.bool.measurableEmbedding
   · exact MeasurableSet.singleton _
-  · rw [hrw_loc]; exact (BaseLit.loc.measurableEmbedding.prodMap
-      BaseLit.loc.measurableEmbedding).measurableSet_image'
-      MeasurableEq.measurableSet_diagonal
-  · rw [hrw_lbl]; exact (BaseLit.lbl.measurableEmbedding.prodMap
-      BaseLit.lbl.measurableEmbedding).measurableSet_image'
-      MeasurableEq.measurableSet_diagonal
-  · rw [hrw_real]; exact (BaseLit.real.measurableEmbedding.prodMap
-      BaseLit.real.measurableEmbedding).measurableSet_image'
-      MeasurableEq.measurableSet_diagonal
+  · exact measurableSet_range_diag BaseLit.loc.measurableEmbedding
+  · exact measurableSet_range_diag BaseLit.lbl.measurableEmbedding
+  · exact measurableSet_range_diag BaseLit.real.measurableEmbedding
 
-/-- Measurability of `decide`-equality on `BaseLit rT` under `[MeasurableEq rT]`.
-Follows directly from `MeasurableEq (BaseLit rT)` (derived above) and the
-general `Measurable.eq` lemma. -/
 private theorem decide_eq_BaseLit_measurable
     [MeasurableSpace rT] [Inhabited rT] [DecidableEq (BaseLit rT)]
     [MeasurableEq rT] :
@@ -2082,16 +1550,12 @@ private theorem decide_eq_BaseLit_measurable
   rw [hpre]
   exact MeasurableEq.measurableSet_diagonal
 
-/-- Outer split on `p.1` (the `v2`); only `.lit` live.
-Requires `[MeasurableEq rT]` because the innermost
-`decide (l1 = l2)` over `BaseLit rT` factors through the diagonal of `rT × rT`. -/
 theorem liftEq_litK.measurable [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] [MeasurableEq rT] :
     Measurable (liftEq_litK (rT := rT)) := by
   let _ : MeasurableSpace (Option Int) := instLocalOption
   let _ : MeasurableSpace (Option (BaseLit rT)) := instLocalOption
   let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
-  -- Reshape: liftEq_litK p = (Exp.litExtract p.1).bind (fun l2 => some (Exp.lit (.bool (decide (p.2 = l2)))))
   have hrw : liftEq_litK (rT := rT) = fun p : Exp rT × BaseLit rT =>
       (Exp.litExtract p.1).bind fun l2 => some (Exp.lit (.bool (decide (p.2 = l2)))) := by
     funext p; obtain ⟨v2, l1⟩ := p
@@ -2102,11 +1566,9 @@ theorem liftEq_litK.measurable [MeasurableSpace rT] [Inhabited rT]
     (some_branch := fun r : (Exp rT × BaseLit rT) × BaseLit rT =>
       some (Exp.lit (BaseLit.bool (decide (r.1.2 = r.2))))) ?_ ?_
   · exact litExtract.measurable.comp measurable_fst
-  · -- `r ↦ some (.lit (.bool (decide (r.1.2 = r.2))))`.
-    refine MeasurableEmbedding.some_mk.measurable.comp ?_
+  · refine MeasurableEmbedding.some_mk.measurable.comp ?_
     refine Exp.lit.measurable.comp ?_
     refine BaseLit.bool.measurable.comp ?_
-    -- Show through explicit composition.
     have : (fun r : (Exp rT × BaseLit rT) × BaseLit rT => decide (r.1.2 = r.2))
          = (fun p : BaseLit rT × BaseLit rT => decide (p.1 = p.2)) ∘
            (fun r : (Exp rT × BaseLit rT) × BaseLit rT => (r.1.2, r.2)) := rfl
@@ -2114,23 +1576,11 @@ theorem liftEq_litK.measurable [MeasurableSpace rT] [Inhabited rT]
     exact (decide_eq_BaseLit_measurable (rT := rT)).comp
       ((measurable_snd.comp measurable_fst).prodMk measurable_snd)
 
-/-- Joint over `(e1', v2)`; live shapes: `(lit l1, inl (lit l2))`
-and `(lit _, inr (lit _))`. Reshape via `Exp.litExtract` on `e1'` first, then a
-2-arm decision on `v2`. -/
 theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] [MeasurableEq rT] :
     Measurable (liftEq_inlK (rT := rT)) := by
   let _ : MeasurableSpace (Option (BaseLit rT)) := instLocalOption
   let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
-  -- liftEq_inlK p = (litExtract p.1).bind (fun l1 =>
-  --   match p.2 with
-  --   | .inl (.lit l2) => some (.bool (l1 = l2))
-  --   | .inr (.lit _)  => some (.bool false)
-  --   | _ => none)
-  -- The inner function of `(l1, p.2)` factors as: `inlExtract p.2 >>= litExtract >>= λ l2 => some...`
-  --                                              ∪ `inrExtract p.2 >>= litExtract >>= λ _ => some false`
-  -- Both branches are measurable bind chains; their `union via first-some` is what `match` does.
-  -- We rewrite directly to a unified bind form.
   have hrw : liftEq_inlK (rT := rT) = fun p : Exp rT × Exp rT =>
       (Exp.litExtract p.1).bind fun l1 =>
         (Exp.inlExtract p.2).casesOn
@@ -2153,8 +1603,7 @@ theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
         (fun e1 => (Exp.litExtract e1).bind fun l2 =>
           some (Exp.lit (BaseLit.bool (decide (r.2 = l2)))))) ?_ ?_
   · exact litExtract.measurable.comp measurable_fst
-  · -- Inner: split on `inlExtract r.1.2`.
-    apply Option.measurable_elim_param (β := Exp rT) (γ := Option (Exp rT))
+  · apply Option.measurable_elim_param (β := Exp rT) (γ := Option (Exp rT))
       (f := fun r : (Exp rT × Exp rT) × BaseLit rT => Exp.inlExtract r.1.2)
       (default := fun r : (Exp rT × Exp rT) × BaseLit rT =>
         (Exp.inrExtract r.1.2).casesOn none (fun e2 =>
@@ -2163,8 +1612,7 @@ theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
         (Exp.litExtract s.2).bind fun l2 =>
           some (Exp.lit (BaseLit.bool (decide (s.1.2 = l2)))))
     · exact inlExtract.measurable.comp (measurable_snd.comp measurable_fst)
-    · -- default: split on `inrExtract r.1.2`.
-      apply Option.measurable_elim_param (β := Exp rT) (γ := Option (Exp rT))
+    · apply Option.measurable_elim_param (β := Exp rT) (γ := Option (Exp rT))
         (f := fun r : (Exp rT × Exp rT) × BaseLit rT => Exp.inrExtract r.1.2)
         (default := fun _ => none)
         (some_branch := fun s : ((Exp rT × Exp rT) × BaseLit rT) × Exp rT =>
@@ -2177,8 +1625,7 @@ theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
             some (Exp.lit (BaseLit.bool false))) ?_ ?_
         · exact litExtract.measurable.comp measurable_snd
         · exact measurable_const
-    · -- some-branch on `(s, e1)`: `(litExtract e1).bind (λ l2 => some (.bool (decide (s.1.2 = l2))))`.
-      refine Option.measurable_bind_param (β := BaseLit rT) (γ := Exp rT)
+    · refine Option.measurable_bind_param (β := BaseLit rT) (γ := Exp rT)
         (f := fun s : ((Exp rT × Exp rT) × BaseLit rT) × Exp rT => Exp.litExtract s.2)
         (some_branch := fun t : (((Exp rT × Exp rT) × BaseLit rT) × Exp rT) × BaseLit rT =>
           some (Exp.lit (BaseLit.bool (decide (t.1.1.2 = t.2))))) ?_ ?_
@@ -2189,7 +1636,6 @@ theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
         exact decide_eq_BaseLit_measurable.comp
           ((measurable_snd.comp (measurable_fst.comp measurable_fst)).prodMk measurable_snd)
 
-/-- Symmetric to `inlK`. -/
 theorem liftEq_inrK.measurable [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] [MeasurableEq rT] :
     Measurable (liftEq_inrK (rT := rT)) := by
@@ -2250,8 +1696,7 @@ theorem liftEq_inrK.measurable [MeasurableSpace rT] [Inhabited rT]
         exact decide_eq_BaseLit_measurable.comp
           ((measurable_snd.comp (measurable_fst.comp measurable_fst)).prodMk measurable_snd)
 
-/-- Helper for `liftEq.measurable`: `liftEq` dispatched through per-shape helpers
-on the outer Exp constructor. Separate lemma so its proof time is bounded. -/
+/-- A separate lemma to keep `liftEq.measurable` within its heartbeat budget. -/
 private theorem liftEq_dispatch [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) :
     liftEq p =
@@ -2280,9 +1725,6 @@ private theorem liftEq_dispatch [MeasurableSpace rT] [Inhabited rT]
       (rename_i e2'; cases e2' <;> simp)
   | _ => rfl
 
-/-- Bespoke 5-pattern lifter for `BinOp.eval .eq`. Decomposed via
-three per-shape helpers: `litK` (when `v1 = .lit _`), `inlK` (when `v1 = .inl _`),
-`inrK` (when `v1 = .inr _`). The outer split on `v1` uses `Exp.measurable_rec`. -/
 theorem liftEq.measurable [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] [MeasurableEq rT] :
     Measurable (liftEq (rT := rT)) := by
@@ -2299,7 +1741,6 @@ theorem liftEq.measurable [MeasurableSpace rT] [Inhabited rT]
         (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
     funext p; exact liftEq_dispatch p
   rw [hrw]
-  -- Joint `Exp.measurable_rec_param` over (p.1, p.2): split on p.1, with p.2 as param.
   refine Exp.measurable_rec_param (rT := rT) (α := Option (Exp rT)) (β := Exp rT)
     (c_bvar := fun _ => none) (c_fvar := fun _ => none)
     (c_lit := fun q : Exp rT × BaseLit rT => liftEq_litK q)
@@ -2313,39 +1754,25 @@ theorem liftEq.measurable [MeasurableSpace rT] [Inhabited rT]
     (c_store := fun _ => none) (c_tape := fun _ => none) (c_rand := fun _ => none)
     (c_fail := fun _ => none) (c_urand := fun _ => none) (c_scrut := fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  -- 23 measurability obligations, only 3 nontrivial.
-  · exact measurable_const  -- c_bvar
-  · exact measurable_const  -- c_fvar
-  · -- c_lit: `q ↦ liftEq_litK q`. Just apply the helper.
-    exact liftEq_litK.measurable
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · -- c_inl: `q ↦ liftEq_inlK (q.2, q.1)`. Swap then apply.
-    show Measurable fun q : Exp rT × Exp rT => liftEq_inlK (q.2, q.1)
+  iterate 2 exact measurable_const
+  · exact liftEq_litK.measurable
+  iterate 9 exact measurable_const
+  · show Measurable fun q : Exp rT × Exp rT => liftEq_inlK (q.2, q.1)
     exact liftEq_inlK.measurable.comp (measurable_snd.prodMk measurable_fst)
   · show Measurable fun q : Exp rT × Exp rT => liftEq_inrK (q.2, q.1)
     exact liftEq_inrK.measurable.comp (measurable_snd.prodMk measurable_fst)
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
-  · exact measurable_const
+  all_goals exact measurable_const
 
-/-! ### `BinOp.eval` rewritten as lifter dispatch + measurability assembly. -/
+/-- Splits two `Exp` operands down to their `BaseLit` constructors, closing each arm by `rfl`. -/
+local macro "lit_pair_cases " v1:ident v2:ident : tactic =>
+  `(tactic| cases $v1:ident <;> first
+    | rfl
+    | (rename_i l1; cases l1 <;> first
+        | rfl
+        | (cases $v2:ident <;> first
+            | rfl
+            | (rename_i l2; cases l2 <;> rfl))))
 
-/-- Helper: `liftII f (v1, v2)` matches the structural pattern of `BinOp.eval`'s
-int-int arms — only int-literal-pairs produce `some`, anything else `none`. -/
 private theorem liftII_def_eq (f : Int → Int → Int) (v1 v2 : Exp rT) :
     liftII f (v1, v2) =
       (match v1, v2 with
@@ -2419,13 +1846,7 @@ private theorem liftIIorRR_def_eq [LawfulProbLangℝ rT] (fi : Int → Int → I
        | _, _ => none) := by
   show (liftII fi (v1, v2)).orElse (fun _ => liftRR f (v1, v2)) = _
   rw [liftII_def_eq, liftRR_def_eq]
-  cases v1 <;> first
-    | rfl
-    | (rename_i l1; cases l1 <;> first
-        | rfl
-        | (cases v2 <;> first
-            | rfl
-            | (rename_i l2; cases l2 <;> rfl)))
+  lit_pair_cases v1 v2
 
 private theorem liftLtLe_def_eq [LawfulProbLangℝ rT] (fi : Int → Int → Bool) (f : rT → rT → Bool)
     (v1 v2 : Exp rT) :
@@ -2436,64 +1857,30 @@ private theorem liftLtLe_def_eq [LawfulProbLangℝ rT] (fi : Int → Int → Boo
        | _, _ => none) := by
   show (liftIB fi (v1, v2)).orElse (fun _ => liftRB f (v1, v2)) = _
   rw [liftIB_def_eq, liftRB_def_eq]
-  cases v1 <;> first
-    | rfl
-    | (rename_i l1; cases l1 <;> first
-        | rfl
-        | (cases v2 <;> first
-            | rfl
-            | (rename_i l2; cases l2 <;> rfl)))
+  lit_pair_cases v1 v2
 
-/-- Helper for the `plus` arm of `BinOp.eval_eq_lift`: integer *or* real operands. -/
 private theorem BinOp.eval_plus_eq_liftIIorRR [LawfulProbLangℝ rT] (v1 v2 : Exp rT) :
     BinOp.eval .plus v1 v2 = liftIIorRR (· + ·) ProbLangℝ.realAdd (v1, v2) := by
   rw [liftIIorRR_def_eq]
-  cases v1 <;> first
-    | rfl
-    | (rename_i l1; cases l1 <;> first
-        | rfl
-        | (cases v2 <;> first
-            | rfl
-            | (rename_i l2; cases l2 <;> rfl)))
+  lit_pair_cases v1 v2
 
-/-- Helper for the `lt` arm of `BinOp.eval_eq_lift`. -/
 private theorem BinOp.eval_lt_eq_liftLtLe [LawfulProbLangℝ rT] (v1 v2 : Exp rT) :
     BinOp.eval .lt v1 v2 = liftLtLe (decide <| · < ·) ProbLangℝ.realLt (v1, v2) := by
   rw [liftLtLe_def_eq]
-  cases v1 <;> first
-    | rfl
-    | (rename_i l1; cases l1 <;> first
-        | rfl
-        | (cases v2 <;> first
-            | rfl
-            | (rename_i l2; cases l2 <;> rfl)))
+  lit_pair_cases v1 v2
 
-/-- Helper for the `le` arm of `BinOp.eval_eq_lift`. -/
 private theorem BinOp.eval_le_eq_liftLtLe [LawfulProbLangℝ rT] (v1 v2 : Exp rT) :
     BinOp.eval .le v1 v2 = liftLtLe (decide <| · ≤ ·) ProbLangℝ.realLe (v1, v2) := by
   rw [liftLtLe_def_eq]
-  cases v1 <;> first
-    | rfl
-    | (rename_i l1; cases l1 <;> first
-        | rfl
-        | (cases v2 <;> first
-            | rfl
-            | (rename_i l2; cases l2 <;> rfl)))
+  lit_pair_cases v1 v2
 
-/-- Helper for the `eq` arm of `BinOp.eval_eq_lift`: `BinOp.eval .eq v1 v2 = liftEq (v1, v2)`.
-Split as a separate lemma so its proof time is bounded and doesn't blow the
-parent's heartbeat budget. -/
+/-- A separate lemma to keep `BinOp.eval_eq_lift` within its heartbeat budget. -/
 private theorem BinOp.eval_eq_eq_liftEq [LawfulProbLangℝ rT] (v1 v2 : Exp rT) :
     BinOp.eval .eq v1 v2 = liftEq (v1, v2) := by
   have h (l1 l2 : BaseLit rT) : (l1 == l2) = decide (l1 = l2) := Bool.beq_eq_decide_eq l1 l2
   cases v1 <;> cases v2 <;> (try simp [BinOp.eval, liftEq, h]) <;>
-    -- For `.inl _, .inl _`, `.inl _, .inr _`, `.inr _, .inl _`, `.inr _, .inr _`:
-    -- inner Exp may or may not be a `.lit`; recurse one more level.
     (rename_i ein1 ein2; cases ein1 <;> cases ein2 <;> simp)
 
-/-- `BinOp.eval` is equal to a per-op dispatch through `liftII`/`liftBB`/`liftIB`/`liftEq`.
-The proof is per-op: discrete `cases op` then unfold each side to the same
-nested-`match` form via the `liftXY_def_eq` helpers (`rfl` for `liftEq`). -/
 theorem BinOp.eval_eq_lift [LawfulProbLangℝ rT] (op : BinOp) (v1 v2 : Exp rT) :
     BinOp.eval op v1 v2 =
       (match op with
@@ -2514,20 +1901,8 @@ theorem BinOp.eval_eq_lift [LawfulProbLangℝ rT] (op : BinOp) (v1 v2 : Exp rT) 
   all_goals
     dsimp only []
     first
-      | (rw [liftII_def_eq]; cases v1 <;> first
-          | rfl
-          | (rename_i l1; cases l1 <;> first
-              | rfl
-              | (cases v2 <;> first
-                  | rfl
-                  | (rename_i l2; cases l2 <;> rfl))))
-      | (rw [liftBB_def_eq]; cases v1 <;> first
-          | rfl
-          | (rename_i l1; cases l1 <;> first
-              | rfl
-              | (cases v2 <;> first
-                  | rfl
-                  | (rename_i l2; cases l2 <;> rfl))))
+      | (rw [liftII_def_eq]; lit_pair_cases v1 v2)
+      | (rw [liftBB_def_eq]; lit_pair_cases v1 v2)
       | exact BinOp.eval_plus_eq_liftIIorRR v1 v2
       | exact BinOp.eval_lt_eq_liftLtLe v1 v2
       | exact BinOp.eval_le_eq_liftLtLe v1 v2
@@ -2571,9 +1946,8 @@ theorem BinOp_eval.measurable [LawfulProbLangℝ rT] :
   · exact liftII.measurable _
   · exact liftII.measurable _
 
-/-- For each fixed `p : Pat rT`, `e ↦ Pat.tryMatch p e` is measurable. Proved
-by structural induction on `p`; each arm uses `Exp.measurable_rec` to dispatch
-on the shape of `e`. -/
+/-! ### `Pat.tryMatch` -/
+
 theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
     Measurable (fun e : Exp rT => Pat.tryMatch p e) := by
   induction p with
@@ -2584,59 +1958,29 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
     rw [hrw]
     exact MeasurableEmbedding.some_mk.measurable
   | lit l =>
-    -- Reshape to Exp.casesOn with only `.lit` live.
-    have hrw : (fun e : Exp rT => Pat.tryMatch (.lit l) e)
-        = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
-            (fun _ => none) (fun _ => none)
-            (fun l' => if (l == l') = true then some (.lit .unit) else none)
-            (fun _ => none) (fun _ => none)
-            (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-            (fun _ _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-            (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-      funext e
-      cases e <;> rfl
+    refine measurable_of_lit_only none
+      (f := fun l' => if (l == l') = true then some (Exp.lit .unit) else none) ?_
+      fun e => by cases e <;> rfl
+    intro S hS
+    have hrw : (fun l' : BaseLit rT =>
+        if (l == l') = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S
+        = (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S then {l} else ∅)
+          ∪ (if (none : Option (Exp rT)) ∈ S then ({l}ᶜ : Set (BaseLit rT)) else ∅) := by
+      ext l'
+      by_cases hll : l = l'
+      · subst hll
+        simp
+      · have hne' : ¬ l' = l := fun h => hll h.symm
+        simp [hll, hne']
     rw [hrw]
-    apply Exp.measurable_rec
-      (f_bvar := fun _ => none) (f_fvar := fun _ => none)
-      (f_lit := fun l' : BaseLit rT =>
-        if (l == l') = true then some (Exp.lit BaseLit.unit) else none)
-      (f_lam := fun _ => none) (f_fix := fun _ => none)
-      (f_app := fun _ => none) (f_unop := fun _ => none) (f_binop := fun _ => none)
-      (f_cond := fun _ => none) (f_pair := fun _ => none)
-      (f_fst := fun _ => none) (f_snd := fun _ => none)
-      (f_inl := fun _ => none) (f_inr := fun _ => none) (f_case := fun _ => none)
-      (f_alloc := fun _ => none) (f_load := fun _ => none) (f_store := fun _ => none)
-      (f_tape := fun _ => none) (f_rand := fun _ => none) (f_fail := fun _ => none)
-      (f_urand := fun _ => none)
-      (f_scrut := fun _ => none)
-    · -- h_lit: `Measurable (fun l' : BaseLit rT => if (l == l') = true then some (.lit .unit) else none)`.
-      -- Factor: the function equals `some (.lit .unit)` if l' = l, else `none`. The set
-      -- {l} is measurable (BaseLit has MeasurableSingletonClass from our MeasurableEq lift).
-      -- Use that `(l == l') = true ↔ l = l'` under LawfulBEq.
-      intro S hS
-      have hrw : (fun l' : BaseLit rT =>
-          if (l == l') = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S
-          = (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S then {l} else ∅)
-            ∪ (if (none : Option (Exp rT)) ∈ S then ({l}ᶜ : Set (BaseLit rT)) else ∅) := by
-        ext l'
-        by_cases hll : l = l'
-        · subst hll
-          simp
-        · have hne : (l == l') ≠ true := fun h => hll (LawfulBEq.eq_of_beq h)
-          have hne' : ¬ l' = l := fun h => hll h.symm
-          simp [hll, hne']
-      rw [hrw]
-      refine MeasurableSet.union ?_ ?_
-      · split_ifs
-        · exact MeasurableSet.singleton l
-        · exact MeasurableSet.empty
-      · split_ifs
-        · exact (MeasurableSet.singleton l).compl
-        · exact MeasurableSet.empty
-    all_goals exact measurable_const
+    refine MeasurableSet.union ?_ ?_
+    · split_ifs
+      · exact MeasurableSet.singleton l
+      · exact MeasurableSet.empty
+    · split_ifs
+      · exact (MeasurableSet.singleton l).compl
+      · exact MeasurableSet.empty
   | pair p1 p2 ih1 ih2 =>
-    -- `Pat.tryMatch (.pair p1 p2) e = match e with | .pair e1 e2 => ih1(e1) >>= ... | _ => none`.
     have hrw : (fun e : Exp rT => Pat.tryMatch (.pair p1 p2) e)
         = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
             (fun _ => none) (fun _ => none) (fun _ => none)
@@ -2666,15 +2010,7 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
       (f_tape := fun _ => none) (f_rand := fun _ => none) (f_fail := fun _ => none)
       (f_urand := fun _ => none)
       (f_scrut := fun _ => none)
-    · -- h_lit (the index of c_lit; obviated)
-      exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · -- h_pair: the bind chain.
+    case h_pair =>
       let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
       refine Option.measurable_bind_param (β := Exp rT) (γ := Exp rT)
         (f := fun q : Exp rT × Exp rT => Pat.tryMatch p1 q.1)
@@ -2693,7 +2029,6 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
           exact MeasurableEmbedding.some_mk.measurable.comp (Exp.pair.measurable.comp hp)
     all_goals exact measurable_const
   | inl p ih =>
-    -- `Pat.tryMatch (.inl p) e = match e with | .inl e' => ih(e') | _ => none`.
     have hrw : (fun e : Exp rT => Pat.tryMatch (.inl p) e)
         = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
             (fun _ => none) (fun _ => none) (fun _ => none)
@@ -2718,18 +2053,7 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
       (f_tape := fun _ => none) (f_rand := fun _ => none) (f_fail := fun _ => none)
       (f_urand := fun _ => none)
       (f_scrut := fun _ => none)
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · -- h_inl
-      exact ih
+    case h_inl => exact ih
     all_goals exact measurable_const
   | inr p ih =>
     have hrw : (fun e : Exp rT => Pat.tryMatch (.inr p) e)
@@ -2756,44 +2080,20 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
       (f_tape := fun _ => none) (f_rand := fun _ => none) (f_fail := fun _ => none)
       (f_urand := fun _ => none)
       (f_scrut := fun _ => none)
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · exact measurable_const
-    · -- h_inr
-      exact ih
+    case h_inr => exact ih
     all_goals exact measurable_const
 
 theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] :
     Measurable (fun (q : Pat rT × Exp rT) => Pat.tryMatch q.1 q.2) := by
-  -- Pat rT is Countable (from Pat's deriving + Countable rT) and MeasurableSingletonClass
-  -- (from CoreMeasures/Pat.lean). Split on the Pat factor (left position) via
-  -- `measurable_from_prod_countable_right` (which expects the LEFT factor to be discrete).
   apply measurable_from_prod_countable_right
-  intro p
-  exact tryMatch_fixed.measurable p
+  exact tryMatch_fixed.measurable
 
-/-- **Joint measurability of `Pat.tryMatch` over arbitrary `rT`** (no `Countable rT`).
-
-Proof outline: Apply `StructRec.measurable_of_cells_param Pat.shape` with `β = Exp rT`
-and `α = Option (Exp rT)`. For each Pat shape, the per-shape cell is computed by hand
-using the Pat constructor's measurable embedding to factor out, then decomposing the
-result via `Exp.casesOn` on the Exp factor. The recursive Pat cases use the cell IH
-(at sub-Pat-shape) applied to a measurable subset that emerges after extracting the
-sub-Exps via Exp's constructor embeddings — handling the doubly-recursive structure
-of `tryMatch` that the standard `Pat.measurable_struct_rec_param` can't reach. -/
+/-- Unlike `tryMatch.measurable`, needs no `Countable rT`. `tryMatch` recurses on both
+arguments, so each `Pat.shape` cell is computed by hand: the pattern constructor's
+embedding factors out, and the `Exp` argument splits into the matching constructor's
+range (handled by the cell IH) and its complement (`none`). -/
 theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
     Measurable (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e)) := by
-  -- We work with `g : Exp rT → Pat rT → Option (Exp rT)` defined by `g e p = tryMatch p e`,
-  -- and prove `Measurable (uncurry g) : Exp × Pat → Option Exp`. The framework gives us
-  -- a function `Exp × Pat → α`; we want `Pat × Exp → α`. We'll use Prod.swap below.
   have hjoint : Measurable
       (Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e)) := by
     apply _root_.StructRec.measurable_of_cells_param (β := Exp rT) (T := Pat rT)
@@ -2801,7 +2101,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
     intro s
     induction s with
     | wildcard =>
-      -- Cell at .wildcard shape: tryMatch .wildcard e = some e.
       intro U hU
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.wildcard ∧
           Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
@@ -2823,7 +2122,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         (fun p => by cases p <;> simp [Pat.shape])
         (fun _ _ => rfl)
         ?_ hU
-      -- Measurability of (e, b) ↦ tryMatch (.lit b) e: dispatch on e via Exp.casesOn.
       have hrw : Function.uncurry
             (fun (e : Exp rT) (b : BaseLit rT) => Pat.tryMatch (.lit b) e)
           = fun q : Exp rT × BaseLit rT =>
@@ -2852,7 +2150,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         (c_urand := fun _ => none)
         (c_scrut := fun _ => none)
       all_goals first | exact measurable_const | skip
-      -- h_lit measurability
       intro S hS
       have hrw' : (fun q : BaseLit rT × BaseLit rT =>
           if (q.1 == q.2) = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S
@@ -2872,8 +2169,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       · exact MeasurableSet.empty
     | inl s' ih =>
       intro U hU
-      -- Cell C = {(e, p) | shape p = .inl s' ∧ tryMatch p e ∈ U}
-      -- = (id × Pat.inl) '' Inner, Inner = {(e, p') | shape p' = s' ∧ tryMatch (.inl p') e ∈ U}.
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.inl s' ∧
             Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
           = (Prod.map (id : Exp rT → Exp rT) Pat.inl) ''
@@ -2897,43 +2192,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           exact ⟨by simp [Pat.shape, hsh], hp⟩
       rw [hcell]
       refine (MeasurableEmbedding.id.prodMap Pat.inl.measurableEmbedding).measurableSet_image' ?_
-      -- Inner set: split by whether e ∈ range Exp.inl.
-      -- We use the equivalent form via Option.elim on (extract sub-e if e ∈ range Exp.inl).
-      have hinl_pat : ∀ (e : Exp rT) (p' : Pat rT),
-          Pat.tryMatch (Pat.inl p') e =
-            ((fun e0 : Exp rT => Pat.tryMatch p' e0) <$>
-              (Exp.casesOn (motive := fun _ => Option (Exp rT)) e
-                (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-                (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-                (fun _ _ => none) (fun _ => none) (fun _ => none)
-                (fun e' => some e') (fun _ => none)
-                (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-                (fun _ => none) (fun _ _ => none) none none (fun _ _ => none))).join := by
-        intros e p'; cases e <;> simp [Pat.tryMatch]
-      -- Rewrite inner via hinl_pat, then prove measurable via composition.
-      have h_inner_set : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-                Pat.tryMatch (Pat.inl q.2) q.1 ∈ U}
-          = {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              ((fun e0 : Exp rT => Pat.tryMatch q.2 e0) <$>
-                (Exp.casesOn (motive := fun _ => Option (Exp rT)) q.1
-                  (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-                  (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-                  (fun _ _ => none) (fun _ => none) (fun _ => none)
-                  (fun e' => some e') (fun _ => none)
-                  (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-                  (fun _ => none) (fun _ _ => none) none none (fun _ _ => none))).join ∈ U} := by
-        ext ⟨e, p'⟩
-        simp only [Set.mem_ofPred_eq]
-        constructor
-        · rintro ⟨hsh, hp⟩; exact ⟨hsh, by rw [← hinl_pat]; exact hp⟩
-        · rintro ⟨hsh, hp⟩; exact ⟨hsh, by rw [hinl_pat]; exact hp⟩
-      -- Forget the elaborate hinl_pat / h_inner_set form and just work directly with the
-      -- per-Exp-constructor decomposition of `tryMatch (Pat.inl p') e`.
-      clear h_inner_set hinl_pat
-      -- Split: cell = A ∪ B where
-      --   A = {(e, p') | e ∈ range Exp.inl ∧ shape p' = s' ∧ tryMatch (Pat.inl p') e ∈ U}
-      --     = (Exp.inl × id) '' (ih cell at s')
-      --   B = {(e, p') | e ∉ range Exp.inl ∧ shape p' = s' ∧ none ∈ U}
       have hA_eq : ∀ (e' : Exp rT) (p' : Pat rT),
           Pat.tryMatch (Pat.inl p') (Exp.inl e') = Pat.tryMatch p' e' := fun _ _ => rfl
       have hB_eq : ∀ (e : Exp rT) (p' : Pat rT), (¬ ∃ e', Exp.inl e' = e) →
@@ -2954,7 +2212,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         obtain ⟨he, hp_eq⟩ := heq
         subst he; subst hp_eq
         exact ⟨hsh, by rw [hA_eq]; exact hp⟩
-      -- Setify: inner = A ∪ B
       have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
               Pat.tryMatch (Pat.inl q.2) q.1 ∈ U}
           = ((Prod.map (Exp.inl : Exp rT → Exp rT) (id : Pat rT → Pat rT)) ''
@@ -2988,11 +2245,9 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             rw [hB_eq _ _ hne]; exact hnone
       rw [h_inner_eq]
       refine MeasurableSet.union ?_ ?_
-      · -- A measurable
-        refine (Exp.inl.measurableEmbedding.prodMap MeasurableEmbedding.id).measurableSet_image' ?_
+      · refine (Exp.inl.measurableEmbedding.prodMap MeasurableEmbedding.id).measurableSet_image' ?_
         exact ih hU
-      · -- B = (range inl)ᶜ ×ˢ univ ∩ {shape = s'} (when none ∈ U) else ∅
-        by_cases hnoneU : (none : Option (Exp rT)) ∈ U
+      · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
         · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inl : Exp rT → Exp rT) ∧
               Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}
               = (((Set.range (Exp.inl : Exp rT → Exp rT))ᶜ ×ˢ (Set.univ : Set (Pat rT)))
@@ -3013,7 +2268,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           exact MeasurableSet.empty
     | inr s' ih =>
       intro U hU
-      -- Symmetric to inl case.
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.inr s' ∧
             Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
           = (Prod.map (id : Exp rT → Exp rT) Pat.inr) ''
@@ -3100,8 +2354,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           exact MeasurableSet.empty
     | pair s1 s2 ih1 ih2 =>
       intro U hU
-      -- Cell = (id × Pat.pair.ctor) '' Inner where
-      --   Inner = {(e, (p1, p2)) | shape p1 = s1 ∧ shape p2 = s2 ∧ tryMatch (.pair p1 p2) e ∈ U}
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.pair s1 s2 ∧
             Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
           = (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) ''
@@ -3126,7 +2378,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           subst he; subst hp_eq
           exact ⟨by simp [Pat.shape, hs1, hs2], hp⟩
       rw [hcell]
-      -- Show the outer image is measurable.
       have hemb : MeasurableEmbedding
           (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) := by
         have hfun : (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2))
@@ -3135,9 +2386,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         rw [hfun]
         exact MeasurableEmbedding.id.prodMap Pat.pair.measurableEmbedding
       refine hemb.measurableSet_image' ?_
-      -- The inner set: split by Exp constructor.
-      -- For e = .pair e1 e2: tryMatch (.pair p1 p2) (.pair e1 e2) = bind chain on tryMatch p1 e1, tryMatch p2 e2.
-      -- For other e: tryMatch = none.
       have hA_eq : ∀ (e1 e2 : Exp rT) (p1 p2 : Pat rT),
           Pat.tryMatch (Pat.pair p1 p2) (Exp.pair e1 e2)
             = (Pat.tryMatch p1 e1).bind (fun b1 =>
@@ -3150,7 +2398,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         all_goals first
           | rfl
           | (rename_i e1 e2; exact absurd ⟨(e1, e2), rfl⟩ h)
-      -- Split Inner = A ∪ B.
       have h_inner_eq : {q : Exp rT × Pat rT × Pat rT |
             Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
             Pat.tryMatch (Pat.pair q.2.1 q.2.2) q.1 ∈ U}
@@ -3189,12 +2436,9 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             rw [hB_eq _ _ _ hne]; exact hnone
       rw [h_inner_eq]
       refine MeasurableSet.union ?_ ?_
-      · -- A measurable via embedding + joint cell.
-        have hemb_inner : MeasurableEmbedding
+      · have hemb_inner : MeasurableEmbedding
             (fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
               (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2)) := by
-          -- (e1, e2, p1, p2) ↦ (.pair e1 e2, p1, p2)
-          -- = ((Function.uncurry Exp.pair) × id) ∘ shuffle.
           have hfun : (fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
                 (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2))
               = (Prod.map (Function.uncurry Exp.pair) (id : Pat rT × Pat rT → Pat rT × Pat rT)) := by
@@ -3202,9 +2446,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           rw [hfun]
           exact Exp.pair.measurableEmbedding.prodMap MeasurableEmbedding.id
         refine hemb_inner.measurableSet_image' ?_
-        -- {((e1, e2), (p1, p2)) | shape p1 = s1 ∧ shape p2 = s2 ∧ q(tryMatch p1 e1, tryMatch p2 e2) ∈ U}
-        -- where q (b1, b2) := b1.bind (fun b1' => b2.bind (fun b2' => some (.pair b1' b2'))).
-        -- Define `qfun` and prove it measurable, then preimage of qfun on the joint.
         set qfun : Option (Exp rT) × Option (Exp rT) → Option (Exp rT) :=
           fun p => p.1.bind fun b1 => p.2.bind fun b2 => some (Exp.pair b1 b2) with hqfun
         have hqfun_meas : Measurable qfun := by
@@ -3225,13 +2466,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
                 exact Exp.pair.measurable.comp
                   (((measurable_snd).comp measurable_fst).prodMk measurable_snd)
               exact MeasurableEmbedding.some_mk.measurable.comp h_pair_meas
-        -- The condition `qfun (tryMatch p1 e1, tryMatch p2 e2) ∈ U` rewrites via the
-        -- preimage of `qfun ⁻¹ U` under the measurable map (e1, e2, p1, p2) ↦ (tryMatch p1 e1, tryMatch p2 e2).
-        -- We use π-system induction on the σ-algebra of `Option Exp × Option Exp`.
         set V : Set (Option (Exp rT) × Option (Exp rT)) := qfun ⁻¹' U with hV_def
         have hV : MeasurableSet V := hqfun_meas hU
-        -- Show: {q | shape q.2.1 = s1 ∧ shape q.2.2 = s2 ∧ (tryMatch q.2.1 q.1.1, tryMatch q.2.2 q.1.2) ∈ V}
-        -- is measurable for any measurable V ⊆ Option Exp × Option Exp.
         suffices hgeneric :
             ∀ V' : Set (Option (Exp rT) × Option (Exp rT)), MeasurableSet V' →
               MeasurableSet
@@ -3249,7 +2485,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           rw [hconv]
           exact hgeneric V hV
         intro V' hV'
-        -- π-system induction on V'.
         have hgen : (Prod.instMeasurableSpace : MeasurableSpace (Option (Exp rT) × Option (Exp rT)))
             = .generateFrom (Set.image2 (· ×ˢ ·) {S : Set (Option (Exp rT)) | MeasurableSet S}
                                                   {S : Set (Option (Exp rT)) | MeasurableSet S}) :=
@@ -3267,12 +2502,10 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         intro V'' hV''
         refine MeasurableSpace.induction_on_inter
           (C := fun V''' _ => MeasurableSet (Joint V''')) hgen hpi ?_ ?_ ?_ ?_ V'' hV''
-        · -- Joint ∅ = ∅
-          show MeasurableSet (Joint ∅)
+        · show MeasurableSet (Joint ∅)
           convert MeasurableSet.empty
           ext q; simp [hJoint_def]
-        · -- Rectangle case
-          rintro _ ⟨A, hA, B, hB, rfl⟩
+        · rintro _ ⟨A, hA, B, hB, rfl⟩
           show MeasurableSet (Joint (A ×ˢ B))
           have heq : Joint (A ×ˢ B)
               = ((fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) =>
@@ -3288,8 +2521,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           refine MeasurableSet.inter ?_ ?_
           · exact MeasurableSet.preimage (ih1 hA) (by fun_prop)
           · exact MeasurableSet.preimage (ih2 hB) (by fun_prop)
-        · -- Complement case
-          intro V''' _ IH
+        · intro V''' _ IH
           show MeasurableSet (Joint V'''ᶜ)
           have heq : Joint V'''ᶜ
               = ({q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
@@ -3297,7 +2529,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             ext q; simp [hJoint_def]; tauto
           rw [heq]
           refine MeasurableSet.diff ?_ IH
-          -- {q | shape q.2.1 = s1 ∧ shape q.2.2 = s2} measurable.
           have hih1_univ := ih1 (MeasurableSet.univ (α := Option (Exp rT)))
           have hih2_univ := ih2 (MeasurableSet.univ (α := Option (Exp rT)))
           have h1 : MeasurableSet
@@ -3320,8 +2551,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             exact MeasurableSet.preimage hih2_univ (by fun_prop)
           convert h1.inter h2 using 1
           measurability
-        · -- Countable union case
-          intro F _ _ IH
+        · intro F _ _ IH
           show MeasurableSet (Joint (⋃ i, F i))
           have heq : Joint (⋃ i, F i) = ⋃ i, Joint (F i) := by
             ext q
@@ -3329,8 +2559,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             tauto
           rw [heq]
           exact MeasurableSet.iUnion IH
-      · -- B = {q | q.1 ∉ range (uncurry pair) ∧ shape q.2.1 = s1 ∧ shape q.2.2 = s2 ∧ none ∈ U}
-        by_cases hnoneU : (none : Option (Exp rT)) ∈ U
+      · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
         · have hB_eq2 : {q : Exp rT × Pat rT × Pat rT |
                 q.1 ∉ Set.range (Function.uncurry (Exp.pair : Exp rT → Exp rT → Exp rT)) ∧
                 Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧ (none : Option (Exp rT)) ∈ U}
@@ -3341,8 +2570,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           rw [hB_eq2]
           refine MeasurableSet.inter (MeasurableSet.prod ?_ MeasurableSet.univ) ?_
           · exact Exp.pair.measurableEmbedding.measurableSet_range.compl
-          · -- {q | shape q.2.1 = s1 ∧ shape q.2.2 = s2} measurable from ih1, ih2 univ.
-            have hih1_univ := ih1 (MeasurableSet.univ (α := Option (Exp rT)))
+          · have hih1_univ := ih1 (MeasurableSet.univ (α := Option (Exp rT)))
             have hih2_univ := ih2 (MeasurableSet.univ (α := Option (Exp rT)))
             have h1 : MeasurableSet
                 {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.1 = s1} := by
@@ -3370,10 +2598,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             ext ⟨e, p1, p2⟩; simp [hnoneU]
           rw [hB_eq2]
           exact MeasurableSet.empty
-  -- Now turn (Exp × Pat) measurability into (Pat × Exp).
-  have hswap : (fun (q : Pat rT × Exp rT) => Pat.tryMatch q.1 q.2)
-      = (Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e)) ∘ Prod.swap := by
-    funext q; rfl
   rw [show (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e))
         = (Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e)) ∘ Prod.swap from
       funext fun _ => rfl]

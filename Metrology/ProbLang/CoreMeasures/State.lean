@@ -23,13 +23,11 @@ theorem LocHeap.measurable_iff {X V : Type _} [MeasurableSpace X] [MeasurableSpa
     {f : X → LocHeap V} :
     Measurable f ↔ ∀ ℓ : Loc, Measurable (fun x => (f x)[ℓ]?) :=
   ⟨fun hf ℓ => (LocHeap.measurable_getElem? ℓ).comp hf,
-   fun h => (measurable_comap_iff).mpr
-              (measurable_pi_iff.mpr h)⟩
+   fun h => measurable_comap_iff.mpr (measurable_pi_iff.mpr h)⟩
 
 theorem LocHeap.measurableSet_mem {V : Type _} [MeasurableSpace V] (ℓ : Loc) :
     MeasurableSet {m : LocHeap V | ℓ ∈ m} := by
-  have hset : {m : LocHeap V | ℓ ∈ m}
-              = (fun m => m[ℓ]?) ⁻¹' (({none} : Set (Option V))ᶜ) := by
+  have hset : {m : LocHeap V | ℓ ∈ m} = (fun m => m[ℓ]?) ⁻¹' ({none} : Set (Option V))ᶜ := by
     ext m
     simp only [Set.mem_ofPred_eq, Std.ExtTreeMap.mem_iff_isSome_getElem?,
       Set.mem_preimage, Set.mem_compl_iff, Set.mem_singleton_iff]
@@ -44,34 +42,22 @@ theorem LocHeap.measurableSet_notMem {V : Type _} [MeasurableSpace V] (ℓ : Loc
 @[fun_prop]
 theorem Measurable.locHeap_insert {V : Type _} [MeasurableSpace V] (ℓ : Loc) :
     Measurable (fun (p : LocHeap V × V) => p.1.insert ℓ p.2) := by
-  rw [LocHeap.measurable_iff]
-  intro k
+  refine LocHeap.measurable_iff.mpr fun k => ?_
   have hrw : (fun (p : LocHeap V × V) => (p.1.insert ℓ p.2)[k]?)
-              = fun p => if compare ℓ k = .eq then some p.2 else p.1[k]? := by
-    funext p; exact Std.ExtTreeMap.getElem?_insert
+      = fun p => if compare ℓ k = .eq then some p.2 else p.1[k]? :=
+    funext fun _ => Std.ExtTreeMap.getElem?_insert
   rw [hrw]
   split_ifs
   · exact measurable_some.comp measurable_snd
   · exact (LocHeap.measurable_getElem? k).comp measurable_fst
 
-/-- Parameterized `LocHeap.insert`: measurable jointly in `(m, ℓ, v)`. Uses
-the fact that `Loc = Int` is countable with discrete σ-algebra. -/
+/-- Measurable jointly in `(m, ℓ, v)` because `Loc` is countable and discrete. -/
 @[fun_prop]
 theorem Measurable.locHeap_insert_param {V : Type _} [MeasurableSpace V] :
     Measurable (fun (q : LocHeap V × Loc × V) => q.1.insert q.2.1 q.2.2) := by
-  -- Reshape `(m, ℓ, v) ↦ (ℓ, m, v)` to put `ℓ` (countable Loc) in the left
-  -- factor; apply `measurable_from_prod_countable_right` from
-  -- (Loc) × (LocHeap V × V) → LocHeap V.
-  have hreshape : Measurable
-      (fun q : LocHeap V × Loc × V => (q.2.1, q.1, q.2.2) : LocHeap V × Loc × V → Loc × LocHeap V × V) :=
-    (measurable_fst.comp measurable_snd).prodMk
-      (measurable_fst.prodMk (measurable_snd.comp measurable_snd))
-  have hflat : Measurable
-      (fun q : Loc × LocHeap V × V => q.2.1.insert q.1 q.2.2) := by
-    apply measurable_from_prod_countable_right
-    intro ℓ
-    exact Measurable.locHeap_insert ℓ
-  exact hflat.comp hreshape
+  have hflat : Measurable (fun q : Loc × LocHeap V × V => q.2.1.insert q.1 q.2.2) :=
+    measurable_from_prod_countable_right Measurable.locHeap_insert
+  exact hflat.comp (f := fun q : LocHeap V × Loc × V => (q.2.1, q.1, q.2.2)) (by fun_prop)
 
 theorem LocHeap.maxKey?_preimage_none {V : Type _} :
     (fun m : LocHeap V => m.maxKey?) ⁻¹' ({none} : Set (Option Loc))
@@ -104,7 +90,7 @@ theorem LocHeap.measurable_maxKey? {V : Type _} [MeasurableSpace V] :
   refine Measurable.option_of_cov (cov := {m : LocHeap V | ∃ k : Loc, k ∈ m}) ?_ ?_ ?_
   · rw [show {m : LocHeap V | ∃ k : Loc, k ∈ m} = ⋃ k : Loc, {m | k ∈ m} from
       Set.ext fun m => by simp]
-    exact .iUnion (LocHeap.measurableSet_mem)
+    exact .iUnion LocHeap.measurableSet_mem
   · rw [LocHeap.maxKey?_preimage_none]
     exact Set.ext fun m => by simp
   · intro S _
@@ -116,10 +102,9 @@ theorem LocHeap.measurable_maxKey? {V : Type _} [MeasurableSpace V] :
 @[fun_prop]
 theorem LocHeap.measurable_fresh {V : Type _} [MeasurableSpace V] :
     Measurable (fun (m : LocHeap V) => m.fresh) := by
-  have hrw : (fun (m : LocHeap V) => m.fresh)
-              = fun m => (m.maxKey?).getD 0 + 1 := by
+  have hrw : (fun (m : LocHeap V) => m.fresh) = fun m => m.maxKey?.getD 0 + 1 := by
     funext m
-    show (match m.maxKey? with | none => (1 : Loc) | some v => v + 1) = (m.maxKey?).getD 0 + 1
+    show (match m.maxKey? with | none => (1 : Loc) | some v => v + 1) = m.maxKey?.getD 0 + 1
     rcases m.maxKey? with _ | _ <;> rfl
   rw [hrw]
   exact (Option.measurable_getD 0 |>.comp LocHeap.measurable_maxKey?).add_const 1

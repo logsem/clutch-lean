@@ -11,14 +11,10 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
-/-! # Tests for the cylinder generator (`Metrology/ProbLang/CoreMeasures/CylinderGen.lean`)
+/-! # Tests for the cylinder generator
 
-Each test type is chosen to break a specific assumption of the generator: parameter and
-constructor names that clash with generated names, fields whose own names shadow identifiers,
-product and function field types, field orders, high arities, and so on. For each type we
-generate the definitions and check, by proof, that they behave as the cylinder recipe requires
-(`selftest`). Unsupported inputs must fail with a clear error (`#guard_msgs`).
--/
+Each test type targets one assumption of the generator (name clashes, field types, orders,
+arities). Unsupported inputs must fail with a clear error. -/
 
 noncomputable section CylinderGenTest
 
@@ -27,12 +23,8 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 namespace CylinderGenTest
 
 set_option hygiene false in
-/-- Semantic checks of the generated definitions, run in the type's namespace. `T` is the type
-and `C` its cylinder type, both applied to concrete parameters:
-- every value lies in the cylinder of its own shape;
-- `Cylinder.shape` inverts `Shape.cylinder`;
-- `singletonCyl x` flattens to `{x}` and has the shape of `x`;
-- cylinders of shapes are measurable. -/
+/-- Semantic checks of the generated definitions, run in the type's namespace, for a type `T`
+and its cylinder type `C` applied to concrete parameters. -/
 macro "selftest " T:term:max C:term:max : command => `(
   example (x : $T) : x ∈ (Shape.cylinder x.shape : $C).flatten := by
     induction x
@@ -50,8 +42,7 @@ macro "selftest " T:term:max C:term:max : command => `(
     flatten_measurable (Shape.cylinder_hasMeasurableLeaves s))
 
 set_option hygiene false in
-/-- The generated `measurability` rules prove measurable leaves of shape cylinders, and
-measurability of cylinders with measurable leaves. -/
+/-- The generated `measurability` rules fire on cylinders. -/
 macro "measurability_test " C:term:max : command => `(
   example (s : Shape) : (Shape.cylinder s : $C).HasMeasurableLeaves := by measurability
   example (c : $C) (h : c.HasMeasurableLeaves) : MeasurableSet c.flatten := by measurability)

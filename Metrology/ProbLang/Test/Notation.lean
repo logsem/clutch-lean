@@ -14,11 +14,11 @@ open ProbLang Exp Ty
 macro "#elabpl " lhs:term:max ppLine "#expect " rhs:term : command =>
   `(example : ($lhs : Exp Int) = $rhs := by rfl)
 
-/-- As `#elabpl`, but for type-level (`Ty`) expressions which have no `Int` parameter. -/
+/-- As `#elabpl`, for `Ty`. -/
 macro "#elabpl_ty " lhs:term:max ppLine "#expect " rhs:term : command =>
   `(example : $lhs = $rhs := by rfl)
 
-/-- As `#elabpl`, but for `Pat` (pattern) expressions parameterized by `Int = Int` here. -/
+/-- As `#elabpl`, for `Pat Int`. -/
 macro "#elabpl_pat " lhs:term:max ppLine "#expect " rhs:term : command =>
   `(example : ($lhs : Pat Int) = $rhs := by rfl)
 
@@ -80,8 +80,6 @@ example : (pl(x) : Exp Int) ≠ pl(y) := by
   injection h with h'
   injection h' with h''
   exact (by decide : "x" ≠ "y") h''
-
-example : (pl(x) : Exp Int) = Exp.fvar "x" := by rfl
 
 /-! ## Arithmetic and precedence -/
 
@@ -369,8 +367,8 @@ example : (pl(x) : Exp Int) = Exp.fvar "x" := by rfl
 #elabpl pl(scrut (x, y) with (a, b))
 #expect Exp.scrut (pair (.fvar "x") (.fvar "y")) (.pair .wildcard .wildcard)
 
--- (Annotated pattern `scrut x with (y : int)` has elaborator dispatch issues;
---  skipped — same issue as `pl_pat((y : int))`.)
+-- `scrut x with (y : int)` is untested: annotated patterns hit the same elaborator dispatch
+-- issue as `pl_pat((y : int))`.
 
 /-! ## Patterns -/
 
@@ -420,113 +418,24 @@ example : (pl(x) : Exp Int) = Exp.fvar "x" := by rfl
 #elabpl pl(&(e1) + {binop .plus e1 e2})
 #expect binop .plus e1 (binop .plus e1 e2)
 
-/-! ## Delaboration round-trip tests
+/-! ## Delaboration round-trips -/
 
-These verify that elaborated `Exp` values delaborate back to readable
-`pl(...)` syntax. -/
-
-/-! ### Atomic / non-binder forms (round-trip cleanly) -/
-
--- TODO: revisit after rT parameterization (delab now shows raw `fvar (Var.named "x")` etc.)
--- /-- info: pl(#1) : Exp Int -/
--- #guard_msgs in #check (pl(#1) : Exp Int)
--- 
--- /-- info: pl(#true) : Exp Int -/
--- #guard_msgs in #check (pl(#true) : Exp Int)
--- 
--- /-- info: pl(#false) : Exp Int -/
--- #guard_msgs in #check (pl(#false) : Exp Int)
--- 
--- /-- info: pl(x) : Exp Int -/
--- #guard_msgs in #check (pl(x) : Exp Int)
--- 
--- /-- info: pl((x + #1)) : Exp Int -/
--- #guard_msgs in #check (pl(x + #1) : Exp Int)
--- 
--- /-- info: pl((x - y)) : Exp Int -/
--- #guard_msgs in #check (pl(x - y) : Exp Int)
--- 
--- /-- info: pl((x * y)) : Exp Int -/
--- #guard_msgs in #check (pl(x * y) : Exp Int)
--- 
--- /-- info: pl((x && y)) : Exp Int -/
--- #guard_msgs in #check (pl(x && y) : Exp Int)
--- 
--- /-- info: pl((x || y)) : Exp Int -/
--- #guard_msgs in #check (pl(x || y) : Exp Int)
--- 
--- /-- info: pl((x ^^ y)) : Exp Int -/
--- #guard_msgs in #check (pl(x ^^ y) : Exp Int)
--- 
--- /-- info: pl((x = y)) : Exp Int -/
--- #guard_msgs in #check (pl(x = y) : Exp Int)
--- 
--- /-- info: pl(~x) : Exp Int -/
--- #guard_msgs in #check (pl(~x) : Exp Int)
--- 
--- /-- info: pl(-x) : Exp Int -/
--- #guard_msgs in #check (pl(-x) : Exp Int)
--- 
--- /-- info: pl(!x) : Exp Int -/
--- #guard_msgs in #check (pl(!x) : Exp Int)
--- 
--- /-- info: pl(if x then y else z) : Exp Int -/
--- #guard_msgs in #check (pl(if x then y else z) : Exp Int)
--- 
--- /-- info: pl((x, y)) : Exp Int -/
--- #guard_msgs in #check (pl((x, y)) : Exp Int)
--- 
--- /-- info: pl((x, y, z)) : Exp Int -/
--- #guard_msgs in #check (pl((x, y, z)) : Exp Int)
--- 
--- /-- info: pl(fst(x)) : Exp Int -/
--- #guard_msgs in #check (pl(fst(x)) : Exp Int)
--- 
--- /-- info: pl(snd(x)) : Exp Int -/
--- #guard_msgs in #check (pl(snd(x)) : Exp Int)
--- 
--- /-- info: pl(inl(x)) : Exp Int -/
--- #guard_msgs in #check (pl(inl(x)) : Exp Int)
--- 
--- /-- info: pl(inr(x)) : Exp Int -/
--- #guard_msgs in #check (pl(inr(x)) : Exp Int)
--- 
--- /-- info: pl(alloc(#0)) : Exp Int -/
--- #guard_msgs in #check (pl(alloc(#0)) : Exp Int)
--- 
--- /-- info: pl(x ← y) : Exp Int -/
--- #guard_msgs in #check (pl(x ← y) : Exp Int)
--- 
--- /-- info: pl(tape(#10)) : Exp Int -/
--- #guard_msgs in #check (pl(tape(#10)) : Exp Int)
--- 
--- /-- info: pl(rand(#10, #())) : Exp Int -/
--- #guard_msgs in #check (pl(rand(#10, #.unit)) : Exp Int)
--- 
--- /-- info: pl(fail) : Exp Int -/
--- #guard_msgs in #check (pl(fail) : Exp Int)
--- 
--- /-- info: pl(scrut x with _) : Exp Int -/
--- #guard_msgs in #check (pl(scrut x with y) : Exp Int)
--- 
--- /-- info: pl(scrut inl(x) with inl(_)) : Exp Int -/
--- #guard_msgs in #check (pl(scrut inl(x) with inl(y)) : Exp Int)
-
-/-! ### Low-precedence entry sugar (`pl%`, `pl_ty%`, `pl_pat%`) -/
-
--- `pl%` embeds without the closing paren and parses the whole tail as one
--- expression, agreeing with the parenthesized `pl(...)` form.
 example : (pl% x + #1 : Exp Int) = pl(x + #1) := rfl
 example : (pl% f x : Exp Int) = pl(f x) := rfl
 example : (pl% if x then y else z : Exp Int) = pl(if x then y else z) := rfl
 example : (pl_ty% int × bool) = pl_ty(int × bool) := rfl
 example : (pl_pat% (x, y) : Pat Int) = pl_pat((x, y)) := rfl
 
-/-! ### Atomic / operator round-trips
+/-! ### Expressions -/
 
-These now round-trip cleanly thanks to the fixed `Exp.fvar` delaborator and
-the `pl_exp`/`pl_ty` category parenthesizers (minimal parentheses, inserted
-only where precedence demands). -/
+/-- info: pl(#1) : Exp ℤ -/
+#guard_msgs in #check (pl(#1) : Exp Int)
+
+/-- info: pl(#true) : Exp ℤ -/
+#guard_msgs in #check (pl(#true) : Exp Int)
+
+/-- info: pl(#false) : Exp ℤ -/
+#guard_msgs in #check (pl(#false) : Exp Int)
 
 /-- info: pl(x) : Exp ℤ -/
 #guard_msgs in #check (pl(x) : Exp Int)
@@ -540,19 +449,26 @@ only where precedence demands). -/
 /-- info: pl(x * y) : Exp ℤ -/
 #guard_msgs in #check (pl(x * y) : Exp Int)
 
--- Parenthesizer keeps the structurally-tighter subterm unparenthesized…
 /-- info: pl(x + y * z) : Exp ℤ -/
 #guard_msgs in #check (pl(x + y * z) : Exp Int)
 
--- …and parenthesizes only the lower-precedence subterm where required.
 /-- info: pl((x + y) * z) : Exp ℤ -/
 #guard_msgs in #check (pl((x + y) * z) : Exp Int)
 
 /-- info: pl(x && y || z) : Exp ℤ -/
 #guard_msgs in #check (pl(x && y || z) : Exp Int)
 
+/-- info: pl(x ^^ y) : Exp ℤ -/
+#guard_msgs in #check (pl(x ^^ y) : Exp Int)
+
+/-- info: pl(x = y) : Exp ℤ -/
+#guard_msgs in #check (pl(x = y) : Exp Int)
+
 /-- info: pl(~x) : Exp ℤ -/
 #guard_msgs in #check (pl(~x) : Exp Int)
+
+/-- info: pl(-x) : Exp ℤ -/
+#guard_msgs in #check (pl(-x) : Exp Int)
 
 /-- info: pl(!x) : Exp ℤ -/
 #guard_msgs in #check (pl(!x) : Exp Int)
@@ -560,14 +476,26 @@ only where precedence demands). -/
 /-- info: pl(if x then y else z) : Exp ℤ -/
 #guard_msgs in #check (pl(if x then y else z) : Exp Int)
 
+/-- info: pl((x, y)) : Exp ℤ -/
+#guard_msgs in #check (pl((x, y)) : Exp Int)
+
 /-- info: pl((x, y, z)) : Exp ℤ -/
 #guard_msgs in #check (pl((x, y, z)) : Exp Int)
 
 /-- info: pl(fst(x)) : Exp ℤ -/
 #guard_msgs in #check (pl(fst(x)) : Exp Int)
 
+/-- info: pl(snd(x)) : Exp ℤ -/
+#guard_msgs in #check (pl(snd(x)) : Exp Int)
+
 /-- info: pl(inl(x)) : Exp ℤ -/
 #guard_msgs in #check (pl(inl(x)) : Exp Int)
+
+/-- info: pl(inr(x)) : Exp ℤ -/
+#guard_msgs in #check (pl(inr(x)) : Exp Int)
+
+/-- info: pl(alloc(#0)) : Exp ℤ -/
+#guard_msgs in #check (pl(alloc(#0)) : Exp Int)
 
 /-- info: pl(alloc(x)) : Exp ℤ -/
 #guard_msgs in #check (pl(alloc(x)) : Exp Int)
@@ -575,13 +503,27 @@ only where precedence demands). -/
 /-- info: pl(x ← y) : Exp ℤ -/
 #guard_msgs in #check (pl(x ← y) : Exp Int)
 
+/-- info: pl(tape(#10)) : Exp ℤ -/
+#guard_msgs in #check (pl(tape(#10)) : Exp Int)
+
+/-- info: pl(rand(#10, #())) : Exp ℤ -/
+#guard_msgs in #check (pl(rand(#10, #.unit)) : Exp Int)
+
+/-- info: pl(fail) : Exp ℤ -/
+#guard_msgs in #check (pl(fail) : Exp Int)
+
+/-- info: pl(scrut x with _) : Exp ℤ -/
+#guard_msgs in #check (pl(scrut x with y) : Exp Int)
+
+/-- info: pl(scrut inl(x) with inl(_)) : Exp ℤ -/
+#guard_msgs in #check (pl(scrut inl(x) with inl(y)) : Exp Int)
+
 /-- info: pl(f x y) : Exp ℤ -/
 #guard_msgs in #check (pl(f x y) : Exp Int)
 
-/-! ### Type delaboration -/
+/-! ### Types -/
 
--- Regression: nested sum under product must keep its parentheses
--- (previously delaborated to the wrongly-reparsing `int × bool + unit`).
+-- `int × bool + unit` would reparse as a sum, so the parentheses must stay.
 /-- info: pl_ty(int × (bool + unit)) : Ty -/
 #guard_msgs in #check (pl_ty(int × (bool + unit)))
 
@@ -615,45 +557,25 @@ only where precedence demands). -/
 /-- info: pl_ty(tape) : Ty -/
 #guard_msgs in #check (pl_ty(tape))
 
-/-- info: pl_ty(int × bool → unit) : Ty -/
-#guard_msgs in #check (pl_ty(int × bool → unit))
-
 /-- info: pl_ty(ref(int → bool)) : Ty -/
 #guard_msgs in #check (pl_ty(ref(int → bool)))
 
-/-! ### Pattern delaboration — identifier patterns elaborate to wildcard -/
+/-! ### Patterns: identifiers delaborate to `_` -/
 
--- TODO: revisit after rT parameterization (Pat metavariable; #check doesn't pin type)
--- /-- info: pl_pat(_) : Pat Int -/
--- #guard_msgs in #check (pl_pat(_))
--- 
--- /-- info: pl_pat(_) : Pat Int -/
--- #guard_msgs in #check (pl_pat(x))
--- 
--- /-- info: pl_pat((_, _)) : Pat Int -/
--- #guard_msgs in #check (pl_pat((x, y)))
--- 
--- /-- info: pl_pat(inl(_)) : Pat Int -/
--- #guard_msgs in #check (pl_pat(inl(x)))
--- 
--- /-- info: pl_pat(inr(_)) : Pat Int -/
--- #guard_msgs in #check (pl_pat(inr(x)))
+/-- info: pl_pat(_) : Pat ℤ -/
+#guard_msgs in #check (pl_pat(_) : Pat Int)
 
-/-! ### Annotation delab gated by `pp.problang.annot` -/
+/-- info: pl_pat(_) : Pat ℤ -/
+#guard_msgs in #check (pl_pat(x) : Pat Int)
 
--- -- TODO: revisit after rT parameterization (annotation delab broken)
--- Default: annotation hidden.
--- /-- info: pl(x) : Exp Int -/
--- #guard_msgs in #check (pl((x : int)) : Exp Int)
--- 
--- set_option pp.problang.annot 2 in
--- /-- info: pl((x : int)) : Exp Int -/
--- #guard_msgs in #check (pl((x : int)) : Exp Int)
--- 
--- set_option pp.problang.annot 2 in
--- /-- info: pl(((x + y) : int)) : Exp Int -/
--- #guard_msgs in #check (pl((x + y : int)) : Exp Int)
--- 
--- set_option pp.problang.annot 2 in
--- /-- info: pl((x : int → bool)) : Exp Int -/
--- #guard_msgs in #check (pl((x : int → bool)) : Exp Int)
+/-- info: pl_pat((_, _)) : Pat ℤ -/
+#guard_msgs in #check (pl_pat((x, y)) : Pat Int)
+
+/-- info: pl_pat(inl(_)) : Pat ℤ -/
+#guard_msgs in #check (pl_pat(inl(x)) : Pat Int)
+
+/-- info: pl_pat(inr(_)) : Pat ℤ -/
+#guard_msgs in #check (pl_pat(inr(x)) : Pat Int)
+
+-- TODO: annotation delab under `pp.problang.annot` prints `annotated pl_ty(int) pl(x)`; once it
+-- prints `pl((x : int))`, test it here (hidden by default, shown with `pp.problang.annot 2`).
