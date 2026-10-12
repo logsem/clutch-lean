@@ -38,7 +38,7 @@ theorem alookup_eq_none_iff {k : Int} {m : List (Int × Int)} :
   | cons hd tl ih =>
     obtain ⟨k', y⟩ := hd
     by_cases hk : k' = k
-    · subst hk; simp [alookup]
+    · simp [alookup, hk]
     · simp [alookup, hk, ih, Ne.symm hk]
 
 /-! ## Pure recursions -/
@@ -109,9 +109,8 @@ theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
 
 /-! ## Map operations: `wp` specifications
 
-Program-side rules for a goal `wp E (op …) Φ`, and spec-side (`_r`) rules acting on a
-`⤇ K.fill (op …)` hypothesis in continuation-passing style — the Lean counterparts of
-clutch's `wp_init_map`/`spec_init_map`, `wp_get`/`spec_get`, `wp_set`/`spec_set`. -/
+Rocq source: clutch's `wp_init_map`/`spec_init_map`, `wp_get`/`spec_get`, `wp_set`/`spec_set`;
+the spec-side (`_r`) rules take the continuation as a hypothesis. -/
 
 section MapOps
 

@@ -133,8 +133,8 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
     (E : CoPset) (He : e.toVal? = some v) :
     wp (GF := GF) E e Φ ⊢@{IProp GF}
       ∀ σ₁ e₁' σ₁' ε₁,
-        (stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp (rT := rT) ⟨e₁', σ₁'⟩ ∗ errInterp (rT
-          := rT) ε₁) -∗
+        stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp (rT := rT) ⟨e₁', σ₁'⟩ ∗
+          errInterp (rT := rT) ε₁ -∗
           |={E, ∅}=> specCoupl ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
             iprop(|={∅, E}=>
               stateInterp (rT := rT) σ₂ ∗ SpecUpdateGS.specInterp (rT := rT) ρ' ∗
@@ -142,8 +142,8 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
   rw [wpPre_value_Z_eq (E := E) (v := v) (Φ := Φ)]
   simp only [wpPre_match_eq]
-  iintro Hwp %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  iapply (BI.equiv_iff.mp ApproxisWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ [$]
+  iintro Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
+  iapply (BI.equiv_iff.mp ApproxisWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
 
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (ε : ENNReal) (He : e.toVal? = some v) :
@@ -156,8 +156,7 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   iapply wp_adequacy_spec_coupl_zero $$ HspecC
   iintro %σ₂ %e₂' %σ₂' %ε' HZ
   imod HZ with ⟨-, Hs', -, %v', Hv', %Hφrel⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs' Hv'
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs' Hv'
   imod BIFUpdate.subset (E2 := ∅) Std.LawfulSet.empty_subset with -
   iintro !%
   unfold execCoupl limExecV asExpr
@@ -194,26 +193,24 @@ theorem wp_adequacy_step_fupdN (ε : ENNReal) (e e' : Exp rT) (σ σ' : State rT
       iapply (laterN_intro (n+1)).trans (step_fupdN_intro Std.LawfulSet.subset_refl)
       ipureintro
       exact Hpure
-    · have Hnone : e.toVal? = none := Exp.toVal?_eq_none.mpr He
+    · have hnone : e.toVal? = none := Exp.toVal?_eq_none.mpr He
       imod wp_unfold_mp $$ Hwp %σ %e' %σ' %ε [$] with Hwp
       iapply wp_adequacy_spec_coupl $$ Hwp
-      rw [Hnone]
+      rw [hnone]
       iintro %σ₂ %e₂' %σ₂' %ε' Hprog
-      iapply wp_adequacy_prog_coupl (Hnone := Hnone) $$ Hprog
+      iapply wp_adequacy_prog_coupl (Hnone := hnone) $$ Hprog
       iintro %e₃ %σ₃ %e₃' %σ₃' %ε₃ Hspec
       simp only [Nat.repeat]
       iintro !> !> !>
       iapply wp_adequacy_spec_coupl $$ Hspec
       iintro %σ₄ %e₄' %σ₄' %ε₄ HZ
-      imod HZ with ⟨Hσ', Hs', Hε', Hcnt⟩
-      iapply ih ε₄ e₃ e₄' σ₄ σ₄'
-      iframe
+      imod HZ
+      iapply ih ε₄ e₃ e₄' σ₄ σ₄' $$ HZ
 
 end Adequacy
 
 variable {GF : BundledGFunctors}
-variable [IPre : AppPreGS rT GF] [ISPre : SpecPreGS rT GF] [IECPre : ECPreGS GF]
-variable [IInvPre : InvGpreS GF]
+variable [AppPreGS rT GF] [SpecPreGS rT GF] [IECPre : ECPreGS GF] [InvGpreS GF]
 
 theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
@@ -229,7 +226,7 @@ theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : V
   imod ec_alloc ε (lt_of_not_ge hε1) with ⟨%γec, HecAuth, HecFrag⟩
   let IAS : ApproxisGS rT .hasNoLC GF :=
     { appGS := IA, specGS := ISpec, ecGS := { toECPreGS := IECPre, γec := γec }, invGS := Hinv }
-  ihave Hwp' := Hwp IAS $$ HspecFrag HecFrag
+  ihave Hwp := Hwp IAS $$ HspecFrag HecFrag
   iapply wp_adequacy_step_fupdN $$ [$]
 
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : Val rT → Val rT → Prop)
@@ -242,9 +239,8 @@ theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (φ : Val rT → Val rT → Prop) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
-  by_cases hε_top : ε = (⊤ : ENNReal)
-  · subst hε_top
-    exact AddCoupl.trivial_of_one_le le_top (limExecV_univ_le_one ⟨e, σ⟩)
+  rcases eq_or_ne ε ⊤ with rfl | hε_top
+  · exact AddCoupl.trivial_of_one_le le_top (limExecV_univ_le_one ⟨e, σ⟩)
   exact AddCoupl.limit fun δ Hδ => wp_adequacy e e' σ σ' (ε + δ) φ fun Hinst =>
     Hwp Hinst (ε + δ) (ENNReal.lt_add_right hε_top (ne_of_gt Hδ))
 

@@ -186,7 +186,7 @@ theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
   iintro %σ₁ Hσ
   icases app_read_natTape_head $$ Hl with ⟨%x, %xs, Hback, %hxv, HHandback⟩
   ihave %hlook := app_state_lookup_tape $$ Hσ Hback
-  have Hzpos : 0 < z := by have := x.2; omega
+  have hz : 0 < z := by have := x.2; omega
   imodintro
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.RandTapeS hlook rfl rfl rfl).pos⟩
   iintro !> %e₂ %σ₂ %Hstep
@@ -205,7 +205,7 @@ theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
     rw [hlook] at hlook'; cases hlook'
   | RandTapeOtherS _ hlook' hne _ _ _ =>
     rw [hlook] at hlook'; cases hlook'; exact absurd rfl hne
-  | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hzpos hnz
+  | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd hz hnz
 
 theorem wp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) : iprop%
@@ -277,8 +277,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ₁'⟩
       ⟨pl(#(.int 0)), σ₁'⟩ := .RandNoTapeS Hz (_root_.le_refl _) Hz
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
@@ -318,7 +317,7 @@ theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → I
   replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
   cases Hstep with
   | RandTapeS hlook' _ _ _ =>
-    rw [hlook] at hlook'; exact absurd (Option.some.inj hlook') (by intro h; cases h)
+    rw [hlook] at hlook'; cases hlook'
   | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
   | RandTapeNonposEmptyS _ _ _ | RandTapeNonposOtherS _ _ _ =>
     imodintro
@@ -333,8 +332,7 @@ theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ₁'⟩
       ⟨pl(#(.int (-1))), σ₁'⟩ := .RandNonposS Hz
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
@@ -362,8 +360,7 @@ theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e :
   ihave HαB := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs HαB
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
       ⟨pl(#(.int 0)), σ₁'⟩ := .RandTapeEmptyS Hz hlook rfl (_root_.le_refl _) Hz rfl
@@ -397,8 +394,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
   iintro ⟨Hj, Hl, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs Hl
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
       ⟨pl(#(.int (-1))), σ₁'⟩ := by
@@ -412,7 +408,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
   obtain ⟨e', rfl, Hstep'⟩ := HeadStepSupport.of_primStep_fill Hwitness (by is_lc) Hstep
   cases Hstep' with
   | RandTapeS hlook' _ _ _ =>
-    rw [hlook] at hlook'; exact absurd (Option.some.inj hlook') (by intro h; cases h)
+    rw [hlook] at hlook'; cases hlook'
   | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
   | RandTapeNonposEmptyS _ _ _ | RandTapeNonposOtherS _ _ _ =>
     imodintro
@@ -455,19 +451,18 @@ theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp 
   ihave Hαb := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
-  ihave %Hlk := spec_auth_lookup_tape $$ Hs Hαb
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
+  ihave %hlook := spec_auth_lookup_tape $$ Hs Hαb
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
-      ⟨pl(#(.int 0)), σ₁'⟩ := .RandTapeEmptyS Hz Hlk rfl (_root_.le_refl _) Hz rfl
+      ⟨pl(#(.int 0)), σ₁'⟩ := .RandTapeEmptyS Hz hlook rfl (_root_.le_refl _) Hz rfl
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
   imodintro
   iapply specCoupl_step (.of_headStepSupport_fill K Hwitness (by is_lc))
   iintro %e₂' %σ₂' %Hstep
   obtain ⟨e', rfl, Hstep'⟩ := HeadStepSupport.of_primStep_fill Hwitness (by is_lc) Hstep
   cases Hstep' with
-  | RandTapeS Hlk' _ _ _ =>
-    rw [Hlk] at Hlk'; cases Hlk'
+  | RandTapeS hlook' _ _ _ =>
+    rw [hlook] at hlook'; cases hlook'
   | RandTapeEmptyS _ _ _ Hv0 Hvz hσ =>
     subst hσ
     imodintro
@@ -478,8 +473,8 @@ theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp 
     iframe Hσ Hs' Hε
     ihave HαNat := spec_empty_to_natTape $$ Hαb
     iapply Hwp $$ [$HαNat $Hj'] %⟨Hv0, Hvz⟩
-  | RandTapeOtherS _ Hlk' hne _ _ _ =>
-    rw [Hlk] at Hlk'; cases Hlk'; exact absurd rfl hne
+  | RandTapeOtherS _ hlook' hne _ _ _ =>
+    rw [hlook] at hlook'; cases hlook'; exact absurd rfl hne
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
 
 theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {ns : List Int}
@@ -492,21 +487,20 @@ theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {n
   icases Hα with ⟨%fs, %hmap, Hαb⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
-  ihave %Hlk := spec_auth_lookup_tape $$ Hs Hαb
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
+  ihave %hlook := spec_auth_lookup_tape $$ Hs Hαb
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
-      ⟨pl(#(.int 0)), σ₁'⟩ := .RandTapeOtherS Hz Hlk HneM (_root_.le_refl _) Hz rfl
+      ⟨pl(#(.int 0)), σ₁'⟩ := .RandTapeOtherS Hz hlook HneM (_root_.le_refl _) Hz rfl
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
   imodintro
   iapply specCoupl_step (.of_headStepSupport_fill K Hwitness (by is_lc))
   iintro %e₂' %σ₂' %Hstep
   obtain ⟨e', rfl, Hstep'⟩ := HeadStepSupport.of_primStep_fill Hwitness (by is_lc) Hstep
   cases Hstep' with
-  | RandTapeS Hlk' heq _ _ =>
-    rw [Hlk] at Hlk'; cases Hlk'; exact absurd heq HneM
-  | RandTapeEmptyS _ Hlk' heq _ _ _ =>
-    rw [Hlk] at Hlk'; cases Hlk'; exact absurd heq HneM
+  | RandTapeS hlook' heq _ _ =>
+    rw [hlook] at hlook'; cases hlook'; exact absurd heq HneM
+  | RandTapeEmptyS _ hlook' heq _ _ _ =>
+    rw [hlook] at hlook'; cases hlook'; exact absurd heq HneM
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
   | RandTapeOtherS _ _ _ Hv0 Hvz hσ =>
     subst hσ

@@ -48,10 +48,10 @@ instance {GF} : CoeFun (lrel rT GF) (fun _ => Val rT → Val rT → IProp GF) :=
 omit [LawfulProbLangℝ rT] in
 theorem lrel.ext {GF : BundledGFunctors} {A B : lrel rT GF}
     (h : ∀ v1 v2, A.car v1 v2 = B.car v1 v2) : A = B := by
-  obtain ⟨carA, closA⟩ := A
-  obtain ⟨carB, closB⟩ := B
-  have hcar : carA = carB := by funext v1 v2; exact h v1 v2
-  subst hcar; rfl
+  obtain ⟨carA, _⟩ := A
+  obtain ⟨carB, _⟩ := B
+  obtain rfl : carA = carB := funext fun v1 => funext (h v1)
+  rfl
 
 instance {GF : BundledGFunctors} : OFE (lrel rT GF) where
   Dist n A B := ∀ v1 v2, A.car v1 v2 ≡{n}≡ B.car v1 v2
@@ -60,10 +60,8 @@ instance {GF : BundledGFunctors} : OFE (lrel rT GF) where
     symm h v1 v2 := dist_eqv.symm (h v1 v2)
     trans h1 h2 v1 v2 := dist_eqv.trans (h1 v1 v2) (h2 v1 v2)
   }
-  eq_dist' {A B} := by
-    refine ⟨fun h _ _ _ => h ▸ .rfl, fun h => ?_⟩
-    refine lrel.ext fun v1 v2 => ?_
-    apply OFE.eq_dist.mpr fun _ => h _ _ _
+  eq_dist' :=
+    ⟨fun h _ _ _ => h ▸ .rfl, fun h => lrel.ext fun _ _ => OFE.eq_dist.mpr fun _ => h _ _ _⟩
   dist_lt hd hmn v1 v2 := OFE.dist_lt (hd v1 v2) hmn
 
 /-- Project an `lrel`-valued chain into the underlying function-space chain. -/
@@ -232,12 +230,10 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     ihave %hAcl := A.closed a1 a2 $$ HA
     ihave %hBcl := B.closed b1 b2 $$ HB
     ipureintro
-    refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
-    · rw [h1]
-      exact Exp.IsLocallyClosed.pair hAcl.1.1 hBcl.1.1
+    refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+    · rw [h1]; exact Exp.IsLocallyClosed.pair hAcl.1.1 hBcl.1.1
     · rw [h1]; simp [Exp.fv]; exact ⟨hAcl.1.2, hBcl.1.2⟩
-    · rw [h2]
-      exact Exp.IsLocallyClosed.pair hAcl.2.1 hBcl.2.1
+    · rw [h2]; exact Exp.IsLocallyClosed.pair hAcl.2.1 hBcl.2.1
     · rw [h2]; simp [Exp.fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
 noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
@@ -250,22 +246,18 @@ noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
     icases Hd with (⟨%h1, %h2, HA⟩ | ⟨%h1, %h2, HB⟩)
     · ihave %hAcl := A.closed w1 w2 $$ HA
       ipureintro
-      refine ⟨?_, ?_⟩
-      · refine ⟨?_, ?_⟩
-        · rw [h1]; exact Exp.IsLocallyClosed.inl hAcl.1.1
-        · rw [h1]; simp [Exp.fv]; exact hAcl.1.2
-      · refine ⟨?_, ?_⟩
-        · rw [h2]; exact Exp.IsLocallyClosed.inl hAcl.2.1
-        · rw [h2]; simp [Exp.fv]; exact hAcl.2.2
+      refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+      · rw [h1]; exact Exp.IsLocallyClosed.inl hAcl.1.1
+      · rw [h1]; simp [Exp.fv]; exact hAcl.1.2
+      · rw [h2]; exact Exp.IsLocallyClosed.inl hAcl.2.1
+      · rw [h2]; simp [Exp.fv]; exact hAcl.2.2
     · ihave %hBcl := B.closed w1 w2 $$ HB
       ipureintro
-      refine ⟨?_, ?_⟩
-      · refine ⟨?_, ?_⟩
-        · rw [h1]; exact Exp.IsLocallyClosed.inr hBcl.1.1
-        · rw [h1]; simp [Exp.fv]; exact hBcl.1.2
-      · refine ⟨?_, ?_⟩
-        · rw [h2]; exact Exp.IsLocallyClosed.inr hBcl.2.1
-        · rw [h2]; simp [Exp.fv]; exact hBcl.2.2
+      refine ⟨⟨?_, ?_⟩, ?_, ?_⟩
+      · rw [h1]; exact Exp.IsLocallyClosed.inr hBcl.1.1
+      · rw [h1]; simp [Exp.fv]; exact hBcl.1.2
+      · rw [h2]; exact Exp.IsLocallyClosed.inr hBcl.2.1
+      · rw [h2]; simp [Exp.fv]; exact hBcl.2.2
 
 noncomputable def lrel_exists (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗ ∃ A : lrel rT GF, C A v1 v2
@@ -293,10 +285,8 @@ noncomputable def lrelRec1 (C : lrel rT GF -n> lrel rT GF) (r : lrel rT GF) : lr
 instance lrelRec1_contractive (C : lrel rT GF -n> lrel rT GF) : OFE.Contractive (lrelRec1 C) where
   distLater_dist {n P Q} hPQ w1 w2 := by
     show iprop(_ ∗ ▷ _) ≡{n}≡ iprop(_ ∗ ▷ _)
-    refine sep_ne.ne .rfl ?_
-    refine Contractive.distLater_dist (f := (Iris.BI.later : IProp GF → IProp GF)) ?_
-    intro k hk
-    exact C.ne.ne (show P ≡{k}≡ Q from hPQ k hk) w1 w2
+    exact sep_ne.ne .rfl <| Contractive.distLater_dist (f := (Iris.BI.later : IProp GF → IProp GF))
+      fun k hk => C.ne.ne (show P ≡{k}≡ Q from hPQ k hk) w1 w2
 
 -- TODO: Tweak when fixpoints land
 noncomputable def lrelRec1Hom (C : lrel rT GF -n> lrel rT GF) : lrel rT GF -c> lrel rT GF where
@@ -328,53 +318,31 @@ theorem lrel_rec_ne {n : Nat} {C1 C2 : lrel rT GF -n> lrel rT GF}
 instance lrel_prod_ne_2 : OFE.NonExpansive₂ (lrel_prod (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     -- TODO: Remove when nonexp lands
-    refine exists_ne fun a1 => ?_
-    refine exists_ne fun a2 => ?_
-    refine exists_ne fun b1 => ?_
-    refine exists_ne fun b2 => ?_
-    refine sep_ne.ne .rfl ?_
-    refine sep_ne.ne .rfl ?_
-    exact sep_ne.ne (hA a1 a2) (hB b1 b2)
+    refine exists_ne fun a1 => exists_ne fun a2 => exists_ne fun b1 => exists_ne fun b2 => ?_
+    exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne (hA a1 a2) (hB b1 b2)
 
 instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     -- TODO: Remove when nonexp lands
-    refine exists_ne fun w1 => ?_
-    refine exists_ne fun w2 => ?_
-    refine or_ne.ne ?_ ?_
-    · refine sep_ne.ne .rfl ?_
-      exact sep_ne.ne .rfl (hA w1 w2)
-    · refine sep_ne.ne .rfl ?_
-      exact sep_ne.ne .rfl (hB w1 w2)
+    refine exists_ne fun w1 => exists_ne fun w2 => or_ne.ne ?_ ?_
+    · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hA w1 w2)
+    · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hB w1 w2)
 
 /-- `refines` is nonexpansive in its relation argument. -/
 theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
     (h : A ≡{n}≡ B) : refines E e e' A ≡{n}≡ refines E e e' B := by
   -- TODO: Remove when nonexp lands
   unfold refines
-  refine forall_ne fun K => ?_
-  refine forall_ne fun ε => ?_
-  refine wand_ne.ne .rfl ?_
-  refine wand_ne.ne .rfl ?_
-  refine wand_ne.ne .rfl ?_
-  refine wand_ne.ne .rfl ?_
-  refine NonExpansive.ne (f := wp ⊤ e) ?_
-  intro v
-  refine exists_ne fun v' => exists_ne fun ε' => ?_
-  refine sep_ne.ne .rfl ?_
-  refine sep_ne.ne .rfl ?_
-  refine sep_ne.ne .rfl ?_
-  refine sep_ne.ne .rfl ?_
-  exact h v v'
+  refine forall_ne fun K => forall_ne fun ε => ?_
+  refine wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl ?_
+  refine NonExpansive.ne (f := wp ⊤ e) fun v => exists_ne fun v' => exists_ne fun ε' => ?_
+  exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl (h v v')
 
 instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     -- TODO: Remove when nonexp lands
-    refine sep_ne.ne .rfl ?_
-    refine intuitionistically_ne.ne ?_
-    refine forall_ne fun w1 => ?_
-    refine forall_ne fun w2 => ?_
-    exact wand_ne.ne (hA w1 w2) (refines_ne hB)
+    exact sep_ne.ne .rfl <| intuitionistically_ne.ne <| forall_ne fun w1 => forall_ne fun w2 =>
+      wand_ne.ne (hA w1 w2) (refines_ne hB)
 
 -- TODO: Can this be removed?
 theorem refines_proper {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
@@ -403,37 +371,27 @@ instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
   ne {n A B} hAB v1 v2 := by
     -- TODO: Tweak when nonexp lands
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
-    refine exists_ne fun l1 => ?_
-    refine exists_ne fun l2 => ?_
-    refine sep_ne.ne .rfl ?_
-    refine sep_ne.ne .rfl ?_
-    refine (Iris.inv_ne _).ne ?_
+    refine exists_ne fun l1 => exists_ne fun l2 => ?_
+    refine sep_ne.ne .rfl <| sep_ne.ne .rfl <| (Iris.inv_ne _).ne ?_
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
-    refine exists_ne fun w1 => ?_
-    refine exists_ne fun w2 => ?_
-    refine sep_ne.ne .rfl ?_
-    refine sep_ne.ne .rfl ?_
-    exact hAB w1 w2
+    exact exists_ne fun w1 => exists_ne fun w2 => sep_ne.ne .rfl <| sep_ne.ne .rfl (hAB w1 w2)
 
 theorem lrel_forall_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     (lrel_forall C1 : lrel rT GF) ≡{n}≡ lrel_forall C2 := by
-    -- TODO: Tweak when nonexp lands
+  -- TODO: Tweak when nonexp lands
   intro v1 v2
   show iprop(∀ _, _) ≡{n}≡ iprop(∀ _, _)
-  refine forall_ne fun A => ?_
-  exact lrel_arr_ne_2.ne .rfl (h A) v1 v2
+  exact forall_ne fun A => lrel_arr_ne_2.ne .rfl (h A) v1 v2
 
 omit [LawfulProbLangℝ rT] in
 theorem lrel_exists_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     (lrel_exists C1 : lrel rT GF) ≡{n}≡ lrel_exists C2 := by
-    -- TODO: Tweak when nonexp lands
+  -- TODO: Tweak when nonexp lands
   intro v1 v2
   show iprop(_ ∗ ∃ _, _) ≡{n}≡ iprop(_ ∗ ∃ _, _)
-  refine sep_ne.ne .rfl ?_
-  refine exists_ne fun A => ?_
-  exact h A v1 v2
+  exact sep_ne.ne .rfl <| exists_ne fun A => h A v1 v2
 
 end SimpleLRels
 
@@ -455,10 +413,10 @@ private theorem fupd_of_inv_disj {E : CoPset} {P1 P2 Q : IProp GF} {p1 p2 : Loc 
   iintro Hinv1 Hinv2
   iinv Hinv1 with HP1
   iinv Hinv2 with HP2
-  ihave HbotLater : iprop% ▷ False $$ [HP1 HP2]
+  ihave Hfalse : iprop% ▷ False $$ [HP1 HP2]
   · inext
     iapply hfalse $$ HP1 HP2
-  imod HbotLater with %h
+  imod Hfalse with %h
   exact h.elim
 
 /-- Reference type is functional in the program-side location. -/
@@ -543,8 +501,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
     iprop(|={⊤}=> refines E e t A) ⊢@{IProp GF} refines E e t A := by
   unfold refines
-  iintro H
-  imod H
+  iintro >H
   iexact H
 
 /-- Sequence two refinements via evaluation-context framing. -/

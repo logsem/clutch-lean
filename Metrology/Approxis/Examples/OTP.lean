@@ -22,17 +22,17 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
 
 def addMod (m N : Int) (n : Int) : Int := (n + m) % N
 
-private theorem emod_bounds (a : Int) {N : Int} (HN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
-  ⟨Int.emod_nonneg _ (Int.ne_of_gt HN), Int.emod_lt_of_pos _ HN⟩
+private theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
+  ⟨Int.emod_nonneg _ (Int.ne_of_gt hN), Int.emod_lt_of_pos _ hN⟩
 
-theorem addMod_dom (m N : Int) (HN : 0 < N) :
+theorem addMod_dom (m N : Int) (hN : 0 < N) :
     ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
-  fun _ _ _ => emod_bounds _ HN
+  fun _ _ _ => emod_bounds _ hN
 
-theorem addMod_bij (m N : Int) (HN : 0 < N) :
+theorem addMod_bij (m N : Int) (hN : 0 < N) :
     ∀ m' : Int, 0 ≤ m' → m' < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ addMod m N n = m' := by
   intro m' hm'0 hm'N
-  refine ⟨(m' - m) % N, ⟨emod_bounds _ HN, ?_⟩, ?_⟩
+  refine ⟨(m' - m) % N, ⟨emod_bounds _ hN, ?_⟩, ?_⟩
   · unfold addMod
     rw [Int.emod_add_emod, Int.sub_add_cancel, Int.emod_eq_of_lt hm'0 hm'N]
   · rintro n ⟨⟨hn0, hnN⟩, hadd⟩
@@ -51,13 +51,13 @@ private theorem refines_lit_int (n : Int) :
   iintro !>
   iapply lrel_int_lit
 
-theorem otp_refines (m N : Int) (HN : 0 < N) :
+theorem otp_refines (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} refines ⊤ (otp_enc (rT := rT) m N) (otp_ideal N) lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines ⊤
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
     (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit)))) lrel_int
-  iapply refines_couple_rands_lr (addMod m N) (addMod_dom m N HN) (addMod_bij m N HN) HN
+  iapply refines_couple_rands_lr (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN) hN
   iintro %n %_
   show ⊢@{IProp GF} refines ⊤ (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int n))) _ lrel_int
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
@@ -75,19 +75,18 @@ theorem otp_refines (m N : Int) (HN : 0 < N) :
 
 /-! ### Reverse direction -/
 
-theorem addMod_neg_inv (m N : Int) :
-    ∀ n : Int, 0 ≤ n → n < N → (m + (n + (-m)) % N) % N = n := by
-  intro n hn0 hnN
+theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
+    (m + (n + (-m)) % N) % N = n := by
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
-theorem otp_refines_rev (m N : Int) (HN : 0 < N) :
+theorem otp_refines_rev (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} refines ⊤ (otp_ideal (rT := rT) N) (otp_enc m N) lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines ⊤
     (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit))))
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit)))) lrel_int
-  iapply refines_couple_rands_lr (addMod (-m) N) (addMod_dom (-m) N HN) (addMod_bij (-m) N HN) HN
-  iintro %n ⟨%Hn0, %HnN⟩
+  iapply refines_couple_rands_lr (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN) hN
+  iintro %n ⟨%hn0, %hnN⟩
   show ⊢@{IProp GF} refines ⊤ _
     (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int (addMod (-m) N n)))) lrel_int
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
@@ -97,14 +96,13 @@ theorem otp_refines_rev (m N : Int) (HN : 0 < N) :
   show ⊢@{IProp GF} refines ⊤ _
     (Ectx.fill ([] : Ectx rT) pl(#(.int (m + addMod (-m) N n)) % #(.int N))) lrel_int
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  rw [show (m + addMod (-m) N n) % N = n from addMod_neg_inv m N n Hn0 HnN]
+  rw [show (m + addMod (-m) N n) % N = n from addMod_neg_inv m N n hn0 hnN]
   exact refines_lit_int n
 
 /-! ## Adequacy: exit the logic
 
-Apply `refines_coupling` to obtain a semantic property of OTP outside the
-Iris logic: the limit-step distributions of `otp_enc m N` and `otp_ideal N`
-are coupled by integer equality, with zero error. -/
+The limit distributions of `otp_enc m N` and `otp_ideal N` are coupled by integer
+equality with zero error. -/
 
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
@@ -117,34 +115,30 @@ theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' 
   ipureintro; exact ⟨n, hv, hv'⟩
 
 theorem otp_adequate (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF] (m N : Int)
-    (HN : 0 < N) (σ σ' : State rT) :
+    (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
-    fun _ => otp_refines m N HN
+    fun _ => otp_refines m N hN
 
 theorem otp_adequate_rev (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF] (m N : Int)
-    (HN : 0 < N) (σ σ' : State rT) :
+    (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
-    fun _ => otp_refines_rev m N HN
+    fun _ => otp_refines_rev m N hN
 
-/-! ## Final closed statement: instantiated at the concrete model
+/-! ## Closed statements at the concrete model `ApproxisFunctor rT` -/
 
-`(ApproxisFunctor rT) : BundledGFunctors` from `AdequacyRel.lean` provides all the
-required PreGS instances, so we can close off `otp_adequate{,_rev}` with no
-remaining type-class hypotheses or `GF` parameter. -/
-
-theorem otp_adequate_closed (m N : Int) (HN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
-  otp_adequate (ApproxisFunctor rT) m N HN σ σ'
+  otp_adequate (ApproxisFunctor rT) m N hN σ σ'
 
-theorem otp_adequate_rev_closed (m N : Int) (HN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
-  otp_adequate_rev (ApproxisFunctor rT) m N HN σ σ'
+  otp_adequate_rev (ApproxisFunctor rT) m N hN σ σ'
 
 end OTP
 

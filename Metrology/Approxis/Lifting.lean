@@ -15,7 +15,7 @@ namespace ProbLang.ApproxisWpGS
 variable {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
 
 theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
-    (Hv : e₁.toVal? = none) : iprop%
+    (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       errInterp (rT := rT) ε -∗ |={E, ∅}=>
       ∃ (X : Cfg rT → Cfg rT → ENNReal) (ε₁ ε₂ : ENNReal),
@@ -29,16 +29,16 @@ theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
             errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂) ∗ wp E e₂ Φ)) ⊢
     wp E e₁ Φ := by
   iintro H
-  iapply wp_lift_step_prog_couple Hv
+  iapply wp_lift_step_prog_couple hv
   iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %Hεsum, %Hred, %Hred', %Hbnd, %Hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
-  iapply progCoupl_steps_adv Hεsum Hred Hred' Hbnd Hcpl
+  iapply progCoupl_steps_adv hεsum hred hred' hbnd hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂'
 
 theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
-    (Hv : e₁.toVal? = none) : iprop%
+    (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       errInterp (rT := rT) ε -∗ |={E, ∅}=>
       ∃ (X : Cfg rT → Cfg rT → ENNReal),
@@ -51,16 +51,16 @@ theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT 
             errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp E e₂ Φ)) ⊢
     wp E e₁ Φ := by
   iintro H
-  iapply wp_lift_step_prog_couple Hv
+  iapply wp_lift_step_prog_couple hv
   iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %Hred, %Hred', %Hbnd, %Hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
-  iapply progCoupl_steps_adv' Hred Hred' Hbnd Hcpl
+  iapply progCoupl_steps_adv' hred hred' hbnd hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂'
 
 theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
+    {Φ : Val rT → IProp GF} (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       errInterp (rT := rT) ε -∗ |={E, ∅}=>
       ∃ (X : Cfg rT → Cfg rT → ENNReal) (ε₁ ε₂ : ENNReal),
@@ -77,17 +77,17 @@ theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %Hεsum, %Hred, %Hred', %Hbnd, %Hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
   iapply specCoupl_ret
-  simp only [Hv]
-  iapply progCoupl_steps_adv Hεsum Hred Hred' Hbnd Hcpl
+  simp only [hv]
+  iapply progCoupl_steps_adv hεsum hred hred' hbnd hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
   ispecialize H $$ %e₂ %σ₂ %e₂' %σ₂'
   by_cases hle : X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂ < 1
   · iapply specCoupl_ret
-    imod H with (%Hge | H)
-    · exact absurd hle (_root_.not_lt.mpr Hge)
+    imod H with (%hge | H)
+    · exact absurd hle (_root_.not_lt.mpr hge)
     · imodintro; iexact H
   · iapply specCoupl_err_ge_1 (_root_.not_lt.mp hle)
 
@@ -104,11 +104,11 @@ theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iintro H
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%R, %μ₁, %μ₁', %Her, %Her', %Hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%R, %μ₁, %μ₁', %her, %her', %hcpl, H⟩
   imodintro
-  iapply specCoupl_erasables (by rw [zero_add]) Hcpl Her Her'
-  iintro %σ₂ %σ₂' %HR !>
+  iapply specCoupl_erasables (by rw [zero_add]) hcpl her her'
+  iintro %σ₂ %σ₂' %hR !>
   iapply specCoupl_ret
-  iapply H $$ %σ₂ %σ₂' %HR
+  iapply H $$ %σ₂ %σ₂' %hR
 
 end ProbLang.ApproxisWpGS

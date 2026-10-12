@@ -32,8 +32,7 @@ theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
   iapply specCoupl_mono_spatial
   iframe
   iintro %σ₂ %ρ' %ε₂ HBody
-  imod HBody with ⟨Hσ, Hs, Hε, HΦc⟩
-  imod HΦc with HΦ
+  imod HBody with ⟨Hσ, Hs, Hε, >HΦ⟩
   iframe
 
 theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
@@ -48,7 +47,7 @@ theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT :
       progCoupl e σ₂ ρ'.expr ρ'.state ε₂ fun e₃ σ₃ e₃' σ₃' ε₃ => iprop%
         ▷ specCoupl ∅ σ₃ e₃' σ₃' ε₃ fun σ₄ ρ'' ε₄ => iprop(|={∅, E1}=>
           stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ errInterp (rT := rT) ε₄ ∗ wp E1 e₃ Φ) := by
-  iintro _
+  iintro HSC
   iapply specCoupl_mono_spatial
   iframe
   iintro %σ₂ %ρ' %ε₂ HBody
@@ -80,8 +79,7 @@ theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT :
     cases htv : e₃.toVal? with
     | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim
     | some v' =>
-      imod HInnerBody with ⟨Hσ5, Hs5, Hε5, HΦc⟩
-      imod HΦc with HΦv
+      imod HInnerBody with ⟨Hσ5, Hs5, Hε5, >HΦv⟩
       imodintro
       iframe
       iapply wp_value_of_toVal htv $$ HΦv
@@ -148,8 +146,7 @@ theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT
     (|={E₂}=> β x ∗ (γ x -∗? Φ v)) ⊢ (β x ={E₂, E₁}=∗ (γ x).getD iprop(emp)) ={E₂, E₁}=∗ Φ v := by
   iintro Hpost Hcl
   imod Hpost with ⟨Hβ, HΦ⟩
-  ispecialize Hcl $$ Hβ
-  imod Hcl
+  imod Hcl $$ Hβ
   imodintro
   cases γ x with
   | none =>

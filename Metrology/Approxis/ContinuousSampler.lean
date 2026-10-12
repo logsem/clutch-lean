@@ -18,10 +18,7 @@ variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
 
 /-! ## The real-literal injection
 
-`urand` steps to `Cfg.uniformReal σ`, the pushforward of `unifUnit` along the
-real-literal injection `r ↦ ⟨#(.real r), σ⟩`. Both rules below need that
-injection to be a measurable embedding, and need its image of `unifUnitSupport`
-to be the measurable set the step measure lives on. -/
+`urand` steps to `Cfg.uniformReal σ`, the pushforward of `unifUnit` along `r ↦ ⟨#(.real r), σ⟩`. -/
 
 theorem Cfg.measurable_realLit (σ : State rT) :
     Measurable (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) :=
@@ -86,14 +83,8 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
 
 /-! ## Relational coupling of two continuous samplers
 
-`wp_urand` is unary-flavoured: it says what a single `urand` produces. Approxis is
-a *relational* logic, so continuous refinement needs a way to couple two `urand`s.
-
-The discrete analogue (`Cfg.uniform_addCoupl_bij`) gets its bijection for free —
-a bijection of a finite set preserves counting measure, so the proof is a
-`Finset.sum_bij` reindexing. The continuous version needs a genuine hypothesis:
-`f` must be **measure-preserving** for `unifUnit`. Given that, the reindexing is
-`MeasurePreserving.lintegral_comp`, and the proof is actually shorter. -/
+Unlike the discrete `Cfg.uniform_addCoupl_bij`, a bijection is not enough here:
+`f` must be measure-preserving for `unifUnit`. -/
 
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
@@ -159,10 +150,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
 
 end Unary
 
-/-! ## The relational rule
-
-`wp_couple_urand_urand` lifted to `refines`, mirroring `refines_couple_rands_lr`.
-This is the rule a continuous refinement proof actually applies. -/
+/-! ## The relational rule -/
 
 section Relational
 variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
@@ -176,16 +164,14 @@ theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} 
   iintro Hcnt
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
-  ihave Hj' : iprop(⤇ (K2.comp K').fill (pl(urand) : Exp rT)) $$ [Hj]
-  · rw [← Ectx.fill_comp]; iexact Hj
+  isimp only [Ectx.fill_comp K2 K' pl(urand)] at Hj
   iapply ApproxisWpGS.wp_bind
   iapply wp_couple_urand_urand f hmp (K2.comp K') _ _
-  iframe Hj'
+  iframe Hj
   iintro %r %hrsupp HKres
-  ihave HKres' : iprop(⤇ K2.fill (K'.fill (pl(#(.real (f r))) : Exp rT))) $$ [HKres]
-  · rw [Ectx.fill_comp]; iexact HKres
+  isimp only [← Ectx.fill_comp K2 K' pl(#(.real (f r)))] at HKres
   rw [show Exp.ofVal (.real r) = pl(#(.real r)) from rfl]
-  iapply Hcnt $$ %r %hrsupp %K2 %ε HKres' Hna Herr Hpos
+  iapply Hcnt $$ %r %hrsupp %K2 %ε HKres Hna Herr Hpos
 
 end Relational
 

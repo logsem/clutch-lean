@@ -24,11 +24,8 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
 
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
     (lrel_arr A B).car v v' ⊢
-    □ (∀ w1 w2, A w1 w2 -∗ refines ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) := by
-  iintro H
-  iunfold lrel_arr at H
-  icases H with ⟨-, HW⟩
-  iexact HW
+    □ (∀ w1 w2, A w1 w2 -∗ refines ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=
+  sep_elim_right
 
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e1 e1' A ⊢
@@ -51,8 +48,7 @@ theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
   iexists v1, v1', v2, v2'
   isplitr; · ipureintro; rfl
   isplitr; · ipureintro; rfl
-  iframe HA
-  iexact HB
+  iframe
 
 theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e e' A ⊢ refines ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
@@ -205,23 +201,23 @@ theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : ipro
     iexact HB
 
 theorem refines_pure_both {e r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (hφ : φ)
-    (hrv : IsVal r) {A : lrel rT GF} (HA : ⊢@{IProp GF} A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢@{IProp GF} refines ⊤ e e A := by
+    (hrv : IsVal r) {A : lrel rT GF} (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
+    ⊢ refines ⊤ e e A := by
   iapply refines_pure_ret (Hex := Hex) (Hex' := Hex) (v := ⟨r, hrv, hrv.lc⟩)
     (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
   iapply HA
 
 theorem refines_binop_pure (op : BinOp) (v1 v2 r : Exp rT) (hv1 : IsVal v1) (hv2 : IsVal v2)
     (hrv : IsVal r) (heval : op.eval v1 v2 = some r) {A : lrel rT GF}
-    (HA : ⊢@{IProp GF} A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢@{IProp GF} refines ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
+    (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
+    ⊢ refines ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
   refines_pure_both (φ := v1.isValue ∧ v2.isValue ∧ op.eval v1 v2 = some r)
     ⟨hv1.toIsValue, hv2.toIsValue, heval⟩ hrv HA
 
 theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal r)
     (heval : op.eval v = some r) {A : lrel rT GF}
-    (HA : ⊢@{IProp GF} A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢@{IProp GF} refines ⊤ (.unop op v) (.unop op v) A :=
+    (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
+    ⊢ refines ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both (φ := v.isValue ∧ op.eval v = some r) ⟨hv.toIsValue, heval⟩ hrv HA
 
 /-! ### Discrete fragment: tape allocation and bounded sampling -/
@@ -246,9 +242,7 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
   iapply specUpdate_ret
   iapply wp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
   iintro %σ₁ Hσ !>
-  isplitr
-  · ipureintro
-    exact ⟨_, (HeadStepSupport.TapeS rfl rfl).pos⟩
+  isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.TapeS rfl rfl).pos⟩
   iintro !> %e₂ %σ₂ %Hstep
   replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
   cases Hstep with
@@ -345,9 +339,9 @@ theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel r
   iapply refines_ret (e1 := Ectx.fill Ectx.empty v.1) (e2 := Ectx.fill Ectx.empty v'.1)
     (v1 := v) (v2 := v') rfl rfl
   imodintro
-  ihave %Hcl := hCclosed v v' $$ HCA
+  ihave %hcl := hCclosed v v' $$ HCA
   iunfold lrel_exists
-  isplitr; · ipureintro; exact Hcl
+  isplitr; · ipureintro; exact hcl
   iexists A
   iexact HCA
 
@@ -462,7 +456,7 @@ theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
   iframe HαE Hα'E
 
 theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz : 0 < z)
-    (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢@{IProp GF} A.car (.int m) (.int m)) :
+    (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     Iris.inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
     refines ⊤ pl(rand(#(.int z), #(.lbl α))) pl(rand(#(.int z), #(.lbl α'))) A := by
   iintro #Hinv
@@ -477,7 +471,7 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
   · subst hNz
     iapply wp_couple_rand_lbl_rand_lbl z id id_dom_range id_bij_range hz K' _ α α'
     iframe HαN Hα'N Hr
-    iintro %m ⟨HαRet, Hα'Ret, HKRes, %Hmr⟩
+    iintro %m ⟨HαRet, Hα'Ret, HKRes, %hm⟩
     ihave HCloseArg := natTapes_empty_close $$ [$HαRet $Hα'Ret]
     imod Hclose $$ HCloseArg with -
     imodintro
@@ -486,11 +480,11 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
     iapply refines_ret (e1 := Ectx.fill [] (Val.int m : Val rT).1) (e2 := pl(#(.int (id m))))
       (v1 := .int m) (v2 := .int m) rfl rfl
     imodintro
-    iapply HA m Hmr.1 Hmr.2
+    iapply HA m hm.1 hm.2
   · iapply wp_couple_rand_lbl_rand_lbl_wrong z N id id_dom_range id_bij_range hz hNz K' _ α α'
       [] []
     iframe HαN Hα'N Hr
-    iintro %m ⟨HαRet, Hα'Ret, HKRes, %Hmr⟩
+    iintro %m ⟨HαRet, Hα'Ret, HKRes, %hm⟩
     ihave HCloseArg := natTapes_empty_close $$ [$HαRet $Hα'Ret]
     imod Hclose $$ HCloseArg with -
     imodintro
@@ -499,18 +493,18 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
     iapply refines_ret (e1 := Ectx.fill [] (Val.int m : Val rT).1) (e2 := pl(#(.int (id m))))
       (v1 := .int m) (v2 := .int m) rfl rfl
     imodintro
-    iapply HA m Hmr.1 Hmr.2
+    iapply HA m hm.1 hm.2
 
 theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
-    (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢@{IProp GF} A.car (.int m) (.int m)) :
-    ⊢@{IProp GF} refines ⊤ pl(rand(#(.int z), #(.unit))) pl(rand(#(.int z), #(.unit))) A := by
+    (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
+    ⊢ refines ⊤ pl(rand(#(.int z), #(.unit))) pl(rand(#(.int z), #(.unit))) A := by
   rw [Ectx.eq_fill_nil (pl(rand(#(.int z), #(.unit))) : Exp rT)]
   iapply refines_couple_rands_lr id id_dom_range id_bij_range hz
-  iintro %m ⟨%Hm0, %Hmz⟩
+  iintro %m ⟨%hm0, %hmz⟩
   iapply refines_ret (e1 := Ectx.fill [] pl(#(.int m))) (e2 := Ectx.fill [] pl(#(.int (id m))))
     (v1 := .int m) (v2 := .int m) rfl rfl
   imodintro
-  iapply HA m Hm0 Hmz
+  iapply HA m hm0 hmz
 
 theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
     refines ⊤ e1 e1' lrel_pos_nat ⊢@{IProp GF}
@@ -521,16 +515,16 @@ theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
   iintro %w %w' HTapeRel
   iunfold lrel_tape at HTapeRel
-  icases HTapeRel with ⟨%α, %α', %N, %Hw, %Hw', #Hinv⟩
+  icases HTapeRel with ⟨%α, %α', %N, %hw, %hw', #Hinv⟩
   rw [show Ectx.fill [EctxItem.randR e1] w.1 = Ectx.fill [EctxItem.randL w] e1 from rfl,
     show Ectx.fill [EctxItem.randR e1'] w'.1 = Ectx.fill [EctxItem.randL w'] e1' from rfl]
   iapply refines_bind [EctxItem.randL w] [EctxItem.randL w'] $$ IH1
   iintro %v %v' HPosNat
   iunfold lrel_pos_nat at HPosNat
-  icases HPosNat with ⟨%M, %hM_pos, %HvM, %Hv'M⟩
+  icases HPosNat with ⟨%M, %hM, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL w] v.1 = Exp.rand v.1 w.1 from rfl,
-    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, HvM, Hv'M, Hw, Hw']
-  iapply refines_rand_lbl_of_pos (z := (M : Int)) (by exact_mod_cast hM_pos)
+    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
+  iapply refines_rand_lbl_of_pos (z := (M : Int)) (by exact_mod_cast hM)
     (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
 theorem refines_rand_unit {e e' : Exp rT} : iprop%
@@ -541,10 +535,10 @@ theorem refines_rand_unit {e e' : Exp rT} : iprop%
   iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH
   iintro %v %v' HPosNat
   iunfold lrel_pos_nat at HPosNat
-  icases HPosNat with ⟨%n, %hn_pos, %Hv, %Hv'⟩
+  icases HPosNat with ⟨%n, %hn, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL .unit] v.1 = Exp.rand v.1 pl(#(.unit)) from rfl,
-    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, Hv, Hv']
-  iapply refines_rand_unit_of_pos (z := (n : Int)) (by exact_mod_cast hn_pos)
+    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, hv, hv']
+  iapply refines_rand_unit_of_pos (z := (n : Int)) (by exact_mod_cast hn)
     fun m h0 _ => lrel_nat_lit h0
 
 theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
@@ -556,15 +550,15 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
   iintro %w %w' HTapeRel
   iunfold lrel_tape at HTapeRel
-  icases HTapeRel with ⟨%α, %α', %N, %Hw, %Hw', #Hinv⟩
+  icases HTapeRel with ⟨%α, %α', %N, %hw, %hw', #Hinv⟩
   rw [show Ectx.fill [EctxItem.randR e1] w.1 = Ectx.fill [EctxItem.randL w] e1 from rfl,
     show Ectx.fill [EctxItem.randR e1'] w'.1 = Ectx.fill [EctxItem.randL w'] e1' from rfl]
   iapply refines_bind [EctxItem.randL w] [EctxItem.randL w'] $$ IH1
   iintro %v %v' HInt
   iunfold lrel_int at HInt
-  icases HInt with ⟨%n, %Hv, %Hv'⟩
+  icases HInt with ⟨%n, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL w] v.1 = Exp.rand v.1 w.1 from rfl,
-    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, Hv, Hv', Hw, Hw']
+    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   by_cases hnpos : 0 < n
   · iapply refines_rand_lbl_of_pos hnpos (fun m _ _ => lrel_int_lit m) $$ Hinv
   · rw [Ectx.eq_fill_nil (pl(rand(#(.int n), #(.lbl α))) : Exp rT)]
@@ -597,9 +591,9 @@ theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
   iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH
   iintro %v %v' HInt
   iunfold lrel_int at HInt
-  icases HInt with ⟨%n, %Hv, %Hv'⟩
+  icases HInt with ⟨%n, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL .unit] v.1 = Exp.rand v.1 pl(#(.unit)) from rfl,
-    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, Hv, Hv']
+    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, hv, hv']
   by_cases hnpos : 0 < n
   · iapply refines_rand_unit_of_pos hnpos fun m _ _ => lrel_int_lit m
   · unfold refines

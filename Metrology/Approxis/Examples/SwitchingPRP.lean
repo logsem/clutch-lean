@@ -9,9 +9,7 @@ import Mathlib.Data.List.GetD
 
 /-! # The idealised random function and random permutation
 
-Representation predicates and query rules for `randomFunction`/`randomPermutation`
-(`Metrology/Code/Switching.lean`) — the Lean counterparts of clutch's
-`is_random_function`/`is_prp` and their `wp_*`/`spec_*` query lemmas
+Rocq source: clutch's `is_random_function`/`is_prp` and their query lemmas
 (`theories/approxis/examples/{prf,prp}.v`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS
@@ -232,8 +230,7 @@ theorem prpPerm_mem_range {N : Int} {m : List (Int × Int)} {r : List Int}
 /-- Map size and fresh-list size add up to `N`. -/
 theorem prpPerm_length {N : Int} {m : List (Int × Int)} {r : List Int}
     (h : prpPerm N m r) : m.length + r.length = N.toNat := by
-  have := h.length_eq
-  simpa using this
+  simpa using h.length_eq
 
 /-- The fresh list is nonempty at a fresh in-range query: the map's keys are distinct
 and in `[0, N)`, so they cannot already cover all of `[0, N)`. -/
@@ -264,6 +261,29 @@ theorem prpPerm_insert {N : Int} {m : List (Int × Int)} {r : List Int}
   exact List.perm_middle.symm.trans
     (List.Perm.append_left _ (List.perm_cons_erase hy).symm)
 
+/-- The side conditions of the injective `rand`/`rand` coupling along `i ↦ r[i]`. -/
+private theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int}
+    {ε : ENNReal} (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)
+    (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
+    (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε) :
+    (0 : Int) < (r.length : Int) ∧ (r.length : Int) ≤ N ∧
+    (∀ i, 0 ≤ i → i < (r.length : Int) → 0 ≤ r.getD i.toNat 0 ∧ r.getD i.toNat 0 < N) ∧
+    (∀ i₁ i₂, 0 ≤ i₁ → i₁ < (r.length : Int) → 0 ≤ i₂ → i₂ < (r.length : Int) →
+      r.getD i₁.toNat 0 = r.getD i₂.toNat 0 → i₁ = i₂) ∧
+    ((N - (r.length : Int)).toNat : ENNReal) / (N.toNat : ENNReal) ≤ ε := by
+  have hrpos := prpPerm_fresh_nonempty hperm n hn hkeys hnodup (alookup_eq_none_iff.mp hfresh)
+  have hlen := prpPerm_length hperm
+  refine ⟨by exact_mod_cast hrpos, by omega, fun i _ hlt => ?_, fun i₁ i₂ _ h₁ _ h₂ heq => ?_, ?_⟩
+  · have hi : i.toNat < r.length := by omega
+    rw [List.getD_eq_getElem r 0 hi]
+    exact prpPerm_mem_range hperm (r.getElem_mem hi)
+  · have hi₁ : i₁.toNat < r.length := by omega
+    have hi₂ : i₂.toNat < r.length := by omega
+    rw [List.getD_eq_getElem r 0 hi₁, List.getD_eq_getElem r 0 hi₂] at heq
+    have := ((prpPerm_nodup hperm).getElem_inj_iff).mp heq
+    omega
+  · rwa [show (N - (r.length : Int)).toNat = m.length by omega]
+
 /-! ## The coupled fresh query
 
 The heart of the switching lemma: at a fresh input `n`, couple the random function's
@@ -287,28 +307,8 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
       (ℓm ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗
       (ℓfv ↦ₛ (intListVal (r.erase y) : Val rT)) -∗ Φ (.int y)) ⊢
     wp E (pl% {rfQuery N ℓ} #(.int n)) Φ := by
-  have hfreshK : n ∉ m.map Prod.fst := alookup_eq_none_iff.mp hfresh
-  have hrpos : 0 < r.length := prpPerm_fresh_nonempty hperm n hn hkeys hnodup hfreshK
-  have hrlen : (0 : Int) < (r.length : Int) := by exact_mod_cast hrpos
-  have hRle : (r.length : Int) ≤ N := by have := prpPerm_length hperm; omega
-  have hdom : ∀ i, 0 ≤ i → i < (r.length : Int) →
-      0 ≤ r.getD i.toNat 0 ∧ r.getD i.toNat 0 < N := by
-    intro i _ hlt
-    have hi : i.toNat < r.length := by omega
-    rw [List.getD_eq_getElem r 0 hi]
-    exact prpPerm_mem_range hperm (r.getElem_mem hi)
-  have hinj : ∀ i₁ i₂, 0 ≤ i₁ → i₁ < (r.length : Int) → 0 ≤ i₂ → i₂ < (r.length : Int) →
-      r.getD i₁.toNat 0 = r.getD i₂.toNat 0 → i₁ = i₂ := by
-    intro i₁ i₂ _ h₁ _ h₂ heq
-    have hi₁ : i₁.toNat < r.length := by omega
-    have hi₂ : i₂.toNat < r.length := by omega
-    rw [List.getD_eq_getElem r 0 hi₁, List.getD_eq_getElem r 0 hi₂] at heq
-    have := ((prpPerm_nodup hperm).getElem_inj_iff).mp heq
-    omega
-  have hεle : ((N - (r.length : Int)).toNat : ENNReal) / (N.toNat : ENNReal) ≤ ε := by
-    rw [show (N - (r.length : Int)).toNat = m.length by
-      have := prpPerm_length hperm; omega]
-    exact hε
+  obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
+    prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε
   iintro ⟨Hj, Herr, Hl, Hm, Hfv, Hcnt⟩
   -- Program side: β-reduce, look up the fresh key, reach the `rand N` draw.
   wp_pure 1
@@ -332,7 +332,6 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   tp_bind (pl% &listLength {Exp.ofVal (intListVal r)})
   imod (step_pure_steps_at _ rfl rfl (listLength_steps r)) $$ Hj with Hj
   tp_pures
-  -- The coupled step.
   wp_bind (pl% rand(#(.int N), #.unit))
   tp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
   iapply wp_couple_rand_rand_rev_inj N (r.length : Int) (fun i => r.getD i.toNat 0) ε
@@ -370,7 +369,6 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   iintro Hl
   wp_pures
   wp_value
-  -- Close.
   rw [show r.eraseIdx j = r.erase r[j] from
     ((prpPerm_nodup hperm).erase_getElem j hjN).symm]
   iapply Hcnt $$ %(r[j]) %(r.getElem_mem hjN) Hj Hl Hm Hfv
@@ -392,28 +390,8 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
       (ℓfv ↦ (intListVal (r.erase y) : Val rT)) -∗
       (ℓ ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗ Φ (.int y)) ⊢
     wp E (pl% {prpQuery ℓm ℓfv} #(.int n)) Φ := by
-  have hfreshK : n ∉ m.map Prod.fst := alookup_eq_none_iff.mp hfresh
-  have hrpos : 0 < r.length := prpPerm_fresh_nonempty hperm n hn hkeys hnodup hfreshK
-  have hrlen : (0 : Int) < (r.length : Int) := by exact_mod_cast hrpos
-  have hRle : (r.length : Int) ≤ N := by have := prpPerm_length hperm; omega
-  have hdom : ∀ i, 0 ≤ i → i < (r.length : Int) →
-      0 ≤ r.getD i.toNat 0 ∧ r.getD i.toNat 0 < N := by
-    intro i _ hlt
-    have hi : i.toNat < r.length := by omega
-    rw [List.getD_eq_getElem r 0 hi]
-    exact prpPerm_mem_range hperm (r.getElem_mem hi)
-  have hinj : ∀ i₁ i₂, 0 ≤ i₁ → i₁ < (r.length : Int) → 0 ≤ i₂ → i₂ < (r.length : Int) →
-      r.getD i₁.toNat 0 = r.getD i₂.toNat 0 → i₁ = i₂ := by
-    intro i₁ i₂ _ h₁ _ h₂ heq
-    have hi₁ : i₁.toNat < r.length := by omega
-    have hi₂ : i₂.toNat < r.length := by omega
-    rw [List.getD_eq_getElem r 0 hi₁, List.getD_eq_getElem r 0 hi₂] at heq
-    have := ((prpPerm_nodup hperm).getElem_inj_iff).mp heq
-    omega
-  have hεle : ((N - (r.length : Int)).toNat : ENNReal) / (N.toNat : ENNReal) ≤ ε := by
-    rw [show (N - (r.length : Int)).toNat = m.length by
-      have := prpPerm_length hperm; omega]
-    exact hε
+  obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
+    prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε
   iintro ⟨Hj, Herr, Hm, Hfv, Hl, Hcnt⟩
   -- Program side: β-reduce, look up the fresh key, compute the fresh-list length,
   -- reach the `rand r.length` draw.
@@ -440,7 +418,6 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   simp only [hfresh, optIntVal, Option.map]
   iintro Hj Hl
   tp_pures
-  -- The coupled step.
   wp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
   tp_bind (pl% rand(#(.int N), #.unit))
   iapply wp_couple_rand_rand_inj (r.length : Int) N (fun i => r.getD i.toNat 0) ε
@@ -482,7 +459,6 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   iintro Hfv
   wp_pures
   wp_value
-  -- Close.
   rw [show r.eraseIdx j = r.erase r[j] from
     ((prpPerm_nodup hperm).erase_getElem j hjN).symm]
   iapply Hcnt $$ %(r[j]) %(r.getElem_mem hjN) Hj Hm Hfv Hl

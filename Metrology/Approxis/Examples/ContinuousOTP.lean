@@ -13,7 +13,7 @@ public import Metrology.Code.ContinuousOTP
 /-! # A continuous one-time pad -/
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS MeasureTheory
 
 namespace ContinuousOTP
 
@@ -31,7 +31,7 @@ private theorem refines_lit_real (r : rT) :
   iapply lrel_real_lit
 
 theorem otp_refines (m : rT)
-    (hmp : MeasureTheory.MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
+    (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
     ⊢@{IProp GF} refines ⊤ (otp_enc m) otp_ideal lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
@@ -59,7 +59,7 @@ Couple the ideal sample against the encryption's key using the *inverse* rotatio
 `g`, so that the encryption's combiner sends `g r` back to `r`. -/
 
 theorem otp_refines_rev (m : rT) (g : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
+    (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
     ⊢@{IProp GF} refines ⊤ otp_ideal (otp_enc m) lrel_real := by
@@ -95,10 +95,10 @@ noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS ℝ hlc GF] :
     ⊢@{IProp GF} refines ⊤ otp_ideal (otp_enc m) lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
-    have hr' : r ∈ Set.Ioo 0 1 := hr
+    obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
     show Int.fract (m + Int.fract (-m + r)) = r
     rw [fract_add_fract_right, show m + (-m + r) = r by ring]
-    exact Int.fract_eq_self.mpr ⟨hr'.1.le, hr'.2⟩
+    exact Int.fract_eq_self.mpr ⟨hr0.le, hr1⟩
 
 /-! ## Adequacy: exiting the logic
 
@@ -158,19 +158,19 @@ theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ 
   have hstep : execN 2 ⟨otp_ideal, σ⟩ Set.univ = 1 := by
     show execN 2 ⟨pl(urand), σ⟩ Set.univ = 1
     rw [execN_succ_not_isValue hnv,
-        MeasureTheory.Measure.bind_apply MeasurableSet.univ (execN_measurable 1).aemeasurable]
+        Measure.bind_apply MeasurableSet.univ (execN_measurable 1).aemeasurable]
     have hae : ∀ᵐ ρ' ∂(primStep ⟨pl(urand), σ⟩), execN 1 ρ' Set.univ = 1 := by
-      rw [MeasureTheory.ae_iff]
-      refine MeasureTheory.measure_mono_null ?_ (Atomic.urand' σ)
+      rw [ae_iff]
+      refine measure_mono_null ?_ (Atomic.urand' σ)
       intro ρ' hρ' hv
       exact hρ' (by rw [execN_succ_isValue hv]; simp)
-    rw [MeasureTheory.lintegral_congr_ae hae, MeasureTheory.lintegral_const, one_mul,
+    rw [lintegral_congr_ae hae, lintegral_const, one_mul,
         show primStep ⟨pl(urand), σ⟩ = Cfg.uniformReal σ from primStep_eq_headStep
           (Exp.decompItem_none_of_lc_headReducible (by is_lc)
-            (show Cfg.uniformReal σ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _))]
+            (show Cfg.uniformReal σ ≠ 0 from IsProbabilityMeasure.ne_zero _))]
     exact Cfg.uniformReal_isProbabilityMeasure.measure_univ
   show asExpr (limExec _) Set.univ = 1
-  rw [asExpr, MeasureTheory.Measure.map_apply Cfg.measurable_expr MeasurableSet.univ,
+  rw [asExpr, Measure.map_apply Cfg.measurable_expr MeasurableSet.univ,
       limExec_term hstep]
   simpa using hstep
 
@@ -179,11 +179,8 @@ theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ S
 
 /-! ## Contextual equivalence
 
-With `Ty.real` in the type system the one-time pad finally lands where Clutch's
-discrete examples land: contextual refinement in both directions, via
-`refines_sound_fresh`. `GF` is a parameter in the Rocq sense (`refines_sound Σ`)
-— the statement holds for any ghost-state bundle able to host the Approxis
-resources. -/
+`GF` is a parameter in the Rocq sense (`refines_sound Σ`): the statement holds for any
+ghost-state bundle able to host the Approxis resources. -/
 
 section Typing
 
@@ -227,7 +224,8 @@ theorem otp_ctx_equiv_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS ℝ G
     limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
   le_antisymm (otp_ctx_refines_real GF m K σ₀ b hK hbf hfresh) <|
     otp_ctx_refines_rev_real GF m K σ₀ b hK hbf fun x hx =>
-      ⟨(hfresh x hx).2.1, (hfresh x hx).1, (hfresh x hx).2.2⟩
+      have ⟨henc, hideal, hpayload⟩ := hfresh x hx
+      ⟨hideal, henc, hpayload⟩
 
 theorem otp_advantage_zero (m : ℝ) : advantage (otp_enc m) otp_ideal = 0 :=
   advantage_eq_zero_of_limExecV_eq fun σ => otp_distribution_eq m σ σ

@@ -46,23 +46,22 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
       ⊢@{IProp GF} (A IR).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : ApproxisRGS rT .hasNoLC GF), ⊢@{IProp GF} ↯ ε -∗ refines ⊤ e e' (A IR)) :
     AddCoupl ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
-  apply wp_adequacy_error_lim (GF := GF) e e' σ σ' ε φ
-  intro IGS ε' Hε'pos
+  refine wp_adequacy_error_lim (GF := GF) e e' σ σ' ε φ fun IGS ε' hε' => ?_
   iintro He' Herr
   imod Iris.NonAtomicInvariant.alloc with ⟨%γ, Htok⟩
   set IR : ApproxisRGS rT .hasNoLC GF := { approxisGS := IGS, naInvG := _, nais := γ }
-  icases ErrorCredit.difference (le_of_lt Hε'pos) $$ Herr with ⟨Hεc, Hrest⟩
+  icases ErrorCredit.difference hε'.le $$ Herr with ⟨Hεc, Hrest⟩
   ihave HlogR := Hlog IR $$ Hεc
   iunfold refines at HlogR
   rw [spec_eq_fill_nil e']
-  ispecialize HlogR $$ %([] : Ectx rT) %(ε' - ε) He' Htok Hrest %(tsub_pos_of_lt Hε'pos)
+  ispecialize HlogR $$ %([] : Ectx rT) %(ε' - ε) He' Htok Hrest %(tsub_pos_of_lt hε')
   iapply ApproxisWpGS.wp_mono $$ HlogR
   intro v
-  iintro ⟨%v', %_, Hspec, -, -, %_, HA_v⟩
+  iintro ⟨%v', %_, Hspec, -, -, -, HAv⟩
   iexists v'
   rw [← spec_fill_nil_eq_ofVal v']
   iframe Hspec
-  iapply HA IR v v' $$ HA_v
+  iapply HA IR v v' $$ HAv
 
 theorem refines_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
     (A : ∀ (_ : ApproxisRGS rT .hasNoLC GF), lrel rT GF)

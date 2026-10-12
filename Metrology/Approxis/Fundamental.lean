@@ -59,12 +59,17 @@ private theorem substMap_open_fresh_pair {vs vs' : ValSubstMap rT} {x : Var} {v 
   exact ⟨substMap_open_fresh hfst hxe (ValSubstMap.fst_lookup_eq_none_of_not_mem hxdom) hv.1,
     substMap_open_fresh hsnd hxe' (ValSubstMap.snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
 
+private theorem fv_subset_substMap_dom {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT}
+    (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
+    (he : e.fv ⊆ (Γ.map (·.1)).toFinset) (he' : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
+    e.fv ⊆ (vs.fst.map (·.1)).toFinset ∧ e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
+  rw [ValSubstMap.fst_dom, ValSubstMap.snd_dom]
+  exact ⟨he.trans hdom, he'.trans hdom⟩
+
 /-! ### Lifting `refines` compatibility to `bin_log_related`
 
-Every non-binder compatibility lemma shares one envelope: specialise the induction
-hypotheses at `vs`, push `substMap` through the constructor, then apply the matching
-`refines_*` rule. `bin_log_related_lift{1,2,3}` package that envelope, parameterised
-by the constructor `f` and its `substMap` commutation lemma. -/
+`bin_log_related_lift{1,2,3}` push `substMap` through a constructor `f` and apply a
+`refines` rule for `f`. -/
 
 private theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A B : lrel rT GF}
     {f : Exp rT → Exp rT} (hf : ∀ σ t, substMap σ (f t) = f (substMap σ t))
@@ -185,10 +190,7 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     lam_substMap_isLocallyClosed hvssnd_closed
       (fun _ hy => ValSubstMap.snd_lookup_eq_none_of_not_mem hy) he'_lc
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
-  have he_dom_fst : e.fv ⊆ (vs.fst.map (·.1)).toFinset := by
-    rw [ValSubstMap.fst_dom]; exact he_fv.trans hΓdomVs
-  have he_dom_snd : e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
-    rw [ValSubstMap.snd_dom]; exact he'_fv.trans hΓdomVs
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
   have hlam_closed : (Exp.lam (substMap vs.fst e)).isClosedEmpty ∧
       (Exp.lam (substMap vs.snd e')).isClosedEmpty :=
     ⟨⟨hlam_lc, substMap_fv_eq_empty hvsfst_closed he_dom_fst⟩,
@@ -238,10 +240,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     fix_substMap_isLocallyClosed hvssnd_closed
       (fun _ hy => ValSubstMap.snd_lookup_eq_none_of_not_mem hy) he'_lc
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
-  have he_dom_fst : e.fv ⊆ (vs.fst.map (·.1)).toFinset := by
-    rw [ValSubstMap.fst_dom]; exact he_fv.trans hΓdomVs
-  have he_dom_snd : e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
-    rw [ValSubstMap.snd_dom]; exact he'_fv.trans hΓdomVs
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
   have hfix_closed : (Exp.fix (substMap vs.fst e)).isClosedEmpty ∧
       (Exp.fix (substMap vs.snd e')).isClosedEmpty :=
     ⟨⟨hfix_lc, substMap_fv_eq_empty hvsfst_closed he_dom_fst⟩,
@@ -289,10 +288,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   simp only [Ectx.fill_nil]
   iapply refines_app $$ HbodyApplied HArgs
 
-/-! ### Heap and tape cases
-
-These are the discrete fragment: `alloc`/`load`/`store` and the bounded
-integer sampler `rand`, whose step rules are stated with atoms. -/
+/-! ### Heap and tape cases -/
 
 section Discrete
 
@@ -361,10 +357,7 @@ theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   ihave %hvsfst_closed := env_ltyped2_fst_allClosed Γ vs $$ Hvs
   ihave %hvssnd_closed := env_ltyped2_snd_allClosed Γ vs $$ Hvs
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
-  have he_dom_fst : e.fv ⊆ (vs.fst.map (·.1)).toFinset := by
-    rw [ValSubstMap.fst_dom]; exact he_fv.trans hΓdomVs
-  have he_dom_snd : e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
-    rw [ValSubstMap.snd_dom]; exact he'_fv.trans hΓdomVs
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
   rw [show interp (.forall' τ) Δ = lrel_forall fun A => interp τ (TyEnv.cons A Δ) from rfl]
   iapply refines_forall (substMap_lc hvsfst_closed he_lc) (substMap_lc hvssnd_closed he'_lc)
     (substMap_fv_eq_empty hvsfst_closed he_dom_fst) (substMap_fv_eq_empty hvssnd_closed he_dom_snd)
@@ -394,8 +387,8 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   ihave HvArr2 := HvArr $$ %(.unit : Val rT) %(.unit : Val rT)
   ihave HvApp : iprop(refines ⊤ (app v.1 pl(#(.unit))) (app v'.1 pl(#(.unit)))
       (interp τ (TyEnv.cons (interp τ' Δ) Δ))) $$ [HvArr2]
-  · ihave HUnit := lrel_unit_lit
-    iapply HvArr2 $$ HUnit
+  · iapply HvArr2
+    iapply lrel_unit_lit
   ihave HvAppFinal := refines_proper_entails ⊤ _ _ (interp_subst τ' τ Δ).symm $$ HvApp
   rw [show Ectx.fill [EctxItem.appL .unit] v.1 = app v.1 pl(#(.unit)) from rfl,
     show Ectx.fill [EctxItem.appL .unit] v'.1 = app v'.1 pl(#(.unit)) from rfl]
@@ -436,13 +429,10 @@ theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Ex
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
   ihave IH' := IH $$ %vs Hvs
-  have hru1 : substMap vs.fst recUnfold = recUnfold := by
-    show substMap vs.fst (.lam (.bvar 0)) = _
+  have hru : ∀ σ : SubstMap rT, substMap σ recUnfold = recUnfold := fun σ => by
+    show substMap σ (.lam (.bvar 0)) = _
     simp [substMap_lam, substMap_bvar, recUnfold]
-  have hru2 : substMap vs.snd recUnfold = recUnfold := by
-    show substMap vs.snd (.lam (.bvar 0)) = _
-    simp [substMap_lam, substMap_bvar, recUnfold]
-  rw [substMap_app, substMap_app, hru1, hru2, ← Ectx.fill_appR recUnfold,
+  rw [substMap_app, substMap_app, hru, hru, ← Ectx.fill_appR recUnfold,
     ← Ectx.fill_appR recUnfold]
   iapply refines_bind [EctxItem.appR recUnfold] [EctxItem.appR recUnfold] $$ IH'
   iintro %v %v' Hv
@@ -533,11 +523,8 @@ theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (L : Finse
 
 /-! ### Operator / scrut compatibility
 
-`lrel_int`, `lrel_bool` and `lrel_real` all relate a value to itself exactly when
-both sides are the *same* literal, so all six operator lemmas share one envelope:
-bind the operands, read off the common literal, then take a pure step. The envelope
-is `refines_{un,bin}op_bind`, parameterised by the literal family `V`; the step is
-`refines_{un,bin}op_val`. -/
+`lrel_int`, `lrel_bool` and `lrel_real` relate exactly equal literals, so each operator
+lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step. -/
 
 private theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) {l : BaseLit rT}
     {A : lrel rT GF} (heval : op.eval w1.1 w2.1 = some (.lit l))
@@ -629,11 +616,7 @@ theorem bin_log_related_int_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : Un
       | (rw [interp_int]; iapply refines_unop_val _ _ rfl (lrel_int_lit _))
       | (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
 
-/-! ### The real fragment
-
-`lrel_real` relates two values exactly when both are the *same* real literal, so
-the two sides of a real operation always step to a common result and
-`refines_{unop,binop}_pure` applies directly. -/
+/-! ### The real fragment -/
 
 theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) :
@@ -939,11 +922,6 @@ theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF
   have heq := HCtx y
   by_cases hxy : y = x
   · subst hxy
-    have hΓy_none : Γtc y = none := by
-      rw [hfresh] at heq
-      cases h : Γtc y with
-      | none => rfl
-      | some τ' => rw [h] at heq; simp at heq
     simp [hfresh]
   · rw [ite_eq_right hxy]
     cases hRc : Γrc.lookup y with
@@ -983,6 +961,12 @@ private theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : R
   rcases List.mem_cons.mp hpmem with rfl | hmem
   · exact (hzy hpeq.symm).elim
   · exact ⟨p, hmem, hpeq⟩
+
+omit [LawfulProbLangℝ rT] in
+private theorem not_mem_union_dom {L : Finset Var} {Γrc : RelCtx rT GF} {x : Var}
+    (hx : x ∉ L ∪ (Γrc.map (·.1)).toFinset) : x ∉ L ∧ Γrc.lookup x = none := by
+  simp only [Finset.mem_union, not_or] at hx
+  exact ⟨hx.1, RelCtx.lookup_eq_none_of_not_mem hx.2⟩
 
 theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
     (Γrc : RelCtx rT GF) (HCtx : TctxRelated Δ Γtc Γrc) :
@@ -1041,29 +1025,19 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
   | tapp _ ih => iintro; iapply bin_log_related_tapp $$ %(ih Δ Γrc HCtx)
   | tpack _ ih => iintro; iapply bin_log_related_pack $$ %(ih Δ Γrc HCtx)
   | @lam L Γtc' e τ1 τ2 Hbody ih =>
-    let L' : Finset Var := L ∪ (Γrc.map (·.1)).toFinset ∪ e.fv
-    have hxL : ∀ x ∉ L', x ∉ L := fun _ hx h =>
-      hx (Finset.mem_union_left _ (Finset.mem_union_left _ h))
-    have hxRc : ∀ x ∉ L', Γrc.lookup x = none := fun _ hx =>
-      RelCtx.lookup_eq_none_of_not_mem fun h =>
-        hx (Finset.mem_union_left _ (Finset.mem_union_right _ h))
+    let L' : Finset Var := L ∪ (Γrc.map (·.1)).toFinset
     have he_fv := fv_subset_of_cofinite HCtx Hbody
     have he_lc : ∀ x ∉ L', (open' e (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody x (hxL x hx)).isLocallyClosed
+      (Hbody x (not_mem_union_dom hx).1).isLocallyClosed
     exact bin_log_related_lam Δ Γrc L' he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (hxL x hx) Δ _ (HCtx.insert x τ1 (hxRc x hx))
+      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x τ1 (not_mem_union_dom hx).2)
   | @«fix» L Γtc' e τ1 τ2 Hbody ih =>
-    let L' : Finset Var := L ∪ (Γrc.map (·.1)).toFinset ∪ e.fv
-    have hxL : ∀ x ∉ L', x ∉ L := fun _ hx h =>
-      hx (Finset.mem_union_left _ (Finset.mem_union_left _ h))
-    have hxRc : ∀ x ∉ L', Γrc.lookup x = none := fun _ hx =>
-      RelCtx.lookup_eq_none_of_not_mem fun h =>
-        hx (Finset.mem_union_left _ (Finset.mem_union_right _ h))
+    let L' : Finset Var := L ∪ (Γrc.map (·.1)).toFinset
     have he_fv := fv_subset_of_cofinite HCtx Hbody
     have he_lc : ∀ x ∉ L', (open' e (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody x (hxL x hx)).isLocallyClosed
+      (Hbody x (not_mem_union_dom hx).1).isLocallyClosed
     exact bin_log_related_fix Δ Γrc L' he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (hxL x hx) Δ _ (HCtx.insert x (.arrow τ1 τ2) (hxRc x hx))
+      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x (.arrow τ1 τ2) (not_mem_union_dom hx).2)
   | @tlam Γtc' e τ Hbody ih =>
     have hLC := Hbody.isLocallyClosed
     have he_fv := fv_subset_relCtxDom (HCtx.shift default) Hbody
@@ -1072,13 +1046,11 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
     iapply ih (TyEnv.cons A Δ) Γrc (HCtx.shift A)
   | @tunpack L Γtc' e1 e2 τ τ2 Hty1 Hbody2 ih1 ih2 =>
     let L' : Finset Var := L ∪ (Γrc.map (·.1)).toFinset
-    have hxL : ∀ x ∉ L', x ∉ L := fun _ hx h => hx (Finset.mem_union_left _ h)
-    have hxRc : ∀ x ∉ L', Γrc.lookup x = none := fun _ hx =>
-      RelCtx.lookup_eq_none_of_not_mem fun h => hx (Finset.mem_union_right _ h)
     have he2_lc : ∀ x ∉ L', (open' e2 (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody2 x (hxL x hx)).isLocallyClosed
+      (Hbody2 x (not_mem_union_dom hx).1).isLocallyClosed
     exact bin_log_related_unpack Δ Γrc L' (ih1 Δ Γrc HCtx) he2_lc he2_lc fun A x hx =>
-      ih2 x (hxL x hx) (TyEnv.cons A Δ) _ ((HCtx.shift A).insert x τ (hxRc x hx))
+      ih2 x (not_mem_union_dom hx).1 (TyEnv.cons A Δ) _
+        ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
 
 theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
     ⊢@{IProp GF} refines ⊤ e e (interp τ Δ) := by

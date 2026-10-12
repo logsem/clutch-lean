@@ -71,9 +71,9 @@ theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Va
 theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {τ : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
-    (Hbody : ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((x, A) :: Γrc') Ke Ke' τ) :
+    (Hbody : ⊢ bin_log_related_ty ⊤ Δ ((x, A) :: Γrc') Ke Ke' τ) :
     ∀ y, y ∉ (Γrc'.map (·.1)).toFinset ∪ {x} ∪ Ke.fv ∪ Ke'.fv →
-      ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((y, A) :: Γrc')
+      ⊢ bin_log_related_ty ⊤ Δ ((y, A) :: Γrc')
         (Exp.open' (Ke.close x) (.fvar y)) (Exp.open' (Ke'.close x) (.fvar y)) τ := by
   intro y hyNotL
   simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hyNotL
@@ -102,8 +102,8 @@ theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : 
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
     (hKe_fv : Ke.fv ⊆ (((x, interp τ_arg Δ) :: Γrc').map (·.1)).toFinset)
     (hKe'_fv : Ke'.fv ⊆ (((x, interp τ_arg Δ) :: Γrc').map (·.1)).toFinset)
-    (Hbody : ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((x, interp τ_arg Δ) :: Γrc') Ke Ke' τ_body) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γrc' (.lam (Ke.close x)) (.lam (Ke'.close x))
+    (Hbody : ⊢ bin_log_related_ty ⊤ Δ ((x, interp τ_arg Δ) :: Γrc') Ke Ke' τ_body) :
+    ⊢ bin_log_related_ty ⊤ Δ Γrc' (.lam (Ke.close x)) (.lam (Ke'.close x))
       (.arrow τ_arg τ_body) := by
   apply bin_log_related_lam _ _ ((Γrc'.map (·.1)).toFinset ∪ {x} ∪ Ke.fv ∪ Ke'.fv)
   · exact fun y _ => open_close_subst_lc_at x y hKe_lc
@@ -117,9 +117,9 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
     (hKe_fv : Ke.fv ⊆ (((f, interp (.arrow τ1 τ2) Δ) :: Γrc').map (·.1)).toFinset)
     (hKe'_fv : Ke'.fv ⊆ (((f, interp (.arrow τ1 τ2) Δ) :: Γrc').map (·.1)).toFinset)
-    (Hbody : ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((f, interp (.arrow τ1 τ2) Δ) :: Γrc') Ke Ke'
+    (Hbody : ⊢ bin_log_related_ty ⊤ Δ ((f, interp (.arrow τ1 τ2) Δ) :: Γrc') Ke Ke'
       (.arrow τ1 τ2)) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γrc' (.fix (Ke.close f)) (.fix (Ke'.close f))
+    ⊢ bin_log_related_ty ⊤ Δ Γrc' (.fix (Ke.close f)) (.fix (Ke'.close f))
       (.arrow τ1 τ2) := by
   apply bin_log_related_fix _ _ ((Γrc'.map (·.1)).toFinset ∪ {f} ∪ Ke.fv ∪ Ke'.fv)
   · exact fun y _ => open_close_subst_lc_at f y hKe_lc
@@ -133,10 +133,10 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     (Hty_e' : Typed Γtc e' τ)
     (Hbinders : ∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated Δ Γtc Γrc →
-      ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γrc e e' τ) :
+      ⊢ bin_log_related_ty ⊤ Δ Γrc e e' τ) :
     ∀ (Δ : TyEnv rT GF) (Γrc' : RelCtx rT GF), TctxRelated Δ Γtc' Γrc' →
       Ctx.BindersFresh K (Γrc'.map (·.1)).toFinset →
-      ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γrc' (K.fill e) (K.fill e') τ' := by
+      ⊢ bin_log_related_ty ⊤ Δ Γrc' (K.fill e) (K.fill e') τ' := by
   induction K generalizing Γtc' τ' with
   | nil =>
     intro Δ Γrc HCtx _

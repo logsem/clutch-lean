@@ -171,9 +171,8 @@ theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H :
 
 theorem unboxed_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp τ Δ).car v v' ⊢ ⌜Val.isUnboxed v ∧ Val.isUnboxed v'⌝ := by
-  refine (unboxed_type_lit_shape H).trans ?_
-  iintro %h !%
-  obtain ⟨l, l', h1, h2⟩ := h
+  refine (unboxed_type_lit_shape H).trans (pure_mono ?_)
+  rintro ⟨_, _, h1, h2⟩
   exact ⟨by simp [Val.isUnboxed, h1], by simp [Val.isUnboxed, h2]⟩
 
 theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType τ) :
@@ -340,18 +339,14 @@ theorem env_ltyped2_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   exact Hc
 
 theorem env_ltyped2_fst_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
-    env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ := by
-  iintro Hvs
-  ihave %Hc := env_ltyped2_allClosed Γ vs $$ Hvs
-  ipureintro
-  exact ValSubstMap.proj_allClosed Prod.fst fun p hp => (Hc p hp).1
+    env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
+  (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
+    ValSubstMap.proj_allClosed Prod.fst fun p hp => (hc p hp).1
 
 theorem env_ltyped2_snd_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
-    env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ := by
-  iintro Hvs
-  ihave %Hc := env_ltyped2_allClosed Γ vs $$ Hvs
-  ipureintro
-  exact ValSubstMap.proj_allClosed Prod.snd fun p hp => (Hc p hp).2
+    env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
+  (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
+    ValSubstMap.proj_allClosed Prod.snd fun p hp => (hc p hp).2
 
 omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
@@ -379,7 +374,7 @@ theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
   iapply Hall $$ %x %A %v1 %v2 %hΓ %hvs_eq
 
 omit [LawfulProbLangℝ rT] in
-theorem env_ltyped2_empty : ⊢@{IProp GF} env_ltyped2 ([] : RelCtx rT GF) [] := by
+theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   unfold env_ltyped2
   isplitr
   · ipureintro; intro x; simp [RelCtx.lookup, ValSubstMap.lookup]
@@ -392,7 +387,7 @@ omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
     env_ltyped2 ([] : RelCtx rT GF) vs ⊢ ⌜vs = []⌝ := by
   unfold env_ltyped2
-  iintro ⟨%Hdom, _, _⟩ !%
+  iintro ⟨%Hdom, -, -⟩ !%
   cases vs with
   | nil => rfl
   | cons p rest =>
@@ -430,10 +425,10 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
   simp only [RelCtx.lookup, ValSubstMap.lookup] at hΓ' hvs'
   cases hΓy : Γ.lookup y with
   | some Bold =>
-    rw [hΓy] at hΓ'; injection hΓ' with hBeq; subst hBeq
+    obtain rfl : Bold = B := by simpa [hΓy] using hΓ'
     obtain ⟨⟨w1', w2'⟩, hvy⟩ := Option.isSome_iff_exists.mp ((Hdom y).mp (by rw [hΓy]; rfl))
-    rw [hvy] at hvs'; injection hvs' with heq; obtain ⟨rfl, rfl⟩ := heq
-    iapply Hall $$ %y %Bold %w1 %w2 %hΓy %hvy
+    obtain ⟨rfl, rfl⟩ : w1' = w1 ∧ w2' = w2 := by simpa [hvy] using hvs'
+    iapply Hall $$ %y %Bold %w1' %w2' %hΓy %hvy
   | none =>
     rw [hΓy] at hΓ'
     simp only at hΓ'
@@ -442,10 +437,7 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
     cases hvy : vs.lookup y with
     | some _ => exact absurd ((Hdom y).mpr (by rw [hvy]; rfl)) (by simp [hΓy])
     | none =>
-      rw [hvy] at hvs'
-      simp only at hvs'
-      injection hvs' with heq
-      obtain ⟨rfl, rfl⟩ := heq
+      obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa [hvy] using hvs'
       iexact HA
 
 omit [LawfulProbLangℝ rT] in
@@ -464,13 +456,7 @@ theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var
     · rw [ValSubstMap.lookup_delete_other vs y z hzy]
       have heq := Hdom z
       rw [RelCtx.lookup_cons] at heq
-      cases hΓz : Γ.lookup z with
-      | some B =>
-        rw [hΓz] at heq
-        simpa using heq
-      | none =>
-        rw [hΓz] at heq
-        simpa [hzy] using heq
+      cases hΓz : Γ.lookup z <;> simpa [hΓz, hzy] using heq
   isplitr
   · ipureintro
     exact fun p hp => Hclosed p ((ValSubstMap.mem_delete _ _ _).mp hp).1
@@ -507,20 +493,20 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
   iintro Hold %vs #Hvs
   have hyHeadLookup : RelCtx.lookup ((y, A) :: Γ) y = some A := by
     rw [RelCtx.lookup_cons, RelCtx.lookup_eq_none_of_not_mem hyNotDom]; simp
-  icases env_ltyped2_lookup _ vs _ _ hyHeadLookup $$ Hvs with ⟨%w1, %w2, %hvsLookupY, HA_w⟩
-  ihave %Hvs_clos := env_ltyped2_allClosed _ vs $$ Hvs
-  obtain ⟨hw1c, hw2c⟩ := Hvs_clos _ (ValSubstMap.mem_of_lookup_eq_some hvsLookupY)
+  icases env_ltyped2_lookup _ vs _ _ hyHeadLookup $$ Hvs with ⟨%w1, %w2, %hvsLookupY, HAw⟩
+  ihave %hvsClosed := env_ltyped2_allClosed _ vs $$ Hvs
+  obtain ⟨hw1c, hw2c⟩ := hvsClosed _ (ValSubstMap.mem_of_lookup_eq_some hvsLookupY)
   ihave HvsDrop := env_ltyped2_drop_head Γ vs y A hyNotDom $$ Hvs
-  ihave Hvs' := env_ltyped2_insert Γ (vs.delete y) x A _ _ hw1c hw2c $$ [$HA_w $HvsDrop]
+  ihave Hvs' := env_ltyped2_insert Γ (vs.delete y) x A _ _ hw1c hw2c $$ [$HAw $HvsDrop]
   set vs' : ValSubstMap rT := (x, (w1, w2)) :: vs.delete y
   ihave Hrefines := Hold $$ %vs' Hvs'
-  ihave %Hvs_dom := env_ltyped2_domEq _ vs $$ Hvs
+  ihave %hvsDom := env_ltyped2_domEq _ vs $$ Hvs
   have hvsLookupX : vs.lookup x = none := by
     have hΓheadX : RelCtx.lookup ((y, A) :: Γ) x = none := by
       rw [RelCtx.lookup_cons, RelCtx.lookup_eq_none_of_not_mem hxNotDom]; simp [hxy]
     cases hvs : vs.lookup x with
     | none => rfl
-    | some _ => simpa [hΓheadX] using (Hvs_dom x).mpr (by rw [hvs]; rfl)
+    | some _ => simpa [hΓheadX] using (hvsDom x).mpr (by rw [hvs]; rfl)
   have hxNotVsDom : x ∉ (vs.map (·.1)).toFinset := by
     intro h
     simp only [List.mem_toFinset, List.mem_map] at h
@@ -528,11 +514,11 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     simpa [hvsLookupX] using ValSubstMap.lookup_isSome_of_mem ⟨p.2, hpmem⟩
   have hswapFst :=
     Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 hxy (by rwa [ValSubstMap.fst_dom])
-      (ValSubstMap.proj_allClosed Prod.fst fun p hp => (Hvs_clos p hp).1)
+      (ValSubstMap.proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
       (by rw [ValSubstMap.fst_lookup, hvsLookupY]; rfl) hyFvE
   have hswapSnd :=
     Exp.substMap_subst_fvar_lookup vs.snd τE' x y w2.1 hxy (by rwa [ValSubstMap.snd_dom])
-      (ValSubstMap.proj_allClosed Prod.snd fun p hp => (Hvs_clos p hp).2)
+      (ValSubstMap.proj_allClosed Prod.snd fun p hp => (hvsClosed p hp).2)
       (by rw [ValSubstMap.snd_lookup, hvsLookupY]; rfl) hyFvE'
   rw [← ValSubstMap.fst_delete] at hswapFst
   rw [← ValSubstMap.snd_delete] at hswapSnd
