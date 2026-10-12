@@ -9,6 +9,9 @@ public import Lean.AuxRecursor
 
 open Lean Elab Command Term Meta
 
+/-- The type of a constructor argument, without `optParam`/`autoParam` annotations. -/
+def argType (x : Expr) : MetaM Expr := return (← inferType x).cleanupAnnotations
+
 -- Helper to construct nested Prod types: A × B × C (right-associative)
 -- For empty list: Unit
 -- For non-empty list: uses last element as base, folds rest to build nested Prod
@@ -33,7 +36,7 @@ def ProjectionName (cinfo : ConstructorVal) : Name := cinfo.name.str "π"
 def ProjectionType (c : ConstructorVal) : MetaM Expr := do
   forallBoundedTelescope c.type (some c.numParams) fun univs e' => do
     forallTelescope e' (fun args core => do
-      let argTyps ← args.toList.mapM (inferType)
+      let argTyps ← args.toList.mapM argType
       let projs ← mkNestedProdType argTyps
       let optionType ← mkAppM ``Option #[projs]
       let funType := mkForall .anonymous .default core optionType
@@ -41,6 +44,50 @@ def ProjectionType (c : ConstructorVal) : MetaM Expr := do
 
 def displayFVars (pref : String) (A : Array Expr) : MetaM Unit := do
   for a in A do logInfo s!"{pref} {a}: {← inferType a}"
+
+/-- For a projection `projName` of `decl` that picks out constructor `ictor`, emit one
+`@[simp]`-tagged rfl theorem per constructor `c'` of `decl`, of the form:
+  * if `c'` is constructor `ictor`: `projName params (c' params args) = some? args`
+  * otherwise:                      `projName params (c' params args) = none`
+Theorems are named `projName.eq_<short c'>`. -/
+def mkProjectionEqTheorems (decl : Name) (ictor : Nat) (some? : Array Expr → MetaM Expr)
+    (projName : Name) (projLevelParams : List Name) : MetaM Unit := do
+  let info ← getConstInfoInduct decl
+  let projLevels : List Level := projLevelParams.map Level.param
+  for h : i in [:info.ctors.length] do
+    let ctorName := info.ctors[i]
+    let ctorInfo ← getConstInfoCtor ctorName
+    forallTelescope ctorInfo.type fun xs _ => do
+      let params : Array Expr := xs[:info.numParams]
+      let ctorArgs : Array Expr := xs[info.numParams:]
+      -- LHS: projName @params (ctorName @params @ctorArgs)
+      let ctorApp ← mkAppOptM ctorName (xs.map some)
+      let projConst : Expr := Expr.const projName projLevels
+      let projApplied := mkAppN projConst params
+      let lhs := mkApp projApplied ctorApp
+      let lhsType ← inferType lhs
+      let rhs ←
+        if i = ictor then some? ctorArgs
+        else
+          let fieldType ←
+            match lhsType with
+            | .app (.const ``Option _) ft => pure ft
+            | _ => throwError "expected projection LHS to have type `Option _`, got {lhsType}"
+          mkAppOptM ``Option.none #[some fieldType]
+      let eqType ← mkEq lhs rhs
+      let proof ← mkEqRefl lhs
+      let eqTypeClosed ← mkForallFVars (params ++ ctorArgs) eqType
+      let proofClosed ← mkLambdaFVars (params ++ ctorArgs) proof
+      let ctorShort := ctorName.componentsRev.head!.toString
+      let thmName := projName.str ("eq_" ++ ctorShort)
+      addDecl <| .thmDecl {
+        name := thmName
+        levelParams := projLevelParams
+        type := (← instantiateMVars eqTypeClosed)
+        value := (← instantiateMVars proofClosed)
+      }
+      addSimpTheorem (ext := simpExtension) thmName (post := true) (inv := false)
+        AttributeKind.global (prio := eval_prio default)
 
 def mkProjection (decl : Name) (ictor : Nat) (cinfo : ConstructorVal) : MetaM Unit := do
   -- Skip constructors with no fields — nothing to project.
@@ -58,7 +105,7 @@ def mkProjection (decl : Name) (ictor : Nat) (cinfo : ConstructorVal) : MetaM Un
     let target_arg := xs[targetIdx]!
 
     -- Construct the return type (optPair)
-    let argtypes ← forallTelescope (← inferType target_arg) (fun args _ => args.mapM inferType)
+    let argtypes ← forallTelescope (← inferType target_arg) (fun args _ => args.mapM argType)
     let projs ← mkNestedProdType argtypes.toList
     let retNone ← mkNone projs
     let returnType : Expr ← mkAppM ``Option #[projs]
@@ -94,6 +141,9 @@ def mkProjection (decl : Name) (ictor : Nat) (cinfo : ConstructorVal) : MetaM Un
     hints := ReducibilityHints.abbrev
     safety := .safe
   }
+  mkProjectionEqTheorems decl ictor
+    (fun args => do mkSome (← mkNestedProdType (← args.toList.mapM argType)) (← mkNestedProdValue args.toList))
+    (ProjectionName cinfo) (casesOnInfo.levelParams.drop 1)
 
 syntax (name := uncurriedProjections) "uncurriedProjections" : attr
 
@@ -117,56 +167,6 @@ initialize registerBuiltinAttribute uncurriedProjectionsImpl
 def SingleProjectionName (cinfo : ConstructorVal) (field : Name) : Name :=
   cinfo.name.str "π" ++ field
 
-/-- For the projection `projName` of `decl` at field index `ifield` (with chosen
-constructor index `ictor` aka `cinfo`), emit one `@[simp]`-tagged rfl theorem
-per constructor `c'` of `decl`, of the form:
-  * if `c' = cinfo`:  `projName params (c' params args) = some args[ifield]`
-  * otherwise:        `projName params (c' params args) = none`
-Theorems are named `projName.eq_<short c'>`. -/
-def mkSingleProjectionEqTheorems (decl : Name) (ictor : Nat) (_cinfo : ConstructorVal)
-    (ifield : Nat) (projName : Name) (projLevelParams : List Name) : MetaM Unit := do
-  let info ← getConstInfoInduct decl
-  let projLevels : List Level := projLevelParams.map Level.param
-  for h : i in [:info.ctors.length] do
-    let ctorName := info.ctors[i]
-    let ctorInfo ← getConstInfoCtor ctorName
-    forallTelescope ctorInfo.type fun xs _ => do
-      let params : Array Expr := xs[:info.numParams]
-      let ctorArgs : Array Expr := xs[info.numParams:]
-      -- LHS: projName @params (ctorName @params @ctorArgs)
-      let ctorApp ← mkAppOptM ctorName (xs.map some)
-      let projConst : Expr := Expr.const projName projLevels
-      let projApplied := mkAppN projConst params
-      let lhs := mkApp projApplied ctorApp
-      let lhsType ← inferType lhs
-      let rhs ←
-        if i = ictor then
-          unless ifield < ctorArgs.size do
-            throwError "field index out of range while building eq theorem"
-          let fieldExpr := ctorArgs[ifield]!
-          let fieldType ← inferType fieldExpr
-          mkAppOptM ``Option.some #[some fieldType, some fieldExpr]
-        else
-          let fieldType ←
-            match lhsType with
-            | .app (.const ``Option _) ft => pure ft
-            | _ => throwError "expected projection LHS to have type `Option _`, got {lhsType}"
-          mkAppOptM ``Option.none #[some fieldType]
-      let eqType ← mkEq lhs rhs
-      let proof ← mkEqRefl lhs
-      let eqTypeClosed ← mkForallFVars (params ++ ctorArgs) eqType
-      let proofClosed ← mkLambdaFVars (params ++ ctorArgs) proof
-      let ctorShort := ctorName.componentsRev.head!.toString
-      let thmName := projName.str ("eq_" ++ ctorShort)
-      addDecl <| .thmDecl {
-        name := thmName
-        levelParams := projLevelParams
-        type := (← instantiateMVars eqTypeClosed)
-        value := (← instantiateMVars proofClosed)
-      }
-      addSimpTheorem (ext := simpExtension) thmName (post := true) (inv := false)
-        AttributeKind.global (prio := eval_prio default)
-
 /-- For a single constructor `c` of `decl` and a chosen field index `ifield`,
 generate `decl.c.π.<fieldname> : params → decl params → Option fieldType`
 returning `some field` on the `c` branch and `none` elsewhere. -/
@@ -187,7 +187,7 @@ def mkSingleProjection (decl : Name) (ictor : Nat) (cinfo : ConstructorVal)
     let fieldType ← forallTelescope (← inferType target_arg) (fun args _ => do
       unless ifield < args.size do
         throwError "field index out of range"
-      inferType args[ifield]!)
+      argType args[ifield]!)
     let retNone ← mkNone fieldType
     let returnType : Expr ← mkAppM ``Option #[fieldType]
 
@@ -220,7 +220,8 @@ def mkSingleProjection (decl : Name) (ictor : Nat) (cinfo : ConstructorVal)
     safety := .safe
   }
   -- Emit one `@[simp]`-tagged definitional-unfolding theorem per constructor.
-  mkSingleProjectionEqTheorems decl ictor cinfo ifield projName projLevelParams
+  mkProjectionEqTheorems decl ictor (fun args => do mkSome (← argType args[ifield]!) args[ifield]!)
+    projName projLevelParams
 
 /-- For each constructor of `decl`, emit one `decl.c.π.<field>` per argument.
 Throws if two arguments within a single constructor share a name. -/
@@ -265,7 +266,7 @@ def mkConstructor (decl : Name) (_ictor : Nat) (cinfo : ConstructorVal) : MetaM 
     let args : Array Expr := xs[info.numParams:]
 
     -- Construct the uncurried constructor type
-    let argtypes ← args.mapM inferType
+    let argtypes ← args.mapM argType
     let projargtyp ← mkNestedProdType argtypes.toList
     let typOpen ← mkArrow projargtyp typ
     let typClosed ← mkForallFVars params typOpen

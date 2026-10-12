@@ -81,6 +81,9 @@ end RelationalLiftings
 -- Page 7
 -- Graded monads: Unclear what we really need out of this.
 
+-- Namespaced so this sketch's `Span` does not clash with `ApproximateSpanLifting`'s.
+namespace DifferentialPrivacy
+
 section Spans
 
 structure SpanData (X Y Φ : Type _) : Type _ where
@@ -114,3 +117,5 @@ structure SpanMor (X Y Φ W Z Ψ) [MeasurableSpace X] [MeasurableSpace Y] [Measu
 
 
 end Spans
+
+end DifferentialPrivacy

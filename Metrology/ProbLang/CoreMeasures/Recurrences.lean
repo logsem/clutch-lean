@@ -217,8 +217,8 @@ theorem lcb.measurable [MeasurableSpace rT] :
   case h_bvar =>
     -- `decide (j < b)` : `Nat × Nat → Bool` is measurable (countable domain).
     exact measurable_of_countable _
-  case h_t_lam => fun_prop
-  case h_t_fix => fun_prop
+  case ht_lam => fun_prop
+  case ht_fix => fun_prop
   all_goals first | (intros; rfl) | fun_prop
 
 /-- The set of locally-closed expressions (`lcb 0 e = true`) is measurable. -/
@@ -543,27 +543,27 @@ theorem fillItem.measurable [MeasurableSpace rT] :
     cases q.1 <;> simp [EctxItem.fillItem]
   rw [heq]
   refine EctxItem.measurable_rec_param (α := rT) (β := Exp rT) (γ := Exp rT)
-    (f_appL := fun p => Exp.app p.1 (Exp.ofVal p.2))
-    (f_appR := fun p => Exp.app p.2 p.1)
-    (f_unop := fun p => Exp.unop p.2 p.1)
-    (f_binopL := fun p => Exp.binop p.2.1 p.1 (Exp.ofVal p.2.2))
-    (f_binopR := fun p => Exp.binop p.2.1 p.2.2 p.1)
-    (f_condC := fun p => Exp.cond p.1 p.2.1 p.2.2)
-    (f_pairL := fun p => Exp.pair p.1 (Exp.ofVal p.2))
-    (f_pairR := fun p => Exp.pair p.2 p.1)
-    (f_fst := fun p => Exp.fst p.1)
-    (f_snd := fun p => Exp.snd p.1)
-    (f_inl := fun p => Exp.inl p.1)
-    (f_inr := fun p => Exp.inr p.1)
-    (f_case := fun p => Exp.case p.1 p.2.1 p.2.2)
-    (f_alloc := fun p => Exp.alloc p.1)
-    (f_load := fun p => Exp.load p.1)
-    (f_storeL := fun p => Exp.store p.1 (Exp.ofVal p.2))
-    (f_storeR := fun p => Exp.store p.2 p.1)
-    (f_tape := fun p => Exp.tape p.1)
-    (f_randL := fun p => Exp.rand p.1 (Exp.ofVal p.2))
-    (f_randR := fun p => Exp.rand p.2 p.1)
-    (f_scrut := fun p => Exp.scrut p.1 p.2)
+    (c_appL := fun p => Exp.app p.1 (Exp.ofVal p.2))
+    (c_appR := fun p => Exp.app p.2 p.1)
+    (c_unop := fun p => Exp.unop p.2 p.1)
+    (c_binopL := fun p => Exp.binop p.2.1 p.1 (Exp.ofVal p.2.2))
+    (c_binopR := fun p => Exp.binop p.2.1 p.2.2 p.1)
+    (c_condC := fun p => Exp.cond p.1 p.2.1 p.2.2)
+    (c_pairL := fun p => Exp.pair p.1 (Exp.ofVal p.2))
+    (c_pairR := fun p => Exp.pair p.2 p.1)
+    (c_fst := fun p => Exp.fst p.1)
+    (c_snd := fun p => Exp.snd p.1)
+    (c_inl := fun p => Exp.inl p.1)
+    (c_inr := fun p => Exp.inr p.1)
+    (c_case := fun p => Exp.case p.1 p.2.1 p.2.2)
+    (c_alloc := fun p => Exp.alloc p.1)
+    (c_load := fun p => Exp.load p.1)
+    (c_storeL := fun p => Exp.store p.1 (Exp.ofVal p.2))
+    (c_storeR := fun p => Exp.store p.2 p.1)
+    (c_tape := fun p => Exp.tape p.1)
+    (c_randL := fun p => Exp.rand p.1 (Exp.ofVal p.2))
+    (c_randR := fun p => Exp.rand p.2 p.1)
+    (c_scrut := fun p => Exp.scrut p.1 p.2)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   -- appL
   · show Measurable (fun p : Exp rT × Val rT => Function.uncurry Exp.app (p.1, Exp.ofVal p.2))
@@ -703,8 +703,8 @@ theorem openRec.measurable [MeasurableSpace rT] :
       · simp only [h, ite_false]; exact measurable_const
     exact h1.comp (by fun_prop : Measurable
       (fun (p : (Nat × Exp rT) × Nat) => ((p.1.1, p.2), p.1.2)))
-  case h_t_lam => fun_prop
-  case h_t_fix => fun_prop
+  case ht_lam => fun_prop
+  case ht_fix => fun_prop
   all_goals first | (intros; rfl) | fun_prop
 
 theorem open'.measurable [MeasurableSpace rT] :
@@ -762,8 +762,8 @@ theorem closeRec.measurable [MeasurableSpace rT] :
       · simp only [h, ite_false]; exact measurable_const
     exact h1.comp (by fun_prop : Measurable
       (fun (p : (Nat × Var) × Var) => ((p.1.2, p.2), p.1.1)))
-  case h_t_lam => fun_prop
-  case h_t_fix => fun_prop
+  case ht_lam => fun_prop
+  case ht_fix => fun_prop
   all_goals first | (intros; rfl) | fun_prop
 
 theorem close.measurable [MeasurableSpace rT] :
@@ -2812,7 +2812,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           Set.mem_singleton_iff]
         cases p <;> simp [Pat.shape, Pat.tryMatch]
       rw [hcell]
-      refine MeasurableSet.prod ?_ (Pat.flatten_measurable .wildcard)
+      refine MeasurableSet.prod ?_ (Pat.flatten_measurable (c := .wildcard) trivial)
       exact MeasurableEmbedding.some_mk.measurable hU
     | lit =>
       intro U hU
