@@ -45,12 +45,11 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
   | succ k IH =>
     iintro Herr
     twp_pures
-    twp_bind (pl(rand(#(.int 2), #(.unit))))
+    twp_bind pl(rand(#(.int 2), #(.unit)))
     let F : ℕ → ℝ≥0∞ := fun x => headsCost s a k (b + x)
     have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ℝ≥0∞) ≤
         headsCost s a (k + 1) b := by
-      have htoNat : (2 : Int).toNat = 2 := rfl
-      rw [htoNat, Finset.sum_range_succ, Finset.sum_range_one]
+      rw [show (2 : Int).toNat = 2 from rfl, Finset.sum_range_succ, Finset.sum_range_one]
       simp only [F, headsCost]
       rw [show ((2 : ℕ) : ℝ≥0∞) = 2 from Nat.cast_ofNat,
         ← ENNReal.ofReal_add (by positivity) (by positivity), ← ENNReal.ofReal_ofNat 2,

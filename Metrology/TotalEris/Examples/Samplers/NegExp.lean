@@ -136,8 +136,7 @@ theorem measurable_negExpContAmp (F : ℕ → ℝ → ℝ≥0∞) (hF : ∀ a, M
   unfold RealDecrTrialCreditV NegExpContAmp
   refine Measurable.tsum fun n => (measurable_realDecrTrialPMF 0 n).mul ?_
   split
-  · exact hF L
-  · exact measurable_const
+  exacts [hF L, measurable_const]
 
 end measurability
 
@@ -211,7 +210,7 @@ theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, M
     exact ⟨rfl, Hx0.le, Hx1⟩
   · rw [intOfNat_emod_two_eq_one hpar]
     isimp only [NegExpContAmp, ite_eq_right (show ¬ n % 2 = 0 by omega)] at Hcn
-    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split (GF := GF) $$ Hcn
+    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split $$ Hcn
     twp_pure
     twp_pure
     rw [← Nat.cast_add_one]

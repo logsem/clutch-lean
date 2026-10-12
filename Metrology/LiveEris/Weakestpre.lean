@@ -57,7 +57,6 @@ abbrev wpBody (Q : State rT → State rT → Prop) (W : WpType rT GF) (Φ : Val 
       | none => iprop(|={E, ∅}=> glm e σ c (fun ρ c₂ =>
           stepCont Q E σ ρ.state c₂ (X ⟨E, ρ.expr⟩) (W E ρ.expr Φ))))
 
-/-- Map both continuations of a `stepCont`. -/
 theorem stepCont_mono {Q : State rT → State rT → Prop} {E : CoPset} {σ σ₂ : State rT}
     {c₂ : Coord → ℝ≥0∞} {P P' R R' : IProp GF} :
     iprop((P -∗ P') ∧ ▷ (R -∗ R')) ∗ stepCont Q E σ σ₂ c₂ P R ⊢ stepCont Q E σ σ₂ c₂ P' R' := by
@@ -69,7 +68,7 @@ theorem stepCont_mono {Q : State rT → State rT → Prop} {E : CoPset} {σ σ�
     iframe Hσ Hc
     iapply HPR $$ HP
   · iright
-    isplitr; · ipureintro; exact Hck
+    iframe %Hck
     inext
     imod HR with ⟨Hσ, Hc, HR⟩
     imodintro
@@ -278,14 +277,14 @@ abbrev wpStrongMonoStmt (Q : State rT → State rT → Prop) (E : CoPset)
 
 theorem lwp_strong_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
     iprop(lwp Q E e Φ ∗ (∀ v, Φ v ={E}=∗ Ψ v)) ⊢ lwp Q E e Ψ := by
-  have Hloeb : ⊢@{IProp GF} wpStrongMonoStmt Q E Φ := by
+  have Hloeb : ⊢ wpStrongMonoStmt Q E Φ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %e' %Ψ' HW
     let P : Exp rT → IProp GF := fun e'' => iprop(
       ∀ (Ψ'' : Val rT → IProp GF), (∀ v, Φ v ={E}=∗ Ψ'' v) -∗ lwp Q E e'' Ψ'')
     let : NonExpansive P := nonExpansive_of_discrete_leibniz P
     ihave HP : iprop(P e') $$ [HW]
-    · iapply (lwp_ind (Q := Q) (E := E) (Φ := Φ) P) $$ [] HW
+    · iapply lwp_ind P $$ [] HW
       iintro !> %e'' HF %Ψ'' Hwand
       rw [lwp_unfold]
       iintro %σ %c Hσc
@@ -360,7 +359,7 @@ abbrev wpBindStmt (Q : State rT → State rT → Prop) (K : Ectx rT) (E : CoPset
 
 theorem lwp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     lwp Q E e (fun v => lwp Q E (K.fill (Exp.ofVal v)) Φ) ⊢ lwp Q E (K.fill e) Φ := by
-  have Hloeb : ⊢@{IProp GF} wpBindStmt Q K E Φ := by
+  have Hloeb : ⊢ wpBindStmt Q K E Φ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %e' HW
     let : NonExpansive (fun e'' => lwp Q E (K.fill e'') Φ) := nonExpansive_of_discrete_leibniz _

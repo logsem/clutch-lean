@@ -32,7 +32,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT] [ErisGS rT
 
 theorem twp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop(∀ l, appHeapFrag l v -∗ Φ (.loc l))
-      ⊢@{IProp GF} tglWp E (.alloc (.ofVal v)) Φ := by
+      ⊢ tglWp E (.alloc (.ofVal v)) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
@@ -50,7 +50,7 @@ theorem twp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
 theorem twp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
-    iprop(l ↦ v ∗ (l ↦ v -∗ Φ v)) ⊢@{IProp GF} tglWp E pl(!#(.loc l)) Φ := by
+    iprop(l ↦ v ∗ (l ↦ v -∗ Φ v)) ⊢ tglWp E pl(!#(.loc l)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
@@ -70,7 +70,7 @@ theorem twp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} 
 
 theorem twp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp GF} :
     iprop(l ↦ v' ∗ (l ↦ v -∗ Φ .unit))
-      ⊢@{IProp GF} tglWp E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
+      ⊢ tglWp E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
@@ -92,14 +92,13 @@ theorem twp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp 
 
 /-! ## Tape operations -/
 
-/-- Allocate a fresh tape. -/
 theorem twp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
     iprop(∀ l, l ↪ₐ Tape.empty z -∗ Φ (.lbl l))
-      ⊢@{IProp GF} tglWp E (pl(tape(#(.int z)))) Φ := by
+      ⊢ tglWp E pl(tape(#(.int z))) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
-  have hred : HeadReducible (pl(tape(#(.int z)))) σ₁ :=
+  have hred : HeadReducible pl(tape(#(.int z))) σ₁ :=
     (HeadStepSupport.TapeS (ℓ := σ₁.tapes.fresh) rfl rfl).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
@@ -116,11 +115,11 @@ theorem twp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
 
 theorem twp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
     iprop(∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n))
-      ⊢@{IProp GF} tglWp E (pl(rand(#(.int z), #(.unit)))) Φ := by
+      ⊢ tglWp E pl(rand(#(.int z), #(.unit))) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
-  have hred : HeadReducible (pl(rand(#(.int z), #(.unit)))) σ₁ :=
+  have hred : HeadReducible pl(rand(#(.int z), #(.unit))) σ₁ :=
     (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
@@ -136,22 +135,20 @@ theorem twp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) 
 theorem twp_rand_tape {E : CoPset} {l : Loc} {z : Int} {n : { z' : Int // 0 ≤ z' ∧ z' < z }}
     {ns : List { z' : Int // 0 ≤ z' ∧ z' < z }} {Φ : Val rT → IProp GF} :
     iprop(l ↪ₐ ⟨z, n :: ns⟩ ∗ (l ↪ₐ ⟨z, ns⟩ -∗ Φ (.int n.val)))
-      ⊢@{IProp GF} tglWp E (pl(rand(#(.int z), #(.lbl l)))) Φ := by
+      ⊢ tglWp E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
   have Hzpos : 0 < z := lt_of_le_of_lt n.2.1 n.2.2
-  have hred : HeadReducible (pl(rand(#(.int z), #(.lbl l)))) σ₁ :=
+  have hred : HeadReducible pl(rand(#(.int z), #(.lbl l))) σ₁ :=
     (HeadStepSupport.RandTapeS hlook rfl rfl rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
   cases Possible.headStepSupport Hstep with
   | RandTapeS hlook' _ hv hσ =>
-    rw [hlook] at hlook'
-    cases hlook'
-    subst hσ hv
+    rw [hlook] at hlook'; cases hlook'; subst hσ hv
     imod app_state_update_tape $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
     isimp only [erisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
@@ -166,12 +163,12 @@ theorem twp_rand_tape {E : CoPset} {l : Loc} {z : Int} {n : { z' : Int // 0 ≤ 
 theorem twp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int}
     {Φ : Val rT → IProp GF} (Hz : 0 < z) :
     iprop(l ↪ₐ ⟨z, []⟩ ∗ (∀ n, l ↪ₐ ⟨z, []⟩ -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)))
-      ⊢@{IProp GF} tglWp E (pl(rand(#(.int z), #(.lbl l)))) Φ := by
+      ⊢ tglWp E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
-  have hred : HeadReducible (pl(rand(#(.int z), #(.lbl l)))) σ₁ :=
+  have hred : HeadReducible pl(rand(#(.int z), #(.lbl l))) σ₁ :=
     (HeadStepSupport.RandTapeEmptyS Hz hlook rfl (le_refl _) Hz rfl).ne_zero
   imodintro
   iframe %hred

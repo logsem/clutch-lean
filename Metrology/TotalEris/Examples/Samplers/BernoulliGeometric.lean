@@ -37,9 +37,7 @@ end abstractBernoulli
 /-! ## Distribution -/
 section distribution
 
-/-- The PMF for the geometric distribution. `GeometricTrial` recurses while
-`trial ()` returns `true` (probability `γ`) and returns on the first `false`
-(probability `1 - γ`), so the number of steps `n` has PMF `γ^n · (1-γ)`. -/
+/-- PMF `γ^n · (1-γ)` of the number of `true` trials before the first `false` in `GeometricTrial`. -/
 def GeometricPMF (γ : ↑unitInterval) (n : ℕ) : ℝ≥0∞ :=
   .ofReal ((γ : ℝ) ^ n * (1 - γ))
 
@@ -66,13 +64,11 @@ end distribution
 /-! ## Credit expectation -/
 section creditExpectation
 
-/-- Expected value of a ℤ-valued random variable wrt. the shifted geometric
-distribution, as a sum over the number of steps `k : ℕ` (`z = shiftR + k`). -/
+/-- Expectation of `F` under the geometric distribution shifted by `shiftR`. -/
 def shiftGeometricPMFCreditV (γ : ↑unitInterval) (shiftR : ℤ) (F : ℤ → ℝ≥0∞) :=
   ∑'(k : ℕ), F (shiftR + k) * GeometricPMF γ k
 
-/-- Error-amplification factor `1/γ`. Well-defined (`≥ 0`) for any `γ`; only
-`> 1` when `0 < γ < 1` (see `one_lt_terminationFactor`). -/
+/-- Error-amplification factor `1/γ`. -/
 def terminationFactor (γ : ↑unitInterval) : ℝ≥0 :=
   ⟨1 / (γ : ℝ), div_nonneg zero_le_one (unitInterval.nonneg γ)⟩
 
@@ -94,7 +90,7 @@ section creditKernel
 
 def geometricContAmp (F : Int → ℝ≥0∞) (γ : ↑unitInterval) (shift : Int) (ε_term : ℝ≥0∞) :
     Bool → ℝ≥0∞
-  | true => (shiftGeometricPMFCreditV γ (shift + 1) F) + terminationFactor γ * ε_term
+  | true => shiftGeometricPMFCreditV γ (shift + 1) F + terminationFactor γ * ε_term
   | false => F shift
 
 end creditKernel
@@ -102,15 +98,12 @@ end creditKernel
 /-! ## Credit conservation -/
 section conservation
 
-/-- The geometric expectation recurrence:
-`E[shift] = γ · E[shift+1] + (1-γ) · F shift`. -/
 theorem shiftGeometricPMFCreditV_succ (γ : ↑unitInterval) (shift : ℤ) (F : ℤ → ℝ≥0∞) :
     shiftGeometricPMFCreditV γ shift F
       = ENNReal.ofReal (γ : ℝ) * shiftGeometricPMFCreditV γ (shift + 1) F
         + (1 - ENNReal.ofReal (γ : ℝ)) * F shift := by
   unfold shiftGeometricPMFCreditV
-  rw [tsum_eq_zero_add' ENNReal.summable,
-    add_comm]
+  rw [tsum_eq_zero_add' ENNReal.summable, add_comm]
   congr 1
   · rw [← ENNReal.tsum_mul_left]
     congr 1; funext k
@@ -143,7 +136,7 @@ theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v 
   twp_bind pl({v.fst} #.unit)
   iapply tglWp_wand
   isplitl [Hε_spec Hε_term]
-  · iapply (Hspec.spec) $$ %(geometricContAmp F γ shift ε_term)
+  · iapply Hspec.spec $$ %(geometricContAmp F γ shift ε_term)
     icombine Hε_term Hε_spec as Hε
     iapply ErrorCredit.ext $$ Hε
     simp only [geometricContAmp]
@@ -163,7 +156,7 @@ theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v 
   · twp_pure
     twp_pure
     twp_bind pl(&GeometricTrial &v.1 #(.int (shift + 1)))
-    iapply (tglWp_wand)
+    iapply tglWp_wand
     isplitl [Hε IH]
     · rw [geometricContAmp]
       ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split $$ Hε

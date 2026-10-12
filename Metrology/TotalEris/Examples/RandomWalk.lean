@@ -8,25 +8,9 @@ public import Metrology.Code.RandomWalk
 /-!
 # Uniform 1D random walk (total correctness)
 
-The target spec is almost-sure termination of the symmetric 1D random walk
-starting at position 1, using presampling against a rank supermartingale (RSM)
-to amortize error credits across the recursive calls.
-
-**Status: structural stub (`unifRw1d_terminate` is `sorry`).** The program and
-the `finalPos` combinatorics are defined; the spec is blocked on two independent
-issues.
-
-⚠ **Off-by-one degeneracy.** `rand z` samples `Finset.Ico 0 z`, i.e. `z` values,
-so `rand 1` samples `{0}` *deterministically*. With the program below (`rand 1`,
-`alloc 1`, tape bound `1`) every step reads `0`: the walk always steps *down*, so
-from position `1` it reaches `0` in a single step. That is a degenerate
-deterministic descent, not the symmetric random walk, and verifying it would
-prove a vacuous instance. A faithful symmetric walk uses `rand 2` / `alloc 2`,
-recovering the `{0,1}` coin flip, and then genuinely needs the RSM machinery.
-
-**Missing prerequisite** for the faithful `rand 2` version: a `twp_presample_rsm`
-rule, which rests on unported sequential-amplification theory (`εAmp`, `kwf`) and
-an error-induction principle.
+Stub: `unifRw1d_terminate` is `sorry`. `rand 1` samples `{0}` deterministically, so this program
+only descends; the faithful walk needs `rand 2` and a `twp_presample_rsm` rule (unported `εAmp`,
+`kwf`, error induction).
 -/
 
 open Iris ProbLang ProbLang.TotalEris ProbLang.TotalEris.ErisWpGS
@@ -40,8 +24,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 
 /-! ## `finalPos` and the RSM scaffold -/
 
-/-- Position after applying a list of binary walk steps (`0` steps down, `1`
-steps up) to a starting position `p₀`. Position `0` is absorbing. -/
+/-- Step `0` moves down, `1` moves up; position `0` is absorbing. -/
 def finalPos (p₀ : Nat) : List (Fin 2) → Nat
   | [] => p₀
   | x :: xs =>
@@ -61,15 +44,11 @@ theorem finalPos_append (p₀ : Nat) (li : List (Fin 2)) (i : Fin 2) :
   | cons a tl IH =>
     obtain _ | n := p₀
     · simp [finalPos]
-    · fin_cases a
-      · simpa [finalPos] using IH n
-      · simpa [finalPos] using IH (n + 2)
+    · fin_cases a <;> simpa [finalPos] using IH _
 
-/-- The RSM is `finalPos` lifted to `ℝ≥0∞`. -/
 noncomputable def finalPosRsm (p₀ : Nat) (li : List (Fin 2)) : ENNReal :=
   (finalPos p₀ li : ENNReal)
 
-/-- Termination condition: the walk has reached the absorbing position `0`. -/
 def termCond (p₀ : Nat) (li : List (Fin 2)) : Prop := finalPos p₀ li = 0
 
 theorem termCond_cons_zero (p₀ : Nat) (li : List (Fin 2)) :
@@ -80,8 +59,6 @@ theorem termCond_cons_one (p₀ : Nat) (li : List (Fin 2)) :
     termCond (p₀ + 1) (1 :: li) ↔ termCond (p₀ + 2) li := by
   simp [termCond, finalPos]
 
-/-- If the walk has not terminated yet, appending a "down" step strictly
-decreases `finalPos`. -/
 theorem finalPos_dec_aux (p₀ : Nat) (li : List (Fin 2)) :
     ¬ termCond p₀ li → finalPos p₀ (li ++ [0]) < finalPos p₀ li := by
   intro h
@@ -89,16 +66,12 @@ theorem finalPos_dec_aux (p₀ : Nat) (li : List (Fin 2)) :
   rw [finalPos_append, hn]
   simp
 
-/-- From the starting position `1`, if not terminated, there is a choice that
-strictly decreases `finalPos`. -/
 theorem finalPos_dec (li : List (Fin 2)) :
     ¬ termCond 1 li → ∃ c : Fin 2, finalPos 1 (li ++ [c]) < finalPos 1 li :=
   fun h => ⟨0, finalPos_dec_aux 1 li h⟩
 
 /-! ## Termination spec -/
 
-/-- Almost-sure termination of the 1D symmetric random walk starting from
-position 1. -/
 theorem unifRw1d_terminate (E : CoPset) :
     ⊢@{IProp GF} tglWp (rT := rT) E unifRw1d
       (fun v => iprop(⌜v = .unit⌝)) := by

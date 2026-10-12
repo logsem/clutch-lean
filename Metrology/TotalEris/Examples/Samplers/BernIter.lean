@@ -35,7 +35,7 @@ theorem AbstractBernoulli.toAbstractBernoulliI {v : Val ℝ} {γ : ↑unitInterv
   spec := by
     intro E
     iintro %F ⟨Hε, HI⟩
-    iapply (tglWp_wand)
+    iapply tglWp_wand
     isplitl [Hε]
     · iapply H.spec $$ %F Hε
     iintro %w ⟨%b, %hb, Hfb⟩
@@ -44,38 +44,20 @@ theorem AbstractBernoulli.toAbstractBernoulliI {v : Val ℝ} {γ : ↑unitInterv
 
 end abstractBernoulli
 
-section distribution
-
 def IterPMF (γ : ↑unitInterval) (N : ℕ) : Bool → ℝ≥0∞
   | true => .ofReal ((γ : ℝ) ^ N)
   | false => 1 - .ofReal ((γ : ℝ) ^ N)
 
-end distribution
-
-section creditExpectation
-
 def IterCreditV (F : Bool → ℝ≥0∞) (γ : ↑unitInterval) (N : ℕ) : ℝ≥0∞ :=
   .ofReal ((γ : ℝ) ^ N) * F true + (1 - .ofReal ((γ : ℝ) ^ N)) * F false
-
-end creditExpectation
-
-section creditKernel
 
 def IterCont (F : Bool → ℝ≥0∞) (γ : ↑unitInterval) (N : ℕ) : Bool → ℝ≥0∞
   | true => IterCreditV F γ N
   | false => F false
 
-end creditKernel
-
-section arithmetic
-
 theorem ENNReal.one_sub_ofReal {x : ℝ} (hx : 0 ≤ x) :
     (1 : ℝ≥0∞) - ENNReal.ofReal x = ENNReal.ofReal (1 - x) := by
   rw [← ENNReal.ofReal_one, ← ENNReal.ofReal_sub _ hx]
-
-end arithmetic
-
-section conservation
 
 theorem IterCreditV_succ (F : Bool → ℝ≥0∞) (γ : ↑unitInterval) (N : ℕ) :
     IterCreditV F γ (N + 1) =
@@ -96,8 +78,6 @@ theorem IterCreditV_succ (F : Bool → ℝ≥0∞) (γ : ↑unitInterval) (N : �
     ENNReal.one_sub_ofReal hγ0, hT, ← hF]
   ring
 
-end conservation
-
 section specification
 
 theorem twp_IterTrial (E : CoPset) (v : Val ℝ) (γ : ↑unitInterval) (I : IProp GF)
@@ -112,17 +92,16 @@ theorem twp_IterTrial (E : CoPset) (v : Val ℝ) (γ : ↑unitInterval) (I : IPr
     twp_pures
     twp_value
     imodintro
-    have hcr : IterCreditV F γ 0 = F true := by simp [IterCreditV]
-    rw [hcr]
+    rw [show IterCreditV F γ 0 = F true by simp [IterCreditV]]
     iframe Hcr HI
     itrivial
   | succ N IH =>
     iintro ⟨Hcr, HI⟩
     twp_pures
     twp_bind pl({v.fst} #.unit)
-    iapply (tglWp_wand)
+    iapply tglWp_wand
     isplitl [Hcr HI]
-    · iapply (Hspec.spec) $$ %(IterCont F γ N)
+    · iapply Hspec.spec $$ %(IterCont F γ N)
       rw [← IterCreditV_succ]
       iframe
     iintro %⟨w', _⟩ ⟨%b, %hret, Hcrb, HIb⟩

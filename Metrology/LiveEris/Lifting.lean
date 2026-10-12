@@ -45,9 +45,7 @@ theorem lwp_lift_step_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT
   iapply glm_prim_step
   specialize hRmeas σ₁
   have hbnd : ∀ ρ : Cfg rT, (fun _ => c) ρ ≤ c := fun _ => le_rfl
-  have hpgl : Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩) := by
-    show primStep ⟨e₁, σ₁⟩ {x | ¬ R σ₁ x} ≤ 0
-    exact (hconc σ₁).le
+  have hpgl : Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩) := (hconc σ₁).le
   have hexp : charge 0 + expect (primStep ⟨e₁, σ₁⟩) (fun _ => c) ≤ c := by
     intro i
     simp only [charge, Pi.add_apply, zero_add, expect, MeasureTheory.lintegral_const]
@@ -100,8 +98,7 @@ theorem lwp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ 
   imodintro
   have Hred := reducible_of_headReducible hlc Hhred
   iframe %Hred
-  iintro %e₂ %σ₂ %hstep
-  imodintro
+  iintro %e₂ %σ₂ %hstep !>
   rw [primStep_eq_headStep hd] at hstep
   ihave HC := HCont $$ %e₂ %σ₂ %hstep
   cases htv : e₂.toVal? with

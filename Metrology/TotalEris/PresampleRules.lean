@@ -41,7 +41,6 @@ theorem presample_update_injective {σ : State rT} {α : Loc} {N : Int} {bs : Li
   have hbs : bs ++ [n₂] = bs ++ [n₁] := by simpa using hget₁
   simpa using (List.append_cancel_left hbs).symm
 
-/-- Any witness that `σ'` is the `n`-update agrees with the chosen one. -/
 theorem presample_choose_eq {σ σ' : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)}
     {n : TapeIdx N} (h : ∃ m : TapeIdx N, σ' = presampleUpdate σ α N bs m)
     (hn : σ' = presampleUpdate σ α N bs n) : Classical.choose h = n :=
@@ -72,7 +71,6 @@ theorem presampleAdvCompX₂_eq_tsum (σ : State rT) (α : Loc) (N : Int) (bs : 
     exact Set.indicator_of_notMem (fun hmem => h ⟨n, Set.mem_singleton_iff.mp hmem⟩) _
 
 open Classical in
-/-- On the `n`-update state, `presampleAdvCompX₂` extracts exactly `ε₂ n`. -/
 @[simp] theorem presampleAdvCompX₂_update (σ : State rT) (α : Loc) (N : Int)
     (bs : List (TapeIdx N)) (ε₂ : TapeIdx N → ENNReal) (n : TapeIdx N) :
     presampleAdvCompX₂ σ α N bs ε₂ (presampleUpdate σ α N bs n) = ε₂ n := by
@@ -80,7 +78,6 @@ open Classical in
   rw [dite_eq_left ⟨n, rfl⟩]
   exact congrArg ε₂ (presample_choose_eq _ rfl)
 
-/-- `presampleAdvCompX₂` inherits the per-outcome bound `ε₂ n ≤ 1`. -/
 theorem presampleAdvCompX₂_le_one {σ : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)}
     {ε₂ : TapeIdx N → ENNReal} (Hbd : ∀ n, ε₂ n ≤ 1) (σ' : State rT) :
     presampleAdvCompX₂ σ α N bs ε₂ σ' ≤ 1 := by
@@ -104,8 +101,7 @@ theorem measurable_presampleAdvCompX₂ (σ : State rT) (α : Loc) (N : Int)
   rw [presampleAdvCompX₂_eq_tsum]
   exact Measurable.tsum fun n => measurable_const.indicator (measurableSet_singleton _)
 
-/-- The presample integral of `presampleAdvCompX₂` is the `Ico`-average of `ε₂`, bounded by `HSum`.
-The chain rewrites the integral against `tapePresample` into a finite average, step by step:
+/-- The integral reduces to the `Ico`-average of `ε₂` via
 `tapePresample → tapeIndexUniform → Cfg.uniform → indicator-sum → (∑ ε₂)/N`. -/
 theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT} {α : Loc} {N : Int}
     {bs : List (TapeIdx N)} {ε₂ : TapeIdx N → ENNReal} {ε₁ : ENNReal}
@@ -170,13 +166,11 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
         α ↪ₐ ⟨t.bound, t.presamples ++ [n]⟩ -∗ tglWp E e Φ))
       ⊢@{IProp GF} tglWp E e Φ := by
   iintro ⟨Herr, Htape, Hcont⟩
-  iapply (twp_lift_step_fupd_glm hv)
+  iapply twp_lift_step_fupd_glm hv
   iintro %σ₁ %ε_now ⟨Hσ, Hε_now⟩
   ihave %hlookup := app_state_lookup_tape $$ Hσ Htape
   obtain ⟨N, bs⟩ := t
-  ihave ⟨Hε_now, Herr, %hLe⟩ : iprop(ErisWpGS.errInterp (rT := rT) ε_now ∗ ↯ε₁ ∗ ⌜ε₁ ≤ ε_now⌝)
-      $$ [Hε_now Herr]
-  · iapply errInterp_supply_bound; iframe Hε_now Herr
+  ihave ⟨Hε_now, Herr, %hLe⟩ := errInterp_supply_bound $$ [$Hε_now $Herr]
   imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
   imodintro
   have hErase := ErasableExpr.tapePresample hlookup hN
@@ -209,10 +203,8 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
   iintro %σ' %⟨n, rfl⟩
   simp only [presampleAdvCompX₂_update]
   imod Hclose with -
-  imod (app_state_update_tape
-        (s := ⟨N, bs ++ [n]⟩)) $$ Hσ Htape with ⟨Hσ', Htape'⟩
-  ihave >Hε_rem : iprop(|==> ErisWpGS.errInterp (rT := rT) (ε_now - ε₁)) $$ [Hε_now Herr]
-  · iapply errInterp_supply_decrease; iframe Hε_now Herr
+  imod (app_state_update_tape (s := ⟨N, bs ++ [n]⟩)) $$ Hσ Htape with ⟨Hσ', Htape'⟩
+  ihave >Hε_rem := errInterp_supply_decrease $$ [$Hε_now $Herr]
   by_cases hlt : ε_now - ε₁ + ε₂ n < 1
   · imod errInterp_supply_increase hlt $$ Hε_rem with ⟨Hε_new, Hε₂_cr⟩
     ihave Hwp := Hcont $$ %n [$Hε₂_cr $Htape']
@@ -240,7 +232,7 @@ theorem twp_presample {E : CoPset} {e : Exp rT} {α : Loc} {Φ : Val rT → IPro
   imod ErrorCredit.zero with Herr
   imodintro
   iapply (twp_presample_adv_comp hN (fun _ => zero_le) (by simp) hv)
-  iframe Herr Htape
+  iframe
   iintro %n ⟨-, Htape'⟩
   iapply Hcont $$ %n Htape'
 

@@ -104,7 +104,6 @@ instance : NeZero (∞ : ℝ≥0∞) := ⟨ENNReal.top_ne_zero⟩
 when finite). -/
 abbrev LiveCredit : Type := CreditBelow 1 × CreditBelow ∞
 
-/-- The credit holding `ε` error and `δ` divergence. -/
 abbrev credits (ε δ : ℝ≥0∞) : LiveCredit := (⟨ε⟩, ⟨δ⟩)
 
 theorem credits_op (ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞) :
@@ -183,40 +182,27 @@ instance {ε₁ δ₁ ε₂ δ₂} : Iris.ProofMode.CombineSepAs (creditFrag ε�
     (creditFrag ε₂ δ₂) (creditFrag (ε₁ + ε₂) (δ₁ + δ₂)) where
   combine_sep_as := frag_combine
 
-theorem frag_sep {ε δ} : creditFrag ε δ ⊣⊢@{IProp GF} ↯ε ∗ ↻δ := by
-  constructor
-  · iintro H
-    iapply frag_split
-    iapply frag_ext (add_zero ε).symm (zero_add δ).symm $$ H
-  · iintro H
-    ihave H := frag_combine $$ H
-    iapply frag_ext (add_zero ε) (zero_add δ) $$ H
+theorem frag_sep {ε δ} : creditFrag ε δ ⊣⊢@{IProp GF} ↯ε ∗ ↻δ :=
+  ⟨(frag_ext (add_zero ε).symm (zero_add δ).symm).trans frag_split,
+   frag_combine.trans (frag_ext (add_zero ε) (zero_add δ))⟩
 
-theorem err_split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯ε₂ := by
-  iintro H
-  iapply frag_split
-  iapply frag_ext rfl (add_zero 0).symm $$ H
+theorem err_split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯ε₂ :=
+  (frag_ext rfl (add_zero 0).symm).trans frag_split
 
-theorem err_combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ + ε₂) := by
-  iintro H
-  ihave H := frag_combine $$ H
-  iapply frag_ext rfl (add_zero 0) $$ H
+theorem err_combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ + ε₂) :=
+  frag_combine.trans (frag_ext rfl (add_zero 0))
 
-theorem div_split {δ₁ δ₂} : ↻(δ₁ + δ₂) ⊢@{IProp GF} ↻δ₁ ∗ ↻δ₂ := by
-  iintro H
-  iapply frag_split
-  iapply frag_ext (add_zero 0).symm rfl $$ H
+theorem div_split {δ₁ δ₂} : ↻(δ₁ + δ₂) ⊢@{IProp GF} ↻δ₁ ∗ ↻δ₂ :=
+  (frag_ext (add_zero 0).symm rfl).trans frag_split
 
-theorem div_combine {δ₁ δ₂} : ↻δ₁ ∗ ↻δ₂ ⊢@{IProp GF} ↻(δ₁ + δ₂) := by
-  iintro H
-  ihave H := frag_combine $$ H
-  iapply frag_ext (add_zero 0) rfl $$ H
+theorem div_combine {δ₁ δ₂} : ↻δ₁ ∗ ↻δ₂ ⊢@{IProp GF} ↻(δ₁ + δ₂) :=
+  frag_combine.trans (frag_ext (add_zero 0) rfl)
 
 theorem frag_weaken {ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞} (hε : ε₂ ≤ ε₁) (hδ : δ₂ ≤ δ₁) :
     creditFrag ε₁ δ₁ ⊢@{IProp GF} creditFrag ε₂ δ₂ := by
   iintro H
   ihave H := frag_ext (tsub_add_cancel_of_le hε).symm (tsub_add_cancel_of_le hδ).symm $$ H
-  ihave ⟨_, H⟩ := frag_split $$ H
+  ihave ⟨-, H⟩ := frag_split $$ H
   iexact H
 
 theorem err_weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ :=
@@ -260,7 +246,7 @@ theorem supply_bound {εₛ δₛ ε δ : ℝ≥0∞} :
 theorem div_bound {εₛ δₛ δ : ℝ≥0∞} :
     ⊢@{IProp GF} creditAuth εₛ δₛ -∗ ↻δ -∗ ⌜δ ≤ δₛ⌝ := by
   iintro Hs H
-  ihave %⟨_, h⟩ := supply_bound $$ Hs H
+  ihave %⟨-, h⟩ := supply_bound $$ Hs H
   ipureintro
   exact h
 
@@ -287,11 +273,9 @@ theorem supply_increase {εₛ δₛ ε δ : ℝ≥0∞} (hε : εₛ + ε < 1) 
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨⟨hε, hδ⟩, Prod.ext (CreditBelow.ext (add_comm _ _)) (CreditBelow.ext (add_comm _ _))⟩
   iintro H
-  ihave H := iOwn_update Hupd $$ H
-  imod H
+  imod (iOwn_update Hupd) $$ H with H
   imodintro
-  iapply iOwn_op
-  iexact H
+  iapply iOwn_op $$ H
 
 theorem supply_convert {εₛ δₛ ε : ℝ≥0∞} :
     ⊢@{IProp GF} creditAuth εₛ δₛ -∗ ↯ε -∗ |==> (creditAuth (εₛ - ε) (δₛ + ε) ∗ ↻ε) := by
@@ -304,9 +288,8 @@ theorem supply_convert {εₛ δₛ ε : ℝ≥0∞} :
   imod supply_increase (ε := 0) (δ := ε) (by simpa using lt_of_le_of_lt tsub_le_self hεₛ) hδ
     $$ Hs with ⟨Hs, H⟩
   imodintro
-  isplitl [Hs]
-  · iapply auth_ext (add_zero _) (by simp) $$ Hs
-  · iexact H
+  iframe H
+  iapply auth_ext (add_zero _) (by simp) $$ Hs
 
 end Credit
 
@@ -320,8 +303,7 @@ theorem credit_alloc {GF : BundledGFunctors} [ILC : LCPreGS GF] (ε δ : ℝ≥0
     (Auth.auth_both_valid_2 ⟨hε, hδ⟩ (credits_included.mpr ⟨le_rfl, le_rfl⟩))) with ⟨%γ, H⟩
   imodintro
   iexists γ
-  iapply iOwn_op
-  iexact H
+  iapply iOwn_op $$ H
 
 end LiveEris
 end ProbLang

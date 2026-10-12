@@ -39,37 +39,46 @@ abbrev tglWpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
             iprop(|={∅, E}=>
               stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ wp E ρ.expr Φ))))
 
+private theorem tglWpPre_mono {wp₁ wp₂ : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF}
+    {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
+    □ (∀ e', wp₁ E e' Φ -∗ wp₂ E e' Φ) ⊢ tglWpPre wp₁ E e Φ -∗ tglWpPre wp₂ E e Φ := by
+  iintro #Hwand Hs
+  unfold tglWpPre
+  iintro %σ %ε ⟨Hσ, Hε⟩
+  ispecialize Hs $$ %σ %ε [$Hσ $Hε]
+  cases e.toVal? with
+  | some v => iexact Hs
+  | none =>
+    imod Hs with HG
+    imodintro
+    iapply glm'_mono_pred
+    iframe HG
+    iintro !> %ρ %ε' HC
+    imod HC with ⟨Hσ', Hε', HW⟩
+    imodintro
+    iframe Hσ' Hε'
+    iapply Hwand $$ HW
+
 abbrev tglWpPreFixed (Φ : Val rT → IProp GF)
     (wp : TglWpState rT → IProp GF) : TglWpState rT → IProp GF :=
   fun ⟨E, e⟩ => tglWpPre (fun E' e' _ => wp ⟨E', e'⟩) E e Φ
 
 instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
-    BIMonoPred (tglWpPreFixed (rT := rT) (GF := GF) Φ) where
+    BIMonoPred (tglWpPreFixed Φ) where
   mono_pred {wp1 wp2 _ _} := by
     iintro #Hwand %s Hs
     obtain ⟨E, e⟩ := s
-    unfold tglWpPreFixed tglWpPre
-    iintro %σ %ε ⟨Hσ, Hε⟩
-    ispecialize Hs $$ %σ %ε [$Hσ $Hε]
-    cases htv : e.toVal? with
-    | some v => iexact Hs
-    | none =>
-      imod Hs with HG
-      imodintro
-      iapply glm'_mono_pred
-      iframe HG
-      iintro !> %ρ %ε' HC
-      imod HC with ⟨Hσ', Hε', HW⟩
-      imodintro
-      iframe Hσ' Hε'
-      iapply Hwand $$ HW
+    unfold tglWpPreFixed
+    iapply (tglWpPre_mono (wp₁ := fun E' e' _ => wp1 ⟨E', e'⟩)
+      (wp₂ := fun E' e' _ => wp2 ⟨E', e'⟩)) $$ [] Hs
+    iintro !> %e'
+    iapply Hwand
   mono_pred_ne.ne {_ s s'} hd := by
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   bi_least_fixpoint (tglWpPreFixed (rT := rT) (GF := GF) Φ) ⟨E, e⟩
 
-/-- Fixpoint unfolding for `tglWp`. -/
 theorem tglWp_unfold {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     tglWp (rT := rT) (GF := GF) E e Φ = tglWpPre (tglWp (rT := rT) (GF := GF)) E e Φ :=
   least_fixpoint_unfold (F := tglWpPreFixed (rT := rT) (GF := GF) Φ) (x := ⟨E, e⟩)
@@ -145,8 +154,6 @@ theorem tglWp_value_inv_with_state {E : CoPset} {v : Val rT} {σ : State rT}
   isimp only [tglWp_unfold_value] at HW
   iapply HW $$ %σ %ε [$Hσ $Hε]
 
-/-- `tglWp` absorbs a state-frame-preserving fupd: if from every `(σ, ε)` one can `|={E}=>`-return
-the state/error interpretation together with `tglWp E e Φ`, then `tglWp E e Φ` holds. -/
 theorem tglWp_of_frame_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     iprop(∀ (σ : State rT) (ε : ENNReal),
         stateInterp σ ∗ errInterp (rT := rT) ε -∗
@@ -253,28 +260,19 @@ theorem tglWp_wand_left {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} 
 theorem fupd_tglWp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     iprop(|={E}=> tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro HW
-  iapply tglWp_unfold
+  iapply tglWp_of_frame_fupd
   iintro %σ %ε ⟨Hσ, Hε⟩
-  cases htv : e.toVal? with
-  | some v =>
-    obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some htv).symm
-    imod HW
-    isimp only [tglWp_unfold_value] at HW
-    iapply HW $$ %σ %ε [$Hσ $Hε]
-  | none =>
-    imod HW
-    isimp only [tglWp_unfold_step htv] at HW
-    iapply HW $$ %σ %ε [$Hσ $Hε]
+  imod HW
+  imodintro
+  iframe
 
 theorem tglWp_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     tglWp E e (fun v => iprop(|={E}=> Φ v)) ⊢ tglWp E e Φ := by
   iintro HW
   iapply tglWp_strong_mono (Φ := fun v => iprop(|={E}=> Φ v)) (Ψ := Φ)
   iframe HW
-  iintro %v HΦfupd
-  imod HΦfupd
-  imodintro
-  iexact HΦfupd
+  iintro %v HΦ
+  iexact HΦ
 
 theorem tglWp_frame_left {E : CoPset} {e : Exp rT} {R : IProp GF}
     {Φ : Val rT → IProp GF} :

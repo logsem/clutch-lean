@@ -72,6 +72,14 @@ theorem lintegral_indicator_restrict {s t : Set ℝ} (hs : MeasurableSet s) (f :
     ∫⁻ r, s.indicator f r ∂(volume.restrict t) = ∫⁻ r in s ∩ t, f r ∂volume := by
   rw [lintegral_indicator hs, Measure.restrict_restrict hs]
 
+private theorem Iic_half_inter_unit : Set.Iic (1 / 2 : ℝ) ∩ Set.Icc 0 1 = Set.Icc 0 (1 / 2) := by
+  ext r; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
+  exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, by linarith⟩⟩
+
+private theorem Ioi_half_inter_unit : Set.Ioi (1 / 2 : ℝ) ∩ Set.Icc 0 1 = Set.Ioc (1 / 2) 1 := by
+  ext r; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
+  exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, by linarith, h1⟩⟩
+
 end lintegral
 
 section conservation
@@ -85,12 +93,6 @@ theorem BNEHalfCredit_lintegral {F : Bool → ℝ≥0∞} :
     rw [intervalIntegral.integral_comp_neg fun x => Real.exp x, neg_zero,
         integral_exp, Real.exp_zero]
     norm_num
-  have hsetA : Set.Iic (1 / 2 : ℝ) ∩ Set.Icc (0 : ℝ) 1 = Set.Icc 0 (1 / 2) := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
-    exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, by linarith⟩⟩
-  have hsetB : Set.Ioi (1 / 2 : ℝ) ∩ Set.Icc (0 : ℝ) 1 = Set.Ioc (1 / 2) 1 := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
-    exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, by linarith, h1⟩⟩
   show ∫⁻ r, BNEHalfCredit F r ∂(volume.restrict (Set.Icc (0 : ℝ) 1)) = _
   simp only [BNEHalfCredit]
   rw [lintegral_add_left (Measurable.ite measurableSet_Iic
@@ -100,7 +102,7 @@ theorem BNEHalfCredit_lintegral {F : Bool → ℝ≥0∞} :
     have hind : (fun r => if ¬ r ≤ 1 / 2 then F true else 0)
         = (Set.Ioi (1 / 2 : ℝ)).indicator (fun _ => F true) := by
       ext r; simp only [Set.indicator_apply, Set.mem_Ioi, not_le]
-    rw [hind, lintegral_indicator_restrict measurableSet_Ioi (fun _ => F true), hsetB,
+    rw [hind, lintegral_indicator_restrict measurableSet_Ioi (fun _ => F true), Ioi_half_inter_unit,
         setLIntegral_const, Real.volume_Ioc, mul_comm]
     norm_num
   have hA : (∫⁻ r, (if r ≤ 1 / 2 then RealDecrTrialCreditV (LiftParity F) 0 r else 0)
@@ -109,7 +111,8 @@ theorem BNEHalfCredit_lintegral {F : Bool → ℝ≥0∞} :
         + ENNReal.ofReal (Real.exp (-1 / 2) - 1 / 2) * F true := by
     rw [← indicator_Iic_eq,
         lintegral_indicator_restrict measurableSet_Iic (RealDecrTrialCreditV (LiftParity F) 0),
-        hsetA, setLIntegral_congr_fun (g := fun x => ENNReal.ofReal (Real.exp (-x)) * F false
+        Iic_half_inter_unit,
+        setLIntegral_congr_fun (g := fun x => ENNReal.ofReal (Real.exp (-x)) * F false
           + ENNReal.ofReal (1 - Real.exp (-x)) * F true) measurableSet_Icc fun r hr => by
         rw [hlift]
         exact RealDecrTrialCreditV_parity (F false) (F true) hr.1 (hr.2.trans (by norm_num))]
@@ -167,7 +170,7 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
   have Hr := mem_unifUnitSupport_real_le Hrm
   twp_pure
   twp_bind pl(&LeHalf #(.real r))
-  iapply (tglWp_wand)
+  iapply tglWp_wand
   isplitl []
   · iapply twp_LeHalf
   iintro %⟨w, _⟩ %hv
@@ -187,11 +190,10 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
     isimp only [BNEHalfCredit, ite_eq_left hle, ite_eq_right (not_not_intro hle), add_zero] at Hcr
     twp_pure
     twp_bind pl(&DecrTrial #(.int (0 : ℤ)) #(.real r))
-    iapply (tglWp_wand)
+    iapply tglWp_wand
     isplitl [Hcr]
     · iapply (twp_DecrTrial E (LiftParity F) 0 r Hr) $$ Hcr
-    iintro %⟨w', _⟩ ⟨%n, %hn, Hcrn⟩
-    dsimp only at hn; subst hn
+    iintro %⟨w', _⟩ ⟨%n, %rfl, Hcrn⟩
     twp_pures
     obtain hpar | hpar := Nat.mod_two_eq_zero_or_one n
     · rw [intOfNat_emod_two_eq_zero hpar]
@@ -229,12 +231,6 @@ theorem measurable_fairCoinCredit (F : Bool → ℝ≥0∞) : Measurable (FairCo
 open MeasureTheory in
 theorem FairCoinCredit_lintegral (F : Bool → ℝ≥0∞) :
     ∫⁻ r, FairCoinCredit F r ∂(LawfulProbLangℝ.unifUnit) = FairCoinCreditV F := by
-  have hsetA : Set.Iic (1 / 2 : ℝ) ∩ Set.Icc (0 : ℝ) 1 = Set.Icc 0 (1 / 2) := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
-    exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, by linarith⟩⟩
-  have hsetB : Set.Ioi (1 / 2 : ℝ) ∩ Set.Icc (0 : ℝ) 1 = Set.Ioc (1 / 2) 1 := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
-    exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, by linarith, h1⟩⟩
   have hsplit : FairCoinCredit F
       = fun r => (Set.Iic (1 / 2 : ℝ)).indicator (fun _ => F true) r
           + (Set.Ioi (1 / 2 : ℝ)).indicator (fun _ => F false) r := by
@@ -247,7 +243,8 @@ theorem FairCoinCredit_lintegral (F : Bool → ℝ≥0∞) :
   rw [hsplit, lintegral_add_left (measurable_const.indicator measurableSet_Iic),
     lintegral_indicator_restrict measurableSet_Iic (fun _ => F true),
     lintegral_indicator_restrict measurableSet_Ioi (fun _ => F false),
-    hsetA, hsetB, setLIntegral_const, setLIntegral_const, Real.volume_Icc, Real.volume_Ioc]
+    Iic_half_inter_unit, Ioi_half_inter_unit, setLIntegral_const, setLIntegral_const,
+    Real.volume_Icc, Real.volume_Ioc]
   norm_num [FairCoinCreditV, mul_comm]
 
 /-! `FairCoin` is a closed constant, so it survives being carried under the
@@ -278,7 +275,7 @@ theorem twp_FairCoin (E : CoPset) (F : Bool → ℝ≥0∞) :
   iintro %r ⟨%Hrm, Hcr⟩
   twp_pure
   twp_bind pl(&LeHalf #(.real r))
-  iapply (tglWp_wand)
+  iapply tglWp_wand
   isplitl []
   · iapply twp_LeHalf
   iintro %⟨w, _⟩ %hv

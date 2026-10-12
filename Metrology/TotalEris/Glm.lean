@@ -46,9 +46,8 @@ theorem mono_pred {ε : ENNReal} {φ ψ : α → Prop} {μ : MeasureTheory.Measu
   intro x hx hxφ; exact hx (hφψ x hxφ)
 
 theorem zero_of_null {φ : α → Prop} (μ : MeasureTheory.Measure α)
-    (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ := by
-  show μ {x | ¬ φ x} ≤ 0
-  rw [Hnull]
+    (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ :=
+  Hnull.le
 
 theorem zero_possible [MeasurableSingletonClass α] {μ : MeasureTheory.Measure α}
     (h : IsAtomicSupport μ) : Pgl 0 (fun a => Possible a μ) μ := by
@@ -58,9 +57,8 @@ theorem zero_possible [MeasurableSingletonClass α] {μ : MeasureTheory.Measure 
   rw [hset]; exact h.le
 
 theorem of_concentrated {μ : MeasureTheory.Measure α} {φ : α → Prop}
-    (h : Concentrated μ {x | φ x}) : Pgl 0 φ μ := by
-  show μ {x | ¬ φ x} ≤ 0
-  exact h.le
+    (h : Concentrated μ {x | φ x}) : Pgl 0 φ μ :=
+  h.le
 
 end Pgl
 
@@ -94,7 +92,7 @@ theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : 
   iintro ⟨HM, HS⟩
   icases HS with ⟨%HVac | HP⟩
   · ileft; ipureintro; exact HVac.trans hε
-  · iright; iapply HM; iexact HP
+  · iright; iapply HM $$ HP
 
 theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
     ((P ε -∗ Q ε) ∗ execStutter P ε) ⊢ execStutter Q ε :=
@@ -308,11 +306,7 @@ theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
   iintro !> %Φ %s HF
   obtain ⟨ρ, ε⟩ := s
   icases HF with ⟨HOT | HPS | HSS⟩
-  · ileft
-    iintro %ε' %Hlt
-    imod HOT $$ %ε' %Hlt with HS
-    imodintro
-    iexact HS
+  · ileft; iexact HOT
   · iright; ileft
     iapply glmPrimStep'_strong_mono
     iframe HPS
@@ -388,9 +382,7 @@ theorem glm'_bind
         imod HCont $$ %ρ'' %HR with HS
         imodintro
         simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
-        icases HS with ⟨%HVac | HC⟩
-        · ileft; ipureintro; exact HVac
-        · iright; iexact HC
+        iexact HS
       · iright; iright; iexact HSS
     · iexact HG
   iexact HΦ

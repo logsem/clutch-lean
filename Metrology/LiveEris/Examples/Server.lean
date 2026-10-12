@@ -63,7 +63,7 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
         lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
   induction k with
   | zero =>
-    iintro #IH %n %Ψ Hl He
+    iintro - %_ %_ - He
     iexfalso
     iapply Credit.err_contradict (by simp) $$ He
   | succ k IHk =>
@@ -100,20 +100,12 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
 theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
     iprop(ℓ ↦ (.int n : Val rT)) ⊢@{IProp GF}
       lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
-  have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ k) Filter.atTop = 0 :=
-    (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
   have H : ⊢@{IProp GF} ServeStmt (rT := rT) ℓ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %n' %Ψ' Hl
-    iapply fupd_lwp
-    imod Credit.zero with H0
-    imodintro
-    ihave ⟨He, -⟩ := Credit.frag_sep.1 $$ H0
-    iapply lwp_err_liminf Filter.univ_mem (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
-    isplitl [He]
-    · iapply Credit.frag_ext hlim.symm rfl $$ He
-    · iintro %k - Hk
-      iapply lwp_serve_depth ℓ k $$ IH %n' %Ψ' Hl Hk
+    iapply lwp_of_err_liminf_zero liminf_half_pow (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
+    iintro %k Hk
+    iapply lwp_serve_depth ℓ k $$ IH %n' %Ψ' Hl Hk
   iintro Hl
   iapply H $$ %n %Ψ Hl
 
@@ -128,7 +120,7 @@ theorem lwp_serveFlag_depth (k : ℕ) :
         lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#(.loc l))) Ψ := by
   induction k with
   | zero =>
-    iintro #IH %l %Ψ Hl He
+    iintro - %_ %_ - He
     iexfalso
     iapply Credit.err_contradict (by simp) $$ He
   | succ k IHk =>
@@ -162,19 +154,11 @@ theorem lwp_serveFlag_depth (k : ℕ) :
       iapply Credit.frag_ext (by simp) rfl $$ He
 
 theorem lwp_serveFlag : ⊢@{IProp GF} FlagStmt (rT := rT) := by
-  have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ k) Filter.atTop = 0 :=
-    (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
   iapply loeb_wand_intuitionistically
   iintro !> #IH %l %Ψ Hl
-  iapply fupd_lwp
-  imod Credit.zero with H0
-  imodintro
-  ihave ⟨He, -⟩ := Credit.frag_sep.1 $$ H0
-  iapply lwp_err_liminf Filter.univ_mem (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
-  isplitl [He]
-  · iapply Credit.frag_ext hlim.symm rfl $$ He
-  · iintro %k - Hk
-    iapply lwp_serveFlag_depth k $$ IH %l %Ψ Hl Hk
+  iapply lwp_of_err_liminf_zero liminf_half_pow (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
+  iintro %k Hk
+  iapply lwp_serveFlag_depth k $$ IH %l %Ψ Hl Hk
 
 theorem lwp_flagServer (Ψ : Val rT → IProp GF) :
     ⊢@{IProp GF} lwp (fun _ σ' => FlagUp σ') ⊤ flagServer Ψ := by

@@ -31,11 +31,12 @@ end program
 
 section distribution
 
+open MeasureTheory
+
 def Norm1 : ℝ := ∑' k : ℕ, Real.exp (-(k : ℝ) ^ 2 / 2)
 
 def G1PMF (k : ℕ) : ℝ≥0∞ := .ofReal (Real.exp (-(k : ℝ) ^ 2 / 2) / Norm1)
 
-open MeasureTheory in
 def Norm2 : ℝ := ∫ x in (0 : ℝ)..1, ∑' k : ℕ, Real.exp (-((x + k) ^ 2) / 2)
 
 def G2pdf (k : ℕ) (x : ℝ) : ℝ≥0∞ := .ofReal (Real.exp (-((x + k) ^ 2) / 2) / Norm2)
@@ -44,15 +45,18 @@ end distribution
 
 section creditExpectation
 
+open MeasureTheory
+
 def G1CreditV (F : ℕ → ℝ≥0∞) : ℝ≥0∞ := ∑' k : ℕ, G1PMF k * F k
 
-open MeasureTheory in
 def G2CreditV (F : ℕ → ℝ → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' k : ℕ, ∫⁻ x, G2pdf k x * F k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
 
 end creditExpectation
 
 section creditKernel
+
+open MeasureTheory
 
 abbrev BNEHalfVal : Val ℝ := ⟨BNEHalf, IsVal.lam (by is_lc), by is_lc⟩
 
@@ -80,9 +84,8 @@ theorem abstractBernoulli_BNEHalf : AbstractBernoulli (GF := GF) BNEHalfVal γBN
   spec := by
     intro E
     iintro %F Hε
-    iapply (twp_BNEHalf E F)
-    iapply (ErrorCredit.ext (γBNE_credit_eq F))
-    iexact Hε
+    iapply twp_BNEHalf E F
+    iapply ErrorCredit.ext (γBNE_credit_eq F) $$ Hε
 
 theorem abstractBernoulliI_BNEHalf (I : IProp GF) :
     AbstractBernoulliI (hlc := hlc) (GF := GF) BNEHalfVal γBNE I :=
@@ -125,9 +128,8 @@ theorem abstractBernoulli_Bkx (k : ℕ) (x : ℝ) (hx : 0 ≤ x ∧ x ≤ 1) :
     have hβ :
         (Exp.openRec 0 pl(#(.unit)) (Exp.closeRec 0 (Var.internal 0) B) : Exp ℝ) = B := rfl
     rw [hβ]
-    iapply (twp_B E F k x hx)
-    iapply (ErrorCredit.ext (γBkx_credit_eq F k x hx.1))
-    iexact Hε
+    iapply twp_B E F k x hx
+    iapply ErrorCredit.ext (γBkx_credit_eq F k x hx.1) $$ Hε
 
 theorem abstractBernoulliI_Bkx (k : ℕ) (x : ℝ) (hx : 0 ≤ x ∧ x ≤ 1) (I : IProp GF) :
     AbstractBernoulliI (hlc := hlc) (GF := GF) (BkxVal k x) (γBkx k x) I :=
@@ -139,7 +141,6 @@ def G2IterContAmp (F : ℕ → ℝ → ℝ≥0∞) (c : ℝ≥0∞) (k : ℕ) (x
 def G2CreditAmp (F : ℕ → ℝ → ℝ≥0∞) (c : ℝ≥0∞) (k : ℕ) (x : ℝ) : ℝ≥0∞ :=
   IterCreditV (G2IterContAmp F c k x) (γBkx k x) (k + 1)
 
-open MeasureTheory in
 def G2G1Credit (F : ℕ → ℝ → ℝ≥0∞) (c : ℝ≥0∞) (k : ℕ) : ℝ≥0∞ :=
   ∫⁻ x, G2CreditAmp F c k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
 
@@ -148,7 +149,9 @@ def G2p (k : ℕ) (x : ℝ) : ℝ≥0∞ := ENNReal.ofReal ((γBkx k x : ℝ) ^ 
 end creditKernel
 
 section measurability
-open MeasureTheory in
+
+open MeasureTheory
+
 theorem measurable_g2p (k : ℕ) : Measurable (G2p k) :=
   ENNReal.measurable_ofReal.comp
     ((Real.measurable_exp.comp (by fun_prop)).pow_const (k + 1))
@@ -156,22 +159,20 @@ theorem measurable_g2p (k : ℕ) : Measurable (G2p k) :=
 theorem measurable_g2CreditAmp (F : ℕ → ℝ → ℝ≥0∞) (hF : ∀ a, Measurable (F a))
     (c : ℝ≥0∞) (k : ℕ) :
     Measurable (G2CreditAmp F c k) := by
-  have hγ : Measurable (fun x : ℝ => ENNReal.ofReal ((γBkx k x : ℝ) ^ (k + 1))) :=
-    measurable_g2p k
   show Measurable (fun x : ℝ => ENNReal.ofReal ((γBkx k x : ℝ) ^ (k + 1)) * F k x
       + (1 - ENNReal.ofReal ((γBkx k x : ℝ) ^ (k + 1))) * (G2CreditV F + c))
-  exact (hγ.mul (hF k)).add ((hγ.const_sub 1).mul measurable_const)
+  exact ((measurable_g2p k).mul (hF k)).add (((measurable_g2p k).const_sub 1).mul measurable_const)
 
 end measurability
 
 section unifUnit
 
-open MeasureTheory in
+open MeasureTheory
+
 theorem unifUnit_univ : (LawfulProbLangℝ.unifUnit (T := ℝ)) Set.univ = 1 := by
   show (volume.restrict (Set.Icc (0 : ℝ) 1)) Set.univ = 1
   rw [Measure.restrict_apply_univ, Real.volume_Icc]; norm_num
 
-open MeasureTheory in
 theorem unifUnit_lintegral_one :
     ∫⁻ _x : ℝ, (1 : ℝ≥0∞) ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = 1 := by
   rw [lintegral_one, unifUnit_univ]
@@ -180,11 +181,12 @@ end unifUnit
 
 section bounds
 
+open MeasureTheory
+
 theorem G2p_le_one (k : ℕ) (x : ℝ) : G2p k x ≤ 1 := by
   rw [G2p, ← ENNReal.ofReal_one]
   exact ENNReal.ofReal_le_ofReal (pow_le_one₀ (γBkx k x).2.1 (γBkx k x).2.2)
 
-open MeasureTheory in
 theorem G2G1Credit_le (F : ℕ → ℝ → ℝ≥0∞) {M : ℝ≥0∞}
     (Hbd : ∀ x k, 0 ≤ x → x ≤ 1 → F k x ≤ M) (c : ℝ≥0∞) (n : ℕ) :
     G2G1Credit F c n ≤ M + G2CreditV F + c := by
@@ -205,6 +207,8 @@ theorem G2G1Credit_le (F : ℕ → ℝ → ℝ≥0∞) {M : ℝ≥0∞}
 end bounds
 
 section conservation
+
+open MeasureTheory
 
 theorem normTerm_le_geometric (k : ℕ) :
     Real.exp (-(k : ℝ) ^ 2 / 2) ≤ Real.exp (-1 / 2) ^ k := by
@@ -303,7 +307,6 @@ theorem geom_iterN_tsum :
       tsum_mul_left]
   rfl
 
-open MeasureTheory in
 theorem Norm2_eq_tsum :
     Norm2 = ∑' k : ℕ, ∫ x in (0 : ℝ)..1, Real.exp (-((x + (k : ℝ)) ^ 2) / 2) := by
   have hpk : ∀ k : ℕ, (∫⁻ x in Set.Ioc (0 : ℝ) 1, ‖Real.exp (-((x + (k : ℝ)) ^ 2) / 2)‖ₑ ∂volume)
@@ -330,7 +333,6 @@ theorem Norm2_eq_tsum :
     MeasureTheory.integral_tsum (fun k => (Continuous.aestronglyMeasurable (by fun_prop))) hbound]
   exact tsum_congr fun k => (intervalIntegral.integral_of_le (by norm_num)).symm
 
-open MeasureTheory in
 theorem Norm2_summand_le (k : ℕ) :
     (∫ x in (0 : ℝ)..1, Real.exp (-((x + (k : ℝ)) ^ 2) / 2)) ≤ Real.exp (-(k : ℝ) ^ 2 / 2) := by
   have h := intervalIntegral.integral_mono_on (μ := volume) (by norm_num : (0 : ℝ) ≤ 1)
@@ -343,13 +345,11 @@ theorem Norm2_summand_le (k : ℕ) :
       nlinarith [hx.1, hkx]))
   rwa [intervalIntegral.integral_const, sub_zero, smul_eq_mul, one_mul] at h
 
-open MeasureTheory in
 theorem Norm2_summand_summable :
-    Summable (fun k : ℕ => ∫ x in (0 : ℝ)..1, Real.exp (-((x + (k : ℝ)) ^ 2) / 2)) := by
-  apply Summable.of_nonneg_of_le (fun k => intervalIntegral.integral_nonneg (by norm_num)
+    Summable (fun k : ℕ => ∫ x in (0 : ℝ)..1, Real.exp (-((x + (k : ℝ)) ^ 2) / 2)) :=
+  Summable.of_nonneg_of_le (fun k => intervalIntegral.integral_nonneg (by norm_num)
     (fun x _ => (Real.exp_pos _).le)) Norm2_summand_le summable_normTerm
 
-open MeasureTheory in
 theorem Norm2_pos : 0 < Norm2 := by
   rw [Norm2_eq_tsum]
   refine lt_of_lt_of_le ?_ (Norm2_summand_summable.le_tsum 0
@@ -357,7 +357,6 @@ theorem Norm2_pos : 0 < Norm2 := by
   exact intervalIntegral.intervalIntegral_pos_of_pos_on
     (Continuous.intervalIntegrable (by fun_prop) _ _) (fun x _ => Real.exp_pos _) (by norm_num)
 
-open MeasureTheory in
 theorem Norm2_lt_Norm1 : Norm2 < Norm1 := by
   rw [Norm2_eq_tsum, Norm1]
   refine Norm2_summand_summable.tsum_lt_tsum (i := 0) Norm2_summand_le ?_ summable_normTerm
@@ -412,7 +411,6 @@ theorem G1PMF_tsum : ∑' k : ℕ, G1PMF k = 1 := by
         (summable_normTerm.div_const _),
       tsum_div_const, ← Norm1, div_self Norm1_pos.ne', ENNReal.ofReal_one]
 
-open MeasureTheory in
 theorem G2pdf_setLIntegral (k : ℕ) :
     ∫⁻ x, G2pdf k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
       = ENNReal.ofReal (∫ x in (0 : ℝ)..1, Real.exp (-((x + k) ^ 2) / 2) / Norm2) := by
@@ -421,7 +419,6 @@ theorem G2pdf_setLIntegral (k : ℕ) :
   exact lintegral_ofReal_Icc (by norm_num) (by fun_prop)
     (fun r _ => div_nonneg (Real.exp_pos _).le Norm2_pos.le)
 
-open MeasureTheory in
 theorem G2pdf_total : ∑' k : ℕ, ∫⁻ x, G2pdf k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = 1 := by
   simp_rw [G2pdf_setLIntegral, intervalIntegral.integral_div]
   rw [← ENNReal.ofReal_tsum_of_nonneg
@@ -447,7 +444,6 @@ theorem G1PMF_mul_accept (k : ℕ) {x : ℝ} (hx : 0 ≤ x) :
   rw [hrr, ← Real.exp_add, hadd]
   field_simp [ne_of_gt Norm1_pos, ne_of_gt Norm2_pos]
 
-open MeasureTheory in
 theorem G2_accept_lintegral (F : ℕ → ℝ → ℝ≥0∞) (k : ℕ) :
     G1PMF k * ∫⁻ x, G2p k x * F k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
       = ENNReal.ofReal (Norm2 / Norm1)
@@ -459,12 +455,10 @@ theorem G2_accept_lintegral (F : ℕ → ℝ → ℝ≥0∞) (k : ℕ) :
   filter_upwards [ae_restrict_mem measurableSet_Icc] with x hx
   rw [← mul_assoc, G1PMF_mul_accept k hx.1, mul_assoc]
 
-open MeasureTheory in
 theorem G2_accept_mass (k : ℕ) :
     G1PMF k * ∫⁻ x, G2p k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
       = ENNReal.ofReal (Norm2 / Norm1) * ∫⁻ x, G2pdf k x ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) := by
-  have h := G2_accept_lintegral (fun _ _ => 1) k
-  simpa only [mul_one] using h
+  simpa only [mul_one] using G2_accept_lintegral (fun _ _ => 1) k
 
 theorem G1Geometric_collapse (F : ℕ → ℝ≥0∞) (ε : ℝ≥0∞) :
     shiftGeometricPMFCreditV γBNE 0 (G1GeometricCredit F ((G1Factor : ℝ≥0∞) * ε))
@@ -530,7 +524,6 @@ theorem G1Geometric_collapse (F : ℕ → ℝ≥0∞) (ε : ℝ≥0∞) :
     rw [hR, ENNReal.one_sub_ofReal (mul_nonneg (by linarith) Norm1_pos.le)]
   rw [hc, h1R, mul_right_comm, G1Factor_mul_reject, one_mul]
 
-open MeasureTheory in
 theorem G2G1_collapse (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measurable (F a)) (ε : ℝ≥0∞) :
     G1CreditV (G2G1Credit F ((G2Factor : ℝ≥0∞) * ε)) = G2CreditV F + ε := by
   set c : ℝ≥0∞ := (G2Factor : ℝ≥0∞) * ε with hc

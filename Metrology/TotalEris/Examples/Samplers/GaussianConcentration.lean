@@ -182,16 +182,21 @@ theorem integral_Ioi_exp_le_shift {t : ℝ} (ht : 0 ≤ t) :
   rw [← Real.exp_add]
   exact Real.exp_le_exp.mpr (by nlinarith)
 
-theorem halfNormal_Ici_le_chernoff {t : ℝ} (ht : 0 < t) :
-    halfNormal (Set.Ici t) ≤ ENNReal.ofReal (Real.exp (-t ^ 2 / 2)) := by
+private theorem halfNormal_Ici_eq {t : ℝ} (ht : 0 < t) :
+    halfNormal (Set.Ici t)
+      = ENNReal.ofReal ((∫ y in Set.Ioi t, Real.exp (-y ^ 2 / 2)) / Norm2) := by
   have hset : Set.Ici t ∩ Set.Ioi (0 : ℝ) = Set.Ici t :=
     Set.inter_eq_self_of_subset_left fun y hy => lt_of_lt_of_le ht hy
   rw [halfNormal_eq_withDensity, withDensity_apply _ measurableSet_Ici,
     Measure.restrict_restrict measurableSet_Ici, hset, setLIntegral_congr Ioi_ae_eq_Ici.symm]
-  show ∫⁻ y in Set.Ioi t, ENNReal.ofReal (Real.exp (-y ^ 2 / 2) / Norm2) ∂volume ≤ _
+  show ∫⁻ y in Set.Ioi t, ENNReal.ofReal (Real.exp (-y ^ 2 / 2) / Norm2) ∂volume = _
   rw [← ofReal_integral_eq_lintegral_ofReal (integrable_exp_neg_sq_half.div_const _).integrableOn
       (ae_restrict_of_forall_mem measurableSet_Ioi
         fun y _ => div_nonneg (Real.exp_pos _).le Norm2_pos.le), integral_div]
+
+theorem halfNormal_Ici_le_chernoff {t : ℝ} (ht : 0 < t) :
+    halfNormal (Set.Ici t) ≤ ENNReal.ofReal (Real.exp (-t ^ 2 / 2)) := by
+  rw [halfNormal_Ici_eq ht]
   refine ENNReal.ofReal_le_ofReal ?_
   rw [div_le_iff₀ Norm2_pos, ← integral_Ioi_exp_eq_Norm2]
   exact integral_Ioi_exp_le_shift ht.le
@@ -199,14 +204,7 @@ theorem halfNormal_Ici_le_chernoff {t : ℝ} (ht : 0 < t) :
 theorem halfNormal_Ici_le_mills {t : ℝ} (ht : 0 < t) :
     halfNormal (Set.Ici t)
       ≤ ENNReal.ofReal (Real.sqrt (2 / Real.pi) * Real.exp (-t ^ 2 / 2) / t) := by
-  have hset : Set.Ici t ∩ Set.Ioi (0 : ℝ) = Set.Ici t :=
-    Set.inter_eq_self_of_subset_left fun y hy => lt_of_lt_of_le ht hy
-  rw [halfNormal_eq_withDensity, withDensity_apply _ measurableSet_Ici,
-    Measure.restrict_restrict measurableSet_Ici, hset, setLIntegral_congr Ioi_ae_eq_Ici.symm]
-  show ∫⁻ y in Set.Ioi t, ENNReal.ofReal (Real.exp (-y ^ 2 / 2) / Norm2) ∂volume ≤ _
-  rw [← ofReal_integral_eq_lintegral_ofReal (integrable_exp_neg_sq_half.div_const _).integrableOn
-      (ae_restrict_of_forall_mem measurableSet_Ioi
-        fun y _ => div_nonneg (Real.exp_pos _).le Norm2_pos.le), integral_div]
+  rw [halfNormal_Ici_eq ht]
   refine ENNReal.ofReal_le_ofReal ?_
   calc (∫ y in Set.Ioi t, Real.exp (-y ^ 2 / 2)) / Norm2
       = Real.sqrt (2 / Real.pi) * ∫ y in Set.Ioi t, Real.exp (-y ^ 2 / 2) := by
@@ -293,41 +291,36 @@ open MeasureTheory ProbabilityTheory
 
 variable {GF : BundledGFunctors.{0,0,0}}
 
+abbrev gaussStdTailProb (σ : State ℝ) (t : ℝ) : ℝ≥0∞ :=
+  limExec ⟨pl(&Gauss #.unit), σ⟩ ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
+
 theorem gauss_std_tail_prob_of_le [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} {ε : ℝ≥0∞}
     (hb : (gaussianReal 0 1) {y : ℝ | t ≤ |y|} ≤ ε) (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩)
-        ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|}) ≤ ε := by
+    gaussStdTailProb σ t ≤ ε := by
   have hmg : Measurable (fun ρ : Cfg ℝ => realOfExp ρ.expr) :=
     measurable_realOfExp.comp Cfg.measurable_expr
-  rw [← Measure.map_apply hmg (measurableSet_abs_ge t), gauss_std_distributed (GF := GF) σ]
+  rw [gaussStdTailProb, ← Measure.map_apply hmg (measurableSet_abs_ge t),
+    gauss_std_distributed (GF := GF) σ]
   exact hb
 
 theorem gauss_std_tail_prob_markov [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} (ht : 0 < t)
     (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩)
-        ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
-      ≤ ENNReal.ofReal (Real.sqrt (2 / Real.pi) / t) :=
+    gaussStdTailProb σ t ≤ ENNReal.ofReal (Real.sqrt (2 / Real.pi) / t) :=
   gauss_std_tail_prob_of_le (GF := GF) (gaussianReal_abs_ge_le_markov ht) σ
 
 theorem gauss_std_tail_prob [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} (ht : 0 < t)
     (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩)
-        ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
-      ≤ ENNReal.ofReal (1 / t ^ 2) :=
+    gaussStdTailProb σ t ≤ ENNReal.ofReal (1 / t ^ 2) :=
   gauss_std_tail_prob_of_le (GF := GF) (gaussianReal_abs_ge_le ht) σ
 
 theorem gauss_std_tail_prob_chernoff [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} (ht : 0 < t)
     (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩)
-        ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
-      ≤ ENNReal.ofReal (Real.exp (-t ^ 2 / 2)) :=
+    gaussStdTailProb σ t ≤ ENNReal.ofReal (Real.exp (-t ^ 2 / 2)) :=
   gauss_std_tail_prob_of_le (GF := GF) (gaussianReal_abs_ge_le_chernoff ht) σ
 
 theorem gauss_std_tail_prob_mills [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} (ht : 0 < t)
     (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩)
-        ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
-      ≤ ENNReal.ofReal (Real.sqrt (2 / Real.pi) * Real.exp (-t ^ 2 / 2) / t) :=
+    gaussStdTailProb σ t ≤ ENNReal.ofReal (Real.sqrt (2 / Real.pi) * Real.exp (-t ^ 2 / 2) / t) :=
   gauss_std_tail_prob_of_le (GF := GF) (gaussianReal_abs_ge_le_mills ht) σ
 
 end Adequacy

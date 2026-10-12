@@ -66,18 +66,25 @@ theorem lintegral_randCredit_le {z : Int} (Hz : 0 < z) (σ : State rT) {H : ℕ 
     ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)
     (fun k _ => Int.toNat_natCast k) ?_
   · intro n hn
-    simp only [Finset.mem_Ico] at hn
-    simp only [Finset.mem_range]
+    simp only [Finset.mem_Ico, Finset.mem_range] at hn ⊢
     omega
   · intro k hk
-    simp only [Finset.mem_range] at hk
-    simp only [Finset.mem_Ico]
+    simp only [Finset.mem_Ico, Finset.mem_range] at hk ⊢
     omega
   · intro n hn
     simp [randCredit, Finset.mem_Ico.mp hn]
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [LiveGS rT hlc GF]
 variable {Q : State rT → State rT → Prop}
+
+private theorem creditAuth_creditInterp {ε δ : ℝ≥0∞} :
+    creditAuth ε δ ⊢@{IProp GF} LiveWpGS.creditInterp (creditVec ε δ) := by
+  iintro Ha
+  isimp only [liveWpGS_creditInterp_eq]
+  iexists δ
+  iframe Ha
+  ipureintro
+  rfl
 
 /-! ## Spending credits at a step -/
 
@@ -154,11 +161,7 @@ theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
     rw [Hstate HRρ]
     iframe Hσ
     isplitl [Ha]
-    · isimp only [liveWpGS_creditInterp_eq]
-      iexists d - δ₁ + g ρ
-      iframe Ha
-      ipureintro
-      rfl
+    · iapply creditAuth_creditInterp $$ Ha
     · iapply Hcont $$ %σ₁ %ρ %HRρ Hfrag
   · ileft
     ipureintro
@@ -178,18 +181,18 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ creditFrag (F n.toNat) (G n.toNat) -∗ Φ (.int n)) -∗
         lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
   set R : State rT → Cfg rT → Prop :=
-    fun σ₁ ρ => ∃ n : Int, 0 ≤ n ∧ n < z ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
+    fun σ₁ ρ => ∃ n : Int, (0 ≤ n ∧ n < z) ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
-    rintro σ₁ ρ ⟨n, _, _, rfl⟩; rfl
+    rintro σ₁ ρ ⟨n, -, rfl⟩; rfl
   have hred : ∀ σ₁ : State rT, Reducible (pl(rand(#(.int z), #(.unit))) : Exp rT) σ₁ :=
     fun σ₁ => Reducible.of_head (by is_lc) (rand_headReducible Hz σ₁)
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     apply Set.Countable.measurableSet
     apply Set.Countable.mono (s₂ := (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) '' Set.univ)
-    · rintro ρ ⟨n, _, _, rfl⟩; exact ⟨n, trivial, rfl⟩
+    · rintro ρ ⟨n, -, rfl⟩; exact ⟨n, trivial, rfl⟩
     · exact Set.countable_univ.image _
   have hpgl : ∀ σ₁ : State rT,
-      Pgl 0 (R σ₁) (primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩) := fun σ₁ => by
+      Pgl 0 (R σ₁) (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) := fun σ₁ => by
     show (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
     refine le_of_eq ?_
     rw [primStep_eq_headStep
@@ -202,18 +205,18 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
       Set.disjoint_left]
     intro n hn hcontra
     rw [Finset.mem_coe, Finset.mem_Ico] at hn
-    exact hcontra ⟨n, hn.1, hn.2, rfl⟩
+    exact hcontra ⟨n, hn, rfl⟩
   iintro Hcr Hcont
   iapply (lwp_credit_spend (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
     (randCredit_measurable z F) (randCredit_le_one HF) (randCredit_le_one HG) hstate hred hrmeas
     hpgl (fun σ₁ => lintegral_randCredit_le Hz σ₁ HSumF)
     (fun σ₁ => lintegral_randCredit_le Hz σ₁ HSumG)) $$ Hcr
   iintro %σ₁ %ρ %HRρ Hcr
-  obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
+  obtain ⟨n, hn, rfl⟩ := HRρ
   iapply lwp_value_of_toVal rfl
   iapply Hcont $$ %n
-  isplitr; · ipureintro; exact ⟨Hn₁, Hn₂⟩
-  iapply Credit.frag_ext (randCredit_int ⟨Hn₁, Hn₂⟩) (randCredit_int ⟨Hn₁, Hn₂⟩) $$ Hcr
+  iframe %hn
+  iapply Credit.frag_ext (randCredit_int hn) (randCredit_int hn) $$ Hcr
 
 /-- `rand z` spends error credits only; outcomes with more than one credit are impossible. -/
 theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → ℝ≥0∞} {Φ : Val rT → IProp GF}
@@ -247,8 +250,7 @@ theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → �
   iapply (lwp_rand_credit Hz (fun _ => zero_le) HG hzero HSum) $$ Hcr
   iintro %n ⟨%Hn, Hcr⟩
   iapply Hcont $$ %n
-  isplitr; · ipureintro; exact Hn
-  iexact Hcr
+  iframe %Hn Hcr
 
 /-! ## Thin air -/
 
@@ -300,11 +302,7 @@ theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val
     rw [lwp_unfold_step Hnv]
     imod HW $$ %σ₁ %(creditVec (c .err + η) (d + η)) [Hσ Ha] with HG
     · iframe Hσ
-      isimp only [liveWpGS_creditInterp_eq]
-      iexists d + η
-      iframe Ha
-      ipureintro
-      rfl
+      iapply creditAuth_creditInterp $$ Ha
     imodintro
     iapply glm_mono_grading hle $$ HG
   · ileft
@@ -426,11 +424,7 @@ theorem lwp_convert {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT →
       rw [Hd, ← add_assoc, add_right_comm, tsub_add_cancel_of_le hε]
   iframe Hσ
   isplitl [Ha]
-  · isimp only [liveWpGS_creditInterp_eq]
-    iexists d + ε
-    iframe Ha
-    ipureintro
-    rfl
+  · iapply creditAuth_creditInterp $$ Ha
   · iapply Hwp $$ Hdiv
 
 end LiveEris

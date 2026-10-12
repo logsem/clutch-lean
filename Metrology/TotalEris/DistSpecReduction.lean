@@ -16,47 +16,28 @@ public import Mathlib.Analysis.Calculus.ContDiff.Polynomial
 
 /-! # Reduced Correctness Specifications
 
-This file contains several reductions of the correctness specification for CTE samplers, based
-on approximation theorems from analysis. The main correctness specification is `DistSpec`.
-
-The statement `DistSpecOn` is a weaker version which only tests one function `G` on one set `K`,
-charging a full credit outside `K`. The general reduction `DistSpec_of_local P` derives `DistSpec`
-from `DistSpecOn` for every pair `(K, G)` satisfying `P`. To apply it, you need to show that every
-measurable `F` can be approximated from above by such a pair: for every `ε > 0` there is `(K, G)`
-satisfying `P` with `min F 1 ≤ G` on `K` and `∫⁻ x in K, G x ∂μ + μ Kᶜ ≤ ∫⁻ F ∂μ + ε`. The proof
-proceeds by generating a thin air credit `↯ ε`, applying the spec for the corresponding `(K, G)`
-pair, and finally weakening `↯ (G r)` down to `↯ (F r)`.
-
-`DistSpec_of_global` is the special case `K = univ`, where the reduced specs are plain triples.
+`DistSpec` is the correctness specification for CTE samplers. `DistSpecOn K G` tests one function
+`G` on one set `K`, charging a full credit outside `K`. `DistSpec_of_local P` derives `DistSpec`
+from `DistSpecOn` for every `(K, G)` satisfying `P`, provided every measurable `F` is approximated
+from above by such a pair: `min F 1 ≤ G` on `K` and `∫⁻ x in K, G x ∂μ + μ Kᶜ ≤ ∫⁻ F ∂μ + ε`.
+The proof spends a thin-air credit `↯ ε` and weakens `↯ (G r)` to `↯ (F r)`.
+`DistSpec_of_global` is the case `K = univ`.
 
 ## Reduced forms
 
-For each reduction, you only need to show credit amplification for a certain family of sets `K` and
-functions `G`: the reduction plus the thin-air credit implies this holds for every measurable `F`.
-
-* `DistSpec_of_DistSpecLusin`: Continuous `G` on compact `K`. By Lusin's theorem `F` is close to
-  some `G` on some `K`. Tietze's extension theorem extends this to all of `ℝ`.
-* `DistSpec_of_DistSpecLSC`: Lower semicontinuous `G` on all of `ℝ`, via Mathlib's
-  Vitali–Carathéodory theorem.
-* `DistSpec_of_DistSpecSimple`: simple functions on all of `ℝ`.
+* `DistSpec_of_DistSpecLusin`: continuous `G` on compact `K` (Lusin, then Tietze).
+* `DistSpec_of_DistSpecLSC`: lower semicontinuous `G` (Vitali–Carathéodory).
+* `DistSpec_of_DistSpecSimple`: simple functions.
 * `DistSpec_of_DistSpecPoly`: real polynomials on compact `K`. Take Lusin's `K` with
-  `μ Kᶜ ≤ ε/2`, and pick `c > 0` with `c * μ ℝ < ε/2`. Approximate the continuous extension
-  within `c/2` by a polynomial (Weierstrass) and add `c/2` so it sits above by at most `c`.
-  (`exists_compact_polynomial_approx`). For a client, this is the biggest reduction.
-* `DistSpec_of_DistSpecRatPoly`: polynomials with rational coefficients on compact `K`, a
-  countable family of `G`. Take the real polynomial `p` from the previous case, approximate it
-  within `c/4` coefficient by coefficient (`exists_rat_polynomial_near`), and add a rational
-  constant between `c/4` and `3c/4` (`exists_compact_ratPolynomial_approx`).
-* `DistSpec_of_DistSpecSmooth`: smooth `G` on compact `K`. Immediate from the polynomial case,
-  since polynomials are smooth. Strictly stronger than `DistSpec_of_DistSpecLusin`.
+  `μ Kᶜ ≤ ε/2`, pick `c > 0` with `c * μ ℝ < ε/2`, approximate the continuous extension within
+  `c/2` (Weierstrass) and add `c/2`.
+* `DistSpec_of_DistSpecRatPoly`: rational polynomials on compact `K`, a countable family.
+  Approximate the real polynomial within `c/4` coefficientwise and add a rational in `(c/4, 3c/4)`.
+* `DistSpec_of_DistSpecSmooth`: smooth `G` on compact `K`; strictly stronger than Lusin.
 
-
-## Restricting to the support
-
-When `μ Sᶜ = 0` for a measurable `S`, `DistSpec_of_local_support` lets a client assume `K ⊆ S`:
-intersect the approximating `K` with a compact `K' ⊆ S` that has `μ K'ᶜ ≤ ε/2` (inner regularity).
-`DistSpec_of_DistSpecPolyOn` and `DistSpec_of_DistSpecRatPolyOn` are the polynomial cases; e.g. a
-sampler into `(0, 1)` only has to handle polynomials on compact subsets of `(0, 1)`.
+When `μ Sᶜ = 0`, `DistSpec_of_local_support` lets a client assume `K ⊆ S`
+(`DistSpec_of_DistSpecPolyOn`, `DistSpec_of_DistSpecRatPolyOn`): e.g. a sampler into `(0, 1)` only
+handles polynomials on compact subsets of `(0, 1)`.
 
 Lusin's theorem is copied from mathlib4 PR #37976, see `Metrology.FromMathlib.LusinContinuous`.
 -/
@@ -155,12 +136,10 @@ theorem DistSpecOn_of_DistSpec {E : CoPset} {e : Exp ℝ} {μ : MeasureTheory.Me
   · iapply ErrorCredit.weaken (by rw [MeasureTheory.lintegral_piecewise hK]; simp) $$ Hε
   · iintro %r H
     by_cases hr : r ∈ K
-    · iapply HΦ
-      isplitr
-      · ipureintro
-        exact hr
-      · isimp only [Set.piecewise_eq_of_mem _ _ _ hr] at H
-        iexact H
+    · isimp only [Set.piecewise_eq_of_mem _ _ _ hr] at H
+      iapply HΦ
+      iframe %hr
+      iexact H
     · iexfalso
       iapply ErrorCredit.contradict (by simp [hr]) $$ H
 
@@ -319,7 +298,7 @@ theorem exists_rat_polynomial_near (a b : ℝ) (p : ℝ[X]) {δ : ℝ} (hδ : 0 
     rw [eval_monomial, aeval_monomial, eq_ratCast, ← sub_mul, abs_mul, abs_pow]
     calc |r - s| * |x| ^ n ≤ |r - s| * (max |a| |b| ^ n + 1) := by
           gcongr
-          exact (pow_le_pow_left₀ (abs_nonneg x) (hR hx) n)
+          exact pow_le_pow_left₀ (abs_nonneg x) (hR hx) n
             |>.trans (le_add_of_nonneg_right zero_le_one)
       _ < δ / (max |a| |b| ^ n + 1) * (max |a| |b| ^ n + 1) := by gcongr
       _ = δ := div_mul_cancel₀ _ hM.ne'
@@ -382,29 +361,6 @@ theorem DistSpec_of_DistSpecSimple [MeasureTheory.IsFiniteMeasure μ] (hv : e.to
       ⟨s, ⟨s, rfl⟩, hle, hint⟩)
     (fun _ ⟨s, hs⟩ => hs ▸ hS s)
 
-theorem DistSpec_of_DistSpecPoly [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
-    (hS : DistSpecPoly (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
-  DistSpec_of_local
-    (fun K G => IsCompact K ∧ ∃ p : Polynomial ℝ, G = fun x => ENNReal.ofReal (p.eval x)) hv
-    (fun _ hF _ hε =>
-      have ⟨K, p, hK, hle, hint⟩ := exists_compact_polynomial_approx μ hF hε
-      ⟨K, _, ⟨hK, p, rfl⟩, hle, hint⟩)
-    (fun K _ ⟨hK, p, hG⟩ => hG ▸ hS K p hK)
-
-theorem DistSpec_of_DistSpecRatPoly [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
-    (hS : DistSpecRatPoly (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
-  DistSpec_of_local
-    (fun K G => IsCompact K ∧ ∃ q : Polynomial ℚ,
-      G = fun x => ENNReal.ofReal (Polynomial.aeval x q)) hv
-    (fun _ hF _ hε =>
-      have ⟨K, q, hK, hle, hint⟩ := exists_compact_ratPolynomial_approx μ hF hε
-      ⟨K, _, ⟨hK, q, rfl⟩, hle, hint⟩)
-    (fun K _ ⟨hK, q, hG⟩ => hG ▸ hS K q hK)
-
-theorem DistSpec_of_DistSpecSmooth [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
-    (hS : DistSpecSmooth (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
-  DistSpec_of_DistSpecPoly hv fun K p hK => hS K _ hK (by simpa using p.contDiff_aeval (𝕜 := ℝ) _)
-
 theorem DistSpec_of_DistSpecPolyOn [MeasureTheory.IsFiniteMeasure μ] {S : Set ℝ}
     (hS : MeasurableSet S) (hμ : μ Sᶜ = 0) (hv : e.toVal? = none)
     (hSpec : DistSpecPolyOn (GF := GF) E e μ S) : DistSpec (GF := GF) E e μ :=
@@ -427,6 +383,18 @@ theorem DistSpec_of_DistSpecRatPolyOn [MeasureTheory.IsFiniteMeasure μ] {S : Se
       have ⟨K, q, hK, hle, hint⟩ := exists_compact_ratPolynomial_approx μ hF hε
       ⟨K, _, ⟨hK, q, rfl⟩, hle, hint⟩)
     (fun K _ ⟨hK, q, hG⟩ hKS => hG ▸ hSpec K q hK hKS)
+
+theorem DistSpec_of_DistSpecPoly [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
+    (hS : DistSpecPoly (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
+  DistSpec_of_DistSpecPolyOn .univ (by simp) hv fun K p hK _ => hS K p hK
+
+theorem DistSpec_of_DistSpecRatPoly [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
+    (hS : DistSpecRatPoly (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
+  DistSpec_of_DistSpecRatPolyOn .univ (by simp) hv fun K q hK _ => hS K q hK
+
+theorem DistSpec_of_DistSpecSmooth [MeasureTheory.IsFiniteMeasure μ] (hv : e.toVal? = none)
+    (hS : DistSpecSmooth (GF := GF) E e μ) : DistSpec (GF := GF) E e μ :=
+  DistSpec_of_DistSpecPoly hv fun K p hK => hS K _ hK (by simpa using p.contDiff_aeval (𝕜 := ℝ) _)
 
 section Converse
 

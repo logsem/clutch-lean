@@ -61,8 +61,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     iintro Herr
     by_cases hxa : x = a
     · iexfalso
-      iapply ErrorCredit.contradict ?_ $$ Herr
-      simp [walkCost, hxa]
+      iapply ErrorCredit.contradict (by simp [walkCost, hxa]) $$ Herr
     twp_pures
     rw [walk_beq_int_lit, beq_eq_false_iff_ne.mpr hxa]
     twp_pures
@@ -73,9 +72,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     iintro Herr
     by_cases hxa : x = a
     · iexfalso
-      iapply ErrorCredit.contradict ?_ $$ Herr
-      simp [walkCost, hxa]
-    have hxa' : x < a := lt_of_le_of_ne hx hxa
+      iapply ErrorCredit.contradict (by simp [walkCost, hxa]) $$ Herr
     twp_pures
     rw [walk_beq_int_lit, beq_eq_false_iff_ne.mpr hxa]
     twp_pures
@@ -84,7 +81,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     have HSum : (∑ r ∈ Finset.range (m : ℤ).toNat, F r) / ((m : ℤ).toNat : ℝ≥0∞) ≤
         walkCost u m a x := by
       rw [Int.toNat_natCast]
-      exact walkCost_avg hum hxa'
+      exact walkCost_avg hum (lt_of_le_of_ne hx hxa)
     iapply (twp_rand_exp' (z := m) (ε₂ := F) (Hz := by omega) (HSum := HSum)) $$ Herr
     iintro %r ⟨%⟨Hr₁, Hr₂⟩, Hcr⟩
     simp only [Exp.ofVal]

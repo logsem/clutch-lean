@@ -65,6 +65,9 @@ theorem two_mul_half_pow (j : ℕ) : (2 : ℝ≥0∞) * 2⁻¹ ^ (j + 1) = 2⁻�
 theorem half_pow_le_one (j : ℕ) : (2⁻¹ : ℝ≥0∞) ^ j ≤ 1 :=
   pow_le_one₀ zero_le (ENNReal.inv_le_one.2 one_le_two)
 
+theorem liminf_half_pow : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ k) Filter.atTop = 0 :=
+  (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
+
 theorem two_third_le_one : (2 : ℝ≥0∞) * 3⁻¹ ≤ 1 := by
   calc (2 : ℝ≥0∞) * 3⁻¹ ≤ 3 * 3⁻¹ := by gcongr; norm_num
     _ = 1 := ENNReal.mul_inv_cancel (by norm_num) ENNReal.ofNat_ne_top
@@ -73,9 +76,25 @@ theorem third_le_one : (3⁻¹ : ℝ≥0∞) ≤ 1 := ENNReal.inv_le_one.2 (by n
 
 theorem third_add_one : (3⁻¹ : ℝ≥0∞) + 1 ≤ 2 * (2 * 3⁻¹) := by
   have h3 : (3 : ℝ≥0∞) * 3⁻¹ = 1 := ENNReal.mul_inv_cancel (by norm_num) ENNReal.ofNat_ne_top
+  apply le_of_eq
   calc (3⁻¹ : ℝ≥0∞) + 1 = 3⁻¹ + 3 * 3⁻¹ := by rw [h3]
     _ = 2 * (2 * 3⁻¹) := by ring
-    _ ≤ 2 * (2 * 3⁻¹) := le_rfl
+
+/-- An `lwp` provable with `↯(ε k)` for every `k` needs no error credits when `ε` has liminf `0`. -/
+theorem lwp_of_err_liminf_zero {Q : State rT → State rT → Prop} {E : CoPset} {e : Exp rT}
+    {Φ : Val rT → IProp GF} {ε : ℕ → ℝ≥0∞} (hlim : Filter.liminf ε Filter.atTop = 0)
+    (Hnv : e.toVal? = none) :
+    iprop(∀ k, ↯(ε k) -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+  iintro Hwp
+  iapply fupd_lwp
+  imod Credit.zero with H0
+  imodintro
+  ihave ⟨He, -⟩ := Credit.frag_sep.1 $$ H0
+  iapply lwp_err_liminf Filter.univ_mem Hnv
+  isplitl [He]
+  · iapply Credit.frag_ext hlim.symm rfl $$ He
+  · iintro %k - Hk
+    iapply Hwp $$ Hk
 
 theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (k : ℕ) :
     iprop(↯((2⁻¹ : ℝ≥0∞) ^ (2 * k)) ∗ ↻(3⁻¹)) ⊢@{IProp GF}
@@ -123,8 +142,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
         · iapply IH
           iapply Credit.frag_sep.1
           iapply Credit.frag_ext (by simp) (by simp) $$ Hcr
-        · iintro %v %Hv
-          subst Hv
+        · iintro %v %rfl
           live_value
           ipureintro; rfl
       · live_pure
@@ -141,16 +159,10 @@ theorem lwp_stopOrSpin (Q : State rT → State rT → Prop) (E : CoPset) :
     exact (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
       (pow_lt_one₀ zero_le (by norm_num) two_ne_zero)).liminf_eq
   iintro Hd
-  iapply fupd_lwp
-  imod Credit.zero with H0
-  imodintro
-  ihave ⟨He, -⟩ := Credit.frag_sep.1 $$ H0
-  iapply lwp_err_liminf Filter.univ_mem (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
-  isplitl [He]
-  · iapply Credit.frag_ext hlim.symm rfl $$ He
-  · iintro %k - Hk
-    iapply lwp_stopOrSpin_depth
-    iframe
+  iapply lwp_of_err_liminf_zero hlim (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
+  iintro %k Hk
+  iapply lwp_stopOrSpin_depth
+  iframe
 
 /-! ## What adequacy gives -/
 

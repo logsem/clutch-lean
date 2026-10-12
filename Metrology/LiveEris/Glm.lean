@@ -85,10 +85,9 @@ abbrev execStutter (P : (ι → ℝ≥0∞) → IProp GF) (c : ι → ℝ≥0∞
 
 theorem execStutter_mono {P Q : (ι → ℝ≥0∞) → IProp GF} {c c' : ι → ℝ≥0∞} (hc : c ≤ c') :
     ((P c -∗ Q c') ∗ execStutter P c) ⊢ execStutter Q c' := by
-  iintro ⟨HM, HS⟩
-  icases HS with ⟨%HVac | HP⟩
+  iintro ⟨HM, %HVac | HP⟩
   · ileft; ipureintro; exact HVac.mono hc
-  · iright; iapply HM; iexact HP
+  · iright; iapply HM $$ HP
 
 theorem execStutter_mono_pred {P Q : (ι → ℝ≥0∞) → IProp GF} {c : ι → ℝ≥0∞} :
     ((P c -∗ Q c) ∗ execStutter P c) ⊢ execStutter Q c :=
@@ -109,15 +108,13 @@ abbrev glmCreditBump (ρ : Cfg rT) (c : ι → ℝ≥0∞)
 theorem glmCreditBump_strong_mono {ρ : Cfg rT} {c : ι → ℝ≥0∞}
     {Φ Ψ : GlmState rT ι → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump ρ c Φ) ⊢ glmCreditBump ρ c Ψ := by
-  iintro ⟨HΦΨ, HOT⟩
-  iintro %c' %Hlt
+  iintro ⟨HΦΨ, HOT⟩ %c' %Hlt
   imod HOT $$ %c' %Hlt with HS
   imodintro
   iapply execStutter_mono_pred
   iframe HS
   iintro HΦ
   iapply HΦΨ $$ HΦ
-
 
 /-- **Primitive step**: take one step of `e₁`, charging the mass outside `R` and averaging the
 continuation credits `X₂` against `c`. -/
@@ -134,8 +131,7 @@ abbrev glmPrimStep (e₁ : Exp rT) (σ₁ : State rT) (c : ι → ℝ≥0∞)
 theorem glmPrimStep_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {c : ι → ℝ≥0∞}
     {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
     iprop((∀ ρ c', Z₁ ρ c' -∗ Z₂ ρ c') ∗ glmPrimStep e₁ σ₁ c Z₁) ⊢ glmPrimStep e₁ σ₁ c Z₂ := by
-  iintro ⟨HZ, HPS⟩
-  icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+  iintro ⟨HZ, %R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists R, ε₁, X₂, r
   iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
   iintro %ρ HR
@@ -190,8 +186,7 @@ theorem glm_strong_ind {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} {Ψ : G
     iprop(□ (∀ s, glmPre Z (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre Z) s')) s -∗ Ψ s)) ⊢
       (∀ s, bi_least_fixpoint (glmPre Z) s -∗ Ψ s) := by
   iintro #HM
-  iapply least_fixpoint_ind
-  iexact HM
+  iapply least_fixpoint_ind $$ HM
 
 theorem glm_strong_mono {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
     {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
@@ -223,14 +218,13 @@ theorem glm_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
     {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (hc : c ≤ c') :
     glm e σ c Z ⊢ glm e σ c' Z := by
   iintro HG
-  ihave HG' := least_fixpoint_unfold_mp (glmPre Z) $$ HG
   iapply least_fixpoint_unfold_mpr (glmPre Z)
-  icases HG' with ⟨HOT | HPS⟩
+  icases least_fixpoint_unfold_mp (glmPre Z) $$ HG with
+    ⟨HOT | ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩⟩
   · ileft
     iintro %c'' %Hb
     iapply HOT $$ %c'' %(Bump.of_le hc Hb)
   · iright
-    icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
     have Hexp' := Hexp.trans hc
     iexists R, ε₁, X₂, r
     iframe %Hred %HRmeas %Hbnd %Hexp' %Hpgl
@@ -252,11 +246,7 @@ theorem glm_mono_pred {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
   iintro !> %Φ %s HF
   obtain ⟨ρ, c⟩ := s
   icases HF with ⟨HOT | HPS⟩
-  · ileft
-    iintro %c' %Hb
-    imod HOT $$ %c' %Hb with HS
-    imodintro
-    iexact HS
+  · ileft; iexact HOT
   · iright
     iapply glmPrimStep_strong_mono
     iframe HPS
@@ -327,9 +317,7 @@ theorem glm_bind {K : Ectx rT} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0�
         imod HCont $$ %ρ'' %HR with HS
         imodintro
         simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
-        icases HS with ⟨%HVac | HC⟩
-        · ileft; ipureintro; exact HVac
-        · iright; iexact HC
+        iexact HS
     · iexact HG
   iexact HΦ
 

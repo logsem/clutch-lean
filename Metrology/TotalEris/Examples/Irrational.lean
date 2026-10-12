@@ -34,21 +34,16 @@ theorem irratErr_le_one (r : ℝ) : irratErr r ≤ 1 := by
 
 open MeasureTheory in
 theorem lintegral_irratErr_eq_zero : ∫⁻ r, irratErr r ∂(LawfulProbLangℝ.unifUnit) = 0 := by
-  have hrange : {r : ℝ | ¬ Irrational r} = Set.range ((↑) : ℚ → ℝ) := by
-    ext r; simp [Irrational]
   rw [irratErr, lintegral_indicator_const measurableSet_not_irrational, one_mul]
   show volume.restrict (Set.Icc (0 : ℝ) 1) {r : ℝ | ¬ Irrational r} = 0
   rw [Measure.restrict_apply measurableSet_not_irrational]
-  refine measure_mono_null Set.inter_subset_left
-    (Set.Countable.measure_zero ?_ volume)
-  rw [hrange]
-  exact Set.countable_range _
+  exact measure_mono_null Set.inter_subset_left <|
+    ((Set.countable_range ((↑) : ℚ → ℝ)).mono fun _ => not_not.mp).measure_zero volume
 
 section Wp
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
 
-/-- `urand` samples irrational values with probability 1 -/
 theorem twp_urand_irrational (E : CoPset) :
     [{ (True : IProp GF) }] pl(urand) @ E [{ r, RET .real r; ⌜Irrational r⌝ }] := by
   iintro %Φ - HΦ
@@ -58,7 +53,7 @@ theorem twp_urand_irrational (E : CoPset) :
   case Gexp => simp [lintegral_irratErr_eq_zero]
   iintro %r ⟨%-, Hcr⟩
   by_cases h : Irrational r
-  · iapply HΦ; ipureintro; exact h
+  · iapply HΦ $$ %r %h
   · iexfalso
     iapply ErrorCredit.contradict $$ Hcr
     rw [irratErr_of_not_irrational h]
@@ -94,8 +89,7 @@ theorem urand_irrational_pgl (σ : State ℝ) :
   intro _; iintro _
   iapply twp_urand_irrational
   · itrivial
-  iintro %r %hr
-  ipureintro
+  iintro %r %hr !%
   exact ⟨r, rfl, hr⟩
 
 /-- info: 'ProbLang.TotalEris.urand_irrational_pgl' depends on axioms: [propext, Classical.choice, Quot.sound] -/

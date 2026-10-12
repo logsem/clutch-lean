@@ -11,8 +11,7 @@ public import Qq
 # Proof-mode tactics for the LiveEris WP
 
 `live_bind`, `live_pure`, `live_pures`, `live_pure_excused` and `live_value` discover the
-evaluation context themselves, so no `K` has to be supplied by hand. The evaluation-context engine is the one of
-TotalEris's `twp_*` tactics; the goal runner matches `LiveWpGS.lwp Q E e Φ`.
+evaluation context themselves. The context engine is the one of TotalEris's `twp_*` tactics.
 -/
 
 namespace ProbLang.LiveEris
@@ -44,12 +43,9 @@ public theorem lwp_pure_step_excused_ctx {rT : Type _} [LawfulProbLangℝ rT] {h
 
 /-! ## Evaluation-context engine -/
 
-/-- Read a value *structurally* off a quoted expression, accepting abstract `Val`
-projections (`Exp.ofVal v`, `v.fst`) at the leaves. `Exp.toVal?` is a computation, so
-on a term with abstract leaves (e.g. an `(assocVal m).fst` induction tail) it is stuck
-— a reflective `whnf` check would wrongly report "not a value" and derail context
-discovery. Concrete `lam`/`fix` leaves (which need a closedness check) fall back to
-the reflective test. -/
+/-- Read a value *structurally* off a quoted expression, accepting abstract `Val` leaves
+(`Exp.ofVal v`, `v.fst`) on which the computational `Exp.toVal?` is stuck. Concrete
+`lam`/`fix` leaves need a closedness check and fall back to the reflective test. -/
 public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) :
     MetaM (Option Q(Val $α)) := do
   let e : Q(Exp $α) ← pure e.consumeMData
@@ -68,14 +64,11 @@ public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) :
     let some va ← exprAsVal? a | return none
     return some q(Val.inr $va)
   | _ => do
-    -- Fast path: a concrete `lam`/`fix` (possibly behind a library constant) is a value
-    -- iff it is locally closed, decided by kernel reduction (`Exp.closedFunVal?`) —
-    -- `whnf` of `toVal?` re-evaluates `lcb` through every inlined library body.
+    -- Kernel reduction decides closedness of a `lam`/`fix`; `whnf` of `toVal?` would
+    -- re-evaluate `lcb` through every inlined library body.
     if let some r ← Exp.closedFunVal? α e then return r
-    -- Reflective fallback, time-boxed: other heads (where `toVal?` is cheap) and
-    -- closures the kernel cannot decide (metavariables). A timeout is reported as
-    -- "not a value": decomposition then descends past the closure, and a supplied focus
-    -- term still matches the rebuilt candidate by lazy δ in `isDefEq`.
+    -- Time-boxed reflective fallback. A timeout counts as "not a value": decomposition
+    -- descends past the closure, and a supplied focus still matches by lazy δ in `isDefEq`.
     let tv? : Option Q(Option (Val $α)) ← controlAt CoreM fun runInBase =>
       Core.tryCatchRuntimeEx
         (runInBase do
@@ -91,11 +84,9 @@ public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) :
       | _ => return none
     | none => return none
 
-/-- Peel one evaluation-context frame off `e`, returning the frame and the
-sub-expression in its hole, or `(none, e)` if `e` is not decomposable. This mirrors
-ProbLang's `Exp.decompItem` (same frames, same right-to-left evaluation order) but
-performs the operand value checks with `exprAsVal?`, so decomposition also succeeds
-around abstract `Val` leaves where the computational `toVal?` is stuck. -/
+/-- Peel one evaluation-context frame off `e`, or return `(none, e)`. Mirrors `Exp.decompItem`
+(same frames, right-to-left order) but checks operands with `exprAsVal?`, so it also works
+around abstract `Val` leaves. -/
 public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
     MetaM (Option Q(EctxItem $α) × Q(Exp $α)) := do
   let e' : Q(Exp $α) ← whnf e.consumeMData
@@ -139,9 +130,8 @@ public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
   | ~q(Exp.scrut $e1 $p) => unlike q(EctxItem.scrut $p) e1
   | _ => return (none, e)
 
-/-- Fully decompose `e` into a frame stack `[innermost, …, outermost]` and the
-innermost non-context sub-expression. The list order matches `Ectx.fill`
-(`foldl (flip fillItem)`), so `Ectx.fill result.1 result.2 = e`. -/
+/-- Decompose `e` into frames `[innermost, …, outermost]` and the innermost redex, so that
+`Ectx.fill result.1 result.2 = e`. -/
 public meta partial def extractAllEctxItems {α : Q(Type)} (e : Q(Exp $α))
     (acc : List Q(EctxItem $α) := []) : MetaM (List Q(EctxItem $α) × Q(Exp $α)) := do
   match ← extractEctxItem e with
@@ -177,8 +167,7 @@ public meta def quoteList {α : Q(Type)} : List Q(EctxItem $α) → Q(Ectx $α)
   | [] => q([])
   | x :: xs => q($x :: $(quoteList xs))
 
-/-- Plug `e` into the (quoted) context `K`, computing the filled expression at the meta
-level. Result is defeq to `Ectx.fill K e` but β-reduced (no residual `Ectx.fill`). -/
+/-- `Ectx.fill K e` computed at the meta level, with no residual `Ectx.fill`. -/
 public meta partial def fill {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
   match K with
   | ~q([]) => pure e
@@ -204,7 +193,6 @@ where
       return some { result := a, K := quoteList Kis, e' := e }
     let Ki :: Kis' := Kis | return none
     go (← fillItem e Ki) Kis'
-
 
 /-! ## WP-goal runner -/
 
@@ -275,19 +263,14 @@ elab "live_bind" colGt ppSpace focus:term:max : tactic =>
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
-/-- Opening any expression of a `Val` is the identity — values are locally closed.
-Lets `reduceExp` discharge the stuck `openRec k u v.fst` that a step leaves on an
-abstract value (which `openRec`'s recursion can't reduce, since `v.fst` is opaque),
-so proofs no longer need a manual `rw [← Exp.open_lc … v.lc]`. -/
+/-- Clears the stuck `openRec k u v.fst` that a step leaves on an abstract value. -/
 @[pl_step_simp] public theorem openRec_val_fst {α : Type _} (k : Nat) (t : Exp α) (v : Val α) :
     Exp.openRec k t v.fst = v.fst := (Exp.open_lc k t v.fst v.lc).symm
 
 /-- Reduce a stepped `Exp`: unfold `open'`/`close`/`ofVal` and normalize Int/Nat/ite/ctor.
-All rewrites are computational, so the result is defeq to the input. `mdata` is stripped
-(re-attached by `reattachNames`). -/
+The result is defeq to the input; `mdata` is stripped (see `reattachNames`). -/
 public meta def reduceExp {α : Q(Type)} (e : Q(Exp $α)) : MetaM Q(Exp $α) := do
-  -- Exactly this set, and no broader default simprocs: those would over-reduce e.g.
-  -- `Exp.ofVal`/heap forms that the heap rules still need to see.
+  -- No default simprocs: they over-reduce `Exp.ofVal`/heap forms the heap rules need.
   let mut thms : SimpTheorems := {}
   for d in [``ProbLang.Exp.open', ``ProbLang.Exp.openRec, ``ProbLang.Exp.close,
             ``ProbLang.Exp.closeRec, ``ProbLang.Exp.ofVal, ``ProbLang.Val.ofBaseLit,
@@ -304,15 +287,12 @@ public meta def reduceExp {α : Q(Type)} (e : Q(Exp $α)) : MetaM Q(Exp $α) := 
     procs ← procs.add p (post := true)
   let ctx ← Simp.mkContext (simpTheorems := #[thms]) (congrTheorems := ← getSimpCongrTheorems)
   let ⟨res, _⟩ ← Lean.Meta.simp e ctx (simprocs := #[procs])
-  -- NB: only defeq-preserving reductions here (the result must be defeq to the synthesis
-  -- form `e₂syn` for the `PureExec` instance to apply). The stuck `openRec _ _ v.fst` on
-  -- an abstract value is NOT defeq to `v.fst` (needs the `open_lc` proof), so it is
-  -- cleared by a *propositional* `simp only [pl_step_simp]` in `live_pure`/`live_pures`.
+  -- Defeq-only, so `PureExec` still applies to `e₂syn`. The stuck `openRec _ _ v.fst` is
+  -- not defeq to `v.fst`; `simp only [pl_step_simp]` in `live_pure` clears it.
   return res.expr
 
-/-- Pre-order re-attach source binder names (from `collectBinderNames` of the redex
-body) to the reduced result's `Exp.lam`/`Exp.fix` binders, as `plBinderName` mdata, so
-they render with their source names. `i` threads through in binder pre-order. -/
+/-- Re-attach source binder names, in pre-order, to the `Exp.lam`/`Exp.fix` binders of `e`
+as `plBinderName` mdata. -/
 public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanExpr) :
     MetaM (LeanExpr × Nat) := do
   if e.isAppOf ``ProbLang.Exp.lam || e.isAppOf ``ProbLang.Exp.fix then
@@ -335,13 +315,11 @@ public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanEx
     return (mkAppN e.getAppFn args, i')
   else return (e, i)
 
+/-- `(e₁', e₂syn, names)`: the redex `e₁'` (defeq to `e`, head constant possibly unfolded),
+its reduct `e₂syn` in the form the `PureExec` instance matches syntactically, and the binder
+names to re-attach (β only; `fix` relies on `@[pl_names]`). -/
 public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLangℝ $α))
     (e : Q(Exp $α)) : MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
-  -- Returns `(e₁', e₂syn, names)`: the redex to step (`e₁'`, defeq to `e` but possibly
-  -- with a head recursive constant unfolded), the synthesis result `e₂syn` (`Exp.open'`
-  -- form so the `PureExec` instance matches syntactically), and the source binder
-  -- `names` to re-attach to the reduced result (β only — the surviving binders of the
-  -- lambda body, in pre-order; empty otherwise, e.g. fix relies on `@[pl_names]`).
   let beta (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
     (q(Exp.app (Exp.lam $body) $v), q(Exp.open' $body $v),
       ProbLang.collectBinderNames body #[])
@@ -349,47 +327,31 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     (q(Exp.app (Exp.fix $body) $v), q(Exp.app (Exp.open' $body (.fix $body)) $v), #[])
   match e with
   | ~q(.app $f $v)                        => do
-    -- β/fix-unfold steps only fire on a *value* argument: without this guard the
-    -- outward context-search would β-reduce an application whose argument is still
-    -- reducible (e.g. `f (!l)`), producing a bogus state.
+    -- Without this guard the outward search would β-reduce `f (!l)`.
     let some _ ← exprAsVal? v | return none
-    -- Strip only the *outer* binder-name mdata of the function (the binder being
-    -- consumed by this β/fix step) via `consumeMData` — NOT `whnf`, so the surviving
-    -- inner `close`/`mdata`/`fvar` structure is preserved for name-recovery.
+    -- `consumeMData`, not `whnf`: keep the inner binder names for `reattachNames`.
     let f0 : Q(Exp $α) ← pure f.consumeMData
     match f0 with
     | ~q(Exp.lam $body) => return some (beta body v)
     | ~q(Exp.fix $body) => return some (betaFix body v)
     | _ => do
-      -- Head recursive constant: `&loopFolded #2`/`geometric ()`. `whnf` (default
-      -- transparency) unfolds the `def` to expose its `Exp.fix`/`Exp.lam`.
+      -- A head constant such as `geometric ()`: `whnf` exposes its `Exp.fix`/`Exp.lam`.
       let fw : Q(Exp $α) ← whnf f
       let f1 : Q(Exp $α) ← pure fw.consumeMData
       match f1 with
       | ~q(Exp.fix $body) => return some (betaFix body v)
       | ~q(Exp.lam $body) => return some (beta body v)
       | _ => return none
-  -- `cond`/`fst`/`snd`/`case` fire once their scrutinee is a value. That value may be
-  -- `Exp.ofVal`-wrapped (e.g. a `Val` plugged back in by `live_bind`'s continuation, or a
-  -- destructured hypothesis), which is only *defeq* to the raw `.lit`/`.pair`/`.inl`
-  -- constructor. So `whnf` the scrutinee (unfolds `Exp.ofVal v` to `v.fst`, projects a
-  -- concrete `Val`) and rebuild the redex `e₁'` with the *normalized* scrutinee — the
-  -- returned `e₁'` is still defeq to `e`, but `PureExec` instance synthesis is indexed by
-  -- the head constructor (a discrimination tree, which does NOT see through `ofVal`), so
-  -- it must see the literal `.lit`/`.pair`/`.inl` to find the instance. An abstract value
-  -- stays stuck under `whnf` and falls through to `none` (no step).
+  -- The scrutinee may be `Exp.ofVal`-wrapped. `PureExec` synthesis is indexed by the head
+  -- constructor and does not see through `ofVal`, so rebuild the redex around the `whnf`
+  -- scrutinee. An abstract value stays stuck and takes no step.
   | ~q(.cond $c $et $ef)                  => do
     let c0 : Q(Exp $α) ← whnf c
     match c0 with
     | ~q(Exp.lit (.bool true))  => return some (q(Exp.cond $c0 $et $ef), et, #[])
     | ~q(Exp.lit (.bool false)) => return some (q(Exp.cond $c0 $et $ef), ef, #[])
-    -- A concrete-but-unreduced discriminant (e.g. `decide (0 = 0)` produced by
-    -- rewriting a symbolic `decide (Int.ofNat n % 2 = 0)` at its integer operand):
-    -- `whnf` only touches the `Exp.lit` head, and `~q`'s `isDefEq` will not fully
-    -- reduce the underlying `Decidable` instance. So fully `reduce` the bool and fire
-    -- only when it lands on a `true`/`false` constructor; a genuinely symbolic bool
-    -- (e.g. `ProbLangℝ.realLt y x`) reduces to a stuck term and stays put (`none`), so
-    -- a sampler proof can still `rcases hb : …` on the discriminant.
+    -- A concrete but unreduced bool such as `decide (0 = 0)`: fire only if `reduce` lands
+    -- on a constructor. A symbolic bool (`ProbLangℝ.realLt y x`) stays put for `rcases`.
     | ~q(Exp.lit (.bool $b))    => do
         let b' : Q(Bool) ← Lean.Meta.reduce b
         if b'.isConstOf ``Bool.true then
@@ -419,14 +381,8 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     let r : Q(Option (Exp $α)) ← whnf q(@BinOp.eval $α
       (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1 $e2)
     match r with
-    -- A boolean result (`b₁ && b₂`, `decide (z₁ < z₂)`, …) has no reducing simproc in
-    -- this toolchain, so reduce it to a `true`/`false` constructor here (defeq, so the
-    -- side condition closes by `rfl`, and exposing the constructor lets `cond` fire).
-    -- BUT only keep the reduced form when it actually lands on a concrete `true`/`false`:
-    -- a *symbolic* boolean like `ProbLangℝ.realLt y x` (real comparison on abstract reals)
-    -- would `reduce` to a stuck `Decidable.rec … (Classical.choice …)` that no
-    -- `cases`/`rcases`/`rw` can branch on. Keep the folded `b` there, so a sampler proof
-    -- can `rcases hb : ProbLangℝ.realLt y x` on the `cond` discriminant.
+    -- No simproc reduces boolean results, so `reduce` here to let `cond` fire. A symbolic
+    -- bool would reduce to a stuck `Decidable.rec …`; keep it folded for `rcases`.
     | ~q(some (Exp.lit (.bool $b))) => do
         let b' : Q(Bool) ← Lean.Meta.reduce b
         if b'.isConstOf ``Bool.true || b'.isConstOf ``Bool.false then
@@ -442,8 +398,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     | ~q(some (Exp.lit (.bool $b)))          => do
         let b' : Q(Bool) ← Lean.Meta.reduce b
         return some (e, q(Exp.lit (.bool $b')), #[])
-    -- `UnOp.eval minus` yields `z.neg` (`Int.neg z`), which `Int.reduceNeg` (matching
-    -- `Neg.neg`) won't catch; rewrite to the defeq `-z` so the simproc renders `#(-5)`.
+    -- `Int.reduceNeg` matches `-z`, not `Int.neg z`.
     | ~q(some (Exp.lit (.int (Int.neg $z)))) => return some (e, q(Exp.lit (.int (-$z))), #[])
     | ~q(some $res)                          => return some (e, res, #[])
     | _                                      => return none
@@ -457,10 +412,8 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
 
 /-! ## Pure steps -/
 
-/-- The pure step found at one redex: `e₁` is the redex actually stepped, `e₂syn` its
-reduct in the form the `PureExec` instance `inst` (with precondition `φ` and step count
-`n`) matches syntactically, and `names` are the source binder names to re-attach to the
-reduced result. -/
+/-- A pure step `inst : PureExec φ n e₁ e₂syn` found at one redex, with the binder `names` to
+re-attach to the reduct. -/
 public meta structure PureStepAt (α : Q(Type)) (instPL : Q(ProbLang.LawfulProbLangℝ $α)) where
   e₁ : Q(Exp $α)
   e₂syn : Q(Exp $α)
@@ -545,7 +498,6 @@ elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
 `|={E}=> Φ v` when the postcondition cannot absorb an update). -/
 elab "live_value" : tactic =>
   runTacticLiveWp fun mvar { α, GF, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
-    -- A closure's value check goes through the kernel (`Exp.closedFunVal?`).
     let tv : Q(Option (Val $α)) ← match ← Exp.closedFunVal? α e with
       | some (some v) => have v : Q(Val $α) := v; pure q(some $v)
       | some none => pure q(none)

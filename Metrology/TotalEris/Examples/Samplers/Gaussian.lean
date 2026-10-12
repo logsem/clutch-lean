@@ -9,22 +9,8 @@ public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-! # The standard Gaussian sampler
 
-`G2` samples the *half*-normal: a pair `(x, k)` with `x ∈ [0,1)` and `k : ℕ`
-standing for `y = x + k ≥ 0`. `Gauss` finishes the construction:
-
-* it assembles the real `y = x + k` in the object language, using the
-  `toReal` coercion and real addition;
-* it flips a `FairCoin` and negates on heads.
-
-Since the half-normal is continuous (no atom at `0`), the symmetrised law is the
-standard Gaussian. `Gauss` returns a bare real literal, so its specification is
-stated against a credit function `F : ℝ → ℝ≥0∞` on the sampled real itself.
-
-Contents: the program and its WP spec `twp_Gauss`; the half-normal `halfNormal`
-that `G2` samples, in both piecewise and density form; and the identification of
-the symmetrised law with Mathlib's `gaussianReal 0 1`, ending in
-`gauss_credit_eq_gaussianReal`. `GaussianAdequacy.lean` turns that into the
-pushforward statement.
+`Gauss` flips a `FairCoin` to sign `G2`'s half-normal sample `x + k`. The symmetrised law is
+`gaussianReal 0 1` (`gauss_credit_eq_gaussianReal`).
 -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris ProbLang.TotalEris.Examples
@@ -41,9 +27,8 @@ variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS ℝ hlc GF]
 
 section credit
 
-/-- The sample with the coin's sign applied: `true` is heads, and negates. Kept
-as a two-branch function rather than an `if`, so that `GaussSign_true` /
-`GaussSign_false` are syntactic rewrites in the two branches of the proof. -/
+/-- Heads (`true`) negates. A two-branch function rather than an `if`, so that
+`GaussSign_true` / `GaussSign_false` are syntactic rewrites. -/
 def GaussSign (y : ℝ) : Bool → ℝ
   | true => -y
   | false => y
@@ -52,12 +37,9 @@ def GaussSign (y : ℝ) : Bool → ℝ
 
 @[simp] theorem GaussSign_false (y : ℝ) : GaussSign y false = y := rfl
 
-/-- Credit for one `Gauss` sample, as `G2`'s pair-shaped credit functional: the
-coin splits the credit between the sample `x + k` and its negation. -/
 def GaussCredit (F : ℝ → ℝ≥0∞) : ℕ → ℝ → ℝ≥0∞ :=
   fun k r => FairCoinCreditV (fun b => F (GaussSign (r + (k : ℝ)) b))
 
-/-- Expected credit of `Gauss` under the credit function `F`. -/
 def GaussCreditV (F : ℝ → ℝ≥0∞) : ℝ≥0∞ := G2CreditV (GaussCredit F)
 
 theorem GaussCreditV_eq (F : ℝ → ℝ≥0∞) : GaussCreditV F = G2CreditV (GaussCredit F) := rfl
@@ -76,9 +58,6 @@ end credit
 
 section specification
 
-/-- **Specification of the standard Gaussian sampler.** Spending the expected
-credit `GaussCreditV F`, `Gauss` returns a real literal `y` with residual credit
-`↯(F y)`. -/
 theorem twp_Gauss (E : CoPset) (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ⊢@{IProp GF} ↯ (GaussCreditV F) -∗
       tglWp E pl(&Gauss #.unit)
@@ -94,15 +73,8 @@ theorem twp_Gauss (E : CoPset) (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
   iintro %p ⟨%k, %r, -, %hpair, Hcr⟩
   obtain ⟨wp, _⟩ := p
   dsimp only at hpair; subst hpair
-  -- Six pure steps: `snd`, the `toReal` coercion, `fst`, the real addition, and
-  -- the two enclosing `let` substitutions. `twp_pures` would run on into the
-  -- coin's own body, so the steps are taken one at a time.
-  twp_pure
-  twp_pure
-  twp_pure
-  twp_pure
-  twp_pure
-  twp_pure
+  -- `twp_pures` would run on into the coin's body, so take exactly the six steps up to it.
+  iterate 6 twp_pure
   isimp only [FairCoin_openRec, FairCoin_closeRec, ProbLang.realAdd_real,
     ProbLang.realOfInt_real, Int.cast_natCast]
   twp_bind pl(&FairCoin #.unit)
@@ -142,20 +114,17 @@ end specification
 
 section targetMeasure
 
-/-! ## The half-normal law
+/-! ## The half-normal law -/
 
-`G2`'s pair `(x, k)` stands for `x + k`, so the law of the sampled real is the
-sum over the integer part of the shifted `G2pdf` slices. -/
+open MeasureTheory
 
 theorem measurable_g2pdf (k : ℕ) : Measurable (G2pdf k) := by unfold G2pdf; fun_prop
 
-open MeasureTheory in
-/-- The law of `G2`'s sampled real: the half-normal. -/
+/-- The law of `G2`'s sampled real `x + k`. -/
 def halfNormal : Measure ℝ :=
   Measure.sum fun k : ℕ =>
     ((LawfulProbLangℝ.unifUnit).withDensity (G2pdf k)).map (fun x => x + (k : ℝ))
 
-open MeasureTheory in
 instance : IsProbabilityMeasure halfNormal := by
   constructor
   rw [halfNormal, Measure.sum_apply _ MeasurableSet.univ, ← G2pdf_total]
@@ -163,9 +132,6 @@ instance : IsProbabilityMeasure halfNormal := by
     rw [Measure.map_apply (by fun_prop) MeasurableSet.univ, Set.preimage_univ,
       withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ]
 
-open MeasureTheory in
-/-- Bridge from a measure integral against the half-normal to `G2`'s credit
-functional on pairs. -/
 theorem halfNormal_credit_eq (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ∫⁻ y, F y ∂halfNormal = G2CreditV (fun k r => F (r + k)) := by
   rw [halfNormal, lintegral_sum_measure, G2CreditV]
@@ -178,21 +144,16 @@ end targetMeasure
 
 section halfNormal
 
-/-! ## `halfNormal` in density form
+/-! ## `halfNormal` in density form -/
 
-`halfNormal` is defined piecewise, as a sum over the integer part. Identifying
-it with the Gaussian density restricted to `(0,∞)` is what lets the symmetrised
-law be compared with Mathlib's `gaussianReal`. -/
+open MeasureTheory
 
-/-- The half-normal density: the standard Gaussian density on `(0, ∞)`,
-normalised by `Norm2`. -/
 def halfDens (y : ℝ) : ℝ≥0∞ := ENNReal.ofReal (Real.exp (-y ^ 2 / 2) / Norm2)
 
 theorem measurable_halfDens : Measurable halfDens := by unfold halfDens; fun_prop
 
 theorem G2pdf_eq_halfDens (k : ℕ) (x : ℝ) : G2pdf k x = halfDens (x + (k : ℝ)) := rfl
 
-/-- The unit intervals `(k, k+1]`, `k : ℕ`, tile `(0, ∞)`. -/
 theorem iUnion_Ioc_nat : (⋃ k : ℕ, Set.Ioc (k : ℝ) ((k : ℝ) + 1)) = Set.Ioi (0 : ℝ) := by
   ext y
   simp only [Set.mem_iUnion, Set.mem_Ioc, Set.mem_Ioi]
@@ -209,22 +170,17 @@ theorem iUnion_Ioc_nat : (⋃ k : ℕ, Set.Ioc (k : ℝ) ((k : ℝ) + 1)) = Set.
     · have := Nat.le_ceil y
       rw [hcast]; linarith
 
-open MeasureTheory in
-/-- `unifUnit` is the Lebesgue measure on the *half-open* unit interval too: the
-endpoints carry no mass. Half-open pieces are what tile `(0,∞)` disjointly. -/
+/-- Half-open pieces are what tile `(0,∞)` disjointly. -/
 theorem unifUnit_eq_restrict_Ioc :
     (LawfulProbLangℝ.unifUnit) = volume.restrict (Set.Ioc (0 : ℝ) 1) := by
   show volume.restrict (Set.Icc (0 : ℝ) 1) = _
   exact (Measure.restrict_congr_set Ioc_ae_eq_Icc).symm
 
-open MeasureTheory in
-/-- **The half-normal identification.** -/
 theorem halfNormal_eq_withDensity :
     halfNormal = (volume.restrict (Set.Ioi (0 : ℝ))).withDensity halfDens := by
   refine Measure.ext fun S hS => ?_
   rw [halfNormal, Measure.sum_apply _ hS, withDensity_apply _ hS,
     Measure.restrict_restrict hS]
-  -- Each summand is the density's mass over `S ∩ (k, k+1]`.
   have hpiece : ∀ k : ℕ,
       (((LawfulProbLangℝ.unifUnit).withDensity (G2pdf k)).map (fun x => x + (k : ℝ))) S
         = ∫⁻ y in S ∩ Set.Ioc (k : ℝ) ((k : ℝ) + 1), halfDens y ∂volume := by
@@ -239,15 +195,12 @@ theorem halfNormal_eq_withDensity :
         = (fun x : ℝ => x + (k : ℝ)) ⁻¹' S ∩ Set.Ioc (0 : ℝ) 1 := by
       ext x
       simp only [Set.mem_preimage, Set.mem_inter_iff, Set.mem_Ioc]
-      constructor
-      · rintro ⟨hxS, h1, h2⟩; exact ⟨hxS, by linarith, by linarith⟩
-      · rintro ⟨hxS, h1, h2⟩; exact ⟨hxS, by linarith, by linarith⟩
+      constructor <;> rintro ⟨hxS, h1, h2⟩ <;> exact ⟨hxS, by linarith, by linarith⟩
     rw [Measure.map_apply (by fun_prop) hS, withDensity_apply _ hpreS,
       unifUnit_eq_restrict_Ioc, Measure.restrict_restrict hpreS]
     simp only [G2pdf_eq_halfDens]
     rw [← hpre, hmp.setLIntegral_comp_preimage_emb hemb halfDens]
   rw [tsum_congr hpiece]
-  -- Sum the pieces: the intervals are pairwise disjoint and tile `(0, ∞)`.
   have hdisj : Pairwise (Function.onFun Disjoint
       fun k : ℕ => S ∩ Set.Ioc (k : ℝ) ((k : ℝ) + 1)) := by
     intro i j hij
@@ -261,10 +214,6 @@ theorem halfNormal_eq_withDensity :
   rw [← lintegral_iUnion (fun k => hS.inter measurableSet_Ioc) hdisj,
     ← Set.inter_iUnion, iUnion_Ioc_nat]
 
-open MeasureTheory in
-/-- `Norm2` is the mass of the Gaussian density on the half-line. Read off the
-half-normal identification and the fact that `halfNormal` is a probability
-measure — no second gluing argument needed. -/
 theorem integral_Ioi_exp_eq_Norm2 :
     (∫ y in Set.Ioi (0 : ℝ), Real.exp (-y ^ 2 / 2)) = Norm2 := by
   have hint : IntegrableOn (fun y : ℝ => Real.exp (-y ^ 2 / 2)) (Set.Ioi 0) volume := by
@@ -282,18 +231,13 @@ theorem integral_Ioi_exp_eq_Norm2 :
         fun y _ => div_nonneg (Real.exp_pos _).le Norm2_pos.le)]
     exact hmass
   rw [integral_div] at hofReal
-  have hval : (∫ y in Set.Ioi (0 : ℝ), Real.exp (-y ^ 2 / 2)) / Norm2 = 1 :=
-    (ENNReal.ofReal_eq_one).mp hofReal
-  rw [div_eq_one_iff_eq Norm2_pos.ne'] at hval
-  exact hval
+  exact (div_eq_one_iff_eq Norm2_pos.ne').mp (ENNReal.ofReal_eq_one.mp hofReal)
 
-open MeasureTheory in
-/-- `Norm2 = √(2π)/2`, so the half-normal density is twice the Gaussian's. -/
 theorem Norm2_eq : Norm2 = Real.sqrt (2 * Real.pi) / 2 := by
   rw [← integral_Ioi_exp_eq_Norm2]
   have hcongr : (∫ y in Set.Ioi (0 : ℝ), Real.exp (-y ^ 2 / 2))
-      = ∫ y in Set.Ioi (0 : ℝ), Real.exp (-(1 / 2 : ℝ) * y ^ 2) := by
-    exact setIntegral_congr_fun measurableSet_Ioi fun y _ => Real.exp_eq_exp.mpr (by ring)
+      = ∫ y in Set.Ioi (0 : ℝ), Real.exp (-(1 / 2 : ℝ) * y ^ 2) :=
+    setIntegral_congr_fun measurableSet_Ioi fun y _ => Real.exp_eq_exp.mpr (by ring)
   rw [hcongr, integral_gaussian_Ioi]
   congr 2
   rw [div_div_eq_mul_div, mul_comm]
@@ -305,8 +249,8 @@ section standardGaussian
 
 /-! ## The symmetrised law is `gaussianReal 0 1` -/
 
-open MeasureTheory ProbabilityTheory in
-/-- The half-normal density is twice the standard Gaussian's. -/
+open MeasureTheory ProbabilityTheory
+
 theorem halfDens_eq_two_mul_gaussianPDF (y : ℝ) :
     halfDens y = 2 * gaussianPDF 0 1 y := by
   have hpi : (0 : ℝ) < Real.sqrt (2 * Real.pi) := Real.sqrt_pos.mpr (by positivity)
@@ -318,7 +262,6 @@ theorem halfDens_eq_two_mul_gaussianPDF (y : ℝ) :
   rw [halfDens, hreal, gaussianPDF, show (2 : ℝ≥0∞) = ENNReal.ofReal 2 by simp,
     ← ENNReal.ofReal_mul (by norm_num)]
 
-open MeasureTheory ProbabilityTheory in
 theorem gaussianPDF_neg (y : ℝ) : gaussianPDF 0 1 (-y) = gaussianPDF 0 1 y := by
   rw [gaussianPDF, gaussianPDF, gaussianPDFReal, gaussianPDFReal]
   congr 2
@@ -329,33 +272,24 @@ theorem ofReal_half_mul_two : ENNReal.ofReal (1 / 2) * 2 = 1 := by
   rw [show (2 : ℝ≥0∞) = ENNReal.ofReal 2 by simp, ← ENNReal.ofReal_mul (by norm_num)]
   norm_num
 
-open MeasureTheory ProbabilityTheory in
-/-- Half the half-normal density is the Gaussian density. -/
 theorem gaussianPDF_eq_half_mul_halfDens (y : ℝ) :
     gaussianPDF 0 1 y = ENNReal.ofReal (1 / 2) * halfDens y := by
   rw [halfDens_eq_two_mul_gaussianPDF, ← mul_assoc, ofReal_half_mul_two, one_mul]
 
-open MeasureTheory in
-/-- Integration against `halfNormal`, in density form. -/
 theorem lintegral_halfNormal (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ∫⁻ y, F y ∂halfNormal = ∫⁻ y in Set.Ioi (0 : ℝ), halfDens y * F y ∂volume := by
   rw [halfNormal_eq_withDensity,
     lintegral_withDensity_eq_lintegral_mul _ measurable_halfDens hFm]
   rfl
 
-open MeasureTheory ProbabilityTheory in
-/-- **Symmetrisation.** Integration against the standard Gaussian splits into the
-two signed halves of `halfNormal`, with weight ½ each. -/
 theorem gaussianReal_lintegral_split (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ∫⁻ y, F y ∂(gaussianReal 0 1)
       = ENNReal.ofReal (1 / 2) * (∫⁻ y, F (-y) ∂halfNormal)
         + ENNReal.ofReal (1 / 2) * ∫⁻ y, F y ∂halfNormal := by
   have hFneg : Measurable fun y : ℝ => F (-y) := hFm.comp measurable_neg
-  -- Rewrite as a density integral against `volume`.
   rw [gaussianReal_of_var_ne_zero 0 one_ne_zero,
     lintegral_withDensity_eq_lintegral_mul _ (measurable_gaussianPDF 0 1) hFm]
   show ∫⁻ y, gaussianPDF 0 1 y * F y ∂volume = _
-  -- Split the line at `0`; the point itself is null.
   have hIic : ∫⁻ y in Set.Iic (0 : ℝ), gaussianPDF 0 1 y * F y ∂volume
       = ∫⁻ y in Set.Iio (0 : ℝ), gaussianPDF 0 1 y * F y ∂volume :=
     setLIntegral_congr Iio_ae_eq_Iic.symm
@@ -364,7 +298,6 @@ theorem gaussianReal_lintegral_split (F : ℝ → ℝ≥0∞) (hFm : Measurable 
         + ∫⁻ y in Set.Iio (0 : ℝ), gaussianPDF 0 1 y * F y ∂volume := by
     rw [← hIic, ← Set.compl_Ioi]
     exact (lintegral_add_compl _ measurableSet_Ioi).symm
-  -- The negative half is the positive half of `F (-·)`.
   have hneg : ∫⁻ y in Set.Iio (0 : ℝ), gaussianPDF 0 1 y * F y ∂volume
       = ∫⁻ y in Set.Ioi (0 : ℝ), gaussianPDF 0 1 y * F (-y) ∂volume := by
     have hmp : MeasurePreserving (fun y : ℝ => -y) volume volume :=
@@ -377,7 +310,6 @@ theorem gaussianReal_lintegral_split (F : ℝ → ℝ≥0∞) (hFm : Measurable 
     rw [hpre] at h
     simp only [neg_neg, gaussianPDF_neg] at h
     exact h
-  -- Each half is ½ of the corresponding `halfNormal` integral.
   have hhalf : ∀ G : ℝ → ℝ≥0∞, Measurable G →
       ∫⁻ y in Set.Ioi (0 : ℝ), gaussianPDF 0 1 y * G y ∂volume
         = ENNReal.ofReal (1 / 2) * ∫⁻ y, G y ∂halfNormal := by
@@ -388,19 +320,15 @@ theorem gaussianReal_lintegral_split (F : ℝ → ℝ≥0∞) (hFm : Measurable 
     rw [gaussianPDF_eq_half_mul_halfDens, mul_assoc]
   rw [hsplit, hneg, hhalf F hFm, hhalf (fun y => F (-y)) hFneg, add_comm]
 
-open MeasureTheory ProbabilityTheory in
-/-- The expected credit of `Gauss` is exactly the standard Gaussian expectation. -/
 theorem gauss_credit_eq_gaussianReal (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ∫⁻ y, F y ∂(gaussianReal 0 1) = GaussCreditV F := by
-  have hG : Measurable fun y : ℝ =>
-      ENNReal.ofReal (1 / 2) * F (-y) + ENNReal.ofReal (1 / 2) * F y :=
-    ((hFm.comp measurable_neg).const_mul _).add (hFm.const_mul _)
-  have hcredit := halfNormal_credit_eq
-    (fun y => ENNReal.ofReal (1 / 2) * F (-y) + ENNReal.ofReal (1 / 2) * F y) hG
-  have hGC : GaussCredit F = fun (k : ℕ) (r : ℝ) =>
-      ENNReal.ofReal (1 / 2) * F (-(r + (k : ℝ))) + ENNReal.ofReal (1 / 2) * F (r + (k : ℝ)) := rfl
   have hm1 : Measurable fun y : ℝ => ENNReal.ofReal (1 / 2) * F (-y) :=
     (hFm.comp measurable_neg).const_mul _
+  have hcredit := halfNormal_credit_eq
+    (fun y => ENNReal.ofReal (1 / 2) * F (-y) + ENNReal.ofReal (1 / 2) * F y)
+    (hm1.add (hFm.const_mul _))
+  have hGC : GaussCredit F = fun (k : ℕ) (r : ℝ) =>
+      ENNReal.ofReal (1 / 2) * F (-(r + (k : ℝ))) + ENNReal.ofReal (1 / 2) * F (r + (k : ℝ)) := rfl
   rw [gaussianReal_lintegral_split F hFm, GaussCreditV, hGC, ← hcredit,
     lintegral_add_left hm1,
     lintegral_const_mul' _ _ ENNReal.ofReal_ne_top,

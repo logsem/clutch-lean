@@ -36,19 +36,20 @@ def gaussSumCost (s a : ℝ) (k : ℕ) (b : ℝ) : ℝ≥0∞ :=
 abbrev gaussSumPost (a b : ℝ) : Val ℝ → IProp GF :=
   fun v => iprop(∃ y : ℝ, ⌜v = .real y ∧ b + y < a⌝)
 
+open MeasureTheory ProbabilityTheory in
 theorem gaussCreditV_exp_le (c s : ℝ) :
     GaussCreditV (fun y => ENNReal.ofReal (Real.exp (c + s * y))) ≤
       ENNReal.ofReal (Real.exp (c + s ^ 2 / 2)) := by
   rw [← gauss_credit_eq_gaussianReal _ (by fun_prop),
-    ← MeasureTheory.ofReal_integral_eq_lintegral_ofReal
+    ← ofReal_integral_eq_lintegral_ofReal
       (by simpa [Real.exp_add] using
         (hasSubgaussianMGF_id_gaussianReal.integrable_exp_mul s).const_mul (Real.exp c))
-      (MeasureTheory.ae_of_all _ fun y => (Real.exp_pos _).le)]
+      (ae_of_all _ fun y => (Real.exp_pos _).le)]
   refine ENNReal.ofReal_le_ofReal ?_
-  calc ∫ y, Real.exp (c + s * y) ∂ProbabilityTheory.gaussianReal 0 1
-      = Real.exp c * ProbabilityTheory.mgf id (ProbabilityTheory.gaussianReal 0 1) s := by
-        simp only [Real.exp_add, ProbabilityTheory.mgf, id]
-        exact MeasureTheory.integral_const_mul _ _
+  calc ∫ y, Real.exp (c + s * y) ∂gaussianReal 0 1
+      = Real.exp c * mgf id (gaussianReal 0 1) s := by
+        simp only [Real.exp_add, mgf, id]
+        exact integral_const_mul _ _
     _ ≤ Real.exp c * Real.exp (1 * s ^ 2 / 2) :=
         mul_le_mul_of_nonneg_left (by simpa using hasSubgaussianMGF_id_gaussianReal.mgf_le s)
           (Real.exp_pos c).le
@@ -73,9 +74,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
       exact ENNReal.ofReal_le_ofReal (Real.one_le_exp (mul_nonneg hs (by linarith)))
   | succ k IH =>
     iintro Herr
-    twp_pure
-    twp_pure
-    twp_pure
+    twp_pure; twp_pure; twp_pure
     isimp only [Gauss_openRec, Gauss_closeRec]
     twp_pure
     twp_bind pl(&Gauss #.unit)
@@ -96,7 +95,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
     twp_pure
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
     twp_bind pl(&gaussSum #(.int (k : ℤ)))
-    iapply (tglWp_wand (Φ := gaussSumPost a (b + y)))
+    iapply tglWp_wand (Φ := gaussSumPost a (b + y))
     isplitl [Hcr]
     · iapply IH $$ Hcr
     iintro %w ⟨%m, %⟨rfl, Hm⟩⟩

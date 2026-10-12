@@ -27,7 +27,6 @@ abbrev creditVec (ε δ : ℝ≥0∞) : Coord → ℝ≥0∞
   | .err => ε
   | .tot => ε + δ
 
-/-- Concrete ghost-state class for LiveEris. -/
 class LiveGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (hlc : outParam HasLC)
     (GF : BundledGFunctors) where
   appGS : AppGS rT GF

@@ -155,8 +155,7 @@ theorem twp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ 
   iapply twp_lift_atomic_step_fupd hv
     (fun σ => by rw [primStep_eq_headStep hd]; exact headStep_atomic e₁ σ hne)
   iintro %σ₁ Hσ
-  ispecialize H $$ %σ₁ Hσ
-  imod H with ⟨%Hhred, HCont⟩
+  imod H $$ %σ₁ Hσ with ⟨%Hhred, HCont⟩
   rw [← primStep_eq_headStep hd]
   replace Hhred := reducible_of_headReducible hlc Hhred
   imodintro
@@ -188,12 +187,10 @@ theorem twp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp G
   have hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr <| val_stuck <| h.safe default
   iapply twp_lift_pure_det_step hv
     (hatom := fun σ => by rw [h.det σ]; exact isAtomicSupport_dirac _) (hsafe := h.safe)
-  intros σ e₂' σ₂ hp
-  by_contra hne
+  intro σ e₂' σ₂ hp
   rw [h.det σ, possible_iff_pos, dirac_singleton_pos] at hp
-  have hother : (⟨e₂', σ₂⟩ : Cfg rT) ≠ ⟨e₂, σ⟩ := by
-    rintro ⟨⟩; exact hne ⟨rfl, rfl⟩
-  exact hother hp.symm
+  cases hp
+  exact ⟨rfl, rfl⟩
 
 theorem twp_pure_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e₁ e₂ : Exp rT}
     (φ : Prop) [HEx : PureExec φ n e₁ e₂] (Hφ : φ := by is_value) :
@@ -204,7 +201,7 @@ theorem twp_pure_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e�
   | zero =>
     simp only [nsteps] at Hex
     subst Hex
-    iintro H; iexact H
+    exact .rfl
   | succ n ih =>
     obtain ⟨c, hstep, hrest⟩ := Hex
     iintro H

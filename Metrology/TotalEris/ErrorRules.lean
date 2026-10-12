@@ -153,17 +153,8 @@ theorem twp_err_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → 
   iapply ErrorCredit.weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
     fun i hi => biInf_le ε hi)) $$ Herr
 
-/-- Generic error-spending presample rule, factoring out the `glm'` plumbing shared by
-`twp_rand_exp` and `twp_urand_exp`.
-
-Given a reach predicate `R σ₁` (the configurations reachable from `⟨e₁, σ₁⟩` that the
-continuation must handle), a per-outcome credit `f`, reducibility, measurability, a `Pgl 0`
-certificate and an integral budget `∫ f ≤ ε₁`, it discharges `tglWp E e₁ Φ` from a
-continuation that, for each reached `ρ`, consumes exactly `↯(f ρ)`.
-
-The whole proof spends the supply `ε₁` up front (leaving `ε_now - ε₁`), pushes the credit
-through `glm'_prim_step` with offset `0` and bound `(ε_now - ε₁) + 1`, and on each reached
-`ρ` either stutters (when `(ε_now - ε₁) + f ρ ≥ 1`) or hands `↯(f ρ)` to the continuation. -/
+/-- Spend `↯ε₁` on a primitive step whose outcomes `ρ` (all in `R`) each receive `↯(f ρ)`,
+given that `f` averages to at most `ε₁`. -/
 theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
     {Φ : Val rT → IProp GF} {R : State rT → Cfg rT → Prop} {f : Cfg rT → ENNReal}
     (hv : e₁.toVal? = none)
@@ -181,36 +172,24 @@ theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
   iintro %σ₁ %ε_now ⟨Hσ, Hε_now⟩
   imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
   imodintro
-  ihave ⟨Hε_now, Herr, %hLe⟩ : iprop(ErisWpGS.errInterp (rT := rT) ε_now ∗ ↯ε₁ ∗ ⌜ε₁ ≤ ε_now⌝)
-      $$ [Hε_now Herr]
-  · iapply errInterp_supply_bound; iframe
+  ihave ⟨Hε_now, Herr, %hLe⟩ := errInterp_supply_bound $$ [$Hε_now $Herr]
   iapply glm'_prim_step
   iexists (R σ₁), 0, (fun ρ : Cfg rT => (ε_now - ε₁) + f ρ), ((ε_now - ε₁) + 1)
-  -- (1) reducible  (2) measurable reach set  (3) per-outcome credit bounded
-  specialize Hred σ₁
-  specialize hRmeas σ₁
+  specialize Hred σ₁; specialize hRmeas σ₁; specialize hPgl σ₁
   have hbnd : ∀ ρ : Cfg rT, (ε_now - ε₁) + f ρ ≤ (ε_now - ε₁) + 1 :=
     fun ρ => add_le_add_right (Hbd ρ) _
-  -- (4) integral budget: `(ε_now - ε₁)·μ(univ) + ∫ f ≤ (ε_now - ε₁) + ε₁ = ε_now`.
   have hexp : 0 + ∫⁻ ρ, ((ε_now - ε₁) + f ρ) ∂(primStep ⟨e₁, σ₁⟩) ≤ ε_now := by
     rw [zero_add, MeasureTheory.lintegral_add_left measurable_const,
         MeasureTheory.lintegral_const]
     calc (ε_now - ε₁) * (primStep ⟨e₁, σ₁⟩) Set.univ + ∫⁻ ρ, f ρ ∂primStep ⟨e₁, σ₁⟩
         ≤ (ε_now - ε₁) * 1 + ε₁ := by gcongr; exacts [primStep_univ_le_one _, HInt σ₁]
       _ = ε_now := by rw [mul_one]; exact tsub_add_cancel_of_le hLe
-  -- (5) the `Pgl 0` certificate.
-  specialize hPgl σ₁
   iframe %Hred %hRmeas %hbnd %hexp %hPgl
-  -- (6) per-outcome continuation: refund the spent supply, then either stutter or continue.
   iintro %ρ %HRρ
-  ihave Hsupp1 : iprop(|==> ErisWpGS.errInterp (rT := rT) (ε_now - ε₁)) $$ [Hε_now Herr]
-  · iapply errInterp_supply_decrease; iframe
-  imod Hsupp1 with Hε_minus
+  imod errInterp_supply_decrease $$ [$Hε_now $Herr] with Hε_minus
   imodintro
   by_cases hlt : (ε_now - ε₁) + f ρ < 1
-  -- The budget for `ρ` already covers a full unit of credit: stutter.
   case neg => push Not at hlt; iapply execStutter_spend hlt
-  -- Otherwise, top the supply back up to `(ε_now - ε₁) + f ρ`, freeing `↯(f ρ)` for `Hcont`.
   case pos =>
     iapply execStutter_free
     imod errInterp_supply_increase hlt $$ Hε_minus with ⟨Hε_new, Hcr⟩
@@ -228,17 +207,14 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
         Φ (.int n : Val rT)) -∗
       tglWp E (pl(rand(#(.int z), #(.unit)))) Φ) := by
-  -- `rand z ()` is a non-value, head-reducible at every state (`primStep = Cfg.uniform z`).
   have Hnv : (pl(rand(#(.int z), #(.unit))) : Exp rT).toVal? = none := solve_not_value
   have hhead : ∀ σ₁ : State rT, HeadReducible (pl(rand(#(.int z), #(.unit)))) σ₁ :=
     fun σ₁ => (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
-  -- Reach predicate `R` (the integers `0 ≤ n < z`) and per-outcome credit `f`.
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ n : Int, 0 ≤ n ∧ n < z ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
   set f : Cfg rT → ENNReal := fun ρ => match ρ.expr with
     | .lit (.int n) => if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0
     | _ => 0 with hf
-  -- Discharge the six `twp_glm_spend` obligations, in signature order.
   have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
     intro ρ; simp only [hf]; split
     · split <;> first | exact Hbd _ | exact zero_le
@@ -252,7 +228,6 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     apply Set.Countable.mono (s₂ := (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) '' Set.univ)
     · rintro ρ ⟨n, _, _, rfl⟩; exact ⟨n, trivial, rfl⟩
     · exact Set.countable_univ.image _
-  -- `Pgl 0`: the complement of the reach set is null under the uniform step.
   have hpgl : ∀ σ₁ : State rT,
       Pgl 0 (R σ₁) (primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩) := fun σ₁ => by
     show (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
@@ -267,7 +242,6 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     intro n hn hcontra
     rw [Finset.mem_coe, Finset.mem_Ico] at hn
     exact hcontra ⟨n, hn.1, hn.2, rfl⟩
-  -- Integral budget: averaging `f` over `Ico 0 z` (the `dif` is always taken) gives `HSum`.
   have hint : ∀ σ₁ : State rT,
       (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩)) ≤ ε₁ := fun σ₁ => by
     have hφ : Measurable f := (measurable_litInt_elim _).comp Cfg.measurable_expr
@@ -279,12 +253,10 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
       ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)
       (fun k _ => Int.toNat_natCast k) ?_
     · intro n hn
-      simp only [Finset.mem_Ico] at hn
-      simp only [Finset.mem_range]
+      simp only [Finset.mem_Ico, Finset.mem_range] at hn ⊢
       omega
     · intro k hk
-      simp only [Finset.mem_range] at hk
-      simp only [Finset.mem_Ico]
+      simp only [Finset.mem_Ico, Finset.mem_range] at hk ⊢
       omega
     · intro n hn
       simp only [Finset.mem_Ico] at hn
@@ -292,7 +264,6 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
       exact dite_eq_left ⟨hn.1, hn.2⟩
   iintro Herr Hcont
   iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
-  -- The reached value is `.int n`, carrying `↯(ε₂ n.toNat)`; hand it to `Hcont`.
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
   have hfe : f (⟨pl(#(.int n)), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
@@ -310,11 +281,9 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
     iprop(↯ε₁) ⊢
       iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
       tglWp E pl(urand) Φ) := by
-  -- `urand` is a non-value, head-reducible at every state (`primStep = uniformReal`).
   have Hnv : (pl(urand) : Exp rT).toVal? = none := solve_not_value
   have hhead : ∀ σ₁ : State rT, HeadReducible (pl(urand) : Exp rT) σ₁ :=
     fun σ₁ => show Cfg.uniformReal σ₁ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
-  -- The real-literal injection: `primStep = uniformReal = unifUnit.map inj`, and `inj` embeds.
   have hps : ∀ σ₁ : State rT, primStep (⟨pl(urand), σ₁⟩ : Cfg rT)
       = (LawfulProbLangℝ.unifUnit).map (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
     fun σ₁ => primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))
@@ -330,19 +299,16 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
     exact Cfg.measurableEquivProd.symm.measurableEmbedding.comp
       ((measurableEmbedding_prod_mk_right σ₁).comp
         (Exp.lit.measurableEmbedding.comp BaseLit.real.measurableEmbedding))
-  -- Reach predicate `R` (the real-literal image) and per-outcome credit `f`.
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ r : rT, ρ = (⟨.lit (.real r), σ₁⟩ : Cfg rT) ∧ r ∈ LawfulProbLangℝ.unifUnitSupport
     with hR
   set f : Cfg rT → ENNReal := fun ρ => match ρ.expr with
     | .lit (.real r) => ε₂ r
     | _ => 0 with hf
-  -- The reach set is exactly the image of the injection (used by `hrmeas` and `hpgl`).
   have hrange : ∀ σ₁ : State rT, {ρ : Cfg rT | R σ₁ ρ}
       = (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) '' LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
     ext ρ; simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
     exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
-  -- Discharge the six `twp_glm_spend` obligations, in signature order.
   have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
     intro ρ; simp only [hf]; split
     · exact Hbd _
@@ -354,14 +320,12 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     rw [hrange σ₁]
     exact (hgemb σ₁).measurableSet_image.mpr LawfulProbLangℝ.unifUnitSupportMeasurable
-  -- `Pgl 0`: the diffuse `uniformReal` is concentrated on the (co-null) image.
   have hpgl : ∀ σ₁ : State rT, Pgl 0 (R σ₁) (primStep ⟨Exp.urand, σ₁⟩) := fun σ₁ => by
     apply Pgl.of_concentrated
     rw [hps σ₁, hrange σ₁]
     exact concentratedOn_map (hg σ₁)
       ((hgemb σ₁).measurableSet_image.mpr LawfulProbLangℝ.unifUnitSupportMeasurable)
       LawfulProbLangℝ.unifUnitIsConcentrated
-  -- Integral budget: push `f` through the real-literal map onto `unifUnit`, then `HInt`.
   have hint : ∀ σ₁ : State rT,
       (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.urand, σ₁⟩)) ≤ ε₁ := fun σ₁ => by
     have hφ : Measurable f := (measurable_litReal_elim ε₂ hε₂).comp Cfg.measurable_expr
@@ -369,7 +333,6 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
     exact HInt
   iintro Herr Hcont
   iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
-  -- The reached value is `.real r`, carrying `↯(ε₂ r)`; hand it to `Hcont`.
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨r, rfl, hrsupp⟩ := HRρ
   have hfe : f (⟨pl(#(.real r)), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
@@ -378,10 +341,7 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   iframe %hrsupp
   iapply (ErrorCredit.ext hfe) $$ Hcr
 
-/-- Bound-free `urand` error rule: applies `twp_urand_exp` with the clamped credit
-`F r := min (ε₂ r) 1`. Clamping only shrinks the integral, so `HInt` still holds;
-per-outcome, either `ε₂ r ≤ 1` (clamp is a no-op) or `ε₂ r > 1` (then `↯1` is already
-contradictory). -/
+/-- `twp_urand_exp` without the bound, via the clamped credit `min (ε₂ r) 1`. -/
 theorem twp_urand_exp' {E : CoPset} {ε₁ : ENNReal}
     {ε₂ : rT → ENNReal} {Φ : Val rT → IProp GF}
     (hε₂ : Measurable ε₂)
@@ -390,28 +350,20 @@ theorem twp_urand_exp' {E : CoPset} {ε₁ : ENNReal}
       iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
       tglWp E pl(urand) Φ) := by
   iintro Herr Hcont
-  -- Clamping shrinks the integrand pointwise, so the budget `HInt` survives.
   have hint : (∫⁻ r, min (ε₂ r) 1 ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁ :=
     (MeasureTheory.lintegral_mono fun r => min_le_left _ _).trans HInt
   iapply (twp_urand_exp (hε₂.min measurable_const)
     (fun r => min_le_right _ _) hint) $$ Herr
-  -- Continuation: case-split on whether `ε₂ r` is already `≤ 1`.
   iintro %r ⟨%hrsupp, Hcr⟩
   by_cases h : ε₂ r ≤ 1
-  · -- `min (ε₂ r) 1 = ε₂ r`: rewrite the credit and feed `Hcont`.
-    iapply Hcont $$ %r
+  · iapply Hcont $$ %r
     iframe %hrsupp
-    iapply (ErrorCredit.ext (show min (ε₂ r) 1 = ε₂ r from min_eq_left h))
-    iexact Hcr
-  · -- `1 < ε₂ r`, so the clamp gives `↯1`, which is contradictory.
-    push Not at h
+    iapply (ErrorCredit.ext (show min (ε₂ r) 1 = ε₂ r from min_eq_left h)) $$ Hcr
+  · push Not at h
     iexfalso
-    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1)))
-    iexact Hcr
+    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1))) $$ Hcr
 
-/-- Bound-free rand error rule: applies `twp_rand_exp` with the clamped credit
-`F n := min (ε₂ n) 1`. Clamping only shrinks the sum, so `HSum` still holds; per-outcome,
-either `ε₂ n ≤ 1` (clamp is a no-op) or `ε₂ n > 1` (then `↯1` is already contradictory). -/
+/-- `twp_rand_exp` without the bound, via the clamped credit `min (ε₂ n) 1`. -/
 theorem twp_rand_exp' {E : CoPset} {z : Int} {ε₁ : ENNReal}
     {ε₂ : ℕ → ENNReal} {Φ : Val rT → IProp GF} (Hz : 0 < z)
     (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
@@ -420,25 +372,19 @@ theorem twp_rand_exp' {E : CoPset} {z : Int} {ε₁ : ENNReal}
         Φ (.int n : Val rT)) -∗
       tglWp E (pl(rand(#(.int z), #(.unit)))) Φ) := by
   iintro Herr Hcont
-  -- Clamping shrinks each summand, so the averaged bound `HSum` survives.
   have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ENNReal) ≤ ε₁ :=
     (ENNReal.div_le_div_right
       (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
   iapply (twp_rand_exp Hz
     (fun n => min_le_right _ _) hsum) $$ Herr
-  -- Continuation: case-split on whether `ε₂ n` is already `≤ 1`.
   iintro %n ⟨%Hn, Hcr⟩
   by_cases h : ε₂ n.toNat ≤ 1
-  · -- `min (ε₂ n) 1 = ε₂ n`: rewrite the credit and feed `Hcont`.
-    iapply Hcont $$ %n
+  · iapply Hcont $$ %n
     iframe %Hn
-    iapply (ErrorCredit.ext (show min (ε₂ n.toNat) 1 = ε₂ n.toNat from min_eq_left h))
-    iexact Hcr
-  · -- `1 < ε₂ n`, so the clamp gives `↯1`, which is contradictory.
-    push Not at h
+    iapply (ErrorCredit.ext (show min (ε₂ n.toNat) 1 = ε₂ n.toNat from min_eq_left h)) $$ Hcr
+  · push Not at h
     iexfalso
-    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1)))
-    iexact Hcr
+    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1))) $$ Hcr
 
 end TotalEris
 end ProbLang

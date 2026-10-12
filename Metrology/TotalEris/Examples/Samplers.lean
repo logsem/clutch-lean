@@ -17,9 +17,7 @@ public import Metrology.TotalEris.Examples.Samplers.Gaussian
 /-!
 # Gaussian samplers
 
-Aggregator for the `urand`-based Gauss sampler stack.
-
-Dependency layering (bottom-up):
+Aggregator for the `urand`-based Gauss sampler stack (all `sorry`-free, `rT = ℝ`), bottom-up:
 
 ```
 RealDecrTrial ── decreasing trial (urand init, real `<` compare, twp_urand_exp presample)
@@ -33,13 +31,6 @@ Gauss (G1, G2)  ← BNEHalf, GeometricTrial, IterTrial, B
         └── GaussianAdequacy  ← DistributionAdequacy
               └── GaussianConcentration          ── Chebyshev/Chernoff/Mills tails
 ```
-
-Every WP spec here is complete and `sorry`-free, and fixed at `rT = ℝ`.
-
-`G2` samples the half-normal as a pair `(x, k)`; `Gauss` assembles the real
-`x + k` in the object language (via the `toReal` coercion and real addition),
-flips a fair coin, and negates on heads, giving a sampler whose limiting
-execution is distributed exactly as `gaussianReal 0 1`.
 
 Laplace is still not included: its value reconstruction needs real scaling by
 powers of two, which `BinOp.eval` does not yet have (real `+`, unary `-` and the

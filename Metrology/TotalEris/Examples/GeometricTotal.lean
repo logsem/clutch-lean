@@ -9,10 +9,7 @@ public import Metrology.Code.Geometric
 /-!
 # Geometric distribution (total correctness)
 
-Termination-with-probability-one of the geometric sampler, proved using
-Eris's *error induction*: a recursive program `geometric ()` that returns
-`0` with probability `1/3` and otherwise recurses with `+1` terminates
-almost surely returning a non-negative integer. -/
+`geometric ()` terminates almost surely with a non-negative integer, by error induction. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris ProbLang.TotalEris.ErisWpGS
 open scoped ENNReal
@@ -24,15 +21,9 @@ namespace Examples
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS rT hlc GF]
 
-/-- The result-postcondition shared by all geometric specs: the sampler
-returns a non-negative integer. -/
 abbrev geoPost : Val rT → IProp GF :=
   fun w => iprop(∃ m : Int, ⌜w = .int m ∧ 0 ≤ m⌝)
 
-/-! ## Spec: `geo_nonneg_pos_err`
-
-  Assuming `↯ε` for some `ε > 0`, the geometric sampler applied to any
-  unit-typed argument terminates returning a non-negative integer. -/
 theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     iprop(↯ε) ⊢@{IProp GF}
       tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
@@ -40,7 +31,7 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
   refine ErrorCredit.Induction.external_simple (k := (3/2 : NNReal)) hε (by norm_num) ?_
   iintro ⟨IH, Herr⟩
   twp_pures
-  twp_bind (pl(rand(#(.int 2), #(.unit))))
+  twp_bind pl(rand(#(.int 2), #(.unit)))
   let F : ℕ → ENNReal := fun n => if n = 0 then 0 else (3/2 : NNReal) * ε
   have htoNat : (2 : Int).toNat = 2 := rfl
   have hF : ∑ n ∈ Finset.range 2, F n = (3/2 : NNReal) * ε := by
@@ -65,8 +56,7 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     iapply (ErisWpGS.tglWp_wand (Φ := geoPost))
     isplitl [Hcr IH]
     · iapply IH
-      iapply (ErrorCredit.ext (show F (Int.toNat 1) = ((3/2 : NNReal) : ENNReal) * ε from rfl))
-      iexact Hcr
+      iapply ErrorCredit.ext (show F (Int.toNat 1) = ((3/2 : NNReal) : ENNReal) * ε from rfl) $$ Hcr
     iintro %w ⟨%m, %⟨rfl, Hmnn⟩⟩
     twp_pures
     twp_value
@@ -74,11 +64,6 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     ipureintro
     exact ⟨rfl, by omega⟩
 
-/-! ## Spec: `geo_nonneg`
-
-  Unconditional: the geometric sampler terminates returning a non-negative
-  integer with probability 1. Obtained from `geo_nonneg_pos_err` by
-  `twp_err_pos`. -/
 theorem geo_nonneg (E : CoPset) :
     ⊢@{IProp GF} tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
       (geoPost (rT := rT) (GF := GF)) := by
@@ -98,7 +83,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
   | succ k IH =>
     iintro Herr
     twp_pures
-    twp_bind (pl(rand(#(.int 2), #(.unit))))
+    twp_bind pl(rand(#(.int 2), #(.unit)))
     let F : ℕ → ENNReal := fun n => if n = 0 then 0 else (2⁻¹ : ENNReal) ^ k
     have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤
         (2⁻¹ : ENNReal) ^ (k + 1) := by
@@ -117,8 +102,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
       iapply (ErisWpGS.tglWp_wand (Φ := geoPost))
       isplitl [Hcr]
       · iapply IH
-        iapply (ErrorCredit.ext (show F (Int.toNat 1) = (2⁻¹ : ENNReal) ^ k from rfl))
-        iexact Hcr
+        iapply ErrorCredit.ext (show F (Int.toNat 1) = (2⁻¹ : ENNReal) ^ k from rfl) $$ Hcr
       iintro %w ⟨%m, %⟨rfl, Hmnn⟩⟩
       twp_pures
       twp_value
@@ -140,16 +124,11 @@ theorem geo_nonneg_of_depth (E : CoPset) :
   · iintro %k - Hk
     iapply geo_nonneg_depth E k $$ Hk
 
-/-! ## Probabilistic statement via `twp_tgl`
+/-! ## Adequacy -/
 
-  Pure-Prop version of `geoPost`, suitable for feeding into `twp_tgl`. -/
-
-/-- Pure predicate version of `geoPost`. -/
 def geoPredicate (v : Val rT) : Prop :=
   ∃ m : Int, v = .int m ∧ 0 ≤ m
 
-/-- `{v | geoPredicate v}` is measurable: it is the countable set of integer
-literals `⟨pl(#(.int m)), _⟩` over `m : ℤ`. -/
 theorem measurableSet_geoPredicate :
     MeasurableSet {v : Val rT | geoPredicate v} := by
   refine Set.Countable.measurableSet
@@ -157,18 +136,15 @@ theorem measurableSet_geoPredicate :
   rintro v ⟨m, rfl, _⟩
   exact ⟨m, rfl⟩
 
-/-- The geometric sampler almost-surely terminates at a non-negative
-integer (Tgl-form). -/
 theorem geo_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
     Tgl (limExec ⟨Exp.app geometric pl(#(.unit)), σ⟩) geoPredicate 0 := by
-  refine twp_tgl (GF := GF) (e := Exp.app geometric pl(#(.unit))) (σ := σ)
-    (φ := geoPredicate) measurableSet_geoPredicate ?_
+  refine twp_tgl (GF := GF) (φ := geoPredicate) measurableSet_geoPredicate ?_
   intro _
   have hwp : ⊢@{IProp GF} tglWp ⊤ (Exp.app (geometric (rT := rT)) pl(#(.unit)))
       (fun v : Val rT => iprop(⌜geoPredicate v⌝)) :=
     (geo_nonneg ⊤).trans
       (ErisWpGS.tglWp_mono fun v => by iintro ⟨%m, %Hm⟩; ipureintro; exact ⟨m, Hm⟩)
-  iintro _
+  iintro -
   iapply hwp
 
 /-- The geometric sampler almost-surely terminates. -/

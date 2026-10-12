@@ -182,27 +182,24 @@ def BiiCCredit (F : Bool → ℝ≥0∞) (x : ℝ) (n : ℕ) : ℝ≥0∞ :=
   ∫⁻ r, BiiCredit F x n r ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
 
 theorem BiiCCredit_zero (F : Bool → ℝ≥0∞) (x : ℝ) : BiiCCredit F x 0 = F true := by
-  show ∫⁻ r, BiiCredit F x 0 r ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = F true
-  have hfn : (fun r => BiiCredit F x 0 r) = (fun _ => F true) := by funext r; rfl
-  rw [hfn, lintegral_const, measure_univ, mul_one]
+  show ∫⁻ _, F true ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = F true
+  rw [lintegral_const, measure_univ, mul_one]
 
 theorem BiiCCredit_two (F : Bool → ℝ≥0∞) (x : ℝ) : BiiCCredit F x 2 = F false := by
-  show ∫⁻ r, BiiCredit F x 2 r ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = F false
-  have hfn : (fun r => BiiCredit F x 2 r) = (fun _ => F false) := by funext r; rfl
-  rw [hfn, lintegral_const, measure_univ, mul_one]
+  show ∫⁻ _, F false ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) = F false
+  rw [lintegral_const, measure_univ, mul_one]
+
+private theorem Ioi_inter_unit {x : ℝ} (hx0 : 0 ≤ x) : Set.Ioi x ∩ Set.Icc 0 1 = Set.Ioc x 1 := by
+  ext r; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
+  exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, hx0.trans h2.le, h1⟩⟩
+
+private theorem Iic_inter_unit {x : ℝ} (hx1 : x ≤ 1) : Set.Iic x ∩ Set.Icc 0 1 = Set.Icc 0 x := by
+  ext r; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
+  exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, h2.trans hx1⟩⟩
 
 theorem BiiCCredit_one (F : Bool → ℝ≥0∞) {x : ℝ} (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
     BiiCCredit F x 1 = F true * ENNReal.ofReal (1 - x) + F false * ENNReal.ofReal x := by
-  show ∫⁻ r, BiiCredit F x 1 r ∂(volume.restrict (Set.Icc (0 : ℝ) 1)) = _
-  have hfn : (fun r => BiiCredit F x 1 r) = (fun r => if x < r then F true else F false) := by
-    funext r; rfl
-  rw [hfn]
-  have hsetT : Set.Ioi x ∩ Set.Icc (0 : ℝ) 1 = Set.Ioc x 1 := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
-    exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, hx0.trans h2.le, h1⟩⟩
-  have hsetF : Set.Iic x ∩ Set.Icc (0 : ℝ) 1 = Set.Icc 0 x := by
-    ext r; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
-    exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, h2.trans hx1⟩⟩
+  show ∫⁻ r, (if x < r then F true else F false) ∂(volume.restrict (Set.Icc (0 : ℝ) 1)) = _
   have hdecomp : (fun r => if x < r then F true else F false)
       = (fun r => (Set.Ioi x).indicator (fun _ => F true) r
           + (Set.Iic x).indicator (fun _ => F false) r) := by
@@ -213,7 +210,7 @@ theorem BiiCCredit_one (F : Bool → ℝ≥0∞) {x : ℝ} (hx0 : 0 ≤ x) (hx1 
     lintegral_add_left ((measurable_const.indicator measurableSet_Ioi)),
     lintegral_indicator measurableSet_Ioi, lintegral_indicator measurableSet_Iic,
     setLIntegral_const, setLIntegral_const, restrict_apply measurableSet_Ioi,
-    restrict_apply measurableSet_Iic, hsetT, hsetF, Real.volume_Ioc, Real.volume_Icc,
+    restrict_apply measurableSet_Iic, Ioi_inter_unit hx0, Iic_inter_unit hx1, Real.volume_Ioc, Real.volume_Icc,
     sub_zero]
 
 def SbiiCredit (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (N : ℕ) (z : ℝ) (c : ℝ≥0∞) :
@@ -252,11 +249,8 @@ theorem measurable_sCreditAmp (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (N : 
     Measurable (SCreditAmp F k x N y c) := by
   unfold SCreditAmp
   refine Measurable.ite measurableSet_Ioi measurable_const ?_
-  have hred : (fun z : ℝ => BiiCreditV (SbiiCredit F k x N z c) k x)
-      = (fun z : ℝ => BiiPMF k x false * (SCreditV F k x z (N + 1) + c)
-          + BiiPMF k x true * F N) := by
-    funext z; rfl
-  rw [hred]
+  change Measurable fun z => BiiPMF k x false * (SCreditV F k x z (N + 1) + c)
+    + BiiPMF k x true * F N
   exact (((measurable_sCreditV F k x (N + 1)).add_const c).const_mul (BiiPMF k x false)).add
     measurable_const
 
@@ -297,12 +291,6 @@ theorem SCreditAmp_lintegral_eq (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (N 
     ∫⁻ z, SCreditAmp F k x N y c z ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
       = SCreditV F k x y N + ENNReal.ofReal (BiiFailProb k x * y) * c := by
   have hqnn := BiiFailProb_nonneg k hx0
-  have hset_ioi : Set.Ioi y ∩ Set.Icc (0 : ℝ) 1 = Set.Ioc y 1 := by
-    ext z; simp only [Set.mem_inter_iff, Set.mem_Ioi, Set.mem_Icc, Set.mem_Ioc]
-    exact ⟨fun ⟨h2, _, h1⟩ => ⟨h2, h1⟩, fun ⟨h2, h1⟩ => ⟨h2, hy0.trans h2.le, h1⟩⟩
-  have hset_iic : Set.Iic y ∩ Set.Icc (0 : ℝ) 1 = Set.Icc 0 y := by
-    ext z; simp only [Set.mem_inter_iff, Set.mem_Iic, Set.mem_Icc]
-    exact ⟨fun ⟨h2, h1, _⟩ => ⟨h1, h2⟩, fun ⟨h1, h2⟩ => ⟨h2, h1, h2.trans hy1⟩⟩
   show ∫⁻ z, SCreditAmp F k x N y c z ∂(volume.restrict (Set.Icc (0 : ℝ) 1)) = _
   have hfun : (fun z => SCreditAmp F k x N y c z) = (Set.Ioi y).piecewise (fun _ => F N)
       (fun z => ENNReal.ofReal (BiiFailProb k x) * SCreditV F k x z (N + 1)
@@ -318,8 +306,8 @@ theorem SCreditAmp_lintegral_eq (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (N 
       ring
   rw [hfun,
     lintegral_piecewise measurableSet_Ioi, Set.compl_Ioi,
-    setLIntegral_const, restrict_apply measurableSet_Ioi, hset_ioi, Real.volume_Ioc,
-    restrict_restrict measurableSet_Iic, hset_iic,
+    setLIntegral_const, restrict_apply measurableSet_Ioi, Ioi_inter_unit hy0, Real.volume_Ioc,
+    restrict_restrict measurableSet_Iic, Iic_inter_unit hy1,
     lintegral_add_left ((measurable_sCreditV F k x (N + 1)).const_mul _),
     lintegral_const_mul' _ _ ENNReal.ofReal_ne_top,
     BiiFailProb_mul_setLIntegral_SCreditV F k hx0 hx1 hy0 hy1,
@@ -405,10 +393,10 @@ theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
   twp_pures
   twp_bind (Exp.rand (pl(#(.int ((m : ℤ) + 2)))) pl(#(.unit)))
   iapply (twp_rand_exp' (ε₂ := CCredit F) (Hz := by omega) (HSum := cCredit_sum_div_le F m)) $$ Hε
-  iintro %n ⟨%Hn, Hcr⟩
+  iintro %n ⟨%hn, Hcr⟩
   iapply (ErisWpGS.tglWp_value_of_toVal (v := (.int n : Val ℝ)) rfl)
   simp only [Exp.ofVal]
-  obtain ⟨Hn0, Hnz⟩ := Hn
+  obtain ⟨hn0, hnz⟩ := hn
   twp_pures
   by_cases h0 : n = 0
   · rw [beq_int_lit, beq_iff_eq.mpr h0]
@@ -462,10 +450,7 @@ theorem twp_Bii (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 
   twp_pure
   twp_bind pl(urand)
   iapply (twp_urand_exp' (ε₂ := BiiCredit F x n) (measurable_biiCredit F x n) ?hint) $$ Hcn
-  case hint =>
-    have hBc : BiiCCredit F x n
-        = ∫⁻ r, BiiCredit F x n r ∂(LawfulProbLangℝ.unifUnit (T := ℝ)) := rfl
-    rw [hBc]
+  case hint => exact le_rfl
   iintro %r ⟨%-, Hcr⟩
   twp_pure
   obtain h0 | h1 | h2 := hmem
@@ -505,20 +490,20 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   have hkpos : (0 : ℝ) ≤ 1 / B := by positivity
   set kf : ℝ≥0 := ⟨1 / B, hkpos⟩
-  have Hk1 : 1 < kf := by
+  have hk1 : 1 < kf := by
     have h : (1 : ℝ) < 1 / B := by rw [lt_div_iff₀ hB0]; linarith
     exact_mod_cast h
-  iintro %N %y %Hy0 %HyB Hε_spec
+  iintro %N %y %hy0 %hyB Hε_spec
   iapply twp_err_pos solve_not_value
-  iintro %ε_term %Hε_pos Hε_term
+  iintro %ε_term %hε_pos Hε_term
   irevert Hε_spec
-  irevert %HyB
-  irevert %Hy0
+  irevert %hyB
+  irevert %hy0
   irevert %y
   irevert %N
-  iapply ErrorCredit.Induction.simple (k := kf) Hε_pos Hk1 $$ [] Hε_term
+  iapply ErrorCredit.Induction.simple (k := kf) hε_pos hk1 $$ [] Hε_term
   imodintro
-  iintro ⟨IH, Hε_term⟩ %N %y %Hy0 %HyB Hε_spec
+  iintro ⟨IH, Hε_term⟩ %N %y %hy0 %hyB Hε_spec
   iterate 5 twp_pure
   twp_bind pl(urand)
   icombine Hε_spec Hε_term as Hε
@@ -534,10 +519,10 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
           ENNReal.ofReal_one, one_mul]
     calc ∫⁻ r, SCreditAmp F k x N y (↑kf * ε_term) r ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
         ≤ SCreditV F k x y N + ENNReal.ofReal B * (↑kf * ε_term) :=
-          SCreditAmp_lintegral_le F k x N y (↑kf * ε_term) hx0 hx1 Hy0 hy1 B HyB
+          SCreditAmp_lintegral_le F k x N y (↑kf * ε_term) hx0 hx1 hy0 hy1 B hyB
       _ = SCreditV F k x y N + ε_term := by rw [hBkf]
-  iintro %z ⟨%Hzm, Hcz⟩
-  have Hzr := mem_unifUnitSupport_real_le Hzm
+  iintro %z ⟨%hzm, Hcz⟩
+  have hzr := mem_unifUnitSupport_real_le hzm
   twp_pures
   rcases hyz : ProbLangℝ.realLt y z with _ | _
   · isimp only [SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
@@ -558,10 +543,10 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
       twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int ((N + 1 : ℕ) : ℤ)))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH $$ Hterm
-      · ipureintro; exact Hzr.1
+      · ipureintro; exact hzr.1
       · ipureintro
         have : z ≤ y := not_lt.mp (of_decide_eq_false hyz)
-        linarith [HyB]
+        linarith [hyB]
       · iexact Hexp
     | true =>
       isimp only [SbiiCredit, Bool.false_eq_true, reduceIte] at Hcbii
@@ -591,8 +576,8 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
     simp only [SCredit]
     exact le_of_eq
       (by rw [SCreditAmp_lintegral_eq F k x N y 0 hx0 hx1 hy0 hy1, mul_zero, add_zero])
-  iintro %z ⟨%Hzm, Hcz⟩
-  have Hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp Hzm
+  iintro %z ⟨%hzm, Hcz⟩
+  have hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp hzm
   twp_pures
   rcases hyz : ProbLangℝ.realLt y z with _ | _
   · isimp only [SCredit, SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
@@ -611,8 +596,8 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
       rw [← Nat.cast_add_one]
       twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int ((N + 1 : ℕ) : ℤ)))
       iapply (tglWp_mono fun _ => tglWp_value)
-      iapply (twp_S_tail E F k x hx0 hx1 z Hz01.1 Hz01.2)
-      · ipureintro; exact Hz01.1.le
+      iapply (twp_S_tail E F k x hx0 hx1 z hz01.1 hz01.2)
+      · ipureintro; exact hz01.1.le
       · ipureintro; exact le_rfl
       · iexact Hcbii
     | true =>
@@ -643,8 +628,8 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
     simp only [SCredit]
     exact le_of_eq
       (by rw [SCreditAmp_lintegral_eq F k x 0 x 0 hx0 hx1 hx0 hx1, mul_zero, add_zero])
-  iintro %z ⟨%Hzm, Hcz⟩
-  have Hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp Hzm
+  iintro %z ⟨%hzm, Hcz⟩
+  have hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp hzm
   twp_pures
   rcases hyz : ProbLangℝ.realLt x z with _ | _
   · isimp only [SCredit, SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
@@ -661,7 +646,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
       twp_pure
       twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int (1 : ℤ)))
       iapply (tglWp_mono fun _ => tglWp_value)
-      iapply (twp_S E F k x z 1 hx0 hx1 Hz01.1.le Hz01.2.le) $$ Hcbii
+      iapply (twp_S E F k x z 1 hx0 hx1 hz01.1.le hz01.2.le) $$ Hcbii
     | true =>
       isimp only [SbiiCredit, Bool.false_eq_true, reduceIte] at Hcbii
       twp_pures
@@ -676,7 +661,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
     iframe Hcz
     itrivial
 
-theorem twp_B (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (Hx : 0 ≤ x ∧ x ≤ 1) :
+theorem twp_B (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx : 0 ≤ x ∧ x ≤ 1) :
     ⊢@{IProp GF} ↯ (BCreditV F k x) -∗
       tglWp E pl(&B #(.int (k : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
@@ -687,8 +672,8 @@ theorem twp_B (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (Hx : 0
   iapply (tglWp_wand (Φ := fun v : Val ℝ => iprop(∃ n : ℕ,
     ⌜v.1 = pl(#(.int (Int.ofNat n)))⌝ ∗ ↯ (BS0Credit F n))))
   isplitl [Hε]
-  · iapply (twp_S0 E (BS0Credit F) k x Hx.1 Hx.2)
-    iapply (ErrorCredit.ext (BCreditV_S0_eq F k x Hx.1 Hx.2)) $$ Hε
+  · iapply (twp_S0 E (BS0Credit F) k x hx.1 hx.2)
+    iapply (ErrorCredit.ext (BCreditV_S0_eq F k x hx.1 hx.2)) $$ Hε
   iintro %⟨w, _⟩ ⟨%n, %rfl, Hcn⟩
   twp_pures
   obtain hpar | hpar := Nat.mod_two_eq_zero_or_one n
