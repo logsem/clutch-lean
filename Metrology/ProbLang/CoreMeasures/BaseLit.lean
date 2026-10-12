@@ -7,6 +7,7 @@ public import Metrology.ProbLang.CoreMeasures.Discrete
 public import Metrology.ProbLang.CoreMeasures.Cylinders
 
 meta import Metrology.Meta
+meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
@@ -22,7 +23,7 @@ namespace ProbLang.BaseLit
 σ-algebra instance, the shape maps, `Cylinder.inter?`, `cover.<ctor>`, `decompCell(_param)`,
 `singletonCyl`, `Shape.cylinder_hasMeasurableLeaves`, `flatten_measurable` and the
 `measurability` aesop rules, generated from the constructors by `cylinder_defs`
-(`Metrology/Meta/CylinderGen.lean`). -/
+(`Metrology/ProbLang/CoreMeasures/CylinderGen.lean`). -/
 
 cylinder_defs BaseLit
 

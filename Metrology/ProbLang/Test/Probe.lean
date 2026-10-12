@@ -7,6 +7,7 @@ public import Metrology.ProbLang.CoreMeasures.BaseLit
 public import Metrology.ProbLang.CoreMeasures.Cylinders
 
 meta import Metrology.Meta
+meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
@@ -45,7 +46,7 @@ inductive Probe (rT : Type _)
   deriving Inhabited
 
 /-! ### §1–§8, §14, §15, §17, §18 injectivity, cylinder definitions and basic lemmas (generated;
-also `decompCell(_param)` and `singletonCyl`, see `Metrology/Meta/CylinderGen.lean`) -/
+also `decompCell(_param)` and `singletonCyl`, see `Metrology/ProbLang/CoreMeasures/CylinderGen.lean`) -/
 
 cylinder_defs Probe
 

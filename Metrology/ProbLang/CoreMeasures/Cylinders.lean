@@ -11,7 +11,7 @@ open Classical MeasureTheory ProbabilityTheory Measure
 
 /-! # Shared cylinder lemmas
 
-Generic lemmas behind `cylinder_defs` (`Metrology.Meta.CylinderGen`), stated over the cylinder
+Generic lemmas behind `cylinder_defs` (`Metrology.ProbLang.CoreMeasures.CylinderGen`), stated over the cylinder
 type `Cyl`, the underlying type `T` and the shape type `Shp`. See `STAMPING.md`. -/
 
 -- simp set for the generated `flatten`, `shape`, `Cylinder.shape`, `Shape.cylinder` and `cover.*`

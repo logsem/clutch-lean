@@ -7,10 +7,11 @@ public import Metrology.ProbLang.CoreMeasures.Cylinders
 public import Metrology.ProbLang.CoreMeasures.BaseLit
 
 meta import Metrology.Meta
+meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
-/-! # Tests for the cylinder generator (`Metrology/Meta/CylinderGen.lean`)
+/-! # Tests for the cylinder generator (`Metrology/ProbLang/CoreMeasures/CylinderGen.lean`)
 
 Each test type is chosen to break a specific assumption of the generator: parameter and
 constructor names that clash with generated names, fields whose own names shadow identifiers,
@@ -278,98 +279,107 @@ namespace Golden
 inductive Tm (rT : Type _) | z | s (n : Nat) (t : Tm rT) (r : rT)
 namespace Tm
 /--
-info: theorem z.ι.inj {rT : Type _} :
-    Function.Injective (@CylinderGenTest.Golden.Tm.z.ι rT) := by intro a b h; cases h; rfl
+info: theorem z.ι.inj {rT : Type _} : Function.Injective (@CylinderGenTest.Golden.Tm.z.ι rT) := by (intro a b h; cases h; rfl)
 
-theorem s.ι.inj {rT : Type _} :
-    Function.Injective (@CylinderGenTest.Golden.Tm.s.ι rT) := by intro a b h; obtain ⟨_, _, _⟩ := a; obtain ⟨_, _, _⟩ := b; cases h; rfl
+theorem s.ι.inj {rT : Type _} : Function.Injective (@CylinderGenTest.Golden.Tm.s.ι rT) := by
+  (intro a b h; obtain ⟨_, _, _⟩ := a; obtain ⟨_, _, _⟩ := b; cases h; rfl)
 
-/-- Cylinders over `CylinderGenTest.Golden.Tm`: data fields are replaced by a set of values. -/
+/-- Cylinders: values with data fields replaced by sets of values. -/
 inductive Cylinder (rT : Type _)
   | z
   | s (n : ℕ) (c2 : Cylinder rT) (S3 : Set rT)
 
-/-- Shapes of `CylinderGenTest.Golden.Tm`: data fields are forgotten, so `Shape` is countable. -/
+/-- Shapes: values with data fields forgotten, so that `Shape` is countable. -/
 inductive Shape
   | z
   | s (n : ℕ) (s2 : Shape)
   deriving Countable
 
-/-- The set of `CylinderGenTest.Golden.Tm` values described by a cylinder. -/
+/-- The set of values described by a cylinder. -/
 def Cylinder.flatten {rT : Type _} : Cylinder rT → Set (CylinderGenTest.Golden.Tm rT)
   | .z => {@CylinderGenTest.Golden.Tm.z rT}
-  | .s x1 c2 S3 => (fun p : (CylinderGenTest.Golden.Tm rT) × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2) '' (flatten c2 ×ˢ S3)
+  | .s x1 c2 S3 =>
+    (fun p : CylinderGenTest.Golden.Tm rT × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2) ''
+      Cylinder.flatten c2 ×ˢ S3
 
 theorem Cylinder.flatten_eqs {rT : Type _} :
     Cylinder.flatten (.z : Cylinder rT) = {@CylinderGenTest.Golden.Tm.z rT} ∧
-    (∀ x1 c2 S3, Cylinder.flatten (.s x1 c2 S3 : Cylinder rT) = (fun p : (CylinderGenTest.Golden.Tm rT) × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2) '' (Cylinder.flatten c2 ×ˢ S3)) :=
+      ∀ x1 c2 S3,
+        Cylinder.flatten (.s x1 c2 S3 : Cylinder rT) =
+          (fun p : CylinderGenTest.Golden.Tm rT × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2) ''
+            Cylinder.flatten c2 ×ˢ S3 :=
   ⟨rfl, fun _ _ _ => rfl⟩
 
 /-- A cylinder has measurable leaves if every set it carries is measurable. -/
 def Cylinder.HasMeasurableLeaves {rT : Type _} [MeasurableSpace rT] : Cylinder rT → Prop
   | .z => True
-  | .s _ c2 S3 => HasMeasurableLeaves c2 ∧ MeasurableSet S3
+  | .s _ c2 S3 => Cylinder.HasMeasurableLeaves c2 ∧ MeasurableSet S3
 
-instance instMeasurableSpaceTm {rT : Type _} [MeasurableSpace rT] :
-    MeasurableSpace (CylinderGenTest.Golden.Tm rT) :=
-  .generateFrom <| Cylinder.flatten '' { c : Cylinder rT | c.HasMeasurableLeaves }
+instance instMeasurableSpaceTm {rT : Type _} [MeasurableSpace rT] : MeasurableSpace (CylinderGenTest.Golden.Tm rT) :=
+  .generateFrom <| Cylinder.flatten '' {c : Cylinder rT | c.HasMeasurableLeaves}
 
-/-- The shape of a `CylinderGenTest.Golden.Tm` value. -/
+/-- The shape of a value. -/
 def _root_.CylinderGenTest.Golden.Tm.shape {rT : Type _} : CylinderGenTest.Golden.Tm rT → Shape
   | .z => .z
-  | .s x1 c2 _ => .s x1 (shape c2)
+  | .s x1 c2 _ => .s x1 (CylinderGenTest.Golden.Tm.shape c2)
 
 theorem _root_.CylinderGenTest.Golden.Tm.shape_eqs {rT : Type _} :
     CylinderGenTest.Golden.Tm.shape (.z : CylinderGenTest.Golden.Tm rT) = .z ∧
-    (∀ x1 c2 S3, CylinderGenTest.Golden.Tm.shape (.s x1 c2 S3 : CylinderGenTest.Golden.Tm rT) = .s x1 (CylinderGenTest.Golden.Tm.shape c2)) :=
+      ∀ x1 c2 S3,
+        CylinderGenTest.Golden.Tm.shape (.s x1 c2 S3 : CylinderGenTest.Golden.Tm rT) =
+          .s x1 (CylinderGenTest.Golden.Tm.shape c2) :=
   ⟨rfl, fun _ _ _ => rfl⟩
 
 /-- The shape of a cylinder. -/
 def Cylinder.shape {rT : Type _} : Cylinder rT → Shape
   | .z => .z
-  | .s x1 c2 _ => .s x1 (shape c2)
+  | .s x1 c2 _ => .s x1 (Cylinder.shape c2)
 
 theorem Cylinder.shape_eqs {rT : Type _} :
     Cylinder.shape (.z : Cylinder rT) = .z ∧
-    (∀ x1 c2 S3, Cylinder.shape (.s x1 c2 S3 : Cylinder rT) = .s x1 (Cylinder.shape c2)) :=
+      ∀ x1 c2 S3, Cylinder.shape (.s x1 c2 S3 : Cylinder rT) = .s x1 (Cylinder.shape c2) :=
   ⟨rfl, fun _ _ _ => rfl⟩
 
 /-- The cylinder of all values of a given shape: `univ` at every data field. -/
 def Shape.cylinder {rT : Type _} : Shape → Cylinder rT
   | .z => .z
-  | .s x1 s2 => .s x1 (cylinder s2) Set.univ
+  | .s x1 s2 => .s x1 (Shape.cylinder s2) Set.univ
 
 theorem Shape.cylinder_eqs {rT : Type _} :
     Shape.cylinder (rT := rT) (.z : Shape) = .z ∧
-    (∀ x1 s2, Shape.cylinder (rT := rT) (.s x1 s2 : Shape) = .s x1 (Shape.cylinder s2) Set.univ) :=
+      ∀ x1 s2, Shape.cylinder (rT := rT) (.s x1 s2 : Shape) = .s x1 (Shape.cylinder s2) Set.univ :=
   ⟨rfl, fun _ _ => rfl⟩
 
 open Classical in
 /-- Partial intersection of cylinders: `none` when the intersection is empty. -/
 def Cylinder.inter? {rT : Type _} : Cylinder rT → Cylinder rT → Option (Cylinder rT)
   | .z, .z => some .z
-  | .s x1 c2 S3, .s x1' c2' S3' => (if x1 = x1' then (match Cylinder.inter? c2 c2' with | some r2 => some (.s x1 r2 (S3 ∩ S3')) | none => none) else none)
+  | .s x1 c2 S3, .s x1' c2' S3' =>
+    if x1 = x1' then
+      match Cylinder.inter? c2 c2' with
+      | some r2 => some (.s x1 r2 (S3 ∩ S3'))
+      | none => none
+    else none
   | _, _ => none
 
 def cover.z {rT : Type _} (S : Set Unit) : Set (CylinderGenTest.Golden.Tm rT) :=
-  ⋃ _ ∈ S, Cylinder.flatten (Cylinder.z : Cylinder rT)
+  ⋃ p ∈ S, Cylinder.flatten (Cylinder.z : Cylinder rT)
 
 def cover.s {rT : Type _} (S : Set (ℕ × Shape)) : Set (CylinderGenTest.Golden.Tm rT) :=
-  ⋃ p ∈ S, Cylinder.flatten (Cylinder.s p.1 p.2.cylinder (Set.univ : Set rT) : Cylinder rT)
+  ⋃ p ∈ S, Cylinder.flatten (Cylinder.s p.1 (Shape.cylinder p.2) (Set.univ : Set rT) : Cylinder rT)
 
 /-- Per-constructor cells of the `casesOn` preimage decomposition. -/
-def decompCell {rT : Type _} {α : Type _} (S : Set α)
-    (f_z : Unit → α) (f_s : ℕ × (CylinderGenTest.Golden.Tm rT) × rT → α) :
-    Fin 2 → Set (CylinderGenTest.Golden.Tm rT) :=
-  ![ CylinderGenTest.Golden.Tm.z.ι '' (f_z ⁻¹' S)
-   , CylinderGenTest.Golden.Tm.s.ι '' (f_s ⁻¹' S) ]
+def decompCell {rT : Type _} {α : Type _} (S : Set α) (f_z : Unit → α)
+    (f_s : ℕ × CylinderGenTest.Golden.Tm rT × rT → α) : Fin 2 → Set (CylinderGenTest.Golden.Tm rT) :=
+  ![CylinderGenTest.Golden.Tm.z.ι '' (f_z ⁻¹' S), CylinderGenTest.Golden.Tm.s.ι '' (f_s ⁻¹' S)]
 
-/-- Per-constructor cells of the `β`-parameterised `casesOn` preimage decomposition. -/
-def decompCell_param {rT : Type _} {α β : Type _} (S : Set α)
-    (f_z : β × Unit → α) (f_s : β × (ℕ × (CylinderGenTest.Golden.Tm rT) × rT) → α) :
-    Fin 2 → Set (CylinderGenTest.Golden.Tm rT × β) :=
-  ![ (fun q : β × Unit => (@CylinderGenTest.Golden.Tm.z rT, q.1)) '' (f_z ⁻¹' S)
-   , (fun q : β × (ℕ × (CylinderGenTest.Golden.Tm rT) × rT) => (@CylinderGenTest.Golden.Tm.s rT q.2.1 q.2.2.1 q.2.2.2, q.1)) '' (f_s ⁻¹' S) ]
+/-- Per-constructor cells of the parameterised `casesOn` preimage decomposition. -/
+def decompCell_param {rT : Type _} {α β : Type _} (S : Set α) (f_z : β × Unit → α)
+    (f_s : β × ℕ × CylinderGenTest.Golden.Tm rT × rT → α) : Fin 2 → Set (CylinderGenTest.Golden.Tm rT × β) :=
+  ![(fun q : β × Unit => (@CylinderGenTest.Golden.Tm.z rT, q.1)) '' (f_z ⁻¹' S),
+    (fun q : β × ℕ × CylinderGenTest.Golden.Tm rT × rT =>
+        (@CylinderGenTest.Golden.Tm.s rT q.2.1 q.2.2.1 q.2.2.2, q.1)) ''
+      (f_s ⁻¹' S)]
 
 /-- The cylinder containing exactly one value. -/
 def singletonCyl {rT : Type _} : CylinderGenTest.Golden.Tm rT → Cylinder rT
@@ -378,20 +388,20 @@ def singletonCyl {rT : Type _} : CylinderGenTest.Golden.Tm rT → Cylinder rT
 
 theorem singletonCyl_eqs {rT : Type _} :
     singletonCyl (.z : CylinderGenTest.Golden.Tm rT) = .z ∧
-    (∀ x1 c2 S3, singletonCyl (.s x1 c2 S3 : CylinderGenTest.Golden.Tm rT) = .s x1 (singletonCyl c2) {S3}) :=
+      ∀ x1 c2 S3, singletonCyl (.s x1 c2 S3 : CylinderGenTest.Golden.Tm rT) = .s x1 (singletonCyl c2) {S3} :=
   ⟨rfl, fun _ _ _ => rfl⟩
 
 /-- The cylinder of a shape has measurable leaves. -/
-theorem Shape.cylinder_hasMeasurableLeaves {rT : Type _} [MeasurableSpace rT] (s' : Shape) :
-    (s'.cylinder (rT := rT)).HasMeasurableLeaves := by
-  induction s' with
+theorem Shape.cylinder_hasMeasurableLeaves {rT : Type _} [MeasurableSpace rT] (s : Shape) :
+    (s.cylinder (rT := rT)).HasMeasurableLeaves := by
+  induction s with
   | z => exact True.intro
-  | s x1 s2 ih2 => exact (And.intro ih2 MeasurableSet.univ)
+  | s x1 s2 ih2 => exact And.intro ih2 MeasurableSet.univ
 
 /-- Flattened cylinders with measurable leaves are measurable. -/
 @[measurability]
-theorem flatten_measurable {rT : Type _} [MeasurableSpace rT] {c : Cylinder rT}
-    (hc : c.HasMeasurableLeaves) : MeasurableSet c.flatten :=
+theorem flatten_measurable {rT : Type _} [MeasurableSpace rT] {c : Cylinder rT} (hc : Cylinder.HasMeasurableLeaves c) :
+    MeasurableSet (Cylinder.flatten c) :=
   Cylinders.flatten_measurable rfl hc
 
 theorem Cylinder.shape_of_mem_flatten {rT : Type _} {c : Cylinder rT} {t : CylinderGenTest.Golden.Tm rT}
@@ -406,70 +416,122 @@ theorem Cylinder.shape_of_mem_flatten {rT : Type _} {c : Cylinder rT} {t : Cylin
 
 /-- Flattens of cylinders with different shapes are disjoint. -/
 theorem Cylinder.flatten_disjoint_of_shape_ne {rT : Type _} {c₁ c₂ : Cylinder rT}
-    (h : Cylinder.shape c₁ ≠ Cylinder.shape c₂) :
-    Cylinder.flatten c₁ ∩ Cylinder.flatten c₂ = ∅ :=
-  Cylinders.flatten_disjoint_of_shape_ne (cShape := Cylinder.shape)
-    (fun {_ _} h => Cylinder.shape_of_mem_flatten h) h
+    (h : Cylinder.shape c₁ ≠ Cylinder.shape c₂) : Cylinder.flatten c₁ ∩ Cylinder.flatten c₂ = ∅ :=
+  Cylinders.flatten_disjoint_of_shape_ne (cShape := Cylinder.shape) (fun {_ _} h => Cylinder.shape_of_mem_flatten h) h
 
 /-- The cylinder of a shape flattens to the values of that shape. -/
-theorem Shape.cylinder_preimage_shape {rT : Type _} (s' : Shape) :
-    (s'.cylinder (rT := rT)).flatten = CylinderGenTest.Golden.Tm.shape ⁻¹' {s'} :=
-  Cylinders.cylinder_preimage_shape (cShape := Cylinder.shape)
-    (fun {_ _} h => Cylinder.shape_of_mem_flatten h)
-    (fun s' => by induction s' <;> simp_all [Shape.cylinder_eqs, Cylinder.shape_eqs, CylinderGenTest.Golden.Tm.shape_eqs, Cylinder.flatten_eqs])
-    (fun p => by induction p <;> simp_all [Shape.cylinder_eqs, Cylinder.shape_eqs, CylinderGenTest.Golden.Tm.shape_eqs, Cylinder.flatten_eqs]) s'
+theorem Shape.cylinder_preimage_shape {rT : Type _} (s : Shape) :
+    (s.cylinder (rT := rT)).flatten = CylinderGenTest.Golden.Tm.shape ⁻¹' { s } :=
+  Cylinders.cylinder_preimage_shape (cShape := Cylinder.shape) (fun {_ _} h => Cylinder.shape_of_mem_flatten h)
+    (fun s => by
+      induction s <;>
+        simp_all [Shape.cylinder_eqs, Cylinder.shape_eqs, CylinderGenTest.Golden.Tm.shape_eqs, Cylinder.flatten_eqs])
+    (fun p => by
+      induction p <;>
+        simp_all [Shape.cylinder_eqs, Cylinder.shape_eqs, CylinderGenTest.Golden.Tm.shape_eqs, Cylinder.flatten_eqs])
+    s
 
 theorem Shape.mem_cylinder_shape {rT : Type _} (p : CylinderGenTest.Golden.Tm rT) :
-    p ∈ ((CylinderGenTest.Golden.Tm.shape p).cylinder (rT := rT)).flatten := by
-  rw [Shape.cylinder_preimage_shape]; exact rfl
+    p ∈ ((CylinderGenTest.Golden.Tm.shape p).cylinder (rT := rT)).flatten := by rw [Shape.cylinder_preimage_shape];
+  exact rfl
 
 open Classical in
-theorem Cylinder.flatten_inter.z {rT : Type _}  (c₂ : Cylinder rT) :
-    Cylinder.flatten (.z : Cylinder rT) ∩ Cylinder.flatten c₂ = (Cylinder.inter? (.z : Cylinder rT) c₂).elim ∅ Cylinder.flatten := by
+theorem Cylinder.flatten_inter.z {rT : Type _} :
+    ∀ c₂ : Cylinder rT,
+      Cylinder.flatten (.z : Cylinder rT) ∩ Cylinder.flatten c₂ =
+        (Cylinder.inter? (.z : Cylinder rT) c₂).elim ∅ Cylinder.flatten :=
+  by
+  intro c₂
   cases c₂
-  case z  =>
+  case z =>
     rw [show Cylinder.inter? .z .z = some .z from rfl]
-    simp only [Cylinder.flatten_eqs, Option.elim, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod, Set.image_empty, Set.inter_self]
+    simp only [Cylinder.flatten_eqs, Option.elim, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod, Set.image_empty,
+      Set.inter_self]
   all_goals exact Cylinder.flatten_disjoint_of_shape_ne Shape.noConfusion
 
 open Classical in
-theorem Cylinder.flatten_inter.s {rT : Type _} (x1 : ℕ) (c2 : Cylinder rT) (S3 : Set rT) (ih2 : ∀ c₂ : Cylinder rT, Cylinder.flatten c2 ∩ Cylinder.flatten c₂ = (Cylinder.inter? c2 c₂).elim ∅ Cylinder.flatten) (c₂ : Cylinder rT) :
-    Cylinder.flatten (.s x1 c2 S3 : Cylinder rT) ∩ Cylinder.flatten c₂ = (Cylinder.inter? (.s x1 c2 S3 : Cylinder rT) c₂).elim ∅ Cylinder.flatten := by
+theorem Cylinder.flatten_inter.s {rT : Type _} (x1 : ℕ) (c2 : Cylinder rT) (S3 : Set rT)
+    (ih2 :
+      ∀ c₂ : Cylinder rT, Cylinder.flatten c2 ∩ Cylinder.flatten c₂ = (Cylinder.inter? c2 c₂).elim ∅ Cylinder.flatten) :
+    ∀ c₂ : Cylinder rT,
+      Cylinder.flatten (.s x1 c2 S3 : Cylinder rT) ∩ Cylinder.flatten c₂ =
+        (Cylinder.inter? (.s x1 c2 S3 : Cylinder rT) c₂).elim ∅ Cylinder.flatten :=
+  by
+  intro c₂
   cases c₂
   case s x1' c2' S3' =>
     have h2 := ih2 c2'
-    have hF : Function.Injective (fun p : (CylinderGenTest.Golden.Tm rT) × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2 : (CylinderGenTest.Golden.Tm rT) × rT → CylinderGenTest.Golden.Tm rT) := by intro a b h; obtain ⟨_, _⟩ := a; obtain ⟨_, _⟩ := b; cases h; rfl
-    rw [show Cylinder.inter? (.s x1 c2 S3) (.s x1' c2' S3') = (if x1 = x1' then (match Cylinder.inter? c2 c2' with | some r2 => some (.s x1 r2 (S3 ∩ S3')) | none => none) else none) from rfl]
+    have hF :
+      Function.Injective
+        (fun p : CylinderGenTest.Golden.Tm rT × rT => @CylinderGenTest.Golden.Tm.s rT x1 p.1 p.2 :
+          CylinderGenTest.Golden.Tm rT × rT → CylinderGenTest.Golden.Tm rT) :=
+      by (intro a b h; obtain ⟨_, _⟩ := a; obtain ⟨_, _⟩ := b; cases h; rfl)
+    rw [show
+        Cylinder.inter? (.s x1 c2 S3) (.s x1' c2' S3') =
+          if x1 = x1' then
+            match Cylinder.inter? c2 c2' with
+            | some r2 => some (.s x1 r2 (S3 ∩ S3'))
+            | none => none
+          else none
+        from rfl]
     by_cases hb : x1 = x1'
-    case neg => rw [ite_eq_right hb]; (rw [Cylinder.flatten_disjoint_of_shape_ne (by simp_all [Cylinder.shape_eqs])]; rfl)
+    case neg => rw [ite_eq_right hb];
+      (rw [Cylinder.flatten_disjoint_of_shape_ne (by simp_all [Cylinder.shape_eqs])]; rfl)
     rw [ite_eq_left hb]
     obtain rfl := hb
     rcases e2 : Cylinder.inter? c2 c2' with _ | r2 <;> rw [e2] at h2 <;> simp only [Option.elim] at h2
-    · simp only [Cylinder.flatten_eqs, Option.elim, ← Set.image_inter hF, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod, Set.image_empty, Set.inter_self, h2]
-    simp only [Cylinder.flatten_eqs, Option.elim, ← Set.image_inter hF, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod, Set.image_empty, Set.inter_self, h2]
+    ·
+      simp only [Cylinder.flatten_eqs, Option.elim, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod,
+        Set.image_empty, Set.inter_self, h2, (Set.image_inter hF).symm]
+    simp only [Cylinder.flatten_eqs, Option.elim, Set.prod_inter_prod, Set.prod_empty, Set.empty_prod, Set.image_empty,
+      Set.inter_self, h2, (Set.image_inter hF).symm]
   all_goals exact Cylinder.flatten_disjoint_of_shape_ne Shape.noConfusion
 
-theorem Cylinder.flatten_inter {rT : Type _} (c₁ : Cylinder rT) (c₂ : Cylinder rT) : Cylinder.flatten c₁ ∩ Cylinder.flatten c₂ = (Cylinder.inter? c₁ c₂).elim ∅ Cylinder.flatten := by
-  induction c₁ generalizing c₂ with
-  | z => exact Cylinder.flatten_inter.z c₂
-  | s x1 c2 S3 ih2 => exact Cylinder.flatten_inter.s x1 c2 S3 ih2 c₂
+theorem Cylinder.flatten_inter {rT : Type _} (c₁ : Cylinder rT) :
+    ∀ c₂ : Cylinder rT, Cylinder.flatten c₁ ∩ Cylinder.flatten c₂ = (Cylinder.inter? c₁ c₂).elim ∅ Cylinder.flatten :=
+  by
+  induction c₁ with
+  | z => exact Cylinder.flatten_inter.z
+  | s x1 c2 S3 ih2 => exact Cylinder.flatten_inter.s x1 c2 S3 ih2
 
 open Classical in
-theorem Cylinder.hasMeasurableLeaves_inter.z {rT : Type _} [MeasurableSpace rT]  {c₂ c : Cylinder rT} (h₁ : (.z : Cylinder rT).HasMeasurableLeaves) (h₂ : c₂.HasMeasurableLeaves) (h : Cylinder.inter? (.z : Cylinder rT) c₂ = some c) :
-    c.HasMeasurableLeaves := by
+theorem Cylinder.hasMeasurableLeaves_inter.z {rT : Type _} [MeasurableSpace rT] :
+    ∀ {c₂ c : Cylinder rT},
+      Cylinder.HasMeasurableLeaves (.z : Cylinder rT) →
+        c₂.HasMeasurableLeaves → Cylinder.inter? (.z : Cylinder rT) c₂ = some c → c.HasMeasurableLeaves :=
+  by
+  intro c₂ c h₁ h₂ h
   cases c₂
-  case z  =>
+  case z =>
     rw [show Cylinder.inter? .z .z = some .z from rfl] at h
-    (try dsimp only at h); cases h
+    try dsimp only at h
+    cases h
     exact True.intro
   all_goals nomatch h
 
 open Classical in
-theorem Cylinder.hasMeasurableLeaves_inter.s {rT : Type _} [MeasurableSpace rT] (x1 : ℕ) (c2 : Cylinder rT) (S3 : Set rT) (ih2 : ∀ {c₂ c : Cylinder rT}, c2.HasMeasurableLeaves → c₂.HasMeasurableLeaves → Cylinder.inter? c2 c₂ = some c → c.HasMeasurableLeaves) {c₂ c : Cylinder rT} (h₁ : (.s x1 c2 S3 : Cylinder rT).HasMeasurableLeaves) (h₂ : c₂.HasMeasurableLeaves) (h : Cylinder.inter? (.s x1 c2 S3 : Cylinder rT) c₂ = some c) :
-    c.HasMeasurableLeaves := by
+theorem Cylinder.hasMeasurableLeaves_inter.s {rT : Type _} [MeasurableSpace rT] (x1 : ℕ) (c2 : Cylinder rT)
+    (S3 : Set rT)
+    (ih2 :
+      ∀ {c₂ c : Cylinder rT},
+        Cylinder.HasMeasurableLeaves c2 →
+          c₂.HasMeasurableLeaves → Cylinder.inter? c2 c₂ = some c → c.HasMeasurableLeaves) :
+    ∀ {c₂ c : Cylinder rT},
+      Cylinder.HasMeasurableLeaves (.s x1 c2 S3 : Cylinder rT) →
+        c₂.HasMeasurableLeaves → Cylinder.inter? (.s x1 c2 S3 : Cylinder rT) c₂ = some c → c.HasMeasurableLeaves :=
+  by
+  intro c₂ c h₁ h₂ h
   cases c₂
-  case s x1' c2' S3' =>
-    rw [show Cylinder.inter? (.s x1 c2 S3) (.s x1' c2' S3') = (if x1 = x1' then (match Cylinder.inter? c2 c2' with | some r2 => some (.s x1 r2 (S3 ∩ S3')) | none => none) else none) from rfl] at h
+  case s x1' c2'
+    S3' =>
+    rw [show
+        Cylinder.inter? (.s x1 c2 S3) (.s x1' c2' S3') =
+          if x1 = x1' then
+            match Cylinder.inter? c2 c2' with
+            | some r2 => some (.s x1 r2 (S3 ∩ S3'))
+            | none => none
+          else none
+        from rfl] at h
     obtain ⟨a2, a3⟩ := h₁
     obtain ⟨b2, b3⟩ := h₂
     by_cases hb : x1 = x1'
@@ -478,259 +540,301 @@ theorem Cylinder.hasMeasurableLeaves_inter.s {rT : Type _} [MeasurableSpace rT] 
     obtain rfl := hb
     rcases e2 : Cylinder.inter? c2 c2' with _ | r2 <;> rw [e2] at h
     · simp at h
-    (try dsimp only at h); cases h
-    exact (And.intro (ih2 a2 b2 e2 : Cylinder.HasMeasurableLeaves r2) (MeasurableSet.inter a3 b3))
+    try dsimp only at h
+    cases h
+    exact And.intro (ih2 a2 b2 e2 : Cylinder.HasMeasurableLeaves r2) (MeasurableSet.inter a3 b3)
   all_goals nomatch h
 
-theorem Cylinder.hasMeasurableLeaves_inter {rT : Type _} [MeasurableSpace rT] {c₁ : Cylinder rT} {c₂ c : Cylinder rT} (h₁ : c₁.HasMeasurableLeaves) (h₂ : c₂.HasMeasurableLeaves) (h : Cylinder.inter? c₁ c₂ = some c) : c.HasMeasurableLeaves := by
-  induction c₁ generalizing c₂ c with
-  | z => exact Cylinder.hasMeasurableLeaves_inter.z h₁ h₂ h
-  | s x1 c2 S3 ih2 => exact Cylinder.hasMeasurableLeaves_inter.s x1 c2 S3 ih2 h₁ h₂ h
+theorem Cylinder.hasMeasurableLeaves_inter {rT : Type _} [MeasurableSpace rT] {c₁ : Cylinder rT} :
+    ∀ {c₂ c : Cylinder rT},
+      Cylinder.HasMeasurableLeaves c₁ →
+        c₂.HasMeasurableLeaves → Cylinder.inter? c₁ c₂ = some c → c.HasMeasurableLeaves :=
+  by
+  induction c₁ with
+  | z => exact Cylinder.hasMeasurableLeaves_inter.z
+  | s x1 c2 S3 ih2 => exact Cylinder.hasMeasurableLeaves_inter.s x1 c2 S3 ih2
 
-theorem Cylinder.flatten_inter_some {rT : Type _} {c₁ c₂ c : Cylinder rT}
-    (h : Cylinder.inter? c₁ c₂ = some c) :
+theorem Cylinder.flatten_inter_some {rT : Type _} {c₁ c₂ c : Cylinder rT} (h : Cylinder.inter? c₁ c₂ = some c) :
     Cylinder.flatten c = Cylinder.flatten c₁ ∩ Cylinder.flatten c₂ :=
   Cylinders.flatten_inter_some Cylinder.flatten_inter h
 
 /-- The flattened cylinders with measurable leaves form a π-system. -/
 theorem Cylinder.flatten_isPiSystem {rT : Type _} [MeasurableSpace rT] :
-    IsPiSystem ({S : Set (CylinderGenTest.Golden.Tm rT) | ∃ c : Cylinder rT, c.HasMeasurableLeaves ∧ Cylinder.flatten c = S}) :=
-  Cylinders.flatten_isPiSystem Cylinder.flatten_inter
-    (fun {_ _ _} => Cylinder.hasMeasurableLeaves_inter)
+    IsPiSystem
+      {S : Set (CylinderGenTest.Golden.Tm rT) | ∃ c : Cylinder rT, c.HasMeasurableLeaves ∧ Cylinder.flatten c = S} :=
+  Cylinders.flatten_isPiSystem Cylinder.flatten_inter (fun {_ _ _} => Cylinder.hasMeasurableLeaves_inter)
 
 /-- The flattened cylinders with measurable leaves are countably spanning. -/
 theorem Cylinder.flatten_isCountablySpanning {rT : Type _} [MeasurableSpace rT] :
-    IsCountablySpanning ({S : Set (CylinderGenTest.Golden.Tm rT) | ∃ c : Cylinder rT, c.HasMeasurableLeaves ∧ Cylinder.flatten c = S}) :=
-  Cylinders.flatten_isCountablySpanning Shape.cylinder_hasMeasurableLeaves
-    Shape.cylinder_preimage_shape (Shape.cylinder .z) (Shape.cylinder_hasMeasurableLeaves .z)
+    IsCountablySpanning
+      {S : Set (CylinderGenTest.Golden.Tm rT) | ∃ c : Cylinder rT, c.HasMeasurableLeaves ∧ Cylinder.flatten c = S} :=
+  Cylinders.flatten_isCountablySpanning Shape.cylinder_hasMeasurableLeaves Shape.cylinder_preimage_shape
+    (Shape.cylinder .z) (Shape.cylinder_hasMeasurableLeaves .z)
 
-theorem cover.z.measurable {rT : Type _} [MeasurableSpace rT]
-    (S : Set Unit) :
+theorem cover.z.measurable {rT : Type _} [MeasurableSpace rT] (S : Set Unit) :
     MeasurableSet (cover.z S : Set (CylinderGenTest.Golden.Tm rT)) :=
   .biUnion (Set.to_countable _) fun p _ => flatten_measurable True.intro
 
-theorem cover.z_univ_eq_range {rT : Type _} :
-    cover.z (Set.univ) = Set.range (@CylinderGenTest.Golden.Tm.z.ι rT) := by
-  ext t; constructor
-  · intro h; obtain ⟨p, -, h⟩ := Set.mem_iUnion₂.1 h
+theorem cover.z_univ_eq_range {rT : Type _} : cover.z Set.univ = Set.range (@CylinderGenTest.Golden.Tm.z.ι rT) :=
+  by
+  ext t
+  constructor
+  · (intro h; obtain ⟨p, -, h⟩ := Set.mem_iUnion₂.1 h)
     obtain rfl := h
     exact ⟨⟨⟩, rfl⟩
   · rintro ⟨⟨⟩, rfl⟩
     exact Set.mem_iUnion₂.2 ⟨(), trivial, rfl⟩
 
-theorem z.ι.measurable {rT : Type _} [MeasurableSpace rT] :
-    Measurable (@CylinderGenTest.Golden.Tm.z.ι rT) := measurable_const
+theorem z.ι.measurable {rT : Type _} [MeasurableSpace rT] : Measurable (@CylinderGenTest.Golden.Tm.z.ι rT) :=
+  measurable_const
 
 theorem z.measurable {rT : Type _} [MeasurableSpace rT] :
-    Measurable (fun _ : Unit => (@CylinderGenTest.Golden.Tm.z rT : CylinderGenTest.Golden.Tm rT)) := z.ι.measurable
+    Measurable fun _ : Unit => (@CylinderGenTest.Golden.Tm.z rT : CylinderGenTest.Golden.Tm rT) :=
+  z.ι.measurable
 
 theorem z.measurableEmbedding {rT : Type _} [MeasurableSpace rT] :
-    MeasurableEmbedding (fun _ : Unit => (@CylinderGenTest.Golden.Tm.z rT : CylinderGenTest.Golden.Tm rT)) :=
+    MeasurableEmbedding fun _ : Unit => (@CylinderGenTest.Golden.Tm.z rT : CylinderGenTest.Golden.Tm rT) :=
   .of_measurable_inverse (g := fun _ => ()) measurable_const
-    (by have hS := cover.z.measurable (rT := rT) Set.univ; rw [cover.z_univ_eq_range] at hS; exact hS)
-    measurable_const fun _ => rfl
+    (by have hS := cover.z.measurable (rT := rT) Set.univ; rw [cover.z_univ_eq_range] at hS; exact hS) measurable_const
+    fun _ => rfl
 
-theorem cover.s.measurable {rT : Type _} [MeasurableSpace rT]
-    (S : Set (ℕ × Shape)) :
+theorem cover.s.measurable {rT : Type _} [MeasurableSpace rT] (S : Set (ℕ × Shape)) :
     MeasurableSet (cover.s S : Set (CylinderGenTest.Golden.Tm rT)) :=
-  .biUnion (Set.to_countable _) fun p _ => flatten_measurable (And.intro (Shape.cylinder_hasMeasurableLeaves p.2) MeasurableSet.univ)
+  .biUnion (Set.to_countable _) fun p _ =>
+    flatten_measurable (And.intro (Shape.cylinder_hasMeasurableLeaves p.2) MeasurableSet.univ)
 
-theorem cover.s_univ_eq_range {rT : Type _} :
-    cover.s (Set.univ) = Set.range (@CylinderGenTest.Golden.Tm.s.ι rT) := by
-  ext t; constructor
-  · intro h; obtain ⟨p, -, h⟩ := Set.mem_iUnion₂.1 h
+theorem cover.s_univ_eq_range {rT : Type _} : cover.s Set.univ = Set.range (@CylinderGenTest.Golden.Tm.s.ι rT) :=
+  by
+  ext t
+  constructor
+  · (intro h; obtain ⟨p, -, h⟩ := Set.mem_iUnion₂.1 h)
     obtain ⟨⟨a2, a3⟩, ⟨-, -⟩, rfl⟩ := h
     exact ⟨⟨p.1, a2, a3⟩, rfl⟩
   · rintro ⟨⟨a1, a2, a3⟩, rfl⟩
-    exact Set.mem_iUnion₂.2 ⟨⟨a1, CylinderGenTest.Golden.Tm.shape a2⟩, trivial, ⟨⟨a2, a3⟩, ⟨Shape.mem_cylinder_shape a2, trivial⟩, rfl⟩⟩
+    exact
+      Set.mem_iUnion₂.2
+        ⟨⟨a1, CylinderGenTest.Golden.Tm.shape a2⟩, trivial, ⟨⟨a2, a3⟩, ⟨Shape.mem_cylinder_shape a2, trivial⟩, rfl⟩⟩
 
-theorem s.ι.measurable {rT : Type _} [MeasurableSpace rT] :
-    Measurable (@CylinderGenTest.Golden.Tm.s.ι rT) := by
+theorem s.ι.measurable {rT : Type _} [MeasurableSpace rT] : Measurable (@CylinderGenTest.Golden.Tm.s.ι rT) :=
+  by
   apply measurable_generateFrom
-  rintro _ ⟨s', hS, rfl⟩
-  cases s' with
+  rintro _ ⟨s, hS, rfl⟩
+  cases s with
   | s x1 c2 S3 =>
     obtain ⟨h2, h3⟩ := hS
-    convert ((MeasurableSet.singleton x1).prod ((flatten_measurable h2).prod h3)) using 1
-    ext ⟨a1, a2, a3⟩; constructor
-    · rintro ⟨⟨b2, b3⟩, ⟨m2, m3⟩, h⟩; cases h
+    convert (MeasurableSet.singleton x1).prod ((flatten_measurable h2).prod h3) using 1
+    ext ⟨a1, a2, a3⟩
+    constructor
+    · rintro ⟨⟨b2, b3⟩, ⟨m2, m3⟩, h⟩
+      cases h
       exact ⟨rfl, m2, m3⟩
     · rintro ⟨rfl, m2, m3⟩
       exact ⟨⟨a2, a3⟩, ⟨m2, m3⟩, rfl⟩
-  | _ => exact Cylinders.measurableSet_of_forall_notMem fun t h =>
-    Shape.noConfusion (Cylinder.shape_of_mem_flatten (Set.mem_preimage.1 h))
+  | _ =>
+    exact
+      Cylinders.measurableSet_of_forall_notMem fun t h =>
+        Shape.noConfusion (Cylinder.shape_of_mem_flatten (Set.mem_preimage.1 h))
 
 theorem s.measurable {rT : Type _} [MeasurableSpace rT] :
-    Measurable (fun (p : ℕ × (CylinderGenTest.Golden.Tm rT) × rT) => @CylinderGenTest.Golden.Tm.s rT p.1 p.2.1 p.2.2) := s.ι.measurable
+    Measurable fun (p : ℕ × CylinderGenTest.Golden.Tm rT × rT) => @CylinderGenTest.Golden.Tm.s rT p.1 p.2.1 p.2.2 :=
+  s.ι.measurable
 
 theorem s.measurableEmbedding {rT : Type _} [MeasurableSpace rT] :
-    MeasurableEmbedding (fun (p : ℕ × (CylinderGenTest.Golden.Tm rT) × rT) => @CylinderGenTest.Golden.Tm.s rT p.1 p.2.1 p.2.2) :=
-  measurableEmbedding_of_piSystem₁ (f := (@CylinderGenTest.Golden.Tm.s.ι rT)) s.ι.inj s.ι.measurable
-    (h_gen := (generateFrom_eq_prod Cylinders.points_generateFrom (generateFrom_eq_prod rfl MeasurableSpace.generateFrom_measurableSet Cylinder.flatten_isCountablySpanning isCountablySpanning_measurableSet) Cylinders.points_isCountablySpanning (Cylinder.flatten_isCountablySpanning.prod isCountablySpanning_measurableSet)).symm) (h_pi := (Cylinders.points_isPiSystem.prod (Cylinder.flatten_isPiSystem.prod MeasurableSpace.isPiSystem_measurableSet)))
+    MeasurableEmbedding fun (p : ℕ × CylinderGenTest.Golden.Tm rT × rT) =>
+      @CylinderGenTest.Golden.Tm.s rT p.1 p.2.1 p.2.2 :=
+  measurableEmbedding_of_piSystem₁ (f := @CylinderGenTest.Golden.Tm.s.ι rT) s.ι.inj s.ι.measurable (h_gen :=
+    (generateFrom_eq_prod Cylinders.points_generateFrom
+        (generateFrom_eq_prod rfl MeasurableSpace.generateFrom_measurableSet Cylinder.flatten_isCountablySpanning
+          isCountablySpanning_measurableSet)
+        Cylinders.points_isCountablySpanning
+        (Cylinder.flatten_isCountablySpanning.prod isCountablySpanning_measurableSet)).symm)
+    (h_pi :=
+    Cylinders.points_isPiSystem.prod (Cylinder.flatten_isPiSystem.prod MeasurableSpace.isPiSystem_measurableSet))
     (h_basic := by
-      rintro _ ⟨_, h1, _, ⟨_, ⟨c2, h2, rfl⟩, S3, h3, rfl⟩, rfl⟩
-      rcases h1 with rfl | ⟨x1, rfl⟩
-      · simp only [Set.prod_empty, Set.empty_prod, Set.image_empty, MeasurableSet.empty]
-      convert flatten_measurable (c := (.s x1 c2 S3 : Cylinder rT)) (And.intro h2 h3) using 1
-      ext t; constructor
-      · rintro ⟨⟨a1, a2, a3⟩, ⟨rfl, m2, m3⟩, rfl⟩
-        exact ⟨⟨a2, a3⟩, ⟨m2, m3⟩, rfl⟩
-      · rintro ⟨⟨a2, a3⟩, ⟨m2, m3⟩, rfl⟩
-        exact ⟨⟨x1, a2, a3⟩, ⟨rfl, m2, m3⟩, rfl⟩)
-    (h_cov_meas := cover.s.measurable (rT := rT) Set.univ) (h_cov_range := cover.s_univ_eq_range)
+    rintro _ ⟨_, h1, _, ⟨_, ⟨c2, h2, rfl⟩, S3, h3, rfl⟩, rfl⟩
+    rcases h1 with rfl | ⟨x1, rfl⟩
+    · simp only [Set.prod_empty, Set.empty_prod, Set.image_empty, MeasurableSet.empty]
+    convert flatten_measurable (c := (.s x1 c2 S3 : Cylinder rT)) (And.intro h2 h3) using 1
+    ext t
+    constructor
+    · rintro ⟨⟨a1, a2, a3⟩, ⟨rfl, m2, m3⟩, rfl⟩
+      exact ⟨⟨a2, a3⟩, ⟨m2, m3⟩, rfl⟩
+    · rintro ⟨⟨a2, a3⟩, ⟨m2, m3⟩, rfl⟩
+      exact ⟨⟨x1, a2, a3⟩, ⟨rfl, m2, m3⟩, rfl⟩) (h_cov_meas := cover.s.measurable (rT := rT) Set.univ) (h_cov_range :=
+    cover.s_univ_eq_range)
 
 theorem s.π.measurable {rT : Type _} [MeasurableSpace rT] :
-    Measurable (@CylinderGenTest.Golden.Tm.s.π rT : CylinderGenTest.Golden.Tm rT → Option (ℕ × (CylinderGenTest.Golden.Tm rT) × rT)) :=
+    Measurable
+      (@CylinderGenTest.Golden.Tm.s.π rT :
+        CylinderGenTest.Golden.Tm rT → Option (ℕ × CylinderGenTest.Golden.Tm rT × rT)) :=
   Cylinders.proj_measurable s.measurableEmbedding
     (by
       ext t; constructor
       · rintro hS ⟨_, rfl⟩; cases hS
-      · intro hS; cases t <;> first | rfl | exact absurd ⟨⟨_, _, _⟩, rfl⟩ hS)
+      · intro hS;
+        cases t <;>
+          first
+          | rfl
+          | exact absurd ⟨⟨_, _, _⟩, rfl⟩ hS)
     (fun S => by
       ext t; constructor
       · rintro ⟨_, hS, h⟩; cases t <;> cases h; exact ⟨_, hS, rfl⟩
       · rintro ⟨_, hS, rfl⟩; exact ⟨_, hS, rfl⟩)
 
-theorem casesOn_preimage_decomp {rT : Type _} {α : Type _} (S : Set α)
-    (f_z : Unit → α) (f_s : ℕ × (CylinderGenTest.Golden.Tm rT) × rT → α) :
-    (fun x : CylinderGenTest.Golden.Tm rT => CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) x
-        (f_z ())
-        (fun x1 x2 x3 => f_s ((x1, x2, x3)))) ⁻¹' S
-      = ⋃ i, decompCell S f_z f_s i := by
+theorem casesOn_preimage_decomp {rT : Type _} {α : Type _} (S : Set α) (f_z : Unit → α)
+    (f_s : ℕ × CylinderGenTest.Golden.Tm rT × rT → α) :
+    (fun x : CylinderGenTest.Golden.Tm rT =>
+          CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) x (f_z ()) fun x1 x2 x3 => f_s (x1, x2, x3)) ⁻¹'
+        S =
+      ⋃ i, decompCell S f_z f_s i :=
+  by
   ext x
   simp only [Set.mem_preimage, Set.mem_iUnion, decompCell]
   constructor
-  · intro hx; cases x
+  · intro hx
+    cases x
     · exact ⟨0, (), hx, rfl⟩
     · exact ⟨1, ⟨_, _, _⟩, hx, rfl⟩
-  · rintro ⟨i, hi⟩; fin_cases i <;>
-      · obtain ⟨q, hq, hx⟩ := hi; cases hx; exact hq
+  · rintro ⟨i, hi⟩; fin_cases i <;> · obtain ⟨q, hq, hx⟩ := hi; cases hx; exact hq
 
-theorem measurable_rec {rT : Type _} [MeasurableSpace rT] {α : Type _} [MeasurableSpace α]
-    (f_z : Unit → α) (f_s : ℕ × (CylinderGenTest.Golden.Tm rT) × rT → α)
-    (h_s : Measurable f_s) :
-    Measurable (fun x : CylinderGenTest.Golden.Tm rT => CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) x
-        (f_z ())
-        (fun x1 x2 x3 => f_s ((x1, x2, x3)))) := by
+theorem measurable_rec {rT : Type _} [MeasurableSpace rT] {α : Type _} [MeasurableSpace α] (f_z : Unit → α)
+    (f_s : ℕ × CylinderGenTest.Golden.Tm rT × rT → α) (h_s : Measurable f_s) :
+    Measurable fun x : CylinderGenTest.Golden.Tm rT =>
+      CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) x (f_z ()) fun x1 x2 x3 => f_s (x1, x2, x3) :=
+  by
   intro S hS
   rw [casesOn_preimage_decomp]
   refine .iUnion fun i => ?_
   fin_cases i
-  · exact z.measurableEmbedding.measurableSet_image' (MeasurableSet.of_discrete)
+  · exact z.measurableEmbedding.measurableSet_image' MeasurableSet.of_discrete
   · exact s.measurableEmbedding.measurableSet_image' (h_s hS)
 
-theorem casesOn_preimage_decomp_param {rT : Type _} {α β : Type _} (S : Set α)
-    (f_z : β × Unit → α) (f_s : β × (ℕ × (CylinderGenTest.Golden.Tm rT) × rT) → α) :
-    (fun p : CylinderGenTest.Golden.Tm rT × β => CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) p.1
-        (f_z (p.2, ()))
-        (fun x1 x2 x3 => f_s ((p.2, x1, x2, x3)))) ⁻¹' S
-      = ⋃ i, decompCell_param S f_z f_s i := by
+theorem casesOn_preimage_decomp_param {rT : Type _} {α β : Type _} (S : Set α) (f_z : β × Unit → α)
+    (f_s : β × ℕ × CylinderGenTest.Golden.Tm rT × rT → α) :
+    (fun p : CylinderGenTest.Golden.Tm rT × β =>
+          CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) p.1 (f_z (p.2, ())) fun x1 x2 x3 =>
+            f_s (p.2, x1, x2, x3)) ⁻¹'
+        S =
+      ⋃ i, decompCell_param S f_z f_s i :=
+  by
   ext ⟨x, y⟩
   simp only [Set.mem_preimage, Set.mem_iUnion, decompCell_param]
   constructor
-  · intro hx; cases x
+  · intro hx
+    cases x
     · exact ⟨0, (y, ()), hx, rfl⟩
     · exact ⟨1, (y, ⟨_, _, _⟩), hx, rfl⟩
-  · rintro ⟨i, hi⟩; fin_cases i <;>
-      · obtain ⟨q, hq, hx⟩ := hi; cases hx; exact hq
+  · rintro ⟨i, hi⟩; fin_cases i <;> · obtain ⟨q, hq, hx⟩ := hi; cases hx; exact hq
 
-theorem measurable_rec_param {rT : Type _} [MeasurableSpace rT]
-    {α : Type _} [MeasurableSpace α] {β : Type _} [MeasurableSpace β]
-    (c_z : β × Unit → α) (c_s : β × (ℕ × (CylinderGenTest.Golden.Tm rT) × rT) → α)
+theorem measurable_rec_param {rT : Type _} [MeasurableSpace rT] {α : Type _} [MeasurableSpace α] {β : Type _}
+    [MeasurableSpace β] (c_z : β × Unit → α) (c_s : β × ℕ × CylinderGenTest.Golden.Tm rT × rT → α)
     (h_z : Measurable c_z) (h_s : Measurable c_s) :
-    Measurable (fun p : CylinderGenTest.Golden.Tm rT × β => CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) p.1
-        (c_z (p.2, ()))
-        (fun x1 x2 x3 => c_s ((p.2, x1, x2, x3)))) := by
+    Measurable fun p : CylinderGenTest.Golden.Tm rT × β =>
+      CylinderGenTest.Golden.Tm.casesOn (motive := fun _ => α) p.1 (c_z (p.2, ())) fun x1 x2 x3 =>
+        c_s (p.2, x1, x2, x3) :=
+  by
   intro S hS
   rw [casesOn_preimage_decomp_param]
   refine .iUnion fun i => ?_
   fin_cases i
-  · exact ((z.measurableEmbedding.prodMap (.id (α := β))).comp
-      MeasurableEquiv.prodComm.measurableEmbedding).measurableSet_image' (h_z hS)
-  · exact ((s.measurableEmbedding.prodMap (.id (α := β))).comp
-      MeasurableEquiv.prodComm.measurableEmbedding).measurableSet_image' (h_s hS)
+  ·
+    exact
+      ((z.measurableEmbedding.prodMap (.id (α := β))).comp
+            MeasurableEquiv.prodComm.measurableEmbedding).measurableSet_image'
+        (h_z hS)
+  ·
+    exact
+      ((s.measurableEmbedding.prodMap (.id (α := β))).comp
+            MeasurableEquiv.prodComm.measurableEmbedding).measurableSet_image'
+        (h_s hS)
 
-theorem singletonCyl_flatten {rT : Type _} (x : CylinderGenTest.Golden.Tm rT) :
-    (singletonCyl x).flatten = {x} := by
+theorem singletonCyl_flatten {rT : Type _} (x : CylinderGenTest.Golden.Tm rT) : (singletonCyl x).flatten = { x } := by
   induction x with
   | z => simp only [singletonCyl_eqs, Cylinder.flatten_eqs, Set.singleton_prod_singleton, Set.image_singleton]
-  | s x1 c2 S3 ih2 => simp only [singletonCyl_eqs, Cylinder.flatten_eqs, Set.singleton_prod_singleton, Set.image_singleton, ih2]
+  | s x1 c2 S3 ih2 =>
+    simp only [singletonCyl_eqs, Cylinder.flatten_eqs, Set.singleton_prod_singleton, Set.image_singleton, ih2]
 
-theorem singletonCyl_hasMeasurableLeaves {rT : Type _} [MeasurableSpace rT] [MeasurableSingletonClass rT] (x : CylinderGenTest.Golden.Tm rT) :
-    (singletonCyl x).HasMeasurableLeaves := by
+theorem singletonCyl_hasMeasurableLeaves {rT : Type _} [MeasurableSpace rT] [MeasurableSingletonClass rT]
+    (x : CylinderGenTest.Golden.Tm rT) : (singletonCyl x).HasMeasurableLeaves := by
   induction x with
   | z => exact True.intro
-  | s x1 c2 S3 ih2 => exact (And.intro ih2 (MeasurableSet.singleton S3))
+  | s x1 c2 S3 ih2 => exact And.intro ih2 (MeasurableSet.singleton S3)
 
 instance instMeasurableSingletonClass {rT : Type _} [MeasurableSpace rT] [MeasurableSingletonClass rT] :
     MeasurableSingletonClass (CylinderGenTest.Golden.Tm rT) where
-  measurableSet_singleton :=
-    Cylinders.measurableSet_singleton rfl singletonCyl_flatten singletonCyl_hasMeasurableLeaves
+  measurableSet_singleton := Cylinders.measurableSet_singleton rfl singletonCyl_flatten singletonCyl_hasMeasurableLeaves
 
 theorem measurable_struct_rec {rT : Type _} {α : Type _} [MeasurableSpace rT] [MeasurableSpace α]
-    {f : CylinderGenTest.Golden.Tm rT → α}
-    {c_z : α}
-    {c_s : ℕ → α → rT → α}
+    {f : CylinderGenTest.Golden.Tm rT → α} {c_z : α} {c_s : ℕ → α → rT → α}
     (eq_z : f (@CylinderGenTest.Golden.Tm.z rT) = c_z)
     (eq_s : ∀ x1 x2 x3, f (@CylinderGenTest.Golden.Tm.s rT x1 x2 x3) = c_s x1 (f x2) x3)
-    (h_s : Measurable (fun (q : ℕ × α × rT) => c_s q.1 q.2.1 q.2.2)) :
-    Measurable f := by
-  apply _root_.StructRec.measurable_of_cells CylinderGenTest.Golden.Tm.shape
-  intro s'
-  have hC : ∀ s' : Shape, MeasurableSet (CylinderGenTest.Golden.Tm.shape (rT := rT) ⁻¹' {s'}) := fun s' => by
-    rw [← Shape.cylinder_preimage_shape]; exact flatten_measurable (Shape.cylinder_hasMeasurableLeaves s')
-  induction s' with
+    (h_s : Measurable (fun (q : ℕ × α × rT) => c_s q.1 q.2.1 q.2.2)) : Measurable f :=
+  by
+  apply StructRec.measurable_of_cells CylinderGenTest.Golden.Tm.shape
+  intro s
+  have hC : ∀ s : Shape, MeasurableSet (CylinderGenTest.Golden.Tm.shape (rT := rT) ⁻¹' { s }) := fun s => by
+    rw [← Shape.cylinder_preimage_shape]; exact flatten_measurable (Shape.cylinder_hasMeasurableLeaves s)
+  induction s with
   | z =>
     intro U hU
-    exact Cylinders.cell (ι := @CylinderGenTest.Golden.Tm.z.ι rT) z.measurableEmbedding (hC _)
-      (fun p hp => by
+    exact
+      Cylinders.cell (ι := @CylinderGenTest.Golden.Tm.z.ι rT) z.measurableEmbedding (hC _) fun p hp =>
+        by
         rw [← Set.mem_singleton_iff, ← Set.mem_preimage, ← Shape.cylinder_preimage_shape] at hp
         obtain rfl := hp
-        exact ⟨(), rfl⟩)
-      (G := fun q => c_z) (fun q _ => eq_z)
-      (measurable_of_countable _) hU
+        exact ⟨(), rfl⟩ (G := fun q => c_z) (fun q _ => eq_z) (measurable_of_countable _) hU
   | s x1 s2 ih2 =>
     intro U hU
-    exact Cylinders.cell (ι := @CylinderGenTest.Golden.Tm.s.ι rT) s.measurableEmbedding (hC _)
-      (fun p hp => by
+    exact
+      Cylinders.cell (ι := @CylinderGenTest.Golden.Tm.s.ι rT) s.measurableEmbedding (hC _) fun p hp =>
+        by
         rw [← Set.mem_singleton_iff, ← Set.mem_preimage, ← Shape.cylinder_preimage_shape] at hp
         obtain ⟨⟨b2, b3⟩, ⟨_, _⟩, rfl⟩ := hp
-        exact ⟨⟨x1, b2, b3⟩, rfl⟩)
-      (G := fun q => c_s q.1 (f q.2.1) q.2.2) (fun q _ => eq_s q.1 q.2.1 q.2.2)
-      (h_s.comp (((measurable_fst).comp measurable_subtype_coe).prodMk ((Cylinders.restrict_comp (Cylinders.restrict_of_cell @ih2) (measurable_fst.comp (measurable_snd)) (fun q hq => (Shape.s.inj hq).2)).prodMk ((measurable_snd.comp (measurable_snd)).comp measurable_subtype_coe)))) hU
+        exact ⟨⟨x1, b2, b3⟩, rfl⟩ (G := fun q => c_s q.1 (f q.2.1) q.2.2) (fun q _ => eq_s q.1 q.2.1 q.2.2)
+        (h_s.comp
+          ((measurable_fst.comp measurable_subtype_coe).prodMk
+            ((Cylinders.restrict_comp (Cylinders.restrict_of_cell @ih2)
+                  ((measurable_fst.comp measurable_snd).comp measurable_id) (fun q hq => (Shape.s.inj hq).2)).prodMk
+              ((measurable_snd.comp measurable_snd).comp measurable_subtype_coe))))
+        hU
 
-theorem measurable_struct_rec_param {rT : Type _} {α : Type _} [MeasurableSpace rT] [MeasurableSpace α] {β : Type _} [MeasurableSpace β]
-    {g : β → CylinderGenTest.Golden.Tm rT → α}
-    {c_z : β → α}
-    {c_s : β → ℕ → α → rT → α}
+theorem measurable_struct_rec_param {rT : Type _} {α : Type _} [MeasurableSpace rT] [MeasurableSpace α] {β : Type _}
+    [MeasurableSpace β] {g : β → CylinderGenTest.Golden.Tm rT → α} {c_z : β → α} {c_s : β → ℕ → α → rT → α}
     (eq_z : ∀ b, g b (@CylinderGenTest.Golden.Tm.z rT) = c_z b)
-    (eq_s : ∀ b x1 x2 x3, g b (@CylinderGenTest.Golden.Tm.s rT x1 x2 x3) = c_s b x1 (g b x2) x3)
-    (h_z : Measurable c_z)
-    (h_s : Measurable (fun (q : β × ℕ × α × rT) => c_s q.1 q.2.1 q.2.2.1 q.2.2.2)) :
-    Measurable (Function.uncurry g) := by
-  apply _root_.StructRec.measurable_of_cells_param CylinderGenTest.Golden.Tm.shape
-  intro s'
-  have hC : ∀ s' : Shape, MeasurableSet (CylinderGenTest.Golden.Tm.shape (rT := rT) ⁻¹' {s'}) := fun s' => by
-    rw [← Shape.cylinder_preimage_shape]; exact flatten_measurable (Shape.cylinder_hasMeasurableLeaves s')
-  induction s' with
+    (eq_s : ∀ b x1 x2 x3, g b (@CylinderGenTest.Golden.Tm.s rT x1 x2 x3) = c_s b x1 (g b x2) x3) (h_z : Measurable c_z)
+    (h_s : Measurable (fun (q : β × ℕ × α × rT) => c_s q.1 q.2.1 q.2.2.1 q.2.2.2)) : Measurable (Function.uncurry g) :=
+  by
+  apply StructRec.measurable_of_cells_param CylinderGenTest.Golden.Tm.shape
+  intro s
+  have hC : ∀ s : Shape, MeasurableSet (CylinderGenTest.Golden.Tm.shape (rT := rT) ⁻¹' { s }) := fun s => by
+    rw [← Shape.cylinder_preimage_shape]; exact flatten_measurable (Shape.cylinder_hasMeasurableLeaves s)
+  induction s with
   | z =>
     intro U hU
-    exact Cylinders.cell_param (ι := @CylinderGenTest.Golden.Tm.z.ι rT) z.measurableEmbedding (hC _)
-      (fun p hp => by
+    exact
+      Cylinders.cell_param (ι := @CylinderGenTest.Golden.Tm.z.ι rT) z.measurableEmbedding (hC _) fun p hp =>
+        by
         rw [← Set.mem_singleton_iff, ← Set.mem_preimage, ← Shape.cylinder_preimage_shape] at hp
         obtain rfl := hp
-        exact ⟨(), rfl⟩)
-      (G := fun q => c_z q.1) (fun b q _ => eq_z b)
-      (h_z.comp (measurable_fst.comp measurable_subtype_coe)) hU
+        exact ⟨(), rfl⟩ (G := fun q => c_z q.1) (fun b q _ => eq_z b)
+        (h_z.comp (measurable_fst.comp measurable_subtype_coe)) hU
   | s x1 s2 ih2 =>
     intro U hU
-    exact Cylinders.cell_param (ι := @CylinderGenTest.Golden.Tm.s.ι rT) s.measurableEmbedding (hC _)
-      (fun p hp => by
+    exact
+      Cylinders.cell_param (ι := @CylinderGenTest.Golden.Tm.s.ι rT) s.measurableEmbedding (hC _) fun p hp =>
+        by
         rw [← Set.mem_singleton_iff, ← Set.mem_preimage, ← Shape.cylinder_preimage_shape] at hp
         obtain ⟨⟨b2, b3⟩, ⟨_, _⟩, rfl⟩ := hp
-        exact ⟨⟨x1, b2, b3⟩, rfl⟩)
-      (G := fun q => c_s q.1 q.2.1 (g q.1 q.2.2.1) q.2.2.2) (fun b q _ => eq_s b q.1 q.2.1 q.2.2)
-      (h_s.comp ((measurable_fst.comp measurable_subtype_coe).prodMk (((measurable_fst).comp (measurable_snd.comp measurable_subtype_coe)).prodMk ((Cylinders.restrict_comp (Cylinders.restrict_of_cell @ih2) ((measurable_fst).prodMk ((measurable_fst.comp (measurable_snd)).comp measurable_snd)) (fun q hq => (Shape.s.inj hq).2)).prodMk ((measurable_snd.comp (measurable_snd)).comp (measurable_snd.comp measurable_subtype_coe)))))) hU
+        exact ⟨⟨x1, b2, b3⟩, rfl⟩ (G := fun q => c_s q.1 q.2.1 (g q.1 q.2.2.1) q.2.2.2)
+        (fun b q _ => eq_s b q.1 q.2.1 q.2.2)
+        (h_s.comp
+          ((measurable_fst.comp measurable_subtype_coe).prodMk
+            ((measurable_fst.comp (measurable_snd.comp measurable_subtype_coe)).prodMk
+              ((Cylinders.restrict_comp (Cylinders.restrict_of_cell @ih2)
+                    (measurable_fst.prodMk ((measurable_fst.comp measurable_snd).comp measurable_snd))
+                    (fun q hq => (Shape.s.inj hq).2)).prodMk
+                ((measurable_snd.comp measurable_snd).comp (measurable_snd.comp measurable_subtype_coe))))))
+        hU
 
 attribute [fun_prop] z.measurable s.measurable s.π.measurable measurable_rec measurable_rec_param
 
@@ -738,7 +842,8 @@ attribute [measurability] cover.z.measurable cover.s.measurable
 
 attribute [aesop safe apply (rule_sets := [Measurable])] Shape.cylinder_hasMeasurableLeaves
 
-attribute [simp, cylinder_simp] Cylinder.flatten_eqs CylinderGenTest.Golden.Tm.shape_eqs Cylinder.shape_eqs Shape.cylinder_eqs
+attribute [simp, cylinder_simp] Cylinder.flatten_eqs CylinderGenTest.Golden.Tm.shape_eqs Cylinder.shape_eqs
+  Shape.cylinder_eqs
 
 attribute [cylinder_simp] cover.z cover.s
 
@@ -862,6 +967,49 @@ end Tm
 end
 end PropField
 
+/-! ## Names the generated code uses
+
+The generated code is hygienic, so the user's names cannot capture the globals it refers to. -/
+
+namespace ParamSet
+@[uncurriedProjections, constructors]
+inductive Tm (Set : Type) | nil | a (r : Set) (t : Tm Set)
+namespace Tm
+cylinder_defs Tm
+selftest (Tm ℝ) (Cylinder ℝ)
+end Tm
+end ParamSet
+
+namespace CtorNone
+@[uncurriedProjections, constructors]
+inductive Tm | none | some (n : ℕ) (t : Tm)
+namespace Tm
+cylinder_defs Tm
+selftest Tm Cylinder
+end Tm
+end CtorNone
+
+namespace Shadowed
+def MeasurableSet (n : ℕ) : ℕ := n
+@[uncurriedProjections, constructors]
+inductive Tm (rT : Type _) | nil | a (r : rT) (t : Tm rT)
+namespace Tm
+cylinder_defs Tm
+end Tm
+end Shadowed
+
+namespace ShadowedDotted
+namespace MeasurableSet
+theorem singleton : True := trivial
+end MeasurableSet
+@[uncurriedProjections, constructors]
+inductive Tm | nil | a (n : ℕ) (t : Tm)
+namespace Tm
+cylinder_defs Tm
+selftest Tm Cylinder
+end Tm
+end ShadowedDotted
+
 /-! ## Rejected inputs -/
 
 namespace ShiftClash
@@ -939,14 +1087,6 @@ error: cylinders: constructor name `cylinder` clashes with a name used by the ge
 -/
 #guard_msgs in #cylinder_classify ReservedCtor2
 
-inductive ReservedParam (Set : Type) | nil | a (r : Set)
-/-- error: cylinders: parameter name `Set` clashes with a name used by the generated code -/
-#guard_msgs in #cylinder_classify ReservedParam
-
-inductive CtorNone | none | some (n : ℕ) (t : CtorNone)
-/-- error: cylinders: constructor name `none` clashes with a name used by the generated code -/
-#guard_msgs in #cylinder_classify CtorNone
-
 inductive CtorShape | nil | Shape (t : CtorShape)
 /-- error: cylinders: constructor name `Shape` clashes with a name used by the generated code -/
 #guard_msgs in #cylinder_classify CtorShape
@@ -971,18 +1111,6 @@ error: cylinders: field type ℕ → FnRec contains `CylinderGenTest.Rejected.Fn
 -/
 #guard_msgs in #cylinder_classify FnRec
 
-namespace Shadowed
-def MeasurableSet (n : ℕ) : ℕ := n
-@[uncurriedProjections, constructors]
-inductive Tm (rT : Type _) | nil | a (r : rT) (t : Tm rT)
-namespace Tm
-/--
-error: cylinders: `MeasurableSet` refers to [CylinderGenTest.Rejected.Shadowed.MeasurableSet] here, but the generated code needs the global `MeasurableSet`
--/
-#guard_msgs in cylinder_defs Tm
-end Tm
-end Shadowed
-
 inductive ImplicitParam {rT : Type} | nil | c (r : rT) (t : @ImplicitParam rT)
 /-- error: cylinders: parameter `rT` must be explicit -/
 #guard_msgs in #cylinder_classify ImplicitParam
@@ -996,20 +1124,6 @@ inductive SuffixClash | nil | a (t : SuffixClash) | a_univ_eq_range (n : ℕ)
 error: cylinders: constructors `a` and `a_univ_eq_range` would both define `cover.a_univ_eq_range`
 -/
 #guard_msgs in #cylinder_classify SuffixClash
-
-namespace ShadowedDotted
-namespace MeasurableSet
-theorem singleton : True := trivial
-end MeasurableSet
-@[uncurriedProjections, constructors]
-inductive Tm | nil | a (n : ℕ) (t : Tm)
-namespace Tm
-/--
-error: cylinders: `MeasurableSet.singleton` refers to [CylinderGenTest.Rejected.ShadowedDotted.MeasurableSet.singleton] here, but the generated code needs the global `MeasurableSet.singleton`
--/
-#guard_msgs in cylinder_defs Tm
-end Tm
-end ShadowedDotted
 
 namespace NoBaseCase
 @[uncurriedProjections, constructors]
