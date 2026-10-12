@@ -894,12 +894,11 @@ theorem headStep.c_rand.measurable :
       match optTape with
       | none => exact measurable_const
       | some ⟨M, ns⟩ =>
-        by_cases hMz : M = z
-        · subst hMz
-          simp only [↓reduceIte]
+        rcases eq_or_ne M z with rfl | hMz
+        · simp only [↓reduceIte]
           match ns with
           | [] =>
-            exact (Cfg.uniform.measurable (rT := rT)).comp
+            exact Cfg.uniform.measurable.comp
               (measurable_const.prodMk measurable_id)
           | n :: ns' =>
             refine Cfg.measurable_dirac_mk measurable_const ?_
@@ -912,7 +911,7 @@ theorem headStep.c_rand.measurable :
               State.measurable_tapes.prodMk (measurable_const.prodMk measurable_const)
             exact Measurable.locHeap_insert_param.comp hpair
         · simp only [hMz, ↓reduceIte]
-          exact (Cfg.uniform.measurable (rT := rT)).comp
+          exact Cfg.uniform.measurable.comp
             (measurable_const.prodMk measurable_id)
     have hreshape : Measurable (fun q : State rT × Int × Lbl × Option Tape =>
         ((q.2.1, q.2.2.1, q.2.2.2), q.1) :
@@ -938,7 +937,7 @@ theorem headStep.c_rand.measurable :
   let c_unit_arm : State rT × Int × Unit → Measure (Cfg rT) :=
     fun ⟨σ, z, _⟩ => Cfg.uniform z σ
   have hc_unit_arm : Measurable c_unit_arm :=
-    (Cfg.uniform.measurable (rT := rT)).comp
+    Cfg.uniform.measurable.comp
       ((measurable_fst.comp measurable_snd).prodMk measurable_fst)
   let c_l2_dispatch : (State rT × Int) × BaseLit rT → Measure (Cfg rT) :=
     fun ⟨⟨σ, z⟩, l2⟩ =>
@@ -1536,7 +1535,7 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | BinOpS hv1 hv2 heval =>
     simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval]
   | AllocS hvd hl hσ =>
-    subst hl; subst hσ; simp [headStep, Exp.asValM, hvd]
+    subst hl hσ; simp [headStep, Exp.asValM, hvd]
   | LoadS hlook he =>
     subst he; simp [headStep, hlook]
   | StoreS hv hsome hσ =>
@@ -1544,7 +1543,7 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     obtain ⟨vold, hvold⟩ := Option.isSome_iff_exists.mp hsome
     simp [headStep, Exp.asValM, hv, hvold]
   | TapeS hl hσ =>
-    subst hl; subst hσ; simp [headStep]
+    subst hl hσ; simp [headStep]
   | ScrutSuccessS hv hmatch =>
     simp [headStep, Exp.isValM, hv, hmatch]
   | ScrutFailureS hv hmatch =>
@@ -1554,9 +1553,9 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | RandNonposS Hz =>
     simp [headStep, Cfg.uniform, Int.isPos, Hz]
   | RandTapeS htape hz hv hσ =>
-    subst hz; subst hv; subst hσ; simp [headStep, htape]
+    subst hz hv hσ; simp [headStep, htape]
   | RandTapeEmptyS Hz htape hz Hv0 Hvz hσ =>
-    subst hσ; subst hz; simp only [headStep, htape, ↓reduceIte]
+    subst hσ hz; simp only [headStep, htape, ↓reduceIte]
     exact (Cfg.uniform_possible Hz Hv0 Hvz).ne_zero
   | RandTapeOtherS Hz htape hzN Hv0 Hvz hσ =>
     subst hσ; simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
@@ -1588,7 +1587,7 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     exact Possible.of_dirac_eq
       (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
   | AllocS hvd hl hσ =>
-    subst hl; subst hσ; exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
+    subst hl hσ; exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
   | LoadS hlook he =>
     subst he; exact Possible.of_dirac_eq (by simp [headStep, hlook])
   | StoreS hv hsome hσ =>
@@ -1596,7 +1595,7 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     obtain ⟨vold, hvold⟩ := Option.isSome_iff_exists.mp hsome
     exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hv, hvold])
   | TapeS hl hσ =>
-    subst hl; subst hσ; exact Possible.of_dirac_eq (by simp [headStep])
+    subst hl hσ; exact Possible.of_dirac_eq (by simp [headStep])
   | ScrutSuccessS hv hmatch =>
     exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv, hmatch])
   | ScrutFailureS hv hmatch =>
@@ -1606,9 +1605,9 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | RandNonposS Hz =>
     exact Possible.of_dirac_eq (by simp [headStep, Cfg.uniform, Int.isPos, Hz])
   | RandTapeS htape hz hv hσ =>
-    subst hz; subst hv; subst hσ; exact Possible.of_dirac_eq (by simp [headStep, htape])
+    subst hz hv hσ; exact Possible.of_dirac_eq (by simp [headStep, htape])
   | RandTapeEmptyS Hz htape hz Hv0 Hvz hσ =>
-    subst hσ; subst hz; simp only [headStep, htape, ↓reduceIte]
+    subst hσ hz; simp only [headStep, htape, ↓reduceIte]
     exact Cfg.uniform_possible Hz Hv0 Hvz
   | RandTapeOtherS Hz htape hzN Hv0 Hvz hσ =>
     subst hσ; simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
@@ -1655,25 +1654,19 @@ theorem headStep_support_of_pos [MeasurableSingletonClass rT]
     obtain ⟨r, hr, h⟩ := h; cfg_dirac h; exact .BinOpS ‹_› ‹_› hr.symm
   case rand.plain =>
     intro h
-    obtain ⟨hσ, hbr⟩ := Cfg.uniform_singleton_pos_inv h
-    simp at hσ; subst hσ
-    rcases hbr with ⟨Hz, v, hv, Hv0, Hvz⟩ | ⟨Hz, hv⟩
-    · simp at hv; subst hv; exact .RandNoTapeS Hz Hv0 Hvz
-    · simp at hv; subst hv; exact .RandNonposS Hz
+    obtain ⟨rfl, ⟨Hz, v, rfl, Hv0, Hvz⟩ | ⟨Hz, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
+    · exact .RandNoTapeS Hz Hv0 Hvz
+    · exact .RandNonposS Hz
   case rand.tape =>
     intro h
-    obtain ⟨hσ, hbr⟩ := Cfg.uniform_singleton_pos_inv h
-    simp at hσ; subst hσ
-    rcases hbr with ⟨Hz, v, hv, Hv0, Hvz⟩ | ⟨Hz, hv⟩
-    · simp at hv; subst hv; exact .RandTapeEmptyS Hz ‹_› rfl Hv0 Hvz rfl
-    · simp at hv; subst hv; exact .RandTapeNonposEmptyS Hz ‹_› rfl
+    obtain ⟨rfl, ⟨Hz, v, rfl, Hv0, Hvz⟩ | ⟨Hz, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
+    · exact .RandTapeEmptyS Hz ‹_› rfl Hv0 Hvz rfl
+    · exact .RandTapeNonposEmptyS Hz ‹_› rfl
   case rand.tape.mismatch =>
     intro h
-    obtain ⟨hσ, hbr⟩ := Cfg.uniform_singleton_pos_inv h
-    simp at hσ; subst hσ
-    rcases hbr with ⟨Hz, v, hv, Hv0, Hvz⟩ | ⟨Hz, hv⟩
-    · simp at hv; subst hv; exact .RandTapeOtherS Hz ‹_› (Ne.symm ‹_›) Hv0 Hvz rfl
-    · simp at hv; subst hv; exact .RandTapeNonposOtherS Hz ‹_› (Ne.symm ‹_›)
+    obtain ⟨rfl, ⟨Hz, v, rfl, Hv0, Hvz⟩ | ⟨Hz, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
+    · exact .RandTapeOtherS Hz ‹_› (Ne.symm ‹_›) Hv0 Hvz rfl
+    · exact .RandTapeNonposOtherS Hz ‹_› (Ne.symm ‹_›)
   case scrut_success => intro h; cfg_dirac h; exact .ScrutSuccessS ‹_› ‹_›
   case scrut_failure => intro h; cfg_dirac h; exact .ScrutFailureS ‹_› ‹_›
   case urand =>
@@ -1689,7 +1682,7 @@ theorem headStep_support_of_pos [MeasurableSingletonClass rT]
     unfold Cfg.uniformReal at h
     obtain ⟨r, hr, hpos⟩ := map_singleton_pos hg hinj h
     rw [← hr]
-    refine .UrandS (rT := rT) ?_
+    refine .UrandS ?_
     by_contra hr_notin
     have hsub : ({r} : Set rT) ⊆ (LawfulProbLangℝ.unifUnitSupport)ᶜ := Set.singleton_subset_iff.mpr hr_notin
     exact (ne_of_gt hpos)
@@ -1755,7 +1748,7 @@ theorem headStep_exists_support_of_ne_zero
     rename_i _ σ' heq
     obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..) ▸ heq
     obtain ⟨r, hr⟩ := LawfulProbLangℝ.unifUnitSupport_nonempty rT
-    exact ⟨_, HeadStepSupport.UrandS (r := r) hr⟩
+    exact ⟨_, .UrandS hr⟩
 
 theorem isValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {m : Measure T}
     (he : e.isValue) [IsProbabilityMeasure m] : IsProbabilityMeasure (e.isValM m) := by

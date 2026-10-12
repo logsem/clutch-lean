@@ -104,19 +104,19 @@ theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT)
 
 theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
     (fun (σ₂ : State rT) (ρ' : Cfg rT) (ε₂ : ENNReal) =>
-      iprop(|={∅, E}=> stateInterp (rT := rT) σ₂ ∗ SpecUpdateGS.specInterp (rT := rT) ρ' ∗
+      iprop(|={∅, E}=> stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
         errInterp (rT := rT) ε₂ ∗ Φ v))
     = (fun (σ₂ : State rT) (ρ' : Cfg rT) (ε₂ : ENNReal) =>
       match (Exp.ofVal v).toVal? with
       | some v => iprop(|={∅, E}=>
-          stateInterp (rT := rT) σ₂ ∗ SpecUpdateGS.specInterp (rT := rT) ρ' ∗
+          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
             errInterp (rT := rT) ε₂ ∗ Φ v)
       | none => iprop(progCoupl (Exp.ofVal v) σ₂ ρ'.expr ρ'.state ε₂
           (fun e₃ σ₃ e₃' σ₃' ε₃ =>
             iprop(▷ specCoupl ∅ σ₃ e₃' σ₃' ε₃ (fun σ₄ ρ'' ε₄ =>
               iprop(|={∅, E}=>
-                stateInterp (rT := rT) σ₄ ∗ SpecUpdateGS.specInterp (rT := rT) ρ'' ∗
-                  errInterp (rT := rT) ε₄ ∗ wp (GF := GF) E e₃ Φ)))))) := by
+                stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗
+                  errInterp (rT := rT) ε₄ ∗ wp E e₃ Φ)))))) := by
   funext σ₂ ρ' ε₂
   rw [Exp.toVal?_ofVal]
 
@@ -125,22 +125,22 @@ omit [LawfulProbLangℝ rT] in
 theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
     (x : Option (Val rT)) (some_f : (v : Val rT) → motive (some v))
     (none_f : Unit → motive none) :
-    ProbLang.wpPre_value_Z_eq.match_1 (rT := rT) motive x some_f none_f =
-    ProbLang.ApproxisWpGS.wpPre.match_1 (rT := rT) motive x some_f none_f := by
+    ProbLang.wpPre_value_Z_eq.match_1 motive x some_f none_f =
+    ProbLang.ApproxisWpGS.wpPre.match_1 motive x some_f none_f := by
   cases x <;> rfl
 
 theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
     (E : CoPset) (He : e.toVal? = some v) :
-    wp (GF := GF) E e Φ ⊢@{IProp GF}
+    wp E e Φ ⊢@{IProp GF}
       ∀ σ₁ e₁' σ₁' ε₁,
         stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp (rT := rT) ⟨e₁', σ₁'⟩ ∗
           errInterp (rT := rT) ε₁ -∗
           |={E, ∅}=> specCoupl ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
             iprop(|={∅, E}=>
-              stateInterp (rT := rT) σ₂ ∗ SpecUpdateGS.specInterp (rT := rT) ρ' ∗
+              stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
                 errInterp (rT := rT) ε₂ ∗ Φ v)) := by
   obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
-  rw [wpPre_value_Z_eq (E := E) (v := v) (Φ := Φ)]
+  rw [wpPre_value_Z_eq E]
   simp only [wpPre_match_eq]
   iintro Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
   iapply (BI.equiv_iff.mp ApproxisWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
@@ -167,7 +167,7 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   | succ n =>
     rw [execN_succ_isValue (ρ := ⟨Exp.ofVal v, σ₂⟩) v.isValue n,
         limExec_of_isVal (e := Exp.ofVal v') (σ := σ₂') v'.2]
-    simp only [MeasureTheory.Measure.map_dirac' (Cfg.measurable_expr (α := rT))]
+    simp only [MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
     exact AddCoupl.dirac _ ⟨v, v', Exp.toVal?_ofVal v, Exp.toVal?_ofVal v', Hφrel⟩
 
 theorem wp_adequacy_step_fupdN (ε : ENNReal) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)

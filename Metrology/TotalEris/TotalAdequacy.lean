@@ -281,8 +281,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
           |={∅}=> ⌜Tgl (limExec ⟨e', σ'⟩) φ ε''⌝) $$ [HOT]
       · iintro %ε'' %hε
         imod HOT $$ %ε'' %hε with HS
-        iapply Tgl_of_execStutter (fun _ => and_elim_l)
-        iexact HS
+        iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
       imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
       imodintro; ipureintro
       exact Tgl.epsilon_limit Hf
@@ -293,8 +292,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
             |={∅}=> ⌜Tgl (limExec ρ) φ (X₂ ρ)⌝) $$ [HCont]
         · iintro %ρ %hR
           imod HCont $$ %ρ %hR with HS
-          iapply Tgl_of_execStutter (P := Z ρ) (fun _ => .rfl)
-          iexact HS
+          iapply Tgl_of_execStutter (P := Z ρ) (fun _ => .rfl) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
         imodintro; ipureintro
         exact Tgl.dbind_prim_step hφ HRmeas Hred Hsum Hpgl Hf
@@ -303,13 +301,11 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
             |={∅}=> ⌜Tgl (limExec ⟨e', σ''⟩) φ (X₂ σ'')⌝) $$ [HCont]
         · iintro %σ'' %hR
           imod HCont $$ %σ'' %hR with HS
-          iapply Tgl_of_execStutter (fun _ => and_elim_l)
-          iexact HS
+          iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
         imodintro; ipureintro
         exact Tgl.dbind_erasable Heras hφ HRmeas Hsum Hpgl Hf
-  iapply (glm'_strong_ind (GF := GF) (Z := Z) (Ψ := Ψ)) $$ HInd
-    %(⟨⟨e, σ⟩, ε⟩ : GlmState rT) HG
+  iapply glm'_strong_ind (Z := Z) (Ψ := Ψ) $$ HInd %(⟨⟨e, σ⟩, ε⟩ : GlmState rT) HG
 
 theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
@@ -322,8 +318,7 @@ theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF]
       |={⊤,∅}=> ⌜Tgl (limExec ⟨e', σ'⟩) φ ε'⌝)
   let : NonExpansive Q := nonExpansive_of_discrete_leibniz Q
   ihave Hq : Q e $$ [HW]
-  · iapply (tglWp_ind (E := ⊤) (Q := Q)
-      (Φ := fun v => iprop(⌜φ v⌝)))
+  · iapply tglWp_ind (E := ⊤) (Q := Q) (Φ := fun v => iprop(⌜φ v⌝))
     · iintro !> %e' HPre %σ' %ε' ⟨Hσ', Hε'⟩
       cases htv : e'.toVal? with
       | some v =>
@@ -369,7 +364,7 @@ theorem twp_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     ecGS := { toECPreGS := inferInstance, γec := γec }
     invGS := Hinv }
   ihave Hwp' := Hwp $$ HecFrag
-  iapply twp_step_fupd_tgl (GF := GF) hφ
+  iapply twp_step_fupd_tgl hφ
   iframe
 
 theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
@@ -389,8 +384,8 @@ theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     ecGS := { toECPreGS := inferInstance, γec := γec }
     invGS := Hinv }
   ihave Hwp' := Hwp $$ HecFrag
-  imod ErisWpGS.tglWp_value_inv_with_state (E := ⊤) (v := v) (σ := σ) (ε := ε)
-    (Φ := fun v => iprop(⌜φ v⌝)) $$ [$Hwp' $HappAuth $HecAuth] with ⟨_, _, %hφ⟩
+  imod tglWp_value_inv_with_state (E := ⊤) (Φ := fun v => iprop(⌜φ v⌝))
+    $$ [$Hwp' $HappAuth $HecAuth] with ⟨-, -, %hφ⟩
   simp only [Nat.repeat]
   imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with _
   imodintro; ipureintro

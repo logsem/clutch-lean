@@ -377,10 +377,10 @@ omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   unfold env_ltyped2
   isplitr
-  · ipureintro; intro x; simp [RelCtx.lookup, ValSubstMap.lookup]
+  · ipureintro; simp [RelCtx.lookup, ValSubstMap.lookup]
   isplitr
-  · ipureintro; intro p hp; cases hp
-  iintro %x %A %v1 %v2 %hΓ %hvs
+  · ipureintro; simp
+  iintro %x %A %v1 %v2 %hΓ
   simp [RelCtx.lookup] at hΓ
 
 omit [LawfulProbLangℝ rT] in
@@ -417,10 +417,7 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
       simp
   isplitr
   · ipureintro
-    intro p hp
-    rcases List.mem_cons.mp hp with rfl | hpm
-    · exact ⟨hv1c, hv2c⟩
-    · exact Hclosed p hpm
+    exact List.forall_mem_cons.mpr ⟨⟨hv1c, hv2c⟩, Hclosed⟩
   iintro %y %B %w1 %w2 %hΓ' %hvs'
   simp only [RelCtx.lookup, ValSubstMap.lookup] at hΓ' hvs'
   cases hΓy : Γ.lookup y with
@@ -458,8 +455,7 @@ theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var
       rw [RelCtx.lookup_cons] at heq
       cases hΓz : Γ.lookup z <;> simpa [hΓz, hzy] using heq
   isplitr
-  · ipureintro
-    exact fun p hp => Hclosed p ((ValSubstMap.mem_delete _ _ _).mp hp).1
+  · ipureintro; exact fun p hp => Hclosed p ((ValSubstMap.mem_delete _ _ _).mp hp).1
   iintro %z %B %v1 %v2 %hΓz %hvsz
   have hzy : z ≠ y := by
     rintro rfl

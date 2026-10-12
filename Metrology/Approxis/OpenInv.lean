@@ -66,11 +66,11 @@ theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT :
     iintro %σ₄ %ρ'' %ε₄ HBody4
     iapply fupd_specCoupl
     irevert HBody4
-    refine BI.entails_wand (fupd_elim (E2 := E2) ?_)
+    refine BI.entails_wand (fupd_elim ?_)
     iintro ⟨Hσ4, Hs4, Hε4, HW4⟩
     ihave HW4 := wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %ε₄ [$]
     irevert HW4
-    refine BI.entails_wand (fupd_elim (E2 := ∅) ?_)
+    refine BI.entails_wand (fupd_elim ?_)
     iintro HSC
     iapply fupd_intro
     iapply specCoupl_mono_spatial
@@ -94,11 +94,11 @@ theorem of_atomic {e : Exp rT} (h : Atomic' e) : OpenInv e := by
   iintro %σ₁ %e₁' %σ₁' %ε₁ Hres
   icombine HF Hres as HFR
   irevert HFR
-  refine BI.entails_wand (fupd_frame_right.trans (fupd_elim (E2 := E2) ?_))
+  refine BI.entails_wand (fupd_frame_right.trans (fupd_elim ?_))
   iintro ⟨HW, HresInner⟩
   ihave HW := wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %ε₁ HresInner
   irevert HW
-  refine BI.entails_wand (fupd_elim (E2 := ∅) ?_)
+  refine BI.entails_wand (fupd_elim ?_)
   cases htv : e.toVal? with
   | some v => exact (specCoupl_atomic_bridge_some (v := v)).trans fupd_intro
   | none => exact (specCoupl_atomic_bridge_none h).trans fupd_intro
@@ -170,13 +170,13 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
   elim_acc := by
     dsimp only [accessor]
     iintro %_ Hinner Hacc
-    iapply (wp_atomic h.out)
+    iapply wp_atomic h.out
     imod Hacc with ⟨%x, Hα, Hclose⟩
     imodintro
     ispecialize Hinner $$ %x Hα
     iapply ApproxisWpGS.wp_frame_wand
     iframe Hclose
-    iapply (ApproxisWpGS.wp_mono (Φ := fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v))))
+    iapply ApproxisWpGS.wp_mono
     case HΦ => exact fun _ => elimAcc_close
     iexact Hinner
 
@@ -195,7 +195,7 @@ instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
     iapply ApproxisWpGS.wp_fupd
     iapply ApproxisWpGS.wp_frame_wand
     iframe Hclose
-    iapply (ApproxisWpGS.wp_mono (Φ := fun v => iprop(|={E}=> β x ∗ (γ x -∗? Φ v))))
+    iapply ApproxisWpGS.wp_mono
     case HΦ => exact fun _ => elimAcc_close
     iexact Hinner
 

@@ -402,11 +402,8 @@ theorem fillItem.measurable [MeasurableSpace rT] :
 @[fun_prop]
 theorem Ectx_fill.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Ectx rT × Exp rT) => Ectx.fill q.1 q.2) := by
-  have hflip : Measurable (Function.uncurry (flip (EctxItem.fillItem (α := rT)))) := by
-    have hrw : Function.uncurry (flip (EctxItem.fillItem (α := rT)))
-        = (fun q : EctxItem rT × Exp rT => q.1.fillItem q.2) ∘ Prod.swap := rfl
-    rw [hrw]
-    exact Exp.fillItem.measurable.comp measurable_swap
+  have hflip : Measurable (Function.uncurry (flip (EctxItem.fillItem (α := rT)))) :=
+    Exp.fillItem.measurable.comp measurable_swap
   exact List.measurable_foldl hflip
 
 /-! ### `Exp.openRec`, `Exp.closeRec` -/
@@ -549,11 +546,9 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
   rw [hrw]
   intro S hS
   obtain ⟨Ssum, hSsum, hSeq⟩ := hS
-  have hTval_meas : MeasurableSet (Sum.inl ⁻¹' Ssum : Set (Val rT)) :=
-    measurable_inl hSsum
   obtain ⟨Uval, hUval, hUval_eq⟩ : ∃ U : Set (Exp rT), MeasurableSet U ∧
       Val.fst ⁻¹' U = (Sum.inl ⁻¹' Ssum : Set (Val rT)) :=
-    MeasurableSpace.measurableSet_comap.mp hTval_meas
+    MeasurableSpace.measurableSet_comap.mp (measurable_inl hSsum)
   have hMset : MeasurableSet {e : Exp rT | e.isValue} := by
     have heq : {e : Exp rT | e.isValue} = {e | e.isValueR} ∩ {e | Exp.lcb 0 e = true} := by
       ext e; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
@@ -577,7 +572,6 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
           (Val.mk e (Classical.choice hv) (Classical.choice hv).lc : Val rT) ∈
           (Sum.inl ⁻¹' Ssum : Set (Val rT)) := Iff.rfl
       rw [hmem_iff, ← hUval_eq]
-      have hfeq : (Val.mk e (Classical.choice hv) (Classical.choice hv).lc : Val rT).fst = e := rfl
       simp only [Set.mem_preimage]
       constructor
       · intro hUe
@@ -630,20 +624,14 @@ theorem _root_.Option.measurable_elim_param
         Set.mem_ofPred_eq, Set.mem_image, Prod.mk.injEq]
       constructor
       · intro h; right; exact ⟨(a, b), h, rfl, rfl⟩
-      · rintro (⟨hcontra, _⟩ | ⟨⟨a', b'⟩, hab, haeq, hbeq⟩)
+      · rintro (⟨hcontra, _⟩ | ⟨⟨a', b'⟩, hab, rfl, hbeq⟩)
         · simp_all
-        · subst haeq; exact Option.some_injective _ hbeq ▸ hab
+        · exact Option.some_injective _ hbeq ▸ hab
   rw [hpre]
   refine MeasurableSet.union ?_ ?_
-  · refine MeasurableSet.inter ?_ (hdef hS)
-    have : {a | f a = none} = f ⁻¹' {none} := by ext a; simp
-    rw [this]; exact hf MeasurableSet.singleton_none
+  · exact (hf MeasurableSet.singleton_none).inter (hdef hS)
   · refine MeasurableSet.preimage ?_ (measurable_id.prodMk hf)
-    refine MeasurableEmbedding.measurableSet_image' ?_ (hsome hS)
-    have heq : (fun q : α × β => (q.1, (some q.2 : Option β)))
-        = Prod.map (id : α → α) (some : β → Option β) := rfl
-    rw [heq]
-    exact MeasurableEmbedding.id.prodMap MeasurableEmbedding.some_mk
+    exact (MeasurableEmbedding.id.prodMap MeasurableEmbedding.some_mk).measurableSet_image' (hsome hS)
 
 theorem _root_.Option.measurable_elim_param_zero
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
@@ -970,25 +958,18 @@ theorem decompItem.measurable [MeasurableSpace rT] :
           Option.casesOn (motive := fun _ => Option (EctxItem rT × Exp rT))
             (projL b).toVal? (some (KL (b, v2), projL b)) fun _ => none) := by
     intro β _ KR KL projL projR hKR hKL hprojL hprojR
-    have h_default : Measurable (fun b : β => (some (KR b, projR b) : Option (EctxItem rT × Exp rT))) := by
-      have : Measurable (fun b : β => ((KR b, projR b) : EctxItem rT × Exp rT)) :=
-        hKR.prodMk hprojR
-      exact MeasurableEmbedding.some_mk.measurable.comp this
     have h_some_branch : Measurable
         (fun bv : β × Val rT =>
           Option.casesOn (motive := fun _ => Option (EctxItem rT × Exp rT))
-            (projL bv.1).toVal? (some (KL bv, projL bv.1)) fun _ => none) := by
-      have h_default' : Measurable
-          (fun bv : β × Val rT => (some (KL bv, projL bv.1) : Option (EctxItem rT × Exp rT))) := by
-        have : Measurable (fun bv : β × Val rT => ((KL bv, projL bv.1) : EctxItem rT × Exp rT)) :=
-          hKL.prodMk (hprojL.comp measurable_fst)
-        exact MeasurableEmbedding.some_mk.measurable.comp this
-      exact Option.measurable_elim_param
+            (projL bv.1).toVal? (some (KL bv, projL bv.1)) fun _ => none) :=
+      Option.measurable_elim_param
         (f := fun bv : β × Val rT => (projL bv.1).toVal?)
         (htv.comp (hprojL.comp measurable_fst))
-        h_default' measurable_const
+        (MeasurableEmbedding.some_mk.measurable.comp (hKL.prodMk (hprojL.comp measurable_fst)))
+        measurable_const
     exact Option.measurable_elim_param (f := fun b => (projR b).toVal?)
-      (htv.comp hprojR) h_default h_some_branch
+      (htv.comp hprojR) (MeasurableEmbedding.some_mk.measurable.comp (hKR.prodMk hprojR))
+      h_some_branch
   refine Exp.measurable_rec
     (f_bvar := fun _ => none) (f_fvar := fun _ => none) (f_lit := fun _ => none)
     (f_lam := fun _ => none) (f_fix := fun _ => none)
@@ -1108,11 +1089,9 @@ private theorem decompN_eq_decomp {α : Type _} :
   induction n with
   | zero =>
     intro e he
-    have heq0 : e.height = 0 := Nat.le_zero.mp he
     have hdec : e.decompItem = none := by
-      by_contra h
       rcases hne : e.decompItem with _ | ⟨Ki, e'⟩
-      · exact h hne
+      · rfl
       · have := Exp.decompItem_height hne
         omega
     show ([], e) = e.decomp
@@ -1124,9 +1103,8 @@ private theorem decompN_eq_decomp {α : Type _} :
     conv_rhs => rw [Exp.decomp_unfold]
     rcases hdec : e.decompItem with _ | ⟨Ki, e'⟩
     · simp
-    · have hh : e'.height < e.height := Exp.decompItem_height hdec
-      have hn : n ≥ e'.height := by omega
-      simp [ih e' hn]
+    · have := Exp.decompItem_height hdec
+      simp [ih e' (by omega)]
 
 private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
     Measurable (decompN n : Exp rT → Ectx rT × Exp rT) := by
@@ -1154,16 +1132,8 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
     · have h_decompN : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
           decompN n q.2.2) :=
         ih.comp (measurable_snd.comp measurable_snd)
-      have h_decompN_fst : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
-          (decompN n q.2.2).1) :=
-        measurable_fst.comp h_decompN
-      have h_decompN_snd : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) =>
-          (decompN n q.2.2).2) :=
-        measurable_snd.comp h_decompN
-      have h_Ki : Measurable (fun q : Exp rT × (EctxItem rT × Exp rT) => q.2.1) :=
-        measurable_fst.comp measurable_snd
-      refine Measurable.prodMk ?_ h_decompN_snd
-      exact List.measurable_append_singleton.comp (h_decompN_fst.prodMk h_Ki)
+      exact (List.measurable_append_singleton.comp
+        (h_decompN.fst.prodMk (measurable_fst.comp measurable_snd))).prodMk h_decompN.snd
 
 @[fun_prop]
 theorem decomp.measurable [MeasurableSpace rT] :
@@ -1171,10 +1141,8 @@ theorem decomp.measurable [MeasurableSpace rT] :
   have hrw : (Exp.decomp : Exp rT → Ectx rT × Exp rT) = fun e => decompN e.height e := by
     funext e; exact (decompN_eq_decomp e.height e (Nat.le_refl _)).symm
   rw [hrw]
-  have hjoint : Measurable (fun p : ℕ × Exp rT => decompN p.1 p.2) := by
-    apply measurable_from_prod_countable_right
-    intro n
-    exact decompN_measurable n
+  have hjoint : Measurable (fun p : ℕ × Exp rT => decompN p.1 p.2) :=
+    measurable_from_prod_countable_right decompN_measurable
   exact hjoint.comp (height.measurable.prodMk measurable_id)
 
 /-! ### Constructor extractors -/
@@ -1569,11 +1537,7 @@ theorem liftEq_litK.measurable [MeasurableSpace rT] [Inhabited rT]
   · refine MeasurableEmbedding.some_mk.measurable.comp ?_
     refine Exp.lit.measurable.comp ?_
     refine BaseLit.bool.measurable.comp ?_
-    have : (fun r : (Exp rT × BaseLit rT) × BaseLit rT => decide (r.1.2 = r.2))
-         = (fun p : BaseLit rT × BaseLit rT => decide (p.1 = p.2)) ∘
-           (fun r : (Exp rT × BaseLit rT) × BaseLit rT => (r.1.2, r.2)) := rfl
-    rw [this]
-    exact (decide_eq_BaseLit_measurable (rT := rT)).comp
+    exact decide_eq_BaseLit_measurable.comp
       ((measurable_snd.comp measurable_fst).prodMk measurable_snd)
 
 theorem liftEq_inlK.measurable [MeasurableSpace rT] [Inhabited rT]
@@ -1650,7 +1614,7 @@ theorem liftEq_inrK.measurable [MeasurableSpace rT] [Inhabited rT]
             some (Exp.lit (.bool (decide (l1 = l2))))) := by
     funext p; obtain ⟨v1, v2⟩ := p
     cases v1 <;> simp [liftEq_inrK, Exp.litExtract, Exp.inlExtract, Exp.inrExtract, Option.bind];
-      cases v2 <;> simp  <;>
+      cases v2 <;> simp <;>
       rename_i e2 <;> cases e2 <;>
       simp
   rw [hrw]
@@ -1728,19 +1692,7 @@ private theorem liftEq_dispatch [MeasurableSpace rT] [Inhabited rT]
 theorem liftEq.measurable [MeasurableSpace rT] [Inhabited rT]
     [DecidableEq (BaseLit rT)] [MeasurableEq rT] :
     Measurable (liftEq (rT := rT)) := by
-  have hrw : liftEq (rT := rT) = fun p : Exp rT × Exp rT =>
-      Exp.casesOn (motive := fun _ => Option (Exp rT)) p.1
-        (fun _ => none) (fun _ => none)
-        (fun l1 => liftEq_litK (p.2, l1))
-        (fun _ => none) (fun _ => none)
-        (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-        (fun _ _ => none) (fun _ => none) (fun _ => none)
-        (fun e1' => liftEq_inlK (e1', p.2))
-        (fun e1' => liftEq_inrK (e1', p.2))
-        (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-        (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-    funext p; exact liftEq_dispatch p
-  rw [hrw]
+  rw [show liftEq (rT := rT) = _ from funext liftEq_dispatch]
   refine Exp.measurable_rec_param (rT := rT) (α := Option (Exp rT)) (β := Exp rT)
     (c_bvar := fun _ => none) (c_fvar := fun _ => none)
     (c_lit := fun q : Exp rT × BaseLit rT => liftEq_litK q)
@@ -1910,24 +1862,8 @@ theorem BinOp.eval_eq_lift [LawfulProbLangℝ rT] (op : BinOp) (v1 v2 : Exp rT) 
 
 theorem BinOp_eval.measurable [LawfulProbLangℝ rT] :
     Measurable (fun (q : BinOp × Exp rT × Exp rT) => BinOp.eval q.1 q.2.1 q.2.2) := by
-  have hrw : (fun (q : BinOp × Exp rT × Exp rT) => BinOp.eval q.1 q.2.1 q.2.2)
-      = fun q : BinOp × Exp rT × Exp rT =>
-          (match q.1 with
-           | .plus  => liftIIorRR (· + ·) ProbLangℝ.realAdd
-           | .minus => liftII (· - ·)
-           | .mult  => liftII (· * ·)
-           | .div   => liftII (· / ·)
-           | .mod   => liftII (· % ·)
-           | .shl   => liftII (fun z1 z2 => z1 * 2 ^ z2.toNat)
-           | .shr   => liftII (fun z1 z2 => z1 / 2 ^ z2.toNat)
-           | .and   => liftBB (· && ·)
-           | .or    => liftBB (· || ·)
-           | .xor   => liftBB (· ^^ ·)
-           | .lt    => liftLtLe (decide <| · < ·) ProbLangℝ.realLt
-           | .le    => liftLtLe (decide <| · ≤ ·) ProbLangℝ.realLe
-           | .eq    => liftEq) (q.2.1, q.2.2) := by
-    funext q; exact BinOp.eval_eq_lift q.1 q.2.1 q.2.2
-  rw [hrw]
+  rw [show (fun (q : BinOp × Exp rT × Exp rT) => BinOp.eval q.1 q.2.1 q.2.2) = _ from
+    funext fun q => BinOp.eval_eq_lift q.1 q.2.1 q.2.2]
   apply measurable_from_prod_countable_right
   intro op
   cases op
@@ -1968,10 +1904,8 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
           ∪ (if (none : Option (Exp rT)) ∈ S then ({l}ᶜ : Set (BaseLit rT)) else ∅) := by
       ext l'
       by_cases hll : l = l'
-      · subst hll
-        simp
-      · have hne' : ¬ l' = l := fun h => hll h.symm
-        simp [hll, hne']
+      · subst hll; simp
+      · simp [hll, Ne.symm hll]
     rw [hrw]
     refine MeasurableSet.union ?_ ?_
     · split_ifs
@@ -2023,10 +1957,8 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
           (some_branch := fun r : ((Exp rT × Exp rT) × Exp rT) × Exp rT =>
             (some (Exp.pair r.1.2 r.2) : Option (Exp rT))) ?_ ?_
         · exact ih2.comp (measurable_snd.comp measurable_fst)
-        · have hp : Measurable
-              (fun r : ((Exp rT × Exp rT) × Exp rT) × Exp rT => (r.1.2, r.2)) :=
-            (measurable_snd.comp measurable_fst).prodMk measurable_snd
-          exact MeasurableEmbedding.some_mk.measurable.comp (Exp.pair.measurable.comp hp)
+        · exact MeasurableEmbedding.some_mk.measurable.comp (Exp.pair.measurable.comp
+            ((measurable_snd.comp measurable_fst).prodMk measurable_snd))
     all_goals exact measurable_const
   | inl p ih =>
     have hrw : (fun e : Exp rT => Pat.tryMatch (.inl p) e)
@@ -2187,8 +2119,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           case inr p' => simp [Pat.shape] at hsh
         · rintro ⟨⟨e0, p0⟩, ⟨hsh, hp⟩, hheq⟩
           simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at hheq
-          obtain ⟨he, hp_eq⟩ := hheq
-          subst he; subst hp_eq
+          obtain ⟨rfl, rfl⟩ := hheq
           exact ⟨by simp [Pat.shape, hsh], hp⟩
       rw [hcell]
       refine (MeasurableEmbedding.id.prodMap Pat.inl.measurableEmbedding).measurableSet_image' ?_
@@ -2201,17 +2132,6 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         all_goals first
           | rfl
           | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
-      have h_setA :
-          (Prod.map (Exp.inl : Exp rT → Exp rT) (id : Pat rT → Pat rT)) ''
-            {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-          ⊆ {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-                Pat.tryMatch (Pat.inl q.2) q.1 ∈ U} := by
-        rintro ⟨e, p⟩ ⟨⟨e', p'⟩, ⟨hsh, hp⟩, heq⟩
-        simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
-        obtain ⟨he, hp_eq⟩ := heq
-        subst he; subst hp_eq
-        exact ⟨hsh, by rw [hA_eq]; exact hp⟩
       have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
               Pat.tryMatch (Pat.inl q.2) q.1 ∈ U}
           = ((Prod.map (Exp.inl : Exp rT → Exp rT) (id : Pat rT → Pat rT)) ''
@@ -2225,8 +2145,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         · rintro ⟨hsh, hp⟩
           by_cases hrange : ∃ e', Exp.inl e' = e
           · left
-            obtain ⟨e', he⟩ := hrange
-            subst he
+            obtain ⟨e', rfl⟩ := hrange
             refine ⟨(e', p'), ⟨hsh, ?_⟩, ?_⟩
             · show Pat.tryMatch p' e' ∈ U
               rw [← hA_eq]; exact hp
@@ -2237,8 +2156,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             exact hp
         · rintro (⟨⟨e0, p0⟩, ⟨hsh, hp⟩, heq⟩ | ⟨hne, hsh, hnone⟩)
           · simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
-            obtain ⟨he, hp_eq⟩ := heq
-            subst he; subst hp_eq
+            obtain ⟨rfl, rfl⟩ := heq
             refine ⟨hsh, ?_⟩
             rw [hA_eq]; exact hp
           · refine ⟨hsh, ?_⟩
@@ -2286,8 +2204,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             exact ⟨(e, p'), ⟨hsh, hp⟩, by simp [Prod.map_apply]⟩
         · rintro ⟨⟨e0, p0⟩, ⟨hsh, hp⟩, hheq⟩
           simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at hheq
-          obtain ⟨he, hp_eq⟩ := hheq
-          subst he; subst hp_eq
+          obtain ⟨rfl, rfl⟩ := hheq
           exact ⟨by simp [Pat.shape, hsh], hp⟩
       rw [hcell]
       refine (MeasurableEmbedding.id.prodMap Pat.inr.measurableEmbedding).measurableSet_image' ?_
@@ -2313,8 +2230,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         · rintro ⟨hsh, hp⟩
           by_cases hrange : ∃ e', Exp.inr e' = e
           · left
-            obtain ⟨e', he⟩ := hrange
-            subst he
+            obtain ⟨e', rfl⟩ := hrange
             refine ⟨(e', p'), ⟨hsh, ?_⟩, ?_⟩
             · show Pat.tryMatch p' e' ∈ U
               rw [← hA_eq]; exact hp
@@ -2325,8 +2241,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             exact hp
         · rintro (⟨⟨e0, p0⟩, ⟨hsh, hp⟩, heq⟩ | ⟨hne, hsh, hnone⟩)
           · simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
-            obtain ⟨he, hp_eq⟩ := heq
-            subst he; subst hp_eq
+            obtain ⟨rfl, rfl⟩ := heq
             refine ⟨hsh, ?_⟩
             rw [hA_eq]; exact hp
           · refine ⟨hsh, ?_⟩
@@ -2374,17 +2289,12 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           case inr p' => simp [Pat.shape] at hsh
         · rintro ⟨⟨e0, p1, p2⟩, ⟨hs1, hs2, hp⟩, hheq⟩
           simp only [Prod.mk.injEq] at hheq
-          obtain ⟨he, hp_eq⟩ := hheq
-          subst he; subst hp_eq
+          obtain ⟨rfl, rfl⟩ := hheq
           exact ⟨by simp [Pat.shape, hs1, hs2], hp⟩
       rw [hcell]
       have hemb : MeasurableEmbedding
-          (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) := by
-        have hfun : (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2))
-            = (Prod.map (id : Exp rT → Exp rT) (Function.uncurry Pat.pair)) := by
-          funext ⟨_, _, _⟩; rfl
-        rw [hfun]
-        exact MeasurableEmbedding.id.prodMap Pat.pair.measurableEmbedding
+          (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) :=
+        MeasurableEmbedding.id.prodMap Pat.pair.measurableEmbedding
       refine hemb.measurableSet_image' ?_
       have hA_eq : ∀ (e1 e2 : Exp rT) (p1 p2 : Pat rT),
           Pat.tryMatch (Pat.pair p1 p2) (Exp.pair e1 e2)
@@ -2428,8 +2338,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             refine ⟨hrange, hs1, hs2, ?_⟩
             rw [hB_eq _ _ _ hrange] at hp; exact hp
         · rintro (⟨⟨⟨e1, e2⟩, p1', p2'⟩, ⟨hs1, hs2, hp⟩, heq⟩ | ⟨hne, hs1, hs2, hnone⟩)
-          · obtain ⟨he, hp1_eq, hp2_eq⟩ := heq
-            subst he; subst hp1_eq; subst hp2_eq
+          · obtain ⟨rfl, rfl, rfl⟩ := heq
             refine ⟨hs1, hs2, ?_⟩
             rw [hA_eq]; exact hp
           · refine ⟨hs1, hs2, ?_⟩
@@ -2438,13 +2347,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       refine MeasurableSet.union ?_ ?_
       · have hemb_inner : MeasurableEmbedding
             (fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
-              (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2)) := by
-          have hfun : (fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
-                (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2))
-              = (Prod.map (Function.uncurry Exp.pair) (id : Pat rT × Pat rT → Pat rT × Pat rT)) := by
-            funext ⟨⟨_, _⟩, _, _⟩; rfl
-          rw [hfun]
-          exact Exp.pair.measurableEmbedding.prodMap MeasurableEmbedding.id
+              (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2)) :=
+          Exp.pair.measurableEmbedding.prodMap MeasurableEmbedding.id
         refine hemb_inner.measurableSet_image' ?_
         set qfun : Option (Exp rT) × Option (Exp rT) → Option (Exp rT) :=
           fun p => p.1.bind fun b1 => p.2.bind fun b2 => some (Exp.pair b1 b2) with hqfun
@@ -2459,13 +2363,9 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
               (f := fun s : (Option (Exp rT) × Option (Exp rT)) × Exp rT => s.1.2)
               (some_branch := fun r : ((Option (Exp rT) × Option (Exp rT)) × Exp rT) × Exp rT =>
                 (some (Exp.pair r.1.2 r.2) : Option (Exp rT))) ?_ ?_
-            · exact (measurable_snd).comp measurable_fst
-            · have h_pair_meas : Measurable
-                  (fun r : ((Option (Exp rT) × Option (Exp rT)) × Exp rT) × Exp rT =>
-                    Exp.pair r.1.2 r.2) := by
-                exact Exp.pair.measurable.comp
-                  (((measurable_snd).comp measurable_fst).prodMk measurable_snd)
-              exact MeasurableEmbedding.some_mk.measurable.comp h_pair_meas
+            · exact measurable_snd.comp measurable_fst
+            · exact MeasurableEmbedding.some_mk.measurable.comp (Exp.pair.measurable.comp
+                ((measurable_snd.comp measurable_fst).prodMk measurable_snd))
         set V : Set (Option (Exp rT) × Option (Exp rT)) := qfun ⁻¹' U with hV_def
         have hV : MeasurableSet V := hqfun_meas hU
         suffices hgeneric :

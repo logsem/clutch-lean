@@ -502,11 +502,10 @@ theorem G1Geometric_collapse (F : ℕ → ℝ≥0∞) (ε : ℝ≥0∞) :
         + (1 - ENNReal.ofReal ((γBNE : ℝ) ^ IterN k)) * GeometricPMF γBNE k
           * (G1CreditV F + c) := by
     intro k
-    have h0 : (0 : ℤ) + (k : ℤ) = (k : ℤ) := by ring
     have hgc : G1GeometricCredit F c (k : ℤ)
         = ENNReal.ofReal ((γBNE : ℝ) ^ IterN k) * F k
             + (1 - ENNReal.ofReal ((γBNE : ℝ) ^ IterN k)) * (G1CreditV F + c) := rfl
-    rw [h0, hgc, add_mul, ← hpterm k]
+    rw [zero_add, hgc, add_mul, ← hpterm k]
     ring
   unfold shiftGeometricPMFCreditV
   have hacc : (∑' k : ℕ, R * G1PMF k * F k) = R * G1CreditV F := by
@@ -604,13 +603,13 @@ theorem twp_G1 (E : CoPset) (F : ℕ → ℝ≥0∞) :
   iapply (tglWp_wand (Φ := fun v : Val ℝ => iprop(∃ z : ℤ,
     ⌜v.1 = pl(#(.int z))⌝ ∗ ⌜(0 : ℤ) ≤ z⌝ ∗ ↯ (G1GeometricCredit F c z))))
   isplitl [Hε]
-  · iapply (twp_GeometricTrial E (γ := γBNE) 0 BNEHalfVal γBNE_pos γBNE_lt_one
+  · iapply (twp_GeometricTrial E 0 BNEHalfVal γBNE_pos γBNE_lt_one
       abstractBernoulli_BNEHalf) $$ %(G1GeometricCredit F c)
     iapply (ErrorCredit.ext (G1Geometric_collapse F ε_term).symm)
     iexact Hε
   iintro %vk ⟨%z, %hz, %hz0, Hck⟩
   obtain ⟨wk, _⟩ := vk
-  dsimp only at hz; subst hz
+  obtain rfl : wk = _ := hz
   twp_pure
   have hck : G1GeometricCredit F c z
       = IterCreditV (G1IterContAmp F c z.toNat) γBNE (IterN z.toNat) := rfl
@@ -628,7 +627,7 @@ theorem twp_G1 (E : CoPset) (F : ℕ → ℝ≥0∞) :
     iframe Hck
   iintro %vb ⟨%b, %hb, Hcb, -⟩
   obtain ⟨wb, _⟩ := vb
-  dsimp only at hb; subst hb
+  obtain rfl : wb = _ := hb
   cases b with
   | true =>
     have hcb : G1IterContAmp F c z.toNat true = F z.toNat := by simp [G1IterContAmp]
@@ -642,7 +641,7 @@ theorem twp_G1 (E : CoPset) (F : ℕ → ℝ≥0∞) :
   | false =>
     have hcb : G1IterContAmp F c z.toNat false = G1CreditV F + c := by simp [G1IterContAmp]
     isimp only [hcb] at Hcb
-    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split (GF := GF) $$ Hcb
+    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split $$ Hcb
     twp_pure
     twp_bind pl(&G1 #.unit)
     iapply (tglWp_mono fun _ => tglWp_value)
@@ -673,15 +672,15 @@ theorem twp_G2 (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measu
     iexact Hε
   iintro %vk ⟨%k, %hk, Hck⟩
   obtain ⟨wk, _⟩ := vk
-  dsimp only at hk; subst hk
+  obtain rfl : wk = _ := hk
   twp_pure
   twp_bind pl(urand)
   iapply (twp_urand_exp' (ε₂ := G2CreditAmp F c k)
     (measurable_g2CreditAmp F hFm c k) ?hint) $$ Hck
   case hint => exact le_rfl
-  iintro %x ⟨%Hxm, Hcx⟩
-  have Hx01 : 0 < x ∧ x < 1 := mem_unifUnitSupport_real.mp Hxm
-  have Hxr : 0 ≤ x ∧ x ≤ 1 := ⟨Hx01.1.le, Hx01.2.le⟩
+  iintro %x ⟨%hxm, Hcx⟩
+  have hx01 : 0 < x ∧ x < 1 := mem_unifUnitSupport_real.mp hxm
+  have hxr : 0 ≤ x ∧ x ≤ 1 := ⟨hx01.1.le, hx01.2.le⟩
   twp_pure
   twp_bind pl(&IterTrial &(BkxVal k x).1 (#(.int (k : ℤ)) + #1))
   twp_pure
@@ -692,28 +691,28 @@ theorem twp_G2 (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measu
     ⌜w.1 = pl(#(.bool b))⌝ ∗ ↯ (G2IterContAmp F c k x b) ∗ ⌜True⌝)))
   isplitl [Hcx]
   · iapply (twp_IterTrial E (BkxVal k x) (γBkx k x) (iprop(⌜True⌝))
-      (abstractBernoulliI_Bkx k x Hxr (iprop(⌜True⌝)))
+      (abstractBernoulliI_Bkx k x hxr (iprop(⌜True⌝)))
       (G2IterContAmp F c k x) (k + 1))
     rw [← hck]
     iframe Hcx
   iintro %vb ⟨%b, %hb, Hcb, -⟩
   obtain ⟨wb, _⟩ := vb
-  dsimp only at hb; subst hb
+  obtain rfl : wb = _ := hb
   cases b with
   | true =>
     have hcb : G2IterContAmp F c k x true = F k x := by simp [G2IterContAmp]
-    have Hx1 : 0 ≤ x ∧ x < 1 := ⟨Hx01.1.le, Hx01.2⟩
+    have hx1 : 0 ≤ x ∧ x < 1 := ⟨hx01.1.le, hx01.2⟩
     twp_pures
     twp_value
     imodintro
     iexists k, x
     rw [← hcb]
-    iframe %Hx1 Hcb
+    iframe %hx1 Hcb
     itrivial
   | false =>
     have hcb : G2IterContAmp F c k x false = G2CreditV F + c := by simp [G2IterContAmp]
     isimp only [hcb] at Hcb
-    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split (GF := GF) $$ Hcb
+    ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split $$ Hcb
     twp_pure
     twp_bind pl(&G2 #.unit)
     iapply (tglWp_mono fun _ => tglWp_value)

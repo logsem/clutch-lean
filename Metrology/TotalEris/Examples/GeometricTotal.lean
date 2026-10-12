@@ -25,9 +25,7 @@ abbrev geoPost : Val rT → IProp GF :=
   fun w => iprop(∃ m : Int, ⌜w = .int m ∧ 0 ≤ m⌝)
 
 theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
-    iprop(↯ε) ⊢@{IProp GF}
-      tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
-        (geoPost (rT := rT) (GF := GF)) := by
+    iprop(↯ε) ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   refine ErrorCredit.Induction.external_simple (k := (3/2 : NNReal)) hε (by norm_num) ?_
   iintro ⟨IH, Herr⟩
   twp_pures
@@ -39,11 +37,11 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
   have hsplit : ((2 : ℕ) : ENNReal) = (3/2 : NNReal) + (1/2 : NNReal) := by
     rw [← ENNReal.coe_add]
     norm_num
-  have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤ ε := by
+  have hsum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤ ε := by
     rw [ENNReal.div_le_iff' (by simp) (by simp), htoNat, hF, hsplit, add_mul]
     exact le_add_right le_rfl
-  iapply (twp_rand_exp' (z := 2) (ε₁ := ε) (ε₂ := F) (Hz := by decide) (HSum := HSum)) $$ Herr
-  iintro %n ⟨%⟨Hn₁, Hn₂⟩, Hcr⟩
+  iapply twp_rand_exp' (by decide) hsum $$ Herr
+  iintro %n ⟨%⟨hn₀, hn₂⟩, Hcr⟩
   simp only [Exp.ofVal]
   interval_cases n
   · twp_pures
@@ -53,11 +51,11 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
   · twp_pure
     twp_pure
     twp_bind (Exp.app geometric pl(#(.unit)))
-    iapply (ErisWpGS.tglWp_wand (Φ := geoPost))
+    iapply ErisWpGS.tglWp_wand (Φ := geoPost)
     isplitl [Hcr IH]
     · iapply IH
       iapply ErrorCredit.ext (show F (Int.toNat 1) = ((3/2 : NNReal) : ENNReal) * ε from rfl) $$ Hcr
-    iintro %w ⟨%m, %⟨rfl, Hmnn⟩⟩
+    iintro %w ⟨%m, %⟨rfl, hm⟩⟩
     twp_pures
     twp_value
     iexists (m + 1)
@@ -65,16 +63,14 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg (E : CoPset) :
-    ⊢@{IProp GF} tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
-      (geoPost (rT := rT) (GF := GF)) := by
+    ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   iapply twp_err_pos solve_not_value
-  iintro %ε %Hε Herr
-  iapply (geo_nonneg_pos_err E ε Hε) $$ Herr
+  iintro %ε %hε Herr
+  iapply geo_nonneg_pos_err E ε hε $$ Herr
 
 theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
     iprop(↯((2⁻¹ : ENNReal) ^ k)) ⊢@{IProp GF}
-      tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
-        (geoPost (rT := rT) (GF := GF)) := by
+      tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   induction k with
   | zero =>
     iintro Herr
@@ -85,11 +81,11 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
     twp_pures
     twp_bind pl(rand(#(.int 2), #(.unit)))
     let F : ℕ → ENNReal := fun n => if n = 0 then 0 else (2⁻¹ : ENNReal) ^ k
-    have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤
+    have hsum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤
         (2⁻¹ : ENNReal) ^ (k + 1) := by
       simp [F, Finset.sum_range_succ, pow_succ, div_eq_mul_inv]
-    iapply (twp_rand_exp' (z := 2) (ε₂ := F) (Hz := by decide) (HSum := HSum)) $$ Herr
-    iintro %n ⟨%⟨Hn₁, Hn₂⟩, Hcr⟩
+    iapply twp_rand_exp' (by decide) hsum $$ Herr
+    iintro %n ⟨%⟨hn₀, hn₂⟩, Hcr⟩
     simp only [Exp.ofVal]
     interval_cases n
     · twp_pures
@@ -99,11 +95,11 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
     · twp_pure
       twp_pure
       twp_bind (Exp.app geometric pl(#(.unit)))
-      iapply (ErisWpGS.tglWp_wand (Φ := geoPost))
+      iapply ErisWpGS.tglWp_wand (Φ := geoPost)
       isplitl [Hcr]
       · iapply IH
         iapply ErrorCredit.ext (show F (Int.toNat 1) = (2⁻¹ : ENNReal) ^ k from rfl) $$ Hcr
-      iintro %w ⟨%m, %⟨rfl, Hmnn⟩⟩
+      iintro %w ⟨%m, %⟨rfl, hm⟩⟩
       twp_pures
       twp_value
       iexists (m + 1)
@@ -111,8 +107,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
       exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg_of_depth (E : CoPset) :
-    ⊢@{IProp GF} tglWp E (Exp.app (geometric (rT := rT)) pl(#(.unit)))
-      (geoPost (rT := rT) (GF := GF)) := by
+    ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ENNReal) ^ k) Filter.atTop = 0 :=
     (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
   iapply fupd_tglWp
@@ -138,12 +133,12 @@ theorem measurableSet_geoPredicate :
 
 theorem geo_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
     Tgl (limExec ⟨Exp.app geometric pl(#(.unit)), σ⟩) geoPredicate 0 := by
-  refine twp_tgl (GF := GF) (φ := geoPredicate) measurableSet_geoPredicate ?_
+  refine twp_tgl (GF := GF) measurableSet_geoPredicate ?_
   intro _
-  have hwp : ⊢@{IProp GF} tglWp ⊤ (Exp.app (geometric (rT := rT)) pl(#(.unit)))
-      (fun v : Val rT => iprop(⌜geoPredicate v⌝)) :=
+  have hwp : ⊢@{IProp GF}
+      tglWp ⊤ (Exp.app geometric pl(#(.unit))) fun v => iprop(⌜geoPredicate v⌝) :=
     (geo_nonneg ⊤).trans
-      (ErisWpGS.tglWp_mono fun v => by iintro ⟨%m, %Hm⟩; ipureintro; exact ⟨m, Hm⟩)
+      (ErisWpGS.tglWp_mono fun _ => by iintro ⟨%m, %hm⟩; ipureintro; exact ⟨m, hm⟩)
   iintro -
   iapply hwp
 

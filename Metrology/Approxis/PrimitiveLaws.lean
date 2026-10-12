@@ -156,9 +156,7 @@ theorem wp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
     imodintro
     simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
-    iapply HΦ
-    ipureintro
-    exact ⟨Hv0, Hvz⟩
+    iapply HΦ $$ %_ %⟨Hv0, Hvz⟩
   | RandNonposS hnz => exact absurd Hz hnz
 
 theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) :
@@ -293,9 +291,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
     imod Hclose
     imodintro
     iframe Hσ Hs' Hε
-    iapply Hwp
-    · ipureintro; exact ⟨Hv0, Hvz⟩
-    · iexact Hj'
+    iapply Hwp $$ %_ %⟨Hv0, Hvz⟩ Hj'
   | RandNonposS hnz => exact absurd Hz hnz
 
 theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → IProp GF}
