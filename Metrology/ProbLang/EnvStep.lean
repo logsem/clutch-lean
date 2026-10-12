@@ -6,25 +6,8 @@ public import Metrology.ProbLang.Syntax.Syntax
 
 /-! # An environment machine for ProbLang
 
-`envStep` is a big-step evaluator that avoids substitution. It evaluates an expression
-under an environment of runtime values (`RVal`), and a function value is a closure pairing
-a body with the environment it was created in. It evaluates subterms in the same order as
-`bigStepF` and takes the same head steps.
-
-Its continuations are first-order `Frame`s, one per evaluation-context item, rather than
-closures: after evaluating a subterm, the machine resumes the pending frame with the value
-(`EnvCfg.resume`).
-
-The step functions are written once, generic over where a step goes next (`StepOps`). The
-proofs read a step as a `Step` value (`envStep`), and the interpreter passes its own loop,
-so after inlining it runs as a CEK-style loop that allocates no intermediate step values.
-
-Readback (`RVal.rb`, `EnvCfg.rb`) substitutes environments back into expressions.
-`EnvStepEquiv.lean` proves that, read back, the machine's measure semantics equals `bigStep`
-on well-scoped configurations.
-
-The heap stores `Val`s, exactly as in the reduction semantics, so states need no readback.
-`alloc`/`store` read the stored value back, and `load` converts it into a runtime value.
+A substitution-free evaluator with closures and first-order `Frame` continuations, taking the
+same steps as `bigStepF`; `EnvStepEquiv.lean` proves it equals `bigStep` under readback (`rb`).
 -/
 
 namespace ProbLang
@@ -79,16 +62,14 @@ inductive Frame (rT : Type _) where
 
 /-- A configuration of the machine: a call of the evaluator. -/
 inductive EnvCfg (rT : Type _) where
-  /-- Evaluate `e` under `env`. -/
   | eval (env : Env rT) (e : Exp rT) (σ : State rT)
-  /-- Apply the function value `f` to `v`. -/
   | apply (f v : RVal rT) (σ : State rT)
   /-- Resume the frame `f` with the value `v` of the subterm it was waiting for. -/
   | resume (f : Frame rT) (v : RVal rT) (σ : State rT)
 
-/-- Where a machine step goes next. -/
+/-- Where a machine step goes next. Proofs use `Step` data (`stepOps`); the interpreter
+passes its own loop, so no intermediate `Step` is allocated. -/
 structure StepOps (rT : Type _) (α : Type _) where
-  /-- Return the value `v`. -/
   ret : RVal rT → State rT → α
   /-- Continue by evaluating `e` under `env` (a tail call). -/
   eval : Env rT → Exp rT → State rT → α
@@ -113,7 +94,6 @@ inductive Step (rT : Type _) where
   | uniform (z : Int) (σ : State rT)
   | uniformReal (σ : State rT)
 
-/-- `StepOps` building `Step` values. -/
 def stepOps : StepOps rT (Step rT) :=
   ⟨.ret, .eval, .evalThen, .apply, .stuck, .uniform, .uniformReal⟩
 
@@ -146,7 +126,6 @@ def Exp.substEnv (k : Nat) (vs : List (Exp rT)) : Exp rT → Exp rT
   | .scrut e p => .scrut (substEnv k vs e) p
 
 mutual
-/-- Read a runtime value back as an expression. -/
 def RVal.rb : RVal rT → Exp rT
   | .lit b => .lit b
   | .clo env body => .lam (body.substEnv 1 (RVal.rbEnv env))
@@ -155,13 +134,11 @@ def RVal.rb : RVal rT → Exp rT
   | .inl v => .inl v.rb
   | .inr v => .inr v.rb
 
-/-- Read an environment back entry by entry. -/
 def RVal.rbEnv : List (RVal rT) → List (Exp rT)
   | [] => []
   | v :: vs => v.rb :: RVal.rbEnv vs
 end
 
-/-- Read a final configuration back. -/
 def RCfg.rb (r : RCfg rT) : Cfg rT := ⟨r.val.rb, r.state⟩
 
 /-- Plug an expression into the hole of a frame, reading the frame back. -/
@@ -191,7 +168,6 @@ def Frame.fill : Frame rT → Exp rT → Exp rT
   | .randR env e1, e => .rand (e1.substEnv 0 (RVal.rbEnv env)) e
   | .randL v2, e => .rand e v2.rb
 
-/-- Read a machine configuration back as the configuration it evaluates. -/
 def EnvCfg.rb : EnvCfg rT → Cfg rT
   | .eval env e σ => ⟨e.substEnv 0 (RVal.rbEnv env), σ⟩
   | .apply f v σ => ⟨.app f.rb v.rb, σ⟩
@@ -221,9 +197,7 @@ def Pat.tryMatchR [BEq (BaseLit rT)] : Pat rT → RVal rT → Option (RVal rT)
 
 /-! ## The machine -/
 
-variable [ProbLangℝ rT]
-
-variable {α : Type _}
+variable [ProbLangℝ rT] {α : Type _}
 
 /-- Resume a frame with the value of its subterm: evaluate the frame's next subterm, or
 take the head step once every subterm is a value. -/
@@ -338,13 +312,11 @@ evaluate, or evaluate its rightmost subterm under the matching frame. -/
   | .rand e1 e2, σ => k.evalThen env e2 σ (.randR env e1)
   | .urand, σ => k.uniformReal σ
 
-/-- Apply a function value. -/
 @[inline] def applyK (k : StepOps rT α) : RVal rT → RVal rT → State rT → α
   | .clo env body, v, σ => k.eval (v :: env) body σ
   | f@(.fixClo env body), v, σ => k.evalThen (f :: env) body σ (.applyTo v)
   | _, _, _ => k.stuck "app: not a function"
 
-/-- One step of the environment machine, as data. -/
 def envStep : EnvCfg rT → Step rT
   | .eval env e σ => evalK stepOps env e σ
   | .apply f v σ => applyK stepOps f v σ

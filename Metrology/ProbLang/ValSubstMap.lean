@@ -95,9 +95,7 @@ theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
       rw [hr] at h
       split_ifs at h with hyz
       · subst hyz
-        simp at h
-        obtain ⟨h1, h2⟩ := h
-        subst h1 h2
+        obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa using h
         exact List.mem_cons.mpr (.inl rfl)
 
 omit [LawfulProbLangℝ rT] in
@@ -162,9 +160,7 @@ theorem lookup_delete_other (vs : ValSubstMap rT) (x z : Var) (hxz : z ≠ x) :
 omit [LawfulProbLangℝ rT] in
 theorem mem_delete (vs : ValSubstMap rT) (x : Var) (p : Var × (Val rT × Val rT)) :
     p ∈ vs.delete x ↔ p ∈ vs ∧ p.1 ≠ x := by
-  unfold delete
-  rw [List.mem_filter]
-  simp
+  simp [delete, List.mem_filter]
 
 omit [LawfulProbLangℝ rT] in
 theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x : Var) :

@@ -7,13 +7,8 @@ public import Lean.Data.Json.FromToJson
 
 /-! # Drawing samples from a program
 
-The `problang-sample` executable (`ProbLangSample.lean`) runs a program many times and
-summarises the results, for the `#sample` widget (`ProbLangSampleWidget.lean`). Programs and
-summaries travel between the two as JSON.
-
-`ToJson Float` keeps only six decimals, so every float on the wire is instead the 16 hex digits
-of its IEEE bits (`hex`). Programs are encoded with `hexToJson` and `hexFromJson` in place of the
-default instances; a summary packs its reals into one string.
+`problang-sample` runs a program many times and sends summaries to the `#sample` widget as JSON.
+`ToJson Float` keeps only six decimals, so floats travel as the hex of their IEEE bits (`hex`).
 -/
 
 open Lean

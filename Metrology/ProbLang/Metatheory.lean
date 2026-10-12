@@ -9,19 +9,13 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 namespace ProbLang
 open Cslib Exp
 
-
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-! ## Group A — Closed contexts and the `isClosed` predicate
+/-! ## Closed contexts and `isClosed`
 
-In the locally-nameless encoding, a "closed context" is just a finite set of
-atoms (free variables) in scope. A term is *closed* in `X` when it is locally
-closed (no dangling de-Bruijn indices) and its free variables are all in `X`.
+Port of Clutch's `is_closed` to locally-nameless syntax: a closed context is a finite set of
+atoms, and `e` is closed in `X` when it is locally closed with free variables in `X`. -/
 
-Port of Clutch's `is_closed` / `is_closed_weaken` on top of LN. The old
-`String → Bool` encoding and `Binder.binds` bookkeeping collapse away. -/
-
-/-- Closed context: a finite set of free-variable atoms. -/
 abbrev ClosedCtx := Finset Var
 
 namespace ClosedCtx
@@ -30,7 +24,6 @@ def empty : ClosedCtx := ∅
 
 def insert (X : ClosedCtx) (x : Var) : ClosedCtx := Insert.insert x X
 
-/-- Subset of closed contexts. -/
 def subset (X Y : ClosedCtx) : Prop := X ⊆ Y
 
 theorem subset.insert {X Y : ClosedCtx} (h : X.subset Y) (x : Var) :
@@ -42,7 +35,6 @@ theorem subset.insert {X Y : ClosedCtx} (h : X.subset Y) (x : Var) :
 
 end ClosedCtx
 
-/-- `Exp.isClosed X e` : `e` is locally closed and every free variable of `e` is in `X`. -/
 def Exp.isClosed (X : ClosedCtx) (e : Exp rT) : Prop := e.IsLocallyClosed ∧ e.fv ⊆ X
 
 theorem Exp.isClosed_weaken {X Y : ClosedCtx} (hXY : X.subset Y)
@@ -50,19 +42,18 @@ theorem Exp.isClosed_weaken {X Y : ClosedCtx} (hXY : X.subset Y)
   ⟨h.1, fun _ hz => hXY (h.2 hz)⟩
 
 theorem Exp.isClosed_weaken_empty {X : ClosedCtx} {e : Exp α}
-    (h : e.isClosed .empty) : e.isClosed X := by
-  refine ⟨h.1, fun z hz => ?_⟩
-  have := h.2 hz
-  simp [ClosedCtx.empty] at this
+    (h : e.isClosed .empty) : e.isClosed X :=
+  ⟨h.1, fun _ hz => by simpa [ClosedCtx.empty] using h.2 hz⟩
 
-/-! ## Group B — Substitution maps
+theorem Exp.notMem_fv_of_isClosed_empty {e : Exp α} (h : e.isClosed .empty) (x : Var) :
+    x ∉ e.fv :=
+  fun hx => by simpa [ClosedCtx.empty] using h.2 hx
 
-An LN substitution map is a finite association list from atoms to LC terms.
-Application walks the expression and applies each substitution in turn. No
-binder bookkeeping is needed: `subst` is capture-free.
--/
+theorem Exp.fv_eq_empty_of_isClosed_empty {e : Exp α} (h : e.isClosed .empty) : e.fv = ∅ :=
+  Finset.eq_empty_iff_forall_notMem.mpr (Exp.notMem_fv_of_isClosed_empty h)
 
-/-- Finite substitution map from atoms to expressions. -/
+/-! ## Substitution maps -/
+
 abbrev SubstMap (rT : Type _) [LawfulProbLangℝ rT] := List (Var × Exp rT)
 
 namespace SubstMap
@@ -77,7 +68,6 @@ inserting over a key `vs` already binds leaves its meaning unchanged
 (`lookup_insert_of_isSome`). Delete first if you want to override. -/
 def insert (vs : SubstMap rT) (x : Var) (v : Exp rT) : SubstMap rT := (x, v) :: vs
 
-/-- Remove all entries for `x`. -/
 def delete (vs : SubstMap rT) (x : Var) : SubstMap rT :=
   vs.filter (fun p => p.1 ≠ x)
 
@@ -92,7 +82,6 @@ def lookup : SubstMap rT → Var → Option (Exp rT)
     | some w => some w
     | none => if x = y then some v else none
 
-/-- `lookup` on an `insert`, unfolded: the tail is consulted first. -/
 @[simp] theorem lookup_insert (vs : SubstMap rT) (x y : Var) (v : Exp rT) :
     (vs.insert x v).lookup y
       = match vs.lookup y with
@@ -106,7 +95,6 @@ theorem lookup_insert_of_isSome {vs : SubstMap rT} {x : Var} {w v : Exp rT}
     (h : vs.lookup x = some w) : (vs.insert x v).lookup x = some w := by
   simp [lookup_insert, h]
 
-/-- `insert` only takes effect on a key the map does not already bind. -/
 theorem lookup_insert_of_none {vs : SubstMap rT} {x : Var} {v : Exp rT}
     (h : vs.lookup x = none) : (vs.insert x v).lookup x = some v := by
   simp [lookup_insert, h]
@@ -130,34 +118,30 @@ def Exp.substMap (vs : SubstMap rT) (e : Exp rT) : Exp rT :=
 @[simp] theorem Exp.substMap_insert (vs : SubstMap rT) (x : Var) (v e : Exp rT) :
     e.substMap (vs.insert x v) = Exp.subst (e.substMap vs) x v := rfl
 
-/-- A substitution that substitutes a single variable. -/
+@[simp] theorem Exp.substMap_cons (p : Var × Exp rT) (vs : SubstMap rT) (e : Exp rT) :
+    e.substMap (p :: vs) = Exp.subst (e.substMap vs) p.1 p.2 := rfl
+
 theorem Exp.substMap_singleton (x : Var) (v e : Exp rT) :
     e.substMap [(x, v)] = Exp.subst e x v := rfl
 
 /-! ### Substitution and closedness -/
 
-/-- Substitution of a value with no free variables in `X` preserves closedness in `X`. -/
 theorem Exp.subst_isClosed {X : ClosedCtx} {e v : Exp α} {x : Var}
     (he : e.isClosed (X.insert x)) (hv : v.isClosed X) :
     (Exp.subst e x v).isClosed X := by
-  refine ⟨Exp.subst_lc he.1 hv.1, ?_⟩
-  intro z hz
-  have hsub := Exp.fv_subst_subset e x v hz
-  rcases Finset.mem_union.mp hsub with h | h
-  · have ⟨hfv, hne⟩ := Finset.mem_sdiff.mp h
-    have := he.2 hfv
-    rcases Finset.mem_insert.mp this with rfl | hx
+  refine ⟨Exp.subst_lc he.1 hv.1, fun z hz => ?_⟩
+  rcases Finset.mem_union.mp (Exp.fv_subst_subset e x v hz) with h | h
+  · obtain ⟨hfv, hne⟩ := Finset.mem_sdiff.mp h
+    rcases Finset.mem_insert.mp (he.2 hfv) with rfl | hx
     · exact absurd (Finset.mem_singleton.mpr rfl) hne
     · exact hx
   · exact hv.2 h
 
-/-- Substitution of a closed-in-`X` value into a closed-in-`X.insert x` term is closed in `X`. -/
 theorem Exp.subst_is_closed {e : Exp α} {x : Var} {v : Exp α} {X : ClosedCtx}
     (he : e.isClosed (X.insert x)) (hv : v.isClosed X) :
     (Exp.subst e x v).isClosed X :=
   Exp.subst_isClosed he hv
 
-/-- Substitution of a fully closed value. -/
 theorem Exp.subst_is_closed_empty {e : Exp α} {x : Var} {v : Exp α}
     (he : e.isClosed (ClosedCtx.empty.insert x)) (hv : v.isClosed .empty) :
     (Exp.subst e x v).isClosed .empty :=
@@ -177,9 +161,7 @@ theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
       · subst h1
         simp [Exp.subst, h2]
       · subst h2
-        have hv'_fresh : Exp.subst v' x (Exp.subst v y v') = v' :=
-          Exp.subst_fresh _ _ _ hv'
-        simp [Exp.subst, h1, hv'_fresh]
+        simp [Exp.subst, h1, Exp.subst_fresh _ _ _ hv']
       · simp [Exp.subst, h1, h2]
   | bvar _ | lit _ | fail | urand => rfl
   | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
@@ -196,21 +178,14 @@ theorem Exp.subst_subst_ne {e v v' : Exp α} {x y : Var}
     (hne : x ≠ y) (hxv' : x ∉ v'.fv) (hyv : y ∉ v.fv)
     (_hv_lc : v.IsLocallyClosed) (hv'_lc : v'.IsLocallyClosed) :
     Exp.subst (Exp.subst e x v) y v' = Exp.subst (Exp.subst e y v') x v := by
-  rw [Exp.subst_subst hne hxv' hv'_lc]
-  rw [Exp.subst_fresh y v v' hyv]
+  rw [Exp.subst_subst hne hxv' hv'_lc, Exp.subst_fresh y v v' hyv]
 
-/-! ### α-renaming infrastructure
+/-! ### α-renaming
 
-For the Soundness precongruence's binder cases (`lam x` etc.) we need to
-transport `bin_log_related_ty` along an atom rename: from related-at-`x`
-infer related-at-fresh-`y` after substituting `x ↦ .fvar y`. The core
-syntactic ingredient is `subst_subst_fvar_id` below. The substMap-level
-commutation `Exp.substMap_subst_fvar_comm` lives further down (after
-`SubstMap.AllClosed`'s definition). -/
+The binder cases of the Soundness precongruence transport `bin_log_related_ty` along an atom
+rename `x ↦ .fvar y`; `subst_subst_fvar_id` and `substMap_subst_fvar_comm` are the syntactic core. -/
 
-/-- Two-step substitution where the bridge is a fresh atom: `e[x ↦ y][y ↦ w] = e[x ↦ w]`
-when `y` doesn't already appear free in `e` (so the only `y` introduced by the
-first step is the one at `x`'s position). -/
+/-- `e[x ↦ y][y ↦ w] = e[x ↦ w]` for `y` fresh in `e`. -/
 theorem Exp.subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
     Exp.subst (Exp.subst e x (.fvar y)) y w = Exp.subst e x w := by
   induction e with
@@ -218,14 +193,12 @@ theorem Exp.subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
     by_cases h1 : x = z
     · subst h1
       simp [Exp.subst]
-    · -- z ≠ x, so subst e x (.fvar y) = .fvar z; then subst by y leaves it alone (y ≠ z since y ∉ e.fv).
-      have hyz : y ≠ z := fun h => hyv (h ▸ by simp [Exp.fv])
+    · have hyz : y ≠ z := fun h => hyv (h ▸ by simp [Exp.fv])
       simp [Exp.subst, h1, hyz]
   | bvar _ | lit _ | fail | urand => rfl
   | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
   | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
-    have hyv' : y ∉ e.fv := by
-      intro h; exact hyv (by simp [Exp.fv]; exact h)
+    have hyv' : y ∉ e.fv := fun h => hyv (by simpa [Exp.fv] using h)
     simp [Exp.subst, ih hyv']
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
   | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
@@ -234,56 +207,37 @@ theorem Exp.subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
     simp [Exp.subst, ih1 hyv1, ih2 hyv2]
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
     have hyv0 : y ∉ e0.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inl h)
-    have hyv1 : y ∉ e1.fv :=
-      fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inl h))
-    have hyv2 : y ∉ e2.fv :=
-      fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inr h))
+    have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inl h))
+    have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inr h))
     simp [Exp.subst, ih0 hyv0, ih1 hyv1, ih2 hyv2]
 
-/-! ### Substitution-map-level closedness lemmas
+/-! ### Closed substitution maps -/
 
-Ports of `SubstMap.deleteB_preserves_closed`, `Exp.substMap_isClosed`,
-`Exp.substMap_isClosed_empty`. The original (Binder/String) versions had
-to thread the binder-shadowing dance through `deleteB`; under LN there is
-no shadowing and the proofs simplify to fold-style induction over the list.
-
-The key invariant is "every value in `vs` is locally-closed and has empty
-free-variable set" — i.e., the substitution range consists of fully-closed
-values. Under that invariant, `substMap` reduces to repeated `subst`. -/
-
-/-- Predicate: every value bound in the substitution map is fully closed. -/
 def SubstMap.AllClosed (vs : SubstMap rT) : Prop :=
   ∀ p ∈ vs, p.2.isClosed .empty
 
-theorem SubstMap.AllClosed_nil : SubstMap.AllClosed ([] : SubstMap rT) := by
-  intro p hp; cases hp
+theorem SubstMap.AllClosed_nil : SubstMap.AllClosed ([] : SubstMap rT) :=
+  fun _ hp => nomatch hp
 
 theorem SubstMap.AllClosed_cons {x : Var} {v : Exp rT} {vs : SubstMap rT} :
     SubstMap.AllClosed ((x, v) :: vs) ↔ v.isClosed .empty ∧ SubstMap.AllClosed vs := by
   constructor
   · intro h
-    refine ⟨h (x, v) (List.mem_cons_self), fun p hp => h p (List.mem_cons_of_mem _ hp)⟩
+    exact ⟨h (x, v) List.mem_cons_self, fun p hp => h p (List.mem_cons_of_mem _ hp)⟩
   · rintro ⟨hv, hvs⟩ p hp
     rcases List.mem_cons.mp hp with rfl | hpm
     · exact hv
     · exact hvs p hpm
 
 theorem SubstMap.AllClosed_delete {vs : SubstMap rT} (x : Var)
-    (h : SubstMap.AllClosed vs) : SubstMap.AllClosed (vs.delete x) := by
-  intro p hp
-  have hmem : p ∈ vs := by
-    have := List.mem_filter.mp hp; exact this.1
-  exact h p hmem
+    (h : SubstMap.AllClosed vs) : SubstMap.AllClosed (vs.delete x) :=
+  fun p hp => h p (List.mem_filter.mp hp).1
 
-/-- A filter on an AllClosed substMap is still AllClosed. -/
 theorem SubstMap.AllClosed_filter (vs : SubstMap rT) (P : Var × Exp rT → Bool)
     (h : SubstMap.AllClosed vs) :
-    SubstMap.AllClosed (vs.filter P) := by
-  intro p hp
-  have hmem : p ∈ vs := (List.mem_filter.mp hp).1
-  exact h p hmem
+    SubstMap.AllClosed (vs.filter P) :=
+  fun p hp => h p (List.mem_filter.mp hp).1
 
-/-- Filter on a domain-disjoint atom is the identity. -/
 theorem SubstMap.filter_notMem_dom (vs : SubstMap rT) {y : Var}
     (h : y ∉ (vs.map (·.1)).toFinset) :
     vs.filter (fun p => !decide (p.1 = y)) = vs := by
@@ -292,14 +246,8 @@ theorem SubstMap.filter_notMem_dom (vs : SubstMap rT) {y : Var}
   | cons p rest ih =>
     obtain ⟨k, w⟩ := p
     have hky : k ≠ y := by intro hk; apply h; rw [hk]; simp
-    have hyRest : y ∉ (rest.map (·.1)).toFinset := by
-      intro h'; apply h
-      simp at h' ⊢; exact Or.inr h'
-    have hcond : (!decide ((k, w).1 = y)) = true := by simp [hky]
-    simp only [List.filter_cons]
-    rw [ite_eq_left hcond]
-    congr 1
-    exact ih hyRest
+    have hyRest : y ∉ (rest.map (·.1)).toFinset := fun h' => h (by simp at h' ⊢; exact Or.inr h')
+    simp [hky, ih hyRest]
 
 /-- The pair returned by `lookup` is the rightmost matching member. -/
 theorem SubstMap.mem_of_lookup_eq_some {vs : SubstMap rT} {y : Var} {w : Exp rT}
@@ -311,17 +259,13 @@ theorem SubstMap.mem_of_lookup_eq_some {vs : SubstMap rT} {y : Var} {w : Exp rT}
     simp only [SubstMap.lookup] at h
     cases hr : SubstMap.lookup rest y with
     | some w' =>
-      rw [hr] at h
-      have hweq : w' = w := by injection h
-      have ihp := ih (by rw [hr, hweq])
-      exact List.mem_cons.mpr (.inr ihp)
+      obtain rfl : w' = w := by simpa [hr] using h
+      exact List.mem_cons_of_mem _ (ih hr)
     | none =>
       rw [hr] at h
       split_ifs at h with hyz
-      · subst hyz
-        simp at h
-        subst h
-        exact List.mem_cons.mpr (.inl rfl)
+      obtain rfl := Option.some.inj h
+      exact hyz ▸ List.mem_cons_self
 
 /-- If `y ∈ vs.dom`, then `vs.lookup y` is some. -/
 theorem SubstMap.lookup_isSome_of_mem_dom {vs : SubstMap rT} {y : Var}
@@ -332,22 +276,14 @@ theorem SubstMap.lookup_isSome_of_mem_dom {vs : SubstMap rT} {y : Var}
   | nil => exact absurd hqmem (by simp)
   | cons p rest ih =>
     obtain ⟨z, v⟩ := p
-    rcases List.mem_cons.mp hqmem with hp_eq | hpm
-    · have hzy : z = y := by
-        have : q.1 = y := hqeq
-        rw [hp_eq] at this; exact this
-      subst hzy
+    rcases List.mem_cons.mp hqmem with rfl | hpm
+    · obtain rfl : z = y := hqeq
       simp only [SubstMap.lookup]
-      cases SubstMap.lookup rest z with
-      | some _ => simp
-      | none => simp
+      cases SubstMap.lookup rest z <;> simp
     · simp only [SubstMap.lookup]
       cases hrr : SubstMap.lookup rest y with
       | some _ => simp
-      | none =>
-        have hihres := ih hpm
-        rw [hrr] at hihres
-        cases hihres
+      | none => simpa [hrr] using ih hpm
 
 /-- `substMap` commutes with `subst _ x (.fvar y)` when both atoms are outside
 `vs`'s domain and `vs`'s payloads are fully closed (so don't introduce new fvs). -/
@@ -364,55 +300,23 @@ theorem Exp.substMap_subst_fvar_comm
     obtain ⟨z, w⟩ := p
     have hzx : z ≠ x := fun h => hxNotDom (h ▸ by simp)
     have hzy : z ≠ y := fun h => hyNotDom (h ▸ by simp)
-    have hxNotRest : x ∉ (rest.map (·.1)).toFinset := by
-      intro h
-      apply hxNotDom
-      simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert]
-      exact Or.inr h
-    have hyNotRest : y ∉ (rest.map (·.1)).toFinset := by
-      intro h
-      apply hyNotDom
-      simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert]
-      exact Or.inr h
-    have hw_closed : w.isClosed .empty := (SubstMap.AllClosed_cons.mp hvs).1
-    have hw_lc : w.IsLocallyClosed := hw_closed.1
-    have hxNotW : x ∉ w.fv := fun h => by
-      have := hw_closed.2 h; simp [ClosedCtx.empty] at this
-    have hvs_rest : SubstMap.AllClosed rest := (SubstMap.AllClosed_cons.mp hvs).2
-    -- substMap (cons (z,w) rest) F = subst (substMap rest F) z w (foldr).
-    have hcons1 : Exp.substMap ((z, w) :: rest) (Exp.subst E x (.fvar y))
-        = Exp.subst (Exp.substMap rest (Exp.subst E x (.fvar y))) z w := rfl
-    have hcons2 : Exp.substMap ((z, w) :: rest) E
-        = Exp.subst (Exp.substMap rest E) z w := rfl
-    rw [hcons1, hcons2, ih hxNotRest hyNotRest hvs_rest]
-    -- Use subst_subst_ne to swap (subst _ x (.fvar y)) and (subst _ z w):
-    -- subst_subst_ne with x := z, y := x, v := w, v' := .fvar y.
-    have hzNotFvY : z ∉ (Exp.fvar (rT := rT) y).fv := by
-      simp only [Exp.fv, Finset.mem_singleton]; exact hzy
-    have hsw := Exp.subst_subst_ne (e := Exp.substMap rest E)
-      (v := w) (v' := Exp.fvar (rT := rT) y) (x := z) (y := x)
-      hzx hzNotFvY hxNotW hw_lc (Exp.IsLocallyClosed.fvar y)
-    rw [← hsw]
+    have hxNotRest : x ∉ (rest.map (·.1)).toFinset := fun h => hxNotDom (by simp [h])
+    have hyNotRest : y ∉ (rest.map (·.1)).toFinset := fun h => hyNotDom (by simp [h])
+    obtain ⟨hw_closed, hvs_rest⟩ := SubstMap.AllClosed_cons.mp hvs
+    have hzNotFvY : z ∉ (Exp.fvar (rT := rT) y).fv := by simpa [Exp.fv] using hzy
+    rw [Exp.substMap_cons, Exp.substMap_cons, ih hxNotRest hyNotRest hvs_rest,
+      ← Exp.subst_subst_ne hzx hzNotFvY (Exp.notMem_fv_of_isClosed_empty hw_closed x)
+        hw_closed.1 (Exp.IsLocallyClosed.fvar y)]
 
-/-- `substMap` through a closed expression is a no-op (Clutch's
-`Exp.substMap_isClosed` for the empty `X = ∅` case). -/
 theorem Exp.substMap_isClosed_empty {e : Exp rT} (vs : SubstMap rT)
     (he : e.isClosed .empty) : e.substMap vs = e := by
-  -- Closed expression has fv ⊆ ∅, so no `subst` step changes it.
   induction vs with
   | nil => rfl
   | cons p vs ih =>
-      simp only [substMap, List.foldr_cons]
-      -- After IH: e.substMap vs = e. Then subst at p.1 with p.2 is identity
-      -- since p.1 ∉ e.fv (e has no free vars at all).
-      rw [show vs.foldr (fun q acc => Exp.subst acc q.1 q.2) e = e from ih]
-      apply Exp.subst_fresh
-      intro hcontra
-      have := he.2 hcontra
-      simp [ClosedCtx.empty] at this
+      rw [Exp.substMap_cons, ih]
+      exact Exp.subst_fresh _ _ _ (Exp.notMem_fv_of_isClosed_empty he _)
 
-/-- General version: if `e` is closed in `X` and `vs` only assigns variables
-NOT in `X`, then `substMap vs e = e`. (Clutch's `substMap_isClosed`.) -/
+/-- Clutch's `substMap_isClosed`. -/
 theorem Exp.substMap_isClosed {X : ClosedCtx} {e : Exp rT} (vs : SubstMap rT)
     (he : e.isClosed X)
     (hvs : ∀ p ∈ vs, p.1 ∉ X) :
@@ -420,54 +324,21 @@ theorem Exp.substMap_isClosed {X : ClosedCtx} {e : Exp rT} (vs : SubstMap rT)
   induction vs with
   | nil => rfl
   | cons p vs ih =>
-      simp only [substMap, List.foldr_cons]
-      have hvs' : ∀ q ∈ vs, q.1 ∉ X :=
-        fun q hq => hvs q (List.mem_cons_of_mem _ hq)
-      rw [show vs.foldr (fun q acc => Exp.subst acc q.1 q.2) e = e from ih hvs']
-      -- Now subst e p.1 p.2 = e since p.1 ∉ e.fv (because p.1 ∉ X ⊇ e.fv).
-      apply Exp.subst_fresh
-      have hp1_notin : p.1 ∉ X := hvs p List.mem_cons_self
-      intro hcontra
-      exact hp1_notin (he.2 hcontra)
+      rw [Exp.substMap_cons, ih fun q hq => hvs q (List.mem_cons_of_mem _ hq)]
+      exact Exp.subst_fresh _ _ _ fun h => hvs p List.mem_cons_self (he.2 h)
 
-/-! ### Substitution-map insertion (closed-range version)
+/-! ### `substMap` through constructors
 
-Port of Clutch's `substMap_insert`: extending a substitution map with a
-single binding decomposes into a `subst'` followed by a `substMap` on the
-deleted environment. The proof is much simpler under LN — `insert` is just
-`cons`, so `substMap (cons p vs) e = subst (substMap vs e) p.1 p.2`
-holds definitionally. -/
+The `substMap_hom*` lemmas transport "`subst` commutes with this constructor" along the fold,
+one per arity. (Clutch gets these by `simpl`: HeapLang's `subst_map` recurses on the
+expression and is simultaneous, whereas this `substMap` is a sequential fold.) -/
 
-@[simp] theorem Exp.substMap_cons (p : Var × Exp rT) (vs : SubstMap rT) (e : Exp rT) :
-    e.substMap (p :: vs) = Exp.subst (e.substMap vs) p.1 p.2 := rfl
-
-/-! ### `substMap` distributivity over expression constructors
-
-These let `simp` push `Exp.substMap vs` through every constructor of `Exp rT`,
-mirroring the recursive structure of `Exp.subst`. They are critical for the
-`Fundamental.lean` lemmas, which need to commute `substMap vs` with the
-relational expression constructors before invoking the corresponding
-`refines_*` compatibility rule.
-
-Every one of them is the same argument: `substMap` is a `foldr` of `subst`, and
-`subst` already commutes with the constructor, so the induction on `vs` only
-transports that fact. The four `substMap_hom*` lemmas run that induction once
-each, indexed by the constructor's arity; the per-constructor lemmas then supply
-nothing but the relevant `Exp.subst` defining equation.
-
-(Clutch defines `subst_map` by recursion on the *expression*, which makes these
-hold by `simpl`. That is not available here: HeapLang's `subst` stops at the
-`Val` constructor, so its `subst_map` is simultaneous, whereas `Exp` has no
-value constructor and this `substMap` is a sequential fold.) -/
-
-/-- A nullary former fixed by `subst` is fixed by `substMap`. -/
 theorem Exp.substMap_hom₀ (C : Exp rT) (hC : ∀ x v, Exp.subst C x v = C)
     (vs : SubstMap rT) : C.substMap vs = C := by
   induction vs with
   | nil => rfl
   | cons _ _ ih => simp only [Exp.substMap_cons, ih, hC]
 
-/-- A unary former that `subst` commutes with is commuted with by `substMap`. -/
 theorem Exp.substMap_hom₁ (C : Exp rT → Exp rT)
     (hC : ∀ e x v, Exp.subst (C e) x v = C (Exp.subst e x v))
     (vs : SubstMap rT) (e : Exp rT) :
@@ -476,7 +347,6 @@ theorem Exp.substMap_hom₁ (C : Exp rT → Exp rT)
   | nil => rfl
   | cons _ _ ih => simp only [Exp.substMap_cons, ih, hC]
 
-/-- A binary former that `subst` commutes with is commuted with by `substMap`. -/
 theorem Exp.substMap_hom₂ (C : Exp rT → Exp rT → Exp rT)
     (hC : ∀ e1 e2 x v, Exp.subst (C e1 e2) x v = C (Exp.subst e1 x v) (Exp.subst e2 x v))
     (vs : SubstMap rT) (e1 e2 : Exp rT) :
@@ -485,7 +355,6 @@ theorem Exp.substMap_hom₂ (C : Exp rT → Exp rT → Exp rT)
   | nil => rfl
   | cons _ _ ih => simp only [Exp.substMap_cons, ih, hC]
 
-/-- A ternary former that `subst` commutes with is commuted with by `substMap`. -/
 theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
     (hC : ∀ e0 e1 e2 x v, Exp.subst (C e0 e1 e2) x v
       = C (Exp.subst e0 x v) (Exp.subst e1 x v) (Exp.subst e2 x v))
@@ -587,8 +456,6 @@ theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
     (Exp.scrut e p).substMap vs = .scrut (e.substMap vs) p :=
   Exp.substMap_hom₁ (Exp.scrut · p) (by intros; simp [Exp.subst]) vs e
 
-/-- `substMap` distributes over `openRec` when all bindings are LC. The key
-binder-substitution lemma: `substMap vs (openRec k u e) = openRec k (substMap vs u) (substMap vs e)`. -/
 theorem Exp.substMap_openRec (vs : SubstMap rT) (k : Nat) (u e : Exp rT)
     (hClosed : SubstMap.AllClosed vs) :
     Exp.substMap vs (Exp.openRec k u e) =
@@ -597,22 +464,16 @@ theorem Exp.substMap_openRec (vs : SubstMap rT) (k : Nat) (u e : Exp rT)
   | nil => rfl
   | cons p rest ih =>
     obtain ⟨y, w⟩ := p
-    rw [SubstMap.AllClosed_cons] at hClosed
-    obtain ⟨hwClosed, hRestClosed⟩ := hClosed
+    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     rw [Exp.substMap_cons, ih hRestClosed, Exp.substMap_cons, Exp.substMap_cons]
-    -- subst (openRec k (substMap rest u) (substMap rest e)) y w
-    --  = openRec k (subst (substMap rest u) y w) (subst (substMap rest e) y w)
     exact Exp.subst_openRec y w k _ _ hwClosed.1
 
-/-- `substMap` distributes over `open'`. -/
 theorem Exp.substMap_open (vs : SubstMap rT) (u e : Exp rT)
     (hClosed : SubstMap.AllClosed vs) :
     Exp.substMap vs (Exp.open' e u) =
       Exp.open' (Exp.substMap vs e) (Exp.substMap vs u) :=
   Exp.substMap_openRec vs 0 u e hClosed
 
-/-- If `x ∉ e.fv` and `vs` is closed, then `x ∉ (substMap vs e).fv`.
-A closed substMap can only remove free vars, not introduce new ones. -/
 theorem Exp.notFv_substMap {vs : SubstMap rT} {e : Exp rT} {x : Var}
     (hClosed : SubstMap.AllClosed vs) (hx : x ∉ e.fv) :
     x ∉ (Exp.substMap vs e).fv := by
@@ -620,30 +481,13 @@ theorem Exp.notFv_substMap {vs : SubstMap rT} {e : Exp rT} {x : Var}
   | nil => exact hx
   | cons p rest ih =>
     obtain ⟨y, w⟩ := p
-    rw [SubstMap.AllClosed_cons] at hClosed
-    obtain ⟨hwClosed, hRestClosed⟩ := hClosed
+    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     rw [Exp.substMap_cons]
-    -- Goal: x ∉ (subst (substMap rest e) y w).fv
-    -- subst y w doesn't introduce new free vars beyond fv(prev) ∪ fv(w).
-    -- fv(w) = ∅ (since w is closed).
-    have hxRest : x ∉ (substMap rest e).fv := ih hRestClosed
     intro hmem
-    -- (subst e' y w).fv ⊆ (e'.fv \ {y}) ∪ w.fv
-    have := fv_subst_subset (substMap rest e) y w hmem
-    rcases Finset.mem_union.mp this with h1 | h2
-    · exact hxRest (Finset.mem_sdiff.mp h1).1
-    · -- w is closed, so x ∉ w.fv
-      have : w.fv = ∅ := by
-        have := hwClosed.2
-        ext z
-        simp only [Finset.notMem_empty, iff_false]
-        intro hzw
-        have := this hzw
-        simp [ClosedCtx.empty] at this
-      rw [this] at h2
-      exact (Finset.notMem_empty _ h2)
+    rcases Finset.mem_union.mp (fv_subst_subset (substMap rest e) y w hmem) with h1 | h2
+    · exact ih hRestClosed (Finset.mem_sdiff.mp h1).1
+    · exact Exp.notMem_fv_of_isClosed_empty hwClosed x h2
 
-/-- Helper: when `x` is unbound in `vs`, `substMap` is a no-op on `.fvar x`. -/
 theorem Exp.substMap_fvar_lookup_none {vs : SubstMap rT} {x : Var}
     (hv : SubstMap.lookup vs x = none) :
     Exp.substMap vs (.fvar x) = .fvar x := by
@@ -659,12 +503,8 @@ theorem Exp.substMap_fvar_lookup_none {vs : SubstMap rT} {x : Var}
       simp only at hv
       split_ifs at hv with hxy
       rw [Exp.substMap_cons, ih hr]
-      show (Exp.fvar x).subst y w = .fvar x
-      simp only [Exp.subst]
-      have : ¬ y = x := fun h => hxy h.symm
-      rw [ite_eq_right this]
+      simp [Exp.subst, Ne.symm hxy]
 
-/-- Closedness of looked-up values in an `AllClosed` SubstMap. -/
 theorem SubstMap.lookup_closed {vs : SubstMap rT} {x : Var} {v : Exp rT}
     (hv : SubstMap.lookup vs x = some v) (hClosed : SubstMap.AllClosed vs) :
     v.isClosed .empty := by
@@ -685,9 +525,7 @@ theorem SubstMap.lookup_closed {vs : SubstMap rT} {x : Var} {v : Exp rT}
       injection hv with hwv; subst hwv
       exact hClosed.1
 
-/-- Bridge for binder-shifting in fundamental's `lam`/`fix`/`tlam`/`unpack`.
-After picking a fresh atom `x` and specializing the IH at vs' = (x, v) :: vs,
-the substMap of an opened body `open' e (.fvar x)` simplifies to `open' (substMap vs e) v`. -/
+/-- Opening a body at a fresh atom `x`, then binding `x ↦ v`, opens the substituted body at `v`. -/
 theorem Exp.substMap_open_fresh {vs : SubstMap rT} {e v : Exp rT} {x : Var}
     (hClosed : SubstMap.AllClosed vs) (hxFv : x ∉ e.fv)
     (hxDom : SubstMap.lookup vs x = none) (hvLC : v.IsLocallyClosed) :
@@ -695,12 +533,9 @@ theorem Exp.substMap_open_fresh {vs : SubstMap rT} {e v : Exp rT} {x : Var}
       Exp.open' (Exp.substMap vs e) v := by
   show Exp.subst (Exp.substMap vs (Exp.open' e (.fvar x))) x v =
     Exp.open' (Exp.substMap vs e) v
-  rw [Exp.substMap_open _ _ _ hClosed]
-  rw [Exp.substMap_fvar_lookup_none hxDom]
-  have hxFv' : x ∉ (Exp.substMap vs e).fv := Exp.notFv_substMap hClosed hxFv
-  rw [Exp.subst_intro x v _ hxFv' hvLC]
+  rw [Exp.substMap_open _ _ _ hClosed, Exp.substMap_fvar_lookup_none hxDom,
+    Exp.subst_intro x v _ (Exp.notFv_substMap hClosed hxFv) hvLC]
 
-/-- `substMap` preserves local closedness when all bindings are LC. -/
 theorem Exp.substMap_lc {vs : SubstMap rT} {e : Exp rT}
     (hClosed : SubstMap.AllClosed vs) (he : e.IsLocallyClosed) :
     (Exp.substMap vs e).IsLocallyClosed := by
@@ -708,16 +543,10 @@ theorem Exp.substMap_lc {vs : SubstMap rT} {e : Exp rT}
   | nil => exact he
   | cons p rest ih =>
     obtain ⟨y, w⟩ := p
-    rw [SubstMap.AllClosed_cons] at hClosed
-    obtain ⟨hwClosed, hRestClosed⟩ := hClosed
-    rw [Exp.substMap_cons]
+    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     exact subst_lc (ih hRestClosed) hwClosed.1
 
-/-- A `lam` whose body is closed off by a substitution is locally closed: the body is
-locally closed once opened at any atom outside `L`, and `σ` neither captures nor
-introduces dangling indices (its values are closed, and its domain sits inside `D`).
-Extracted from `bin_log_related_lam`, which needs exactly this for `Val`'s new
-local-closedness field. -/
+/-- Needed by `bin_log_related_lam` for `Val`'s local-closedness field. -/
 theorem Exp.lam_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : Finset Var}
     (hσ : SubstMap.AllClosed σ) (hdom : ∀ y ∉ D, SubstMap.lookup σ y = none)
     (he : ∀ x ∉ L, (Exp.open' e (.fvar x)).IsLocallyClosed) :
@@ -732,8 +561,7 @@ theorem Exp.lam_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : 
   rw [← hbridge]
   exact Exp.substMap_lc hσ (he y hyL)
 
-/-- The `fix` twin of `Exp.lam_substMap_isLocallyClosed`: same hypotheses, same proof,
-`Exp.IsLocallyClosed.fix` in place of `.lam`. Needed by `bin_log_related_fix`. -/
+/-- The `fix` twin of `Exp.lam_substMap_isLocallyClosed`, for `bin_log_related_fix`. -/
 theorem Exp.fix_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : Finset Var}
     (hσ : SubstMap.AllClosed σ) (hdom : ∀ y ∉ D, SubstMap.lookup σ y = none)
     (he : ∀ x ∉ L, (Exp.open' e (.fvar x)).IsLocallyClosed) :
@@ -757,23 +585,14 @@ theorem Exp.fv_substMap_subset (vs : SubstMap rT) (e : Exp rT) :
   | cons p rest ih =>
     obtain ⟨z, w⟩ := p
     rw [Exp.substMap_cons]
-    -- Goal: (subst (substMap rest e) z w).fv ⊆ e.fv ∪ ((w.fv ∪ rest_w_fv) ∪ acc).
     intro y hy
-    have h1 := fv_subst_subset (substMap rest e) z w hy
-    rcases Finset.mem_union.mp h1 with hL | hR
-    · -- y ∈ (substMap rest e).fv \ {z} ⊆ (substMap rest e).fv ⊆ e.fv ∪ rest_w_fv.
-      have hyRest : y ∈ (substMap rest e).fv := (Finset.mem_sdiff.mp hL).1
-      have hih : y ∈ e.fv ∪ ((rest.map (·.2)).foldr (fun w acc => w.fv ∪ acc) ∅) := by
-        exact (ih (e := e)) hyRest
-      simp only [List.map_cons, List.foldr_cons, Finset.mem_union]
-      rcases Finset.mem_union.mp hih with h_e | h_rest
+    simp only [List.map_cons, List.foldr_cons, Finset.mem_union]
+    rcases Finset.mem_union.mp (fv_subst_subset (substMap rest e) z w hy) with hL | hR
+    · rcases Finset.mem_union.mp (ih (e := e) (Finset.mem_sdiff.mp hL).1) with h_e | h_rest
       · exact .inl h_e
       · exact .inr (.inr h_rest)
-    · -- y ∈ w.fv. Goal: in the rhs.
-      simp only [List.map_cons, List.foldr_cons, Finset.mem_union]
-      exact .inr (.inl hR)
+    · exact .inr (.inl hR)
 
-/-- Closed-bindings have no free variables (combined). -/
 theorem SubstMap.allClosed_values_fv_empty {vs : SubstMap rT}
     (hClosed : SubstMap.AllClosed vs) :
     ((vs.map (·.2)).foldr (fun w acc => w.fv ∪ acc) ∅) = ∅ := by
@@ -781,21 +600,11 @@ theorem SubstMap.allClosed_values_fv_empty {vs : SubstMap rT}
   | nil => rfl
   | cons p rest ih =>
     obtain ⟨z, w⟩ := p
-    rw [SubstMap.AllClosed_cons] at hClosed
-    obtain ⟨hwClosed, hRestClosed⟩ := hClosed
+    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     simp only [List.map_cons, List.foldr_cons]
-    rw [ih hRestClosed]
-    have hwfv : w.fv = ∅ := by
-      ext z'
-      simp only [Finset.notMem_empty, iff_false]
-      intro hz'
-      have := hwClosed.2 hz'
-      simp [ClosedCtx.empty] at this
-    rw [hwfv]
+    rw [ih hRestClosed, Exp.fv_eq_empty_of_isClosed_empty hwClosed]
     simp
 
-/-- Stronger: `(substMap vs e).fv ⊆ e.fv \ vs.dom` when `vs` is closed.
-i.e., a closed substMap removes exactly the `vs.dom`-variables. -/
 theorem Exp.fv_substMap_sdiff_dom {vs : SubstMap rT} {e : Exp rT}
     (hClosed : SubstMap.AllClosed vs) :
     (Exp.substMap vs e).fv ⊆ e.fv \ (vs.map (·.1)).toFinset := by
@@ -804,43 +613,24 @@ theorem Exp.fv_substMap_sdiff_dom {vs : SubstMap rT} {e : Exp rT}
     simp [Exp.substMap]
   | cons p rest ih =>
     obtain ⟨z, w⟩ := p
-    rw [SubstMap.AllClosed_cons] at hClosed
-    obtain ⟨hwClosed, hRestClosed⟩ := hClosed
+    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     rw [Exp.substMap_cons]
     intro y hy
-    -- hy : y ∈ (subst (substMap rest e) z w).fv.
-    -- (subst e' z w).fv ⊆ (e'.fv \ {z}) ∪ w.fv. w.fv = ∅.
-    have h1 := fv_subst_subset (substMap rest e) z w hy
-    rcases Finset.mem_union.mp h1 with hL | hR
-    · -- y ∈ (substMap rest e).fv \ {z}.
-      have hyRest : y ∈ (substMap rest e).fv := (Finset.mem_sdiff.mp hL).1
-      have hyNeZ : y ∉ ({z} : Finset Var) := (Finset.mem_sdiff.mp hL).2
-      have hih : y ∈ e.fv \ (rest.map (·.1)).toFinset := (ih (e := e) hRestClosed) hyRest
+    rcases Finset.mem_union.mp (fv_subst_subset (substMap rest e) z w hy) with hL | hR
+    · obtain ⟨hyRest, hyNeZ⟩ := Finset.mem_sdiff.mp hL
+      obtain ⟨hyE, hyDom⟩ := Finset.mem_sdiff.mp (ih (e := e) hRestClosed hyRest)
       simp only [Finset.mem_sdiff, List.map_cons, List.toFinset_cons, Finset.mem_insert,
         not_or]
-      have hyDecomp := Finset.mem_sdiff.mp hih
-      refine ⟨hyDecomp.1, ?_, hyDecomp.2⟩
-      intro h; exact hyNeZ (by simp [h])
-    · -- y ∈ w.fv. But w is closed, so w.fv = ∅. Contradiction.
-      have hwfv : w.fv = ∅ := by
-        ext z'
-        simp only [Finset.notMem_empty, iff_false]
-        intro hz'
-        have := hwClosed.2 hz'
-        simp [ClosedCtx.empty] at this
-      rw [hwfv] at hR
-      exact (Finset.notMem_empty _ hR).elim
+      exact ⟨hyE, fun h => hyNeZ (by simp [h]), hyDom⟩
+    · exact absurd hR (Exp.notMem_fv_of_isClosed_empty hwClosed y)
 
-/-- If `e.fv ⊆ dom(vs)` and `vs` is closed, then `(substMap vs e).fv = ∅`. -/
 theorem Exp.substMap_fv_eq_empty {vs : SubstMap rT} {e : Exp rT}
     (hClosed : SubstMap.AllClosed vs)
     (hsub : e.fv ⊆ (vs.map (·.1)).toFinset) :
     (Exp.substMap vs e).fv = ∅ := by
-  rw [Finset.eq_empty_iff_forall_notMem]
-  intro y hy
-  have h := Exp.fv_substMap_sdiff_dom hClosed (e := e) hy
-  have h' := Finset.mem_sdiff.mp h
-  exact h'.2 (hsub h'.1)
+  refine Finset.eq_empty_iff_forall_notMem.mpr fun y hy => ?_
+  obtain ⟨hyE, hyDom⟩ := Finset.mem_sdiff.mp (Exp.fv_substMap_sdiff_dom hClosed hy)
+  exact hyDom (hsub hyE)
 
 /-- The α-renaming key equation: when `vs` maps `y` to `w` and `x` is fresh,
 `substMap vs (subst E x (.fvar y)) = subst (substMap (vs without y) E) x w`. -/
@@ -855,11 +645,6 @@ theorem Exp.substMap_subst_fvar_lookup
       = Exp.subst (Exp.substMap (vs.filter (fun p => !decide (p.1 = y))) E) x w := by
   have hw_closed : w.isClosed .empty :=
     hvs (y, w) (SubstMap.mem_of_lookup_eq_some hyLookup)
-  have hw_lc : w.IsLocallyClosed := hw_closed.1
-  have hxNotW : x ∉ w.fv := fun h => by
-    have := hw_closed.2 h; simp [ClosedCtx.empty] at this
-  have hyNotW : y ∉ w.fv := fun h => by
-    have := hw_closed.2 h; simp [ClosedCtx.empty] at this
   induction vs with
   | nil => simp [SubstMap.lookup] at hyLookup
   | cons p rest ih =>
@@ -867,16 +652,8 @@ theorem Exp.substMap_subst_fvar_lookup
     have hcons1 : Exp.substMap ((z, v) :: rest) (Exp.subst E x (.fvar y))
         = Exp.subst (Exp.substMap rest (Exp.subst E x (.fvar y))) z v := rfl
     have hzx : z ≠ x := fun h => hxNotDom (h ▸ by simp)
-    have hxNotRest : x ∉ (rest.map (·.1)).toFinset := by
-      intro h
-      apply hxNotDom
-      simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert]
-      exact Or.inr h
-    have hv_closed : v.isClosed .empty := (SubstMap.AllClosed_cons.mp hvs).1
-    have hv_lc : v.IsLocallyClosed := hv_closed.1
-    have hxNotV : x ∉ v.fv := fun h => by
-      have := hv_closed.2 h; simp [ClosedCtx.empty] at this
-    have hvs_rest : SubstMap.AllClosed rest := (SubstMap.AllClosed_cons.mp hvs).2
+    have hxNotRest : x ∉ (rest.map (·.1)).toFinset := fun h => hxNotDom (by simp [h])
+    obtain ⟨hv_closed, hvs_rest⟩ := SubstMap.AllClosed_cons.mp hvs
     rw [hcons1]
     by_cases hzy : z = y
     · simp only [hzy, SubstMap.lookup] at hyLookup
@@ -904,7 +681,7 @@ theorem Exp.substMap_subst_fvar_lookup
           have := Exp.fv_subst_subset _ x w hy
           rcases Finset.mem_union.mp this with h1 | h2
           · exact hyNotFinner (Finset.mem_sdiff.mp h1).1
-          · exact hyNotW h2
+          · exact Exp.notMem_fv_of_isClosed_empty hw_closed y h2
         rw [Exp.subst_fresh y _ v hyNotFsubst]
       | none =>
         rw [hr] at hyLookup
@@ -944,21 +721,13 @@ theorem Exp.substMap_subst_fvar_lookup
           have : (!decide ((z, v).1 = y)) = true := by simp [hzy]
           rw [ite_eq_left this]
         rw [hfilter_cons]
-        have hxz : x ≠ z := fun h => hzx h.symm
-        have hzNotW : z ∉ w.fv := fun h => by
-          have := hw_closed.2 h; simp [ClosedCtx.empty] at this
-        have hsw := Exp.subst_subst_ne
-          (e := Exp.substMap (rest.filter (fun p => !decide (p.1 = y))) E)
-          (v := w) (v' := v) (x := x) (y := z)
-          hxz hxNotV hzNotW hw_lc hv_lc
-        rw [hsw]
+        rw [Exp.subst_subst_ne (Ne.symm hzx) (Exp.notMem_fv_of_isClosed_empty hv_closed x)
+          (Exp.notMem_fv_of_isClosed_empty hw_closed z) hw_closed.1 hv_closed.1]
         rfl
       | none =>
         rw [hr] at hyLookup
         simp [Ne.symm hzy] at hyLookup
 
-/-- `substMap` on `fvar x` looks up the rightmost binding for `x`, provided
-all bindings are closed expressions. -/
 theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
     (hClosed : SubstMap.AllClosed vs) :
     ∀ {v : Exp rT}, SubstMap.lookup vs x = some v → Exp.substMap vs (.fvar x) = v := by
@@ -975,12 +744,8 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
     | some w' =>
       rw [hr] at hv; injection hv with hw'v; subst hw'v
       rw [ih hRestClosed hr]
-      have hw'Closed := SubstMap.lookup_closed hr hRestClosed
-      show w'.subst y w = w'
-      apply Exp.subst_fresh
-      intro hmem
-      have := hw'Closed.2 hmem
-      simp [ClosedCtx.empty] at this
+      exact Exp.subst_fresh _ _ _
+        (Exp.notMem_fv_of_isClosed_empty (SubstMap.lookup_closed hr hRestClosed) y)
     | none =>
       rw [hr] at hv
       simp only at hv
@@ -990,12 +755,10 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
       show (Exp.fvar x).subst x w = w
       simp [Exp.subst]
 
-/-! ## Group D — Deterministic / probabilistic head-step characterization
+/-! ## Deterministic and probabilistic head steps
 
-Predicate-based step classification (Clutch's `metatheory.v` ~1448–1713,
-minus Laplace/Tick). The `HeadStepSupport` relation lives in `HeadStep.lean`. -/
+Clutch's `metatheory.v` ~1448–1713, minus Laplace/Tick. -/
 
-/-- Expressions that take a single deterministic head step in state `σ`. -/
 inductive DetHeadStepPred : Exp rT → State rT → Prop
   | betaLam {e1 e2 σ} : e2.isValue →
       DetHeadStepPred (.app (.lam e1) e2) σ
@@ -1026,7 +789,6 @@ inductive DetHeadStepPred : Exp rT → State rT → Prop
   | scrutFailure {e p σ} : e.isValue → Pat.tryMatch p e = none →
       DetHeadStepPred (.scrut e p) σ
 
-/-- Expressions that take a probabilistic head step in state `σ`. -/
 inductive ProbHeadStepPred : Exp rT → State rT → Prop
   | randNoTape {z σ} : 0 < z →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit .unit)) σ
@@ -1044,11 +806,9 @@ inductive ProbHeadStepPred : Exp rT → State rT → Prop
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
   | urand {σ} : ProbHeadStepPred Exp.urand σ
 
-/-- Either a deterministic or a probabilistic head step is taken. -/
 def HeadStepPred (e : Exp rT) (σ : State rT) : Prop :=
   DetHeadStepPred e σ ∨ ProbHeadStepPred e σ
 
-/-- Boolean test for determinism of a head step. -/
 def isDetHeadStep (e : Exp rT) (σ : State rT) : Bool :=
   match e with
   | .app (.lam _) e2 => decide e2.isValue
@@ -1069,7 +829,6 @@ def isDetHeadStep (e : Exp rT) (σ : State rT) : Bool :=
   | .scrut e _ => decide e.isValue
   | _ => false
 
-/-- Values don't take head steps. -/
 theorem val_not_HeadStepPred {e : Exp rT} {σ : State rT}
     (hv : e.isValue) : ¬ HeadStepPred e σ := by
   rw [Exp.isValue_iff_isValueR] at hv
@@ -1077,7 +836,6 @@ theorem val_not_HeadStepPred {e : Exp rT} {σ : State rT}
   · cases hdet <;> simp [Exp.isValueR] at hv
   · cases hprob <;> simp [Exp.isValueR] at hv
 
-/-- `isDetHeadStep ↔ DetHeadStepPred`. -/
 theorem isDetHeadStep_iff_pred (e : Exp rT) (σ : State rT) :
     isDetHeadStep e σ = true ↔ DetHeadStepPred e σ := by
   constructor
@@ -1094,9 +852,9 @@ theorem isDetHeadStep_iff_pred (e : Exp rT) (σ : State rT) :
       obtain ⟨⟨hv1, hv2⟩, e', heval⟩ := h
       exact .binop hv1 hv2 heval
     · rename_i b _ _
-      cases b with
-      | true => exact .ifTrue
-      | false => exact .ifFalse
+      cases b
+      · exact .ifFalse
+      · exact .ifTrue
     · rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h
       exact .fst h.1 h.2
     · rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h
@@ -1219,25 +977,20 @@ theorem not_HeadStepPred_iff_zero [MeasurableSingletonClass rT]
     ¬ HeadStepPred e σ ↔ headStep ⟨e, σ⟩ = 0 := by
   rw [HeadStepPred_iff_exists_support]
   constructor
-  · -- No support point ⇒ `headStep` is zero. Countability-free via the
-    -- structural atomicity lemma `headStep_exists_support_of_ne_zero`.
-    intro hns
+  · intro hns
     by_contra h0
     exact hns (headStep_exists_support_of_ne_zero h0)
-  · -- A support point witnesses `headStep ≠ 0` directly.
-    rintro h0 ⟨ρ', hsupp⟩
+  · rintro h0 ⟨ρ', hsupp⟩
     exact HeadStepSupport.ne_zero hsupp h0
 
 theorem det_or_prob_or_zero [MeasurableSingletonClass rT]
     (e : Exp rT) (σ : State rT) :
     DetHeadStepPred e σ ∨ ProbHeadStepPred e σ ∨ headStep ⟨e, σ⟩ = 0 := by
   by_cases hpred : HeadStepPred e σ
-  · rcases hpred with hdet | hprob
-    · exact .inl hdet
-    · exact .inr (.inl hprob)
+  · exact hpred.imp_right .inl
   · exact .inr (.inr ((not_HeadStepPred_iff_zero e σ).mp hpred))
 
-/-! ## Group E — Tape and fresh-location update lemmas -/
+/-! ## Tape and fresh-location updates -/
 
 theorem State.upd_tape_some (σ : State α) (α : Loc) (t : Tape) :
     (σ.update_tapes (·.insert α t)).tapes[α]? = some t := by
@@ -1254,8 +1007,7 @@ theorem State.upd_diff_tape_comm {σ : State α} {α β : Loc} {bs bs' : Tape}
   simp [Std.ExtTreeMap.getElem?_insert]
   by_cases hαk : α = k
   · subst hαk
-    have : ¬ (β = α) := fun h => hne h.symm
-    simp [this]
+    simp [Ne.symm hne]
   · by_cases hβk : β = k
     · subst hβk
       simp [hαk]
@@ -1313,9 +1065,8 @@ theorem Std.ExtTreeMap.elem_fresh_ne
     (h : t[k]? = some v) : t.fresh ≠ k := by
   intro heq
   have hfresh := Std.ExtTreeMap.fresh_get? t
-  rw [heq] at hfresh
-  rw [hfresh] at h
-  simp at h
+  rw [heq, h] at hfresh
+  simp at hfresh
 
 theorem State.fresh_loc_upd_swap {σ : State β} {α : Loc} {bs bs' : Tape} {t : Tape}
     (h : σ.tapes[α]? = some bs) :
@@ -1328,8 +1079,7 @@ theorem State.fresh_loc_upd_swap {σ : State β} {α : Loc} {bs bs' : Tape} {t :
   simp [Std.ExtTreeMap.getElem?_insert]
   by_cases hαk : α = k
   · subst hαk
-    have : ¬ (σ.tapes.fresh = α) := hne
-    simp [this]
+    simp [hne]
   · by_cases hfk : σ.tapes.fresh = k
     · subst hfk
       simp [hαk]
@@ -1352,10 +1102,8 @@ theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
 
 theorem Cfg.uniform_ne_zero
     (z : Int) (σ : State rT) : Cfg.uniform z σ ≠ 0 := by
-  intro heq
-  have hp : MeasureTheory.IsProbabilityMeasure (Cfg.uniform z σ) :=
-    Cfg.uniform_isProbabilityMeasure
-  have := hp.measure_univ; rw [heq] at this; simp at this
+  have : MeasureTheory.IsProbabilityMeasure (Cfg.uniform z σ) := Cfg.uniform_isProbabilityMeasure
+  exact MeasureTheory.IsProbabilityMeasure.ne_zero _
 
 /-- Reindex a sum over `Ico 0 z` along a map that restricts to a bijection on it. -/
 theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
@@ -1378,18 +1126,13 @@ theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
     exact ⟨n₀, by simp only [Finset.mem_Ico]; exact hn₀, hfn₀⟩
   · intro n _; rfl
 
-/-- Integrate a function over `Cfg.uniform z σ`: the result is the uniform
-average over `n ∈ Ico 0 z` of `φ ⟨#n, σ⟩`. -/
 theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT) :
     Cfg.uniform z σ = (PMF.uniformOfFinset (Finset.Ico (0 : Int) z)
         (Finset.nonempty_Ico.mpr hz)).toMeasure.map
       (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold Cfg.uniform Int.isPos; simp only [dite_eq_left hz]
 
-/-- **Countability-free `lintegral` against `Cfg.uniform`.** For a *measurable* `φ`
-the integral is the `Ico`-average. `rand` branches over a finite set of integers,
-so nothing here depends on `rT` being countable — measurability of `φ` is supplied
-rather than derived from discreteness. -/
+/-- Countability-free: measurability of `φ` is assumed rather than derived from discreteness. -/
 theorem Cfg.lintegral_uniform' [MeasurableSingletonClass rT]
     {z : Int} (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
@@ -1474,7 +1217,6 @@ theorem State.head_step_dzero_upd_tapes [MeasurableSingletonClass rT]
   case rand.tape.empty =>
     exact absurd h0 (Cfg.uniform_ne_zero _ _)
   case urand h0 =>
-    -- `urand` always steps (probability measure), so the `headStep = 0` premise is false.
     exact absurd h0 (MeasureTheory.IsProbabilityMeasure.ne_zero _)
 
 theorem State.det_head_step_upd_tapes
@@ -1515,16 +1257,14 @@ theorem State.prim_step_empty_tape [Countable rT] [MeasurableSingletonClass rT]
       = ([], .rand (.lit (.int z)) (.lit (.lbl α))) := by
     rw [Exp.decomp_unfold]
     simp only [Exp.decompItem]
-    have hlbl : (Exp.lit (rT := rT) (.lbl α)).toVal? = some (.lbl α) := rfl
-    have hint : (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) := rfl
-    rw [hlbl, hint]
+    rw [show (Exp.lit (rT := rT) (.lbl α)).toVal? = some (.lbl α) from rfl,
+      show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
   have hdecomp_unit : (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).decomp
       = ([], .rand (.lit (.int z)) (.lit .unit)) := by
     rw [Exp.decomp_unfold]
     simp only [Exp.decompItem]
-    have hunit : (Exp.lit (rT := rT) .unit).toVal? = some .unit := rfl
-    have hint : (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) := rfl
-    rw [hunit, hint]
+    rw [show (Exp.lit (rT := rT) .unit).toVal? = some .unit from rfl,
+      show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
   simp only [primStep, hdecomp_lbl, hdecomp_unit, Ectx.fillCfg_empty, MeasureTheory.Measure.map_id]
   simp only [headStep, _hmem]
   rw [ite_self]

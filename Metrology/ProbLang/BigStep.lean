@@ -6,19 +6,8 @@ public import Metrology.ProbLang.Syntax.Syntax
 
 /-! # Big-step evaluation for ProbLang
 
-`bigStepF` is one unfolding of a big-step evaluator: it evaluates the subterms of an
-expression right to left (the order fixed by `Exp.decompItem`), then performs the head
-step that `headStep` would perform, and continues evaluating the reduct. Recursive calls
-go to the argument `eval`.
-
-The evaluator is written once, generic over the result type `M` and its effects
-(`EvalOps`). Two readings of it are used:
-
-* `measureOps` (in `BigStepEquiv.lean`) reads `M` as `Measure (Cfg rT)`. The least fixed
-  point of `bigStepF measureOps` is the big-step semantics `bigStep`, proved equal to
-  `limExec` there.
-* `ioOps` (in `Interp/BigStepIO.lean`) reads `M` as `IO (Cfg rT)`. The interpreter is the
-  `partial def` fixed point of `bigStepF ioOps`, so it runs the very same code.
+Generic over the effects `EvalOps`, so one evaluator serves both the measure semantics
+(`measureOps`, `BigStepEquiv.lean`) and the interpreter (`ioOps`, `Interp/BigStepIO.lean`).
 -/
 
 namespace ProbLang
@@ -38,8 +27,8 @@ structure EvalOps (rT : Type _) (M : Type _) where
 
 variable {rT : Type _} [ProbLangℝ rT] {M : Type _}
 
-/-- One unfolding of the big-step evaluator. Each compound case evaluates its subterms
-right to left, then takes the corresponding `headStep`. -/
+/-- Evaluates subterms right to left (the order of `Exp.decompItem`), then takes the
+corresponding `headStep`. -/
 @[specialize]
 def bigStepF (m : EvalOps rT M) (eval : Cfg rT → M) : Cfg rT → M
   -- Stuck terms.

@@ -172,10 +172,7 @@ theorem RVal.ofExp_spec {e : Exp rT} (he : e.isValue) :
   obtain ⟨w⟩ := he
   induction w with
   | lit => exact ⟨rfl, trivial⟩
-  | lam h =>
-    refine ⟨by simp [RVal.ofExp, RVal.rb, RVal.rbEnv], ?_, trivial⟩
-    simpa [Exp.lcb] using Exp.lc_imp_lcb h
-  | fix h =>
+  | lam h | fix h =>
     refine ⟨by simp [RVal.ofExp, RVal.rb, RVal.rbEnv], ?_, trivial⟩
     simpa [Exp.lcb] using Exp.lc_imp_lcb h
   | pair _ _ ih1 ih2 => exact ⟨by simp [RVal.ofExp, RVal.rb, ih1.1, ih2.1], ih1.2, ih2.2⟩
@@ -676,7 +673,6 @@ theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : E
       | _ => simp [RVal.rb, Step.bnd]
     all_goals (cases v <;> simp [RVal.rb, Step.bnd])
 
-
 /-! ## `envBig ≤ bigStep` after readback -/
 
 omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
@@ -756,10 +752,7 @@ theorem envStep_bnd_bigStep {c : EnvCfg rT} (hc : c.WF) :
       rw [bigStep_retVal.bind_rb hv]
       dsimp only
       cases v with
-      | inl v =>
-        simp only [envStep, resumeK, stepOps, RVal.rb]
-        exact bnd_evalThen_bigStep (f := .applyTo v) hv
-      | inr v =>
+      | inl v | inr v =>
         simp only [envStep, resumeK, stepOps, RVal.rb]
         exact bnd_evalThen_bigStep (f := .applyTo v) hv
       | _ => simp [envStep, resumeK, stepOps, RVal.rb, Step.bnd]
@@ -886,7 +879,6 @@ theorem envBig_eval_val : ∀ {u : Exp rT} (_ : IsVal u) {env : Env rT} {e : Exp
       rw [hE1, dirac_bind_rcfg, envBig_apply]
       rfl
     | _ => simp [Exp.substEnv] at hu
-
 
 omit [Countable rT] [MeasurableSingletonClass rT] in
 /-- Every configuration that reads back to a value returns that value at once. -/
@@ -1037,11 +1029,7 @@ theorem claimGe_resume_value {f : Frame rT} {v : RVal rT} {σ : State rT}
     ClaimGe (.resume f v σ) := by
   obtain ⟨hfw, hv⟩ := hc
   cases f
-  case appL v2 =>
-    have := claimGe_apply (σ := σ) ⟨hv, hfw⟩
-    unfold ClaimGe at this ⊢
-    rw [envBig_apply]; exact this
-  case applyTo v2 =>
+  case appL v2 | applyTo v2 =>
     have := claimGe_apply (σ := σ) ⟨hv, hfw⟩
     unfold ClaimGe at this ⊢
     rw [envBig_apply]; exact this
@@ -1073,17 +1061,14 @@ theorem claimGe_resume_value {f : Frame rT} {v : RVal rT} {σ : State rT}
 
 theorem claimGe_resume {f : Frame rT} {v : RVal rT} {σ : State rT}
     (hc : (EnvCfg.resume f v σ).WF) : ClaimGe (.resume f v σ) := by
-  have hval : ∀ g : Frame rT, (∀ env e, g ≠ .pairR env e ∧ g ≠ .appR env e ∧
-      (∀ op, g ≠ .binopR op env e) ∧ g ≠ .storeR env e ∧ g ≠ .randR env e) →
-      ∀ w σ', (EnvCfg.resume g w σ').WF → ClaimGe (.resume g w σ') :=
-    fun g hg w σ' hw => claimGe_resume_value hw hg
   obtain ⟨hfw, hv⟩ := hc
   cases f
   case pairR env e1 | appR env e1 | binopR op env e1 | storeR env e1 | randR env e1 =>
     unfold ClaimGe
     rw [envBig_apply]
     simp only [envStep, resumeK, stepOps]
-    refine le_of_eq_of_le ?_ (claimGe_chain hfw hv fun w σ' hw => hval _ (by simp) w σ' ⟨hv, hw⟩)
+    refine le_of_eq_of_le ?_
+      (claimGe_chain hfw hv fun w σ' hw => claimGe_resume_value ⟨hv, hw⟩ (by simp))
     rfl
   all_goals exact claimGe_resume_value ⟨hfw, hv⟩ (by simp)
 

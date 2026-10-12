@@ -7,21 +7,8 @@ public import Metrology.ProbLang.Exec
 
 /-! # The big-step semantics agrees with the reduction semantics
 
-`bigStep` is the least fixed point of `bigStepF measureOps`. The main theorem,
-`bigStep_eq_limExec`, says it equals `limExec`, the limit of the small-step executions.
-
-The proof is discrete-only: it assumes `[Countable rT] [MeasurableSingletonClass rT]`, so
-that every map out of `Cfg rT` is measurable and `Measure.bind` is monotone.
-
-Two facts about one unfolding `bigStepF measureOps R` do most of the work. They hold for
-any `R` that returns values unchanged (`RetVal`) and only produces values (`OnlyVal`):
-
-* `bigStepF_head`: on a head redex, it takes exactly the `headStep`;
-* `bigStepF_fillItem`: at `Ki[e]`, it evaluates `e` with `R`, then continues at `Ki[v]`.
-
-`limExec` satisfies both hypotheses, which makes it a pre-fixed point of `bigStepF`
-(`bigStepF_limExec_le`), so `bigStep ≤ limExec`. Conversely `bigStep` satisfies them too,
-so it is closed under small steps (`bigStep_primStep`) and bounds every `execN n`.
+`bigStep_eq_limExec`. Discrete-only: `[Countable rT] [MeasurableSingletonClass rT]` make every
+map out of `Cfg rT` measurable and `Measure.bind` monotone.
 -/
 
 noncomputable section
@@ -202,6 +189,20 @@ private theorem Option.casesOn_some_eq_none {α β : Type _} {o : Option α} {b 
     {f : α → Option β} (h : o.casesOn (some b) f = none) : ∃ a, o = some a ∧ f a = none := by
   cases o <;> simp_all
 
+omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+private theorem Exp.isValue_of_decompItem₁ {β : Type _} {e1 : Exp rT} {b : β}
+    (h : e1.toVal?.casesOn (some b) (fun _ => none) = none) : e1.isValue :=
+  let ⟨_, hv1, _⟩ := Option.casesOn_some_eq_none h
+  Exp.toVal?_isValue hv1
+
+omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+private theorem Exp.isValue_of_decompItem₂ {β : Type _} {e1 e2 : Exp rT} {b : β}
+    {f : Val rT → β}
+    (h : e2.toVal?.casesOn (some b) (fun v2 => e1.toVal?.casesOn (some (f v2)) fun _ => none) =
+      none) : e1.isValue ∧ e2.isValue :=
+  let ⟨_, hv2, h⟩ := Option.casesOn_some_eq_none h
+  ⟨Exp.isValue_of_decompItem₁ h, Exp.toVal?_isValue hv2⟩
+
 /-- On a head redex, one unfolding of the evaluator takes exactly the head step. -/
 theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp rT}
     {σ : State rT} (hdec : e.decompItem = none) (hnv : ¬e.isValue) :
@@ -214,39 +215,28 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
   | urand => exact (hR.uniformReal_bind σ).symm
   | pair e1 e2 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v2, hv2, hdec⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨w1⟩ := Exp.toVal?_isValue hv1
-    obtain ⟨w2⟩ := Exp.toVal?_isValue hv2
+    obtain ⟨⟨w1⟩, ⟨w2⟩⟩ := Exp.isValue_of_decompItem₂ hdec
     exact absurd ⟨.pair w1 w2⟩ hnv
   | inl e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨w1⟩ := Exp.toVal?_isValue hv1
+    obtain ⟨w1⟩ := Exp.isValue_of_decompItem₁ hdec
     exact absurd ⟨.inl w1⟩ hnv
   | inr e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨w1⟩ := Exp.toVal?_isValue hv1
+    obtain ⟨w1⟩ := Exp.isValue_of_decompItem₁ hdec
     exact absurd ⟨.inr w1⟩ hnv
   | app e1 e2 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v2, hv2, hdec'⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec'
-    have h1 := Exp.toVal?_isValue hv1
-    have h2 := Exp.toVal?_isValue hv2
-    clear hdec hdec' hv1 hnv
+    obtain ⟨h1, h2⟩ := Exp.isValue_of_decompItem₂ hdec
+    clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h2]; dsimp only; rw [hR.bind_eq h1]; dsimp only
     obtain ⟨w1⟩ := h1
     cases w1 <;> simp [headStep, h2, dirac_bind_discrete]
   | binop op e1 e2 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v2, hv2, hdec'⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec'
-    have h1 := Exp.toVal?_isValue hv1
-    have h2 := Exp.toVal?_isValue hv2
-    clear hdec hdec' hv1 hnv
+    obtain ⟨h1, h2⟩ := Exp.isValue_of_decompItem₂ hdec
+    clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h2]; dsimp only; rw [hR.bind_eq h1]; dsimp only
     simp only [headStep, Exp.isValM_some h1, Exp.isValM_some h2]
@@ -278,11 +268,8 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | rand e1 e2 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v2, hv2, hdec'⟩ := Option.casesOn_some_eq_none hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec'
-    have h1 := Exp.toVal?_isValue hv1
-    have h2 := Exp.toVal?_isValue hv2
-    clear hdec hdec' hv1 hnv
+    obtain ⟨h1, h2⟩ := Exp.isValue_of_decompItem₂ hdec
+    clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h2]; dsimp only; rw [hR.bind_eq h1]; dsimp only
     obtain ⟨w1⟩ := h1
@@ -312,8 +299,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | unop op e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -325,8 +311,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
       exact (hR _ _ (UnOp.eval_isValue hop)).symm
   | cond e1 et ef =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -339,8 +324,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | fst e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -353,8 +337,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | snd e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -367,8 +350,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | case e1 el er =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -388,8 +370,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     exact (hR _ _ ⟨.lit⟩).symm
   | load e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -408,8 +389,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | tape e1 =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -422,8 +402,7 @@ theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp
     | _ => simp [headStep]
   | scrut e1 p =>
     simp only [Exp.decompItem] at hdec
-    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec
-    have h1 := Exp.toVal?_isValue hv1
+    have h1 := Exp.isValue_of_decompItem₁ hdec
     clear hdec hnv
     simp only [bigStepF, measureOps]
     rw [hR.bind_eq h1]; dsimp only
@@ -520,7 +499,6 @@ theorem Exp.pendingArgs_fillItem_lt (Ki : EctxItem rT) {e v : Exp rT} (he : ¬e.
   cases Ki <;>
     simp [EctxItem.fillItem, Exp.pendingArgs, Exp.pendingArgs.pending, Exp.ofVal, he, hv]
 
-/-- `limExec` is a pre-fixed point of `bigStepF`. -/
 theorem bigStepF_limExec_le (e : Exp rT) (σ : State rT) :
     bigStepF measureOps limExec ⟨e, σ⟩ ≤ limExec ⟨e, σ⟩ := by
   induction h : e.pendingArgs using Nat.strong_induction_on generalizing e σ with
@@ -588,7 +566,6 @@ theorem limExec_le_bigStep : limExec (rT := rT) ≤ bigStep :=
 
 /-! ## The main theorem -/
 
-/-- The big-step semantics equals the limit of the small-step executions. -/
 theorem bigStep_eq_limExec : bigStep (rT := rT) = limExec :=
   le_antisymm bigStep_le_limExec limExec_le_bigStep
 

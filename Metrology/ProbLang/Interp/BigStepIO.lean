@@ -8,23 +8,10 @@ public import Metrology.ProbLang.Comp
 
 /-! # The ProbLang interpreter
 
-`run` executes the environment machine. Its three loops (`runEval`, `runApply`, `runRet`)
-are `evalK`, `applyK` and `resumeK` read through `ioStepOps`: the same step functions whose
-`stepOps` reading is proved correct. `EnvStepEquiv.envBig_eval_closed` shows the machine's
-measure semantics equals `limExec` on closed programs.
-
-The frame stack lives on the heap, so an object-level tail call pushes nothing and deep
-non-tail recursion grows only that stack, never the native one. After inlining, the three
-loops call each other in tail position.
-
-The code to check by hand is `ioStepOps` and `runRet`: each operation must mean what
-`Step.interp` says the corresponding `Step` constructor means.
-
-`runSubst` executes the substitution evaluator `bigStepF` through `Comp` trees and `drive`.
-It is slower and serves as a reference for differential testing.
-
-The interpreter runs over `Float`. `urand` draws `k` uniformly from `[0, 2^53)` and
-returns `k · 2^-53`.
+`run` executes the environment machine: `evalK`, `applyK` and `resumeK` read through `ioStepOps`,
+with the frame stack on the heap so deep recursion never grows the native stack. Only `ioStepOps`
+and `runRet` need checking by hand against `Step.interp`. `runSubst` runs the slower substitution
+evaluator `bigStepF`, as a reference for differential testing.
 -/
 
 namespace ProbLang
@@ -45,6 +32,9 @@ instance : ProbLangℝ Float where
 /-- Draw from the unit interval: `k · 2^-53` for `k` uniform on `[0, 2^53)`. -/
 def sampleUnit : IO Float := return (Float.ofNat (← IO.rand 0 (2 ^ 53 - 1))).scaleB (-53)
 
+/-- Draw uniformly from `[0, z)`, or `-1` when `z ≤ 0`, as `Cfg.uniform` does. -/
+def sampleInt (z : Int) : IO Int := if 0 < z then return (← IO.rand 0 (z - 1).toNat) else return -1
+
 variable {C R : Type}
 
 /-- Run `c` with recursive calls handled by `step`, then pass its result to the
@@ -60,12 +50,8 @@ partial def drive (step : C → Comp Float C R) (c : Comp Float C R)
     | none => return r
     | some k => drive step (k r) ks.pop
   | .stuck msg => throw (IO.userError s!"stuck: {msg}")
-  | .sample z k =>
-    let n : Int ← if 0 < z then pure (← IO.rand 0 (z - 1).toNat) else pure (-1)
-    drive step (k n) ks
-  | .sampleReal k =>
-    let r ← sampleUnit
-    drive step (k r) ks
+  | .sample z k => drive step (k (← sampleInt z)) ks
+  | .sampleReal k => drive step (k (← sampleUnit)) ks
 
 /-- The interpreter's `StepOps`, given its three loops. The frame stack `ks` lives on the
 heap: `evalThen` pushes a frame, and `runRet` pops the next one. -/
@@ -80,13 +66,8 @@ heap: `evalThen` pushes a frame, and `runRet` pops the next one. -/
   evalThen env e σ f ks := runEval env e σ (ks.push f)
   apply f v σ ks := runApply f v σ ks
   stuck msg _ := throw (IO.userError s!"stuck: {msg}")
-  uniform z σ ks := do
-    -- `Cfg.uniform`: uniform on `[0, z)`, or `-1` when `z ≤ 0`.
-    let n : Int ← if 0 < z then pure (← IO.rand 0 (z - 1).toNat) else pure (-1)
-    runRet (.lit (.int n)) σ ks
-  uniformReal σ ks := do
-    let r ← sampleUnit
-    runRet (.lit (.real r)) σ ks
+  uniform z σ ks := do runRet (.lit (.int (← sampleInt z))) σ ks
+  uniformReal σ ks := do runRet (.lit (.real (← sampleUnit))) σ ks
 
 mutual
 /-- Evaluate `e` under `env`, then resume the frames `ks`. -/
@@ -114,9 +95,8 @@ def run : EnvCfg Float → IO (RCfg Float)
   | .resume f v σ => resumeK (ioStepOps runEval runApply runRet) f v σ #[]
 
 /-- Run a closed expression from the empty state and read its value back. -/
-def eval (e : Exp Float) : IO (Exp Float) := do
-  let r ← run (.eval [] e default)
-  return r.val.rb
+def eval (e : Exp Float) : IO (Exp Float) :=
+  return (← run (.eval [] e default)).val.rb
 
 /-- `bigStepF` read into `Comp`. -/
 def compOps : EvalOps Float (Comp Float (Cfg Float) (Cfg Float)) where

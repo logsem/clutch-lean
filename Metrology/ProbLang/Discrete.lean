@@ -30,8 +30,7 @@ instance LocHeap.instMeasurableSingletonClass
                   = (fun (n : LocHeap V) (ℓ : Loc) => n[ℓ]?) ⁻¹' {fun ℓ => m[ℓ]?} := by
       ext n
       refine ⟨fun h => h ▸ rfl, fun h => ?_⟩
-      apply Std.ExtTreeMap.ext_getElem?
-      intro k; exact congrFun h k
+      exact Std.ExtTreeMap.ext_getElem? (congrFun h)
     rw [hsing]
     exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
 

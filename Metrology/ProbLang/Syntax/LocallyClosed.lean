@@ -6,13 +6,9 @@ public meta import Lean.Elab.Tactic.Basic
 @[expose] public section
 
 /-!
-# LN plumbing theorems for `Exp`
+# Locally-nameless theory for `Exp`
 
-Standard locally-nameless substitution theory, mirroring
-`cslib/Cslib/Languages/LambdaCalculus/LocallyNameless/Untyped/Properties.lean`
-for our ProbLang `Exp` syntax.
-
-All theorems here concern `openRec` / `closeRec` / `subst` / `fv` / `LC`.
+Mirrors `cslib/Cslib/Languages/LambdaCalculus/LocallyNameless/Untyped/Properties.lean`.
 -/
 
 namespace ProbLang
@@ -21,7 +17,6 @@ open Cslib Exp
 
 namespace Exp
 
-
 variable {rT : Type _}
 variable {x y : Var} {e e' u t : Exp rT}
 
@@ -29,61 +24,49 @@ theorem openRec_aux (e : Exp rT) (j v i u) (neq : i ≠ j)
     (heq : openRec j v e = openRec i u (openRec j v e)) : e = openRec i u e := by
   induction e generalizing i j <;> grind
 
-/-- Swap opens at non-clashing depths (both substituting free variables). -/
 theorem openRec_openRec_comm (k n : Nat) (x y : Var) (e : Exp rT) (neq : k ≠ n) :
     openRec k (fvar x) (openRec n (fvar y) e) = openRec n (fvar y) (openRec k (fvar x) e) := by
   induction e generalizing k n <;> grind
 
-/-- Substitution of an absent free variable is the identity. -/
 @[scoped grind =]
 theorem subst_fresh (x : Var) (e sub : Exp rT) (h : x ∉ e.fv) :
     subst e x sub = e := by
   induction e <;> grind
 
-/-- Opening then closing at the same depth recovers the term, provided the atom is fresh. -/
 theorem closeRec_openRec (x : Var) (e : Exp rT) (k : Nat) (h : x ∉ e.fv) :
     e = closeRec k x (openRec k (fvar x) e) := by
   induction e generalizing k <;> grind
 
-/-- Specialisation of `open_close` to the outermost binder. -/
 theorem close_open (x : Var) (e : Exp rT) (h : x ∉ e.fv) :
     e = close (open' e (fvar x)) x :=
   closeRec_openRec x e 0 h
 
-/-- Opening at a free variable is injective on terms not containing that variable. -/
 theorem open_inj (x : Var) (e e' : Exp rT) (hx : x ∉ e.fv) (hx' : x ∉ e'.fv)
     (heq : open' e (fvar x) = open' e' (fvar x)) : e = e' := by
   grind [closeRec_openRec x e 0 hx, closeRec_openRec x e' 0 hx']
 
-/-- Opening and closing commute at non-clashing depths / variables. -/
 theorem swap_open_fvar_close (k n : Nat) (x y : Var) (e : Exp rT)
     (hk : k ≠ n) (hxy : x ≠ y) :
     closeRec k x (openRec n (fvar y) e)
       = openRec n (fvar y) (closeRec k x e) := by
   induction e generalizing k n <;> grind
 
-/-- Closing preserves the absence of other free variables. -/
 theorem close_preserve_not_fvar {k x y} (e : Exp rT) (h : x ∉ e.fv) :
     x ∉ (closeRec k y e).fv := by
   induction e generalizing k <;> grind
 
-/-- Opening at a fresh free variable preserves the absence of `x`. -/
 theorem open_fresh_preserve_not_fvar {k x y} (e : Exp rT) (h : x ∉ e.fv) (hne : x ≠ y) :
     x ∉ (openRec k (fvar y) e).fv := by
   induction e generalizing k <;> grind
 
-/-- Opening preserves free-variable absence. -/
 theorem open_preserve_not_fvar {k x} (e u : Exp rT) (he : x ∉ e.fv) (hu : x ∉ u.fv) :
     x ∉ (openRec k u e).fv := by
   induction e generalizing k <;> grind
 
-/-- Substitution cannot introduce `x` if it is absent from both arguments. -/
 theorem subst_preserve_not_fvar {x y : Var} (e u : Exp rT)
     (h : x ∉ e.fv ∪ u.fv) : x ∉ (subst e y u).fv := by
   induction e <;> grind
 
-/-- The free variables after substituting `v` for `x` in `e` are contained in
-    `(e.fv \ {x}) ∪ v.fv`. -/
 theorem fv_subst_subset (e : Exp rT) (x : Var) (v : Exp rT) :
     (subst e x v).fv ⊆ (e.fv \ {x}) ∪ v.fv := by
   intro z hz
@@ -94,101 +77,49 @@ theorem fv_subst_subset (e : Exp rT) (x : Var) (v : Exp rT) :
       · simp [subst, hxy] at hz; subst hz
         refine Finset.mem_union_left _ ?_
         simp; exact fun h => hxy h.symm
-  | bvar _ | lit _ | fail | urand => simp [subst] at hz
-  | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
-      simp [subst] at hz; exact ih hz
-  | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
-      simp [subst] at hz
-      rcases hz with h1 | h2
-      · have hi := ih1 h1
-        simp only [Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton] at hi
-        simp only [fv, Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton]
-        rcases hi with ⟨hf, hne⟩ | hv
-        · exact .inl ⟨.inl hf, hne⟩
-        · exact .inr hv
-      · have hi := ih2 h2
-        simp only [Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton] at hi
-        simp only [fv, Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton]
-        rcases hi with ⟨hf, hne⟩ | hv
-        · exact .inl ⟨.inr hf, hne⟩
-        · exact .inr hv
-  | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
-      simp only [subst, fv, Finset.mem_union] at hz
-      simp only [fv, Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton]
-      rcases hz with (h0 | h1) | h2
-      · have hi := ih0 h0
-        simp only [Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton] at hi
-        rcases hi with ⟨hf, hne⟩ | hv
-        · exact .inl ⟨.inl (.inl hf), hne⟩
-        · exact .inr hv
-      · have hi := ih1 h1
-        simp only [Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton] at hi
-        rcases hi with ⟨hf, hne⟩ | hv
-        · exact .inl ⟨.inl (.inr hf), hne⟩
-        · exact .inr hv
-      · have hi := ih2 h2
-        simp only [Finset.mem_union, Finset.mem_sdiff, Finset.mem_singleton] at hi
-        rcases hi with ⟨hf, hne⟩ | hv
-        · exact .inl ⟨.inr hf, hne⟩
-        · exact .inr hv
+  | _ => simp [subst, fv] at * <;> tauto
 
-/-- Closing always removes the closed variable from the fv set. -/
 @[scoped grind ←]
 theorem close_var_not_fvar_rec (x) (k) (e : Exp rT) : x ∉ (closeRec k x e).fv := by
   induction e generalizing k <;> grind
 
-/-- Specialisation to the outermost closing. -/
 theorem close_var_not_fvar (x : Var) (e : Exp rT) : x ∉ (close e x).fv :=
   close_var_not_fvar_rec x 0 e
 
-/-- A locally-closed term is unchanged by opening. -/
 @[scoped grind =_]
 theorem open_lc (k : Nat) (t : Exp rT) (e : Exp rT) (he : e.IsLocallyClosed) :
     e = openRec k t e := by
   induction he generalizing k with
-  | lam L e _ ih =>
-      obtain ⟨x, hx⟩ := HasFresh.fresh_exists L
-      grind [openRec_aux e 0 (fvar x) (k+1) t]
-  | fix L e _ ih =>
+  | lam L e _ ih | fix L e _ ih =>
       obtain ⟨x, hx⟩ := HasFresh.fresh_exists L
       grind [openRec_aux e 0 (fvar x) (k+1) t]
   | _ => grind
 
-/-- Substitution distributes through `openRec` when the substitute is LC. -/
 @[scoped grind =]
 theorem subst_openRec (x : Var) (t : Exp rT) (k : Nat) (u e : Exp rT) (hu : IsLocallyClosed t) :
     subst (openRec k u e) x t = openRec k (subst u x t) (subst e x t) := by
   induction e generalizing k with grind
 
-/-- `closeRec` at a fresh atom is the identity. -/
 theorem closeRec_fresh (x : Var) (e : Exp rT) (k : Nat) (h : x ∉ e.fv) :
     closeRec k x e = e := by
   induction e generalizing k <;> grind
 
-/-- Substitution commutes with closing at a different atom, provided the substitute
-    doesn't contain that atom. Used to push `subst` through `close`-introduced binders. -/
 @[scoped grind =]
 theorem subst_closeRec (x y : Var) (t : Exp rT) (k : Nat) (e : Exp rT) (hxy : x ≠ y)
     (ht : y ∉ t.fv) :
     subst (closeRec k y e) x t = closeRec k y (subst e x t) := by
   induction e generalizing k with grind [closeRec_fresh]
 
-/-- Specialised to the outermost binder. -/
 theorem subst_close (x y : Var) (t : Exp rT) (e : Exp rT) (hxy : x ≠ y) (ht : y ∉ t.fv) :
     subst (close e y) x t = close (subst e x t) y :=
   subst_closeRec x y t 0 e hxy ht
 
-/-- Substitution commutes with opening the outermost binder. -/
 theorem subst_open (x : Var) (t : Exp rT) (u e : Exp rT) (hu : IsLocallyClosed t) :
     subst (open' e u) x t = open' (subst e x t) (subst u x t) := by grind
 
-/-- When opening at a fresh free variable, substitution pulls through. -/
 theorem subst_open_var (x y : Var) (u e : Exp rT) (hne : y ≠ x) (hu : IsLocallyClosed u) :
     subst (open' e (fvar x)) y u = open' (subst e y u) (fvar x) := by grind
 
-/-- Substitution of LC terms into LC terms is LC. -/
 @[scoped grind ←]
 theorem subst_lc {x : Var} {e u : Exp rT} (he : IsLocallyClosed e) (hu : IsLocallyClosed u)
     : IsLocallyClosed (subst e x u) := by
@@ -196,155 +127,85 @@ theorem subst_lc {x : Var} {e u : Exp rT} (he : IsLocallyClosed e) (hu : IsLocal
   | lam L e _ ih =>
       apply IsLocallyClosed.lam (free_union Var)
       intro y hy
-      have hyL : y ∉ L := by
-        have := hy
-        grind
-      have hyx : y ≠ x := by
-        intro h; subst h
-        have := hy
-        grind
+      have hyL : y ∉ L := by grind
+      have hyx : y ≠ x := by grind
       grind [subst_open_var]
   | fix L e _ ih =>
       apply IsLocallyClosed.fix (free_union Var)
       intro y hy
-      have hyL : y ∉ L := by
-        have := hy
-        grind
-      have hyx : y ≠ x := by
-        intro h; subst h
-        have := hy
-        grind
+      have hyL : y ∉ L := by grind
+      have hyx : y ≠ x := by grind
       grind [subst_open_var]
   | _ => grind
 
-/-- Opening at a term is equivalent to opening at a free variable and substituting. -/
 theorem subst_intro (x : Var) (t e : Exp rT) (mem : x ∉ e.fv) (t_lc : IsLocallyClosed t) :
     open' e t = subst (open' e (fvar x)) x t := by
   grind
 
-/-- β-style: opening an LC `lam` body with an LC argument is LC. -/
 theorem beta_lc (L : Finset Var) (e u : Exp rT)
-    (he : ∀ x ∉ L, IsLocallyClosed (open' e (fvar x))) (hu : IsLocallyClosed u) : IsLocallyClosed
-    (open' e u) := by
+    (he : ∀ x ∉ L, IsLocallyClosed (open' e (fvar x))) (hu : IsLocallyClosed u) :
+    IsLocallyClosed (open' e u) := by
   obtain ⟨x, hx⟩ := HasFresh.fresh_exists (L ∪ e.fv)
   have hxL : x ∉ L := fun h => hx (Finset.mem_union_left _ h)
   have hxfv : x ∉ e.fv := fun h => hx (Finset.mem_union_right _ h)
   grind [subst_intro x u e hxfv hu, subst_lc (he x hxL) hu]
 
-/-- The "open ∘ close = subst" lemma for LC terms.
-    Mirrors `Cslib...Untyped.Properties.open_close_to_subst`. -/
+private theorem openRec_closeRec_binder {L : Finset Var} {t : Exp rT} {x y : Var} {k : Nat}
+    (ih : ∀ z ∉ L, ∀ k, openRec k (fvar y) (closeRec k x (open' t (fvar z)))
+      = subst (open' t (fvar z)) x (fvar y)) :
+    openRec (k+1) (fvar y) (closeRec (k+1) x t) = subst t x (fvar y) := by
+  obtain ⟨z, hz⟩ := HasFresh.fresh_exists (L ∪ t.fv ∪ {x, y})
+  simp only [Finset.mem_union, Finset.mem_insert, Finset.mem_singleton, not_or] at hz
+  obtain ⟨⟨hzL, hzt⟩, hzx, hzy⟩ := hz
+  have hzL' : z ∉ (openRec (k+1) (fvar y) (closeRec (k+1) x t)).fv :=
+    open_fresh_preserve_not_fvar _ (close_preserve_not_fvar _ hzt) hzy
+  have hzR : z ∉ (subst t x (fvar y)).fv :=
+    subst_preserve_not_fvar _ _ (by simp [fv, hzt, hzy])
+  refine open_inj z _ _ hzL' hzR ?_
+  calc open' (openRec (k+1) (fvar y) (closeRec (k+1) x t)) (fvar z)
+      = openRec (k+1) (fvar y) (closeRec (k+1) x (open' t (fvar z))) := by
+        simp only [open']
+        rw [openRec_openRec_comm 0 (k+1) z y _ (by omega),
+          swap_open_fvar_close (k+1) 0 x z t (by omega) (Ne.symm hzx)]
+    _ = subst (open' t (fvar z)) x (fvar y) := ih z hzL (k+1)
+    _ = open' (subst t x (fvar y)) (fvar z) := subst_open_var z x (fvar y) t (Ne.symm hzx) (.fvar y)
+
 @[scoped grind =]
 theorem open_close_to_subst (e : Exp rT) (x y : Var) (k : Nat) (he : IsLocallyClosed e) :
     openRec k (fvar y) (closeRec k x e) = subst e x (fvar y) := by
   induction he generalizing k with
-  | lam L t _ ih =>
+  | lam L t _ ih | fix L t _ ih =>
       simp only [closeRec, openRec, subst]
       congr 1
-      have ⟨x', hx'⟩ := HasFresh.fresh_exists (L ∪ t.fv ∪ {x, y})
-      have hx'L : x' ∉ L := fun h => hx' (Finset.mem_union_left _ (Finset.mem_union_left _ h))
-      have hx'fv : x' ∉ t.fv := fun h => hx'
-        (Finset.mem_union_left _ (Finset.mem_union_right _ h))
-      have hx'x : x' ≠ x := fun h => hx' (by
-        rw [h]; exact Finset.mem_union_right _ (by simp))
-      have hx'y : x' ≠ y := fun h => hx' (by
-        rw [h]; exact Finset.mem_union_right _ (by simp))
-      have hih := ih x' hx'L (k+1)
-      have hLfv : x' ∉ (openRec (k+1) (fvar y) (closeRec (k+1) x t)).fv :=
-        open_fresh_preserve_not_fvar _ (close_preserve_not_fvar _ hx'fv) hx'y
-      have hRfv : x' ∉ (subst t x (fvar y)).fv := by
-        apply subst_preserve_not_fvar
-        simp only [Finset.mem_union, fv, not_or]
-        refine ⟨hx'fv, ?_⟩
-        intro h
-        rw [Finset.mem_singleton] at h
-        exact hx'y h
-      have hLHS :
-          open' (openRec (k+1) (fvar y) (closeRec (k+1) x t)) (fvar x')
-            = openRec (k+1) (fvar y) (closeRec (k+1) x (open' t (fvar x'))) := by
-        simp only [open']
-        rw [openRec_openRec_comm 0 (k+1) x' y _ (by omega)]
-        rw [swap_open_fvar_close (k+1) 0 x x' t (by omega) hx'x.symm]
-      have hIH := ih x' hx'L (k+1)
-      have hRHS :
-          open' (subst t x (fvar y)) (fvar x')
-            = subst (open' t (fvar x')) x (fvar y) := by
-        rw [subst_open_var x' x (fvar y) t hx'x.symm (.fvar y)]
-      have heq : open' (openRec (k+1) (fvar y) (closeRec (k+1) x t)) (fvar x')
-            = open' (subst t x (fvar y)) (fvar x') := by
-        rw [hLHS, hIH, hRHS]
-      exact open_inj x' _ _ hLfv hRfv heq
-  | fix L t _ ih =>
-      simp only [closeRec, openRec, subst]
-      congr 1
-      have ⟨x', hx'⟩ := HasFresh.fresh_exists (L ∪ t.fv ∪ {x, y})
-      have hx'L : x' ∉ L := fun h => hx' (Finset.mem_union_left _ (Finset.mem_union_left _ h))
-      have hx'fv : x' ∉ t.fv := fun h => hx'
-        (Finset.mem_union_left _ (Finset.mem_union_right _ h))
-      have hx'x : x' ≠ x := fun h => hx' (by
-        rw [h]; exact Finset.mem_union_right _ (by simp))
-      have hx'y : x' ≠ y := fun h => hx' (by
-        rw [h]; exact Finset.mem_union_right _ (by simp))
-      have hLfv : x' ∉ (openRec (k+1) (fvar y) (closeRec (k+1) x t)).fv :=
-        open_fresh_preserve_not_fvar _ (close_preserve_not_fvar _ hx'fv) hx'y
-      have hRfv : x' ∉ (subst t x (fvar y)).fv := by
-        apply subst_preserve_not_fvar
-        simp only [Finset.mem_union, fv, not_or]
-        refine ⟨hx'fv, ?_⟩
-        intro h; rw [Finset.mem_singleton] at h; exact hx'y h
-      have hLHS :
-          open' (openRec (k+1) (fvar y) (closeRec (k+1) x t)) (fvar x')
-            = openRec (k+1) (fvar y) (closeRec (k+1) x (open' t (fvar x'))) := by
-        simp only [open']
-        rw [openRec_openRec_comm 0 (k+1) x' y _ (by omega)]
-        rw [swap_open_fvar_close (k+1) 0 x x' t (by omega) hx'x.symm]
-      have hIH := ih x' hx'L (k+1)
-      have hRHS :
-          open' (subst t x (fvar y)) (fvar x')
-            = subst (open' t (fvar x')) x (fvar y) := by
-        rw [subst_open_var x' x (fvar y) t hx'x.symm (.fvar y)]
-      have heq : open' (openRec (k+1) (fvar y) (closeRec (k+1) x t)) (fvar x')
-            = open' (subst t x (fvar y)) (fvar x') := by
-        rw [hLHS, hIH, hRHS]
-      exact open_inj x' _ _ hLfv hRfv heq
+      exact openRec_closeRec_binder ih
   | _ => grind
 
-/-- Specialised: outermost open ∘ close equals substitution. -/
 theorem open_close_subst_lc (x y : Var) (e : Exp rT) (he : IsLocallyClosed e) :
     open' (close e x) (fvar y) = subst e x (fvar y) :=
   open_close_to_subst e x y 0 he
 
-/-- Opening a `close`d locally-closed term is locally closed: `open ∘ close` is a
-renaming substitution, which preserves local closedness. This is the shape the
-`unpack` contexts produce (`CtxItem.fill (.unpackR x e₁) e = app (lam (close e x)) e₁`). -/
+/-- The shape `unpack` contexts produce: `CtxItem.fill (.unpackR x e₁) e = app (lam (close e x)) e₁`. -/
 theorem open_close_isLocallyClosed {e : Exp rT} (x y : Var) (he : IsLocallyClosed e) :
     (Exp.open' (Exp.close e x) (Exp.fvar y)).IsLocallyClosed := by
   rw [open_close_subst_lc x y e he]
   exact subst_lc he (IsLocallyClosed.fvar y)
 
-/-- Generalised: outermost open ∘ close equals substitution by an arbitrary
-    LC value. Proved via `subst_intro` with a fresh atom and the `fvar`-only
-    version `open_close_subst_lc`. -/
 theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
     (he : IsLocallyClosed e) (hv : IsLocallyClosed v) :
     open' (close e x) v = subst e x v := by
-  -- Pick a fresh atom z disjoint from `e.fv ∪ v.fv ∪ {x}`, then use
-  -- `subst_intro` to factor `open' (close e x) v` through `subst _ z v`.
   obtain ⟨z, hz⟩ := HasFresh.fresh_exists (insert x (e.fv ∪ v.fv))
   have hzx : z ≠ x := fun h => hz (h ▸ Finset.mem_insert_self _ _)
   have hze : z ∉ e.fv := fun h => hz (Finset.mem_insert_of_mem (Finset.mem_union_left _ h))
   have hzv : z ∉ v.fv := fun h => hz (Finset.mem_insert_of_mem (Finset.mem_union_right _ h))
   have hzcl : z ∉ (close e x).fv := close_preserve_not_fvar e hze
-  rw [subst_intro z v (close e x) hzcl hv]
-  rw [open_close_subst_lc x z e he]
-  have aux : ∀ (e : Exp rT), z ∉ e.fv →
-      subst (subst e x (fvar z)) z v = subst e x v := by
+  rw [subst_intro z v (close e x) hzcl hv, open_close_subst_lc x z e he]
+  have subst_rename : ∀ e : Exp rT, z ∉ e.fv → subst (subst e x (fvar z)) z v = subst e x v := by
     intro e hze
     induction e with
     | fvar y =>
         by_cases hxy : x = y
         · subst hxy; simp [subst]
-        · -- x ≠ y; inner subst leaves fvar y, outer subst hits z vs y.
-          have hzy : z ≠ y := fun h => hze (by rw [h]; simp [fv])
+        · have hzy : z ≠ y := fun h => hze (by rw [h]; simp [fv])
           simp [subst, hxy, hzy]
     | bvar _ | lit _ | fail | urand => simp [subst]
     | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
@@ -358,39 +219,31 @@ theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
     | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
         simp only [subst, fv, Finset.mem_union, not_or] at hze ⊢
         rw [ih0 hze.1.1, ih1 hze.1.2, ih2 hze.2]
-  exact aux e hze
+  exact subst_rename e hze
 
-/-- `e.isClosedEmpty` : `e` is locally closed and has no free variables.
-A minimal predicate (no `ClosedCtx`-parameterization) suitable for use upstream
-of `Metatheory.lean` where `ClosedCtx` is defined. -/
+/-- Locally closed with no free variables; usable before `ClosedCtx` exists in `Metatheory.lean`. -/
 def isClosedEmpty (e : Exp rT) : Prop := IsLocallyClosed e ∧ e.fv = ∅
 
 theorem isClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.isClosedEmpty) :
-    e.IsLocallyClosed ∧ e.fv ⊆ (∅ : Finset Var) := by
-  refine ⟨h.1, ?_⟩
-  rw [h.2]
+    e.IsLocallyClosed ∧ e.fv ⊆ (∅ : Finset Var) :=
+  ⟨h.1, h.2.subset⟩
 
-/-- A literal value is closed. -/
 theorem lit_isClosedEmpty (b : BaseLit rT) : (Exp.lit b).isClosedEmpty :=
   ⟨IsLocallyClosed.lit b, by simp [Exp.fv]⟩
 
-/-- Opening a locally-closed term leaves it locally closed (opening is a no-op). -/
 theorem open_isLocallyClosed {e : Exp rT} (t : Exp rT) (he : e.IsLocallyClosed) :
     (Exp.open' e t).IsLocallyClosed := by
-  have h : Exp.open' e t = e := (open_lc 0 t e he).symm
-  rw [h]; exact he
+  rw [open', ← open_lc 0 t e he]
+  exact he
 
-/-- Opening at a free variable preserves the original free variables. -/
 theorem fv_subset_openRec (k : Nat) (y : Var) (e : Exp rT) :
     e.fv ⊆ (openRec k (fvar y) e).fv := by
   induction e generalizing k <;> grind
 
-/-- Specialization to the outermost open. -/
 theorem fv_subset_open (e : Exp rT) (y : Var) :
     e.fv ⊆ (open' e (fvar y)).fv :=
   fv_subset_openRec 0 y e
 
-/-- After opening at a free variable `y`, the resulting fv is contained in `e.fv ∪ {y}`. -/
 theorem fv_openRec_subset (k : Nat) (y : Var) (e : Exp rT) :
     (openRec k (fvar y) e).fv ⊆ e.fv ∪ {y} := by
   induction e generalizing k with grind
@@ -485,19 +338,12 @@ macro_rules
             | exact Exp.IsLocallyClosed.lit _
             | exact Exp.IsLocallyClosed.fail
             | exact Exp.IsLocallyClosed.urand
-            -- Binders: introduce a fresh opening variable (cofinite, `L := ∅`) and
-            -- reduce the `open'` so the body's constructors are exposed to the descent.
-            -- `openRec`/`open'` are `@[simp]`, so `simp only` distributes them and
-            -- decides the `bvar`→`fvar` substitution; it leaves an `openRec _ _ e₀`
-            -- stuck on each opaque leaf `e₀` (a `Val` projection or a closed constant),
-            -- cleared below by `← Exp.open_lc`.
+            -- Binders: open at a cofinite variable and reduce `open'`; this leaves
+            -- `openRec _ _ e₀` stuck on each opaque leaf `e₀`, cleared by `← Exp.open_lc`.
             | (refine Exp.IsLocallyClosed.lam ∅ _ ?_ <;> intro _ _ <;>
                  simp only [Exp.open', Exp.openRec])
             | (refine Exp.IsLocallyClosed.fix ∅ _ ?_ <;> intro _ _ <;>
                  simp only [Exp.open', Exp.openRec])
-            -- Clear an `openRec k t e₀` stuck on a closed leaf `e₀`: rewrite it back to
-            -- `e₀` (the side goal `e₀.IsLocallyClosed` is then closed by the recursion —
-            -- `Val.lc` for a value, `lcb_imp_lc (by lcb_kernel)` for a closed constant).
             | rw [← Exp.open_lc]
             | apply Exp.IsLocallyClosed.app | apply Exp.IsLocallyClosed.unop
             | apply Exp.IsLocallyClosed.binop | apply Exp.IsLocallyClosed.cond
@@ -515,20 +361,15 @@ macro_rules
         | trivial
         | repeat' (first
             | rfl
-            | assumption       -- a value-hood fact already in context (e.g. an abstract
-                               -- `Val`'s `v.isValue`), matched up to defeq
-            | exact Val.snd _                -- `IsVal v.fst` for an abstract `Val v`
-            | exact Val.isValue _            -- `v.fst.isValue` (`Nonempty (IsVal v.fst)`)
-            | exact Exp.lcb_imp_lc (by lcb_kernel)  -- a closed `(lam/fix …).IsLocallyClosed` subterm
-            | exact Val.lc _                 -- a value's closedness, from its `Val.lc` field
+            | assumption
+            | exact Val.snd _
+            | exact Val.isValue _
+            | exact Exp.lcb_imp_lc (by lcb_kernel)
+            | exact Val.lc _
             | exact ProbLang.IsVal.lit
             | refine ProbLang.IsVal.lam ?_ | refine ProbLang.IsVal.fix ?_
             | apply ProbLang.IsVal.inl | apply ProbLang.IsVal.inr | apply ProbLang.IsVal.pair
-            -- A `(lam/fix …).IsLocallyClosed` side condition whose body is *not* closed
-            -- (e.g. it mentions an abstract `Val` projection): introduce the cofinite
-            -- opening variable, reduce `open'`, and let the descent below finish — see
-            -- `is_lc` for the full rationale (`← Exp.open_lc` clears the `openRec`
-            -- stuck on each opaque leaf).
+            -- `lam`/`fix` bodies that are not closed: see `is_lc`.
             | (refine Exp.IsLocallyClosed.lam ∅ _ ?_ <;> intro _ _ <;>
                  simp only [Exp.open', Exp.openRec])
             | (refine Exp.IsLocallyClosed.fix ∅ _ ?_ <;> intro _ _ <;>
@@ -544,21 +385,16 @@ macro_rules
             | apply Exp.IsLocallyClosed.load | apply Exp.IsLocallyClosed.store
             | apply Exp.IsLocallyClosed.tape | apply Exp.IsLocallyClosed.rand
             | apply Exp.IsLocallyClosed.scrut
-            | refine ⟨?_, ?_⟩    -- split `∧` (binop/unop/scrut side condition)
-            | refine ⟨?_⟩))      -- enter `Nonempty (IsVal …)`
+            | refine ⟨?_, ?_⟩
+            | refine ⟨?_⟩))
 
 /-! ## `toVal?` on value-shaped expressions -/
 
--- `rfl` goes through despite the `Val.lc` field: `lc` is a `Prop`, so any two
--- proofs are definitionally equal (kernel proof irrelevance), and the `lit` branch's
--- closedness proof is the real `lcb_imp_lc rfl` (`lcb 0 (lit b)` reduces to `true`).
+-- `rfl` by proof irrelevance on the `Val.lc` field.
 @[simp] theorem Exp.toVal?_lit (b : BaseLit rT) :
     (Exp.lit b).toVal? = some ⟨.lit b, IsVal.lit, Exp.lcb_imp_lc rfl⟩ := rfl
 
--- `lam`/`fix` are values only when locally closed (`toVal?`/`check?` gate on `lcb`),
--- so these carry the closedness hypothesis, which supplies both the `IsVal` witness and
--- the `Val.lc` field. (`(IsVal.lam h).lc` is `h` definitionally, so this is `rfl` after
--- reducing `check?`.)
+-- `lam`/`fix` are values only when locally closed: `toVal?` gates on `lcb`.
 @[simp] theorem Exp.toVal?_lam (e : Exp rT) (h : (Exp.lam e).IsLocallyClosed) :
     (Exp.lam e).toVal? = some ⟨.lam e, IsVal.lam h, h⟩ := by
   simp only [Exp.toVal?, IsVal.check?, dite_eq_left (Exp.lc_imp_lcb h)]
