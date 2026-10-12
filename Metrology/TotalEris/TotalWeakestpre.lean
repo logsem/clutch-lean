@@ -77,11 +77,11 @@ instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
-  bi_least_fixpoint (tglWpPreFixed (rT := rT) (GF := GF) Φ) ⟨E, e⟩
+  bi_least_fixpoint (tglWpPreFixed Φ) ⟨E, e⟩
 
 theorem tglWp_unfold {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
-    tglWp (rT := rT) (GF := GF) E e Φ = tglWpPre (tglWp (rT := rT) (GF := GF)) E e Φ :=
-  least_fixpoint_unfold (F := tglWpPreFixed (rT := rT) (GF := GF) Φ) (x := ⟨E, e⟩)
+    tglWp E e Φ = tglWpPre tglWp E e Φ :=
+  least_fixpoint_unfold (tglWpPreFixed Φ)
 
 theorem tglWpPre_eq_value {wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF}
     {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
@@ -186,27 +186,15 @@ theorem tglWp_ind {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   let Q' : TglWpState rT → IProp GF := fun s => iprop(⌜s.1 = E⌝ -∗ Q s.2)
   let : NonExpansive Q' := nonExpansive_of_discrete_leibniz Q'
   ihave HQ' : iprop(Q' ⟨E, e⟩) $$ [HW]
-  · iapply (least_fixpoint_iter (F := tglWpPreFixed Φ) (Φ := Q'))
-    · iintro !> %s HF
-      obtain ⟨E', e'⟩ := s
-      iintro %rfl
-      iapply HInd
-      iintro %σ %ε ⟨Hσ, Hε⟩
-      ispecialize HF $$ %σ %ε [$Hσ $Hε]
-      cases htv : e'.toVal? with
-      | some v => iexact HF
-      | none =>
-        imod HF with HG
-        imodintro
-        iapply glm'_mono_pred
-        iframe HG
-        iintro !> %ρ %ε' HC
-        imod HC with ⟨Hσ', Hε', HW⟩
-        imodintro
-        iframe Hσ' Hε'
-        iapply HW
-        itrivial
-    · iexact HW
+  · iapply (least_fixpoint_iter (F := tglWpPreFixed Φ) (Φ := Q')) $$ [] HW
+    iintro !> %s HF
+    obtain ⟨E', e'⟩ := s
+    iintro %rfl
+    iapply HInd
+    iapply (tglWpPre_mono (wp₁ := fun E' e' _ => Q' ⟨E', e'⟩)) $$ [] HF
+    iintro !> %e'' HQ
+    iapply HQ
+    itrivial
   iapply HQ'
   itrivial
 
@@ -328,8 +316,7 @@ theorem tglWp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IPro
     | some v =>
       obtain rfl : e' = Exp.ofVal v := (Exp.ofVal_of_toVal_some htv).symm
       isimp only [tglWpPre_eq_value] at HF
-      iapply tglWp_of_frame_fupd
-      iexact HF
+      iapply tglWp_of_frame_fupd $$ HF
     | none =>
       have hKtv : (K.fill e').toVal? = none :=
         Exp.toVal?_eq_none.mpr fun hKv =>

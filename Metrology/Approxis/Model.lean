@@ -74,7 +74,7 @@ abbrev lrel.appAt {GF : BundledGFunctors} (v1 v2 : Val rT) :
     (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
 
 instance lrel.appAt_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
-    OFE.NonExpansive (lrel.appAt (rT := rT) (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
+    OFE.NonExpansive (lrel.appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
 noncomputable instance {GF : BundledGFunctors} : IsCOFE (lrel rT GF) where
   compl c :=
@@ -103,13 +103,13 @@ section NaShorthand
 variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
 
 @[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
-  Iris.NonAtomicInvariant.own (GF := GF) (ApproxisRGS.nais (rT := rT) GF) E
+  Iris.NonAtomicInvariant.own (ApproxisRGS.nais (rT := rT) GF) E
 
 @[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
-  Iris.NonAtomicInvariant.inv (GF := GF) (ApproxisRGS.nais (rT := rT) GF) N P
+  Iris.NonAtomicInvariant.inv (ApproxisRGS.nais (rT := rT) GF) N P
 
 @[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
-  iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ (↑N : CoPset)) ={⊤}=∗ naOwnP (rT := rT) E
+  iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ ↑N) ={⊤}=∗ naOwnP (rT := rT) E
 
 end NaShorthand
 
@@ -304,8 +304,7 @@ theorem lrel_rec_unfold (C : lrel rT GF -n> lrel rT GF) :
 
 -- TODO: Attempt to simplify once nonexp lands
 omit [LawfulProbLangℝ rT] in
-/-- `lrel_rec` is nonexpansive in the functional.  `lrelRec1` guards the recursive
-occurrence under `▷`, so this is just `fixpoint_dist` for its contractive body. -/
+/-- `lrelRec1` guards the recursive occurrence under `▷`, so this is `fixpoint_dist`. -/
 theorem lrel_rec_ne {n : Nat} {C1 C2 : lrel rT GF -n> lrel rT GF}
     (hC : ∀ A : lrel rT GF, C1 A ≡{n}≡ C2 A) :
     lrel_rec C1 ≡{n}≡ lrel_rec C2 :=
@@ -328,7 +327,6 @@ instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) wh
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hA w1 w2)
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hB w1 w2)
 
-/-- `refines` is nonexpansive in its relation argument. -/
 theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
     (h : A ≡{n}≡ B) : refines E e e' A ≡{n}≡ refines E e e' B := by
   -- TODO: Remove when nonexp lands
@@ -506,9 +504,9 @@ theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
 
 /-- Sequence two refinements via evaluation-context framing. -/
 theorem refines_bind (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : Exp rT} :
-    ⊢@{IProp GF} iprop(refines E e e' A -∗
-      (∀ (v v' : Val rT), A v v' -∗ refines (⊤ : CoPset) (K.fill v.1) (K'.fill v'.1) A') -∗
-      refines E (K.fill e) (K'.fill e') A') := by
+    ⊢ refines E e e' A -∗
+      (∀ v v', A v v' -∗ refines ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗
+      refines E (K.fill e) (K'.fill e') A' := by
   iintro Hm Hf
   iunfold refines at Hm
   iunfold refines
@@ -525,11 +523,11 @@ theorem refines_bind (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : E
     iexact Hm
   intro v
   change _ ⊢ wp ⊤ (K.fill v.1) _
-  iintro ⟨Hf', %v', %ε', Hj', Hna', Herr', Hpos', HA⟩
-  ihave Hf'' := Hf' $$ %v %v' HA
-  iunfold refines at Hf''
-  isimp only [← Ectx.fill_comp K'' K' v'.1] at Hj'
-  iapply Hf'' $$ %K'' %ε' Hj' Hna' Herr' Hpos'
+  iintro ⟨Hf, %v', %ε', Hj, Hna, Herr, Hpos, HA⟩
+  ispecialize Hf $$ %v %v' HA
+  iunfold refines at Hf
+  isimp only [← Ectx.fill_comp K'' K' v'.1] at Hj
+  iapply Hf $$ %K'' %ε' Hj Hna Herr Hpos
 
 /-- Value introduction that consumes the local `na_own E` to produce
 `na_own ⊤` together with `A v1 v2`. -/
@@ -547,7 +545,7 @@ theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel 
   iframe HK HF Herr Hpos HA
 
 /-- Dual of `refines_ret_na` splitting `⊤ = E ∪ (⊤ \ E)`. -/
-theorem refines_ret_na' {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
+theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> naOwnP (rT := rT) ((⊤ : CoPset) \ E) ∗ A v1 v2)
       ⊢@{IProp GF} refines E e1 e2 A := by
@@ -564,7 +562,6 @@ theorem refines_ret_na' {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel
   iapply hun
   iframe Hnais HF
 
-/-- From `|={⊤}=> A v1 v2`, conclude `REL v1 << v2 : A`. -/
 theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> A v1 v2) ⊢@{IProp GF} refines (⊤ : CoPset) e1 e2 A := by
@@ -603,9 +600,9 @@ theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
   unfold refines
   iintro Hupd %K %ε Hj Hna Herr Hpos
   iapply ApproxisWpGS.fupd_wp
-  imod Hupd $$ Hna with ⟨Hna', HR⟩
+  imod Hupd $$ Hna with ⟨Hna, HR⟩
   imodintro
-  iapply HR $$ %K %ε Hj Hna' Herr Hpos
+  iapply HR $$ %K %ε Hj Hna Herr Hpos
 
 theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
@@ -620,21 +617,21 @@ theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Ex
 theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT} {A : lrel rT GF}
     (HNE : (↑N : CoPset) ⊆ E) :
     iprop% naInvP (rT := rT) N P ∗
-        ((▷ P) ∗ naCloseP (rT := rT) P N E -∗ refines (E \ (↑N : CoPset)) e1 e2 A)
+        ((▷ P) ∗ naCloseP (rT := rT) P N E -∗ refines (E \ ↑N) e1 e2 A)
       ⊢@{IProp GF} refines E e1 e2 A := by
   iintro ⟨Hinv, IH⟩
   iapply refines_na_update
   iintro Hnais
   imod Iris.NonAtomicInvariant.inv_acc CoPset.subseteq_top HNE $$ Hinv Hnais
-    with ⟨HP, Hnais', Hclose⟩
+    with ⟨HP, Hnais, Hclose⟩
   imodintro
-  iframe Hnais'
+  iframe Hnais
   iapply IH $$ [$HP $Hclose]
 
 theorem refines_na_close {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
     iprop% (▷ P) ∗ naCloseP (rT := rT) P N E ∗ refines E e1 e2 A
-      ⊢@{IProp GF} refines (E \ (↑N : CoPset)) e1 e2 A := by
+      ⊢@{IProp GF} refines (E \ ↑N) e1 e2 A := by
   iintro ⟨HP, Hclose, IH⟩
   iapply refines_na_update
   iintro HownFN

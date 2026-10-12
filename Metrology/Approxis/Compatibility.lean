@@ -46,9 +46,8 @@ theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
   imodintro
   unfold lrel_prod
   iexists v1, v1', v2, v2'
-  isplitr; · ipureintro; rfl
-  isplitr; · ipureintro; rfl
   iframe
+  itrivial
 
 theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e e' A ⊢ refines ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
@@ -63,9 +62,8 @@ theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   unfold lrel_sum
   iexists v, v'
   ileft
-  isplitr; · ipureintro; rfl
-  isplitr; · ipureintro; rfl
-  iexact HA
+  iframe HA
+  itrivial
 
 theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e e' B ⊢ refines ⊤ (.inr e) (.inr e') (lrel_sum A B) := by
@@ -80,9 +78,8 @@ theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   unfold lrel_sum
   iexists v, v'
   iright
-  isplitr; · ipureintro; rfl
-  isplitr; · ipureintro; rfl
-  iexact HB
+  iframe HB
+  itrivial
 
 theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e1 e1' (lrel_arr A B) ⊢
@@ -96,10 +93,11 @@ theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     show Ectx.fill [EctxItem.appR e1'] v2'.1 = Ectx.fill [EctxItem.appL v2'] e1' from rfl]
   iapply refines_bind [EctxItem.appL v2] [EctxItem.appL v2'] $$ IH1
   iintro %v1 %v1' #Hff
-  ihave Hff' := lrel_arr_unfold_wand _ _ _ _ $$ Hff
+  iunfold lrel_arr at Hff
+  icases Hff with ⟨-, Hff⟩
   rw [show Ectx.fill [EctxItem.appL v2] v1.1 = Exp.app v1.1 v2.1 from rfl,
     show Ectx.fill [EctxItem.appL v2'] v1'.1 = Exp.app v1'.1 v2'.1 from rfl]
-  iapply Hff' $$ %v2 %v2' HA
+  iapply Hff $$ %v2 %v2' HA
 
 theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     iprop% ▷ refines ⊤ b t A ⊢ refines ⊤ (.app (.lam b) u.1) t A := by
@@ -135,7 +133,7 @@ theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
   iapply refines_beta_r he2'
   iexact IH2
 
-/-! ### Symmetric refines lemmas for pure-step constructors -/
+/-! ### Pure-step constructors -/
 
 theorem refines_pure_step {e e' r r' : Exp rT} {φ φ' : Prop}
     [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
@@ -261,9 +259,8 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
     iframe HKRes Hna Herr Hpos
     unfold lrel_tape
     iexists lL, l', n
-    isplitr; · ipureintro; rfl
-    isplitr; · ipureintro; rfl
-    iexact HInv
+    iframe HInv
+    itrivial
 
 theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
     refines ⊤ e e' A ⊢ refines ⊤ (.alloc e) (.alloc e') (lrel_ref A) := by
@@ -288,9 +285,8 @@ theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
   imodintro
   unfold lrel_ref
   iexists l, l'
-  isplitr; · ipureintro; rfl
-  isplitr; · ipureintro; rfl
-  iexact HInv
+  iframe HInv
+  itrivial
 
 theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
     refines ⊤ e0 e0' lrel_bool ⊢

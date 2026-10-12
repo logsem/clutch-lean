@@ -256,8 +256,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     ⟨.fix (substMap vs.snd e'), IsVal.fix (by is_lc), by is_lc⟩)
   iintro !> #IH
   unfold lrel_arr
-  isplitr
-  · ipureintro; exact hfix_closed
+  isplitr; · ipureintro; exact hfix_closed
   iintro !> %v1 %v2 #HA
   rw [Ectx.eq_fill_nil (.app (.fix (substMap vs.fst e)) v1.1),
     Ectx.eq_fill_nil (.app (.fix (substMap vs.snd e')) v2.1)]
@@ -389,10 +388,10 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
       (interp τ (TyEnv.cons (interp τ' Δ) Δ))) $$ [HvArr2]
   · iapply HvArr2
     iapply lrel_unit_lit
-  ihave HvAppFinal := refines_proper_entails ⊤ _ _ (interp_subst τ' τ Δ).symm $$ HvApp
-  rw [show Ectx.fill [EctxItem.appL .unit] v.1 = app v.1 pl(#(.unit)) from rfl,
+  rw [interp_subst τ' τ Δ,
+    show Ectx.fill [EctxItem.appL .unit] v.1 = app v.1 pl(#(.unit)) from rfl,
     show Ectx.fill [EctxItem.appL .unit] v'.1 = app v'.1 pl(#(.unit)) from rfl]
-  iexact HvAppFinal
+  iexact HvApp
 
 private theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
     (interp (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
@@ -413,8 +412,8 @@ theorem bin_log_related_fold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
   ihave IH' := IH $$ %vs Hvs
-  ihave IH'' := refines_proper_entails ⊤ _ _ (interp_subst (.rec' τ) τ Δ) $$ IH'
-  iapply refines_wand $$ IH''
+  isimp only [interp_subst (.rec' τ) τ Δ] at IH'
+  iapply refines_wand $$ IH'
   iintro %v %v' #Hv !>
   rw [interp_rec_car Δ τ v v']
   isplitr
@@ -462,8 +461,8 @@ theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
   ihave IH' := IH $$ %vs Hvs
-  ihave IH'' := refines_proper_entails ⊤ _ _ (interp_subst τ' τ Δ) $$ IH'
-  iapply refines_wand $$ IH''
+  isimp only [interp_subst τ' τ Δ] at IH'
+  iapply refines_wand $$ IH'
   iintro %v %v' #Hv !>
   ihave %Hclosed := interp_closed τ v v' $$ Hv
   rw [interp_exists_car Δ τ v v']

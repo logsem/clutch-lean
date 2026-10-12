@@ -98,7 +98,7 @@ instance wpPre_mono {Q : State rT → State rT → Prop} {W : WpType rT GF}
       iframe HC
       isplit
       · iapply Hwand
-      · inext; iintro HW; iexact HW
+      · inext; iapply wand_rfl
   mono_pred_ne.ne {_ s s'} hd := by
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
@@ -186,8 +186,8 @@ theorem lwp_ind {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
         iapply stepCont_mono
         iframe HC
         isplit
-        · iintro HX; iapply HX; ipureintro; rfl
-        · inext; iintro HW; iexact HW
+        · iintro HX; iapply HX $$ %rfl
+        · inext; iapply wand_rfl
     · iexact HW
   iapply HΨ'
   ipureintro
@@ -280,16 +280,16 @@ theorem lwp_strong_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} 
   have Hloeb : ⊢ wpStrongMonoStmt Q E Φ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %e' %Ψ' HW
-    let P : Exp rT → IProp GF := fun e'' => iprop(
-      ∀ (Ψ'' : Val rT → IProp GF), (∀ v, Φ v ={E}=∗ Ψ'' v) -∗ lwp Q E e'' Ψ'')
+    let P : Exp rT → IProp GF := fun e => iprop(
+      ∀ (Ψ : Val rT → IProp GF), (∀ v, Φ v ={E}=∗ Ψ v) -∗ lwp Q E e Ψ)
     let : NonExpansive P := nonExpansive_of_discrete_leibniz P
     ihave HP : iprop(P e') $$ [HW]
     · iapply lwp_ind P $$ [] HW
-      iintro !> %e'' HF %Ψ'' Hwand
+      iintro !> %e HF %Ψ Hwand
       rw [lwp_unfold]
       iintro %σ %c Hσc
       ispecialize HF $$ %σ %c Hσc
-      cases htv : e''.toVal? with
+      cases htv : e.toVal? with
       | some v =>
         imod HF with ⟨Hσ', Hc', HΦv⟩
         imod Hwand $$ %v HΦv with HΨv
@@ -304,8 +304,8 @@ theorem lwp_strong_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} 
         iapply stepCont_mono
         iframe HC
         isplit
-        · iintro HP; iapply HP $$ %Ψ'' Hwand
-        · inext; iintro HW'; iapply IH $$ %ρ.expr %Ψ'' HW' Hwand
+        · iintro HP; iapply HP $$ %Ψ Hwand
+        · inext; iintro HW'; iapply IH $$ %ρ.expr %Ψ HW' Hwand
     iapply HP
   iintro ⟨HW, Hwand⟩
   iapply Hloeb $$ %e %Ψ HW Hwand
@@ -390,7 +390,7 @@ theorem lwp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp 
       iapply stepCont_mono
       iframe HC
       isplit
-      · iintro HX; iexact HX
+      · iapply wand_rfl
       · inext; iintro HW'; iapply IH $$ %ρ.expr HW'
   iapply Hloeb
 

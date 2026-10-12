@@ -77,15 +77,12 @@ abbrev execStutter (P : ENNReal → IProp GF) (ε : ENNReal) : IProp GF :=
   iprop(⌜1 ≤ ε⌝ ∨ P ε)
 
 theorem execStutter_free {P : ENNReal → IProp GF} {ε : ENNReal} :
-    P ε ⊢ execStutter P ε := by
-  iintro HP; iright; iexact HP
+    P ε ⊢ execStutter P ε :=
+  or_intro_r
 
 theorem execStutter_spend {P : ENNReal → IProp GF} {ε : ENNReal} (hε : 1 ≤ ε) :
-    ⊢ execStutter P ε := by
-  iintro
-  ileft
-  ipureintro
-  exact hε
+    ⊢ execStutter P ε :=
+  (pure_intro hε).trans or_intro_l
 
 theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : ε ≤ ε') :
     ((P ε -∗ Q ε') ∗ execStutter P ε) ⊢ execStutter Q ε' := by
@@ -228,8 +225,7 @@ theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT 
               -∗ Ψ s)) ⊢
       (∀ s, bi_least_fixpoint (glmPre' Z) s -∗ Ψ s) := by
   iintro #HM
-  iapply least_fixpoint_ind
-  iexact HM
+  iapply least_fixpoint_ind $$ HM
 
 theorem glm'_strong_mono
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
@@ -272,9 +268,8 @@ theorem glm'_mono_grading
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
   icases HG' with ⟨HOT | HPS | HSS⟩
   · ileft
-    iintro %ε'' %Hlt'
-    have Hlt : ε < ε'' := hε.trans_lt Hlt'
-    iapply HOT $$ %ε'' %Hlt
+    iintro %ε'' %Hlt
+    iapply HOT $$ %ε'' %(hε.trans_lt Hlt)
   · iright; ileft
     icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
     have Hexp' := Hexp.trans hε

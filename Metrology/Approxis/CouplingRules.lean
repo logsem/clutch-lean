@@ -454,16 +454,17 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   subst Heq
   ihave %HL := HstepL σ₁ $$ Hσ HA
   ihave %HR := HstepR (K.fill eR) σ₁' $$ Hs HA
+  have hεsum : 0 + ε ≤ ε := (zero_add ε).le
+  have hredL := HL.1.toReducible
+  have hredR := HR.1.toReducible.fill K
+  have hcpl : AddCoupl 0 {p | CoupledDraw z f σ₁ σ₁' K p.1 p.2}
+      (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
+    rw [HL.2, primStep_fill HvR, HR.2]
+    exact Cfg.uniform_addCoupl_bij_fill Hz σ₁ σ₁' f K hdom hbij
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
   imodintro
   iexists CoupledDraw z f σ₁ σ₁' K, 0, ε
-  isplitr; · ipureintro; rw [zero_add]
-  isplitr; · ipureintro; exact HL.1.toReducible
-  isplitr; · ipureintro; exact HR.1.toReducible.fill K
-  isplitr
-  · ipureintro
-    rw [HL.2, primStep_fill HvR, HR.2]
-    exact Cfg.uniform_addCoupl_bij_fill Hz σ₁ σ₁' f K hdom hbij
+  iframe %hεsum %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, hn0, hnz, heq1, heq2⟩
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
@@ -559,16 +560,15 @@ theorem wp_couple_rand_rand_adv (z : Int) (f : Int → Int) (ε₁ : ENNReal) (�
   ihave %Hεle := ErrorCredit.supply_bound $$ Hε Herr
   imod ErrorCredit.supply_decrease $$ Hε Herr with Hdec
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
+  have hεsum : ε₁ + (ε - ε₁) ≤ ε := (add_tsub_cancel_of_le Hεle).le
+  have hredL := (randUnit_uniform_step Hz σ₁).1.toReducible
+  have hredR : Reducible (K.fill pl(rand(#(.int z), #(.unit)))) σ₁' :=
+    (Discrete.Reducible.of_headStepSupport_fill K
+    (.RandNoTapeS Hz (_root_.le_refl _) Hz) (by is_lc)).toReducible
+  have hX : ∀ ρ₁ ρ₂, X ρ₁ ρ₂ ≤ 1 := fun _ _ => inf_le_left
   imodintro
   iexists X, ε₁, ε - ε₁
-  isplitr; · ipureintro; exact _root_.le_of_eq (add_tsub_cancel_of_le Hεle)
-  isplitr; · ipureintro; exact (randUnit_uniform_step Hz σ₁).1.toReducible
-  isplitr
-  · ipureintro
-    exact (Discrete.Reducible.of_headStepSupport_fill K
-      (.RandNoTapeS Hz (_root_.le_refl _) Hz) (by is_lc)).toReducible
-  isplitr; · ipureintro; exact fun _ _ => inf_le_left
-  iframe %Hkant
+  iframe %hεsum %hredL %hredR %hX %Hkant
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
   by_cases hg : ∃ n, P ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ n
   · obtain ⟨n, ⟨hn0, hnz⟩, h1, h2⟩ := hg
@@ -646,16 +646,17 @@ theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int) (ε : ENNReal)
   iexists CoupledDraw zL f σ₁ σ₁' K,
     ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal),
     εnow - ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal)
-  isplitr; · ipureintro; exact _root_.le_of_eq (add_tsub_cancel_of_le Hεle)
-  isplitr; · ipureintro; exact (randUnit_uniform_step HzL σ₁).1.toReducible
-  isplitr
-  · ipureintro
-    exact ((randUnit_uniform_step (HzL.trans_le Hle) σ₁').1.toReducible).fill K
-  isplitr
-  · ipureintro
+  have hεsum := (add_tsub_cancel_of_le Hεle).le
+  have hredL := (randUnit_uniform_step HzL σ₁).1.toReducible
+  have hredR := ((randUnit_uniform_step (HzL.trans_le Hle) σ₁').1.toReducible).fill K
+  have hcpl : AddCoupl (((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal))
+      {p | CoupledDraw zL f σ₁ σ₁' K p.1 p.2}
+      (primStep ⟨pl(rand(#(.int zL), #(.unit))), σ₁⟩)
+      (primStep ⟨K.fill pl(rand(#(.int zR), #(.unit))), σ₁'⟩) := by
     rw [primStep_rand_unit HzL, primStep_fill Exp.rand_not_isValue,
       primStep_rand_unit (HzL.trans_le Hle)]
     exact Cfg.uniform_addCoupl_inj_fill HzL Hle σ₁ σ₁' f K hdom hinj
+  iframe %hεsum %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, hn0, hnz, heq1, heq2⟩
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
@@ -692,17 +693,17 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int) (ε : ENNRea
   iexists CoupledDrawRev zR f σ₁ σ₁' K,
     ((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal),
     εnow - ((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal)
-  isplitr; · ipureintro; exact _root_.le_of_eq (add_tsub_cancel_of_le Hεle)
-  isplitr
-  · ipureintro; exact (randUnit_uniform_step (HzR.trans_le Hle) σ₁).1.toReducible
-  isplitr
-  · ipureintro
-    exact ((randUnit_uniform_step HzR σ₁').1.toReducible).fill K
-  isplitr
-  · ipureintro
+  have hεsum := (add_tsub_cancel_of_le Hεle).le
+  have hredL := (randUnit_uniform_step (HzR.trans_le Hle) σ₁).1.toReducible
+  have hredR := ((randUnit_uniform_step HzR σ₁').1.toReducible).fill K
+  have hcpl : AddCoupl (((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal))
+      {p | CoupledDrawRev zR f σ₁ σ₁' K p.1 p.2}
+      (primStep ⟨pl(rand(#(.int zL), #(.unit))), σ₁⟩)
+      (primStep ⟨K.fill pl(rand(#(.int zR), #(.unit))), σ₁'⟩) := by
     rw [primStep_rand_unit (HzR.trans_le Hle), primStep_fill Exp.rand_not_isValue,
       primStep_rand_unit HzR]
     exact Cfg.uniform_addCoupl_rev_inj_fill HzR Hle σ₁ σ₁' f K hdom hinj
+  iframe %hεsum %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨m, hm0, hmz, heq1, heq2⟩
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
@@ -738,11 +739,11 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
       σ₂ = σ₁.update_tapes (·.insert α ⟨z, fs ++ [tapeIdxOf Hz n]⟩) ∧
       σ₂' = σ₁'.update_tapes (·.insert αₛ ⟨z, fsₛ ++ [tapeIdxOf Hz (f n)]⟩)),
     tapePresample σ₁ α, tapePresample σ₁' αₛ
-  isplitr; · ipureintro; exact ErasableExpr.tapePresample hlk Hz
-  isplitr; · ipureintro; exact ErasableExpr.tapePresample hlk' Hz
-  isplitr; · ipureintro; exact tapePresample_addCoupl_bij hlk hlk' Hz f hdom hbij
-  iintro %σ₂ %σ₂' %HR
-  obtain ⟨n, hn0, hnz, rfl, rfl⟩ := HR
+  have her := ErasableExpr.tapePresample hlk Hz
+  have her' := ErasableExpr.tapePresample hlk' Hz
+  have hcpl := tapePresample_addCoupl_bij hlk hlk' Hz f hdom hbij
+  iframe %her %her' %hcpl
+  iintro %σ₂ %σ₂' %⟨n, hn0, hnz, rfl, rfl⟩
   imod app_state_update_tape (s := ⟨z, fs ++ [tapeIdxOf Hz n]⟩) $$ Hσ Hα with ⟨Hσ', Hα'⟩
   imod spec_auth_update_tape (s := ⟨z, fsₛ ++ [tapeIdxOf Hz (f n)]⟩) $$ Hs Hαₛ with ⟨Hs', Hαₛ'⟩
   imod Hclose

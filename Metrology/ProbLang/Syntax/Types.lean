@@ -542,10 +542,9 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       Γ' = Γ.insert x τ_x → y ∉ e.fv ∪ {x} →
       Typed (Γ.insert y τ_x) (Exp.subst e x (Exp.fvar y)) τ := by
   induction h with
+    (intro x y τ_x Γ heq hy; subst heq
+     simp only [Exp.fv, Exp.subst, Finset.mem_union, Finset.mem_singleton, not_or] at hy ⊢)
   | @fvar Γ' z τ hz =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       by_cases hxz : x = z
       · subst hxz
         rw [ite_eq_left rfl]
@@ -553,70 +552,31 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
         exact .fvar (by simp [Tctx.insert])
       · rw [ite_eq_right hxz]
         exact .fvar (by simpa [Tctx.insert, Ne.symm hxz, Ne.symm hy.1] using hz)
-  | lit_int | lit_bool | lit_unit | lit_real | urand =>
-      intros; subst_vars; simp only [Exp.subst]; constructor
+  | lit_int | lit_bool | lit_unit | lit_real | urand => constructor
   | binop_real _ _ hop ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .binop_real (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy])) hop
-  | unop_real _ hop ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .unop_real (ih x y τ_x Γ rfl hy) hop
+  | unop_real _ hop ih => exact .unop_real (ih x y τ_x Γ rfl (by simp [hy])) hop
   | binop_int _ _ hop ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .binop_int (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy])) hop
   | binop_bool _ _ hop ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .binop_bool (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy])) hop
-  | unop_int _ hop ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .unop_int (ih x y τ_x Γ rfl hy) hop
-  | unop_bool _ hop ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .unop_bool (ih x y τ_x Γ rfl hy) hop
+  | unop_int _ hop ih => exact .unop_int (ih x y τ_x Γ rfl (by simp [hy])) hop
+  | unop_bool _ hop ih => exact .unop_bool (ih x y τ_x Γ rfl (by simp [hy])) hop
   | unboxed_eq hu _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .unboxed_eq hu (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | pair _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .pair (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
-  | fst _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .fst (ih x y τ_x Γ rfl hy)
-  | snd _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .snd (ih x y τ_x Γ rfl hy)
-  | inl _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .inl (ih x y τ_x Γ rfl hy)
-  | inr _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .inr (ih x y τ_x Γ rfl hy)
+  | fst _ ih => exact .fst (ih x y τ_x Γ rfl (by simp [hy]))
+  | snd _ ih => exact .snd (ih x y τ_x Γ rfl (by simp [hy]))
+  | inl _ ih => exact .inl (ih x y τ_x Γ rfl (by simp [hy]))
+  | inr _ ih => exact .inr (ih x y τ_x Γ rfl (by simp [hy]))
   | case _ _ _ ih0 ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       refine .case (ih0 x y τ_x Γ rfl ?_) (ih1 x y τ_x Γ rfl ?_) (ih2 x y τ_x Γ rfl ?_) <;>
         simp [hy]
   | cond _ _ _ ih0 ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       refine .cond (ih0 x y τ_x Γ rfl ?_) (ih1 x y τ_x Γ rfl ?_) (ih2 x y τ_x Γ rfl ?_) <;>
         simp [hy]
   | @lam L Γ' e τ1 τ2 _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       refine .lam (L ∪ {x, y}) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
       rw [← Exp.subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
@@ -625,9 +585,6 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
       exact ⟨Exp.open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
   | @fix L Γ' e τ1 τ2 _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       refine .fix (L ∪ {x, y}) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
       rw [← Exp.subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
@@ -637,38 +594,19 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
       exact ⟨Exp.open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
   | app _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .app (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | tlam _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.subst]
       refine .tlam ?_
       rw [Tctx.shift_insert]
-      exact ih x y τ_x.shift Γ.shift (Tctx.shift_insert Γ x τ_x) hy
-  | tapp _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
-      exact .tapp (ih x y τ_x Γ rfl (by simp [hy]))
-  | tfold _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      exact .tfold (ih x y τ_x Γ rfl hy)
+      exact ih x y τ_x.shift Γ.shift (Tctx.shift_insert Γ x τ_x) (by simp [hy])
+  | tapp _ ih => exact .tapp (ih x y τ_x Γ rfl (by simp [hy]))
+  | tfold _ ih => exact .tfold (ih x y τ_x Γ rfl (by simp [hy]))
   | tunfold _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       rw [show Exp.subst (recUnfold (rT := rT)) x (Exp.fvar y) = recUnfold by
         simp [recUnfold, Exp.subst]]
       exact .tunfold (ih x y τ_x Γ rfl (by simp [hy]))
-  | tpack _ ih =>
-      intro x y τ_x Γ heq hy; subst heq
-      exact .tpack (ih x y τ_x Γ rfl hy)
+  | tpack _ ih => exact .tpack (ih x y τ_x Γ rfl (by simp [hy]))
   | @tunpack L Γ' e1 e2 τ τ2 _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       refine .tunpack (L ∪ {x, y}) (ih1 x y τ_x Γ rfl (by simp [hy])) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
       rw [← Exp.subst_open_var z x (.fvar y) e2 hzx.symm (.fvar y),
@@ -677,33 +615,16 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       · rw [Tctx.shift_insert, Tctx.insert_swap Γ.shift hzx.symm τ_x.shift τ]
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
       exact ⟨Exp.open_fresh_preserve_not_fvar e2 hy.1.1 hzy.symm, hy.2⟩
-  | alloc _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .alloc (ih x y τ_x Γ rfl hy)
-  | load _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .load (ih x y τ_x Γ rfl hy)
+  | alloc _ ih => exact .alloc (ih x y τ_x Γ rfl (by simp [hy]))
+  | load _ ih => exact .load (ih x y τ_x Γ rfl (by simp [hy]))
   | store _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .store (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
-  | alloc_tape _ ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .alloc_tape (ih x y τ_x Γ rfl hy)
+  | alloc_tape _ ih => exact .alloc_tape (ih x y τ_x Γ rfl (by simp [hy]))
   | rand _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .rand (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | rand_unit _ _ ih1 ih2 =>
-      intro x y τ_x Γ heq hy; subst heq
-      simp only [Exp.fv, Finset.mem_union, Finset.mem_singleton, not_or] at hy
-      simp only [Exp.subst]
       exact .rand_unit (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
-  | scrut _ hp ih =>
-      intro x y τ_x Γ heq hy; subst heq; simp only [Exp.subst]
-      exact .scrut (ih x y τ_x Γ rfl hy) hp
+  | scrut _ hp ih => exact .scrut (ih x y τ_x Γ rfl (by simp [hy])) hp
 
 theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
     (x y : Var) (h : Typed (Γ.insert x τ_x) e τ) (hy : y ∉ e.fv ∪ {x}) :

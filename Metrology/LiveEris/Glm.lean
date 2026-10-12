@@ -195,24 +195,21 @@ theorem glm_strong_mono {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
   let Ψ : GlmState rT ι → IProp GF := fun s => iprop(
     (∀ ρ c', Z₁ ρ c' -∗ Z₂ ρ c') -∗ bi_least_fixpoint (glmPre Z₂) s)
   let : NonExpansive Ψ := nonExpansive_of_discrete_leibniz Ψ
-  ihave HΨ : iprop(Ψ ((⟨e, σ⟩, c) : GlmState rT ι)) $$ [HG]
-  · iapply (least_fixpoint_iter (F := glmPre Z₁))
-    · iintro !> %s HF Hwand
-      iapply least_fixpoint_unfold_mpr (glmPre Z₂)
-      obtain ⟨ρ, c⟩ := s
-      icases HF with ⟨HOT | HPS⟩
-      · ileft
-        iapply glmCreditBump_strong_mono
-        iframe HOT
-        iintro %s HP
-        iapply HP $$ Hwand
-      · iright
-        iapply glmPrimStep_strong_mono
-        iframe HPS
-        iintro %ρ' %c' HC
-        iapply Hwand $$ HC
-    · iexact HG
-  iapply HΨ $$ HZ
+  iapply least_fixpoint_iter (F := glmPre Z₁) (Φ := Ψ) $$ [] %((⟨e, σ⟩, c) : GlmState rT ι) HG HZ
+  iintro !> %s HF Hwand
+  iapply least_fixpoint_unfold_mpr (glmPre Z₂)
+  obtain ⟨ρ, c⟩ := s
+  icases HF with ⟨HOT | HPS⟩
+  · ileft
+    iapply glmCreditBump_strong_mono
+    iframe HOT
+    iintro %s HP
+    iapply HP $$ Hwand
+  · iright
+    iapply glmPrimStep_strong_mono
+    iframe HPS
+    iintro %ρ' %c' HC
+    iapply Hwand $$ HC
 
 theorem glm_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
     {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (hc : c ≤ c') :
@@ -227,8 +224,7 @@ theorem glm_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
   · iright
     have Hexp' := Hexp.trans hc
     iexists R, ε₁, X₂, r
-    iframe %Hred %HRmeas %Hbnd %Hexp' %Hpgl
-    iexact HCont
+    iframe %Hred %HRmeas %Hbnd %Hexp' %Hpgl HCont
 
 theorem glm_strong_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
     {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (hc : c ≤ c') :
