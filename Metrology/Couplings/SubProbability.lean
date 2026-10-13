@@ -1,5 +1,6 @@
 module
 
+public import Mathlib.Probability.Kernel.Composition.MeasureComp
 public import Metrology.Couplings.Measure
 
 /-! Subprobability measures, the carrier of the sub-Giry monad (Approximate Span Liftings,
@@ -71,3 +72,33 @@ theorem measurable_finiteOrZero : Measurable (finiteOrZero : Measure X → Measu
 end Measure
 
 end MeasureTheory
+
+namespace ProbabilityTheory
+
+open MeasureTheory
+
+variable {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
+
+/-- A kernel whose measures all have total mass at most `1`. -/
+class IsSubMarkovKernel (κ : Kernel X Y) : Prop where
+  isSubProbabilityMeasure (x : X) : IsSubProbabilityMeasure (κ x)
+
+attribute [instance] IsSubMarkovKernel.isSubProbabilityMeasure
+
+instance (priority := 100) IsZeroOrMarkovKernel.toIsSubMarkovKernel (κ : Kernel X Y)
+    [IsZeroOrMarkovKernel κ] : IsSubMarkovKernel κ where
+  isSubProbabilityMeasure _ := inferInstance
+
+instance (priority := 100) IsSubMarkovKernel.toIsFiniteKernel (κ : Kernel X Y)
+    [IsSubMarkovKernel κ] : IsFiniteKernel κ where
+  exists_univ_le := ⟨1, ENNReal.one_lt_top, fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one⟩
+
+instance isSubProbabilityMeasure_comp (μ : Measure X) [IsSubProbabilityMeasure μ]
+    (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsSubProbabilityMeasure (κ ∘ₘ μ) :=
+  isSubProbabilityMeasure_bind (fun _ ↦ inferInstance) κ.measurable.aemeasurable
+
+instance isSubMarkovKernel_comp (η : Kernel Y Z) [IsSubMarkovKernel η] (κ : Kernel X Y)
+    [IsSubMarkovKernel κ] : IsSubMarkovKernel (η ∘ₖ κ) where
+  isSubProbabilityMeasure x := by rw [Kernel.comp_apply]; infer_instance
+
+end ProbabilityTheory
