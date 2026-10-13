@@ -3,6 +3,7 @@ module
 public import Metrology.Approxis.Examples.SwitchingPRP
 public import Metrology.Approxis.Adequacy
 public import Metrology.Approxis.AdequacyRel
+public import Metrology.Couplings.CodensityTV
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -19,7 +20,7 @@ open scoped AppGS
 namespace ProbLang
 namespace Switching
 
-variable {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- With `c` entries memoised and `q` rounds to go, round `i` costs `(c + i) / N`. -/
 noncomputable def loopErr (N : Int) (c q : Nat) : ENNReal :=
@@ -41,7 +42,7 @@ theorem loopErr_succ (N : Int) (c q : Nat) :
 
 section Games
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc TVDiv.tv GF]
 
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
@@ -389,7 +390,7 @@ theorem adequacyRel_eq_subset :
 set_option linter.style.haveILetI false in
 theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
-    AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
@@ -409,7 +410,7 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
 
 theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
-    AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
   wPRF_wPRP_switching (ApproxisFunctor rT) N Q hN hQ σ σ'
@@ -417,7 +418,7 @@ theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
 set_option linter.style.haveILetI false in
 theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
-    AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
@@ -437,7 +438,7 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
 
 theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
-    AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
   wPRP_wPRF_switching (ApproxisFunctor rT) N Q hN hQ σ σ'
@@ -448,8 +449,10 @@ theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : S
         + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
     limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S
         + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
-  ⟨((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono_rel adequacyRel_eq_subset).eq_elim hS,
-   ((wPRP_wPRF_switching_closed N Q hN hQ σ' σ).mono_rel adequacyRel_eq_subset).eq_elim hS⟩
+  ⟨GradedDivergence.Codensity.tv_le_add_of_diag
+    ((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono_rel adequacyRel_eq_subset) hS,
+   GradedDivergence.Codensity.tv_le_add_of_diag
+    ((wPRP_wPRF_switching_closed N Q hN hQ σ' σ).mono_rel adequacyRel_eq_subset) hS⟩
 
 end AdequacyCor
 

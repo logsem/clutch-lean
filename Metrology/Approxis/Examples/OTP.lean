@@ -5,6 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Approxis.AppRelRules
 public import Metrology.Approxis.AdequacyRel
 public import Metrology.Code.OTP
+public import Metrology.Couplings.CodensityTV
 
 @[expose] public section
 
@@ -16,7 +17,7 @@ open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
 namespace OTP
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc TVDiv.tv GF]
 
 /-! ### The bijection -/
 
@@ -107,7 +108,7 @@ equality with zero error. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
-theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' : Val rT) :
+theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc TVDiv.tv GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hint
   iunfold lrel_int at Hint
@@ -116,14 +117,14 @@ theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' 
 
 theorem otp_adequate (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
-    AddCoupl 0 (adequacyRel otpφ)
+    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
     fun _ => otp_refines m N hN
 
 theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
-    AddCoupl 0 (adequacyRel otpφ)
+    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
     fun _ => otp_refines_rev m N hN
@@ -131,12 +132,12 @@ theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int
 /-! ## Closed statements at the concrete model `ApproxisFunctor rT` -/
 
 theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
-    AddCoupl 0 (adequacyRel otpφ)
+    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate (ApproxisFunctor rT) m N hN σ σ'
 
 theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
-    AddCoupl 0 (adequacyRel otpφ)
+    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev (ApproxisFunctor rT) m N hN σ σ'
 

@@ -18,7 +18,7 @@ open scoped AppGS
 namespace ProbLang
 namespace Switching
 
-variable {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## Closure values -/
 
@@ -32,7 +32,7 @@ def prpQueryV (ℓm ℓfv : Loc) : Val rT :=
 
 section PRP
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc TVDiv.tv GF]
 
 /-! ## Representation predicates -/
 
@@ -334,7 +334,7 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   tp_pures
   wp_bind (pl% rand(#(.int N), #.unit))
   tp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
-  iapply wp_couple_rand_rand_rev_inj N (r.length : Int) (fun i => r.getD i.toNat 0) ε
+  iapply wp_couple_rand_rand_rev_inj_tv N (r.length : Int) (fun i => r.getD i.toNat 0) ε
     hdom hinj hrlen hRle hεle
   iframe Hj Herr
   iintro %i ⟨%hi0, %hiR⟩ Hj
@@ -420,7 +420,7 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   tp_pures
   wp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
   tp_bind (pl% rand(#(.int N), #.unit))
-  iapply wp_couple_rand_rand_inj (r.length : Int) N (fun i => r.getD i.toNat 0) ε
+  iapply wp_couple_rand_rand_inj_tv (r.length : Int) N (fun i => r.getD i.toNat 0) ε
     hdom hinj hrlen hRle hεle
   iframe Hj Herr
   iintro %i ⟨%hi0, %hiR⟩ Hj
