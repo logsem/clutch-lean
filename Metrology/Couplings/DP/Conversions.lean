@@ -1,67 +1,19 @@
 module
 
-public import Mathlib.Analysis.SpecialFunctions.Pow.Asymptotics
-public import Mathlib.Topology.Instances.EReal.Lemmas
 public import Metrology.Couplings.DP.Basic
+public import Metrology.Couplings.DP.Renyi
 
 /-! Conversions between differential privacy and its Rényi relaxations (Approximate Span
 Liftings, Fig. 4: [D/z], [R/D], [z/D], [t/D]). -/
 
 @[expose] public section
 
-open MeasureTheory ProbabilityTheory Set Filter Topology Real
+open MeasureTheory ProbabilityTheory Set Filter Topology Real Renyi
 open scoped ENNReal
 
 namespace DPDiv
 
 variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
-
-/-! ### The Rényi weight -/
-
-theorem slopeAtTop_rpow {α : ℝ} (hα : 1 < α) : (WeightFunction.rpow α).slopeAtTop = ⊤ := by
-  refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
-  refine (tendsto_rpow_atTop (sub_pos.2 hα)).congr' ?_
-  filter_upwards [eventually_gt_atTop 0] with t ht
-  rw [WeightFunction.rpow, Real.rpow_sub_one ht.ne']
-
-theorem persp_rpow_of_pos (α : ℝ) {p q : ℝ} (hq : 0 < q) :
-    (WeightFunction.rpow α).persp p q = ((q * (p / q) ^ α : ℝ) : EReal) := by
-  simp [WeightFunction.persp, hq.ne', WeightFunction.rpow]
-
-theorem persp_rpow_of_zero {α : ℝ} (hα : 1 < α) {p : ℝ} (hp : 0 < p) :
-    (WeightFunction.rpow α).persp p 0 = ⊤ := by
-  simp [WeightFunction.persp, hp.ne', slopeAtTop_rpow hα, EReal.coe_mul_top_of_pos hp]
-
-theorem persp_rpow_nonneg {α : ℝ} (hα : 1 < α) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
-    0 ≤ (WeightFunction.rpow α).persp p q := by
-  rcases hq.eq_or_lt with rfl | hq
-  · rcases hp.eq_or_lt with rfl | hp
-    · simp [WeightFunction.persp]
-    · simp [persp_rpow_of_zero hα hp]
-  · rw [persp_rpow_of_pos α hq]
-    exact EReal.coe_nonneg.2 (by positivity)
-
-/-! ### Rényi bounds as `f`-divergence bounds -/
-
-theorem coe_mul_le_iff {c : ℝ} (hc : 0 < c) {L : EReal} {d : ℝ} :
-    (c : EReal) * L ≤ d ↔ L ≤ ((d / c : ℝ) : EReal) := by
-  induction L with
-  | bot => simp [EReal.coe_mul_bot_of_pos hc]
-  | top => simp [EReal.coe_mul_top_of_pos hc]
-  | coe l => rw [← EReal.coe_mul, EReal.coe_le_coe_iff, EReal.coe_le_coe_iff, le_div_iff₀ hc,
-      mul_comm]
-
-/-- A Rényi divergence bound is a bound on the `t ↦ t ^ α` divergence. -/
-theorem renyiDiv_le_iff {α : ℝ} (hα : 1 < α) (μ ν : Measure X) (d : ℝ) :
-    renyiDiv α μ ν ≤ d ↔
-      (fDiv (.rpow α) μ ν).toENNReal ≤ ENNReal.ofReal (exp ((α - 1) * d)) := by
-  rw [renyiDiv, coe_mul_le_iff (inv_pos.2 (sub_pos.2 hα)), ← ENNReal.log_le_log_iff,
-    ENNReal.log_ofReal_of_pos (exp_pos _), log_exp, div_inv_eq_mul, mul_comm]
-
-theorem le_coe_toENNReal (x : EReal) : x ≤ (x.toENNReal : EReal) := by
-  rcases le_total 0 x with h | h
-  · rw [EReal.coe_toENNReal h]
-  · exact h.trans (EReal.coe_ennreal_nonneg _)
 
 /-! ### [D/z]: pure DP bounds every Rényi divergence -/
 
@@ -184,25 +136,14 @@ theorem bound_of_tendsto {μ ν : Measure X} [IsFiniteMeasure ν] {e : ℕ → �
     (ENNReal.tendsto_ofReal ((continuous_exp.tendsto e₀).comp he))
     (Or.inr (measure_ne_top ν S))).add_const δ) fun n ↦ h n S hS
 
-/-! ### Mechanism-level conversions -/
+/-! ### [z/D] and [t/D]: concentrated bounds give DP bounds -/
 
-variable {m : Mechanism X Y} {Φ : Adjacency X}
-
-/-- Pure differential privacy implies zero-concentrated differential privacy ([D/z]). -/
-theorem zCDP_of_DP [∀ x, IsSubProbabilityMeasure (m x)] {ε : ℝ} (h : DP m Φ ε 0) :
-    zCDP m Φ ε 0 := fun _ _ hx α hα ↦ by
-  rw [mul_zero, add_zero]
-  exact renyiDiv_le_of_bound (h hx) hα
-
-/-- Rényi differential privacy implies differential privacy ([R/D]). -/
-theorem DP_of_RDP [IsFiniteKernel m] {α ρ δ : ℝ} (hα : 1 < α) (hδ : 0 < δ) (h : RDP m Φ α ρ) :
-    DP m Φ (ρ + log (1 / δ) / (α - 1)) (ENNReal.ofReal δ) := fun _ _ hx ↦
-  bound_of_renyiDiv_le hα hδ (h hx)
-
-/-- Zero-concentrated differential privacy implies differential privacy ([z/D]). -/
-theorem DP_of_zCDP [IsFiniteKernel m] {ξ ρ δ : ℝ} (hρ : 0 ≤ ρ) (hδ : 0 < δ) (hδ₁ : δ < 1)
-    (h : zCDP m Φ ξ ρ) :
-    DP m Φ (ξ + ρ + 2 * √(ρ * log (1 / δ))) (ENNReal.ofReal δ) := fun x x' hx ↦ by
+/-- Rényi bounds `ξ + α ρ` at all orders `α > 1` give the DP inequality with slack `δ` and budget
+`ξ + ρ + 2 √(ρ log (1 / δ))` (cf. [z/D]). -/
+theorem bound_of_zcdp {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ξ ρ δ : ℝ}
+    (hρ : 0 ≤ ρ) (hδ : 0 < δ) (hδ₁ : δ < 1)
+    (h : ∀ α, 1 < α → renyiDiv α μ ν ≤ ((ξ + α * ρ : ℝ) : EReal)) :
+    Bound (ENNReal.ofReal (exp (ξ + ρ + 2 * √(ρ * log (1 / δ))))) (ENNReal.ofReal δ) μ ν := by
   have hL : 0 < log (1 / δ) := log_pos (by rw [one_div]; exact one_lt_inv_iff₀.2 ⟨hδ, hδ₁⟩)
   rcases hρ.eq_or_lt with rfl | hρ
   · -- with `ρ = 0`, let the order tend to infinity
@@ -213,14 +154,14 @@ theorem DP_of_zCDP [IsFiniteKernel m] {ξ ρ δ : ℝ} (hρ : 0 ≤ ρ) (hδ : 0
       simpa using tendsto_const_nhds.add this
     simp only [zero_mul, Real.sqrt_zero, mul_zero, add_zero]
     refine bound_of_tendsto he fun n ↦ ?_
-    have := h hx (n + 2) (by linarith [n.cast_nonneg (α := ℝ)])
+    have := h (n + 2) (by linarith [n.cast_nonneg (α := ℝ)])
     rw [mul_zero, add_zero] at this
     exact bound_of_renyiDiv_le (by linarith [n.cast_nonneg (α := ℝ)]) hδ this
   · -- otherwise use the optimal order `1 + √(log (1 / δ) / ρ)`
     set t := √(log (1 / δ) / ρ)
     have ht : 0 < t := sqrt_pos.2 (div_pos hL hρ)
     have ht2 : t ^ 2 = log (1 / δ) / ρ := sq_sqrt (div_pos hL hρ).le
-    have := bound_of_renyiDiv_le (α := 1 + t) (by linarith) hδ (h hx (1 + t) (by linarith))
+    have := bound_of_renyiDiv_le (α := 1 + t) (by linarith) hδ (h (1 + t) (by linarith))
     have hs : √(ρ * log (1 / δ)) = ρ * t := by
       rw [show ρ * log (1 / δ) = (ρ * t) ^ 2 by rw [mul_pow, ht2]; field_simp,
         sqrt_sq (by positivity)]
@@ -230,19 +171,20 @@ theorem DP_of_zCDP [IsFiniteKernel m] {ξ ρ δ : ℝ} (hρ : 0 ≤ ρ) (hδ : 0
       ring
     rwa [heq] at this
 
-/-- Truncated concentrated differential privacy implies differential privacy, at the order
-`β = min ω (1 + √(log (1 / δ) / ρ))` ([t/D]). -/
-theorem DP_of_tCDP [IsFiniteKernel m] {ρ ω δ : ℝ} (hρ : 0 < ρ) (hω : 1 < ω) (hδ : 0 < δ)
-    (hδ₁ : δ < 1) (h : tCDP m Φ ρ ω) :
-    DP m Φ (ρ * min ω (1 + √(log (1 / δ) / ρ)) + log (1 / δ) / (min ω (1 + √(log (1 / δ) / ρ)) - 1))
-      (ENNReal.ofReal δ) := fun x x' hx ↦ by
+/-- Rényi bounds `α ρ` at the orders `1 < α < ω` give the DP inequality with slack `δ`, at the
+order `β = min ω (1 + √(log (1 / δ) / ρ))` (cf. [t/D]). -/
+theorem bound_of_tcdp {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ ω δ : ℝ}
+    (hρ : 0 < ρ) (hω : 1 < ω) (hδ : 0 < δ) (hδ₁ : δ < 1)
+    (h : ∀ α, 1 < α → α < ω → renyiDiv α μ ν ≤ ((α * ρ : ℝ) : EReal)) :
+    Bound (ENNReal.ofReal (exp (ρ * min ω (1 + √(log (1 / δ) / ρ)) +
+      log (1 / δ) / (min ω (1 + √(log (1 / δ) / ρ)) - 1)))) (ENNReal.ofReal δ) μ ν := by
   have hL : 0 < log (1 / δ) := log_pos (by rw [one_div]; exact one_lt_inv_iff₀.2 ⟨hδ, hδ₁⟩)
   set β := min ω (1 + √(log (1 / δ) / ρ))
   have hβ : 1 < β := lt_min hω (by linarith [sqrt_pos.2 (div_pos hL hρ)])
   have key {α : ℝ} (hα : 1 < α) (hαω : α < ω) :
       Bound (ENNReal.ofReal (exp (ρ * α + log (1 / δ) / (α - 1)))) (ENNReal.ofReal δ)
-        (m x) (m x') := by
-    have := bound_of_renyiDiv_le hα hδ (h hx α hα hαω)
+        μ ν := by
+    have := bound_of_renyiDiv_le hα hδ (h α hα hαω)
     rwa [mul_comm α ρ] at this
   rcases (min_le_left ω _ : β ≤ ω).lt_or_eq with hlt | heq
   · exact key hβ hlt
@@ -262,5 +204,34 @@ theorem DP_of_tCDP [IsFiniteKernel m] {ρ ω δ : ℝ} (hρ : 0 < ρ) (hω : 1 <
     refine bound_of_tendsto ?_ fun n ↦ key (ha₁ n) (haω n)
     exact (tendsto_const_nhds.mul ha).add (tendsto_const_nhds.div (ha.sub_const 1)
       (by linarith))
+
+/-! ### Mechanism-level conversions -/
+
+variable {m : Mechanism X Y} {Φ : Adjacency X}
+
+/-- Pure differential privacy implies zero-concentrated differential privacy ([D/z]). -/
+theorem zCDP_of_DP [∀ x, IsSubProbabilityMeasure (m x)] {ε : ℝ} (h : DP m Φ ε 0) :
+    zCDP m Φ ε 0 := fun _ _ hx α hα ↦ by
+  rw [mul_zero, add_zero]
+  exact renyiDiv_le_of_bound (h hx) hα
+
+/-- Rényi differential privacy implies differential privacy ([R/D]). -/
+theorem DP_of_RDP [IsFiniteKernel m] {α ρ δ : ℝ} (hα : 1 < α) (hδ : 0 < δ) (h : RDP m Φ α ρ) :
+    DP m Φ (ρ + log (1 / δ) / (α - 1)) (ENNReal.ofReal δ) := fun _ _ hx ↦
+  bound_of_renyiDiv_le hα hδ (h hx)
+
+/-- Zero-concentrated differential privacy implies differential privacy ([z/D]). -/
+theorem DP_of_zCDP [IsFiniteKernel m] {ξ ρ δ : ℝ} (hρ : 0 ≤ ρ) (hδ : 0 < δ) (hδ₁ : δ < 1)
+    (h : zCDP m Φ ξ ρ) :
+    DP m Φ (ξ + ρ + 2 * √(ρ * log (1 / δ))) (ENNReal.ofReal δ) := fun _ _ hx ↦
+  bound_of_zcdp hρ hδ hδ₁ (h hx)
+
+/-- Truncated concentrated differential privacy implies differential privacy, at the order
+`β = min ω (1 + √(log (1 / δ) / ρ))` ([t/D]). -/
+theorem DP_of_tCDP [IsFiniteKernel m] {ρ ω δ : ℝ} (hρ : 0 < ρ) (hω : 1 < ω) (hδ : 0 < δ)
+    (hδ₁ : δ < 1) (h : tCDP m Φ ρ ω) :
+    DP m Φ (ρ * min ω (1 + √(log (1 / δ) / ρ)) + log (1 / δ) / (min ω (1 + √(log (1 / δ) / ρ)) - 1))
+      (ENNReal.ofReal δ) := fun _ _ hx ↦
+  bound_of_tcdp hρ hω hδ hδ₁ (h hx)
 
 end DPDiv

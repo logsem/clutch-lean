@@ -14,6 +14,11 @@ public import Metrology.Couplings.DP.Mechanisms
 public import Metrology.Couplings.DP.Gaussian
 public import Metrology.Couplings.DP.Approximable
 public import Metrology.Couplings.DP.Conversions
+public import Metrology.Couplings.DP.Discretize
+public import Metrology.Couplings.DP.FDivergence
+public import Metrology.Couplings.DP.Renyi
+public import Metrology.Couplings.DP.Concentrated
+public import Metrology.Couplings.DP.Hierarchy
 public import Metrology.Couplings.GradedDivergence
 public import Metrology.Couplings.Measure
 public import Metrology.Couplings.DPCouplings
