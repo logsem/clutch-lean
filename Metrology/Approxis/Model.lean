@@ -139,11 +139,21 @@ end Refines
 
 /-! ## Notation for the refinement judgement -/
 
-scoped notation:100 "REL[" Δ "] " e1 " << " e2 " @ " E " : " A =>
-  refines Δ E e1 e2 A
+scoped syntax:100 (name := approxisRel) "REL[" term "] " term " << " term (" @ " term)? " : " term :
+  term
 
-scoped notation:100 "REL[" Δ "] " e1 " << " e2 " : " A =>
-  refines Δ (⊤ : CoPset) e1 e2 A
+macro_rules
+  | `(REL[$Δ] $e1 << $e2 $[@ $E]? : $A) => do
+    let E ← match E with | some E => pure E | none => `((⊤ : CoPset))
+    `(refines $Δ $E $e1 $e2 $A)
+
+/-- Print `refines` through `REL[Δ]`, dropping the mask when it is `⊤`. -/
+@[app_unexpander ProbLang.refines]
+meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
+  | `($_ $Δ $E $e1 $e2 $A) =>
+    if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(REL[$Δ] $e1 << $e2 : $A)
+    else `(REL[$Δ] $e1 << $e2 @ $E : $A)
+  | _ => throw ()
 
 /-! ## Simple lrel constructors -/
 

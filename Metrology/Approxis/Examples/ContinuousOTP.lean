@@ -26,7 +26,7 @@ abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 def otpKLam (m : rT) : Ectx rT := [EctxItem.appR (otpLam m)]
 
 private theorem refines_lit_real (r : rT) :
-    ⊢@{IProp GF} refines tv ⊤ (pl(#(.real r)) : Exp rT) pl(#(.real r)) lrel_real := by
+    ⊢@{IProp GF} REL[tv] (pl(#(.real r)) : Exp rT) << pl(#(.real r)) : lrel_real := by
   iapply refines_ret (v1 := .real r) (v2 := .real r) rfl rfl
   imodintro
   iapply lrel_real_lit
@@ -34,7 +34,7 @@ private theorem refines_lit_real (r : rT) :
 theorem otp_refines (m : rT)
     (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
-    ⊢@{IProp GF} refines tv ⊤ (otp_enc m) otp_ideal lrel_real := by
+    ⊢@{IProp GF} REL[tv] (otp_enc m) << otp_ideal : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines tv ⊤
     ((otpKLam m).fill pl(urand))
@@ -63,7 +63,7 @@ theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
-    ⊢@{IProp GF} refines tv ⊤ otp_ideal (otp_enc m) lrel_real := by
+    ⊢@{IProp GF} REL[tv] otp_ideal << (otp_enc m) : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines tv ⊤
     (Ectx.fill ([] : Ectx rT) pl(urand))
@@ -89,14 +89,14 @@ so the refinement holds outright for the genuinely continuous instance. -/
 
 theorem otp_refines_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
     [ApproxisRGS ℝ hlc GF] :
-    ⊢@{IProp GF} refines tv ⊤ (otp_enc m) otp_ideal lrel_real :=
+    ⊢@{IProp GF} REL[tv] (otp_enc m) << otp_ideal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
 noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 
 theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
     [ApproxisRGS ℝ hlc GF] :
-    ⊢@{IProp GF} refines tv ⊤ otp_ideal (otp_enc m) lrel_real :=
+    ⊢@{IProp GF} REL[tv] otp_ideal << (otp_enc m) : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
     show Int.fract (m + Int.fract (-m + r)) = r

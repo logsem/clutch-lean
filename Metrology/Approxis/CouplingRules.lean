@@ -141,6 +141,7 @@ theorem unifInt_map_bijOn {z : Int} (hz : 0 < z) (f : Int → Int)
   rw [lintegral_map hψ Measurable.of_discrete, lintegral_unifInt, lintegral_unifInt,
     Finset.sum_Ico_comp_of_bijOn hdom hbij]
 
+variable (Δ) in
 /-- Exact coupling of two uniform draws on `[0, z)` along a bijection `f`. -/
 theorem unifInt_codensity_bij [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {z : Int}
     (hz : 0 < z) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -183,7 +184,7 @@ theorem Cfg.uniform_codensity_bij_fill [MeasurableSingletonClass rT] [Δ.IsRefle
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     Δ.Codensity 1 0 {p | CoupledDraw z f σ σ' K p.1 p.2}
       (Cfg.uniform z σ) ((Cfg.uniform z σ').map K.fillCfg) :=
-  Cfg.uniform_codensity_fill Hz Hz σ σ' K (unifInt_codensity_bij Hz f hdom hbij)
+  Cfg.uniform_codensity_fill Hz Hz σ σ' K (unifInt_codensity_bij Δ Hz f hdom hbij)
     fun n _ ⟨h0, h1, hm⟩ => ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
 -- DEAD(approxis-codensity): replaced by `Codensity.map_right`
@@ -736,7 +737,7 @@ theorem wp_couple_rand_rand_adv [Δ.IsExpectationAdditive] (z : Int) (f : Int �
   have Hkant : Δ.CodensityE 1 ε₁ X (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩)
       (primStep ⟨K.fill pl(rand(#(.int z), #(.unit))), σ₁'⟩) := by
     have h := ((GradedDivergence.codensityE_relCost_iff.2
-      (unifInt_codensity_bij (Δ := Δ) Hz f hdom hbij)).add_right (c := c)
+      (unifInt_codensity_bij Δ Hz f hdom hbij)).add_right (c := c)
       Measurable.of_discrete).mono_bound hint
     rw [primStep_rand_unit Hz, primStep_fill Exp.rand_not_isValue, primStep_rand_unit Hz,
       Cfg.uniform_eq_map Hz σ₁, Cfg.uniform_eq_map Hz σ₁',

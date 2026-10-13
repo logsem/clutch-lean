@@ -36,6 +36,13 @@ theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNRe
     AddCoupl ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy_error_lim e e' σ σ' ε φ Hwp).addCoupl
 
+/-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
+theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
+    (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ WP[TVDiv.tv] e {{ v, ∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝ }}) :
+    limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε := by
+  simpa using AddCoupl.mass_leq (wp_adequacy_tv e e' σ σ' ε φ Hwp)
+
 end
 
 /-- `approximates_coupling` at `tv`. -/

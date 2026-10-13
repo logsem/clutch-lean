@@ -47,13 +47,13 @@ abbrev otpLam (m N : Int) : Exp rT := pl% fun k, (#(.int m) + k) % #(.int N)
 def otpKLam (m N : Int) : Ectx rT := [EctxItem.appR (otpLam m N)]
 
 private theorem refines_lit_int (n : Int) :
-    ⊢@{IProp GF} refines tv ⊤ (pl(#(.int n)) : Exp rT) pl(#(.int n)) lrel_int := by
+    ⊢@{IProp GF} REL[tv] (pl(#(.int n)) : Exp rT) << pl(#(.int n)) : lrel_int := by
   iapply refines_ret (v1 := .int n) (v2 := .int n) rfl rfl
   iintro !>
   iapply lrel_int_lit
 
 theorem otp_refines (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} refines tv ⊤ (otp_enc (rT := rT) m N) (otp_ideal N) lrel_int := by
+    ⊢@{IProp GF} REL[tv] (otp_enc (rT := rT) m N) << (otp_ideal N) : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines tv ⊤
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
@@ -81,7 +81,7 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
 theorem otp_refines_rev (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} refines tv ⊤ (otp_ideal (rT := rT) N) (otp_enc m N) lrel_int := by
+    ⊢@{IProp GF} REL[tv] (otp_ideal (rT := rT) N) << (otp_enc m N) : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢@{IProp GF} refines tv ⊤
     (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit))))
