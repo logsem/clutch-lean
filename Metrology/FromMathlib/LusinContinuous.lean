@@ -16,6 +16,9 @@ Delete this file once the PR lands.
 
 @[expose] public section
 
+set_option linter.deprecated false
+set_option linter.unnecessarySimpa false
+
 noncomputable section
 
 open scoped symmDiff

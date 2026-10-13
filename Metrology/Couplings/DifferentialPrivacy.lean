@@ -1,121 +1,182 @@
 module
 
-public import Mathlib.Basic.Real.Basic
-public import Mathlib.Data.EReal.Basic
-public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Basic
-public import Mathlib.MeasureTheory.Measure.Dirac.Basic
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
-public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
-public import Mathlib.MeasureTheory.Measure.GiryMonad
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Add
-public import Mathlib.Topology.UnitInterval
-public import Mathlib.MeasureTheory.Constructions.UnitInterval
-public import Mathlib.Probability.ProbabilityMassFunction.Basic
-public import Mathlib.Probability.ProbabilityMassFunction.Constructions
-public import Mathlib.Analysis.Real.OfDigits
+public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLog
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Probability.Kernel.Defs
+public import Metrology.Couplings.ApproximateSpanLifting
 
-public import Metrology.Couplings.AdditiveCouplings
+/-! Differential privacy, its relaxations, and `f`-divergences (Approximate Span Liftings, §2). -/
 
 @[expose] public section
 
-section DifferentialPrivacy
+open MeasureTheory ProbabilityTheory Set Filter Topology
+open scoped ENNReal
 
-open MeasureTheory ProbabilityTheory NNReal ENNReal
+theorem EReal.coe_finset_sum {ι : Type*} (s : Finset ι) (x : ι → ℝ) :
+    ((∑ i ∈ s, x i : ℝ) : EReal) = ∑ i ∈ s, (x i : EReal) :=
+  map_sum (⟨⟨(↑), EReal.coe_zero⟩, EReal.coe_add⟩ : ℝ →+ EReal) x s
 
--- Page 3
+variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 
-abbrev Mechanism (X Y : Type _) [MeasurableSpace X] [MeasurableSpace Y] :=
-  Kernel X Y
+/-- A randomized algorithm: a kernel from inputs to distributions on outputs. -/
+abbrev Mechanism (X Y : Type*) [MeasurableSpace X] [MeasurableSpace Y] := Kernel X Y
 
-abbrev Adjacency (X : Type _) := X → X → Prop
+/-- An adjacency relation on inputs. -/
+abbrev Adjacency (X : Type*) := X → X → Prop
 
-def Renyi {X : Type _} [MeasurableSpace X] (μ₁ μ₂ : Measure X) : ENNReal := sorry
+/-! ### `f`-divergences -/
 
-section DifferentialPrivacy
+/-- The weight function of an `f`-divergence (Def. 2.6). -/
+abbrev WeightFunction := ℝ → ℝ
 
-variable {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y]
+namespace WeightFunction
 
-def DP (m : Mechanism X Y) (Φ : Adjacency X) (ε δ : ℝ≥0∞) : Prop :=
-  ∀ {x x'}, Φ x x' → sorry
+/-- The slope `lim f t / t` of a weight function at infinity. -/
+noncomputable def slopeAtTop (f : WeightFunction) : EReal :=
+  limsup (fun t : ℝ ↦ ((f t / t : ℝ) : EReal)) atTop
 
-def RDP (m : Mechanism X Y) (Φ : Adjacency X) (α ρ : ℝ≥0∞) : Prop := sorry
+/-- The perspective `b f (a / b)`, extended by `0 f (0 / 0) = 0` and `0 f (a / 0) = a f'(∞)`. -/
+noncomputable def persp (f : WeightFunction) (a b : ℝ) : EReal :=
+  if b = 0 then (if a = 0 then 0 else a * f.slopeAtTop) else ((b * f (a / b) : ℝ) : EReal)
 
-def zCDP (m : Mechanism X Y) (Φ : Adjacency X) (ζ ρ : ℝ≥0∞) : Prop := sorry
+/-- The weight `t ↦ max 0 (t - e^ε)` of `(ε, δ)`-differential privacy. -/
+noncomputable def dp (ε : ℝ) : WeightFunction := fun t ↦ max 0 (t - Real.exp ε)
 
-def tCDP (m : Mechanism X Y) (Φ : Adjacency X) (ρ ω : ℝ≥0∞) : Prop := sorry
+/-- The weight `t ↦ t ^ α` of the Rényi divergence of order `α`. -/
+noncomputable def rpow (α : ℝ) : WeightFunction := fun t ↦ t ^ α
 
--- Privacy loss random variable
--- DP bounds the max loss
--- RDP bounds the alpha moment
--- zCDP bounds all moments
--- tCDP bounds the moments up to ω
+theorem slopeAtTop_dp (ε : ℝ) : (dp ε).slopeAtTop = 1 := by
+  refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
+  have h : Tendsto (fun t : ℝ ↦ 1 - Real.exp ε / t) atTop (𝓝 1) := by
+    simpa using (tendsto_const_nhds (x := (1 : ℝ))).sub
+      ((tendsto_const_nhds (x := Real.exp ε)).div_atTop tendsto_id)
+  refine h.congr' ?_
+  filter_upwards [eventually_gt_atTop (Real.exp ε)] with t ht
+  have ht0 : 0 < t := (Real.exp_pos ε).trans ht
+  rw [dp, max_eq_right (by linarith)]
+  field_simp
 
-end DifferentialPrivacy
+theorem persp_dp (ε : ℝ) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    (dp ε).persp a b = ((max 0 (a - Real.exp ε * b) : ℝ) : EReal) := by
+  rcases hb.eq_or_lt with rfl | hb
+  · by_cases ha0 : a = 0
+    · simp [persp, ha0]
+    · simp [persp, ha0, slopeAtTop_dp, max_eq_right ha]
+  · simp only [persp, hb.ne', ↓reduceIte, dp]
+    rw [mul_max_of_nonneg _ _ hb.le, mul_zero, mul_sub, mul_div_cancel₀ _ hb.ne', mul_comm]
 
-section RelationalLiftings
+end WeightFunction
 
-variable {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y]
+/-- The `f`-divergence, as a supremum over finite measurable partitions (Def. 2.7, Thm. 4.7). -/
+noncomputable def fDiv (f : WeightFunction) (μ ν : Measure X) : EReal :=
+  ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
+    ∑ i, f.persp (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal
 
-abbrev WeightFunction := ℝ → ℝ≥0
+/-- An `f`-divergence as a singly graded divergence. -/
+noncomputable def fDivergence (f : WeightFunction) : GradedDivergence.{u} Unit :=
+  fun _ {_} _ μ ν ↦ fDiv f μ ν
 
-def FDiv (f : WeightFunction) (μ₁ μ₂ : Measure X) : ℝ≥0∞ := sorry
+/-- Pushing forward along a measurable map does not increase an `f`-divergence. -/
+instance fDivergence.isFunctorial (f : WeightFunction) :
+    (fDivergence.{u} f).IsFunctorial where
+  map_le _ X Y _ _ k μ ν _ _ hk := by
+    refine iSup_le fun n ↦ iSup_le fun k' ↦ iSup_le fun hk' ↦ ?_
+    refine le_iSup_of_le n <| le_iSup_of_le (k' ∘ k) <| le_iSup_of_le (hk'.comp hk) ?_
+    simp only [Measure.map_apply hk (hk' (measurableSet_singleton _)), preimage_comp, le_refl]
 
-def WeightDP (ε : ℝ≥0∞) : WeightFunction := sorry
+/-- The DP `f`-divergence is the largest gap `μ S - e^ε ν S` over measurable events. -/
+theorem fDiv_dp_eq_iSup (ε : ℝ) (μ ν : Measure X) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+    fDiv (.dp ε) μ ν = ⨆ (S : Set X) (_ : MeasurableSet S),
+      (((μ S).toReal - Real.exp ε * (ν S).toReal : ℝ) : EReal) := by
+  apply le_antisymm
+  · refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
+    set x : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal - Real.exp ε * (ν (k ⁻¹' {i})).toReal
+    set P := Finset.univ.filter fun i ↦ 0 ≤ x i
+    have hP : MeasurableSet (k ⁻¹' (P : Set (Fin n))) := hk (.of_discrete)
+    refine le_iSup₂_of_le _ hP (le_of_eq ?_)
+    have hsum (ρ : Measure X) [IsFiniteMeasure ρ] :
+        ∑ i ∈ P, (ρ (k ⁻¹' {i})).toReal = (ρ (k ⁻¹' P)).toReal := by
+      rw [← ENNReal.toReal_sum (fun _ _ ↦ measure_ne_top _ _),
+        sum_measure_preimage_singleton _ fun _ _ ↦ hk (measurableSet_singleton _)]
+    simp_rw [WeightFunction.persp_dp ε ENNReal.toReal_nonneg ENNReal.toReal_nonneg,
+      ← EReal.coe_finset_sum, ← hsum μ, ← hsum ν, Finset.mul_sum, ← Finset.sum_sub_distrib]
+    congr 1
+    rw [Finset.sum_filter]
+    exact Finset.sum_congr rfl fun i _ ↦ by split_ifs with h <;> simp [x, h, le_of_not_ge]
+  · refine iSup₂_le fun S hS ↦ ?_
+    classical
+    let k : X → Fin 2 := fun x ↦ if x ∈ S then 0 else 1
+    have hk : Measurable k := measurable_const.ite hS measurable_const
+    have h0 : k ⁻¹' {0} = S := by ext x; by_cases hx : x ∈ S <;> simp [k, hx]
+    refine le_iSup_of_le 2 <| le_iSup_of_le k <| le_iSup_of_le hk ?_
+    simp only [Fin.sum_univ_two, h0,
+      WeightFunction.persp_dp ε ENNReal.toReal_nonneg ENNReal.toReal_nonneg]
+    rw [← EReal.coe_add, EReal.coe_le_coe_iff]
+    exact (le_max_right _ _).trans (le_add_of_nonneg_right (le_max_left _ _))
 
-theorem DP_iff_FDiv_DeltaDP {Φ ε δ} {m : Mechanism X Y} :
-  DP m Φ ε δ ↔ ∀ x x', FDiv (WeightDP ε) (m x) (m x') ≤ δ := sorry
+/-- The Rényi divergence of order `α` (Def. 2.2). -/
+noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
+  ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (.rpow α) μ ν).toENNReal
 
-def TWRL (R : X → Y → Prop) (f : WeightFunction) (δ : ℝ≥0∞) :
-    Measure X → Measure Y → Prop := sorry
+/-! ### Differential privacy and its relaxations -/
 
-theorem TWRL_eq_iff_div {μ₁ μ₂ : Measure X} :
-  TWRL (· = ·) f δ μ₁ μ₂ ↔ FDiv f μ₁ μ₂ ≤ δ := sorry
+section Privacy
 
-end RelationalLiftings
+variable (m : Mechanism X Y) (Φ : Adjacency X)
 
--- Page 6
+/-- `(ε, δ)`-differential privacy (Def. 2.1). -/
+def DP (ε : ℝ) (δ : ℝ≥0∞) : Prop :=
+  ∀ ⦃x x'⦄, Φ x x' → ∀ S, MeasurableSet S → m x S ≤ ENNReal.ofReal (Real.exp ε) * m x' S + δ
 
--- Limits and colimits in Meas: what are they as a theorem in Mathlib?
+/-- `(α, ρ)`-Rényi differential privacy (Def. 2.3). -/
+def RDP (α ρ : ℝ) : Prop :=
+  ∀ ⦃x x'⦄, Φ x x' → renyiDiv α (m x) (m x') ≤ ρ
 
--- Page 7
--- Graded monads: Unclear what we really need out of this.
+/-- `(ξ, ρ)`-zero-concentrated differential privacy (Def. 2.4). -/
+def zCDP (ξ ρ : ℝ) : Prop :=
+  ∀ ⦃x x'⦄, Φ x x' → ∀ α, 1 < α → renyiDiv α (m x) (m x') ≤ ((ξ + α * ρ : ℝ) : EReal)
 
--- Namespaced so this sketch's `Span` does not clash with `ApproximateSpanLifting`'s.
-namespace DifferentialPrivacy
+/-- `(ρ, ω)`-truncated concentrated differential privacy (Def. 2.5). -/
+def tCDP (ρ ω : ℝ) : Prop :=
+  ∀ ⦃x x'⦄, Φ x x' → ∀ α, 1 < α → α < ω → renyiDiv α (m x) (m x') ≤ ((α * ρ : ℝ) : EReal)
 
-section Spans
+/-- Differential privacy bounds the DP `f`-divergence between adjacent outputs (§2.2). -/
+theorem DP_iff_fDiv_dp [IsFiniteKernel m] {ε : ℝ} {δ : ℝ≥0∞} :
+    DP m Φ ε δ ↔ ∀ ⦃x x'⦄, Φ x x' → fDiv (.dp ε) (m x) (m x') ≤ δ := by
+  refine forall₃_congr fun x x' _ ↦ ?_
+  rw [fDiv_dp_eq_iSup, iSup₂_le_iff]
+  refine forall₂_congr fun S _ ↦ ?_
+  rcases eq_or_ne δ ⊤ with rfl | hδ
+  · simp
+  rw [← EReal.coe_ennreal_toReal hδ, EReal.coe_le_coe_iff,
+    ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
+    ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal (Real.exp_pos ε).le]
+  constructor <;> intro h <;> linarith
 
-structure SpanData (X Y Φ : Type _) : Type _ where
-  ρ₁ : Φ → X
-  ρ₂ : Φ → Y
+end Privacy
 
-structure Span (X Y Φ) [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Φ] : Type _
-    extends SpanData X Y Φ where
-  [measurable₁ : Measurable ρ₁]
-  [measurable₂ : Measurable ρ₂ ]
+/-! ### Two-witness relational liftings -/
 
-structure SpanMorData (X Y Φ : Type _) (Z W Ψ : Type _) where
-  h : X → Z
-  k : Y → W
-  l : Φ → Ψ
+open Span in
+/-- The two-witness relational lifting of `R` for an `f`-divergence (Eq. 5), as an approximate
+span lifting. -/
+def TWRL (R : X → Y → Prop) (f : WeightFunction) (δ : EReal) (μ : Measure X) (ν : Measure Y) :
+    Prop :=
+  ((Span.ofRel {p | R p.1 p.2})♯[fDivergence f, (), δ]).Rel μ ν
 
-structure SpanMor (X Y Φ W Z Ψ) [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Φ]
-    [MeasurableSpace W] [MeasurableSpace Z] [MeasurableSpace Ψ] : Type _
-    extends SpanMorData X Y Φ W Z Ψ where
-  [measurableh : Measurable h]
-  [measurablek : Measurable k]
-  [measurablel : Measurable l]
-  comp₁ (S₁ : Span X Y Φ) (S₂ : Span Z W Ψ) : True
-  comp₂ (S₁ : Span X Y Φ) (S₂ : Span Z W Ψ) : True
-
--- Coproducts
--- Binary relations to spans
-
-
-
-
-
-end Spans
-
-end DifferentialPrivacy
+open Span in
+/-- Lifting equality relates exactly the pairs at `f`-divergence at most `δ` (§2.2). -/
+theorem TWRL_eq_iff (f : WeightFunction) (δ : EReal) {μ ν : Measure X}
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    TWRL (· = ·) f δ μ ν ↔ fDiv f μ ν ≤ δ := by
+  unfold TWRL
+  constructor
+  · intro h
+    have := (Hom.lift Hom.eqToDiag () δ).rel h
+    simp only [Hom.lift, Hom.eqToDiag, Measure.map_id] at this
+    exact (rel_lift_diag.1 this).le
+  · intro h
+    have := (Hom.lift Hom.diagToEq () δ).rel
+      ((rel_lift_diag (Δ := fDivergence f) (μ := μ) (ν := ν)).2 ⟨inferInstance, inferInstance, h⟩)
+    simpa only [Hom.lift, Hom.diagToEq, Measure.map_id] using this

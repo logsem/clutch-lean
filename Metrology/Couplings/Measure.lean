@@ -44,4 +44,21 @@ theorem _root_.Measurable.measure_prod {f : Z → Measure X} {g : Z → Measure 
   have hg' : Measurable fun z ↦ (⟨g z, inferInstance⟩ : FiniteMeasure Y) := hg.subtype_mk
   exact FiniteMeasure.measurable_fun_prod.comp (hf'.prodMk hg')
 
+/-- Pushing forward a bind is binding the pushed-forward kernel. -/
+theorem map_bind_eq {κ : Φ → Measure X} {k : X → Y} (μ : Measure Φ)
+    (hκ : Measurable κ := by fun_prop) (hk : Measurable k := by fun_prop) :
+    (μ.bind κ).map k = μ.bind fun φ ↦ (κ φ).map k := by
+  ext A hA
+  have hκk : Measurable fun φ ↦ (κ φ).map k := by fun_prop
+  rw [map_apply hk hA, bind_apply (hk hA) hκ.aemeasurable, bind_apply hA hκk.aemeasurable]
+  simp only [map_apply hk hA]
+
+/-- Binding a pushed-forward measure is binding along the composite kernel. -/
+theorem bind_map_eq {d : Φ → X} {h : X → Measure Y} (μ : Measure Φ)
+    (hd : Measurable d := by fun_prop) (hh : Measurable h := by fun_prop) :
+    (μ.map d).bind h = μ.bind (h ∘ d) := by
+  ext A hA
+  rw [bind_apply hA hh.aemeasurable, bind_apply hA (hh.comp hd).aemeasurable]
+  exact lintegral_map ((measurable_coe hA).comp hh) hd
+
 end MeasureTheory.Measure
