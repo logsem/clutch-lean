@@ -26,6 +26,7 @@ public import Metrology.ProbLang.Reals
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Syntax.Types
+public import Metrology.ProbLang.Syntax.TypeCheck
 public import Metrology.ProbLang.Test
 
 @[expose] public section

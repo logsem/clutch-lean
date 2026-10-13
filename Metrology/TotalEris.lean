@@ -11,6 +11,7 @@ public import Metrology.TotalEris.ErrorRules
 public import Metrology.TotalEris.WpTactics
 public import Metrology.TotalEris.TotalAdequacy
 public import Metrology.TotalEris.PresampleRules
+public import Metrology.TotalEris.DistSpecReduction
 
 @[expose] public section
 
