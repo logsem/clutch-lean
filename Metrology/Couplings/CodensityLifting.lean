@@ -67,22 +67,6 @@ theorem Codensity.bind {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S
   rw [Kernel.comp_apply, Kernel.comp_apply]
   exact hfg hxy hkl
 
-/-- The product of two relations. -/
-def relProd (R : Set (X × Y)) (S : Set (X' × Y')) : Set ((X × X') × (Y × Y')) :=
-  {p | (p.1.1, p.2.1) ∈ R ∧ (p.1.2, p.2.2) ∈ S}
-
-/-- Pairing related points with lifted measures stays in the lifting of the product relation
-(strength). -/
-theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
-    {μ : Measure X'} {ν : Measure Y'} (h : Δ.Codensity α δ S μ ν) {x : X} {y : Y}
-    (hxy : (x, y) ∈ R) :
-    Δ.Codensity α δ (relProd R S) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) := by
-  have := h.bind (f := .deterministic (Prod.mk x) (by fun_prop))
-    (g := .deterministic (Prod.mk y) (by fun_prop)) fun x' y' h' ↦ by
-      rw [Kernel.deterministic_apply, Kernel.deterministic_apply]
-      exact codensity_dirac (R := relProd R S) ⟨hxy, h'⟩
-  rwa [mul_one, add_zero, deterministic_comp_eq_map, deterministic_comp_eq_map] at this
-
 /-- Larger relations give larger liftings. -/
 theorem Codensity.mono_rel {α : ι} {δ : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hR : R ⊆ R') : Δ.Codensity α δ R' μ ν :=
@@ -124,6 +108,18 @@ theorem Codensity.bind_fun {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)
   have : IsSubMarkovKernel ⟨f, hf⟩ := ⟨fun x ↦ inferInstanceAs (IsSubProbabilityMeasure (f x))⟩
   have : IsSubMarkovKernel ⟨g, hg⟩ := ⟨fun y ↦ inferInstanceAs (IsSubProbabilityMeasure (g y))⟩
   h.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
+
+/-- The product of two relations. -/
+def relProd (R : Set (X × Y)) (S : Set (X' × Y')) : Set ((X × X') × (Y × Y')) :=
+  {p | (p.1.1, p.2.1) ∈ R ∧ (p.1.2, p.2.2) ∈ S}
+
+/-- Pairing related points with lifted measures stays in the lifting of the product relation
+(strength). -/
+theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
+    {μ : Measure X'} {ν : Measure Y'} (h : Δ.Codensity α δ S μ ν) {x : X} {y : Y}
+    (hxy : (x, y) ∈ R) :
+    Δ.Codensity α δ (relProd R S) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) :=
+  h.map fun _ _ h' ↦ ⟨hxy, h'⟩
 
 /-! ### The fundamental property (Thm. 8.2) -/
 
