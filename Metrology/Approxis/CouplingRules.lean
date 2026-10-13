@@ -591,7 +591,7 @@ theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
 section CouplingRules
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [ApproxisGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Monoid ι] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 private theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
@@ -641,7 +641,7 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
       ⌜Discrete.Reducible eR σ' ∧ primStep ⟨eR, σ'⟩ = Cfg.uniform z σ'⌝)
     (Φ : Val rT → IProp GF) : iprop%
     ▷ A ∗ ⤇ K.fill eR ∗ (∀ n, A ∗ ⤇ K.fill pl(#(.int (f n))) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E eL Φ := by
+    wp Δ E eL Φ := by
   iintro ⟨HA, Hj, Hcnt⟩
   iapply wp_lift_prim_steps_coupl HvL
   iintro %σ₁ %e₁' %σ₁' %ε ⟨Hσ, Hs, Hε⟩
@@ -680,7 +680,7 @@ theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
     (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#(.int (f n))) -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.unit))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.unit))) Φ := by
   iintro ⟨Hj, Hcnt⟩
   iapply wp_couple_rand_core z f hdom hbij Hz (eL := pl(rand(#(.int z), #(.unit))))
     (eR := pl(rand(#(.int z), #(.unit)))) K E iprop(emp)
@@ -700,7 +700,7 @@ theorem wp_couple_rand_rand_adv [Δ.IsExpectationAdditive] (z : Int) (f : Int �
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗ ↯ ε₁ ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ↯ ε₂ n -∗ ⤇ K.fill pl(#(.int (f n))) -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.unit))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.unit))) Φ := by
   classical
   iintro ⟨Hj, Herr, Hcnt⟩
   iapply wp_lift_prim_steps_coupl_adv_err_le_1 Exp.rand_toVal?_eq_none
@@ -801,7 +801,7 @@ theorem wp_couple_rand_rand_avoid [Δ.IsExpectationAdditive] (z bad : Int) (Hz :
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗ ↯ (z.toNat : ENNReal)⁻¹ ∗
     (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗ ⤇ K.fill pl(#(.int n)) -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.unit))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.unit))) Φ := by
   classical
   iintro ⟨Hj, Herr, Hcnt⟩
   iapply wp_couple_rand_rand_adv z id (z.toNat : ENNReal)⁻¹ (fun n => if n = bad then 1 else 0)
@@ -826,7 +826,7 @@ theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int) (ε εinj : ENNR
     (hε : εinj ≤ ε) (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int zR), #(.unit))) ∗ ↯ ε ∗
     (∀ n, ⌜0 ≤ n ∧ n < zL⌝ -∗ ⤇ K.fill pl(#(.int (f n))) -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int zL), #(.unit))) Φ := by
+    wp Δ E pl(rand(#(.int zL), #(.unit))) Φ := by
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr' := ErrorCredit.weaken hε $$ Herr
   iapply wp_lift_prim_steps_coupl Exp.rand_toVal?_eq_none
@@ -870,7 +870,7 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int) (ε εinj : 
     (hε : εinj ≤ ε) (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int zR), #(.unit))) ∗ ↯ ε ∗
     (∀ m, ⌜0 ≤ m ∧ m < zR⌝ -∗ ⤇ K.fill pl(#(.int m)) -∗ Φ (.int (f m))) ⊢
-    wp E pl(rand(#(.int zL), #(.unit))) Φ := by
+    wp Δ E pl(rand(#(.int zL), #(.unit))) Φ := by
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr' := ErrorCredit.weaken hε $$ Herr
   iapply wp_lift_prim_steps_coupl Exp.rand_toVal?_eq_none
@@ -911,8 +911,8 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) : iprop%
     appNatTape α z ns ∗ specNatTape αₛ z nsₛ ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
-      wp E e Φ) ⊢
-    wp E e Φ := by
+      wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hα, Hαₛ, Hcnt⟩
   iunfold appNatTape at Hα
   iunfold specNatTape at Hαₛ
@@ -955,7 +955,7 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
     ▷ appNatTape α M xs ∗ ▷ specNatTape α' M ys ∗ ⤇ K.fill pl(rand(#(.int z), #(.lbl α'))) ∗
     (∀ n, appNatTape α M xs ∗ specNatTape α' M ys ∗ ⤇ K.fill pl(#(.int (f n))) ∗
       ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl α))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl α))) Φ := by
   iintro ⟨Hα, Hα', Hj, Hcnt⟩
   iapply wp_couple_rand_core z f hdom hbij Hz (eL := pl(rand(#(.int z), #(.lbl α))))
     (eR := pl(rand(#(.int z), #(.lbl α')))) K E iprop(appNatTape α M xs ∗ specNatTape α' M ys)
@@ -990,7 +990,7 @@ theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
     ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#(.int z), #(.lbl α'))) ∗
     (∀ n, appNatTape α z [] ∗ specNatTape α' z [] ∗ ⤇ K.fill pl(#(.int (f n))) ∗
       ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl α))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl α))) Φ := by
   iintro ⟨Hα, Hα', Hj, Hcnt⟩
   iapply wp_couple_rand_core z f hdom hbij Hz (eL := pl(rand(#(.int z), #(.lbl α))))
     (eR := pl(rand(#(.int z), #(.lbl α')))) K E iprop(appNatTape α z [] ∗ specNatTape α' z [])
@@ -1013,7 +1013,7 @@ theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
     (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α : Loc) (Φ : Val rT → IProp GF) : iprop%
     ▷ appNatTape α z [] ∗ ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗
     (∀ n, appNatTape α z [] ∗ ⤇ K.fill pl(#(.int (f n))) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl α))) Φ :=
+    wp Δ E pl(rand(#(.int z), #(.lbl α))) Φ :=
   wp_couple_rand_core z f hdom hbij Hz K E iprop(appNatTape α z [])
     Exp.rand_toVal?_eq_none Exp.rand_not_isValue
     (appNatTape_empty_rand_step Hz α) (fun _ σ' => randUnit_step_pure Hz σ') Φ
@@ -1024,7 +1024,7 @@ theorem wp_couple_rand_tape (z : Int) (f : Int → Int)
     (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α' : Loc) (Φ : Val rT → IProp GF) : iprop%
     ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#(.int z), #(.lbl α'))) ∗
     (∀ n, specNatTape α' z [] ∗ ⤇ K.fill pl(#(.int (f n))) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.unit))) Φ :=
+    wp Δ E pl(rand(#(.int z), #(.unit))) Φ :=
   wp_couple_rand_core z f hdom hbij Hz K E iprop(specNatTape α' z [])
     Exp.rand_toVal?_eq_none Exp.rand_not_isValue
     (fun σ => randUnit_step_pure Hz σ) (specNatTape_empty_rand_step Hz α') Φ
@@ -1036,7 +1036,7 @@ end CouplingRules
 section CouplingRulesTV
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [ApproxisGS rT hlc TVDiv.tv GF]
+  [ApproxisGS rT hlc GF]
 
 /-- Coupling `rand zL ~ rand zR` (`zL ≤ zR`) along an injection `f : [0,zL) ↪ [0,zR)`,
 spending `(zR - zL)/zR` error credits: the left draw is `n`, the right draw is `f n`.
@@ -1049,7 +1049,7 @@ theorem wp_couple_rand_rand_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int zR), #(.unit))) ∗ ↯ ε ∗
     (∀ n, ⌜0 ≤ n ∧ n < zL⌝ -∗ ⤇ K.fill pl(#(.int (f n))) -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int zL), #(.unit))) Φ :=
+    wp TVDiv.tv E pl(rand(#(.int zL), #(.unit))) Φ :=
   wp_couple_rand_rand_inj zL zR f ε _ HzL (HzL.trans_le Hle)
     (unifInt_addCoupl_inj HzL Hle f hdom hinj).codensity hε K E Φ
 
@@ -1064,7 +1064,7 @@ theorem wp_couple_rand_rand_rev_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENN
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int zR), #(.unit))) ∗ ↯ ε ∗
     (∀ m, ⌜0 ≤ m ∧ m < zR⌝ -∗ ⤇ K.fill pl(#(.int m)) -∗ Φ (.int (f m))) ⊢
-    wp E pl(rand(#(.int zL), #(.unit))) Φ :=
+    wp TVDiv.tv E pl(rand(#(.int zL), #(.unit))) Φ :=
   wp_couple_rand_rand_rev_inj zL zR f ε _ (HzR.trans_le Hle) HzR
     (unifInt_addCoupl_rev_inj HzR Hle f hdom hinj).codensity hε K E Φ
 

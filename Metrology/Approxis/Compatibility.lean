@@ -21,20 +21,20 @@ namespace ProbLang
 section Compatibility
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc Δ GF]
+  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
-    (lrel_arr A B).car v v' ⊢
-    □ (∀ w1 w2, A w1 w2 -∗ refines ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=
+    (lrel_arr Δ A B).car v v' ⊢
+    □ (∀ w1 w2, A w1 w2 -∗ refines Δ ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=
   sep_elim_right
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e1 e1' A ⊢
-    refines ⊤ e2 e2' B -∗ refines ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by
-  show _ ⊢ refines ⊤ e2 e2' B -∗ refines ⊤ (Ectx.fill [EctxItem.pairR e1] e2)
+    refines Δ ⊤ e1 e1' A ⊢
+    refines Δ ⊤ e2 e2' B -∗ refines Δ ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by
+  show _ ⊢ refines Δ ⊤ e2 e2' B -∗ refines Δ ⊤ (Ectx.fill [EctxItem.pairR e1] e2)
     (Ectx.fill [EctxItem.pairR e1'] e2') (lrel_prod A B)
   iintro IH1 IH2
   iapply refines_bind [EctxItem.pairR e1] [EctxItem.pairR e1'] $$ IH2
@@ -55,8 +55,8 @@ theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e e' A ⊢ refines ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.inl] e) (Ectx.fill [EctxItem.inl] e') (lrel_sum A B)
+    refines Δ ⊤ e e' A ⊢ refines Δ ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.inl] e) (Ectx.fill [EctxItem.inl] e') (lrel_sum A B)
   iintro IH
   iapply refines_bind [EctxItem.inl] [EctxItem.inl] $$ IH
   iintro %v %v' HA
@@ -72,8 +72,8 @@ theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e e' B ⊢ refines ⊤ (.inr e) (.inr e') (lrel_sum A B) := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.inr] e) (Ectx.fill [EctxItem.inr] e') (lrel_sum A B)
+    refines Δ ⊤ e e' B ⊢ refines Δ ⊤ (.inr e) (.inr e') (lrel_sum A B) := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.inr] e) (Ectx.fill [EctxItem.inr] e') (lrel_sum A B)
   iintro IH
   iapply refines_bind [EctxItem.inr] [EctxItem.inr] $$ IH
   iintro %v %v' HB
@@ -89,10 +89,10 @@ theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e1 e1' (lrel_arr A B) ⊢
-    refines ⊤ e2 e2' A -∗ refines ⊤ (Exp.app e1 e2) (Exp.app e1' e2') B := by
-  show _ ⊢ refines ⊤ e2 e2' A -∗
-    refines ⊤ (Ectx.fill [EctxItem.appR e1] e2) (Ectx.fill [EctxItem.appR e1'] e2') B
+    refines Δ ⊤ e1 e1' (lrel_arr Δ A B) ⊢
+    refines Δ ⊤ e2 e2' A -∗ refines Δ ⊤ (Exp.app e1 e2) (Exp.app e1' e2') B := by
+  show _ ⊢ refines Δ ⊤ e2 e2' A -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.appR e1] e2) (Ectx.fill [EctxItem.appR e1'] e2') B
   iintro IH1 IH2
   iapply refines_bind [EctxItem.appR e1] [EctxItem.appR e1'] $$ IH2
   iintro %v2 %v2' HA
@@ -100,14 +100,14 @@ theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     show Ectx.fill [EctxItem.appR e1'] v2'.1 = Ectx.fill [EctxItem.appL v2'] e1' from rfl]
   iapply refines_bind [EctxItem.appL v2] [EctxItem.appL v2'] $$ IH1
   iintro %v1 %v1' #Hff
-  iunfold lrel_arr at Hff
+  iunfold lrel_arr  at Hff
   icases Hff with ⟨-, Hff⟩
   rw [show Ectx.fill [EctxItem.appL v2] v1.1 = Exp.app v1.1 v2.1 from rfl,
     show Ectx.fill [EctxItem.appL v2'] v1'.1 = Exp.app v1'.1 v2'.1 from rfl]
   iapply Hff $$ %v2 %v2' HA
 
 theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
-    iprop% ▷ refines ⊤ b t A ⊢ refines ⊤ (.app (.lam b) u.1) t A := by
+    iprop% ▷ refines Δ ⊤ b t A ⊢ refines Δ ⊤ (.app (.lam b) u.1) t A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
   iapply refines_pure_l (e := .app (.lam b) u.1) (e' := Exp.open' b u.1) (n := 1)
@@ -118,7 +118,7 @@ theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
-    refines ⊤ t b A ⊢ refines ⊤ t (.app (.lam b) u.1) A := by
+    refines Δ ⊤ t b A ⊢ refines Δ ⊤ t (.app (.lam b) u.1) A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
   iapply refines_pure_r (e := .app (.lam b) u.1) (e' := Exp.open' b u.1) (n := 1)
@@ -128,10 +128,11 @@ theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
 
 theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
     (he2 : e2.IsLocallyClosed) (he2' : e2'.IsLocallyClosed) : iprop%
-    refines ⊤ e1 e1' A ⊢
-    refines ⊤ e2 e2' B -∗ refines ⊤ (.app (.lam e2) e1) (.app (.lam e2') e1') B := by
-  show _ ⊢ refines ⊤ e2 e2' B -∗
-    refines ⊤ (Ectx.fill [EctxItem.appR (.lam e2)] e1) (Ectx.fill [EctxItem.appR (.lam e2')] e1') B
+    refines Δ ⊤ e1 e1' A ⊢
+    refines Δ ⊤ e2 e2' B -∗ refines Δ ⊤ (.app (.lam e2) e1) (.app (.lam e2') e1') B := by
+  show _ ⊢ refines Δ ⊤ e2 e2' B -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.appR (.lam e2)] e1)
+      (Ectx.fill [EctxItem.appR (.lam e2')] e1') B
   iintro IH1 IH2
   iapply refines_bind [EctxItem.appR (.lam e2)] [EctxItem.appR (.lam e2')] $$ IH1
   iintro %v %v' -
@@ -145,7 +146,7 @@ theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
 
 theorem refines_pure_step {e e' r r' : Exp rT} {φ φ' : Prop}
     [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
-    {A : lrel rT GF} : iprop% ▷ refines ⊤ r r' A ⊢ refines ⊤ e e' A := by
+    {A : lrel rT GF} : iprop% ▷ refines Δ ⊤ r r' A ⊢ refines Δ ⊤ e e' A := by
   iintro H
   rw [Ectx.eq_fill_nil e, Ectx.eq_fill_nil e']
   iapply refines_pure_l (Hex := Hex) hφ
@@ -157,7 +158,7 @@ theorem refines_pure_step {e e' r r' : Exp rT} {φ φ' : Prop}
 theorem refines_pure_ret {e e' r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
     [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
     (hr : r = v.1) (hr' : r' = v'.1) {A : lrel rT GF} :
-    A.car v v' ⊢ refines ⊤ e e' A := by
+    A.car v v' ⊢ refines Δ ⊤ e e' A := by
   iintro HA
   iapply refines_pure_step (Hex := Hex) (Hex' := Hex') hφ hφ'
   inext
@@ -166,8 +167,8 @@ theorem refines_pure_ret {e e' r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
   iexact HA
 
 theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e e' (lrel_prod A B) ⊢ refines ⊤ (.fst e) (.fst e') A := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.fst] e) (Ectx.fill [EctxItem.fst] e') A
+    refines Δ ⊤ e e' (lrel_prod A B) ⊢ refines Δ ⊤ (.fst e) (.fst e') A := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.fst] e) (Ectx.fill [EctxItem.fst] e') A
   iintro IH
   iapply refines_bind [EctxItem.fst] [EctxItem.fst] $$ IH
   iintro %v %v' Hprod
@@ -178,11 +179,11 @@ theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩ rfl rfl $$ HA
 
 theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : iprop%
-    refines ⊤ e0 e0' (lrel_sum A B) ⊢
-    refines ⊤ e1 e1' (lrel_arr A C) -∗ refines ⊤ e2 e2' (lrel_arr B C) -∗
-    refines ⊤ (.case e0 e1 e2) (.case e0' e1' e2') C := by
-  show _ ⊢ refines ⊤ e1 e1' (lrel_arr A C) -∗ refines ⊤ e2 e2' (lrel_arr B C) -∗
-    refines ⊤ (Ectx.fill [EctxItem.case e1 e2] e0) (Ectx.fill [EctxItem.case e1' e2'] e0') C
+    refines Δ ⊤ e0 e0' (lrel_sum A B) ⊢
+    refines Δ ⊤ e1 e1' (lrel_arr Δ A C) -∗ refines Δ ⊤ e2 e2' (lrel_arr Δ B C) -∗
+    refines Δ ⊤ (.case e0 e1 e2) (.case e0' e1' e2') C := by
+  show _ ⊢ refines Δ ⊤ e1 e1' (lrel_arr Δ A C) -∗ refines Δ ⊤ e2 e2' (lrel_arr Δ B C) -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.case e1 e2] e0) (Ectx.fill [EctxItem.case e1' e2'] e0') C
   iintro IH0 IH1 IH2
   iapply refines_bind [EctxItem.case e1 e2] [EctxItem.case e1' e2'] $$ IH0
   iintro %v %v' Hsum
@@ -208,7 +209,7 @@ theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : ipro
 
 theorem refines_pure_both {e r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (hφ : φ)
     (hrv : IsVal r) {A : lrel rT GF} (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢ refines ⊤ e e A := by
+    ⊢ refines Δ ⊤ e e A := by
   iapply refines_pure_ret (Hex := Hex) (Hex' := Hex) (v := ⟨r, hrv, hrv.lc⟩)
     (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
   iapply HA
@@ -216,22 +217,22 @@ theorem refines_pure_both {e r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (
 theorem refines_binop_pure (op : BinOp) (v1 v2 r : Exp rT) (hv1 : IsVal v1) (hv2 : IsVal v2)
     (hrv : IsVal r) (heval : op.eval v1 v2 = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢ refines ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
+    ⊢ refines Δ ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
   refines_pure_both (φ := v1.isValue ∧ v2.isValue ∧ op.eval v1 v2 = some r)
     ⟨hv1.toIsValue, hv2.toIsValue, heval⟩ hrv HA
 
 theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal r)
     (heval : op.eval v = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
-    ⊢ refines ⊤ (.unop op v) (.unop op v) A :=
+    ⊢ refines Δ ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both (φ := v.isValue ∧ op.eval v = some r) ⟨hv.toIsValue, heval⟩ hrv HA
 
 /-! ### Discrete fragment: tape allocation and bounded sampling -/
 
 theorem refines_alloctape {e e' : Exp rT} : iprop%
-    refines ⊤ e e' lrel_int ⊢@{IProp GF} refines ⊤ (.tape e) (.tape e') lrel_tape := by
+    refines Δ ⊤ e e' lrel_int ⊢@{IProp GF} refines Δ ⊤ (.tape e) (.tape e') lrel_tape := by
   show _ ⊢@{IProp GF}
-    refines ⊤ (Ectx.fill [EctxItem.tape] e) (Ectx.fill [EctxItem.tape] e') lrel_tape
+    refines Δ ⊤ (Ectx.fill [EctxItem.tape] e) (Ectx.fill [EctxItem.tape] e') lrel_tape
   iintro IH
   iapply refines_bind [EctxItem.tape] [EctxItem.tape] $$ IH
   iintro %v %v' Hint
@@ -271,8 +272,8 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
     itrivial
 
 theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
-    refines ⊤ e e' A ⊢ refines ⊤ (.alloc e) (.alloc e') (lrel_ref A) := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.alloc] e) (Ectx.fill [EctxItem.alloc] e') (lrel_ref A)
+    refines Δ ⊤ e e' A ⊢ refines Δ ⊤ (.alloc e) (.alloc e') (lrel_ref A) := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.alloc] e) (Ectx.fill [EctxItem.alloc] e') (lrel_ref A)
   iintro IH
   iapply refines_bind [EctxItem.alloc] [EctxItem.alloc] $$ IH
   iintro %v %v' #HA
@@ -297,11 +298,11 @@ theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
   itrivial
 
 theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
-    refines ⊤ e0 e0' lrel_bool ⊢
-    refines ⊤ e1 e1' A -∗ refines ⊤ e2 e2' A -∗
-    refines ⊤ (.cond e0 e1 e2) (.cond e0' e1' e2') A := by
-  show _ ⊢ refines ⊤ e1 e1' A -∗ refines ⊤ e2 e2' A -∗
-    refines ⊤ (Ectx.fill [EctxItem.condC e1 e2] e0) (Ectx.fill [EctxItem.condC e1' e2'] e0') A
+    refines Δ ⊤ e0 e0' lrel_bool ⊢
+    refines Δ ⊤ e1 e1' A -∗ refines Δ ⊤ e2 e2' A -∗
+    refines Δ ⊤ (.cond e0 e1 e2) (.cond e0' e1' e2') A := by
+  show _ ⊢ refines Δ ⊤ e1 e1' A -∗ refines Δ ⊤ e2 e2' A -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.condC e1 e2] e0) (Ectx.fill [EctxItem.condC e1' e2'] e0') A
   iintro IH0 IH1 IH2
   iapply refines_bind [EctxItem.condC e1 e2] [EctxItem.condC e1' e2'] $$ IH0
   iintro %v %v' Hb
@@ -321,8 +322,8 @@ theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
     iexact IH2
 
 theorem refines_snd {e e' : Exp rT} {A B : lrel rT GF} : iprop%
-    refines ⊤ e e' (lrel_prod A B) ⊢ refines ⊤ (.snd e) (.snd e') B := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.snd] e) (Ectx.fill [EctxItem.snd] e') B
+    refines Δ ⊤ e e' (lrel_prod A B) ⊢ refines Δ ⊤ (.snd e) (.snd e') B := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.snd] e) (Ectx.fill [EctxItem.snd] e') B
   iintro IH
   iapply refines_bind [EctxItem.snd] [EctxItem.snd] $$ IH
   iintro %v %v' Hprod
@@ -336,8 +337,8 @@ omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
     (_hC : OFE.NonExpansive C)
     (hCclosed : ∀ v v', (C A).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝) :
-    refines ⊤ e e' (C A) ⊢ refines ⊤ e e' (lrel_exists C) := by
-  show _ ⊢ refines ⊤ (Ectx.fill Ectx.empty e) (Ectx.fill Ectx.empty e') (lrel_exists C)
+    refines Δ ⊤ e e' (C A) ⊢ refines Δ ⊤ e e' (lrel_exists C) := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill Ectx.empty e) (Ectx.fill Ectx.empty e') (lrel_exists C)
   iintro IH
   iapply refines_bind Ectx.empty Ectx.empty $$ IH
   iintro %v %v' HCA
@@ -352,7 +353,7 @@ theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel r
 
 theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
     (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
-    □ (∀ A, refines ⊤ e e' (C A)) ⊢ refines ⊤ (.lam e) (.lam e') (lrel_forall C) := by
+    □ (∀ A, refines Δ ⊤ e e' (C A)) ⊢ refines Δ ⊤ (.lam e) (.lam e') (lrel_forall Δ C) := by
   iintro #H
   iapply refines_ret (v1 := ⟨.lam e, IsVal.lam (by is_lc), by is_lc⟩)
     (v2 := ⟨.lam e', IsVal.lam (by is_lc), by is_lc⟩) rfl rfl
@@ -370,10 +371,10 @@ theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
   iapply H
 
 theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
-    refines ⊤ e1 e1' (lrel_ref A) ⊢
-    refines ⊤ e2 e2' A -∗ refines ⊤ (.store e1 e2) (.store e1' e2') lrel_unit := by
-  show _ ⊢ refines ⊤ e2 e2' A -∗
-    refines ⊤ (Ectx.fill [EctxItem.storeR e1] e2) (Ectx.fill [EctxItem.storeR e1'] e2') lrel_unit
+    refines Δ ⊤ e1 e1' (lrel_ref A) ⊢
+    refines Δ ⊤ e2 e2' A -∗ refines Δ ⊤ (.store e1 e2) (.store e1' e2') lrel_unit := by
+  show _ ⊢ refines Δ ⊤ e2 e2' A -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.storeR e1] e2) (Ectx.fill [EctxItem.storeR e1'] e2') lrel_unit
   iintro IH1 IH2
   iapply refines_bind [EctxItem.storeR e1] [EctxItem.storeR e1'] $$ IH2
   iintro %w %w' #HwA
@@ -413,8 +414,8 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
   iapply lrel_unit_lit
 
 theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
-    refines ⊤ e e' (lrel_ref A) ⊢ refines ⊤ (.load e) (.load e') A := by
-  show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.load] e) (Ectx.fill [EctxItem.load] e') A
+    refines Δ ⊤ e e' (lrel_ref A) ⊢ refines Δ ⊤ (.load e) (.load e') A := by
+  show _ ⊢ refines Δ ⊤ (Ectx.fill [EctxItem.load] e) (Ectx.fill [EctxItem.load] e') A
   iintro IH
   iapply refines_bind [EctxItem.load] [EctxItem.load] $$ IH
   iintro %v %v' HRef
@@ -464,7 +465,7 @@ theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
 theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     Iris.inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
-    refines ⊤ pl(rand(#(.int z), #(.lbl α))) pl(rand(#(.int z), #(.lbl α'))) A := by
+    refines Δ ⊤ pl(rand(#(.int z), #(.lbl α))) pl(rand(#(.int z), #(.lbl α'))) A := by
   iintro #Hinv
   rw [Ectx.eq_fill_nil (pl(rand(#(.int z), #(.lbl α))) : Exp rT)]
   iapply refines_atomic_l (E' := ⊤ \ ↑(logN.@ (α, α'))) (OpenInv.of_atomic (Atomic.rand_lbl' z α))
@@ -503,7 +504,7 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
 
 theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
-    ⊢ refines ⊤ pl(rand(#(.int z), #(.unit))) pl(rand(#(.int z), #(.unit))) A := by
+    ⊢ refines Δ ⊤ pl(rand(#(.int z), #(.unit))) pl(rand(#(.int z), #(.unit))) A := by
   rw [Ectx.eq_fill_nil (pl(rand(#(.int z), #(.unit))) : Exp rT)]
   iapply refines_couple_rands_lr id id_dom_range id_bij_range hz
   iintro %m ⟨%hm0, %hmz⟩
@@ -513,10 +514,10 @@ theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
   iapply HA m hm0 hmz
 
 theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
-    refines ⊤ e1 e1' lrel_pos_nat ⊢@{IProp GF}
-    refines ⊤ e2 e2' lrel_tape -∗ refines ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
-  show _ ⊢@{IProp GF} refines ⊤ e2 e2' lrel_tape -∗
-    refines ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_nat
+    refines Δ ⊤ e1 e1' lrel_pos_nat ⊢@{IProp GF}
+    refines Δ ⊤ e2 e2' lrel_tape -∗ refines Δ ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
+  show _ ⊢@{IProp GF} refines Δ ⊤ e2 e2' lrel_tape -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_nat
   iintro IH1 IH2
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
   iintro %w %w' HTapeRel
@@ -534,8 +535,8 @@ theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
     (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
 theorem refines_rand_unit {e e' : Exp rT} : iprop%
-    refines ⊤ e e' lrel_pos_nat ⊢@{IProp GF}
-    refines ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
+    refines Δ ⊤ e e' lrel_pos_nat ⊢@{IProp GF}
+    refines Δ ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
       lrel_nat := by
   iintro IH
   iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH
@@ -548,10 +549,10 @@ theorem refines_rand_unit {e e' : Exp rT} : iprop%
     fun m h0 _ => lrel_nat_lit h0
 
 theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
-    refines ⊤ e1 e1' lrel_int ⊢@{IProp GF}
-    refines ⊤ e2 e2' lrel_tape -∗ refines ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
-  show _ ⊢@{IProp GF} refines ⊤ e2 e2' lrel_tape -∗
-    refines ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_int
+    refines Δ ⊤ e1 e1' lrel_int ⊢@{IProp GF}
+    refines Δ ⊤ e2 e2' lrel_tape -∗ refines Δ ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
+  show _ ⊢@{IProp GF} refines Δ ⊤ e2 e2' lrel_tape -∗
+    refines Δ ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_int
   iintro IH1 IH2
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
   iintro %w %w' HTapeRel
@@ -590,8 +591,8 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     iapply lrel_int_lit (-1)
 
 theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
-    refines ⊤ e e' lrel_int ⊢@{IProp GF}
-    refines ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
+    refines Δ ⊤ e e' lrel_int ⊢@{IProp GF}
+    refines Δ ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
       lrel_int := by
   iintro IH
   iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH

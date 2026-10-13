@@ -65,11 +65,11 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     LawfulProbLangℝ.unifUnitIsConcentrated
 
 section Unary
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc Δ GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
-    (▷ ∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp E pl(urand) Φ := by
+    (▷ ∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp Δ E pl(urand) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_step_concentrated Exp.urand_toVal?_eq_none
     Cfg.measurableSet_realLit_image Cfg.concentrated_primStep_urand
@@ -133,7 +133,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(urand) ∗
     (∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ ⤇ K.fill pl(#(.real (f r))) -∗ Φ (.real r)) ⊢
-    wp E pl(urand) Φ := by
+    wp Δ E pl(urand) Φ := by
   iintro ⟨Hj, Hcnt⟩
   iapply wp_lift_prim_steps_coupl Exp.urand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %ε ⟨Hσ, Hs, Hε⟩
@@ -168,15 +168,15 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc Δ GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
       (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) : iprop%
     (∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗
-      refines E (K.fill pl(#(.real r))) (K'.fill pl(#(.real (f r)))) A) ⊢
-    refines E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
+      refines Δ E (K.fill pl(#(.real r))) (K'.fill pl(#(.real (f r)))) A) ⊢
+    refines Δ E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
   iintro Hcnt
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos

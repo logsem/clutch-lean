@@ -22,23 +22,24 @@ open Cslib Exp
 section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc D GF]
+  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
   [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft]
 
 /-! ## Tctx → RelCtx lifting -/
 
+variable (D) in
 def TctxRelated (Δ : TyEnv rT GF) (Γtc : Tctx) (Γrc : RelCtx rT GF) : Prop :=
-  ∀ x, (Γtc x).map (fun τ => interp τ Δ) = Γrc.lookup x
+  ∀ x, (Γtc x).map (fun τ => interp D τ Δ) = Γrc.lookup x
 
 /-! ## Compatibility lemmas -/
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_var (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (x : Var) (τ : Ty)
-    (hΓ : Γ.lookup x = some (interp τ Δ)) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ (.fvar x) (.fvar x) τ := by
+    (hΓ : Γ.lookup x = some (interp D τ Δ)) :
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ (.fvar x) (.fvar x) τ := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
-  icases env_ltyped2_lookup Γ vs x (interp τ Δ) hΓ $$ Hvs with ⟨%v1, %v2, %hvs_eq, HA⟩
+  icases env_ltyped2_lookup Γ vs x (interp D τ Δ) hΓ $$ Hvs with ⟨%v1, %v2, %hvs_eq, HA⟩
   ihave %hfst_closed := env_ltyped2_fst_allClosed Γ vs $$ Hvs
   ihave %hsnd_closed := env_ltyped2_snd_allClosed Γ vs $$ Hvs
   have hfst_lookup : SubstMap.lookup vs.fst x = some v1.1 := by
@@ -77,8 +78,8 @@ private theorem fv_subset_substMap_dom {Γ : RelCtx rT GF} {vs : ValSubstMap rT}
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A B : lrel rT GF}
     {f : Exp rT → Exp rT} (hf : ∀ σ t, substMap σ (f t) = f (substMap σ t))
-    (H : ∀ t t', refines ⊤ t t' A ⊢ refines ⊤ (f t) (f t') B) :
-    bin_log_related ⊤ Γ e e' A ⊢ bin_log_related ⊤ Γ (f e) (f e') B := by
+    (H : ∀ t t', refines D ⊤ t t' A ⊢ refines D ⊤ (f t) (f t') B) :
+    bin_log_related D ⊤ Γ e e' A ⊢ bin_log_related D ⊤ Γ (f e) (f e') B := by
   unfold bin_log_related
   iintro IH %vs #Hvs
   ihave IH' := IH $$ %vs Hvs
@@ -90,9 +91,9 @@ private theorem bin_log_related_lift2 {Γ : RelCtx rT GF} {e1 e2 e1' e2' : Exp r
     {A1 A2 B : lrel rT GF} {f : Exp rT → Exp rT → Exp rT}
     (hf : ∀ σ t1 t2, substMap σ (f t1 t2) = f (substMap σ t1) (substMap σ t2))
     (H : ∀ t1 t2 t1' t2', iprop%
-      refines ⊤ t1 t1' A1 ⊢ refines ⊤ t2 t2' A2 -∗ refines ⊤ (f t1 t2) (f t1' t2') B) : iprop%
-    bin_log_related ⊤ Γ e1 e1' A1 ⊢
-    bin_log_related ⊤ Γ e2 e2' A2 -∗ bin_log_related ⊤ Γ (f e1 e2) (f e1' e2') B := by
+      refines D ⊤ t1 t1' A1 ⊢ refines D ⊤ t2 t2' A2 -∗ refines D ⊤ (f t1 t2) (f t1' t2') B) : iprop%
+    bin_log_related D ⊤ Γ e1 e1' A1 ⊢
+    bin_log_related D ⊤ Γ e2 e2' A2 -∗ bin_log_related D ⊤ Γ (f e1 e2) (f e1' e2') B := by
   unfold bin_log_related
   iintro IH1 IH2 %vs #Hvs
   ihave IH1' := IH1 $$ %vs Hvs
@@ -106,11 +107,11 @@ private theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' 
     (hf : ∀ σ t0 t1 t2,
       substMap σ (f t0 t1 t2) = f (substMap σ t0) (substMap σ t1) (substMap σ t2))
     (H : ∀ t0 t1 t2 t0' t1' t2', iprop%
-      refines ⊤ t0 t0' A0 ⊢ refines ⊤ t1 t1' A1 -∗ refines ⊤ t2 t2' A2 -∗
-      refines ⊤ (f t0 t1 t2) (f t0' t1' t2') B) : iprop%
-    bin_log_related ⊤ Γ e0 e0' A0 ⊢
-    bin_log_related ⊤ Γ e1 e1' A1 -∗ bin_log_related ⊤ Γ e2 e2' A2 -∗
-    bin_log_related ⊤ Γ (f e0 e1 e2) (f e0' e1' e2') B := by
+      refines D ⊤ t0 t0' A0 ⊢ refines D ⊤ t1 t1' A1 -∗ refines D ⊤ t2 t2' A2 -∗
+      refines D ⊤ (f t0 t1 t2) (f t0' t1' t2') B) : iprop%
+    bin_log_related D ⊤ Γ e0 e0' A0 ⊢
+    bin_log_related D ⊤ Γ e1 e1' A1 -∗ bin_log_related D ⊤ Γ e2 e2' A2 -∗
+    bin_log_related D ⊤ Γ (f e0 e1 e2) (f e0' e1' e2') B := by
   unfold bin_log_related
   iintro IH0 IH1 IH2 %vs #Hvs
   ihave IH0' := IH0 $$ %vs Hvs
@@ -122,7 +123,7 @@ private theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lrel rT GF}
     (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} bin_log_related ⊤ Γ (.lit l) (.lit l) A := by
+    ⊢@{IProp GF} bin_log_related D ⊤ Γ (.lit l) (.lit l) A := by
   unfold bin_log_related
   iintro %vs -
   rw [substMap_lit, substMap_lit, show lit l = (Val.ofBaseLit l).1 from rfl]
@@ -133,62 +134,64 @@ private theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lr
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_pair (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ1 τ2 : Ty} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' τ1 ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' τ2 -∗
-    bin_log_related_ty ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' τ1 ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' τ2 -∗
+    bin_log_related_ty D ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
   bin_log_related_lift2 substMap_pair fun _ _ _ _ => refines_pair
 
 theorem bin_log_related_fst (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢ bin_log_related_ty ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
+    bin_log_related_ty D ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
   bin_log_related_lift1 substMap_fst fun _ _ => refines_fst
 
 theorem bin_log_related_snd (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢ bin_log_related_ty ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
+    bin_log_related_ty D ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
   bin_log_related_lift1 substMap_snd fun _ _ => refines_snd
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_injl (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' τ1 ⊢
-    bin_log_related_ty ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
+    bin_log_related_ty D ⊤ Δ Γ e e' τ1 ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
   bin_log_related_lift1 substMap_inl fun _ _ => refines_injl
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_injr (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' τ2 ⊢
-    bin_log_related_ty ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
+    bin_log_related_ty D ⊤ Δ Γ e e' τ2 ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
   bin_log_related_lift1 substMap_inr fun _ _ => refines_injr
 
 theorem bin_log_related_case (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e0 e1 e2 e0' e1' e2' : Exp rT} {τ1 τ2 τ3 : Ty} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e0 e0' (.sum τ1 τ2) ⊢
-    bin_log_related_ty ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
-    bin_log_related_ty ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
-    bin_log_related_ty ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
+    bin_log_related_ty D ⊤ Δ Γ e0 e0' (.sum τ1 τ2) ⊢
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
+    bin_log_related_ty D ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
   bin_log_related_lift3 substMap_case fun _ _ _ _ _ _ => refines_case
 
 theorem bin_log_related_if (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e0 e1 e2 e0' e1' e2' : Exp rT} {τ : Ty} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e0 e0' .bool ⊢
-    bin_log_related_ty ⊤ Δ Γ e1 e1' τ -∗
-    bin_log_related_ty ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e0 e0' .bool ⊢
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' τ -∗
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' τ -∗
+    bin_log_related_ty D ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
   bin_log_related_lift3 substMap_cond fun _ _ _ _ _ _ => refines_if
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_app (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ1 τ2 : Ty} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' (.arrow τ1 τ2) ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' τ1 -∗
-    bin_log_related_ty ⊤ Δ Γ (.app e1 e2) (.app e1' e2') τ2 :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' (.arrow τ1 τ2) ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' τ1 -∗
+    bin_log_related_ty D ⊤ Δ Γ (.app e1 e2) (.app e1' e2') τ2 :=
   bin_log_related_lift2 substMap_app fun _ _ _ _ => refines_app
 
 theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty}
     (L : Finset Var) (he_lc : ∀ x ∉ L, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ L, (open' e' (.fvar x)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ x ∉ L, ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((x, interp τ1 Δ) :: Γ)
+    (Hbody : ∀ x ∉ L, ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ ((x, interp D τ1 Δ) :: Γ)
       (open' e (.fvar x)) (open' e' (.fvar x)) τ2) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ (.lam e) (.lam e') (.arrow τ1 τ2) := by
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ (.lam e) (.lam e') (.arrow τ1 τ2) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam, interp_arrow]
@@ -214,8 +217,8 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   simp only [Finset.mem_union, not_or] at hx
   obtain ⟨⟨⟨hxL, hxFvE⟩, hxFvE'⟩, hxNotDom⟩ := hx
   let vs' : ValSubstMap rT := (x, (v1, v2)) :: vs
-  ihave Hvs' : iprop(env_ltyped2 ((x, interp τ1 Δ) :: Γ) vs') $$ [HA]
-  · iapply env_ltyped2_insert Γ vs x (interp τ1 Δ) v1 v2
+  ihave Hvs' : iprop(env_ltyped2 ((x, interp D τ1 Δ) :: Γ) vs') $$ [HA]
+  · iapply env_ltyped2_insert Γ vs x (interp D τ1 Δ) v1 v2
       hv1v2_closed.1.toFvSubsetEmpty hv1v2_closed.2.toFvSubsetEmpty
     iframe HA Hvs
   ihave HbodyApplied := Hbody x hxL $$ Hvs'
@@ -236,9 +239,9 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     (L : Finset Var) (he_lc : ∀ f ∉ L, (open' e (.fvar f)).IsLocallyClosed)
     (he'_lc : ∀ f ∉ L, (open' e' (.fvar f)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ f ∉ L, ⊢@{IProp GF} bin_log_related_ty ⊤ Δ ((f, interp (.arrow τ1 τ2) Δ) :: Γ)
+    (Hbody : ∀ f ∉ L, ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ ((f, interp D (.arrow τ1 τ2) Δ) :: Γ)
       (open' e (.fvar f)) (open' e' (.fvar f)) (.arrow τ1 τ2)) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ (.fix e) (.fix e') (.arrow τ1 τ2) := by
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ (.fix e) (.fix e') (.arrow τ1 τ2) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_fix, substMap_fix, interp_arrow]
@@ -262,7 +265,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   iapply refines_ret (e1 := .fix (substMap vs.fst e)) (e2 := .fix (substMap vs.snd e'))
     (v1 := ⟨_, IsVal.fix (by is_lc), by is_lc⟩) (v2 := ⟨_, IsVal.fix (by is_lc), by is_lc⟩) rfl rfl
   imodintro
-  iapply loeb_wand (P := (lrel_arr (interp τ1 Δ) (interp τ2 Δ)).car
+  iapply loeb_wand (P := (lrel_arr D (interp D τ1 Δ) (interp D τ2 Δ)).car
     ⟨.fix (substMap vs.fst e), IsVal.fix (by is_lc), by is_lc⟩
     ⟨.fix (substMap vs.snd e'), IsVal.fix (by is_lc), by is_lc⟩)
   iintro !> #IH
@@ -279,9 +282,9 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   let fixv : Val rT := ⟨.fix (substMap vs.fst e), IsVal.fix (by is_lc), by is_lc⟩
   let fixv' : Val rT := ⟨.fix (substMap vs.snd e'), IsVal.fix (by is_lc), by is_lc⟩
   let vs' : ValSubstMap rT := (f, (fixv, fixv')) :: vs
-  ihave Hvs' : iprop(env_ltyped2 ((f, interp (.arrow τ1 τ2) Δ) :: Γ) vs') $$ [IH]
+  ihave Hvs' : iprop(env_ltyped2 ((f, interp D (.arrow τ1 τ2) Δ) :: Γ) vs') $$ [IH]
   · rw [interp_arrow]
-    iapply env_ltyped2_insert Γ vs f (lrel_arr (interp τ1 Δ) (interp τ2 Δ))
+    iapply env_ltyped2_insert Γ vs f (lrel_arr D (interp D τ1 Δ) (interp D τ2 Δ))
       fixv fixv' hfix_closed.1.toFvSubsetEmpty hfix_closed.2.toFvSubsetEmpty
     isplitr [IH]
     · iunfold lrel_arr
@@ -291,7 +294,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   obtain ⟨hbridge_fst, hbridge_snd⟩ := substMap_open_fresh_pair (vs' := vs') rfl
     hvsfst_closed hvssnd_closed hfFvE hfFvE' hfNotDom hfix_closed.1 hfix_closed.2
   isimp only [hbridge_fst, hbridge_snd, interp_arrow] at HbodyApplied
-  ihave HArgs : iprop(refines ⊤ v1.1 v2.1 (interp τ1 Δ)) $$ [HA]
+  ihave HArgs : iprop(refines D ⊤ v1.1 v2.1 (interp D τ1 Δ)) $$ [HA]
   · iapply refines_ret rfl rfl
     imodintro
     iexact HA
@@ -303,36 +306,37 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
 section Discrete
 
 theorem bin_log_related_alloc (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' τ ⊢ bin_log_related_ty ⊤ Δ Γ (.alloc e) (.alloc e') (.ref τ) :=
+    bin_log_related_ty D ⊤ Δ Γ e e' τ ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.alloc e) (.alloc e') (.ref τ) :=
   bin_log_related_lift1 substMap_alloc fun _ _ => refines_alloc
 
 theorem bin_log_related_load (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (.ref τ) ⊢ bin_log_related_ty ⊤ Δ Γ (.load e) (.load e') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e e' (.ref τ) ⊢ bin_log_related_ty D ⊤ Δ Γ (.load e) (.load e') τ :=
   bin_log_related_lift1 substMap_load fun _ _ => refines_load
 
 theorem bin_log_related_store (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ : Ty} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' (.ref τ) ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty ⊤ Δ Γ (.store e1 e2) (.store e1' e2') .unit :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' (.ref τ) ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' τ -∗
+    bin_log_related_ty D ⊤ Δ Γ (.store e1 e2) (.store e1' e2') .unit :=
   bin_log_related_lift2 substMap_store fun _ _ _ _ => refines_store
 
 theorem bin_log_related_alloctape (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} :
-    bin_log_related_ty ⊤ Δ Γ e e' .int ⊢ bin_log_related_ty ⊤ Δ Γ (.tape e) (.tape e') .tape :=
+    bin_log_related_ty D ⊤ Δ Γ e e' .int ⊢ bin_log_related_ty D ⊤ Δ Γ (.tape e) (.tape e') .tape :=
   bin_log_related_lift1 substMap_tape fun _ _ => refines_alloctape
 
 theorem bin_log_related_rand_tape (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e1 e1' e2 e2' : Exp rT} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' .tape -∗
-    bin_log_related_ty ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' .int ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' .tape -∗
+    bin_log_related_ty D ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
   bin_log_related_lift2 substMap_rand fun _ _ _ _ => refines_rand_tape_int
 
 theorem bin_log_related_rand_unit (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e1 e1' e2 e2' : Exp rT} : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' .unit -∗
-    bin_log_related_ty ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' .int ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' .unit -∗
+    bin_log_related_ty D ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
   bin_log_related_lift2 substMap_rand fun t1 t2 t1' _ => by
     rw [interp_int, interp_unit]
     iintro IH1 IH2
@@ -354,14 +358,14 @@ end Discrete
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem refines_proper_entails (E : CoPset) (e e' : Exp rT) {A B : lrel rT GF} (h : A = B) :
-    refines E e e' A ⊢ refines E e e' B :=
+    refines D E e e' A ⊢ refines D E e e' B :=
   (BI.equiv_iff.mp (refines_proper h)).1
 
 theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty}
     (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ A, ⊢@{IProp GF} □ (bin_log_related_ty ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
+    (Hbody : ∀ A, ⊢@{IProp GF} □ (bin_log_related_ty D ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam]
@@ -369,7 +373,7 @@ theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   ihave %hvssnd_closed := env_ltyped2_snd_allClosed Γ vs $$ Hvs
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
-  rw [show interp (.forall' τ) Δ = lrel_forall fun A => interp τ (TyEnv.cons A Δ) from rfl]
+  rw [show interp D (.forall' τ) Δ = lrel_forall D fun A => interp D τ (TyEnv.cons A Δ) from rfl]
   iapply refines_forall (substMap_lc hvsfst_closed he_lc) (substMap_lc hvssnd_closed he'_lc)
     (substMap_fv_eq_empty hvsfst_closed he_dom_fst) (substMap_fv_eq_empty hvssnd_closed he_dom_snd)
   iintro !> %A
@@ -377,8 +381,8 @@ theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (.forall' τ) ⊢
-    bin_log_related_ty ⊤ Δ Γ (.app e pl(#(.unit))) (.app e' pl(#(.unit))) (τ.single τ') := by
+    bin_log_related_ty D ⊤ Δ Γ e e' (.forall' τ) ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.app e pl(#(.unit))) (.app e' pl(#(.unit))) (τ.single τ') := by
   iintro IH
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -390,15 +394,15 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
       Ectx.fill [EctxItem.appL .unit] (substMap vs.snd e') from rfl]
   iapply refines_bind [EctxItem.appL .unit] [EctxItem.appL .unit] $$ IH'
   iintro %v %v' Hv
-  isimp only [show (interp (.forall' τ) Δ).car v v' =
-    (lrel_forall fun A => interp τ (TyEnv.cons A Δ)).car v v' from rfl] at Hv
+  isimp only [show (interp D (.forall' τ) Δ).car v v' =
+    (lrel_forall D fun A => interp D τ (TyEnv.cons A Δ)).car v v' from rfl] at Hv
   iunfold lrel_forall at Hv
-  ihave HvSpec := Hv $$ %(interp τ' Δ)
-  ihave HvArr := lrel_arr_unfold_wand lrel_unit (interp τ (TyEnv.cons (interp τ' Δ) Δ)) v v'
+  ihave HvSpec := Hv $$ %(interp D τ' Δ)
+  ihave HvArr := lrel_arr_unfold_wand lrel_unit (interp D τ (TyEnv.cons (interp D τ' Δ) Δ)) v v'
     $$ HvSpec
   ihave HvArr2 := HvArr $$ %(.unit : Val rT) %(.unit : Val rT)
-  ihave HvApp : iprop(refines ⊤ (app v.1 pl(#(.unit))) (app v'.1 pl(#(.unit)))
-      (interp τ (TyEnv.cons (interp τ' Δ) Δ))) $$ [HvArr2]
+  ihave HvApp : iprop(refines D ⊤ (app v.1 pl(#(.unit))) (app v'.1 pl(#(.unit)))
+      (interp D τ (TyEnv.cons (interp D τ' Δ) Δ))) $$ [HvArr2]
   · iapply HvArr2
     iapply lrel_unit_lit
   rw [interp_subst τ' τ Δ,
@@ -408,22 +412,22 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
-    (interp (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ▷ (interp τ (TyEnv.cons (interp (.rec' τ) Δ) Δ)).car v v') :=
+    (interp D (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+      ▷ (interp D τ (TyEnv.cons (interp D (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
-    { f := fun X => interp τ (TyEnv.cons X Δ)
-      ne := ⟨fun {_ _ _} hXY => (interpNE τ).ne (TyEnv.cons_ne_head hXY)⟩ })
+    { f := fun X => interp D τ (TyEnv.cons X Δ)
+      ne := ⟨fun {_ _ _} hXY => (interpNE D τ).ne (TyEnv.cons_ne_head hXY)⟩ })
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
-    (interp (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ∃ A, (interp τ (TyEnv.cons A Δ)).car v v') :=
+    (interp D (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+      ∃ A, (interp D τ (TyEnv.cons A Δ)).car v v') :=
   rfl
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_fold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (τ.single (.rec' τ)) ⊢
-    bin_log_related_ty ⊤ Δ Γ e e' (.rec' τ) := by
+    bin_log_related_ty D ⊤ Δ Γ e e' (τ.single (.rec' τ)) ⊢
+    bin_log_related_ty D ⊤ Δ Γ e e' (.rec' τ) := by
   iintro IH
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -438,8 +442,8 @@ theorem bin_log_related_fold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iexact Hv
 
 theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (.rec' τ) ⊢
-    bin_log_related_ty ⊤ Δ Γ (.app recUnfold e) (.app recUnfold e') (τ.single (.rec' τ)) := by
+    bin_log_related_ty D ⊤ Δ Γ e e' (.rec' τ) ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.app recUnfold e) (.app recUnfold e') (τ.single (.rec' τ)) := by
   iintro IH
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -473,7 +477,8 @@ theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Ex
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
-    bin_log_related_ty ⊤ Δ Γ e e' (τ.single τ') ⊢ bin_log_related_ty ⊤ Δ Γ e e' (.exists' τ) := by
+    bin_log_related_ty D ⊤ Δ Γ e e' (τ.single τ') ⊢
+    bin_log_related_ty D ⊤ Δ Γ e e' (.exists' τ) := by
   iintro IH
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -484,17 +489,17 @@ theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   ihave %Hclosed := interp_closed τ v v' $$ Hv
   rw [interp_exists_car Δ τ v v']
   iframe %Hclosed
-  iexists interp τ' Δ
+  iexists interp D τ' Δ
   iexact Hv
 
 theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (L : Finset Var)
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
-    (HIH1 : ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ e1 e1' (.exists' τ))
+    (HIH1 : ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ e1 e1' (.exists' τ))
     (he2_lc : ∀ x ∉ L, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ L, (open' e2' (.fvar x)).IsLocallyClosed)
-    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ L, ⊢@{IProp GF} bin_log_related_ty ⊤ (TyEnv.cons A Δ)
-      ((x, interp τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 := by
+    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ L, ⊢@{IProp GF} bin_log_related_ty D ⊤ (TyEnv.cons A Δ)
+      ((x, interp D τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 := by
   unfold bin_log_related_ty bin_log_related at HIH1 HIH2 ⊢
   iintro %vs #Hvs
   ihave HIH1' := HIH1 $$ %vs Hvs
@@ -524,8 +529,8 @@ theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (L : Finse
   iapply refines_pure_r (e' := open' (substMap vs.snd e2') v'.1) (Hex := pureExec_app_lam)
     ⟨v'.2.toIsValue, by is_lc⟩
   let vs' : ValSubstMap rT := (x, (v, v')) :: vs
-  ihave Hvs' : iprop(env_ltyped2 ((x, interp τ (TyEnv.cons A Δ)) :: Γ) vs') $$ [HvA]
-  · iapply env_ltyped2_insert Γ vs x (interp τ (TyEnv.cons A Δ)) v v'
+  ihave Hvs' : iprop(env_ltyped2 ((x, interp D τ (TyEnv.cons A Δ)) :: Γ) vs') $$ [HvA]
+  · iapply env_ltyped2_insert Γ vs x (interp D τ (TyEnv.cons A Δ)) v v'
       hvc.1.toFvSubsetEmpty hvc.2.toFvSubsetEmpty
     iframe HvA Hvs
   ihave HBody_shift := HIH2 A x hxL $$ Hvs'
@@ -545,21 +550,21 @@ lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step. -/
 private theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) {l : BaseLit rT}
     {A : lrel rT GF} (heval : op.eval w1.1 w2.1 = some (.lit l))
     (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} refines ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
+    ⊢@{IProp GF} refines D ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
   refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
 
 private theorem refines_unop_val (op : UnOp) (w : Val rT) {l : BaseLit rT} {A : lrel rT GF}
     (heval : op.eval w.1 = some (.lit l)) (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} refines ⊤ (.unop op w.1) (.unop op w.1) A :=
+    ⊢@{IProp GF} refines D ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT) {A B : lrel rT GF}
     {e1 e2 e1' e2' : Exp rT} (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
-    refines ⊤ e1 e1' A ⊢
-    refines ⊤ e2 e2' A -∗
-    (∀ i1 i2, refines ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) B) -∗
-    refines ⊤ (.binop op e1 e2) (.binop op e1' e2') B := by
+    refines D ⊤ e1 e1' A ⊢
+    refines D ⊤ e2 e2' A -∗
+    (∀ i1 i2, refines D ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) B) -∗
+    refines D ⊤ (.binop op e1 e2) (.binop op e1' e2') B := by
   iintro IH1 IH2 Hcont
   rw [show binop op e1 e2 = Ectx.fill [EctxItem.binopR op e1] e2 from rfl,
     show binop op e1' e2' = Ectx.fill [EctxItem.binopR op e1'] e2' from rfl]
@@ -580,9 +585,9 @@ private theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) {A B : lrel rT GF}
     {e e' : Exp rT} (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
-    refines ⊤ e e' A ⊢
-    (∀ i, refines ⊤ (.unop op (V i).1) (.unop op (V i).1) B) -∗
-    refines ⊤ (.unop op e) (.unop op e') B := by
+    refines D ⊤ e e' A ⊢
+    (∀ i, refines D ⊤ (.unop op (V i).1) (.unop op (V i).1) B) -∗
+    refines D ⊤ (.unop op e) (.unop op e') B := by
   iintro IH Hcont
   rw [show unop op e = Ectx.fill [EctxItem.unop op] e from rfl,
     show unop op e' = Ectx.fill [EctxItem.unop op] e' from rfl]
@@ -595,9 +600,9 @@ private theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) 
 
 theorem bin_log_related_int_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.intResTy = some τ) : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' .int -∗
-    bin_log_related_ty ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' .int ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' .int -∗
+    bin_log_related_ty D ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_int]
     iintro IH1 IH2
@@ -610,9 +615,9 @@ theorem bin_log_related_int_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : B
 
 theorem bin_log_related_bool_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.boolResTy = some τ) : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' .bool ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' .bool -∗
-    bin_log_related_ty ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' .bool ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' .bool -∗
+    bin_log_related_ty D ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_bool]
     iintro IH1 IH2
@@ -623,7 +628,8 @@ theorem bin_log_related_bool_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : 
 
 theorem bin_log_related_int_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.intResTy = some τ) :
-    bin_log_related_ty ⊤ Δ Γ e e' .int ⊢ bin_log_related_ty ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e e' .int ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_int]
     iintro IH
@@ -638,7 +644,8 @@ theorem bin_log_related_int_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : Un
 
 theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) :
-    bin_log_related_ty ⊤ Δ Γ e e' .real ⊢ bin_log_related_ty ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e e' .real ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_real]
     iintro IH
@@ -649,9 +656,9 @@ theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : U
 
 theorem bin_log_related_real_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' .real ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' .real -∗
-    bin_log_related_ty ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' .real ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' .real -∗
+    bin_log_related_ty D ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_real]
     iintro IH1 IH2
@@ -663,7 +670,7 @@ theorem bin_log_related_real_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : 
       | (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
 theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γ .urand .urand .real := by
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γ .urand .urand .real := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs -
   rw [substMap_urand, substMap_urand, interp_real,
@@ -678,7 +685,8 @@ theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
 
 theorem bin_log_related_bool_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.boolResTy = some τ) :
-    bin_log_related_ty ⊤ Δ Γ e e' .bool ⊢ bin_log_related_ty ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+    bin_log_related_ty D ⊤ Δ Γ e e' .bool ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_bool]
     iintro IH
@@ -691,9 +699,9 @@ theorem bin_log_related_bool_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : U
 
 theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ : Ty} (HUnboxed : UnboxedType τ) : iprop%
-    bin_log_related_ty ⊤ Δ Γ e1 e1' τ ⊢
-    bin_log_related_ty ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty ⊤ Δ Γ (.binop .eq e1 e2) (.binop .eq e1' e2') .bool := by
+    bin_log_related_ty D ⊤ Δ Γ e1 e1' τ ⊢
+    bin_log_related_ty D ⊤ Δ Γ e2 e2' τ -∗
+    bin_log_related_ty D ⊤ Δ Γ (.binop .eq e1 e2) (.binop .eq e1' e2') .bool := by
   iintro IH1 IH2
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -748,7 +756,7 @@ omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
     (hv : v = .ofBaseLit l') (hv' : v' = .ofBaseLit l') (hll : l = l' ∨ ¬ (l == l') = true) :
     ⊢@{IProp GF} (∃ (b b' : Val rT), ⌜Pat.tryMatch (.lit l) v.1 = some b.1 ∧
-      Pat.tryMatch (.lit l) v'.1 = some b'.1⌝ ∗ (interp Ty.unit Δ).car b b') ∨
+      Pat.tryMatch (.lit l) v'.1 = some b'.1⌝ ∗ (interp D Ty.unit Δ).car b b') ∨
       ⌜Pat.tryMatch (.lit l) v.1 = none ∧ Pat.tryMatch (.lit l) v'.1 = none⌝ := by
   subst hv hv'
   rcases hll with rfl | hne
@@ -765,9 +773,9 @@ private theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
     (Hpat : PatTyped τs p τb) (v v' : Val rT) :
-    (interp τs Δ).car v v' ⊢@{IProp GF}
+    (interp D τs Δ).car v v' ⊢@{IProp GF}
       (∃ (b b' : Val rT), ⌜Pat.tryMatch p v.1 = some b.1 ∧ Pat.tryMatch p v'.1 = some b'.1⌝ ∗
-        (interp τb Δ).car b b') ∨
+        (interp D τb Δ).car b b') ∨
       ⌜Pat.tryMatch p v.1 = none ∧ Pat.tryMatch p v'.1 = none⌝ := by
   induction Hpat generalizing v v' with
   | @wildcard τ =>
@@ -864,8 +872,8 @@ theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
 
 theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT}
     {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p τb) :
-    bin_log_related_ty ⊤ Δ Γ e e' τs ⊢
-    bin_log_related_ty ⊤ Δ Γ (.scrut e p) (.scrut e' p) (.sum τb .unit) := by
+    bin_log_related_ty D ⊤ Δ Γ e e' τs ⊢
+    bin_log_related_ty D ⊤ Δ Γ (.scrut e p) (.scrut e' p) (.sum τb .unit) := by
   iintro IH
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
@@ -913,21 +921,21 @@ Every well-typed expression is logically related to itself. -/
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem TctxRelated.lookup_isSome {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) {x : Var} (hx : (Γtc x).isSome) : (Γrc.lookup x).isSome := by
+    (HCtx : TctxRelated D Δ Γtc Γrc) {x : Var} (hx : (Γtc x).isSome) : (Γrc.lookup x).isSome := by
   rw [← HCtx x]
   simpa using hx
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem TctxRelated.lookup_some {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) {x : Var} {τ : Ty} (hx : Γtc x = some τ) :
-    Γrc.lookup x = some (interp τ Δ) := by
+    (HCtx : TctxRelated D Δ Γtc Γrc) {x : Var} {τ : Ty} (hx : Γtc x = some τ) :
+    Γrc.lookup x = some (interp D τ Δ) := by
   rw [← HCtx x, hx]
   rfl
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem TctxRelated.shift {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) (A : lrel rT GF) :
-    TctxRelated (TyEnv.cons A Δ) Γtc.shift Γrc := by
+    (HCtx : TctxRelated D Δ Γtc Γrc) (A : lrel rT GF) :
+    TctxRelated D (TyEnv.cons A Δ) Γtc.shift Γrc := by
   intro x
   have heq := HCtx x
   unfold Tctx.shift
@@ -939,8 +947,8 @@ theorem TctxRelated.shift {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
-    TctxRelated Δ (Γtc.insert x τ) ((x, interp τ Δ) :: Γrc) := by
+    (HCtx : TctxRelated D Δ Γtc Γrc) (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
+    TctxRelated D Δ (Γtc.insert x τ) ((x, interp D τ Δ) :: Γrc) := by
   intro y
   unfold Tctx.insert RelCtx.lookup
   have heq := HCtx y
@@ -960,18 +968,18 @@ theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF
       | none => rw [hΓy] at heq; simp at heq
       | some τ' =>
         rw [hΓy] at heq; simp at heq
-        show some (interp τ' Δ) = some A
+        show some (interp D τ' Δ) = some A
         rw [heq]
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 theorem fv_subset_relCtxDom {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) :
+    (HCtx : TctxRelated D Δ Γtc Γrc) {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset :=
   fun x hx => RelCtx.mem_of_lookup_isSome (HCtx.lookup_isSome (Hty.fvSubset x hx))
 
 omit [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] in
 private theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
-    (HCtx : TctxRelated Δ Γtc Γrc) {L : Finset Var} {e : Exp rT} {τ1 τ2 : Ty}
+    (HCtx : TctxRelated D Δ Γtc Γrc) {L : Finset Var} {e : Exp rT} {τ1 τ2 : Ty}
     (Hbody : ∀ x ∉ L, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset := by
   intro z hz
@@ -994,9 +1002,10 @@ private theorem not_mem_union_dom {L : Finset Var} {Γrc : RelCtx rT GF} {x : Va
   simp only [Finset.mem_union, not_or] at hx
   exact ⟨hx.1, RelCtx.lookup_eq_none_of_not_mem hx.2⟩
 
+variable (D) in
 theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
-    (Γrc : RelCtx rT GF) (HCtx : TctxRelated Δ Γtc Γrc) :
-    ⊢@{IProp GF} bin_log_related_ty ⊤ Δ Γrc e e τ := by
+    (Γrc : RelCtx rT GF) (HCtx : TctxRelated D Δ Γtc Γrc) :
+    ⊢@{IProp GF} bin_log_related_ty D ⊤ Δ Γrc e e τ := by
   induction Hty generalizing Δ Γrc with
   | @fvar _ x τ hx => exact bin_log_related_var Δ Γrc x τ (HCtx.lookup_some hx)
   | @lit_int _ n => exact bin_log_related_lit Γrc _ (lrel_int_lit n)
@@ -1079,11 +1088,11 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
         ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
 
 theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
-    ⊢@{IProp GF} refines ⊤ e e (interp τ Δ) := by
-  have Hfund := fundamental Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])
+    ⊢@{IProp GF} refines D ⊤ e e (interp D τ Δ) := by
+  have Hfund := fundamental D Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])
   unfold bin_log_related_ty bin_log_related at Hfund
-  show ⊢@{IProp GF} refines ⊤ (substMap (ValSubstMap.fst ([] : ValSubstMap rT)) e)
-    (substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e) (interp τ Δ)
+  show ⊢@{IProp GF} refines D ⊤ (substMap (ValSubstMap.fst ([] : ValSubstMap rT)) e)
+    (substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e) (interp D τ Δ)
   iapply Hfund $$ %([] : ValSubstMap rT)
   iapply env_ltyped2_empty
 

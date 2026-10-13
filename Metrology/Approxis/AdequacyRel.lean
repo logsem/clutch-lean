@@ -45,19 +45,19 @@ variable {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.I
   [Δ.IsExpectationAdditive]
 
 theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
-    (A : ∀ (_ : ApproxisRGS rT .hasNoLC Δ GF), lrel rT GF)
+    (A : ∀ (_ : ApproxisRGS rT .hasNoLC GF), lrel rT GF)
     (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
-    (HA : ∀ (IR : ApproxisRGS rT .hasNoLC Δ GF) (v v' : Val rT),
+    (HA : ∀ (IR : ApproxisRGS rT .hasNoLC GF) (v v' : Val rT),
       ⊢@{IProp GF} (A IR).car v v' -∗ ⌜φ v v'⌝)
-    (Hlog : ∀ (IR : ApproxisRGS rT .hasNoLC Δ GF), ⊢@{IProp GF} ↯ ε -∗ refines ⊤ e e' (A IR)) :
+    (Hlog : ∀ (IR : ApproxisRGS rT .hasNoLC GF), ⊢@{IProp GF} ↯ ε -∗ refines Δ ⊤ e e' (A IR)) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
   refine wp_adequacy_error_lim (GF := GF) e e' σ σ' ε φ fun IGS ε' hε' => ?_
   iintro He' Herr
   imod Iris.NonAtomicInvariant.alloc with ⟨%γ, Htok⟩
-  set IR : ApproxisRGS rT .hasNoLC Δ GF := { approxisGS := IGS, naInvG := _, nais := γ }
+  set IR : ApproxisRGS rT .hasNoLC GF := { approxisGS := IGS, naInvG := _, nais := γ }
   icases ErrorCredit.difference hε'.le $$ Herr with ⟨Hεc, Hrest⟩
   ihave HlogR := Hlog IR $$ Hεc
-  iunfold refines at HlogR
+  iunfold refines  at HlogR
   rw [spec_eq_fill_nil e']
   ispecialize HlogR $$ %([] : Ectx rT) %(ε' - ε) He' Htok Hrest %(tsub_pos_of_lt hε')
   iapply ApproxisWpGS.wp_mono $$ HlogR
@@ -69,11 +69,11 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
   iapply HA IR v v' $$ HAv
 
 theorem refines_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
-    (A : ∀ (_ : ApproxisRGS rT .hasNoLC Δ GF), lrel rT GF)
+    (A : ∀ (_ : ApproxisRGS rT .hasNoLC GF), lrel rT GF)
     (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
-    (HA : ∀ (IR : ApproxisRGS rT .hasNoLC Δ GF) (v v' : Val rT),
+    (HA : ∀ (IR : ApproxisRGS rT .hasNoLC GF) (v v' : Val rT),
       ⊢@{IProp GF} (A IR).car v v' -∗ ⌜φ v v'⌝)
-    (Hlog : ∀ (IR : ApproxisRGS rT .hasNoLC Δ GF), ⊢@{IProp GF} refines ⊤ e e' (A IR)) :
+    (Hlog : ∀ (IR : ApproxisRGS rT .hasNoLC GF), ⊢@{IProp GF} refines Δ ⊤ e e' (A IR)) :
     Δ.Codensity 1 0 (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   approximates_coupling A φ e e' σ σ' 0 HA fun IR => by
     iintro -

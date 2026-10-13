@@ -41,13 +41,13 @@ section Adequacy
 
 variable {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous]
   [Δ.IsExpectationAdditive]
-variable {GF : BundledGFunctors} [IA : ApproxisGS rT .hasNoLC Δ GF]
+variable {GF : BundledGFunctors} [IA : ApproxisGS rT .hasNoLC GF]
 
 omit [Δ.IsZeroLeft] [Δ.IsLeftContinuous] in
 theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
     (σ₁' : State rT) (Z : State rT → Cfg rT → ENNReal → IProp GF) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) : iprop%
-    specCoupl ∅ σ₁ e₁' σ₁' ε Z ⊢
+    specCoupl Δ ∅ σ₁ e₁' σ₁' ε Z ⊢
     (∀ σ₂ e₂' σ₂' ε', Z σ₂ ⟨e₂', σ₂'⟩ ε' -∗
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ ε' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ ε m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
@@ -86,7 +86,7 @@ omit [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous] [Δ.IsExpectationA
 theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
     (σ₁' : State rT) (Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF)
     (φ : Val rT → Val rT → Prop) (ε : ENNReal) (Hnone : e₁.toVal? = none) : iprop%
-    progCoupl e₁ σ₁ e₁' σ₁' ε Z ⊢
+    progCoupl Δ e₁ σ₁ e₁' σ₁' ε Z ⊢
     (∀ e₂ σ₂ e₂' σ₂' ε', Z e₂ σ₂ e₂' σ₂' ε' -∗
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ ε' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ ε (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
@@ -108,12 +108,13 @@ omit [Δ.IsZeroLeft] [Δ.IsLeftContinuous] in
 theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
     (σ₁' : State rT) (Z : State rT → Cfg rT → ENNReal → IProp GF) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) : iprop%
-    specCoupl ∅ σ₁ e₁' σ₁' ε Z ⊢
+    specCoupl Δ ∅ σ₁ e₁' σ₁' ε Z ⊢
     (∀ σ₂ e₂' σ₂' ε', Z σ₂ ⟨e₂', σ₂'⟩ ε' -∗ |={∅}=> ⌜execCoupl Δ φ ε' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> ⌜execCoupl Δ φ ε m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl 0 m e₁ σ₁ e₁' σ₁' Z φ ε
 
 omit [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous] [Δ.IsExpectationAdditive] in
+variable (Δ) in
 theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
     (fun (σ₂ : State rT) (ρ' : Cfg rT) (ε₂ : ENNReal) =>
       iprop(|={∅, E}=> stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
@@ -123,12 +124,12 @@ theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
       | some v => iprop(|={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
             errInterp (rT := rT) ε₂ ∗ Φ v)
-      | none => iprop(progCoupl (Exp.ofVal v) σ₂ ρ'.expr ρ'.state ε₂
+      | none => iprop(progCoupl Δ (Exp.ofVal v) σ₂ ρ'.expr ρ'.state ε₂
           (fun e₃ σ₃ e₃' σ₃' ε₃ =>
-            iprop(▷ specCoupl ∅ σ₃ e₃' σ₃' ε₃ (fun σ₄ ρ'' ε₄ =>
+            iprop(▷ specCoupl Δ ∅ σ₃ e₃' σ₃' ε₃ (fun σ₄ ρ'' ε₄ =>
               iprop(|={∅, E}=>
                 stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗
-                  errInterp (rT := rT) ε₄ ∗ wp E e₃ Φ)))))) := by
+                  errInterp (rT := rT) ε₄ ∗ wp Δ E e₃ Φ)))))) := by
   funext σ₂ ρ' ε₂
   rw [Exp.toVal?_ofVal]
 
@@ -144,16 +145,16 @@ theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
 omit [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous] [Δ.IsExpectationAdditive] in
 theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
     (E : CoPset) (He : e.toVal? = some v) :
-    wp E e Φ ⊢@{IProp GF}
+    wp Δ E e Φ ⊢@{IProp GF}
       ∀ σ₁ e₁' σ₁' ε₁,
         stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp (rT := rT) ⟨e₁', σ₁'⟩ ∗
           errInterp (rT := rT) ε₁ -∗
-          |={E, ∅}=> specCoupl ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
+          |={E, ∅}=> specCoupl Δ ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
             iprop(|={∅, E}=>
               stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
                 errInterp (rT := rT) ε₂ ∗ Φ v)) := by
   obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
-  rw [wpPre_value_Z_eq E]
+  rw [wpPre_value_Z_eq Δ E]
   simp only [wpPre_match_eq]
   iintro Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
   iapply (BI.equiv_iff.mp ApproxisWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
@@ -162,7 +163,7 @@ omit [Δ.IsLeftContinuous] in
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (ε : ENNReal) (He : e.toVal? = some v) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ ecAuth ε ∗
-      wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
     |={⊤, ∅}=> ⌜execCoupl Δ φ ε n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
   iintro ⟨Hσ, Hs, Hε, Hwp⟩
@@ -189,7 +190,7 @@ omit [Δ.IsLeftContinuous] in
 theorem wp_adequacy_step_fupdN (ε : ENNReal) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ ecAuth ε ∗
-      wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
     |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ ε n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   induction n generalizing ε e e' σ σ' with
   | zero =>
@@ -232,8 +233,8 @@ variable [AppPreGS rT GF] [SpecPreGS rT GF] [IECPre : ECPreGS GF] [InvGpreS GF]
 
 omit [Δ.IsLeftContinuous] in
 theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
-    (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC Δ GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl Δ φ ε n ⟨e, σ⟩ ⟨e', σ'⟩ := by
   by_cases hε1 : 1 ≤ ε
   · exact codensity_of_one_le hε1
@@ -243,21 +244,21 @@ theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : V
   imod app_ra_init σ with ⟨%IA, HappAuth⟩
   imod spec_ra_init e' σ' with ⟨%ISpec, HspecAuth, HspecFrag⟩
   imod ec_alloc ε (lt_of_not_ge hε1) with ⟨%γec, HecAuth, HecFrag⟩
-  let IAS : ApproxisGS rT .hasNoLC Δ GF :=
+  let IAS : ApproxisGS rT .hasNoLC GF :=
     { appGS := IA, specGS := ISpec, ecGS := { toECPreGS := IECPre, γec := γec }, invGS := Hinv }
   ihave Hwp := Hwp IAS $$ HspecFrag HecFrag
   iapply wp_adequacy_step_fupdN $$ [$]
 
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : Val rT → Val rT → Prop)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC Δ GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   limExecV_codensity fun n => wp_adequacy_exec_n e e' σ σ' n φ ε Hwp
 
 theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (φ : Val rT → Val rT → Prop)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC Δ GF) (ε' : ENNReal), ε < ε' →
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   Codensity.of_forall_lt fun ε' hε' => wp_adequacy e e' σ σ' ε' φ fun Hinst => Hwp Hinst ε' hε'
 
@@ -265,7 +266,7 @@ theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
 /-
 theorem wp_adequacy_mass (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε := by
   simpa using AddCoupl.mass_leq (wp_adequacy e e' σ σ' ε φ Hwp)
 -/

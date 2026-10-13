@@ -380,6 +380,7 @@ instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     exact exists_ne fun w1 => exists_ne fun w2 => sep_ne.ne .rfl <| sep_ne.ne .rfl (hAB w1 w2)
 
+variable (Δ) in
 theorem lrel_forall_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     (lrel_forall Δ C1 : lrel rT GF) ≡{n}≡ lrel_forall Δ C2 := by
