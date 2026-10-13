@@ -12,12 +12,12 @@ public import Metrology.Couplings.CodensityTV
 /-! # One-Time Pad refinement example, using modular addition as the combiner. -/
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS TVDiv
 
 namespace OTP
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc TVDiv.tv GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
 
 /-! ### The bijection -/
 
@@ -47,27 +47,27 @@ abbrev otpLam (m N : Int) : Exp rT := pl% fun k, (#(.int m) + k) % #(.int N)
 def otpKLam (m N : Int) : Ectx rT := [EctxItem.appR (otpLam m N)]
 
 private theorem refines_lit_int (n : Int) :
-    ⊢@{IProp GF} refines ⊤ (pl(#(.int n)) : Exp rT) pl(#(.int n)) lrel_int := by
+    ⊢@{IProp GF} refines tv ⊤ (pl(#(.int n)) : Exp rT) pl(#(.int n)) lrel_int := by
   iapply refines_ret (v1 := .int n) (v2 := .int n) rfl rfl
   iintro !>
   iapply lrel_int_lit
 
 theorem otp_refines (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} refines ⊤ (otp_enc (rT := rT) m N) (otp_ideal N) lrel_int := by
+    ⊢@{IProp GF} refines tv ⊤ (otp_enc (rT := rT) m N) (otp_ideal N) lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines ⊤
+  show ⊢@{IProp GF} refines tv ⊤
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
     (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit)))) lrel_int
   iapply refines_couple_rands_lr (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN) hN
   iintro %n %_
-  show ⊢@{IProp GF} refines ⊤ (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int n))) _ lrel_int
+  show ⊢@{IProp GF} refines tv ⊤ (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int n))) _ lrel_int
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   inext
   let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢@{IProp GF} refines ⊤ (Kmod.fill pl(#(.int m) + #(.int n))) _ lrel_int
+  show ⊢@{IProp GF} refines tv ⊤ (Kmod.fill pl(#(.int m) + #(.int n))) _ lrel_int
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
-  show ⊢@{IProp GF} refines ⊤
+  show ⊢@{IProp GF} refines tv ⊤
     (Ectx.fill ([] : Ectx rT) pl(#(.int (m + n)) % #(.int N))) _ lrel_int
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
@@ -81,20 +81,20 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
 theorem otp_refines_rev (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} refines ⊤ (otp_ideal (rT := rT) N) (otp_enc m N) lrel_int := by
+    ⊢@{IProp GF} refines tv ⊤ (otp_ideal (rT := rT) N) (otp_enc m N) lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines ⊤
+  show ⊢@{IProp GF} refines tv ⊤
     (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit))))
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit)))) lrel_int
   iapply refines_couple_rands_lr (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN) hN
   iintro %n ⟨%hn0, %hnN⟩
-  show ⊢@{IProp GF} refines ⊤ _
+  show ⊢@{IProp GF} refines tv ⊤ _
     (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int (addMod (-m) N n)))) lrel_int
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢@{IProp GF} refines ⊤ _ (Kmod.fill pl(#(.int m) + #(.int (addMod (-m) N n)))) lrel_int
+  show ⊢@{IProp GF} refines tv ⊤ _ (Kmod.fill pl(#(.int m) + #(.int (addMod (-m) N n)))) lrel_int
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢@{IProp GF} refines ⊤ _
+  show ⊢@{IProp GF} refines tv ⊤ _
     (Ectx.fill ([] : Ectx rT) pl(#(.int (m + addMod (-m) N n)) % #(.int N))) lrel_int
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   rw [show (m + addMod (-m) N n) % N = n from addMod_neg_inv m N n hn0 hnN]
@@ -108,7 +108,7 @@ equality with zero error. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
-theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc TVDiv.tv GF] (v v' : Val rT) :
+theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hint
   iunfold lrel_int at Hint

@@ -14,7 +14,7 @@ Port of clutch's `theories/approxis/examples/prp_prf_weak.v`: `Q` uniform querie
 function and to a random permutation over `[0, N)` are indistinguishable up to
 `Q (Q - 1) / (2 N)`. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS TVDiv
 open scoped AppGS
 
 namespace ProbLang
@@ -42,7 +42,7 @@ theorem loopErr_succ (N : Int) (c q : Nat) :
 
 section Games
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc TVDiv.tv GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
 
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
@@ -57,7 +57,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    wp E (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q)) Φ := by
+    WP[tv] (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q)) @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hl, Hm, Hfv, HresL, HresS, Hcnt⟩
@@ -157,7 +157,7 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (wPRP N Q) ∗ ↯ ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
-    wp E (wPRF N Q) Φ := by
+    WP[tv] (wPRF N Q) @ E {{ Φ }} := by
   rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := ErrorCredit.weaken hε $$ Herr
@@ -229,7 +229,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    wp E (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q)) Φ := by
+    WP[tv] (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q)) @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hm, Hfv, Hl, HresL, HresS, Hcnt⟩
@@ -329,7 +329,7 @@ theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (wPRF N Q) ∗ ↯ ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
-    wp E (wPRP N Q) Φ := by
+    WP[tv] (wPRP N Q) @ E {{ Φ }} := by
   rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := ErrorCredit.weaken hε $$ Herr
