@@ -235,23 +235,29 @@ open Discretize
 
 variable {ι : Type*} (F : ι → WeightFunction)
 
+/-- An `f`-divergence is the supremum of its pushforwards to finite spaces. -/
+theorem _root_.fDiv_eq_iSup_map (f : WeightFunction) {X : Type u} [MeasurableSpace X]
+    (μ ν : Measure X) : fDiv f μ ν = ⨆ (n : ℕ) (k : X → ULift.{u} (Fin n)) (_ : Measurable k),
+      fDiv f (μ.map k) (ν.map k) := by
+  refine le_antisymm (iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_)
+    (iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ fDiv_map_le f hk μ ν)
+  have hk' : Measurable (ULift.up.{u} ∘ k) := measurable_up.comp hk
+  refine le_iSup_of_le n <| le_iSup_of_le _ <| le_iSup_of_le hk' <| le_iSup_of_le n <|
+    le_iSup_of_le ULift.down <| le_iSup_of_le measurable_down ?_
+  simp only [Measure.map_apply hk' (measurable_down (measurableSet_singleton _))]
+  exact le_rfl
+
 /-- An `f`-divergence is the supremum of its pushforwards to finite spaces (Thm. 4.7). -/
 instance isContinuous : (fDivFamily F : GradedDivergence.{u} ι).IsContinuous where
   eq_iSup α X _ μ ν _ _ := by
-    refine le_antisymm (iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_)
-      (iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ IsFunctorial.map_le α μ ν hk)
-    have hk' : Measurable (ULift.up.{u} ∘ k) := measurable_up.comp hk
-    refine le_iSup_of_le n <| le_iSup_of_le _ <| le_iSup_of_le hk' ?_
-    refine le_iSup_of_le n <| le_iSup_of_le ULift.down <| le_iSup_of_le measurable_down ?_
-    simp only [Measure.map_apply hk' (measurable_down (measurableSet_singleton _))]
-    exact le_rfl
+    simp_rw [fDivFamily, fDiv_eq_iSup_map (F α) μ, EReal.toENNReal_iSup]
 
 /-- An `f`-divergence with `f 1 ≤ 0` at the unit grade is reflexive (§4.2). -/
 theorem isReflexive [One ι] (h : F 1 1 ≤ 0) :
     (fDivFamily F : GradedDivergence.{u} ι).IsReflexive where
   self_le_zero μ _ := by
-    change fDiv (F 1) μ μ ≤ 0
-    rw [fDiv_self, ← EReal.coe_zero, EReal.coe_le_coe_iff]
+    refine EReal.toENNReal_le_iff_le_coe.2 ?_
+    rw [EReal.coe_ennreal_zero, fDiv_self, ← EReal.coe_zero, EReal.coe_le_coe_iff]
     exact mul_nonpos_of_nonneg_of_nonpos ENNReal.toReal_nonneg h
 
 /-- Families of convex `f`-divergences are approximable (Thm. 4.8, App. C.3). -/
@@ -275,7 +281,7 @@ theorem isApproximable (hF : ∀ α, ConvexOn ℝ (Ici 0) (F α)) :
     have hsum (n : ℕ) := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind (f ∘ rep f g n ∘ disc f g n))
       (μ₂.bind (g ∘ rep f g n ∘ disc f g n)) (hb (hf.comp (hrd n)) μ₁) (hb (hg.comp (hrd n)) μ₂)
     have hsum₀ := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind f) (μ₂.bind g) (hb hf μ₁) (hb hg μ₂)
-    change Tendsto (fun n ↦ fDiv (F α) _ _) atTop (𝓝 (fDiv (F α) _ _))
+    refine (EReal.continuous_toENNReal.tendsto _).comp ?_
     rw [funext hsum, hsum₀]
     refine EReal.tendsto_finset_sum _ (fun i _ ↦ ?_)
       fun i _ ↦ (F α).persp_ne_bot (hF α) ENNReal.toReal_nonneg

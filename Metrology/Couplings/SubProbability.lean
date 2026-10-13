@@ -101,4 +101,15 @@ instance isSubMarkovKernel_comp (η : Kernel Y Z) [IsSubMarkovKernel η] (κ : K
     [IsSubMarkovKernel κ] : IsSubMarkovKernel (η ∘ₖ κ) where
   isSubProbabilityMeasure x := by rw [Kernel.comp_apply]; infer_instance
 
+instance isSubMarkovKernel_map (κ : Kernel X Y) [IsSubMarkovKernel κ] (f : Y → Z) :
+    IsSubMarkovKernel (κ.map f) where
+  isSubProbabilityMeasure x := by
+    by_cases hf : Measurable f
+    · rw [Kernel.map_apply _ hf]; infer_instance
+    · rw [Kernel.map_of_not_measurable _ hf]; exact ⟨by simp⟩
+
+instance isSubMarkovKernel_comap (κ : Kernel Y Z) [IsSubMarkovKernel κ] {g : X → Y}
+    (hg : Measurable g) : IsSubMarkovKernel (κ.comap g hg) where
+  isSubProbabilityMeasure x := by rw [Kernel.comap_apply]; infer_instance
+
 end ProbabilityTheory

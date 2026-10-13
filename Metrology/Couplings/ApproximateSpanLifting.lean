@@ -9,7 +9,8 @@ public import Metrology.Couplings.Span
 
 universe u v
 
-open MeasureTheory Measure
+open MeasureTheory Measure ProbabilityTheory
+open scoped ENNReal
 
 namespace Span
 
@@ -20,19 +21,19 @@ section WitnessSpace
 variable {ι : Type v} (Δ : GradedDivergence.{u} ι)
 
 /-- A pair of subprobability measures at divergence at most `δ`. -/
-structure IsWitness (α : ι) (δ : EReal) {Φ : Type u} [MeasurableSpace Φ]
+structure IsWitness (α : ι) (δ : ℝ≥0∞) {Φ : Type u} [MeasurableSpace Φ]
     (p : Measure Φ × Measure Φ) : Prop where
   fst : IsSubProbabilityMeasure p.1
   snd : IsSubProbabilityMeasure p.2
   le : Δ α p.1 p.2 ≤ δ
 
 /-- The witness space `W(Φ, Δ, α, δ)` of an approximate span lifting (Def. 5.1). -/
-def Witness (α : ι) (δ : EReal) (Φ : Type u) [MeasurableSpace Φ] : Type u :=
+def Witness (α : ι) (δ : ℝ≥0∞) (Φ : Type u) [MeasurableSpace Φ] : Type u :=
   { p : Measure Φ × Measure Φ // IsWitness Δ α δ p }
 
 namespace Witness
 
-variable {Δ} {α : ι} {δ : EReal} {Φ : Type u} [MeasurableSpace Φ]
+variable {Δ} {α : ι} {δ : ℝ≥0∞} {Φ : Type u} [MeasurableSpace Φ]
 
 instance instMeasurableSpace : MeasurableSpace (Witness Δ α δ Φ) :=
   inferInstanceAs <| MeasurableSpace (Subtype _)
@@ -76,7 +77,7 @@ variable {Φ Ψ : Type u} [MeasurableSpace Φ] [MeasurableSpace Ψ]
 
 namespace Witness
 
-variable [Mul ι] {α β : ι} {δ γ : EReal}
+variable [Mul ι] {α β : ι} {δ γ : ℝ≥0∞}
 
 section Bind
 
@@ -91,8 +92,12 @@ theorem isWitness_bind (w : Witness Δ β γ Φ) {κ : Φ → Witness Δ α δ �
   fst := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
   snd := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
   le :=
+    let K₁ : Kernel Φ Ψ := ⟨fun φ ↦ (κ φ).fst, by fun_prop⟩
+    let K₂ : Kernel Φ Ψ := ⟨fun φ ↦ (κ φ).snd, by fun_prop⟩
+    have : IsSubMarkovKernel K₁ := ⟨fun φ ↦ isSubProbabilityMeasure_fst (κ φ)⟩
+    have : IsSubMarkovKernel K₂ := ⟨fun φ ↦ isSubProbabilityMeasure_snd (κ φ)⟩
     calc Δ (β * α) (w.fst.bind fun φ ↦ (κ φ).fst) (w.snd.bind fun φ ↦ (κ φ).snd)
-        ≤ Δ β w.fst w.snd + ⨆ φ, Δ α (κ φ).fst (κ φ).snd := IsComposable.bind_le β α _ _
+        ≤ Δ β w.fst w.snd + ⨆ φ, Δ α (κ φ).fst (κ φ).snd := IsComposable.bind_le β α _ _ K₁ K₂
       _ ≤ γ + δ := add_le_add w.le (iSup_le fun φ ↦ (κ φ).le)
 
 /-- Binding a witness with a measurable family of witnesses. -/
@@ -143,7 +148,7 @@ end Witness
 
 /-- The approximate span lifting `s♯[Δ, α, δ]`: witness pairs on `Φ`, pushed forward along the
 legs of `s` (Def. 5.1). -/
-noncomputable def lift (s : Span X Y Φ) (Δ : GradedDivergence.{u} ι) (α : ι) (δ : EReal) :
+noncomputable def lift (s : Span X Y Φ) (Δ : GradedDivergence.{u} ι) (α : ι) (δ : ℝ≥0∞) :
     Span (Measure X) (Measure Y) (Witness Δ α δ Φ) where
   left w := w.fst.map s.left
   right w := w.snd.map s.right
@@ -151,7 +156,7 @@ noncomputable def lift (s : Span X Y Φ) (Δ : GradedDivergence.{u} ι) (α : ι
 @[inherit_doc] scoped notation:max s "♯[" Δ ", " α ", " δ "]" => lift s Δ α δ
 
 /-- Lifting the diagonal relates exactly the pairs at divergence at most `δ` (Thm. 5.2). -/
-theorem rel_lift_diag {α : ι} {δ : EReal} {μ ν : Measure Φ} :
+theorem rel_lift_diag {α : ι} {δ : ℝ≥0∞} {μ ν : Measure Φ} :
     ((diag Φ)♯[Δ, α, δ]).Rel μ ν ↔ IsWitness Δ α δ (μ, ν) := by
   simp only [Rel, lift, diag, map_id]
   exact ⟨fun ⟨w, h₁, h₂⟩ ↦ h₁ ▸ h₂ ▸ w.2, fun h ↦ ⟨⟨_, h⟩, rfl, rfl⟩⟩
@@ -161,7 +166,7 @@ namespace Hom
 variable {s : Span X Y Φ} {t : Span X' Y' Ψ}
 
 /-- The functor action of the lifting (Thm. 5.3). -/
-noncomputable def lift [Δ.IsFunctorial] (m : s →ₛ t) (α : ι) (δ : EReal) :
+noncomputable def lift [Δ.IsFunctorial] (m : s →ₛ t) (α : ι) (δ : ℝ≥0∞) :
     s♯[Δ, α, δ] →ₛ t♯[Δ, α, δ] where
   leftMap := map m.leftMap
   rightMap := map m.rightMap
@@ -179,8 +184,8 @@ noncomputable def unit [One ι] [Δ.IsReflexive] (s : Span X Y Φ) : s →ₛ s�
   comm_right φ := (map_dirac' (by fun_prop) φ).symm
 
 /-- The graded Kleisli lifting: bind with the witnesses chosen by `m` (Thm. 5.3). -/
-noncomputable def bind [Mul ι] [Δ.IsComposable] {α : ι} {δ : EReal} (m : s →ₛ t♯[Δ, α, δ])
-    (β : ι) (γ : EReal) : s♯[Δ, β, γ] →ₛ t♯[Δ, β * α, γ + δ] where
+noncomputable def bind [Mul ι] [Δ.IsComposable] {α : ι} {δ : ℝ≥0∞} (m : s →ₛ t♯[Δ, α, δ])
+    (β : ι) (γ : ℝ≥0∞) : s♯[Δ, β, γ] →ₛ t♯[Δ, β * α, γ + δ] where
   leftMap μ := μ.bind m.leftMap
   rightMap μ := μ.bind m.rightMap
   witnessMap w := w.bind m.witnessMap
@@ -188,7 +193,7 @@ noncomputable def bind [Mul ι] [Δ.IsComposable] {α : ι} {δ : EReal} (m : s 
   comm_right _ := bind_map_of_comm m.comm_right _
 
 /-- Weakening the grade and the bound (Thm. 5.3). -/
-def inclusion [Preorder ι] [Δ.IsGraded] (s : Span X Y Φ) {α β : ι} {δ γ : EReal} (hα : α ≤ β)
+def inclusion [Preorder ι] [Δ.IsGraded] (s : Span X Y Φ) {α β : ι} {δ γ : ℝ≥0∞} (hα : α ≤ β)
     (hδ : δ ≤ γ) : s♯[Δ, α, δ] →ₛ s♯[Δ, β, γ] where
   leftMap := _root_.id
   rightMap := _root_.id
@@ -198,7 +203,7 @@ def inclusion [Preorder ι] [Δ.IsGraded] (s : Span X Y Φ) {α β : ι} {δ γ 
 
 /-- The double strength: product measures (Thm. 5.3). -/
 noncomputable def doubleStrength [Mul ι] [Δ.IsAdditive] (s : Span X Y Φ) (t : Span X' Y' Ψ)
-    (α β : ι) (δ γ : EReal) :
+    (α β : ι) (δ γ : ℝ≥0∞) :
     s♯[Δ, α, δ] ×̇ t♯[Δ, β, γ] →ₛ (s ×̇ t)♯[Δ, α * β, δ + γ] where
   leftMap p := p.1.finiteOrZero.prod p.2.finiteOrZero
   rightMap p := p.1.finiteOrZero.prod p.2.finiteOrZero

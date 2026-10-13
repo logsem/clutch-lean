@@ -10,6 +10,7 @@ Program Logics*, §7). -/
 universe u v
 
 open MeasureTheory Measure ProbabilityTheory
+open scoped ENNReal
 
 namespace GradedDivergence
 
@@ -28,8 +29,8 @@ def BasicCodensity (Ω : Type*) [MeasurableSpace Ω] (S₀ S : Measure Ω → Me
 /-- The codensity lifting `T[Δ](α, δ) R`: for every test space, grade and bound, the basic
 codensity lifting from `Δ`-closeness to `Δ`-closeness with the grades multiplied and the bounds
 added (Thm. 8). -/
-def Codensity (α : ι) (δ : EReal) (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
-  ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : EReal⦄,
+def Codensity (α : ι) (δ : ℝ≥0∞) (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
+  ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄,
     BasicCodensity I (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν
 
 variable {Δ}
@@ -37,7 +38,7 @@ variable {Δ}
 /-! ### The lifting laws (Def. 15, Thm. 8.1) -/
 
 /-- Larger grades and bounds give larger liftings. -/
-theorem Codensity.mono [Preorder ι] [MulRightMono ι] [Δ.IsGraded] {α α' : ι} {δ δ' : EReal}
+theorem Codensity.mono [Preorder ι] [MulRightMono ι] [Δ.IsGraded] {α α' : ι} {δ δ' : ℝ≥0∞}
     {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (h : Δ.Codensity α δ R μ ν) (hα : α ≤ α') (hδ : δ ≤ δ') :
     Δ.Codensity α' δ' R μ ν := by
@@ -55,7 +56,7 @@ theorem codensity_dirac {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∈ R) :
   exact hkl h
 
 /-- Binding with kernels that map related inputs into the lifting of `S` (Kleisli extension). -/
-theorem Codensity.bind {α α' : ι} {δ δ' : EReal} {R : Set (X × Y)} {S : Set (X' × Y')}
+theorem Codensity.bind {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
     {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : Kernel X X'}
     {g : Kernel Y Y'} [IsSubMarkovKernel f] [IsSubMarkovKernel g]
     (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → Δ.Codensity α' δ' S (f x) (g y)) :
@@ -72,7 +73,7 @@ def relProd (R : Set (X × Y)) (S : Set (X' × Y')) : Set ((X × X') × (Y × Y'
 
 /-- Pairing related points with lifted measures stays in the lifting of the product relation
 (strength). -/
-theorem Codensity.strength {α : ι} {δ : EReal} {R : Set (X × Y)} {S : Set (X' × Y')}
+theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
     {μ : Measure X'} {ν : Measure Y'} (h : Δ.Codensity α δ S μ ν) {x : X} {y : Y}
     (hxy : (x, y) ∈ R) :
     Δ.Codensity α δ (relProd R S) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) := by
@@ -89,23 +90,23 @@ def diagRel (X : Type*) : Set (X × X) := {p | p.1 = p.2}
 
 /-- Reflexivity: the codensity lifting of equality is at most the divergence. -/
 theorem Codensity.le_of_diag [Δ.IsReflexive] {X : Type u} [MeasurableSpace X] {α : ι}
-    {δ : EReal} {μ ν : Measure X} (h : Δ.Codensity α δ (diagRel X) μ ν) : Δ α μ ν ≤ δ := by
+    {δ : ℝ≥0∞} {μ ν : Measure X} (h : Δ.Codensity α δ (diagRel X) μ ν) : Δ α μ ν ≤ δ := by
   have := h (k := Kernel.id) (l := Kernel.id)
     fun x y (hxy : x = y) ↦ by subst hxy; exact IsReflexive.self_le_zero _
   rwa [id_comp, id_comp, mul_one, add_zero] at this
 
 /-- Composability: the divergence is at most the codensity lifting of equality. -/
 theorem codensity_diag_of_le [Δ.IsComposable] {X : Type u} [MeasurableSpace X] {α : ι}
-    {δ : EReal} {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    (h : Δ α μ ν ≤ δ) : Δ.Codensity α δ (diagRel X) μ ν := fun I _ β γ k l _ _ hkl ↦
+    {δ : ℝ≥0∞} {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (h : Δ α μ ν ≤ δ) : Δ.Codensity α δ (diagRel X) μ ν := fun _ _ β γ k l _ _ hkl ↦
     calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν)
-        ≤ Δ α μ ν + ⨆ x, Δ β (k x) (l x) := IsComposable.bind_le α β μ ν
+        ≤ Δ α μ ν + ⨆ x, Δ β (k x) (l x) := IsComposable.bind_le α β μ ν k l
       _ ≤ δ + γ := add_le_add h (iSup_le fun x ↦ hkl (show x = x from rfl))
 
 /-- With reflexivity and composability, the codensity lifting of equality is exactly the
 divergence bound (the fundamental property, Thm. 8.2). -/
 theorem codensity_diag_iff [Δ.IsReflexive] [Δ.IsComposable] {X : Type u} [MeasurableSpace X]
-    {α : ι} {δ : EReal} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    {α : ι} {δ : ℝ≥0∞} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] : Δ.Codensity α δ (diagRel X) μ ν ↔ Δ α μ ν ≤ δ :=
   ⟨Codensity.le_of_diag, codensity_diag_of_le⟩
 
@@ -120,9 +121,9 @@ def IsGenerated (Ω : Type u) [MeasurableSpace Ω] : Prop :=
 
 /-- For a divergence generated over `Ω`, tests into `Ω` suffice (Prop. 14). -/
 theorem codensity_iff_of_isGenerated {Ω : Type u} [MeasurableSpace Ω] (hΩ : Δ.IsGenerated Ω)
-    {α : ι} {δ : EReal} {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
+    {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
-    Δ.Codensity α δ R μ ν ↔ ∀ ⦃β : ι⦄ ⦃γ : EReal⦄,
+    Δ.Codensity α δ R μ ν ↔ ∀ ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄,
       BasicCodensity Ω (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν := by
   refine ⟨fun h β γ ↦ @h Ω _ β γ, fun h I _ β γ k l _ _ hkl ↦ ?_⟩
   beta_reduce at hkl ⊢
@@ -146,15 +147,16 @@ variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y] {Φ : Type u} [Me
 
 /-- Measures related by a span lifting pass every test of the span's relation: forgetting the
 witnesses lands in the codensity lifting. -/
-theorem Rel.codensity {s : Span X Y Φ} {α : ι} {δ : EReal} {μ : Measure X} {ν : Measure Y}
+theorem Rel.codensity {s : Span X Y Φ} {α : ι} {δ : ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
     (h : (s♯[Δ, α, δ]).Rel μ ν) : Δ.Codensity α δ {p | s.Rel p.1 p.2} μ ν := by
   obtain ⟨w, rfl, rfl⟩ := h
   intro I _ β γ k l _ _ hkl
   calc Δ (α * β) (k ∘ₘ w.fst.map s.left) (l ∘ₘ w.snd.map s.right)
-      = Δ (α * β) (w.fst.bind fun φ ↦ k (s.left φ)) (w.snd.bind fun φ ↦ l (s.right φ)) :=
+      = Δ (α * β) (k.comap s.left s.leftMeasurable ∘ₘ w.fst)
+          (l.comap s.right s.rightMeasurable ∘ₘ w.snd) :=
         congrArg₂ (fun a b ↦ Δ (α * β) a b) (bind_map_eq _) (bind_map_eq _)
     _ ≤ Δ α w.fst w.snd + ⨆ φ, Δ β (k (s.left φ)) (l (s.right φ)) :=
-        IsComposable.bind_le α β _ _
+        IsComposable.bind_le α β _ _ _ _
     _ ≤ δ + γ := add_le_add w.le (iSup_le fun φ ↦ hkl ⟨φ, rfl, rfl⟩)
 
 end Span

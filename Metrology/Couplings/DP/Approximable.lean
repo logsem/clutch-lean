@@ -34,23 +34,7 @@ instance isApproximable_dp : (dp.{u}).IsApproximable where
     have hlimf := tendsto_bind_disc hf hg hf (μ := μ₁) (cell_fst (g := g))
     have hlimg := tendsto_bind_disc hf hg hg (μ := μ₂) (cell_snd (f := f))
     have := isSubProbabilityMeasure_bind (μ := μ₁) (f := f) inferInstance
-    have := isSubProbabilityMeasure_bind (μ := μ₂) (f := g) inferInstance
-    rcases eq_or_ne (μ₁.bind f) 0 with h0 | h0
-    · -- the zero measure stays zero under discretization
-      have hz (n : ℕ) : μ₁.bind (f ∘ rep f g n ∘ disc f g n) = 0 :=
-        measure_eq_zero_iff_singleton.2 fun i ↦
-          (bind_disc_singleton_eq_zero_iff hf hg hf μ₁ cell_fst n i).2
-            (measure_eq_zero_iff_singleton.1 h0 i)
-      simp only [h0, hz, dp_zero]
-      exact tendsto_const_nhds
-    -- otherwise the approximants are eventually nonzero and their gaps converge
-    have hmass : ∀ᶠ n in atTop, μ₁.bind (f ∘ rep f g n ∘ disc f g n) ≠ 0 := by
-      filter_upwards [(hlimf univ).eventually_ne (Measure.measure_univ_ne_zero.2 h0)] with n hn
-      exact fun h ↦ hn (by simp [h])
-    refine Tendsto.congr' (hmass.mono fun n hn ↦ (dp_of_ne_zero hn).symm) ?_
-    rw [dp_of_ne_zero h0]
-    refine continuous_coe_ennreal_ereal.continuousAt.tendsto.comp ?_
-    simp_rw [gap_eq_sup']
+    simp_rw [dp_apply, gap_eq_sup']
     refine Filter.Tendsto.finset_sup'_nhds_apply _ fun T _ ↦ ?_
     exact ENNReal.Tendsto.sub (hlimf T)
       (ENNReal.Tendsto.const_mul (hlimg T) (Or.inr ENNReal.ofReal_ne_top))

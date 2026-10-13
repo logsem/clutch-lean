@@ -19,7 +19,7 @@ variable {X Y X' Y' : Type*} [MeasurableSpace X] [MeasurableSpace Y] [Measurable
 variable {Φ Ψ : Type u} [MeasurableSpace Φ] [MeasurableSpace Ψ]
 
 /-- The DP span lifting `s♯(Δ_DP, ε, δ)` (Thm. 5.4). -/
-noncomputable abbrev dpLift (s : Span X Y Φ) (ε : ℝ≥0) (δ : EReal) :
+noncomputable abbrev dpLift (s : Span X Y Φ) (ε : ℝ≥0) (δ : ℝ≥0∞) :
     Span (Measure X) (Measure Y) (Witness dp.{u} (.ofAdd ε) δ Φ) :=
   s♯[dp, .ofAdd ε, δ]
 
@@ -40,18 +40,18 @@ noncomputable def unit (s : Span X Y Φ) : s →ₛ dpLift s 0 0 :=
   Span.Hom.unit s
 
 /-- Sequential composition of DP liftings adds budgets and slacks (Thm. 5.4). -/
-noncomputable def bind {ε : ℝ≥0} {δ : EReal} (m : s →ₛ dpLift t ε δ) (ε' : ℝ≥0) (δ' : EReal) :
+noncomputable def bind {ε : ℝ≥0} {δ : ℝ≥0∞} (m : s →ₛ dpLift t ε δ) (ε' : ℝ≥0) (δ' : ℝ≥0∞) :
     dpLift s ε' δ' →ₛ dpLift t (ε' + ε) (δ' + δ) :=
   Span.Hom.bind m _ _
 
 /-- Weakening the DP budget and slack (Thm. 5.4). -/
-noncomputable def inclusion (s : Span X Y Φ) {ε ε' : ℝ≥0} {δ δ' : EReal} (hε : ε ≤ ε')
+noncomputable def inclusion (s : Span X Y Φ) {ε ε' : ℝ≥0} {δ δ' : ℝ≥0∞} (hε : ε ≤ ε')
     (hδ : δ ≤ δ') :
     dpLift s ε δ →ₛ dpLift s ε' δ' :=
   Span.Hom.inclusion s (Multiplicative.ofAdd_le.2 hε) hδ
 
 /-- Independent products of DP liftings add budgets and slacks (Thm. 5.4). -/
-noncomputable def doubleStrength (s : Span X Y Φ) (t : Span X' Y' Ψ) (ε ε' : ℝ≥0) (δ δ' : EReal) :
+noncomputable def doubleStrength (s : Span X Y Φ) (t : Span X' Y' Ψ) (ε ε' : ℝ≥0) (δ δ' : ℝ≥0∞) :
     dpLift s ε δ ×̇ dpLift t ε' δ' →ₛ dpLift (s ×̇ t) (ε + ε') (δ + δ') :=
   Span.Hom.doubleStrength s t _ _ _ _
 

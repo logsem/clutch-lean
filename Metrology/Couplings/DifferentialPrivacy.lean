@@ -16,6 +16,18 @@ theorem EReal.coe_finset_sum {ι : Type*} (s : Finset ι) (x : ι → ℝ) :
     ((∑ i ∈ s, x i : ℝ) : EReal) = ∑ i ∈ s, (x i : EReal) :=
   map_sum (⟨⟨(↑), EReal.coe_zero⟩, EReal.coe_add⟩ : ℝ →+ EReal) x s
 
+theorem EReal.toENNReal_le_iff_le_coe {x : EReal} {y : ℝ≥0∞} : x.toENNReal ≤ y ↔ x ≤ y := by
+  refine ⟨fun h ↦ ?_, fun h ↦ (EReal.toENNReal_le_toENNReal h).trans_eq EReal.toENNReal_coe⟩
+  exact (le_max_right 0 x).trans (EReal.coe_toENNReal_eq_max ▸
+    EReal.coe_ennreal_le_coe_ennreal_iff.2 h)
+
+theorem EReal.toENNReal_iSup {ι : Sort*} (g : ι → EReal) :
+    (⨆ i, g i).toENNReal = ⨆ i, (g i).toENNReal :=
+  le_antisymm (EReal.toENNReal_le_iff_le_coe.2 <| iSup_le fun i ↦
+      (EReal.toENNReal_le_iff_le_coe.1 le_rfl).trans <|
+        EReal.coe_ennreal_le_coe_ennreal_iff.2 (le_iSup (fun i ↦ (g i).toENNReal) i))
+    (iSup_le fun i ↦ EReal.toENNReal_le_toENNReal (le_iSup g i))
+
 variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 
 /-- A randomized algorithm: a kernel from inputs to distributions on outputs. -/
@@ -72,9 +84,16 @@ noncomputable def fDiv (f : WeightFunction) (μ ν : Measure X) : EReal :=
   ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
     ∑ i, f.persp (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal
 
-/-- A family of `f`-divergences, graded by the index of the weight (§4.2). -/
+/-- Pushing forward along a measurable map does not increase an `f`-divergence. -/
+theorem fDiv_map_le (f : WeightFunction) {k : X → Y} (hk : Measurable k) (μ ν : Measure X) :
+    fDiv f (μ.map k) (ν.map k) ≤ fDiv f μ ν := by
+  refine iSup_le fun n ↦ iSup_le fun k' ↦ iSup_le fun hk' ↦ ?_
+  refine le_iSup_of_le n <| le_iSup_of_le (k' ∘ k) <| le_iSup_of_le (hk'.comp hk) ?_
+  simp only [Measure.map_apply hk (hk' (measurableSet_singleton _)), Set.preimage_comp, le_refl]
+
+/-- A family of `f`-divergences, graded by the index of the weight and truncated at zero (§4.2). -/
 noncomputable def fDivFamily {ι : Type*} (F : ι → WeightFunction) : GradedDivergence.{u} ι :=
-  fun α {_} _ μ ν ↦ fDiv (F α) μ ν
+  fun α {_} _ μ ν ↦ (fDiv (F α) μ ν).toENNReal
 
 /-- An `f`-divergence as a singly graded divergence. -/
 noncomputable abbrev fDivergence (f : WeightFunction) : GradedDivergence.{u} Unit :=
@@ -83,10 +102,7 @@ noncomputable abbrev fDivergence (f : WeightFunction) : GradedDivergence.{u} Uni
 /-- Pushing forward along a measurable map does not increase an `f`-divergence. -/
 instance fDivFamily.isFunctorial {ι : Type*} (F : ι → WeightFunction) :
     (fDivFamily F : GradedDivergence.{u} ι).IsFunctorial where
-  map_le _ X Y _ _ k μ ν _ _ hk := by
-    refine iSup_le fun n ↦ iSup_le fun k' ↦ iSup_le fun hk' ↦ ?_
-    refine le_iSup_of_le n <| le_iSup_of_le (k' ∘ k) <| le_iSup_of_le (hk'.comp hk) ?_
-    simp only [Measure.map_apply hk (hk' (measurableSet_singleton _)), preimage_comp, le_refl]
+  map_le _ _ _ _ _ _ μ ν _ _ hk := EReal.toENNReal_le_toENNReal (fDiv_map_le _ hk μ ν)
 
 /-- The DP `f`-divergence is the largest gap `μ S - e^ε ν S` over measurable events. -/
 theorem fDiv_dp_eq_iSup (ε : ℝ) (μ ν : Measure X) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
@@ -171,16 +187,17 @@ end Privacy
 open Span in
 /-- The two-witness relational lifting of `R` for an `f`-divergence (Eq. 5), as an approximate
 span lifting. -/
-def TWRL (R : X → Y → Prop) (f : WeightFunction) (δ : EReal) (μ : Measure X) (ν : Measure Y) :
+def TWRL (R : X → Y → Prop) (f : WeightFunction) (δ : ℝ≥0∞) (μ : Measure X) (ν : Measure Y) :
     Prop :=
   ((Span.ofRel {p | R p.1 p.2})♯[fDivergence f, (), δ]).Rel μ ν
 
 open Span in
 /-- Lifting equality relates exactly the pairs at `f`-divergence at most `δ` (§2.2). -/
-theorem TWRL_eq_iff (f : WeightFunction) (δ : EReal) {μ ν : Measure X}
+theorem TWRL_eq_iff (f : WeightFunction) (δ : ℝ≥0∞) {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     TWRL (· = ·) f δ μ ν ↔ fDiv f μ ν ≤ δ := by
   unfold TWRL
+  rw [← EReal.toENNReal_le_iff_le_coe]
   constructor
   · intro h
     have := (Hom.lift Hom.eqToDiag () δ).rel h

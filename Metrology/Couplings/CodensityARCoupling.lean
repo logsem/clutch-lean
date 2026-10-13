@@ -61,7 +61,7 @@ theorem GradedDivergence.Codensity.arCoupling_dp {ε : ℝ≥0} {δ : ℝ≥0∞
   have htest : ∀ ⦃x y⦄, (x, y) ∈ R →
       DPDiv.dp (.ofAdd 0) (massKernel.{u} hf x) (massKernel.{u} hg y) ≤ 0 := by
     intro x y hxy
-    rw [← EReal.coe_ennreal_zero, DPDiv.dp_le_iff]
+    rw [DPDiv.dp_le_iff]
     intro S _
     simp only [massKernel, Kernel.coe_mk, Measure.smul_apply, smul_eq_mul, toAdd_ofAdd,
       NNReal.coe_zero, Real.exp_zero, ENNReal.ofReal_one, one_mul, add_zero]

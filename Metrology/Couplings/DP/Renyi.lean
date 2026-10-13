@@ -11,7 +11,7 @@ App. C.4). -/
 @[expose] public section
 
 open MeasureTheory Set Filter Topology Real GradedDivergence
-open scoped ENNReal
+open scoped ENNReal NNReal
 
 universe u
 
@@ -136,6 +136,9 @@ theorem transform_iSup (hα : 1 < α) {ι : Sort*} (g : ι → EReal) :
   (monotone_transform hα).map_iSup_of_continuousAt (continuous_transform hα).continuousAt
     (transform_bot hα)
 
+theorem transform_coe_toENNReal (x : EReal) : transform α x.toENNReal = transform α x := by
+  simp [transform]
+
 /-- The Rényi transform turns products of nonnegative values into sums. -/
 theorem transform_mul (hα : 1 < α) {x y : EReal} (hx : 0 ≤ x) :
     transform α (x * y) = transform α x + transform α y := by
@@ -219,9 +222,10 @@ end Renyi
 
 open Renyi
 
-/-- The Rényi divergence of order `α`, as a singly graded divergence (Def. 2.2). -/
+/-- The Rényi divergence of order `α`, as a singly graded divergence (Def. 2.2), truncated at
+zero. Negative values, possible for subprobability measures, are lost, as in SampCert. -/
 noncomputable def renyiDivergence (α : ℝ) : GradedDivergence.{u} Unit :=
-  fun _ {_} _ μ ν ↦ renyiDiv α μ ν
+  fun _ {_} _ μ ν ↦ (renyiDiv α μ ν).toENNReal
 
 namespace renyiDivergence
 
@@ -230,19 +234,25 @@ variable (α : ℝ)
 instance isGraded : (renyiDivergence.{u} α).IsGraded where
   anti _ _ _ _ _ _ _ _ _ := le_rfl
 
+variable {α} in
+theorem le_coe_iff {X : Type u} [MeasurableSpace X] {μ ν : Measure X} {ρ : ℝ≥0} :
+    renyiDivergence α () μ ν ≤ ρ ↔ renyiDiv α μ ν ≤ (ρ : ℝ) :=
+  EReal.toENNReal_le_iff_le_coe.trans (by rw [EReal.coe_nnreal_eq_coe_real])
+
 variable [hα : Fact (1 < α)]
 
 /-- Deterministic post-processing does not increase the Rényi divergence. -/
 instance isFunctorial : (renyiDivergence.{u} α).IsFunctorial where
   map_le _ _ _ _ _ _ μ ν _ _ hk :=
-    monotone_transform hα.out (IsFunctorial.map_le (Δ := fDivergence.{u} (.rpow α)) () μ ν hk)
+    EReal.toENNReal_le_toENNReal (monotone_transform hα.out (fDiv_map_le _ hk μ ν))
 
-/-- A measure is at Rényi divergence at most zero from itself (Thm. 4.11). -/
+/-- A measure is at Rényi divergence zero from itself (Thm. 4.11). -/
 instance isReflexive : (renyiDivergence.{u} α).IsReflexive where
   self_le_zero μ _ := by
-    change transform α (fDiv (.rpow α) μ μ) ≤ 0
-    rw [fDiv_self, WeightFunction.rpow, Real.one_rpow, mul_one, transform,
-      EReal.real_coe_toENNReal]
+    refine EReal.toENNReal_le_iff_le_coe.2 ?_
+    change transform α (fDiv (.rpow α) μ μ) ≤ (0 : ℝ≥0∞)
+    rw [EReal.coe_ennreal_zero, fDiv_self, WeightFunction.rpow, Real.one_rpow, mul_one,
+      transform, EReal.real_coe_toENNReal]
     refine mul_nonpos_of_nonneg_of_nonpos (EReal.coe_nonneg.2 (inv_nonneg.2 (sub_pos.2 hα.out).le))
       (ENNReal.log_le_zero_iff.2 ?_)
     exact ENNReal.ofReal_le_one.2 (ENNReal.toReal_le_of_le_ofReal zero_le_one
@@ -251,25 +261,28 @@ instance isReflexive : (renyiDivergence.{u} α).IsReflexive where
 /-- The Rényi divergence is the supremum of its pushforwards to finite spaces (Thm. 4.11). -/
 instance isContinuous : (renyiDivergence.{u} α).IsContinuous where
   eq_iSup _ X _ μ ν _ _ := by
-    change transform α (fDiv (.rpow α) μ ν) = _
-    rw [show fDiv (.rpow α) μ ν = fDivergence.{u} (.rpow α) () μ ν from rfl,
-      IsContinuous.eq_iSup (Δ := fDivergence.{u} (.rpow α)) () μ ν]
-    simp_rw [transform_iSup hα.out]
-    rfl
+    simp_rw [renyiDivergence, renyiDiv_eq, fDiv_eq_iSup_map _ μ, transform_iSup hα.out,
+      EReal.toENNReal_iSup]
 
 /-- The Rényi divergence is approximable (Thm. 4.11). -/
 instance isApproximable : (renyiDivergence.{u} α).IsApproximable where
   tendsto _ X _ N f g _ _ μ₁ μ₂ _ _ hf hg := by
     obtain ⟨J, d, e, hd, he, h⟩ := (fDivFamily.isApproximable (ι := Unit) (fun _ ↦ .rpow α)
       fun _ ↦ Renyi.convexOn_rpow hα.out.le).tendsto () N μ₁ μ₂ hf hg
-    exact ⟨J, d, e, hd, he, ((continuous_transform hα.out).tendsto _).comp h⟩
+    refine ⟨J, d, e, hd, he, ?_⟩
+    simp only [renyiDivergence, renyiDiv_eq]
+    have := ((EReal.continuous_toENNReal.comp ((continuous_transform hα.out).comp
+      continuous_coe_ennreal_ereal)).tendsto _).comp h
+    simpa only [Function.comp_def, fDivFamily, transform_coe_toENNReal] using this
 
 /-- The Rényi divergence composes between finite spaces (App. C.4). -/
 instance isFiniteComposable : (renyiDivergence.{u} α).IsFiniteComposable where
-  bind_le _ _ M N μ₁ μ₂ _ _ f g _ _ _ _ := by
+  bind_le _ _ M N μ₁ μ₂ _ _ κ η _ _ := by
+    refine (EReal.toENNReal_le_toENNReal ?_).trans <|
+      EReal.toENNReal_add_le.trans_eq (congrArg _ (EReal.toENNReal_iSup _))
     change transform α _ ≤ transform α _ + ⨆ i, transform α _
     rw [← transform_iSup hα.out, ← transform_mul hα.out (fDiv_rpow_nonneg hα.out _ _)]
-    exact monotone_transform hα.out (fDiv_rpow_bind_le hα.out μ₁ μ₂ f g)
+    exact monotone_transform hα.out (fDiv_rpow_bind_le hα.out μ₁ μ₂ κ η)
 
 /-- The Rényi divergence composes adaptively (Thm. 4.11, by Thm. 4.6). -/
 instance isComposable : (renyiDivergence.{u} α).IsComposable :=
