@@ -434,7 +434,8 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
   iapply Hcnt $$ %n %Hn %K2 %ε HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_adv {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
+theorem refines_couple_rands_lr_adv [Δ.IsExpectationAdditive] {E : CoPset} {K K' : Ectx rT}
+    {A : lrel rT GF} {z : Int}
     (f : Int → Int) (ε₁ : ENNReal) (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -455,7 +456,8 @@ theorem refines_couple_rands_lr_adv {E : CoPset} {K K' : Ectx rT} {A : lrel rT G
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
   iapply Hcnt $$ %n %Hn Hec %K2 %ε HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_avoid {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
+theorem refines_couple_rands_lr_avoid [Δ.IsExpectationAdditive] {E : CoPset} {K K' : Ectx rT}
+    {A : lrel rT GF} {z : Int}
     (bad : Int) (Hz : 0 < z) : iprop%
     ↯ (z.toNat : ENNReal)⁻¹ ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
       refines E (K.fill pl(#(.int n))) (K'.fill pl(#(.int n))) A) ⊢
@@ -474,6 +476,7 @@ theorem refines_couple_rands_lr_avoid {E : CoPset} {K K' : Ectx rT} {A : lrel rT
   · simp only [id_eq]
     iapply Hcnt $$ %n %⟨hn, hb⟩
 
+omit [Δ.IsZeroLeft] in
 theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {z : Int} {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)

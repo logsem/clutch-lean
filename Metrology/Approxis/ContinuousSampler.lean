@@ -14,7 +14,8 @@ open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
 
 /-! ## The real-literal injection
 
@@ -64,7 +65,8 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     LawfulProbLangℝ.unifUnitIsConcentrated
 
 section Unary
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc Δ GF]
+  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (▷ ∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp E pl(urand) Φ := by
@@ -83,9 +85,25 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
 
 /-! ## Relational coupling of two continuous samplers
 
-Unlike the discrete `Cfg.uniform_addCoupl_bij`, a bijection is not enough here:
+Unlike the discrete `unifInt_codensity_bij`, a bijection is not enough here:
 `f` must be measure-preserving for `unifUnit`. -/
 
+theorem Cfg.uniformReal_codensity_bij (σ σ' : State rT) (f : rT → rT)
+    (hmp : MeasureTheory.MeasurePreserving f
+      (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) :
+    Δ.Codensity 1 0
+      {p : Cfg rT × Cfg rT | ∃ r, r ∈ LawfulProbLangℝ.unifUnitSupport ∧
+        p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
+      (Cfg.uniformReal σ) (Cfg.uniformReal σ') := by
+  have h := (GradedDivergence.codensity_graph (Δ := Δ) LawfulProbLangℝ.unifUnit
+    hmp.measurable).concentrated_L LawfulProbLangℝ.unifUnitSupportMeasurable
+    LawfulProbLangℝ.unifUnitIsConcentrated
+  rw [hmp.map_eq] at h
+  exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (Cfg.measurable_realLit σ)
+    (Cfg.measurable_realLit σ')
+
+-- DEAD(approxis-codensity): replaced by `Cfg.uniformReal_codensity_bij`
+/-
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
       (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) :
@@ -107,6 +125,7 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
   refine MeasureTheory.lintegral_mono_ae ?_
   filter_upwards [hae] with r hr
   exact Hle ⟨r, hr, rfl, rfl⟩
+-/
 
 theorem wp_couple_urand_urand (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
@@ -131,12 +150,8 @@ theorem wp_couple_urand_urand (f : rT → rT)
   isplitr
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill Exp.urand_not_isValue, primStep_urand σ₁']
-    have hmap : AddCoupl 0 {p | R p.1 p.2} ((Cfg.uniformReal σ₁).map id)
-        ((Cfg.uniformReal σ₁').map fun ρ => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT)) :=
-      AddCoupl.map _ _ measurable_id (by measurability)
-        (by rintro a b ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩)
-        (Cfg.uniformReal_addCoupl_bij σ₁ σ₁' f hmp)
-    rwa [MeasureTheory.Measure.map_id] at hmap
+    exact (Cfg.uniformReal_codensity_bij σ₁ σ₁' f hmp).map_right
+      (by rintro a b ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (Ectx.fillCfg.measurable K)
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
@@ -153,7 +168,8 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc Δ GF]
+  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
