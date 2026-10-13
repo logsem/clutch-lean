@@ -12,17 +12,18 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Approxi
 
 namespace ProbLang
 
-variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
 
-def OpenInv (e : Exp rT) : Prop :=
-  ∀ {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF] {E1 E2 : CoPset}
+def OpenInv (Δ : GradedDivergence.{0} ι) (e : Exp rT) : Prop :=
+  ∀ {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
     (|={E1, E2}=> wp E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp E1 e Φ
 
 namespace OpenInv
 
 theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
-    [ApproxisWpGS (rT := rT) GF] [InvGS_gen hlc GF] {E1 E2 : CoPset} {σ₁ : State rT}
+    [ApproxisWpGS (rT := rT) Δ GF] [InvGS_gen hlc GF] {E1 E2 : CoPset} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {ε₁ : ENNReal} {Φ : Val rT → IProp GF} {v : Val rT} : iprop%
     specCoupl ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ => iprop(|={∅, E2}=>
       stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ errInterp (rT := rT) ε₂ ∗ (|={E2, E1}=> Φ v))) ⊢
@@ -35,7 +36,8 @@ theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
   imod HBody with ⟨Hσ, Hs, Hε, >HΦ⟩
   iframe
 
-theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
+theorem specCoupl_atomic_bridge_none [Δ.IsZeroLeft] {GF : BundledGFunctors}
+    [ApproxisWpGS (rT := rT) Δ GF]
     {e : Exp rT} (h : Atomic' e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ : ENNReal} {Φ : Val rT → IProp GF} : iprop%
     specCoupl ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
@@ -86,7 +88,7 @@ theorem specCoupl_atomic_bridge_none {GF : BundledGFunctors} [ApproxisWpGS (rT :
   · iintro !>
     iapply specCoupl_err_ge_1 Hε1
 
-theorem of_atomic {e : Exp rT} (h : Atomic' e) : OpenInv e := by
+theorem of_atomic [Δ.IsZeroLeft] {e : Exp rT} (h : Atomic' e) : OpenInv Δ e := by
   intro GF _ E1 E2 Φ
   iintro HF
   iapply ApproxisWpGS.wp_unfold
@@ -105,7 +107,8 @@ theorem of_atomic {e : Exp rT} (h : Atomic' e) : OpenInv e := by
 
 end OpenInv
 
-theorem wp_atomic {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF] {e : Exp rT} (h : OpenInv e)
+theorem wp_atomic {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {e : Exp rT}
+    (h : OpenInv Δ e)
     {E1 E2 : CoPset} {Φ : Val rT → IProp GF} :
     iprop(|={E1, E2}=> wp E2 e (fun v => iprop(|={E2, E1}=> Φ v))) ⊢ wp E1 e Φ :=
   h
@@ -117,30 +120,31 @@ theorem wp_atomic {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF] {e : Exp 
 lemma has to be applied by hand. `OpenInv` is a plain `Prop`, so it is wrapped in
 a class that the concrete redexes register into. -/
 
-class IsOpenInv (e : Exp rT) : Prop where
-  out : OpenInv e
+class IsOpenInv (Δ : GradedDivergence.{0} ι) (e : Exp rT) : Prop where
+  out : OpenInv Δ e
 
 section Instances
-variable [MeasurableSingletonClass rT]
+variable [MeasurableSingletonClass rT] [Δ.IsZeroLeft]
 
-instance : IsOpenInv (rT := rT) .urand := ⟨OpenInv.of_atomic Atomic.urand'⟩
+instance : IsOpenInv Δ (rT := rT) .urand := ⟨OpenInv.of_atomic Atomic.urand'⟩
 
-instance (l : Loc) : IsOpenInv (rT := rT) pl(!#(.loc l)) := ⟨OpenInv.of_atomic (Atomic.load' l)⟩
+instance (l : Loc) : IsOpenInv Δ (rT := rT) pl(!#(.loc l)) := ⟨OpenInv.of_atomic (Atomic.load' l)⟩
 
-instance (l : Loc) (v : Val rT) : IsOpenInv (Exp.store pl(#(.loc l)) v.1) :=
+instance (l : Loc) (v : Val rT) : IsOpenInv Δ (Exp.store pl(#(.loc l)) v.1) :=
   ⟨OpenInv.of_atomic (Atomic.store' l v)⟩
 
-instance (v : Val rT) : IsOpenInv (Exp.alloc v.1) := ⟨OpenInv.of_atomic (Atomic.alloc' v)⟩
+instance (v : Val rT) : IsOpenInv Δ (Exp.alloc v.1) := ⟨OpenInv.of_atomic (Atomic.alloc' v)⟩
 
-instance (z : Int) : IsOpenInv (rT := rT) pl(rand(#(.int z), #(.unit))) :=
+instance (z : Int) : IsOpenInv Δ (rT := rT) pl(rand(#(.int z), #(.unit))) :=
   ⟨OpenInv.of_atomic (Atomic.rand_unit' z)⟩
 
-instance (z : Int) (l : Loc) : IsOpenInv (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
+instance (z : Int) (l : Loc) : IsOpenInv Δ (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
   ⟨OpenInv.of_atomic (Atomic.rand_lbl' z l)⟩
 
 end Instances
 
-theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
+omit [Monoid ι] in
+theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
     {E₁ E₂ : CoPset} {Φ : Val rT → IProp GF} {β : X → IProp GF} {γ : X → Option (IProp GF)}
     {x : X} {v : Val rT} : iprop%
     (|={E₂}=> β x ∗ (γ x -∗? Φ v)) ⊢ (β x ={E₂, E₁}=∗ (γ x).getD iprop(emp)) ={E₂, E₁}=∗ Φ v := by
@@ -155,15 +159,15 @@ theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT
   | some P => iapply HΦ $$ Hcl
 
 instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 E2 : CoPset}
-    {e : Exp rT} [h : IsOpenInv e] {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
+    {e : Exp rT} [h : IsOpenInv Δ e] {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
     {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True p io false iprop(|={E1, E2}=> P) P
       (wp E1 e Φ) (wp E2 e (fun v => iprop(|={E2, E1}=> Φ v))) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans (wp_atomic h.out)
 
-instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpenInv e]
-    {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF] {Φ : Val rT → IProp GF}
+instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpenInv Δ e]
+    {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {Φ : Val rT → IProp GF}
     (E₁ E₂ : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
     ElimAcc True (fupd E₁ E₂) (fupd E₂ E₁) α β γ (wp E₁ e Φ)
       (fun x => wp E₂ e (fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v)))) where
@@ -181,7 +185,7 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
     iexact Hinner
 
 instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
-    {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF] {Φ : Val rT → IProp GF}
+    {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {Φ : Val rT → IProp GF}
     (E : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
     ElimAcc True (fupd E E) (fupd E E) α β γ (wp E e Φ)
       (fun x => wp E e (fun v => iprop(|={E}=> β x ∗ (γ x -∗? Φ v)))) where

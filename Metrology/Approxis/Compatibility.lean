@@ -19,14 +19,18 @@ open scoped AppGS
 namespace ProbLang
 
 section Compatibility
-variable {rT : Type _} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {rT : Type} [LawfulProbLangℝ rT]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc Δ GF]
+  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
     (lrel_arr A B).car v v' ⊢
     □ (∀ w1 w2, A w1 w2 -∗ refines ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=
   sep_elim_right
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e1 e1' A ⊢
     refines ⊤ e2 e2' B -∗ refines ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by
@@ -49,6 +53,7 @@ theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe
   itrivial
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e e' A ⊢ refines ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
   show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.inl] e) (Ectx.fill [EctxItem.inl] e') (lrel_sum A B)
@@ -65,6 +70,7 @@ theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe HA
   itrivial
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e e' B ⊢ refines ⊤ (.inr e) (.inr e') (lrel_sum A B) := by
   show _ ⊢ refines ⊤ (Ectx.fill [EctxItem.inr] e) (Ectx.fill [EctxItem.inr] e') (lrel_sum A B)
@@ -81,6 +87,7 @@ theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe HB
   itrivial
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines ⊤ e1 e1' (lrel_arr A B) ⊢
     refines ⊤ e2 e2' A -∗ refines ⊤ (Exp.app e1 e2) (Exp.app e1' e2') B := by
@@ -109,6 +116,7 @@ theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
   inext
   iexact H
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     refines ⊤ t b A ⊢ refines ⊤ t (.app (.lam b) u.1) A := by
   iintro H
@@ -324,6 +332,7 @@ theorem refines_snd {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iapply refines_pure_ret (Hex := pureExec_snd_pair) (Hex' := pureExec_snd_pair)
     ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩ rfl rfl $$ HB
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
     (_hC : OFE.NonExpansive C)
     (hCclosed : ∀ v v', (C A).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝) :
@@ -442,6 +451,7 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
 
 /-! ### Shared machinery for the `rand` compatibility rules -/
 
+omit [Monoid ι] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
     appNatTape α z [] ∗ specNatTape α' z [] ⊢@{IProp GF}
     ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) := by

@@ -14,12 +14,12 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Approxi
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 section TyEnvSetup
 variable {GF : BundledGFunctors}
 
-abbrev TyEnv (rT : Type _) (GF : BundledGFunctors) := Nat → lrel rT GF
+abbrev TyEnv (rT : Type) (GF : BundledGFunctors) := Nat → lrel rT GF
 
 def TyEnv.cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
@@ -42,15 +42,17 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
 end TyEnvSetup
 
 section interp
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
-structure NEFun (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
   fn : TyEnv rT GF → lrel rT GF
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 
 namespace NEFun
-variable {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 @[reducible] noncomputable def const (L : lrel rT GF) : NEFun rT GF :=
   { fn := fun _ => L, ne := fun _ => Dist.rfl }
@@ -130,7 +132,8 @@ end interp
 /-! ## Closedness of related values -/
 
 section interp_closed
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
     (interp τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
@@ -151,7 +154,8 @@ end interp_closed
 /-! ## Soundness of the semantic type interpretation -/
 
 section interp_sound
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
@@ -219,6 +223,7 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
   subst heq1 heq2
   exact .rfl
 
+omit [Monoid ι] in
 private theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
     (lrel_ref A).car v1 v2 ⊢ ⌜∃ l1 l2 : Loc, v1 = .loc l1 ∧ v2 = .loc l2⌝ := by
   unfold lrel_ref
@@ -259,10 +264,10 @@ end interp_sound
 
 /-! ## Relational environment typing -/
 
-abbrev RelCtx (rT : Type _) (GF : BundledGFunctors) := List (Var × lrel rT GF)
+abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors}
 
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
@@ -312,7 +317,8 @@ theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
 end RelCtx
 
 section env_typed
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
@@ -470,7 +476,8 @@ end env_typed
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
     (A : lrel rT GF) : IProp GF := iprop%
@@ -543,7 +550,8 @@ scoped notation:100 Δ "; " Γ " ⊨ " e " ≤log≤ " e' " : " τ =>
 /-! ## Substitution lemmas on `interp` -/
 
 section interp_subst
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [ApproxisRGS rT hlc D GF]
 
 @[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)

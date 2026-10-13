@@ -8,11 +8,12 @@ public import Metrology.Approxis.AppWeakestpre
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
 
-variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
 namespace ProbLang.ApproxisWpGS
 
-variable {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
+variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisWpGS (rT := rT) Δ GF]
 
 theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -23,7 +24,7 @@ theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜∀ ρ₁ ρ₂, X ρ₁ ρ₂ ≤ 1⌝ ∗
-        ⌜ExpCoupl ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜Δ.CodensityE 1 ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
             errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂) ∗ wp E e₂ Φ)) ⊢
@@ -45,7 +46,7 @@ theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT 
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜∀ ρ₁ ρ₂, X ρ₁ ρ₂ ≤ 1⌝ ∗
-        ⌜ExpCoupl ε X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜Δ.CodensityE 1 ε X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
             errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp E e₂ Φ)) ⊢
@@ -68,7 +69,7 @@ theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜∀ ρ₁ ρ₂, X ρ₁ ρ₂ ≤ 1⌝ ∗
-        ⌜ExpCoupl ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜Δ.CodensityE 1 ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
           ⌜1 ≤ X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂⌝ ∨
           (stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
@@ -96,7 +97,7 @@ theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
       errInterp (rT := rT) ε -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),
         ⌜ErasableExpr μ₁ σ₁⌝ ∗ ⌜ErasableExpr μ₁' σ₁'⌝ ∗
-        ⌜AddCoupl 0 {p | R p.1 p.2} μ₁ μ₁'⌝ ∗
+        ⌜Δ.Codensity 1 0 {p | R p.1 p.2} μ₁ μ₁'⌝ ∗
         (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₂'⟩ ∗ errInterp (rT := rT) ε ∗
             wp E e Φ)) ⊢

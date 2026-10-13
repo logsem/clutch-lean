@@ -16,10 +16,12 @@ open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 section AppRelRules
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
+  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc Δ GF]
+  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 /-! ## Forward reductions on the LHS -/
 
@@ -33,6 +35,7 @@ theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   inext
   iapply H $$ HK Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines E t (K.fill e') A ⊢ refines E t (K.fill e) A := by
@@ -47,6 +50,7 @@ theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K' K e'] at HK'
   iapply H $$ %K' %ε HK' Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
       specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines E e1 (K'.fill v.1) A))) ⊢
@@ -62,6 +66,7 @@ theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K'' K' v.1] at HK''
   iapply Hrefines $$ %K'' %ε HK'' Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
     {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
@@ -78,6 +83,7 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
   isimp only [← Ectx.fill_comp K'' K' e2'] at HKres
   iapply Hlog $$ %K'' %ε HKres Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF} :
     wp ⊤ e1 (fun v => refines E (K.fill v.1) t A) ⊢ refines E (K.fill e1) t A := by
   iintro He
@@ -98,8 +104,9 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
   iunfold refines at HRefv
   iapply HRefv $$ %K' %ε HK Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
-    (Hopen : OpenInv e1) : iprop%
+    (Hopen : OpenInv Δ e1) : iprop%
     (∀ (K' : Ectx rT), ⤇ K'.fill t -∗
       |={⊤, E'}=> wp E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
         ⤇ K'.fill t' ∗ refines E (K.fill v.1) t' A)) ⊢
@@ -165,6 +172,7 @@ theorem refines_store_l {E : CoPset} {K : Ectx rT} {l : Loc} {v' : Val rT} {t : 
 
 /-! ## Stateful reductions on the RHS -/
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, l ↦ₛ v -∗ refines E t (K.fill pl(#(.loc l))) A) ⊢
     refines E t (K.fill (.alloc v.1)) A := by
@@ -179,6 +187,7 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iframe HKRes
   iapply Hlog $$ %l Hl
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v -∗ refines E t (K.fill v.1) A) ⊢ refines E t (K.fill pl(!#(.loc l))) A := by
@@ -194,6 +203,7 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iframe HKRes
   iapply Hlog $$ HlRes
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines E e (K.fill pl(#(.unit))) A) ⊢
@@ -259,6 +269,7 @@ theorem refines_randU_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : l
   isimp only [← Ectx.fill_comp K' K] at HKRes
   iapply Hlog $$ %n %Hbnds %K' %ε HKRes Hna Herr Hpos
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {e : Exp rT} {A : lrel rT GF} : iprop%
     specNatTape l z (n :: ns) ∗
@@ -298,6 +309,7 @@ theorem refines_alloctape_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT} {A
   iintro %l Hl
   iapply Hlog $$ %l Hl
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, specNatTape l z [] -∗ refines E e (K.fill pl(#(.lbl l))) A) ⊢
     refines E e (K.fill pl(tape(#(.int z)))) A := by
@@ -313,6 +325,7 @@ theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A
 
 /-! ## Structural rules -/
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
     refines E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines E e1 e2 A' := by
   iintro He HAA
@@ -326,6 +339,7 @@ theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
   iapply refines_ret (v1 := v) (v2 := v') rfl rfl
   iapply HAA $$ %v %v' HA
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
@@ -338,6 +352,7 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
   iintro !> %w1 %w2 HA
   iapply H $$ %w1 %w2 HA
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines ⊤ v1.1 v2.1 A -∗
@@ -354,6 +369,7 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
 
 /-! ## Error-credit rules -/
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_get_ec {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ ε, ↯ ε -∗ ⌜0 < ε⌝ -∗ refines E e e' A) ⊢ refines E e e' A := by
   iintro Hcnt
@@ -365,6 +381,7 @@ theorem refines_get_ec {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
   have hpos2 : 0 < ε / 2 := ENNReal.half_pos HposTot.ne'
   iapply Hcnt $$ %(ε / 2) Herr1 %hpos2 %K %(ε / 2) Hj Hna Herr2 %hpos2
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_ind_amp {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} {k : NNReal}
     (hk : 1 < k) : iprop%
     □ (∀ (ε : ENNReal), ⌜0 < ε⌝ -∗ □ (↯ ((k : ENNReal) * ε) -∗ refines E e e' A) -∗ ↯ ε -∗
@@ -377,6 +394,7 @@ theorem refines_ind_amp {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} {k : NNRea
   iintro !> %ε' %hε' #Hstep Hε'
   iapply Hamp $$ %ε' %hε' Hstep Hε'
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem refines_arrow_val_err {v v' : Val rT} {A A' : lrel rT GF} {k : NNReal}
     (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (ε : ENNReal), ⌜0 < ε⌝ -∗
