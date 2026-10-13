@@ -958,16 +958,15 @@ theorem headStep.c_rand.measurable :
           (fun _ => 0)
           (fun α => c_lbl_arm (p.2.1, p.2.2, α))
           (fun _ => 0)) := by
-      apply BaseLit.measurable_rec_param
+      apply BaseLit.measurable_casesOn_param
         (c_int := fun _ => 0) (c_bool := fun _ => 0)
-        (c_unit := fun q : (State rT × Int) × Unit => c_unit_arm (q.1.1, q.1.2, q.2))
+        (c_unit := fun q : State rT × Int => c_unit_arm (q.1, q.2, ()))
         (c_loc := fun _ => 0)
         (c_lbl := fun q : (State rT × Int) × Lbl => c_lbl_arm (q.1.1, q.1.2, q.2))
         (c_real := fun _ => 0)
         (h_int := measurable_const) (h_bool := measurable_const)
         (h_unit := hc_unit_arm.comp
-          ((measurable_fst.comp measurable_fst).prodMk
-            ((measurable_snd.comp measurable_fst).prodMk measurable_snd)))
+          (measurable_fst.prodMk (measurable_snd.prodMk (measurable_const (a := ())))))
         (h_loc := measurable_const)
         (h_lbl := hc_lbl_arm.comp
           ((measurable_fst.comp measurable_fst).prodMk
@@ -1011,7 +1010,7 @@ theorem headStep.c_rand.measurable :
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun z => c_e2_dispatch ((p.2.1, z), p.2.2)) (fun _ => 0) 0
           (fun _ => 0) (fun _ => 0) (fun _ => 0)) := by
-      apply BaseLit.measurable_rec_param
+      apply BaseLit.measurable_casesOn_param
         (c_int := fun q : (State rT × Exp rT) × Int =>
           c_e2_dispatch ((q.1.1, q.2), q.1.2))
         (c_bool := fun _ => 0) (c_unit := fun _ => 0)
@@ -1217,8 +1216,8 @@ theorem headStep.measurable :
   let c_pair  : State rT × Exp rT × Exp rT → Measure (Cfg rT) := fun _ => 0
   let c_inl   : State rT × Exp rT → Measure (Cfg rT) := fun _ => 0
   let c_inr   : State rT × Exp rT → Measure (Cfg rT) := fun _ => 0
-  let c_fail  : State rT × Unit → Measure (Cfg rT) := fun _ => 0
-  let c_urand : State rT × Unit → Measure (Cfg rT) := fun p => Cfg.uniformReal p.1
+  let c_fail  : State rT → Measure (Cfg rT) := fun _ => 0
+  let c_urand : State rT → Measure (Cfg rT) := fun σ => Cfg.uniformReal σ
   have hheq : (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2))
       = fun p : Exp rT × State rT => Exp.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun n => c_bvar (p.2, n)) (fun x => c_fvar (p.2, x))
@@ -1236,8 +1235,8 @@ theorem headStep.measurable :
           (fun e1 e2 => headStep.c_store (p.2, e1, e2))
           (fun e => headStep.c_tape (p.2, e))
           (fun e1 e2 => headStep.c_rand (p.2, e1, e2))
-          (c_fail (p.2, ()))
-          (c_urand (p.2, ()))
+          (c_fail p.2)
+          (c_urand p.2)
           (fun e pat => headStep.c_scrut (p.2, e, pat)) := by
     funext ⟨e, σ⟩
     cases e with
@@ -1269,7 +1268,7 @@ theorem headStep.measurable :
                         case lit l2 => cases l2 <;> rfl
     | scrut _ _ => rfl
   rw [hheq]
-  apply Exp.measurable_rec_param
+  apply Exp.measurable_casesOn_param
     (c_bvar := c_bvar) (c_fvar := c_fvar) (c_lit := c_lit)
     (c_lam := c_lam) (c_fix := c_fix)
     (c_app := headStep.c_app) (c_unop := headStep.c_unop) (c_binop := headStep.c_binop)
@@ -1300,7 +1299,7 @@ theorem headStep.measurable :
   · exact headStep.c_tape.measurable
   · exact headStep.c_rand.measurable
   · exact measurable_const
-  · exact Cfg.uniformReal.measurable.comp measurable_fst
+  · exact Cfg.uniformReal.measurable
   · exact headStep.c_scrut.measurable
 
 def headStepKernel : Kernel (Cfg rT) (Cfg rT) where

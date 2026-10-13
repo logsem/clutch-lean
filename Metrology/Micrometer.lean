@@ -5,6 +5,7 @@ public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 public import Mathlib.Basic.Real.Basic
 public import Metrology.Meta.Projections
 import all Metrology.Meta.Projections
+import all Metrology.Meta.Build
 
 @[expose] public section
 

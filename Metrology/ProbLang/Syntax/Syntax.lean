@@ -145,7 +145,7 @@ theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [LawfulProbLang�
   rw [MeasureTheory.measure_univ] at h1
   exact one_ne_zero h1
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive BaseLit (rT : Type _)
   | int (z : Int)
   | bool (b : Bool)
@@ -155,15 +155,15 @@ inductive BaseLit (rT : Type _)
   | real (r : rT)
   deriving Countable, BEq, Repr
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive UnOp | neg | minus | toReal | frac
   deriving Inhabited, Countable, Repr, BEq
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive BinOp | plus | minus | mult | div | mod | and | or | xor | eq | lt | le | shl | shr
   deriving Inhabited, Countable, Repr, BEq
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive Ty
   | int | bool | unit
   | real
@@ -178,7 +178,7 @@ inductive Ty
   | exists' (τ : Ty)
   deriving Inhabited, DecidableEq, Countable, Repr, BEq
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive Pat (rT : Type _)
   | wildcard
   | lit (b : BaseLit rT)
@@ -187,7 +187,7 @@ inductive Pat (rT : Type _)
   | inr (p : Pat rT)
   deriving Inhabited, Countable, BEq, Repr
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive Exp (rT : Type _)
   | bvar (n : Nat)
   | fvar (x : Var)
@@ -948,7 +948,7 @@ theorem Exp.ofVal_injective : Function.Injective (@Exp.ofVal α) :=
 
 /- ## Evaluation contexts -/
 
-@[uncurriedProjections, curriedProjections, constructors]
+@[uncurriedProjections, constructors]
 inductive EctxItem (α : Type _)
   | appL (v2 : Val α)
   | appR (e1 : Exp α)

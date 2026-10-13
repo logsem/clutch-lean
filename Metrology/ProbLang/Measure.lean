@@ -297,28 +297,6 @@ theorem Measure.bind_map_comm {α β γ : Type*}
 
 abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
 
-/-! ### `MeasurableEmbedding` from a generating π-system -/
-
-theorem measurableEmbedding_of_piSystem₁
-    {X Z : Type*} [mX : MeasurableSpace X] [MeasurableSpace Z]
-    {f : X → Z} (h_inj : Function.Injective f) (h_meas : Measurable f)
-    {𝓒 : Set (Set X)}
-    (h_gen : mX = MeasurableSpace.generateFrom 𝓒)
-    (h_pi : IsPiSystem 𝓒)
-    (h_basic : ∀ ⦃A⦄, A ∈ 𝓒 → MeasurableSet (f '' A))
-    {cov : Set Z} (h_cov_meas : MeasurableSet cov) (h_cov_range : cov = .range f) :
-    MeasurableEmbedding f := by
-  refine ⟨h_inj, h_meas, fun S hS => ?_⟩
-  refine MeasurableSpace.induction_on_inter (C := fun S _ => MeasurableSet (f '' S))
-      h_gen h_pi ?_ h_basic ?_ ?_ S hS
-  · simp
-  · intro T _ ih
-    rw [Set.compl_eq_univ_sdiff, Set.image_sdiff h_inj, Set.image_univ, ← h_cov_range]
-    exact h_cov_meas.diff ih
-  · intro f _ _ ih
-    rw [Set.image_iUnion]
-    exact .iUnion ih
-
 /-! ## Shape-stratified measurability
 
 Measurability is assembled from cells `{p | shape p = s ∧ f p ∈ U}`, one per shape. -/
@@ -329,18 +307,7 @@ variable {T α : Type _} [MeasurableSpace T] [MeasurableSpace α]
 variable {Sh : Type _} (shape : T → Sh)
 variable {f : T → α}
 
-theorem measurable_of_cells [Countable Sh]
-    (h_cell : ∀ (s : Sh) {U : Set α}, MeasurableSet U →
-      MeasurableSet {p : T | shape p = s ∧ f p ∈ U}) :
-    Measurable f := by
-  intro S hS
-  rw [show (f ⁻¹' S) = ⋃ s : Sh, {p : T | shape p = s ∧ f p ∈ S} from by
-    ext p
-    simp only [Set.mem_preimage, Set.mem_iUnion, Set.mem_ofPred_eq]
-    exact ⟨fun h => ⟨_, rfl, h⟩, fun ⟨_, _, h⟩ => h⟩]
-  exact MeasurableSet.iUnion fun s => h_cell s hS
-
-/-! Variants with an extra measurable parameter `β`; the cell is over `β × T`. -/
+/-! With an extra measurable parameter `β`, the cell is over `β × T`. -/
 
 variable {β : Type _} [MeasurableSpace β]
 variable {g : β → T → α}

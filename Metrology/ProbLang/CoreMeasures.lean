@@ -1,6 +1,6 @@
 module
 
-public import Metrology.ProbLang.CoreMeasures.Cylinders
+public import Metrology.ProbLang.CoreMeasures.Shapes
 public import Metrology.ProbLang.CoreMeasures.BaseLit
 public import Metrology.ProbLang.CoreMeasures.Pat
 public import Metrology.ProbLang.CoreMeasures.Exp

@@ -4,7 +4,7 @@ import all Mathlib.Tactic.DeriveCountable
 public import Metrology.ProbLang.Measure
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.CoreMeasures.Val
-public import Metrology.ProbLang.CoreMeasures.Cylinders
+public import Metrology.ProbLang.CoreMeasures.Shapes
 
 meta import Metrology.Meta
 meta import Metrology.ProbLang.CoreMeasures.CylinderGen
@@ -21,14 +21,14 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 namespace ProbLang.EctxItem
 
-/-! `cylinder_defs` generates the cylinder σ-algebra, measurable constructors, embeddings and
-projections, and the `casesOn` keystones `measurable_rec` / `measurable_rec_param`. -/
+/-! Deriving `MeasurableSpace` generates the cylinder σ-algebra, measurable constructors, embeddings
+and projections, and the `casesOn` keystones `measurable_casesOn` / `measurable_casesOn_param`. -/
 
-cylinder_defs EctxItem
+deriving instance MeasurableSpace for EctxItem
 
 /-! ### Smoke tests
 
-`EctxItem` is not recursive, so each test goes through `measurable_rec` or `measurable_rec_param`
+`EctxItem` is not recursive, so each test goes through `measurable_casesOn` or `measurable_casesOn_param`
 and exercises all 21 constructor slots. -/
 
 /-- Discrete codomain. -/
@@ -66,14 +66,14 @@ theorem tagDepth.measurable [MeasurableSpace α] :
         (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)) := by
     funext K; cases K <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_appL := fun _ => 0) (f_appR := fun _ => 1) (f_unop := fun _ => 2)
-    (f_binopL := fun _ => 3) (f_binopR := fun _ => 4) (f_condC := fun _ => 5)
-    (f_pairL := fun _ => 6) (f_pairR := fun _ => 7)
-    (f_fst := fun _ => 8) (f_snd := fun _ => 9) (f_inl := fun _ => 10) (f_inr := fun _ => 11)
-    (f_case := fun _ => 12) (f_alloc := fun _ => 13) (f_load := fun _ => 14)
-    (f_storeL := fun _ => 15) (f_storeR := fun _ => 16) (f_tape := fun _ => 17)
-    (f_randL := fun _ => 18) (f_randR := fun _ => 19) (f_scrut := fun _ => 20)
+  apply measurable_casesOn
+    (c_appL := fun _ => 0) (c_appR := fun _ => 1) (c_unop := fun _ => 2)
+    (c_binopL := fun _ => 3) (c_binopR := fun _ => 4) (c_condC := fun _ => 5)
+    (c_pairL := fun _ => 6) (c_pairR := fun _ => 7)
+    (c_fst := fun _ => 8) (c_snd := fun _ => 9) (c_inl := fun _ => 10) (c_inr := fun _ => 11)
+    (c_case := fun _ => 12) (c_alloc := fun _ => 13) (c_load := fun _ => 14)
+    (c_storeL := fun _ => 15) (c_storeR := fun _ => 16) (c_tape := fun _ => 17)
+    (c_randL := fun _ => 18) (c_randR := fun _ => 19) (c_scrut := fun _ => 20)
   all_goals fun_prop
 
 /-- Depends on whether a constructor carries a payload. -/
@@ -111,14 +111,14 @@ theorem countLeaves.measurable [MeasurableSpace α] :
         (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)) := by
     funext K; cases K <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_appL := fun _ => 1) (f_appR := fun _ => 1) (f_unop := fun _ => 1)
-    (f_binopL := fun _ => 1) (f_binopR := fun _ => 1) (f_condC := fun _ => 1)
-    (f_pairL := fun _ => 1) (f_pairR := fun _ => 1)
-    (f_fst := fun _ => 0) (f_snd := fun _ => 0) (f_inl := fun _ => 0) (f_inr := fun _ => 0)
-    (f_case := fun _ => 1) (f_alloc := fun _ => 0) (f_load := fun _ => 0)
-    (f_storeL := fun _ => 1) (f_storeR := fun _ => 1) (f_tape := fun _ => 0)
-    (f_randL := fun _ => 1) (f_randR := fun _ => 1) (f_scrut := fun _ => 1)
+  apply measurable_casesOn
+    (c_appL := fun _ => 1) (c_appR := fun _ => 1) (c_unop := fun _ => 1)
+    (c_binopL := fun _ => 1) (c_binopR := fun _ => 1) (c_condC := fun _ => 1)
+    (c_pairL := fun _ => 1) (c_pairR := fun _ => 1)
+    (c_fst := fun _ => 0) (c_snd := fun _ => 0) (c_inl := fun _ => 0) (c_inr := fun _ => 0)
+    (c_case := fun _ => 1) (c_alloc := fun _ => 0) (c_load := fun _ => 0)
+    (c_storeL := fun _ => 1) (c_storeR := fun _ => 1) (c_tape := fun _ => 0)
+    (c_randL := fun _ => 1) (c_randR := fun _ => 1) (c_scrut := fun _ => 1)
   all_goals fun_prop
 
 /-- Non-discrete codomain; only `appR` transforms its payload. -/
@@ -158,24 +158,24 @@ theorem endoMap.measurable [MeasurableSpace α] :
         EctxItem.randL EctxItem.randR EctxItem.scrut) := by
     funext K; cases K <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_appL := EctxItem.appL) (f_appR := fun e => EctxItem.appR (Exp.fst e))
-    (f_unop := EctxItem.unop)
-    (f_binopL := fun q : BinOp × Val α => EctxItem.binopL q.1 q.2)
-    (f_binopR := fun q : BinOp × Exp α => EctxItem.binopR q.1 q.2)
-    (f_condC := fun q : Exp α × Exp α => EctxItem.condC q.1 q.2)
-    (f_pairL := EctxItem.pairL) (f_pairR := EctxItem.pairR)
-    (f_fst := fun _ => EctxItem.fst) (f_snd := fun _ => EctxItem.snd)
-    (f_inl := fun _ => EctxItem.inl) (f_inr := fun _ => EctxItem.inr)
-    (f_case := fun q : Exp α × Exp α => EctxItem.case q.1 q.2)
-    (f_alloc := fun _ => EctxItem.alloc) (f_load := fun _ => EctxItem.load)
-    (f_storeL := EctxItem.storeL) (f_storeR := EctxItem.storeR)
-    (f_tape := fun _ => EctxItem.tape)
-    (f_randL := EctxItem.randL) (f_randR := EctxItem.randR)
-    (f_scrut := EctxItem.scrut)
+  apply measurable_casesOn
+    (c_appL := EctxItem.appL) (c_appR := fun e => EctxItem.appR (Exp.fst e))
+    (c_unop := EctxItem.unop)
+    (c_binopL := fun q : BinOp × Val α => EctxItem.binopL q.1 q.2)
+    (c_binopR := fun q : BinOp × Exp α => EctxItem.binopR q.1 q.2)
+    (c_condC := fun q : Exp α × Exp α => EctxItem.condC q.1 q.2)
+    (c_pairL := EctxItem.pairL) (c_pairR := EctxItem.pairR)
+    (c_fst := fun _ => EctxItem.fst) (c_snd := fun _ => EctxItem.snd)
+    (c_inl := fun _ => EctxItem.inl) (c_inr := fun _ => EctxItem.inr)
+    (c_case := fun q : Exp α × Exp α => EctxItem.case q.1 q.2)
+    (c_alloc := fun _ => EctxItem.alloc) (c_load := fun _ => EctxItem.load)
+    (c_storeL := EctxItem.storeL) (c_storeR := EctxItem.storeR)
+    (c_tape := fun _ => EctxItem.tape)
+    (c_randL := EctxItem.randL) (c_randR := EctxItem.randR)
+    (c_scrut := EctxItem.scrut)
   all_goals fun_prop
 
-/-- Threads a parameter through `measurable_rec_param`. -/
+/-- Threads a parameter through `measurable_casesOn_param`. -/
 @[simp] def addAcc : Nat → EctxItem α → Nat
   | acc, .appL _    => acc + 1
   | acc, .appR _    => acc + 1
@@ -192,19 +192,19 @@ theorem addAcc.measurable [MeasurableSpace α] :
         (fun _ => p.2) (fun _ => p.2) p.2 (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)) := by
     funext ⟨K, _⟩; cases K <;> rfl
   rw [heq]
-  apply measurable_rec_param
+  apply measurable_casesOn_param
     (c_appL := fun q : Nat × Val α => q.1 + 1) (c_appR := fun q : Nat × Exp α => q.1 + 1)
     (c_unop := fun q : Nat × UnOp => q.1)
     (c_binopL := fun q : Nat × BinOp × Val α => q.1)
     (c_binopR := fun q : Nat × BinOp × Exp α => q.1)
     (c_condC := fun q : Nat × Exp α × Exp α => q.1)
     (c_pairL := fun q : Nat × Val α => q.1) (c_pairR := fun q : Nat × Exp α => q.1)
-    (c_fst := fun q : Nat × Unit => q.1) (c_snd := fun q : Nat × Unit => q.1)
-    (c_inl := fun q : Nat × Unit => q.1) (c_inr := fun q : Nat × Unit => q.1)
+    (c_fst := fun q : Nat => q) (c_snd := fun q : Nat => q)
+    (c_inl := fun q : Nat => q) (c_inr := fun q : Nat => q)
     (c_case := fun q : Nat × Exp α × Exp α => q.1)
-    (c_alloc := fun q : Nat × Unit => q.1) (c_load := fun q : Nat × Unit => q.1)
+    (c_alloc := fun q : Nat => q) (c_load := fun q : Nat => q)
     (c_storeL := fun q : Nat × Val α => q.1) (c_storeR := fun q : Nat × Exp α => q.1)
-    (c_tape := fun q : Nat × Unit => q.1)
+    (c_tape := fun q : Nat => q)
     (c_randL := fun q : Nat × Val α => q.1) (c_randR := fun q : Nat × Exp α => q.1)
     (c_scrut := fun q : Nat × Pat α => q.1)
   all_goals fun_prop

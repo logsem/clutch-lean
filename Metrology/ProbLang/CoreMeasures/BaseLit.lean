@@ -4,7 +4,7 @@ import all Mathlib.Tactic.DeriveCountable
 public import Metrology.ProbLang.Measure
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.CoreMeasures.Discrete
-public import Metrology.ProbLang.CoreMeasures.Cylinders
+public import Metrology.ProbLang.CoreMeasures.Shapes
 
 meta import Metrology.Meta
 meta import Metrology.ProbLang.CoreMeasures.CylinderGen
@@ -17,11 +17,11 @@ noncomputable section ProbLangMeasures
 
 namespace ProbLang.BaseLit
 
-/-! `cylinder_defs` (`CylinderGen.lean`) generates the cylinder σ-algebra, the constructor
-embeddings and projections, their measurability lemmas, and the `casesOn` keystones
-`measurable_rec` / `measurable_rec_param`. -/
+/-! Deriving `MeasurableSpace` (`CylinderGen.lean`) generates the cylinder σ-algebra, the
+constructor embeddings and projections, their measurability lemmas, and the `casesOn` keystones
+`measurable_casesOn` / `measurable_casesOn_param`. -/
 
-cylinder_defs BaseLit
+deriving instance MeasurableSpace for BaseLit
 
 /-! ## Smoke tests: each one exercises every constructor slot of a keystone. -/
 
@@ -41,10 +41,10 @@ theorem tagDepth.measurable [MeasurableSpace rT] [Inhabited rT] :
           (fun _ => 0) (fun _ => 1) 2 (fun _ => 3) (fun _ => 4) (fun _ => 5)) := by
     funext b; cases b <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_int := fun _ => 0) (f_bool := fun _ => 1)
-    (f_unit := fun _ => 2) (f_loc := fun _ => 3) (f_lbl := fun _ => 4)
-    (f_real := fun _ => 5)
+  apply measurable_casesOn
+    (c_int := fun _ => 0) (c_bool := fun _ => 1)
+    (c_unit := fun _ => 2) (c_loc := fun _ => 3) (c_lbl := fun _ => 4)
+    (c_real := fun _ => 5)
   fun_prop
 
 /-- Depends on the `int` and `real` payloads. -/
@@ -62,10 +62,10 @@ theorem countLeaves.measurable [MeasurableSpace rT] [Inhabited rT] (g : rT → I
           (fun n => n) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) g) := by
     funext b; cases b <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_int := fun n => n) (f_bool := fun _ => 0)
-    (f_unit := fun _ => 0) (f_loc := fun _ => 0) (f_lbl := fun _ => 0)
-    (f_real := g)
+  apply measurable_casesOn
+    (c_int := fun n => n) (c_bool := fun _ => 0)
+    (c_unit := fun _ => 0) (c_loc := fun _ => 0) (c_lbl := fun _ => 0)
+    (c_real := g)
   exact hg
 
 /-- Non-discrete codomain. -/
@@ -85,13 +85,13 @@ theorem endoMap.measurable [MeasurableSpace rT] [Inhabited rT] :
           BaseLit.int BaseLit.bool BaseLit.unit BaseLit.loc BaseLit.lbl BaseLit.real) := by
     funext b; cases b <;> rfl
   rw [heq]
-  apply measurable_rec
-    (f_int := BaseLit.int) (f_bool := BaseLit.bool)
-    (f_unit := fun _ => BaseLit.unit) (f_loc := BaseLit.loc) (f_lbl := BaseLit.lbl)
-    (f_real := BaseLit.real)
+  apply measurable_casesOn
+    (c_int := BaseLit.int) (c_bool := BaseLit.bool)
+    (c_unit := fun _ => BaseLit.unit) (c_loc := BaseLit.loc) (c_lbl := BaseLit.lbl)
+    (c_real := BaseLit.real)
   exact real.measurable
 
-/-- Threads an accumulator through `measurable_rec_param`. -/
+/-- Threads an accumulator through `measurable_casesOn_param`. -/
 @[simp] def addAcc : Int → BaseLit rT → Int
   | acc, .int n  => acc + n
   | acc, _       => acc
@@ -103,16 +103,16 @@ theorem addAcc.measurable [MeasurableSpace rT] [Inhabited rT] :
         BaseLit.casesOn (motive := fun _ => Int) p.1
           (fun z => (fun q : Int × Int => q.1 + q.2) (p.2, z))
           (fun b => (fun q : Int × Bool => q.1) (p.2, b))
-          ((fun q : Int × Unit => q.1) (p.2, ()))
+          ((fun q : Int => q) p.2)
           (fun l => (fun q : Int × Loc => q.1) (p.2, l))
           (fun l => (fun q : Int × Lbl => q.1) (p.2, l))
           (fun r => (fun q : Int × rT => q.1) (p.2, r))) := by
     funext p; obtain ⟨b, x⟩ := p; cases b <;> rfl
   rw [heq]
-  apply measurable_rec_param
+  apply measurable_casesOn_param
     (c_int := fun q : Int × Int => q.1 + q.2)
     (c_bool := fun q : Int × Bool => q.1)
-    (c_unit := fun q : Int × Unit => q.1)
+    (c_unit := fun q : Int => q)
     (c_loc := fun q : Int × Loc => q.1)
     (c_lbl := fun q : Int × Lbl => q.1)
     (c_real := fun q : Int × rT => q.1)
