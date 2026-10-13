@@ -2,6 +2,7 @@ module
 
 public import Metrology.ProbLang.Erasable
 public import Metrology.ProbLang.Metatheory
+public import Metrology.Couplings.CodensityCost
 
 @[expose] public section
 
@@ -11,7 +12,7 @@ public import Metrology.ProbLang.Metatheory
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
@@ -181,6 +182,14 @@ theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
           simp_rw [Measure.dirac_apply' _ MeasurableSet.univ, Set.indicator_univ, Pi.one_apply]
       _ = (tapeIndexUniform N) Set.univ := by rw [lintegral_one]
       _ ≤ 1 := tapeIndexUniform_univ_le_one
+
+instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
+    IsSubProbabilityMeasure (tapeIndexUniform N) :=
+  ⟨tapeIndexUniform_univ_le_one⟩
+
+instance tapePresample.isSubProbabilityMeasure (σ : State rT) (α : Loc) :
+    IsSubProbabilityMeasure (tapePresample σ α) :=
+  ⟨tapePresample_univ_le_one⟩
 
 theorem tapePresample_bind_dirac_measurable {α : Loc}
     {g : Cfg rT → State rT → Cfg rT}
@@ -1422,6 +1431,10 @@ theorem mass {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ) 
   simp at hboth
   exact hboth
 
+theorem isProbabilityMeasure {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ) :
+    IsProbabilityMeasure μ :=
+  ⟨h.mass⟩
+
 theorem dret (σ : State rT) : ErasableExpr (Measure.dirac σ) σ :=
   of_erasable (Erasable.dret σ)
 
@@ -1515,11 +1528,146 @@ theorem limExec_tape_presample_expr_eq
       limExecV ⟨e, σ⟩ :=
   (ErasableExpr.tapePresample h hN).lim_exec e
 
-/-! ## ARcoupl wrappers
+/-! ## Codensity wrappers
 
-Approxis-facing: lift an `AddCoupl` on `ErasableExpr` state distributions to an `AddCoupl`
-on the expression projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
+Approxis-facing: lift a codensity lifting on `ErasableExpr` state distributions to one on the
+expression projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
 
+section Codensity
+
+variable {ι : Type*} [Monoid ι]
+
+/-- A bijection of `[0, N)` leaves `tapeIndexUniform N` invariant. -/
+theorem tapeIndexUniform_map_bijOn {N : Int} (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    (tapeIndexUniform N).map (fun x => tapeIdxOf hN (f x.val)) = tapeIndexUniform N := by
+  refine Measure.ext_of_lintegral _ fun ψ _ => ?_
+  rw [lintegral_map Measurable.of_discrete Measurable.of_discrete, lintegral_tapeIndexUniform hN,
+    lintegral_tapeIndexUniform hN,
+    ← Finset.sum_Ico_comp_of_bijOn hdom hbij (fun m => ψ (tapeIdxOf hN m))]
+  congr 1
+  refine Finset.sum_congr rfl fun n hn => ?_
+  rw [Finset.mem_Ico] at hn
+  rw [tapeIdxOf_val hN hn.1 hn.2]
+
+/-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
+theorem tapeIndexUniform_codensity_bij {Δ : GradedDivergence.{0} ι} [Δ.IsReflexive]
+    [Δ.IsComposable] {N : Int} (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    Δ.Codensity 1 0
+      {p : { z : Int // 0 ≤ z ∧ z < N } × { z : Int // 0 ≤ z ∧ z < N } |
+        ∃ n : Int, 0 ≤ n ∧ n < N ∧ p.1 = tapeIdxOf hN n ∧ p.2 = tapeIdxOf hN (f n)}
+      (tapeIndexUniform N) (tapeIndexUniform N) := by
+  have h := GradedDivergence.codensity_graph (Δ := Δ) (tapeIndexUniform N)
+    (f := fun x => tapeIdxOf hN (f x.val)) Measurable.of_discrete
+  rw [tapeIndexUniform_map_bijOn hN f hdom hbij] at h
+  exact h.mono_rel fun p hp =>
+    ⟨p.1.val, p.1.2.1, p.1.2.2, Subtype.ext (tapeIdxOf_val hN p.1.2.1 p.1.2.2).symm, hp.symm⟩
+
+theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
+    {bs : List { z : Int // 0 ≤ z ∧ z < N }} (hσ : σ.tapes[α]? = some ⟨N, bs⟩) :
+    tapePresample σ α =
+      (tapeIndexUniform N).map (fun n => σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) := by
+  simp only [tapePresample, hσ]
+  rw [Measure.bind_dirac_eq_map _ Measurable.of_discrete]
+
+/-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`. -/
+theorem tapePresample_codensity_bij {Δ : GradedDivergence.{0} ι} [Δ.IsReflexive]
+    [Δ.IsComposable] {σ σ' : State rT} {α α' : Loc} {N : Int}
+    {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
+    (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
+    (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    Δ.Codensity 1 0
+      {p : State rT × State rT | ∃ n : Int, 0 ≤ n ∧ n < N ∧
+        p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
+        p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
+      (tapePresample σ α) (tapePresample σ' α') := by
+  rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
+  refine (tapeIndexUniform_codensity_bij hN f hdom hbij).map ?_ Measurable.of_discrete
+    Measurable.of_discrete
+  rintro a b ⟨n, h0, hn, rfl, rfl⟩
+  exact ⟨n, h0, hn, rfl, rfl⟩
+
+/-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
+on the RHS sample. -/
+theorem Codensity_erasure_erasable_exp_rhs {Δ : GradedDivergence.{0} ι}
+    [Δ.IsExpectationAdditive] [MeasurableSingletonClass rT]
+    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
+    {μ₁ μ₁' : Measure (State rT)} {R : Set ((State rT) × (Cfg rT))}
+    {Φexp : Set ((Exp rT) × (Exp rT))}
+    {ε ε₁ ε₂ : ENNReal} {E₂ : Cfg rT → ENNReal} {n m : Nat}
+    (hE₂meas : Measurable E₂)
+    (hCoupl : Δ.Codensity 1 ε₁ R μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
+    (hBoundSum : ∫⁻ ρ, E₂ ρ ∂(μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)) ≤ ε₂)
+    (hEpsSum : ε₁ + ε₂ ≤ ε)
+    (hErase₁ : ErasableExpr μ₁ σ₁)
+    (hErase₁' : ErasableExpr μ₁' σ₁')
+    (hCont : ∀ σ₂ ρ', R (σ₂, ρ') →
+        Δ.Codensity 1 (E₂ ρ') Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
+    Δ.Codensity 1 ε Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
+  have hmkC : ∀ e : Exp rT, Measurable (fun σ : State rT => (⟨e, σ⟩ : Cfg rT)) := fun e =>
+    Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
+  have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
+    (execN_measurable n).comp (hmkC e₁)
+  have := hErase₁.isProbabilityMeasure
+  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁']
+  have hrw : (μ₁'.bind (fun σ₂' => limExec ⟨e₁', σ₂'⟩))
+           = (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)).bind limExec := by
+    have hpk : Measurable fun σ : State rT => pexecN m (⟨e₁', σ⟩ : Cfg rT) :=
+      pexecN_measurable.comp (hmkC e₁')
+    rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
+    exact congrArg _ (funext fun σ₂' => limExec_pexecN m ⟨e₁', σ₂'⟩)
+  rw [hrw]
+  unfold asExpr
+  rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
+      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  have h := hCoupl.bind_adv (f := fun σ => asExpr (execN n ⟨e₁, σ⟩)) (g := limExecV) hBoundSum
+    (fun σ₂ ρ' hR => hCont σ₂ ρ' hR) ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable) hE₂meas
+  rw [mul_one] at h
+  exact h.mono_bound hEpsSum
+
+/-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
+samples. -/
+theorem Codensity_erasure_erasable_exp_lhs_kanto {Δ : GradedDivergence ι}
+    [MeasurableSingletonClass rT]
+    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
+    {μ₁' : Measure (State rT)} {Φexp : Set ((Exp rT) × (Exp rT))}
+    {ε : ENNReal} {E₂ : Cfg rT → Cfg rT → ENNReal}
+    {n m : Nat}
+    (hErase₁' : ErasableExpr μ₁' σ₁')
+    (hExp : Δ.CodensityE 1 ε E₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)))
+    (hCont : ∀ ρ ρ',
+        Δ.Codensity 1 (E₂ ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
+    Δ.Codensity 1 ε Φexp
+      (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
+      (limExecV ⟨e₁', σ₁'⟩) := by
+  have hmkC : Measurable (fun σ : State rT => (⟨e₁', σ⟩ : Cfg rT)) :=
+    Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
+  rw [← hErase₁'.lim_exec e₁']
+  have hrw : (μ₁'.bind (fun σ => limExec ⟨e₁', σ⟩))
+           = (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)).bind limExec := by
+    have hpk : Measurable fun σ : State rT => pexecN m (⟨e₁', σ⟩ : Cfg rT) :=
+      pexecN_measurable.comp hmkC
+    rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
+    exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e₁', σ⟩)
+  rw [hrw]
+  unfold asExpr
+  rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
+      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  have h := hExp.bind_fun (f := fun ρ => asExpr (execN n ρ)) (g := limExecV) hCont
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
+  rwa [mul_one] at h
+
+end Codensity
+
+-- DEAD(approxis-codensity): replaced by `tapeIndexUniform_codensity_bij`
+/-
 /-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
 theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
     (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
@@ -1536,14 +1684,10 @@ theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
   gcongr with n hn
   simp only [Finset.mem_Ico] at hn
   exact Hle ⟨n, hn.1, hn.2, rfl, rfl⟩
+-/
 
-theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
-    {bs : List { z : Int // 0 ≤ z ∧ z < N }} (hσ : σ.tapes[α]? = some ⟨N, bs⟩) :
-    tapePresample σ α =
-      (tapeIndexUniform N).map (fun n => σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) := by
-  simp only [tapePresample, hσ]
-  rw [Measure.bind_dirac_eq_map _ Measurable.of_discrete]
-
+-- DEAD(approxis-codensity): replaced by `tapePresample_codensity_bij`
+/-
 /-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`. -/
 theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
     {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
@@ -1561,7 +1705,10 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
     (tapeIndexUniform_addCoupl_bij hN f hdom hbij)
   rintro a b ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
+-/
 
+-- DEAD(approxis-codensity): no caller; `Codensity_erasure_erasable_exp_rhs` covers it
+/-
 /-- Clutch `ARcoupl_erasure_erasable`, projected to expressions. -/
 theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
@@ -1596,7 +1743,10 @@ theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
       unfold asExpr limExecV asExpr at this
       exact this)
   exact AddCoupl.mono_grading hSum hBind
+-/
 
+-- DEAD(approxis-codensity): replaced by `Codensity_erasure_erasable_exp_rhs`
+/-
 /-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
 on the RHS sample. -/
 theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
@@ -1655,7 +1805,10 @@ theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
       unfold asExpr limExecV asExpr at this
       exact this)
   exact AddCoupl.mono_grading hEpsSum hBind
+-/
 
+-- DEAD(approxis-codensity): no caller; would need a left-sample `IsExpectationAdditive`
+/-
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs`, projected: the continuation's slack depends
 on the LHS sample. -/
 theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonClass rT]
@@ -1693,7 +1846,10 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
       unfold asExpr limExecV asExpr at this
       exact this)
   exact AddCoupl.mono_grading hEpsSum hBind
+-/
 
+-- DEAD(approxis-codensity): replaced by `Codensity_erasure_erasable_exp_lhs_kanto`
+/-
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
 samples. -/
 theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
@@ -1745,5 +1901,6 @@ theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
       have := hCont ρ ρ'
       unfold asExpr limExecV asExpr at this
       exact this)
+-/
 
 end ProbLang
