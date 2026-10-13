@@ -32,14 +32,14 @@ class IsReflexive [One ι] : Prop where
 /-- Pushing forward along a measurable map does not increase the divergence (Def. 4.3). -/
 class IsFunctorial : Prop where
   map_le (α : ι) {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {k : X → Y}
-    (hk : Measurable k) (μ ν : Measure X) [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] : Δ α (μ.map k) (ν.map k) ≤ Δ α μ ν
+    (μ ν : Measure X) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (hk : Measurable k := by fun_prop) : Δ α (μ.map k) (ν.map k) ≤ Δ α μ ν
 
 /-- Binding with a measurable kernel does not increase the divergence (Def. 4.3). -/
 class IsSubstitutive : Prop where
   bind_le (α : ι) {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {f : X → Measure Y}
-    (hf : Measurable f) [∀ x, IsSubProbabilityMeasure (f x)] (μ ν : Measure X)
-    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    [∀ x, IsSubProbabilityMeasure (f x)] (μ ν : Measure X) [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (hf : Measurable f := by fun_prop) :
     Δ α (μ.bind f) (ν.bind f) ≤ Δ α μ ν
 
 /-- The divergence of product measures is at most the sum of the divergences (Def. 4.3). -/
@@ -54,8 +54,8 @@ largest divergence between the kernels (Def. 4.3). -/
 class IsComposable [Mul ι] : Prop where
   bind_le (α β : ι) {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (μ₁ μ₂ : Measure X)
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂] {f g : X → Measure Y}
-    (hf : Measurable f) (hg : Measurable g) [∀ x, IsSubProbabilityMeasure (f x)]
-    [∀ x, IsSubProbabilityMeasure (g x)] :
+    [∀ x, IsSubProbabilityMeasure (f x)] [∀ x, IsSubProbabilityMeasure (g x)]
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
     Δ (α * β) (μ₁.bind f) (μ₂.bind g) ≤ Δ α μ₁ μ₂ + ⨆ x, Δ β (f x) (g x)
 
 /-- The divergence is the supremum of its pushforwards to finite spaces (Def. 4.3). -/
@@ -68,17 +68,17 @@ class IsContinuous : Prop where
 /-- Reflexive and composable implies substitutive. -/
 instance IsComposable.toIsSubstitutive [MulOneClass ι] [Δ.IsReflexive] [Δ.IsComposable] :
     Δ.IsSubstitutive where
-  bind_le α X Y _ _ f hf _ μ ν _ _ :=
+  bind_le α X Y _ _ f _ μ ν _ _ hf :=
     calc Δ α (μ.bind f) (ν.bind f)
         = Δ (α * 1) (μ.bind f) (ν.bind f) := by rw [mul_one]
-      _ ≤ Δ α μ ν + ⨆ x, Δ 1 (f x) (f x) := IsComposable.bind_le α 1 μ ν hf hf
+      _ ≤ Δ α μ ν + ⨆ x, Δ 1 (f x) (f x) := IsComposable.bind_le α 1 μ ν
       _ ≤ Δ α μ ν + 0 := add_le_add le_rfl (iSup_le fun x ↦ IsReflexive.self_le_zero _)
       _ = Δ α μ ν := add_zero _
 
 /-- Substitutive implies functorial. -/
 instance IsSubstitutive.toIsFunctorial [Δ.IsSubstitutive] : Δ.IsFunctorial where
-  map_le α X Y _ _ k hk μ ν _ _ := by
+  map_le α X Y _ _ k μ ν _ _ hk := by
     rw [← bind_dirac_eq_map μ hk, ← bind_dirac_eq_map ν hk]
-    exact IsSubstitutive.bind_le (f := fun x ↦ dirac (k x)) α (measurable_dirac.comp hk) μ ν
+    exact IsSubstitutive.bind_le (f := fun x ↦ dirac (k x)) α μ ν
 
 end GradedDivergence

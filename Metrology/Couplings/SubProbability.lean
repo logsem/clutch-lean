@@ -1,8 +1,6 @@
 module
 
-public import Mathlib.MeasureTheory.Measure.FiniteMeasure
-public import Mathlib.MeasureTheory.Measure.GiryMonad
-public import Mathlib.MeasureTheory.Measure.Prod
+public import Metrology.Couplings.Measure
 
 /-! Subprobability measures, the carrier of the sub-Giry monad (Approximate Span Liftings,
 Def. 3.1). -/
@@ -46,17 +44,30 @@ instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubPr
 
 /-- Not an instance: `Measure.bind` is junk for non-measurable kernels. -/
 theorem isSubProbabilityMeasure_bind {μ : Measure X} {f : X → Measure Y}
-    [IsSubProbabilityMeasure μ] (hf : AEMeasurable f μ)
-    (hfx : ∀ x, IsSubProbabilityMeasure (f x)) : IsSubProbabilityMeasure (μ.bind f) :=
+    [IsSubProbabilityMeasure μ] (hfx : ∀ x, IsSubProbabilityMeasure (f x))
+    (hf : AEMeasurable f μ := by fun_prop) : IsSubProbabilityMeasure (μ.bind f) :=
   ⟨calc μ.bind f univ = ∫⁻ x, f x univ ∂μ := Measure.bind_apply .univ hf
       _ ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun x ↦ (hfx x).measure_univ_le_one
       _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)⟩
 
-theorem _root_.Measurable.measure_prod {Z : Type*} [MeasurableSpace Z] {f : Z → Measure X}
-    {g : Z → Measure Y} (hf : Measurable f) (hg : Measurable g) [∀ z, IsFiniteMeasure (f z)]
-    [∀ z, IsFiniteMeasure (g z)] : Measurable fun z ↦ (f z).prod (g z) := by
-  have hf' : Measurable fun z ↦ (⟨f z, inferInstance⟩ : FiniteMeasure X) := hf.subtype_mk
-  have hg' : Measurable fun z ↦ (⟨g z, inferInstance⟩ : FiniteMeasure Y) := hg.subtype_mk
-  exact FiniteMeasure.measurable_fun_prod.comp (hf'.prodMk hg')
+open Classical in
+/-- `μ` if it is finite, and `0` otherwise. -/
+noncomputable def Measure.finiteOrZero (μ : Measure X) : Measure X :=
+  if IsFiniteMeasure μ then μ else 0
+
+namespace Measure
+
+instance isFiniteMeasure_finiteOrZero (μ : Measure X) : IsFiniteMeasure μ.finiteOrZero := by
+  unfold finiteOrZero
+  split <;> infer_instance
+
+theorem finiteOrZero_eq (μ : Measure X) [h : IsFiniteMeasure μ] : μ.finiteOrZero = μ := by
+  simp [finiteOrZero, h]
+
+@[fun_prop]
+theorem measurable_finiteOrZero : Measurable (finiteOrZero : Measure X → Measure X) :=
+  Measurable.ite FiniteMeasure.measurableSet_isFiniteMeasure measurable_id measurable_const
+
+end Measure
 
 end MeasureTheory
