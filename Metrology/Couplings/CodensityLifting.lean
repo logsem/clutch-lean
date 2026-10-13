@@ -83,6 +83,48 @@ theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : S
       exact codensity_dirac (R := relProd R S) ⟨hxy, h'⟩
   rwa [mul_one, add_zero, deterministic_comp_eq_map, deterministic_comp_eq_map] at this
 
+/-- Larger relations give larger liftings. -/
+theorem Codensity.mono_rel {α : ι} {δ : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hR : R ⊆ R') : Δ.Codensity α δ R' μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ h fun _ _ hxy ↦ hkl (hR hxy)
+
+/-- Larger bounds give larger liftings. -/
+theorem Codensity.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hδ : δ ≤ δ') : Δ.Codensity α δ' R μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ (h hkl).trans (add_le_add_left hδ _)
+
+/-- A bound that holds above `δ` holds at `δ`. -/
+theorem Codensity.of_forall_lt {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
+    {ν : Measure Y} (h : ∀ δ' > δ, Δ.Codensity α δ' R μ ν) : Δ.Codensity α δ R μ ν := by
+  intro I _ β γ k l _ _ hkl
+  refine ENNReal.le_of_forall_pos_le_add fun ε hε hlt ↦ ?_
+  have hδ : δ < δ + ε := ENNReal.lt_add_right (ne_top_of_le_ne_top hlt.ne le_self_add)
+    (by simpa using hε.ne')
+  calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν) ≤ δ + ε + γ := h _ hδ hkl
+    _ = δ + γ + ε := add_right_comm _ _ _
+
+/-- Pushing forward along maps that send `R` into `S` (functoriality). -/
+theorem Codensity.map {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : X → X'} {g : Y → Y'}
+    (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → (f x, g y) ∈ S) (hf : Measurable f := by fun_prop)
+    (hg : Measurable g := by fun_prop) : Δ.Codensity α δ S (μ.map f) (ν.map g) := by
+  intro I _ β γ k l _ _ hkl
+  rw [bind_map_eq μ hf, bind_map_eq ν hg]
+  exact h (k := k.comap f hf) (l := l.comap g hg) fun x y hxy ↦ hkl (hfg hxy)
+
+/-- Binding with measurable families of subprobability measures (`Codensity.bind` for plain
+functions). -/
+theorem Codensity.bind_fun {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : X → Measure X'}
+    {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
+    [∀ y, IsSubProbabilityMeasure (g y)]
+    (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → Δ.Codensity α' δ' S (f x) (g y))
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    Δ.Codensity (α * α') (δ + δ') S (μ.bind f) (ν.bind g) :=
+  have : IsSubMarkovKernel ⟨f, hf⟩ := ⟨fun x ↦ inferInstanceAs (IsSubProbabilityMeasure (f x))⟩
+  have : IsSubMarkovKernel ⟨g, hg⟩ := ⟨fun y ↦ inferInstanceAs (IsSubProbabilityMeasure (g y))⟩
+  h.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
+
 /-! ### The fundamental property (Thm. 8.2) -/
 
 /-- The diagonal relation. -/
@@ -109,6 +151,22 @@ theorem codensity_diag_iff [Δ.IsReflexive] [Δ.IsComposable] {X : Type u} [Meas
     {α : ι} {δ : ℝ≥0∞} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] : Δ.Codensity α δ (diagRel X) μ ν ↔ Δ α μ ν ≤ δ :=
   ⟨Codensity.le_of_diag, codensity_diag_of_le⟩
+
+/-- A measure lifts the graph of a map against its pushforward (exact coupling). -/
+theorem codensity_graph [Δ.IsReflexive] [Δ.IsComposable] {X : Type u} [MeasurableSpace X]
+    (μ : Measure X) [IsSubProbabilityMeasure μ] {f : X → Y} (hf : Measurable f := by fun_prop) :
+    Δ.Codensity 1 0 {p | f p.1 = p.2} μ (μ.map f) := by
+  have h := (codensity_diag_of_le (IsReflexive.self_le_zero (Δ := Δ) μ)).map (f := id) (g := f)
+    (S := {p | f p.1 = p.2}) fun x y (hxy : x = y) ↦ congrArg f hxy
+  rwa [map_id] at h
+
+/-- Probability measures lift the full relation (trivial coupling). -/
+theorem codensity_univ [Δ.IsReflexive] [Δ.IsComposable] {X Y : Type u} [MeasurableSpace X]
+    [MeasurableSpace Y] (μ : Measure X) (ν : Measure Y) [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] : Δ.Codensity 1 0 .univ μ ν := by
+  have h := (codensity_diag_of_le (IsReflexive.self_le_zero (Δ := Δ) (μ.prod ν))).map
+    (f := Prod.fst) (g := Prod.snd) (S := .univ) fun _ _ _ ↦ trivial
+  rwa [map_fst_prod, map_snd_prod, measure_univ, measure_univ, one_smul, one_smul] at h
 
 /-- Conversely, if the lifting of equality contains every divergence bound, then `Δ` is
 composable (Thm. 8.2). -/
