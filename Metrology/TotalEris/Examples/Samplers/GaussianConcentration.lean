@@ -237,7 +237,7 @@ end Measure
 
 section Credit
 
-variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS ℝ hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
 
 /-- Any bound on the tail mass is a price for a `t`-bounded sample. -/
 theorem twp_Gauss_tail_of_le (E : CoPset) {t : ℝ} {ε : ℝ≥0∞}
@@ -289,7 +289,7 @@ end Credit
 section Adequacy
 open MeasureTheory ProbabilityTheory
 
-variable {GF : BundledGFunctors.{0,0,0}}
+variable {GF : BundledGFunctors}
 
 abbrev gaussStdTailProb (σ : State ℝ) (t : ℝ) : ℝ≥0∞ :=
   limExec ⟨pl(&Gauss #.unit), σ⟩ ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})

@@ -56,7 +56,7 @@ noncomputable instance liveWpGS_of_components : LiveWpGS rT Coord GF where
 
 end LiveInstance
 
-noncomputable def liveGF : BundledGFunctors.{0,0,0} := fun
+noncomputable def liveGF : BundledGFunctors := fun
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
   | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩

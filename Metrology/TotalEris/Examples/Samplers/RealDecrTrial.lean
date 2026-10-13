@@ -19,7 +19,7 @@ namespace Examples
 
 noncomputable section
 
-variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS ℝ hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
 
 theorem intOfNat_emod_two_eq_zero {n : ℕ} (hn : n % 2 = 0) : Int.ofNat n % 2 = 0 := by
   simp only [Int.ofNat_eq_natCast]; omega

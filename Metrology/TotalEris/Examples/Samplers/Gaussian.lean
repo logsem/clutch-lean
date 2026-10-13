@@ -23,7 +23,7 @@ namespace Examples
 
 noncomputable section
 
-variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS ℝ hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
 
 section credit
 

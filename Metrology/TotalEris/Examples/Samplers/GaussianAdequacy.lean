@@ -17,7 +17,7 @@ namespace Examples
 
 noncomputable section
 
-variable {GF : BundledGFunctors.{0,0,0}}
+variable {GF : BundledGFunctors}
 
 open MeasureTheory ProbabilityTheory in
 theorem gauss_std_distSpec :

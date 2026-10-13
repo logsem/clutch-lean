@@ -175,7 +175,7 @@ example (E : CoPset) (ε : ENNReal) :
 
 section AdequacySmokeTests
 
-variable {GF : BundledGFunctors.{0,0,0}}
+variable {GF : BundledGFunctors}
   [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 
 /-- `twp_tgl` -/

@@ -47,7 +47,7 @@ noncomputable instance erisWpGS_of_components : ErisWpGS (rT := rT) GF where
 
 end ErisInstance
 
-noncomputable def erisGF : BundledGFunctors.{0,0,0} := fun
+noncomputable def erisGF : BundledGFunctors := fun
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
   | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩

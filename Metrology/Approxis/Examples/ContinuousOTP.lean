@@ -116,7 +116,7 @@ theorem lrel_real_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v'
   ipureintro; exact ⟨r, hv, hv'⟩
 
 section Adequacy
-variable {GF : BundledGFunctors.{0, 0, 0}}
+variable {GF : BundledGFunctors}
 
 theorem otp_adequate_real [RefinesPreGS ℝ GF] (m : ℝ) (σ σ' : State ℝ) :
     AddCoupl 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩) (limExecV ⟨otp_ideal, σ'⟩) :=
@@ -196,7 +196,7 @@ theorem otp_enc_typed (m : rT) : Typed Tctx.empty (otp_enc m) .real := .app (otp
 
 end Typing
 
-theorem otp_ctx_refines_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS ℝ GF] (m : ℝ) :
+theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ) :
     ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧
@@ -206,7 +206,7 @@ theorem otp_ctx_refines_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS ℝ
   refines_sound_fresh (GF := GF) _ _ .real (otp_enc_typed m) otp_ideal_typed
     fun _ _ => otp_refines_real m
 
-theorem otp_ctx_refines_rev_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS ℝ GF] (m : ℝ) :
+theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ) :
     ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧
@@ -216,7 +216,7 @@ theorem otp_ctx_refines_rev_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS
   refines_sound_fresh (GF := GF) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ => otp_refines_rev_real m
 
-theorem otp_ctx_equiv_real (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS ℝ GF] (m : ℝ)
+theorem otp_ctx_equiv_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ)
     (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool) (hK : TypedCtx K Tctx.empty .real Tctx.empty .bool)
     (hbf : Ctx.BindersFresh K ∅) (hfresh : ∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧
       x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ Ctx.payloadFv K) :

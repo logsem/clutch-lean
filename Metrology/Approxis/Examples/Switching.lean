@@ -387,7 +387,7 @@ theorem adequacyRel_eq_subset :
   exact (Exp.fst_eq_of_toVal?_eq_some hv).symm.trans (Exp.fst_eq_of_toVal?_eq_some hv')
 
 set_option linter.style.haveILetI false in
-theorem wPRF_wPRP_switching (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF]
+theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
@@ -415,7 +415,7 @@ theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
   wPRF_wPRP_switching (ApproxisFunctor rT) N Q hN hQ σ σ'
 
 set_option linter.style.haveILetI false in
-theorem wPRP_wPRF_switching (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF]
+theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     AddCoupl (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))

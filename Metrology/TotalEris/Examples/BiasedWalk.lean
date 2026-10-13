@@ -16,7 +16,7 @@ namespace Examples
 noncomputable section
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 
 def walkCost (u m : ℕ) (a x : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((u : ℝ) / (m - u)) ^ (a - x).toNat)

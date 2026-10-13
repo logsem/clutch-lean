@@ -114,14 +114,14 @@ theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' 
   icases Hint with ⟨%n, %hv, %hv'⟩
   ipureintro; exact ⟨n, hv, hv'⟩
 
-theorem otp_adequate (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF] (m N : Int)
+theorem otp_adequate (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
     fun _ => otp_refines m N hN
 
-theorem otp_adequate_rev (GF : BundledGFunctors.{0, 0, 0}) [RefinesPreGS rT GF] (m N : Int)
+theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     AddCoupl 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=

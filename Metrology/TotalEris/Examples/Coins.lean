@@ -17,7 +17,7 @@ namespace Examples
 noncomputable section
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {GF : BundledGFunctors.{0,0,0}} [ErisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 
 def headsCost (s a : ℝ) (k : ℕ) (b : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((1 + Real.exp s) / 2) ^ k * Real.exp (s * (b - a)))
