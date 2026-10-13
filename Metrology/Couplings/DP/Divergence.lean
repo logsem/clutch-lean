@@ -59,6 +59,16 @@ instance isComposable_dp : (dp.{u}).IsComposable where
     rw [dp_apply, toAdd_mul, NNReal.coe_add]
     exact gap_le_iff.2 hbind
 
+/-- The DP divergence is at most the mass of the left measure. -/
+instance isMassBounded_dp : (dp.{u}).IsMassBounded where
+  le_measure_univ _ _ _ _ _ _ _ := iSup₂_le fun _ _ ↦ tsub_le_self.trans (measure_mono le_top)
+
+/-- The DP divergence is continuous along increasing sequences on the left. -/
+instance isLeftContinuous_dp : (dp.{u}).IsLeftContinuous where
+  iSup_left_le _ _ _ _ _ hμ _ _ := iSup₂_le fun S hS ↦ by
+    rw [Measure.iSup_apply_of_monotone hμ hS, ENNReal.iSup_sub]
+    exact iSup_mono fun n ↦ le_iSup₂_of_le (f := fun S (_ : MeasurableSet S) ↦ _) S hS le_rfl
+
 /-- The DP divergence is the supremum of its pushforwards to finite spaces. -/
 instance isContinuous_dp : (dp.{u}).IsContinuous where
   eq_iSup α X _ μ ν _ _ := by

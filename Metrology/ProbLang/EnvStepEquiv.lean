@@ -247,24 +247,6 @@ theorem bind_mono_ae_disc {μ : Measure α} {f g : α → Measure β} (hfg : ∀
     bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono_ae (hfg.mono fun a h => h s)
 
-omit [DiscreteMeasurableSpace α] in
-/-- `lintegral` is continuous along a monotone sequence of measures. -/
-theorem lintegral_iSup_measure {μ : ℕ → Measure α} (hμ : Monotone μ) {f : α → ENNReal}
-    (hf : Measurable f) : ∫⁻ a, f a ∂(⨆ n, μ n) = ⨆ n, ∫⁻ a, f a ∂(μ n) := by
-  refine le_antisymm ?_ (iSup_le fun n => lintegral_mono' (le_iSup μ n) le_rfl)
-  rw [lintegral_eq_iSup_eapprox_lintegral hf]
-  refine iSup_le fun k => ?_
-  have : (SimpleFunc.eapprox f k).lintegral (⨆ n, μ n) =
-      ⨆ n, (SimpleFunc.eapprox f k).lintegral (μ n) := by
-    simp only [SimpleFunc.lintegral,
-      Measure.iSup_apply_of_monotone μ hμ (SimpleFunc.measurableSet_fiber _ _), ENNReal.mul_iSup]
-    exact ENNReal.finsetSum_iSup_of_monotone fun x _ _ h =>
-      mul_le_mul_right (hμ h _) _
-  rw [this]
-  refine iSup_mono fun n => ?_
-  rw [lintegral_eq_iSup_eapprox_lintegral hf]
-  exact le_iSup (fun k => (SimpleFunc.eapprox f k).lintegral (μ n)) k
-
 variable [DiscreteMeasurableSpace β]
 
 omit [DiscreteMeasurableSpace β] in
@@ -275,11 +257,11 @@ theorem bind_iSup_iSup_le {μ : ℕ → Measure α} (hμ : Monotone μ) {f : ℕ
     fun _ _ h => bind_mono_disc (hμ h) fun a => hf h a
   refine Measure.le_iff.mpr fun s hs => ?_
   rw [bind_apply hs Measurable.of_discrete.aemeasurable,
-    Measure.iSup_apply_of_monotone _ hbind hs]
-  simp_rw [Measure.iSup_apply_of_monotone (fun n => f n _) (fun _ _ h => hf h _) hs]
+    Measure.iSup_apply_of_monotone hbind hs]
+  simp_rw [Measure.iSup_apply_of_monotone (fun _ _ h => hf h _) hs]
   rw [lintegral_iSup (fun _ => Measurable.of_discrete) (fun _ _ h a => hf h a s)]
   refine iSup_le fun n => ?_
-  rw [lintegral_iSup_measure hμ Measurable.of_discrete]
+  rw [lintegral_iSup_of_monotone hμ Measurable.of_discrete]
   refine iSup_le fun m => le_iSup_of_le (max n m) ?_
   rw [bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono' (hμ (le_max_right _ _)) fun a => hf (le_max_left _ _) a s
@@ -449,7 +431,7 @@ theorem envIter_pres (n : ℕ) : Pres (envΦ^[n] (⊥ : EnvCfg rT → Measure (R
 theorem envBig_pres : Pres (envBig (rT := rT)) := by
   intro c hc
   rw [ae_iff, envBig, iSup_apply,
-    Measure.iSup_apply_of_monotone _ (fun _ _ h => envIter_mono h c) MeasurableSet.of_discrete]
+    Measure.iSup_apply_of_monotone (fun _ _ h => envIter_mono h c) MeasurableSet.of_discrete]
   exact ENNReal.iSup_eq_zero.mpr fun n => ae_iff.mp (envIter_pres n c hc)
 
 /-! ## Bounding one step by read-back evaluations -/
@@ -766,7 +748,7 @@ theorem map_iSup_le_of {μ : ℕ → Measure (RCfg rT)} (hμ : Monotone μ) {ν 
     (h : ∀ n, (μ n).map RCfg.rb ≤ ν) : (⨆ n, μ n).map RCfg.rb ≤ ν := by
   refine Measure.le_iff.mpr fun s hs => ?_
   rw [map_apply RCfg.measurable_rb hs,
-    Measure.iSup_apply_of_monotone μ hμ (RCfg.measurable_rb hs)]
+    Measure.iSup_apply_of_monotone hμ (RCfg.measurable_rb hs)]
   exact iSup_le fun n => by
     rw [← map_apply RCfg.measurable_rb hs]; exact Measure.le_iff.mp (h n) s hs
 

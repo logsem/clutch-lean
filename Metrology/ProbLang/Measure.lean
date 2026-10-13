@@ -6,6 +6,7 @@ public import Mathlib.Probability.ProbabilityMassFunction.Basic
 public import Mathlib.Probability.Kernel.Defs
 public import Mathlib.Probability.Kernel.MeasurableLIntegral
 public import Mathlib.Probability.Distributions.Uniform
+public import Metrology.Couplings.Measure
 
 @[expose] public section
 
@@ -540,46 +541,11 @@ theorem Measure.measurable_map_uncurry {α β γ : Type _}
   simp_rw [hker_eq]
   exact ProbabilityTheory.Kernel.measurable_kernel_prodMk_left hT
 
-/-- `s ↦ ⨆ i, μ i s` for a monotone family; σ-additivity swaps `⨆` past `∑'`. -/
-noncomputable def Measure.monotoneSupNat {α : Type _} [MeasurableSpace α]
-    (μ : ℕ → Measure α) (hmono : Monotone μ) : Measure α :=
-  Measure.ofMeasurable (fun s _ => ⨆ i, μ i s)
-    (by simp)
-    (fun f hf hd => by
-      have h1 : ∀ i, μ i (⋃ k, f k) = ∑' k, μ i (f k) :=
-        fun i => measure_iUnion hd hf
-      have hmono' : ∀ k, Monotone (fun i => μ i (f k)) :=
-        fun k i j hij => hmono hij (f k)
-      simp_rw [h1, ENNReal.tsum_eq_iSup_sum]
-      rw [iSup_comm]
-      exact iSup_congr fun s => (ENNReal.finsetSum_iSup_of_monotone hmono').symm)
-
-theorem Measure.monotoneSupNat_apply {α : Type _} [MeasurableSpace α]
-    (μ : ℕ → Measure α) (hmono : Monotone μ)
-    {s : Set α} (hs : MeasurableSet s) :
-    Measure.monotoneSupNat μ hmono s = ⨆ i, μ i s :=
-  Measure.ofMeasurable_apply _ hs
-
-theorem Measure.iSup_apply_of_monotone {α : Type _} [MeasurableSpace α]
-    (μ : ℕ → Measure α) (hmono : Monotone μ)
-    {s : Set α} (hs : MeasurableSet s) :
-    (⨆ i, μ i) s = ⨆ i, μ i s := by
-  have h : Measure.monotoneSupNat μ hmono = ⨆ i, μ i := by
-    apply le_antisymm
-    · rw [Measure.le_iff]; intro t ht
-      rw [Measure.monotoneSupNat_apply _ _ ht]
-      exact iSup_le fun i => Measure.le_iff.mp (le_iSup μ i) t ht
-    · refine iSup_le fun i => ?_
-      rw [Measure.le_iff]; intro t ht
-      rw [Measure.monotoneSupNat_apply _ _ ht]
-      exact le_iSup (fun j => μ j t) i
-  rw [← h, Measure.monotoneSupNat_apply _ _ hs]
-
 theorem Measure.measurable_iSup_countable {α β : Type _}
     [MeasurableSpace α] [MeasurableSpace β]
     {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))
     (hmono : ∀ a, Monotone (fun i => μ i a)) :
     Measurable (fun a : α => ⨆ i, μ i a) := by
   refine Measure.measurable_of_measurable_coe _ fun s hs => ?_
-  simp_rw [fun a => Measure.iSup_apply_of_monotone (μ · a) (hmono a) hs]
+  simp_rw [fun a => Measure.iSup_apply_of_monotone (hmono a) hs]
   exact Measurable.iSup fun i => (Measure.measurable_coe hs).comp (hμ i)

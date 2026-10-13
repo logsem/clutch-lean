@@ -8,6 +8,8 @@ public import Mathlib.MeasureTheory.Measure.Prod
 
 @[expose] public section
 
+open scoped ENNReal
+
 namespace MeasureTheory.Measure
 
 variable {X X' X'' Y Z Φ Ψ : Type*} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace X'']
@@ -60,5 +62,49 @@ theorem bind_map_eq {d : Φ → X} {h : X → Measure Y} (μ : Measure Φ)
   ext A hA
   rw [bind_apply hA hh.aemeasurable, bind_apply hA (hh.comp hd).aemeasurable]
   exact lintegral_map ((measurable_coe hA).comp hh) hd
+
+/-- The supremum of an increasing sequence of measures is computed setwise. -/
+theorem iSup_apply_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {s : Set X}
+    (hs : MeasurableSet s) : (⨆ n, μ n) s = ⨆ n, μ n s := by
+  let ν : Measure X := ofMeasurable (fun s _ ↦ ⨆ n, μ n s) (by simp) fun f hf hd ↦ by
+    simp_rw [measure_iUnion hd hf, ENNReal.tsum_eq_iSup_sum]
+    rw [iSup_comm]
+    exact iSup_congr fun _ ↦ (ENNReal.finsetSum_iSup_of_monotone fun k _ _ h ↦ hμ h (f k)).symm
+  have hν : ν = ⨆ n, μ n := le_antisymm
+    (le_iff.2 fun t ht ↦ by
+      rw [ofMeasurable_apply _ ht]; exact iSup_le fun n ↦ le_iff.1 (le_iSup μ n) t ht)
+    (iSup_le fun n ↦ le_iff.2 fun t ht ↦ by rw [ofMeasurable_apply _ ht]; exact le_iSup (μ · t) n)
+  rw [← hν, ofMeasurable_apply _ hs]
+
+/-- Integrals against an increasing sequence of measures converge (monotone convergence). -/
+theorem lintegral_iSup_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : X → ℝ≥0∞}
+    (hf : Measurable f) : ∫⁻ x, f x ∂(⨆ n, μ n) = ⨆ n, ∫⁻ x, f x ∂μ n := by
+  refine le_antisymm ?_ (iSup_le fun n ↦ lintegral_mono' (le_iSup μ n) le_rfl)
+  rw [lintegral_eq_iSup_eapprox_lintegral hf]
+  refine iSup_le fun k ↦ ?_
+  have : (SimpleFunc.eapprox f k).lintegral (⨆ n, μ n) =
+      ⨆ n, (SimpleFunc.eapprox f k).lintegral (μ n) := by
+    simp only [SimpleFunc.lintegral, iSup_apply_of_monotone hμ (SimpleFunc.measurableSet_fiber _ _),
+      ENNReal.mul_iSup]
+    exact ENNReal.finsetSum_iSup_of_monotone fun _ _ _ h ↦ mul_le_mul_right (hμ h _) _
+  rw [this]
+  refine iSup_mono fun n ↦ ?_
+  rw [lintegral_eq_iSup_eapprox_lintegral hf]
+  exact le_iSup (fun k ↦ (SimpleFunc.eapprox f k).lintegral (μ n)) k
+
+/-- Binding is monotone in the measure. -/
+theorem bind_mono_left {μ μ' : Measure X} (h : μ ≤ μ') {f : X → Measure Y}
+    (hf : Measurable f := by fun_prop) : μ.bind f ≤ μ'.bind f := le_iff.2 fun s hs ↦ by
+  rw [bind_apply hs hf.aemeasurable, bind_apply hs hf.aemeasurable]
+  exact lintegral_mono' h le_rfl
+
+/-- Binding commutes with the supremum of an increasing sequence of measures. -/
+theorem iSup_bind_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : X → Measure Y}
+    (hf : Measurable f := by fun_prop) : (⨆ n, μ n).bind f = ⨆ n, (μ n).bind f := by
+  have hmono : Monotone fun n ↦ (μ n).bind f := fun _ _ h ↦ bind_mono_left (hμ h) hf
+  ext s hs
+  rw [iSup_apply_of_monotone hmono hs, bind_apply hs hf.aemeasurable,
+    lintegral_iSup_of_monotone hμ (f := (f · s)) ((measurable_coe hs).comp hf)]
+  simp_rw [bind_apply hs hf.aemeasurable]
 
 end MeasureTheory.Measure

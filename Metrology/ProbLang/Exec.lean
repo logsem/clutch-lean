@@ -98,7 +98,7 @@ theorem ENNReal.tsum_iSup_of_monotone_cts {f : ℕ → Cfg rT → ENNReal}
 theorem iSup_measure_apply {f : ℕ → Measure (Cfg rT)} (hf : Monotone f)
     {S : Set (Cfg rT)} (HS : MeasurableSet S) :
     (⨆ i, f i) S = ⨆ i, f i S :=
-  Measure.iSup_apply_of_monotone f hf HS
+  Measure.iSup_apply_of_monotone hf HS
 
 theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure α) (f g : α → Measure β) (Hf : Measurable f) (Hg : Measurable g)

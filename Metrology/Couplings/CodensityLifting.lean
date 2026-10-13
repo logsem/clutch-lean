@@ -121,6 +121,61 @@ theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : S
     Δ.Codensity α δ (relProd R S) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) :=
   h.map fun _ _ h' ↦ ⟨hxy, h'⟩
 
+/-! ### Limits, null sets and mass bounds -/
+
+/-- The zero measure lifts anything. -/
+theorem codensity_zero_left [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {ν : Measure Y} [IsSubProbabilityMeasure ν] : Δ.Codensity α δ R 0 ν := by
+  intro I _ β γ k l _ _ _
+  rw [bind_zero_left]
+  exact (IsZeroLeft.zero_left_le _ _).trans zero_le
+
+/-- Strengthen the relation with `x ∈ T` for a set `T` carrying all of `μ`: tests may vanish off
+`T`. -/
+theorem Codensity.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T) (hμ : μ Tᶜ = 0)
+    (h : Δ.Codensity α δ R μ ν) : Δ.Codensity α δ {p | p ∈ R ∧ p.1 ∈ T} μ ν := by
+  classical
+  intro I _ β γ k l _ _ hkl
+  have : IsSubMarkovKernel (Kernel.piecewise hT k 0) :=
+    ⟨fun x ↦ by rw [Kernel.piecewise_apply]; split_ifs <;> infer_instance⟩
+  have hk : Kernel.piecewise hT k 0 ∘ₘ μ = k ∘ₘ μ := comp_congr <| by
+    filter_upwards [measure_eq_zero_iff_ae_notMem.1 hμ] with x hx
+    simp [Kernel.piecewise_apply, not_not.1 hx]
+  rw [← hk]
+  refine h fun x y hxy ↦ ?_
+  by_cases hx : x ∈ T
+  · simpa [Kernel.piecewise_apply, hx] using hkl ⟨hxy, hx⟩
+  · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le β (l y)).trans zero_le
+
+/-- The limit of an increasing sequence of liftings is a lifting. -/
+theorem Codensity.iSup_left [Δ.IsLeftContinuous] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {μ : ℕ → Measure X} [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) {ν : Measure Y}
+    [IsSubProbabilityMeasure ν] (h : ∀ n, Δ.Codensity α δ R (μ n) ν) :
+    Δ.Codensity α δ R (⨆ n, μ n) ν := by
+  intro I _ β γ k l _ _ hkl
+  rw [iSup_bind_of_monotone hμ k.measurable]
+  exact (IsLeftContinuous.iSup_left_le _ (fun _ _ hmn ↦ bind_mono_left (hμ hmn) k.measurable)
+    _).trans (iSup_le fun n ↦ h n hkl)
+
+/-- A measure lifts anything with a bound at least its mass. -/
+theorem codensity_of_measure_univ_le [Δ.IsMassBounded] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (hδ : μ .univ ≤ δ) : Δ.Codensity α δ R μ ν := by
+  intro I _ β γ k l _ _ _
+  calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν)
+      ≤ (k ∘ₘ μ) .univ := IsMassBounded.le_measure_univ _ _ _
+    _ ≤ μ .univ := by
+        rw [bind_apply .univ k.measurable.aemeasurable]
+        exact lintegral_le_meas (fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one) (by simp)
+    _ ≤ δ + γ := hδ.trans le_self_add
+
+/-- A bound of at least one makes any subprobability measure lift anything. -/
+theorem codensity_of_one_le [Δ.IsMassBounded] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (hδ : 1 ≤ δ) : Δ.Codensity α δ R μ ν :=
+  codensity_of_measure_univ_le (IsSubProbabilityMeasure.measure_univ_le_one.trans hδ)
+
 /-! ### The fundamental property (Thm. 8.2) -/
 
 /-- The diagonal relation. -/

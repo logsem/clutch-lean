@@ -84,6 +84,27 @@ class IsFiniteComposable [Mul ι] : Prop where
     (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
     [IsSubMarkovKernel η] : Δ (α * β) (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ Δ α μ₁ μ₂ + ⨆ i, Δ β (κ i) (η i)
 
+/-- The zero measure is at divergence zero from any measure. -/
+class IsZeroLeft : Prop where
+  zero_left_le (α : ι) {X : Type u} [MeasurableSpace X] (ν : Measure X)
+    [IsSubProbabilityMeasure ν] : Δ α 0 ν ≤ 0
+
+/-- The divergence is at most the mass of the left measure. -/
+class IsMassBounded : Prop where
+  le_measure_univ (α : ι) {X : Type u} [MeasurableSpace X] (μ ν : Measure X)
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : Δ α μ ν ≤ μ .univ
+
+/-- The divergence from the limit of an increasing sequence is at most the limit of the
+divergences. -/
+class IsLeftContinuous : Prop where
+  iSup_left_le (α : ι) {X : Type u} [MeasurableSpace X] {μ : ℕ → Measure X}
+    [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) (ν : Measure X)
+    [IsSubProbabilityMeasure ν] : Δ α (⨆ n, μ n) ν ≤ ⨆ n, Δ α (μ n) ν
+
+/-- Mass-bounded implies zero on the left. -/
+instance IsMassBounded.toIsZeroLeft [Δ.IsMassBounded] : Δ.IsZeroLeft where
+  zero_left_le α _ _ ν _ := by simpa using IsMassBounded.le_measure_univ (Δ := Δ) α 0 ν
+
 /-- Composable implies finite-composable. -/
 instance IsComposable.toIsFiniteComposable [Mul ι] [Δ.IsComposable] : Δ.IsFiniteComposable where
   bind_le α β _ _ μ₁ μ₂ _ _ κ η _ _ := IsComposable.bind_le α β μ₁ μ₂ κ η
