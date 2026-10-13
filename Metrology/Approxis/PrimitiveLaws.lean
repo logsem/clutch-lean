@@ -19,12 +19,15 @@ open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## Bundled ghost-state class -/
 
-class ApproxisGS (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (hlc : outParam HasLC) (GF : BundledGFunctors) where
+/-- The Approxis ghost-state components; `Δ` is the graded divergence of the coupling modalities
+(an `outParam`, like `hlc`). -/
+class ApproxisGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    (hlc : outParam HasLC) {ι : outParam Type} (Δ : outParam (GradedDivergence.{0} ι))
+    (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   specGS : SpecGS rT GF
   ecGS : ECGS GF
@@ -37,10 +40,11 @@ attribute [reducible, instance] ApproxisGS.appGS ApproxisGS.specGS
 
 section ApproxisInstance
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisGS rT hlc Δ GF]
 
 @[reducible]
-noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) GF where
+noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) Δ GF where
   hlc := hlc
   invGS := inferInstance
   stateInterp σ := appStateAuth σ
@@ -67,7 +71,8 @@ attribute [simp] ExtTreeMap.insert_eq_PartialMap_insert
 
 section Lifting
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp E (.alloc (.ofVal v)) Φ := by
@@ -415,6 +420,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
     iframe Hσ Hs' Hε
     iapply Hwp $$ Hl Hj'
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_alloc_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(tape(#(.int z))) ∗
@@ -426,6 +432,7 @@ theorem wp_alloc_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
   ihave HlNat := spec_empty_to_natTape $$ Hl
   iapply Hwp $$ %l Hj' HlNat
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_rand_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {n : Int} {ns : List Int}
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z (n :: ns) ∗

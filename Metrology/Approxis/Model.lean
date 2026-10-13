@@ -16,7 +16,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Approxi
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-! ## Log-relation namespace -/
 
@@ -24,9 +24,10 @@ def logN : Namespace := nroot.@ (1 : Pos)
 
 /-! ## `ApproxisRGS` ghost-state bundle -/
 
-class ApproxisRGS (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (hlc : outParam HasLC) (GF : BundledGFunctors) where
-  approxisGS : ApproxisGS rT hlc GF
+class ApproxisRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    (hlc : outParam HasLC) {ι : outParam Type} (Δ : outParam (GradedDivergence.{0} ι))
+    (GF : BundledGFunctors) where
+  approxisGS : ApproxisGS rT hlc Δ GF
   naInvG     : NaInvG GF
   nais       : NaInvPoolName
 
@@ -34,7 +35,7 @@ attribute [reducible, instance] ApproxisRGS.approxisGS ApproxisRGS.naInvG
 
 /-! ## Logical relation type -/
 
-structure lrel (rT : Type _) (GF : BundledGFunctors) where
+structure lrel (rT : Type) (GF : BundledGFunctors) where
   car : Val rT → Val rT → IProp GF
   [persistent : ∀ v1 v2, Persistent (car v1 v2)]
   closed v1 v2 : car v1 v2 ⊢@{IProp GF} ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
@@ -100,7 +101,8 @@ instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
 /-! ## `na_own` / `na_inv` abbreviations keyed on the pool name -/
 
 section NaShorthand
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisRGS rT hlc Δ GF]
 
 @[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
   Iris.NonAtomicInvariant.own (ApproxisRGS.nais (rT := rT) GF) E
@@ -116,7 +118,8 @@ end NaShorthand
 /-! ## Refinement judgement -/
 
 section Refines
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisRGS rT hlc Δ GF]
 
 noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
   ∀ (K : Ectx rT) (ε : ENNReal),
@@ -145,7 +148,8 @@ scoped notation:100 "REL " e1 " << " e2 " : " A =>
 /-! ## Simple lrel constructors -/
 
 section SimpleLRels
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisRGS rT hlc Δ GF]
 
 omit [LawfulProbLangℝ rT] in
 theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
@@ -396,7 +400,8 @@ end SimpleLRels
 /-! ### Semantic property lemmas -/
 
 section SemtypesProperties
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisRGS rT hlc Δ GF]
 
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
@@ -494,7 +499,8 @@ end SemtypesProperties
 /-! ## Monadic layer -/
 
 section Monadic
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisRGS rT hlc Δ GF]
 
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
     iprop(|={⊤}=> refines E e t A) ⊢@{IProp GF} refines E e t A := by

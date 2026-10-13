@@ -3,8 +3,7 @@ module
 public import Metrology.Iris.SpecUpdate
 public import Metrology.Iris.ErrorCredits
 public import Metrology.Iris.Fixpoint
-public import Metrology.Couplings.AdditiveCouplings
-public import Metrology.Couplings.Couplings
+public import Metrology.Couplings.CodensityCost
 public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Metrology.ProbLang.Exec
 public import Metrology.ProbLang.Erasable
@@ -15,16 +14,21 @@ public import Iris.ProofMode.InstancesUpdates
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedDivergence
 
 namespace ProbLang
 
-variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
-/-! ## Approxis ghost state class -/
+/-! ## Approxis ghost state class
 
-class ApproxisWpGS {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
+The graded divergence `Δ` is an `outParam`, like `hlc`: `wp E e Φ` elaborates with `Δ` as a
+metavariable, and the local instance assigns it. `Monoid ι` is a section variable (no field needs
+it; `Δ.Codensity` does). -/
+
+class ApproxisWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    {ι : outParam Type} (Δ : outParam (GradedDivergence.{0} ι)) (GF : BundledGFunctors)
+    extends SpecUpdateGS rT GF where
   hlc : HasLC
   invGS : InvGS_gen hlc GF
   stateInterp : State rT → IProp GF
@@ -33,14 +37,15 @@ class ApproxisWpGS {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClas
 attribute [reducible, instance] ApproxisWpGS.invGS
 
 namespace ApproxisWpGS
-variable {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
+variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
+  [ApproxisWpGS (rT := rT) Δ GF]
 
 /-! ## `spec_coupl` modality
 
 Optionally prepends spec-side steps and erasable distributions on both sides before `Z`. -/
 
 -- TODO remove when fixpoint is added
-abbrev SpecCouplState (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] :
+abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] :
     Type _ := State rT × Cfg rT × ENNReal
 
 instance : COFE (SpecCouplState rT) := COFE.ofDiscrete _
@@ -52,7 +57,7 @@ abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' 
     (Φ : SpecCouplState rT → IProp GF) : IProp GF := iprop%
   (∃ (S : State rT → Cfg rT → Prop) (n : Nat) (μ₁ : MeasureTheory.Measure (State rT))
       (μ₁' : MeasureTheory.Measure (State rT)) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal) (r : ENNReal),
-      ⌜AddCoupl ε₁ {p | S p.1 p.2} μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
+      ⌜Δ.Codensity 1 ε₁ {p | S p.1 p.2} μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
       ⌜Measurable X₂⌝ ∗
       ⌜∀ ρ, X₂ ρ ≤ r⌝ ∗
       ⌜ε₁ + (∫⁻ ρ, X₂ ρ ∂(μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)) ≤ ε⌝ ∗
@@ -68,7 +73,6 @@ abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (ε
     (Z : State rT → Cfg rT → ENNReal → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre E Z) (σ, ⟨e', σ'⟩, ε)
 
-omit [ApproxisWpGS (rT := rT) GF] in
 theorem specCouplState_ne {Φ : SpecCouplState rT → IProp GF} : NonExpansive Φ where
   ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
 
@@ -176,7 +180,7 @@ abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : S
   (∃ (n : Nat) (μ₁' : MeasureTheory.Measure (State rT)) (X₂ : Cfg rT → Cfg rT → ENNReal),
       ⌜Reducible e₁ σ₁⌝ ∗
       ⌜∃ r, ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ r⌝ ∗
-      ⌜ExpCoupl ε X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
+      ⌜Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
       ⌜ErasableExpr μ₁' σ₁'⌝ ∗
       (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)))
 
@@ -422,6 +426,9 @@ theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.deco
   rw [heq]
   exact primStep_atomic e σ hne
 
+-- DEAD(approxis-codensity): tv-specific test-function manipulations, superseded by
+-- `Codensity.codensityE` and `CodensityE.add_const`.
+/-
 theorem lintegral_le_of_clamped {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {μ : MeasureTheory.Measure α} {ν : MeasureTheory.Measure β}
     {h₁ : α → ENNReal} {h₂ : β → ENNReal} {ε₁ ε₂ ε : ENNReal}
@@ -482,12 +489,13 @@ theorem expCoupl_add_const {α β : Type _} [MeasurableSpace α] [MeasurableSpac
     · rw [inf_of_le_right (_root_.not_le.mp hlt).le]
       exact le_add_right (Hh₁ a)
   · exact lintegral_le_of_one_le Hε (_root_.not_le.mp hε₂).le hμ Hh₁
+-/
 
 theorem specCoupl_couple {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     {S : State rT → Cfg rT → Prop} {n : Nat} {ε₁ r : ENNReal} {X₂ : Cfg rT → ENNReal}
     {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
-    (Hcpl : AddCoupl ε₁ {p | S p.1 p.2} μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+    (Hcpl : Δ.Codensity 1 ε₁ {p | S p.1 p.2} μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (HX₂meas : Measurable X₂) (Hbnd : ∀ ρ, X₂ ρ ≤ r)
     (Hexp : ε₁ + (∫⁻ ρ, X₂ ρ ∂(μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)) ≤ ε)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -510,7 +518,8 @@ theorem fupd_specCoupl_of_le {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : S
     (by
       rw [MeasureTheory.Measure.dirac_bind (by fun_prop)]
       simp only [pexecN_zero]
-      exact AddCoupl.dirac _ ⟨rfl, rfl⟩)
+      refine (codensity_dirac ?_).mono_bound zero_le
+      exact ⟨rfl, rfl⟩)
     measurable_const (fun _ => _root_.le_refl _)
     (by
       refine _root_.le_trans ?_ (tsub_add_cancel_of_le Hε).le
@@ -546,7 +555,7 @@ theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → ENNReal → I
 theorem specCoupl_erasables_exp {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF} {R : State rT → State rT → Prop}
     {μ₁ μ₁' : MeasureTheory.Measure (State rT)} {X₂ : State rT → ENNReal} {r : ENNReal}
-    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ₁ μ₁') (HX₂meas : Measurable X₂)
+    (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} μ₁ μ₁') (HX₂meas : Measurable X₂)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁')
     (Hbnd : ∀ σ', X₂ σ' ≤ r) (Hexp : ε₁ + ∫⁻ σ', X₂ σ' ∂μ₁' ≤ ε) : iprop%
     (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={E}=> specCoupl E σ₂ e₁' σ₂' (X₂ σ₂') Z) ⊢
@@ -558,9 +567,8 @@ theorem specCoupl_erasables_exp {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
   iapply specCoupl_couple (S := fun σ₂ c => R σ₂ c.state ∧ c.expr = e₁') (n := 0)
     (ε₁ := ε₁) (X₂ := fun ρ => X₂ ρ.state)
     (by
-      rw [heq, ← MeasureTheory.Measure.map_id (μ := μ₁)]
-      exact AddCoupl.map (f := id) (g := fun σ => (⟨e₁', σ⟩ : Cfg rT))
-        (by fun_prop) (by fun_prop) (fun {σ σ'} HR => ⟨HR, rfl⟩) Hcpl)
+      rw [heq]
+      exact Hcpl.map_right fun _ _ HR => ⟨HR, rfl⟩)
     (HX₂meas.comp Cfg.measurable_state) (fun _ => Hbnd _)
     (by
       refine _root_.le_trans ?_ Hexp
@@ -574,7 +582,7 @@ theorem specCoupl_erasables_exp {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
 theorem specCoupl_erasables {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε₂ ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     {R : State rT → State rT → Prop} {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
-    (Hε : ε₁ + ε₂ ≤ ε) (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ₁ μ₁')
+    (Hε : ε₁ + ε₂ ≤ ε) (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} μ₁ μ₁')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={E}=> specCoupl E σ₂ e₁' σ₂' ε₂ Z) ⊢
     specCoupl E σ₁ e₁' σ₁' ε Z := by
@@ -590,7 +598,7 @@ theorem specCoupl_erasables {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ
 theorem specCoupl_erasable_steps {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {n : Nat} {ε₁ ε₂ ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     {R : State rT → Cfg rT → Prop} {μ₁ : MeasureTheory.Measure (State rT)}
-    (Hε : ε₁ + ε₂ ≤ ε) (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ₁ (pexecN n ⟨e₁', σ₁'⟩))
+    (Hε : ε₁ + ε₂ ≤ ε) (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl E σ₂ e₂' σ₂' ε₂ Z) ⊢
     specCoupl E σ₁ e₁' σ₁' ε Z := by
@@ -609,7 +617,8 @@ theorem specCoupl_erasable_steps {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT
 theorem specCoupl_steps {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {n : Nat} {ε₁ ε₂ ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     {R : State rT → Cfg rT → Prop} (Hε : ε₁ + ε₂ ≤ ε)
-    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (MeasureTheory.Measure.dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) :
+    (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} (MeasureTheory.Measure.dirac σ₁)
+      (pexecN n ⟨e₁', σ₁'⟩)) :
     iprop% (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl E σ₂ e₂' σ₂' ε₂ Z) ⊢
     specCoupl E σ₁ e₁' σ₁' ε Z :=
   specCoupl_erasable_steps Hε Hcpl (ErasableExpr.dret σ₁)
@@ -624,7 +633,7 @@ theorem specCoupl_steps_det {E : CoPset} {σ : State rT} {e₁' : Exp rT} {σ₁
     (X₂ := fun _ => ε)
     (by
       rw [MeasureTheory.Measure.dirac_bind (by fun_prop), Hstep]
-      exact AddCoupl.dirac _ ⟨rfl, rfl⟩)
+      exact codensity_dirac ⟨rfl, rfl⟩)
     measurable_const (fun _ => _root_.le_refl _)
     (by
       rw [zero_add]
@@ -634,7 +643,8 @@ theorem specCoupl_steps_det {E : CoPset} {σ : State rT} {e₁' : Exp rT} {σ₁
   obtain ⟨rfl, ⟨⟩⟩ := HS'
   iexact HS
 
-theorem specCoupl_step_concentrated {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem specCoupl_step_concentrated [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+    {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     {S : Set (Cfg rT)} (Hred : Reducible e₁' σ₁')
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
@@ -642,29 +652,21 @@ theorem specCoupl_step_concentrated {E : CoPset} {σ₁ : State rT} {e₁' : Exp
     specCoupl E σ₁ e₁' σ₁' ε Z := by
   iintro H
   have Hε : 0 + ε ≤ ε := by rw [zero_add]
-  have hprob_rhs : primStep ⟨e₁', σ₁'⟩ Set.univ = 1 := by
-    have := prim_step_mass Hred
-    exact MeasureTheory.IsProbabilityMeasure.measure_univ
-  have Htrivial : AddCoupl 0 Set.univ (MeasureTheory.Measure.dirac σ₁) (primStep ⟨e₁', σ₁'⟩) :=
-    RelCoupl.exact (RelCoupl.trivial (by simp) hprob_rhs)
-  have hdirac : MeasureTheory.Measure.dirac σ₁ {σ₁}ᶜ = 0 := by
-    rw [MeasureTheory.Measure.dirac_apply' _ (by measurability)]; simp
+  have := prim_step_mass Hred
   have hpexec1 : pexecN 1 ⟨e₁', σ₁'⟩ = primStep ⟨e₁', σ₁'⟩ := by
     rw [pexecN_one, stepOrFinal_not_isValue (val_stuck Hred)]
-  have HcplR : AddCoupl 0 {p | (fun σ c => σ = σ₁ ∧ c ∈ S) p.1 p.2}
+  have HcplR : Δ.Codensity 1 0 {p | (fun σ c => σ = σ₁ ∧ c ∈ S) p.1 p.2}
       (MeasureTheory.Measure.dirac σ₁) (pexecN 1 ⟨e₁', σ₁'⟩) := by
     rw [hpexec1]
-    refine AddCoupl.mono_rel ?_ (AddCoupl.concentrated_R hSmeas hSconc
-      (AddCoupl.concentrated_L (MeasurableSet.singleton σ₁) hdirac Htrivial))
-    rintro ⟨σ, c⟩ ⟨⟨_, hσ⟩, hc⟩
-    exact ⟨hσ, hc⟩
+    exact codensity_dirac_left hSmeas hSconc σ₁
   iapply specCoupl_steps (n := 1) (R := fun σ c => σ = σ₁ ∧ c ∈ S) Hε HcplR
   iintro %σ₂ %e₂' %σ₂' %HR
   obtain ⟨rfl, Hmem⟩ := HR
   iapply H $$ %e₂' %σ₂' %Hmem
 
 @[discrete]
-theorem specCoupl_step {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem specCoupl_step [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+    {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
     (Hred : Discrete.Reducible e₁' σ₁') (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
     (∀ e₂' σ₂', ⌜0 < primStep ⟨e₁', σ₁'⟩ {⟨e₂', σ₂'⟩}⌝ -∗ |={E}=> specCoupl E σ₁ e₂' σ₂' ε Z) ⊢
@@ -684,7 +686,7 @@ theorem progCoupl_intro {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
     {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {n : Nat} {μ₁' : MeasureTheory.Measure (State rT)} {r : ENNReal}
     {X₂ : Cfg rT → Cfg rT → ENNReal} (Hred : Reducible e₁ σ₁) (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ r)
-    (Hexp : ExpCoupl ε X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+    (Hexp : Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
     progCoupl e₁ σ₁ e₁' σ₁' ε Z := by
@@ -699,7 +701,8 @@ theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Redu
   rw [MeasureTheory.Measure.dirac_bind (by fun_prop), pexecN_one,
     stepOrFinal_not_isValue (val_stuck Hred')]
 
-theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem progCoupl_strong_mono [Δ.IsZeroLeft] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT}
     {ε : ENNReal} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     iprop% (□ ∀ e₂ σ₂ e₂' σ₂', Z₂ e₂ σ₂ e₂' σ₂' 1) ∗
@@ -714,26 +717,9 @@ theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     split_ifs with h
     · exact (Hr a b).trans (le_max_left _ _)
     · exact le_max_right _ _
-  have Hexp' : ExpCoupl ε (fun a b => if a ∈ S then X₂ a b else 1)
-      (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) := by
-    intro h₁ h₂ Hh₁meas Hh₂meas Hh₁ Hh₂ Hh₁h₂
-    let h₁' : Cfg rT → ENNReal := fun a => if a ∈ S then h₁ a else 0
-    have hcongr : (∫⁻ a, h₁ a ∂(primStep ⟨e₁, σ₁⟩)) = ∫⁻ a, h₁' a ∂(primStep ⟨e₁, σ₁⟩) := by
-      refine MeasureTheory.lintegral_congr_ae ?_
-      rw [Filter.eventuallyEq_iff_exists_mem]
-      refine ⟨S, ?_, ?_⟩
-      · rw [MeasureTheory.mem_ae_iff]; exact hSconc
-      · intro a ha
-        simp only [h₁', ite_eq_left ha]
-    rw [hcongr]
-    have hh₁'meas : Measurable h₁' := Measurable.ite hSmeas Hh₁meas measurable_const
-    refine Hexp h₁' h₂ hh₁'meas Hh₂meas ?_ Hh₂ ?_
-    · intro a; simp only [h₁']; split_ifs; exacts [Hh₁ a, zero_le]
-    · intro a b
-      simp only [h₁']
-      split_ifs with h
-      · simpa only [ite_eq_left h] using Hh₁h₂ a b
-      · exact zero_le.trans le_self_add
+  have Hexp' : Δ.CodensityE 1 ε (fun a b => if a ∈ S then X₂ a b else 1)
+      (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) :=
+    Hexp.concentrated_L hSmeas hSconc fun a ha b => by simp [ha]
   iapply progCoupl_intro Hred Hbnd' Hexp' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases hmem : ⟨e₂, σ₂⟩ ∈ S
@@ -746,7 +732,8 @@ theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     imodintro
     iexact H1F
 
-theorem progCoupl_strengthen {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem progCoupl_strengthen [Δ.IsZeroLeft] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT}
     {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     iprop% (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗ progCoupl e₁ σ₁ e₁' σ₁' ε Z ⊢
@@ -781,20 +768,12 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT} {e�
     cases Kinv a.expr with
     | none => exact le_max_right _ _
     | some e' => exact (Hr _ _).trans (le_max_left _ _)
-  have Hexp' : ExpCoupl ε (fun a b => match Kinv a.expr with
+  have Hexp' : Δ.CodensityE 1 ε (fun a b => match Kinv a.expr with
         | some e' => X₂ ⟨e', a.state⟩ b
         | none => 1)
       (primStep ⟨K.fill e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) := by
-    intro h₁ h₂ Hh₁meas Hh₂meas Hh₁ Hh₂ Hh₁h₂
-    let h₁' : Cfg rT → ENNReal := fun ρ => h₁ ⟨K.fill ρ.expr, ρ.state⟩
-    have hh₁'meas : Measurable h₁' := Hh₁meas.comp (Ectx.fillCfg.measurable K)
-    have hmap : (∫⁻ a, h₁ a ∂(primStep ⟨K.fill e₁, σ₁⟩)) = ∫⁻ ρ, h₁' ρ ∂(primStep ⟨e₁, σ₁⟩) := by
-      rw [primStep_fill hv, MeasureTheory.lintegral_map Hh₁meas (by fun_prop)]
-    rw [hmap]
-    refine Hexp h₁' h₂ hh₁'meas Hh₂meas ?_ Hh₂ ?_
-    · exact fun _ => Hh₁ _
-    · intro ρ b
-      simpa only [Kinv_left] using Hh₁h₂ ⟨K.fill ρ.expr, ρ.state⟩ b
+    rw [primStep_fill hv, ← MeasureTheory.Measure.map_id (μ := μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)]
+    exact (Hexp.mono_cost fun ρ b => by simp [Kinv_left]).map (by fun_prop) measurable_id
   iapply progCoupl_intro (Hred.fill K) Hbnd' Hexp' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   cases hKinv : Kinv e₂ with
@@ -815,7 +794,7 @@ theorem progCoupl_steps_adv' {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {X₂ : Cfg rT → Cfg rT → ENNReal}
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ 1)
-    (Hcpl : ExpCoupl ε X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
+    (Hcpl : Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
     progCoupl e₁ σ₁ e₁' σ₁' ε Z :=
   progCoupl_intro Hred Hbnd (dirac_bind_pexecN_one Hred' ▸ Hcpl) (ErasableExpr.dret σ₁')
@@ -824,13 +803,13 @@ theorem progCoupl_steps_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} 
     {ε₁ ε₂ ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {X₂ : Cfg rT → Cfg rT → ENNReal} (Hε : ε₁ + ε₂ ≤ ε)
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ 1)
-    (Hcpl : ExpCoupl ε₁ X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
+    (Hcpl : Δ.CodensityE 1 ε₁ X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂)) ⊢
     progCoupl e₁ σ₁ e₁' σ₁' ε Z := by
   iintro Hcnt
-  iapply progCoupl_intro (r := 1 + ε₂) Hred (fun a b => by gcongr; exact Hbnd a b)
-    (dirac_bind_pexecN_one Hred' ▸ expCoupl_add_const Hε (primStep_univ_le_one _)
-      (primStep_univ_le_one _) Hcpl)
+  iapply progCoupl_intro (r := 1 + ε₂) (X₂ := fun a b => X₂ a b + ε₂) Hred
+    (fun a b => by gcongr; exact Hbnd a b)
+    (by rw [dirac_bind_pexecN_one Hred']; exact (Hcpl.add_const ε₂).mono_bound Hε)
     (ErasableExpr.dret σ₁')
   iexact Hcnt
 
@@ -838,7 +817,7 @@ theorem progCoupl_steps {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → Cfg rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
-    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
+    (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' ε₂) ⊢
     progCoupl e₁ σ₁ e₁' σ₁' ε Z := by
@@ -847,13 +826,12 @@ theorem progCoupl_steps {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
   let Y : Cfg rT → Cfg rT → ENNReal := fun ρ₁ ρ₂ => if R ρ₁ ρ₂ ∧ ε₂ ≤ 1 then ε₂ else 1
   have HY_bnd : ∀ ρ₁ ρ₂, Y ρ₁ ρ₂ ≤ 1 := fun ρ₁ ρ₂ => by
     simp only [Y]; split_ifs with h; exacts [h.2, _root_.le_refl _]
-  have HY_exp : ExpCoupl ε Y (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) :=
-    expCoupl_of_addCoupl Hε (primStep_univ_le_one _) (primStep_univ_le_one _) (fun a b hab => by
+  have HY_exp : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) :=
+    (Hcpl.codensityE fun a b hab => by
         simp only [Y]
         split_ifs with h
         · exact _root_.le_refl _
-        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le)
-      Hcpl
+        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le).mono_bound Hε
   iapply progCoupl_steps_adv' Hred Hred' HY_bnd HY_exp
   iintro %e₂ %σ₂ %e₂' %σ₂'
   simp only [Y]
@@ -867,8 +845,7 @@ theorem progCoupl_step_l_erasable_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' 
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {X₂ : Cfg rT → State rT → ENNReal} (Hred : Reducible e₁ σ₁) (Heras : ErasableExpr μ₁' σ₁')
     (Hbnd : ∀ ρ₁ σ₂', X₂ ρ₁ σ₂' ≤ 1)
-    (Hcpl : ExpCoupl ε (fun a (b : Cfg rT) => X₂ a b.state) (primStep ⟨e₁, σ₁⟩)
-      (μ₁'.bind fun σ => MeasureTheory.Measure.dirac ⟨e₁', σ⟩)) : iprop%
+    (Hcpl : Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
     (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗
     (∀ e₂ σ₂ σ₂', |={∅}=> Z e₂ σ₂ e₁' σ₂' (X₂ ⟨e₂, σ₂⟩ σ₂')) ⊢ progCoupl e₁ σ₁ e₁' σ₁' ε Z := by
   iintro ⟨#H1F, Hcnt⟩
@@ -878,17 +855,12 @@ theorem progCoupl_step_l_erasable_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' 
     split_ifs with h
     · exact Hbnd _ _
     · exact _root_.le_refl _
-  have Hexp' : ExpCoupl ε (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1)
+  have Hexp' : Δ.CodensityE 1 ε (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1)
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN 0 ⟨e₁', σ⟩) := by
-    intro h₁ h₂ Hh₁meas Hh₂meas Hh₁ Hh₂ Hh₁h₂
     simp only [pexecN_zero]
-    have Hh₂'meas : Measurable fun b : Cfg rT => h₂ ⟨e₁', b.state⟩ := Hh₂meas.comp (by fun_prop)
-    have := Hcpl h₁ (fun b => h₂ ⟨e₁', b.state⟩) Hh₁meas Hh₂'meas Hh₁ (fun _ => Hh₂ _)
-      (fun a b => by simpa using Hh₁h₂ a ⟨e₁', b.state⟩)
     rw [MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop),
-      MeasureTheory.lintegral_map Hh₂'meas (by fun_prop)] at this
-    rwa [MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop),
-      MeasureTheory.lintegral_map Hh₂meas (by fun_prop)]
+      ← MeasureTheory.Measure.map_id (μ := primStep ⟨e₁, σ₁⟩)]
+    exact (Hcpl.mono_cost fun ρ σ => by simp).map measurable_id (by fun_prop)
   iapply progCoupl_intro Hred Hbnd' Hexp' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases he : e₂' = e₁'
@@ -903,7 +875,7 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
     {μ₁' : MeasureTheory.Measure (State rT)} {ε₁ ε₂ ε : ENNReal}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {R : Cfg rT → State rT → Prop} (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁)
-    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) μ₁')
+    (Hcpl : Δ.Codensity 1 ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) μ₁')
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗
     (∀ e₂ σ₂ σ₂', ⌜R ⟨e₂, σ₂⟩ σ₂'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' ε₂) ⊢
@@ -913,24 +885,12 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
   let Y : Cfg rT → State rT → ENNReal := fun ρ₁ σ₂' => if R ρ₁ σ₂' ∧ ε₂ ≤ 1 then ε₂ else 1
   have HY_bnd : ∀ ρ₁ σ₂', Y ρ₁ σ₂' ≤ 1 := fun ρ₁ σ₂' => by
     simp only [Y]; split_ifs with h; exacts [h.2, _root_.le_refl _]
-  have Hcpl' : AddCoupl ε₁ {p | R p.1 p.2.state} (primStep ⟨e₁, σ₁⟩)
-      (μ₁'.bind fun σ => MeasureTheory.Measure.dirac (⟨e₁', σ⟩ : Cfg rT)) := by
-    rw [MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop),
-      ← MeasureTheory.Measure.map_id (μ := primStep ⟨e₁, σ₁⟩)]
-    exact AddCoupl.map (f := id) (g := fun σ => (⟨e₁', σ⟩ : Cfg rT))
-      (by fun_prop) (by fun_prop) (fun {_ _} HR => HR) Hcpl
-  have hν : (μ₁'.bind fun σ => MeasureTheory.Measure.dirac (⟨e₁', σ⟩ : Cfg rT)) Set.univ ≤ 1 := by
-    rw [MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop),
-      MeasureTheory.Measure.map_apply (by fun_prop) MeasurableSet.univ]
-    simp [ErasableExpr.mass Heras]
-  have HY_exp : ExpCoupl ε (fun a (b : Cfg rT) => Y a b.state) (primStep ⟨e₁, σ₁⟩)
-      (μ₁'.bind fun σ => MeasureTheory.Measure.dirac ⟨e₁', σ⟩) :=
-    expCoupl_of_addCoupl Hε (primStep_univ_le_one _) hν (fun a b hab => by
+  have HY_exp : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) μ₁' :=
+    (Hcpl.codensityE fun a b hab => by
         simp only [Y]
         split_ifs with h
         · exact _root_.le_refl _
-        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le)
-      Hcpl'
+        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le).mono_bound Hε
   iapply progCoupl_step_l_erasable_adv Hred Heras HY_bnd HY_exp
   iframe H1F
   iintro %e₂ %σ₂ %σ₂'
@@ -940,6 +900,10 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
   · imodintro
     iexact H1F
 
+-- DEAD(approxis-codensity): needs right concentration (`AddCoupl.concentrated_R`), which has
+-- no generic codensity analogue; `progCoupl_step_l_concentrated` now goes through
+-- `progCoupl_step_l_erasable` at `μ₁' := dirac σ₁'` via `codensity_dirac_right`.
+/-
 theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
@@ -962,29 +926,26 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
   iintro %e₂ %σ₂ %σ₂' %HR'
   obtain ⟨HR, rfl⟩ := HR'
   iapply H $$ %e₂ %σ₂ %HR
+-/
 
-theorem progCoupl_step_l_concentrated {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem progCoupl_step_l_concentrated [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+    {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     {S : Set (Cfg rT)} (Hred : Reducible e₁ σ₁)
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗
     (∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε) ⊢ progCoupl e₁ σ₁ e₁' σ₁' ε Z := by
   iintro ⟨#H1F, H⟩
-  classical
-  have hprob_lhs : primStep ⟨e₁, σ₁⟩ Set.univ = 1 := by
-    have := prim_step_mass Hred
-    exact MeasureTheory.IsProbabilityMeasure.measure_univ
-  have Htrivial : AddCoupl 0 Set.univ (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') :=
-    RelCoupl.exact (RelCoupl.trivial hprob_lhs (by simp))
+  have := prim_step_mass Hred
   have Hε : 0 + ε ≤ ε := by rw [zero_add]
-  have HcplR : AddCoupl 0 {p | (fun ρ _ => ρ ∈ S) p.1 p.2}
-      (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') := by
-    refine AddCoupl.mono_rel ?_ (AddCoupl.concentrated_L hSmeas hSconc Htrivial)
-    rintro ⟨ρ, σ⟩ ⟨_, hρ⟩
-    exact hρ
-  iapply progCoupl_step_l_dret (R := fun ρ _ => ρ ∈ S) Hε Hred HcplR
+  have HcplR : Δ.Codensity 1 0 {p | (fun ρ σ => ρ ∈ S ∧ σ = σ₁') p.1 p.2}
+      (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') :=
+    codensity_dirac_right hSmeas hSconc σ₁'
+  iapply progCoupl_step_l_erasable (R := fun ρ σ => ρ ∈ S ∧ σ = σ₁') Hε Hred HcplR
+    (ErasableExpr.dret σ₁')
   iframe H1F
-  iintro %e₂ %σ₂ %Hmem
+  iintro %e₂ %σ₂ %σ₂' %HR
+  obtain ⟨Hmem, rfl⟩ := HR
   iapply H $$ %e₂ %σ₂ %Hmem
 
 /-! ## WP — outer OFE instances and `IntoVal`-style value intros -/
@@ -1339,6 +1300,14 @@ theorem wp_lift_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   iapply specCoupl_ret
   iexact HL
 
+/-! ### Rules that pair the program step with a Dirac on the other side
+
+Everything below routes through `specCoupl_step_concentrated` or `progCoupl_step_l_concentrated`,
+which build the exact coupling along a diagonal (`codensity_dirac_left`/`_right`). -/
+
+section ConcentratedRules
+variable [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+
 theorem wp_lift_step_later_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none) (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
     (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
@@ -1391,6 +1360,7 @@ theorem wp_lift_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → 
   iintro %e₂ %σ₂ %Hmem !> !>
   iapply H $$ %e₂ %σ₂ %Hmem
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ errInterp (rT := rT) ε -∗
@@ -1398,7 +1368,7 @@ theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
         ⌜ε₁ + ε₂ ≤ ε⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜Δ.Codensity 1 ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗ errInterp (rT := rT) ε₂ ∗
             wp E e₂ Φ)) ⊢ wp E e₁ Φ := by
@@ -1419,11 +1389,7 @@ theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   imodintro
   iframe
 
--- DISCRETE: `wp_lift_prim_step_l_dret (Hv : e₁.toVal? = none) :`
---   `(∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ errInterp ε -∗ |={E,∅}=>`
---   `∃ R ε₁ ε₂, ⌜ε₁ + ε₂ ≤ ε⌝ ∗ ⌜Discrete.Reducible e₁ σ₁⌝ ∗`
---   `⌜AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (dirac σ₁')⌝ ∗ …) ⊢ wp E e₁ Φ`
-
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_lift_prim_step_l_erasable {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ errInterp (rT := rT) ε -∗
@@ -1432,7 +1398,7 @@ theorem wp_lift_prim_step_l_erasable {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
         ⌜ε₁ + ε₂ ≤ ε⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜ErasableExpr μ₁' σ₁'⌝ ∗
-        ⌜AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) μ₁'⌝ ∗
+        ⌜Δ.Codensity 1 ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) μ₁'⌝ ∗
         (∀ e₂ σ₂ σ₂', ⌜R ⟨e₂, σ₂⟩ σ₂'⌝ -∗ |={∅}=> ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₂'⟩ ∗ errInterp (rT := rT) ε₂ ∗
             wp E e₂ Φ)) ⊢ wp E e₁ Φ := by
@@ -1605,6 +1571,7 @@ theorem wp_pure_step_later' {E : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : N
 
 /-! ## Evaluation-context lifting lemmas (ports `clutch/theories/approxis/ectx_lifting.v`) -/
 
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_lift_head_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε₁, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
@@ -1648,14 +1615,12 @@ state where `e₁` is not head-reducible the redex may sit under a context and
 off the head-reducible states, where concentration is free. -/
 
 open scoped Classical in
-omit [ApproxisWpGS (rT := rT) GF] in
 theorem measurableSet_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)}
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁)) (σ₁ : State rT) :
     MeasurableSet (if HeadReducible e₁ σ₁ then S σ₁ else Set.univ) := by
   split_ifs; exacts [hSmeas σ₁, MeasurableSet.univ]
 
 open scoped Classical in
-omit [ApproxisWpGS (rT := rT) GF] in
 theorem concentrated_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)} (Hlc : e₁.IsLocallyClosed)
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁))
     (σ₁ : State rT) :
@@ -1728,6 +1693,8 @@ theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
 
 -- DISCRETE: `wp_lift_pure_det_head_step'` — same hypotheses, `▷`-form:
 --   `(▷ wp E e₂ Φ) ⊢ wp E e₁ Φ`
+
+end ConcentratedRules
 
 end ApproxisWpGS
 
