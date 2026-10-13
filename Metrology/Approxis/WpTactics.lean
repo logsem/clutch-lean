@@ -286,14 +286,15 @@ elab "wp_value" : tactic =>
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 public theorem wp_value_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {E : CoPset} (v : Val rT) {e : Exp rT}
-    (heq : e = Exp.ofVal v) {Φ : Val rT → IProp GF} :
+    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
+    {E : CoPset} (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) {Φ : Val rT → IProp GF} :
     Φ v ⊢ wp E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
 public theorem wp_expr_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF] {E : CoPset} {e e' : Exp rT} (heq : e = e')
-    {Φ : Val rT → IProp GF} : wp E e' Φ ⊢ wp E e Φ :=
+    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
+    {E : CoPset} {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
+    wp E e' Φ ⊢ wp E e Φ :=
   heq ▸ .rfl
 
 /-- `wp_show e'` refolds the goal `wp E e Φ` to the definitionally equal `wp E e' Φ`, e.g. a
@@ -307,8 +308,8 @@ elab "wp_value_at" colGt ppSpace v:term : tactic =>
 
 public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} {hlc : HasLC}
-    [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset} (v : Val rT)
-    {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
+    [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
+    (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
     (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp E ea Φ :=
   heq ▸ wp_alloc
 

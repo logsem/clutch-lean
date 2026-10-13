@@ -14,6 +14,7 @@ public import Metrology.Approxis.Compatibility
 public import Metrology.Approxis.Fundamental
 public import Metrology.Approxis.Adequacy
 public import Metrology.Approxis.AdequacyRel
+public import Metrology.Approxis.AdequacyTV
 public import Metrology.Approxis.Soundness
 public import Metrology.Approxis.Examples.OTP
 public import Metrology.Approxis.Examples.Switching
