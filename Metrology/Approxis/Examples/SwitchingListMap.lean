@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Couplings.CodensityTV
 public import Metrology.Approxis.WpTactics
 public import Metrology.Code.Switching
 import Metrology.ProbLang.Syntax.Notation
@@ -18,7 +19,7 @@ open scoped AppGS
 namespace ProbLang
 namespace Switching
 
-variable {rT : Type _} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## The meta-level model of maps -/
 
@@ -114,7 +115,7 @@ the spec-side (`_r`) rules take the continuation as a hypothesis. -/
 
 section MapOps
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc TVDiv.tv GF]
 
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢
