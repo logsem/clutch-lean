@@ -110,6 +110,38 @@ theorem codensity_diag_iff [Δ.IsReflexive] [Δ.IsComposable] {X : Type u} [Meas
     [IsSubProbabilityMeasure ν] : Δ.Codensity α δ (diagRel X) μ ν ↔ Δ α μ ν ≤ δ :=
   ⟨Codensity.le_of_diag, codensity_diag_of_le⟩
 
+/-- Conversely, if the lifting of equality contains every divergence bound, then `Δ` is
+composable (Thm. 8.2). -/
+theorem isComposable_of_codensity_diag
+    (h : ∀ (α : ι) {X : Type u} [MeasurableSpace X] (μ ν : Measure X) [IsSubProbabilityMeasure μ]
+      [IsSubProbabilityMeasure ν], Δ.Codensity α (Δ α μ ν) (diagRel X) μ ν) :
+    Δ.IsComposable where
+  bind_le α β _ _ _ _ μ₁ μ₂ _ _ κ η _ _ :=
+    h α μ₁ μ₂ fun x _ (hxy : x = _) ↦ hxy ▸ le_iSup (fun x ↦ Δ β (κ x) (η x)) x
+
+/-- Conversely, if the lifting of equality is within the divergence bounds, then Dirac measures
+are at divergence zero from themselves (Thm. 8.2). -/
+theorem dirac_self_le_zero_of_codensity_diag
+    (h : ∀ {X : Type u} [MeasurableSpace X] {μ ν : Measure X},
+      Δ.Codensity 1 0 (diagRel X) μ ν → Δ 1 μ ν ≤ 0) {X : Type u} [MeasurableSpace X] (x : X) :
+    Δ 1 (dirac x) (dirac x) ≤ 0 :=
+  h (codensity_dirac rfl)
+
+theorem relProd_diagRel {X Y : Type*} :
+    relProd (diagRel X) (diagRel Y) = diagRel (X × Y) := by
+  ext ⟨⟨x, y⟩, x', y'⟩
+  simp [relProd, diagRel]
+
+/-- Pairing both sides with the same point does not increase the divergence (Prop. 13, from the
+fundamental property and strength). -/
+theorem map_prodMk_le [Δ.IsReflexive] [Δ.IsComposable] {X Y : Type u} [MeasurableSpace X]
+    [MeasurableSpace Y] (α : ι) (x : X) (μ ν : Measure Y) [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] : Δ α (μ.map (Prod.mk x)) (ν.map (Prod.mk x)) ≤ Δ α μ ν := by
+  have h := (codensity_diag_of_le (Δ := Δ) (le_refl (Δ α μ ν))).strength
+    (R := diagRel X) (show x = x from rfl)
+  rw [relProd_diagRel] at h
+  exact h.le_of_diag
+
 /-! ### Fixing the test space (Def. 11, Prop. 14) -/
 
 /-- `Δ` is generated over `Ω`: it is the supremum of its pushforwards along kernels into `Ω`
