@@ -27,7 +27,7 @@ instance (priority := 100) IsZeroOrProbabilityMeasure.toIsSubProbabilityMeasure
     (μ : Measure X) [IsZeroOrProbabilityMeasure μ] : IsSubProbabilityMeasure μ where
   measure_univ_le_one := prob_le_one
 
-instance (μ : Measure X) [IsSubProbabilityMeasure μ] (f : X → Y) :
+instance isSubProbabilityMeasure_map (μ : Measure X) [IsSubProbabilityMeasure μ] (f : X → Y) :
     IsSubProbabilityMeasure (μ.map f) where
   measure_univ_le_one := by
     by_cases hf : AEMeasurable f μ
@@ -37,7 +37,7 @@ instance (μ : Measure X) [IsSubProbabilityMeasure μ] (f : X → Y) :
     · simp [hμ]
     · simp [Measure.map_of_not_aemeasurable_of_ne_zero hf hμ]
 
-instance (μ : Measure X) (ν : Measure Y) [IsSubProbabilityMeasure μ]
+instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] : IsSubProbabilityMeasure (μ.prod ν) where
   measure_univ_le_one := by
     rw [← univ_prod_univ, Measure.prod_prod]
