@@ -18,6 +18,10 @@ variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 class IsSubProbabilityMeasure (μ : Measure X) : Prop where
   measure_univ_le_one : μ univ ≤ 1
 
+theorem IsSubProbabilityMeasure.measure_le_one {μ : Measure X} [IsSubProbabilityMeasure μ]
+    (s : Set X) : μ s ≤ 1 :=
+  (measure_mono (subset_univ s)).trans measure_univ_le_one
+
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := measure_univ_le_one.trans_lt one_lt_top
