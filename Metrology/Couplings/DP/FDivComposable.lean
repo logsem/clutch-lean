@@ -11,6 +11,7 @@ open scoped ENNReal
 
 universe u
 
+/-- `EReal.toENNReal` commutes with sums of nonnegative terms. -/
 theorem EReal.toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ i ∈ s, 0 ≤ x i) :
     (∑ i ∈ s, x i).toENNReal = ∑ i ∈ s, (x i).toENNReal := by
   classical
@@ -20,20 +21,16 @@ theorem EReal.toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx 
     rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.toENNReal_add (hx j (by simp))
       (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
 
-/-- Every set has real mass in `[0, 1]` under a subprobability measure. -/
-theorem MeasureTheory.IsSubProbabilityMeasure.toReal_mem_Icc {X : Type*} [MeasurableSpace X]
-    (ρ : Measure X) [IsSubProbabilityMeasure ρ] (s : Set X) : (ρ s).toReal ∈ Icc (0 : ℝ) 1 :=
-  ⟨ENNReal.toReal_nonneg, ENNReal.toReal_le_of_le_ofReal zero_le_one
-    (ENNReal.ofReal_one ▸ IsSubProbabilityMeasure.measure_le_one s)⟩
-
 namespace WeightFunction
 
 variable {f : WeightFunction}
 
+/-- A nonnegative weight has nonnegative slope at infinity. -/
 theorem slopeAtTop_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ f.slopeAtTop :=
   Filter.le_limsup_of_frequently_le (Filter.Eventually.frequently <|
     (Filter.eventually_ge_atTop 0).mono fun t ht ↦ EReal.coe_nonneg.2 (div_nonneg (hf t ht) ht))
 
+/-- A nonnegative weight has nonnegative perspective. -/
 theorem persp_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
     0 ≤ f.persp a b := by
   unfold persp
@@ -42,18 +39,14 @@ theorem persp_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) {a b : ℝ} (ha : 0 ≤
   · exact EReal.mul_nonneg (EReal.coe_nonneg.2 ha) (slopeAtTop_nonneg hf)
   · exact EReal.coe_nonneg.2 (mul_nonneg hb (hf _ (div_nonneg ha hb)))
 
-end WeightFunction
-
 /-- The perspective of `f` at a product splits into the perspectives of `f₁` and `f₂`, weighted
 by convex combinations with coefficients `β, β'` (condition (A') of Sato–Katsumata, Prop. 1). -/
-def WeightFunction.PerspSplit (f f₁ f₂ : WeightFunction) (β β' : ℝ) : Prop :=
+def PerspSplit (f f₁ f₂ : WeightFunction) (β β' : ℝ) : Prop :=
   ∀ x ∈ Icc (0 : ℝ) 1, ∀ y ∈ Icc (0 : ℝ) 1, ∀ z ∈ Icc (0 : ℝ) 1, ∀ w ∈ Icc (0 : ℝ) 1,
     f.persp (z * w) (x * y) ≤ ((β * w + (1 - β) * y : ℝ) : EReal) * f₁.persp z x +
       ((β' * z + (1 - β') * x : ℝ) : EReal) * f₂.persp w y
 
-namespace WeightFunction
-
-variable {f f₁ f₂ : WeightFunction} {β β' : ℝ}
+variable {f₁ f₂ : WeightFunction} {β β' : ℝ}
 
 open IsSubProbabilityMeasure in
 /-- Under condition (A'), the `f`-divergence of two compositions on finite spaces is at most the
@@ -85,7 +78,7 @@ theorem fDiv_comp_le (hf : ConvexOn ℝ (Ici 0) f) (hf₁ : ConvexOn ℝ (Ici 0)
     have hsum (ρ : Measure (ULift.{u} (Fin K))) [IsSubProbabilityMeasure ρ] :
         ∑ i, (ρ {i}).toReal ≤ 1 := by
       rw [← ENNReal.toReal_sum fun _ _ ↦ by finiteness, sum_measure_singleton]
-      exact (toReal_mem_Icc ρ _).2
+      exact (toReal_mem_Icc (μ := ρ) _).2
     rw [← ENNReal.ofReal_sum_of_nonneg fun _ _ ↦ hw hγ, Finset.sum_add_distrib, ← Finset.mul_sum,
       ← Finset.mul_sum, ENNReal.ofReal_le_one]
     nlinarith [hsum ρ, hsum ρ', hγ.1, hγ.2]
@@ -112,8 +105,9 @@ theorem fDiv_comp_le (hf : ConvexOn ℝ (Ici 0) f) (hf₁ : ConvexOn ℝ (Ici 0)
           ENNReal.ofReal (β' * (μ₁ {j}).toReal + (1 - β') * (μ₂ {j}).toReal) *
             (f₂.persp (κ j {i}).toReal (η j {i}).toReal).toENNReal) := by
         refine Finset.sum_le_sum fun i _ ↦ Finset.sum_le_sum fun j _ ↦ ?_
-        refine (EReal.toENNReal_le_toENNReal (hA _ (toReal_mem_Icc μ₂ _) _
-          (toReal_mem_Icc (η j) _) _ (toReal_mem_Icc μ₁ _) _ (toReal_mem_Icc (κ j) _))).trans_eq ?_
+        refine (EReal.toENNReal_le_toENNReal (hA _ (toReal_mem_Icc (μ := μ₂) _) _
+          (toReal_mem_Icc (μ := η j) _) _ (toReal_mem_Icc (μ := μ₁) _) _
+          (toReal_mem_Icc (μ := κ j) _))).trans_eq ?_
         rw [EReal.toENNReal_add
           (EReal.mul_nonneg (EReal.coe_nonneg.2 (hw hβ)) (hp hf₁₀))
           (EReal.mul_nonneg (EReal.coe_nonneg.2 (hw hβ')) (hp hf₂₀)),

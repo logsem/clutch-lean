@@ -22,6 +22,11 @@ theorem IsSubProbabilityMeasure.measure_le_one {μ : Measure X} [IsSubProbabilit
     (s : Set X) : μ s ≤ 1 :=
   (measure_mono (subset_univ s)).trans measure_univ_le_one
 
+/-- Every set has real mass in `[0, 1]` under a subprobability measure. -/
+theorem IsSubProbabilityMeasure.toReal_mem_Icc {μ : Measure X} [IsSubProbabilityMeasure μ]
+    (s : Set X) : (μ s).toReal ∈ Icc (0 : ℝ) 1 :=
+  ⟨toReal_nonneg, toReal_le_of_le_ofReal zero_le_one (ofReal_one ▸ measure_le_one s)⟩
+
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := measure_univ_le_one.trans_lt one_lt_top
