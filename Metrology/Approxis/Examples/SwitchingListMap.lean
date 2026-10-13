@@ -13,7 +13,7 @@ import Metrology.ProbLang.Syntax.Notation
 The `PureSteps` facts for the pure list recursions of `Metrology/Code/Switching.lean`,
 and `wp`-level specifications (program side and spec side) for the map operations. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS TVDiv
 open scoped AppGS
 
 namespace ProbLang
@@ -115,11 +115,11 @@ the spec-side (`_r`) rules take the continuation as a hypothesis. -/
 
 section MapOps
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc TVDiv.tv GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
 
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢
-    wp E (pl% &initMap #.unit) Φ := by
+    WP[tv] (pl% &initMap #.unit) @ E {{ Φ }} := by
   iintro HΦ
   wp_pures
   rw [show (Exp.alloc (.inl (.lit .unit)) : Exp rT) =
@@ -129,8 +129,8 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
 
 theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &initMap #.unit) ∗
-    (∀ ℓ : Loc, ⤇ K.fill pl(#(.loc ℓ)) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (∀ ℓ : Loc, ⤇ K.fill pl(#(.loc ℓ)) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗ WP[tv] e @ E {{ Φ }}) ⊢
+    WP[tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hcnt⟩
   tp_pures
   ihave Hj := specProgFrag_reshape
@@ -144,7 +144,7 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal m : Val rT)) -∗ Φ (optIntVal (alookup k m))) ⊢
-    wp E (pl% &getMap #(.loc ℓ) #(.int k)) Φ := by
+    WP[tv] (pl% &getMap #(.loc ℓ) #(.int k)) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
   wp_bind (pl% !#(.loc ℓ))
@@ -159,8 +159,8 @@ theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &getMap #(.loc ℓ) #(.int k)) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (⤇ K.fill (Exp.ofVal (optIntVal (alookup k m))) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗
-      wp E e Φ) ⊢
-    wp E e Φ := by
+      WP[tv] e @ E {{ Φ }}) ⊢
+    WP[tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
   tp_bind (pl% !#(.loc ℓ))
@@ -173,7 +173,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal ((k, y) :: m) : Val rT)) -∗ Φ .unit) ⊢
-    wp E (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) Φ := by
+    WP[tv] (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
   wp_bind (pl% !#(.loc ℓ))
@@ -191,8 +191,8 @@ theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) ∗
       (ℓ ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#(.unit)) -∗ (ℓ ↦ₛ (assocVal ((k, y) :: m) : Val rT)) -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (⤇ K.fill pl(#(.unit)) -∗ (ℓ ↦ₛ (assocVal ((k, y) :: m) : Val rT)) -∗ WP[tv] e @ E {{ Φ }}) ⊢
+    WP[tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
   tp_bind (pl% !#(.loc ℓ))

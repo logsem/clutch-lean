@@ -29,12 +29,12 @@ open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.TotalEris
 
 section
 variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
+  {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
-    wp E (K.fill e₂) Φ ⊢ wp E (K.fill e₁) Φ := by
+    wp Δ E (K.fill e₂) Φ ⊢ wp Δ E (K.fill e₁) Φ := by
   have : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
   exact (BI.laterN_intro n).trans (wp_pure_step_later' Hφ)
 
@@ -59,17 +59,17 @@ section PureStepsConsumers
 variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
   {GF : BundledGFunctors}
 
-public theorem wp_pure_steps [ApproxisWpGS (rT := rT) Δ GF]
+public theorem wp_pure_steps [ApproxisWpGS (rT := rT) GF]
     [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset} {e₁ e₂ : Exp rT}
     {Φ : Val rT → IProp GF} (h : PureSteps e₁ e₂) :
-    wp E e₂ Φ ⊢ wp E e₁ Φ :=
+    wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
   have := h.pureExec
   (BI.laterN_intro _).trans (wp_pure_step_later' trivial)
 
-public theorem wp_pure_steps_at [ApproxisWpGS (rT := rT) Δ GF]
+public theorem wp_pure_steps_at [ApproxisWpGS (rT := rT) GF]
     [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
     {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF} (heq : e₁ = e₁') (h : PureSteps e₁' e₂) :
-    wp E e₂ Φ ⊢ wp E e₁ Φ :=
+    wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
   heq ▸ wp_pure_steps h
 
 public theorem step_pure_steps_at {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
@@ -93,7 +93,7 @@ end PureStepsConsumers
 
 /-! ## WP-goal runner -/
 
-/-- A proof-mode goal `ehyps ⊢ wp E e Φ`, its `wp` spine read positionally. -/
+/-- A proof-mode goal `ehyps ⊢ wp Δ E e Φ`, its `wp` spine read positionally. -/
 meta structure WpGoal where
   {u : Level}
   {α : Q(Type)}
@@ -102,7 +102,7 @@ meta structure WpGoal where
   instMonoid : Q(Monoid $ι)
   Δ : Q(GradedDivergence.{0} $ι)
   {GF : Q(BundledGFunctors.{0, 0, 0})}
-  instWp : Q(ProbLang.ApproxisWpGS (rT := $α) $Δ $GF)
+  instWp : Q(ProbLang.ApproxisWpGS (rT := $α) $GF)
   /-- The full `wp` application, with `E`, `e`, `Φ` as the trailing arguments. -/
   wpApp : LeanExpr
   {prop : Q(Type u)}
@@ -147,7 +147,7 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     have ι : Q(Type) := args[2]!
     have instMonoid : Q(Monoid $ι) := args[3]!
     have Δ : Q(GradedDivergence.{0} $ι) := args[4]!
-    have instWp : Q(ProbLang.ApproxisWpGS (rT := $α) $Δ $GF) := args[6]!
+    have instWp : Q(ProbLang.ApproxisWpGS (rT := $α) $GF) := args[6]!
     have E : Q(CoPset) := args[7]!
     have e : Q(Exp $α) := args[8]!
     let Φ : LeanExpr := args[9]!
@@ -156,8 +156,8 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
 
 /-! ## `wp_bind` — focus on a subexpression by auto-discovering its context -/
 
-/-- `wp_bind e` rebases the goal `wp E (K.fill e) Φ` to
-`wp E e (fun v => wp E (K.fill v) Φ)`, discovering `K` automatically. -/
+/-- `wp_bind e` rebases the goal `wp Δ E (K.fill e) Φ` to
+`wp Δ E e (fun v => wp Δ E (K.fill v) Φ)`, discovering `K` automatically. -/
 elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
   runTacticWp fun mvar g => do
     let { α, GF, hyps, e, .. } := g
@@ -167,7 +167,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
           m!"cannot unify {← ppExpr focus} with any evaluation context of {← ppExpr e}"
     have K : Q(Ectx $α) := res.K
     have e' : Q(Exp $α) := focus
-    -- Continuation `fun v => wp E (K.fill (ofVal v)) Φ`, with `K` filled at the meta
+    -- Continuation `fun v => wp Δ E (K.fill (ofVal v)) Φ`, with `K` filled at the meta
     -- level so the continuation displays the clean refocused expression.
     let Φc : LeanExpr ←
       withLocalDeclDQ `v q(Val $α) fun v => do
@@ -241,7 +241,7 @@ macro "wp_pures" : tactic =>
 
 /-! ## `wp_value` — discharge a value WP -/
 
-/-- `wp_value` reduces a goal `wp E v Φ` (with `v` a value) to `Φ v`
+/-- `wp_value` reduces a goal `wp Δ E v Φ` (with `v` a value) to `Φ v`
 (or `|={E}=> Φ v` if the postcondition cannot absorb the update). -/
 elab "wp_value" : tactic =>
   runTacticWp fun mvar g => do
@@ -286,34 +286,35 @@ elab "wp_value" : tactic =>
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 public theorem wp_value_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
+    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
     {E : CoPset} (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) {Φ : Val rT → IProp GF} :
-    Φ v ⊢ wp E e Φ :=
+    Φ v ⊢ wp Δ E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
 public theorem wp_expr_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) Δ GF]
+    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [ApproxisWpGS (rT := rT) GF]
     {E : CoPset} {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
-    wp E e' Φ ⊢ wp E e Φ :=
+    wp Δ E e' Φ ⊢ wp Δ E e Φ :=
   heq ▸ .rfl
 
-/-- `wp_show e'` refolds the goal `wp E e Φ` to the definitionally equal `wp E e' Φ`, e.g. a
+/-- `wp_show e'` refolds the goal `wp Δ E e Φ` to the definitionally equal `wp Δ E e' Φ`, e.g. a
 stepped β-residual back to its library form before applying an induction hypothesis. -/
 elab "wp_show" colGt ppSpace e':term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_expr_eq (e := $eS) (e' := $e') (by kernel_rfl)))
 
-/-- `wp_value_at v` closes `wp E e Φ` with `e` only definitionally `Exp.ofVal v`, leaving `Φ v`. -/
+/-- `wp_value_at v` closes `wp Δ E e Φ` with `e` only definitionally `Exp.ofVal v`, leaving
+`Φ v`. -/
 elab "wp_value_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_value_eq (e := $eS) $v (by kernel_rfl)))
 
 public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} {hlc : HasLC}
-    [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
+    [ApproxisGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
     (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
-    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp E ea Φ :=
+    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp Δ E ea Φ :=
   heq ▸ wp_alloc
 
-/-- `wp_alloc_at v` applies `wp_alloc` to `wp E (alloc e) Φ` with `e` only definitionally
+/-- `wp_alloc_at v` applies `wp_alloc` to `wp Δ E (alloc e) Φ` with `e` only definitionally
 `Exp.ofVal v`. -/
 elab "wp_alloc_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_alloc_eq (ea := $eS) $v (by kernel_rfl)))

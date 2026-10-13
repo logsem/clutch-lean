@@ -23,11 +23,10 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## Bundled ghost-state class -/
 
-/-- The Approxis ghost-state components; `Δ` is the graded divergence of the coupling modalities
-(an `outParam`, like `hlc`). -/
+/-- The Approxis ghost-state components. The graded divergence is not part of the ghost state;
+it is the explicit first argument of `wp`. -/
 class ApproxisGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (hlc : outParam HasLC) {ι : outParam Type} (Δ : outParam (GradedDivergence.{0} ι))
-    (GF : BundledGFunctors) where
+    (hlc : outParam HasLC) (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   specGS : SpecGS rT GF
   ecGS : ECGS GF
@@ -40,11 +39,10 @@ attribute [reducible, instance] ApproxisGS.appGS ApproxisGS.specGS
 
 section ApproxisInstance
 
-variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisGS rT hlc Δ GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
 
 @[reducible]
-noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) Δ GF where
+noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) GF where
   hlc := hlc
   invGS := inferInstance
   stateInterp σ := appStateAuth σ
@@ -72,10 +70,10 @@ attribute [simp] ExtTreeMap.insert_eq_PartialMap_insert
 section Lifting
 
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisGS rT hlc Δ GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [ApproxisGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
-    iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp E (.alloc (.ofVal v)) Φ := by
+    iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp Δ E (.alloc (.ofVal v)) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_head_step Exp.alloc_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
@@ -92,7 +90,7 @@ theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
 theorem wp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
-    iprop% appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp E pl(!#(.loc l)) Φ := by
+    iprop% appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp Δ E pl(!#(.loc l)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply wp_lift_atomic_head_step Exp.load_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ
@@ -110,7 +108,8 @@ theorem wp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
     iapply HΦ $$ Hl
 
 theorem wp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp GF} : iprop%
-    appHeapFrag l v' ∗ (appHeapFrag l v -∗ Φ .unit) ⊢ wp E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
+    appHeapFrag l v' ∗ (appHeapFrag l v -∗ Φ .unit) ⊢
+    wp Δ E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply wp_lift_atomic_head_step Exp.store_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ
@@ -132,7 +131,7 @@ theorem wp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp G
     iapply HΦ $$ Hl'
 
 theorem wp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
-    iprop% (∀ l, appTapesFrag l (Tape.empty z) -∗ Φ (.lbl l)) ⊢ wp E pl(tape(#(.int z))) Φ := by
+    iprop% (∀ l, appTapesFrag l (Tape.empty z) -∗ Φ (.lbl l)) ⊢ wp Δ E pl(tape(#(.int z))) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_head_step Exp.tape_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
@@ -149,7 +148,7 @@ theorem wp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
     iapply HΦ $$ %σ₁.tapes.fresh Hl
 
 theorem wp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢ wp E pl(rand(#(.int z), #(.unit))) Φ := by
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢ wp Δ E pl(rand(#(.int z), #(.unit))) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
@@ -165,7 +164,7 @@ theorem wp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
   | RandNonposS hnz => exact absurd Hz hnz
 
 theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) :
-    Φ (.int (-1)) ⊢ wp E pl(rand(#(.int z), #(.unit))) Φ := by
+    Φ (.int (-1)) ⊢ wp Δ E pl(rand(#(.int z), #(.unit))) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
@@ -183,7 +182,7 @@ theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : �
 theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
     {Φ : Val rT → IProp GF} : iprop%
     appNatTape l z (n :: ns) ∗ (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl l))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ
@@ -213,7 +212,7 @@ theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
 theorem wp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) : iprop%
     appNatTape l z [] ∗ (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl l))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   ihave HlBack := app_natTape_to_empty $$ Hl
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
@@ -242,7 +241,7 @@ theorem wp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int} {Φ : Val rT → IPr
 theorem wp_rand_tape_wrong_bound {E : CoPset} {l : Loc} {z M : Int} {ns : List Int}
     {Φ : Val rT → IProp GF} (Hz : 0 < z) (HneM : z ≠ M) : iprop%
     appNatTape l M ns ∗ (∀ n, appNatTape l M ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp E pl(rand(#(.int z), #(.lbl l))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   iunfold appNatTape at Hl
   icases Hl with ⟨%fs, %hmap, HlBack⟩
@@ -275,8 +274,8 @@ theorem wp_rand_tape_wrong_bound {E : CoPset} {l : Loc} {z M : Int} {ns : List I
 theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#(.int n)) -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#(.int n)) -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
@@ -302,7 +301,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
 theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → IProp GF}
     (Hz : ¬ 0 < z) : iprop%
     appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢
-    wp E pl(rand(#(.int z), #(.lbl l))) Φ := by
+    wp Δ E pl(rand(#(.int z), #(.lbl l))) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ
@@ -328,8 +327,8 @@ theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → I
 
 theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) : iprop%
-    ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗ (⤇ K.fill pl(#(.int (-1))) -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    ⤇ K.fill pl(rand(#(.int z), #(.unit))) ∗ (⤇ K.fill pl(#(.int (-1))) -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
@@ -355,8 +354,8 @@ theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
 theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : 0 < z) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z [] ∗
-    (∀ n, specNatTape l z [] -∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (∀ n, specNatTape l z [] -∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hα, Hwp⟩
   ihave HαB := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
@@ -390,8 +389,8 @@ theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e :
 theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specTapesFrag l ⟨N, []⟩ ∗
-    (specTapesFrag l ⟨N, []⟩ -∗ ⤇ K.fill pl(#(.int (-1))) -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (specTapesFrag l ⟨N, []⟩ -∗ ⤇ K.fill pl(#(.int (-1))) -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hl, Hwp⟩
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
@@ -424,8 +423,8 @@ omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_alloc_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(tape(#(.int z))) ∗
-      (∀ (l : Loc), ⤇ K.fill pl(#(.lbl l)) -∗ specNatTape l z [] -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+      (∀ (l : Loc), ⤇ K.fill pl(#(.lbl l)) -∗ specNatTape l z [] -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hwp⟩
   imod step_alloctape K z $$ Hj with ⟨%l, Hj', Hl⟩
   isimp only [Tape.empty] at Hl
@@ -436,8 +435,8 @@ omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_rand_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {n : Int} {ns : List Int}
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z (n :: ns) ∗
-    (⤇ K.fill pl(#(.int n)) -∗ specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (⤇ K.fill pl(#(.int n)) -∗ specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hl, Hwp⟩
   icases spec_read_natTape_head $$ Hl with ⟨%x, %xs, Hback, %hxv, HHandback⟩
   imod step_rand K l x xs $$ [$] with ⟨Hj', Hback'⟩
@@ -448,8 +447,8 @@ theorem wp_rand_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {n : Int} 
 theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : 0 < z) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z [] ∗
-    (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hα, Hwp⟩
   ihave Hαb := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
@@ -483,8 +482,8 @@ theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp 
 theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {ns : List Int}
     {e : Exp rT} {Φ : Val rT → IProp GF} (Hz : 0 < z) (HneM : z ≠ M) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l M ns ∗
-    (∀ n, specNatTape l M ns ∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp E e Φ) ⊢
-    wp E e Φ := by
+    (∀ n, specNatTape l M ns ∗ ⤇ K.fill pl(#(.int n)) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp Δ E e Φ) ⊢
+    wp Δ E e Φ := by
   iintro ⟨Hj, Hα, Hwp⟩
   iunfold specNatTape at Hα
   icases Hα with ⟨%fs, %hmap, Hαb⟩
