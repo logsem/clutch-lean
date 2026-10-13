@@ -35,20 +35,20 @@ theorem gap_anti {ε ε' : ℝ} (h : ε ≤ ε') (μ ν : Measure X) : gap ε' �
     (mul_le_mul_left (ENNReal.ofReal_le_ofReal (Real.exp_le_exp.2 h)) _) _
 
 /-- A larger privacy budget gives a smaller divergence. -/
-instance : (dp.{u}).IsGraded where
+instance isGraded_dp : (dp.{u}).IsGraded where
   anti _ _ h _ _ μ ν _ _ := gap_anti (NNReal.coe_le_coe.2 (Multiplicative.toAdd_le.2 h)) μ ν
 
 /-- A measure is at DP divergence zero from itself at budget zero. -/
-instance : (dp.{u}).IsReflexive where
+instance isReflexive_dp : (dp.{u}).IsReflexive where
   self_le_zero μ _ := by simp [dp_apply, gap]
 
 /-- Deterministic post-processing does not increase the DP divergence. -/
-instance : (dp.{u}).IsFunctorial where
+instance isFunctorial_dp : (dp.{u}).IsFunctorial where
   map_le α X Y _ _ k μ ν _ _ hk := iSup₂_le fun S hS ↦ le_iSup₂_of_le (k ⁻¹' S) (hk hS) <| by
     rw [Measure.map_apply hk hS, Measure.map_apply hk hS]
 
 /-- Adaptive composition adds DP budgets and slacks (DP composition). -/
-instance : (dp.{u}).IsComposable where
+instance isComposable_dp : (dp.{u}).IsComposable where
   bind_le α β X Y _ _ μ₁ μ₂ _ _ κ η _ _ := by
     have h₂ (x : X) : Bound (ENNReal.ofReal (Real.exp ((Multiplicative.toAdd β : ℝ≥0) : ℝ)))
         (⨆ x, dp β (κ x) (η x)) (κ x) (η x) :=
@@ -60,7 +60,7 @@ instance : (dp.{u}).IsComposable where
     exact gap_le_iff.2 hbind
 
 /-- The DP divergence is the supremum of its pushforwards to finite spaces. -/
-instance : (dp.{u}).IsContinuous where
+instance isContinuous_dp : (dp.{u}).IsContinuous where
   eq_iSup α X _ μ ν _ _ := by
     refine le_antisymm (iSup₂_le fun S hS ↦ ?_)
       (iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ IsFunctorial.map_le α μ ν hk)

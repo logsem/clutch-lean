@@ -77,6 +77,24 @@ variable {Φ Ψ : Type u} [MeasurableSpace Φ] [MeasurableSpace Ψ]
 
 namespace Witness
 
+/-- The first measures of a measurable family of witnesses, as a kernel. -/
+noncomputable def fstKernel {α : ι} {δ : ℝ≥0∞} (κ : Φ → Witness Δ α δ Ψ)
+    (hκ : Measurable κ := by fun_prop) : Kernel Φ Ψ :=
+  ⟨fun φ ↦ (κ φ).fst, by fun_prop⟩
+
+/-- The second measures of a measurable family of witnesses, as a kernel. -/
+noncomputable def sndKernel {α : ι} {δ : ℝ≥0∞} (κ : Φ → Witness Δ α δ Ψ)
+    (hκ : Measurable κ := by fun_prop) : Kernel Φ Ψ :=
+  ⟨fun φ ↦ (κ φ).snd, by fun_prop⟩
+
+instance isSubMarkovKernel_fstKernel {α : ι} {δ : ℝ≥0∞} (κ : Φ → Witness Δ α δ Ψ)
+    (hκ : Measurable κ) : IsSubMarkovKernel (fstKernel κ hκ) :=
+  ⟨fun φ ↦ isSubProbabilityMeasure_fst (κ φ)⟩
+
+instance isSubMarkovKernel_sndKernel {α : ι} {δ : ℝ≥0∞} (κ : Φ → Witness Δ α δ Ψ)
+    (hκ : Measurable κ) : IsSubMarkovKernel (sndKernel κ hκ) :=
+  ⟨fun φ ↦ isSubProbabilityMeasure_snd (κ φ)⟩
+
 variable [Mul ι] {α β : ι} {δ γ : ℝ≥0∞}
 
 section Bind
@@ -92,12 +110,9 @@ theorem isWitness_bind (w : Witness Δ β γ Φ) {κ : Φ → Witness Δ α δ �
   fst := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
   snd := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
   le :=
-    let K₁ : Kernel Φ Ψ := ⟨fun φ ↦ (κ φ).fst, by fun_prop⟩
-    let K₂ : Kernel Φ Ψ := ⟨fun φ ↦ (κ φ).snd, by fun_prop⟩
-    have : IsSubMarkovKernel K₁ := ⟨fun φ ↦ isSubProbabilityMeasure_fst (κ φ)⟩
-    have : IsSubMarkovKernel K₂ := ⟨fun φ ↦ isSubProbabilityMeasure_snd (κ φ)⟩
     calc Δ (β * α) (w.fst.bind fun φ ↦ (κ φ).fst) (w.snd.bind fun φ ↦ (κ φ).snd)
-        ≤ Δ β w.fst w.snd + ⨆ φ, Δ α (κ φ).fst (κ φ).snd := IsComposable.bind_le β α _ _ K₁ K₂
+        ≤ Δ β w.fst w.snd + ⨆ φ, Δ α (κ φ).fst (κ φ).snd :=
+          IsComposable.bind_le β α _ _ (fstKernel κ hκ) (sndKernel κ hκ)
       _ ≤ γ + δ := add_le_add w.le (iSup_le fun φ ↦ (κ φ).le)
 
 /-- Binding a witness with a measurable family of witnesses. -/
