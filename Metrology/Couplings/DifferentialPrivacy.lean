@@ -72,13 +72,17 @@ noncomputable def fDiv (f : WeightFunction) (μ ν : Measure X) : EReal :=
   ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
     ∑ i, f.persp (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal
 
+/-- A family of `f`-divergences, graded by the index of the weight (§4.2). -/
+noncomputable def fDivFamily {ι : Type*} (F : ι → WeightFunction) : GradedDivergence.{u} ι :=
+  fun α {_} _ μ ν ↦ fDiv (F α) μ ν
+
 /-- An `f`-divergence as a singly graded divergence. -/
-noncomputable def fDivergence (f : WeightFunction) : GradedDivergence.{u} Unit :=
-  fun _ {_} _ μ ν ↦ fDiv f μ ν
+noncomputable abbrev fDivergence (f : WeightFunction) : GradedDivergence.{u} Unit :=
+  fDivFamily fun _ ↦ f
 
 /-- Pushing forward along a measurable map does not increase an `f`-divergence. -/
-instance fDivergence.isFunctorial (f : WeightFunction) :
-    (fDivergence.{u} f).IsFunctorial where
+instance fDivFamily.isFunctorial {ι : Type*} (F : ι → WeightFunction) :
+    (fDivFamily F : GradedDivergence.{u} ι).IsFunctorial where
   map_le _ X Y _ _ k μ ν _ _ hk := by
     refine iSup_le fun n ↦ iSup_le fun k' ↦ iSup_le fun hk' ↦ ?_
     refine le_iSup_of_le n <| le_iSup_of_le (k' ∘ k) <| le_iSup_of_le (hk'.comp hk) ?_
@@ -114,6 +118,21 @@ theorem fDiv_dp_eq_iSup (ε : ℝ) (μ ν : Measure X) [IsFiniteMeasure μ] [IsF
     rw [← EReal.coe_add, EReal.coe_le_coe_iff]
     exact (le_max_right _ _).trans (le_add_of_nonneg_right (le_max_left _ _))
 
+/-- A DP `f`-divergence bound is the DP inequality on events. -/
+theorem fDiv_dp_le_iff (ε : ℝ) (δ : ℝ≥0∞) (μ ν : Measure X) [IsFiniteMeasure μ]
+    [IsFiniteMeasure ν] :
+    fDiv (.dp ε) μ ν ≤ δ ↔
+      ∀ S, MeasurableSet S → μ S ≤ ENNReal.ofReal (Real.exp ε) * ν S + δ := by
+  rw [fDiv_dp_eq_iSup, iSup₂_le_iff]
+  refine forall₂_congr fun S _ ↦ ?_
+  rcases eq_or_ne δ ⊤ with rfl | hδ
+  · simp
+  rw [← EReal.coe_ennreal_toReal hδ, EReal.coe_le_coe_iff,
+    ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
+    ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal (Real.exp_pos ε).le]
+  constructor <;> intro h <;> linarith
+
 /-- The Rényi divergence of order `α` (Def. 2.2). -/
 noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
   ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (.rpow α) μ ν).toENNReal
@@ -142,17 +161,8 @@ def tCDP (ρ ω : ℝ) : Prop :=
 
 /-- Differential privacy bounds the DP `f`-divergence between adjacent outputs (§2.2). -/
 theorem DP_iff_fDiv_dp [IsFiniteKernel m] {ε : ℝ} {δ : ℝ≥0∞} :
-    DP m Φ ε δ ↔ ∀ ⦃x x'⦄, Φ x x' → fDiv (.dp ε) (m x) (m x') ≤ δ := by
-  refine forall₃_congr fun x x' _ ↦ ?_
-  rw [fDiv_dp_eq_iSup, iSup₂_le_iff]
-  refine forall₂_congr fun S _ ↦ ?_
-  rcases eq_or_ne δ ⊤ with rfl | hδ
-  · simp
-  rw [← EReal.coe_ennreal_toReal hδ, EReal.coe_le_coe_iff,
-    ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
-    ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
-    ENNReal.toReal_ofReal (Real.exp_pos ε).le]
-  constructor <;> intro h <;> linarith
+    DP m Φ ε δ ↔ ∀ ⦃x x'⦄, Φ x x' → fDiv (.dp ε) (m x) (m x') ≤ δ :=
+  forall₃_congr fun _ _ _ ↦ (fDiv_dp_le_iff ε δ _ _).symm
 
 end Privacy
 
