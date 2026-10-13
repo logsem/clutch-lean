@@ -96,6 +96,20 @@ theorem Codensity.map {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X
   rw [bind_map_eq μ hf, bind_map_eq ν hg]
   exact h (k := k.comap f hf) (l := l.comap g hg) fun x y hxy ↦ hkl (hfg hxy)
 
+/-- Pushing forward the left measure along a map that sends `R` into `S`. -/
+theorem Codensity.map_left {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y)}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : X → X'}
+    (hf' : ∀ ⦃x y⦄, (x, y) ∈ R → (f x, y) ∈ S) (hf : Measurable f := by fun_prop) :
+    Δ.Codensity α δ S (μ.map f) ν := by
+  simpa [map_id] using h.map (g := id) hf' hf measurable_id
+
+/-- Pushing forward the right measure along a map that sends `R` into `S`. -/
+theorem Codensity.map_right {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X × Y')}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {g : Y → Y'}
+    (hg' : ∀ ⦃x y⦄, (x, y) ∈ R → (x, g y) ∈ S) (hg : Measurable g := by fun_prop) :
+    Δ.Codensity α δ S μ (ν.map g) := by
+  simpa [map_id] using h.map (f := id) hg' measurable_id hg
+
 /-- Binding with measurable families of subprobability measures (`Codensity.bind` for plain
 functions). -/
 theorem Codensity.bind_fun {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}

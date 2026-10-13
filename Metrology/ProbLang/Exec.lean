@@ -5,7 +5,7 @@ public import Metrology.Couplings.SubProbability
 public import Metrology.ProbLang.HeadStep
 public import Metrology.ProbLang.DetStep
 public import Metrology.ProbLang.Discrete
-public import Metrology.Couplings.AdditiveCouplings
+public import Metrology.Couplings.CodensityLifting
 
 @[expose] public section
 
@@ -79,6 +79,11 @@ def limExec (ρ : Cfg rT) : Measure (Cfg rT) := ⨆ (i : ℕ), execN i ρ
 
 /-- Extract an expression measure from a Cfg measure -/
 def asExpr (μ : Measure (Cfg rT)) : Measure (Exp rT) := μ.map (·.expr)
+
+/-- `asExpr` preserves sub-probability measures. -/
+instance asExpr.isSubProbabilityMeasure (μ : Measure (Cfg rT)) [IsSubProbabilityMeasure μ] :
+    IsSubProbabilityMeasure (asExpr μ) :=
+  isSubProbabilityMeasure_map _ _
 
 /-- Limiting distribution of an execution, over return values -/
 def limExecV (ρ : Cfg rT) : Measure (Exp rT) := asExpr <| limExec ρ
@@ -391,8 +396,32 @@ theorem lintegral_limExec'
     exact le_iSup_of_le g (le_iSup_of_le hg le_rfl)
   · exact iSup_le fun n => lintegral_mono' (le_iSup (fun i => execN i ρ) n) le_rfl
 
-/-! ### Additive coupling lift (Approxis glue) -/
+/-! ### Codensity lifting of the limiting execution (Approxis glue) -/
 
+section Codensity
+
+variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
+
+/-- The limit of the finite executions inherits a codensity lifting from every stage. -/
+theorem limExec_map_codensity [Δ.IsLeftContinuous] {γ β : Type*} [MeasurableSpace γ]
+    [MeasurableSpace β] {α : ι} {δ : ENNReal} {Φ : Set (γ × β)} {ρ : Cfg rT} {μ₂ : Measure β}
+    [IsSubProbabilityMeasure μ₂] {F : Cfg rT → γ} (hF : Measurable F)
+    (H : ∀ n, Δ.Codensity α δ Φ ((execN n ρ).map F) μ₂) :
+    Δ.Codensity α δ Φ ((limExec ρ).map F) μ₂ := by
+  rw [limExec, Measure.map_iSup_of_monotone execN_monotone hF]
+  exact GradedDivergence.Codensity.iSup_left (fun _ _ h => Measure.map_mono (execN_mono h ρ) hF) H
+
+/-- `limExec_map_codensity` at `F := Cfg.expr`: the form `adequacy` needs. -/
+theorem limExecV_codensity [Δ.IsLeftContinuous] {β : Type*} [MeasurableSpace β] {α : ι}
+    {δ : ENNReal} {Φ : Set (Exp rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
+    [IsSubProbabilityMeasure μ₂] (H : ∀ n, Δ.Codensity α δ Φ (asExpr (execN n ρ)) μ₂) :
+    Δ.Codensity α δ Φ (limExecV ρ) μ₂ :=
+  limExec_map_codensity Cfg.measurable_expr H
+
+end Codensity
+
+-- DEAD(approxis-codensity): AddCoupl limit lemmas, replaced by `limExec_map_codensity`
+/-
 -- Rocq: lim_exec_ARcoupl, specialized to additive form.
 theorem limExec_AddCoupl
     {β : Type*} [MeasurableSpace β] {ε : ENNReal}
@@ -422,6 +451,7 @@ theorem limExecV_AddCoupl
     (H : ∀ n, AddCoupl ε Φ (asExpr (execN n ρ)) μ₂) :
     AddCoupl ε Φ (limExecV ρ) μ₂ :=
   limExec_map_AddCoupl Cfg.measurable_expr H
+-/
 
 end ProbLang
 end
