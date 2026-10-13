@@ -7,6 +7,7 @@ public import Metrology.Couplings.CodensityLifting
 public import Metrology.Couplings.CodensityARCoupling
 public import Metrology.Couplings.CodensityCost
 public import Metrology.Couplings.CodensityTV
+public import Metrology.Couplings.CodensityMassDetecting
 public import Metrology.Couplings.Couplings
 public import Metrology.Couplings.DifferentialPrivacy
 public import Metrology.Couplings.DP.Basic
