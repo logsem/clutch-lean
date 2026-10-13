@@ -134,6 +134,10 @@ theorem GradedDivergence.CodensityE.tv_add_right [IsSubProbabilityMeasure μ]
     _ = ∫⁻ y, g y ∂ν + (δ + ∫⁻ y, c y ∂ν) := by
         rw [lintegral_add_right _ hc]; ring
 
+/-- Total variation pays costs on the right sample in expectation. -/
+instance TVDiv.isExpectationAdditive_tv : tv.{u}.IsExpectationAdditive where
+  add_right h _ hc := h.tv_add_right hc
+
 /-! ### The total variation codensity lifting is `AddCoupl` -/
 
 /-- An additive coupling is a coupling in expectation for the relation's cost. -/

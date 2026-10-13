@@ -155,4 +155,62 @@ theorem Codensity.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R 
     · simp [relCost_of_mem (show (x, y) ∈ {p | p ∈ R ∧ p.1 ∈ T} from ⟨hxy, hx⟩)]
     · simp [relCost_of_notMem hxy]
 
+/-- A Dirac measure lifts against a probability measure carried by `S`, relating its point to
+`S`. -/
+theorem codensity_dirac_left [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {Y : Type u}
+    [MeasurableSpace Y] {S : Set Y} (hS : MeasurableSet S) {ν : Measure Y}
+    [IsProbabilityMeasure ν] (hν : ν Sᶜ = 0) (x₀ : X) :
+    Δ.Codensity 1 0 {p | p.1 = x₀ ∧ p.2 ∈ S} (dirac x₀) ν := by
+  have h := ((codensity_diag_of_le (IsReflexive.self_le_zero (Δ := Δ) ν)).concentrated_L hS
+    hν).map (f := fun _ ↦ x₀) (g := id) (S := {p | p.1 = x₀ ∧ p.2 ∈ S})
+    fun _ _ hxy ↦ ⟨rfl, hxy.1 ▸ hxy.2⟩
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
+/-- A probability measure carried by `S` lifts against a Dirac measure, relating `S` to its
+point. -/
+theorem codensity_dirac_right [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {X : Type u}
+    [MeasurableSpace X] {S : Set X} (hS : MeasurableSet S) {μ : Measure X}
+    [IsProbabilityMeasure μ] (hμ : μ Sᶜ = 0) (y₀ : Y) :
+    Δ.Codensity 1 0 {p | p.1 ∈ S ∧ p.2 = y₀} μ (dirac y₀) := by
+  have h := ((codensity_diag_of_le (IsReflexive.self_le_zero (Δ := Δ) μ)).concentrated_L hS
+    hμ).map (f := id) (g := fun _ ↦ y₀) (S := {p | p.1 ∈ S ∧ p.2 = y₀})
+    fun _ _ hxy ↦ ⟨hxy.2, rfl⟩
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
+/-! ### Paying costs in expectation -/
+
+variable (Δ) in
+/-- A cost on the right sample may be paid in expectation (cf. `AddCoupl.bind_adv`); this is a
+stopgap property of the lifting, pending a property of `Δ` itself. -/
+class IsExpectationAdditive : Prop where
+  add_right {α : ι} {δ : ℝ≥0∞} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
+    {E : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ]
+    (h : Δ.CodensityE α δ E μ ν) {c : Y → ℝ≥0∞} (hc : Measurable c) :
+    Δ.CodensityE α (δ + ∫⁻ y, c y ∂ν) (fun x y ↦ E x y + c y) μ ν
+
+/-- A measurable cost on the right sample may be paid in expectation. -/
+theorem CodensityE.add_right [Δ.IsExpectationAdditive] {α : ι} {δ : ℝ≥0∞} {X Y : Type u}
+    [MeasurableSpace X] [MeasurableSpace Y] {E : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
+    [IsSubProbabilityMeasure μ] (h : Δ.CodensityE α δ E μ ν) {c : Y → ℝ≥0∞}
+    (hc : Measurable c := by fun_prop) :
+    Δ.CodensityE α (δ + ∫⁻ y, c y ∂ν) (fun x y ↦ E x y + c y) μ ν :=
+  IsExpectationAdditive.add_right h hc
+
+/-- Binding with continuations whose bound `E₂ y` depends on the right sample, paying only its
+expectation (cf. `AddCoupl.bind_adv`). -/
+theorem Codensity.bind_adv [Δ.IsExpectationAdditive] {α α' : ι} {δ δ' : ℝ≥0∞} {X Y : Type u}
+    [MeasurableSpace X] [MeasurableSpace Y] {S : Set (X × Y)} {T : Set (X' × Y')}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] (h : Δ.Codensity α δ S μ ν)
+    {f : X → Measure X'} {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
+    [∀ y, IsSubProbabilityMeasure (g y)] {E₂ : Y → ℝ≥0∞} (hE₂ : ∫⁻ y, E₂ y ∂ν ≤ δ')
+    (hfg : ∀ ⦃x y⦄, (x, y) ∈ S → Δ.Codensity α' (E₂ y) T (f x) (g y))
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop)
+    (hE : Measurable E₂ := by fun_prop) :
+    Δ.Codensity (α * α') (δ + δ') T (μ.bind f) (ν.bind g) :=
+  (((codensityE_relCost_iff.2 h).add_right hE).mono_bound (add_le_add_right hE₂ δ)).bind_fun
+    (fun x y ↦ by
+      by_cases hxy : (x, y) ∈ S
+      · simpa [relCost_of_mem hxy] using hfg hxy
+      · exact fun _ _ _ _ _ _ _ _ _ ↦ by simp [relCost_of_notMem hxy]) hf hg
+
 end GradedDivergence
