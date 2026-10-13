@@ -162,8 +162,6 @@ instance IsComposable.toIsAdditive [Mul ι] [Δ.IsComposable] [Δ.IsFunctorial] 
       ⟨fun x ↦ ν.map (Prod.mk x), measurable_of_measurable_coe _ fun s hs ↦ by
         simp_rw [map_apply measurable_prodMk_left hs]
         exact measurable_measure_prodMk_left hs⟩
-    have (ν : Measure Y) [IsSubProbabilityMeasure ν] : IsSubMarkovKernel (K ν) :=
-      ⟨fun x ↦ show IsSubProbabilityMeasure (ν.map (Prod.mk x)) from inferInstance⟩
     calc Δ (α * β) (μ₁.prod ν₁) (μ₂.prod ν₂)
         = Δ (α * β) (K ν₁ ∘ₘ μ₁) (K ν₂ ∘ₘ μ₂) := by rw [Measure.prod_def, Measure.prod_def]; rfl
       _ ≤ Δ α μ₁ μ₂ + ⨆ x, Δ β (ν₁.map (Prod.mk x)) (ν₂.map (Prod.mk x)) :=

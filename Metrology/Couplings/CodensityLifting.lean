@@ -77,6 +77,20 @@ theorem Codensity.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} 
     {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hδ : δ ≤ δ') : Δ.Codensity α δ' R μ ν :=
   fun _ _ _ _ _ _ _ _ hkl ↦ (h hkl).trans (add_le_add_left hδ _)
 
+/-- Weakening the bound and the relation, in the form `gcongr` uses. -/
+@[gcongr]
+theorem Codensity.imp {α : ι} {δ δ' : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
+    (hδ : δ ≤ δ') (hR : R ⊆ R') : Δ.Codensity α δ R μ ν → Δ.Codensity α δ' R' μ ν :=
+  fun h ↦ (h.mono_rel hR).mono_bound hδ
+
+/-- Weakening the grade, the bound and the relation, in the form `gcongr` uses. -/
+@[gcongr]
+theorem Codensity.imp_grade [Preorder ι] [MulRightMono ι] [Δ.IsGraded] {α α' : ι}
+    {δ δ' : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (hα : α ≤ α') (hδ : δ ≤ δ')
+    (hR : R ⊆ R') : Δ.Codensity α δ R μ ν → Δ.Codensity α' δ' R' μ ν :=
+  fun h ↦ (h.mono_rel hR).mono hα hδ
+
 /-- A bound that holds above `δ` holds at `δ`. -/
 theorem Codensity.of_forall_lt {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} (h : ∀ δ' > δ, Δ.Codensity α δ' R μ ν) : Δ.Codensity α δ R μ ν := by
@@ -119,8 +133,6 @@ theorem Codensity.bind_fun {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)
     (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → Δ.Codensity α' δ' S (f x) (g y))
     (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
     Δ.Codensity (α * α') (δ + δ') S (μ.bind f) (ν.bind g) :=
-  have : IsSubMarkovKernel ⟨f, hf⟩ := ⟨fun x ↦ inferInstanceAs (IsSubProbabilityMeasure (f x))⟩
-  have : IsSubMarkovKernel ⟨g, hg⟩ := ⟨fun y ↦ inferInstanceAs (IsSubProbabilityMeasure (g y))⟩
   h.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
 
 /-- The product of two relations. -/

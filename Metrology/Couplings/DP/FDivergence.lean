@@ -277,7 +277,7 @@ theorem isApproximable (hF : ∀ α, ConvexOn ℝ (Ici 0) (F α)) :
     have hb {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubProbabilityMeasure (K x)]
         (hK : Measurable K) (μ : Measure X) [IsSubProbabilityMeasure μ] :
         IsFiniteMeasure (μ.bind K) :=
-      have := isSubProbabilityMeasure_bind (μ := μ) (f := K) inferInstance; inferInstance
+      have := isSubProbabilityMeasure_bind μ K; inferInstance
     have hsum (n : ℕ) := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind (f ∘ rep f g n ∘ disc f g n))
       (μ₂.bind (g ∘ rep f g n ∘ disc f g n)) (hb (hf.comp (hrd n)) μ₁) (hb (hg.comp (hrd n)) μ₂)
     have hsum₀ := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind f) (μ₂.bind g) (hb hf μ₁) (hb hg μ₂)

@@ -33,7 +33,7 @@ instance isApproximable_dp : (dp.{u}).IsApproximable where
     refine ⟨_, disc f g, rep f g, measurable_disc f g hf hg, measurable_rep f g, ?_⟩
     have hlimf := tendsto_bind_disc hf hg hf (μ := μ₁) (cell_fst (g := g))
     have hlimg := tendsto_bind_disc hf hg hg (μ := μ₂) (cell_snd (f := f))
-    have := isSubProbabilityMeasure_bind (μ := μ₁) (f := f) inferInstance
+    have := isSubProbabilityMeasure_bind μ₁ f
     simp_rw [dp_apply, gap_eq_sup']
     refine Filter.Tendsto.finset_sup'_nhds_apply _ fun T _ ↦ ?_
     exact ENNReal.Tendsto.sub (hlimf T)

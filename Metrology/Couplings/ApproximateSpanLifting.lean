@@ -107,8 +107,8 @@ theorem isWitness_bind (w : Witness Δ β γ Φ) {κ : Φ → Witness Δ α δ �
     (hκ : Measurable κ := by fun_prop) :
     IsWitness Δ (β * α) (γ + δ)
       (w.fst.bind fun φ ↦ (κ φ).fst, w.snd.bind fun φ ↦ (κ φ).snd) where
-  fst := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
-  snd := isSubProbabilityMeasure_bind fun _ ↦ inferInstance
+  fst := isSubProbabilityMeasure_bind _ _
+  snd := isSubProbabilityMeasure_bind _ _
   le :=
     calc Δ (β * α) (w.fst.bind fun φ ↦ (κ φ).fst) (w.snd.bind fun φ ↦ (κ φ).snd)
         ≤ Δ β w.fst w.snd + ⨆ φ, Δ α (κ φ).fst (κ φ).snd :=

@@ -207,7 +207,7 @@ theorem tendsto_bind_disc {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubP
     simpa [c] using ENNReal.Tendsto.const_mul this (Or.inr (ENNReal.natCast_ne_top N))
   have hKn (n : ℕ) : Measurable (K ∘ rep f g n ∘ disc f g n) :=
     hK.comp ((measurable_rep f g n).comp (measurable_disc f g hf hg n))
-  have := isSubProbabilityMeasure_bind (μ := μ) (f := K) inferInstance
+  have := isSubProbabilityMeasure_bind μ K
   have hpt (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
     le_add_of_cell_eq (singleton_le_one (ρ := K x) i) (singleton_le_one i) (hcell n x i).symm
   have hpt' (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=

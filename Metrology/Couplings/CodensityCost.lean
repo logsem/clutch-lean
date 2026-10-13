@@ -63,6 +63,13 @@ theorem CodensityE.mono_cost {α : ι} {δ : ℝ≥0∞} {E E' : X → Y → ℝ
     Δ.CodensityE α δ E' μ ν :=
   fun _ _ _ _ _ _ _ _ hkl ↦ h fun x y ↦ (hkl x y).trans (add_le_add le_rfl (hE x y))
 
+/-- Weakening the bound and lowering the cost, in the form `gcongr` uses. -/
+@[gcongr]
+theorem CodensityE.imp {α : ι} {δ δ' : ℝ≥0∞} {E E' : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (hδ : δ ≤ δ') (hE : E' ≤ E) :
+    Δ.CodensityE α δ E μ ν → Δ.CodensityE α δ' E' μ ν :=
+  fun h ↦ (h.mono_cost fun x y ↦ hE x y).mono_bound hδ
+
 /-- Adding a constant to the cost adds it to the bound (cf. `expCoupl_add_const` in Approxis). -/
 theorem CodensityE.add_const {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
     {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (c : ℝ≥0∞) :
@@ -117,8 +124,6 @@ theorem CodensityE.bind_fun {α α' : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ
     [∀ y, IsSubProbabilityMeasure (g y)] (hfg : ∀ x y, Δ.Codensity α' (E x y) S (f x) (g y))
     (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
     Δ.Codensity (α * α') δ S (μ.bind f) (ν.bind g) :=
-  have : IsSubMarkovKernel ⟨f, hf⟩ := ⟨fun x ↦ inferInstanceAs (IsSubProbabilityMeasure (f x))⟩
-  have : IsSubMarkovKernel ⟨g, hg⟩ := ⟨fun y ↦ inferInstanceAs (IsSubProbabilityMeasure (g y))⟩
   h.bind_codensity (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
 
 /-- Pushing forward along maps, with the cost pulled back along them. -/

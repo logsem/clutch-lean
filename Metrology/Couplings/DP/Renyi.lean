@@ -174,9 +174,9 @@ theorem fDiv_rpow_bind_le (hα : 1 < α) {M N : ℕ} (d₁ d₂ : Measure (ULift
     fDiv (.rpow α) (d₁.bind h) (d₂.bind k) ≤
       fDiv (.rpow α) d₁ d₂ * ⨆ j, fDiv (.rpow α) (h j) (k j) := by
   have hcvx := convexOn_rpow hα.le
-  have := isSubProbabilityMeasure_bind (μ := d₁) (f := h) inferInstance
+  have := isSubProbabilityMeasure_bind d₁ h
     (measurable_of_countable h).aemeasurable
-  have := isSubProbabilityMeasure_bind (μ := d₂) (f := k) inferInstance
+  have := isSubProbabilityMeasure_bind d₂ k
     (measurable_of_countable k).aemeasurable
   have hb (d : Measure (ULift.{u} (Fin M))) [IsSubProbabilityMeasure d]
       (h : ULift.{u} (Fin M) → Measure (ULift.{u} (Fin N))) [∀ j, IsSubProbabilityMeasure (h j)]

@@ -53,11 +53,11 @@ instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubPr
       IsSubProbabilityMeasure.measure_univ_le_one
 
 /-- Not an instance: `Measure.bind` is junk for non-measurable kernels. -/
-theorem isSubProbabilityMeasure_bind {μ : Measure X} {f : X → Measure Y}
-    [IsSubProbabilityMeasure μ] (hfx : ∀ x, IsSubProbabilityMeasure (f x))
+theorem isSubProbabilityMeasure_bind (μ : Measure X) (f : X → Measure Y)
+    [IsSubProbabilityMeasure μ] [∀ x, IsSubProbabilityMeasure (f x)]
     (hf : AEMeasurable f μ := by fun_prop) : IsSubProbabilityMeasure (μ.bind f) :=
   ⟨calc μ.bind f univ = ∫⁻ x, f x univ ∂μ := Measure.bind_apply .univ hf
-      _ ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun x ↦ (hfx x).measure_univ_le_one
+      _ ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun x ↦ IsSubProbabilityMeasure.measure_univ_le_one
       _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)⟩
 
 open Classical in
@@ -104,7 +104,7 @@ instance (priority := 100) IsSubMarkovKernel.toIsFiniteKernel (κ : Kernel X Y)
 
 instance isSubProbabilityMeasure_comp (μ : Measure X) [IsSubProbabilityMeasure μ]
     (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsSubProbabilityMeasure (κ ∘ₘ μ) :=
-  isSubProbabilityMeasure_bind (fun _ ↦ inferInstance) κ.measurable.aemeasurable
+  isSubProbabilityMeasure_bind μ κ κ.measurable.aemeasurable
 
 instance isSubMarkovKernel_comp (η : Kernel Y Z) [IsSubMarkovKernel η] (κ : Kernel X Y)
     [IsSubMarkovKernel κ] : IsSubMarkovKernel (η ∘ₖ κ) where
@@ -126,5 +126,17 @@ instance isSubMarkovKernel_piecewise {s : Set X} [DecidablePred (· ∈ s)] (hs 
 instance isSubMarkovKernel_comap (κ : Kernel Y Z) [IsSubMarkovKernel κ] {g : X → Y}
     (hg : Measurable g) : IsSubMarkovKernel (κ.comap g hg) where
   isSubProbabilityMeasure x := by rw [Kernel.comap_apply]; infer_instance
+
+/-- A measurable family of subprobability measures is a sub-Markov kernel. -/
+instance isSubMarkovKernel_mk (f : X → Measure Y) (hf : Measurable f)
+    [∀ x, IsSubProbabilityMeasure (f x)] : IsSubMarkovKernel ⟨f, hf⟩ where
+  isSubProbabilityMeasure x := inferInstanceAs (IsSubProbabilityMeasure (f x))
+
+instance isSubMarkovKernel_const (μ : Measure Y) [IsSubProbabilityMeasure μ] :
+    IsSubMarkovKernel (Kernel.const X μ) where
+  isSubProbabilityMeasure x := by rw [Kernel.const_apply]; infer_instance
+
+instance isSubMarkovKernel_zero : IsSubMarkovKernel (0 : Kernel X Y) where
+  isSubProbabilityMeasure x := by rw [zero_apply]; infer_instance
 
 end ProbabilityTheory

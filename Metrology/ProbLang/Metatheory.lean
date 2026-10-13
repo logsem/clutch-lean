@@ -1102,7 +1102,6 @@ theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
 
 theorem Cfg.uniform_ne_zero
     (z : Int) (σ : State rT) : Cfg.uniform z σ ≠ 0 := by
-  have : MeasureTheory.IsProbabilityMeasure (Cfg.uniform z σ) := Cfg.uniform_isProbabilityMeasure
   exact MeasureTheory.IsProbabilityMeasure.ne_zero _
 
 /-- Reindex a sum over `Ico 0 z` along a map that restricts to a bijection on it. -/
