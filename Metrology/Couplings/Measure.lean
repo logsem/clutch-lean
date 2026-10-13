@@ -107,4 +107,10 @@ theorem iSup_bind_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : 
     lintegral_iSup_of_monotone hμ (f := (f · s)) ((measurable_coe hs).comp hf)]
   simp_rw [bind_apply hs hf.aemeasurable]
 
+/-- Pushing forward commutes with the supremum of an increasing sequence of measures. -/
+theorem map_iSup_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : X → Y}
+    (hf : Measurable f := by fun_prop) : (⨆ n, μ n).map f = ⨆ n, (μ n).map f := by
+  simp_rw [← bind_dirac_eq_map _ hf]
+  exact iSup_bind_of_monotone hμ
+
 end MeasureTheory.Measure

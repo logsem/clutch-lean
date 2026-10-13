@@ -2,9 +2,10 @@ module
 
 public import Metrology.Couplings.AdditiveCouplings
 public import Metrology.Couplings.CodensityARCoupling
+public import Metrology.Couplings.CodensityCost
 
-/-! The one-sided total variation divergence and its codensity lifting, which is the additive
-coupling `AddCoupl`. -/
+/-! The one-sided total variation divergence: its cost lifting is the coupling in expectation
+`ExpCoupl` and its codensity lifting is the additive coupling `AddCoupl`. -/
 
 @[expose] public section
 
@@ -21,6 +22,7 @@ noncomputable def tv : GradedDivergence.{u} Unit := fun _ ↦ DPDiv.dp 1
 
 variable {X : Type u} [MeasurableSpace X] {a : Unit} {μ ν : Measure X}
 
+/-- The total variation is the largest excess of `μ` over `ν` on an event. -/
 theorem tv_apply : tv a μ ν = ⨆ (S : Set X) (_ : MeasurableSet S), μ S - ν S := by
   simp [tv, DPDiv.dp_apply, DPDiv.gap]
 
@@ -28,25 +30,32 @@ theorem tv_apply : tv a μ ν = ⨆ (S : Set X) (_ : MeasurableSet S), μ S - ν
 theorem tv_le_iff {δ : ℝ≥0∞} : tv a μ ν ≤ δ ↔ ∀ S, MeasurableSet S → μ S ≤ ν S + δ := by
   simp [tv_apply, add_comm]
 
+/-- The total variation is trivially graded. -/
 instance isGraded_tv : (tv.{u}).IsGraded where
   anti _ _ _ _ _ _ _ _ _ := le_rfl
 
+/-- A measure is at total variation zero from itself. -/
 instance isReflexive_tv : (tv.{u}).IsReflexive where
   self_le_zero := IsReflexive.self_le_zero (Δ := DPDiv.dp) (X := _)
 
+/-- Deterministic post-processing does not increase the total variation. -/
 instance isFunctorial_tv : (tv.{u}).IsFunctorial where
   map_le _ _ _ _ _ _ μ ν _ _ hk := IsFunctorial.map_le (Δ := DPDiv.dp) 1 μ ν hk
 
+/-- Adaptive composition adds total variations. -/
 instance isComposable_tv : (tv.{u}).IsComposable where
   bind_le _ _ _ _ _ _ μ₁ μ₂ _ _ κ η _ _ := by
     simpa [tv] using IsComposable.bind_le (Δ := DPDiv.dp) 1 1 μ₁ μ₂ κ η
 
+/-- The total variation is the supremum of its pushforwards to finite spaces. -/
 instance isContinuous_tv : (tv.{u}).IsContinuous where
   eq_iSup _ := IsContinuous.eq_iSup (Δ := DPDiv.dp) 1
 
+/-- The total variation is at most the mass of the left measure. -/
 instance isMassBounded_tv : (tv.{u}).IsMassBounded where
   le_measure_univ _ := IsMassBounded.le_measure_univ (Δ := DPDiv.dp) 1
 
+/-- The total variation is continuous along increasing sequences on the left. -/
 instance isLeftContinuous_tv : (tv.{u}).IsLeftContinuous where
   iSup_left_le _ := IsLeftContinuous.iSup_left_le (Δ := DPDiv.dp) 1
 
@@ -58,30 +67,35 @@ end TVDiv
 
 open TVDiv
 
-variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞} {R : Set (X × Y)}
-  {μ : Measure X} {ν : Measure Y}
+variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞}
+  {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
 
-/-- Measures related by the total variation codensity lifting are additively coupled. -/
-theorem GradedDivergence.Codensity.addCoupl (h : tv.{u}.Codensity () δ R μ ν) :
-    AddCoupl δ R μ ν := by
-  rintro ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ hfg
+/-! ### The total variation cost lifting is `ExpCoupl` -/
+
+/-- Measures in the total variation cost lifting are coupled in expectation. -/
+theorem GradedDivergence.CodensityE.expCoupl (h : tv.{u}.CodensityE () δ E μ ν) :
+    ExpCoupl δ E μ ν := by
+  intro f g hf hg hf1 hg1 hfg
   have := isSubMarkovKernel_massKernel.{u} hf hf1
   have := isSubMarkovKernel_massKernel.{u} hg hg1
   have hc := h (β := ()) (γ := 0) (k := massKernel.{u} hf) (l := massKernel.{u} hg)
-    fun x y hxy ↦ tv_le_iff.2 fun S _ ↦ by simpa [massKernel] using mul_le_mul_left (hfg hxy) _
+    fun x y ↦ tv_le_iff.2 fun S _ ↦ by
+      rcases Set.eq_empty_or_nonempty S with rfl | ⟨⟨⟩, hS⟩
+      · simp
+      · simpa [massKernel, hS] using hfg x y
   simpa using tv_le_iff.1 hc .univ .univ
 
-/-- An additive coupling is in the total variation codensity lifting: a test that the kernels
+/-- A coupling in expectation is in the total variation cost lifting: a test that the kernels
 pass with slack `γ` becomes a `[0, 1]`-valued test function once `γ` is cut off. -/
-theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] (h : AddCoupl δ R μ ν) :
-    tv.{u}.Codensity () δ R μ ν := by
+theorem ExpCoupl.codensityE [IsSubProbabilityMeasure μ] (h : ExpCoupl δ E μ ν) :
+    tv.{u}.CodensityE () δ E μ ν := by
   intro I _ β γ k l _ _ hkl
   refine tv_le_iff.2 fun S hS ↦ ?_
   have hkS := k.measurable_coe hS
-  have hfg := h ⟨fun x ↦ k x S - γ, hkS.sub measurable_const,
-      fun _ ↦ tsub_le_self.trans (IsSubProbabilityMeasure.measure_le_one S)⟩
-    ⟨fun y ↦ l y S, l.measurable_coe hS, fun _ ↦ IsSubProbabilityMeasure.measure_le_one S⟩
-    fun {x y} hxy ↦ tsub_le_iff_right.2 (tv_le_iff.1 (hkl hxy) S hS)
+  have hfg := h (fun x ↦ k x S - γ) (fun y ↦ l y S) (hkS.sub measurable_const)
+    (l.measurable_coe hS) (fun _ ↦ tsub_le_self.trans (IsSubProbabilityMeasure.measure_le_one S))
+    (fun _ ↦ IsSubProbabilityMeasure.measure_le_one S)
+    fun x y ↦ tsub_le_iff_right.2 <| (tv_le_iff.1 (hkl x y) S hS).trans_eq (by ring)
   rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable]
   calc ∫⁻ x, k x S ∂μ
       ≤ ∫⁻ x, (k x S - γ) + γ ∂μ := lintegral_mono fun _ ↦ le_tsub_add
@@ -92,6 +106,51 @@ theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] (h : AddCoupl δ R μ ν
     _ ≤ ∫⁻ y, l y S ∂ν + (δ + γ) := by
         rw [← add_assoc]
         exact add_le_add_left hfg γ
+
+/-- Couplings in expectation are exactly the total variation cost lifting. -/
+theorem expCoupl_iff_codensityE [IsSubProbabilityMeasure μ] :
+    ExpCoupl δ E μ ν ↔ tv.{u}.CodensityE () δ E μ ν :=
+  ⟨ExpCoupl.codensityE, CodensityE.expCoupl⟩
+
+/-- For total variation, a measurable cost on the right sample may be paid in expectation; this
+uses linearity of tests, so it is specific to total variation (cf. `AddCoupl.bind_adv`). -/
+theorem GradedDivergence.CodensityE.tv_add_right [IsSubProbabilityMeasure μ]
+    (h : tv.{u}.CodensityE () δ E μ ν) {c : Y → ℝ≥0∞} (hc : Measurable c := by fun_prop) :
+    tv.{u}.CodensityE () (δ + ∫⁻ y, c y ∂ν) (fun x y ↦ E x y + c y) μ ν := by
+  refine ExpCoupl.codensityE fun f g hf hg hf1 hg1 hfg ↦ ?_
+  calc ∫⁻ x, f x ∂μ
+      ≤ ∫⁻ y, min (g y + c y) 1 ∂ν + δ :=
+        h.expCoupl f _ hf ((hg.add hc).min measurable_const) hf1 (fun _ ↦ min_le_right _ _)
+          fun x y ↦ by
+            rcases le_total (g y + c y) 1 with hle | hle
+            · rw [min_eq_left hle]
+              exact (hfg x y).trans_eq (by ring)
+            · exact (hf1 x).trans (by rw [min_eq_right hle]; exact le_self_add)
+    _ ≤ ∫⁻ y, g y + c y ∂ν + δ := by gcongr with y; exact min_le_left _ _
+    _ = ∫⁻ y, g y ∂ν + (δ + ∫⁻ y, c y ∂ν) := by
+        rw [lintegral_add_right _ hc]; ring
+
+/-! ### The total variation codensity lifting is `AddCoupl` -/
+
+/-- An additive coupling is a coupling in expectation for the relation's cost. -/
+theorem addCoupl_iff_expCoupl_relCost : AddCoupl δ R μ ν ↔ ExpCoupl δ (relCost R) μ ν := by
+  refine ⟨fun h f g hf hg hf1 hg1 hfg ↦ h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun {x y} hxy ↦ by
+    simpa [relCost_of_mem hxy] using hfg x y, ?_⟩
+  rintro h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ hfg
+  refine h f g hf hg hf1 hg1 fun x y ↦ ?_
+  by_cases hxy : (x, y) ∈ R
+  · simpa [relCost_of_mem hxy] using hfg hxy
+  · simp [relCost_of_notMem hxy]
+
+/-- Measures related by the total variation codensity lifting are additively coupled. -/
+theorem GradedDivergence.Codensity.addCoupl (h : tv.{u}.Codensity () δ R μ ν) :
+    AddCoupl δ R μ ν :=
+  addCoupl_iff_expCoupl_relCost.2 (codensityE_relCost_iff.2 h).expCoupl
+
+/-- An additive coupling is in the total variation codensity lifting. -/
+theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] (h : AddCoupl δ R μ ν) :
+    tv.{u}.Codensity () δ R μ ν :=
+  codensityE_relCost_iff.1 (addCoupl_iff_expCoupl_relCost.1 h).codensityE
 
 /-- Additive couplings are exactly the total variation codensity lifting. -/
 theorem addCoupl_iff_codensity [IsSubProbabilityMeasure μ] :
@@ -105,11 +164,6 @@ theorem tv_concentrated_R [IsSubProbabilityMeasure μ] {T : Set Y} (hT : Measura
     (hν : ν Tᶜ = 0) (h : tv.{u}.Codensity () δ R μ ν) :
     tv.{u}.Codensity () δ {p | p ∈ R ∧ p.2 ∈ T} μ ν :=
   (h.addCoupl.concentrated_R hT hν).codensity
-
-/-- Strengthen the relation with `x ∈ T` for a set `T` carrying all of `μ`. -/
-theorem tv_concentrated_L {T : Set X} (hT : MeasurableSet T) (hμ : μ Tᶜ = 0)
-    (h : tv.{u}.Codensity () δ R μ ν) : tv.{u}.Codensity () δ {p | p ∈ R ∧ p.1 ∈ T} μ ν :=
-  h.concentrated_L hT hμ
 
 /-- An exact total variation lifting bounds events through the relation. -/
 theorem tv_set_le {T : Set X} {T' : Set Y} (hT : MeasurableSet T) (hT' : MeasurableSet T')
@@ -128,6 +182,11 @@ theorem tv_eq_of_diag {μ ν : Measure X} (h₁ : tv.{u}.Codensity () 0 (diagRel
   AddCoupl.eq_of_eq_zero h₁.addCoupl h₂.addCoupl
 
 end GradedDivergence.Codensity
+
+/-- The zero measure lifts anything, with no condition on the right measure (cf.
+`GradedDivergence.codensity_zero_left`). -/
+theorem TVDiv.codensity_zero_left : tv.{u}.Codensity () δ R 0 ν := fun _ _ _ _ _ _ _ _ _ ↦ by
+  simp [tv_le_iff]
 
 /-- A bound of at least one makes any subprobability measure lift anything, with no condition on
 the right measure (cf. `GradedDivergence.codensity_of_one_le`). -/

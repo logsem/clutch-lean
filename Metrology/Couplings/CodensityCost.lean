@@ -1,10 +1,10 @@
 module
 
-public import Metrology.Couplings.CodensityTV
+public import Metrology.Couplings.CodensityLifting
 
 /-! Cost-graded codensity liftings: the relation of `Codensity` becomes a cost charged on top of
-the test slack, so that `ExpCoupl` is the total variation instance and `AddCoupl.bind_adv_kanto`
-is the bind law. -/
+the test slack, so that `ExpCoupl` is the total variation instance (`CodensityTV.lean`) and
+`AddCoupl.bind_adv_kanto` is the bind law. -/
 
 @[expose] public section
 
@@ -31,10 +31,12 @@ def CodensityE (α : ι) (δ : ℝ≥0∞) (E : X → Y → ℝ≥0∞) (μ : Me
 noncomputable def relCost (R : Set (X × Y)) (x : X) (y : Y) : ℝ≥0∞ := Rᶜ.indicator ⊤ (x, y)
 
 omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A relation costs nothing on its pairs. -/
 theorem relCost_of_mem {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∈ R) : relCost R x y = 0 :=
   Set.indicator_of_notMem (not_not.2 h) _
 
 omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A relation costs `⊤` off its pairs. -/
 theorem relCost_of_notMem {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∉ R) :
     relCost R x y = ⊤ :=
   Set.indicator_of_mem h _
@@ -64,11 +66,9 @@ theorem CodensityE.mono_cost {α : ι} {δ : ℝ≥0∞} {E E' : X → Y → ℝ
 /-- Adding a constant to the cost adds it to the bound (cf. `expCoupl_add_const` in Approxis). -/
 theorem CodensityE.add_const {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
     {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (c : ℝ≥0∞) :
-    Δ.CodensityE α (δ + c) (fun x y ↦ E x y + c) μ ν := by
-  intro I _ β γ k l _ _ hkl
-  calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν) ≤ δ + (γ + c) :=
-        h fun x y ↦ (hkl x y).trans_eq (by ring)
-    _ = δ + c + γ := by rw [add_comm γ, add_assoc]
+    Δ.CodensityE α (δ + c) (fun x y ↦ E x y + c) μ ν :=
+  fun _ _ _ γ _ _ _ _ hkl ↦ (h (γ := γ + c) fun x y ↦ (hkl x y).trans_eq (by ring)).trans_eq
+    (by ring)
 
 /-- A relational lifting gives the cost lifting of any cost bounded on the relation, paying the
 bound (cf. `expCoupl_of_addCoupl` in Approxis). -/
@@ -137,8 +137,6 @@ theorem CodensityE.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {E
     Δ.CodensityE α δ E' μ ν := by
   classical
   intro I _ β γ k l _ _ hkl
-  have : IsSubMarkovKernel (Kernel.piecewise hT k 0) :=
-    ⟨fun x ↦ by rw [Kernel.piecewise_apply]; split_ifs <;> infer_instance⟩
   have hk : Kernel.piecewise hT k 0 ∘ₘ μ = k ∘ₘ μ := comp_congr <| by
     filter_upwards [measure_eq_zero_iff_ae_notMem.1 hμ] with x hx
     simp [Kernel.piecewise_apply, not_not.1 hx]
@@ -148,68 +146,13 @@ theorem CodensityE.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {E
   · simpa [Kernel.piecewise_apply, hx] using (hkl x y).trans (add_le_add le_rfl (hE x hx y))
   · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le β (l y)).trans zero_le
 
+/-- Strengthen the relation with `x ∈ T` for a set `T` carrying all of `μ`. -/
+theorem Codensity.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
+    {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T) (hμ : μ Tᶜ = 0)
+    (h : Δ.Codensity α δ R μ ν) : Δ.Codensity α δ {p | p ∈ R ∧ p.1 ∈ T} μ ν :=
+  codensityE_relCost_iff.1 <| (codensityE_relCost_iff.2 h).concentrated_L hT hμ fun x hx y ↦ by
+    by_cases hxy : (x, y) ∈ R
+    · simp [relCost_of_mem (show (x, y) ∈ {p | p ∈ R ∧ p.1 ∈ T} from ⟨hxy, hx⟩)]
+    · simp [relCost_of_notMem hxy]
+
 end GradedDivergence
-
-/-! ### The total variation instance is `ExpCoupl` -/
-
-open GradedDivergence TVDiv
-
-variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞}
-  {μ : Measure X} {ν : Measure Y}
-
-/-- Measures in the total variation cost lifting are coupled in expectation. -/
-theorem GradedDivergence.CodensityE.expCoupl (h : tv.{u}.CodensityE () δ E μ ν) :
-    ExpCoupl δ E μ ν := by
-  intro f g hf hg hf1 hg1 hfg
-  have := isSubMarkovKernel_massKernel.{u} hf hf1
-  have := isSubMarkovKernel_massKernel.{u} hg hg1
-  have hc := h (β := ()) (γ := 0) (k := massKernel.{u} hf) (l := massKernel.{u} hg)
-    fun x y ↦ tv_le_iff.2 fun S _ ↦ by
-      rcases Set.eq_empty_or_nonempty S with rfl | ⟨⟨⟩, hS⟩
-      · simp
-      · simpa [massKernel, hS] using hfg x y
-  simpa using tv_le_iff.1 hc .univ .univ
-
-/-- A coupling in expectation is in the total variation cost lifting. -/
-theorem ExpCoupl.codensityE [IsSubProbabilityMeasure μ] (h : ExpCoupl δ E μ ν) :
-    tv.{u}.CodensityE () δ E μ ν := by
-  intro I _ β γ k l _ _ hkl
-  refine tv_le_iff.2 fun S hS ↦ ?_
-  have hkS := k.measurable_coe hS
-  have hfg := h (fun x ↦ k x S - γ) (fun y ↦ l y S) (hkS.sub measurable_const)
-    (l.measurable_coe hS) (fun _ ↦ tsub_le_self.trans (IsSubProbabilityMeasure.measure_le_one S))
-    (fun _ ↦ IsSubProbabilityMeasure.measure_le_one S)
-    fun x y ↦ tsub_le_iff_right.2 <| (tv_le_iff.1 (hkl x y) S hS).trans_eq (by ring)
-  rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable]
-  calc ∫⁻ x, k x S ∂μ
-      ≤ ∫⁻ x, (k x S - γ) + γ ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, k x S - γ ∂μ + γ := by
-        rw [lintegral_add_right _ measurable_const, lintegral_const]
-        gcongr
-        exact mul_le_of_le_one_right' IsSubProbabilityMeasure.measure_univ_le_one
-    _ ≤ ∫⁻ y, l y S ∂ν + (δ + γ) := by
-        rw [← add_assoc]
-        exact add_le_add_left hfg γ
-
-/-- Couplings in expectation are exactly the total variation cost lifting. -/
-theorem expCoupl_iff_codensityE [IsSubProbabilityMeasure μ] :
-    ExpCoupl δ E μ ν ↔ tv.{u}.CodensityE () δ E μ ν :=
-  ⟨ExpCoupl.codensityE, CodensityE.expCoupl⟩
-
-/-- For total variation, a measurable cost on the right sample may be paid in expectation; this
-uses linearity of tests, so it is specific to total variation (cf. `AddCoupl.bind_adv`). -/
-theorem GradedDivergence.CodensityE.tv_add_right [IsSubProbabilityMeasure μ]
-    (h : tv.{u}.CodensityE () δ E μ ν) {c : Y → ℝ≥0∞} (hc : Measurable c := by fun_prop) :
-    tv.{u}.CodensityE () (δ + ∫⁻ y, c y ∂ν) (fun x y ↦ E x y + c y) μ ν := by
-  refine ExpCoupl.codensityE fun f g hf hg hf1 hg1 hfg ↦ ?_
-  calc ∫⁻ x, f x ∂μ
-      ≤ ∫⁻ y, min (g y + c y) 1 ∂ν + δ :=
-        h.expCoupl f _ hf ((hg.add hc).min measurable_const) hf1 (fun _ ↦ min_le_right _ _)
-          fun x y ↦ by
-            rcases le_total (g y + c y) 1 with hle | hle
-            · rw [min_eq_left hle]
-              exact (hfg x y).trans_eq (by ring)
-            · exact (hf1 x).trans (by rw [min_eq_right hle]; exact le_self_add)
-    _ ≤ ∫⁻ y, g y + c y ∂ν + δ := by gcongr with y; exact min_le_left _ _
-    _ = ∫⁻ y, g y ∂ν + (δ + ∫⁻ y, c y ∂ν) := by
-        rw [lintegral_add_right _ hc]; ring
