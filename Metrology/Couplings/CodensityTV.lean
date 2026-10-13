@@ -55,6 +55,10 @@ instance isContinuous_tv : (tv.{u}).IsContinuous where
 instance isMassBounded_tv : (tv.{u}).IsMassBounded where
   le_measure_univ _ := IsMassBounded.le_measure_univ (Δ := DPDiv.dp) 1
 
+/-- The zero measure is at total variation zero from any measure. -/
+instance isZeroLeft_tv : (tv.{u}).IsZeroLeft where
+  zero_left_le _ := IsZeroLeft.zero_left_le (Δ := DPDiv.dp) 1
+
 /-- The total variation is continuous along increasing sequences on the left. -/
 instance isLeftContinuous_tv : (tv.{u}).IsLeftContinuous where
   iSup_left_le _ := IsLeftContinuous.iSup_left_le (Δ := DPDiv.dp) 1
@@ -182,11 +186,6 @@ theorem tv_eq_of_diag {μ ν : Measure X} (h₁ : tv.{u}.Codensity () 0 (diagRel
   AddCoupl.eq_of_eq_zero h₁.addCoupl h₂.addCoupl
 
 end GradedDivergence.Codensity
-
-/-- The zero measure lifts anything, with no condition on the right measure (cf.
-`GradedDivergence.codensity_zero_left`). -/
-theorem TVDiv.codensity_zero_left : tv.{u}.Codensity () δ R 0 ν := fun _ _ _ _ _ _ _ _ _ ↦ by
-  simp [tv_le_iff]
 
 /-- A bound of at least one makes any subprobability measure lift anything, with no condition on
 the right measure (cf. `GradedDivergence.codensity_of_one_le`). -/

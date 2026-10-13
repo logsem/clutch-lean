@@ -399,20 +399,6 @@ theorem wp_wand_r {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
 
 /-! ### Measure-theoretic plumbing for the coupling-intro rules -/
 
-theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 := by
-  induction n generalizing ρ with
-  | zero => simp
-  | succ k ih =>
-    rw [pexecN_succ, MeasureTheory.Measure.bind_apply (by measurability)
-      pexecN_measurable.aemeasurable]
-    calc ∫⁻ a, pexecN k a Set.univ ∂(stepOrFinal ρ)
-      _ ≤ ∫⁻ _, 1 ∂(stepOrFinal ρ) := MeasureTheory.lintegral_mono fun a => ih a
-      _ = stepOrFinal ρ Set.univ := by simp
-      _ ≤ 1 := by
-        by_cases hv : ρ.expr.isValue
-        · rw [stepOrFinal_isValue hv]; simp
-        · rw [stepOrFinal_not_isValue hv]; exact primStep_univ_le_one ρ
-
 theorem lintegral_const_le {α : Type _} [MeasurableSpace α] {ν : MeasureTheory.Measure α}
     (hν : ν Set.univ ≤ 1) (c : ENNReal) : ∫⁻ _, c ∂ν ≤ c := by
   rw [MeasureTheory.lintegral_const]

@@ -1,6 +1,7 @@
 module
 
 public import Metrology.ProbLang.Measure
+public import Metrology.Couplings.SubProbability
 public import Metrology.ProbLang.HeadStep
 public import Metrology.ProbLang.DetStep
 public import Metrology.ProbLang.Discrete
@@ -192,6 +193,10 @@ theorem execN_univ_le_one
         _ = (primStep ρ) Set.univ := by simp
         _ ≤ 1 := primStep_univ_le_one ρ
 
+/-- Bounded-step execution has mass at most one. -/
+instance execN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
+    IsSubProbabilityMeasure (execN n ρ) := ⟨execN_univ_le_one n ρ⟩
+
 /-! ### Algebraic laws
 
 Rocq's `exec (n + m) = pexec n ≫= exec m` has no analogue here: `execN 0 = 0` merges
@@ -257,6 +262,24 @@ theorem pexecN_measurable {n : Nat} : Measurable (pexecN (rT := rT) n) := by
 theorem pexecN_succ (n : Nat) (ρ : Cfg rT) :
     pexecN (n + 1) ρ = (stepOrFinal ρ).bind (pexecN n) := rfl
 
+theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 := by
+  induction n generalizing ρ with
+  | zero => simp
+  | succ k ih =>
+    rw [pexecN_succ, MeasureTheory.Measure.bind_apply (by measurability)
+      pexecN_measurable.aemeasurable]
+    calc ∫⁻ a, pexecN k a Set.univ ∂(stepOrFinal ρ)
+      _ ≤ ∫⁻ _, 1 ∂(stepOrFinal ρ) := MeasureTheory.lintegral_mono fun a => ih a
+      _ = stepOrFinal ρ Set.univ := by simp
+      _ ≤ 1 := by
+        by_cases hv : ρ.expr.isValue
+        · rw [stepOrFinal_isValue hv]; simp
+        · rw [stepOrFinal_not_isValue hv]; exact primStep_univ_le_one ρ
+
+/-- Iterated stepping has mass at most one. -/
+instance pexecN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
+    IsSubProbabilityMeasure (pexecN n ρ) := ⟨pexecN_univ_le_one n ρ⟩
+
 theorem pexecN_one (ρ : Cfg rT) : pexecN 1 ρ = stepOrFinal ρ := by
   show (stepOrFinal ρ).bind dirac = stepOrFinal ρ
   exact Measure.bind_dirac
@@ -309,6 +332,14 @@ theorem limExec_leq_setwise {ρ : Cfg rT} {S : Set (Cfg rT)} {r : ENNReal} (HS :
 theorem limExec_leq_mass {ρ : Cfg rT} {r : ENNReal}
     (H : ∀ n, (execN n ρ) Set.univ ≤ r) : (limExec ρ) Set.univ ≤ r :=
   (limExec_univ' ρ).trans_le (iSup_le H)
+
+/-- The limiting execution has mass at most one. -/
+instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExec ρ) :=
+  ⟨limExec_leq_mass fun n ↦ execN_univ_le_one n ρ⟩
+
+/-- The limiting distribution over return values has mass at most one. -/
+instance limExecV.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExecV ρ) :=
+  isSubProbabilityMeasure_map _ _
 
 theorem limExec_term {ρ : Cfg rT} {n : Nat} (Hv : (execN n ρ) Set.univ = 1) :
     limExec ρ = execN n ρ := by

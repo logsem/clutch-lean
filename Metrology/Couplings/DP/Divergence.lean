@@ -63,6 +63,10 @@ instance isComposable_dp : (dp.{u}).IsComposable where
 instance isMassBounded_dp : (dp.{u}).IsMassBounded where
   le_measure_univ _ _ _ _ _ _ _ := iSup₂_le fun _ _ ↦ tsub_le_self.trans (measure_mono le_top)
 
+/-- The zero measure is at DP divergence zero from any measure. -/
+instance isZeroLeft_dp : (dp.{u}).IsZeroLeft where
+  zero_left_le _ _ _ := by simp [dp_apply, gap]
+
 /-- The DP divergence is continuous along increasing sequences on the left. -/
 instance isLeftContinuous_dp : (dp.{u}).IsLeftContinuous where
   iSup_left_le _ _ _ _ _ hμ _ _ := iSup₂_le fun S hS ↦ by

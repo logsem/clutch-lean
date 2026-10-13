@@ -2,6 +2,7 @@ module
 
 public meta import Metrology.Meta.Discrete
 public import Metrology.ProbLang.Measure
+public import Metrology.Couplings.SubProbability
 public import Metrology.ProbLang.HeadStep
 public import Metrology.ProbLang.Discrete
 
@@ -159,6 +160,11 @@ theorem primStep_univ_le_one [LawfulProbLangℝ rT] (ρ : Cfg rT) : (primStep ρ
   have Hmeas : Measurable e.decomp.1.fillCfg := by measurability
   rw [Measure.map_apply Hmeas MeasurableSet.univ]
   simpa using headStep_univ_le_one ⟨e.decomp.2, σ⟩
+
+/-- One step of the primitive semantics has mass at most one. -/
+instance primStep.isSubProbabilityMeasure [LawfulProbLangℝ rT] (ρ : Cfg rT) :
+    IsSubProbabilityMeasure (primStep ρ) :=
+  ⟨primStep_univ_le_one ρ⟩
 
 theorem prim_step_mass [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
     (hred : Reducible e σ) : IsProbabilityMeasure (primStep ⟨e, σ⟩) := by

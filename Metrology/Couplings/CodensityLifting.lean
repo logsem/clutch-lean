@@ -125,7 +125,7 @@ theorem Codensity.strength {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : S
 
 /-- The zero measure lifts anything. -/
 theorem codensity_zero_left [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
-    {ν : Measure Y} [IsSubProbabilityMeasure ν] : Δ.Codensity α δ R 0 ν := by
+    {ν : Measure Y} : Δ.Codensity α δ R 0 ν := by
   intro I _ β γ k l _ _ _
   rw [bind_zero_left]
   exact (IsZeroLeft.zero_left_le _ _).trans zero_le
