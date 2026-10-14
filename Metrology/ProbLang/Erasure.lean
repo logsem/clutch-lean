@@ -1688,7 +1688,6 @@ theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
     {Φexp : Set ((Exp rT) × (Exp rT))}
     {ε ε₁ ε₂ : ENNReal} {n : Nat}
     (hSum : ε₁ + ε₂ ≤ ε)
-    (hμ₁mass : μ₁ Set.univ ≤ 1)
     (hCoupl : AddCoupl ε₁ R μ₁ μ₂)
     (hErase₁ : ErasableExpr μ₁ σ₁)
     (hErase₂ : ErasableExpr μ₂ σ₁')
@@ -1699,13 +1698,12 @@ theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
     AddCoupl ε Φexp
       (asExpr (execN n ⟨e₁, σ₁⟩))
       (limExecV ⟨e₁', σ₁'⟩) := by
-  have hmassk : ∀ σ : State rT, asExpr (execN n ⟨e₁, σ⟩) Set.univ ≤ 1 :=
-    fun _ => IsSubProbabilityMeasure.measure_univ_le_one
-  rw [← hErase₁ e₁ n, ← hErase₂.lim_exec e₁']
-  unfold asExpr
-  rw [Measure.bind_map_comm, Measure.bind_map_comm]
-  exact (AddCoupl.bind Measurable.of_discrete Measurable.of_discrete hμ₁mass hmassk hCoupl
-    fun {σ₂ σ₂'} hR => hCont σ₂ σ₂' hR).mono_grading hSum
+  have := hErase₂.isProbabilityMeasure
+  have hd := Measure.bind_dirac_eq_map μ₂ (f := (⟨e₁', ·⟩ : State rT → Cfg rT)) .of_discrete
+  refine AddCoupl_erasure_erasable_exp_rhs (m := 0) (E₂ := fun _ => ε₂)
+    (R := {p | ∃ σ', p.2 = ⟨e₁', σ'⟩ ∧ R (p.1, σ')}) measurable_const ?_ (by simp [hd]) hSum
+    hErase₁ hErase₂ fun σ₂ ρ ⟨σ₂', (h : ρ = _), hR⟩ => h ▸ hCont σ₂ σ₂' hR
+  simpa [hd] using hCoupl.map id _ measurable_id .of_discrete fun h => ⟨_, rfl, h⟩
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs`, projected: the continuation's slack depends
 on the LHS sample. -/
