@@ -32,12 +32,9 @@ theorem renyiDiv_le_of_bound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
       rw [add_zero] at this
       simpa [p, q, ENNReal.toReal_mul, (exp_pos ε).le] using
         ENNReal.toReal_mono (by finiteness) this
-    rcases (ENNReal.toReal_nonneg : 0 ≤ q).eq_or_lt with hq | hq
-    · have hq' : q = 0 := hq.symm
-      rw [hq', mul_zero] at hpq
-      have hp : p = 0 := le_antisymm hpq ENNReal.toReal_nonneg
-      rw [hq', hp]
-      simp [WeightFunction.persp]
+    obtain hq | hq : 0 = q ∨ 0 < q := ENNReal.toReal_nonneg.eq_or_lt
+    · rw [← hq, mul_zero] at hpq
+      simp [WeightFunction.persp, ← hq, le_antisymm hpq ENNReal.toReal_nonneg]
     rw [persp_rpow_of_pos α hq, EReal.coe_le_coe_iff]
     have hr : p / q ≤ exp ε := (div_le_iff₀ hq).2 (by linarith)
     have hp : 0 ≤ p := ENNReal.toReal_nonneg
@@ -48,7 +45,6 @@ theorem renyiDiv_le_of_bound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
           have : p ≠ 0 := h0.ne'
           rw [Real.rpow_sub_one (div_pos h0 hq).ne']
           field_simp
-          rfl
       _ ≤ p * exp ε ^ (α - 1) := by gcongr
       _ = exp ((α - 1) * ε) * p := by rw [← exp_mul, mul_comm ε, mul_comm]
   calc ∑ i, (WeightFunction.rpow α).persp (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal
@@ -60,9 +56,7 @@ theorem renyiDiv_le_of_bound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
           Finset.coe_univ]
     _ ≤ (ENNReal.ofReal (exp ((α - 1) * ε)) : EReal) := by
         rw [EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le, EReal.coe_le_coe_iff]
-        refine mul_le_of_le_one_right (exp_pos _).le ?_
-        exact ENNReal.toReal_le_of_le_ofReal zero_le_one ((measure_mono (subset_univ _)).trans
-          (IsSubProbabilityMeasure.measure_univ_le_one.trans ENNReal.ofReal_one.ge))
+        exact mul_le_of_le_one_right (exp_pos _).le (IsSubProbabilityMeasure.toReal_mem_Icc _).2
 
 /-! ### [R/D]: Rényi bounds give DP inequalities -/
 
@@ -78,7 +72,9 @@ theorem bound_of_renyiDiv_le {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteM
   -- the two-cell partition `{S, Sᶜ}` bounds the perspective on `S`
   let k : X → Fin 2 := fun x ↦ if x ∈ S then 0 else 1
   have hk : Measurable k := measurable_const.ite hS measurable_const
-  have h0 : k ⁻¹' {0} = S := by ext x; by_cases hx : x ∈ S <;> simp [k, hx]
+  have h0 : k ⁻¹' {0} = S := by
+    ext
+    simp [k]
   set p := (μ S).toReal
   set q := (ν S).toReal
   have hcell : (WeightFunction.rpow α).persp p q ≤ (ENNReal.ofReal E : EReal) := by
@@ -100,7 +96,8 @@ theorem bound_of_renyiDiv_le {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteM
   rcases hq.eq_or_lt with hq0 | hq0
   · -- an event of `ν`-mass zero has `μ`-mass zero
     rcases hp.eq_or_lt with hp0 | hp0
-    · rw [← hp0]; positivity
+    · rw [← hp0]
+      positivity
     · rw [← hq0, persp_rpow_of_zero hα hp0] at hcell
       exact absurd hcell (by simp)
   rw [persp_rpow_of_pos α hq0, EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le,
@@ -196,9 +193,11 @@ theorem bound_of_tcdp {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure 
     have ha₁ (n : ℕ) : 1 < a n := by
       have : (ω - 1) / (n + 2) < ω - 1 :=
         div_lt_self (by linarith) (by linarith [n.cast_nonneg (α := ℝ)])
-      simp only [a]; linarith
+      simp only [a]
+      linarith
     have haω (n : ℕ) : a n < ω := by
-      simp only [a]; linarith [div_pos (by linarith : 0 < ω - 1) (by positivity : (0 : ℝ) < n + 2)]
+      simp only [a]
+      linarith [div_pos (by linarith : 0 < ω - 1) (by positivity : (0 : ℝ) < n + 2)]
     have hβω : β = ω := heq
     rw [hβω]
     refine bound_of_tendsto ?_ fun n ↦ key (ha₁ n) (haω n)

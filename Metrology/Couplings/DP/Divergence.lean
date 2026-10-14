@@ -82,9 +82,10 @@ instance isContinuous_dp : (dp.{u}).IsContinuous where
     let k : X → ULift.{u} (Fin 2) := fun x ↦ if x ∈ S then ⟨0⟩ else ⟨1⟩
     have hk : Measurable k := measurable_const.ite hS measurable_const
     have hT : MeasurableSet ({⟨0⟩} : Set (ULift.{u} (Fin 2))) :=
-      (measurable_down : Measurable (ULift.down : ULift.{u} (Fin 2) → Fin 2))
-        (measurableSet_singleton 0)
-    have hpre : k ⁻¹' {⟨0⟩} = S := by ext x; by_cases hx : x ∈ S <;> simp [k, hx]
+      measurable_down.{_, u} (measurableSet_singleton (0 : Fin 2))
+    have hpre : k ⁻¹' {⟨0⟩} = S := by
+      ext
+      simp [k]
     refine le_iSup_of_le 2 <| le_iSup_of_le k <| le_iSup_of_le hk <| le_iSup₂_of_le _ hT ?_
     rw [Measure.map_apply hk hT, Measure.map_apply hk hT, hpre]
 

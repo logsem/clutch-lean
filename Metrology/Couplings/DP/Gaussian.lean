@@ -20,7 +20,7 @@ namespace DPDiv
 /-- The Gaussian mass beyond `H > a` is at most `v · pdf(H) / (H - a)`. -/
 theorem gaussianReal_Ioi_le {a H : ℝ} (hH : a < H) {v : ℝ≥0} (hv : v ≠ 0) :
     gaussianReal a v (Ioi H) ≤ ENNReal.ofReal (v * gaussianPDFReal a v H / (H - a)) := by
-  have hv' : (0 : ℝ) < v := lt_of_le_of_ne v.2 (Ne.symm (NNReal.coe_ne_zero.2 hv))
+  have hv' : (0 : ℝ) < v := NNReal.coe_pos.2 (pos_iff_ne_zero.2 hv)
   set F : ℝ → ℝ := fun x ↦ -(v * gaussianPDFReal a v x)
   have hF (x : ℝ) : HasDerivAt F ((x - a) * gaussianPDFReal a v x) x := by
     have h : HasDerivAt (fun x ↦ -(x - a) ^ 2 / (2 * (v : ℝ))) (-(x - a) / v) x := by
@@ -66,8 +66,8 @@ theorem gaussianPDFReal_le_exp_mul {a a' r ε x : ℝ} (hr : 0 < r) (hε : 0 ≤
     rcases le_total (2 * x - a - a') 0 with h | h
     · nlinarith [mul_nonneg (sub_nonneg.2 haa) (neg_nonneg.2 h), mul_nonneg hv.le hε]
     · have h1 : (2 * x - a - a') * r ≤ 2 * v * ε := by
-        have : 2 * x - a - a' ≤ 2 * v * ε / r := by rw [mul_assoc, mul_div_assoc]; linarith
-        rwa [le_div_iff₀ hr] at this
+        rw [← le_div_iff₀ hr, mul_assoc, mul_div_assoc]
+        linarith
       nlinarith [mul_le_mul_of_nonneg_left har h]
   have key2 : ((x - a') ^ 2 - (x - a) ^ 2) / (2 * v) ≤ ε := by
     rw [div_le_iff₀ (by positivity)]
@@ -93,7 +93,9 @@ theorem gaussian_tail_le {h c δ : ℝ} (hh : c - 1 / (2 * c) ≤ h) (hc : (1 + 
   have h1 : 1 < h := hm.trans_le hh
   have hsq : c ^ 2 - 1 ≤ h ^ 2 := by
     have : c ^ 2 - 1 ≤ (c - 1 / (2 * c)) ^ 2 := by
-      have e : (c - 1 / (2 * c)) ^ 2 = c ^ 2 - 1 + (1 / (2 * c)) ^ 2 := by field_simp; ring
+      have e : (c - 1 / (2 * c)) ^ 2 = c ^ 2 - 1 + (1 / (2 * c)) ^ 2 := by
+        field_simp
+        ring
       nlinarith [sq_nonneg (1 / (2 * c))]
     nlinarith [this, mul_le_mul hh hh (by linarith) (by linarith)]
   have hpi : 0 < √(2 * π) := sqrt_pos.2 (by positivity)
@@ -123,13 +125,17 @@ theorem bound_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ
   set H := (a + a') / 2 + ((σ ^ 2 : ℝ≥0) : ℝ) * ε / r
   have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
   -- the tail point `(H - a) / σ` is at least `c - 1 / (2c)`
-  have hc' : c ≤ σ * ε / r := by rw [le_div_iff₀ hr]; exact (div_le_iff₀ hε).1 hcσ
+  have hc' : c ≤ σ * ε / r := by
+    rw [le_div_iff₀ hr]
+    exact (div_le_iff₀ hε).1 hcσ
   have hh : c - 1 / (2 * c) ≤ (H - a) / σ := by
     have hmono : c - 1 / (2 * c) ≤ σ * ε / r - 1 / (2 * (σ * ε / r)) := by
       have := one_div_le_one_div_of_le (by positivity) (mul_le_mul_of_nonneg_left hc' zero_le_two)
       linarith
     have hval : (H - a) / σ = (a' - a) / (2 * σ) + σ * ε / r := by
-      simp only [H, NNReal.coe_pow]; field_simp; ring
+      simp only [H, NNReal.coe_pow]
+      field_simp
+      ring
     have hlow : -(ε / (2 * (σ * ε / r))) ≤ (a' - a) / (2 * σ) := by
       rw [show ε / (2 * (σ * ε / r)) = r / (2 * σ) by field_simp, neg_div',
         div_le_div_iff_of_pos_right (by positivity)]
@@ -139,10 +145,11 @@ theorem bound_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ
     rw [hval]
     linarith
   have hHa : a < H := by
-    have : 0 < (H - a) / σ := lt_of_lt_of_le (by
-      have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)
+    have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)
+    have : 0 < c - 1 / (2 * c) := by
       rw [sub_pos, div_lt_iff₀ (by positivity)]
-      nlinarith [sqrt_nonneg 3]) hh
+      nlinarith [sqrt_nonneg 3]
+    have := this.trans_le hh
     rw [div_pos_iff_of_pos_right hσ'] at this
     linarith
   -- the tail `(H, ∞)` has mass at most `δ`
@@ -156,9 +163,7 @@ theorem bound_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ
   calc gaussianReal a (σ ^ 2) S
       ≤ gaussianReal a (σ ^ 2) (S ∩ Iic H) + gaussianReal a (σ ^ 2) (Ioi H) := by
         refine (measure_mono fun x hx ↦ ?_).trans (measure_union_le _ _)
-        by_cases hxH : x ≤ H
-        · exact .inl ⟨hx, hxH⟩
-        · exact .inr (not_le.1 hxH)
+        exact (le_or_gt x H).imp (⟨hx, ·⟩) id
     _ ≤ ENNReal.ofReal (exp ε) * gaussianReal a' (σ ^ 2) S + ENNReal.ofReal δ := by
         gcongr
         rw [gaussianReal_of_var_ne_zero _ hv, gaussianReal_of_var_ne_zero _ hv,
@@ -173,7 +178,7 @@ theorem bound_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ
                 volume.withDensity (gaussianPDF a' (σ ^ 2)) (S ∩ Iic H) := by
               rw [lintegral_const_mul _ (by fun_prop),
                 withDensity_apply _ (hS.inter measurableSet_Iic)]
-          _ ≤ _ := by gcongr; exact inter_subset_left
+          _ ≤ _ := by grw [inter_subset_left]
 
 /-- The Gaussian mechanism with means at distance at most `r` is `(ε, δ)`-DP when `ε ≤ 1`,
 `c > (1 + √3) / 2`, `c² ≥ 2 log (0.66 / δ)` and `σ ≥ c r / ε` ([DP-G]). -/

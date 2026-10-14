@@ -51,15 +51,9 @@ theorem fDiv_dp_eq_gap (ε : ℝ) (μ ν : Measure X) [IsFiniteMeasure μ] [IsFi
   have hR : 0 ≤ R := le_iSup₂_of_le ∅ .empty (by simp)
   have hterm (S : Set X) : ((μ S - ENNReal.ofReal (Real.exp ε) * ν S : ℝ≥0∞) : EReal) =
       ((max 0 ((μ S).toReal - Real.exp ε * (ν S).toReal) : ℝ) : EReal) := by
-    rw [← EReal.coe_ennreal_toReal (by finiteness), EReal.coe_eq_coe_iff]
-    rcases le_total (ENNReal.ofReal (Real.exp ε) * ν S) (μ S) with h | h
-    · rw [ENNReal.toReal_sub_of_le h (by finiteness), ENNReal.toReal_mul,
-        ENNReal.toReal_ofReal (Real.exp_pos ε).le, max_eq_right]
-      rw [sub_nonneg, ← ENNReal.toReal_ofReal (Real.exp_pos ε).le, ← ENNReal.toReal_mul]
-      exact ENNReal.toReal_mono (by finiteness) h
-    · rw [tsub_eq_zero_of_le h, max_eq_left, ENNReal.toReal_zero]
-      rw [sub_nonpos, ← ENNReal.toReal_ofReal (Real.exp_pos ε).le, ← ENNReal.toReal_mul]
-      exact ENNReal.toReal_mono (by finiteness) h
+    rw [max_comm, ← EReal.coe_ennreal_ofReal, ENNReal.ofReal_sub _ (by positivity),
+      ENNReal.ofReal_mul (Real.exp_pos ε).le, ENNReal.ofReal_toReal (by finiteness),
+      ENNReal.ofReal_toReal (by finiteness)]
   apply le_antisymm
   · refine iSup₂_le fun S hS ↦ ?_
     refine (EReal.coe_le_coe_iff.2 (le_max_right 0 _)).trans ?_
@@ -113,15 +107,11 @@ theorem Bound.bind {c₁ c₂ δ₁ δ₂ : ℝ≥0∞} {μ₁ μ₂ : Measure X
     · rw [min_eq_right h]
       exact h₂ x S hS
     · rw [min_eq_left h]
-      exact ((measure_mono (subset_univ S)).trans
-        IsSubProbabilityMeasure.measure_univ_le_one).trans le_self_add
+      exact (IsSubProbabilityMeasure.measure_le_one S).trans le_self_add
   rw [Measure.bind_apply hS hf.aemeasurable, Measure.bind_apply hS hg.aemeasurable]
   calc ∫⁻ x, f x S ∂μ₁
       ≤ ∫⁻ x, min 1 (c₂ * g x S) + δ₂ ∂μ₁ := lintegral_mono hpt
-    _ ≤ ∫⁻ x, min 1 (c₂ * g x S) ∂μ₁ + δ₂ := by
-        rw [lintegral_add_right _ measurable_const, lintegral_const]
-        gcongr
-        exact mul_le_of_le_one_right' IsSubProbabilityMeasure.measure_univ_le_one
+    _ ≤ ∫⁻ x, min 1 (c₂ * g x S) ∂μ₁ + δ₂ := IsSubProbabilityMeasure.lintegral_add_const_le _ _
     _ ≤ c₁ * ∫⁻ x, min 1 (c₂ * g x S) ∂μ₂ + δ₁ + δ₂ := by
         gcongr
         exact h₁.lintegral_le (measurable_const.min (measurable_const.mul hgS))
@@ -135,7 +125,7 @@ theorem Bound.bind {c₁ c₂ δ₁ δ₂ : ℝ≥0∞} {μ₁ μ₂ : Measure X
 theorem Bound.trans {c₁ c₂ δ₁ δ₂ : ℝ≥0∞} {μ₁ μ₂ μ₃ : Measure X} (h₁ : Bound c₁ δ₁ μ₁ μ₂)
     (h₂ : Bound c₂ δ₂ μ₂ μ₃) : Bound (c₁ * c₂) (c₁ * δ₂ + δ₁) μ₁ μ₃ := fun S hS ↦
   calc μ₁ S ≤ c₁ * μ₂ S + δ₁ := h₁ S hS
-    _ ≤ c₁ * (c₂ * μ₃ S + δ₂) + δ₁ := by gcongr; exact h₂ S hS
+    _ ≤ c₁ * (c₂ * μ₃ S + δ₂) + δ₁ := by grw [h₂ S hS]
     _ = c₁ * c₂ * μ₃ S + (c₁ * δ₂ + δ₁) := by ring
 
 end DPDiv

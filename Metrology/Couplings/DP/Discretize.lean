@@ -90,7 +90,7 @@ theorem measure_le_add_of_singleton {ρ ρ' : Measure (ULift.{u} (Fin N))} {c : 
   classical
   rw [← T.coe_toFinset, ← sum_measure_singleton, ← sum_measure_singleton]
   calc ∑ i ∈ T.toFinset, ρ {i} ≤ ∑ i ∈ T.toFinset, (ρ' {i} + c) := Finset.sum_le_sum fun i _ ↦ h i
-    _ = ∑ i ∈ T.toFinset, ρ' {i} + T.toFinset.card * c := by rw [Finset.sum_add_distrib]; simp
+    _ = ∑ i ∈ T.toFinset, ρ' {i} + T.toFinset.card * c := by simp [Finset.sum_add_distrib]
     _ ≤ ∑ i ∈ T.toFinset, ρ' {i} + N * c := by
         gcongr
         exact_mod_cast (Finset.card_le_univ _).trans_eq (by simp)
@@ -159,7 +159,7 @@ variable {f g}
 
 theorem singleton_le_one {ρ : Measure (ULift.{u} (Fin N))} [IsSubProbabilityMeasure ρ]
     (i : ULift.{u} (Fin N)) : ρ {i} ≤ 1 :=
-  (measure_mono (subset_univ _)).trans IsSubProbabilityMeasure.measure_univ_le_one
+  IsSubProbabilityMeasure.measure_le_one _
 
 omit [MeasurableSpace X] in
 theorem cell_fst [Nonempty X] (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :
@@ -179,11 +179,7 @@ theorem bind_le_add {μ : Measure X} [IsSubProbabilityMeasure μ]
   have hT := ULift.measurableSet_fin T
   rw [Measure.bind_apply hT hF.aemeasurable, Measure.bind_apply hT hF'.aemeasurable]
   calc ∫⁻ x, F x T ∂μ ≤ ∫⁻ x, F' x T + C ∂μ := lintegral_mono fun x ↦ h x T
-    _ = ∫⁻ x, F' x T ∂μ + C * μ univ := by
-        rw [lintegral_add_right _ measurable_const, lintegral_const]
-    _ ≤ ∫⁻ x, F' x T ∂μ + C := by
-        gcongr
-        exact mul_le_of_le_one_right' IsSubProbabilityMeasure.measure_univ_le_one
+    _ ≤ ∫⁻ x, F' x T ∂μ + C := IsSubProbabilityMeasure.lintegral_add_const_le _ _
 
 end Discretize
 

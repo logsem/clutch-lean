@@ -30,8 +30,7 @@ theorem le_slopeAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (
     have := hf.secant_mono (a := x) hx (by simp only [mem_Ici]; linarith)
       (by simp only [mem_Ici]; linarith) (by linarith) (by linarith) ht
     rw [add_sub_cancel_left] at this
-    rw [← le_sub_iff_add_le', ← le_div_iff₀ (by linarith)]
-    exact this
+    rwa [← le_sub_iff_add_le', ← le_div_iff₀ (by linarith)]
   by_contra! hlt
   obtain ⟨r, hr, hrs⟩ := EReal.lt_iff_exists_real_btwn.1 hlt
   rw [EReal.coe_lt_coe_iff] at hrs
@@ -78,7 +77,9 @@ theorem persp_add_le (hf : ConvexOn ℝ (Ici 0) f) {a a' b b' : ℝ} (ha : 0 ≤
     have key := le_slopeAtTop hf (div_nonneg ha' hb'.le) (div_pos ha hb')
     have hsplit : b' * f ((a + a') / b') = b' * f (a' / b') +
         a * ((f (a' / b' + a / b') - f (a' / b')) / (a / b')) := by
-      rw [add_comm a a', add_div, add_comm (a' / b')]; field_simp; ring
+      rw [add_comm a a', add_div, add_comm (a' / b')]
+      field_simp
+      ring
     rw [hsplit, EReal.coe_add, add_comm, EReal.coe_mul]
     exact add_le_add (mul_le_mul_of_nonneg_left key (EReal.coe_nonneg.2 ha.le)) le_rfl
   rcases hb.eq_or_lt with rfl | hb
@@ -180,7 +181,8 @@ theorem fDiv_eq_sum (hf : ConvexOn ℝ (Ici 0) f) {I : Type*} [Fintype I] [Measu
         (ρ (k ⁻¹' {j})).toReal = ∑ i ∈ Finset.univ.filter (k · = j), (ρ {i}).toReal := by
       rw [← ENNReal.toReal_sum (fun _ _ ↦ measure_ne_top _ _), sum_measure_singleton]
       congr 2
-      ext; simp
+      ext
+      simp
     simp_rw [hfib]
     calc ∑ j, f.persp (∑ i ∈ Finset.univ.filter (k · = j), (ρ₁ {i}).toReal)
           (∑ i ∈ Finset.univ.filter (k · = j), (ρ₂ {i}).toReal)
@@ -277,7 +279,8 @@ theorem isApproximable (hF : ∀ α, ConvexOn ℝ (Ici 0) (F α)) :
     have hb {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubProbabilityMeasure (K x)]
         (hK : Measurable K) (μ : Measure X) [IsSubProbabilityMeasure μ] :
         IsFiniteMeasure (μ.bind K) :=
-      have := isSubProbabilityMeasure_bind μ K; inferInstance
+      have := isSubProbabilityMeasure_bind μ K
+      inferInstance
     have hsum (n : ℕ) := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind (f ∘ rep f g n ∘ disc f g n))
       (μ₂.bind (g ∘ rep f g n ∘ disc f g n)) (hb (hf.comp (hrd n)) μ₁) (hb (hg.comp (hrd n)) μ₂)
     have hsum₀ := @fDiv_eq_sum _ (hF α) _ _ _ _ (μ₁.bind f) (μ₂.bind g) (hb hf μ₁) (hb hg μ₂)
@@ -298,9 +301,7 @@ theorem isApproximable (hF : ∀ α, ConvexOn ℝ (Ici 0) (F α)) :
         ((μ.bind (K ∘ rep f g n ∘ disc f g n)) {i}).toReal = 0 ↔ ((μ.bind K) {i}).toReal = 0 := by
       have := hb hK μ
       have := hb (hK.comp (hrd n)) μ
-      rw [ENNReal.toReal_eq_zero_iff, ENNReal.toReal_eq_zero_iff, or_iff_left (measure_ne_top _ _),
-        or_iff_left (measure_ne_top _ _)]
-      exact bind_disc_singleton_eq_zero_iff hf hg hK μ hcell n i
+      simpa [ENNReal.toReal_eq_zero_iff] using bind_disc_singleton_eq_zero_iff hf hg hK μ hcell n i
     exact (F α).tendsto_persp (hF α) (hlim hf μ₁ cell_fst) (hlim hg μ₂ cell_snd)
       (fun _ ↦ ENNReal.toReal_nonneg) (hzero hf μ₁ cell_fst) (hzero hg μ₂ cell_snd)
       fun _ ↦ ENNReal.toReal_nonneg

@@ -27,6 +27,13 @@ theorem IsSubProbabilityMeasure.toReal_mem_Icc {μ : Measure X} [IsSubProbabilit
     (s : Set X) : (μ s).toReal ∈ Icc (0 : ℝ) 1 :=
   ⟨toReal_nonneg, toReal_le_of_le_ofReal zero_le_one (ofReal_one ▸ measure_le_one s)⟩
 
+/-- Adding a constant under the integral adds at most that constant. -/
+theorem IsSubProbabilityMeasure.lintegral_add_const_le {μ : Measure X} [IsSubProbabilityMeasure μ]
+    (f : X → ℝ≥0∞) (c : ℝ≥0∞) : ∫⁻ x, f x + c ∂μ ≤ ∫⁻ x, f x ∂μ + c := by
+  rw [lintegral_add_right _ measurable_const, lintegral_const]
+  gcongr
+  exact mul_le_of_le_one_right' measure_univ_le_one
+
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := measure_univ_le_one.trans_lt one_lt_top

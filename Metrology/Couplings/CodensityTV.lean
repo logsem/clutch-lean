@@ -103,10 +103,7 @@ theorem ExpCoupl.codensityE [IsSubProbabilityMeasure μ] (h : ExpCoupl δ E μ �
   rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable]
   calc ∫⁻ x, k x S ∂μ
       ≤ ∫⁻ x, (k x S - γ) + γ ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, k x S - γ ∂μ + γ := by
-        rw [lintegral_add_right _ measurable_const, lintegral_const]
-        gcongr
-        exact mul_le_of_le_one_right' IsSubProbabilityMeasure.measure_univ_le_one
+    _ ≤ ∫⁻ x, k x S - γ ∂μ + γ := IsSubProbabilityMeasure.lintegral_add_const_le _ _
     _ ≤ ∫⁻ y, l y S ∂ν + (δ + γ) := by
         rw [← add_assoc]
         exact add_le_add_left hfg γ

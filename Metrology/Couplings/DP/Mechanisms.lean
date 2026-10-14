@@ -59,15 +59,17 @@ theorem bound_bernoulli_symm (x y : X) {p : I} (hp₀ : 0 < (p : ℝ)) (hp₁ : 
     exact mul_le_mul_of_nonneg_left hb ((le_max_left _ _).trans' p.2.1)
   refine bound_of_le fun S hS ↦ ?_
   rw [bernoulliMeasure_apply _ hS, bernoulliMeasure_apply _ hS, symm_symm]
-  have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p := by
-    rw [ENNReal.ofReal, Real.toNNReal_of_nonneg p.2.1]; rfl
-  have hq : ((toNNReal (σ p) : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal (σ p) := by
-    rw [ENNReal.ofReal, Real.toNNReal_of_nonneg (σ p).2.1]; rfl
+  have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p :=
+    (ENNReal.ofReal_eq_coe_nnreal p.2.1).symm
+  have hq : ((toNNReal (σ p) : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal (σ p) :=
+    (ENNReal.ofReal_eq_coe_nnreal (σ p).2.1).symm
   split_ifs
   · rw [mul_one, ← ENNReal.ofReal_one]
     exact ENNReal.ofReal_le_ofReal ((one_le_div hmin).2 (min_le_max))
-  · rw [hp, hq]; exact key (le_max_left _ _) (min_le_right _ _) (σ p).2.1
-  · rw [hp, hq]; exact key (le_max_right _ _) (min_le_left _ _) p.2.1
+  · rw [hp, hq]
+    exact key (le_max_left _ _) (min_le_right _ _) (σ p).2.1
+  · rw [hp, hq]
+    exact key (le_max_right _ _) (min_le_left _ _) p.2.1
   · simp
 
 /-! ### Laplace -/
@@ -82,10 +84,12 @@ noncomputable def laplace (a : ℝ) (b : ℝ≥0) : Measure ℝ :=
 
 @[fun_prop]
 theorem measurable_laplacePDF (a : ℝ) (b : ℝ≥0) : Measurable (laplacePDF a b) := by
-  unfold laplacePDF; fun_prop
+  unfold laplacePDF
+  fun_prop
 
 theorem measurable_exponentialPDF' (r : ℝ) : Measurable (exponentialPDF r) := by
-  unfold exponentialPDF; fun_prop
+  unfold exponentialPDF
+  fun_prop
 
 /-- Off the location, the Laplace density is an even mixture of two exponential densities. -/
 theorem laplacePDF_eq (a : ℝ) {b : ℝ≥0} (hb : 0 < b) {x : ℝ} (hx : x ≠ a) :

@@ -47,7 +47,6 @@ theorem persp_rpow_nonneg {α : ℝ} (hα : 1 < α) {p q : ℝ} (hp : 0 ≤ p) (
   · rw [persp_rpow_of_pos α hq]
     exact EReal.coe_nonneg.2 (by positivity)
 
-
 theorem coe_mul_le_iff {c : ℝ} (hc : 0 < c) {L : EReal} {d : ℝ} :
     (c : EReal) * L ≤ d ↔ L ≤ ((d / c : ℝ) : EReal) := by
   induction L with
@@ -63,10 +62,8 @@ theorem renyiDiv_le_iff {α : ℝ} (hα : 1 < α) (μ ν : Measure X) (d : ℝ) 
   rw [renyiDiv, coe_mul_le_iff (inv_pos.2 (sub_pos.2 hα)), ← ENNReal.log_le_log_iff,
     ENNReal.log_ofReal_of_pos (exp_pos _), log_exp, div_inv_eq_mul, mul_comm]
 
-theorem le_coe_toENNReal (x : EReal) : x ≤ (x.toENNReal : EReal) := by
-  rcases le_total 0 x with h | h
-  · rw [EReal.coe_toENNReal h]
-  · exact h.trans (EReal.coe_ennreal_nonneg _)
+theorem le_coe_toENNReal (x : EReal) : x ≤ (x.toENNReal : EReal) :=
+  EReal.coe_toENNReal_eq_max ▸ le_max_right 0 x
 
 theorem persp_rpow_zero_left (α : ℝ) {q : ℝ} (hq : 0 ≤ q) (hα : 0 < α) :
     (WeightFunction.rpow α).persp 0 q = 0 := by
@@ -174,10 +171,8 @@ theorem fDiv_rpow_bind_le (hα : 1 < α) {M N : ℕ} (d₁ d₂ : Measure (ULift
     fDiv (.rpow α) (d₁.bind h) (d₂.bind k) ≤
       fDiv (.rpow α) d₁ d₂ * ⨆ j, fDiv (.rpow α) (h j) (k j) := by
   have hcvx := convexOn_rpow hα.le
-  have := isSubProbabilityMeasure_bind d₁ h
-    (measurable_of_countable h).aemeasurable
-  have := isSubProbabilityMeasure_bind d₂ k
-    (measurable_of_countable k).aemeasurable
+  have := isSubProbabilityMeasure_bind d₁ h (measurable_of_countable h).aemeasurable
+  have := isSubProbabilityMeasure_bind d₂ k (measurable_of_countable k).aemeasurable
   have hb (d : Measure (ULift.{u} (Fin M))) [IsSubProbabilityMeasure d]
       (h : ULift.{u} (Fin M) → Measure (ULift.{u} (Fin N))) [∀ j, IsSubProbabilityMeasure (h j)]
       (i : ULift.{u} (Fin N)) :
@@ -255,8 +250,7 @@ instance isReflexive : (renyiDivergence.{u} α).IsReflexive where
       transform, EReal.real_coe_toENNReal]
     refine mul_nonpos_of_nonneg_of_nonpos (EReal.coe_nonneg.2 (inv_nonneg.2 (sub_pos.2 hα.out).le))
       (ENNReal.log_le_zero_iff.2 ?_)
-    exact ENNReal.ofReal_le_one.2 (ENNReal.toReal_le_of_le_ofReal zero_le_one
-      (IsSubProbabilityMeasure.measure_univ_le_one.trans ENNReal.ofReal_one.ge))
+    exact ENNReal.ofReal_le_one.2 (IsSubProbabilityMeasure.toReal_mem_Icc univ).2
 
 /-- The Rényi divergence is the supremum of its pushforwards to finite spaces (Thm. 4.11). -/
 instance isContinuous : (renyiDivergence.{u} α).IsContinuous where

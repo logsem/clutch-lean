@@ -23,10 +23,7 @@ theorem EReal.toENNReal_le_iff_le_coe {x : EReal} {y : ℝ≥0∞} : x.toENNReal
 
 theorem EReal.toENNReal_iSup {ι : Sort*} (g : ι → EReal) :
     (⨆ i, g i).toENNReal = ⨆ i, (g i).toENNReal :=
-  le_antisymm (EReal.toENNReal_le_iff_le_coe.2 <| iSup_le fun i ↦
-      (EReal.toENNReal_le_iff_le_coe.1 le_rfl).trans <|
-        EReal.coe_ennreal_le_coe_ennreal_iff.2 (le_iSup (fun i ↦ (g i).toENNReal) i))
-    (iSup_le fun i ↦ EReal.toENNReal_le_toENNReal (le_iSup g i))
+  GaloisConnection.l_iSup fun _ _ ↦ EReal.toENNReal_le_iff_le_coe
 
 variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 
@@ -127,7 +124,9 @@ theorem fDiv_dp_eq_iSup (ε : ℝ) (μ ν : Measure X) [IsFiniteMeasure μ] [IsF
     classical
     let k : X → Fin 2 := fun x ↦ if x ∈ S then 0 else 1
     have hk : Measurable k := measurable_const.ite hS measurable_const
-    have h0 : k ⁻¹' {0} = S := by ext x; by_cases hx : x ∈ S <;> simp [k, hx]
+    have h0 : k ⁻¹' {0} = S := by
+      ext
+      simp [k]
     refine le_iSup_of_le 2 <| le_iSup_of_le k <| le_iSup_of_le hk ?_
     simp only [Fin.sum_univ_two, h0,
       WeightFunction.persp_dp ε ENNReal.toReal_nonneg ENNReal.toReal_nonneg]
@@ -146,8 +145,7 @@ theorem fDiv_dp_le_iff (ε : ℝ) (δ : ℝ≥0∞) (μ ν : Measure X) [IsFinit
   rw [← EReal.coe_ennreal_toReal hδ, EReal.coe_le_coe_iff,
     ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
     ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
-    ENNReal.toReal_ofReal (Real.exp_pos ε).le]
-  constructor <;> intro h <;> linarith
+    ENNReal.toReal_ofReal (Real.exp_pos ε).le, sub_le_iff_le_add']
 
 /-- The Rényi divergence of order `α` (Def. 2.2). -/
 noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
