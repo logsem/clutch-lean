@@ -50,10 +50,8 @@ theorem Codensity.measure_le [Δ.IsReflexive] [Δ.IsZeroLeft] [Δ.IsMassDetectin
     (h : Δ.Codensity 1 0 R μ ν) (hR : ∀ x y, (x, y) ∈ R → x ∈ T → y ∈ T') : μ T ≤ ν T' := by
   have := @h PUnit _ 1 0 (indKernel hT) (indKernel hT') _ _ fun x y hxy ↦ ?_
   · rw [indKernel_bind, indKernel_bind, one_mul, zero_add] at this
-    have hle {Z : Type u} [MeasurableSpace Z] (S : Set Z) {m : Measure Z}
-        [IsSubProbabilityMeasure m] : m S ≤ 1 :=
-      (measure_mono S.subset_univ).trans IsSubProbabilityMeasure.measure_univ_le_one
-    exact IsMassDetecting.le_of_le_zero (hle T) (hle T') this
+    exact IsMassDetecting.le_of_le_zero (IsSubProbabilityMeasure.measure_le_one T)
+      (IsSubProbabilityMeasure.measure_le_one T') this
   · by_cases hx : x ∈ T
     · have hy := hR x y hxy hx
       simp only [indKernel, Kernel.piecewise_apply, hx, hy, ite_true]
@@ -67,9 +65,7 @@ namespace TVDiv
 
 /-- The total variation detects masses. -/
 instance isMassDetecting_tv : (tv.{u}).IsMassDetecting where
-  le_of_le_zero _ _ h := by
-    have := tv_le_iff.1 h .univ MeasurableSet.univ
-    simpa using this
+  le_of_le_zero _ _ h := by simpa using tv_le_iff.1 h .univ .univ
 
 end TVDiv
 
@@ -77,8 +73,6 @@ namespace DPDiv
 
 /-- The DP divergence at budget zero detects masses. -/
 instance isMassDetecting_dp : (dp.{u}).IsMassDetecting where
-  le_of_le_zero _ _ h := by
-    have := dp_le_iff.1 h .univ MeasurableSet.univ
-    simpa using this
+  le_of_le_zero _ _ h := by simpa using dp_le_iff.1 h .univ .univ
 
 end DPDiv

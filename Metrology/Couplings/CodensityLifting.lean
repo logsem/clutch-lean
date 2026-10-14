@@ -202,7 +202,7 @@ theorem codensity_diag_of_le [Δ.IsComposable] {X : Type u} [MeasurableSpace X] 
     (h : Δ α μ ν ≤ δ) : Δ.Codensity α δ (diagRel X) μ ν := fun _ _ β γ k l _ _ hkl ↦
     calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν)
         ≤ Δ α μ ν + ⨆ x, Δ β (k x) (l x) := IsComposable.bind_le α β μ ν k l
-      _ ≤ δ + γ := add_le_add h (iSup_le fun x ↦ hkl (show x = x from rfl))
+      _ ≤ δ + γ := add_le_add h (iSup_le fun _ ↦ hkl rfl)
 
 /-- With reflexivity and composability, the codensity lifting of equality is exactly the
 divergence bound (the fundamental property, Thm. 8.2). -/
@@ -279,9 +279,9 @@ theorem codensity_iff_of_isGenerated {Ω : Type u} [MeasurableSpace Ω] (hΩ : �
   rw [hΩ]
   refine iSup₂_le fun j _ ↦ ?_
   rw [comp_assoc, comp_assoc]
-  refine h (fun x y hxy ↦ ?_)
-  rw [Kernel.comp_apply, Kernel.comp_apply]
-  exact le_trans (by rw [hΩ β (k x) (l y)]; exact le_iSup₂_of_le j ‹_› le_rfl) (hkl hxy)
+  refine h fun x y hxy ↦ le_trans ?_ (hkl hxy)
+  rw [Kernel.comp_apply, Kernel.comp_apply, hΩ β (k x) (l y)]
+  exact le_iSup₂_of_le j ‹_› le_rfl
 
 end GradedDivergence
 

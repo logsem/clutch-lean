@@ -158,7 +158,9 @@ instance IsComposable.toIsAdditive [Mul ι] [Δ.IsComposable] [Δ.IsFunctorial] 
         simp_rw [map_apply measurable_prodMk_left hs]
         exact measurable_measure_prodMk_left hs⟩
     calc Δ (α * β) (μ₁.prod ν₁) (μ₂.prod ν₂)
-        = Δ (α * β) (K ν₁ ∘ₘ μ₁) (K ν₂ ∘ₘ μ₂) := by rw [Measure.prod_def, Measure.prod_def]; rfl
+        = Δ (α * β) (K ν₁ ∘ₘ μ₁) (K ν₂ ∘ₘ μ₂) := by
+          rw [Measure.prod_def, Measure.prod_def]
+          rfl
       _ ≤ Δ α μ₁ μ₂ + ⨆ x, Δ β (ν₁.map (Prod.mk x)) (ν₂.map (Prod.mk x)) :=
           IsComposable.bind_le α β μ₁ μ₂ (K ν₁) (K ν₂)
       _ ≤ Δ α μ₁ μ₂ + Δ β ν₁ ν₂ := add_le_add le_rfl (iSup_le fun _ ↦ IsFunctorial.map_le β ν₁ ν₂)

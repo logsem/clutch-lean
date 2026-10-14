@@ -129,10 +129,11 @@ theorem GradedDivergence.CodensityE.tv_add_right [IsSubProbabilityMeasure μ]
             rcases le_total (g y + c y) 1 with hle | hle
             · rw [min_eq_left hle]
               exact (hfg x y).trans_eq (by ring)
-            · exact (hf1 x).trans (by rw [min_eq_right hle]; exact le_self_add)
-    _ ≤ ∫⁻ y, g y + c y ∂ν + δ := by gcongr with y; exact min_le_left _ _
+            · exact (hf1 x).trans (le_add_right (le_min hle le_rfl))
+    _ ≤ ∫⁻ y, g y + c y ∂ν + δ := add_le_add_left (lintegral_mono fun _ ↦ min_le_left _ _) _
     _ = ∫⁻ y, g y ∂ν + (δ + ∫⁻ y, c y ∂ν) := by
-        rw [lintegral_add_right _ hc]; ring
+        rw [lintegral_add_right _ hc]
+        ring
 
 /-- Total variation pays costs on the right sample in expectation. -/
 instance TVDiv.isExpectationAdditive_tv : tv.{u}.IsExpectationAdditive where

@@ -114,8 +114,10 @@ instance isSubMarkovKernel_map (κ : Kernel X Y) [IsSubMarkovKernel κ] (f : Y �
     IsSubMarkovKernel (κ.map f) where
   isSubProbabilityMeasure x := by
     by_cases hf : Measurable f
-    · rw [Kernel.map_apply _ hf]; infer_instance
-    · rw [Kernel.map_of_not_measurable _ hf]; exact ⟨by simp⟩
+    · rw [Kernel.map_apply _ hf]
+      infer_instance
+    · rw [Kernel.map_of_not_measurable _ hf]
+      exact ⟨by simp⟩
 
 /-- Gluing two sub-Markov kernels along a measurable set gives a sub-Markov kernel. -/
 instance isSubMarkovKernel_piecewise {s : Set X} [DecidablePred (· ∈ s)] (hs : MeasurableSet s)
