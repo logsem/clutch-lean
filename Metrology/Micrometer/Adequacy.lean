@@ -149,7 +149,7 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   rw [wpPre_value_Z_eq Δ E]
   simp only [wpPre_match_eq]
   iintro Hwp %σ₁ %e₁' %σ₁' %α₁ %ε₁ Hinterp
-  iapply (BI.equiv_iff.mp MicrometerWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %α₁ %ε₁ Hinterp
+  iapply wp_unfold_mp $$ Hwp %σ₁ %e₁' %σ₁' %α₁ %ε₁ Hinterp
 
 /-- At a value, the remaining budget `α` must be droppable: `gradeInterp α` forces `α` to absorb
 (clutch-dp's leftover privacy budget). -/

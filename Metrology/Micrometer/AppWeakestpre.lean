@@ -618,8 +618,7 @@ theorem fupd_specCoupl_of_le {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : S
   iapply specCoupl_couple_rel (S := fun s c => s = σ ∧ c = ⟨e', σ'⟩) (n := 0) (ε₁ := ε₂ - ε₁)
     (tsub_add_cancel_of_le Hε).le
     (by
-      rw [MeasureTheory.Measure.dirac_bind (by fun_prop)]
-      simp only [pexecN_zero]
+      rw [MeasureTheory.Measure.dirac_bind (by fun_prop), pexecN_zero]
       refine (codensity_dirac ?_).mono_bound zero_le
       exact ⟨rfl, rfl⟩)
     (ErasableExpr.dret σ) (ErasableExpr.dret σ')
@@ -678,8 +677,7 @@ theorem specCoupl_erasable_steps {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl Δ E σ₂ e₂' σ₂' α ε₂ Z) ⊢
     specCoupl Δ E σ₁ e₁' σ₁' α ε Z :=
   specCoupl_couple_rel (n := n) Hε (by rwa [MeasureTheory.Measure.dirac_bind (by fun_prop)])
-    Heras₁
-    (ErasableExpr.dret σ₁')
+    Heras₁ (ErasableExpr.dret σ₁')
 
 theorem specCoupl_steps {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {n : Nat} {α : ι} {ε₁ ε₂ ε : ENNReal} {Z : State rT → Cfg rT → ι → ENNReal → IProp GF}
@@ -778,7 +776,7 @@ theorem progCoupl_strong_mono [Δ.IsZeroLeft] {e₁ : Exp rT} {σ₁ : State rT}
   · simp only [ite_eq_left hmem]
     imod HCont $$ %e₂ %σ₂ %e₂' %σ₂' with HZ₁
     imodintro
-    iapply Hm $$ %e₂ %σ₂ %e₂' %σ₂' %(G ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) %(X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) [HZ₁]
+    iapply Hm
     iframe %hmem HZ₁
   · simp only [ite_eq_right hmem]
     imodintro

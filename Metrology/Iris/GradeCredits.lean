@@ -106,22 +106,16 @@ theorem frag_mul {α β : ι} :
 theorem split {α β : ι} : ↯g (α * β) ⊢@{IProp GF} ↯g α ∗ ↯g β := by
   unfold gc
   rw [frag_mul]
-  iintro H
-  iapply iOwn_op
-  iexact H
+  exact iOwn_op.1
 
 theorem combine {α β : ι} : ↯g α ∗ ↯g β ⊢@{IProp GF} ↯g (α * β) := by
   unfold gc
   rw [frag_mul]
-  iintro ⟨H1, H2⟩
-  icombine H1 H2 as H
-  iexact H
+  exact iOwn_op.2
 
 /-- A credit for `α * β` covers a credit for `α`. -/
-theorem weaken {α β : ι} : ↯g (α * β) ⊢@{IProp GF} ↯g α := by
-  iintro H
-  ihave ⟨H, -⟩ := split $$ H
-  iexact H
+theorem weaken {α β : ι} : ↯g (α * β) ⊢@{IProp GF} ↯g α :=
+  split.trans BI.sep_elim_left
 
 /-- A fragment divides the budget. -/
 theorem supply_bound {s β : ι} : ⊢@{IProp GF} ●↯g s -∗ ↯g β -∗ ⌜∃ r, s = β * r⌝ := by
