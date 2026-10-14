@@ -271,15 +271,14 @@ theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 
   induction n generalizing ρ with
   | zero => simp
   | succ k ih =>
-    rw [pexecN_succ, MeasureTheory.Measure.bind_apply (by measurability)
-      pexecN_measurable.aemeasurable]
+    rw [pexecN_succ, bind_apply .univ pexecN_measurable.aemeasurable]
     calc ∫⁻ a, pexecN k a Set.univ ∂(stepOrFinal ρ)
-      _ ≤ ∫⁻ _, 1 ∂(stepOrFinal ρ) := MeasureTheory.lintegral_mono fun a => ih a
+      _ ≤ ∫⁻ _, 1 ∂(stepOrFinal ρ) := lintegral_mono fun a => ih a
       _ = stepOrFinal ρ Set.univ := by simp
       _ ≤ 1 := by
         by_cases hv : ρ.expr.isValue
-        · rw [stepOrFinal_isValue hv]; simp
-        · rw [stepOrFinal_not_isValue hv]; exact primStep_univ_le_one ρ
+        · simp [stepOrFinal_isValue hv]
+        · simpa [stepOrFinal_not_isValue hv] using primStep_univ_le_one ρ
 
 /-- Iterated stepping has mass at most one. -/
 instance pexecN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :

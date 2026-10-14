@@ -1548,8 +1548,7 @@ theorem tapeIndexUniform_map_bijOn {N : Int} (hN : 0 < N) (f : Int → Int)
     ← Finset.sum_Ico_comp_of_bijOn hdom hbij (fun m => ψ (tapeIdxOf hN m))]
   congr 1
   refine Finset.sum_congr rfl fun n hn => ?_
-  rw [Finset.mem_Ico] at hn
-  rw [tapeIdxOf_val hN hn.1 hn.2]
+  rw [tapeIdxOf_val hN (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2]
 
 /-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
 theorem tapeIndexUniform_codensity_bij {Δ : GradedDivergence.{0} ι} [Δ.IsReflexive]
@@ -1592,6 +1591,14 @@ theorem tapePresample_codensity_bij {Δ : GradedDivergence.{0} ι} [Δ.IsReflexi
   rintro a b ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
 
+/-- Running to the limit from a measure of states first runs `m` steps. -/
+private theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
+    μ.bind (fun σ => limExec ⟨e, σ⟩) = (μ.bind fun σ => pexecN m ⟨e, σ⟩).bind limExec := by
+  have hpk : Measurable fun σ : State rT => pexecN m (⟨e, σ⟩ : Cfg rT) :=
+    pexecN_measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
+  rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
+  exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e, σ⟩)
+
 /-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
 on the RHS sample. -/
 theorem Codensity_erasure_erasable_exp_rhs {Δ : GradedDivergence.{0} ι}
@@ -1609,19 +1616,10 @@ theorem Codensity_erasure_erasable_exp_rhs {Δ : GradedDivergence.{0} ι}
     (hCont : ∀ σ₂ ρ', R (σ₂, ρ') →
         Δ.Codensity 1 (E₂ ρ') Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
     Δ.Codensity 1 ε Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
-  have hmkC : ∀ e : Exp rT, Measurable (fun σ : State rT => (⟨e, σ⟩ : Cfg rT)) := fun e =>
-    Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
   have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
-    (execN_measurable n).comp (hmkC e₁)
+    (execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
   have := hErase₁.isProbabilityMeasure
-  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁']
-  have hrw : (μ₁'.bind (fun σ₂' => limExec ⟨e₁', σ₂'⟩))
-           = (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)).bind limExec := by
-    have hpk : Measurable fun σ : State rT => pexecN m (⟨e₁', σ⟩ : Cfg rT) :=
-      pexecN_measurable.comp (hmkC e₁')
-    rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
-    exact congrArg _ (funext fun σ₂' => limExec_pexecN m ⟨e₁', σ₂'⟩)
-  rw [hrw]
+  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
@@ -1646,16 +1644,7 @@ theorem Codensity_erasure_erasable_exp_lhs_kanto {Δ : GradedDivergence ι}
     Δ.Codensity 1 ε Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
-  have hmkC : Measurable (fun σ : State rT => (⟨e₁', σ⟩ : Cfg rT)) :=
-    Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
-  rw [← hErase₁'.lim_exec e₁']
-  have hrw : (μ₁'.bind (fun σ => limExec ⟨e₁', σ⟩))
-           = (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)).bind limExec := by
-    have hpk : Measurable fun σ : State rT => pexecN m (⟨e₁', σ⟩ : Cfg rT) :=
-      pexecN_measurable.comp hmkC
-    rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
-    exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e₁', σ⟩)
-  rw [hrw]
+  rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
