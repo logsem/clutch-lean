@@ -19,6 +19,12 @@ variable {ι : Type} [Monoid ι]
 def adequacyRel (φ : Val rT → Val rT → Prop) : Set (Exp rT × Exp rT) :=
   fun p => ∃ v v', p.1.toVal? = some v ∧ p.2.toVal? = some v' ∧ φ v v'
 
+omit [LawfulProbLangℝ rT] in
+theorem adequacyRel_eq_subset :
+    adequacyRel (rT := rT) (· = ·) ⊆ {p : Exp rT × Exp rT | p.1 = p.2} := by
+  rintro ⟨e₁, e₂⟩ ⟨v, v', hv, hv', rfl⟩
+  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+
 /-- The codensity lifting of the finite executions of `ρ` against the limit execution of `ρ'`. -/
 @[reducible] def execCoupl (Δ : GradedDivergence.{0} ι) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (n : Nat) (ρ ρ' : Cfg rT) : Prop :=
@@ -248,6 +254,22 @@ theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
       ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   Codensity.of_forall_lt fun ε' hε' => wp_adequacy e e' σ σ' ε' φ fun Hinst => Hwp Hinst ε' hε'
+
+/-- Programs whose results agree up to error credits `ε` have output divergence at most `ε`
+(via the fundamental property, Approxis Thm. 8.2). -/
+theorem wp_adequacy_div [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
+    Δ 1 (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) ≤ ε :=
+  ((wp_adequacy e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
+
+/-- `wp_adequacy_div` with error credits strictly above `ε`. -/
+theorem wp_adequacy_div_error_lim [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT)
+    (ε : ENNReal)
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
+    Δ 1 (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) ≤ ε :=
+  ((wp_adequacy_error_lim e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
 
 /-- Adequacy bounds the mass of the left program by that of the right plus the error credits
 (the `tv` instance of `wp_adequacy`). -/

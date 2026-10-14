@@ -36,6 +36,25 @@ theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNRe
     AddCoupl ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy_error_lim e e' σ σ' ε φ Hwp).addCoupl
 
+/-- `wp_adequacy_div` at `tv`: programs whose results agree up to `ε` differ by at most `ε` on
+every event. -/
+theorem wp_adequacy_div_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗
+        wp TVDiv.tv ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
+    {S : Set (Exp rT)} (hS : MeasurableSet S) :
+    limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
+  TVDiv.tv_le_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
+
+/-- `wp_adequacy_div_error_lim` at `tv`. -/
+theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
+    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗
+        wp TVDiv.tv ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
+    {S : Set (Exp rT)} (hS : MeasurableSet S) :
+    limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
+  TVDiv.tv_le_iff.1 (wp_adequacy_div_error_lim e e' σ σ' ε Hwp) S hS
+
 /-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
 theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),

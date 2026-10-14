@@ -373,20 +373,6 @@ end Games
 
 section AdequacyCor
 
-omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
-theorem Exp.fst_eq_of_toVal?_eq_some {e : Exp rT} {v : Val rT} (h : e.toVal? = some v) :
-    v.1 = e := by
-  unfold Exp.toVal? at h
-  cases hc : IsVal.check? e with
-  | none => rw [hc] at h; cases h
-  | some w => rw [hc] at h; cases h; rfl
-
-omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
-theorem adequacyRel_eq_subset :
-    adequacyRel (rT := rT) (· = ·) ⊆ {p : Exp rT × Exp rT | p.1 = p.2} := by
-  rintro ⟨e1, e2⟩ ⟨v, v', hv, hv', rfl⟩
-  exact (Exp.fst_eq_of_toVal?_eq_some hv).symm.trans (Exp.fst_eq_of_toVal?_eq_some hv')
-
 set_option linter.style.haveILetI false in
 theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
