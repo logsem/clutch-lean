@@ -4,6 +4,7 @@ public import Metrology.Approxis.AppWeakestpre
 public import Metrology.Approxis.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
+public import Metrology.Couplings.CodensityMassDetecting
 
 @[expose] public section
 
@@ -271,13 +272,11 @@ theorem wp_adequacy_div_error_lim [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : Sta
     Δ 1 (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) ≤ ε :=
   ((wp_adequacy_error_lim e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
 
-/-- Adequacy bounds the mass of the left program by that of the right plus the error credits
-(the `tv` instance of `wp_adequacy`). -/
-theorem wp_adequacy_mass (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
-    (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp TVDiv.tv.{0} ⊤ e
-        (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
-    limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε := by
-  simpa using (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl.mass_leq
+/-- Adequacy bounds the mass of the left program by that of the right plus the error credits. -/
+theorem wp_adequacy_mass [Δ.IsReflexive] [Δ.IsMassDetecting] (e e' : Exp rT) (σ σ' : State rT)
+    (φ : Val rT → Val rT → Prop) (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
+  (wp_adequacy e e' σ σ' ε φ Hwp).measure_le_add .univ .univ fun _ _ _ _ ↦ trivial
 
 end ProbLang

@@ -59,8 +59,8 @@ theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : E
 theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ WP[TVDiv.tv] e {{ v, ∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝ }}) :
-    limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε := by
-  simpa using AddCoupl.mass_leq (wp_adequacy_tv e e' σ σ' ε φ Hwp)
+    limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
+  wp_adequacy_mass e e' σ σ' φ ε Hwp
 
 end
 
