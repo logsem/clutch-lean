@@ -18,6 +18,22 @@ variable {ι : Type v} [Monoid ι] (Δ : GradedDivergence.{u} ι)
 variable {X Y X' Y' : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
   [MeasurableSpace Y']
 
+/-- The cost-graded codensity lifting `T[Δ](α, δ) E`: for every test space, grade and slack,
+kernels that are `Δ`-close at `x, y` within the slack plus the cost `E x y` are `Δ`-close after
+binding within the slack plus `δ` (Thm. 8, Katsumata–Sato, *Codensity Liftings of Monads*). -/
+def CodensityE (α : ι) (δ : ℝ≥0∞) (E : X → Y → ℝ≥0∞) (μ : Measure X) (ν : Measure Y) : Prop :=
+  ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄
+    [IsSubMarkovKernel k] [IsSubMarkovKernel l],
+    (∀ x y, Δ β (k x) (l y) ≤ γ + E x y) → Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν) ≤ δ + γ
+
+/-- The cost of a relation: free on it, infinite off it. -/
+noncomputable def relCost (R : Set (X × Y)) (x : X) (y : Y) : ℝ≥0∞ := Rᶜ.indicator ⊤ (x, y)
+
+/-- The codensity lifting `T[Δ](α, δ) R`: the cost lifting of the relation's cost (Thm. 8,
+Katsumata–Sato, *Codensity Liftings of Monads*). -/
+def Codensity (α : ι) (δ : ℝ≥0∞) (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
+  Δ.CodensityE α δ (relCost R) μ ν
+
 /-- The basic codensity lifting of `R` with observation space `Ω`, base relation `S₀` and target
 relation `S`: measures whose binds with every `S₀`-respecting pair of kernels land in `S`
 (Katsumata–Sato, *Codensity Liftings of Monads*). -/
@@ -26,14 +42,105 @@ def BasicCodensity (Ω : Type*) [MeasurableSpace Ω] (S₀ S : Measure Ω → Me
   ∀ ⦃k : Kernel X Ω⦄ ⦃l : Kernel Y Ω⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
     (∀ ⦃x y⦄, (x, y) ∈ R → S₀ (k x) (l y)) → S (k ∘ₘ μ) (l ∘ₘ ν)
 
-/-- The codensity lifting `T[Δ](α, δ) R`: for every test space, grade and bound, the basic
-codensity lifting from `Δ`-closeness to `Δ`-closeness with the grades multiplied and the bounds
-added (Thm. 8). -/
-def Codensity (α : ι) (δ : ℝ≥0∞) (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
-  ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄,
-    BasicCodensity I (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν
-
 variable {Δ}
+
+/-! ### The cost of a relation -/
+
+omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A relation costs nothing on its pairs. -/
+theorem relCost_of_mem {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∈ R) : relCost R x y = 0 :=
+  Set.indicator_of_notMem (not_not.2 h) _
+
+omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A relation costs `⊤` off its pairs. -/
+theorem relCost_of_notMem {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∉ R) :
+    relCost R x y = ⊤ :=
+  Set.indicator_of_mem h _
+
+omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- Larger relations cost less. -/
+theorem relCost_anti : Antitone (relCost : Set (X × Y) → X → Y → ℝ≥0∞) := fun _ _ hR x y ↦
+  Set.indicator_le_indicator_of_subset (Set.compl_subset_compl.2 hR) (fun _ ↦ zero_le) (x, y)
+
+/-- The codensity lifting passes every test whose kernels are close on related pairs (Thm. 8). -/
+theorem codensity_iff {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y} :
+    Δ.Codensity α δ R μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄
+      ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
+      (∀ ⦃x y⦄, (x, y) ∈ R → Δ β (k x) (l y) ≤ γ) → Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν) ≤ δ + γ := by
+  refine ⟨fun h I _ β γ k l _ _ hkl ↦ h fun x y ↦ ?_, fun h I _ β γ k l _ _ hkl ↦
+    h fun x y hxy ↦ by simpa [relCost_of_mem hxy] using hkl x y⟩
+  by_cases hxy : (x, y) ∈ R
+  · simpa [relCost_of_mem hxy] using hkl hxy
+  · simp [relCost_of_notMem hxy]
+
+/-- The codensity lifting is the basic codensity lifting for every test space, grade and bound
+(Thm. 8, Katsumata–Sato). -/
+theorem codensity_iff_basicCodensity {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
+    {ν : Measure Y} : Δ.Codensity α δ R μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄
+      ⦃γ : ℝ≥0∞⦄,
+      BasicCodensity I (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν :=
+  codensity_iff
+
+/-! ### The cost lifting laws -/
+
+/-- Larger bounds give larger liftings. -/
+theorem CodensityE.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (hδ : δ ≤ δ') : Δ.CodensityE α δ' E μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ (h hkl).trans (add_le_add_left hδ _)
+
+/-- Smaller costs give larger liftings. -/
+theorem CodensityE.mono_cost {α : ι} {δ : ℝ≥0∞} {E E' : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (hE : ∀ x y, E' x y ≤ E x y) :
+    Δ.CodensityE α δ E' μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ h fun x y ↦ (hkl x y).trans (add_le_add le_rfl (hE x y))
+
+/-- Weakening the bound and lowering the cost, in the form `gcongr` uses. -/
+@[gcongr]
+theorem CodensityE.imp {α : ι} {δ δ' : ℝ≥0∞} {E E' : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (hδ : δ ≤ δ') (hE : E' ≤ E) :
+    Δ.CodensityE α δ E μ ν → Δ.CodensityE α δ' E' μ ν :=
+  fun h ↦ (h.mono_cost fun x y ↦ hE x y).mono_bound hδ
+
+/-- The infinite bound lifts anything. -/
+theorem codensityE_top {α : ι} {E : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y} :
+    Δ.CodensityE α ⊤ E μ ν :=
+  fun _ _ _ _ _ _ _ _ _ ↦ by simp
+
+/-- Adding a constant to the cost adds it to the bound (cf. `expCoupl_add_const` in Approxis). -/
+theorem CodensityE.add_const {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (c : ℝ≥0∞) :
+    Δ.CodensityE α (δ + c) (fun x y ↦ E x y + c) μ ν :=
+  fun _ _ _ γ _ _ _ _ hkl ↦ (h (γ := γ + c) fun x y ↦ (hkl x y).trans_eq (by ring)).trans_eq
+    (by ring)
+
+/-- Dirac measures lift at the unit grade with their cost as the bound. -/
+theorem codensityE_dirac {E : X → Y → ℝ≥0∞} (x : X) (y : Y) :
+    Δ.CodensityE 1 (E x y) E (dirac x) (dirac y) := by
+  intro I _ β γ k l _ _ hkl
+  rw [dirac_bind k.measurable, dirac_bind l.measurable, one_mul, add_comm]
+  exact hkl x y
+
+/-- Binding with kernels whose outputs at `x, y` are in the cost lifting with bound `E x y`: the
+cost is charged once, through the outer lifting (cf. `AddCoupl.bind_adv_kanto`). -/
+theorem CodensityE.bind {α α' : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {F : X' → Y' → ℝ≥0∞}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) {f : Kernel X X'}
+    {g : Kernel Y Y'} [IsSubMarkovKernel f] [IsSubMarkovKernel g]
+    (hfg : ∀ x y, Δ.CodensityE α' (E x y) F (f x) (g y)) :
+    Δ.CodensityE (α * α') δ F (f ∘ₘ μ) (g ∘ₘ ν) := by
+  intro I _ β γ k l _ _ hkl
+  rw [comp_assoc, comp_assoc, mul_assoc]
+  refine h fun x y ↦ ?_
+  rw [Kernel.comp_apply, Kernel.comp_apply, add_comm]
+  exact hfg x y hkl
+
+/-- Pushing forward along maps, with the cost pulled back along them. -/
+theorem CodensityE.map {α : ι} {δ : ℝ≥0∞} {E : X' → Y' → ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
+    {f : X → X'} {g : Y → Y'} (h : Δ.CodensityE α δ (fun x y ↦ E (f x) (g y)) μ ν)
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    Δ.CodensityE α δ E (μ.map f) (ν.map g) := by
+  intro I _ β γ k l _ _ hkl
+  rw [bind_map_eq μ hf, bind_map_eq ν hg]
+  exact h (k := k.comap f hf) (l := l.comap g hg) fun x y ↦ hkl (f x) (g y)
 
 /-! ### The lifting laws (Def. 15, Thm. 8.1) -/
 
@@ -50,10 +157,8 @@ theorem Codensity.mono [Preorder ι] [MulRightMono ι] [Δ.IsGraded] {α α' : �
 
 /-- Related points lift to their Dirac measures at the unit grade. -/
 theorem codensity_dirac {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∈ R) :
-    Δ.Codensity 1 0 R (dirac x) (dirac y) := by
-  intro I _ β γ k l _ _ hkl
-  rw [dirac_bind k.measurable, dirac_bind l.measurable, one_mul, zero_add]
-  exact hkl h
+    Δ.Codensity 1 0 R (dirac x) (dirac y) :=
+  relCost_of_mem h ▸ codensityE_dirac x y
 
 /-- Binding with kernels that map related inputs into the lifting of `S` (Kleisli extension). -/
 theorem Codensity.bind {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
@@ -61,27 +166,26 @@ theorem Codensity.bind {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S
     {g : Kernel Y Y'} [IsSubMarkovKernel f] [IsSubMarkovKernel g]
     (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → Δ.Codensity α' δ' S (f x) (g y)) :
     Δ.Codensity (α * α') (δ + δ') S (f ∘ₘ μ) (g ∘ₘ ν) := by
-  intro I _ β γ k l _ _ hkl
-  rw [comp_assoc, comp_assoc, mul_assoc, add_assoc]
-  refine h fun x y hxy ↦ ?_
-  rw [Kernel.comp_apply, Kernel.comp_apply]
-  exact hfg hxy hkl
+  refine CodensityE.bind (CodensityE.add_const h δ') fun x y ↦ ?_
+  by_cases hxy : (x, y) ∈ R
+  · simpa [relCost_of_mem hxy, Codensity] using hfg hxy
+  · simp [relCost_of_notMem hxy, codensityE_top]
 
 /-- Larger relations give larger liftings. -/
 theorem Codensity.mono_rel {α : ι} {δ : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hR : R ⊆ R') : Δ.Codensity α δ R' μ ν :=
-  fun _ _ _ _ _ _ _ _ hkl ↦ h fun _ _ hxy ↦ hkl (hR hxy)
+  CodensityE.mono_cost h (relCost_anti hR)
 
 /-- Larger bounds give larger liftings. -/
 theorem Codensity.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) (hδ : δ ≤ δ') : Δ.Codensity α δ' R μ ν :=
-  fun _ _ _ _ _ _ _ _ hkl ↦ (h hkl).trans (add_le_add_left hδ _)
+  CodensityE.mono_bound h hδ
 
 /-- Weakening the bound and the relation, in the form `gcongr` uses. -/
 @[gcongr]
 theorem Codensity.imp {α : ι} {δ δ' : ℝ≥0∞} {R R' : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
     (hδ : δ ≤ δ') (hR : R ⊆ R') : Δ.Codensity α δ R μ ν → Δ.Codensity α δ' R' μ ν :=
-  fun h ↦ (h.mono_rel hR).mono_bound hδ
+  CodensityE.imp hδ (relCost_anti hR)
 
 /-- Weakening the grade, the bound and the relation, in the form `gcongr` uses. -/
 @[gcongr]
@@ -105,10 +209,8 @@ theorem Codensity.of_forall_lt {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {�
 theorem Codensity.map {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')} {μ : Measure X}
     {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : X → X'} {g : Y → Y'}
     (hfg : ∀ ⦃x y⦄, (x, y) ∈ R → (f x, g y) ∈ S) (hf : Measurable f := by fun_prop)
-    (hg : Measurable g := by fun_prop) : Δ.Codensity α δ S (μ.map f) (ν.map g) := by
-  intro I _ β γ k l _ _ hkl
-  rw [bind_map_eq μ hf, bind_map_eq ν hg]
-  exact h (k := k.comap f hf) (l := l.comap g hg) fun x y hxy ↦ hkl (hfg hxy)
+    (hg : Measurable g := by fun_prop) : Δ.Codensity α δ S (μ.map f) (ν.map g) :=
+  CodensityE.map (CodensityE.mono_cost h fun x y ↦ relCost_anti (fun _ hp ↦ hfg hp) x y) hf hg
 
 /-- Pushing forward the left measure along a map that sends `R` into `S`. -/
 theorem Codensity.map_left {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y)}
@@ -192,14 +294,15 @@ def diagRel (X : Type*) : Set (X × X) := {p | p.1 = p.2}
 /-- Reflexivity: the codensity lifting of equality is at most the divergence. -/
 theorem Codensity.le_of_diag [Δ.IsReflexive] {X : Type u} [MeasurableSpace X] {α : ι}
     {δ : ℝ≥0∞} {μ ν : Measure X} (h : Δ.Codensity α δ (diagRel X) μ ν) : Δ α μ ν ≤ δ := by
-  have := h (k := Kernel.id) (l := Kernel.id)
+  have := codensity_iff.1 h (k := Kernel.id) (l := Kernel.id)
     fun x y (hxy : x = y) ↦ by subst hxy; exact IsReflexive.self_le_zero _
   rwa [id_comp, id_comp, mul_one, add_zero] at this
 
 /-- Composability: the divergence is at most the codensity lifting of equality. -/
 theorem codensity_diag_of_le [Δ.IsComposable] {X : Type u} [MeasurableSpace X] {α : ι}
     {δ : ℝ≥0∞} {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    (h : Δ α μ ν ≤ δ) : Δ.Codensity α δ (diagRel X) μ ν := fun _ _ β γ k l _ _ hkl ↦
+    (h : Δ α μ ν ≤ δ) : Δ.Codensity α δ (diagRel X) μ ν :=
+  codensity_iff.2 fun _ _ β γ k l _ _ hkl ↦
     calc Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν)
         ≤ Δ α μ ν + ⨆ x, Δ β (k x) (l x) := IsComposable.bind_le α β μ ν k l
       _ ≤ δ + γ := add_le_add h (iSup_le fun _ ↦ hkl rfl)
@@ -234,7 +337,7 @@ theorem isComposable_of_codensity_diag
       [IsSubProbabilityMeasure ν], Δ.Codensity α (Δ α μ ν) (diagRel X) μ ν) :
     Δ.IsComposable where
   bind_le α β _ _ _ _ μ₁ μ₂ _ _ κ η _ _ :=
-    h α μ₁ μ₂ fun x _ (hxy : x = _) ↦ hxy ▸ le_iSup (fun x ↦ Δ β (κ x) (η x)) x
+    codensity_iff.1 (h α μ₁ μ₂) fun x _ (hxy : x = _) ↦ hxy ▸ le_iSup (fun x ↦ Δ β (κ x) (η x)) x
 
 /-- Conversely, if the lifting of equality is within the divergence bounds, then Dirac measures
 are at divergence zero from themselves (Thm. 8.2). -/
@@ -274,6 +377,7 @@ theorem codensity_iff_of_isGenerated {Ω : Type u} [MeasurableSpace Ω] (hΩ : �
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     Δ.Codensity α δ R μ ν ↔ ∀ ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄,
       BasicCodensity Ω (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν := by
+  rw [codensity_iff_basicCodensity]
   refine ⟨fun h β γ ↦ @h Ω _ β γ, fun h I _ β γ k l _ _ hkl ↦ ?_⟩
   beta_reduce at hkl ⊢
   rw [hΩ]
@@ -299,7 +403,7 @@ witnesses lands in the codensity lifting. -/
 theorem Rel.codensity {s : Span X Y Φ} {α : ι} {δ : ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
     (h : (s♯[Δ, α, δ]).Rel μ ν) : Δ.Codensity α δ {p | s.Rel p.1 p.2} μ ν := by
   obtain ⟨w, rfl, rfl⟩ := h
-  intro I _ β γ k l _ _ hkl
+  refine codensity_iff.2 fun I _ β γ k l _ _ hkl ↦ ?_
   calc Δ (α * β) (k ∘ₘ w.fst.map s.left) (l ∘ₘ w.snd.map s.right)
       = Δ (α * β) (k.comap s.left s.leftMeasurable ∘ₘ w.fst)
           (l.comap s.right s.rightMeasurable ∘ₘ w.snd) :=

@@ -70,7 +70,7 @@ theorem GradedDivergence.Codensity.arCoupling_dp {ε : ℝ≥0} {δ : ℝ≥0∞
     simp only [massKernel, Kernel.coe_mk, Measure.smul_apply, smul_eq_mul, toAdd_ofAdd,
       NNReal.coe_zero, Real.exp_zero, ENNReal.ofReal_one, one_mul, add_zero]
     exact mul_le_mul_left (hfg hxy) _
-  have hc := h htest
+  have hc := codensity_iff.1 h htest
   rw [add_zero, ← ofAdd_add, add_zero, DPDiv.dp_le_iff] at hc
   simpa [DPF, exp_coe_nnreal] using hc .univ .univ
 
@@ -79,7 +79,7 @@ slack `γ` becomes a `[0, 1]`-valued test function once `γ` is cut off. -/
 theorem ARCoupling.DP.codensity {ε : ℝ≥0} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} [IsSubProbabilityMeasure μ] (h : ARCoupling.DP ε δ R μ ν) :
     DPDiv.dp.{u}.Codensity (.ofAdd ε) δ R μ ν := by
-  intro I _ β γ k l _ _ hkl
+  refine codensity_iff.2 fun I _ β γ k l _ _ hkl ↦ ?_
   rw [DPDiv.dp_le_iff]
   intro S hS
   set c := ENNReal.ofReal (Real.exp (Multiplicative.toAdd β : ℝ≥0))

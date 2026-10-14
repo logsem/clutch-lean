@@ -48,7 +48,8 @@ theorem Codensity.measure_le [Δ.IsReflexive] [Δ.IsZeroLeft] [Δ.IsMassDetectin
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     {T : Set X} {T' : Set Y} (hT : MeasurableSet T) (hT' : MeasurableSet T')
     (h : Δ.Codensity 1 0 R μ ν) (hR : ∀ x y, (x, y) ∈ R → x ∈ T → y ∈ T') : μ T ≤ ν T' := by
-  have := @h PUnit _ 1 0 (indKernel hT) (indKernel hT') _ _ fun x y hxy ↦ ?_
+  have := codensity_iff.1 h (I := PUnit) (β := 1) (γ := 0) (k := indKernel hT)
+    (l := indKernel hT') fun x y hxy ↦ ?_
   · rw [indKernel_bind, indKernel_bind, one_mul, zero_add] at this
     exact IsMassDetecting.le_of_le_zero (IsSubProbabilityMeasure.measure_le_one T)
       (IsSubProbabilityMeasure.measure_le_one T') this
