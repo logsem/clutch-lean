@@ -21,7 +21,7 @@ open ProbLang.MicrometerWpGS
 section Soundness
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
   [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft]
 
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
@@ -273,15 +273,14 @@ section RefinesSound
 open MeasureTheory
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι} [D.IsMassBounded] [D.IsZeroLeft]
-  [D.IsLeftContinuous] [D.IsExpectationAdditive] [D.IsReflexive] [D.IsComposable]
-  [D.IsMassDetecting]
+  [D.IsLeftContinuous] [D.IsReflexive] [D.IsComposable] [D.IsMassDetecting]
 variable {GF : BundledGFunctors} [RefinesPreGS rT GF]
 
 def boolEqVal (v v' : Val rT) : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
 omit [RefinesPreGS rT GF] [Monoid ι] [D.IsMassBounded] [D.IsZeroLeft] [D.IsLeftContinuous]
-  [D.IsExpectationAdditive] [D.IsReflexive] [D.IsComposable] [D.IsMassDetecting] in
+  [D.IsReflexive] [D.IsComposable] [D.IsMassDetecting] in
 theorem lrel_bool_to_boolEqVal [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iintro Hbool

@@ -493,7 +493,7 @@ theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
 section CouplingRules
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [MicrometerGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [MicrometerGS rT hlc GF] [GradeGS ι GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Monoid ι] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 private theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :

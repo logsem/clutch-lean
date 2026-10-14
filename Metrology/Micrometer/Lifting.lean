@@ -13,7 +13,7 @@ variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 namespace ProbLang.MicrometerWpGS
 
 variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerWpGS (rT := rT) GF]
+  [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
 
 theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -31,12 +31,15 @@ theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
     wp Δ E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
-  iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with
+    ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
   iapply progCoupl_steps_adv hεsum hred hred' hbnd hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
-  iapply H $$ %e₂ %σ₂ %e₂' %σ₂'
+  imod H $$ %e₂ %σ₂ %e₂' %σ₂' with ⟨Hσ', Hs', Hε', Hwp⟩
+  imodintro
+  iframe
 
 theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -53,12 +56,14 @@ theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT 
     wp Δ E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
-  iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %hred, %hred', %hbnd, %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%X, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
   iapply progCoupl_steps_adv' hred hred' hbnd hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
-  iapply H $$ %e₂ %σ₂ %e₂' %σ₂'
+  imod H $$ %e₂ %σ₂ %e₂' %σ₂' with ⟨Hσ', Hs', Hε', Hwp⟩
+  imodintro
+  iframe
 
 theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} (hv : e₁.toVal? = none) : iprop%
@@ -77,8 +82,9 @@ theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
     wp Δ E e₁ Φ := by
   iintro H
   iapply wp_lift_step_couple
-  iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with
+    ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hbnd, %hcpl, H⟩
   imodintro
   iapply specCoupl_ret
   simp only [hv]
@@ -89,7 +95,9 @@ theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
   · iapply specCoupl_ret
     imod H with (%hge | H)
     · exact absurd hle (_root_.not_lt.mpr hge)
-    · imodintro; iexact H
+    · icases H with ⟨Hσ', Hs', Hε', Hwp⟩
+      imodintro
+      iframe
   · iapply specCoupl_err_ge_1 (_root_.not_lt.mp hle)
 
 theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
@@ -104,12 +112,14 @@ theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     wp Δ E e Φ := by
   iintro H
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε Hpre
-  imod H $$ %σ₁ %e₁' %σ₁' %ε Hpre with ⟨%R, %μ₁, %μ₁', %her, %her', %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%R, %μ₁, %μ₁', %her, %her', %hcpl, H⟩
   imodintro
   iapply specCoupl_erasables (by rw [zero_add]) hcpl her her'
   iintro %σ₂ %σ₂' %hR !>
   iapply specCoupl_ret
-  iapply H $$ %σ₂ %σ₂' %hR
+  imod H $$ %σ₂ %σ₂' %hR with ⟨Hσ', Hs', Hε', Hwp⟩
+  imodintro
+  iframe
 
 end ProbLang.MicrometerWpGS

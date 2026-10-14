@@ -173,6 +173,29 @@ theorem codensity_dirac {R : Set (X × Y)} {x : X} {y : Y} (h : (x, y) ∈ R) :
     Δ.Codensity 1 0 R (dirac x) (dirac y) :=
   relCost_of_mem h ▸ codensityE_dirac x y
 
+variable (Δ) in
+/-- A grade that never increases the divergence when multiplied into a test grade: an unspent
+budget can be dropped. -/
+def Absorbs (α : ι) : Prop :=
+  ∀ (β : ι) {Z : Type u} [MeasurableSpace Z] (μ ν : Measure Z) [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν], Δ (α * β) μ ν ≤ Δ β μ ν
+
+/-- The unit grade absorbs. -/
+theorem absorbs_one : Δ.Absorbs 1 := fun β _ _ μ ν _ _ ↦ by rw [one_mul]
+
+/-- In a canonically ordered grade monoid, every grade absorbs. -/
+theorem absorbs_of_canonical [Preorder ι] [CanonicallyOrderedMul ι] [Δ.IsGraded] (α : ι) :
+    Δ.Absorbs α :=
+  fun _ _ _ μ ν _ _ ↦ IsGraded.anti le_mul_self μ ν
+
+/-- Related points lift to their Dirac measures at any absorbing grade. -/
+theorem codensity_dirac_of_absorbs {α : ι} (hα : Δ.Absorbs α) {R : Set (X × Y)} {x : X} {y : Y}
+    (h : (x, y) ∈ R) : Δ.Codensity α 0 R (dirac x) (dirac y) := by
+  intro I _ β γ k l _ _ hkl
+  rw [dirac_bind k.measurable, dirac_bind l.measurable, zero_add]
+  calc Δ (α * β) (k x) (l y) ≤ Δ β (k x) (l y) := hα β (k x) (l y)
+    _ ≤ γ := by simpa [relCost_of_mem h] using hkl x y
+
 /-- Binding with kernels that map related inputs into the lifting of `S` (Kleisli extension). -/
 theorem Codensity.bind {α α' : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {S : Set (X' × Y')}
     {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν) {f : Kernel X X'}

@@ -43,7 +43,7 @@ end TyEnvSetup
 
 section interp
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
@@ -52,7 +52,7 @@ structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 namespace NEFun
 variable {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 @[reducible] noncomputable def const (L : lrel rT GF) : NEFun rT GF :=
   { fn := fun _ => L, ne := fun _ => Dist.rfl }
@@ -136,7 +136,7 @@ end interp
 
 section interp_closed
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
     (interp D τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
@@ -158,7 +158,7 @@ end interp_closed
 
 section interp_sound
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp D τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
@@ -321,7 +321,7 @@ end RelCtx
 
 section env_typed
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
@@ -480,7 +480,7 @@ end env_typed
 
 section bin_log_related
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 variable (D) in
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
@@ -556,7 +556,7 @@ scoped notation:100 Δ "; " Γ " ⊨[" D "] " e " ≤log≤ " e' " : " τ =>
 
 section interp_subst
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 @[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)

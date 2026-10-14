@@ -117,7 +117,7 @@ end NaShorthand
 
 section Refines
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 variable (Δ) in
 /-- `REL[Δ] e << e' @ E : A`: `e` refines `e'` at `A` under the graded divergence `Δ`. -/
@@ -159,7 +159,7 @@ meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
 
 section SimpleLRels
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 omit [LawfulProbLangℝ rT] in
 theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
@@ -414,7 +414,7 @@ end SimpleLRels
 
 section SemtypesProperties
 variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
@@ -513,7 +513,7 @@ end SemtypesProperties
 
 section Monadic
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
 
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
     iprop(|={⊤}=> refines Δ E e t A) ⊢@{IProp GF} refines Δ E e t A := by

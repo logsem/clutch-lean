@@ -22,7 +22,7 @@ open Cslib Exp
 section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF] [GradeGS ι GF]
   [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft]
 
 /-! ## Tctx → RelCtx lifting -/

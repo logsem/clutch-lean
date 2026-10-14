@@ -16,73 +16,76 @@ variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
 
 def OpenInv (Δ : GradedDivergence.{0} ι) (e : Exp rT) : Prop :=
-  ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] {E1 E2 : CoPset}
+  ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
     (|={E1, E2}=> wp Δ E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp Δ E1 e Φ
 
 namespace OpenInv
 
 theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
-    [MicrometerWpGS (rT := rT) GF] [InvGS_gen hlc GF] {E1 E2 : CoPset} {σ₁ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT} {ε₁ : ENNReal} {Φ : Val rT → IProp GF} {v : Val rT} : iprop%
-    specCoupl Δ ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ => iprop(|={∅, E2}=>
-      stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ errInterp (rT := rT) ε₂ ∗ (|={E2, E1}=> Φ v))) ⊢
-    specCoupl Δ ∅ σ₁ e₁' σ₁' ε₁ fun σ₂ ρ' ε₂ => iprop(|={∅, E1}=>
-      stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ errInterp (rT := rT) ε₂ ∗ Φ v) := by
+    [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF] [InvGS_gen hlc GF] {E1 E2 : CoPset}
+    {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {α₁ : ι} {ε₁ : ENNReal}
+    {Φ : Val rT → IProp GF} {v : Val rT} : iprop%
+    specCoupl Δ ∅ σ₁ e₁' σ₁' α₁ ε₁ (fun σ₂ ρ' α₂ ε₂ => iprop(|={∅, E2}=>
+      stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ gradeInterp α₂ ∗ errInterp (rT := rT) ε₂ ∗
+        (|={E2, E1}=> Φ v))) ⊢
+    specCoupl Δ ∅ σ₁ e₁' σ₁' α₁ ε₁ fun σ₂ ρ' α₂ ε₂ => iprop(|={∅, E1}=>
+      stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ gradeInterp α₂ ∗ errInterp (rT := rT) ε₂ ∗
+        Φ v) := by
   iintro HSC
   iapply specCoupl_mono_spatial
   iframe
-  iintro %σ₂ %ρ' %ε₂ HBody
-  imod HBody with ⟨Hσ, Hs, Hε, >HΦ⟩
+  iintro %σ₂ %ρ' %α₂ %ε₂ HBody
+  imod HBody with ⟨Hσ, Hs, Hα, Hε, >HΦ⟩
   iframe
 
 theorem specCoupl_atomic_bridge_none [Δ.IsZeroLeft] {GF : BundledGFunctors}
-    [MicrometerWpGS (rT := rT) GF]
+    [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
     {e : Exp rT} (h : Atomic' e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {ε₁ : ENNReal} {Φ : Val rT → IProp GF} : iprop%
-    specCoupl Δ ∅ σ₁ e₁' σ₁' ε₁ (fun σ₂ ρ' ε₂ =>
-      progCoupl Δ e σ₂ ρ'.expr ρ'.state ε₂ fun e₃ σ₃ e₃' σ₃' ε₃ => iprop%
-        ▷ specCoupl Δ ∅ σ₃ e₃' σ₃' ε₃ fun σ₄ ρ'' ε₄ => iprop(|={∅, E2}=>
-          stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ errInterp (rT := rT) ε₄ ∗
-            wp Δ E2 e₃ (fun v => iprop(|={E2, E1}=> Φ v)))) ⊢
-    specCoupl Δ ∅ σ₁ e₁' σ₁' ε₁ fun σ₂ ρ' ε₂ =>
-      progCoupl Δ e σ₂ ρ'.expr ρ'.state ε₂ fun e₃ σ₃ e₃' σ₃' ε₃ => iprop%
-        ▷ specCoupl Δ ∅ σ₃ e₃' σ₃' ε₃ fun σ₄ ρ'' ε₄ => iprop(|={∅, E1}=>
-          stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ errInterp (rT := rT) ε₄ ∗
-            wp Δ E1 e₃ Φ) := by
+    {α₁ : ι} {ε₁ : ENNReal} {Φ : Val rT → IProp GF} : iprop%
+    specCoupl Δ ∅ σ₁ e₁' σ₁' α₁ ε₁ (fun σ₂ ρ' α₂ ε₂ =>
+      progCoupl Δ e σ₂ ρ'.expr ρ'.state α₂ ε₂ fun e₃ σ₃ e₃' σ₃' α₃ ε₃ => iprop%
+        ▷ specCoupl Δ ∅ σ₃ e₃' σ₃' α₃ ε₃ fun σ₄ ρ'' α₄ ε₄ => iprop(|={∅, E2}=>
+          stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ gradeInterp α₄ ∗
+            errInterp (rT := rT) ε₄ ∗ wp Δ E2 e₃ (fun v => iprop(|={E2, E1}=> Φ v)))) ⊢
+    specCoupl Δ ∅ σ₁ e₁' σ₁' α₁ ε₁ fun σ₂ ρ' α₂ ε₂ =>
+      progCoupl Δ e σ₂ ρ'.expr ρ'.state α₂ ε₂ fun e₃ σ₃ e₃' σ₃' α₃ ε₃ => iprop%
+        ▷ specCoupl Δ ∅ σ₃ e₃' σ₃' α₃ ε₃ fun σ₄ ρ'' α₄ ε₄ => iprop(|={∅, E1}=>
+          stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ gradeInterp α₄ ∗
+            errInterp (rT := rT) ε₄ ∗ wp Δ E1 e₃ Φ) := by
   iintro HSC
   iapply specCoupl_mono_spatial
   iframe
-  iintro %σ₂ %ρ' %ε₂ HBody
+  iintro %σ₂ %ρ' %α₂ %ε₂ HBody
   iapply progCoupl_mono
   isplitr
   swap
   · iapply progCoupl_strengthen (S := {ρ : Cfg rT | ρ.1.isValue}) Cfg.isValue_measurableSet (h σ₂)
     iframe HBody
-    iintro !> %_ %_ %_ %_ !>
+    iintro !> %_ %_ %_ %_ %_ !>
     iapply specCoupl_err_ge_1 (_root_.le_refl _)
-  iintro %e₃ %σ₃ %e₃' %σ₃' %ε₃ ⟨%Hreach, HInner⟩
+  iintro %e₃ %σ₃ %e₃' %σ₃' %α₃ %ε₃ ⟨%Hreach, HInner⟩
   rcases Hreach with he₃val | Hε1
   · iintro !>
     iapply specCoupl_bind Std.LawfulSet.subset_refl
     iframe HInner
-    iintro %σ₄ %ρ'' %ε₄ HBody4
+    iintro %σ₄ %ρ'' %α₄ %ε₄ HBody4
     iapply fupd_specCoupl
     irevert HBody4
     refine BI.entails_wand (fupd_elim ?_)
-    iintro ⟨Hσ4, Hs4, Hε4, HW4⟩
-    ihave HW4 := wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %ε₄ [$]
+    iintro ⟨Hσ4, Hs4, Hα4, Hε4, HW4⟩
+    ihave HW4 := wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %α₄ %ε₄ [$]
     irevert HW4
     refine BI.entails_wand (fupd_elim ?_)
     iintro HSC
     iapply fupd_intro
     iapply specCoupl_mono_spatial
     iframe
-    iintro %σ₅ %ρ''' %ε₅ HInnerBody
+    iintro %σ₅ %ρ''' %α₅ %ε₅ HInnerBody
     cases htv : e₃.toVal? with
     | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim
     | some v' =>
-      imod HInnerBody with ⟨Hσ5, Hs5, Hε5, >HΦv⟩
+      imod HInnerBody with ⟨Hσ5, Hs5, Hα5, Hε5, >HΦv⟩
       imodintro
       iframe
       iapply wp_value_of_toVal htv $$ HΦv
@@ -90,16 +93,16 @@ theorem specCoupl_atomic_bridge_none [Δ.IsZeroLeft] {GF : BundledGFunctors}
     iapply specCoupl_err_ge_1 Hε1
 
 theorem of_atomic [Δ.IsZeroLeft] {e : Exp rT} (h : Atomic' e) : OpenInv Δ e := by
-  intro GF _ E1 E2 Φ
+  intro GF _ _ E1 E2 Φ
   iintro HF
   iapply MicrometerWpGS.wp_unfold
   unfold wpPre
-  iintro %σ₁ %e₁' %σ₁' %ε₁ Hres
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ Hres
   icombine HF Hres as HFR
   irevert HFR
   refine BI.entails_wand (fupd_frame_right.trans (fupd_elim ?_))
   iintro ⟨HW, HresInner⟩
-  ihave HW := wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %ε₁ HresInner
+  ihave HW := wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %α₁ %ε₁ HresInner
   irevert HW
   refine BI.entails_wand (fupd_elim ?_)
   cases htv : e.toVal? with
@@ -108,7 +111,8 @@ theorem of_atomic [Δ.IsZeroLeft] {e : Exp rT} (h : Atomic' e) : OpenInv Δ e :=
 
 end OpenInv
 
-theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] {e : Exp rT}
+theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
+    {e : Exp rT}
     (h : OpenInv Δ e)
     {E1 E2 : CoPset} {Φ : Val rT → IProp GF} :
     iprop(|={E1, E2}=> wp Δ E2 e (fun v => iprop(|={E2, E1}=> Φ v))) ⊢ wp Δ E1 e Φ :=
@@ -161,14 +165,14 @@ theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [MicrometerWpGS (rT := 
 
 instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 E2 : CoPset}
     {e : Exp rT} [h : IsOpenInv Δ e] {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-    {P : IProp GF} {Φ : Val rT → IProp GF} :
+    [GradeGS ι GF] {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True p io false iprop(|={E1, E2}=> P) P
       (wp Δ E1 e Φ) (wp Δ E2 e (fun v => iprop(|={E2, E1}=> Φ v))) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans (wp_atomic h.out)
 
 instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpenInv Δ e]
-    {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] {Φ : Val rT → IProp GF}
+    {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF] {Φ : Val rT → IProp GF}
     (E₁ E₂ : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
     ElimAcc True (fupd E₁ E₂) (fupd E₂ E₁) α β γ (wp Δ E₁ e Φ)
       (fun x => wp Δ E₂ e (fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v)))) where
@@ -186,7 +190,7 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
     iexact Hinner
 
 instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
-    {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] {Φ : Val rT → IProp GF}
+    {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF] {Φ : Val rT → IProp GF}
     (E : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
     ElimAcc True (fupd E E) (fupd E E) α β γ (wp Δ E e Φ)
       (fun x => wp Δ E e (fun v => iprop(|={E}=> β x ∗ (γ x -∗? Φ v)))) where

@@ -20,7 +20,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 section AppRelRules
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF] [GradeGS ι GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 /-! ## Forward reductions on the LHS -/

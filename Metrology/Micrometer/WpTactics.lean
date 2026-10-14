@@ -29,7 +29,7 @@ open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.TotalEris
 
 section
 variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
@@ -59,14 +59,14 @@ section PureStepsConsumers
 variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
   {GF : BundledGFunctors}
 
-public theorem wp_pure_steps [MicrometerWpGS (rT := rT) GF]
+public theorem wp_pure_steps [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
     [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset} {e₁ e₂ : Exp rT}
     {Φ : Val rT → IProp GF} (h : PureSteps e₁ e₂) :
     wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
   have := h.pureExec
   (BI.laterN_intro _).trans (wp_pure_step_later' trivial)
 
-public theorem wp_pure_steps_at [MicrometerWpGS (rT := rT) GF]
+public theorem wp_pure_steps_at [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
     [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
     {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF} (heq : e₁ = e₁') (h : PureSteps e₁' e₂) :
     wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
@@ -103,6 +103,7 @@ meta structure WpGoal where
   Δ : Q(GradedDivergence.{0} $ι)
   {GF : Q(BundledGFunctors.{0, 0, 0})}
   instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF)
+  instGrade : Q(ProbLang.GradeGS $ι $GF)
   /-- The full `wp` application, with `E`, `e`, `Φ` as the trailing arguments. -/
   wpApp : LeanExpr
   {prop : Q(Type u)}
@@ -116,10 +117,11 @@ meta structure WpGoal where
   hprop : $prop =Q IProp $GF
   hbi : $bi =Q UPred.instBIUPred
 
-/-- The leading `wp` arguments `rT, instPL, ι, instMonoid, Δ, GF, instWp`, shared by every
-lemma the tactics apply (as `mkAppOptM` arguments; class instances on `Δ` follow as `none`). -/
+/-- The leading `wp` arguments `rT, instPL, ι, instMonoid, Δ, GF, instWp, instGrade`, shared by
+every lemma the tactics apply (as `mkAppOptM` arguments; class instances on `Δ` follow as
+`none`). -/
 meta def WpGoal.prefix (g : WpGoal) : Array (Option LeanExpr) :=
-  #[g.α, g.instPL, g.ι, g.instMonoid, g.Δ, g.GF, g.instWp]
+  #[g.α, g.instPL, g.ι, g.instMonoid, g.Δ, g.GF, g.instWp, g.instGrade]
 
 meta def WpGoal.mkWp (g : WpGoal) (e : LeanExpr) (Φ : LeanExpr) : LeanExpr :=
   let args := g.wpApp.getAppArgs
@@ -139,8 +141,8 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     unless goalE.getAppFn.consumeMData.isConstOf ``ProbLang.MicrometerWpGS.wp do
       throwError "the goal {goal} must be a `wp`"
     let args := goalE.getAppArgs
-    -- `rT, instPL, ι, instMonoid, Δ, GF, instWp, E, e, Φ`
-    unless args.size == 10 do
+    -- `rT, instPL, ι, instMonoid, Δ, GF, instWp, instGrade, E, e, Φ`
+    unless args.size == 11 do
       throwError "unexpected `wp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
     have instPL : Q(ProbLang.LawfulProbLangℝ $α) := args[1]!
@@ -148,10 +150,11 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     have instMonoid : Q(Monoid $ι) := args[3]!
     have Δ : Q(GradedDivergence.{0} $ι) := args[4]!
     have instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF) := args[6]!
-    have E : Q(CoPset) := args[7]!
-    have e : Q(Exp $α) := args[8]!
-    let Φ : LeanExpr := args[9]!
-    k mvar { instPL, instMonoid, Δ, GF, instWp, wpApp := goalE, hyps, E, e, Φ,
+    have instGrade : Q(ProbLang.GradeGS $ι $GF) := args[7]!
+    have E : Q(CoPset) := args[8]!
+    have e : Q(Exp $α) := args[9]!
+    let Φ : LeanExpr := args[10]!
+    k mvar { instPL, instMonoid, Δ, GF, instWp, instGrade, wpApp := goalE, hyps, E, e, Φ,
              hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
 /-! ## `wp_bind` — focus on a subexpression by auto-discovering its context -/
@@ -287,12 +290,14 @@ elab "wp_value" : tactic =>
 
 public theorem wp_value_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
     {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+    [GradeGS ι GF]
     {E : CoPset} (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) {Φ : Val rT → IProp GF} :
     Φ v ⊢ wp Δ E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
 public theorem wp_expr_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
     {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+    [GradeGS ι GF]
     {E : CoPset} {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
     wp Δ E e' Φ ⊢ wp Δ E e Φ :=
   heq ▸ .rfl

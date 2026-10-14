@@ -65,7 +65,7 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     LawfulProbLangℝ.unifUnitIsConcentrated
 
 section Unary
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [GradeGS ι GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
@@ -154,7 +154,7 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF] [GradeGS ι GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)

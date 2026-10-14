@@ -21,7 +21,7 @@ namespace ProbLang
 section Compatibility
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF] [GradeGS ι GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in

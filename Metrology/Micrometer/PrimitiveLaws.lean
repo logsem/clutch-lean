@@ -70,7 +70,7 @@ attribute [simp] ExtTreeMap.insert_eq_PartialMap_insert
 section Lifting
 
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [MicrometerGS rT hlc GF] [GradeGS ι GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp Δ E (.alloc (.ofVal v)) Φ := by
@@ -282,7 +282,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
     wp Δ E e Φ := by
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ₁'⟩
       ⟨pl(#(.int 0)), σ₁'⟩ := .RandNoTapeS Hz (_root_.le_refl _) Hz
@@ -298,7 +298,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
     imod specProg_update (e3 := K.fill pl(#(.int _))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     iapply Hwp $$ %_ %⟨Hv0, Hvz⟩ Hj'
   | RandNonposS hnz => exact absurd Hz hnz
 
@@ -335,7 +335,7 @@ theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     wp Δ E e Φ := by
   iintro ⟨Hj, Hwp⟩
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ₁'⟩
       ⟨pl(#(.int (-1))), σ₁'⟩ := .RandNonposS Hz
@@ -352,7 +352,7 @@ theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     imod specProg_update (e3 := K.fill pl(#(.int (-1)))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     iapply Hwp $$ Hj'
 
 theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e : Exp rT}
@@ -363,7 +363,7 @@ theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e :
   iintro ⟨Hj, Hα, Hwp⟩
   ihave HαB := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs HαB
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
@@ -383,7 +383,7 @@ theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e :
     imod specProg_update (e3 := K.fill pl(#(.int _))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     ihave HαNat := spec_empty_to_natTape $$ HαB
     iapply Hwp $$ HαNat Hj' %⟨Hv0, Hvz⟩
   | RandTapeOtherS _ hlook' hne _ _ _ =>
@@ -397,7 +397,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
     wp Δ E e Φ := by
   iintro ⟨Hj, Hl, Hwp⟩
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs Hl
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
@@ -420,7 +420,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
     imod specProg_update (e3 := K.fill pl(#(.int (-1)))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     iapply Hwp $$ Hl Hj'
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
@@ -456,7 +456,7 @@ theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp 
   iintro ⟨Hj, Hα, Hwp⟩
   ihave Hαb := spec_natTape_to_empty $$ Hα
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs Hαb
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
@@ -476,7 +476,7 @@ theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp 
     imod specProg_update (e3 := K.fill pl(#(.int _))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     ihave HαNat := spec_empty_to_natTape $$ Hαb
     iapply Hwp $$ [$HαNat $Hj'] %⟨Hv0, Hvz⟩
   | RandTapeOtherS _ hlook' hne _ _ _ =>
@@ -492,7 +492,7 @@ theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {n
   iunfold specNatTape at Hα
   icases Hα with ⟨%fs, %hmap, Hαb⟩
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %ε₁ ⟨Hσ, Hs, Hε⟩
+  iintro %σ₁ %e₁' %σ₁' %α₁ %ε₁ ⟨Hσ, Hs, Hα, Hε⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   ihave %hlook := spec_auth_lookup_tape $$ Hs Hαb
   have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ₁'⟩
@@ -515,7 +515,7 @@ theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {n
     imod specProg_update (e3 := K.fill pl(#(.int _))) $$ Hs Hj with ⟨Hs', Hj'⟩
     imod Hclose
     imodintro
-    iframe Hσ Hs' Hε
+    iframe Hσ Hs' Hα Hε
     ihave HαNat : specNatTape l M ns $$ [Hαb]
     · iunfold specNatTape; iexists fs; iframe %hmap Hαb
     iapply Hwp $$ [$HαNat $Hj'] %⟨Hv0, Hvz⟩
