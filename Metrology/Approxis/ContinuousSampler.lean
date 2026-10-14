@@ -102,30 +102,16 @@ theorem Cfg.uniformReal_codensity_bij (σ σ' : State rT) (f : rT → rT)
   exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (Cfg.measurable_realLit σ)
     (Cfg.measurable_realLit σ')
 
--- DEAD(approxis-codensity): replaced by `Cfg.uniformReal_codensity_bij`
-/-
+/-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
+of `Cfg.uniformReal_codensity_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f
       (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) :
     AddCoupl 0
       {p : Cfg rT × Cfg rT | ∃ r, r ∈ LawfulProbLangℝ.unifUnitSupport ∧
         p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
-      (Cfg.uniformReal σ) (Cfg.uniformReal σ') := by
-  rintro ⟨φ, Hφm, Hφb⟩ ⟨ψ, Hψm, Hψb⟩ Hle
-  simp only [add_zero]
-  show ∫⁻ c, φ c ∂(Cfg.uniformReal σ) ≤ ∫⁻ c, ψ c ∂(Cfg.uniformReal σ')
-  rw [Cfg.uniformReal, Cfg.uniformReal,
-      MeasureTheory.lintegral_map Hφm (Cfg.measurable_realLit σ),
-      MeasureTheory.lintegral_map Hψm (Cfg.measurable_realLit σ')]
-  have hψ' : Measurable fun r : rT => ψ ⟨pl(#(.real r)), σ'⟩ :=
-    Hψm.comp (Cfg.measurable_realLit σ')
-  rw [← hmp.lintegral_comp hψ']
-  have hae : ∀ᵐ r ∂(LawfulProbLangℝ.unifUnit (T := rT)), r ∈ LawfulProbLangℝ.unifUnitSupport :=
-    MeasureTheory.ae_iff.mpr LawfulProbLangℝ.unifUnitIsConcentrated
-  refine MeasureTheory.lintegral_mono_ae ?_
-  filter_upwards [hae] with r hr
-  exact Hle ⟨r, hr, rfl, rfl⟩
--/
+      (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
+  (Cfg.uniformReal_codensity_bij (Δ := TVDiv.tv.{0}) σ σ' f hmp).addCoupl
 
 theorem wp_couple_urand_urand (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f

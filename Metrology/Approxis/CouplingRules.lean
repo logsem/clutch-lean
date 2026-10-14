@@ -187,19 +187,8 @@ theorem Cfg.uniform_codensity_bij_fill [MeasurableSingletonClass rT] [Δ.IsRefle
   Cfg.uniform_codensity_fill Hz Hz σ σ' K (unifInt_codensity_bij Δ Hz f hdom hbij)
     fun n _ ⟨h0, h1, hm⟩ => ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
--- DEAD(approxis-codensity): replaced by `Codensity.map_right`
-/-
-open MeasureTheory in
-private theorem addCoupl_map_right {α β β' : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    [MeasurableSpace β'] {ε : ENNReal} {S : Set (α × β)} {R : Set (α × β')} {μ : Measure α}
-    {ν : Measure β} {g : β → β'} (hg : Measurable g) (HR : ∀ a b, S (a, b) → R (a, g b))
-    (H : AddCoupl ε S μ ν) : AddCoupl ε R μ (ν.map g) := by
-  have := AddCoupl.map id g measurable_id hg (HR _ _) H
-  rwa [Measure.map_id] at this
--/
-
--- DEAD(approxis-codensity): replaced by `unifInt_codensity_bij` + `Cfg.uniform_codensity_fill`
-/-
+/-- Exact coupling of `rand z ~ rand z` along a bijection of `[0, z)` (the `tv` instance of
+`unifInt_codensity_bij`). -/
 theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     (σ σ' : State rT) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
@@ -207,30 +196,20 @@ theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] {z : Int} (Hz : 0
       {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < z ∧
         p.1 = ⟨pl(#(.int n)), σ⟩ ∧ p.2 = ⟨pl(#(.int (f n))), σ'⟩}
       (Cfg.uniform z σ) (Cfg.uniform z σ') := by
-  classical
-  rintro ⟨φ, Hφm, Hφb⟩ ⟨ψ, Hψm, Hψb⟩ Hle
-  simp only [add_zero]
-  show ∫⁻ c, φ c ∂(Cfg.uniform z σ) ≤ ∫⁻ c, ψ c ∂(Cfg.uniform z σ')
-  rw [Cfg.lintegral_uniform' Hz σ Hφm, Cfg.lintegral_uniform' Hz σ' Hψm]
-  refine mul_le_mul_right ?_ _
-  rw [← Finset.sum_Ico_comp_of_bijOn hdom hbij fun m => ψ ⟨pl(#(.int m)), σ'⟩]
-  refine Finset.sum_le_sum fun n hn => ?_
-  simp only [Finset.mem_Ico] at hn
-  exact Hle ⟨n, hn.1, hn.2, rfl, rfl⟩
--/
+  rw [Cfg.uniform_eq_map Hz, Cfg.uniform_eq_map Hz]
+  refine ((unifInt_codensity_bij TVDiv.tv.{0} Hz f hdom hbij).map ?_).addCoupl
+  rintro n _ ⟨h0, h1, hm⟩
+  exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
--- DEAD(approxis-codensity): replaced by `Cfg.uniform_codensity_bij_fill`
-/-
+/-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)` (the `tv` instance of
+`Cfg.uniform_codensity_bij_fill`). -/
 theorem Cfg.uniform_addCoupl_bij_fill [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     AddCoupl 0 {p | CoupledDraw z f σ σ' K p.1 p.2}
       (Cfg.uniform z σ) ((Cfg.uniform z σ').map K.fillCfg) :=
-  addCoupl_map_right (Ectx.fillCfg.measurable K)
-    (by rintro _ _ ⟨n, h0, hz, heqL, rfl⟩; exact ⟨n, h0, hz, heqL, rfl⟩)
-    (Cfg.uniform_addCoupl_bij Hz σ σ' f hdom hbij)
--/
+  (Cfg.uniform_codensity_bij_fill (Δ := TVDiv.tv.{0}) Hz σ σ' f K hdom hbij).addCoupl
 
 /-! ## Core probability fact: uniform couplings along an injection (unequal bounds)
 
@@ -378,8 +357,6 @@ theorem unifInt_addCoupl_rev_inj {zL zR : Int} (HzR : 0 < zR) (Hle : zR ≤ zL) 
         gcongr
         exact_mod_cast Int.toNat_le_toNat Hle
 
--- DEAD(approxis-codensity): replaced by the integer-level `unifInt_addCoupl_inj`/`_rev_inj`
-/-
 /-- Uniform coupling along an injection, smaller bound on the left:
 `rand zL ~ rand zR` for `zL ≤ zR` along `f`, with error `(zR - zL)/zR`. -/
 theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
@@ -390,32 +367,11 @@ theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
       {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < zL ∧
         p.1 = ⟨pl(#(.int n)), σ⟩ ∧ p.2 = ⟨pl(#(.int (f n))), σ'⟩}
       (Cfg.uniform zL σ) (Cfg.uniform zR σ') := by
-  classical
-  have HzR : 0 < zR := HzL.trans_le Hle
-  rintro ⟨φ, Hφm, Hφb⟩ ⟨ψ, Hψm, Hψb⟩ Hpt
-  show ∫⁻ c, φ c ∂(Cfg.uniform zL σ) ≤ ∫⁻ c, ψ c ∂(Cfg.uniform zR σ') + _
-  rw [Cfg.lintegral_uniform' HzL σ Hφm, Cfg.lintegral_uniform' HzR σ' Hψm]
-  have hcast : (zR.toNat : ENNReal) = (zL.toNat : ENNReal) + ((zR - zL).toNat : ENNReal) := by
-    rw [← Nat.cast_add]
-    congr 1
-    omega
-  set S : ENNReal := ∑ n ∈ Finset.Ico (0 : Int) zL, ψ ⟨pl(#(.int (f n))), σ'⟩ with hS
-  have h1 : ∑ n ∈ Finset.Ico (0 : Int) zL, φ ⟨pl(#(.int n)), σ⟩ ≤ S := by
-    refine Finset.sum_le_sum fun n hn => ?_
-    simp only [Finset.mem_Ico] at hn
-    exact Hpt ⟨n, hn.1, hn.2, rfl, rfl⟩
-  have h2 : S ≤ ∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩ :=
-    Finset.sum_Ico_comp_le_of_injOn hdom hinj fun m => ψ ⟨pl(#(.int m)), σ'⟩
-  have h3 : S ≤ (zL.toNat : ENNReal) := Finset.sum_Ico_le_toNat fun n => Hψb _
-  calc (zL.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) zL, φ ⟨pl(#(.int n)), σ⟩
-    _ ≤ (zL.toNat : ENNReal)⁻¹ * S := by gcongr
-    _ ≤ ((zL.toNat : ENNReal) + ((zR - zL).toNat : ENNReal))⁻¹ * S +
-          ((zR - zL).toNat : ENNReal) / ((zL.toNat : ENNReal) + ((zR - zL).toNat : ENNReal)) :=
-        ENNReal.inv_mul_le_inv_mul_add (by omega) h3
-    _ = (zR.toNat : ENNReal)⁻¹ * S + ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal) := by
-        rw [hcast]
-    _ ≤ (zR.toNat : ENNReal)⁻¹ * ∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩ +
-          ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal) := by gcongr
+  rw [Cfg.uniform_eq_map HzL, Cfg.uniform_eq_map (HzL.trans_le Hle)]
+  refine AddCoupl.map _ _ Measurable.of_discrete Measurable.of_discrete ?_
+    (unifInt_addCoupl_inj HzL Hle f hdom hinj)
+  rintro n _ ⟨h0, h1, hm⟩
+  exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
 /-- Uniform coupling along an injection, smaller bound on the right:
 `rand zL ~ rand zR` for `zR ≤ zL` along `f : [0, zR) ↪ [0, zL)`; the left draw is
@@ -428,59 +384,11 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
       {p : Cfg rT × Cfg rT | ∃ m, 0 ≤ m ∧ m < zR ∧
         p.1 = ⟨pl(#(.int (f m))), σ⟩ ∧ p.2 = ⟨pl(#(.int m)), σ'⟩}
       (Cfg.uniform zL σ) (Cfg.uniform zR σ') := by
-  classical
-  have HzL : 0 < zL := HzR.trans_le Hle
-  rintro ⟨φ, Hφm, Hφb⟩ ⟨ψ, Hψm, Hψb⟩ Hpt
-  show ∫⁻ c, φ c ∂(Cfg.uniform zL σ) ≤ ∫⁻ c, ψ c ∂(Cfg.uniform zR σ') + _
-  rw [Cfg.lintegral_uniform' HzL σ Hφm, Cfg.lintegral_uniform' HzR σ' Hψm]
-  have hinjOn : ∀ n ∈ Finset.Ico (0 : Int) zR, ∀ m ∈ Finset.Ico (0 : Int) zR,
-      f n = f m → n = m := fun n hn m hm heq => by
-    simp only [Finset.mem_Ico] at hn hm
-    exact hinj n m hn.1 hn.2 hm.1 hm.2 heq
-  have himg_sub : (Finset.Ico (0 : Int) zR).image f ⊆ Finset.Ico (0 : Int) zL := by
-    intro m hm
-    obtain ⟨n, hn, rfl⟩ := Finset.mem_image.mp hm
-    simp only [Finset.mem_Ico] at hn ⊢
-    exact hdom n hn.1 hn.2
-  have himg_card : ((Finset.Ico (0 : Int) zR).image f).card = zR.toNat := by
-    rw [Finset.card_image_of_injOn hinjOn, Int.card_Ico, Int.sub_zero]
-  have himg_le : ∑ m ∈ (Finset.Ico (0 : Int) zR).image f, φ ⟨pl(#(.int m)), σ⟩ ≤
-      ∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩ := by
-    rw [Finset.sum_image hinjOn]
-    refine Finset.sum_le_sum fun m hm => ?_
-    simp only [Finset.mem_Ico] at hm
-    exact Hpt ⟨m, hm.1, hm.2, rfl, rfl⟩
-  have hrest_le : ∑ n ∈ Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f,
-      φ ⟨pl(#(.int n)), σ⟩ ≤ ((zL - zR).toNat : ENNReal) := by
-    calc ∑ n ∈ Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f,
-        φ ⟨pl(#(.int n)), σ⟩
-      _ ≤ ∑ _n ∈ Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f, 1 :=
-          Finset.sum_le_sum fun n _ => Hφb _
-      _ = (((Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f).card : ℕ) :
-            ENNReal) := by
-          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
-      _ = (((zL - zR).toNat : ℕ) : ENNReal) := by
-          rw [Finset.card_sdiff, Finset.inter_eq_left.mpr himg_sub, himg_card,
-            Int.card_Ico, Int.sub_zero]
-          congr 1
-          omega
-  have hsplit : ∑ n ∈ Finset.Ico (0 : Int) zL, φ ⟨pl(#(.int n)), σ⟩ ≤
-      (∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩) +
-        ((zL - zR).toNat : ENNReal) := by
-    rw [← Finset.sum_sdiff himg_sub, add_comm]
-    exact add_le_add himg_le hrest_le
-  calc (zL.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) zL, φ ⟨pl(#(.int n)), σ⟩
-    _ ≤ (zL.toNat : ENNReal)⁻¹ * ((∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩) +
-          ((zL - zR).toNat : ENNReal)) := by gcongr
-    _ = (zL.toNat : ENNReal)⁻¹ * ∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩ +
-          ((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal) := by
-        rw [mul_add, ENNReal.div_eq_inv_mul]
-    _ ≤ (zR.toNat : ENNReal)⁻¹ * ∑ m ∈ Finset.Ico (0 : Int) zR, ψ ⟨pl(#(.int m)), σ'⟩ +
-          ((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal) := by
-        gcongr
-        exact_mod_cast Int.toNat_le_toNat Hle
-
--/
+  rw [Cfg.uniform_eq_map (HzR.trans_le Hle), Cfg.uniform_eq_map HzR]
+  refine AddCoupl.map _ _ Measurable.of_discrete Measurable.of_discrete ?_
+    (unifInt_addCoupl_rev_inj HzR Hle f hdom hinj)
+  rintro _ m ⟨h0, h1, hm⟩
+  exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
 
 /-- Like `CoupledDraw`, but for the reversed injective coupling: the left draw is
 `f m` for the right draw `m`. -/
@@ -489,31 +397,33 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
   ∃ m : Int, 0 ≤ m ∧ m < z ∧
     c₁ = ⟨pl(#(.int (f m))), σ⟩ ∧ c₂ = ⟨K.fill (pl(#(.int m))), σ'⟩
 
--- DEAD(approxis-codensity): replaced by `Cfg.uniform_codensity_fill` under a hypothesis
-/-
+/-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the left (the `tv`
+instance of `Cfg.uniform_codensity_fill`). -/
 theorem Cfg.uniform_addCoupl_inj_fill [MeasurableSingletonClass rT] {zL zR : Int}
     (HzL : 0 < zL) (Hle : zL ≤ zR) (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
     AddCoupl (((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal))
       {p | CoupledDraw zL f σ σ' K p.1 p.2}
-      (Cfg.uniform zL σ) ((Cfg.uniform zR σ').map K.fillCfg) :=
-  addCoupl_map_right (Ectx.fillCfg.measurable K)
-    (by rintro _ _ ⟨n, h0, hz, heqL, rfl⟩; exact ⟨n, h0, hz, heqL, rfl⟩)
-    (Cfg.uniform_addCoupl_inj HzL Hle σ σ' f hdom hinj)
+      (Cfg.uniform zL σ) ((Cfg.uniform zR σ').map K.fillCfg) := by
+  have h := (unifInt_addCoupl_inj HzL Hle f hdom hinj).codensity
+  refine (Cfg.uniform_codensity_fill HzL (HzL.trans_le Hle) σ σ' K h ?_).addCoupl
+  rintro n _ ⟨h0, h1, hm⟩
+  exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
+/-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the right (the `tv`
+instance of `Cfg.uniform_codensity_fill`). -/
 theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT] {zL zR : Int}
     (HzR : 0 < zR) (Hle : zR ≤ zL) (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
     AddCoupl (((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal))
       {p | CoupledDrawRev zR f σ σ' K p.1 p.2}
-      (Cfg.uniform zL σ) ((Cfg.uniform zR σ').map K.fillCfg) :=
-  addCoupl_map_right (Ectx.fillCfg.measurable K)
-    (by rintro _ _ ⟨m, h0, hz, heqL, rfl⟩; exact ⟨m, h0, hz, heqL, rfl⟩)
-    (Cfg.uniform_addCoupl_rev_inj HzR Hle σ σ' f hdom hinj)
-
--/
+      (Cfg.uniform zL σ) ((Cfg.uniform zR σ').map K.fillCfg) := by
+  have h := (unifInt_addCoupl_rev_inj HzR Hle f hdom hinj).codensity
+  refine (Cfg.uniform_codensity_fill (HzR.trans_le Hle) HzR σ σ' K h ?_).addCoupl
+  rintro _ m ⟨h0, h1, hm⟩
+  exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
 
 theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) (σ : State rT) :
     primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ := by
@@ -559,29 +469,26 @@ theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] {z : Int} (Hz : 0 
   rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl (_root_.le_refl _) Hz rfl), Hlk]
   simp only [↓reduceIte]
 
--- DEAD(approxis-codensity): no callers; `Codensity.map_right` covers the generic case
-/-
 /-! ## Coupling-context helpers -/
 
 open MeasureTheory in
+/-- A coupling with a step of `e` gives one with a step of `K[e]`. -/
 theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [MeasurableSpace α]
     {μ : Measure α} {e : Exp rT} {σ : State rT} {R : Set (α × Cfg rT)} {ε : ENNReal} {K : Ectx rT}
     (hv : ¬ e.isValue) (Hcpl : AddCoupl ε R μ (primStep ⟨e, σ⟩)) :
     AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R (p.1, ⟨e'', p.2.state⟩)} μ
       (primStep ⟨K.fill e, σ⟩) := by
-  rw [primStep_fill hv]
-  exact addCoupl_map_right (Ectx.fillCfg.measurable K)
-    (by rintro _ ⟨e', _⟩ HR; exact ⟨e', rfl, HR⟩) Hcpl
+  rw [primStep_fill hv, ← Measure.map_id (μ := μ)]
+  exact Hcpl.map id K.fillCfg measurable_id (Ectx.fillCfg.measurable K) fun HR => ⟨_, rfl, HR⟩
 
 open MeasureTheory in
+/-- `AddCoupl_steps_ctx_bind_r` for a relation on expressions only. -/
 theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
     {μ : Measure (Cfg rT)} {e : Exp rT} {σ : State rT} {R : Exp rT → Exp rT → Prop} {ε : ENNReal}
     {K : Ectx rT} (hv : ¬ e.isValue)
     (Hcpl : AddCoupl ε {p : Cfg rT × Cfg rT | R p.1.expr p.2.expr} μ (primStep ⟨e, σ⟩)) :
-    AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R p.1.expr e''} μ (primStep ⟨K.fill e, σ⟩) := by
-  rw [primStep_fill hv]
-  exact addCoupl_map_right (Ectx.fillCfg.measurable K) (fun _ b HR => ⟨b.expr, rfl, HR⟩) Hcpl
--/
+    AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R p.1.expr e''} μ (primStep ⟨K.fill e, σ⟩) :=
+  AddCoupl_steps_ctx_bind_r hv Hcpl
 
 section CouplingRules
 

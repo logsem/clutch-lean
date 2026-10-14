@@ -472,9 +472,6 @@ theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.deco
   rw [heq]
   exact primStep_atomic e σ hne
 
--- DEAD(approxis-codensity): tv-specific test-function manipulations, superseded by
--- `Codensity.codensityE` and `CodensityE.add_const`.
-/-
 theorem lintegral_le_of_clamped {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {μ : MeasureTheory.Measure α} {ν : MeasureTheory.Measure β}
     {h₁ : α → ENNReal} {h₂ : β → ENNReal} {ε₁ ε₂ ε : ENNReal}
@@ -503,6 +500,8 @@ theorem lintegral_le_of_one_le {α β : Type _} [MeasurableSpace α] [Measurable
     _ ≤ ε := _root_.le_trans _root_.le_add_self Hε
     _ ≤ _ := _root_.le_add_self
 
+/-- An additive coupling gives a coupling in expectation for any cost bounded on the relation
+(the `tv` form of `Codensity.codensityE`). -/
 theorem expCoupl_of_addCoupl {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {μ : MeasureTheory.Measure α} {ν : MeasureTheory.Measure β} {R : α → β → Prop}
     {Y : α → β → ENNReal} {ε₁ ε₂ ε : ENNReal}
@@ -518,6 +517,8 @@ theorem expCoupl_of_addCoupl {α β : Type _} [MeasurableSpace α] [MeasurableSp
     simpa using this
   · exact lintegral_le_of_one_le Hε (_root_.not_le.mp hε₂).le hμ Hh₁
 
+/-- Adding a constant to the cost of a coupling in expectation adds it to the bound
+(the `tv` form of `CodensityE.add_const`). -/
 theorem expCoupl_add_const {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {μ : MeasureTheory.Measure α} {ν : MeasureTheory.Measure β} {X₂ : α → β → ENNReal}
     {ε₁ ε₂ ε : ENNReal} (Hε : ε₁ + ε₂ ≤ ε) (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1)
@@ -535,7 +536,6 @@ theorem expCoupl_add_const {α β : Type _} [MeasurableSpace α] [MeasurableSpac
     · rw [inf_of_le_right (_root_.not_le.mp hlt).le]
       exact le_add_right (Hh₁ a)
   · exact lintegral_le_of_one_le Hε (_root_.not_le.mp hε₂).le hμ Hh₁
--/
 
 theorem specCoupl_couple {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε : ENNReal} {Z : State rT → Cfg rT → ENNReal → IProp GF}
@@ -933,17 +933,16 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
   · imodintro
     iexact H1F
 
--- DEAD(approxis-codensity): needs right concentration (`AddCoupl.concentrated_R`), which has
--- no generic codensity analogue; `progCoupl_step_l_concentrated` now goes through
--- `progCoupl_step_l_erasable` at `μ₁' := dirac σ₁'` via `codensity_dirac_right`.
-/-
+/-- Step the left program against a right state that does not move, for an additive coupling
+with the right Dirac measure. -/
 theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁)
     (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁')) :
     iprop% (□ ∀ e₂ σ₂ e₂' σ₂', Z e₂ σ₂ e₂' σ₂' 1) ∗
-    (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢ progCoupl Δ e₁ σ₁ e₁' σ₁' ε Z := by
+    (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
+      progCoupl TVDiv.tv.{0} e₁ σ₁ e₁' σ₁' ε Z := by
   iintro ⟨#H1F, H⟩
   classical
   have hconc : MeasureTheory.Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
@@ -953,13 +952,12 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     refine AddCoupl.mono_rel ?_ (AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl)
     rintro ⟨ρ, σ⟩ ⟨HR, hmem⟩
     exact ⟨HR, hmem⟩
-  iapply progCoupl_step_l_erasable (R := fun ρ σ => R ρ σ ∧ σ = σ₁') Hε Hred HcplR
+  iapply progCoupl_step_l_erasable (R := fun ρ σ => R ρ σ ∧ σ = σ₁') Hε Hred HcplR.codensity
     (ErasableExpr.dret σ₁')
   iframe H1F
   iintro %e₂ %σ₂ %σ₂' %HR'
   obtain ⟨HR, rfl⟩ := HR'
   iapply H $$ %e₂ %σ₂ %HR
--/
 
 theorem progCoupl_step_l_concentrated [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
     {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}

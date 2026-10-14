@@ -6,6 +6,7 @@ public import Metrology.ProbLang.HeadStep
 public import Metrology.ProbLang.DetStep
 public import Metrology.ProbLang.Discrete
 public import Metrology.Couplings.CodensityLifting
+public import Metrology.Couplings.AdditiveCouplings
 
 @[expose] public section
 
@@ -419,8 +420,6 @@ theorem limExecV_codensity [Δ.IsLeftContinuous] {β : Type*} [MeasurableSpace �
 
 end Codensity
 
--- DEAD(approxis-codensity): AddCoupl limit lemmas, replaced by `limExec_map_codensity`
-/-
 -- Rocq: lim_exec_ARcoupl, specialized to additive form.
 theorem limExec_AddCoupl
     {β : Type*} [MeasurableSpace β] {ε : ENNReal}
@@ -450,7 +449,6 @@ theorem limExecV_AddCoupl
     (H : ∀ n, AddCoupl ε Φ (asExpr (execN n ρ)) μ₂) :
     AddCoupl ε Φ (limExecV ρ) μ₂ :=
   limExec_map_AddCoupl Cfg.measurable_expr H
--/
 
 end ProbLang
 end

@@ -24,19 +24,6 @@ def adequacyRel (φ : Val rT → Val rT → Prop) : Set (Exp rT × Exp rT) :=
     (ε : ENNReal) (n : Nat) (ρ ρ' : Cfg rT) : Prop :=
   Δ.Codensity 1 ε (adequacyRel φ) (asExpr (execN n ρ)) (limExecV ρ')
 
--- DEAD(approxis-codensity): replaced by the `IsSubProbabilityMeasure` instance on `asExpr`
-/-
-theorem asExpr_execN_univ_le_one (n : Nat) (ρ : Cfg rT) : asExpr (execN n ρ) Set.univ ≤ 1 := by
-  unfold asExpr
-  rw [MeasureTheory.Measure.map_apply Cfg.measurable_expr MeasurableSet.univ]
-  simpa using execN_univ_le_one n ρ
-
-theorem limExecV_univ_le_one (ρ : Cfg rT) : limExecV ρ Set.univ ≤ 1 := by
-  unfold limExecV asExpr
-  rw [MeasureTheory.Measure.map_apply Cfg.measurable_expr MeasurableSet.univ]
-  simpa using limExec_leq_mass (r := 1) (fun n => execN_univ_le_one n ρ)
--/
-
 section Adequacy
 
 variable {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous]
@@ -262,13 +249,13 @@ theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   Codensity.of_forall_lt fun ε' hε' => wp_adequacy e e' σ σ' ε' φ fun Hinst => Hwp Hinst ε' hε'
 
--- DEAD(approxis-codensity): unused; `Codensity` has no mass bound for general `Δ`
-/-
+/-- Adequacy bounds the mass of the left program by that of the right plus the error credits
+(the `tv` instance of `wp_adequacy`). -/
 theorem wp_adequacy_mass (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
     (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp TVDiv.tv.{0} ⊤ e
+        (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε := by
-  simpa using AddCoupl.mass_leq (wp_adequacy e e' σ σ' ε φ Hwp)
--/
+  simpa using (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl.mass_leq
 
 end ProbLang
