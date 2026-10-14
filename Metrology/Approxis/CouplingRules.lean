@@ -307,10 +307,8 @@ theorem unifInt_addCoupl_inj {zL zR : Int} (HzL : 0 < zL) (Hle : zL ≤ zR) (f :
     congr 1
     omega
   set S : ENNReal := ∑ n ∈ Finset.Ico (0 : Int) zL, ψ (f n) with hS
-  have h1 : ∑ n ∈ Finset.Ico (0 : Int) zL, φ n ≤ S := by
-    refine Finset.sum_le_sum fun n hn => ?_
-    simp only [Finset.mem_Ico] at hn
-    exact Hpt ⟨hn.1, hn.2, rfl⟩
+  have h1 : ∑ n ∈ Finset.Ico (0 : Int) zL, φ n ≤ S :=
+    Finset.sum_le_sum fun n hn => Hpt ⟨(Finset.mem_Ico.1 hn).1, (Finset.mem_Ico.1 hn).2, rfl⟩
   have h2 : S ≤ ∑ m ∈ Finset.Ico (0 : Int) zR, ψ m :=
     Finset.sum_Ico_comp_le_of_injOn hdom hinj ψ
   have h3 : S ≤ (zL.toNat : ENNReal) := Finset.sum_Ico_le_toNat fun n => Hψb _
@@ -341,19 +339,15 @@ theorem unifInt_addCoupl_rev_inj {zL zR : Int} (HzR : 0 < zR) (Hle : zR ≤ zL) 
       f n = f m → n = m := fun n hn m hm heq => by
     simp only [Finset.mem_Ico] at hn hm
     exact hinj n m hn.1 hn.2 hm.1 hm.2 heq
-  have himg_sub : (Finset.Ico (0 : Int) zR).image f ⊆ Finset.Ico (0 : Int) zL := by
-    intro m hm
-    obtain ⟨n, hn, rfl⟩ := Finset.mem_image.mp hm
-    simp only [Finset.mem_Ico] at hn ⊢
-    exact hdom n hn.1 hn.2
+  have himg_sub : (Finset.Ico (0 : Int) zR).image f ⊆ Finset.Ico (0 : Int) zL :=
+    Finset.image_subset_iff.2 fun n hn =>
+      Finset.mem_Ico.2 (hdom n (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2)
   have himg_card : ((Finset.Ico (0 : Int) zR).image f).card = zR.toNat := by
     rw [Finset.card_image_of_injOn hinjOn, Int.card_Ico, Int.sub_zero]
   have himg_le : ∑ m ∈ (Finset.Ico (0 : Int) zR).image f, φ m ≤
       ∑ m ∈ Finset.Ico (0 : Int) zR, ψ m := by
     rw [Finset.sum_image hinjOn]
-    refine Finset.sum_le_sum fun m hm => ?_
-    simp only [Finset.mem_Ico] at hm
-    exact Hpt ⟨hm.1, hm.2, rfl⟩
+    exact Finset.sum_le_sum fun m hm => Hpt ⟨(Finset.mem_Ico.1 hm).1, (Finset.mem_Ico.1 hm).2, rfl⟩
   have hrest_le : ∑ n ∈ Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f,
       φ n ≤ ((zL - zR).toNat : ENNReal) := by
     calc ∑ n ∈ Finset.Ico (0 : Int) zL \ (Finset.Ico (0 : Int) zR).image f,
@@ -730,10 +724,9 @@ theorem wp_couple_rand_rand_adv [Δ.IsExpectationAdditive] (z : Int) (f : Int �
     refine _root_.le_antisymm (iInf₂_le n ⟨⟨h0, h1⟩, rfl⟩) (le_iInf₂ fun n' hn' => ?_)
     rw [(huniq n' hn').trans (huniq n ⟨⟨h0, h1⟩, rfl⟩).symm]
   have hint : 0 + ∫⁻ m, c m ∂unifInt z Hz ≤ ε₁ := by
-    rw [zero_add, lintegral_unifInt, ← Finset.sum_Ico_comp_of_bijOn hdom hbij c,
+    rwa [zero_add, lintegral_unifInt, ← Finset.sum_Ico_comp_of_bijOn hdom hbij c,
       Finset.sum_congr rfl fun n hn => hcf n (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2,
       ← ENNReal.div_eq_inv_mul]
-    exact hamort
   have Hkant : Δ.CodensityE 1 ε₁ X (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩)
       (primStep ⟨K.fill pl(rand(#(.int z), #(.unit))), σ₁'⟩) := by
     have h := ((GradedDivergence.codensityE_relCost_iff.2
@@ -750,8 +743,7 @@ theorem wp_couple_rand_rand_adv [Δ.IsExpectationAdditive] (z : Int) (f : Int �
       rcases hnm with ⟨h0 : 0 ≤ n, h1 : n < z, rfl : m = f n⟩
       rw [hcf n h0 h1]
       exact (hXgraph n h0 h1).le.trans inf_le_right
-    · rw [GradedDivergence.relCost_of_notMem hnm, top_add]
-      exact le_top
+    · simp [GradedDivergence.relCost_of_notMem hnm]
   ihave %Hεle := ErrorCredit.supply_bound $$ Hε Herr
   imod ErrorCredit.supply_decrease $$ Hε Herr with Hdec
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose

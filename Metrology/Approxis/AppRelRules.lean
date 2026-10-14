@@ -101,7 +101,7 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
   iintro ⟨⟨HK, Hna, Herr, Hpos⟩, HRefv⟩
-  iunfold refines  at HRefv
+  iunfold refines at HRefv
   iapply HRefv $$ %K' %ε HK Hna Herr Hpos
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
@@ -133,7 +133,7 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
   iintro ⟨⟨Hna, Herr, Hpos⟩, HFup⟩
   imod HFup with ⟨%t', HKt', HRef⟩
   imodintro
-  iunfold refines  at HRef
+  iunfold refines at HRef
   iapply HRef $$ %K' %ε HKt' Hna Herr Hpos
 
 /-! ## Stateful reductions on the LHS -/

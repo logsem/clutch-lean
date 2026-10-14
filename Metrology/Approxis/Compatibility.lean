@@ -100,7 +100,7 @@ theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     show Ectx.fill [EctxItem.appR e1'] v2'.1 = Ectx.fill [EctxItem.appL v2'] e1' from rfl]
   iapply refines_bind [EctxItem.appL v2] [EctxItem.appL v2'] $$ IH1
   iintro %v1 %v1' #Hff
-  iunfold lrel_arr  at Hff
+  iunfold lrel_arr at Hff
   icases Hff with ⟨-, Hff⟩
   rw [show Ectx.fill [EctxItem.appL v2] v1.1 = Exp.app v1.1 v2.1 from rfl,
     show Ectx.fill [EctxItem.appL v2'] v1'.1 = Exp.app v1'.1 v2'.1 from rfl]

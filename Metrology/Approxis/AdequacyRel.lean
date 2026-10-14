@@ -57,7 +57,7 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
   set IR : ApproxisRGS rT .hasNoLC GF := { approxisGS := IGS, naInvG := _, nais := γ }
   icases ErrorCredit.difference hε'.le $$ Herr with ⟨Hεc, Hrest⟩
   ihave HlogR := Hlog IR $$ Hεc
-  iunfold refines  at HlogR
+  iunfold refines at HlogR
   rw [spec_eq_fill_nil e']
   ispecialize HlogR $$ %([] : Ectx rT) %(ε' - ε) He' Htok Hrest %(tsub_pos_of_lt hε')
   iapply ApproxisWpGS.wp_mono $$ HlogR

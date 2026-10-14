@@ -870,14 +870,9 @@ theorem progCoupl_steps {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
   iintro ⟨#H1F, Hcnt⟩
   classical
   let Y : Cfg rT → Cfg rT → ENNReal := fun ρ₁ ρ₂ => if R ρ₁ ρ₂ ∧ ε₂ ≤ 1 then ε₂ else 1
-  have HY_bnd : ∀ ρ₁ ρ₂, Y ρ₁ ρ₂ ≤ 1 := fun ρ₁ ρ₂ => by
-    simp only [Y]; split_ifs with h; exacts [h.2, _root_.le_refl _]
+  have HY_bnd : ∀ ρ₁ ρ₂, Y ρ₁ ρ₂ ≤ 1 := fun ρ₁ ρ₂ => by grind
   have HY_exp : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) :=
-    (Hcpl.codensityE fun a b hab => by
-        simp only [Y]
-        split_ifs with h
-        · exact _root_.le_refl _
-        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le).mono_bound Hε
+    (Hcpl.codensityE fun a b hab => by grind).mono_bound Hε
   iapply progCoupl_steps_adv' Hred Hred' HY_bnd HY_exp
   iintro %e₂ %σ₂ %e₂' %σ₂'
   simp only [Y]
@@ -896,11 +891,8 @@ theorem progCoupl_step_l_erasable_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' 
     (∀ e₂ σ₂ σ₂', |={∅}=> Z e₂ σ₂ e₁' σ₂' (X₂ ⟨e₂, σ₂⟩ σ₂')) ⊢ progCoupl Δ e₁ σ₁ e₁' σ₁' ε Z := by
   iintro ⟨#H1F, Hcnt⟩
   classical
-  have Hbnd' : ∀ ρ₁ ρ₂ : Cfg rT, (if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1) ≤ 1 := by
-    intro ρ₁ ρ₂
-    split_ifs with h
-    · exact Hbnd _ _
-    · exact _root_.le_refl _
+  have Hbnd' : ∀ ρ₁ ρ₂ : Cfg rT, (if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1) ≤ 1 :=
+    fun ρ₁ ρ₂ => by grind
   have Hexp' : Δ.CodensityE 1 ε (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1)
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN 0 ⟨e₁', σ⟩) := by
     simp only [pexecN_zero]
@@ -929,14 +921,9 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
   iintro ⟨#H1F, Hcnt⟩
   classical
   let Y : Cfg rT → State rT → ENNReal := fun ρ₁ σ₂' => if R ρ₁ σ₂' ∧ ε₂ ≤ 1 then ε₂ else 1
-  have HY_bnd : ∀ ρ₁ σ₂', Y ρ₁ σ₂' ≤ 1 := fun ρ₁ σ₂' => by
-    simp only [Y]; split_ifs with h; exacts [h.2, _root_.le_refl _]
+  have HY_bnd : ∀ ρ₁ σ₂', Y ρ₁ σ₂' ≤ 1 := fun ρ₁ σ₂' => by grind
   have HY_exp : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) μ₁' :=
-    (Hcpl.codensityE fun a b hab => by
-        simp only [Y]
-        split_ifs with h
-        · exact _root_.le_refl _
-        · exact (_root_.not_le.mp fun hc => h ⟨hab, hc⟩).le).mono_bound Hε
+    (Hcpl.codensityE fun a b hab => by grind).mono_bound Hε
   iapply progCoupl_step_l_erasable_adv Hred Heras HY_bnd HY_exp
   iframe H1F
   iintro %e₂ %σ₂ %σ₂'
