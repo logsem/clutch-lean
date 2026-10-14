@@ -1,8 +1,8 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
-public import Metrology.Approxis.Model
-public import Metrology.Approxis.AppRelRules
+public import Metrology.Micrometer.PrimitiveLaws
+public import Metrology.Micrometer.Model
+public import Metrology.Micrometer.AppRelRules
 
 @[expose] public section
 

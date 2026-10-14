@@ -1,14 +1,14 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.AppWeakestpre
+public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
 public import Metrology.Couplings.CodensityMassDetecting
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS ProbLang.Cfg
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS ProbLang.Cfg
 open GradedDivergence
 open scoped AppGS
 
@@ -35,7 +35,7 @@ section Adequacy
 
 variable {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous]
   [Δ.IsExpectationAdditive]
-variable {GF : BundledGFunctors} [IA : ApproxisGS rT .hasNoLC GF]
+variable {GF : BundledGFunctors} [IA : MicrometerGS rT .hasNoLC GF]
 
 omit [Δ.IsZeroLeft] [Δ.IsLeftContinuous] in
 theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -133,7 +133,7 @@ theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
     (x : Option (Val rT)) (some_f : (v : Val rT) → motive (some v))
     (none_f : Unit → motive none) :
     ProbLang.wpPre_value_Z_eq.match_1 motive x some_f none_f =
-    ProbLang.ApproxisWpGS.wpPre.match_1 motive x some_f none_f := by
+    ProbLang.MicrometerWpGS.wpPre.match_1 motive x some_f none_f := by
   cases x <;> rfl
 
 omit [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous] [Δ.IsExpectationAdditive] in
@@ -151,7 +151,7 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   rw [wpPre_value_Z_eq Δ E]
   simp only [wpPre_match_eq]
   iintro Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
-  iapply (BI.equiv_iff.mp ApproxisWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
+  iapply (BI.equiv_iff.mp MicrometerWpGS.wp_unfold).1 $$ Hwp %σ₁ %e₁' %σ₁' %ε₁ Hinterp
 
 omit [Δ.IsLeftContinuous] in
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
@@ -227,7 +227,7 @@ variable [AppPreGS rT GF] [SpecPreGS rT GF] [IECPre : ECPreGS GF] [InvGpreS GF]
 
 omit [Δ.IsLeftContinuous] in
 theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
-    (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+    (ε : ENNReal) (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl Δ φ ε n ⟨e, σ⟩ ⟨e', σ'⟩ := by
   by_cases hε1 : 1 ≤ ε
@@ -238,20 +238,20 @@ theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : V
   imod app_ra_init σ with ⟨%IA, HappAuth⟩
   imod spec_ra_init e' σ' with ⟨%ISpec, HspecAuth, HspecFrag⟩
   imod ec_alloc ε (lt_of_not_ge hε1) with ⟨%γec, HecAuth, HecFrag⟩
-  let IAS : ApproxisGS rT .hasNoLC GF :=
+  let IAS : MicrometerGS rT .hasNoLC GF :=
     { appGS := IA, specGS := ISpec, ecGS := { toECPreGS := IECPre, γec := γec }, invGS := Hinv }
   ihave Hwp := Hwp IAS $$ HspecFrag HecFrag
   iapply wp_adequacy_step_fupdN $$ [$]
 
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : Val rT → Val rT → Prop)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   limExecV_codensity fun n => wp_adequacy_exec_n e e' σ σ' n φ ε Hwp
 
 theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (φ : Val rT → Val rT → Prop)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     Δ.Codensity 1 ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   Codensity.of_forall_lt fun ε' hε' => wp_adequacy e e' σ σ' ε' φ fun Hinst => Hwp Hinst ε' hε'
@@ -259,7 +259,7 @@ theorem wp_adequacy_error_lim (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
 /-- Programs whose results agree up to error credits `ε` have output divergence at most `ε`
 (the fundamental property, Thm. 8.2). -/
 theorem wp_adequacy_div [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
     Δ 1 (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) ≤ ε :=
   ((wp_adequacy e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
@@ -267,14 +267,14 @@ theorem wp_adequacy_div [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT) (ε
 /-- `wp_adequacy_div` with error credits strictly above `ε`. -/
 theorem wp_adequacy_div_error_lim [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT)
     (ε : ENNReal)
-    (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ec ε' -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
     Δ 1 (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) ≤ ε :=
   ((wp_adequacy_error_lim e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
 
 /-- Adequacy bounds the mass of the left program by that of the right plus the error credits. -/
 theorem wp_adequacy_mass [Δ.IsReflexive] [Δ.IsMassDetectingAdd] (e e' : Exp rT) (σ σ' : State rT)
-    (φ : Val rT → Val rT → Prop) (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
+    (φ : Val rT → Val rT → Prop) (ε : ENNReal) (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
   (wp_adequacy e e' σ σ' ε φ Hwp).measure_le_add .univ .univ fun _ _ _ _ ↦ trivial

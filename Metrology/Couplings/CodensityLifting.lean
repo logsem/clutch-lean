@@ -119,7 +119,7 @@ theorem codensityE_top {α : ι} {E : X → Y → ℝ≥0∞} {μ : Measure X} {
     Δ.CodensityE α ⊤ E μ ν :=
   fun _ _ _ _ _ _ _ _ _ ↦ by simp
 
-/-- Adding a constant to the cost adds it to the bound (cf. `expCoupl_add_const` in Approxis). -/
+/-- Adding a constant to the cost adds it to the bound (cf. `expCoupl_add_const` in Micrometer). -/
 theorem CodensityE.add_const {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
     {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (c : ℝ≥0∞) :
     Δ.CodensityE α (δ + c) (fun x y ↦ E x y + c) μ ν :=

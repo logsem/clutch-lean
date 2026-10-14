@@ -1,12 +1,12 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.Model
-public import Metrology.Approxis.AdequacyRel
+public import Metrology.Micrometer.Model
+public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.CodensityMassDetecting
-public import Metrology.Approxis.Interp
-public import Metrology.Approxis.Fundamental
+public import Metrology.Micrometer.Interp
+public import Metrology.Micrometer.Fundamental
 public import Metrology.ProbLang.ContextualRefinement
 
 @[expose] public section
@@ -16,12 +16,12 @@ public import Metrology.ProbLang.ContextualRefinement
 namespace ProbLang
 
 open GradedDivergence ProbLang.Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
-open ProbLang.ApproxisWpGS
+open ProbLang.MicrometerWpGS
 
 section Soundness
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft]
 
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
@@ -282,7 +282,7 @@ def boolEqVal (v v' : Val rT) : Prop :=
 
 omit [RefinesPreGS rT GF] [Monoid ι] [D.IsMassBounded] [D.IsZeroLeft] [D.IsLeftContinuous]
   [D.IsExpectationAdditive] [D.IsReflexive] [D.IsComposable] [D.IsMassDetecting] in
-theorem lrel_bool_to_boolEqVal [ApproxisRGS rT .hasNoLC GF] (v v' : Val rT) :
+theorem lrel_bool_to_boolEqVal [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iintro Hbool
   iunfold lrel_bool at Hbool
@@ -293,7 +293,7 @@ theorem lrel_bool_to_boolEqVal [ApproxisRGS rT .hasNoLC GF] (v v' : Val rT) :
 variable (D) in
 theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ)
     (Hty_e' : Typed Γtc e' τ)
-    (Hlog : ∀ (_IR : ApproxisRGS rT .hasNoLC GF) (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF),
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF),
       TctxRelated D Δ Γtc Γrc →
         ⊢@{IProp GF} bin_log_related_ty D (hlc := .hasNoLC) ⊤ Δ Γrc e e' τ) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ Tctx.empty .bool →
@@ -331,7 +331,7 @@ theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e 
 
 theorem refines_sound_fresh (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Tctx.empty e τ)
     (Hty_e' : Typed Tctx.empty e' τ)
-    (Hlog : ∀ (_IR : ApproxisRGS rT .hasNoLC GF) (Δ : TyEnv rT GF),
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (Δ : TyEnv rT GF),
       ⊢@{IProp GF} refines D (hlc := .hasNoLC) ⊤ e e' (interp D τ Δ)) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Tctx.empty τ Tctx.empty .bool →
       Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →

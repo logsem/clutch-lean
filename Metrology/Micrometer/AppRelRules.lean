@@ -1,17 +1,17 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
+public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.Model
-public import Metrology.Approxis.PrimitiveLaws
-public import Metrology.Approxis.CouplingRules
-public import Metrology.Approxis.OpenInv
+public import Metrology.Micrometer.Model
+public import Metrology.Micrometer.PrimitiveLaws
+public import Metrology.Micrometer.CouplingRules
+public import Metrology.Micrometer.OpenInv
 
 @[expose] public section
 
 /-! # Relational Rules -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -20,7 +20,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 section AppRelRules
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 /-! ## Forward reductions on the LHS -/
@@ -31,7 +31,7 @@ theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
   iintro H %K' %ε HK Hna Herr Hpos
-  iapply ApproxisWpGS.wp_pure_step_later' (Hex := HexK) Hφ
+  iapply MicrometerWpGS.wp_pure_step_later' (Hex := HexK) Hφ
   inext
   iapply H $$ HK Hna Herr Hpos
 
@@ -89,15 +89,15 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
   iintro He
   iunfold refines
   iintro %K' %ε HK Hna Herr Hpos
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   let R : IProp GF := iprop% ⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯ ε ∗ ⌜0 < ε⌝
   ihave HR : R $$ [HK Hna Herr Hpos]
   · isplitl [HK]; · iassumption
     iframe
   ihave HFrame : wp Δ ⊤ e1 (fun v => iprop(R ∗ refines Δ E (K.fill v.1) t A)) $$ [HR He]
-  · iapply ApproxisWpGS.wp_frame_l (Φ := fun v => refines Δ E (K.fill v.1) t A)
+  · iapply MicrometerWpGS.wp_frame_l (Φ := fun v => refines Δ E (K.fill v.1) t A)
     iframe HR He
-  iapply ApproxisWpGS.wp_mono $$ HFrame
+  iapply MicrometerWpGS.wp_mono $$ HFrame
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
   iintro ⟨⟨HK, Hna, Herr, Hpos⟩, HRefv⟩
@@ -114,7 +114,7 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
   iintro Hlog
   iunfold refines
   iintro %K' %ε HK Hna Herr Hpos
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_atomic Hopen
   imod Hlog $$ %K' HK with HW
   imodintro
@@ -124,10 +124,10 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
     iframe
   ihave HFrame : wp Δ E' e1 (fun v => iprop(R ∗
       (|={E', ⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines Δ E (K.fill v.1) t' A))) $$ [HR HW]
-  · iapply ApproxisWpGS.wp_frame_l
+  · iapply MicrometerWpGS.wp_frame_l
       (Φ := fun v => iprop(|={E',⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines Δ E (K.fill v.1) t' A))
     iframe HR HW
-  iapply ApproxisWpGS.wp_mono $$ HFrame
+  iapply MicrometerWpGS.wp_mono $$ HFrame
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
   iintro ⟨⟨Hna, Herr, Hpos⟩, HFup⟩
@@ -427,7 +427,7 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_rand z f hdom hbij Hz (K2.comp K') ⊤ _
   iframe Hj
   iintro %n %Hn HKres
@@ -449,7 +449,7 @@ theorem refines_couple_rands_lr_adv [Δ.IsExpectationAdditive] {E : CoPset} {K K
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort (K2.comp K') ⊤ _
   iframe Hj Hε
   iintro %n %Hn Hec HKres
@@ -506,7 +506,7 @@ theorem refines_couple_TU {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_tape_rand z f hdom hbij Hz (K2.comp K') ⊤ α _
   iframe Hα Hj
   iintro %n ⟨HαNew, HKres, %Hn⟩
@@ -525,7 +525,7 @@ theorem refines_couple_UT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_tape z f hdom hbij Hz (K2.comp K') ⊤ α' _
   iframe Hα' Hj
   iintro %n ⟨Hα'New, HKres, %Hn⟩
@@ -545,7 +545,7 @@ theorem refines_couple_TT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply ApproxisWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_lbl_rand_lbl z f hdom hbij Hz (K2.comp K') ⊤ α α' _
   iframe Hα Hα' Hj
   iintro %n ⟨HαNew, Hα'New, HKres, %Hn⟩

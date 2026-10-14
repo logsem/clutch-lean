@@ -7,7 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over the unit interval
 
-Refined in `Approxis/Examples/ContinuousOTP`. -/
+Refined in `Micrometer/Examples/ContinuousOTP`. -/
 
 namespace ProbLang
 namespace ContinuousOTP

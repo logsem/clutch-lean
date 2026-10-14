@@ -1,11 +1,11 @@
 module
 
-public import Metrology.Approxis.ContinuousSampler
-public import Metrology.Approxis.Soundness
+public import Metrology.Micrometer.ContinuousSampler
+public import Metrology.Micrometer.Soundness
 public import Metrology.ProbLang.Advantage
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
-public import Metrology.Approxis.AdequacyRel
+public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Code.ContinuousOTP
 public import Metrology.Couplings.CodensityTV
 
@@ -14,12 +14,12 @@ public import Metrology.Couplings.CodensityTV
 /-! # A continuous one-time pad -/
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS MeasureTheory TVDiv
+open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS MeasureTheory TVDiv
 
 namespace ContinuousOTP
 
 variable {rT : Type} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
 
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
@@ -88,14 +88,14 @@ The abstract hypothesis is discharged by rotation invariance of `Uniform[0,1]`,
 so the refinement holds outright for the genuinely continuous instance. -/
 
 theorem otp_refines_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [ApproxisRGS ℝ hlc GF] :
+    [MicrometerRGS ℝ hlc GF] :
     ⊢@{IProp GF} REL[tv] (otp_enc m) << otp_ideal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
 noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 
 theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [ApproxisRGS ℝ hlc GF] :
+    [MicrometerRGS ℝ hlc GF] :
     ⊢@{IProp GF} REL[tv] otp_ideal << (otp_enc m) : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
@@ -111,7 +111,7 @@ execution distributions, with no Iris in sight. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ r : rT, v = .real r ∧ v' = .real r
 
-theorem lrel_real_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' : Val rT) :
+theorem lrel_real_to_otpφ {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hr
   iunfold lrel_real at Hr
@@ -137,7 +137,7 @@ end Adequacy
 
 /-! ## Closed statement
 
-At the concrete model `ApproxisFunctor ℝ` every ghost-state hypothesis is
+At the concrete model `MicrometerFunctor ℝ` every ghost-state hypothesis is
 discharged, leaving a self-contained theorem about `ℝ`-valued programs. -/
 
 omit [LawfulProbLangℝ rT] in
@@ -148,8 +148,8 @@ theorem adequacyRel_otpφ_subset_eq : adequacyRel otpφ ⊆ {p : Exp rT × Exp r
 theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
     limExecV ⟨otp_enc m, σ⟩ = limExecV ⟨otp_ideal, σ'⟩ :=
   GradedDivergence.Codensity.tv_eq_of_diag
-    ((otp_adequate_real (GF := ApproxisFunctor ℝ) m σ σ').mono_rel adequacyRel_otpφ_subset_eq)
-    ((otp_adequate_rev_real (GF := ApproxisFunctor ℝ) m σ' σ).mono_rel adequacyRel_otpφ_subset_eq)
+    ((otp_adequate_real (GF := MicrometerFunctor ℝ) m σ σ').mono_rel adequacyRel_otpφ_subset_eq)
+    ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ) m σ' σ).mono_rel adequacyRel_otpφ_subset_eq)
 
 /-! ### Non-vacuity
 
@@ -185,7 +185,7 @@ theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ S
 /-! ## Contextual equivalence
 
 `GF` is a parameter in the Rocq sense (`refines_sound Σ`): the statement holds for any
-ghost-state bundle able to host the Approxis resources. -/
+ghost-state bundle able to host the Micrometer resources. -/
 
 section Typing
 

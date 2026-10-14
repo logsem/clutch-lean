@@ -20,7 +20,7 @@ def Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
 /-- The step measure is concentrated on value configurations. This is the form the program
-logic consumes (`Approxis.OpenInv.of_atomic`). -/
+logic consumes (`Micrometer.OpenInv.of_atomic`). -/
 def Atomic' (e : Exp rT) : Prop :=
   ∀ σ, Concentrated (primStep ⟨e, σ⟩) { ρ | ρ.1.isValue }
 

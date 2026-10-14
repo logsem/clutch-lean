@@ -1,8 +1,8 @@
 module
 
-public import Metrology.Approxis.Lifting
+public import Metrology.Micrometer.Lifting
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Metatheory
 public import Metrology.Couplings.CodensityTV
 
@@ -12,7 +12,7 @@ set_option linter.discrete false
 
 /-! # Coupling Rules -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -493,7 +493,7 @@ theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
 section CouplingRules
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [ApproxisGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [MicrometerGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Monoid ι] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 private theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
@@ -837,7 +837,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   imod spec_auth_update_tape (s := ⟨z, fsₛ ++ [tapeIdxOf Hz (f n)]⟩) $$ Hs Hαₛ with ⟨Hs', Hαₛ'⟩
   imod Hclose
   imodintro
-  simp only [approxisWpGS_stateInterp_eq, approxisWpGS_specInterp_eq,
+  simp only [micrometerWpGS_stateInterp_eq, micrometerWpGS_specInterp_eq,
     ExtTreeMap.insert_eq_PartialMap_insert]
   iframe Hσ' Hs' Hε
   have hd := hdom n hn0 hnz
@@ -936,7 +936,7 @@ end CouplingRules
 section CouplingRulesTV
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [ApproxisGS rT hlc GF]
+  [MicrometerGS rT hlc GF]
 
 /-- Coupling `rand zL ~ rand zR` (`zL ≤ zR`) along an injection `f : [0,zL) ↪ [0,zR)`,
 spending `(zR - zL)/zR` error credits: the left draw is `n`, the right draw is `f n`.

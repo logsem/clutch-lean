@@ -1,9 +1,9 @@
 module
 
-public import Metrology.Approxis.Compatibility
+public import Metrology.Micrometer.Compatibility
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.AppRelRules
-public import Metrology.Approxis.AdequacyRel
+public import Metrology.Micrometer.AppRelRules
+public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Code.OTP
 public import Metrology.Couplings.CodensityTV
 
@@ -12,12 +12,12 @@ public import Metrology.Couplings.CodensityTV
 /-! # One-Time Pad refinement example, using modular addition as the combiner. -/
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS TVDiv
+open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS TVDiv
 
 namespace OTP
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
 
 /-! ### The bijection -/
 
@@ -108,7 +108,7 @@ equality with zero error. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
-theorem lrel_int_to_otpφ {GF : BundledGFunctors} [ApproxisRGS rT hlc GF] (v v' : Val rT) :
+theorem lrel_int_to_otpφ {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hint
   iunfold lrel_int at Hint
@@ -129,17 +129,17 @@ theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT GF] (m N : Int
   refines_coupling (GF := GF) (fun _ => lrel_int) otpφ _ _ σ σ' (fun _ => lrel_int_to_otpφ)
     fun _ => otp_refines_rev m N hN
 
-/-! ## Closed statements at the concrete model `ApproxisFunctor rT` -/
+/-! ## Closed statements at the concrete model `MicrometerFunctor rT` -/
 
 theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
-  otp_adequate (ApproxisFunctor rT) m N hN σ σ'
+  otp_adequate (MicrometerFunctor rT) m N hN σ σ'
 
 theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
-  otp_adequate_rev (ApproxisFunctor rT) m N hN σ σ'
+  otp_adequate_rev (MicrometerFunctor rT) m N hN σ σ'
 
 end OTP
 

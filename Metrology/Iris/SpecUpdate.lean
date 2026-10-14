@@ -164,7 +164,7 @@ theorem specUpdate_frame_l {E : CoPset} {R P : IProp GF} :
 
 end SpecUpdate
 
-/-- Concrete Approxis SpecUpdateGS -/
+/-- Concrete Micrometer SpecUpdateGS -/
 instance defaultSpecUpdateGS {rT : Type _} [LawfulProbLangℝ rT]
     [MeasurableSingletonClass rT] {GF} [SpecGS rT GF] : SpecUpdateGS rT GF where
   specInterp := Cfg.specAuth

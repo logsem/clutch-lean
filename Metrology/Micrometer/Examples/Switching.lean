@@ -1,8 +1,8 @@
 module
 
-public import Metrology.Approxis.Examples.SwitchingPRP
-public import Metrology.Approxis.Adequacy
-public import Metrology.Approxis.AdequacyRel
+public import Metrology.Micrometer.Examples.SwitchingPRP
+public import Metrology.Micrometer.Adequacy
+public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.CodensityTV
 import Metrology.ProbLang.Syntax.Notation
 
@@ -14,7 +14,7 @@ Port of clutch's `theories/approxis/examples/prp_prf_weak.v`: `Q` uniform querie
 function and to a random permutation over `[0, N)` are indistinguishable up to
 `Q (Q - 1) / (2 N)`. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS TVDiv
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS TVDiv
 open scoped AppGS
 
 namespace ProbLang
@@ -42,7 +42,7 @@ theorem loopErr_succ (N : Int) (c q : Nat) :
 
 section Games
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
@@ -399,7 +399,7 @@ theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
-  wPRF_wPRP_switching (ApproxisFunctor rT) N Q hN hQ σ σ'
+  wPRF_wPRP_switching (MicrometerFunctor rT) N Q hN hQ σ σ'
 
 set_option linter.style.haveILetI false in
 theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
@@ -427,7 +427,7 @@ theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
-  wPRP_wPRF_switching (ApproxisFunctor rT) N Q hN hQ σ σ'
+  wPRP_wPRF_switching (MicrometerFunctor rT) N Q hN hQ σ σ'
 
 theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT)
     {S : Set (Exp rT)} (hS : MeasurableSet S) :

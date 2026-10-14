@@ -7,7 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over `{0, …, N-1}`
 
-Refined in `Approxis/Examples/OTP`. -/
+Refined in `Micrometer/Examples/OTP`. -/
 
 namespace ProbLang
 namespace OTP

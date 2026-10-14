@@ -1,8 +1,8 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Couplings.CodensityTV
-public import Metrology.Approxis.WpTactics
+public import Metrology.Micrometer.WpTactics
 public import Metrology.Code.Switching
 import Metrology.ProbLang.Syntax.Notation
 
@@ -13,7 +13,7 @@ import Metrology.ProbLang.Syntax.Notation
 The `PureSteps` facts for the pure list recursions of `Metrology/Code/Switching.lean`,
 and `wp`-level specifications (program side and spec side) for the map operations. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS TVDiv
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS TVDiv
 open scoped AppGS
 
 namespace ProbLang
@@ -115,7 +115,7 @@ the spec-side (`_r`) rules take the continuation as a hypothesis. -/
 
 section MapOps
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢

@@ -12,5 +12,5 @@ public import Metrology.Code.ContinuousOTP
 
 /-! # Example programs
 
-The ProbLang programs that the TotalEris and Approxis examples reason about.
+The ProbLang programs that the TotalEris and Micrometer examples reason about.
 The proofs stay with their logic. -/

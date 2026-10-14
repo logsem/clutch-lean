@@ -1531,7 +1531,7 @@ theorem limExec_tape_presample_expr_eq
 
 /-! ## Codensity wrappers
 
-Approxis-facing: lift a codensity lifting on `ErasableExpr` state distributions to one on the
+Micrometer-facing: lift a codensity lifting on `ErasableExpr` state distributions to one on the
 expression projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
 
 section Codensity

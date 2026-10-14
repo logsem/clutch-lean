@@ -1,15 +1,15 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.CouplingRules
-public import Metrology.Approxis.AppRelRules
+public import Metrology.Micrometer.CouplingRules
+public import Metrology.Micrometer.AppRelRules
 
 @[expose] public section
 
 /-! # Continuous sampler rules -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -65,7 +65,7 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     LawfulProbLangℝ.unifUnitIsConcentrated
 
 section Unary
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
@@ -154,7 +154,7 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
@@ -167,7 +167,7 @@ theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} 
   unfold refines
   iintro %K2 %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K' pl(urand)] at Hj
-  iapply ApproxisWpGS.wp_bind
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_urand_urand f hmp (K2.comp K') _ _
   iframe Hj
   iintro %r %hrsupp HKres

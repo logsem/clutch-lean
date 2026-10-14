@@ -1,6 +1,6 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
+public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Iris.AppProgram
 public import Metrology.Iris.SpecProgram
@@ -14,7 +14,7 @@ set_option linter.discrete false
 
 /-! # Primitive Laws -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -23,26 +23,26 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## Bundled ghost-state class -/
 
-/-- The Approxis ghost-state components. The graded divergence is not part of the ghost state;
+/-- The Micrometer ghost-state components. The graded divergence is not part of the ghost state;
 it is the explicit first argument of `wp`. -/
-class ApproxisGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class MicrometerGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   specGS : SpecGS rT GF
   ecGS : ECGS GF
   invGS : InvGS_gen hlc GF
 
-attribute [reducible, instance] ApproxisGS.appGS ApproxisGS.specGS
-  ApproxisGS.ecGS ApproxisGS.invGS
+attribute [reducible, instance] MicrometerGS.appGS MicrometerGS.specGS
+  MicrometerGS.ecGS MicrometerGS.invGS
 
-/-! ## `ApproxisWpGS` instance synthesis -/
+/-! ## `MicrometerWpGS` instance synthesis -/
 
-section ApproxisInstance
+section MicrometerInstance
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
 @[reducible]
-noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) GF where
+noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) GF where
   hlc := hlc
   invGS := inferInstance
   stateInterp σ := appStateAuth σ
@@ -50,16 +50,16 @@ noncomputable instance approxisWpGS_of_components : ApproxisWpGS (rT := rT) GF w
 
 /-! ### `stateInterp` / `errInterp` unfolding lemmas -/
 
-@[simp] theorem approxisWpGS_stateInterp_eq :
-    (ApproxisWpGS.stateInterp : State rT → IProp GF) = appStateAuth := rfl
+@[simp] theorem micrometerWpGS_stateInterp_eq :
+    (MicrometerWpGS.stateInterp : State rT → IProp GF) = appStateAuth := rfl
 
-@[simp] theorem approxisWpGS_errInterp_eq :
-    (ApproxisWpGS.errInterp (rT := rT) : ENNReal → IProp GF) = ecAuth := rfl
+@[simp] theorem micrometerWpGS_errInterp_eq :
+    (MicrometerWpGS.errInterp (rT := rT) : ENNReal → IProp GF) = ecAuth := rfl
 
-@[simp] theorem approxisWpGS_specInterp_eq :
+@[simp] theorem micrometerWpGS_specInterp_eq :
     (SpecUpdateGS.specInterp : Cfg rT → IProp GF) = Cfg.specAuth := rfl
 
-end ApproxisInstance
+end MicrometerInstance
 
 /-! ### `ExtTreeMap.insert` ↔ `PartialMap.insert` bridge -/
 
@@ -70,7 +70,7 @@ attribute [simp] ExtTreeMap.insert_eq_PartialMap_insert
 section Lifting
 
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+  [MicrometerGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp Δ E (.alloc (.ofVal v)) Φ := by
@@ -85,7 +85,8 @@ theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hl hσ
     imod app_state_heap_alloc v $$ Hσ with ⟨Hσ', Hl⟩
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
+      Exp.toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
@@ -103,7 +104,7 @@ theorem wp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
   | LoadS hlook' hofv =>
     rw [hlook] at hlook'; cases hlook'; subst hofv
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_ofVal]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_ofVal]
     iframe Hσ
     iapply HΦ $$ Hl
 
@@ -126,7 +127,8 @@ theorem wp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp G
     rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hσ
     imod app_state_update_heap $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
+      Exp.toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ Hl'
 
@@ -143,7 +145,8 @@ theorem wp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
     subst hl hσ
     imod app_state_tape_alloc (Tape.empty z) $$ Hσ with ⟨Hσ', Hl⟩
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
+      Exp.toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ %σ₁.tapes.fresh Hl
 
@@ -158,7 +161,7 @@ theorem wp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
   cases Hstep with
   | RandNoTapeS _ Hv0 Hvz =>
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     iapply HΦ $$ %_ %⟨Hv0, Hvz⟩
   | RandNonposS hnz => exact absurd Hz hnz
@@ -175,7 +178,7 @@ theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : �
   | RandNoTapeS hpos _ _ => exact absurd hpos Hz
   | RandNonposS _ =>
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     iexact HΦ
 
@@ -199,7 +202,8 @@ theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
     subst hσ hv hxv
     imod app_state_update_tape $$ Hσ Hback with ⟨Hσ', Hl'⟩
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
+      Exp.toVal?_lit]
     iframe Hσ'
     ihave HlNew := HHandback $$ Hl'
     iapply HΦ $$ HlNew %(x.2)
@@ -230,7 +234,7 @@ theorem wp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int} {Φ : Val rT → IPr
   | RandTapeEmptyS _ _ _ Hv0 Hvz hσ =>
     subst hσ
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     ihave HlNat := app_empty_to_natTape $$ HlBack
     iapply HΦ $$ HlNat %⟨Hv0, Hvz⟩
@@ -263,7 +267,7 @@ theorem wp_rand_tape_wrong_bound {E : CoPset} {l : Loc} {z M : Int} {ns : List I
   | RandTapeOtherS _ _ _ Hv0 Hvz hσ =>
     subst hσ
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     ihave HlNat : appNatTape l M ns $$ [HlBack]
     · iunfold appNatTape; iexists fs; iframe %hmap HlBack
@@ -321,7 +325,7 @@ theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → I
   | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
   | RandTapeNonposEmptyS _ _ _ | RandTapeNonposOtherS _ _ _ =>
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     iapply HΦ $$ Hl
 

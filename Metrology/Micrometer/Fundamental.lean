@@ -1,19 +1,19 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.Model
-public import Metrology.Approxis.Compatibility
-public import Metrology.Approxis.AppRelRules
-public import Metrology.Approxis.ContinuousSampler
-public import Metrology.Approxis.RelTactics
-public import Metrology.Approxis.Interp
+public import Metrology.Micrometer.Model
+public import Metrology.Micrometer.Compatibility
+public import Metrology.Micrometer.AppRelRules
+public import Metrology.Micrometer.ContinuousSampler
+public import Metrology.Micrometer.RelTactics
+public import Metrology.Micrometer.Interp
 
 @[expose] public section
 
 /-! # Fundamental Theorem -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 
 namespace ProbLang
 
@@ -22,7 +22,7 @@ open Cslib Exp
 section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft]
 
 /-! ## Tctx → RelCtx lifting -/

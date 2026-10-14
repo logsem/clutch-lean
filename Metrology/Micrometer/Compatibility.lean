@@ -1,10 +1,10 @@
 module
 
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.Model
-public import Metrology.Approxis.RelTactics
-public import Metrology.Approxis.AppRelRules
+public import Metrology.Micrometer.Model
+public import Metrology.Micrometer.RelTactics
+public import Metrology.Micrometer.AppRelRules
 public import Metrology.ProbLang.Syntax.LocallyClosed
 
 @[expose] public section
@@ -13,7 +13,7 @@ set_option linter.discrete false
 
 /-! # Compatibility Lemmas -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -21,7 +21,7 @@ namespace ProbLang
 section Compatibility
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : ApproxisRGS rT hlc GF]
+  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
@@ -262,7 +262,8 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
     · rw [← show Tape.empty n = ⟨n, []⟩ from rfl]
       iintro !>; iframe Hlfrag Hl'frag
     imodintro
-    simp only [approxisWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
+    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
+      Exp.toVal?_lit]
     iframe Hσ'
     iexists (.lbl l' : Val _), ε
     iframe HKRes Hna Herr Hpos

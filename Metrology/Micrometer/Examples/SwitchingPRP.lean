@@ -1,7 +1,7 @@
 module
 
-public import Metrology.Approxis.Examples.SwitchingListMap
-public import Metrology.Approxis.CouplingRules
+public import Metrology.Micrometer.Examples.SwitchingListMap
+public import Metrology.Micrometer.CouplingRules
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Data.List.GetD
 
@@ -12,7 +12,7 @@ import Mathlib.Data.List.GetD
 Rocq source: clutch's `is_random_function`/`is_prp` and their query lemmas
 (`theories/approxis/examples/{prf,prp}.v`). -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.ApproxisWpGS TVDiv
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS TVDiv
 open scoped AppGS
 
 namespace ProbLang
@@ -32,7 +32,7 @@ def prpQueryV (ℓm ℓfv : Loc) : Val rT :=
 
 section PRP
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
 /-! ## Representation predicates -/
 

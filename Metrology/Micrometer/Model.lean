@@ -1,8 +1,8 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
+public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Iris.Instances.Lib.NaInvariants
 public import Iris.Instances.Lib.Invariants
@@ -12,7 +12,7 @@ public import Metrology.Iris.Countable
 
 /-! # Semantic Model -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 
 namespace ProbLang
 
@@ -22,15 +22,15 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 def logN : Namespace := nroot.@ (1 : Pos)
 
-/-! ## `ApproxisRGS` ghost-state bundle -/
+/-! ## `MicrometerRGS` ghost-state bundle -/
 
-class ApproxisRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
-  approxisGS : ApproxisGS rT hlc GF
+  micrometerGS : MicrometerGS rT hlc GF
   naInvG     : NaInvG GF
   nais       : NaInvPoolName
 
-attribute [reducible, instance] ApproxisRGS.approxisGS ApproxisRGS.naInvG
+attribute [reducible, instance] MicrometerRGS.micrometerGS MicrometerRGS.naInvG
 
 /-! ## Logical relation type -/
 
@@ -100,13 +100,13 @@ instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
 /-! ## `na_own` / `na_inv` abbreviations keyed on the pool name -/
 
 section NaShorthand
-variable {hlc : HasLC} {GF : BundledGFunctors} [ApproxisRGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
 
 @[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
-  Iris.NonAtomicInvariant.own (ApproxisRGS.nais (rT := rT) GF) E
+  Iris.NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
 
 @[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
-  Iris.NonAtomicInvariant.inv (ApproxisRGS.nais (rT := rT) GF) N P
+  Iris.NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
 
 @[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
   iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ ↑N) ={⊤}=∗ naOwnP (rT := rT) E
@@ -117,7 +117,7 @@ end NaShorthand
 
 section Refines
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF]
 
 variable (Δ) in
 /-- `REL[Δ] e << e' @ E : A`: `e` refines `e'` at `A` under the graded divergence `Δ`. -/
@@ -139,8 +139,8 @@ end Refines
 
 /-! ## Notation for the refinement judgement -/
 
-scoped syntax:100 (name := approxisRel) "REL[" term "] " term " << " term (" @ " term)? " : " term :
-  term
+scoped syntax:100 (name := micrometerRel)
+  "REL[" term "] " term " << " term (" @ " term)? " : " term : term
 
 macro_rules
   | `(REL[$Δ] $e1 << $e2 $[@ $E]? : $A) => do
@@ -159,7 +159,7 @@ meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
 
 section SimpleLRels
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF]
 
 omit [LawfulProbLangℝ rT] in
 theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
@@ -414,7 +414,7 @@ end SimpleLRels
 
 section SemtypesProperties
 variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF]
 
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
@@ -513,7 +513,7 @@ end SemtypesProperties
 
 section Monadic
 variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisRGS rT hlc GF]
+  [MicrometerRGS rT hlc GF]
 
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
     iprop(|={⊤}=> refines Δ E e t A) ⊢@{IProp GF} refines Δ E e t A := by
@@ -532,12 +532,12 @@ theorem refines_bind (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : E
   iintro %K'' %ε Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K'' K' e'] at Hj
   ispecialize Hm $$ %(K''.comp K') %ε Hj Hna Herr Hpos
-  iapply ApproxisWpGS.wp_bind (K := K)
-  iapply ApproxisWpGS.wp_mono
+  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_mono
   -- Take the `wp` premise first: it pins the intermediate postcondition to the one of `Hm`,
   -- with the continuation `Hf` framed alongside it.
   swap
-  · iapply ApproxisWpGS.wp_frame_l
+  · iapply MicrometerWpGS.wp_frame_l
     iframe Hf
     iexact Hm
   intro v
@@ -574,7 +574,7 @@ theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A :
   imod HFA with ⟨HF, HA⟩
   imodintro
   have hun := (Iris.NonAtomicInvariant.own_union (GF := GF)
-    (p := ApproxisRGS.nais (rT := rT) GF) (E2 := (⊤ : CoPset) \ E)
+    (p := MicrometerRGS.nais (rT := rT) GF) (E2 := (⊤ : CoPset) \ E)
     LawfulSet.disjoint_diff_right).mpr
   rw [LawfulSet.subset_union_diff (s₂ := (⊤ : CoPset)) (fun _ _ => CoPset.mem_full)] at hun
   iframe HA
@@ -618,7 +618,7 @@ theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
       ⊢@{IProp GF} refines Δ E e1 e2 A := by
   unfold refines
   iintro Hupd %K %ε Hj Hna Herr Hpos
-  iapply ApproxisWpGS.fupd_wp
+  iapply MicrometerWpGS.fupd_wp
   imod Hupd $$ Hna with ⟨Hna, HR⟩
   imodintro
   iapply HR $$ %K %ε Hj Hna Herr Hpos

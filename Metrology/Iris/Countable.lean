@@ -1,15 +1,15 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
+public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Approxis.PrimitiveLaws
+public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Iris.Instances.Lib.NaInvariants
 public import Iris.Instances.Lib.Invariants
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 
 namespace ProbLang
 

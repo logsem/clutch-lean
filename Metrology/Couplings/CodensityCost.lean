@@ -24,7 +24,7 @@ theorem codensityE_relCost_iff {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {�
   Iff.rfl
 
 /-- A relational lifting gives the cost lifting of any cost bounded on the relation, paying the
-bound (cf. `expCoupl_of_addCoupl` in Approxis). -/
+bound (cf. `expCoupl_of_addCoupl` in Micrometer). -/
 theorem Codensity.codensityE {α : ι} {δ δ' : ℝ≥0∞} {R : Set (X × Y)} {E : X → Y → ℝ≥0∞}
     {μ : Measure X} {ν : Measure Y} (h : Δ.Codensity α δ R μ ν)
     (hE : ∀ ⦃x y⦄, (x, y) ∈ R → E x y ≤ δ') : Δ.CodensityE α (δ + δ') E μ ν :=

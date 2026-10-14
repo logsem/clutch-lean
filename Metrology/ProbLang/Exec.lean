@@ -396,7 +396,7 @@ theorem lintegral_limExec'
     exact le_iSup_of_le g (le_iSup_of_le hg le_rfl)
   · exact iSup_le fun n => lintegral_mono' (le_iSup (fun i => execN i ρ) n) le_rfl
 
-/-! ### Codensity lifting of the limiting execution (Approxis glue) -/
+/-! ### Codensity lifting of the limiting execution (Micrometer glue) -/
 
 section Codensity
 

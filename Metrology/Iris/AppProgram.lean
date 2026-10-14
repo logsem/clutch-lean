@@ -15,7 +15,7 @@ public import Metrology.ProbLang.Syntax.Notation
 /-!
 # Program-side ghost state
 
-Program heap and tapes for the Approxis WP; the spec side lives in `SpecProgram.lean` and reuses
+Program heap and tapes for the Micrometer WP; the spec side lives in `SpecProgram.lean` and reuses
 the same CMRAs (`SpecHeap`, `SpecTapes`).
 -/
 

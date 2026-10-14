@@ -20,25 +20,25 @@ namespace ProbLang
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
-/-! ## Approxis ghost state class
+/-! ## Micrometer ghost state class
 
 The ghost state does not depend on the graded divergence: `Δ` is an explicit argument of `wp`
 and the coupling modalities (`wp Δ E e Φ`, notation `WP[Δ] e @ E {{ Φ }}`), never a class
 parameter, so the modality instances (`ElimModal`, `Frame`, ...) unify without a `Δ`
 metavariable. `Monoid ι` is a section variable next to `Δ` (`Δ.Codensity` needs it). -/
 
-class ApproxisWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class MicrometerWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
   hlc : HasLC
   invGS : InvGS_gen hlc GF
   stateInterp : State rT → IProp GF
   errInterp : ENNReal → IProp GF
 
-attribute [reducible, instance] ApproxisWpGS.invGS
+attribute [reducible, instance] MicrometerWpGS.invGS
 
-namespace ApproxisWpGS
+namespace MicrometerWpGS
 variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisWpGS (rT := rT) GF]
+  [MicrometerWpGS (rT := rT) GF]
 
 /-! ## `spec_coupl` modality
 
@@ -76,7 +76,7 @@ abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (ε
     (Z : State rT → Cfg rT → ENNReal → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre Δ E Z) (σ, ⟨e', σ'⟩, ε)
 
-omit [ApproxisWpGS (rT := rT) GF] in
+omit [MicrometerWpGS (rT := rT) GF] in
 theorem specCouplState_ne {Φ : SpecCouplState rT → IProp GF} : NonExpansive Φ where
   ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
 
@@ -278,13 +278,13 @@ theorem wp_unfold_mp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
 The postcondition is either a function `{{ Φ }}` or a binder form `{{ v, P }}`; the mask
 defaults to `⊤`. -/
 
-declare_syntax_cat approxisWpPost
-syntax ident ", " term : approxisWpPost
-syntax term : approxisWpPost
+declare_syntax_cat micrometerWpPost
+syntax ident ", " term : micrometerWpPost
+syntax term : micrometerWpPost
 
 /-- `WP[Δ] e @ E {{ Φ }}` is `wp Δ E e Φ`. -/
-syntax (name := approxisWp) "WP[" term "] " term:max (" @ " term:max)?
-  " {" noWs "{ " approxisWpPost " }" noWs "}" : term
+syntax (name := micrometerWp) "WP[" term "] " term:max (" @ " term:max)?
+  " {" noWs "{ " micrometerWpPost " }" noWs "}" : term
 
 macro_rules
   | `(WP[$Δ] $e $[@ $E]? {{ $v:ident, $P:term }}) => do
@@ -294,14 +294,14 @@ macro_rules
     let E ← E.getDM `(⊤)
     `(wp $Δ $E $e iprop($Φ))
 
-@[app_unexpander ProbLang.ApproxisWpGS.wp]
+@[app_unexpander ProbLang.MicrometerWpGS.wp]
 meta def unexpandWp : Lean.PrettyPrinter.Unexpander
   | `($_ $Δ $E $e $Φ) => do
-    let post : Lean.TSyntax `approxisWpPost ← match Φ with
-      | `(fun $v:ident => iprop($P)) => `(approxisWpPost| $v:ident, $P)
-      | `(fun $v:ident => $P) => `(approxisWpPost| $v:ident, $P)
-      | `(iprop($P)) => `(approxisWpPost| $P:term)
-      | _ => `(approxisWpPost| $Φ:term)
+    let post : Lean.TSyntax `micrometerWpPost ← match Φ with
+      | `(fun $v:ident => iprop($P)) => `(micrometerWpPost| $v:ident, $P)
+      | `(fun $v:ident => $P) => `(micrometerWpPost| $v:ident, $P)
+      | `(iprop($P)) => `(micrometerWpPost| $P:term)
+      | _ => `(micrometerWpPost| $Φ:term)
     -- `⊤` is a choice node at quotation time (Iris and Mathlib both notate it), so test the token.
     if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(WP[$Δ] $e {{ $post }})
     else `(WP[$Δ] $e @ $E {{ $post }})
@@ -1733,6 +1733,6 @@ theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
 
 end ConcentratedRules
 
-end ApproxisWpGS
+end MicrometerWpGS
 
 end ProbLang

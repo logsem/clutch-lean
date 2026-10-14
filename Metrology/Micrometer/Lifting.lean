@@ -1,19 +1,19 @@
 module
 
-public import Metrology.Approxis.AppWeakestpre
+public import Metrology.Micrometer.AppWeakestpre
 
 @[expose] public section
 
 /-! # Lifting lemmas translating operational semantics rules into program-logic rules. -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.ApproxisWpGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
-namespace ProbLang.ApproxisWpGS
+namespace ProbLang.MicrometerWpGS
 
 variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [ApproxisWpGS (rT := rT) GF]
+  [MicrometerWpGS (rT := rT) GF]
 
 theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -112,4 +112,4 @@ theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iapply specCoupl_ret
   iapply H $$ %σ₂ %σ₂' %hR
 
-end ProbLang.ApproxisWpGS
+end ProbLang.MicrometerWpGS
