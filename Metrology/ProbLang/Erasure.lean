@@ -1732,29 +1732,49 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
   exact (AddCoupl.bind_adv_lhs Measurable.of_discrete Measurable.of_discrete hE₂meas hmassk
     hBoundSum hCoupl fun {ρ σ₂'} hR => hCont ρ σ₂' hR).mono_grading hEpsSum
 
-/-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
-samples. -/
+/-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the grade and slack depend on
+both samples. -/
 theorem Codensity_erasure_erasable_exp_lhs_kanto {Δ : GradedDivergence ι}
     [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁' : Measure (State rT)} {Φexp : Set ((Exp rT) × (Exp rT))}
-    {ε : ENNReal} {E₂ : Cfg rT → Cfg rT → ENNReal}
+    {α : ι} {ε : ENNReal} {G : Cfg rT → Cfg rT → ι} {E₂ : Cfg rT → Cfg rT → ENNReal}
     {n m : Nat}
     (hErase₁' : ErasableExpr μ₁' σ₁')
-    (hExp : Δ.CodensityE 1 ε E₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)))
+    (hExp : Δ.CodensityG α ε G E₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)))
     (hCont : ∀ ρ ρ',
-        Δ.Codensity 1 (E₂ ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
-    Δ.Codensity 1 ε Φexp
+        Δ.Codensity (G ρ ρ') (E₂ ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
+    Δ.Codensity α ε Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
   rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  have h := hExp.bind_fun (f := fun ρ => asExpr (execN n ρ)) (g := limExecV) hCont
+  exact hExp.bind_fun (f := fun ρ => asExpr (execN n ρ)) (g := limExecV) hCont
     ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
     ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
-  rwa [mul_one] at h
+
+/-- Clutch-dp `spec_coupl` erasure, projected: erasable distributions on both sides, coupled by a
+per-pair graded cost lifting, with the continuation's grade and slack chosen per pair. -/
+theorem Codensity_erasure_erasable_graded {Δ : GradedDivergence ι} [MeasurableSingletonClass rT]
+    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
+    {Φexp : Set ((Exp rT) × (Exp rT))} {α : ι} {ε : ENNReal} {G : State rT → Cfg rT → ι}
+    {E₂ : State rT → Cfg rT → ENNReal} {n m : Nat}
+    (hCoupl : Δ.CodensityG α ε G E₂ μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
+    (hErase₁ : ErasableExpr μ₁ σ₁) (hErase₁' : ErasableExpr μ₁' σ₁')
+    (hCont : ∀ σ₂ ρ', Δ.Codensity (G σ₂ ρ') (E₂ σ₂ ρ') Φexp
+      (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
+    Δ.Codensity α ε Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
+  have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
+    (execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
+  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
+  unfold asExpr
+  rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
+      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  exact hCoupl.bind_fun (f := fun σ => asExpr (execN n ⟨e₁, σ⟩)) (g := limExecV) hCont
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
 samples (the `tv` instance of `Codensity_erasure_erasable_exp_lhs_kanto`). -/
@@ -1772,8 +1792,8 @@ theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
     AddCoupl ε Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
-  exact (Codensity_erasure_erasable_exp_lhs_kanto (Δ := TVDiv.tv.{0}) hErase₁' hExp.codensityE
-    fun ρ ρ' => (hCont ρ ρ').codensity).addCoupl
+  exact (Codensity_erasure_erasable_exp_lhs_kanto (Δ := TVDiv.tv.{0}) hErase₁'
+    (hExp.codensityE.codensityG_one 1) fun ρ ρ' => (hCont ρ ρ').codensity).addCoupl
 
 end Codensity
 

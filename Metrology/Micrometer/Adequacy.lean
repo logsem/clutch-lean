@@ -91,7 +91,7 @@ theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
   · refine step_fupdN_mono (P := iprop(∀ e₂ σ₂ e₂' σ₂',
       ⌜execCoupl Δ φ (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ : IProp GF)) ?_
     iintro %Hpure !%
-    exact Codensity_erasure_erasable_exp_lhs_kanto Herase' Hexp
+    exact Codensity_erasure_erasable_exp_lhs_kanto Herase' (Hexp.codensityG_one 1)
       fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ => Hpure e₂ σ₂ e₂' σ₂'
   iapply fupd_step_fupdN_plain_forall_4
   iintro %e₂ %σ₂ %e₂' %σ₂'

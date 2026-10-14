@@ -52,6 +52,75 @@ theorem CodensityE.bind_fun {α α' : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ
     Δ.Codensity (α * α') δ S (μ.bind f) (ν.bind g) :=
   h.bind_codensity (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
 
+/-! ### Per-pair graded cost liftings -/
+
+variable (Δ) in
+/-- The per-pair graded cost lifting: kernels `Δ`-close at `x, y` within the slack plus `E x y`, at
+grade `G x y` times the test grade, are `Δ`-close after binding at grade `α` times the test grade,
+within the slack plus `δ` (the coupling side condition of clutch-dp's `spec_coupl`). -/
+def CodensityG (α : ι) (δ : ℝ≥0∞) (G : X → Y → ι) (E : X → Y → ℝ≥0∞) (μ : Measure X)
+    (ν : Measure Y) : Prop :=
+  ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄
+    [IsSubMarkovKernel k] [IsSubMarkovKernel l],
+    (∀ x y, Δ (G x y * β) (k x) (l y) ≤ γ + E x y) → Δ (α * β) (k ∘ₘ μ) (l ∘ₘ ν) ≤ δ + γ
+
+/-- A cost lifting at grade `α` leaves the grade `α'` to every continuation. -/
+theorem CodensityE.codensityG {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.CodensityE α δ E μ ν) (α' : ι) :
+    Δ.CodensityG (α * α') δ (fun _ _ ↦ α') E μ ν := by
+  intro I _ β γ k l _ _ hkl
+  rw [mul_assoc]
+  exact h hkl
+
+/-- A cost lifting at the unit grade leaves the whole grade to every continuation. -/
+theorem CodensityE.codensityG_one {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} (h : Δ.CodensityE 1 δ E μ ν) (α : ι) :
+    Δ.CodensityG α δ (fun _ _ ↦ α) E μ ν := by
+  simpa using h.codensityG α
+
+/-- Larger bounds give larger graded liftings. -/
+theorem CodensityG.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {G : X → Y → ι} {E : X → Y → ℝ≥0∞}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityG α δ G E μ ν) (hδ : δ ≤ δ') :
+    Δ.CodensityG α δ' G E μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ (h hkl).trans (add_le_add_left hδ _)
+
+/-- Smaller costs give larger graded liftings. -/
+theorem CodensityG.mono_cost {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι} {E E' : X → Y → ℝ≥0∞}
+    {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityG α δ G E μ ν)
+    (hE : ∀ x y, E' x y ≤ E x y) : Δ.CodensityG α δ G E' μ ν :=
+  fun _ _ _ _ _ _ _ _ hkl ↦ h fun x y ↦ (hkl x y).trans (add_le_add le_rfl (hE x y))
+
+/-- Pushing forward along maps, with the grades and costs pulled back along them. -/
+theorem CodensityG.map {α : ι} {δ : ℝ≥0∞} {G : X' → Y' → ι} {E : X' → Y' → ℝ≥0∞}
+    {μ : Measure X} {ν : Measure Y} {f : X → X'} {g : Y → Y'}
+    (h : Δ.CodensityG α δ (fun x y ↦ G (f x) (g y)) (fun x y ↦ E (f x) (g y)) μ ν)
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    Δ.CodensityG α δ G E (μ.map f) (ν.map g) := by
+  intro I _ β γ k l _ _ hkl
+  rw [bind_map_eq μ hf, bind_map_eq ν hg]
+  exact h (k := k.comap f hf) (l := l.comap g hg) fun x y ↦ hkl (f x) (g y)
+
+/-- Binding with continuations in the lifting at the grade and bound left at each pair. -/
+theorem CodensityG.bind_codensity {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι} {E : X → Y → ℝ≥0∞}
+    {S : Set (X' × Y')} {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityG α δ G E μ ν)
+    {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f] [IsSubMarkovKernel g]
+    (hfg : ∀ x y, Δ.Codensity (G x y) (E x y) S (f x) (g y)) :
+    Δ.Codensity α δ S (f ∘ₘ μ) (g ∘ₘ ν) := by
+  intro I _ β γ k l _ _ hkl
+  rw [comp_assoc, comp_assoc]
+  refine h fun x y ↦ ?_
+  rw [Kernel.comp_apply, Kernel.comp_apply, add_comm]
+  exact hfg x y hkl
+
+/-- `CodensityG.bind_codensity` for measurable families of subprobability measures. -/
+theorem CodensityG.bind_fun {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι} {E : X → Y → ℝ≥0∞}
+    {S : Set (X' × Y')} {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityG α δ G E μ ν)
+    {f : X → Measure X'} {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
+    [∀ y, IsSubProbabilityMeasure (g y)] (hfg : ∀ x y, Δ.Codensity (G x y) (E x y) S (f x) (g y))
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    Δ.Codensity α δ S (μ.bind f) (ν.bind g) :=
+  h.bind_codensity (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hfg
+
 /-! ### Concentration -/
 
 
@@ -70,6 +139,22 @@ theorem CodensityE.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {E
   by_cases hx : x ∈ T
   · simpa [Kernel.piecewise_apply, hx] using (hkl x y).trans (add_le_add le_rfl (hE x hx y))
   · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le β (l y)).trans zero_le
+
+/-- Only the cost on a set `T` carrying all of `μ` matters, at any grades. -/
+theorem CodensityG.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι}
+    {E E' : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T)
+    (hμ : μ Tᶜ = 0) (h : Δ.CodensityG α δ G E μ ν) (hE : ∀ x ∈ T, ∀ y, E' x y ≤ E x y) :
+    Δ.CodensityG α δ G E' μ ν := by
+  classical
+  intro I _ β γ k l _ _ hkl
+  have hk : Kernel.piecewise hT k 0 ∘ₘ μ = k ∘ₘ μ := comp_congr <| by
+    filter_upwards [measure_eq_zero_iff_ae_notMem.1 hμ] with x hx
+    simp [Kernel.piecewise_apply, not_not.1 hx]
+  rw [← hk]
+  refine h fun x y ↦ ?_
+  by_cases hx : x ∈ T
+  · simpa [Kernel.piecewise_apply, hx] using (hkl x y).trans (add_le_add le_rfl (hE x hx y))
+  · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le _ (l y)).trans zero_le
 
 /-- Strengthen the relation with `x ∈ T` for a set `T` carrying all of `μ`. -/
 theorem Codensity.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
