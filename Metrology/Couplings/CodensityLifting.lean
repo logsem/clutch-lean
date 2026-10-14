@@ -34,13 +34,18 @@ Katsumata–Sato, *Codensity Liftings of Monads*). -/
 def Codensity (α : ι) (δ : ℝ≥0∞) (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
   Δ.CodensityE α δ (relCost R) μ ν
 
-/-- The basic codensity lifting of `R` with observation space `Ω`, base relation `S₀` and target
-relation `S`: measures whose binds with every `S₀`-respecting pair of kernels land in `S`
-(Katsumata–Sato, *Codensity Liftings of Monads*). -/
-def BasicCodensity (Ω : Type*) [MeasurableSpace Ω] (S₀ S : Measure Ω → Measure Ω → Prop)
-    (R : Set (X × Y)) (μ : Measure X) (ν : Measure Y) : Prop :=
+/-- The basic codensity lifting with observation space `Ω`, a base relation `S₀ x y` for each
+pair of inputs and target relation `S`: measures whose binds with every pair of kernels that
+satisfy `S₀` pointwise land in `S` (Katsumata–Sato, *Codensity Liftings of Monads*). -/
+def BasicCodensity (Ω : Type*) [MeasurableSpace Ω] (S₀ : X → Y → Measure Ω → Measure Ω → Prop)
+    (S : Measure Ω → Measure Ω → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
   ∀ ⦃k : Kernel X Ω⦄ ⦃l : Kernel Y Ω⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
-    (∀ ⦃x y⦄, (x, y) ∈ R → S₀ (k x) (l y)) → S (k ∘ₘ μ) (l ∘ₘ ν)
+    (∀ x y, S₀ x y (k x) (l y)) → S (k ∘ₘ μ) (l ∘ₘ ν)
+
+/-- A base relation required on the pairs of `R` only. -/
+def onRel {Ω : Type*} [MeasurableSpace Ω] (R : Set (X × Y)) (S₀ : Measure Ω → Measure Ω → Prop) :
+    X → Y → Measure Ω → Measure Ω → Prop :=
+  fun x y p q ↦ (x, y) ∈ R → S₀ p q
 
 variable {Δ}
 
@@ -73,12 +78,20 @@ theorem codensity_iff {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measu
   · simpa [relCost_of_mem hxy] using hkl hxy
   · simp [relCost_of_notMem hxy]
 
+/-- The cost lifting is the basic codensity lifting, with the cost in the base relation, for every
+test space, grade and bound (Thm. 8, Katsumata–Sato). -/
+theorem codensityE_iff_basicCodensity {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} : Δ.CodensityE α δ E μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄
+      ⦃γ : ℝ≥0∞⦄, BasicCodensity I (fun x y p q ↦ Δ β p q ≤ γ + E x y)
+        (fun p q ↦ Δ (α * β) p q ≤ δ + γ) μ ν :=
+  Iff.rfl
+
 /-- The codensity lifting is the basic codensity lifting for every test space, grade and bound
 (Thm. 8, Katsumata–Sato). -/
 theorem codensity_iff_basicCodensity {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X}
     {ν : Measure Y} : Δ.Codensity α δ R μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃β : ι⦄
       ⦃γ : ℝ≥0∞⦄,
-      BasicCodensity I (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν :=
+      BasicCodensity I (onRel R (Δ β · · ≤ γ)) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) μ ν :=
   codensity_iff
 
 /-! ### The cost lifting laws -/
@@ -376,14 +389,14 @@ theorem codensity_iff_of_isGenerated {Ω : Type u} [MeasurableSpace Ω] (hΩ : �
     {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)} {μ : Measure X} {ν : Measure Y}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     Δ.Codensity α δ R μ ν ↔ ∀ ⦃β : ι⦄ ⦃γ : ℝ≥0∞⦄,
-      BasicCodensity Ω (fun p q ↦ Δ β p q ≤ γ) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) R μ ν := by
+      BasicCodensity Ω (onRel R (Δ β · · ≤ γ)) (fun p q ↦ Δ (α * β) p q ≤ δ + γ) μ ν := by
   rw [codensity_iff_basicCodensity]
   refine ⟨fun h β γ ↦ @h Ω _ β γ, fun h I _ β γ k l _ _ hkl ↦ ?_⟩
   beta_reduce at hkl ⊢
   rw [hΩ]
   refine iSup₂_le fun j _ ↦ ?_
   rw [comp_assoc, comp_assoc]
-  refine h fun x y hxy ↦ le_trans ?_ (hkl hxy)
+  refine h fun x y hxy ↦ le_trans ?_ (hkl x y hxy)
   rw [Kernel.comp_apply, Kernel.comp_apply, hΩ β (k x) (l y)]
   exact le_iSup₂_of_le j ‹_› le_rfl
 

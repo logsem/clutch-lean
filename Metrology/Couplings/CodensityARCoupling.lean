@@ -35,15 +35,15 @@ theorem isSubMarkovKernel_massKernel {f : X → ℝ≥0∞} (hf : Measurable f) 
 /-- An approximate coupling is the basic codensity lifting into a point that compares masses, with
 `F` applied after the test. -/
 theorem arCoupling_iff_basicCodensity {F : ℝ≥0∞ → ℝ≥0∞} {Φ : Set (X × Y)} {μ : Measure X}
-    {ν : Measure Y} : ARCoupling F Φ μ ν ↔ BasicCodensity Unit (fun p q ↦ p .univ ≤ q .univ)
-      (fun p q ↦ p .univ ≤ F (q .univ)) Φ μ ν := by
+    {ν : Measure Y} : ARCoupling F Φ μ ν ↔ BasicCodensity Unit (onRel Φ fun p q ↦ p .univ ≤ q .univ)
+      (fun p q ↦ p .univ ≤ F (q .univ)) μ ν := by
   constructor
   · intro h k l _ _ hkl
     rw [bind_apply .univ k.measurable.aemeasurable, bind_apply .univ l.measurable.aemeasurable]
     exact h ⟨fun x ↦ k x .univ, k.measurable_coe .univ,
       fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one⟩ ⟨fun y ↦ l y .univ,
       l.measurable_coe .univ, fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one⟩
-      fun hab ↦ hkl hab
+      fun hab ↦ hkl _ _ hab
   · rintro h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ hfg
     have := isSubMarkovKernel_massKernel.{0} hf hf1
     have := isSubMarkovKernel_massKernel.{0} hg hg1
