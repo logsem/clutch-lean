@@ -273,7 +273,7 @@ theorem wp_adequacy_div_error_lim [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : Sta
   ((wp_adequacy_error_lim e e' σ σ' ε (· = ·) Hwp).mono_rel adequacyRel_eq_subset).le_of_diag
 
 /-- Adequacy bounds the mass of the left program by that of the right plus the error credits. -/
-theorem wp_adequacy_mass [Δ.IsReflexive] [Δ.IsMassDetecting] (e e' : Exp rT) (σ σ' : State rT)
+theorem wp_adequacy_mass [Δ.IsReflexive] [Δ.IsMassDetectingAdd] (e e' : Exp rT) (σ σ' : State rT)
     (φ : Val rT → Val rT → Prop) (ε : ENNReal) (Hwp : ∀ (_ : ApproxisGS rT .hasNoLC GF),
       ⊢@{IProp GF} ⤇ e' -∗ ec ε -∗ wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
