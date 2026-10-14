@@ -1474,6 +1474,39 @@ theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   iframe
 
 omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+/-- `wp_lift_prim_steps_coupl` spending grade: a coupling at grade `α₁` out of the budget
+`α₁ * α₂` leaves `α₂` to the continuation (clutch-dp's `wp_couple`). -/
+theorem wp_lift_prim_steps_coupl_graded {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+    (Hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' α ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ gradeInterp α ∗
+      errInterp (rT := rT) ε -∗
+      |={E, ∅}=> ∃ (R : Cfg rT → Cfg rT → Prop) (α₁ α₂ : ι) (ε₁ ε₂ : ENNReal),
+        ⌜α = α₁ * α₂⌝ ∗
+        ⌜ε₁ + ε₂ ≤ ε⌝ ∗
+        ⌜Reducible e₁ σ₁⌝ ∗
+        ⌜Reducible e₁' σ₁'⌝ ∗
+        ⌜Δ.Codensity α₁ ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> ▷ |={∅, E}=>
+          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗ gradeInterp α₂ ∗
+            errInterp (rT := rT) ε₂ ∗ wp Δ E e₂ Φ)) ⊢ wp Δ E e₁ Φ := by
+  iintro H
+  iapply wp_lift_step_couple
+  iintro %σ₁ %e₁' %σ₁' %α %ε Hres
+  imod H $$ %σ₁ %e₁' %σ₁' %α %ε Hres with
+    ⟨%R, %α₁, %α₂, %ε₁, %ε₂, %Hα, %Hεsum, %Hred, %Hred', %Hcpl, H⟩
+  subst Hα
+  imodintro
+  iapply specCoupl_ret
+  simp only [Hv]
+  iapply progCoupl_steps_graded Hεsum Hred Hred' Hcpl
+  isplitr; · iapply wpProgBody_err_ge_1
+  iintro %e₂ %σ₂ %e₂' %σ₂' %HR
+  imod H $$ %e₂ %σ₂ %e₂' %σ₂' %HR with H
+  iintro !> !>
+  iapply specCoupl_ret
+  iexact H
+
+omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
 theorem wp_lift_prim_step_l_erasable {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' ε,

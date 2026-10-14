@@ -971,3 +971,54 @@ theorem wp_couple_rand_rand_rev_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENN
 end CouplingRulesTV
 
 end ProbLang
+
+/-! ## Spending grade credits -/
+
+namespace ProbLang
+
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {ι : Type} [CommMonoid ι] [IsCancelMul ι] {Δ : GradedDivergence.{0} ι}
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [GradeCreditGS ι GF]
+
+/-- Couple `rand N ~ K[rand N]` along `R`, given a lifting of the two uniform draws at grade `α`
+within `δ`; spends `↯g α` and `↯ δ` (clutch-dp's `hoare_couple_laplace`, for any `Δ`). -/
+theorem wp_couple_rand_rand_graded (N : Int) (HN : 0 < N) (R : Int → Int → Prop) (α : ι)
+    (δ : ENNReal) (Hcpl : Δ.Codensity α δ {p | R p.1 p.2} (unifInt N HN) (unifInt N HN))
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯g α ∗ ↯ δ ∗
+    (∀ r r', ⌜R r r'⌝ -∗ ⤇ K.fill pl(#(.int r')) -∗ Φ (.int r)) ⊢
+    wp Δ E pl(rand(#(.int N), #(.unit))) Φ := by
+  iintro ⟨Hj, Hα, Hδ, Hcnt⟩
+  iapply MicrometerWpGS.wp_lift_prim_steps_coupl_graded Exp.rand_toVal?_eq_none
+  iintro %σ₁ %e₁' %σ₁' %s %ε ⟨Hσ, Hs, Hg, Hε⟩
+  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
+  subst Heq
+  ihave %Hδle := ErrorCredit.supply_bound $$ Hε Hδ
+  imod ErrorCredit.supply_decrease $$ Hε Hδ with Hdec
+  imod GradeCredit.supply_decrease $$ Hg Hα with ⟨%r, %Hr, Hgdec⟩
+  imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
+  imodintro
+  let D : Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
+    ∃ n m, R n m ∧ c₁ = ⟨pl(#(.int n)), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#(.int m)), σ₁'⟩
+  iexists D, α, r, δ, ε - δ
+  have hεsum := (add_tsub_cancel_of_le Hδle).le
+  have hredL := (randUnit_uniform_step HN σ₁).1.toReducible
+  have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
+  have hcpl : Δ.Codensity α δ {p | D p.1 p.2}
+      (primStep ⟨pl(rand(#(.int N), #(.unit))), σ₁⟩)
+      (primStep ⟨K.fill pl(rand(#(.int N), #(.unit))), σ₁'⟩) := by
+    rw [primStep_rand_unit HN, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN]
+    exact Cfg.uniform_codensity_fill HN HN σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
+  iframe %Hr %hεsum %hredL %hredR %hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, m, hR, heq1, heq2⟩
+  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
+  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
+  iintro !> !>
+  imod specProg_update (e3 := K.fill pl(#(.int m))) $$ Hs Hj with ⟨Hs', Hj'⟩
+  imod Hclose
+  imodintro
+  iframe Hσ Hs' Hgdec Hdec
+  iapply MicrometerWpGS.wp_value_of_toVal (v := .int n) rfl
+  iapply Hcnt $$ %n %m %hR Hj'
+
+end ProbLang
