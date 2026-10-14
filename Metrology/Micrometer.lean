@@ -19,6 +19,7 @@ public import Metrology.Micrometer.Soundness
 public import Metrology.Micrometer.Examples.OTP
 public import Metrology.Micrometer.Examples.Switching
 public import Metrology.Micrometer.Examples.ContinuousOTP
+public import Metrology.Micrometer.Examples.RandomizedResponse
 
 @[expose] public section
 
