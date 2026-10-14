@@ -78,6 +78,11 @@ theorem CodensityE.codensityG_one {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞}
     Δ.CodensityG α δ (fun _ _ ↦ α) E μ ν := by
   simpa using h.codensityG α
 
+/-- A cost lifting is the graded lifting at the unit grade everywhere. -/
+theorem codensityG_one_iff {α : ι} {δ : ℝ≥0∞} {E : X → Y → ℝ≥0∞} {μ : Measure X}
+    {ν : Measure Y} : Δ.CodensityG α δ (fun _ _ ↦ 1) E μ ν ↔ Δ.CodensityE α δ E μ ν := by
+  simp only [CodensityG, CodensityE, one_mul]
+
 /-- Larger bounds give larger graded liftings. -/
 theorem CodensityG.mono_bound {α : ι} {δ δ' : ℝ≥0∞} {G : X → Y → ι} {E : X → Y → ℝ≥0∞}
     {μ : Measure X} {ν : Measure Y} (h : Δ.CodensityG α δ G E μ ν) (hδ : δ ≤ δ') :
@@ -123,23 +128,6 @@ theorem CodensityG.bind_fun {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι} {E 
 
 /-! ### Concentration -/
 
-
-/-- Only the cost on a set `T` carrying all of `μ` matters. -/
-theorem CodensityE.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {E E' : X → Y → ℝ≥0∞}
-    {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T) (hμ : μ Tᶜ = 0)
-    (h : Δ.CodensityE α δ E μ ν) (hE : ∀ x ∈ T, ∀ y, E' x y ≤ E x y) :
-    Δ.CodensityE α δ E' μ ν := by
-  classical
-  intro I _ β γ k l _ _ hkl
-  have hk : Kernel.piecewise hT k 0 ∘ₘ μ = k ∘ₘ μ := comp_congr <| by
-    filter_upwards [measure_eq_zero_iff_ae_notMem.1 hμ] with x hx
-    simp [Kernel.piecewise_apply, not_not.1 hx]
-  rw [← hk]
-  refine h fun x y ↦ ?_
-  by_cases hx : x ∈ T
-  · simpa [Kernel.piecewise_apply, hx] using (hkl x y).trans (add_le_add le_rfl (hE x hx y))
-  · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le β (l y)).trans zero_le
-
 /-- Only the cost on a set `T` carrying all of `μ` matters, at any grades. -/
 theorem CodensityG.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {G : X → Y → ι}
     {E E' : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T)
@@ -155,6 +143,13 @@ theorem CodensityG.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {G
   by_cases hx : x ∈ T
   · simpa [Kernel.piecewise_apply, hx] using (hkl x y).trans (add_le_add le_rfl (hE x hx y))
   · simpa [Kernel.piecewise_apply, hx] using (IsZeroLeft.zero_left_le _ (l y)).trans zero_le
+
+/-- Only the cost on a set `T` carrying all of `μ` matters. -/
+theorem CodensityE.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {E E' : X → Y → ℝ≥0∞}
+    {μ : Measure X} {ν : Measure Y} {T : Set X} (hT : MeasurableSet T) (hμ : μ Tᶜ = 0)
+    (h : Δ.CodensityE α δ E μ ν) (hE : ∀ x ∈ T, ∀ y, E' x y ≤ E x y) :
+    Δ.CodensityE α δ E' μ ν :=
+  codensityG_one_iff.1 ((codensityG_one_iff.2 h).concentrated_L hT hμ hE)
 
 /-- Strengthen the relation with `x ∈ T` for a set `T` carrying all of `μ`. -/
 theorem Codensity.concentrated_L [Δ.IsZeroLeft] {α : ι} {δ : ℝ≥0∞} {R : Set (X × Y)}
