@@ -82,7 +82,7 @@ theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl Δ φ α ε (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (Exp.toVal?_eq_none.mp Hnone) m]
   iintro HCpl Hcoupl
-  icases HCpl with ⟨%k, %μ₁', %G, %X₂, %_, %_, %Hexp, %Herase', Hcnt⟩
+  icases HCpl with ⟨%k, %μ₁', %G, %X₂, %_, %Hexp, %Herase', Hcnt⟩
   iapply BIFUpdate.mono
   · refine step_fupdN_mono (P := iprop(∀ e₂ σ₂ e₂' σ₂',
       ⌜execCoupl Δ φ (G ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩

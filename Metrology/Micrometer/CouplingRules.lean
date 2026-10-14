@@ -659,10 +659,9 @@ theorem wp_couple_rand_rand_adv [Δ.IsExpectationAdditive] (z : Int) (f : Int �
   have hredR : Reducible (K.fill pl(rand(#(.int z), #(.unit)))) σ₁' :=
     (Discrete.Reducible.of_headStepSupport_fill K
     (.RandNoTapeS Hz (_root_.le_refl _) Hz) (by is_lc)).toReducible
-  have hX : ∀ ρ₁ ρ₂, X ρ₁ ρ₂ ≤ 1 := fun _ _ => inf_le_left
   imodintro
   iexists X, ε₁, ε - ε₁
-  iframe %hεsum %hredL %hredR %hX %Hkant
+  iframe %hεsum %hredL %hredR %Hkant
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
   by_cases hg : ∃ n, P ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ n
   · obtain ⟨n, ⟨hn0, hnz⟩, h1, h2⟩ := hg

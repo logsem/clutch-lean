@@ -205,7 +205,6 @@ abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : S
   (∃ (n : Nat) (μ₁' : MeasureTheory.Measure (State rT)) (G : Cfg rT → Cfg rT → ι)
       (X₂ : Cfg rT → Cfg rT → ENNReal),
       ⌜Reducible e₁ σ₁⌝ ∗
-      ⌜∃ r, ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ r⌝ ∗
       ⌜Δ.CodensityG α ε G X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
       ⌜ErasableExpr μ₁' σ₁'⌝ ∗
       (∀ e₂ σ₂ e₂' σ₂', |={∅}=>
@@ -224,8 +223,7 @@ theorem progCoupl_ne {n : Nat} {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp r
     (HZ : ∀ e₂ σ₂ e₂' σ₂' α' ε', Z₁ e₂ σ₂ e₂' σ₂' α' ε' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' α' ε') :
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₁ ≡{n}≡ progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₂ := by
   refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
-  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
-    sep_ne.ne (.of_eq rfl) ?_
+  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) ?_
   exact forall_ne fun _ => forall_ne fun _ => forall_ne fun _ => forall_ne fun _ =>
     BIFUpdate.ne.ne (HZ _ _ _ _ _ _)
 
@@ -234,7 +232,7 @@ theorem progCoupl_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
     iprop% (∀ e₂ σ₂ e₂' σ₂' α' ε', Z₁ e₂ σ₂ e₂' σ₂' α' ε' -∗ Z₂ e₂ σ₂ e₂' σ₂' α' ε') ∗
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₁ ⊢ progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₂ := by
   iintro ⟨HZ, HCpl⟩
-  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hbnd, %Hexp, %Heras, HCont⟩
+  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hexp, %Heras, HCont⟩
   iexists n, μ₁', G, X₂
   iframe %
   iintro %e₂ %σ₂ %e₂' %σ₂'
@@ -745,13 +743,12 @@ theorem progCoupl_reducible {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} 
 
 theorem progCoupl_intro {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {α : ι} {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ι → ENNReal → IProp GF}
-    {n : Nat} {μ₁' : MeasureTheory.Measure (State rT)} {r : ENNReal} {G : Cfg rT → Cfg rT → ι}
-    {X₂ : Cfg rT → Cfg rT → ENNReal} (Hred : Reducible e₁ σ₁) (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ r)
+    {n : Nat} {μ₁' : MeasureTheory.Measure (State rT)} {G : Cfg rT → Cfg rT → ι}
+    {X₂ : Cfg rT → Cfg rT → ENNReal} (Hred : Reducible e₁ σ₁)
     (Hexp : Δ.CodensityG α ε G X₂ (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' (G ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z := by
-  have Hbnd : ∃ r, ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ r := ⟨r, Hbnd⟩
   iintro H
   iexists n, μ₁', G, X₂
   iframe %
@@ -770,18 +767,12 @@ theorem progCoupl_strong_mono [Δ.IsZeroLeft] {e₁ : Exp rT} {σ₁ : State rT}
     (∀ e₂ σ₂ e₂' σ₂' α' ε', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' α' ε' -∗ Z₂ e₂ σ₂ e₂' σ₂' α' ε') ∗
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₁ ⊢ progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z₂ := by
   iintro ⟨#H1F, Hm, HCpl⟩
-  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hbnd, %Hexp, %Heras, HCont⟩
-  obtain ⟨r, Hr⟩ := Hbnd
+  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hexp, %Heras, HCont⟩
   classical
-  have Hbnd' : ∀ a b, (if a ∈ S then X₂ a b else 1) ≤ max r 1 := by
-    intro a b
-    split_ifs with h
-    · exact (Hr a b).trans (le_max_left _ _)
-    · exact le_max_right _ _
   have Hexp' : Δ.CodensityG α ε G (fun a b => if a ∈ S then X₂ a b else 1)
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) :=
     Hexp.concentrated_L hSmeas hSconc fun a ha b => by simp [ha]
-  iapply progCoupl_intro Hred Hbnd' Hexp' Heras
+  iapply progCoupl_intro Hred Hexp' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases hmem : ⟨e₂, σ₂⟩ ∈ S
   · simp only [ite_eq_left hmem]
@@ -819,8 +810,7 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT} {e�
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε (fun e₂ => Z (K.fill e₂)) ⊢
     progCoupl Δ (K.fill e₁) σ₁ e₁' σ₁' α ε Z := by
   iintro ⟨#H1F, HCpl⟩
-  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hbnd, %Hexp, %Heras, HCont⟩
-  obtain ⟨r, Hr⟩ := Hbnd
+  icases HCpl with ⟨%n, %μ₁', %G, %X₂, %Hred, %Hexp, %Heras, HCont⟩
   classical
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e, Kinv (K.fill e) = some e := Function.partialInv_left (Ectx.fill_injective K)
@@ -830,18 +820,12 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT} {e�
   let X₂' : Cfg rT → Cfg rT → ENNReal := fun a b => match Kinv a.expr with
     | some e' => X₂ ⟨e', a.state⟩ b
     | none => 1
-  have Hbnd' : ∀ a b, X₂' a b ≤ max r 1 := by
-    intro a b
-    simp only [X₂']
-    cases Kinv a.expr with
-    | none => exact le_max_right _ _
-    | some e' => exact (Hr _ _).trans (le_max_left _ _)
   have Hexp' : Δ.CodensityG α ε G' X₂' (primStep ⟨K.fill e₁, σ₁⟩)
       (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) := by
     rw [primStep_fill hv, ← MeasureTheory.Measure.map_id (μ := μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)]
     refine CodensityG.map ?_ (by fun_prop) measurable_id
     simpa [G', X₂', Kinv_left] using Hexp
-  iapply progCoupl_intro (Hred.fill K) Hbnd' Hexp' Heras
+  iapply progCoupl_intro (Hred.fill K) Hexp' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   simp only [G', X₂']
   cases hKinv : Kinv e₂ with
@@ -861,29 +845,24 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT} {e�
 theorem progCoupl_steps_adv' {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {α : ι} {ε : ENNReal} {Z : Exp rT → State rT → Exp rT → State rT → ι → ENNReal → IProp GF}
     {X₂ : Cfg rT → Cfg rT → ENNReal}
-    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ 1)
+    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' α (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z :=
-  progCoupl_intro (G := fun _ _ => α) Hred Hbnd
+  progCoupl_intro (G := fun _ _ => α) Hred
     (dirac_bind_pexecN_one Hred' ▸ Hcpl.codensityG_one α) (ErasableExpr.dret σ₁')
 
 theorem progCoupl_steps_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {α : ι} {ε₁ ε₂ ε : ENNReal}
     {Z : Exp rT → State rT → Exp rT → State rT → ι → ENNReal → IProp GF}
     {X₂ : Cfg rT → Cfg rT → ENNReal} (Hε : ε₁ + ε₂ ≤ ε)
-    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (Hbnd : ∀ ρ₁ ρ₂, X₂ ρ₁ ρ₂ ≤ 1)
+    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : Δ.CodensityE 1 ε₁ X₂ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', |={∅}=> Z e₂ σ₂ e₂' σ₂' α (X₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂)) ⊢
-    progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z := by
-  iintro Hcnt
-  iapply progCoupl_intro (r := 1 + ε₂) (G := fun _ _ => α) (X₂ := fun a b => X₂ a b + ε₂) Hred
-    (fun a b => by gcongr; exact Hbnd a b)
-    (by
-      rw [dirac_bind_pexecN_one Hred']
-      exact ((Hcpl.add_const ε₂).mono_bound Hε).codensityG_one α)
+    progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z :=
+  progCoupl_intro (G := fun _ _ => α) (X₂ := fun a b => X₂ a b + ε₂) Hred
+    (dirac_bind_pexecN_one Hred' ▸ ((Hcpl.add_const ε₂).mono_bound Hε).codensityG_one α)
     (ErasableExpr.dret σ₁')
-  iexact Hcnt
 
 /-- Couple one program step against one spec step by a relational lifting at grade `α₁`, leaving
 the grade `α₂` to the continuation: the step spends `α₁` out of the budget `α₁ * α₂`. -/
@@ -897,16 +876,15 @@ theorem progCoupl_steps_graded {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp r
     progCoupl Δ e₁ σ₁ e₁' σ₁' (α₁ * α₂) ε Z := by
   iintro ⟨#H1F, Hcnt⟩
   classical
-  let Y : Cfg rT → Cfg rT → ENNReal := fun ρ₁ ρ₂ => if R ρ₁ ρ₂ ∧ ε₂ ≤ 1 then ε₂ else 1
-  have HY_bnd : ∀ ρ₁ ρ₂, Y ρ₁ ρ₂ ≤ 1 := fun ρ₁ ρ₂ => by grind
-  have HY_exp : Δ.CodensityE α₁ ε Y (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) :=
-    (Hcpl.codensityE fun a b hab => by grind).mono_bound Hε
-  iapply progCoupl_intro (G := fun _ _ => α₂) Hred HY_bnd
-    (by rw [dirac_bind_pexecN_one Hred']; exact HY_exp.codensityG α₂) (ErasableExpr.dret σ₁')
+  let Y : Cfg rT → Cfg rT → ENNReal := fun ρ₁ ρ₂ => if R ρ₁ ρ₂ then ε₂ else 1
+  have HY : Δ.CodensityE α₁ ε Y (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) :=
+    (Hcpl.codensityE fun _ _ h => (ite_eq_left h).le).mono_bound Hε
+  iapply progCoupl_intro (G := fun _ _ => α₂) Hred
+    (dirac_bind_pexecN_one Hred' ▸ HY.codensityG α₂) (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %e₂' %σ₂'
   simp only [Y]
   split_ifs with h
-  · iapply Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %(h.1)
+  · iapply Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %h
   · imodintro
     iexact H1F
 
@@ -925,22 +903,19 @@ theorem progCoupl_step_l_erasable_adv {e₁ : Exp rT} {σ₁ : State rT} {e₁' 
     {μ₁' : MeasureTheory.Measure (State rT)} {α : ι} {ε : ENNReal}
     {Z : Exp rT → State rT → Exp rT → State rT → ι → ENNReal → IProp GF}
     {X₂ : Cfg rT → State rT → ENNReal} (Hred : Reducible e₁ σ₁) (Heras : ErasableExpr μ₁' σ₁')
-    (Hbnd : ∀ ρ₁ σ₂', X₂ ρ₁ σ₂' ≤ 1)
     (Hcpl : Δ.CodensityE 1 ε X₂ (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
     (□ ∀ e₂ σ₂ e₂' σ₂' α', Z e₂ σ₂ e₂' σ₂' α' 1) ∗
     (∀ e₂ σ₂ σ₂', |={∅}=> Z e₂ σ₂ e₁' σ₂' α (X₂ ⟨e₂, σ₂⟩ σ₂')) ⊢
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z := by
   iintro ⟨#H1F, Hcnt⟩
   classical
-  have Hbnd' : ∀ ρ₁ ρ₂ : Cfg rT, (if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1) ≤ 1 :=
-    fun ρ₁ ρ₂ => by grind
   have Hexp' : Δ.CodensityE 1 ε (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then X₂ ρ₁ ρ₂.state else 1)
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN 0 ⟨e₁', σ⟩) := by
     simp only [pexecN_zero]
     rw [MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop),
       ← MeasureTheory.Measure.map_id (μ := primStep ⟨e₁, σ₁⟩)]
     exact (Hcpl.mono_cost fun ρ σ => by simp).map measurable_id (by fun_prop)
-  iapply progCoupl_intro (G := fun _ _ => α) Hred Hbnd' (Hexp'.codensityG_one α) Heras
+  iapply progCoupl_intro (G := fun _ _ => α) Hred (Hexp'.codensityG_one α) Heras
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases he : e₂' = e₁'
   · subst he
@@ -961,16 +936,15 @@ theorem progCoupl_step_l_erasable {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Ex
     progCoupl Δ e₁ σ₁ e₁' σ₁' α ε Z := by
   iintro ⟨#H1F, Hcnt⟩
   classical
-  let Y : Cfg rT → State rT → ENNReal := fun ρ₁ σ₂' => if R ρ₁ σ₂' ∧ ε₂ ≤ 1 then ε₂ else 1
-  have HY_bnd : ∀ ρ₁ σ₂', Y ρ₁ σ₂' ≤ 1 := fun ρ₁ σ₂' => by grind
-  have HY_exp : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) μ₁' :=
-    (Hcpl.codensityE fun a b hab => by grind).mono_bound Hε
-  iapply progCoupl_step_l_erasable_adv Hred Heras HY_bnd HY_exp
+  let Y : Cfg rT → State rT → ENNReal := fun ρ₁ σ₂' => if R ρ₁ σ₂' then ε₂ else 1
+  have HY : Δ.CodensityE 1 ε Y (primStep ⟨e₁, σ₁⟩) μ₁' :=
+    (Hcpl.codensityE fun _ _ h => (ite_eq_left h).le).mono_bound Hε
+  iapply progCoupl_step_l_erasable_adv Hred Heras HY
   iframe H1F
   iintro %e₂ %σ₂ %σ₂'
   simp only [Y]
   split_ifs with h
-  · iapply Hcnt $$ %e₂ %σ₂ %σ₂' %(h.1)
+  · iapply Hcnt $$ %e₂ %σ₂ %σ₂' %h
   · imodintro
     iexact H1F
 
