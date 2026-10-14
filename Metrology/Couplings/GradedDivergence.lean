@@ -122,21 +122,16 @@ theorem IsComposable.of_finite [Mul ι] [Δ.IsContinuous] [Δ.IsApproximable]
     obtain ⟨J, d, e, hd, he, hlim⟩ :=
       IsApproximable.tendsto (Δ := Δ) (α * β) N (f := κ.map k) (g := η.map k) μ₁ μ₂
     refine le_of_tendsto' hlim fun n ↦ ?_
-    have := hd n
-    have h₁ : μ₁.bind (κ.map k ∘ e n ∘ d n) = (κ.map k).comap (e n) (he n) ∘ₘ μ₁.map (d n) := by
-      rw [bind_map_eq μ₁ (hd n) ((κ.map k).comap (e n) (he n)).measurable]; rfl
-    have h₂ : μ₂.bind (η.map k ∘ e n ∘ d n) = (η.map k).comap (e n) (he n) ∘ₘ μ₂.map (d n) := by
-      rw [bind_map_eq μ₂ (hd n) ((η.map k).comap (e n) (he n)).measurable]; rfl
-    rw [h₁, h₂]
-    calc Δ (α * β) ((κ.map k).comap (e n) (he n) ∘ₘ μ₁.map (d n))
-          ((η.map k).comap (e n) (he n) ∘ₘ μ₂.map (d n))
-        ≤ Δ α (μ₁.map (d n)) (μ₂.map (d n)) +
+    calc _ = Δ (α * β) ((κ.map k).comap (e n) (he n) ∘ₘ μ₁.map (d n))
+          ((η.map k).comap (e n) (he n) ∘ₘ μ₂.map (d n)) := by
+          rw [bind_map_eq μ₁ (hd n), bind_map_eq μ₂ (hd n)]
+          rfl
+      _ ≤ Δ α (μ₁.map (d n)) (μ₂.map (d n)) +
             ⨆ j, Δ β ((κ.map k).comap (e n) (he n) j) ((η.map k).comap (e n) (he n) j) :=
           IsFiniteComposable.bind_le α β _ _ _ _ _ _
       _ ≤ Δ α μ₁ μ₂ + ⨆ x, Δ β (κ x) (η x) := by
-          refine add_le_add (IsContinuous.map_le Δ α μ₁ μ₂) (iSup_le fun j ↦ ?_)
-          rw [Kernel.comap_apply, Kernel.comap_apply, Kernel.map_apply _ hk,
-            Kernel.map_apply _ hk]
+          refine add_le_add (IsContinuous.map_le Δ α μ₁ μ₂ (hd n)) (iSup_le fun j ↦ ?_)
+          simp only [Kernel.comap_apply, Kernel.map_apply _ hk]
           exact le_iSup_of_le (e n j) (IsContinuous.map_le Δ β _ _)
 
 /-- Reflexive and composable implies substitutive. -/
