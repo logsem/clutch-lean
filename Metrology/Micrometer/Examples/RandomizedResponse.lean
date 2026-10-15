@@ -107,10 +107,10 @@ theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     imodintro
     iexact H
 
-/-- The spec reports `bif d then b else !b`. -/
-theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp DPDiv.dp ⊤ e Φ) ⊢
+/-- The spec reports `bif d then b else !b`, under any evaluation context. -/
+theorem tp_report_fill (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
+    ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
+      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗ wp DPDiv.dp ⊤ e Φ) ⊢
       wp DPDiv.dp ⊤ e Φ := by
   cases d
   all_goals cases b
@@ -120,6 +120,13 @@ theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
     tp_pures
     iapply H
     iexact Hj
+
+/-- The spec reports `bif d then b else !b`. -/
+theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
+    ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
+      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp DPDiv.dp ⊤ e Φ) ⊢
+      wp DPDiv.dp ⊤ e Φ :=
+  tp_report_fill [] d b e Φ
 
 end Tail
 
@@ -147,12 +154,56 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   ipureintro
   exact congrArg Val.bool (by simpa [rrOut] using hR)
 
+/-! ## The relational proof -/
+
+/-- Randomized response refines itself at equal reports, spending the grade `ln 3`. -/
+theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    [GradeCreditGS (Multiplicative ℝ≥0) GF] (b b' : Bool) :
+    ⊢@{IProp GF} ↯g grade -∗ REL[DPDiv.dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+  iintro Hg
+  iunfold refines
+  iintro %K %ε Hj Hna Herr %Hpos
+  imod ErrorCredit.zero with H0
+  simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
+  wp_bind (pl% rand(#4, #.unit))
+  tp_bind (pl% rand(#4, #.unit))
+  iapply wp_couple_rand_rand_graded 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') grade 0
+    (rr_coupling b b')
+  iframe Hj Hg H0
+  iintro %r %r' %hR Hj
+  wp_pures
+  tp_pures
+  iapply tp_report_fill
+  iframe Hj
+  iintro Hj
+  iapply wp_report
+  iexists .bool (bif decide (r' < 3) then b' else !b'), ε
+  iframe Hj Hna Herr %Hpos
+  iunfold lrel_bool
+  iexists _
+  ipureintro
+  exact ⟨congrArg Val.bool (by simpa [rrOut] using hR), rfl⟩
+
 /-! ## Adequacy: exit the logic -/
 
 theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF] [ECPreGS GF]
     [GradeCreditPreGS (Multiplicative ℝ≥0) GF] [InvGpreS GF] (b b' : Bool) (σ σ' : State rT) :
     DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 :=
   wp_adequacy_div_graded (GF := GF) _ _ σ σ' grade 0 fun _ _ ↦ wp_rr b b'
+
+/-- `rr_dp_of`, through the refinement `rr_refines`. -/
+theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT GF]
+    [GradeCreditPreGS (Multiplicative ℝ≥0) GF] (b b' : Bool) (σ σ' : State rT) :
+    DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 := by
+  refine approximates_div_graded (GF := GF) (fun _ _ ↦ lrel_bool) _ _ σ σ' grade 0 ?_ ?_
+  · intro _ _ v v'
+    iunfold lrel_bool
+    iintro ⟨%c, %⟨rfl, rfl⟩⟩
+    ipureintro
+    rfl
+  · intro _ _
+    iintro Hg -
+    iapply rr_refines b b' $$ Hg
 
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
 (clutch-dp's `randomized_response.v`). -/

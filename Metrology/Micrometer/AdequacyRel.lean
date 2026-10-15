@@ -41,7 +41,8 @@ theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val r
   rfl
 
 section Coupling
-variable [Monoid ι] {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft] [Δ.IsLeftContinuous]
+variable [Monoid ι] {Δ : GradedDivergence.{0} ι} [Δ.IsMassBounded] [Δ.IsZeroLeft]
+  [Δ.IsLeftContinuous]
 
 theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT GF]
     (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF), lrel rT GF)
