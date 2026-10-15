@@ -339,6 +339,16 @@ theorem wp_adequacy_graded (e e' : Exp rT) (σ σ' : State rT) (α₀ : ι) (ε 
     Δ.Codensity α₀ ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   limExecV_codensity fun n => wp_adequacy_exec_n_graded e e' σ σ' n φ α₀ ε Hwp
 
+/-- `wp_adequacy_graded` with error credits strictly above `ε`. -/
+theorem wp_adequacy_error_lim_graded (e e' : Exp rT) (σ σ' : State rT) (α₀ : ι) (ε : ENNReal)
+    (φ : Val rT → Val rT → Prop)
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : GradeCreditGS ι GF) (ε' : ENNReal), ε < ε' →
+      ⊢@{IProp GF} ⤇ e' -∗ ↯g α₀ -∗ ec ε' -∗
+        wp Δ ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    Δ.Codensity α₀ ε (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
+  Codensity.of_forall_lt fun ε' hε' =>
+    wp_adequacy_graded e e' σ σ' α₀ ε' φ fun IGS IGC => Hwp IGS IGC ε' hε'
+
 /-- Programs whose results agree from grade credits `α₀` and error credits `ε` have output
 divergence at most `ε` at grade `α₀` (clutch-dp's `wp_diffpriv`). -/
 theorem wp_adequacy_div_graded [Δ.IsReflexive] (e e' : Exp rT) (σ σ' : State rT) (α₀ : ι)

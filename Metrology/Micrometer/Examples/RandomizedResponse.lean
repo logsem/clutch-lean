@@ -154,47 +154,11 @@ theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF] [ECP
     DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 :=
   wp_adequacy_div_graded (GF := GF) _ _ σ σ' grade 0 fun _ _ ↦ wp_rr b b'
 
-/-! ## The concrete model: `MicrometerFunctor` plus grade credits -/
-
-section DPFunctor
-
-variable (rT) in
-/-- `MicrometerFunctor` with a grade-credit camera in slot `9`. -/
-noncomputable def DPFunctor : BundledGFunctors := fun
-  | 9 => ⟨constOF (Auth (GradeCredit (Multiplicative ℝ≥0))), by infer_instance⟩
-  | n => MicrometerFunctor rT n
-
-instance : AppPreGS rT (DPFunctor rT) where
-  heap := ⟨4, rfl⟩
-  tapes := ⟨5, rfl⟩
-
-instance : SpecPreGS rT (DPFunctor rT) where
-  prog := ⟨6, rfl⟩
-  heap := ⟨4, rfl⟩
-  tapes := ⟨5, rfl⟩
-
-instance : ECPreGS (DPFunctor rT) where ec := ⟨7, rfl⟩
-
-instance : GradeCreditPreGS (Multiplicative ℝ≥0) (DPFunctor rT) where gc := ⟨9, rfl⟩
-
-instance : WsatGpreS (DPFunctor rT) where
-  inv := ⟨0, rfl⟩
-  enabled := ⟨1, rfl⟩
-  disabled := ⟨2, rfl⟩
-
-instance : LcGpreS (DPFunctor rT) where lc_elem := ⟨3, rfl⟩
-
-instance : InvGpreS (DPFunctor rT) where
-  toWsatGpreS := inferInstance
-  toLcGpreS := inferInstance
-
-end DPFunctor
-
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
 (clutch-dp's `randomized_response.v`). -/
 theorem rr_dp (b b' : Bool) (σ σ' : State rT) :
     DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 :=
-  rr_dp_of (DPFunctor rT) b b' σ σ'
+  rr_dp_of (MicrometerGradedFunctor rT (Multiplicative ℝ≥0)) b b' σ σ'
 
 /-- Every event is at most three times as likely under one private bit as under the other. -/
 theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : MeasurableSet S) :
