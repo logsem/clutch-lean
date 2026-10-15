@@ -202,5 +202,15 @@ theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : M
   have h := DPDiv.dp_le_iff.1 (rr_dp b b' σ σ') S hS
   rwa [toAdd_ofAdd, exp_log_three, add_zero] at h
 
+/-- Randomized response as a mechanism on private bits, started from state `σ`. -/
+noncomputable def rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=
+  ⟨fun b ↦ limExecV ⟨rr b, σ⟩, .of_discrete⟩
+
+/-- Randomized response is `(ln 3, 0)`-differentially private for any two bits (Def. 2.1). -/
+theorem rr_DP (σ : State rT) : DP (rrMech σ) (fun _ _ ↦ True) (Real.log 3) 0 :=
+  fun b b' _ S hS ↦ by
+    rw [Real.exp_log (by norm_num), add_zero, ENNReal.ofReal_ofNat]
+    exact rr_event_le b b' σ σ S hS
+
 end RandomizedResponse
 end ProbLang
