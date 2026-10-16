@@ -569,7 +569,7 @@ theorem specCoupl_couple {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁
   iexact H
 
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
-related pair; at `b₂ = ⊤` the whole budget is `⊤` and the coupling exits. -/
+related pair. -/
 theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b₁ b₂ b : B}
     {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} {n : Nat}
@@ -579,25 +579,21 @@ theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLa
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
   classical
+  have := Heras₁.isProbabilityMeasure
+  have := Heras₁'.isProbabilityMeasure
   iintro H
-  rcases (le_top (a := b₂)).lt_or_eq with hb₂ | rfl
-  · have := Heras₁.isProbabilityMeasure
-    have := Heras₁'.isProbabilityMeasure
-    iapply specCoupl_couple (R := fun σ ρ => if S σ ρ then b₂ else (⊤ : B))
-      (IsLawful.mono (Hcpl.frame_le (fun _ _ h => (ite_eq_left h).le) hb₂) hb le_rfl) Heras₁ Heras₁'
-    iintro %σ₂ %e₂' %σ₂' %hR
-    by_cases hS : S σ₂ ⟨e₂', σ₂'⟩
-    · simp only [hS, ↓reduceIte]
-      iapply H $$ %σ₂ %e₂' %σ₂' %hS
-    · simp [hS] at hR
-  · obtain rfl : b = (⊤ : B) := top_le_iff.1 (le_add_self.trans hb)
-    iclear H
-    iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
+  iapply specCoupl_couple (R := fun σ ρ => if S σ ρ then b₂ else (⊤ : B))
+    (IsLawful.mono (Hcpl.frame_le_of_isTopAbsorbing fun _ _ h => (ite_eq_left h).le) hb le_rfl)
+    Heras₁ Heras₁'
+  iintro %σ₂ %e₂' %σ₂' %hR
+  by_cases hS : S σ₂ ⟨e₂', σ₂'⟩
+  · simp only [hS, ↓reduceIte]
+    iapply H $$ %σ₂ %e₂' %σ₂' %hS
+  · simp [hS] at hR
 
 /-! ### `specCoupl` — derived lemmas -/
 
-/-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget; at `b₁ = ⊤` the budget
-is `⊤` and the coupling exits. -/
+/-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget. -/
 theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat}
     {b₁ b : B} {Z : State rT → Cfg rT → B → IProp GF}
@@ -605,17 +601,13 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
   iintro HF
-  rcases (le_top (a := b₁)).lt_or_eq with hb₁ | rfl
-  swap
-  · obtain rfl : b = (⊤ : B) := top_le_iff.1 hb
-    iclear HF
-    iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
   let R : State rT → Cfg rT → B := fun s c => if s = σ ∧ c = ⟨e₂', σ₂'⟩ then b₁ else (⊤ : B)
   have hR : R σ ⟨e₂', σ₂'⟩ = b₁ := ite_eq_left ⟨rfl, rfl⟩
   have Hcpl : L b R (MeasureTheory.Measure.dirac σ)
       ((MeasureTheory.Measure.dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) := by
     rw [MeasureTheory.Measure.dirac_bind (by fun_prop), Hstep]
-    exact IsLawful.mono (hR ▸ IsLawful.pure (hR ▸ hb₁)) hb le_rfl
+    exact IsTopAbsorbing.of_lt_top fun hb' ↦
+      IsLawful.mono (hR ▸ IsLawful.pure (hR ▸ hb.trans_lt hb')) hb le_rfl
   iapply specCoupl_couple Hcpl (ErasableExpr.dret σ) (ErasableExpr.dret σ₁')
   iintro %σ₂ %e₂'' %σ₂'' %hlt
   by_cases hS : σ₂ = σ ∧ e₂'' = e₂' ∧ σ₂'' = σ₂'
@@ -832,34 +824,40 @@ theorem progCoupl_steps_adv' {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCoupl_intro Hred (dirac_bind_pexecN_one Hred' ▸ Hcpl) (ErasableExpr.dret σ₁')
 
-/-- Couple one program step against one spec step within `b₁`, adding the finite `b₂` to every
+/-- Couple one program step against one spec step within `b₁`, adding `b₂` to every
 leftover. -/
-theorem progCoupl_steps_adv [Add B] [L.IsLawful] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b₁ b₂ b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
-    {R : Cfg rT → Cfg rT → B} (hb : b₁ + b₂ ≤ b) (hb₂ : b₂ < (⊤ : B))
-    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
+theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {b₁ b₂ b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    {R : Cfg rT → Cfg rT → B} (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁)
+    (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  have := prim_step_mass Hred
+  have := prim_step_mass Hred'
   progCoupl_intro (R := fun ρ₁ ρ₂ => R ρ₁ ρ₂ + b₂) Hred
-    (dirac_bind_pexecN_one Hred' ▸ IsLawful.mono (IsLawful.frame hb₂ Hcpl) hb le_rfl)
+    (dirac_bind_pexecN_one Hred' ▸ IsLawful.mono (IsTopAbsorbing.frame Hcpl) hb le_rfl)
     (ErasableExpr.dret σ₁')
 
 /-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
-the finite `b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
-theorem progCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] {e₁ : Exp rT}
-    {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b₁ b₂ b : B} {S : Cfg rT → Cfg rT → Prop}
+`b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
+theorem progCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {b₁ b₂ b : B} {S : Cfg rT → Cfg rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
-    (hb : b₁ + b₂ ≤ b) (hb₂ : b₂ < (⊤ : B)) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
+    (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' b₂) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical
+  have := prim_step_mass Hred
+  have := prim_step_mass Hred'
   iintro Hcnt
   iapply progCoupl_intro (R := fun ρ₁ ρ₂ => if S ρ₁ ρ₂ then b₂ else (⊤ : B)) Hred
     (dirac_bind_pexecN_one Hred' ▸
-      IsLawful.mono (Hcpl.frame_le (fun _ _ h => (ite_eq_left h).le) hb₂) hb le_rfl)
+      IsLawful.mono (Hcpl.frame_le_of_isTopAbsorbing fun _ _ h => (ite_eq_left h).le) hb le_rfl)
     (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   by_cases h : S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩
@@ -891,20 +889,21 @@ theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] {e₁ : Exp rT} {σ�
   · simp [he] at hR
 
 theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {μ₁' : MeasureTheory.Measure
-    (State rT)} {b₁ b₂ b : B}
+    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {μ₁' : MeasureTheory.Measure (State rT)} {b₁ b₂ b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Cfg rT → State rT → Prop}
-    (hb : b₁ + b₂ ≤ b) (hb₂ : b₂ < (⊤ : B)) (Hred : Reducible e₁ σ₁)
+    (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁)
     (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) μ₁')
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ σ₂', ⌜S ⟨e₂, σ₂⟩ σ₂'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' b₂) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical
   have := Heras.isProbabilityMeasure
+  have := prim_step_mass Hred
   iintro Hcnt
   iapply progCoupl_step_l_erasable_adv (R := fun ρ₁ σ₂' => if S ρ₁ σ₂' then b₂ else (⊤ : B)) Hred
     Heras
-    (IsLawful.mono (Hcpl.frame_le (fun _ _ h => (ite_eq_left h).le) hb₂) hb le_rfl)
+    (IsLawful.mono (Hcpl.frame_le_of_isTopAbsorbing fun _ _ h => (ite_eq_left h).le) hb le_rfl)
   iintro %e₂ %σ₂ %σ₂' %hR
   by_cases h : S ⟨e₂, σ₂⟩ σ₂'
   · simp only [h, ↓reduceIte]
@@ -921,36 +920,28 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     iprop% (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
       progCoupl (GradedDivergence.codensity GradedDivergence.tv.{0}) e₁ σ₁ e₁' σ₁' ε Z := by
   iintro H
-  rcases (le_top (a := ε₂)).lt_or_eq with hε₂ | rfl
-  · have hconc : MeasureTheory.Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
-      rw [MeasureTheory.Measure.dirac_apply' _ (by measurability)]; simp
-    have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}
-        (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') := by
-      refine AddCoupl.mono_rel ?_ (AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl)
-      rintro ⟨ρ, σ⟩ ⟨HR, hmem⟩
-      exact ⟨HR, hmem⟩
-    iapply progCoupl_step_l_erasable (S := fun ρ σ => R ρ σ ∧ σ = σ₁') Hε hε₂ Hred HcplR.codensity
-      (ErasableExpr.dret σ₁')
-    iintro %e₂ %σ₂ %σ₂' %HR'
-    obtain ⟨HR, rfl⟩ := HR'
-    iapply H $$ %e₂ %σ₂ %HR
-  · obtain rfl : ε = (⊤ : ENNReal) := top_le_iff.1 (le_add_self.trans Hε)
-    iclear H
-    iapply progCoupl_intro (R := fun _ _ => (⊤ : ENNReal)) (n := 0) Hred
-      (IsTopAbsorbing.absorbing_top _ _ _) (ErasableExpr.dret σ₁')
-    iintro %e₂ %σ₂ %e₂' %σ₂' %hR
-    exact absurd hR (lt_irrefl _)
+  have hconc : MeasureTheory.Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
+    rw [MeasureTheory.Measure.dirac_apply' _ (by measurability)]; simp
+  have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}
+      (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') :=
+    AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl
+  iapply progCoupl_step_l_erasable (S := fun ρ σ => R ρ σ ∧ σ = σ₁') Hε Hred HcplR.codensity
+    (ErasableExpr.dret σ₁')
+  iintro %e₂ %σ₂ %σ₂' %HR'
+  obtain ⟨HR, rfl⟩ := HR'
+  iapply H $$ %e₂ %σ₂ %HR
 
 theorem progCoupl_step_l_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Set
-    (Cfg rT)} (hb : b < (⊤ : B)) (Hred : Reducible e₁ σ₁)
+    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT}
+    {e₁' : Exp rT} {σ₁' : State rT} {b : B}
+    {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Set (Cfg rT)}
+    (Hred : Reducible e₁ σ₁)
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   iintro H
   have := prim_step_mass Hred
-  iapply progCoupl_step_l_erasable (S := fun ρ σ => ρ ∈ S ∧ σ = σ₁') (zero_add b).le hb Hred
+  iapply progCoupl_step_l_erasable (S := fun ρ σ => ρ ∈ S ∧ σ = σ₁') (zero_add b).le Hred
     (rel_dirac_right _ hSmeas hSconc σ₁') (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %σ₂' %HS
   obtain ⟨Hmem, rfl⟩ := HS
@@ -1322,8 +1313,7 @@ theorem wp_lift_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
 /-! ### Rules that pair the program step with a Dirac on the other side
 
 Everything below routes through `specCoupl_step_concentrated` or `progCoupl_step_l_concentrated`,
-which build the exact coupling along a diagonal (`rel_dirac_left`/`_right`). A budget `⊤` exits
-through `IsTopAbsorbing` before the step. -/
+which build the exact coupling along a diagonal (`rel_dirac_left`/`_right`). -/
 
 section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
@@ -1339,13 +1329,9 @@ theorem wp_lift_step_later_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val r
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
   imodintro
-  rcases (le_top (a := b₁)).lt_or_eq with hb₁ | rfl
-  swap
-  · iclear H Hs Hb
-    iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
   iapply specCoupl_ret
   simp only [Hv]
-  iapply progCoupl_step_l_concentrated hb₁ Hred (hSmeas σ₁) (hSconc σ₁)
+  iapply progCoupl_step_l_concentrated Hred (hSmeas σ₁) (hSconc σ₁)
   iintro %e₂ %σ₂ %Hmem
   imod H $$ %e₂ %σ₂ %Hmem with H
   iintro !> !>
@@ -1404,14 +1390,9 @@ theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with ⟨%S, %b₁, %b₂, %hb, %Hred, %Hred', %Hcpl, H⟩
   imodintro
-  rcases (le_top (a := b₂)).lt_or_eq with hb₂ | rfl
-  swap
-  · obtain rfl : b = (⊤ : B) := top_le_iff.1 (le_add_self.trans hb)
-    iclear H
-    iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
   iapply specCoupl_ret
   simp only [Hv]
-  iapply progCoupl_steps hb hb₂ Hred Hred' Hcpl
+  iapply progCoupl_steps hb Hred Hred' Hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %HS
   imod H $$ %e₂ %σ₂ %e₂' %σ₂' %HS with H
   iintro !> !>
@@ -1437,14 +1418,9 @@ theorem wp_lift_prim_step_l_erasable {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with ⟨%S, %μ₁', %b₁, %b₂, %hb, %Hred, %Heras, %Hcpl, H⟩
   imodintro
-  rcases (le_top (a := b₂)).lt_or_eq with hb₂ | rfl
-  swap
-  · obtain rfl : b = (⊤ : B) := top_le_iff.1 (le_add_self.trans hb)
-    iclear H
-    iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
   iapply specCoupl_ret
   simp only [Hv]
-  iapply progCoupl_step_l_erasable hb hb₂ Hred Hcpl Heras
+  iapply progCoupl_step_l_erasable hb Hred Hcpl Heras
   iintro %e₂ %σ₂ %σ₂' %HS
   imod H $$ %e₂ %σ₂ %σ₂' %HS with H
   iintro !> !>
@@ -1730,6 +1706,27 @@ theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
 end ConcentratedRules
 
 end Wp
+
+/-! ## Budget credits
+
+A local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`, so credit rules sit here. -/
+
+section BudgetCredits
+variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
+
+/-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
+theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
+    {Φ : Val rT → IProp GF} : ↯b c ⊢ wp L E e Φ := by
+  iintro Hc
+  iapply wp_unfold
+  unfold wpPre
+  iintro %σ₁ %e₁' %σ₁' %b₁ ⟨-, -, Hb⟩
+  ihave %hle := BudgetCredit.supply_bound $$ Hb Hc
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
+  imodintro
+  iapply specCoupl_absorbing (hc.mono hle)
+
+end BudgetCredits
 
 end MicrometerWpGS
 

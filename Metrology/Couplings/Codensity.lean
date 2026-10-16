@@ -193,7 +193,7 @@ instance isReflexive_codensity [AddZeroClass B] [LT B] [Top B] [D.IsReflexive] [
     exact IsComposable.comp (IsReflexive.refl μ) fun x ↦ by simpa using hkl x x
 
 /-- A larger budget `b' + c` comes from a larger budget `b'` at the same slack. -/
-instance isBudgetClosed_codensity [AddCommSemigroup B] [PartialOrder B] [CanonicallyOrderedAdd B]
+instance isBudgetClosed_codensity [AddCommSemigroup B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] [D.IsBudgetClosed] : (codensity D).IsBudgetClosed where
   of_forall_gt {X Y} _ _ b R μ ν _ _ h := by
     intro I _ c _ k l _ _ hkl
@@ -225,15 +225,18 @@ instance isMassDetecting_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D
 /-! ## Absorbing budgets -/
 
 /-- At budget `⊤` there is no test left. -/
+theorem codensity_top [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] (R : X → Y → B)
+    (μ : Measure X) (ν : Measure Y) : D.codensity ⊤ R μ ν :=
+  fun _ _ _ hc ↦ (le_self_add.not_gt hc).elim
+
 theorem absorbing_codensity_top [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] :
-    (codensity D).Absorbing ⊤ := by
-  intro X Y _ _ R μ ν _ _ I _ c hc
-  exact (lt_irrefl _ (le_self_add.trans_lt hc)).elim
+    (codensity D).Absorbing ⊤ :=
+  fun R μ ν _ _ ↦ codensity_top R μ ν
 
 /-- The codensity lifting relates everything at `⊤`, where no test is left. -/
 instance isTopAbsorbing_codensity [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] :
     (codensity D).IsTopAbsorbing :=
-  ⟨absorbing_codensity_top⟩
+  ⟨codensity_top⟩
 
 /-- A left measure of mass at most `δ` is related to everything at the slack `s δ`: every test
 output has mass at most `δ`. -/

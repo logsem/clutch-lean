@@ -69,6 +69,16 @@ theorem isSubProbabilityMeasure_bind (μ : Measure X) (f : X → Measure Y)
       _ ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun x ↦ IsSubProbabilityMeasure.measure_univ_le_one
       _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)⟩
 
+/-- A bind of mass `1` comes from almost surely total continuations. -/
+theorem ae_measure_univ_eq_one_of_bind {μ : Measure X} [IsSubProbabilityMeasure μ]
+    {κ : X → Measure Y} [∀ x, IsSubProbabilityMeasure (κ x)] (hκ : Measurable κ)
+    (h : μ.bind κ univ = 1) : ∀ᵐ x ∂μ, κ x univ = 1 := by
+  rw [Measure.bind_apply .univ hκ.aemeasurable] at h
+  refine ae_eq_of_ae_le_of_lintegral_le
+    (.of_forall fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one) (h ▸ one_ne_top)
+    aemeasurable_const ?_
+  simpa [h] using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)
+
 open Classical in
 /-- `μ` if it is finite, and `0` otherwise. -/
 noncomputable def Measure.finiteOrZero (μ : Measure X) : Measure X :=
@@ -127,6 +137,29 @@ instance isSubMarkovKernel_map (κ : Kernel X Y) [IsSubMarkovKernel κ] (f : Y �
       infer_instance
     · rw [Kernel.map_of_not_measurable _ hf]
       exact ⟨by simp⟩
+
+instance isSubMarkovKernel_sectL (k : Kernel (X × Y) Z) [IsSubMarkovKernel k] (y : Y) :
+    IsSubMarkovKernel (k.sectL y) where
+  isSubProbabilityMeasure x := by rw [Kernel.sectL_apply]; infer_instance
+
+instance isSubMarkovKernel_sectR (k : Kernel (X × Y) Z) [IsSubMarkovKernel k] (x : X) :
+    IsSubMarkovKernel (k.sectR x) where
+  isSubProbabilityMeasure y := by rw [Kernel.sectR_apply]; infer_instance
+
+instance isSubMarkovKernel_prod (κ : Kernel X Y) [IsSubMarkovKernel κ] (η : Kernel X Z)
+    [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ×ₖ η) where
+  isSubProbabilityMeasure x := ⟨by
+    rw [Kernel.prod_apply, ← Set.univ_prod_univ, Measure.prod_prod]
+    exact mul_le_one' (IsSubProbabilityMeasure.measure_univ_le_one)
+      IsSubProbabilityMeasure.measure_univ_le_one⟩
+
+instance isSubMarkovKernel_compProd (κ : Kernel X Y) [IsSubMarkovKernel κ]
+    (η : Kernel (X × Y) Z) [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ⊗ₖ η) where
+  isSubProbabilityMeasure x := ⟨by
+    rw [Kernel.compProd_apply .univ]
+    calc ∫⁻ y, η (x, y) Set.univ ∂κ x
+        ≤ ∫⁻ _, 1 ∂κ x := lintegral_mono fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one
+      _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one⟩
 
 /-- Gluing two sub-Markov kernels along a measurable set gives a sub-Markov kernel. -/
 instance isSubMarkovKernel_piecewise {s : Set X} [DecidablePred (· ∈ s)] (hs : MeasurableSet s)

@@ -39,12 +39,13 @@ theorem spanLifting_dirac [AddZeroClass B] [Preorder B] [Top B] [D.IsReflexive] 
   · rw [map_dirac' (by fun_prop)]
   · rw [map_dirac' (by fun_prop)]
 
-/-- Zero measures are span-lifted at every grade. -/
-theorem spanLifting_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
-    [D.IsReflexive] (b : B) (R : X → Y → B) :
-    D.spanLifting b R (0 : Measure X) (0 : Measure Y) :=
+/-- Zero on the left lifts against any right measure (Rocq `GCFamDZeroL_span_top`). -/
+theorem spanLifting_zero_left [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
+    [D.IsReflexive] (b : B) (R : X → Y → B) (ν : Measure Y) :
+    D.spanLifting b R (0 : Measure X) ν :=
   ⟨∅, 0, 0, (zero_add _).trans_le zero_le, fun _ ↦ False.elim, 0, 0, inferInstance,
-    inferInstance, IsReflexive.refl _, Measure.map_zero _, (Measure.map_zero _).le⟩
+    inferInstance, IsReflexive.refl _, Measure.map_zero _, (Measure.map_zero _).trans_le
+    (Measure.zero_le ν)⟩
 
 /-- Span lifting is monotone in the grade and antitone in the relation. -/
 theorem spanLifting_mono [Add B] [Preorder B] [Top B] {b' : B} {R' : X → Y → B}
@@ -85,10 +86,14 @@ theorem isLawful_spanLifting [AddMonoid B] [Preorder B] [AddRightMono B] [Canoni
     [Top B] [D.IsReflexive] [D.IsComposable] (hB : ∀ a c : B, a < ⊤ → c < ⊤ → a + c < ⊤) :
     D.spanLifting.IsLawful where
   pure := spanLifting_dirac
-  zero := spanLifting_zero
+  zero b R := spanLifting_zero_left b R 0
   mono := spanLifting_mono
   frame hc := spanLifting_frame fun a ha ↦ hB a _ ha hc
   map := spanLifting_map
+
+instance isZeroLeft_spanLifting [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
+    [D.IsReflexive] : D.spanLifting.IsZeroLeft where
+  zero_left b R ν _ := spanLifting_zero_left b R ν
 
 /-! ## Soundness and the codensity lifting -/
 
@@ -132,15 +137,27 @@ theorem not_absorbing_spanLifting [Add B] [Preorder B] [Top B] (b : B) :
   rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
   exact dirac_ne_zero hp.symm
 
-/-- Spans are not lawful at product budgets: framing `(⊤, 0)` by `(0, ⊤)` reaches `⊤`. -/
-theorem not_isLawful_spanLifting_prod (D : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞))
-    [D.IsReflexive] : ¬D.spanLifting.IsLawful := fun hL ↦ by
-  let R : PUnit.{u + 1} → PUnit.{u + 1} → ℝ≥0∞ × ℝ≥0∞ := fun _ _ ↦ (⊤, 0)
-  have h0 := hL.pure (R := R) (x := PUnit.unit) (y := PUnit.unit) (by simp [R, Prod.lt_iff])
-  have h1 := hL.frame (c := ((0, ⊤) : ℝ≥0∞ × ℝ≥0∞)) (by simp [Prod.lt_iff]) h0
-  obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ := h1
-  have : IsEmpty S := ⟨fun z ↦ (hS z z.2).1.ne (by simp [R]; rfl)⟩
+/-- Spans are not lawful when two finite budgets add up to `⊤`: framing by one leaves no
+support for a witness. -/
+theorem not_isLawful_spanLifting_of_add [Add B] [Preorder B] [Top B] {a c : B} (ha : a < ⊤)
+    (hc : c < ⊤) (hac : ¬a + c < ⊤) : ¬D.spanLifting.IsLawful := fun hL ↦ by
+  obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ :=
+    hL.frame hc (hL.pure (R := fun (_ _ : PUnit.{u + 1}) ↦ a) (x := .unit) (y := .unit) ha)
+  have : IsEmpty S := ⟨fun z ↦ hac (hS z z.2).1⟩
   rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
   exact dirac_ne_zero hp.symm
+
+/-- Spans are lawful exactly when finite budgets stay finite under addition. -/
+theorem isLawful_spanLifting_iff [AddMonoid B] [Preorder B] [AddRightMono B]
+    [CanonicallyOrderedAdd B] [Top B] [D.IsReflexive] [D.IsComposable] :
+    D.spanLifting.IsLawful ↔ ∀ a c : B, a < ⊤ → c < ⊤ → a + c < ⊤ :=
+  ⟨fun hL _ _ ha hc ↦ by_contra fun hac ↦ not_isLawful_spanLifting_of_add ha hc hac hL,
+    isLawful_spanLifting⟩
+
+/-- Spans are not lawful at product budgets: `(⊤, 0) + (0, ⊤) = ⊤`. -/
+theorem not_isLawful_spanLifting_prod (D : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞)) :
+    ¬D.spanLifting.IsLawful :=
+  not_isLawful_spanLifting_of_add (a := (⊤, 0)) (c := (0, ⊤)) (by simp [Prod.lt_iff])
+    (by simp [Prod.lt_iff]) (by simp [Prod.lt_iff])
 
 end GradedDivergence

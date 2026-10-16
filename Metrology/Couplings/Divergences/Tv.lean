@@ -27,6 +27,12 @@ theorem tv_smul_dirac_iff {a a' : ℝ≥0∞} :
     tv δ (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit) ↔ a ≤ a' + δ := by
   simp [tv, dp_smul_dirac_iff]
 
+omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
+theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
+    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
+  by_cases hS : S x y <;> simp [hS]
+
 /-! ## Instances -/
 
 instance isGraded_tv : tv.{u}.IsGraded where
@@ -52,10 +58,7 @@ instance isLeftAntitone_tv : tv.{u}.IsLeftAntitone where
   left_anti δ := IsLeftAntitone.left_anti (D := dp) (b := (0, δ))
 
 instance isBudgetClosed_tv : tv.{u}.IsBudgetClosed where
-  of_forall_gt {δ} _ _ _ _ _ _ h :=
-    tv_iff.2 fun S hS ↦ by
-      simpa using Bound.of_forall_lt (c := 1) (fun δ' hδ' S hS ↦ by
-        simpa using tv_iff.1 (h δ' hδ') S hS) S hS
+  of_forall_gt := fun h h0 ↦ .of_forall_lt fun δ' hδ' ↦ h δ' hδ' h0
 
 instance hasSlack_tv : tv.{u}.HasSlack (OrderAddMonoidHom.id ℝ≥0∞) where
   of_forall_le h := tv_iff.2 h
@@ -128,7 +131,8 @@ instance isExpectationAdditive_codensity_tv :
           rw [lintegral_add_right _ hc]
           ring
 
-/-- At slack at least `1`, every sub-probability measure is related to any measure. -/
+/-- At slack at least `1`, every sub-probability measure is related to any measure (Rocq
+`ARcoupl_1`). -/
 theorem codensity_tv_of_one_le [IsSubProbabilityMeasure μ] (hδ : 1 ≤ δ) :
     tv.codensity δ E μ ν := by
   intro I _ c _ k l _ _ _
@@ -144,11 +148,10 @@ theorem absorbing_codensity_tv_one : (codensity tv.{u}).Absorbing 1 :=
 theorem tv_measure_le_add (h : (codensity tv).Rel δ S μ ν) {T : Set X} {T' : Set Y}
     (hT : MeasurableSet T) (hT' : MeasurableSet T') (hS : ∀ x y, S x y → x ∈ T → y ∈ T') :
     μ T ≤ ν T' + δ := by
-  have hfg (x : X) (y : Y) :
-      T.indicator (1 : X → ℝ≥0∞) x ≤ T'.indicator 1 y + relCost S x y := by
-    by_cases hxy : S x y
-    · by_cases hx : x ∈ T <;> simp [hxy, hx, hS x y hxy]
-    · simp [hxy]
+  have hfg (x : X) (y : Y) : T.indicator (1 : X → ℝ≥0∞) x ≤ T'.indicator 1 y + relCost S x y := by
+    rw [le_add_relCost_iff]
+    intro hxy
+    by_cases hx : x ∈ T <;> simp [hx, hS x y hxy]
   simpa [lintegral_indicator_const, hT, hT'] using lintegral_le_of_codensity_tv h
     (measurable_const.indicator hT) (measurable_const.indicator hT')
     (fun _ ↦ Set.indicator_le_self' (by simp) _) (fun _ ↦ Set.indicator_le_self' (by simp) _) hfg
@@ -172,20 +175,16 @@ theorem codensity_tv_rel_false_iff :
   ⟨fun h ↦ by simpa using tv_measure_le_add h .univ .empty fun _ _ ↦ False.elim,
     fun h ↦ absorbing_codensity_tv_one.mono h _ _ _⟩
 
-/-- Total variation liftings are DP liftings at multiplier `1`, leftovers included (Rocq
-`CM_AR_DP`). -/
+/-- Total variation liftings are DP liftings at multiplier `1`, leftovers included. -/
 theorem codensity_tv_iff_dp [IsSubProbabilityMeasure μ] :
     tv.codensity δ E μ ν ↔ dp.codensity (0, δ) (fun x y ↦ dpSlack (E x y)) μ ν := by
   rw [codensity_dp_iff ENNReal.zero_ne_top, codensity_tv_iff]
   simp
 
-/-- Total variation liftings of a relation are DP liftings at multiplier `1`. -/
+/-- Total variation liftings of a relation are DP liftings at multiplier `1` (Rocq `CM_AR_DP`). -/
 theorem codensity_tv_rel_iff_dp [IsSubProbabilityMeasure μ] :
     (codensity tv).Rel δ S μ ν ↔ (codensity dp).Rel (0, δ) S μ ν := by
   rw [codensity_dp_rel_iff ENNReal.zero_ne_top, GradedLifting.Rel, codensity_tv_iff]
-  refine forall₂_congr fun f g ↦ forall₄_congr fun _ _ _ _ ↦ ?_
-  simp only [expBudget_zero, one_mul]
-  refine imp_congr_left (forall₂_congr fun x y ↦ ?_)
-  by_cases hS : S x y <;> simp [hS]
+  simp only [expBudget_zero, one_mul, le_add_relCost_iff]
 
 end GradedDivergence

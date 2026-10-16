@@ -735,7 +735,7 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, paying `s (ε₂ n)` to the continuation at
 the left draw `n` out of `↯b (s ε₁)`, where `ε₁` bounds the average of `ε₂`. -/
-theorem wp_couple_rand_rand_adv [Nontrivial B] [L.IsReflexive] [L.IsSupportLocal]
+theorem wp_couple_rand_rand_adv [L.IsReflexive] [L.IsSupportLocal]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z : Int) (f : Int → Int) (ε₁ : ENNReal)
     (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -801,30 +801,10 @@ theorem wp_couple_rand_rand_adv [Nontrivial B] [L.IsReflexive] [L.IsSupportLocal
     (.RandNoTapeS Hz (_root_.le_refl _) Hz) (by is_lc)).toReducible
   imod BudgetCredit.supply_decrease hc $$ Hb Herr with ⟨%r, %hr, Hb⟩
   imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
-  rcases (le_top (a := r)).lt_or_eq with hr' | rfl
-  swap
-  -- A supply of `⊤` is absorbing: skip the coupling.
-  · have hb : (⊤ : B) + 0 ≤ b := by rw [add_zero, hr]; exact le_add_self
-    have h0 : (0 : B) < (⊤ : B) := zero_le.lt_of_ne fun h ↦ by
-      obtain ⟨a, ha⟩ := exists_ne (0 : B)
-      exact ha ((h ▸ le_top).antisymm zero_le)
-    have htop : L ⊤ (fun _ _ ↦ (⊤ : B)) (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩)
-        (primStep ⟨K.fill pl(rand(#(.int z), #(.unit))), σ₁'⟩) :=
-      IsTopAbsorbing.absorbing_top _ _ _
-    imodintro
-    iexists fun _ _ ↦ (⊤ : B), (⊤ : B), (0 : B)
-    iframe %hb %h0 %hredL %hredR %htop
-    iintro %e₂ %σ₂ %e₂' %σ₂' !>
-    imod Hclose
-    imodintro
-    ileft
-    ipureintro
-    rw [add_zero]
-    exact IsTopAbsorbing.absorbing_top
   have hb : s ε₁ + r ≤ b := hr.ge
   imodintro
   iexists R, s ε₁, r
-  iframe %hb %hr' %hredL %hredR %Hkant
+  iframe %hb %hredL %hredR %Hkant
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
   by_cases hg : ∃ n, P ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ n
   · obtain ⟨n, ⟨hn0, hnz⟩, h1, h2⟩ := hg
@@ -856,7 +836,7 @@ theorem wp_couple_rand_rand_adv [Nontrivial B] [L.IsReflexive] [L.IsSupportLocal
 
 /-- Couple `rand z ~ K[rand z]` along the identity, avoiding the outcome `bad` for
 `↯b (s (1 / z))` when `s 1` is absorbing. -/
-theorem wp_couple_rand_rand_avoid [Nontrivial B] [L.IsReflexive] [L.IsSupportLocal]
+theorem wp_couple_rand_rand_avoid [L.IsReflexive] [L.IsSupportLocal]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z bad : Int) (Hz : 0 < z)
     (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) (K : Ectx rT) (E : CoPset)
@@ -1021,8 +1001,8 @@ theorem wp_couple_rand_rand_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal
     wp GradedDivergence.tv.codensity E pl(rand(#(.int zL), #(.unit))) Φ :=
   wp_couple_rand_rand_inj zL zR f ε _ HzL (HzL.trans_le Hle)
     (unifInt_addCoupl_inj HzL Hle f hdom hinj).codensity hε
-    (ENNReal.isAddLeftRegular_of_ne_top (ENNReal.div_ne_top (ENNReal.natCast_ne_top _)
-      (Nat.cast_ne_zero.2 (by omega)))) K E Φ
+    (IsAddRegular.of_ne_top (ENNReal.div_ne_top (ENNReal.natCast_ne_top _)
+      (Nat.cast_ne_zero.2 (by omega)))).1 K E Φ
 
 /-- Coupling `rand zL ~ rand zR` (`zR ≤ zL`) along an injection `f : [0,zR) ↪ [0,zL)`,
 spending `(zL - zR)/zL` error credits: the left draw is `f m`, the right draw is `m`.
@@ -1038,8 +1018,8 @@ theorem wp_couple_rand_rand_rev_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENN
     wp GradedDivergence.tv.codensity E pl(rand(#(.int zL), #(.unit))) Φ :=
   wp_couple_rand_rand_rev_inj zL zR f ε _ (HzR.trans_le Hle) HzR
     (unifInt_addCoupl_rev_inj HzR Hle f hdom hinj).codensity hε
-    (ENNReal.isAddLeftRegular_of_ne_top (ENNReal.div_ne_top (ENNReal.natCast_ne_top _)
-      (Nat.cast_ne_zero.2 (by omega)))) K E Φ
+    (IsAddRegular.of_ne_top (ENNReal.div_ne_top (ENNReal.natCast_ne_top _)
+      (Nat.cast_ne_zero.2 (by omega)))).1 K E Φ
 
 end CouplingRulesTV
 

@@ -6,6 +6,9 @@ public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
 public import Iris.Instances.IProp.Instance
+public import Mathlib.Algebra.Order.Hom.Monoid
+public import Mathlib.Basic.ENNReal.Basic
+import Metrology.Iris.ErrorCredits
 
 /-! Budget credits: an authoritative budget `●↯b s` and spendable fragments `↯b c` over an
 additive budget type (Rocq `gconeUR`). -/
@@ -164,6 +167,26 @@ instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
 
 /-- The authoritative budget is timeless. -/
 instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_timeless
+
+/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1` (Approxis `ec_ind_amp`). -/
+theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} {ε : ENNReal}
+    {k : NNReal} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) : iprop%
+    □ (↯b (s 1) -∗ P) ⊢
+      □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ P) -∗ ↯b (s ε') -∗ P) -∗
+      ↯b (s ε) -∗ P := by
+  iintro #Hexit #Hamp Hε
+  obtain ⟨n, hn⟩ := ErrorCredit.Induction.err_amp_power hε hk
+  iinduction n generalizing %ε %hε %hn Hε with
+  | zero =>
+    simp only [pow_zero, mul_one] at hn
+    iapply Hexit $$ [Hε]
+    iapply weaken (OrderHomClass.mono s hn) $$ Hε
+  | succ n IH =>
+    iapply Hamp $$ %_ %hε [] Hε
+    iintro !> Hε
+    iapply IH $$ %((k : ENNReal) * ε)
+      %(ENNReal.mul_pos_iff.mpr ⟨ENNReal.coe_pos.mpr (pos_of_gt hk), pos_of_gt hε⟩)
+      %(hn.trans (le_of_eq (by ring))) Hε
 
 end BudgetCredit
 

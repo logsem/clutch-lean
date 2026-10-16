@@ -152,13 +152,16 @@ theorem dp_of_renyi [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} 
   gcongr
   rw [ENNReal.toReal_ofReal']
   exact le_max_left _ _
-/-- DP inequalities at multipliers converging to `e^{e₀}` give the one at `e^{e₀}`. -/
-theorem Bound.of_tendsto [IsFiniteMeasure ν] {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (𝓝 e₀))
-    {δ : ℝ≥0∞} (h : ∀ n, Bound (ENNReal.ofReal (exp (e n))) δ μ ν) :
-    Bound (ENNReal.ofReal (exp e₀)) δ μ ν := fun S hS ↦
-  ge_of_tendsto' ((ENNReal.Tendsto.mul_const
-    (ENNReal.tendsto_ofReal ((continuous_exp.tendsto e₀).comp he))
-    (Or.inr (measure_ne_top ν S))).add_const δ) fun n ↦ h n S hS
+
+/-- Rényi bounds `g α` at the orders `α ∈ A` give DP at every slack `δ > 0`, at the best order
+([R/D]). -/
+theorem dp_of_forall_renyi [IsFiniteMeasure μ] [IsFiniteMeasure ν] {A : Set ℝ} (hA : A ⊆ Ioi 1)
+    {g : ℝ → ℝ≥0∞} {δ : ℝ} (hδ : 0 < δ) (h : ∀ α ∈ A, renyiDivergence α (g α) μ ν) :
+    dp (⨅ α ∈ A, g α + ENNReal.ofReal (log (1 / δ) / (α - 1)), ENNReal.ofReal δ) μ ν :=
+  dp_iInf_left fun α ↦ by
+    by_cases hα : α ∈ A
+    · simpa [hα] using dp_of_renyi (hA hα) hδ (h α hα)
+    · simpa [hα] using dp_top_left
 
 /-- Moment bounds on the line `ξ + α ρ` at all orders `α > 1` give the DP inequality with slack `δ`
 and budget `ξ + ρ + 2 √(ρ log (1 / δ))`, at the order `1 + √(log (1 / δ) / ρ)` (cf. [z/D]). -/
@@ -266,13 +269,20 @@ theorem dp_of_tcdp [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} {
 
 /-! ## Conversions of codensity liftings -/
 
-/-- A conversion of a divergence into DP carries codensity liftings of relations along, provided
-point masses with ordered masses are within budget zero: test the DP lifting with mass kernels. -/
+/-- Point masses with ordered masses are within budget zero for a reflexive, right-monotone
+divergence. -/
+theorem zero_smul_dirac_of_le {B : Type v} [Zero B] {D : GradedDivergence.{u} B} [D.IsReflexive]
+    [D.IsRightMonotone] {a a' : ℝ≥0∞} (h : a ≤ a') (ha' : a' ≤ 1) :
+    D 0 (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit) := by
+  have : IsSubProbabilityMeasure (a • dirac PUnit.unit.{u + 1}) := ⟨by simpa using h.trans ha'⟩
+  have : IsSubProbabilityMeasure (a' • dirac PUnit.unit.{u + 1}) := ⟨by simpa using ha'⟩
+  exact IsRightMonotone.right_mono (by gcongr) (IsReflexive.refl _)
+
+/-- A conversion of a divergence into DP carries codensity liftings of relations along: test the
+DP lifting with mass kernels. -/
 theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
     [CanonicallyOrderedAdd B] [OrderTop B] {D : GradedDivergence.{u} B} [D.IsGraded]
-    {φ : B → ℝ≥0∞ × ℝ≥0∞}
-    (h0 : ∀ a a' : ℝ≥0∞, a ≤ a' → a' ≤ 1 →
-      D 0 (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit))
+    [D.IsReflexive] [D.IsRightMonotone] {φ : B → ℝ≥0∞ × ℝ≥0∞}
     (himp : ∀ b {Z : Type u} [MeasurableSpace Z] {μ ν : Measure Z} [IsSubProbabilityMeasure μ]
       [IsSubProbabilityMeasure ν], D b μ ν → dp (φ b) μ ν)
     (htop : (φ ⊤).1 = ⊤) {b : B} {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
@@ -288,57 +298,85 @@ theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
   have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
   have hD := codensity_rel_iff.1 h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
     (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg) fun x y hS ↦ by
-      simpa [Kernel.mass_apply] using h0 _ _ (hfg x y hS) (hg1 y)
+      simpa [Kernel.mass_apply] using zero_smul_dirac_of_le (D := D) (hfg x y hS) (hg1 y)
   rw [add_zero] at hD
   have := dp_smul_dirac_iff.1 (by simpa only [Kernel.mass_comp] using himp b hD)
   exact this (lt_top_iff_ne_top.2 hε)
 
+end GradedDivergence
+
+/-! ## Homomorphisms into DP -/
+
+open GradedDivergence
+
+namespace LiftingRelHom
+
+variable {α ω δ : ℝ}
+
 /-- Rényi liftings of relations are DP liftings at every slack `δ > 0` ([R/D]). -/
-noncomputable def liftingRelHom_renyi_dp [hα : Fact (1 < α)] {δ : ℝ} (hδ : 0 < δ) :
+noncomputable def renyiToDp [hα : Fact (1 < α)] (hδ : 0 < δ) :
     LiftingRelHom (codensity (renyiDivergence.{u} α)) (codensity dp.{u}) where
   map ρ := (ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)), ENNReal.ofReal δ)
   mono _ _ h := Prod.mk_le_mk.2 ⟨by gcongr, le_rfl⟩
-  map_rel := codensity_dp_rel_of_imp (fun _ _ ↦ renyiDivergence_zero_smul_dirac hα.out)
-    (fun _ _ _ _ _ _ _ ↦ dp_of_renyi hα.out hδ) (by simp)
+  map_rel := codensity_dp_rel_of_imp (D := renyiDivergence α) (fun _ ↦ dp_of_renyi hα.out hδ)
+    (by simp)
 
-/-- zCDP liftings of relations are DP liftings at every slack `0 < δ < 1` ([z/D]). -/
-noncomputable def liftingRelHom_zcdp_dp {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+/-- zCDP codensity liftings of relations are DP liftings at every slack `δ > 0`, at the best
+order ([z/D]). -/
+noncomputable def codensityZcdpToDp (hδ : 0 < δ) :
     LiftingRelHom (codensity zcdpDivergence.{u}) (codensity dp.{u}) where
-  map b := (b.1 + b.2 + ENNReal.ofReal (2 * √(b.2.toReal * log (1 / δ))), ENNReal.ofReal δ)
-  mono b b' h := by
-    refine Prod.mk_le_mk.2 ⟨?_, le_rfl⟩
-    rcases eq_or_ne b'.2 ⊤ with h' | h'
-    · simp [h']
-    have hL : 0 ≤ log (1 / δ) := log_nonneg (by rw [one_div]; exact one_le_inv₀ hδ |>.2 hδ₁.le)
-    exact add_le_add (add_le_add h.1 h.2) (ENNReal.ofReal_le_ofReal (mul_le_mul_of_nonneg_left
-      (Real.sqrt_le_sqrt (mul_le_mul_of_nonneg_right (ENNReal.toReal_mono h' h.2) hL))
-      zero_le_two))
+  map b := (⨅ α ∈ Ioi 1, b.1 + ENNReal.ofReal α * b.2 + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+    ENNReal.ofReal δ)
+  mono _ _ h := Prod.mk_le_mk.2 ⟨iInf₂_mono fun _ _ ↦ by grw [h.1, h.2], le_rfl⟩
   map_rel := codensity_dp_rel_of_imp (D := zcdpDivergence)
-    (fun _ _ ↦ concentratedDivergence_zero_smul_dirac)
-    (fun b _ _ _ _ _ _ h ↦ dp_of_zcdp (ξ := b.1) (ρ := b.2) hδ hδ₁ h) (by simp)
+    (fun _ ↦ (dp_of_forall_renyi subset_rfl hδ fun _ hα ↦ renyi_of_zcdp hα ·))
+    (by simp)
 
-/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, through the order
-`1 < α < ω` ([t/D] at a fixed order). -/
-noncomputable def liftingRelHom_tcdp_dp [hα : Fact (1 < α)] (hαω : α < ω) {δ : ℝ} (hδ : 0 < δ) :
+/-- tCDP codensity liftings of relations are DP liftings at every slack `δ > 0`, at the best
+order below `ω` ([t/D]). -/
+noncomputable def codensityTcdpToDp (hδ : 0 < δ) :
     LiftingRelHom (codensity (tcdpDivergence.{u} ω)) (codensity dp.{u}) where
-  map ρ := (ENNReal.ofReal α * ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)), ENNReal.ofReal δ)
-  mono _ _ h := Prod.mk_le_mk.2 ⟨by gcongr, le_rfl⟩
+  map ρ := (⨅ α ∈ Ioo 1 ω, ENNReal.ofReal α * ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+    ENNReal.ofReal δ)
+  mono _ _ h := Prod.mk_le_mk.2 ⟨iInf₂_mono fun _ _ ↦ by gcongr, le_rfl⟩
   map_rel := codensity_dp_rel_of_imp (D := tcdpDivergence ω)
-    (fun _ _ ↦ concentratedDivergence_zero_smul_dirac)
-    (fun _ _ _ _ _ _ _ h ↦ dp_of_renyi hα.out hδ (renyi_of_tcdp hα.out hαω h))
-    (by simp [ENNReal.mul_top (ENNReal.ofReal_pos.2 (zero_lt_one.trans hα.out)).ne'])
+    (fun _ ↦ (dp_of_forall_renyi Ioo_subset_Ioi_self hδ fun _ hα ↦ renyi_of_tcdp hα.1 hα.2 ·))
+    (by simp +contextual [ENNReal.mul_top, (zero_lt_one.trans _).ne'])
 
+/-- zCDP liftings of relations are DP liftings at every slack `δ > 0`, at the best order
+([z/D]). -/
+noncomputable def zcdpToDp (hδ : 0 < δ) : LiftingRelHom zcdpLifting.{u} (codensity dp.{u}) :=
+  (codensityZcdpToDp hδ).comp ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl)
 
-/-- zCDP liftings of relations are DP liftings at every slack `0 < δ < 1` ([z/D]). -/
-noncomputable def liftingRelHom_zcdpLifting_dp {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
-    LiftingRelHom zcdpLifting.{u} (codensity dp.{u}) :=
-  (liftingRelHom_zcdp_dp hδ hδ₁).comp
-    ((liftingHom_concentratedLifting_codensity _).toLiftingRelHom rfl)
+/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, at the best order below
+`ω` ([t/D]). -/
+noncomputable def tcdpToDp (hδ : 0 < δ) : LiftingRelHom (tcdpLifting.{u} ω) (codensity dp.{u}) :=
+  (codensityTcdpToDp hδ).comp ((LiftingHom.tcdpToCodensity ω).toLiftingRelHom rfl)
 
-/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, through the order
-`1 < α < ω` ([t/D] at a fixed order). -/
-noncomputable def liftingRelHom_tcdpLifting_dp [Fact (1 < α)] (hαω : α < ω) {δ : ℝ}
-    (hδ : 0 < δ) : LiftingRelHom (tcdpLifting.{u} ω) (codensity dp.{u}) :=
-  (liftingRelHom_tcdp_dp hαω hδ).comp ((liftingHom_tcdpLifting_codensity ω).toLiftingRelHom rfl)
+end LiftingRelHom
+
+namespace GradedDivergence
+
+variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ : Measure X} {ν : Measure Y}
+  [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S : X → Y → Prop} {α ω δ : ℝ}
+
+/-- zCDP liftings of relations are DP liftings at every slack `0 < δ < 1`, in closed form
+([z/D]). -/
+theorem codensity_dp_rel_of_zcdp {ξ ρ : ℝ≥0∞} (hδ : 0 < δ) (hδ₁ : δ < 1)
+    (h : (codensity zcdpDivergence).Rel (ξ, ρ) S μ ν) :
+    (codensity dp).Rel
+      (ξ + ρ + ENNReal.ofReal (2 * √(ρ.toReal * log (1 / δ))), ENNReal.ofReal δ) S μ ν :=
+  codensity_dp_rel_of_imp (φ := fun b ↦
+      (b.1 + b.2 + ENNReal.ofReal (2 * √(b.2.toReal * log (1 / δ))), ENNReal.ofReal δ))
+    (fun _ ↦ dp_of_zcdp hδ hδ₁) (by simp) h
+
+/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, at a fixed order
+`1 < α < ω` ([t/D]). -/
+theorem codensity_dp_rel_of_tcdp {ρ : ℝ≥0∞} (hα : 1 < α) (hαω : α < ω) (hδ : 0 < δ)
+    (h : (codensity (tcdpDivergence ω)).Rel ρ S μ ν) :
+    (codensity dp).Rel
+      (ENNReal.ofReal α * ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)), ENNReal.ofReal δ) S μ ν :=
+  ((LiftingRelHom.codensityTcdpToDp hδ).map_rel h).mono
+    (Prod.mk_le_mk.2 ⟨iInf₂_le α ⟨hα, hαω⟩, le_rfl⟩) fun _ _ ↦ id
 
 end GradedDivergence

@@ -7,7 +7,7 @@ public import Metrology.Couplings.SubProbability
 
 @[expose] public section
 
-universe u v
+universe u v w
 
 open MeasureTheory Measure ProbabilityTheory
 open scoped ENNReal
@@ -123,9 +123,6 @@ theorem IsComposable.prod [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {b c
     {μ₁ μ₂ : Measure X} {ν₁ ν₂ : Measure Y} [IsSubProbabilityMeasure μ₁]
     [IsSubProbabilityMeasure μ₂] [IsSubProbabilityMeasure ν₁] [IsSubProbabilityMeasure ν₂]
     (hμ : D b μ₁ μ₂) (hν : D c ν₁ ν₂) : D (b + c) (μ₁.prod ν₁) (μ₂.prod ν₂) := by
-  have (ν : Measure Y) [IsSubProbabilityMeasure ν] :
-      IsSubMarkovKernel (Kernel.id ×ₖ Kernel.const X ν) :=
-    ⟨fun x ↦ by rw [Kernel.prod_apply]; infer_instance⟩
   rw [← compProd_const, ← compProd_const, compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine IsComposable.comp hμ fun x ↦ ?_
   simpa [Kernel.prod_apply, Kernel.id_apply, dirac_prod] using IsComposable.map (f := Prod.mk x) hν
@@ -140,3 +137,108 @@ theorem IsComposable.map_iff_of_measurableEmbedding [AddZeroClass B] [D.IsReflex
   · convert IsComposable.comp_self (0 : Kernel Y X) h <;> exact Subsingleton.elim _ _
   obtain ⟨g, hg, hgf⟩ := hf.exists_measurable_extend measurable_id fun _ ↦ inferInstance
   simpa [map_map hg hf.measurable, hgf] using IsComposable.map h hg
+
+/-! ## Regrading -/
+
+section Comap
+
+variable {B : Type v} {B' : Type w} {φ : B' → B} {D : GradedDivergence.{u} B}
+
+variable (D) (φ) in
+/-- Regrading a divergence along a budget map (Rocq `GCF_regrade`). -/
+def comap : GradedDivergence.{u} B' :=
+  fun b ↦ D (φ b)
+
+theorem comap_def {b : B'} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
+    D.comap φ b μ ν ↔ D (φ b) μ ν :=
+  Iff.rfl
+
+theorem comap_comap {B'' : Type*} {ψ : B'' → B'} : (D.comap φ).comap ψ = D.comap (φ ∘ ψ) :=
+  rfl
+
+/-- Regrading keeps grading along a monotone map whose image of `⊤` always holds. -/
+theorem isGraded_comap [Preorder B] [Top B] [Preorder B'] [Top B'] [D.IsGraded]
+    (hφ : Monotone φ) (htop : ∀ {X : Type u} [MeasurableSpace X] (μ ν : Measure X)
+      [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν], D (φ ⊤) μ ν) :
+    (D.comap φ).IsGraded where
+  mono _ _ hb := IsGraded.mono (D := D) (hφ hb)
+  top := htop
+
+/-- Regrading keeps grading along a monotone map that keeps `⊤`. -/
+theorem isGraded_comap_of_map_top [Preorder B] [Top B] [Preorder B'] [Top B'] [D.IsGraded]
+    (hφ : Monotone φ) (htop : φ ⊤ = ⊤) : (D.comap φ).IsGraded :=
+  isGraded_comap hφ fun μ ν _ _ ↦ htop ▸ IsGraded.top μ ν
+
+/-- Regrading keeps reflexivity when `φ 0` is at least `0`. -/
+theorem isReflexive_comap [Zero B] [LE B] [Top B] [Zero B'] [D.IsGraded] [D.IsReflexive]
+    (h0 : 0 ≤ φ 0) : (D.comap φ).IsReflexive where
+  refl μ _ := IsGraded.mono h0 (IsReflexive.refl (D := D) μ)
+
+/-- Regrading keeps composability along a superadditive map. -/
+theorem isComposable_comap [Add B] [LE B] [Top B] [Add B'] [D.IsGraded] [D.IsComposable]
+    (hadd : ∀ b c, φ b + φ c ≤ φ (b + c)) : (D.comap φ).IsComposable where
+  comp b c := fun h hκ ↦ IsGraded.mono (hadd b c) (IsComposable.comp (D := D) h hκ)
+
+instance isZeroLeft_comap [D.IsZeroLeft] : (D.comap φ).IsZeroLeft where
+  zero_left b := IsZeroLeft.zero_left (D := D) (φ b)
+
+instance isLeftContinuous_comap [D.IsLeftContinuous] : (D.comap φ).IsLeftContinuous where
+  iSup_left b := IsLeftContinuous.iSup_left (D := D) (b := φ b)
+
+instance isRightMonotone_comap [D.IsRightMonotone] : (D.comap φ).IsRightMonotone where
+  right_mono b := IsRightMonotone.right_mono (D := D) (b := φ b)
+
+instance isLeftAntitone_comap [D.IsLeftAntitone] : (D.comap φ).IsLeftAntitone where
+  left_anti b := IsLeftAntitone.left_anti (D := D) (b := φ b)
+
+end Comap
+
+/-! ## Families -/
+
+section Pi
+
+variable {ι : Type w} {B : ι → Type v} {D : ∀ i, GradedDivergence.{u} (B i)}
+
+variable (D) in
+/-- A family of divergences met at once, each within its own coordinate of the budget
+(Rocq `RDPcoupl_curve`). -/
+def pi : GradedDivergence.{u} (∀ i, B i) :=
+  fun b _ _ μ ν ↦ ∀ i, D i (b i) μ ν
+
+theorem pi_def {b : ∀ i, B i} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
+    pi D b μ ν ↔ ∀ i, D i (b i) μ ν :=
+  Iff.rfl
+
+instance isGraded_pi [∀ i, LE (B i)] [∀ i, Top (B i)] [∀ i, (D i).IsGraded] :
+    (pi D).IsGraded where
+  mono _ _ hb := fun h i ↦ IsGraded.mono (hb i) (h i)
+  top μ ν _ _ i := IsGraded.top (D := D i) μ ν
+
+instance isReflexive_pi [∀ i, Zero (B i)] [∀ i, (D i).IsReflexive] : (pi D).IsReflexive where
+  refl μ _ i := IsReflexive.refl (D := D i) μ
+
+instance isComposable_pi [∀ i, Add (B i)] [∀ i, (D i).IsComposable] :
+    (pi D).IsComposable where
+  comp _ _ := fun h hκ i ↦ IsComposable.comp (h i) fun x ↦ hκ x i
+
+instance isZeroLeft_pi [∀ i, (D i).IsZeroLeft] : (pi D).IsZeroLeft where
+  zero_left b _ _ ν _ i := IsZeroLeft.zero_left (b i) ν
+
+instance isLeftContinuous_pi [∀ i, (D i).IsLeftContinuous] : (pi D).IsLeftContinuous where
+  iSup_left b := fun hμ _ _ h i ↦ IsLeftContinuous.iSup_left (b := b i) hμ fun n ↦ h n i
+
+instance isRightMonotone_pi [∀ i, (D i).IsRightMonotone] : (pi D).IsRightMonotone where
+  right_mono _ := fun hν h i ↦ IsRightMonotone.right_mono hν (h i)
+
+instance isLeftAntitone_pi [∀ i, (D i).IsLeftAntitone] : (pi D).IsLeftAntitone where
+  left_anti _ := fun hμ h i ↦ IsLeftAntitone.left_anti hμ (h i)
+
+/-- Budgets are closed one coordinate at a time. -/
+instance isBudgetClosed_pi [∀ i, Preorder (B i)] [∀ i, (D i).IsBudgetClosed] :
+    (pi D).IsBudgetClosed where
+  of_forall_gt {b} := fun h i ↦ by
+    classical
+    exact IsBudgetClosed.of_forall_gt fun t ht ↦
+      by simpa using h (Function.update b i t) (lt_update_self_iff.2 ht) i
+
+end Pi

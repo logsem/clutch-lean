@@ -16,8 +16,8 @@ namespace ProbLang.MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-/-- Lift a program step coupled with a spec step within `b₁`, adding the finite `b₂` to every
-leftover (Rocq `wp_lift_step_couple_adv`). -/
+/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
+(Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -25,7 +25,6 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
         ⌜b₁ + b₂ ≤ b⌝ ∗
-        ⌜b₂ < (⊤ : B)⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
@@ -36,9 +35,9 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
   iintro H
   iapply wp_lift_step_prog_couple hv
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hb₂, %hred, %hred', %hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hred, %hred', %hcpl, H⟩
   imodintro
-  iapply progCoupl_steps_adv hb hb₂ hred hred' hcpl
+  iapply progCoupl_steps_adv hb hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   imodintro
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
@@ -75,7 +74,6 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
         ⌜b₁ + b₂ ≤ b⌝ ∗
-        ⌜b₂ < (⊤ : B)⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
@@ -87,11 +85,11 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hb₂, %hred, %hred', %hcpl, H⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hred, %hred', %hcpl, H⟩
   imodintro
   iapply specCoupl_ret
   simp only [hv]
-  iapply progCoupl_steps_adv hb hb₂ hred hred' hcpl
+  iapply progCoupl_steps_adv hb hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !> !>
   ispecialize H $$ %e₂ %σ₂ %e₂' %σ₂'
   by_cases habs : L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)

@@ -1,7 +1,6 @@
 module
 
 public import Mathlib.Algebra.Order.Monoid.Lex
-public import Mathlib.Algebra.Order.Monoid.Prod
 public import Mathlib.MeasureTheory.Integral.Layercake
 public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
 public import Metrology.Couplings.Codensity
@@ -12,7 +11,7 @@ public import Metrology.Couplings.Codensity
 
 universe u v
 
-open MeasureTheory Measure ProbabilityTheory GradedLifting Set
+open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology Real
 open scoped ENNReal
 
 namespace GradedDivergence
@@ -35,6 +34,14 @@ theorem Bound.of_forall_lt (h : ∀ δ', δ < δ' → Bound c δ' μ ν) : Bound
   refine ENNReal.le_of_forall_pos_le_add fun η hη _ ↦ ?_
   rw [add_assoc]
   exact h _ (ENNReal.lt_add_right hδ (by simpa using hη.ne')) S hS
+
+/-- DP inequalities at multipliers converging to `e^{e₀}` give the one at `e^{e₀}`. -/
+theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (𝓝 e₀)) {δ : ℝ≥0∞}
+    (h : ∀ n, Bound (ENNReal.ofReal (exp (e n))) δ μ ν) :
+    Bound (ENNReal.ofReal (exp e₀)) δ μ ν := fun S hS ↦
+  ge_of_tendsto' ((ENNReal.Tendsto.mul_const
+    (ENNReal.tendsto_ofReal ((continuous_exp.tendsto e₀).comp he))
+    (.inl (ENNReal.ofReal_pos.2 (exp_pos _)).ne')).add_const δ) fun n ↦ h n S hS
 
 theorem Bound.mono (h : Bound c δ μ ν) (hc : c ≤ c') (hδ : δ ≤ δ') : Bound c' δ' μ ν :=
   fun S hS ↦ (h S hS).trans (by gcongr)
@@ -127,8 +134,11 @@ theorem expBudget_top : expBudget ⊤ = ⊤ := by
   simp [expBudget]
 
 theorem expBudget_of_ne_top (hε : ε ≠ ⊤) : expBudget ε = ENNReal.ofReal (Real.exp ε.toReal) := by
-  rw [expBudget, ← ENNReal.ofReal_toReal hε, EReal.coe_ennreal_ofReal,
-    max_eq_left ENNReal.toReal_nonneg, EReal.exp_coe, ENNReal.toReal_ofReal ENNReal.toReal_nonneg]
+  rw [expBudget, ← EReal.coe_ennreal_toReal hε, EReal.exp_coe]
+
+theorem expBudget_ofReal {x : ℝ} (hx : 0 ≤ x) :
+    expBudget (ENNReal.ofReal x) = ENNReal.ofReal (Real.exp x) := by
+  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top, ENNReal.toReal_ofReal hx]
 
 @[simp]
 theorem expBudget_zero : expBudget 0 = 1 := by
@@ -168,6 +178,9 @@ theorem dp_iff (hε : ε ≠ ⊤) :
     dp (ε, δ) μ ν ↔ ∀ S, MeasurableSet S → μ S ≤ expBudget ε * ν S + δ :=
   ⟨fun h ↦ h hε.lt_top, fun h _ ↦ h⟩
 
+theorem dp_of_forall_le (h : ∀ S, MeasurableSet S → μ S ≤ expBudget ε * ν S) : dp (ε, 0) μ ν :=
+  fun _ S hS ↦ (h S hS).trans le_self_add
+
 theorem dp_top_left : dp (⊤, δ) μ ν :=
   fun h ↦ (lt_irrefl _ h).elim
 
@@ -185,6 +198,27 @@ theorem dp_smul_dirac_iff {a a' : ℝ≥0∞} :
   rcases S.eq_empty_or_nonempty with rfl | ⟨⟨⟩, hS⟩
   · simp
   · simpa [hS] using h
+
+/-- DP at every larger multiplier is DP at the multiplier. -/
+theorem dp_of_forall_gt_left (h : ∀ ε', ε < ε' → dp (ε', δ) μ ν) : dp (ε, δ) μ ν := by
+  intro (hε : ε < ⊤)
+  have key (n : ℕ) : Bound (ENNReal.ofReal (exp (ε.toReal + 1 / (n + 1)))) δ μ ν := by
+    have hlt : ε < ε + ENNReal.ofReal (1 / (n + 1)) :=
+      ENNReal.lt_add_right hε.ne (by simp; positivity)
+    have hfin := ENNReal.add_lt_top.2 ⟨hε, ENNReal.ofReal_lt_top (r := 1 / (n + 1))⟩
+    have : Bound (expBudget (ε + ENNReal.ofReal (1 / (n + 1)))) δ μ ν := h _ hlt hfin
+    rwa [expBudget_of_ne_top hfin.ne, ENNReal.toReal_add hε.ne ENNReal.ofReal_ne_top,
+      ENNReal.toReal_ofReal (by positivity)] at this
+  rw [expBudget_of_ne_top hε.ne]
+  exact .of_tendsto (by simpa using
+    (tendsto_const_nhds (x := ε.toReal)).add tendsto_one_div_add_atTop_nhds_zero_nat) key
+
+/-- DP at a family of multipliers is DP at their infimum. -/
+theorem dp_iInf_left {ι : Sort*} [Nonempty ι] {ε : ι → ℝ≥0∞} (h : ∀ i, dp (ε i, δ) μ ν) :
+    dp (⨅ i, ε i, δ) μ ν :=
+  dp_of_forall_gt_left fun _ h' ↦ by
+    obtain ⟨i, hi⟩ := iInf_lt_iff.1 h'
+    exact dp_mono_left hi.le (h i)
 
 theorem dp_map (h : dp b μ ν) {f : X → Y} (hf : Measurable f := by fun_prop) :
     dp b (μ.map f) (ν.map f) :=
@@ -215,19 +249,19 @@ instance isZeroLeft_dp : dp.{u}.IsZeroLeft where
   zero_left _ _ _ ν _ _ := bound_zero_left _ _ ν
 
 instance isLeftContinuous_dp : dp.{u}.IsLeftContinuous where
-  iSup_left _ _ _ _ _ hμ _ _ h hb S hS := by
+  iSup_left _ := fun hμ _ _ h hb S hS ↦ by
     rw [iSup_apply_of_monotone hμ hS]
     exact iSup_le fun n ↦ h n hb S hS
 
 instance isRightMonotone_dp : dp.{u}.IsRightMonotone where
-  right_mono _ _ _ _ _ _ _ _ hν h hb S hS := (h hb S hS).trans (by grw [le_iff'.1 hν S])
+  right_mono _ := fun hν h hb S hS ↦ (h hb S hS).trans (by grw [le_iff'.1 hν S])
 
 instance isLeftAntitone_dp : dp.{u}.IsLeftAntitone where
-  left_anti _ _ _ _ _ _ _ _ hμ h hb S hS := (le_iff'.1 hμ S).trans (h hb S hS)
+  left_anti _ := fun hμ h hb S hS ↦ (le_iff'.1 hμ S).trans (h hb S hS)
 
 /-- A bound at every larger slack is a bound at the slack. -/
 instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
-  of_forall_gt {b} _ _ _ _ _ _ h hb :=
+  of_forall_gt {b} := fun h hb ↦
     .of_forall_lt fun δ' hδ' ↦ h (b.1, δ') (Prod.lt_iff.2 (.inr ⟨le_rfl, hδ'⟩)) hb
 
 /-- The slack `δ ↦ (0, δ)` through which an event gap enters a DP budget. -/
@@ -255,7 +289,7 @@ theorem codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν := by
   simp at h
 
 theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ) :=
-  fun R μ ν _ _ ↦ (codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν)
+  fun _ _ _ _ _ ↦ codensity_dp_top_left
 
 /-- Reading a DP codensity lifting on `[0, 1]`-valued test functions through mass kernels. -/
 theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, δ) R μ ν)
@@ -323,6 +357,18 @@ theorem codensity_dp_rel_iff [IsSubProbabilityMeasure μ] (hε : ε ≠ ⊤) :
   refine forall₂_congr fun f g ↦ forall₄_congr fun _ _ _ _ ↦ imp_congr_left <|
     forall₂_congr fun x y ↦ ?_
   by_cases hS : S x y <;> simp [hS]
+
+/-- A DP lifting at a finite multiplier bounds an event by `e^ε` times its image, plus `δ`. -/
+theorem dp_measure_le_add (hε : ε ≠ ⊤) (h : (codensity dp).Rel (ε, δ) S μ ν) {T : Set X}
+    {T' : Set Y} (hT : MeasurableSet T) (hT' : MeasurableSet T')
+    (hS : ∀ x y, S x y → x ∈ T → y ∈ T') : μ T ≤ expBudget ε * ν T' + δ := by
+  simpa [lintegral_indicator_const, hT, hT'] using lintegral_le_of_codensity_dp hε h
+    (measurable_const.indicator hT) (measurable_const.indicator hT')
+    (fun _ ↦ Set.indicator_le_self' (by simp) _) (fun _ ↦ Set.indicator_le_self' (by simp) _)
+    fun x y hxy ↦ by
+      have hxy' : S x y := (relCost_lt_top_iff (B := ℝ≥0∞ × ℝ≥0∞)).1
+        (by simpa [Prod.lt_iff] using Or.inl hxy)
+      by_cases hx : x ∈ T <;> simp [hxy', hx, hS x y hxy']
 
 /-- Countable fibers with a pointwise DP bound give a DP codensity lifting of equal images
 (clutch-dp `randomized_response.v`). -/

@@ -30,7 +30,8 @@ theorem measurable_laplacePDF (a : ℝ) (b : ℝ≥0) : Measurable (laplacePDF a
   fun_prop
 
 /-- The exponential density is measurable. -/
-theorem measurable_exponentialPDF' (r : ℝ) : Measurable (exponentialPDF r) := by
+@[fun_prop]
+theorem measurable_exponentialPDF (r : ℝ) : Measurable (exponentialPDF r) := by
   unfold exponentialPDF
   fun_prop
 
@@ -62,7 +63,6 @@ instance isProbabilityMeasure_laplace (a : ℝ) {b : ℝ≥0} [hb : Fact (0 < b)
         fun x ↦ 2⁻¹ * (exponentialPDF (b : ℝ)⁻¹ (x - a) + exponentialPDF (b : ℝ)⁻¹ (a - x)) := by
       have : ∀ᵐ x ∂(volume : Measure ℝ), x ≠ a := by simp [ae_iff, measure_singleton]
       filter_upwards [this] with x hx using laplacePDF_eq a hb.out hx
-    have hm := measurable_exponentialPDF' (b : ℝ)⁻¹
     rw [laplace, withDensity_apply _ .univ, Measure.restrict_univ, lintegral_congr_ae hae,
       lintegral_const_mul _ (by fun_prop), lintegral_add_left (by fun_prop),
       lintegral_sub_right_eq_self (exponentialPDF (b : ℝ)⁻¹) a,
@@ -82,11 +82,6 @@ end ProbabilityTheory
 namespace GradedDivergence
 
 variable {X : Type*} [MeasurableSpace X] {ε : ℝ≥0∞}
-
-/-- An event bound without slack is a DP bound at slack `0`. -/
-theorem dp_of_forall_le {μ ν : Measure X}
-    (h : ∀ S, MeasurableSet S → μ S ≤ expBudget ε * ν S) : dp (ε, 0) μ ν :=
-  fun _ S hS ↦ (h S hS).trans le_self_add
 
 /-! ## Bernoulli -/
 
@@ -113,8 +108,7 @@ theorem dp_bernoulli_symm (x y : X) {p : I} (hp₀ : 0 < (p : ℝ)) (hp₁ : (p 
     rw [div_mul_eq_mul_div, le_div_iff₀ hmin]
     exact mul_le_mul_of_nonneg_left hb ((le_max_left _ _).trans' p.2.1)
   refine dp_of_forall_le fun S hS ↦ ?_
-  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
-    ENNReal.toReal_ofReal (Real.log_nonneg ((one_le_div hmin).2 min_le_max)),
+  rw [expBudget_ofReal (Real.log_nonneg ((one_le_div hmin).2 min_le_max)),
     Real.exp_log hratio, bernoulliMeasure_apply _ hS, bernoulliMeasure_apply _ hS, symm_symm]
   have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p :=
     (ENNReal.ofReal_eq_coe_nnreal p.2.1).symm
@@ -135,8 +129,7 @@ theorem dp_bernoulli_symm (x y : X) {p : I} (hp₀ : 0 < (p : ℝ)) (hp₁ : (p 
 theorem dp_laplace {a a' r : ℝ} (h : |a - a'| ≤ r) (b : ℝ≥0) :
     dp (ENNReal.ofReal (r / b), 0) (laplace a b) (laplace a' b) := by
   refine dp_of_forall_le fun S hS ↦ ?_
-  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
-    ENNReal.toReal_ofReal (div_nonneg ((abs_nonneg _).trans h) b.coe_nonneg), laplace, laplace,
+  rw [expBudget_ofReal (div_nonneg ((abs_nonneg _).trans h) b.coe_nonneg), laplace, laplace,
     withDensity_apply _ hS, withDensity_apply _ hS,
     ← lintegral_const_mul _ (measurable_laplacePDF _ _)]
   refine setLIntegral_mono (by fun_prop) fun x _ ↦ ?_
@@ -154,6 +147,9 @@ namespace Mechanism
 /-- The Laplace mechanism with scale `b`. -/
 noncomputable def laplaceMech (b : ℝ≥0) : Mechanism ℝ ℝ :=
   ⟨fun a ↦ laplace a b, measurable_laplace b⟩
+
+instance isMarkovKernel_laplaceMech (b : ℝ≥0) [Fact (0 < b)] : IsMarkovKernel (laplaceMech b) :=
+  ⟨fun a ↦ isProbabilityMeasure_laplace a⟩
 
 /-- The Laplace mechanism is `(r / b, 0)`-DP for inputs at distance at most `r` ([DP-Lap]). -/
 theorem DP_laplaceMech (r : ℝ) (b : ℝ≥0) :

@@ -15,7 +15,7 @@ variable {X : Type*} [MeasurableSpace X]
 
 namespace MeasureTheory.Measure
 
-/-- `μ` on `Option X`, with the lost mass `1 - μ univ` on `none`. -/
+/-- `μ` on `Option X`, with the lost mass `1 - μ univ` on `none` (Rocq `dcomplete`). -/
 noncomputable def withBot (μ : Measure X) : Measure (Option X) :=
   μ.map some + (1 - μ Set.univ) • dirac none
 
@@ -41,7 +41,7 @@ def leftUp : GradedDivergence.{u} B :=
 
 /-- The fill of a divergence: grow the left measure, then fill in the lost mass on both sides
 (Rocq `FillDiv`). -/
-def fill : GradedDivergence.{u} B :=
+abbrev fill : GradedDivergence.{u} B :=
   D.onWithBot.leftUp
 
 variable {D}
@@ -49,8 +49,8 @@ variable {D}
 /-! ## Laws -/
 
 instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded where
-  mono _ _ hb _ _ _ _ _ _ h := IsGraded.mono (D := D) hb h
-  top {_} _ μ ν _ _ := IsGraded.top (D := D) μ.withBot ν.withBot
+  mono _ _ hb := IsGraded.mono (D := D) hb
+  top μ ν := IsGraded.top (D := D) μ.withBot ν.withBot
 
 instance isReflexive_onWithBot [Zero B] [D.IsReflexive] : D.onWithBot.IsReflexive where
   refl {_} _ μ _ := IsReflexive.refl (D := D) μ.withBot
@@ -69,18 +69,5 @@ instance isZeroLeft_leftUp [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd 
 
 instance isLeftAntitone_leftUp : D.leftUp.IsLeftAntitone where
   left_anti _ _ _ _ _ _ _ _ hμ := fun ⟨μ', hμ', h⟩ ↦ ⟨μ', hμ.trans hμ', h⟩
-
-instance isGraded_fill [LE B] [Top B] [D.IsGraded] : D.fill.IsGraded :=
-  isGraded_leftUp
-
-instance isReflexive_fill [Zero B] [D.IsReflexive] : D.fill.IsReflexive :=
-  isReflexive_leftUp
-
-instance isZeroLeft_fill [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
-    [D.IsGraded] [D.IsReflexive] : D.fill.IsZeroLeft :=
-  isZeroLeft_leftUp
-
-instance isLeftAntitone_fill : D.fill.IsLeftAntitone :=
-  isLeftAntitone_leftUp
 
 end GradedDivergence

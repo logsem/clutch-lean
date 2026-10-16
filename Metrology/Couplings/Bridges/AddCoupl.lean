@@ -33,13 +33,10 @@ theorem expCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {E : X → Y → 
 /-- An additive coupling is a coupling in expectation for the relation's leftover. -/
 theorem addCoupl_iff_expCoupl_relCost {S : Set (X × Y)} :
     AddCoupl δ S μ ν ↔ ExpCoupl δ (relCost fun x y ↦ (x, y) ∈ S) μ ν := by
-  refine ⟨fun h f g hf hg hf1 hg1 hfg ↦ h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun {x y} hxy ↦ by
-    simpa [relCost_of (S := fun x y ↦ (x, y) ∈ S) hxy] using hfg x y, ?_⟩
-  rintro h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ hfg
-  refine h f g hf hg hf1 hg1 fun x y ↦ ?_
-  by_cases hxy : (x, y) ∈ S
-  · simpa [relCost_of (S := fun x y ↦ (x, y) ∈ S) hxy] using hfg hxy
-  · simp [relCost_of_not (S := fun x y ↦ (x, y) ∈ S) hxy]
+  refine ⟨fun h f g hf hg hf1 hg1 hfg ↦ h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun {x y} hxy ↦ ?_, ?_⟩
+  · exact le_add_relCost_iff.1 (hfg x y) hxy
+  · rintro h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ hfg
+    exact h f g hf hg hf1 hg1 fun x y ↦ le_add_relCost_iff.2 hfg
 
 /-- An additive coupling is a total variation codensity lifting. -/
 theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)} (h : AddCoupl δ S μ ν) :
@@ -50,9 +47,7 @@ theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)} (h : 
 theorem GradedLifting.Rel.addCoupl {S : X → Y → Prop} (h : (codensity tv).Rel δ S μ ν) :
     AddCoupl δ {p | S p.1 p.2} μ ν := fun f g hfg ↦
   lintegral_le_of_codensity_tv h f.measurable g.measurable f.bounded g.bounded fun x y ↦ by
-    by_cases hS : S x y
-    · simpa [hS] using hfg hS
-    · simp [hS]
+    exact le_add_relCost_iff.2 hfg
 
 /-- Additive couplings are the total variation codensity lifting (Rocq `gcoupl_AR_eq`). -/
 theorem addCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {S : Set (X × Y)} :
@@ -72,18 +67,17 @@ theorem ARCoupling.DP.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)}
     (h : ARCoupling.DP ε δ S μ ν) : (codensity dp).Rel (ε, δ) (fun x y ↦ (x, y) ∈ S) μ ν := by
   rcases eq_or_ne ε ⊤ with rfl | hε
   · exact codensity_dp_top_left
-  refine (codensity_dp_rel_iff hε).2 fun f g hf hg hf1 hg1 hfg ↦ ?_
-  simpa [DPF, expBudget] using h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun hxy ↦ hfg _ _ hxy
+  exact (codensity_dp_rel_iff hε).2 fun f g hf hg hf1 hg1 hfg ↦
+    h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun hxy ↦ hfg _ _ hxy
 
 /-- At a finite multiplier, a DP codensity lifting is a test-function DP coupling. -/
 theorem GradedLifting.Rel.arCoupling_dp (hε : ε ≠ ⊤) {S : X → Y → Prop}
     (h : (codensity dp).Rel (ε, δ) S μ ν) : ARCoupling.DP ε δ {p | S p.1 p.2} μ ν :=
-  fun f g hfg ↦ by
-    simpa [DPF, expBudget] using lintegral_le_of_codensity_dp hε h f.measurable
-      g.measurable f.bounded g.bounded fun x y ↦ by
-        by_cases hS : S x y
-        · simpa [hS] using hfg hS
-        · simp [hS]
+  fun f g hfg ↦
+    lintegral_le_of_codensity_dp hε h f.measurable g.measurable f.bounded g.bounded fun x y ↦ by
+      by_cases hS : S x y
+      · simpa [hS] using hfg hS
+      · simp [hS]
 
 /-- At a finite multiplier, test-function DP couplings are the DP codensity lifting (Rocq
 `gcoupl_DP_eq`). -/
@@ -92,13 +86,13 @@ theorem arCoupling_dp_iff_codensity [IsSubProbabilityMeasure μ] (hε : ε ≠ �
   ⟨ARCoupling.DP.codensity, Rel.arCoupling_dp hε⟩
 
 /-- Total variation liftings are DP liftings at multiplier `1`, leftovers included. -/
-noncomputable def liftingHom_tv_dp : LiftingHom (codensity tv.{u}) (codensity dp.{u}) where
+noncomputable def LiftingHom.tvToDp : LiftingHom (codensity tv.{u}) (codensity dp.{u}) where
   map := dpSlack
   mono := dpSlack.monotone'
   map_lift := codensity_tv_iff_dp.1
 
 /-- Total variation liftings of relations are DP liftings at multiplier `1` (Rocq `CM_AR_DP`). -/
-noncomputable def liftingRelHom_tv_dp : LiftingRelHom (codensity tv.{u}) (codensity dp.{u}) where
+noncomputable def LiftingRelHom.tvToDp : LiftingRelHom (codensity tv.{u}) (codensity dp.{u}) where
   map := dpSlack
   mono := dpSlack.monotone'
   map_rel := codensity_tv_rel_iff_dp.1

@@ -8,6 +8,7 @@ public import Metrology.Code.RandomizedResponse
 public import Metrology.Couplings.Divergences.Dp
 public import Metrology.Couplings.Divergences.Mechanism
 import Metrology.ProbLang.Syntax.Notation
+import Mathlib.Algebra.Regular.Prod
 
 @[expose] public section
 
@@ -76,9 +77,7 @@ theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
 noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.log 3), 0)
 
 /-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
-theorem isAddLeftRegular_budget : IsAddLeftRegular budget := fun x y h ↦
-  Prod.ext (ENNReal.isAddLeftRegular_of_ne_top ENNReal.ofReal_ne_top (congrArg Prod.fst h))
-    (by simpa using congrArg Prod.snd h)
+theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 /-- The two draws couple along equal reports at privacy budget `(ln 3, 0)`. -/
 theorem rr_coupling (b b' : Bool) :

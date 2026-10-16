@@ -154,10 +154,10 @@ def Absorbing (b : B) : Prop :=
   ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (R : X → Y → B) (μ : Measure X)
     (ν : Measure Y) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν], L b R μ ν
 
-/-- The top budget relates every pair of sub-probability measures (Rocq `GCFTop` at the order
-top). -/
+/-- The top budget relates every pair of measures (Rocq `GCFTop` at the order top). -/
 class IsTopAbsorbing [Top B] : Prop where
-  absorbing_top : L.Absorbing ⊤
+  top {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (R : X → Y → B) (μ : Measure X)
+    (ν : Measure Y) : L ⊤ R μ ν
 
 end Classes
 
@@ -234,6 +234,24 @@ theorem Rel.restrict [Zero B] [Top B] [L.IsSupportLocal] {A : Set X} (h : L.Rel 
   ext x y
   by_cases hx : x ∈ A <;> by_cases hS : S x y <;> simp [hx, hS]
 
+/-- A probability measure lifts against the point mass at `y₀`, relating everything to `y₀`
+(Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+theorem rel_const_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    (μ : Measure X) [IsProbabilityMeasure μ] (y₀ : Y) :
+    L.Rel 0 (fun _ y ↦ y = y₀) μ (dirac y₀) := by
+  have h := (IsReflexive.refl (L := L) μ).map (f := id) (g := fun _ ↦ y₀)
+    (S' := fun _ y ↦ y = y₀) fun _ _ _ ↦ rfl
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
+/-- The point mass at `x₀` lifts against a probability measure, relating `x₀` to everything
+(Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+theorem rel_const_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    (ν : Measure Y) [IsProbabilityMeasure ν] (x₀ : X) :
+    L.Rel 0 (fun x _ ↦ x = x₀) (dirac x₀) ν := by
+  have h := (IsReflexive.refl (L := L) ν).map (f := fun _ ↦ x₀) (g := id)
+    (S' := fun x _ ↦ x = x₀) fun _ _ _ ↦ rfl
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
 /-- A Dirac measure lifts against a probability measure carried by `A`, relating its point to
 `A`. -/
 theorem rel_dirac_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
@@ -249,10 +267,8 @@ point. -/
 theorem rel_dirac_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     [L.IsSupportLocal] (μ : Measure X) [IsProbabilityMeasure μ] {A : Set X}
     (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) (y₀ : Y) :
-    L.Rel 0 (fun x y ↦ x ∈ A ∧ y = y₀) μ (dirac y₀) := by
-  have h := ((IsReflexive.refl (L := L) μ).restrict hA hμ).map (f := id) (g := fun _ ↦ y₀)
-    (S' := fun x y ↦ x ∈ A ∧ y = y₀) fun _ _ h ↦ ⟨h.2, rfl⟩
-  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+    L.Rel 0 (fun x y ↦ x ∈ A ∧ y = y₀) μ (dirac y₀) :=
+  ((rel_const_right μ y₀).restrict hA hμ).mono le_rfl fun _ _ h ↦ ⟨h.2, h.1⟩
 
 /-- Binding with measurable families of sub-probability measures. -/
 theorem HasBind.bind_fun [LT B] [Top B] [L.HasBind] {R : X → Y → B} {R' : X' → Y' → B}
@@ -262,15 +278,20 @@ theorem HasBind.bind_fun [LT B] [Top B] [L.HasBind] {R : X → Y → B} {R' : X'
     (hg : Measurable g := by fun_prop) : L b R' (μ.bind f) (ν.bind g) :=
   HasBind.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hk
 
-/-- Binding with continuations needed only on a set carrying the left measure. -/
+/-- Binding with continuations needed only almost everywhere on the left: restrict the
+leftover to a measurable set of full measure where they exist. -/
 theorem HasBind.bind_of_ae [Preorder B] [Top B] [L.IsSupportLocal] [L.HasBind] {R : X → Y → B}
     {R' : X' → Y' → B} {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f]
-    [IsSubMarkovKernel g] {A : Set X} (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) (h : L b R μ ν)
-    (hk : ∀ x ∈ A, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
+    [IsSubMarkovKernel g] (h : L b R μ ν)
+    (hk : ∀ᵐ x ∂μ, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
   classical
-  refine HasBind.bind (IsSupportLocal.restrict hA hμ h) fun x y hxy ↦ ?_
-  by_cases hx : x ∈ A
-  · simpa [hx] using hk x hx y (by simpa [hx] using hxy)
+  obtain ⟨T, hkT, hT, hμT⟩ := exists_measurable_superset_of_null (ae_iff.1 hk)
+  have hTk : ∀ x ∈ Tᶜ, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y) :=
+    fun x hx ↦ not_not.1 fun hn ↦ hx (hkT hn)
+  refine HasBind.bind (IsSupportLocal.restrict hT.compl (by rwa [compl_compl]) h)
+    fun x y hxy ↦ ?_
+  by_cases hx : x ∈ Tᶜ
+  · simpa [hx] using hTk x hx y (by simpa [hx] using hxy)
   · simp [hx] at hxy
 
 /-- Binding a relational lifting with continuations lifted at a finite budget `c` on the
@@ -314,5 +335,33 @@ relation. -/
 theorem not_absorbing_of_refutes [Zero B] [Top B]
     (h : ¬L.Rel b (fun _ _ ↦ False) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit.{u + 1})) :
     ¬L.Absorbing b := fun hb ↦ h (hb _ _ _)
+
+/-! ## Top budget -/
+
+theorem IsTopAbsorbing.absorbing_top [Top B] [L.IsTopAbsorbing] : L.Absorbing ⊤ :=
+  fun R μ ν _ _ ↦ IsTopAbsorbing.top R μ ν
+
+/-- A lifting holds once it holds at finite budgets; needs no finiteness: at `⊤` everything is
+related. -/
+theorem IsTopAbsorbing.of_lt_top [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {R : X → Y → B}
+    (h : b < ⊤ → L b R μ ν) : L b R μ ν := by
+  by_cases hb : ⊤ ≤ b
+  · exact Absorbing.mono IsTopAbsorbing.absorbing_top hb R μ ν
+  · exact h (le_top.lt_of_not_ge hb)
+
+/-- Framing by any `c`; needs no finiteness: at `⊤` everything is related. -/
+theorem IsTopAbsorbing.frame [AddCommMagma B] [Preorder B] [OrderTop B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L b R μ ν) :
+    L (b + c) (fun x y ↦ R x y + c) μ ν :=
+  IsTopAbsorbing.of_lt_top fun hbc ↦ IsLawful.frame (le_add_self.trans_lt hbc) h
+
+/-- `Rel.frame_le` for any `c`; needs no finiteness: at `⊤` everything is related. -/
+theorem Rel.frame_le_of_isTopAbsorbing [AddCommMonoid B] [Preorder B] [OrderTop B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L.Rel b S μ ν)
+    (hR : ∀ x y, S x y → R x y ≤ c) : L (b + c) R μ ν :=
+  IsTopAbsorbing.of_lt_top fun hbc ↦ h.frame_le hR (le_add_self.trans_lt hbc)
 
 end GradedLifting

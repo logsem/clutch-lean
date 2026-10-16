@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Couplings.Divergences.FDivBound
+public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 
 /-! The Rényi divergence as a graded divergence (Approximate Span Liftings, Def. 2.2, Thm. 4.11,
 App. C.4). -/
@@ -15,10 +16,6 @@ open scoped ENNReal
 namespace ProbabilityTheory
 
 variable {X : Type*} [MeasurableSpace X] {f : ℝ → ℝ}
-
-/-- Against the zero measure the `f`-divergence is the mass times the slope at infinity. -/
-theorem fDiv_zero_right_eq (μ : Measure X) : fDiv f μ 0 = derivAtTop f * μ univ := by
-  simp [fDiv_of_integrable integrable_zero_measure]
 
 /-! ## The weight `t ↦ t ^ α` -/
 
@@ -100,6 +97,27 @@ theorem persp_rpow_mono_left (hα : 1 < α) {p p' q : ℝ} (hp : 0 ≤ p) (h : p
   rw [persp_rpow_of_pos α hq, persp_rpow_of_pos α hq, EReal.coe_le_coe_iff]
   gcongr
 
+/-- A perspective bound by `e^{(α - 1) r}` is the Hölder bound
+`a ≤ e^{(α - 1) r / α} b^{(α - 1) / α}`. -/
+theorem persp_rpow_le_exp_iff (hα : 1 < α) {a b r : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    persp (· ^ α) a b ≤ ((Real.exp ((α - 1) * r) : ℝ) : EReal) ↔
+      a ≤ Real.exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
+  have hα0 : 0 < α := zero_lt_one.trans hα
+  rcases hb.eq_or_lt with rfl | hb
+  · rw [Real.zero_rpow (div_ne_zero (sub_ne_zero.2 hα.ne') hα0.ne'), mul_zero]
+    rcases ha.eq_or_lt with rfl | ha
+    · simp [persp_rpow_zero_left hα0 le_rfl, (Real.exp_pos _).le]
+    · simp [persp_rpow_zero_right hα ha, ha.not_ge]
+  have hpow : (Real.exp ((α - 1) * r) / b) ^ α⁻¹ * b =
+      Real.exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
+    rw [Real.div_rpow (Real.exp_pos _).le hb.le, ← Real.exp_mul, div_mul_eq_mul_div, mul_div_assoc,
+      show (α - 1) / α = 1 - α⁻¹ by field_simp, Real.rpow_sub hb, Real.rpow_one]
+    congr 2
+    field_simp
+  rw [persp_rpow_of_pos α hb, EReal.coe_le_coe_iff, ← le_div_iff₀' hb,
+    ← Real.le_rpow_inv_iff_of_pos (div_nonneg ha hb.le) (div_nonneg (Real.exp_pos _).le hb.le) hα0,
+    div_le_iff₀ hb, hpow]
+
 theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
   fDiv_nonneg_of_nonneg fun _ ht ↦ Real.rpow_nonneg ht α
 
@@ -168,6 +186,10 @@ theorem fDiv_rpow_comp_le (hα : 1 < α) {M N : ℕ} (μ₁ μ₂ : Measure (ULi
         rw [mul_comm, EReal.mul_finset_sum_of_nonneg _ _ fun _ _ ↦ hP]
         simp_rw [mul_comm]
 
+/-- The Rényi divergence `D_α(μ ‖ ν) = (α - 1)⁻¹ log ∫ (dμ/dν)^α dν` (Def. 2.2). -/
+noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
+  ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (· ^ α) μ ν).toENNReal
+
 end ProbabilityTheory
 
 namespace GradedDivergence
@@ -197,6 +219,9 @@ theorem renyiThresh_zero : renyiThresh α 0 = 1 := by
 
 theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
   EReal.coe_ennreal_le_coe_ennreal_iff.2 (expBudget_mono (by gcongr))
+
+theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
+  EReal.coe_ennreal_nonneg _
 
 theorem renyiThresh_add (ρ ρ' : ℝ≥0∞) :
     renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ' := by
@@ -236,28 +261,31 @@ theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
 theorem renyiDivergence_top (hα : 1 < α) (μ ν : Measure X) : renyiDivergence α ⊤ μ ν :=
   renyiDivergence_iff.2 (renyiThresh_top hα ▸ le_top)
 
-/-- Point masses with ordered masses are within budget zero. -/
-theorem renyiDivergence_zero_smul_dirac (hα : 1 < α) {a a' : ℝ≥0∞} (h : a ≤ a') (ha' : a' ≤ 1) :
-    renyiDivergence α 0 (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit) := by
-  have hα0 : 0 < α := zero_lt_one.trans hα
-  have ha'₁ : a' ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top ha'
-  have : IsFiniteMeasure (a • dirac PUnit.unit.{u + 1}) := ⟨by simpa using h.trans_lt ha'₁.lt_top⟩
-  have : IsFiniteMeasure (a' • dirac PUnit.unit.{u + 1}) := ⟨by simpa using ha'₁.lt_top⟩
-  rw [renyiDivergence_iff, renyiThresh_zero,
-    fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero hα0)]
-  simp only [Finset.univ_unique, PUnit.default_eq_unit, Finset.sum_singleton, Measure.smul_apply,
-    dirac_apply_of_mem (mem_singleton _), smul_eq_mul, mul_one]
-  have hq : a'.toReal ≤ 1 := ENNReal.toReal_le_of_le_ofReal zero_le_one (by simpa using ha')
-  have hpq : a.toReal ≤ a'.toReal := ENNReal.toReal_mono ha'₁ h
-  rcases (ENNReal.toReal_nonneg (a := a')).eq_or_lt with hq0 | hq0
-  · rw [← hq0, le_antisymm (hq0 ▸ hpq) ENNReal.toReal_nonneg,
-      persp_rpow_zero_left hα0 le_rfl]
-    exact zero_le_one
-  rw [persp_rpow_of_pos α hq0, ← EReal.coe_one, EReal.coe_le_coe_iff]
-  calc a'.toReal * (a.toReal / a'.toReal) ^ α ≤ a'.toReal * 1 := by
-        gcongr
-        exact Real.rpow_le_one (by positivity) ((div_le_one hq0).2 hpq) hα0.le
-    _ ≤ 1 := by rwa [mul_one]
+/-- The moment bound is the Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ` (Def. 2.2; Rocq
+`codensity_div_form`). -/
+theorem renyiDivergence_iff_renyiDiv_le (hα : 1 < α) :
+    renyiDivergence α ρ μ ν ↔ renyiDiv α μ ν ≤ ρ := by
+  have hα1 : 0 < α - 1 := sub_pos.2 hα
+  rw [renyiDivergence_iff, renyiThresh, expBudget, renyiDiv,
+    ← EReal.coe_toENNReal fDiv_rpow_nonneg, EReal.coe_ennreal_le_coe_ennreal_iff,
+    ← ENNReal.log_le_log_iff, EReal.log_exp, EReal.coe_ennreal_mul, EReal.coe_ennreal_ofReal,
+    max_eq_left hα1.le, EReal.le_coe_mul_iff hα1, EReal.toENNReal_coe]
+
+/-- Between point masses, a finite Rényi budget is the Hölder bound
+`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}`. -/
+theorem renyiDivergence_smul_dirac_iff (hα : 1 < α) (hρ : ρ ≠ ⊤) {a b : ℝ≥0∞} (ha : a ≠ ⊤)
+    (hb : b ≠ ⊤) :
+    renyiDivergence α ρ (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) ↔
+      a ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * b ^ ((α - 1) / α) := by
+  have hγ : 0 ≤ (α - 1) / α := div_nonneg (by linarith) (by linarith)
+  have hb' : b ^ ((α - 1) / α) = ENNReal.ofReal (b.toReal ^ ((α - 1) / α)) := by
+    rw [← ENNReal.ofReal_rpow_of_nonneg ENNReal.toReal_nonneg hγ, ENNReal.ofReal_toReal hb]
+  rw [renyiDivergence_iff_of_ne_top hα.le hρ, fDiv_smul_dirac (convexOn_rpow hα.le)
+    (continuousWithinAt_rpow_zero (zero_lt_one.trans hα)) ha hb,
+    persp_rpow_le_exp_iff hα ENNReal.toReal_nonneg ENNReal.toReal_nonneg,
+    expBudget_of_ne_top (ENNReal.mul_ne_top ENNReal.ofReal_ne_top hρ), ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal hγ, hb', ← ENNReal.ofReal_mul (Real.exp_pos _).le,
+    ENNReal.le_ofReal_iff_toReal_le ha (by positivity)]
 
 /-! ## Instances -/
 
@@ -265,14 +293,17 @@ section Instances
 
 variable (α) [hα : Fact (1 < α)]
 
+/-- The Rényi divergence is graded. -/
 instance isGraded_renyi : (renyiDivergence.{u} α).IsGraded :=
   isGraded_fDivBound (fun _ _ ↦ convexOn_rpow hα.out.le)
     (fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out))
     (fun _ _ _ _ _ _ ↦ le_rfl) (fun _ _ h _ ↦ renyiThresh_mono h) fun _ ↦ renyiThresh_top hα.out
 
+/-- The Rényi divergence is reflexive. -/
 instance isReflexive_renyi : (renyiDivergence.{u} α).IsReflexive :=
   isReflexive_fDivBound fun _ ↦ by simp
 
+/-- The Rényi divergence vanishes against the zero measure on the left. -/
 instance isZeroLeft_renyi : (renyiDivergence.{u} α).IsZeroLeft :=
   isZeroLeft_fDivBound fun _ _ ↦ by
     simp [Real.zero_rpow (zero_lt_one.trans hα.out).ne', renyiThresh, EReal.coe_ennreal_nonneg]
@@ -282,32 +313,33 @@ instance isLeftContinuous_renyi : (renyiDivergence.{u} α).IsLeftContinuous :=
   isLeftContinuous_fDivBound (fun _ _ ↦ convexOn_rpow hα.out.le)
     fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out)
 
+/-- The Rényi divergence is monotone in the right measure. -/
 instance isRightMonotone_renyi : (renyiDivergence.{u} α).IsRightMonotone where
-  right_mono _ _ _ _ _ _ _ _ hν h :=
+  right_mono _ := fun hν h ↦
     renyiDivergence_iff.2 ((fDiv_rpow_anti_right hα.out hν).trans (renyiDivergence_iff.1 h))
 
+/-- The Rényi divergence is antitone in the left measure. -/
 instance isLeftAntitone_renyi : (renyiDivergence.{u} α).IsLeftAntitone where
-  left_anti _ _ _ _ _ _ _ _ hμ h :=
+  left_anti _ := fun hμ h ↦
     renyiDivergence_iff.2 ((fDiv_rpow_mono_left hα.out hμ).trans (renyiDivergence_iff.1 h))
 
+/-- Rényi budgets are closed from above. -/
 instance isBudgetClosed_renyi : (renyiDivergence.{u} α).IsBudgetClosed :=
   isBudgetClosed_fDivBound (fun _ _ _ ↦ rfl) fun _ _ _ h ↦ le_renyiThresh_of_forall_lt hα.out h
 
 /-- Moments multiply under composition, so Rényi budgets add (Thm. 4.11, by Thm. 4.6). -/
 instance isComposable_renyi : (renyiDivergence.{u} α).IsComposable :=
-  isComposable_fDivBound_of_finite (fun _ _ ↦ convexOn_rpow hα.out.le)
+  isComposable_fDivBound_of_mul (fun _ _ ↦ convexOn_rpow hα.out.le)
     (fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out))
-    (chain := fun a c ↦ ((a.toENNReal * c.toENNReal : ℝ≥0∞) : EReal))
-    (fun _ _ _ _ ha hc ↦ EReal.coe_ennreal_le_coe_ennreal_iff.2
-      (mul_le_mul' (EReal.toENNReal_le_toENNReal ha) (EReal.toENNReal_le_toENNReal hc)))
     (fun _ _ _ M N _ μ₁ μ₂ _ _ κ η _ _ ↦ by
       have : Nonempty (ULift.{u} (Fin M)) := ⟨⟨0⟩⟩
       have hS : 0 ≤ ⨆ i, fDiv (· ^ α) (κ i) (η i) :=
         le_iSup_of_le (Classical.arbitrary _) fDiv_rpow_nonneg
-      rw [EReal.coe_ennreal_mul, EReal.coe_toENNReal fDiv_rpow_nonneg, EReal.coe_toENNReal hS]
+      rw [max_eq_right fDiv_rpow_nonneg, max_eq_right hS]
       exact fDiv_rpow_comp_le hα.out μ₁ μ₂ κ η)
-    (fun b c _ ↦ by rw [renyiThresh_add]; simp [renyiThresh, EReal.coe_ennreal_mul])
-    fun _ _ ↦ EReal.coe_ennreal_nonneg _
+    (fun b c _ ↦ by
+      rw [renyiThresh_add, max_eq_right renyiThresh_nonneg, max_eq_right renyiThresh_nonneg])
+    fun _ _ ↦ renyiThresh_nonneg
 
 end Instances
 
@@ -322,5 +354,32 @@ theorem not_absorbing_codensity_renyi (hα : 1 < α) (hρ : ρ < ⊤) :
   have := renyiDivergence_iff.1 <| h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
     (k := Kernel.id) (l := 0) fun _ _ ↦ by simpa using IsGraded.top (D := renyiDivergence α) _ _
   simp [fDiv_zero_right_eq, derivAtTop_rpow hα, renyiThresh_of_ne_top hα.le hρ.ne] at this
+
+/-- A finite Rényi budget relates two measures along equality only if the first is absolutely
+continuous in the second (Rocq `RDPcoupl_eq_absolute_continuity`). -/
+theorem absolutelyContinuous_of_codensity_renyi_rel_eq (hα : 1 < α) (hρ : ρ ≠ ⊤)
+    [IsFiniteMeasure μ] (h : (codensity (renyiDivergence.{u} α)).Rel ρ (· = ·) μ ν) : μ ≪ ν := by
+  have : Fact (1 < α) := ⟨hα⟩
+  classical
+  intro s hs
+  set t := toMeasurable ν s
+  have ht : MeasurableSet t := measurableSet_toMeasurable ν s
+  have hνt : ν t = 0 := by rwa [measure_toMeasurable]
+  refine measure_mono_null (subset_toMeasurable ν s) ?_
+  have hF : Measurable (t.indicator (1 : X → ℝ≥0∞)) := measurable_one.indicator ht
+  have hF1 (x : X) : t.indicator (1 : X → ℝ≥0∞) x ≤ 1 := Set.indicator_le_self' (by simp) x
+  have := Kernel.isSubMarkovKernel_mass.{u} hF hF1
+  have key := h (I := PUnit.{u + 1}) (c := 0) (by simpa using hρ.lt_top)
+    (k := Kernel.mass hF) (l := Kernel.mass hF) fun x y ↦ by
+      by_cases hxy : x = y
+      · subst hxy
+        simpa [relCost_of] using IsReflexive.refl (D := renyiDivergence α) (Kernel.mass hF x)
+      · simpa [relCost_of_not hxy] using renyiDivergence_top hα _ _
+  have hγ : 0 < (α - 1) / α := div_pos (sub_pos.2 hα) (zero_lt_one.trans hα)
+  rw [Kernel.mass_comp, Kernel.mass_comp, add_zero, lintegral_indicator_one ht,
+    lintegral_indicator_one ht, hνt,
+    renyiDivergence_smul_dirac_iff hα hρ (measure_ne_top μ t) ENNReal.zero_ne_top,
+    ENNReal.zero_rpow_of_pos hγ, mul_zero] at key
+  exact nonpos_iff_eq_zero.1 key
 
 end GradedDivergence

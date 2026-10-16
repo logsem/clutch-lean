@@ -27,7 +27,7 @@ abbrev RenyiBudget :=
 
 /-- A Rényi bound at every order, each within its own budget (Rocq `RDPcoupl_curve`). -/
 noncomputable def renyiCurve : GradedDivergence.{u} RenyiBudget :=
-  fun ρ _ _ μ ν ↦ ∀ α : Ioi (1 : ℝ), renyiDivergence α (ρ α) μ ν
+  pi fun α ↦ renyiDivergence α
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 
@@ -35,29 +35,37 @@ theorem renyiCurve_iff {ρ : RenyiBudget} {μ ν : Measure X} :
     renyiCurve ρ μ ν ↔ ∀ α : Ioi (1 : ℝ), renyiDivergence α (ρ α) μ ν :=
   Iff.rfl
 
-instance isGraded_renyiCurve : renyiCurve.{u}.IsGraded where
-  mono _ _ hb _ _ _ _ _ _ h α := IsGraded.mono (hb α) (h α)
-  top μ ν _ _ α := IsGraded.top (D := renyiDivergence α) μ ν
+/-- Rényi curves are graded order by order. -/
+instance isGraded_renyiCurve : renyiCurve.{u}.IsGraded :=
+  isGraded_pi
 
-instance isReflexive_renyiCurve : renyiCurve.{u}.IsReflexive where
-  refl μ _ α := IsReflexive.refl (D := renyiDivergence α) μ
+/-- Rényi curves are reflexive order by order. -/
+instance isReflexive_renyiCurve : renyiCurve.{u}.IsReflexive :=
+  isReflexive_pi
 
-instance isComposable_renyiCurve : renyiCurve.{u}.IsComposable where
-  comp _ _ _ _ _ _ _ _ _ _ _ _ _ _ h hκ α := IsComposable.comp (h α) fun x ↦ hκ x α
+/-- Rényi curves compose order by order. -/
+instance isComposable_renyiCurve : renyiCurve.{u}.IsComposable :=
+  isComposable_pi
 
-instance isZeroLeft_renyiCurve : renyiCurve.{u}.IsZeroLeft where
-  zero_left b _ _ ν _ α := IsZeroLeft.zero_left (b α) ν
+/-- The zero measure is within every curve of every measure. -/
+instance isZeroLeft_renyiCurve : renyiCurve.{u}.IsZeroLeft :=
+  isZeroLeft_pi
 
 /-- Rényi curves are left continuous (Rocq `GCFamLim_curve`). -/
-instance isLeftContinuous_renyiCurve : renyiCurve.{u}.IsLeftContinuous where
-  iSup_left b _ _ _ _ hμ _ _ h α := IsLeftContinuous.iSup_left (b := b α) hμ fun n ↦ h n α
+instance isLeftContinuous_renyiCurve : renyiCurve.{u}.IsLeftContinuous :=
+  isLeftContinuous_pi
+
+/-- Rényi curves are monotone in the right measure, order by order. -/
+instance isRightMonotone_renyiCurve : renyiCurve.{u}.IsRightMonotone :=
+  isRightMonotone_pi
+
+/-- Rényi curves are antitone in the left measure, order by order. -/
+instance isLeftAntitone_renyiCurve : renyiCurve.{u}.IsLeftAntitone :=
+  isLeftAntitone_pi
 
 /-- A bound at every larger curve is a bound at the curve: raise one order at a time. -/
-instance isBudgetClosed_renyiCurve : renyiCurve.{u}.IsBudgetClosed where
-  of_forall_gt {b} _ _ _ _ _ _ h α := by
-    classical
-    refine IsBudgetClosed.of_forall_gt fun t ht ↦ ?_
-    simpa using h (Function.update b α t) (lt_update_self_iff.2 ht) α
+instance isBudgetClosed_renyiCurve : renyiCurve.{u}.IsBudgetClosed :=
+  isBudgetClosed_pi
 
 /-- A codensity lifting of a Rényi curve is one at every order: tests at a single order are curve
 tests with slack `⊤` at the other orders. -/
@@ -80,22 +88,19 @@ theorem codensity_renyiCurve_iff {ρ : RenyiBudget} {R : X → Y → RenyiBudget
     exact renyiDivergence_top α.2 _ _
   · exact h α (lt_top_iff_ne_top.2 hlt) fun x y ↦ hkl x y α
 
-/-- A Rényi-curve lifting is a Rényi lifting at each order. -/
-noncomputable def liftingHom_renyiCurve_renyi (α : Ioi (1 : ℝ)) :
-    LiftingHom (codensity renyiCurve.{u}) (codensity (renyiDivergence.{u} α)) where
-  map ρ := ρ α
-  mono _ _ h := h α
-  map_lift h := codensity_renyiCurve_iff.1 h α
-
-/-- A curve with a finite order is not absorbing (Rocq `GCF_curve_top_exact`). -/
-theorem not_absorbing_codensity_renyiCurve {ρ : RenyiBudget} (hρ : ∃ α, ρ α < ⊤) :
-    ¬(codensity renyiCurve.{u}).Absorbing ρ := by
+/-- A curve is absorbing exactly at `⊤` (Rocq `GCF_curve_top_exact`). -/
+theorem absorbing_codensity_renyiCurve_iff {ρ : RenyiBudget} :
+    (codensity renyiCurve.{u}).Absorbing ρ ↔ ρ = ⊤ := by
   classical
-  obtain ⟨α, hα⟩ := hρ
-  refine fun h ↦ not_absorbing_codensity_renyi α.2 hα fun R μ ν _ _ ↦ ?_
+  refine ⟨fun h ↦ by_contra fun hρ ↦ ?_, fun h ↦ h ▸ absorbing_codensity_top⟩
+  obtain ⟨α, hα⟩ := Function.ne_iff.1 hρ
+  refine not_absorbing_codensity_renyi α.2 (lt_top_iff_ne_top.2 hα) fun R μ ν _ _ ↦ ?_
   simpa using codensity_renyiCurve_iff.1 (h (fun x y ↦ Function.update ⊤ α (R x y)) μ ν) α
 
 /-! ## Concentrated divergences -/
+
+theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 := by
+  simpa using zero_lt_one.trans α.2
 
 section Line
 
@@ -127,22 +132,31 @@ theorem concentratedLine_mono : Monotone (concentratedLine A) := fun b c h α �
   · simpa [concentratedLine, hα] using add_le_add h.1 (mul_le_mul_right h.2 _)
   · simp [concentratedLine, hα]
 
+theorem concentratedLine_fst_top (ρ : ℝ≥0∞) : concentratedLine A (⊤, ρ) = ⊤ := by
+  ext α
+  by_cases hα : (α : ℝ) ∈ A <;> simp [concentratedLine, hα]
+
 theorem concentratedLine_snd_top (ξ : ℝ≥0∞) : concentratedLine A (ξ, ⊤) = ⊤ := by
   ext α
-  have : ENNReal.ofReal α ≠ 0 := by simpa using zero_lt_one.trans α.2
-  simp [concentratedLine, ENNReal.mul_top this]
+  simp [concentratedLine, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
 
 theorem concentratedLine_top : concentratedLine A ⊤ = ⊤ :=
   concentratedLine_snd_top A ⊤
 
-theorem zero_prodMk_lt_top (ρ : ℝ≥0∞) : ((0 : ℝ≥0∞), ρ) < ⊤ :=
-  Prod.mk_lt_mk_of_lt_of_le ENNReal.zero_lt_top le_top
+/-- A zCDP line lies below the tCDP line of the summed budget (Rocq `zcdp_line_le_tcdp`). -/
+theorem concentratedLine_ioi_le_ioo {ω : ℝ} (b : ℝ≥0∞ × ℝ≥0∞) :
+    concentratedLine (Ioi 1) b ≤ concentratedLine (Ioo 1 ω) (0, b.1 + b.2) := fun α ↦ by
+  by_cases hα : (α : ℝ) ∈ Ioo 1 ω
+  · have h1 : 1 ≤ ENNReal.ofReal α := by simpa using α.2.le
+    simp only [concentratedLine_of_mem _ hα, concentratedLine_of_mem _ α.2, zero_add, mul_add]
+    exact add_le_add (le_mul_of_one_le_left zero_le h1) le_rfl
+  · simp [hα]
 
 end Line
 
 /-- Rényi bounds `ξ + α ρ` at the orders `α ∈ A` (Eqs. 6 and 7). -/
 noncomputable def concentratedDivergence (A : Set ℝ) : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞) :=
-  fun b ↦ renyiCurve (concentratedLine A b)
+  renyiCurve.comap (concentratedLine A)
 
 /-- `(ξ, ρ)`-zCDP: Rényi bounds `ξ + α ρ` at every order (Eq. 6). -/
 noncomputable abbrev zcdpDivergence : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞) :=
@@ -150,7 +164,7 @@ noncomputable abbrev zcdpDivergence : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥
 
 /-- `(ρ, ω)`-tCDP: Rényi bounds `α ρ` at the orders `1 < α < ω` (Eq. 7). -/
 noncomputable def tcdpDivergence (ω : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
-  fun ρ ↦ concentratedDivergence (Ioo 1 ω) (0, ρ)
+  (concentratedDivergence (Ioo 1 ω)).comap (Prod.mk 0)
 
 variable {A : Set ℝ} {b : ℝ≥0∞ × ℝ≥0∞} {ξ ρ : ℝ≥0∞} {ω : ℝ} {μ ν : Measure X}
 
@@ -161,94 +175,105 @@ theorem concentratedDivergence_of_forall
   · simpa [concentratedLine, hα] using h α hα
   · simpa [concentratedLine, hα] using renyiDivergence_top α.2 μ ν
 
-/-- Point masses with ordered masses are within budget zero. -/
-theorem concentratedDivergence_zero_smul_dirac {a a' : ℝ≥0∞} (h : a ≤ a') (ha' : a' ≤ 1) :
-    concentratedDivergence A 0 (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit) :=
-  concentratedDivergence_of_forall fun α _ ↦ by
-    simpa using renyiDivergence_zero_smul_dirac α.2 h ha'
+theorem concentratedDivergence_iff :
+    concentratedDivergence A b μ ν ↔
+      ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → renyiDivergence α (b.1 + ENNReal.ofReal α * b.2) μ ν :=
+  ⟨fun h α hα ↦ by simpa [hα] using h α, concentratedDivergence_of_forall⟩
 
-theorem concentratedDivergence_iff (hA : A ⊆ Ioi 1) :
+theorem concentratedDivergence_iff' (hA : A ⊆ Ioi 1) :
     concentratedDivergence A (ξ, ρ) μ ν ↔
       ∀ α ∈ A, renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
-  ⟨fun h α hα ↦ by simpa [concentratedLine, hα] using h ⟨α, hA hα⟩,
-    fun h ↦ concentratedDivergence_of_forall fun α hα ↦ h α hα⟩
+  concentratedDivergence_iff.trans
+    ⟨fun h α hα ↦ h ⟨α, hA hα⟩ hα, fun h α hα ↦ h α hα⟩
 
 theorem zcdpDivergence_iff :
     zcdpDivergence (ξ, ρ) μ ν ↔ ∀ α, 1 < α → renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
-  concentratedDivergence_iff subset_rfl
+  concentratedDivergence_iff' subset_rfl
 
 theorem tcdpDivergence_iff :
     tcdpDivergence ω ρ μ ν ↔ ∀ α, 1 < α → α < ω → renyiDivergence α (ENNReal.ofReal α * ρ) μ ν :=
-  (concentratedDivergence_iff Ioo_subset_Ioi_self).trans (by simp [and_imp])
+  (concentratedDivergence_iff' Ioo_subset_Ioi_self).trans (by simp [and_imp])
 
 /-! ## Instances -/
 
 variable (A ω)
 
-instance isGraded_concentrated : (concentratedDivergence.{u} A).IsGraded where
-  mono _ _ hb _ _ _ _ _ _ h := IsGraded.mono (D := renyiCurve) (concentratedLine_mono A hb) h
-  top μ ν _ _ := by
-    change renyiCurve _ μ ν
-    rw [concentratedLine_top]
-    exact IsGraded.top μ ν
+/-- Concentrated divergences are graded, since lines are monotone and keep `⊤`. -/
+instance isGraded_concentrated : (concentratedDivergence.{u} A).IsGraded :=
+  isGraded_comap_of_map_top (concentratedLine_mono A) (concentratedLine_top A)
 
-instance isReflexive_concentrated : (concentratedDivergence.{u} A).IsReflexive where
-  refl μ _ := concentratedDivergence_of_forall fun _ _ ↦ by simpa using IsReflexive.refl μ
+/-- Concentrated divergences are reflexive: every line is above `0`. -/
+instance isReflexive_concentrated : (concentratedDivergence.{u} A).IsReflexive :=
+  isReflexive_comap zero_le
 
 /-- Concentrated budgets add, since lines do (Thms. 4.12 and 4.13). -/
-instance isComposable_concentrated : (concentratedDivergence.{u} A).IsComposable where
-  comp _ _ _ _ _ _ _ _ _ _ _ _ _ _ h hκ := by
-    simpa only [concentratedDivergence, concentratedLine_add] using
-      IsComposable.comp (D := renyiCurve) h hκ
+instance isComposable_concentrated : (concentratedDivergence.{u} A).IsComposable :=
+  isComposable_comap fun b c ↦ (concentratedLine_add A b c).ge
 
-instance isZeroLeft_concentrated : (concentratedDivergence.{u} A).IsZeroLeft where
-  zero_left _ _ _ ν _ := IsZeroLeft.zero_left (D := renyiCurve) _ ν
+/-- The zero measure is within every concentrated budget of every measure. -/
+instance isZeroLeft_concentrated : (concentratedDivergence.{u} A).IsZeroLeft :=
+  GradedDivergence.isZeroLeft_comap
 
-instance isLeftContinuous_concentrated : (concentratedDivergence.{u} A).IsLeftContinuous where
-  iSup_left _ _ _ _ _ hμ _ _ h := IsLeftContinuous.iSup_left (D := renyiCurve) hμ h
+/-- Concentrated divergences are left continuous. -/
+instance isLeftContinuous_concentrated : (concentratedDivergence.{u} A).IsLeftContinuous :=
+  GradedDivergence.isLeftContinuous_comap
+
+/-- Concentrated divergences are monotone in the right measure. -/
+instance isRightMonotone_concentrated : (concentratedDivergence.{u} A).IsRightMonotone :=
+  GradedDivergence.isRightMonotone_comap
+
+/-- Concentrated divergences are antitone in the left measure. -/
+instance isLeftAntitone_concentrated : (concentratedDivergence.{u} A).IsLeftAntitone :=
+  GradedDivergence.isLeftAntitone_comap
 
 /-- A bound at every larger budget is one at the budget: raise the shift `ξ`. -/
 instance isBudgetClosed_concentrated : (concentratedDivergence.{u} A).IsBudgetClosed where
-  of_forall_gt {b} _ _ _ _ _ _ h := concentratedDivergence_of_forall fun α hα ↦
+  of_forall_gt {b} := fun h ↦ concentratedDivergence_of_forall fun α hα ↦
     IsBudgetClosed.of_forall_gt fun t ht ↦ by
       obtain ⟨ξ', hξ', rfl⟩ := exists_lt_and_add_eq_of_add_lt ht
-      simpa [concentratedLine, hα] using h (ξ', b.2) (Prod.mk_lt_mk_iff_left.2 hξ') α
+      simpa [hα] using h (ξ', b.2) (Prod.mk_lt_mk_iff_left.2 hξ') α
 
-instance isGraded_tcdp : (tcdpDivergence.{u} ω).IsGraded where
-  mono _ _ hb _ _ _ _ _ _ h :=
-    IsGraded.mono (D := concentratedDivergence _) (Prod.mk_le_mk.2 ⟨le_rfl, hb⟩) h
-  top μ ν _ _ := by
-    change renyiCurve _ μ ν
-    rw [concentratedLine_snd_top]
-    exact IsGraded.top μ ν
+/-- tCDP divergences are graded: the line at `(0, ⊤)` is `⊤`. -/
+instance isGraded_tcdp : (tcdpDivergence.{u} ω).IsGraded :=
+  isGraded_comap (fun _ _ h ↦ Prod.mk_le_mk.2 ⟨le_rfl, h⟩) fun μ ν _ _ ↦ by
+    simpa [tcdpDivergence, concentratedDivergence, comap_def, concentratedLine_snd_top] using
+      IsGraded.top (D := renyiCurve) μ ν
 
-instance isReflexive_tcdp : (tcdpDivergence.{u} ω).IsReflexive where
-  refl μ _ := IsReflexive.refl (D := concentratedDivergence _) μ
+/-- tCDP divergences are reflexive. -/
+instance isReflexive_tcdp : (tcdpDivergence.{u} ω).IsReflexive :=
+  isReflexive_comap le_rfl
 
 /-- tCDP budgets add (Thm. 4.13). -/
-instance isComposable_tcdp : (tcdpDivergence.{u} ω).IsComposable where
-  comp _ _ _ _ _ _ _ _ _ _ _ _ _ _ h hκ := by
-    simpa [tcdpDivergence] using IsComposable.comp (D := concentratedDivergence _) h hκ
+instance isComposable_tcdp : (tcdpDivergence.{u} ω).IsComposable :=
+  isComposable_comap fun _ _ ↦ by simp
 
-instance isZeroLeft_tcdp : (tcdpDivergence.{u} ω).IsZeroLeft where
-  zero_left _ _ _ ν _ := IsZeroLeft.zero_left (D := concentratedDivergence _) _ ν
+/-- The zero measure is within every tCDP budget of every measure. -/
+instance isZeroLeft_tcdp : (tcdpDivergence.{u} ω).IsZeroLeft :=
+  GradedDivergence.isZeroLeft_comap
 
-instance isLeftContinuous_tcdp : (tcdpDivergence.{u} ω).IsLeftContinuous where
-  iSup_left _ _ _ _ _ hμ _ _ h :=
-    IsLeftContinuous.iSup_left (D := concentratedDivergence _) hμ h
+/-- tCDP divergences are left continuous. -/
+instance isLeftContinuous_tcdp : (tcdpDivergence.{u} ω).IsLeftContinuous :=
+  GradedDivergence.isLeftContinuous_comap
+
+/-- tCDP divergences are monotone in the right measure. -/
+instance isRightMonotone_tcdp : (tcdpDivergence.{u} ω).IsRightMonotone :=
+  GradedDivergence.isRightMonotone_comap
+
+/-- tCDP divergences are antitone in the left measure. -/
+instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
+  GradedDivergence.isLeftAntitone_comap
 
 /-- A bound at every larger budget is one at the budget: at order `α`, `ρ' = t / α`. -/
 instance isBudgetClosed_tcdp : (tcdpDivergence.{u} ω).IsBudgetClosed where
-  of_forall_gt {ρ} _ _ _ _ _ _ h := concentratedDivergence_of_forall fun α hα ↦
+  of_forall_gt {ρ} := fun h ↦ concentratedDivergence_of_forall fun α hα ↦
     IsBudgetClosed.of_forall_gt fun t ht ↦ by
-      have h0 : ENNReal.ofReal α ≠ 0 := by simpa using zero_lt_one.trans α.2
+      have h0 := ofReal_ioi_ne_zero α
       have hρ : ρ < t / ENNReal.ofReal α :=
         (ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top)).2
           (by simpa [mul_comm] using ht)
-      simpa [concentratedLine, hα, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top] using
-        h _ hρ α
+      simpa [hα, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top] using h _ hρ α
 
-variable {A}
+variable {A ω}
 
 omit [MeasurableSpace X] [MeasurableSpace Y] in
 @[simp]
@@ -259,9 +284,8 @@ theorem relCost_fst_add_mul_snd {S : X → Y → Prop} {x : X} {y : Y} (c : ℝ�
 /-! ## Concentrated liftings -/
 
 variable (A) in
-/-- The Rényi-curve lifting read along the lines, so that every order is a homomorphic image;
-the codensity lifting of `concentratedDivergence A` is larger and has no such image (Rocq
-`GCF_zCDP`, `GCF_tCDP`). -/
+/-- The Rényi-curve lifting read along the lines, so that every order is a homomorphic image
+(Rocq `GCF_zCDP`, `GCF_tCDP`). -/
 noncomputable def concentratedLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   (codensity renyiCurve).comap (concentratedLine A)
 
@@ -269,13 +293,16 @@ noncomputable def concentratedLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0
 noncomputable abbrev zcdpLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   concentratedLifting (Ioi 1)
 
+variable (ω) in
 /-- The tCDP lifting: Rényi liftings along `α ρ` at the orders `1 < α < ω`. -/
 noncomputable def tcdpLifting : GradedLifting.{u} ℝ≥0∞ :=
   (concentratedLifting (Ioo 1 ω)).comap (Prod.mk 0)
 
+variable {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop} {ν : Measure Y}
+
 /-- A concentrated lifting is a Rényi lifting along the line at every order of `A` (Rocq
-`gcf_zCDP_iff`, `gcf_tCDP_iff`). -/
-theorem concentratedLifting_iff {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {μ : Measure X} {ν : Measure Y} :
+`gcf_zCDP_iff`). -/
+theorem concentratedLifting_iff :
     concentratedLifting A b R μ ν ↔ ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A →
       (renyiDivergence α).codensity (b.1 + ENNReal.ofReal α * b.2)
         (fun x y ↦ (R x y).1 + ENNReal.ofReal α * (R x y).2) μ ν := by
@@ -285,122 +312,219 @@ theorem concentratedLifting_iff {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {μ :
   · intro I _ c hc
     simp [hα] at hc
 
-variable (A)
+/-- A concentrated relational lifting is a Rényi one along the line at every order of `A` (Rocq
+`gcf_zCDP_iff`). -/
+theorem concentratedLifting_rel_iff :
+    (concentratedLifting A).Rel b S μ ν ↔ ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A →
+      (codensity (renyiDivergence α)).Rel (b.1 + ENNReal.ofReal α * b.2) S μ ν := by
+  simp only [GradedLifting.Rel, concentratedLifting_iff, relCost_fst_add_mul_snd]
 
+/-- A tCDP lifting is a Rényi lifting along `α ρ` at every order below `ω` (Rocq
+`gcf_tCDP_iff`). -/
+theorem tcdpLifting_iff {R : X → Y → ℝ≥0∞} :
+    tcdpLifting ω ρ R μ ν ↔ ∀ α : Ioi (1 : ℝ), (α : ℝ) < ω →
+      (renyiDivergence α).codensity (ENNReal.ofReal α * ρ)
+        (fun x y ↦ ENNReal.ofReal α * R x y) μ ν :=
+  concentratedLifting_iff.trans <| forall_congr' fun α ↦ by simp [α.2.out]
+
+/-- A tCDP relational lifting is a Rényi one along `α ρ` at every order below `ω` (Rocq
+`gcf_tCDP_iff`). -/
+theorem tcdpLifting_rel_iff :
+    (tcdpLifting ω).Rel ρ S μ ν ↔ ∀ α : Ioi (1 : ℝ), (α : ℝ) < ω →
+      (codensity (renyiDivergence α)).Rel (ENNReal.ofReal α * ρ) S μ ν := by
+  refine tcdpLifting_iff.trans (forall₂_congr fun α _ ↦ ?_)
+  have : (fun x y ↦ ENNReal.ofReal α * relCost S x y) = relCost (B := ℝ≥0∞) S := by
+    ext x y
+    by_cases hS : S x y <;> simp [hS, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
+  rw [this, GradedLifting.Rel]
+
+variable (A ω)
+
+/-- Concentrated liftings are lawful although finite budgets such as `(⊤, 0)` reach `⊤`. -/
 instance isLawful_concentratedLifting : (concentratedLifting.{u} A).IsLawful :=
   isLawful_comap_codensity (concentratedLine_mono A) (concentratedLine_add A)
 
+/-- Concentrated liftings bind, since lines keep `⊤`. -/
 instance hasBind_concentratedLifting : (concentratedLifting.{u} A).HasBind :=
   hasBind_comap (concentratedLine_top A)
 
 /-- Off `A` every order is at `⊤`; on `A` the line at `0` is `0`. -/
 instance isReflexive_concentratedLifting : (concentratedLifting.{u} A).IsReflexive where
-  refl μ _ := concentratedLifting_iff.2 fun α _ ↦ by
-    simp only [Prod.fst_zero, Prod.snd_zero, mul_zero, add_zero, relCost_fst_add_mul_snd]
-    exact GradedLifting.IsReflexive.refl (L := codensity (renyiDivergence α)) μ
+  refl μ _ := concentratedLifting_rel_iff.2 fun α _ ↦ by
+    simpa using GradedLifting.IsReflexive.refl (L := codensity (renyiDivergence α)) μ
 
+/-- The zero measure on the left lifts against everything. -/
 instance isZeroLeft_concentratedLifting : (concentratedLifting.{u} A).IsZeroLeft :=
-  isZeroLeft_comap
+  GradedLifting.isZeroLeft_comap
 
+/-- Concentrated liftings are left continuous. -/
 instance isLeftContinuous_concentratedLifting : (concentratedLifting.{u} A).IsLeftContinuous :=
-  isLeftContinuous_comap
+  GradedLifting.isLeftContinuous_comap
 
+/-- Concentrated liftings are support local, since lines keep `⊤`. -/
 instance isSupportLocal_concentratedLifting : (concentratedLifting.{u} A).IsSupportLocal :=
   isSupportLocal_comap (concentratedLine_top A)
 
+/-- Concentrated liftings relate everything at `⊤`. -/
 instance isTopAbsorbing_concentratedLifting : (concentratedLifting.{u} A).IsTopAbsorbing :=
   isTopAbsorbing_comap (concentratedLine_top A)
 
-instance isLawful_tcdpLifting : (tcdpLifting.{u} ω).IsLawful :=
-  isLawful_comap (fun _ _ ↦ Prod.mk_le_mk_iff_right.2) (fun _ _ ↦ by simp)
-    fun _ _ ↦ zero_prodMk_lt_top _
+/-- A concentrated lifting of equality is the concentrated divergence. -/
+instance isSound_concentratedLifting :
+    (concentratedLifting.{u} A).IsSound (concentratedDivergence A) where
+  sound h := IsSound.sound (L := codensity (concentratedDivergence A))
+    (comap_codensity_le (concentratedLine_add A) h)
 
+/-- The concentrated divergence gives a concentrated lifting of equality, order by order. -/
+instance isComplete_concentratedLifting :
+    (concentratedLifting.{u} A).IsComplete (concentratedDivergence A) where
+  complete h := concentratedLifting_rel_iff.2 fun α hα ↦
+    IsComplete.complete (L := codensity (renyiDivergence α)) (concentratedDivergence_iff.1 h α hα)
+
+/-- A lifting at every larger budget is one at the budget: raise the shift `ξ`. -/
+instance isBudgetClosed_concentratedLifting : (concentratedLifting.{u} A).IsBudgetClosed where
+  of_forall_gt {_ _} _ _ b := fun h ↦ concentratedLifting_iff.2 fun α hα ↦
+    GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity (renyiDivergence α)) fun t ht ↦ by
+      obtain ⟨ξ', hξ', rfl⟩ := exists_lt_and_add_eq_of_add_lt ht
+      exact concentratedLifting_iff.1 (h (ξ', b.2) (Prod.mk_lt_mk_iff_left.2 hξ')) α hα
+
+/-- A budget with an infinite shift is absorbing: its line is `⊤`. -/
+theorem absorbing_concentratedLifting_fst_top (ρ : ℝ≥0∞) :
+    (concentratedLifting.{u} A).Absorbing (⊤, ρ) :=
+  absorbing_comap (concentratedLine_fst_top A ρ)
+
+/-- tCDP liftings are lawful although `(0, ⊤)` is below `⊤`. -/
+instance isLawful_tcdpLifting : (tcdpLifting.{u} ω).IsLawful :=
+  isLawful_comap_of_top (fun _ _ ↦ Prod.mk_le_mk_iff_right.2) fun _ _ ↦ by simp
+
+/-- tCDP liftings bind, since the line at `(0, ⊤)` is `⊤`. -/
 instance hasBind_tcdpLifting : (tcdpLifting.{u} ω).HasBind :=
   hasBind_comap (L := codensity renyiCurve) (concentratedLine_snd_top _ 0)
 
+/-- tCDP liftings are reflexive: frame by the finite budget `(0, 0)`. -/
 instance isReflexive_tcdpLifting : (tcdpLifting.{u} ω).IsReflexive :=
-  isReflexive_comap_of_lt_top (zero_prodMk_lt_top 0)
+  isReflexive_comap_of_lt_top bot_lt_top
 
+/-- The zero measure on the left lifts against everything. -/
 instance isZeroLeft_tcdpLifting : (tcdpLifting.{u} ω).IsZeroLeft :=
-  isZeroLeft_comap
+  GradedLifting.isZeroLeft_comap
 
+/-- tCDP liftings are left continuous. -/
 instance isLeftContinuous_tcdpLifting : (tcdpLifting.{u} ω).IsLeftContinuous :=
-  isLeftContinuous_comap
+  GradedLifting.isLeftContinuous_comap
 
+/-- tCDP liftings are support local, since the line at `(0, ⊤)` is `⊤`. -/
 instance isSupportLocal_tcdpLifting : (tcdpLifting.{u} ω).IsSupportLocal :=
   isSupportLocal_comap (L := codensity renyiCurve) (concentratedLine_snd_top _ 0)
 
+/-- tCDP liftings relate everything at `⊤`. -/
 instance isTopAbsorbing_tcdpLifting : (tcdpLifting.{u} ω).IsTopAbsorbing :=
   isTopAbsorbing_comap (L := codensity renyiCurve) (concentratedLine_snd_top _ 0)
 
-variable {A}
+/-- A tCDP lifting of equality is the tCDP divergence. -/
+instance isSound_tcdpLifting : (tcdpLifting.{u} ω).IsSound (tcdpDivergence ω) where
+  sound h := IsSound.sound (L := codensity (tcdpDivergence ω))
+    (comap_codensity_le (φ := fun ρ ↦ concentratedLine (Ioo 1 ω) (0, ρ))
+      (fun _ _ ↦ by rw [← concentratedLine_add]; simp) h)
+
+/-- The tCDP divergence gives a tCDP lifting of equality, order by order. -/
+instance isComplete_tcdpLifting : (tcdpLifting.{u} ω).IsComplete (tcdpDivergence ω) where
+  complete h := tcdpLifting_rel_iff.2 fun α hα ↦
+    IsComplete.complete (L := codensity (renyiDivergence α)) (tcdpDivergence_iff.1 h α α.2 hα)
+
+/-- A lifting at every larger budget is one at the budget: at order `α`, `ρ' = t / α`. -/
+instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
+  of_forall_gt {_ _} _ _ ρ := fun h ↦ tcdpLifting_iff.2 fun α hα ↦
+    GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity (renyiDivergence α)) fun t ht ↦ by
+      have h0 := ofReal_ioi_ne_zero α
+      have hρ : ρ < t / ENNReal.ofReal α :=
+        (ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top)).2
+          (by simpa [mul_comm] using ht)
+      simpa [ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top] using tcdpLifting_iff.1 (h _ hρ) α hα
+
+variable {A ω}
 
 /-! ## Concentrated codensity liftings -/
 
-/-- A curve lifting along the lines is a concentrated lifting. -/
-theorem codensity_concentrated_of_renyiCurve {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {μ : Measure X}
-    {ν : Measure Y}
-    (h : renyiCurve.codensity (concentratedLine A b) (fun x y ↦ concentratedLine A (R x y)) μ ν) :
-    (concentratedDivergence A).codensity b R μ ν := by
-  intro I _ c _ k l _ _ hkl
-  change renyiCurve _ _ _
-  rw [concentratedLine_add]
-  rcases eq_or_ne (concentratedLine A b + concentratedLine A c) ⊤ with htop | hlt
-  · exact htop ▸ fun α ↦ renyiDivergence_top α.2 _ _
-  · exact h (lt_top_iff_ne_top.2 hlt) fun x y ↦ concentratedLine_add A (R x y) c ▸ hkl x y
-
 /-- Rényi liftings at every order of `A` give a concentrated lifting (Rocq `gcf_zCDP_iff`,
 `gcf_tCDP_iff`, one direction). -/
-theorem codensity_concentrated_of_forall {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {μ : Measure X}
-    {ν : Measure Y}
+theorem codensity_concentrated_of_forall [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : ∀ α ∈ A, (renyiDivergence α).codensity (b.1 + ENNReal.ofReal α * b.2)
       (fun x y ↦ (R x y).1 + ENNReal.ofReal α * (R x y).2) μ ν) :
     (concentratedDivergence A).codensity b R μ ν :=
-  codensity_concentrated_of_renyiCurve (concentratedLifting_iff.2 fun α hα ↦ h α hα)
+  comap_codensity_le (concentratedLine_add A) (concentratedLifting_iff.2 fun α hα ↦ h α hα)
 
-theorem codensity_concentrated_rel_of_forall {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
+theorem codensity_concentrated_rel_of_forall [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν]
     (h : ∀ α ∈ A, (codensity (renyiDivergence α)).Rel (ξ + ENNReal.ofReal α * ρ) S μ ν) :
     (codensity (concentratedDivergence A)).Rel (ξ, ρ) S μ ν :=
   codensity_concentrated_of_forall fun α hα ↦ by
     simp only [relCost_fst_add_mul_snd]
     exact h α hα
 
-variable (A)
+end GradedDivergence
 
 /-! ## Homomorphisms of concentrated liftings -/
 
-/-- A concentrated lifting is a Rényi lifting at each order, through the curve (Rocq
-`CM_zCDP_RDP`, `CM_tCDP_RDP`). -/
-noncomputable def liftingHom_concentratedLifting_renyi (α : Ioi (1 : ℝ)) :
-    LiftingHom (concentratedLifting.{u} A) (codensity (renyiDivergence.{u} α)) :=
-  (liftingHom_renyiCurve_renyi α).comp (comapHom _ _ (concentratedLine_mono A))
+open GradedDivergence
 
-/-- A zCDP lifting is a Rényi lifting at each order, along `ξ + α ρ` (Rocq `CM_zCDP_RDP`). -/
-noncomputable def liftingHom_zcdpLifting_renyi (α : Ioi (1 : ℝ)) :
-    LiftingHom zcdpLifting.{u} (codensity (renyiDivergence.{u} α)) :=
-  liftingHom_concentratedLifting_renyi _ α
+namespace LiftingHom
+
+variable (A : Set ℝ) (ω : ℝ)
+
+/-- A Rényi-curve lifting is a Rényi lifting at each order. -/
+noncomputable def renyiCurveToRenyi (α : Ioi (1 : ℝ)) :
+    LiftingHom (codensity renyiCurve.{u}) (codensity (renyiDivergence.{u} α)) where
+  map ρ := ρ α
+  mono _ _ h := h α
+  map_lift h := codensity_renyiCurve_iff.1 h α
+
+/-- A concentrated lifting is a Rényi-curve lifting along the line (Rocq `CM_zCDP_curve`). -/
+noncomputable def concentratedToRenyiCurve :
+    LiftingHom (concentratedLifting.{u} A) (codensity renyiCurve.{u}) :=
+  comapHom (concentratedLine_mono A)
+
+/-- A tCDP lifting is a Rényi-curve lifting along the line (Rocq `CM_tCDP_curve`). -/
+noncomputable def tcdpToRenyiCurve : LiftingHom (tcdpLifting.{u} ω) (codensity renyiCurve.{u}) :=
+  (concentratedToRenyiCurve _).comp (comapHom fun _ _ ↦ Prod.mk_le_mk_iff_right.2)
+
+/-- A concentrated lifting is a Rényi lifting at each order (Rocq `CM_zCDP_RDP`). -/
+noncomputable def concentratedToRenyi (α : Ioi (1 : ℝ)) :
+    LiftingHom (concentratedLifting.{u} A) (codensity (renyiDivergence.{u} α)) :=
+  (renyiCurveToRenyi α).comp (concentratedToRenyiCurve A)
 
 /-- A tCDP lifting is a Rényi lifting at each order, along `α ρ` below `ω` and `⊤` above
 (Rocq `CM_tCDP_RDP`). -/
-noncomputable def liftingHom_tcdpLifting_renyi (α : Ioi (1 : ℝ)) :
+noncomputable def tcdpToRenyi (α : Ioi (1 : ℝ)) :
     LiftingHom (tcdpLifting.{u} ω) (codensity (renyiDivergence.{u} α)) :=
-  (liftingHom_concentratedLifting_renyi _ α).comp
-    (comapHom _ _ fun _ _ ↦ Prod.mk_le_mk_iff_right.2)
+  (renyiCurveToRenyi α).comp (tcdpToRenyiCurve ω)
 
 /-- A concentrated lifting is a codensity lifting of the concentrated divergence. -/
-noncomputable def liftingHom_concentratedLifting_codensity :
+noncomputable def concentratedToCodensity :
     LiftingHom (concentratedLifting.{u} A) (codensity (concentratedDivergence.{u} A)) where
   map b := b
   mono := monotone_id
-  map_lift := codensity_concentrated_of_renyiCurve
+  map_lift := comap_codensity_le (concentratedLine_add A)
 
 /-- A tCDP lifting is a codensity lifting of the tCDP divergence. -/
-noncomputable def liftingHom_tcdpLifting_codensity :
+noncomputable def tcdpToCodensity :
     LiftingHom (tcdpLifting.{u} ω) (codensity (tcdpDivergence.{u} ω)) where
   map b := b
   mono := monotone_id
-  map_lift h := comap_codensity_le (fun _ _ ↦ by simp)
-    (fun _ _ ↦ zero_prodMk_lt_top _)
-    (codensity_concentrated_of_renyiCurve h)
+  map_lift := comap_codensity_le (φ := fun ρ ↦ concentratedLine (Ioo 1 ω) (0, ρ))
+    fun _ _ ↦ by rw [← concentratedLine_add]; simp
 
-end GradedDivergence
+end LiftingHom
+
+namespace LiftingRelHom
+
+/-- A zCDP relational lifting at `(ξ, ρ)` is a tCDP one at `ξ + ρ`, for every `ω`
+(Rocq `CM_zCDP_tCDP`). -/
+noncomputable def zcdpToTcdp (ω : ℝ) : LiftingRelHom zcdpLifting.{u} (tcdpLifting.{u} ω) where
+  map b := b.1 + b.2
+  mono _ _ h := add_le_add h.1 h.2
+  map_rel {_ _} _ _ b := fun h ↦ tcdpLifting_rel_iff.2 fun α hα ↦
+    (concentratedLifting_rel_iff.1 h α α.2).mono
+      (by simpa [α.2.out, hα] using concentratedLine_ioi_le_ioo (ω := ω) b α) fun _ _ h ↦ h
+
+end LiftingRelHom

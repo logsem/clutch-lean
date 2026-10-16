@@ -62,7 +62,7 @@ namespace ProbabilityTheory
 
 variable {f g : ℝ → ℝ}
 
-/-- The slope `lim f t / t` of a weight at `+∞`. -/
+/-- The slope `limsup f t / t` of a weight at `+∞` (a limit for convex weights). -/
 noncomputable def derivAtTop (f : ℝ → ℝ) : EReal :=
   limsup (fun t : ℝ ↦ ((f t / t : ℝ) : EReal)) atTop
 

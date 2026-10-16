@@ -354,25 +354,12 @@ instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure
 instance limExecV.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExecV ρ) :=
   isSubProbabilityMeasure_map _ _
 
+/-- A run of mass `1` within `n` steps is the whole execution. -/
 theorem limExec_term {ρ : Cfg rT} {n : Nat} (Hv : (execN n ρ) Set.univ = 1) :
-    limExec ρ = execN n ρ := by
-  have hfin_n : IsFiniteMeasure (execN n ρ) :=
-    ⟨by rw [Hv]; exact ENNReal.one_lt_top⟩
-  have hk_eq : ∀ k, n ≤ k → execN k ρ = execN n ρ := by
-    intro k hk
-    have hk_univ : (execN k ρ) Set.univ = 1 := by
-      refine le_antisymm (execN_univ_le_one k ρ) ?_
-      calc (1 : ENNReal) = (execN n ρ) Set.univ := Hv.symm
-        _ ≤ (execN k ρ) Set.univ := (execN_mono hk ρ) _
-    exact (Measure.eq_of_le_of_measure_univ_eq (execN_mono hk ρ) (Hv.trans hk_univ.symm)).symm
-  ext S HS
-  rw [limExec_apply _ HS]
-  apply le_antisymm
-  · refine iSup_le fun k => ?_
-    by_cases hkn : k ≤ n
-    · exact execN_mono hkn ρ S
-    · rw [hk_eq k (Nat.le_of_not_le hkn)]
-  · exact le_iSup_of_le n le_rfl
+    limExec ρ = execN n ρ :=
+  have hle : execN n ρ ≤ limExec ρ := le_iSup (fun i ↦ execN i ρ) n
+  (Measure.eq_of_le_of_measure_univ_eq hle
+    (le_antisymm (hle _) (Hv ▸ IsSubProbabilityMeasure.measure_le_one _))).symm
 
 /-! ### Deterministic trace -/
 

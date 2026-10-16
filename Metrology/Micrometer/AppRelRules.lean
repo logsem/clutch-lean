@@ -2,7 +2,6 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
-import Metrology.Iris.ErrorCredits
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.CouplingRules
@@ -378,19 +377,6 @@ An absorbing credit discharges any refinement; amplification climbs from `↯b (
 absorbing `↯b (s 1)`, which replaces the old contradiction at `↯ 1`. -/
 
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
-/-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
-theorem wp_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} : ↯b c ⊢ wp L E e Φ := by
-  iintro Hc
-  iapply MicrometerWpGS.wp_unfold
-  unfold wpPre
-  iintro %σ₁ %e₁' %σ₁' %b₁ ⟨-, -, Hb⟩
-  ihave %hle := BudgetCredit.supply_bound $$ Hb Hc
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
-  imodintro
-  iapply specCoupl_absorbing (hc.mono hle)
-
-omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
 theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
     {A : lrel rT GF} : ↯b c ⊢ refines L E e e' A := by
   iintro Hc
@@ -409,28 +395,6 @@ theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ �
   ihave ⟨Herr1, Herr2⟩ := (BudgetCredit.weaken hle).trans BudgetCredit.split $$ Herr
   iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
 
-omit [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
-/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1` (Approxis
-`ec_ind_amp`). -/
-theorem budgetCredit_amplifying {s : ENNReal →+o B} {ε : ENNReal} {k : NNReal} {P : IProp GF}
-    (hε : 0 < ε) (hk : 1 < k) : iprop%
-    □ (↯b (s 1) -∗ P) ⊢
-      □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ P) -∗ ↯b (s ε') -∗ P) -∗
-      ↯b (s ε) -∗ P := by
-  iintro #Hexit #Hamp Hε
-  obtain ⟨n, hn⟩ := ErrorCredit.Induction.err_amp_power hε hk
-  iinduction n generalizing %ε %hε %hn Hε with
-  | zero =>
-    simp only [pow_zero, mul_one] at hn
-    iapply Hexit $$ [Hε]
-    iapply BudgetCredit.weaken (OrderHomClass.mono s hn) $$ Hε
-  | succ n IH =>
-    iapply Hamp $$ %_ %hε [] Hε
-    iintro !> Hε
-    iapply IH $$ %((k : ENNReal) * ε)
-      %(ENNReal.mul_pos_iff.mpr ⟨ENNReal.coe_pos.mpr (pos_of_gt hk), pos_of_gt hε⟩)
-      %(hn.trans (_root_.le_of_eq (by ring))) Hε
-
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
 theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
@@ -443,7 +407,7 @@ theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : 
   iapply refines_get_ec hsplit
   iintro %b Herr %hpos
   obtain ⟨ε, hε, hle⟩ := hslack b hpos
-  iapply budgetCredit_amplifying (s := s) hε hk $$ [] [] [Herr]
+  iapply BudgetCredit.amplifying (s := s) hε hk $$ [] [] [Herr]
   · iintro !> Hc
     iapply refines_of_absorbing habs $$ Hc
   · iintro !> %ε' %hε' #Hstep Hε'
@@ -467,7 +431,7 @@ theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel
   iintro %b Herr %hpos
   obtain ⟨ε, hε, hle⟩ := hslack b hpos
   ihave Herr := BudgetCredit.weaken hle $$ Herr
-  ihave Hall := budgetCredit_amplifying
+  ihave Hall := BudgetCredit.amplifying
       (P := iprop(∀ w1 w2, A w1 w2 -∗ refines L ⊤ (.app v.1 w1.1) (.app v'.1 w2.1) A')) hε hk
     $$ [] [] Herr
   · iintro !> Hc %w1 %w2 -
@@ -496,7 +460,7 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
   iapply Hcnt $$ %n %Hn %K2 %b HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_adv [Nontrivial B] {s : ENNReal →+o B}
+theorem refines_couple_rands_lr_adv {s : ENNReal →+o B}
     [L.IsExpectationAdditive s] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (f : Int → Int) (ε₁ : ENNReal) (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -519,7 +483,7 @@ theorem refines_couple_rands_lr_adv [Nontrivial B] {s : ENNReal →+o B}
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
   iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_avoid [Nontrivial B] {s : ENNReal →+o B}
+theorem refines_couple_rands_lr_avoid {s : ENNReal →+o B}
     [L.IsExpectationAdditive s] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (bad : Int) (Hz : 0 < z) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) : iprop%

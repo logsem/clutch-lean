@@ -35,32 +35,6 @@ theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e
 
 section Termination
 
-/-- A bind of mass `1` comes from almost surely total continuations. -/
-theorem ae_measure_univ_eq_one_of_bind {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
-    {μ : MeasureTheory.Measure X} [MeasureTheory.IsSubProbabilityMeasure μ]
-    {κ : X → MeasureTheory.Measure Y} [∀ x, MeasureTheory.IsSubProbabilityMeasure (κ x)]
-    (hκ : Measurable κ) (h : μ.bind κ Set.univ = 1) : ∀ᵐ x ∂μ, κ x Set.univ = 1 := by
-  have hf : Measurable fun x => κ x Set.univ :=
-    (MeasureTheory.Measure.measurable_coe .univ).comp hκ
-  rw [MeasureTheory.Measure.bind_apply .univ hκ.aemeasurable] at h
-  have h0 : ∫⁻ x, 1 - κ x Set.univ ∂μ = 0 := by
-    rw [MeasureTheory.lintegral_sub hf (h ▸ ENNReal.one_ne_top)
-      (.of_forall fun x => MeasureTheory.IsSubProbabilityMeasure.measure_le_one _),
-      MeasureTheory.lintegral_const, h, one_mul]
-    exact tsub_eq_zero_of_le MeasureTheory.IsSubProbabilityMeasure.measure_univ_le_one
-  filter_upwards [(MeasureTheory.lintegral_eq_zero_iff (measurable_const.sub hf)).1 h0]
-    with x hx
-  exact _root_.le_antisymm (MeasureTheory.IsSubProbabilityMeasure.measure_le_one _)
-    (tsub_eq_zero_iff_le.1 hx)
-
-omit [MeasurableSingletonClass rT] in
-/-- A run of mass `1` within `n` steps is the whole execution. -/
-theorem limExec_eq_execN {n : Nat} {ρ : Cfg rT} (h : execN n ρ Set.univ = 1) :
-    limExec ρ = execN n ρ :=
-  have hle : execN n ρ ≤ limExec ρ := le_iSup (fun i => execN i ρ) n
-  (MeasureTheory.Measure.eq_of_le_of_measure_univ_eq hle
-    (_root_.le_antisymm (hle _) (h ▸ MeasureTheory.IsSubProbabilityMeasure.measure_le_one _))).symm
-
 variable [Zero B] [Preorder B] [_root_.Top B] {L : GradedLifting.{0} B} [L.HasBind]
   [L.IsSupportLocal]
 
@@ -85,8 +59,8 @@ theorem execCoupl_erasable_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State r
     simp only [asExpr, MeasureTheory.Measure.map_apply Cfg.measurable_expr .univ,
       Set.preimage_univ] at h
     rw [h, hterm]
-  refine lift_erasure_erasable (IsSupportLocal.restrict hA
-    (MeasureTheory.ae_iff.1 (ae_measure_univ_eq_one_of_bind hek hmass)) hCoupl) hErase₁ hErase₁'
+  have hAc := MeasureTheory.ae_iff.1 (MeasureTheory.ae_measure_univ_eq_one_of_bind hek hmass)
+  refine lift_erasure_erasable (IsSupportLocal.restrict hA hAc hCoupl) hErase₁ hErase₁'
     fun σ₂ ρ' hR => ?_
   by_cases hσ : σ₂ ∈ {σ : State rT | execN m ⟨e₁, σ⟩ Set.univ = 1}
   · simp only [Set.piecewise_eq_of_mem _ _ _ hσ] at hR ⊢
@@ -109,8 +83,9 @@ theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
       (measurableSet_singleton 1)
   simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (Exp.toVal?_eq_none.mp Hnone) m]
     at hterm ⊢
-  refine lift_erasure_erasable_exp_lhs_kanto hErase₁' (IsSupportLocal.restrict hA
-    (MeasureTheory.ae_iff.1 (ae_measure_univ_eq_one_of_bind (execN_measurable m) hterm)) hExp)
+  have hAc := MeasureTheory.ae_iff.1
+    (MeasureTheory.ae_measure_univ_eq_one_of_bind (execN_measurable m) hterm)
+  refine lift_erasure_erasable_exp_lhs_kanto hErase₁' (IsSupportLocal.restrict hA hAc hExp)
     fun ρ ρ' hR => ?_
   by_cases hρ : ρ ∈ {ρ : Cfg rT | execN m ρ Set.univ = 1}
   · simp only [Set.piecewise_eq_of_mem _ _ _ hρ] at hR ⊢
@@ -523,7 +498,7 @@ theorem wp_adequacy_term (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
-  rw [limExecV, limExec_eq_execN hterm]
+  rw [limExecV, limExec_term hterm]
   exact wp_adequacy_exec_n_term e e' σ σ' n φ b hterm Hwp
 
 end BudgetTerm

@@ -76,6 +76,10 @@ theorem gaussianPDFReal_le_exp_mul {a a' r ε x : ℝ} (hr : 0 < r) (hε : 0 ≤
         = ((x - a') ^ 2 - (x - a) ^ 2) / (2 * v) + -(x - a') ^ 2 / (2 * v) := by ring
     _ ≤ ε + -(x - a') ^ 2 / (2 * v) := by linarith
 
+end ProbabilityTheory
+
+namespace Real
+
 /-- The constant `0.66` exceeds `√(e / (2π))`, the slack in the Gaussian tail bound. -/
 theorem sqrt_exp_one_div_two_pi_le : √(exp 1 / (2 * π)) ≤ 0.66 := by
   rw [sqrt_le_left (by norm_num), div_le_iff₀ (by positivity)]
@@ -113,15 +117,17 @@ theorem gaussian_tail_le {h c δ : ℝ} (hh : c - 1 / (2 * c) ≤ h) (hc : (1 + 
     _ ≤ 0.66 * (δ / 0.66) := mul_le_mul sqrt_exp_one_div_two_pi_le hexp (exp_pos _).le (by norm_num)
     _ = δ := by field_simp
 
-end ProbabilityTheory
+end Real
 
 namespace GradedDivergence
 
 /-- The Gaussian mechanism with nearby means is `(ε, δ)`-DP, case `a' ≤ a` ([DP-G]). -/
-theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ) (hε : 0 < ε)
+theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
     (hε₁ : ε ≤ 1) (hr : 0 < r) (hδ : 0 < δ) (hc : (1 + √3) / 2 < c)
     (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2) (hcσ : c * r / ε ≤ σ) (haa : a' ≤ a) (har : a - a' ≤ r) :
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
+  have hσ : 0 < σ := NNReal.coe_pos.1
+    ((div_pos (mul_pos ((by positivity : 0 < (1 + √3) / 2).trans hc) hr) hε).trans_le hcσ)
   have hσ' : (0 : ℝ) < σ := hσ
   have hv : σ ^ 2 ≠ 0 := pow_ne_zero 2 hσ.ne'
   have hv' : (0 : ℝ) < ((σ ^ 2 : ℝ≥0) : ℝ) := by push_cast; positivity
@@ -163,7 +169,7 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ) (
     rw [sqrt_mul' _ (by positivity), sqrt_sq hσ'.le]
     field_simp
   intro _ S hS
-  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top, ENNReal.toReal_ofReal hε.le]
+  rw [expBudget_ofReal hε.le]
   calc gaussianReal a (σ ^ 2) S
       ≤ gaussianReal a (σ ^ 2) (S ∩ Iic H) + gaussianReal a (σ ^ 2) (Ioi H) := by
         refine (measure_mono fun x hx ↦ ?_).trans (measure_union_le _ _)
@@ -186,13 +192,13 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ) (
 
 /-- The Gaussian mechanism with means at distance at most `r` is `(ε, δ)`-DP when `ε ≤ 1`,
 `c > (1 + √3) / 2`, `c² ≥ 2 log (0.66 / δ)` and `σ ≥ c r / ε` ([DP-G]). -/
-theorem dp_gaussian {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hσ : 0 < σ) (hε : 0 < ε) (hε₁ : ε ≤ 1)
+theorem dp_gaussian {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε) (hε₁ : ε ≤ 1)
     (hr : 0 < r) (hδ : 0 < δ) (hc : (1 + √3) / 2 < c) (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2)
     (hcσ : c * r / ε ≤ σ) (h : |a - a'| ≤ r) :
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
   rcases le_total a' a with haa | haa
-  · exact dp_gaussian_of_le hσ hε hε₁ hr hδ hc hcδ hcσ haa (le_of_abs_le h)
-  · have := dp_map (dp_gaussian_of_le hσ hε hε₁ hr hδ hc hcδ hcσ (neg_le_neg haa)
+  · exact dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ haa (le_of_abs_le h)
+  · have := dp_map (dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ (neg_le_neg haa)
       (by linarith [(abs_le.1 h).1])) measurable_neg
     simpa only [gaussianReal_map_neg, neg_neg] using this
 
@@ -205,12 +211,15 @@ noncomputable def gaussianMech (σ : ℝ≥0) : Mechanism ℝ ℝ :=
   ⟨fun a ↦ gaussianReal a (σ ^ 2), measurable_gaussianReal.comp (measurable_id.prodMk
     measurable_const)⟩
 
+instance isMarkovKernel_gaussianMech (σ : ℝ≥0) : IsMarkovKernel (gaussianMech σ) :=
+  ⟨fun _ ↦ inferInstanceAs (IsProbabilityMeasure (gaussianReal _ _))⟩
+
 /-- The Gaussian mechanism is `(ε, δ)`-DP for inputs at distance at most `r`, under the side
 conditions of [DP-G]. -/
-theorem DP_gaussianMech {σ : ℝ≥0} {ε δ r c : ℝ} (hσ : 0 < σ) (hε : 0 < ε) (hε₁ : ε ≤ 1)
+theorem DP_gaussianMech {σ : ℝ≥0} {ε δ r c : ℝ} (hε : 0 < ε) (hε₁ : ε ≤ 1)
     (hr : 0 < r) (hδ : 0 < δ) (hc : (1 + √3) / 2 < c) (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2)
     (hcσ : c * r / ε ≤ σ) :
     (gaussianMech σ).DP (fun a a' ↦ |a - a'| ≤ r) (ENNReal.ofReal ε) (ENNReal.ofReal δ) :=
-  fun _ _ h ↦ GradedDivergence.dp_gaussian hσ hε hε₁ hr hδ hc hcδ hcσ h
+  fun _ _ h ↦ GradedDivergence.dp_gaussian hε hε₁ hr hδ hc hcδ hcσ h
 
 end Mechanism

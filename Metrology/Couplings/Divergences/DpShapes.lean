@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Couplings.Divergences.Dp
+public import Metrology.Couplings.Divergences.Tv
 
 /-! The DP bind shapes beyond uniform composition, as DP codensity liftings (Rocq
 `instances_dp.v`). -/
@@ -39,6 +40,14 @@ theorem codensity_dp_rhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
     _ = expBudget (ε₁ + ε₂) * ∫⁻ y, g y ∂ν + (δ₁ + expBudget ε₁ * ∫⁻ y, D y ∂ν) := by
         rw [expBudget_add]
         ring
+
+open Classical in
+/-- Adaptive composition keyed on the right outcome after a total variation lifting: no
+multiplier is spent on the head (Rocq `dp_rhs_head_of_AR`). -/
+theorem codensity_dp_rhs_of_tv [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (h : (codensity tv).Rel δ₁ S μ ν) {D : Y → ℝ≥0∞} (hD : Measurable D) :
+    dp.codensity (ε₂, δ₁ + ∫⁻ y, D y ∂ν) (fun x y ↦ if S x y then (ε₂, D y) else ⊤) μ ν := by
+  simpa using codensity_dp_rhs (ε₂ := ε₂) (codensity_tv_rel_iff_dp.1 h) hD
 
 open Classical in
 /-- Adaptive composition keyed on the left outcome: after a DP lifting of `S`, the budgets

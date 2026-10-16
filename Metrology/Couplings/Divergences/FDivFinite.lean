@@ -1,6 +1,6 @@
 module
 
-public import Metrology.Couplings.Divergences.FDiv
+public import Metrology.Couplings.Divergences.FDivPartition
 
 /-! Chain rules for `f`-divergences from finite spaces, by dyadic discretisation (Approximate Span
 Liftings, Thms. 4.6, 4.8, App. C.3; Sato–Katsumata, Prop. 1). -/
@@ -254,6 +254,16 @@ theorem fDiv_eq_sum (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt 
         Finset.sum_le_sum fun j _ ↦ persp_sum_le hf _ (fun _ _ ↦ ENNReal.toReal_nonneg)
           fun _ _ ↦ ENNReal.toReal_nonneg
     _ = ∑ i, persp f (ρ₁ {i}).toReal (ρ₂ {i}).toReal := Finset.sum_fiberwise _ _ _
+
+/-- Between point masses the `f`-divergence is the perspective of the masses. -/
+theorem fDiv_smul_dirac (hf : ConvexOn ℝ (Ici 0) f)
+    (hf_cont : ContinuousWithinAt f (Ici 0) 0) {a b : ℝ≥0∞} (ha : a ≠ ⊤) (hb : b ≠ ⊤) :
+    fDiv f (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) = persp f a.toReal b.toReal := by
+  have : IsFiniteMeasure (a • dirac PUnit.unit.{u + 1}) := ⟨by simpa using ha.lt_top⟩
+  have : IsFiniteMeasure (b • dirac PUnit.unit.{u + 1}) := ⟨by simpa using hb.lt_top⟩
+  rw [fDiv_eq_sum hf hf_cont]
+  simp only [Finset.univ_unique, PUnit.default_eq_unit, Finset.sum_singleton, Measure.smul_apply,
+    dirac_apply_of_mem (mem_singleton _), smul_eq_mul, mul_one]
 
 /-- An `f`-divergence is the supremum of its pushforwards to finite spaces (Thm. 4.7). -/
 theorem fDiv_eq_iSup_map (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)

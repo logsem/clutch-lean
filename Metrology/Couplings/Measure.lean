@@ -164,3 +164,10 @@ theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) 
   | insert j s hj ih =>
     rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.left_distrib_of_nonneg (hx j (by simp))
       (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
+
+theorem EReal.le_coe_mul_iff {c : ℝ} (hc : 0 < c) {x y : EReal} :
+    x ≤ c * y ↔ ((c⁻¹ : ℝ) : EReal) * x ≤ y := by
+  have hc' : 0 < c⁻¹ := inv_pos.2 hc
+  induction x <;> induction y <;>
+    simp [EReal.coe_mul_top_of_pos hc, EReal.coe_mul_bot_of_pos hc, EReal.coe_mul_top_of_pos hc',
+      EReal.coe_mul_bot_of_pos hc', ← EReal.coe_mul, inv_mul_le_iff₀ hc]

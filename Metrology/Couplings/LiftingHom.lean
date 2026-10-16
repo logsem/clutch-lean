@@ -78,15 +78,6 @@ def comp (G : LiftingHom L₂ L₃) (F : LiftingHom L₁ L₂) : LiftingHom L₁
   mono := G.mono.comp F.mono
   map_lift h := G.map_lift (F.map_lift h)
 
-/-- A homomorphism keeping `⊤` carries relational liftings. -/
-def toLiftingRelHom [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
-    [CanonicallyOrderedAdd B₂] [L₂.IsLawful] (F : LiftingHom L₁ L₂) (htop : F.map ⊤ = ⊤) :
-    LiftingRelHom L₁ L₂ where
-  map := F.map
-  mono := F.mono
-  map_rel {X Y} _ _ b S μ ν _ _ h := IsLawful.mono (F.map_lift h) le_rfl fun x y ↦ by
-    by_cases hS : S x y <;> simp [hS, htop]
-
 end LiftingHom
 
 namespace GradedLifting
@@ -106,6 +97,9 @@ def comap : GradedLifting.{u} B' :=
 theorem comap_def {R : X → Y → B'} :
     L.comap φ b R μ ν ↔ L (φ b) (fun x y ↦ φ (R x y)) μ ν :=
   Iff.rfl
+
+theorem comap_comap {B'' : Type*} {ψ : B'' → B'} : (L.comap φ).comap ψ = L.comap (φ ∘ ψ) :=
+  rfl
 
 /-- Regrading keeps relations when `φ` keeps `0` and `⊤`. -/
 theorem comap_rel_iff [Zero B] [Top B] [Zero B'] [Top B'] (h0 : φ 0 = 0) (htop : φ ⊤ = ⊤) :
@@ -136,22 +130,19 @@ theorem isLawful_comap [Add B] [Preorder B] [Top B] [Add B'] [Preorder B'] [Top 
 /-- A monotone additive budget map regrades a lawful lifting whose top budget relates every pair
 of measures, even when finite budgets map to `⊤` (the zCDP line at `(⊤, 0)`). -/
 theorem isLawful_comap_of_top [AddCommMagma B] [PartialOrder B] [OrderTop B]
-    [CanonicallyOrderedAdd B] [Add B'] [Preorder B'] [Top B'] [L.IsLawful] (hφ : Monotone φ)
-    (hadd : ∀ a b, φ (a + b) = φ a + φ b)
-    (htop : ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (R : X → Y → B)
-      (μ : Measure X) (ν : Measure Y), L ⊤ R μ ν) : (L.comap φ).IsLawful where
+    [CanonicallyOrderedAdd B] [Add B'] [Preorder B'] [Top B'] [L.IsLawful] [L.IsTopAbsorbing]
+    (hφ : Monotone φ) (hadd : ∀ a b, φ (a + b) = φ a + φ b) : (L.comap φ).IsLawful where
   pure {_ _} _ _ R x y _ := by
-    rcases (le_top : φ (R x y) ≤ ⊤).lt_or_eq with hlt | htop'
+    rcases (le_top : φ (R x y) ≤ ⊤).lt_or_eq with hlt | htop
     · exact IsLawful.pure (L := L) (R := fun x y ↦ φ (R x y)) hlt
-    · exact (comap_def (L := L)).2 (htop' ▸ htop _ _ _)
+    · exact (comap_def (L := L)).2 (htop ▸ IsTopAbsorbing.top _ _ _)
   zero b _ := IsLawful.zero (L := L) (φ b) _
   mono h hb hR := IsLawful.mono (L := L) h (hφ hb) fun x y ↦ hφ (hR x y)
-  -- `frame` has no sub-probability instances, so `L.IsTopAbsorbing` would not do here
   frame {_ _} _ _ b c _ _ _ _ h := by
     simp only [comap, hadd]
-    rcases (le_top : φ c ≤ ⊤).lt_or_eq with hlt | htop'
+    rcases (le_top : φ c ≤ ⊤).lt_or_eq with hlt | htop
     · exact IsLawful.frame hlt h
-    · simpa only [htop', top_le_iff.1 le_add_self] using htop _ _ _
+    · simpa only [htop, top_le_iff.1 le_add_self] using IsTopAbsorbing.top (L := L) _ _ _
   map hf hg h := IsLawful.map (L := L) hf hg h
 
 /-- A budget map keeping `⊤` regrades a lifting with bind. -/
@@ -177,15 +168,13 @@ theorem isReflexive_comap [Zero B] [Top B] [Zero B'] [Top B'] [L.IsReflexive] (h
 
 /-- A budget map with `φ 0` finite regrades a lawful reflexive lifting: frame reflexivity by
 `φ 0` (tCDP lines move `0`; Rocq `GCF_regrade_le`). -/
-theorem isReflexive_comap_of_lt_top [AddZeroClass B] [PartialOrder B] [OrderTop B]
+theorem isReflexive_comap_of_lt_top [AddZeroClass B] [Preorder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [Zero B'] [Top B'] [L.IsLawful] [L.IsReflexive]
     (h0 : φ 0 < ⊤) : (L.comap φ).IsReflexive where
   refl μ _ := by
-    refine IsLawful.mono (L := L) (zero_add (φ 0) ▸ IsLawful.frame h0 (IsReflexive.refl μ))
-      le_rfl fun x y ↦ ?_
-    by_cases h : x = y
-    · simp [h]
-    · simpa [h] using le_top.trans le_self_add
+    have := (IsReflexive.refl (L := L) μ).frame_le
+      (R := fun x y ↦ φ (relCost (B := B') (· = ·) x y)) (fun _ _ h ↦ by simp [h]) h0
+    rwa [zero_add] at this
 
 instance isZeroLeft_comap [L.IsZeroLeft] : (L.comap φ).IsZeroLeft where
   zero_left b _ ν _ := IsZeroLeft.zero_left (L := L) (φ b) _ ν
@@ -197,12 +186,16 @@ instance isLeftContinuous_comap [L.IsLeftContinuous] : (L.comap φ).IsLeftContin
 theorem Absorbing.comap (h : L.Absorbing (φ b)) : (L.comap φ).Absorbing b :=
   fun _ μ ν _ _ ↦ h _ μ ν
 
+/-- A budget sent to `⊤` is absorbing for the regrading of a lifting absorbing at `⊤` (Rocq
+`regrade_top_triv`). -/
+theorem absorbing_comap [Top B] [L.IsTopAbsorbing] (h : φ b = ⊤) : (L.comap φ).Absorbing b :=
+  Absorbing.comap (h ▸ IsTopAbsorbing.absorbing_top)
+
 /-- A budget map keeping `⊤` regrades a lifting absorbing at `⊤`. -/
 theorem isTopAbsorbing_comap [Top B] [Top B'] [L.IsTopAbsorbing] (htop : φ ⊤ = ⊤) :
     (L.comap φ).IsTopAbsorbing :=
-  ⟨Absorbing.comap (htop ▸ IsTopAbsorbing.absorbing_top)⟩
+  ⟨fun _ _ _ ↦ (comap_def (L := L)).2 (htop ▸ IsTopAbsorbing.top _ _ _)⟩
 
-variable (φ) (L) in
 /-- The regraded lifting maps back to the original along `φ`. -/
 def comapHom [Preorder B] [Preorder B'] (hφ : Monotone φ) : LiftingHom (L.comap φ) L where
   map := φ
@@ -216,22 +209,36 @@ open GradedDivergence
 variable {D : GradedDivergence.{u} B}
 
 /-- The regraded codensity lifting lies below the codensity lifting of the regraded divergence:
-a test at slack `c` is a test at slack `φ c`. -/
-theorem comap_codensity_le [Add B] [LT B] [Top B] [Add B'] [LT B'] [Top B']
-    (hadd : ∀ a b, φ (a + b) = φ a + φ b) (hlt : ∀ a, a < ⊤ → φ a < ⊤) {R : X → Y → B'}
-    (h : (codensity D).comap φ b R μ ν) : codensity (fun b' ↦ D (φ b')) b R μ ν := by
-  intro I _ c hbc k l _ _ hkl
-  have := h (c := φ c) (by rw [← hadd]; exact hlt _ hbc) (k := k) (l := l) fun x y ↦ by
-    rw [← hadd]; exact hkl x y
-  simpa only [hadd] using this
+a test at slack `c` is a test at slack `φ c`, and one reaching `⊤` holds by grading. -/
+theorem comap_codensity_le [Add B] [Preorder B] [OrderTop B] [Add B'] [LT B'] [Top B']
+    [D.IsGraded] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (hadd : ∀ a b, φ (a + b) = φ a + φ b) {R : X → Y → B'}
+    (h : (codensity D).comap φ b R μ ν) : (D.comap φ).codensity b R μ ν := by
+  intro I _ c _ k l _ _ hkl
+  refine IsGraded.of_lt_top (D := D) fun hbc ↦ ?_
+  rw [hadd] at hbc ⊢
+  exact h hbc fun x y ↦ hadd _ _ ▸ hkl x y
 
 /-- A monotone additive regrading of a codensity lifting is lawful, whatever it does to finite
 budgets: the codensity lifting at `⊤` relates every pair of measures. -/
 theorem isLawful_comap_codensity [AddCommMonoid B] [PartialOrder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [Add B'] [Preorder B'] [Top B'] [D.IsGraded] [D.IsReflexive]
     (hφ : Monotone φ) (hadd : ∀ a b, φ (a + b) = φ a + φ b) : ((codensity D).comap φ).IsLawful :=
-  isLawful_comap_of_top hφ hadd fun _ _ _ ↦ by
-    intro I _ c hc
-    exact absurd (le_self_add.trans_lt hc) (lt_irrefl _)
+  isLawful_comap_of_top hφ hadd
 
 end GradedLifting
+
+namespace LiftingHom
+
+variable {B₁ : Type v} {B₂ : Type w} [Preorder B₁] [Preorder B₂] {L₁ : GradedLifting.{u} B₁}
+  {L₂ : GradedLifting.{u} B₂}
+
+/-- A homomorphism keeping `⊤` carries relational liftings. -/
+def toLiftingRelHom [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
+    [CanonicallyOrderedAdd B₂] [L₂.IsLawful] (F : LiftingHom L₁ L₂) (htop : F.map ⊤ = ⊤) :
+    LiftingRelHom L₁ L₂ where
+  map := F.map
+  mono := F.mono
+  map_rel h := Rel.of_comap htop (F.map_lift h)
+
+end LiftingHom
