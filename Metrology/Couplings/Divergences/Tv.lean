@@ -43,21 +43,19 @@ instance isZeroLeft_tv : tv.{u}.IsZeroLeft where
   zero_left δ := IsZeroLeft.zero_left (D := dp) (0, δ)
 
 instance isLeftContinuous_tv : tv.{u}.IsLeftContinuous where
-  iSup_left δ := IsLeftContinuous.iSup_left (D := dp) (0, δ)
+  iSup_left δ := IsLeftContinuous.iSup_left (D := dp) (b := (0, δ))
 
 instance isRightMonotone_tv : tv.{u}.IsRightMonotone where
-  right_mono δ := IsRightMonotone.right_mono (D := dp) (0, δ)
+  right_mono δ := IsRightMonotone.right_mono (D := dp) (b := (0, δ))
 
 instance isLeftAntitone_tv : tv.{u}.IsLeftAntitone where
-  left_anti δ := IsLeftAntitone.left_anti (D := dp) (0, δ)
+  left_anti δ := IsLeftAntitone.left_anti (D := dp) (b := (0, δ))
 
 instance isBudgetClosed_tv : tv.{u}.IsBudgetClosed where
-  of_forall_gt {δ} _ _ _ _ _ _ h := tv_iff.2 fun S hS ↦ by
-    rcases eq_or_ne δ ⊤ with rfl | hδ
-    · simp
-    refine ENNReal.le_of_forall_pos_le_add fun η hη _ ↦ ?_
-    rw [add_assoc]
-    exact tv_iff.1 (h _ (ENNReal.lt_add_right hδ (by simpa using hη.ne'))) S hS
+  of_forall_gt {δ} _ _ _ _ _ _ h :=
+    tv_iff.2 fun S hS ↦ by
+      simpa using Bound.of_forall_lt (c := 1) (fun δ' hδ' S hS ↦ by
+        simpa using tv_iff.1 (h δ' hδ') S hS) S hS
 
 instance hasSlack_tv : tv.{u}.HasSlack (OrderAddMonoidHom.id ℝ≥0∞) where
   of_forall_le h := tv_iff.2 h
@@ -76,12 +74,12 @@ theorem lintegral_le_of_codensity_tv (h : tv.codensity δ E μ ν) {f : X → �
     (hfg : ∀ x y, f x ≤ g y + E x y) : ∫⁻ x, f x ∂μ ≤ ∫⁻ y, g y ∂ν + δ := by
   rcases eq_or_ne δ ⊤ with rfl | hδ
   · simp
-  have := isSubMarkovKernel_massKernel.{u} hf hf1
-  have := isSubMarkovKernel_massKernel.{u} hg hg1
-  have hc := h (c := 0) (k := massKernel.{u} hf) (l := massKernel.{u} hg)
+  have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
+  have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
+  have hc := h (c := 0) (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg)
     (by simpa using hδ.lt_top) fun x y ↦ by
-      simpa [massKernel_apply, tv_smul_dirac_iff] using hfg x y
-  simpa [massKernel_comp, tv_smul_dirac_iff] using hc
+      simpa [Kernel.mass_apply, tv_smul_dirac_iff] using hfg x y
+  simpa [Kernel.mass_comp, tv_smul_dirac_iff] using hc
 
 /-- `[0, 1]`-valued test functions that the leftover relates give a total variation codensity
 lifting: a test passed with slack `c` becomes a test function once `c` is cut off. -/
@@ -130,15 +128,22 @@ instance isExpectationAdditive_codensity_tv :
           rw [lintegral_add_right _ hc]
           ring
 
-/-- Slack `1` relates every pair of sub-probability measures. -/
+/-- At slack at least `1`, every sub-probability measure is related to any measure. -/
+theorem codensity_tv_of_one_le [IsSubProbabilityMeasure μ] (hδ : 1 ≤ δ) :
+    tv.codensity δ E μ ν := by
+  intro I _ c _ k l _ _ _
+  refine tv_iff.2 fun S _ ↦ ?_
+  calc (k ∘ₘ μ) S ≤ 1 := IsSubProbabilityMeasure.measure_le_one S
+    _ ≤ (l ∘ₘ ν) S + (δ + c) := le_add_left (hδ.trans le_self_add)
+
+/-- Slack `1` relates every pair of sub-probability measures (Rocq `GCFTop_AR`). -/
 theorem absorbing_codensity_tv_one : (codensity tv.{u}).Absorbing 1 :=
-  absorbing_codensity_of_hasSlack (s := OrderAddMonoidHom.id ℝ≥0∞)
+  fun _ _ _ _ _ ↦ codensity_tv_of_one_le le_rfl
 
 /-- A total variation lifting at slack `δ` bounds an event by its image, up to `δ`. -/
 theorem tv_measure_le_add (h : (codensity tv).Rel δ S μ ν) {T : Set X} {T' : Set Y}
     (hT : MeasurableSet T) (hT' : MeasurableSet T') (hS : ∀ x y, S x y → x ∈ T → y ∈ T') :
     μ T ≤ ν T' + δ := by
-  classical
   have hfg (x : X) (y : Y) :
       T.indicator (1 : X → ℝ≥0∞) x ≤ T'.indicator 1 y + relCost S x y := by
     by_cases hxy : S x y
@@ -159,12 +164,20 @@ theorem tv_eq_of_rel {μ ν : Measure X} (h₁ : (codensity tv).Rel 0 (· = ·) 
   ext fun S hS ↦ le_antisymm (by simpa using tv_le_add_of_rel h₁ hS)
     (by simpa using tv_le_add_of_rel h₂ hS)
 
-/-- Two point masses are related along the empty relation exactly at slack at least `1`. -/
+/-- Two point masses are related along the empty relation exactly at slack at least `1` (Rocq
+`GCF_AR_top_exact`). -/
 theorem codensity_tv_rel_false_iff :
     (codensity tv).Rel δ (fun _ _ ↦ False) (dirac PUnit.unit.{u + 1})
       (dirac PUnit.unit.{u + 1}) ↔ 1 ≤ δ :=
   ⟨fun h ↦ by simpa using tv_measure_le_add h .univ .empty fun _ _ ↦ False.elim,
     fun h ↦ absorbing_codensity_tv_one.mono h _ _ _⟩
+
+/-- Total variation liftings are DP liftings at multiplier `1`, leftovers included (Rocq
+`CM_AR_DP`). -/
+theorem codensity_tv_iff_dp [IsSubProbabilityMeasure μ] :
+    tv.codensity δ E μ ν ↔ dp.codensity (0, δ) (fun x y ↦ dpSlack (E x y)) μ ν := by
+  rw [codensity_dp_iff ENNReal.zero_ne_top, codensity_tv_iff]
+  simp
 
 /-- Total variation liftings of a relation are DP liftings at multiplier `1`. -/
 theorem codensity_tv_rel_iff_dp [IsSubProbabilityMeasure μ] :

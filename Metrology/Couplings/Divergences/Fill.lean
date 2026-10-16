@@ -13,14 +13,6 @@ open scoped ENNReal
 
 variable {X : Type*} [MeasurableSpace X]
 
-/-- A set of `Option X` is measurable when its points under `some` are. -/
-instance Option.instMeasurableSpace : MeasurableSpace (Option X) :=
-  .map some ‹_›
-
-@[fun_prop]
-theorem measurable_some : Measurable (some : X → Option X) :=
-  fun _ ↦ id
-
 namespace MeasureTheory.Measure
 
 /-- `μ` on `Option X`, with the lost mass `1 - μ univ` on `none`. -/

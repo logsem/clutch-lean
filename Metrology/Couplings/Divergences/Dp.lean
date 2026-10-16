@@ -3,6 +3,7 @@ module
 public import Mathlib.Algebra.Order.Monoid.Lex
 public import Mathlib.Algebra.Order.Monoid.Prod
 public import Mathlib.MeasureTheory.Integral.Layercake
+public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
 public import Metrology.Couplings.Codensity
 
 /-! `(ε, δ)`-differential privacy as a graded divergence (Approximate Span Liftings, §4.3). -/
@@ -13,33 +14,6 @@ universe u v
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set
 open scoped ENNReal
-
-/-! ## Kernels into a point -/
-
-section massKernel
-
-variable {X : Type*} [MeasurableSpace X] {f : X → ℝ≥0∞}
-
-/-- A measurable function as a kernel into a point: the point with that mass. -/
-noncomputable def massKernel (hf : Measurable f) : Kernel X PUnit.{v + 1} :=
-  ⟨fun x ↦ f x • dirac PUnit.unit, hf.smul_measure _⟩
-
-theorem massKernel_apply (hf : Measurable f) (x : X) :
-    massKernel.{v} hf x = f x • dirac PUnit.unit :=
-  rfl
-
-theorem isSubMarkovKernel_massKernel (hf : Measurable f) (hf1 : ∀ x, f x ≤ 1) :
-    IsSubMarkovKernel (massKernel.{v} hf) where
-  isSubProbabilityMeasure x := ⟨by simpa [massKernel_apply] using hf1 x⟩
-
-/-- Composing with a mass kernel integrates its function. -/
-theorem massKernel_comp (hf : Measurable f) (μ : Measure X) :
-    massKernel.{v} hf ∘ₘ μ = (∫⁻ x, f x ∂μ) • dirac PUnit.unit := by
-  ext s hs
-  rw [bind_apply hs (massKernel hf).measurable.aemeasurable]
-  simp [massKernel_apply, lintegral_mul_const _ hf]
-
-end massKernel
 
 namespace GradedDivergence
 
@@ -53,6 +27,14 @@ variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y] {c c' δ δ' : �
 /-- The DP inequality `μ S ≤ c ν S + δ` on every measurable event. -/
 def Bound (c δ : ℝ≥0∞) (μ ν : Measure X) : Prop :=
   ∀ S, MeasurableSet S → μ S ≤ c * ν S + δ
+
+/-- A bound at every larger slack is a bound at the slack. -/
+theorem Bound.of_forall_lt (h : ∀ δ', δ < δ' → Bound c δ' μ ν) : Bound c δ μ ν := fun S hS ↦ by
+  rcases eq_or_ne δ ⊤ with rfl | hδ
+  · simp
+  refine ENNReal.le_of_forall_pos_le_add fun η hη _ ↦ ?_
+  rw [add_assoc]
+  exact h _ (ENNReal.lt_add_right hδ (by simpa using hη.ne')) S hS
 
 theorem Bound.mono (h : Bound c δ μ ν) (hc : c ≤ c') (hδ : δ ≤ δ') : Bound c' δ' μ ν :=
   fun S hS ↦ (h S hS).trans (by gcongr)
@@ -138,47 +120,35 @@ variable {ε ε' : ℝ≥0∞}
 
 /-- The multiplier `e^ε`, `⊤` at `ε = ⊤`. -/
 noncomputable def expBudget (ε : ℝ≥0∞) : ℝ≥0∞ :=
-  if ε = ⊤ then ⊤ else ENNReal.ofReal (Real.exp ε.toReal)
+  (ε : EReal).exp
 
 @[simp]
 theorem expBudget_top : expBudget ⊤ = ⊤ := by
   simp [expBudget]
 
 theorem expBudget_of_ne_top (hε : ε ≠ ⊤) : expBudget ε = ENNReal.ofReal (Real.exp ε.toReal) := by
-  simp [expBudget, hε]
+  rw [expBudget, ← ENNReal.ofReal_toReal hε, EReal.coe_ennreal_ofReal,
+    max_eq_left ENNReal.toReal_nonneg, EReal.exp_coe, ENNReal.toReal_ofReal ENNReal.toReal_nonneg]
 
 @[simp]
 theorem expBudget_zero : expBudget 0 = 1 := by
-  simp [expBudget_of_ne_top]
+  simp [expBudget]
 
-theorem one_le_expBudget (ε : ℝ≥0∞) : 1 ≤ expBudget ε := by
-  rcases eq_or_ne ε ⊤ with rfl | hε
-  · simp
-  · simp [expBudget_of_ne_top hε, Real.one_le_exp ENNReal.toReal_nonneg]
+theorem one_le_expBudget (ε : ℝ≥0∞) : 1 ≤ expBudget ε :=
+  EReal.one_le_exp_iff.2 (EReal.coe_ennreal_nonneg ε)
 
 theorem expBudget_lt_top_iff : expBudget ε < ⊤ ↔ ε < ⊤ := by
-  rcases eq_or_ne ε ⊤ with rfl | hε
-  · simp
-  · simp [expBudget_of_ne_top hε, hε.lt_top]
-
-@[gcongr]
-theorem expBudget_le_expBudget (h : ε ≤ ε') : expBudget ε ≤ expBudget ε' := by
-  rcases eq_or_ne ε' ⊤ with rfl | hε'
-  · simp
-  rw [expBudget_of_ne_top (ne_top_of_le_ne_top hε' h), expBudget_of_ne_top hε']
-  gcongr
+  simp [expBudget, lt_top_iff_ne_top, EReal.coe_ennreal_eq_top_iff]
 
 theorem expBudget_mono : Monotone expBudget :=
-  fun _ _ ↦ expBudget_le_expBudget
+  fun _ _ h ↦ EReal.exp_monotone (EReal.coe_ennreal_le_coe_ennreal_iff.2 h)
+
+@[gcongr]
+theorem expBudget_le_expBudget (h : ε ≤ ε') : expBudget ε ≤ expBudget ε' :=
+  expBudget_mono h
 
 theorem expBudget_add (ε ε' : ℝ≥0∞) : expBudget (ε + ε') = expBudget ε * expBudget ε' := by
-  rcases eq_or_ne ε ⊤ with rfl | hε
-  · simp [ENNReal.top_mul (one_pos.trans_le (one_le_expBudget ε')).ne']
-  rcases eq_or_ne ε' ⊤ with rfl | hε'
-  · simp [ENNReal.mul_top (one_pos.trans_le (one_le_expBudget ε)).ne']
-  rw [expBudget_of_ne_top (ENNReal.add_ne_top.2 ⟨hε, hε'⟩), expBudget_of_ne_top hε,
-    expBudget_of_ne_top hε', ENNReal.toReal_add hε hε', Real.exp_add,
-    ENNReal.ofReal_mul (Real.exp_pos _).le]
+  simp [expBudget, EReal.coe_ennreal_add, EReal.exp_add]
 
 end expBudget
 
@@ -201,8 +171,11 @@ theorem dp_iff (hε : ε ≠ ⊤) :
 theorem dp_top_left : dp (⊤, δ) μ ν :=
   fun h ↦ (lt_irrefl _ h).elim
 
+theorem dp_mono {b' : ℝ≥0∞ × ℝ≥0∞} (hb : b ≤ b') (h : dp b μ ν) : dp b' μ ν :=
+  fun hb' ↦ (h (hb.1.trans_lt hb')).mono (expBudget_mono hb.1) hb.2
+
 theorem dp_mono_left (h : ε ≤ ε') (hd : dp (ε, δ) μ ν) : dp (ε', δ) μ ν :=
-  fun hε' ↦ (hd (h.trans_lt hε')).mono (expBudget_mono h) le_rfl
+  dp_mono (Prod.mk_le_mk.2 ⟨h, le_rfl⟩) hd
 
 /-- Point masses within a DP budget compare their masses. -/
 theorem dp_smul_dirac_iff {a a' : ℝ≥0∞} :
@@ -225,9 +198,8 @@ theorem dp_trans {μ₁ μ₂ μ₃ : Measure X} {ε₁ ε₂ δ₁ δ₂ : ℝ�
 
 /-! ## Instances -/
 
-instance isGraded_dp : dp.{u}.IsGraded where
-  mono _ _ hb := fun h hb' ↦ (h (hb.1.trans_lt hb')).mono (expBudget_mono hb.1) hb.2
-  top _ _ := fun h ↦ (lt_irrefl _ h).elim
+instance isGraded_dp : dp.{u}.IsGraded :=
+  ⟨fun _ _ hb ↦ dp_mono hb, fun _ _ ↦ dp_top_left⟩
 
 instance isReflexive_dp : dp.{u}.IsReflexive where
   refl _ := fun _ _ _ ↦ by simp
@@ -255,13 +227,8 @@ instance isLeftAntitone_dp : dp.{u}.IsLeftAntitone where
 
 /-- A bound at every larger slack is a bound at the slack. -/
 instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
-  of_forall_gt {b} _ _ _ _ _ _ h hb S hS := by
-    rcases eq_or_ne b.2 ⊤ with htop | htop
-    · simp [htop]
-    refine ENNReal.le_of_forall_pos_le_add fun η hη _ ↦ ?_
-    rw [add_assoc]
-    refine h (b.1, b.2 + η) (Prod.lt_iff.2 (.inr ⟨le_rfl, ?_⟩)) hb S hS
-    exact ENNReal.lt_add_right htop (by simpa using hη.ne')
+  of_forall_gt {b} _ _ _ _ _ _ h hb :=
+    .of_forall_lt fun δ' hδ' ↦ h (b.1, δ') (Prod.lt_iff.2 (.inr ⟨le_rfl, hδ'⟩)) hb
 
 /-- The slack `δ ↦ (0, δ)` through which an event gap enters a DP budget. -/
 noncomputable def dpSlack : ℝ≥0∞ →+o ℝ≥0∞ × ℝ≥0∞ :=
@@ -287,18 +254,21 @@ theorem codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν := by
   intro I _ c _ k l _ _ _ h
   simp at h
 
+theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ) :=
+  fun R μ ν _ _ ↦ (codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν)
+
 /-- Reading a DP codensity lifting on `[0, 1]`-valued test functions through mass kernels. -/
 theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, δ) R μ ν)
     {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞} (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1)
     (hg1 : ∀ y, g y ≤ 1)
     (hfg : ∀ x y, (R x y).1 < ⊤ → f x ≤ expBudget (R x y).1 * g y + (R x y).2) :
     ∫⁻ x, f x ∂μ ≤ expBudget ε * ∫⁻ y, g y ∂ν + δ := by
-  have := isSubMarkovKernel_massKernel.{u} hf hf1
-  have := isSubMarkovKernel_massKernel.{u} hg hg1
-  have hc := h (c := 0) (k := massKernel.{u} hf) (l := massKernel.{u} hg)
+  have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
+  have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
+  have hc := h (c := 0) (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg)
     (by simpa [Prod.lt_iff] using Or.inl hε.lt_top) fun x y ↦ by
-      simpa [massKernel_apply, dp_smul_dirac_iff] using hfg x y
-  simpa [massKernel_comp, dp_smul_dirac_iff, hε.lt_top] using hc
+      simpa [Kernel.mass_apply, dp_smul_dirac_iff] using hfg x y
+  simpa [Kernel.mass_comp, dp_smul_dirac_iff, hε.lt_top] using hc
 
 /-- `[0, 1]`-valued test functions that the leftover relates give a DP codensity lifting: a
 test passed with slack `c` becomes a test function once `c.2` is cut off. -/
@@ -349,13 +319,10 @@ theorem codensity_dp_rel_iff [IsSubProbabilityMeasure μ] (hε : ε ≠ ⊤) :
     (codensity dp).Rel (ε, δ) S μ ν ↔ ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) →
       (∀ y, g y ≤ 1) → (∀ x y, S x y → f x ≤ g y) →
       ∫⁻ x, f x ∂μ ≤ expBudget ε * ∫⁻ y, g y ∂ν + δ := by
-  have (f : X → ℝ≥0∞) (g : Y → ℝ≥0∞) (x : X) (y : Y) :
-      ((relCost S x y : ℝ≥0∞ × ℝ≥0∞).1 < ⊤ →
-        f x ≤ expBudget (relCost S x y : ℝ≥0∞ × ℝ≥0∞).1 * g y +
-          (relCost S x y : ℝ≥0∞ × ℝ≥0∞).2) ↔
-      (S x y → f x ≤ g y) := by
-    by_cases hS : S x y <;> simp [hS]
-  simp only [GradedLifting.Rel, codensity_dp_iff hε, this]
+  rw [GradedLifting.Rel, codensity_dp_iff hε]
+  refine forall₂_congr fun f g ↦ forall₄_congr fun _ _ _ _ ↦ imp_congr_left <|
+    forall₂_congr fun x y ↦ ?_
+  by_cases hS : S x y <;> simp [hS]
 
 /-- Countable fibers with a pointwise DP bound give a DP codensity lifting of equal images
 (clutch-dp `randomized_response.v`). -/
@@ -382,12 +349,12 @@ theorem codensity_dp_of_fiber {Z : Type*} [MeasurableSpace Z] [Countable Z]
         gcongr with y
         exact biInf_le h₂ rfl
 
-/-- Slack `1` relates every pair of sub-probability measures. -/
+/-- Slack `1` relates every pair of sub-probability measures (Rocq `GCFTop_DP`). -/
 theorem absorbing_codensity_dp : (codensity dp.{u}).Absorbing (0, 1) :=
   absorbing_codensity_of_hasSlack (s := dpSlack)
 
 /-- At a finite multiplier, two point masses are related along the empty relation exactly at
-slack at least `1`. -/
+slack at least `1` (Rocq `GCF_DP_trivial_iff`). -/
 theorem codensity_dp_rel_false_iff (hε : ε ≠ ⊤) :
     (codensity dp).Rel (ε, δ) (fun _ _ ↦ False) (dirac PUnit.unit.{u + 1})
       (dirac PUnit.unit.{u + 1}) ↔ 1 ≤ δ := by

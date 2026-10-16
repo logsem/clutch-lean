@@ -1,7 +1,8 @@
 module
 
 public import Mathlib.Algebra.Order.Monoid.Canonical.Defs
-public import Iris
+public import Mathlib.Algebra.Order.Sub.Basic
+public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
 public import Iris.Instances.IProp.Instance
@@ -27,16 +28,16 @@ instance instCMRA : CMRA (BudgetCredit B) := CommMonoidLike.instCMRA
 instance instUCMRA : UCMRA (BudgetCredit B) := CommMonoidLike.instUCMRA
 instance instCMRADiscrete : CMRA.Discrete (BudgetCredit B) := CommMonoidLike.instDiscrete
 
-instance instPartialOrder [PartialOrder B] : PartialOrder (BudgetCredit B) :=
-  inferInstanceAs (PartialOrder B)
-instance instCanonicallyOrderedAdd [PartialOrder B] [CanonicallyOrderedAdd B] :
+instance instLE [LE B] : LE (BudgetCredit B) :=
+  inferInstanceAs (LE B)
+instance instCanonicallyOrderedAdd [LE B] [CanonicallyOrderedAdd B] :
     CanonicallyOrderedAdd (BudgetCredit B) :=
   inferInstanceAs (CanonicallyOrderedAdd B)
 
 variable {s c r t : BudgetCredit B}
 
 /-- Camera inclusion in a budget is the canonical order. -/
-theorem included_iff [PartialOrder B] [CanonicallyOrderedAdd B] : c ≼ s ↔ c ≤ s :=
+theorem included_iff [LE B] [CanonicallyOrderedAdd B] : c ≼ s ↔ c ≤ s :=
   le_iff_exists_add.symm
 
 /-- Spending a cancelable `c` out of `s = c + r` leaves `r` (Rocq `gcone_spend_local_update`). -/
@@ -110,7 +111,7 @@ instance combineSepAs_bc {a b : B} :
   combine_sep_as := combine
 
 /-- A credit can be weakened to a smaller one. -/
-theorem weaken [PartialOrder B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
+theorem weaken [LE B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
     ↯b a ⊢@{IProp GF} ↯b b := by
   obtain ⟨c, rfl⟩ := exists_add_of_le hb
   exact split.trans BI.sep_elim_left
@@ -120,7 +121,7 @@ theorem zero : ⊢@{IProp GF} |==> ↯b (0 : B) :=
   iOwn_unit (ε := UCMRA.unit)
 
 /-- A credit never exceeds the authoritative budget. -/
-theorem supply_bound [PartialOrder B] [CanonicallyOrderedAdd B] {s c : B} :
+theorem supply_bound [LE B] [CanonicallyOrderedAdd B] {s c : B} :
     ⊢@{IProp GF} ●↯b s -∗ ↯b c -∗ ⌜c ≤ s⌝ := by
   unfold bc bcAuth
   iintro Hs Hc
@@ -130,7 +131,7 @@ theorem supply_bound [PartialOrder B] [CanonicallyOrderedAdd B] {s c : B} :
   exact included_iff.mp (Auth.auth_both_valid_discrete.mp hv).1
 
 /-- Spending a cancelable credit `c` takes it out of the budget. -/
-theorem supply_decrease [PartialOrder B] [CanonicallyOrderedAdd B] {s c : B}
+theorem supply_decrease [LE B] [CanonicallyOrderedAdd B] {s c : B}
     (hc : IsAddLeftRegular c) :
     ⊢@{IProp GF} ●↯b s -∗ ↯b c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯b r := by
   iintro Hs Hc
@@ -151,6 +152,12 @@ theorem supply_increase {s c : B} : ⊢@{IProp GF} ●↯b s -∗ |==> (●↯b 
   imod (iOwn_update hup) $$ Hs with H
   imodintro
   iapply iOwn_op $$ H
+
+/-- A credit splits off any smaller credit. -/
+theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSub B]
+    {a b : B} (h : b ≤ a) :
+    ↯b a ⊢@{IProp GF} ↯b b ∗ ↯b (a - b) := by
+  simpa only [add_tsub_cancel_of_le h] using split (GF := GF) (a := b) (b := a - b)
 
 /-- Credits are timeless. -/
 instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless

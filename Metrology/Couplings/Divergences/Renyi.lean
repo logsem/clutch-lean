@@ -12,15 +12,6 @@ universe u
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology
 open scoped ENNReal
 
-theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) {x : ι → EReal}
-    (hx : ∀ i ∈ s, 0 ≤ x i) : c * ∑ i ∈ s, x i = ∑ i ∈ s, c * x i := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simp
-  | insert j s hj ih =>
-    rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.left_distrib_of_nonneg (hx j (by simp))
-      (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
-
 namespace ProbabilityTheory
 
 variable {X : Type*} [MeasurableSpace X] {f : ℝ → ℝ}
@@ -147,7 +138,7 @@ theorem fDiv_rpow_comp_le (hα : 1 < α) {M N : ℕ} (μ₁ μ₂ : Measure (ULi
       (κ : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
       (i : ULift.{u} (Fin N)) :
       ((κ ∘ₘ μ) {i}).toReal = ∑ j, (μ {j}).toReal * (κ j {i}).toReal := by
-    rw [Measure.bind_apply (ULift.measurableSet_fin _) κ.measurable.aemeasurable,
+    rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable,
       lintegral_fintype, ENNReal.toReal_sum fun _ _ ↦ by finiteness]
     exact Finset.sum_congr rfl fun j _ ↦ by rw [ENNReal.toReal_mul, mul_comm]
   have hP {a b : ℝ≥0∞} : 0 ≤ persp (· ^ α) a.toReal b.toReal :=

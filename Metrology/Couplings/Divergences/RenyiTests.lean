@@ -12,41 +12,6 @@ universe u
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology
 open scoped ENNReal
 
-/-- Capping at `n` keeps a bound `a ≤ c b` with `1 ≤ c`. -/
-theorem ENNReal.min_le_mul_min {a b c n : ℝ≥0∞} (h : a ≤ c * b) (hc : 1 ≤ c) :
-    min a n ≤ c * min b n := by
-  rcases le_total b n with hb | hb
-  · rw [min_eq_left hb]
-    exact (min_le_left _ _).trans h
-  · rw [min_eq_right hb]
-    exact (min_le_right _ _).trans (le_mul_of_one_le_left' hc)
-
-namespace MeasureTheory
-
-/-- A function below `1` has finite integral against a finite measure. -/
-theorem lintegral_ne_top_of_le_one {Z : Type*} [MeasurableSpace Z] (P : Measure Z)
-    [IsFiniteMeasure P] {F : Z → ℝ≥0∞} (hF : ∀ z, F z ≤ 1) : ∫⁻ z, F z ∂P ≠ ⊤ :=
-  ne_top_of_le_ne_top (measure_ne_top P univ) ((lintegral_mono hF).trans_eq lintegral_one)
-
-/-- A measure on a point is its mass times the Dirac mass. -/
-theorem Measure.eq_smul_dirac_punit (μ : Measure PUnit.{u + 1}) :
-    μ = μ univ • dirac PUnit.unit := by
-  ext s hs
-  rcases s.eq_empty_or_nonempty with rfl | hs'
-  · simp
-  · simp [Subsingleton.eq_univ_of_nonempty hs']
-
-/-- Integrating a function that factors through a finite partition sums over its cells. -/
-theorem toReal_lintegral_ofReal_comp {Z : Type*} [MeasurableSpace Z] {n : ℕ} {π : Z → Fin n}
-    (hπ : Measurable π) {w : Fin n → ℝ} (hw : ∀ j, 0 ≤ w j) (P : Measure Z) [IsFiniteMeasure P] :
-    (∫⁻ z, ENNReal.ofReal (w (π z)) ∂P).toReal = ∑ j, w j * (P (π ⁻¹' {j})).toReal := by
-  rw [← lintegral_map (f := fun j ↦ ENNReal.ofReal (w j)) (by fun_prop) hπ, lintegral_fintype,
-    ENNReal.toReal_sum fun j _ ↦ ENNReal.mul_ne_top ENNReal.ofReal_ne_top (measure_ne_top _ _)]
-  refine Finset.sum_congr rfl fun j _ ↦ ?_
-  rw [map_apply hπ (measurableSet_singleton j), ENNReal.toReal_mul, ENNReal.toReal_ofReal (hw j)]
-
-end MeasureTheory
-
 namespace ProbabilityTheory
 
 variable {α : ℝ}
@@ -244,13 +209,13 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   have hw' : Measurable w := .of_discrete
   have hF : Measurable fun i ↦ ENNReal.ofReal (s * w (π i)) := by fun_prop
   have hG : Measurable fun i ↦ ENNReal.ofReal (s * w (π i) ^ (α / (α - 1))) := by fun_prop
-  have := isSubMarkovKernel_massKernel.{u} hF hF1
-  have := isSubMarkovKernel_massKernel.{u} hG hG1
+  have := Kernel.isSubMarkovKernel_mass.{u} hF hF1
+  have := Kernel.isSubMarkovKernel_mass.{u} hG hG1
   have hmass (P Q : Measure I) [IsFiniteMeasure P] [IsFiniteMeasure Q] :
-      fDiv (· ^ α) (massKernel.{u} hF ∘ₘ P) (massKernel.{u} hG ∘ₘ Q) =
+      fDiv (· ^ α) (Kernel.mass.{u} hF ∘ₘ P) (Kernel.mass.{u} hG ∘ₘ Q) =
         s * persp (· ^ α) (∑ j, w j * (P (π ⁻¹' {j})).toReal)
           (∑ j, w j ^ (α / (α - 1)) * (Q (π ⁻¹' {j})).toReal) := by
-    rw [massKernel_comp, massKernel_comp, fDiv_smul_dirac hf hf_cont
+    rw [Kernel.mass_comp, Kernel.mass_comp, fDiv_smul_dirac hf hf_cont
       (lintegral_ne_top_of_le_one P hF1) (lintegral_ne_top_of_le_one Q hG1),
       toReal_lintegral_ofReal_comp hπ (w := fun j ↦ s * w j) (fun j ↦ mul_nonneg hs.le (hw j).1),
       toReal_lintegral_ofReal_comp hπ (w := fun j ↦ s * w j ^ (α / (α - 1)))
@@ -260,7 +225,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
         (Finset.sum_nonneg fun j _ ↦ mul_nonneg (Real.rpow_nonneg (hw j).1 _)
           ENNReal.toReal_nonneg)]
     simp only [Finset.mul_sum, mul_assoc]
-  have key := h (massKernel.{u} hF ∘ₖ k) (massKernel.{u} hG ∘ₖ l) fun x y hR ↦ by
+  have key := h (Kernel.mass.{u} hF ∘ₖ k) (Kernel.mass.{u} hG ∘ₖ l) fun x y hR ↦ by
     rw [Kernel.comp_apply, Kernel.comp_apply, renyiDivergence_iff_of_ne_top hα1.le hR.ne, hmass]
     have hkl' := (renyiDivergence_iff_of_ne_top hα1.le
       (ENNReal.add_ne_top.2 ⟨hR.ne, hc.ne⟩)).1 (hkl x y)
@@ -365,17 +330,17 @@ theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure 
       ENNReal.rpow_le_one (hcap a) hβ.le
     have hF : Measurable fun x ↦ t * min (f x) (N + 1) := by fun_prop
     have hG : Measurable fun y ↦ (t * min (g y) (N + 1)) ^ (α / (α - 1)) := by fun_prop
-    have := isSubMarkovKernel_massKernel.{u} hF fun x ↦ hcap (f x)
-    have := isSubMarkovKernel_massKernel.{u} hG fun y ↦ hcapβ (g y)
-    have key := renyiDivergence_comp_of_codensity h (k := massKernel.{u} hF)
-      (l := massKernel.{u} hG) fun x y hR ↦ by
-        rw [massKernel_apply, massKernel_apply, renyiDivergence_smul_dirac_iff hα.out hR.ne
+    have := Kernel.isSubMarkovKernel_mass.{u} hF fun x ↦ hcap (f x)
+    have := Kernel.isSubMarkovKernel_mass.{u} hG fun y ↦ hcapβ (g y)
+    have key := renyiDivergence_comp_of_codensity h (k := Kernel.mass.{u} hF)
+      (l := Kernel.mass.{u} hG) fun x y hR ↦ by
+        rw [Kernel.mass_apply, Kernel.mass_apply, renyiDivergence_smul_dirac_iff hα.out hR.ne
           (ne_top_of_le_ne_top ENNReal.one_ne_top (hcap _))
           (ne_top_of_le_ne_top ENNReal.one_ne_top (hcapβ _)), ← ENNReal.rpow_mul, hβγ,
           ENNReal.rpow_one, mul_left_comm]
         gcongr
         exact ENNReal.min_le_mul_min (hfg x y hR) (one_le_expBudget _)
-    rw [massKernel_comp, massKernel_comp, renyiDivergence_smul_dirac_iff hα.out hρ
+    rw [Kernel.mass_comp, Kernel.mass_comp, renyiDivergence_smul_dirac_iff hα.out hρ
       (lintegral_ne_top_of_le_one μ fun x ↦ hcap (f x))
       (lintegral_ne_top_of_le_one ν fun y ↦ hcapβ (g y)),
       lintegral_const_mul _ (by fun_prop)] at key

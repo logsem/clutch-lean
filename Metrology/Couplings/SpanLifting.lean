@@ -9,6 +9,7 @@ public import Metrology.Couplings.Codensity
 universe u v
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting
+open scoped ENNReal
 
 namespace GradedDivergence
 
@@ -52,7 +53,8 @@ theorem spanLifting_mono [Add B] [Preorder B] [Top B] {b' : B} {R' : X → Y →
   exact ⟨S, g₁, g₂, hg.trans hb, fun z hz ↦
     ⟨(hR _ _).trans_lt (hS z hz).1, (hR _ _).trans (hS z hz).2⟩, w⟩
 
-/-- Framing needs finite budgets to stay finite under addition, which saturating budgets break. -/
+/-- Framing needs finite budgets to stay finite under addition, which product and function
+budgets break: `(⊤, 0) + (0, ⊤) = ⊤`. -/
 theorem spanLifting_frame [AddSemigroup B] [Preorder B] [AddRightMono B] [Top B] {c : B}
     (hB : ∀ a, a < ⊤ → a + c < ⊤) (h : D.spanLifting b R μ ν) :
     D.spanLifting (b + c) (fun x y ↦ R x y + c) μ ν := by
@@ -101,7 +103,7 @@ instance isSound_spanLifting [AddZeroClass B] [Preorder B] [CanonicallyOrderedAd
       exact (relCost_of_not (B := B) hz ▸ (hS z z.2).1).false
     have := IsComposable.map (f := fun z : S ↦ z.1.1) hpq (by fun_prop)
     rw [congrArg q.map hdiag] at this
-    exact IsGraded.mono (le_self_add.trans hb) (IsRightMonotone.right_mono _ hq this)
+    exact IsGraded.mono (le_self_add.trans hb) (IsRightMonotone.right_mono hq this)
 
 /-- Spans lie below the codensity lifting: a test pulled back to the witnesses' support composes
 with the witnesses, and the right marginal grows to `ν` (Rocq `cod_of_witness`). -/
@@ -116,10 +118,10 @@ theorem spanLifting_le_codensity [AddSemigroup B] [Preorder B] [AddRightMono B] 
       (η := l.comap (fun z : S ↦ z.1.2) (by fun_prop)) hpq fun z ↦
       IsGraded.mono (add_le_add_left (hS z z.2).2 c) (hkl z.1.1 z.1.2)
   rw [← add_assoc] at hcomp
-  exact IsRightMonotone.right_mono _ (bind_mono_left hq l.measurable)
+  exact IsRightMonotone.right_mono (bind_mono_left hq l.measurable)
     (IsGraded.mono (add_le_add_left hb c) hcomp)
 
-/-! ## No absorbing budget -/
+/-! ## No absorbing budget, no lawfulness at product budgets -/
 
 /-- Spans have no absorbing budget: the leftover `⊤` leaves no support for a witness. -/
 theorem not_absorbing_spanLifting [Add B] [Preorder B] [Top B] (b : B) :
@@ -127,6 +129,17 @@ theorem not_absorbing_spanLifting [Add B] [Preorder B] [Top B] (b : B) :
   obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ :=
     h (fun _ _ ↦ (⊤ : B)) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit.{u + 1})
   have : IsEmpty S := ⟨fun z ↦ (hS z z.2).1.false⟩
+  rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
+  exact dirac_ne_zero hp.symm
+
+/-- Spans are not lawful at product budgets: framing `(⊤, 0)` by `(0, ⊤)` reaches `⊤`. -/
+theorem not_isLawful_spanLifting_prod (D : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞))
+    [D.IsReflexive] : ¬D.spanLifting.IsLawful := fun hL ↦ by
+  let R : PUnit.{u + 1} → PUnit.{u + 1} → ℝ≥0∞ × ℝ≥0∞ := fun _ _ ↦ (⊤, 0)
+  have h0 := hL.pure (R := R) (x := PUnit.unit) (y := PUnit.unit) (by simp [R, Prod.lt_iff])
+  have h1 := hL.frame (c := ((0, ⊤) : ℝ≥0∞ × ℝ≥0∞)) (by simp [Prod.lt_iff]) h0
+  obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ := h1
+  have : IsEmpty S := ⟨fun z ↦ (hS z z.2).1.ne (by simp [R]; rfl)⟩
   rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
   exact dirac_ne_zero hp.symm
 

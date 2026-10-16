@@ -284,13 +284,13 @@ theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
   · exact (Prod.ext hε rfl : φ b = (⊤, (φ b).2)) ▸ codensity_dp_top_left
   refine (codensity_dp_rel_iff (ε := (φ b).1) (δ := (φ b).2) hε).2
     fun f g hf hg hf1 hg1 hfg ↦ ?_
-  have := isSubMarkovKernel_massKernel.{u} hf hf1
-  have := isSubMarkovKernel_massKernel.{u} hg hg1
+  have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
+  have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
   have hD := codensity_rel_iff.1 h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
-    (k := massKernel.{u} hf) (l := massKernel.{u} hg) fun x y hS ↦ by
-      simpa [massKernel_apply] using h0 _ _ (hfg x y hS) (hg1 y)
+    (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg) fun x y hS ↦ by
+      simpa [Kernel.mass_apply] using h0 _ _ (hfg x y hS) (hg1 y)
   rw [add_zero] at hD
-  have := dp_smul_dirac_iff.1 (by simpa only [massKernel_comp] using himp b hD)
+  have := dp_smul_dirac_iff.1 (by simpa only [Kernel.mass_comp] using himp b hD)
   exact this (lt_top_iff_ne_top.2 hε)
 
 /-- Rényi liftings of relations are DP liftings at every slack `δ > 0` ([R/D]). -/
@@ -328,11 +328,17 @@ noncomputable def liftingRelHom_tcdp_dp [hα : Fact (1 < α)] (hαω : α < ω) 
     (fun _ _ _ _ _ _ _ h ↦ dp_of_renyi hα.out hδ (renyi_of_tcdp hα.out hαω h))
     (by simp [ENNReal.mul_top (ENNReal.ofReal_pos.2 (zero_lt_one.trans hα.out)).ne'])
 
-/-- A Rényi-curve lifting is a Rényi lifting at each order. -/
-noncomputable def liftingHom_renyiCurve_renyi (α : Ioi (1 : ℝ)) :
-    LiftingHom (codensity renyiCurve.{u}) (codensity (renyiDivergence.{u} α)) where
-  map ρ := ρ α
-  mono _ _ h := h α
-  map_lift h := codensity_renyiCurve_iff.1 h α
+
+/-- zCDP liftings of relations are DP liftings at every slack `0 < δ < 1` ([z/D]). -/
+noncomputable def liftingRelHom_zcdpLifting_dp {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+    LiftingRelHom zcdpLifting.{u} (codensity dp.{u}) :=
+  (liftingRelHom_zcdp_dp hδ hδ₁).comp
+    ((liftingHom_concentratedLifting_codensity _).toLiftingRelHom rfl)
+
+/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, through the order
+`1 < α < ω` ([t/D] at a fixed order). -/
+noncomputable def liftingRelHom_tcdpLifting_dp [Fact (1 < α)] (hαω : α < ω) {δ : ℝ}
+    (hδ : 0 < δ) : LiftingRelHom (tcdpLifting.{u} ω) (codensity dp.{u}) :=
+  (liftingRelHom_tcdp_dp hαω hδ).comp ((liftingHom_tcdpLifting_codensity ω).toLiftingRelHom rfl)
 
 end GradedDivergence

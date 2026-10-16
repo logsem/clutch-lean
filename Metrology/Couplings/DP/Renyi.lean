@@ -146,15 +146,6 @@ theorem transform_mul (hα : 1 < α) {x y : EReal} (hx : 0 ≤ x) :
 
 /-! ### Finite spaces -/
 
-theorem _root_.EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) {x : ι → EReal}
-    (hx : ∀ i ∈ s, 0 ≤ x i) : c * ∑ i ∈ s, x i = ∑ i ∈ s, c * x i := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simp
-  | insert j s hj ih =>
-    rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.left_distrib_of_nonneg (hx j (by simp))
-      (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
-
 /-- On finite spaces, binding is a finite weighted sum. -/
 theorem bind_singleton {M N : ℕ} (d : Measure (ULift.{u} (Fin M)))
     (h : ULift.{u} (Fin M) → Measure (ULift.{u} (Fin N))) (i : ULift.{u} (Fin N)) :

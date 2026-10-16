@@ -2,13 +2,15 @@ module
 
 public import Metrology.Couplings.Lifting
 
-/-! Bind laws: ways to compose a lifted step with lifted continuations (Rocq `GradedBindLaw`). -/
+/-! Bind laws: ways to compose a lifted step with lifted continuations. -/
 
 @[expose] public section
 
 universe u v
 
-open MeasureTheory Measure ProbabilityTheory GradedLifting
+open MeasureTheory Measure ProbabilityTheory
+
+namespace GradedLifting
 
 /-- One way to compose a step with its continuations; the side condition sees only the spec side
 (Rocq `GradedBindLaw`). -/
@@ -47,3 +49,5 @@ theorem bind_fun (law : BindLaw L) {b : B} {R : X → Y → B} {R' : X' → Y' �
   law.sound (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hside hk
 
 end BindLaw
+
+end GradedLifting

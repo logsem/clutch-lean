@@ -154,6 +154,11 @@ def Absorbing (b : B) : Prop :=
   ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (R : X → Y → B) (μ : Measure X)
     (ν : Measure Y) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν], L b R μ ν
 
+/-- The top budget relates every pair of sub-probability measures (Rocq `GCFTop` at the order
+top). -/
+class IsTopAbsorbing [Top B] : Prop where
+  absorbing_top : L.Absorbing ⊤
+
 end Classes
 
 /-! ## Derived laws -/
@@ -200,6 +205,21 @@ theorem Rel.map_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     L.Rel b S' μ (ν.map g) := by
   simpa only [map_id] using h.map (f := id) hS measurable_id hg
 
+/-- Pairing related points with a relational lifting lifts the product relation (strength). -/
+theorem Rel.strength [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S₀ : X' → Y' → Prop} {x : X'}
+    {y : Y'} (h : L.Rel b S μ ν) (hxy : S₀ x y) :
+    L.Rel b (fun p q ↦ S₀ p.1 q.1 ∧ S p.2 q.2) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) :=
+  h.map fun _ _ h ↦ ⟨hxy, h⟩
+
+/-- Probability measures lift the full relation at budget `0`, through their product. -/
+theorem rel_true [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    (μ : Measure X) (ν : Measure Y) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
+    L.Rel 0 (fun _ _ ↦ True) μ ν := by
+  have h := (IsReflexive.refl (L := L) (μ.prod ν)).map (f := Prod.fst) (g := Prod.snd)
+    (S' := fun _ _ ↦ True) (fun _ _ _ ↦ trivial) measurable_fst measurable_snd
+  rwa [map_fst_prod, map_snd_prod, measure_univ, measure_univ, one_smul, one_smul] at h
+
 /-- A measure lifts against its pushforward along the graph of the map. -/
 theorem rel_graph [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (μ : Measure X) [IsSubProbabilityMeasure μ] {f : X → Y} (hf : Measurable f := by fun_prop) :
@@ -241,6 +261,17 @@ theorem HasBind.bind_fun [LT B] [Top B] [L.HasBind] {R : X → Y → B} {R' : X'
     (hk : ∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) (hf : Measurable f := by fun_prop)
     (hg : Measurable g := by fun_prop) : L b R' (μ.bind f) (ν.bind g) :=
   HasBind.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hk
+
+/-- Binding with continuations needed only on a set carrying the left measure. -/
+theorem HasBind.bind_of_ae [Preorder B] [Top B] [L.IsSupportLocal] [L.HasBind] {R : X → Y → B}
+    {R' : X' → Y' → B} {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f]
+    [IsSubMarkovKernel g] {A : Set X} (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) (h : L b R μ ν)
+    (hk : ∀ x ∈ A, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
+  classical
+  refine HasBind.bind (IsSupportLocal.restrict hA hμ h) fun x y hxy ↦ ?_
+  by_cases hx : x ∈ A
+  · simpa [hx] using hk x hx y (by simpa [hx] using hxy)
+  · simp [hx] at hxy
 
 /-- Binding a relational lifting with continuations lifted at a finite budget `c` on the
 relation. -/

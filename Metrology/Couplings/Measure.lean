@@ -4,10 +4,13 @@ public import Mathlib.MeasureTheory.Measure.FiniteMeasure
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Prod
 
-/-! General facts about measures. -/
+/-! General facts about measures, and about the extended reals they take values in. -/
 
 @[expose] public section
 
+universe u
+
+open MeasureTheory
 open scoped ENNReal
 
 namespace MeasureTheory.Measure
@@ -102,3 +105,62 @@ theorem map_iSup_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : X
   exact iSup_bind_of_monotone hμ
 
 end MeasureTheory.Measure
+
+/-- A set of `Option X` is measurable when its points under `some` are. -/
+instance Option.instMeasurableSpace {X : Type*} [MeasurableSpace X] : MeasurableSpace (Option X) :=
+  .comap (Equiv.optionEquivSumPUnit.{0, _} X) inferInstance
+
+@[fun_prop]
+theorem measurable_some {X : Type*} [MeasurableSpace X] : Measurable (some : X → Option X) := by
+  refine measurable_comap_iff.2 ?_
+  simpa [Function.comp_def, Equiv.optionEquivSumPUnit] using measurable_inl
+
+/-- The lift of a discrete measurable space is discrete. -/
+instance discreteMeasurableSpace_uLift {α : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α] :
+    DiscreteMeasurableSpace (ULift α) :=
+  ⟨fun _ ↦ measurable_down (t := ULift.up ⁻¹' _) .of_discrete⟩
+
+namespace MeasureTheory
+
+/-- A function below `1` has finite integral against a finite measure. -/
+theorem lintegral_ne_top_of_le_one {Z : Type*} [MeasurableSpace Z] (P : Measure Z)
+    [IsFiniteMeasure P] {F : Z → ℝ≥0∞} (hF : ∀ z, F z ≤ 1) : ∫⁻ z, F z ∂P ≠ ⊤ :=
+  ne_top_of_le_ne_top (measure_ne_top P Set.univ) ((lintegral_mono hF).trans_eq lintegral_one)
+
+/-- A measure on a point is its mass times the Dirac mass. -/
+theorem Measure.eq_smul_dirac_punit (μ : Measure PUnit.{u + 1}) :
+    μ = μ Set.univ • Measure.dirac PUnit.unit := by
+  ext s hs
+  rcases s.eq_empty_or_nonempty with rfl | hs'
+  · simp
+  · simp [Subsingleton.eq_univ_of_nonempty hs']
+
+/-- Integrating a function that factors through a finite partition sums over its cells. -/
+theorem toReal_lintegral_ofReal_comp {Z : Type*} [MeasurableSpace Z] {n : ℕ} {π : Z → Fin n}
+    (hπ : Measurable π) {w : Fin n → ℝ} (hw : ∀ j, 0 ≤ w j) (P : Measure Z) [IsFiniteMeasure P] :
+    (∫⁻ z, ENNReal.ofReal (w (π z)) ∂P).toReal = ∑ j, w j * (P (π ⁻¹' {j})).toReal := by
+  rw [← lintegral_map (f := fun j ↦ ENNReal.ofReal (w j)) (by fun_prop) hπ, lintegral_fintype,
+    ENNReal.toReal_sum fun j _ ↦ ENNReal.mul_ne_top ENNReal.ofReal_ne_top (measure_ne_top _ _)]
+  refine Finset.sum_congr rfl fun j _ ↦ ?_
+  rw [Measure.map_apply hπ (measurableSet_singleton j), ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal (hw j)]
+
+end MeasureTheory
+
+/-- Capping at `n` keeps a bound `a ≤ c b` with `1 ≤ c`. -/
+theorem ENNReal.min_le_mul_min {a b c n : ℝ≥0∞} (h : a ≤ c * b) (hc : 1 ≤ c) :
+    min a n ≤ c * min b n := by
+  rcases le_total b n with hb | hb
+  · rw [min_eq_left hb]
+    exact (min_le_left _ _).trans h
+  · rw [min_eq_right hb]
+    exact (min_le_right _ _).trans (le_mul_of_one_le_left' hc)
+
+theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) {x : ι → EReal}
+    (hx : ∀ i ∈ s, 0 ≤ x i) : c * ∑ i ∈ s, x i = ∑ i ∈ s, c * x i := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+    rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.left_distrib_of_nonneg (hx j (by simp))
+      (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]

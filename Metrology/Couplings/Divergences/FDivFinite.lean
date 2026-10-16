@@ -12,19 +12,6 @@ universe u
 open MeasureTheory Measure ProbabilityTheory Set Filter Topology
 open scoped ENNReal
 
-namespace ULift
-
-variable {N : ℕ}
-
-theorem measurableSet_fin (T : Set (ULift.{u} (Fin N))) : MeasurableSet T :=
-  measurable_down (t := up ⁻¹' T) .of_discrete
-
-/-- Every singleton of `ULift (Fin N)` is measurable. -/
-instance measurableSingletonClass_fin : MeasurableSingletonClass (ULift.{u} (Fin N)) :=
-  ⟨fun _ ↦ measurableSet_fin _⟩
-
-end ULift
-
 namespace Discretize
 
 /-! ## Dyadic cells -/
@@ -141,7 +128,7 @@ theorem cellVec_rep_disc [Nonempty X] (n : ℕ) (x : X) :
 theorem measurable_disc (hκ : Measurable κ) (hη : Measurable η) (n : ℕ) :
     Measurable (disc κ η n) := by
   refine measurable_up.comp ((measurable_of_countable _).comp (measurable_pi_iff.2 fun i ↦ ?_))
-  have hS := Measure.measurable_coe (ULift.measurableSet_fin {(⟨i⟩ : ULift.{u} (Fin N))})
+  have hS := Measure.measurable_coe (.of_discrete : MeasurableSet {(⟨i⟩ : ULift.{u} (Fin N))})
   exact ((measurable_cell n).comp (hS.comp hκ)).prodMk ((measurable_cell n).comp (hS.comp hη))
 
 theorem measurable_rep [Nonempty X] (n : ℕ) : Measurable (rep κ η n) :=
@@ -177,7 +164,7 @@ theorem bind_le_add {μ : Measure X} [IsSubProbabilityMeasure μ]
     {F F' : X → Measure (ULift.{u} (Fin N))}
     (hF : Measurable F) (hF' : Measurable F') {C : ℝ≥0∞} (h : ∀ x T, F x T ≤ F' x T + C)
     (T : Set (ULift.{u} (Fin N))) : (μ.bind F) T ≤ (μ.bind F') T + C := by
-  have hT := ULift.measurableSet_fin T
+  have hT : MeasurableSet T := .of_discrete
   rw [Measure.bind_apply hT hF.aemeasurable, Measure.bind_apply hT hF'.aemeasurable]
   calc ∫⁻ x, F x T ∂μ ≤ ∫⁻ x, F' x T + C ∂μ := lintegral_mono fun x ↦ h x T
     _ ≤ ∫⁻ x, F' x T ∂μ + C := IsSubProbabilityMeasure.lintegral_add_const_le _ _
@@ -223,7 +210,7 @@ theorem bind_disc_singleton_eq_zero_iff {K : X → Measure (ULift.{u} (Fin N))}
     (μ.bind (K ∘ rep κ η n ∘ disc κ η n)) {i} = 0 ↔ (μ.bind K) {i} = 0 := by
   have hKn : Measurable (K ∘ rep κ η n ∘ disc κ η n) :=
     hK.comp ((measurable_rep κ η n).comp (measurable_disc κ η hκ hη n))
-  have hi := ULift.measurableSet_fin {i}
+  have hi := (.of_discrete : MeasurableSet {i})
   rw [Measure.bind_apply hi hKn.aemeasurable, Measure.bind_apply hi hK.aemeasurable,
     lintegral_eq_zero_iff (f := fun x ↦ (K ∘ rep κ η n ∘ disc κ η n) x {i})
       ((Measure.measurable_coe hi).comp hKn),
@@ -388,7 +375,7 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
       (κ : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
       (i : ULift.{u} (Fin N)) :
       ((κ ∘ₘ μ) {i}).toReal = ∑ j, (μ {j}).toReal * (κ j {i}).toReal := by
-    rw [Measure.bind_apply (ULift.measurableSet_fin _) κ.measurable.aemeasurable,
+    rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable,
       lintegral_fintype, ENNReal.toReal_sum fun _ _ ↦ by finiteness]
     exact Finset.sum_congr rfl fun j _ ↦ by rw [ENNReal.toReal_mul, mul_comm]
   have hw {γ : ℝ} (hγ : γ ∈ Icc (0 : ℝ) 1) {a b : ℝ≥0∞} : 0 ≤ γ * a.toReal + (1 - γ) * b.toReal :=

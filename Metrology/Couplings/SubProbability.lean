@@ -8,7 +8,9 @@ Def. 3.1). -/
 
 @[expose] public section
 
-open MeasureTheory Set ENNReal
+universe v
+
+open MeasureTheory Measure Set ENNReal
 
 namespace MeasureTheory
 
@@ -148,4 +150,38 @@ instance isSubMarkovKernel_const (μ : Measure Y) [IsSubProbabilityMeasure μ] :
 instance isSubMarkovKernel_zero : IsSubMarkovKernel (0 : Kernel X Y) where
   isSubProbabilityMeasure x := by rw [zero_apply]; infer_instance
 
+/-! ## Kernels into a point -/
+
+variable {f : X → ℝ≥0∞}
+
+/-- A measurable function as a kernel into a point: the point with that mass. -/
+noncomputable def Kernel.mass (hf : Measurable f) : Kernel X PUnit.{v + 1} :=
+  ⟨fun x ↦ f x • dirac PUnit.unit, hf.smul_measure _⟩
+
+theorem Kernel.mass_apply (hf : Measurable f) (x : X) :
+    Kernel.mass.{v} hf x = f x • dirac PUnit.unit :=
+  rfl
+
+theorem Kernel.isSubMarkovKernel_mass (hf : Measurable f) (hf1 : ∀ x, f x ≤ 1) :
+    IsSubMarkovKernel (Kernel.mass.{v} hf) where
+  isSubProbabilityMeasure x := ⟨by simpa [Kernel.mass_apply] using hf1 x⟩
+
+/-- Composing with a mass kernel integrates its function. -/
+theorem Kernel.mass_comp (hf : Measurable f) (μ : Measure X) :
+    Kernel.mass.{v} hf ∘ₘ μ = (∫⁻ x, f x ∂μ) • dirac PUnit.unit := by
+  ext s hs
+  rw [bind_apply hs (Kernel.mass hf).measurable.aemeasurable]
+  simp [Kernel.mass_apply, lintegral_mul_const _ hf]
+
 end ProbabilityTheory
+
+open ProbabilityTheory in
+/-- A kernel cut off outside `s` composes with the restriction of the measure to `s`. -/
+theorem MeasureTheory.Measure.piecewise_zero_comp {X Y : Type*} [MeasurableSpace X]
+    [MeasurableSpace Y] {s : Set X} [DecidablePred (· ∈ s)] (hs : MeasurableSet s)
+    (κ : Kernel X Y) (μ : Measure X) : Kernel.piecewise hs κ 0 ∘ₘ μ = κ ∘ₘ μ.restrict s := by
+  ext t ht
+  rw [bind_apply ht (Kernel.measurable _).aemeasurable, bind_apply ht κ.measurable.aemeasurable,
+    ← lintegral_indicator hs]
+  congr with x
+  by_cases hx : x ∈ s <;> simp [Kernel.piecewise_apply, hx]

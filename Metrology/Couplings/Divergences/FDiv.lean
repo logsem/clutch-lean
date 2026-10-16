@@ -37,8 +37,8 @@ theorem fDiv_of_not_integrable (h : ¬Integrable (fun x ↦ f (μ.rnDeriv ν x).
     fDiv f μ ν = ⊤ := by
   simp [fDiv, h]
 
-/-- A weight continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
-theorem measurable_comp_of_continuousOn (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
+/-- A function continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
+theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
     (hG : Measurable G) (hG0 : ∀ x, 0 ≤ G x) : Measurable fun x ↦ f (G x) := by
   have : Continuous fun t ↦ f (max t 0) :=
     hf.comp_continuous (continuous_id.max continuous_const) fun t ↦ le_max_right t 0
@@ -61,10 +61,11 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
   set μs := μ.singularPart ν
   have hwi (i) (hi : i ∈ s) (x) : w i x ≤ 1 :=
     (Finset.single_le_sum (fun j _ ↦ hw0 j x) hi).trans (hw1 x)
+  have hwb (i) (hi : i ∈ s) (x) : ‖w i x‖ ≤ 1 := by
+    rw [Real.norm_of_nonneg (hw0 i x)]
+    exact hwi i hi x
   have hint_w (i) (hi : i ∈ s) (ρ : Measure X) [IsFiniteMeasure ρ] : Integrable (w i) ρ :=
-    .of_bound (hw i).aestronglyMeasurable 1 (ae_of_all _ fun x ↦ by
-      rw [Real.norm_of_nonneg (hw0 i x)]
-      exact hwi i hi x)
+    .of_bound (hw i).aestronglyMeasurable 1 (ae_of_all _ (hwb i hi))
   have hsplit (i) (hi : i ∈ s) : ∫ x, w i x ∂μ = ∫ x, w i x * G x ∂ν + ∫ x, w i x ∂μs := by
     conv_lhs => rw [← μ.rnDeriv_add_singularPart ν]
     rw [integral_add_measure (hint_w i hi _) (hint_w i hi _),
@@ -110,7 +111,7 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
     _ = ((∫ x, (∑ i ∈ s, w i x) * f (G x) ∂ν + (∫ x, ∑ i ∈ s, w i x ∂μs) * d : ℝ) : EReal) := by
         rw [← EReal.coe_finset_sum, Finset.sum_add_distrib, ← Finset.sum_mul,
           ← integral_finsetSum _ fun i hi ↦ hint.bdd_mul (hw i).aestronglyMeasurable
-            (ae_of_all _ fun x ↦ by rw [Real.norm_of_nonneg (hw0 i x)]; exact hwi i hi x),
+            (ae_of_all _ (hwb i hi)),
           ← integral_finsetSum _ fun i hi ↦ hint_w i hi _]
         simp_rw [Finset.sum_mul]
         rfl
@@ -169,7 +170,7 @@ theorem fDiv_eq_lintegral_sub (hf : ConvexOn ℝ (Ici 0) f)
       sub_add_cancel]
   have htop : ∫⁻ x, ENNReal.ofReal (f (G x) - (a * G x + c)) ∂ν = ⊤ := by
     by_contra hne
-    have hfG := measurable_comp_of_continuousOn (hf.continuousOn_Ici hf_cont) hG
+    have hfG := (hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
       fun _ ↦ ENNReal.toReal_nonneg
     refine hint (((?_ : Integrable (fun x ↦ f (G x) - (a * G x + c)) ν).add hL).congr
       (ae_of_all _ fun x ↦ by simp))
@@ -197,8 +198,8 @@ theorem integrable_partialSups_affine [IsFiniteMeasure ν] {a c : ℕ → ℝ} {
 
 /-- Finitely many affine minorants: the integral of their maximum at the density, plus the
 singular part, is at most a partition sum. -/
-theorem exists_partition_ge {a c : ℕ → ℝ} (h : ∀ i t, 0 ≤ t → a i * t + c i ≤ f t)
-    [IsFiniteMeasure μ] [IsFiniteMeasure ν] (N : ℕ) :
+theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
+    (h : ∀ i t, 0 ≤ t → a i * t + c i ≤ f t) [IsFiniteMeasure μ] [IsFiniteMeasure ν] (N : ℕ) :
     ∃ k : X → Fin (N + 2), Measurable k ∧
       ((∫ x, partialSups (fun i ↦ a i * (μ.rnDeriv ν x).toReal + c i) N ∂ν : ℝ) : EReal) +
         derivAtTop f * μ.singularPart ν univ ≤
@@ -252,8 +253,7 @@ theorem exists_partition_ge {a c : ℕ → ℝ} (h : ∀ i t, 0 ≤ t → a i * 
       ← measure_add_measure_compl hT, hμsT, zero_add]
   have hterm (i : Fin (N + 1)) : ((∫ x in C i, H x ∂ν : ℝ) : EReal) ≤
       persp f (μ (C i)).toReal (ν (C i)).toReal := by
-    refine le_trans (le_of_eq ?_) (affine_le_persp (h i) ENNReal.toReal_nonneg
-      ENNReal.toReal_nonneg)
+    refine Eq.trans_le ?_ (affine_le_persp (h i) ENNReal.toReal_nonneg ENNReal.toReal_nonneg)
     rw [hμ _ (hC i) inter_subset_left, setIntegral_congr_fun (hC i) fun x hx ↦
       (show H x = a i * G x + c i by rw [← hjH x, hx.2])]
     rw [integral_add (hGi.integrableOn.const_mul _) (integrableOn_const (measure_ne_top _ _)),
@@ -330,8 +330,9 @@ theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
     (Or.inl (EReal.coe_ennreal_ne_bot _))).tendsto.comp
     (((continuous_coe_ennreal_ereal.tendsto _).comp hElim).prodMk_nhds tendsto_const_nhds))
     fun N ↦ ?_
-  obtain ⟨k, hk, hle⟩ := exists_partition_ge (μ := μ) (ν := ν) (fun i ↦ hmin i) N
-  refine le_trans (le_of_eq ?_) (le_iSup_of_le (N + 2) <| le_iSup_of_le k <| le_iSup_of_le hk hle)
+  obtain ⟨k, hk, hle⟩ :=
+    exists_partition_ge_integral_partialSups_add (μ := μ) (ν := ν) (fun i ↦ hmin i) N
+  refine Eq.trans_le ?_ (le_iSup_of_le (N + 2) <| le_iSup_of_le k <| le_iSup_of_le hk hle)
   simp only [Function.comp_apply]
   rw [← add_assoc, ← hE N]
 
@@ -357,8 +358,9 @@ theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f 
   obtain ⟨a, c, hac⟩ :=
     hf.exists_affine_le_real isClosed_Ici (hf.continuousOn_Ici hf_cont).lowerSemicontinuousOn
   have hfG : Integrable (fun x ↦ f (G x)) ν :=
-    integrable_of_le_of_le (measurable_comp_of_continuousOn (hf.continuousOn_Ici hf_cont) hG
-      fun _ ↦ ENNReal.toReal_nonneg).aestronglyMeasurable
+    integrable_of_le_of_le
+      ((hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
+        fun _ ↦ ENNReal.toReal_nonneg).aestronglyMeasurable
       (ae_of_all _ fun _ ↦ hac _ ENNReal.toReal_nonneg)
       (ae_of_all _ fun _ ↦ h _ ENNReal.toReal_nonneg)
       ((integrable_toReal_rnDeriv.const_mul a).add (integrable_const c)) hg
@@ -377,8 +379,12 @@ theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
     singularPart_self]
   simp [measureReal_def]
 
-theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [IsFiniteMeasure μ] : fDiv f μ μ = 0 := by
-  simp [fDiv_self_eq, hf1]
+theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [SigmaFinite μ] : fDiv f μ μ = 0 := by
+  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ 0 :=
+    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx, hf1]
+  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
+    singularPart_self]
+  simp
 
 /-- From the zero measure the `f`-divergence is the mass times `f 0`. -/
 theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
@@ -389,8 +395,12 @@ theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
     singularPart_zero]
   simp [measureReal_def]
 
-theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) [IsFiniteMeasure ν] : fDiv f 0 ν = 0 := by
-  simp [fDiv_zero_left_eq, hf0]
+theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
+  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ 0 :=
+    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx, hf0]
+  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
+    singularPart_zero]
+  simp
 
 theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
     fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
@@ -405,6 +415,17 @@ theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
   obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := ν) univ
   exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
     (mul_le_of_le_one_left (le_max_left _ _) h1)
+
+/-- A divergence with infinite slope at infinity that is finite forces absolute continuity. -/
+theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
+    (hf : derivAtTop f = ⊤) (h : fDiv f μ ν ≠ ⊤) : μ ≪ ν := by
+  by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
+  · rw [← singularPart_eq_zero, ← measure_univ_eq_zero]
+    by_contra h0
+    rw [fDiv_of_integrable hint, hf,
+      EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 h0)), EReal.coe_add_top] at h
+    exact h rfl
+  · exact absurd (fDiv_of_not_integrable hint) h
 
 theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f μ ν := by
   by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
@@ -423,7 +444,7 @@ variable {Y : Type*} [MeasurableSpace Y]
 
 /-- Data processing along a sub-Markov kernel; when the kernel may lose mass, the weight must be
 nonnegative. -/
-theorem fDiv_comp_le_of_le_one (hf : ConvexOn ℝ (Ici 0) f)
+theorem fDiv_comp_le_of_isSubMarkovKernel (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (κ : Kernel X Y) [IsSubMarkovKernel κ] (h : (∀ x, κ x univ = 1) ∨ ∀ t, 0 ≤ t → 0 ≤ f t) :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν := by
@@ -449,14 +470,14 @@ theorem fDiv_comp_le_of_le_one (hf : ConvexOn ℝ (Ici 0) f)
 theorem fDiv_comp_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : Kernel X Y) [IsMarkovKernel κ] :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν :=
-  fDiv_comp_le_of_le_one hf hf_cont κ (.inl fun _ ↦ measure_univ)
+  fDiv_comp_le_of_isSubMarkovKernel hf hf_cont κ (.inl fun _ ↦ measure_univ)
 
 /-- Data processing along a sub-Markov kernel, for a nonnegative weight. -/
 theorem fDiv_comp_le_of_nonneg (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf₀ : ∀ t, 0 ≤ t → 0 ≤ f t)
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : Kernel X Y) [IsSubMarkovKernel κ] :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν :=
-  fDiv_comp_le_of_le_one hf hf_cont κ (.inr hf₀)
+  fDiv_comp_le_of_isSubMarkovKernel hf hf_cont κ (.inr hf₀)
 
 /-- Data processing along a measurable map. -/
 theorem fDiv_map_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
@@ -465,34 +486,44 @@ theorem fDiv_map_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt 
   rw [← deterministic_comp_eq_map hk, ← deterministic_comp_eq_map hk]
   exact fDiv_comp_le hf hf_cont _
 
-/-- Left continuity: along an increasing sequence on the left, the limit of the `f`-divergences
-is at least the `f`-divergence of the supremum. -/
-theorem fDiv_iSup_left_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    {μ : ℕ → Measure X} (hμ : Monotone μ) [IsFiniteMeasure (⨆ n, μ n)] [IsFiniteMeasure ν] :
-    fDiv f (⨆ n, μ n) ν ≤ ⨆ n, fDiv f (μ n) ν := by
+/-- Lower semicontinuity: along an increasing sequence on the left, the `f`-divergence of the
+supremum is at most the `liminf` of the `f`-divergences. -/
+theorem fDiv_le_liminf_of_monotone (hf : ConvexOn ℝ (Ici 0) f)
+    (hf_cont : ContinuousWithinAt f (Ici 0) 0) {μ : ℕ → Measure X} (hμ : Monotone μ)
+    [IsFiniteMeasure (⨆ n, μ n)] [IsFiniteMeasure ν] :
+    fDiv f (⨆ n, μ n) ν ≤ liminf (fun n ↦ fDiv f (μ n) ν) atTop := by
   have (n : ℕ) : IsFiniteMeasure (μ n) := isFiniteMeasure_of_le _ (le_iSup μ n)
   rw [fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun m ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
-  refine le_of_tendsto' (EReal.tendsto_finset_sum (l := atTop) _ (fun i _ ↦ ?_)
-    fun i _ ↦ persp_ne_bot hf ENNReal.toReal_nonneg)
-    fun n ↦ (sum_persp_le_fDiv hf hf_cont hk).trans (le_iSup (fun n ↦ fDiv f (μ n) ν) n)
-  have hA : MeasurableSet (k ⁻¹' {i}) := hk (measurableSet_singleton i)
-  set A := k ⁻¹' {i}
-  have hsup : (⨆ n, μ n) A = ⨆ n, μ n A := iSup_apply_of_monotone hμ hA
-  have hlim : Tendsto (fun n ↦ (μ n A).toReal) atTop (𝓝 ((⨆ n, μ n) A).toReal) :=
-    (ENNReal.tendsto_toReal (measure_ne_top _ _)).comp
-      (hsup ▸ tendsto_atTop_iSup fun _ _ h ↦ hμ h A)
-  rcases eq_or_ne ((⨆ n, μ n) A) 0 with h0 | h0
-  · have hn (n : ℕ) : μ n A = 0 := le_antisymm (h0 ▸ hsup ▸ le_iSup (μ · A) n) zero_le
-    simp [hn, h0]
-  obtain ⟨N, hN⟩ : ∃ N, μ N A ≠ 0 := by
-    by_contra! h
-    exact h0 (hsup.trans (by simp [h]))
-  have hpos (n : ℕ) : (μ (n + N) A).toReal ≠ 0 := ENNReal.toReal_ne_zero.2
-    ⟨fun h ↦ hN (le_antisymm (h ▸ hμ (Nat.le_add_left N n) A) zero_le), measure_ne_top _ _⟩
-  refine (tendsto_add_atTop_iff_nat N).1 (tendsto_persp hf ((tendsto_add_atTop_iff_nat N).2 hlim)
-    tendsto_const_nhds (fun _ ↦ ENNReal.toReal_nonneg) (fun _ ↦ ENNReal.toReal_nonneg)
-    (fun n ↦ ?_) fun _ ↦ Iff.rfl)
-  simp [hpos n, ENNReal.toReal_eq_zero_iff, h0, measure_ne_top]
+  have hlim : Tendsto (fun n ↦ ∑ i, persp f (μ n (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal)
+      atTop (𝓝 (∑ i, persp f ((⨆ n, μ n) (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal)) := by
+    refine EReal.tendsto_finset_sum _ (fun i _ ↦ ?_) fun i _ ↦ persp_ne_bot hf ENNReal.toReal_nonneg
+    have hA : MeasurableSet (k ⁻¹' {i}) := hk (measurableSet_singleton i)
+    set A := k ⁻¹' {i}
+    have hsup : (⨆ n, μ n) A = ⨆ n, μ n A := iSup_apply_of_monotone hμ hA
+    have hlim : Tendsto (fun n ↦ (μ n A).toReal) atTop (𝓝 ((⨆ n, μ n) A).toReal) :=
+      (ENNReal.tendsto_toReal (measure_ne_top _ _)).comp
+        (hsup ▸ tendsto_atTop_iSup fun _ _ h ↦ hμ h A)
+    rcases eq_or_ne ((⨆ n, μ n) A) 0 with h0 | h0
+    · have hn (n : ℕ) : μ n A = 0 := le_antisymm (h0 ▸ hsup ▸ le_iSup (μ · A) n) zero_le
+      simp [hn, h0]
+    obtain ⟨N, hN⟩ : ∃ N, μ N A ≠ 0 := by
+      by_contra! h
+      exact h0 (hsup.trans (by simp [h]))
+    have hpos (n : ℕ) : (μ (n + N) A).toReal ≠ 0 := ENNReal.toReal_ne_zero.2
+      ⟨fun h ↦ hN (le_antisymm (h ▸ hμ (Nat.le_add_left N n) A) zero_le), measure_ne_top _ _⟩
+    refine (tendsto_add_atTop_iff_nat N).1 (tendsto_persp hf ((tendsto_add_atTop_iff_nat N).2 hlim)
+      tendsto_const_nhds (fun _ ↦ ENNReal.toReal_nonneg) (fun _ ↦ ENNReal.toReal_nonneg)
+      (fun n ↦ ?_) fun _ ↦ Iff.rfl)
+    simp [hpos n, ENNReal.toReal_eq_zero_iff, h0, measure_ne_top]
+  rw [← hlim.liminf_eq]
+  exact liminf_le_liminf (.of_forall fun n ↦ sum_persp_le_fDiv hf hf_cont hk)
+
+/-- Left continuity: along an increasing sequence on the left, the `f`-divergence of the
+supremum is at most the supremum of the `f`-divergences. -/
+theorem fDiv_iSup_left_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
+    {μ : ℕ → Measure X} (hμ : Monotone μ) [IsFiniteMeasure (⨆ n, μ n)] [IsFiniteMeasure ν] :
+    fDiv f (⨆ n, μ n) ν ≤ ⨆ n, fDiv f (μ n) ν :=
+  (fDiv_le_liminf_of_monotone hf hf_cont hμ).trans <| (Filter.liminf_le_limsup).trans limsup_le_iSup
 
 end ProbabilityTheory

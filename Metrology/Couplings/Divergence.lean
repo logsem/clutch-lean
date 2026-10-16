@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Couplings.Budget
+public import Metrology.Couplings.SubProbability
 
 /-! Graded divergences with yes/no budgets (Approximate Span Liftings, §4). -/
 
@@ -48,18 +49,18 @@ class IsZeroLeft : Prop where
 
 /-- A budget met along an increasing sequence on the left is met by its supremum. -/
 class IsLeftContinuous : Prop where
-  iSup_left (b : B) {X : Type u} [MeasurableSpace X] {μ : ℕ → Measure X}
-    [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) (ν : Measure X)
+  iSup_left ⦃b : B⦄ {X : Type u} [MeasurableSpace X] {μ : ℕ → Measure X}
+    [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) ⦃ν : Measure X⦄
     [IsSubProbabilityMeasure ν] : (∀ n, D b (μ n) ν) → D b (⨆ n, μ n) ν
 
 /-- Growing the right measure keeps the budget. -/
 class IsRightMonotone : Prop where
-  right_mono (b : B) {X : Type u} [MeasurableSpace X] {μ ν ν' : Measure X}
+  right_mono ⦃b : B⦄ {X : Type u} [MeasurableSpace X] {μ ν ν' : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν'] (h : ν ≤ ν') : D b μ ν → D b μ ν'
 
 /-- Shrinking the left measure keeps the budget. -/
 class IsLeftAntitone : Prop where
-  left_anti (b : B) {X : Type u} [MeasurableSpace X] {μ μ' ν : Measure X}
+  left_anti ⦃b : B⦄ {X : Type u} [MeasurableSpace X] {μ μ' ν : Measure X}
     [IsSubProbabilityMeasure μ'] [IsSubProbabilityMeasure ν] (h : μ ≤ μ') : D b μ' ν → D b μ ν
 
 /-- Budgets are closed from above: meeting every larger budget meets the budget. -/
@@ -76,8 +77,8 @@ class HasSlack [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop whe
 
 /-- Point masses within budget `s δ` differ in mass by at most `δ`. -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
-  le_add_of {a b δ : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
-    D (s δ) (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) → a ≤ b + δ
+  le_add_of {p q δ : ℝ≥0∞} (hp : p ≤ 1) (hq : q ≤ 1) :
+    D (s δ) (p • dirac PUnit.unit.{u + 1}) (q • dirac PUnit.unit) → p ≤ q + δ
 
 end Classes
 
@@ -90,6 +91,13 @@ variable {B : Type v} {D : GradedDivergence.{u} B} {X Y : Type u} [MeasurableSpa
 theorem IsGraded.of_top_le [LE B] [Top B] [D.IsGraded] {b : B} (hb : ⊤ ≤ b)
     (μ ν : Measure X) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : D b μ ν :=
   IsGraded.mono hb (IsGraded.top μ ν)
+
+/-- A budget holds once it holds whenever it is finite. -/
+theorem IsGraded.of_lt_top [Preorder B] [OrderTop B] [D.IsGraded] {b : B} {μ ν : Measure X}
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (h : b < ⊤ → D b μ ν) : D b μ ν := by
+  by_cases hb : ⊤ ≤ b
+  · exact IsGraded.of_top_le hb μ ν
+  · exact h (le_top.lt_of_not_ge hb)
 
 /-- Substitutivity: a kernel bound carries over a bind against the same measure. -/
 theorem IsComposable.subst [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {c : B}

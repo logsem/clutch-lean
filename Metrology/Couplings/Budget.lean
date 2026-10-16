@@ -1,6 +1,9 @@
 module
 
-public import Metrology.Couplings.SubProbability
+public import Mathlib.Algebra.Order.Monoid.Prod
+public import Mathlib.Algebra.Regular.Pi
+public import Mathlib.Algebra.Regular.Prod
+public import Mathlib.Basic.ENNReal.Basic
 
 /-! Order facts on budgets: room above a sum, and which budgets cancel. -/
 
@@ -11,8 +14,8 @@ open scoped ENNReal
 variable {B : Type*}
 
 /-- Strictly above `b + c` means strictly above `b` after removing `c`. -/
-theorem exists_lt_add_of_lt_add [AddCommSemigroup B] [PartialOrder B] [CanonicallyOrderedAdd B]
-    {b c d : B} (h : b + c < d) : ∃ b', b < b' ∧ b' + c = d := by
+theorem exists_lt_and_add_eq_of_add_lt [AddCommSemigroup B] [PartialOrder B]
+    [CanonicallyOrderedAdd B] {b c d : B} (h : b + c < d) : ∃ b', b < b' ∧ b' + c = d := by
   obtain ⟨e, rfl⟩ := exists_add_of_le h.le
   refine ⟨b + e, lt_of_le_of_ne le_self_add fun hb ↦ h.ne ?_, add_right_comm b e c⟩
   rw [add_right_comm, ← hb]

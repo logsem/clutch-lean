@@ -73,16 +73,6 @@ theorem possible_iff_pos {α : Type _} [MeasurableSpace α] [MeasurableSingleton
       exact measure_mono (Set.singleton_subset_iff.mpr hρs)
     · rw [Set.indicator_of_notMem hρs]; simp
 
-instance [MeasurableSpace α] : MeasurableSpace (Option α) :=
-  MeasurableSpace.comap (Equiv.optionEquivSumPUnit.{0, _} α) inferInstance
-
-@[fun_prop]
-theorem measurable_some [MeasurableSpace α] : Measurable (Option.some : α → _) := by
-  refine measurable_comap_iff.mpr ?_
-  unfold Function.comp
-  simp [Equiv.optionEquivSumPUnit]
-  fun_prop
-
 /-! ### Option-cylinders -/
 
 theorem MeasurableEmbedding.some_mk {α : Type _} [MeasurableSpace α] :

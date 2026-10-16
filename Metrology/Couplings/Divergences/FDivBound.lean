@@ -95,7 +95,8 @@ theorem isComposable_fDivBound [Add B] {chain : EReal → EReal → EReal}
       _ ≤ thresh (b + c) k := hthresh b c k
 
 /-- Composability from a per-index chain rule between finite spaces, by the finite route
-(Thms. 4.6, 4.9). -/
+(Thms. 4.6, 4.9). The chain must be globally monotone; multiplicative chains use
+`isComposable_fDivBound_of_mul`. -/
 theorem isComposable_fDivBound_of_finite [Add B] (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b k))
     (hw_cont : ∀ b k, ContinuousWithinAt (weight b k) (Ici 0) 0) {chain : EReal → EReal → EReal}
     (hchain : ∀ ⦃a a' c c'⦄, a ≤ a' → c ≤ c' → chain a c ≤ chain a' c')
@@ -128,7 +129,28 @@ theorem isComposable_fDivBound_of_perspSplit [Add B]
       (hw b k) (hw_cont b k) (hw c k) (hw_cont c k) (hw₀ _ k) (hw₀ b k) (hw₀ c k) hβ hβ'
       (hA b c k) _ _ _ _) hthresh hpos
 
-/-! ## Differential privacy as an `f`-divergence bound -/
+/-- Multiplicative chain rules (Rényi shape) go through the clamped chain `max 0 a * max 0 c`,
+which is globally monotone. -/
+theorem isComposable_fDivBound_of_mul [Add B] (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b k))
+    (hw_cont : ∀ b k, ContinuousWithinAt (weight b k) (Ici 0) 0)
+    (hfin : ∀ b c k {M N : ℕ} [NeZero M] {μ₁ μ₂ : Measure (ULift.{u} (Fin M))}
+      [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
+      {κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))} [IsSubMarkovKernel κ]
+      [IsSubMarkovKernel η],
+      fDiv (weight (b + c) k) (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤
+        max 0 (fDiv (weight b k) μ₁ μ₂) * max 0 (⨆ i, fDiv (weight c k) (κ i) (η i)))
+    (hthresh : ∀ b c k, max 0 (thresh b k) * max 0 (thresh c k) ≤ thresh (b + c) k)
+    (hpos : ∀ b k, 0 ≤ thresh b k) :
+    (fDivBound.{u} K weight thresh).IsComposable :=
+  isComposable_fDivBound_of_finite hw hw_cont
+    (chain := fun a c ↦ max 0 a * max 0 c)
+    (fun _ _ _ _ ha hc ↦ mul_le_mul (max_le_max le_rfl ha) (max_le_max le_rfl hc)
+      (le_max_left _ _) ((le_max_left _ _).trans (max_le_max le_rfl ha)))
+    hfin hthresh hpos
+
+end GradedDivergence
+
+namespace ProbabilityTheory
 
 /-- The weight `t ↦ max 0 (t - e^ε)` of `(ε, δ)`-differential privacy (Def. 2.6). -/
 noncomputable def dpWeight (ε t : ℝ) : ℝ := max 0 (t - Real.exp ε)
@@ -204,6 +226,12 @@ theorem fDiv_dpWeight_le_iff (ε : ℝ) (δ : ℝ≥0∞) [IsFiniteMeasure μ] [
     ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
     ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
     ENNReal.toReal_ofReal (Real.exp_pos ε).le, sub_le_iff_le_add']
+
+end ProbabilityTheory
+
+namespace GradedDivergence
+
+variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
 
 /-- `(ε, δ)`-DP is the `f`-divergence bound with weight `dpWeight ε` and threshold `δ`. -/
 theorem dp_iff_fDivBound {ε δ : ℝ≥0∞} (hε : ε ≠ ⊤) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
