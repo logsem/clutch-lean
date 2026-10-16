@@ -61,9 +61,8 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
   set μs := μ.singularPart ν
   have hwi (i) (hi : i ∈ s) (x) : w i x ≤ 1 :=
     (Finset.single_le_sum (fun j _ ↦ hw0 j x) hi).trans (hw1 x)
-  have hwb (i) (hi : i ∈ s) (x) : ‖w i x‖ ≤ 1 := by
-    rw [Real.norm_of_nonneg (hw0 i x)]
-    exact hwi i hi x
+  have hwb (i) (hi : i ∈ s) (x) : ‖w i x‖ ≤ 1 :=
+    (Real.norm_of_nonneg (hw0 i x)).le.trans (hwi i hi x)
   have hint_w (i) (hi : i ∈ s) (ρ : Measure X) [IsFiniteMeasure ρ] : Integrable (w i) ρ :=
     .of_bound (hw i).aestronglyMeasurable 1 (ae_of_all _ (hwb i hi))
   have hsplit (i) (hi : i ∈ s) : ∫ x, w i x ∂μ = ∫ x, w i x * G x ∂ν + ∫ x, w i x ∂μs := by
@@ -72,9 +71,9 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
       integral_withDensity_eq_integral_toReal_smul (measurable_rnDeriv _ _) (rnDeriv_lt_top _ _)]
     simp_rw [smul_eq_mul, mul_comm (μ.rnDeriv ν _).toReal]
     rfl
-  have hsing (i) (hi : i ∈ s) : ∫ x, w i x ∂μs ≤ μs.real univ :=
-    calc ∫ x, w i x ∂μs ≤ ∫ _, (1 : ℝ) ∂μs :=
-          integral_mono (hint_w i hi _) (integrable_const 1) (hwi i hi)
+  have hsing {φ : X → ℝ} (hφ : Integrable φ μs) (hφ1 : ∀ x, φ x ≤ 1) :
+      ∫ x, φ x ∂μs ≤ μs.real univ :=
+    calc ∫ x, φ x ∂μs ≤ ∫ _, (1 : ℝ) ∂μs := integral_mono hφ (integrable_const 1) hφ1
       _ = μs.real univ := by simp
   by_cases htop : derivAtTop f = ⊤ ∧ μs univ ≠ 0
   · rw [fDiv_of_integrable hint, htop.1,
@@ -99,12 +98,11 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
             hs0 (integral_nonneg (hw0 i)) le_rfl
       _ ≤ _ := add_le_add (persp_integral_le hf hf_cont (fun _ ↦ ENNReal.toReal_nonneg)
             integrable_toReal_rnDeriv hint (hw i) (hw0 i) (hwi i hi))
-            (by rw [persp_zero_right, hd _ hs0 (hsing i hi)])
+            (by rw [persp_zero_right, hd _ hs0 (hsing (hint_w i hi _) (hwi i hi))])
   have hsum_int : Integrable (fun x ↦ (∑ i ∈ s, w i x) * f (G x)) ν :=
     hint.bdd_mul (Finset.measurable_sum _ fun i _ ↦ hw i).aestronglyMeasurable
-      (ae_of_all _ fun x ↦ by
-        rw [Real.norm_of_nonneg (Finset.sum_nonneg fun i _ ↦ hw0 i x)]
-        exact hw1 x)
+      (ae_of_all _ fun x ↦
+        (Real.norm_of_nonneg (Finset.sum_nonneg fun i _ ↦ hw0 i x)).le.trans (hw1 x))
   calc ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν)
       ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) :=
         Finset.sum_le_sum hterm
@@ -119,13 +117,11 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
         rw [EReal.coe_le_coe_iff]
         rcases h with h | h
         · simp [h]
-        refine add_le_add (integral_mono hsum_int hint fun x ↦
+        exact add_le_add (integral_mono hsum_int hint fun x ↦
           mul_le_of_le_one_left (h _ ENNReal.toReal_nonneg) (hw1 x))
-          (mul_le_mul_of_nonneg_right ?_ (hd0 (derivAtTop_nonneg h)))
-        calc ∫ x, ∑ i ∈ s, w i x ∂μs ≤ ∫ _, (1 : ℝ) ∂μs :=
-              integral_mono (integrable_finsetSum _ fun i hi ↦ hint_w i hi _)
-                (integrable_const 1) hw1
-          _ = μs.real univ := by simp
+          (mul_le_mul_of_nonneg_right
+            (hsing (integrable_finsetSum _ fun i hi ↦ hint_w i hi _) hw1)
+            (hd0 (derivAtTop_nonneg h)))
     _ = fDiv f μ ν := by
         rw [fDiv_of_integrable hint, EReal.coe_add, ← hd _ measureReal_nonneg le_rfl, mul_comm,
           measureReal_def, EReal.coe_ennreal_toReal (measure_ne_top _ _)]
@@ -135,7 +131,6 @@ theorem sum_persp_le_fDiv (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ι : Type*} [Fintype ι] [MeasurableSpace ι]
     [MeasurableSingletonClass ι] {k : X → ι} (hk : Measurable k) :
     ∑ i, persp f (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤ fDiv f μ ν := by
-  classical
   have hA (i : ι) : MeasurableSet (k ⁻¹' {i}) := hk (measurableSet_singleton i)
   have hsum (x : X) : ∑ i, (k ⁻¹' {i}).indicator (1 : X → ℝ) x = 1 := by
     rw [Finset.sum_eq_single (k x) (fun i _ hi ↦ by simp [Ne.symm hi]) (by simp)]
@@ -202,19 +197,21 @@ theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
     singularPart_zero]
   simp
 
-theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
-    fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
-  rw [fDiv_self_eq, EReal.coe_le_coe_iff]
+theorem toReal_univ_mul_le_max (μ : Measure X) [IsSubProbabilityMeasure μ] (c : ℝ) :
+    (μ univ).toReal * c ≤ max 0 c := by
   obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ) univ
   exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
     (mul_le_of_le_one_left (le_max_left _ _) h1)
 
+theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
+    fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
+  rw [fDiv_self_eq, EReal.coe_le_coe_iff]
+  exact toReal_univ_mul_le_max μ _
+
 theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
     fDiv f 0 ν ≤ ((max 0 (f 0) : ℝ) : EReal) := by
   rw [fDiv_zero_left_eq, EReal.coe_le_coe_iff]
-  obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := ν) univ
-  exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
-    (mul_le_of_le_one_left (le_max_left _ _) h1)
+  exact toReal_univ_mul_le_max ν _
 
 /-- Against the zero measure the `f`-divergence is the mass times the slope at infinity. -/
 theorem fDiv_zero_right_eq (μ : Measure X) : fDiv f μ 0 = derivAtTop f * μ univ := by

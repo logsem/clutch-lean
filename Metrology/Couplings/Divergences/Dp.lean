@@ -36,7 +36,7 @@ theorem Bound.of_forall_lt (h : ∀ δ', δ < δ' → Bound c δ' μ ν) : Bound
   exact h _ (ENNReal.lt_add_right hδ (by simpa using hη.ne')) S hS
 
 /-- DP inequalities at multipliers converging to `e^{e₀}` give the one at `e^{e₀}`. -/
-theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (𝓝 e₀)) {δ : ℝ≥0∞}
+theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (𝓝 e₀))
     (h : ∀ n, Bound (ENNReal.ofReal (exp (e n))) δ μ ν) :
     Bound (ENNReal.ofReal (exp e₀)) δ μ ν := fun S hS ↦
   ge_of_tendsto' ((ENNReal.Tendsto.mul_const
@@ -133,11 +133,11 @@ noncomputable def expBudget (ε : ℝ≥0∞) : ℝ≥0∞ :=
 theorem expBudget_top : expBudget ⊤ = ⊤ := by
   simp [expBudget]
 
-theorem expBudget_of_ne_top (hε : ε ≠ ⊤) : expBudget ε = ENNReal.ofReal (Real.exp ε.toReal) := by
+theorem expBudget_of_ne_top (hε : ε ≠ ⊤) : expBudget ε = ENNReal.ofReal (exp ε.toReal) := by
   rw [expBudget, ← EReal.coe_ennreal_toReal hε, EReal.exp_coe]
 
 theorem expBudget_ofReal {x : ℝ} (hx : 0 ≤ x) :
-    expBudget (ENNReal.ofReal x) = ENNReal.ofReal (Real.exp x) := by
+    expBudget (ENNReal.ofReal x) = ENNReal.ofReal (exp x) := by
   rw [expBudget_of_ne_top ENNReal.ofReal_ne_top, ENNReal.toReal_ofReal hx]
 
 @[simp]
@@ -232,8 +232,9 @@ theorem dp_trans {μ₁ μ₂ μ₃ : Measure X} {ε₁ ε₂ δ₁ δ₂ : ℝ�
 
 /-! ## Instances -/
 
-instance isGraded_dp : dp.{u}.IsGraded :=
-  ⟨fun _ _ hb ↦ dp_mono hb, fun _ _ ↦ dp_top_left⟩
+instance isGraded_dp : dp.{u}.IsGraded where
+  mono _ _ hb := dp_mono hb
+  top _ _ := dp_top_left
 
 instance isReflexive_dp : dp.{u}.IsReflexive where
   refl _ := fun _ _ _ ↦ by simp
@@ -259,7 +260,6 @@ instance isRightMonotone_dp : dp.{u}.IsRightMonotone where
 instance isLeftAntitone_dp : dp.{u}.IsLeftAntitone where
   left_anti _ := fun hμ h hb S hS ↦ (le_iff'.1 hμ S).trans (h hb S hS)
 
-/-- A bound at every larger slack is a bound at the slack. -/
 instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
   of_forall_gt {b} := fun h hb ↦
     .of_forall_lt fun δ' hδ' ↦ h (b.1, δ') (Prod.lt_iff.2 (.inr ⟨le_rfl, hδ'⟩)) hb
@@ -304,6 +304,14 @@ theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, �
       simpa [Kernel.mass_apply, dp_smul_dirac_iff] using hfg x y
   simpa [Kernel.mass_comp, dp_smul_dirac_iff, hε.lt_top] using hc
 
+/-- Cutting a constant off the integrand costs at most that constant. -/
+theorem _root_.MeasureTheory.IsSubProbabilityMeasure.lintegral_le_tsub_add
+    [IsSubProbabilityMeasure μ] (f : X → ℝ≥0∞) (c : ℝ≥0∞) :
+    ∫⁻ x, f x ∂μ ≤ ∫⁻ x, f x - c ∂μ + c :=
+  calc ∫⁻ x, f x ∂μ
+      ≤ ∫⁻ x, (f x - c) + c ∂μ := lintegral_mono fun _ ↦ le_tsub_add
+    _ ≤ ∫⁻ x, f x - c ∂μ + c := IsSubProbabilityMeasure.lintegral_add_const_le _ _
+
 /-- `[0, 1]`-valued test functions that the leftover relates give a DP codensity lifting: a
 test passed with slack `c` becomes a test function once `c.2` is cut off. -/
 theorem codensity_dp_of_lintegral_le [IsSubProbabilityMeasure μ]
@@ -331,8 +339,7 @@ theorem codensity_dp_of_lintegral_le [IsSubProbabilityMeasure μ]
   rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable,
     expBudget_add]
   calc ∫⁻ x, k x S ∂μ
-      ≤ ∫⁻ x, (k x S - c.2) + c.2 ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, k x S - c.2 ∂μ + c.2 := IsSubProbabilityMeasure.lintegral_add_const_le _ _
+      ≤ ∫⁻ x, k x S - c.2 ∂μ + c.2 := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
     _ ≤ expBudget ε * ∫⁻ y, min 1 (expBudget c.1 * l y S) ∂ν + δ + c.2 := by gcongr
     _ ≤ expBudget ε * expBudget c.1 * ∫⁻ y, l y S ∂ν + (δ + c.2) := by
         rw [mul_assoc, ← lintegral_const_mul _ hlS, add_assoc]
@@ -364,7 +371,7 @@ theorem dp_measure_le_add (hε : ε ≠ ⊤) (h : (codensity dp).Rel (ε, δ) S 
     (hS : ∀ x y, S x y → x ∈ T → y ∈ T') : μ T ≤ expBudget ε * ν T' + δ := by
   simpa [lintegral_indicator_const, hT, hT'] using lintegral_le_of_codensity_dp hε h
     (measurable_const.indicator hT) (measurable_const.indicator hT')
-    (fun _ ↦ Set.indicator_le_self' (by simp) _) (fun _ ↦ Set.indicator_le_self' (by simp) _)
+    (fun _ ↦ indicator_le_self' (by simp) _) (fun _ ↦ indicator_le_self' (by simp) _)
     fun x y hxy ↦ by
       have hxy' : S x y := (relCost_lt_top_iff (B := ℝ≥0∞ × ℝ≥0∞)).1
         (by simpa [Prod.lt_iff] using Or.inl hxy)

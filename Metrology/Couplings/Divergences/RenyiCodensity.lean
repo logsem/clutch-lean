@@ -3,8 +3,7 @@ module
 public import Metrology.Couplings.Divergences.Concentrated
 
 /-! The Rényi codensity lifting is decided by tests into a point, and is the Hölder-dual Rényi
-coupling (Rocq `renyi_kanto_canonical.v`, `renyi_codensity.v`). The zCDP and tCDP liftings are
-Hölder-dual Rényi couplings at every order. -/
+coupling (Rocq `renyi_kanto_canonical.v`, `renyi_codensity.v`). -/
 
 @[expose] public section
 
@@ -173,7 +172,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   have hG1 (i : I) : ENNReal.ofReal (s * w (π i) ^ (α / (α - 1))) ≤ 1 :=
     ENNReal.ofReal_le_one.2 ((mul_le_of_le_one_left (Real.rpow_nonneg (hw _).1 _) hs1).trans
       (Real.rpow_le_one (hw _).1 (hw _).2 hβ))
-  have hw' : Measurable w := .of_discrete
+  have : Measurable w := .of_discrete
   have hF : Measurable fun i ↦ ENNReal.ofReal (s * w (π i)) := by fun_prop
   have hG : Measurable fun i ↦ ENNReal.ofReal (s * w (π i) ^ (α / (α - 1))) := by fun_prop
   have := Kernel.isSubMarkovKernel_mass.{u} hF hF1
@@ -254,10 +253,9 @@ theorem codensity_renyi_of_slackHolder [hα : Fact (1 < α)] [IsSubProbabilityMe
   refine codensity_renyi_of_unitTests fun k l _ _ hkl ↦ ?_
   rcases eq_or_ne ρ ⊤ with rfl | hρ
   · exact renyiDivergence_top hα.out _ _
-  have hγβ : (α - 1) / α * (α / (α - 1)) = 1 := by
-    have := sub_ne_zero.2 hα.out.ne'
-    have := (zero_lt_one.trans hα.out).ne'
-    field_simp
+  have hα0 : 0 < α := zero_lt_one.trans hα.out
+  have hα1 : 0 < α - 1 := sub_pos.2 hα.out
+  have hγβ : (α - 1) / α * (α / (α - 1)) = 1 := by field_simp
   rw [Measure.eq_smul_dirac_punit (k ∘ₘ μ), Measure.eq_smul_dirac_punit (l ∘ₘ ν),
     renyiDivergence_smul_dirac_iff hα.out hρ (measure_ne_top _ _) (measure_ne_top _ _),
     bind_apply .univ k.measurable.aemeasurable, bind_apply .univ l.measurable.aemeasurable]
@@ -277,12 +275,11 @@ theorem slackHolder_truncated_of_codensity [hα : Fact (1 < α)] [IsSubProbabili
     (hfg : ∀ x y, R x y < ⊤ → f x ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * R x y) * g y)
     (N : ℕ) : ∫⁻ x, min (f x) (N + 1) ∂μ ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
       (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α) := by
-  have hγ : 0 < (α - 1) / α := div_pos (by linarith [hα.out]) (by linarith [hα.out])
-  have hβ : 0 < α / (α - 1) := div_pos (by linarith [hα.out]) (by linarith [hα.out])
-  have hβγ : α / (α - 1) * ((α - 1) / α) = 1 := by
-    have := sub_ne_zero.2 hα.out.ne'
-    have := (zero_lt_one.trans hα.out).ne'
-    field_simp
+  have hα0 : 0 < α := zero_lt_one.trans hα.out
+  have hα1 : 0 < α - 1 := sub_pos.2 hα.out
+  have hγ : 0 < (α - 1) / α := div_pos hα1 hα0
+  have hβ : 0 < α / (α - 1) := div_pos hα0 hα1
+  have hβγ : α / (α - 1) * ((α - 1) / α) = 1 := by field_simp
   set t : ℝ≥0∞ := ((N : ℝ≥0∞) + 1)⁻¹
   have ht0 : t ≠ 0 := ENNReal.inv_ne_zero.2 (by simp)
   have htop : t ≠ ⊤ := ENNReal.inv_ne_top.2 (by simp)

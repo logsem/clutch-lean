@@ -4,9 +4,9 @@ public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.ProbLang.Atomic
 import Metrology.ProbLang.Syntax.Notation
 
-@[expose] public section
-
 /-! # `OpenInv e`: the logical-atomicity predicate enabling mask-shift around evaluating `e`. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -16,6 +16,7 @@ namespace ProbLang
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
+/-- Evaluating `e` is logically atomic: `wp` may open invariants around it. -/
 def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
   ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
@@ -60,29 +61,24 @@ theorem specCoupl_atomic_bridge_none [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.
   iintro %σ₂ %ρ' %b₂ HBody
   iapply progCoupl_mono
   isplitr
+  -- Take the `progCoupl` premise first: it pins the intermediate postcondition.
   swap
   · iapply progCoupl_strengthen (S := {ρ : Cfg rT | ρ.1.isValue}) Cfg.isValue_measurableSet (h σ₂)
     iexact HBody
-  iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ ⟨%he₃val, HInner⟩
-  iintro !>
+  iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ ⟨%he₃val, HInner⟩ !>
   iapply specCoupl_bind Std.LawfulSet.subset_refl
   iframe HInner
   iintro %σ₄ %ρ'' %b₄ HBody4
   iapply fupd_specCoupl
-  irevert HBody4
-  refine BI.entails_wand (fupd_elim ?_)
-  iintro ⟨Hσ4, Hs4, Hb4, HW4⟩
-  ihave HW4 := wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %b₄ [$]
-  irevert HW4
-  refine BI.entails_wand (fupd_elim ?_)
-  iintro HSC
-  iapply fupd_intro
+  imod HBody4 with ⟨Hσ4, Hs4, Hb4, HW4⟩
+  imod wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %b₄ [$] with HSC
+  imodintro
   iapply specCoupl_mono_spatial
   iframe
   iintro %σ₅ %ρ''' %b₅ HInnerBody
   cases htv : e₃.toVal? with
   | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim
-  | some v' =>
+  | some _ =>
     imod HInnerBody with ⟨Hσ5, Hs5, Hb5, >HΦv⟩
     imodintro
     iframe
@@ -93,35 +89,27 @@ theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] {e 
   intro GF _ _ E1 E2 Φ
   iintro HF
   iapply MicrometerWpGS.wp_unfold
-  unfold wpPre
   iintro %σ₁ %e₁' %σ₁' %b₁ Hres
-  icombine HF Hres as HFR
-  irevert HFR
-  refine BI.entails_wand (fupd_frame_right.trans (fupd_elim ?_))
-  iintro ⟨HW, HresInner⟩
-  ihave HW := wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ HresInner
-  irevert HW
-  refine BI.entails_wand (fupd_elim ?_)
+  imod HF
+  imod wp_unfold_mp $$ HF %σ₁ %e₁' %σ₁' %b₁ Hres with HSC
+  imodintro
   cases htv : e.toVal? with
-  | some v => exact (specCoupl_atomic_bridge_some (v := v)).trans fupd_intro
-  | none => exact (specCoupl_atomic_bridge_none h).trans fupd_intro
+  | some v => iapply specCoupl_atomic_bridge_some (v := v) $$ HSC
+  | none => iapply specCoupl_atomic_bridge_none h $$ HSC
 
 end OpenInv
 
 theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
-    {e : Exp rT}
-    (h : OpenInv L e)
-    {E1 E2 : CoPset} {Φ : Val rT → IProp GF} :
-    iprop(|={E1, E2}=> wp L E2 e (fun v => iprop(|={E2, E1}=> Φ v))) ⊢ wp L E1 e Φ :=
+    {e : Exp rT} (h : OpenInv L e) {E1 E2 : CoPset} {Φ : Val rT → IProp GF} : iprop%
+    (|={E1, E2}=> wp L E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp L E1 e Φ :=
   h
 
 /-! ## Proof-mode support
 
-`wp_atomic` is the theorem; these make the proof mode *find* it. Without the
-`ElimModal` instance below, `imod`/`iinv` will not fire on an atomic `wp` and the
-lemma has to be applied by hand. `OpenInv` is a plain `Prop`, so it is wrapped in
-a class that the concrete redexes register into. -/
+These instances make `imod`/`iinv` find `wp_atomic`. `OpenInv` is a plain `Prop`, so the
+concrete redexes register into the class `IsOpenInv` instead. -/
 
+/-- Registers `OpenInv L e` for instance search. -/
 class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
   out : OpenInv L e
 
@@ -181,9 +169,7 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
     ispecialize Hinner $$ %x Hα
     iapply MicrometerWpGS.wp_frame_wand
     iframe Hclose
-    iapply MicrometerWpGS.wp_mono
-    case HΦ => exact fun _ => elimAcc_close
-    iexact Hinner
+    iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
 instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {Φ : Val rT → IProp GF}
@@ -200,8 +186,6 @@ instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
     iapply MicrometerWpGS.wp_fupd
     iapply MicrometerWpGS.wp_frame_wand
     iframe Hclose
-    iapply MicrometerWpGS.wp_mono
-    case HΦ => exact fun _ => elimAcc_close
-    iexact Hinner
+    iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
 end ProbLang

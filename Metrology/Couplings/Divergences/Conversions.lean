@@ -3,8 +3,7 @@ module
 public import Metrology.Couplings.Divergences.Concentrated
 public import Metrology.Couplings.LiftingHom
 
-/-! Conversions between differential privacy and its Rényi relaxations (Approximate Span
-Liftings, Fig. 4: [D/z], [R/D], [z/D], [t/D]). -/
+/-! Conversions between DP and its Rényi relaxations (Approximate Span Liftings, Fig. 4). -/
 
 @[expose] public section
 
@@ -15,7 +14,11 @@ open scoped ENNReal
 
 namespace GradedDivergence
 
-variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ ν : Measure X} {α ω : ℝ}
+variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α ω : ℝ}
+
+section
+
+variable {μ ν : Measure X}
 
 /-! ## Pure DP bounds every Rényi divergence -/
 
@@ -137,7 +140,7 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
     field_simp
     rfl
   rw [hE] at key
-  exact absurd (lt_of_mul_lt_mul_right key (by positivity)) (not_lt.2 hpδ.le)
+  exact (lt_of_mul_lt_mul_right key (by positivity)).not_gt hpδ
 
 /-- A Rényi bound of order `α` gives DP at every slack `δ > 0` ([R/D]). -/
 theorem dp_of_renyi [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} {δ : ℝ} (hα : 1 < α)
@@ -169,7 +172,7 @@ theorem bound_of_forall_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {
     (hρ : 0 ≤ ρ) (hδ : 0 < δ) (hδ₁ : δ < 1)
     (h : ∀ α, 1 < α → fDiv (· ^ α) μ ν ≤ ((exp ((α - 1) * (ξ + α * ρ)) : ℝ) : EReal)) :
     Bound (ENNReal.ofReal (exp (ξ + ρ + 2 * √(ρ * log (1 / δ))))) (ENNReal.ofReal δ) μ ν := by
-  have hL : 0 < log (1 / δ) := log_pos (by rw [one_div]; exact one_lt_inv_iff₀.2 ⟨hδ, hδ₁⟩)
+  have hL := log_pos (one_lt_one_div hδ hδ₁)
   rcases hρ.eq_or_lt with rfl | hρ
   · -- with `ρ = 0`, let the order tend to infinity
     have he : Tendsto (fun n : ℕ ↦ ξ + log (1 / δ) / ((n + 2 : ℝ) - 1)) atTop (𝓝 ξ) := by
@@ -204,7 +207,7 @@ theorem bound_of_forall_lt_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν
     (h : ∀ α, 1 < α → α < ω → fDiv (· ^ α) μ ν ≤ ((exp ((α - 1) * (α * ρ)) : ℝ) : EReal)) :
     Bound (ENNReal.ofReal (exp (ρ * min ω (1 + √(log (1 / δ) / ρ)) +
       log (1 / δ) / (min ω (1 + √(log (1 / δ) / ρ)) - 1)))) (ENNReal.ofReal δ) μ ν := by
-  have hL : 0 < log (1 / δ) := log_pos (by rw [one_div]; exact one_lt_inv_iff₀.2 ⟨hδ, hδ₁⟩)
+  have hL := log_pos (one_lt_one_div hδ hδ₁)
   set β := min ω (1 + √(log (1 / δ) / ρ))
   have hβ : 1 < β := lt_min hω (by linarith [sqrt_pos.2 (div_pos hL hρ)])
   have key {α : ℝ} (hα : 1 < α) (hαω : α < ω) :
@@ -256,7 +259,7 @@ theorem dp_of_tcdp [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} {
   rcases eq_or_ne ρ ⊤ with rfl | hρ'
   · have hβ : 0 < β := lt_min (zero_lt_one.trans hω) (by positivity)
     simpa [ENNReal.top_mul (ENNReal.ofReal_pos.2 hβ).ne'] using dp_top_left
-  have hL : 0 < log (1 / δ) := log_pos (by rw [one_div]; exact one_lt_inv_iff₀.2 ⟨hδ, hδ₁⟩)
+  have hL := log_pos (one_lt_one_div hδ hδ₁)
   have hρr : 0 < ρ.toReal := ENNReal.toReal_pos hρ.ne' hρ'
   have hβ : 1 < β := lt_min hω (by linarith [sqrt_pos.2 (div_pos hL hρr)])
   intro _
@@ -266,6 +269,8 @@ theorem dp_of_tcdp [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} {
   refine bound_of_forall_lt_fDiv_rpow_le hρr hω hδ hδ₁ fun α hα hαω ↦ ?_
   have := (renyiDivergence_iff_of_ne_top hα.le (by finiteness)).1 (renyi_of_tcdp hα hαω h)
   rwa [ENNReal.toReal_mul, ENNReal.toReal_ofReal (by linarith)] at this
+
+end
 
 /-! ## Conversions of codensity liftings -/
 
@@ -292,16 +297,15 @@ theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
   · exact (Prod.ext htop rfl : φ ⊤ = (⊤, (φ ⊤).2)) ▸ codensity_dp_top_left
   rcases eq_or_ne (φ b).1 ⊤ with hε | hε
   · exact (Prod.ext hε rfl : φ b = (⊤, (φ b).2)) ▸ codensity_dp_top_left
-  refine (codensity_dp_rel_iff (ε := (φ b).1) (δ := (φ b).2) hε).2
+  refine (codensity_dp_rel_iff hε).2
     fun f g hf hg hf1 hg1 hfg ↦ ?_
   have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
   have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
   have hD := codensity_rel_iff.1 h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
     (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg) fun x y hS ↦ by
-      simpa [Kernel.mass_apply] using zero_smul_dirac_of_le (D := D) (hfg x y hS) (hg1 y)
+      simpa [Kernel.mass_apply] using zero_smul_dirac_of_le (hfg x y hS) (hg1 y)
   rw [add_zero] at hD
-  have := dp_smul_dirac_iff.1 (by simpa only [Kernel.mass_comp] using himp b hD)
-  exact this (lt_top_iff_ne_top.2 hε)
+  exact dp_smul_dirac_iff.1 (by simpa only [Kernel.mass_comp] using himp b hD) hε.lt_top
 
 end GradedDivergence
 

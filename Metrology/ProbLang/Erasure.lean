@@ -176,13 +176,7 @@ theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
     obtain ⟨N, bs⟩ := t
     simp only [tapePresample, hsome]
     rw [Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
-    calc ∫⁻ n, (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) : Measure (State rT))
-              Set.univ
-            ∂(tapeIndexUniform N)
-        = ∫⁻ _, 1 ∂(tapeIndexUniform N) := by
-          simp_rw [Measure.dirac_apply' _ MeasurableSet.univ, Set.indicator_univ, Pi.one_apply]
-      _ = (tapeIndexUniform N) Set.univ := by rw [lintegral_one]
-      _ ≤ 1 := tapeIndexUniform_univ_le_one
+    simpa using tapeIndexUniform_univ_le_one
 
 instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
     IsSubProbabilityMeasure (tapeIndexUniform N) :=
@@ -1535,8 +1529,8 @@ theorem limExec_tape_presample_expr_eq
 
 /-! ## Lifting wrappers
 
-Micrometer-facing: lift a lifting on `ErasableExpr` state distributions to one on the
-expression projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
+Micrometer-facing: transfer a lifting of `ErasableExpr` state distributions to the expression
+projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
 
 section Lifting
 
@@ -1604,7 +1598,7 @@ theorem tapePresample_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [
   rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
   refine (tapeIndexUniform_codensity_bij hN f hdom hbij).map ?_ Measurable.of_discrete
     Measurable.of_discrete
-  rintro a b ⟨n, h0, hn, rfl, rfl⟩
+  rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
 
 /-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`
@@ -1620,8 +1614,7 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
         p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
         p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
       (tapePresample σ α) (tapePresample σ' α') :=
-  (tapePresample_codensity_bij (L := GradedDivergence.tv.codensity) hσ hσ' hN f hdom
-    hbij).addCoupl
+  (tapePresample_codensity_bij (L := GradedDivergence.tv.codensity) hσ hσ' hN f hdom hbij).addCoupl
 
 /-- Running to the limit from a measure of states first runs `m` steps. -/
 theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
@@ -1631,7 +1624,7 @@ theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) 
   rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
   exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e, σ⟩)
 
-/-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
+/-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's budget depends
 on the RHS sample. -/
 theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrderedAddMonoid B]
     [CanonicallyOrderedAdd B] [OrderTop B] {s : ENNReal →+o B} [L.IsLawful] [L.HasBind]
@@ -1659,8 +1652,8 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  exact IsExpectationAdditive.bind_adv (f := fun σ => asExpr (execN n ⟨e₁, σ⟩)) (g := limExecV)
-    hCoupl hCont ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
+  exact IsExpectationAdditive.bind_adv hCoupl hCont
+    ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
     ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable) hE₂meas
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
@@ -1758,7 +1751,7 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  exact HasBind.bind_fun (f := fun ρ => asExpr (execN n ρ)) (g := limExecV) hExp hCont
+  exact HasBind.bind_fun hExp hCont
     ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
     ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
 
@@ -1778,7 +1771,7 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSin
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  exact HasBind.bind_fun (f := fun σ => asExpr (execN n ⟨e₁, σ⟩)) (g := limExecV) hCoupl hCont
+  exact HasBind.bind_fun hCoupl hCont
     ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
     ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
 

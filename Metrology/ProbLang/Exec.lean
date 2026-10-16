@@ -285,8 +285,8 @@ theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 
 instance pexecN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (pexecN n ρ) := ⟨pexecN_univ_le_one n ρ⟩
 
-/-- Running a fixed expression `n` steps from a sub-probability measure of states keeps the mass
-at most one. -/
+/-- Running an expression for `n` steps from a sub-probability measure of states gives a
+sub-probability measure. -/
 instance isSubProbabilityMeasure_bind_pexecN (μ : Measure (State rT)) [IsSubProbabilityMeasure μ]
     (e : Exp rT) (n : Nat) : IsSubProbabilityMeasure (μ.bind fun σ ↦ pexecN n ⟨e, σ⟩) :=
   have hk : Measurable fun σ : State rT ↦ pexecN n ⟨e, σ⟩ :=

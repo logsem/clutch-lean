@@ -191,7 +191,7 @@ theorem Rel.map [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     {g : Y → Y'} (h : L.Rel b S μ ν) (hS : ∀ x y, S x y → S' (f x) (g y))
     (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
     L.Rel b S' (μ.map f) (ν.map g) :=
-  IsLawful.map hf hg (IsLawful.mono h le_rfl (relCost_anti (S' := fun x y ↦ S' (f x) (g y)) hS))
+  IsLawful.map hf hg (IsLawful.mono h le_rfl (relCost_anti hS))
 
 theorem Rel.map_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X' → Y → Prop} {f : X → X'}
@@ -210,7 +210,7 @@ theorem Rel.strength [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S₀ : X' → Y' → Prop} {x : X'}
     {y : Y'} (h : L.Rel b S μ ν) (hxy : S₀ x y) :
     L.Rel b (fun p q ↦ S₀ p.1 q.1 ∧ S p.2 q.2) (μ.map (Prod.mk x)) (ν.map (Prod.mk y)) :=
-  h.map fun _ _ h ↦ ⟨hxy, h⟩
+  h.map fun _ _ hS ↦ ⟨hxy, hS⟩
 
 /-- Probability measures lift the full relation at budget `0`, through their product. -/
 theorem rel_true [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
@@ -301,10 +301,10 @@ theorem HasBind.bind_rel [AddZeroClass B] [Preorder B] [Top B] [CanonicallyOrder
     {f : X → Measure X'} {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
     [∀ y, IsSubProbabilityMeasure (g y)] (hk : ∀ x y, S x y → L c R' (f x) (g y))
     (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
-    L (b + c) R' (μ.bind f) (ν.bind g) :=
-  HasBind.bind_fun (IsLawful.frame hc h) (fun x y hxy ↦ by
-    obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
-    simpa [hS] using hk x y hS) hf hg
+    L (b + c) R' (μ.bind f) (ν.bind g) := by
+  refine HasBind.bind_fun (IsLawful.frame hc h) (fun x y hxy ↦ ?_) hf hg
+  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
+  simpa [hS] using hk x y hS
 
 /-- Binding with continuations whose budget `s (E y)` depends on the right sample pays only the
 expectation of `E`. -/
@@ -315,10 +315,10 @@ theorem IsExpectationAdditive.bind_adv [AddZeroClass B] [Preorder B] [Top B]
     [∀ x, IsSubProbabilityMeasure (f x)] [∀ y, IsSubProbabilityMeasure (g y)] {E : Y → ℝ≥0∞}
     (hk : ∀ x y, S x y → L (s (E y)) R' (f x) (g y)) (hf : Measurable f := by fun_prop)
     (hg : Measurable g := by fun_prop) (hE : Measurable E := by fun_prop) :
-    L (b + s (∫⁻ y, E y ∂ν)) R' (μ.bind f) (ν.bind g) :=
-  HasBind.bind_fun (IsExpectationAdditive.add_right hE h) (fun x y hxy ↦ by
-    obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
-    simpa [hS] using hk x y hS) hf hg
+    L (b + s (∫⁻ y, E y ∂ν)) R' (μ.bind f) (ν.bind g) := by
+  refine HasBind.bind_fun (IsExpectationAdditive.add_right hE h) (fun x y hxy ↦ ?_) hf hg
+  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
+  simpa [hS] using hk x y hS
 
 /-- An exact relational lifting bounds the mass of an event by that of its image. -/
 theorem IsMassDetecting.measure_le [AddZeroClass B] [Preorder B] [Top B] {s : ℝ≥0∞ →+o B}
@@ -341,8 +341,7 @@ theorem not_absorbing_of_refutes [Zero B] [Top B]
 theorem IsTopAbsorbing.absorbing_top [Top B] [L.IsTopAbsorbing] : L.Absorbing ⊤ :=
   fun R μ ν _ _ ↦ IsTopAbsorbing.top R μ ν
 
-/-- A lifting holds once it holds at finite budgets; needs no finiteness: at `⊤` everything is
-related. -/
+/-- A lifting holds once it holds at finite budgets, since everything is related at `⊤`. -/
 theorem IsTopAbsorbing.of_lt_top [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {R : X → Y → B}
     (h : b < ⊤ → L b R μ ν) : L b R μ ν := by
@@ -350,14 +349,14 @@ theorem IsTopAbsorbing.of_lt_top [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
   · exact Absorbing.mono IsTopAbsorbing.absorbing_top hb R μ ν
   · exact h (le_top.lt_of_not_ge hb)
 
-/-- Framing by any `c`; needs no finiteness: at `⊤` everything is related. -/
+/-- Framing by any `c`, finite or not. -/
 theorem IsTopAbsorbing.frame [AddCommMagma B] [Preorder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L b R μ ν) :
     L (b + c) (fun x y ↦ R x y + c) μ ν :=
   IsTopAbsorbing.of_lt_top fun hbc ↦ IsLawful.frame (le_add_self.trans_lt hbc) h
 
-/-- `Rel.frame_le` for any `c`; needs no finiteness: at `⊤` everything is related. -/
+/-- `Rel.frame_le` for any `c`, finite or not. -/
 theorem Rel.frame_le_of_isTopAbsorbing [AddCommMonoid B] [Preorder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L.Rel b S μ ν)

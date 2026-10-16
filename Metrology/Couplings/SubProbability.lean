@@ -20,6 +20,8 @@ variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 class IsSubProbabilityMeasure (μ : Measure X) : Prop where
   measure_univ_le_one : μ univ ≤ 1
 
+open IsSubProbabilityMeasure
+
 theorem IsSubProbabilityMeasure.measure_le_one {μ : Measure X} [IsSubProbabilityMeasure μ]
     (s : Set X) : μ s ≤ 1 :=
   (measure_mono (subset_univ s)).trans measure_univ_le_one
@@ -36,6 +38,11 @@ theorem IsSubProbabilityMeasure.lintegral_add_const_le {μ : Measure X} [IsSubPr
   gcongr
   exact mul_le_of_le_one_right' measure_univ_le_one
 
+/-- A function below `1` integrates to at most `1`. -/
+theorem IsSubProbabilityMeasure.lintegral_le_one {μ : Measure X} [IsSubProbabilityMeasure μ]
+    {f : X → ℝ≥0∞} (hf : ∀ x, f x ≤ 1) : ∫⁻ x, f x ∂μ ≤ 1 :=
+  (lintegral_mono hf).trans (by simpa using measure_univ_le_one (μ := μ))
+
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := measure_univ_le_one.trans_lt one_lt_top
@@ -49,7 +56,7 @@ instance isSubProbabilityMeasure_map (μ : Measure X) [IsSubProbabilityMeasure �
   measure_univ_le_one := by
     by_cases hf : AEMeasurable f μ
     · rw [Measure.map_apply_of_aemeasurable hf .univ, preimage_univ]
-      exact IsSubProbabilityMeasure.measure_univ_le_one
+      exact measure_univ_le_one
     by_cases hμ : μ = 0
     · simp [hμ]
     · simp [Measure.map_of_not_aemeasurable_of_ne_zero hf hμ]
@@ -58,26 +65,22 @@ instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubPr
     [IsSubProbabilityMeasure ν] : IsSubProbabilityMeasure (μ.prod ν) where
   measure_univ_le_one := by
     rw [← univ_prod_univ, Measure.prod_prod]
-    exact mul_le_one' IsSubProbabilityMeasure.measure_univ_le_one
-      IsSubProbabilityMeasure.measure_univ_le_one
+    exact mul_le_one' measure_univ_le_one measure_univ_le_one
 
 /-- Not an instance: `Measure.bind` is junk for non-measurable kernels. -/
 theorem isSubProbabilityMeasure_bind (μ : Measure X) (f : X → Measure Y)
     [IsSubProbabilityMeasure μ] [∀ x, IsSubProbabilityMeasure (f x)]
     (hf : AEMeasurable f μ := by fun_prop) : IsSubProbabilityMeasure (μ.bind f) :=
-  ⟨calc μ.bind f univ = ∫⁻ x, f x univ ∂μ := Measure.bind_apply .univ hf
-      _ ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun x ↦ IsSubProbabilityMeasure.measure_univ_le_one
-      _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)⟩
+  ⟨(Measure.bind_apply .univ hf).trans_le (lintegral_le_one fun _ ↦ measure_univ_le_one)⟩
 
 /-- A bind of mass `1` comes from almost surely total continuations. -/
 theorem ae_measure_univ_eq_one_of_bind {μ : Measure X} [IsSubProbabilityMeasure μ]
     {κ : X → Measure Y} [∀ x, IsSubProbabilityMeasure (κ x)] (hκ : Measurable κ)
     (h : μ.bind κ univ = 1) : ∀ᵐ x ∂μ, κ x univ = 1 := by
   rw [Measure.bind_apply .univ hκ.aemeasurable] at h
-  refine ae_eq_of_ae_le_of_lintegral_le
-    (.of_forall fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one) (h ▸ one_ne_top)
-    aemeasurable_const ?_
-  simpa [h] using IsSubProbabilityMeasure.measure_univ_le_one (μ := μ)
+  refine ae_eq_of_ae_le_of_lintegral_le (.of_forall fun _ ↦ measure_univ_le_one)
+    (h ▸ one_ne_top) aemeasurable_const ?_
+  simpa [h] using measure_univ_le_one (μ := μ)
 
 open Classical in
 /-- `μ` if it is finite, and `0` otherwise. -/
@@ -103,7 +106,7 @@ end MeasureTheory
 
 namespace ProbabilityTheory
 
-open MeasureTheory
+open IsSubProbabilityMeasure
 
 variable {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
 
@@ -119,7 +122,7 @@ instance (priority := 100) IsZeroOrMarkovKernel.toIsSubMarkovKernel (κ : Kernel
 
 instance (priority := 100) IsSubMarkovKernel.toIsFiniteKernel (κ : Kernel X Y)
     [IsSubMarkovKernel κ] : IsFiniteKernel κ where
-  exists_univ_le := ⟨1, ENNReal.one_lt_top, fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one⟩
+  exists_univ_le := ⟨1, ENNReal.one_lt_top, fun _ ↦ measure_univ_le_one⟩
 
 instance isSubProbabilityMeasure_comp (μ : Measure X) [IsSubProbabilityMeasure μ]
     (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsSubProbabilityMeasure (κ ∘ₘ μ) :=
@@ -148,18 +151,13 @@ instance isSubMarkovKernel_sectR (k : Kernel (X × Y) Z) [IsSubMarkovKernel k] (
 
 instance isSubMarkovKernel_prod (κ : Kernel X Y) [IsSubMarkovKernel κ] (η : Kernel X Z)
     [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ×ₖ η) where
-  isSubProbabilityMeasure x := ⟨by
-    rw [Kernel.prod_apply, ← Set.univ_prod_univ, Measure.prod_prod]
-    exact mul_le_one' (IsSubProbabilityMeasure.measure_univ_le_one)
-      IsSubProbabilityMeasure.measure_univ_le_one⟩
+  isSubProbabilityMeasure x := by rw [Kernel.prod_apply]; infer_instance
 
 instance isSubMarkovKernel_compProd (κ : Kernel X Y) [IsSubMarkovKernel κ]
     (η : Kernel (X × Y) Z) [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ⊗ₖ η) where
   isSubProbabilityMeasure x := ⟨by
     rw [Kernel.compProd_apply .univ]
-    calc ∫⁻ y, η (x, y) Set.univ ∂κ x
-        ≤ ∫⁻ _, 1 ∂κ x := lintegral_mono fun _ ↦ IsSubProbabilityMeasure.measure_univ_le_one
-      _ ≤ 1 := by simpa using IsSubProbabilityMeasure.measure_univ_le_one⟩
+    exact lintegral_le_one fun _ ↦ measure_univ_le_one⟩
 
 /-- Gluing two sub-Markov kernels along a measurable set gives a sub-Markov kernel. -/
 instance isSubMarkovKernel_piecewise {s : Set X} [DecidablePred (· ∈ s)] (hs : MeasurableSet s)

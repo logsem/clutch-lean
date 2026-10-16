@@ -17,7 +17,7 @@ import Mathlib.Algebra.Regular.Prod
 Port of clutch-dp's `examples/randomized_response.v`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
-open GradedDivergence (dp codensity expBudget)
+open GradedDivergence (dp codensity expBudget expBudget_of_ne_top codensity_dp_of_fiber dp_iff)
 open scoped ENNReal NNReal
 
 namespace ProbLang
@@ -42,8 +42,7 @@ theorem unifInt_four_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) :
 other. -/
 theorem rrOut_zero_three (b c : Bool) :
     rrOut b 0 = c ∧ rrOut b 3 ≠ c ∨ rrOut b 3 = c ∧ rrOut b 0 ≠ c := by
-  revert b c
-  decide
+  decide +revert
 
 /-- One fiber of the reported bit misses a draw, so it has mass at most `3/4`. -/
 theorem rrOut_fiber_le (b c : Bool) : unifInt 4 (by norm_num) (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
@@ -69,7 +68,7 @@ theorem one_sub_quarter_le : (1 - 4⁻¹ : ℝ≥0∞) ≤ 3 * 4⁻¹ := by
     ENNReal.mul_inv_cancel (by norm_num) (by norm_num)]
 
 theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
-  rw [GradedDivergence.expBudget_of_ne_top ENNReal.ofReal_ne_top,
+  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
     ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
   norm_num
 
@@ -83,7 +82,7 @@ theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 theorem rr_coupling (b b' : Bool) :
     (codensity dp).Rel budget (fun r r' ↦ rrOut b r = rrOut b' r')
       (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)) := by
-  refine GradedDivergence.codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦ ?_
+  refine codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦ ?_
   rw [expBudget_log_three]
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := one_sub_quarter_le
@@ -207,15 +206,12 @@ theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ ×
     (b b' : Bool) (σ σ' : State rT) :
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) := by
   refine approximates_div (GF := GF) (L := codensity dp)
-    (fun _ _ ↦ lrel_bool) _ _ σ σ' budget ?_ ?_
-  · intro _ _ v v'
-    iunfold lrel_bool
-    iintro ⟨%c, %⟨rfl, rfl⟩⟩
-    ipureintro
-    rfl
-  · intro _ _
-    iintro Hb
-    iapply rr_refines b b' $$ Hb
+    (fun _ _ ↦ lrel_bool) _ _ σ σ' budget ?_ fun _ _ ↦ rr_refines b b'
+  intro _ _ v v'
+  iunfold lrel_bool
+  iintro ⟨%c, %⟨rfl, rfl⟩⟩
+  ipureintro
+  rfl
 
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
 (clutch-dp's `randomized_response.v`). -/
@@ -226,7 +222,7 @@ theorem rr_dp (b b' : Bool) (σ σ' : State rT) :
 /-- Every event is at most three times as likely under one private bit as under the other. -/
 theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : MeasurableSet S) :
     limExecV ⟨rr b, σ⟩ S ≤ 3 * limExecV ⟨rr b', σ'⟩ S := by
-  have h := (GradedDivergence.dp_iff ENNReal.ofReal_ne_top).1 (rr_dp b b' σ σ') S hS
+  have h := (dp_iff ENNReal.ofReal_ne_top).1 (rr_dp b b' σ σ') S hS
   rwa [expBudget_log_three, add_zero] at h
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/

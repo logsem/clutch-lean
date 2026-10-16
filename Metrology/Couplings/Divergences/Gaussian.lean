@@ -7,8 +7,7 @@ public import Mathlib.Analysis.Real.Pi.Bounds
 public import Mathlib.Analysis.Complex.ExponentialBounds
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! The Gaussian mechanism is differentially private (Approximate Span Liftings, Fig. 2, [DP-G];
-Sato 2016, Lemma A.11). -/
+/-! The Gaussian mechanism is differentially private (Approximate Span Liftings, Fig. 2). -/
 
 @[expose] public section
 
@@ -85,15 +84,18 @@ theorem sqrt_exp_one_div_two_pi_le : √(exp 1 / (2 * π)) ≤ 0.66 := by
   rw [sqrt_le_left (by norm_num), div_le_iff₀ (by positivity)]
   nlinarith [exp_one_lt_d9, pi_gt_d2]
 
+theorem one_lt_sub_one_div_two_mul {c : ℝ} (hc : (1 + √3) / 2 < c) : 1 < c - 1 / (2 * c) := by
+  have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
+  have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)
+  rw [lt_sub_iff_add_lt, ← lt_sub_iff_add_lt', div_lt_iff₀ (by positivity)]
+  nlinarith [sqrt_nonneg 3]
+
 /-- The Gaussian tail value `exp (-h²/2) / (√(2π) h)` is at most `δ` once
 `h ≥ c - 1 / (2c)`, `c > (1 + √3) / 2` and `c² ≥ 2 log (0.66 / δ)`. -/
 theorem gaussian_tail_le {h c δ : ℝ} (hh : c - 1 / (2 * c) ≤ h) (hc : (1 + √3) / 2 < c)
     (hδ : 0 < δ) (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2) : exp (-h ^ 2 / 2) / (√(2 * π) * h) ≤ δ := by
-  have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)
   have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
-  have hm : 1 < c - 1 / (2 * c) := by
-    rw [lt_sub_iff_add_lt, ← lt_sub_iff_add_lt', div_lt_iff₀ (by positivity)]
-    nlinarith [sqrt_nonneg 3]
+  have hm := one_lt_sub_one_div_two_mul hc
   have h1 : 1 < h := hm.trans_le hh
   have hsq : c ^ 2 - 1 ≤ h ^ 2 := by
     have : c ^ 2 - 1 ≤ (c - 1 / (2 * c)) ^ 2 := by
@@ -121,18 +123,18 @@ end Real
 
 namespace GradedDivergence
 
-/-- The Gaussian mechanism with nearby means is `(ε, δ)`-DP, case `a' ≤ a` ([DP-G]). -/
+/-- The Gaussian mechanism with nearby means is `(ε, δ)`-DP, case `a' ≤ a` ([DP-G];
+Sato 2016, Lemma A.11). -/
 theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
     (hε₁ : ε ≤ 1) (hr : 0 < r) (hδ : 0 < δ) (hc : (1 + √3) / 2 < c)
     (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2) (hcσ : c * r / ε ≤ σ) (haa : a' ≤ a) (har : a - a' ≤ r) :
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
-  have hσ : 0 < σ := NNReal.coe_pos.1
-    ((div_pos (mul_pos ((by positivity : 0 < (1 + √3) / 2).trans hc) hr) hε).trans_le hcσ)
-  have hσ' : (0 : ℝ) < σ := hσ
+  have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
+  have hσ' : (0 : ℝ) < σ := (div_pos (mul_pos hc0 hr) hε).trans_le hcσ
+  have hσ : 0 < σ := NNReal.coe_pos.1 hσ'
   have hv : σ ^ 2 ≠ 0 := pow_ne_zero 2 hσ.ne'
   have hv' : (0 : ℝ) < ((σ ^ 2 : ℝ≥0) : ℝ) := by push_cast; positivity
   set H := (a + a') / 2 + ((σ ^ 2 : ℝ≥0) : ℝ) * ε / r
-  have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
   -- the tail point `(H - a) / σ` is at least `c - 1 / (2c)`
   have hc' : c ≤ σ * ε / r := by
     rw [le_div_iff₀ hr]
@@ -154,12 +156,8 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
     rw [hval]
     linarith
   have hHa : a < H := by
-    have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)
-    have : 0 < c - 1 / (2 * c) := by
-      rw [sub_pos, div_lt_iff₀ (by positivity)]
-      nlinarith [sqrt_nonneg 3]
-    have := this.trans_le hh
-    rw [div_pos_iff_of_pos_right hσ'] at this
+    have := (one_lt_sub_one_div_two_mul hc).trans_le hh
+    rw [one_lt_div hσ'] at this
     linarith
   -- the tail `(H, ∞)` has mass at most `δ`
   have htail : gaussianReal a (σ ^ 2) (Ioi H) ≤ ENNReal.ofReal δ := by

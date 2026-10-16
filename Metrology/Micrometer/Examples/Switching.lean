@@ -28,22 +28,35 @@ noncomputable def loopErr (N : Int) (c q : Nat) : ENNReal :=
 
 theorem loopErr_mono (N : Int) (c : Nat) {q q' : Nat} (h : q ≤ q') :
     loopErr N c q ≤ loopErr N c q' :=
-  ENNReal.div_le_div_right
-    (Finset.sum_le_sum_of_subset fun _x hx =>
-      Finset.mem_range.mpr (lt_of_lt_of_le (Finset.mem_range.mp hx) h)) _
+  ENNReal.div_le_div_right (Finset.sum_le_sum_of_subset (Finset.range_mono h)) _
 
+/-- The first round costs `c / N` and the remaining rounds start from `c + 1` entries. -/
 theorem loopErr_succ (N : Int) (c q : Nat) :
     loopErr N c (q + 1) = (c : ENNReal) / (N.toNat : ENNReal) + loopErr N (c + 1) q := by
-  unfold loopErr
-  rw [Finset.sum_range_succ', show (∑ i ∈ Finset.range q, ((c + (i + 1) : Nat) : ENNReal)) =
-      ∑ i ∈ Finset.range q, (((c + 1) + i : Nat) : ENNReal) from
-    Finset.sum_congr rfl fun i _ => by push_cast; ring, ENNReal.add_div, add_comm]
-  norm_num
+  simp only [loopErr, Finset.sum_range_succ', ← ENNReal.add_div]
+  rw [add_comm]
+  congr 2
+  exact Finset.sum_congr rfl fun i _ => by rw [← add_assoc, add_right_comm]
+
+/-- The loop error is at most the birthday bound `q (q - 1) / (2 N)`. -/
+theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
+    loopErr N 0 q ≤ ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
+  simp only [loopErr, Nat.zero_add]
+  rw [← Nat.cast_sum, Finset.sum_range_id]
+  calc ((q * (q - 1) / 2 : ℕ) : ENNReal) / (N.toNat : ENNReal)
+      ≤ (((q * (q - 1) : ℕ) : ENNReal) / 2) / (N.toNat : ENNReal) := by
+        gcongr
+        rw [ENNReal.le_div_iff_mul_le (Or.inl (by norm_num)) (Or.inl (by norm_num))]
+        exact_mod_cast Nat.div_mul_le_self _ 2
+    _ = ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
+        rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
+          ENNReal.mul_inv (Or.inl (by norm_num)) (Or.inl (by norm_num)), mul_assoc]
 
 section Games
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
+/-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`. -/
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
@@ -94,8 +107,8 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       tp_bind (pl% !#(.loc resS))
       imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
       tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store (hv := Val.isVal_ofVal (assocVal ((n, y) :: acc)))
-        (hnew := Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
+        with ⟨Hj, HresS⟩
       tp_pure
       tp_pure
       wp_pures
@@ -104,17 +117,16 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iframe HresL
       iintro HresL
       wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store (v' := assocVal acc) (v := assocVal ((n, y) :: acc))
+      iapply wp_store
       iframe HresL
       iintro HresL
       wp_pure 1
       wp_pure 1
-      rw [show ((q + 1 : Nat) : Int) - 1 = ((q : Nat) : Int) by omega]
+      rw [Nat.cast_succ, add_sub_cancel_right]
       tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q))
       wp_show (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
-      iframe Hj Herr Hl Hm Hfv HresL HresS
-      iexact Hcnt
+      iframe
     | none =>
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
@@ -127,8 +139,8 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       tp_bind (pl% !#(.loc resS))
       imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
       tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store (hv := Val.isVal_ofVal (assocVal ((n, y) :: acc)))
-        (hnew := Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
+        with ⟨Hj, HresS⟩
       tp_pure
       tp_pure
       wp_pures
@@ -137,12 +149,12 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iframe HresL
       iintro HresL
       wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store (v' := assocVal acc) (v := assocVal ((n, y) :: acc))
+      iapply wp_store
       iframe HresL
       iintro HresL
       wp_pure 1
       wp_pure 1
-      rw [show ((q + 1 : Nat) : Int) - 1 = ((q : Nat) : Int) by omega]
+      rw [Nat.cast_succ, add_sub_cancel_right]
       tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q))
       wp_show (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
       iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
@@ -150,16 +162,16 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
         (fun k hk => (List.mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
         (List.nodup_cons.mpr ⟨alookup_eq_none_iff.mp hlk, hnodup⟩)
       simp only [List.length_cons]
-      iframe Hj Herr' Hl Hm Hfv HresL HresS
-      iexact Hcnt
+      iframe
 
+/-- The program `wPRF` refines the spec `wPRP` up to the loop error. -/
 theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (wPRP N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
     WP[codensity tv] (wPRF N Q) @ E {{ Φ }} := by
-  rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
+  rw [← Int.toNat_of_nonneg hQ]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := BudgetCredit.weaken hε $$ Herr
   wp_bind (randomFunction N)
@@ -198,25 +210,7 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   iintro HresL
   iapply Hcnt $$ %(assocVal acc) Hj
 
-/-! ## Adequacy: the birthday bound -/
-
-theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
-    loopErr N 0 q ≤ ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
-  unfold loopErr
-  simp only [Nat.zero_add]
-  rw [show (∑ i ∈ Finset.range q, ((i : Nat) : ENNReal)) =
-      ((∑ i ∈ Finset.range q, i : Nat) : ENNReal) from (Nat.cast_sum _ _).symm,
-    Finset.sum_range_id]
-  calc ((q * (q - 1) / 2 : ℕ) : ENNReal) / (N.toNat : ENNReal)
-      ≤ (((q * (q - 1) : ℕ) : ENNReal) / 2) / (N.toNat : ENNReal) := by
-        gcongr
-        rw [ENNReal.le_div_iff_mul_le (Or.inl (by norm_num)) (Or.inl (by norm_num)),
-          show ((2 : ENNReal)) = ((2 : ℕ) : ENNReal) from rfl, ← Nat.cast_mul]
-        exact_mod_cast Nat.div_mul_le_self _ 2
-    _ = ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
-        rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
-          ENNReal.mul_inv (Or.inl (by norm_num)) (Or.inl (by norm_num)), mul_assoc]
-
+/-- `wp_wLoop` with the random permutation on the program side. -/
 theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
@@ -267,8 +261,8 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       tp_bind (pl% !#(.loc resS))
       imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
       tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store (hv := Val.isVal_ofVal (assocVal ((n, y) :: acc)))
-        (hnew := Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
+        with ⟨Hj, HresS⟩
       tp_pure
       tp_pure
       wp_pures
@@ -277,17 +271,16 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iframe HresL
       iintro HresL
       wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store (v' := assocVal acc) (v := assocVal ((n, y) :: acc))
+      iapply wp_store
       iframe HresL
       iintro HresL
       wp_pure 1
       wp_pure 1
-      rw [show ((q + 1 : Nat) : Int) - 1 = ((q : Nat) : Int) by omega]
+      rw [Nat.cast_succ, add_sub_cancel_right]
       tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q))
       wp_show (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
-      iframe Hj Herr Hm Hfv Hl HresL HresS
-      iexact Hcnt
+      iframe
     | none =>
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
@@ -300,8 +293,8 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       tp_bind (pl% !#(.loc resS))
       imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
       tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store (hv := Val.isVal_ofVal (assocVal ((n, y) :: acc)))
-        (hnew := Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
+        with ⟨Hj, HresS⟩
       tp_pure
       tp_pure
       wp_pures
@@ -310,12 +303,12 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iframe HresL
       iintro HresL
       wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store (v' := assocVal acc) (v := assocVal ((n, y) :: acc))
+      iapply wp_store
       iframe HresL
       iintro HresL
       wp_pure 1
       wp_pure 1
-      rw [show ((q + 1 : Nat) : Int) - 1 = ((q : Nat) : Int) by omega]
+      rw [Nat.cast_succ, add_sub_cancel_right]
       tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q))
       wp_show (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
       iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
@@ -323,16 +316,16 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
         (fun k hk => (List.mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
         (List.nodup_cons.mpr ⟨alookup_eq_none_iff.mp hlk, hnodup⟩)
       simp only [List.length_cons]
-      iframe Hj Herr' Hm Hfv Hl HresL HresS
-      iexact Hcnt
+      iframe
 
+/-- The program `wPRP` refines the spec `wPRF` up to the loop error. -/
 theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (wPRF N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
     WP[codensity tv] (wPRP N Q) @ E {{ Φ }} := by
-  rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
+  rw [← Int.toNat_of_nonneg hQ]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := BudgetCredit.weaken hε $$ Herr
   wp_bind (randomPermutation N)
@@ -375,19 +368,17 @@ end Games
 
 section AdequacyCor
 
-set_option linter.style.haveILetI false in
+/-- Adequacy of `wp_wPRF_wPRP`: the two games are `Rel`-close up to the birthday bound. -/
 theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
-  intro IGS IBC ε' hε'
-  letI := IGS
-  letI := IBC
+  intro _ _ ε' hε'
   iintro Hj Herr
   iapply wp_wPRF_wPRP ([] : Ectx rT) N Q hN hQ ε'
-    (le_of_lt (lt_of_le_of_lt (loopErr_zero_le_birthday N Q.toNat) hε'))
+    ((loopErr_zero_le_birthday N Q.toNat).trans hε'.le)
   rw [← spec_eq_fill_nil (wPRP N Q)]
   iframe Hj Herr
   iintro %v Hj
@@ -397,6 +388,7 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   ipureintro
   rfl
 
+/-- `wPRF_wPRP_switching` at the canonical functors. -/
 theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
@@ -404,19 +396,17 @@ theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
   wPRF_wPRP_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
-set_option linter.style.haveILetI false in
+/-- Adequacy of `wp_wPRP_wPRF`: the two games are `Rel`-close up to the birthday bound. -/
 theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
-  intro IGS IBC ε' hε'
-  letI := IGS
-  letI := IBC
+  intro _ _ ε' hε'
   iintro Hj Herr
   iapply wp_wPRP_wPRF ([] : Ectx rT) N Q hN hQ ε'
-    (le_of_lt (lt_of_le_of_lt (loopErr_zero_le_birthday N Q.toNat) hε'))
+    ((loopErr_zero_le_birthday N Q.toNat).trans hε'.le)
   rw [← spec_eq_fill_nil (wPRF N Q)]
   iframe Hj Herr
   iintro %v Hj
@@ -426,6 +416,7 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   ipureintro
   rfl
 
+/-- `wPRP_wPRF_switching` at the canonical functors. -/
 theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
@@ -433,6 +424,8 @@ theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
   wPRP_wPRF_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
+/-- The weak PRF/PRP switching lemma: any event's probability changes by at most the
+birthday bound. -/
 theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT)
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S

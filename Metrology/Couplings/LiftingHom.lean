@@ -120,11 +120,10 @@ theorem Rel.of_comap [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrde
 theorem isLawful_comap [Add B] [Preorder B] [Top B] [Add B'] [Preorder B'] [Top B']
     [L.IsLawful] (hφ : Monotone φ) (hadd : ∀ a b, φ (a + b) = φ a + φ b)
     (hlt : ∀ a, a < ⊤ → φ a < ⊤) : (L.comap φ).IsLawful where
-  pure {_ _} _ _ R _ _ h := IsLawful.pure (L := L) (R := fun x y ↦ φ (R x y)) (hlt _ h)
-  zero b _ := IsLawful.zero (L := L) (φ b) _
+  pure {_ _} _ _ R _ _ h := IsLawful.pure (R := fun x y ↦ φ (R x y)) (hlt _ h)
+  zero b _ := IsLawful.zero (φ b) _
   mono h hb hR := IsLawful.mono (L := L) h (hφ hb) fun x y ↦ hφ (hR x y)
-  frame hc h := by
-    simpa only [comap, hadd] using IsLawful.frame (L := L) (hlt _ hc) h
+  frame hc h := by simpa only [comap, hadd] using IsLawful.frame (hlt _ hc) h
   map hf hg h := IsLawful.map (L := L) hf hg h
 
 /-- A monotone additive budget map regrades a lawful lifting whose top budget relates every pair
@@ -134,15 +133,15 @@ theorem isLawful_comap_of_top [AddCommMagma B] [PartialOrder B] [OrderTop B]
     (hφ : Monotone φ) (hadd : ∀ a b, φ (a + b) = φ a + φ b) : (L.comap φ).IsLawful where
   pure {_ _} _ _ R x y _ := by
     rcases (le_top : φ (R x y) ≤ ⊤).lt_or_eq with hlt | htop
-    · exact IsLawful.pure (L := L) (R := fun x y ↦ φ (R x y)) hlt
-    · exact (comap_def (L := L)).2 (htop ▸ IsTopAbsorbing.top _ _ _)
-  zero b _ := IsLawful.zero (L := L) (φ b) _
+    · exact IsLawful.pure (R := fun x y ↦ φ (R x y)) hlt
+    · exact comap_def.2 (htop ▸ IsTopAbsorbing.top _ _ _)
+  zero b _ := IsLawful.zero (φ b) _
   mono h hb hR := IsLawful.mono (L := L) h (hφ hb) fun x y ↦ hφ (hR x y)
   frame {_ _} _ _ b c _ _ _ _ h := by
     simp only [comap, hadd]
     rcases (le_top : φ c ≤ ⊤).lt_or_eq with hlt | htop
     · exact IsLawful.frame hlt h
-    · simpa only [htop, top_le_iff.1 le_add_self] using IsTopAbsorbing.top (L := L) _ _ _
+    · simpa only [htop, top_le_iff.1 le_add_self] using IsTopAbsorbing.top _ _ _
   map hf hg h := IsLawful.map (L := L) hf hg h
 
 /-- A budget map keeping `⊤` regrades a lifting with bind. -/
@@ -177,7 +176,7 @@ theorem isReflexive_comap_of_lt_top [AddZeroClass B] [Preorder B] [OrderTop B]
     rwa [zero_add] at this
 
 instance isZeroLeft_comap [L.IsZeroLeft] : (L.comap φ).IsZeroLeft where
-  zero_left b _ ν _ := IsZeroLeft.zero_left (L := L) (φ b) _ ν
+  zero_left b _ ν _ := IsZeroLeft.zero_left (φ b) _ ν
 
 instance isLeftContinuous_comap [L.IsLeftContinuous] : (L.comap φ).IsLeftContinuous where
   iSup_left hμ _ _ h := IsLeftContinuous.iSup_left (L := L) hμ h
@@ -194,7 +193,7 @@ theorem absorbing_comap [Top B] [L.IsTopAbsorbing] (h : φ b = ⊤) : (L.comap �
 /-- A budget map keeping `⊤` regrades a lifting absorbing at `⊤`. -/
 theorem isTopAbsorbing_comap [Top B] [Top B'] [L.IsTopAbsorbing] (htop : φ ⊤ = ⊤) :
     (L.comap φ).IsTopAbsorbing :=
-  ⟨fun _ _ _ ↦ (comap_def (L := L)).2 (htop ▸ IsTopAbsorbing.top _ _ _)⟩
+  ⟨fun _ _ _ ↦ comap_def.2 (htop ▸ IsTopAbsorbing.top _ _ _)⟩
 
 /-- The regraded lifting maps back to the original along `φ`. -/
 def comapHom [Preorder B] [Preorder B'] (hφ : Monotone φ) : LiftingHom (L.comap φ) L where

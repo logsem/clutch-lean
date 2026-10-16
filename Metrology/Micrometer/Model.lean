@@ -1,16 +1,16 @@
 module
 
 public import Metrology.Micrometer.AppWeakestpre
-import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Iris.Instances.Lib.NaInvariants
 public import Iris.Instances.Lib.Invariants
 public import Metrology.Iris.Countable
-
-@[expose] public section
+import Metrology.ProbLang.Syntax.Notation
 
 /-! # Semantic Model -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -21,10 +21,12 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-! ## Log-relation namespace -/
 
+/-- The namespace of the invariants of the logical relation. -/
 def logN : Namespace := nroot.@ (1 : Pos)
 
 /-! ## `MicrometerRGS` ghost-state bundle -/
 
+/-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
 class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   micrometerGS : MicrometerGS rT hlc GF
@@ -35,10 +37,11 @@ attribute [reducible, instance] MicrometerRGS.micrometerGS MicrometerRGS.naInvG
 
 /-! ## Logical relation type -/
 
+/-- A value relation: persistent, and only relating closed values. -/
 structure lrel (rT : Type) (GF : BundledGFunctors) where
   car : Val rT → Val rT → IProp GF
   [persistent : ∀ v1 v2, Persistent (car v1 v2)]
-  closed v1 v2 : car v1 v2 ⊢@{IProp GF} ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
+  closed v1 v2 : car v1 v2 ⊢ ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
 
 attribute [instance] lrel.persistent
 
@@ -71,6 +74,7 @@ noncomputable def lrel.toFunChain {GF : BundledGFunctors}
   chain k := (c.chain k).car
   cauchy h := (c.cauchy h : _)
 
+/-- Evaluation of a binary relation at a pair of values. -/
 abbrev lrel.appAt {GF : BundledGFunctors} (v1 v2 : Val rT) :
     (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
 
@@ -103,12 +107,15 @@ instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
 section NaShorthand
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
 
+/-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/
 @[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
   Iris.NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
 
+/-- The non-atomic invariant `P` at namespace `N`, in the pool of `MicrometerRGS`. -/
 @[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
   Iris.NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
 
+/-- The update that closes the non-atomic invariant `P` at `N`, opened from mask `E`. -/
 @[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
   iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ ↑N) ={⊤}=∗ naOwnP (rT := rT) E
 
@@ -170,34 +177,40 @@ theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
   iintro %h !%
   exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Values related when both are `()`. -/
 noncomputable def lrel_unit : lrel rT GF where
   car v1 v2 := iprop% ⌜ v1 = .unit ∧ v2 = .unit ⌝
   closed v1 v2 := lrel_closed_lit_pair v1 v2
 
+/-- Values related when both are the same boolean. -/
 noncomputable def lrel_bool : lrel rT GF where
   car v1 v2 := iprop% ∃ b : Bool, ⌜ v1 = .bool b ∧ v2 = .bool b ⌝
   closed v1 v2 := by
     iintro ⟨%b, %h⟩ !%
     exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Values related when both are the same natural-number literal. -/
 noncomputable def lrel_nat : lrel rT GF where
   car v1 v2 := iprop% ∃ n : Nat, ⌜ v1 = .int n ∧ v2 = .int n ⌝
   closed v1 v2 := by
     iintro ⟨%n, %h⟩ !%
     exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Values related when both are the same positive natural-number literal. -/
 noncomputable def lrel_pos_nat : lrel rT GF where
   car v1 v2 := iprop% ∃ n : Nat, ⌜ 0 < n ∧ v1 = .int n ∧ v2 = .int n ⌝
   closed v1 v2 := by
     iintro ⟨%n, %h⟩ !%
     exact ⟨h.2.1 ▸ Exp.lit_isClosedEmpty _, h.2.2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Values related when both are the same integer literal. -/
 noncomputable def lrel_int : lrel rT GF where
   car v1 v2 := iprop% ∃ n : Int, ⌜ v1 = .int n ∧ v2 = .int n ⌝
   closed v1 v2 := by
     iintro ⟨%n, %h⟩ !%
     exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Values related when both are the same real literal. -/
 noncomputable def lrel_real : lrel rT GF where
   car v1 v2 := iprop% ∃ r : rT, ⌜ v1 = .real r ∧ v2 = .real r ⌝
   closed v1 v2 := by
@@ -231,6 +244,7 @@ theorem lrel_real_lit (r : rT) : ⊢@{IProp GF} lrel_real.car (.real r : Val rT)
   unfold lrel_real; iexists r; ipureintro; exact ⟨rfl, rfl⟩
 
 variable (L) in
+/-- Closed values whose applications to `A1`-related arguments refine at `A2`. -/
 noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗
@@ -238,6 +252,7 @@ noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
         refines L (⊤ : CoPset) (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
+/-- Pairs related componentwise. -/
 noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (a1 a2 b1 b2 : Val rT),
@@ -254,6 +269,7 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     · rw [h2]; exact Exp.IsLocallyClosed.pair hAcl.2.1 hBcl.2.1
     · rw [h2]; simp [Exp.fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
+/-- Sums related when both are injections of the same side, with related payloads. -/
 noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (w1 w2 : Val rT),
@@ -277,11 +293,13 @@ noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
       · rw [h2]; exact Exp.IsLocallyClosed.inr hBcl.2.1
       · rw [h2]; simp [Exp.fv]; exact hBcl.2.2
 
+/-- Closed values related by `C A` for some relation `A`. -/
 noncomputable def lrel_exists (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗ ∃ A : lrel rT GF, C A v1 v2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 variable (L) in
+/-- Thunks related by `C A` for every relation `A`. -/
 noncomputable def lrel_forall (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ∀ (A : lrel rT GF), (lrel_arr L lrel_unit (C A)).car v1 v2
   closed v1 v2 := by
@@ -289,6 +307,7 @@ noncomputable def lrel_forall (C : lrel rT GF → lrel rT GF) : lrel rT GF where
     ihave Hinst := Hall $$ %(default : lrel rT GF)
     iapply (lrel_arr L lrel_unit (C default)).closed v1 v2 $$ Hinst
 
+/-- Relates every pair of closed values. -/
 noncomputable def lrel_true : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
   closed _ _ := .rfl
@@ -296,6 +315,7 @@ noncomputable def lrel_true : lrel rT GF where
 /-! ### Recursive lrel via `fixpoint` -/
 
 -- TODO: Tweak when fixpoints land
+/-- One unfolding of a recursive relation, with the recursive occurrence guarded by `▷`. -/
 noncomputable def lrelRec1 (C : lrel rT GF -n> lrel rT GF) (r : lrel rT GF) : lrel rT GF where
   car w1 w2 := iprop% ⌜w1.1.isClosedEmpty ∧ w2.1.isClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
@@ -308,10 +328,12 @@ instance lrelRec1_contractive (C : lrel rT GF -n> lrel rT GF) : OFE.Contractive 
       fun k hk => C.ne.ne (show P ≡{k}≡ Q from hPQ k hk) w1 w2
 
 -- TODO: Tweak when fixpoints land
+/-- `lrelRec1` bundled as a contractive function. -/
 noncomputable def lrelRec1Hom (C : lrel rT GF -n> lrel rT GF) : lrel rT GF -c> lrel rT GF where
   f := lrelRec1 C
 
 -- TODO: Tweak when fixpoints land
+/-- Recursive relations, as the fixpoint of `lrelRec1`. -/
 noncomputable def lrel_rec (C : lrel rT GF -n> lrel rT GF) : lrel rT GF :=
   fixpoint (lrelRec1 C)
 
@@ -366,6 +388,7 @@ theorem refines_proper {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
     (h : A = B) : refines L E e e' A = refines L E e e' B :=
   OFE.eq_dist.mpr fun n => refines_ne (OFE.eq_dist_1 h n)
 
+/-- Locations whose contents stay `A`-related, kept in an invariant. -/
 noncomputable def lrel_ref (A : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (l1 l2 : Loc),
@@ -375,6 +398,7 @@ noncomputable def lrel_ref (A : lrel rT GF) : lrel rT GF where
     iintro ⟨%l1, %l2, %h1, %h2, _⟩ !%
     exact ⟨h1 ▸ Exp.lit_isClosedEmpty _, h2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- Tape labels of two empty tapes with the same bound, kept in an invariant. -/
 noncomputable def lrel_tape : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (α1 α2 : Loc) (z : Int),
@@ -423,8 +447,8 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
 private theorem fupd_of_inv_disj {E : CoPset} {P1 P2 Q : IProp GF} {p1 p2 : Loc × Loc}
-    (HE : (↑logN : CoPset) ⊆ E) (hne : p1 ≠ p2) (hfalse : ⊢@{IProp GF} P1 -∗ P2 -∗ False) :
-    ⊢@{IProp GF} Iris.inv (logN.@ p1) P1 -∗ Iris.inv (logN.@ p2) P2 -∗ |={E}=> Q := by
+    (HE : (↑logN : CoPset) ⊆ E) (hne : p1 ≠ p2) (hfalse : ⊢ P1 -∗ P2 -∗ False) :
+    ⊢ Iris.inv (logN.@ p1) P1 -∗ Iris.inv (logN.@ p2) P2 -∗ |={E}=> Q := by
   have hN_disj : logN.@ p1 ## logN.@ p2 := ndot_ne_disjoint _ hne
   have h1 : (↑(logN.@ p1) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
   have h2 : (↑(logN.@ p2) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
@@ -442,7 +466,7 @@ private theorem fupd_of_inv_disj {E : CoPset} {P1 P2 Q : IProp GF} {p1 p2 : Loc 
 /-- Reference type is functional in the program-side location. -/
 theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
-    ⊢@{IProp GF} (lrel_ref A).car (.loc l) (.loc l1) -∗
+    ⊢ (lrel_ref A).car (.loc l) (.loc l1) -∗
         (lrel_ref A).car (.loc l) (.loc l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
@@ -460,7 +484,7 @@ theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
 /-- Reference type is injective on the program-side location. -/
 theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
-    ⊢@{IProp GF} (lrel_ref A).car (.loc l1) (.loc l) -∗
+    ⊢ (lrel_ref A).car (.loc l1) (.loc l) -∗
         (lrel_ref A).car (.loc l2) (.loc l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
@@ -478,7 +502,7 @@ theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
 /-- Tape type is functional in the program-side location. -/
 theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
-    ⊢@{IProp GF} (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l1) -∗
+    ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l1) -∗
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
@@ -496,7 +520,7 @@ theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
 /-- Tape type is injective on the program-side location. -/
 theorem interp_tape_inj {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
-    ⊢@{IProp GF} (lrel_tape (rT := rT) (GF := GF)).car (.lbl l1) (.lbl l) -∗
+    ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l1) (.lbl l) -∗
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l2) (.lbl l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
@@ -521,7 +545,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   [BudgetCreditGS B GF]
 
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
-    iprop(|={⊤}=> refines L E e t A) ⊢@{IProp GF} refines L E e t A := by
+    iprop(|={⊤}=> refines L E e t A) ⊢ refines L E e t A := by
   unfold refines
   iintro >H
   iexact H
@@ -559,7 +583,7 @@ theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {E : CoPse
 theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) ⊤ ∗ A v1 v2)
-      ⊢@{IProp GF} refines L E e1 e2 A := by
+      ⊢ refines L E e1 e2 A := by
   subst hv1 hv2
   unfold refines
   iintro HFA %K %b HK Hnais Herr Hpos
@@ -573,7 +597,7 @@ theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel 
 theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> naOwnP (rT := rT) ((⊤ : CoPset) \ E) ∗ A v1 v2)
-      ⊢@{IProp GF} refines L E e1 e2 A := by
+      ⊢ refines L E e1 e2 A := by
   iintro HFA
   iapply refines_ret_na hv1 hv2
   iintro Hnais
@@ -589,7 +613,7 @@ theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A :
 
 theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
-    iprop(|={⊤}=> A v1 v2) ⊢@{IProp GF} refines L (⊤ : CoPset) e1 e2 A := by
+    iprop(|={⊤}=> A v1 v2) ⊢ refines L (⊤ : CoPset) e1 e2 A := by
   iintro HA
   iapply refines_ret_na hv1 hv2
   iintro Hna
@@ -621,7 +645,7 @@ instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
 
 theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) F ∗ refines L F e1 e2 A)
-      ⊢@{IProp GF} refines L E e1 e2 A := by
+      ⊢ refines L E e1 e2 A := by
   unfold refines
   iintro Hupd %K %b Hj Hna Herr Hpos
   iapply MicrometerWpGS.fupd_wp
@@ -632,7 +656,7 @@ theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
 theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
     iprop% (▷ P) ∗ (naInvP (rT := rT) N P -∗ refines L E e1 e2 A)
-      ⊢@{IProp GF} refines L E e1 e2 A := by
+      ⊢ refines L E e1 e2 A := by
   iintro ⟨HP, Hcont⟩
   iapply fupd_refines
   imod Iris.NonAtomicInvariant.inv_alloc $$ [$HP] with Hinv
@@ -643,7 +667,7 @@ theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp 
     (HNE : (↑N : CoPset) ⊆ E) :
     iprop% naInvP (rT := rT) N P ∗
         ((▷ P) ∗ naCloseP (rT := rT) P N E -∗ refines L (E \ ↑N) e1 e2 A)
-      ⊢@{IProp GF} refines L E e1 e2 A := by
+      ⊢ refines L E e1 e2 A := by
   iintro ⟨Hinv, IH⟩
   iapply refines_na_update
   iintro Hnais
@@ -656,7 +680,7 @@ theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp 
 theorem refines_na_close {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
     iprop% (▷ P) ∗ naCloseP (rT := rT) P N E ∗ refines L E e1 e2 A
-      ⊢@{IProp GF} refines L (E \ ↑N) e1 e2 A := by
+      ⊢ refines L (E \ ↑N) e1 e2 A := by
   iintro ⟨HP, Hclose, IH⟩
   iapply refines_na_update
   iintro HownFN

@@ -134,11 +134,9 @@ theorem codensity_dp_choice [IsSubProbabilityMeasure μ] {S₁ S₂ : X → Y �
   have hb₁ := setLIntegral_le_of_codensity_dp (ε₂ := ε₂) (δ₂ := δ₂) hε₁ h₁ hP hT hPT₁ hf hg hf1
     fun x y hx hS ↦ by simpa [hx, hS, hε₂.lt_top] using hfg x y
   have hb₂ := setLIntegral_le_of_codensity_dp (ε₂ := ε₂') (δ₂ := δ₂) hε₁' h₂ hP.compl hT.compl
-    (fun x y hx hS ↦ hPT₂ x y hx hS) hf hg hf1
-    fun x y hx hS ↦ by simpa [show x ∉ P from hx, hS, hε₂'.lt_top] using hfg x y
+    hPT₂ hf hg hf1 fun x y hx hS ↦ by simpa [show x ∉ P from hx, hS, hε₂'.lt_top] using hfg x y
   calc ∫⁻ x, f x ∂μ
-      ≤ ∫⁻ x, (f x - δ₂) + δ₂ ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, f x - δ₂ ∂μ + δ₂ := IsSubProbabilityMeasure.lintegral_add_const_le _ _
+      ≤ ∫⁻ x, f x - δ₂ ∂μ + δ₂ := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
     _ = ∫⁻ x in P, f x - δ₂ ∂μ + ∫⁻ x in Pᶜ, f x - δ₂ ∂μ + δ₂ := by
         rw [lintegral_add_compl _ hP]
     _ ≤ (expBudget ε * ∫⁻ y in T, g y ∂ν + δ₁) + (expBudget ε * ∫⁻ y in Tᶜ, g y ∂ν + δ₁') +

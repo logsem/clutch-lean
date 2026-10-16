@@ -84,6 +84,8 @@ end Classes
 
 /-! ## Derived laws -/
 
+section Laws
+
 variable {B : Type v} {D : GradedDivergence.{u} B} {X Y : Type u} [MeasurableSpace X]
   [MeasurableSpace Y]
 
@@ -138,13 +140,15 @@ theorem IsComposable.map_iff_of_measurableEmbedding [AddZeroClass B] [D.IsReflex
   obtain ⟨g, hg, hgf⟩ := hf.exists_measurable_extend measurable_id fun _ ↦ inferInstance
   simpa [map_map hg hf.measurable, hgf] using IsComposable.map h hg
 
+end Laws
+
 /-! ## Regrading -/
 
 section Comap
 
 variable {B : Type v} {B' : Type w} {φ : B' → B} {D : GradedDivergence.{u} B}
 
-variable (D) (φ) in
+variable (D φ) in
 /-- Regrading a divergence along a budget map (Rocq `GCF_regrade`). -/
 def comap : GradedDivergence.{u} B' :=
   fun b ↦ D (φ b)
@@ -161,7 +165,7 @@ theorem isGraded_comap [Preorder B] [Top B] [Preorder B'] [Top B'] [D.IsGraded]
     (hφ : Monotone φ) (htop : ∀ {X : Type u} [MeasurableSpace X] (μ ν : Measure X)
       [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν], D (φ ⊤) μ ν) :
     (D.comap φ).IsGraded where
-  mono _ _ hb := IsGraded.mono (D := D) (hφ hb)
+  mono _ _ hb := IsGraded.mono (hφ hb)
   top := htop
 
 /-- Regrading keeps grading along a monotone map that keeps `⊤`. -/
@@ -172,24 +176,24 @@ theorem isGraded_comap_of_map_top [Preorder B] [Top B] [Preorder B'] [Top B'] [D
 /-- Regrading keeps reflexivity when `φ 0` is at least `0`. -/
 theorem isReflexive_comap [Zero B] [LE B] [Top B] [Zero B'] [D.IsGraded] [D.IsReflexive]
     (h0 : 0 ≤ φ 0) : (D.comap φ).IsReflexive where
-  refl μ _ := IsGraded.mono h0 (IsReflexive.refl (D := D) μ)
+  refl μ _ := IsGraded.mono h0 (IsReflexive.refl μ)
 
 /-- Regrading keeps composability along a superadditive map. -/
 theorem isComposable_comap [Add B] [LE B] [Top B] [Add B'] [D.IsGraded] [D.IsComposable]
     (hadd : ∀ b c, φ b + φ c ≤ φ (b + c)) : (D.comap φ).IsComposable where
-  comp b c := fun h hκ ↦ IsGraded.mono (hadd b c) (IsComposable.comp (D := D) h hκ)
+  comp b c := fun h hκ ↦ IsGraded.mono (hadd b c) (IsComposable.comp h hκ)
 
 instance isZeroLeft_comap [D.IsZeroLeft] : (D.comap φ).IsZeroLeft where
-  zero_left b := IsZeroLeft.zero_left (D := D) (φ b)
+  zero_left b := IsZeroLeft.zero_left (φ b)
 
 instance isLeftContinuous_comap [D.IsLeftContinuous] : (D.comap φ).IsLeftContinuous where
-  iSup_left b := IsLeftContinuous.iSup_left (D := D) (b := φ b)
+  iSup_left b := IsLeftContinuous.iSup_left (b := φ b)
 
 instance isRightMonotone_comap [D.IsRightMonotone] : (D.comap φ).IsRightMonotone where
-  right_mono b := IsRightMonotone.right_mono (D := D) (b := φ b)
+  right_mono b := IsRightMonotone.right_mono (b := φ b)
 
 instance isLeftAntitone_comap [D.IsLeftAntitone] : (D.comap φ).IsLeftAntitone where
-  left_anti b := IsLeftAntitone.left_anti (D := D) (b := φ b)
+  left_anti b := IsLeftAntitone.left_anti (b := φ b)
 
 end Comap
 
@@ -212,10 +216,10 @@ theorem pi_def {b : ∀ i, B i} {X : Type u} [MeasurableSpace X] {μ ν : Measur
 instance isGraded_pi [∀ i, LE (B i)] [∀ i, Top (B i)] [∀ i, (D i).IsGraded] :
     (pi D).IsGraded where
   mono _ _ hb := fun h i ↦ IsGraded.mono (hb i) (h i)
-  top μ ν _ _ i := IsGraded.top (D := D i) μ ν
+  top μ ν _ _ _ := IsGraded.top μ ν
 
 instance isReflexive_pi [∀ i, Zero (B i)] [∀ i, (D i).IsReflexive] : (pi D).IsReflexive where
-  refl μ _ i := IsReflexive.refl (D := D i) μ
+  refl μ _ _ := IsReflexive.refl μ
 
 instance isComposable_pi [∀ i, Add (B i)] [∀ i, (D i).IsComposable] :
     (pi D).IsComposable where
@@ -225,7 +229,7 @@ instance isZeroLeft_pi [∀ i, (D i).IsZeroLeft] : (pi D).IsZeroLeft where
   zero_left b _ _ ν _ i := IsZeroLeft.zero_left (b i) ν
 
 instance isLeftContinuous_pi [∀ i, (D i).IsLeftContinuous] : (pi D).IsLeftContinuous where
-  iSup_left b := fun hμ _ _ h i ↦ IsLeftContinuous.iSup_left (b := b i) hμ fun n ↦ h n i
+  iSup_left _ := fun hμ _ _ h i ↦ IsLeftContinuous.iSup_left hμ fun n ↦ h n i
 
 instance isRightMonotone_pi [∀ i, (D i).IsRightMonotone] : (pi D).IsRightMonotone where
   right_mono _ := fun hν h i ↦ IsRightMonotone.right_mono hν (h i)
@@ -238,7 +242,7 @@ instance isBudgetClosed_pi [∀ i, Preorder (B i)] [∀ i, (D i).IsBudgetClosed]
     (pi D).IsBudgetClosed where
   of_forall_gt {b} := fun h i ↦ by
     classical
-    exact IsBudgetClosed.of_forall_gt fun t ht ↦
-      by simpa using h (Function.update b i t) (lt_update_self_iff.2 ht) i
+    exact IsBudgetClosed.of_forall_gt fun t ht ↦ by
+      simpa using h (Function.update b i t) (lt_update_self_iff.2 ht) i
 
 end Pi

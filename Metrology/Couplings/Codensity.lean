@@ -119,13 +119,13 @@ theorem codensity_isSound_iff [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGr
     (codensity D).IsSound D ↔
       ∀ {X : Type u} [MeasurableSpace X] (x : X), D 0 (dirac x) (dirac x) := by
   refine ⟨fun _ X _ x ↦ IsSound.sound (L := codensity D) ?_, fun hD ↦ ⟨fun {X} _ b μ ν _ _ h ↦ ?_⟩⟩
-  · exact relCost_of (B := B) (rfl : x = x) ▸ codensity_dirac x x
+  · exact relCost_of (B := B) rfl ▸ codensity_dirac x x
   refine IsGraded.of_lt_top fun hb ↦ ?_
-  have := h (k := Kernel.id) (l := Kernel.id) (c := 0) (by rwa [add_zero]) fun x y ↦ by
-    obtain rfl | hxy := eq_or_ne x y
-    · simpa [Kernel.id_apply] using hD x
-    · simpa [Kernel.id_apply, hxy] using IsGraded.top (D := D) (dirac x) (dirac y)
-  simpa [id_comp] using this
+  simpa [id_comp] using h (k := Kernel.id) (l := Kernel.id) (c := 0) (by rwa [add_zero])
+    fun x y ↦ by
+      obtain rfl | hxy := eq_or_ne x y
+      · simpa [Kernel.id_apply] using hD x
+      · simpa [Kernel.id_apply, hxy] using IsGraded.top (dirac x) (dirac y)
 
 /-- The codensity lifting of a graded reflexive divergence is sound for it. -/
 instance isSound_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded]
@@ -136,7 +136,7 @@ instance isSound_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGrade
 composable (Sato–Katsumata, Thm. 8.2). -/
 theorem codensity_isComplete_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] : (codensity D).IsComplete D ↔ D.IsComposable := by
-  refine ⟨fun _ ↦ ⟨fun b c X Y _ _ μ₁ μ₂ _ _ κ η _ _ h hκη ↦ ?_⟩,
+  refine ⟨fun _ ↦ ⟨fun _ _ ↦ fun h hκη ↦ ?_⟩,
     fun _ ↦ ⟨fun {X} _ b μ ν _ _ h ↦ codensity_rel_iff.2 fun I _ c _ k l _ _ hkl ↦
       IsComposable.comp h fun x ↦ hkl x x rfl⟩⟩
   exact IsGraded.of_lt_top fun hbc ↦
@@ -182,7 +182,7 @@ instance isSupportLocal_codensity [Add B] [LT B] [Top B] [D.IsZeroLeft] :
     refine h hbc fun x y ↦ ?_
     by_cases hx : x ∈ A
     · simpa [Kernel.piecewise_apply, hx] using hkl x y
-    · simpa [Kernel.piecewise_apply, hx] using IsZeroLeft.zero_left (D := D) _ (l y)
+    · simpa [Kernel.piecewise_apply, hx] using IsZeroLeft.zero_left _ (l y)
 
 /-- Reflexivity of the lifting composes each test with the divergence's reflexivity, so it needs
 `IsComposable`, not `IsComplete` (Rocq `cod_diag`). -/
@@ -214,9 +214,9 @@ instance isMassDetecting_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D
         by_cases hxy : S x y
         · by_cases hx : x ∈ T
           · simpa [k, l, Kernel.piecewise_apply, hxy, hx, hS x y hxy hx] using
-              IsReflexive.refl (D := D) (dirac PUnit.unit)
-          · simpa [k, Kernel.piecewise_apply, hxy, hx] using IsZeroLeft.zero_left (D := D) 0 (l y)
-        · simpa [hxy] using IsGraded.top (D := D) (k x) (l y)
+              IsReflexive.refl (dirac PUnit.unit)
+          · simpa [k, Kernel.piecewise_apply, hxy, hx] using IsZeroLeft.zero_left 0 (l y)
+        · simpa [hxy] using IsGraded.top (k x) (l y)
     rw [piecewise_zero_comp, piecewise_zero_comp, const_comp, const_comp, restrict_apply_univ,
       restrict_apply_univ] at hkl
     exact IsMassDetecting.le_add_of (IsSubProbabilityMeasure.measure_le_one T)

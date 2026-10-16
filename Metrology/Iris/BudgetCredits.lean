@@ -31,8 +31,7 @@ instance instCMRA : CMRA (BudgetCredit B) := CommMonoidLike.instCMRA
 instance instUCMRA : UCMRA (BudgetCredit B) := CommMonoidLike.instUCMRA
 instance instCMRADiscrete : CMRA.Discrete (BudgetCredit B) := CommMonoidLike.instDiscrete
 
-instance instLE [LE B] : LE (BudgetCredit B) :=
-  inferInstanceAs (LE B)
+instance instLE [LE B] : LE (BudgetCredit B) := inferInstanceAs (LE B)
 instance instCanonicallyOrderedAdd [LE B] [CanonicallyOrderedAdd B] :
     CanonicallyOrderedAdd (BudgetCredit B) :=
   inferInstanceAs (CanonicallyOrderedAdd B)
@@ -160,7 +159,7 @@ theorem supply_increase {s c : B} : ⊢@{IProp GF} ●↯b s -∗ |==> (●↯b 
 theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSub B]
     {a b : B} (h : b ≤ a) :
     ↯b a ⊢@{IProp GF} ↯b b ∗ ↯b (a - b) := by
-  simpa only [add_tsub_cancel_of_le h] using split (GF := GF) (a := b) (b := a - b)
+  simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
 /-- Credits are timeless. -/
 instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless

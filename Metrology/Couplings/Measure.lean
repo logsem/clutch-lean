@@ -162,8 +162,9 @@ theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) 
   induction s using Finset.induction_on with
   | empty => simp
   | insert j s hj ih =>
-    rw [Finset.sum_insert hj, Finset.sum_insert hj, EReal.left_distrib_of_nonneg (hx j (by simp))
-      (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
+    rw [Finset.forall_mem_insert] at hx
+    rw [Finset.sum_insert hj, Finset.sum_insert hj,
+      EReal.left_distrib_of_nonneg hx.1 (Finset.sum_nonneg hx.2), ih hx.2]
 
 theorem EReal.le_coe_mul_iff {c : ℝ} (hc : 0 < c) {x y : EReal} :
     x ≤ c * y ↔ ((c⁻¹ : ℝ) : EReal) * x ≤ y := by

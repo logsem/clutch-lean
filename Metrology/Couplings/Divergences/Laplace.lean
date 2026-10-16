@@ -4,8 +4,7 @@ public import Mathlib.Probability.Distributions.Bernoulli
 public import Mathlib.Probability.Distributions.Exponential
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! The basic DP mechanisms: Bernoulli and Laplace (Approximate Span Liftings, Fig. 2, [DP-Bern],
-[DP-Bern-Eq], [DP-Lap]). -/
+/-! The Bernoulli and Laplace mechanisms (Approximate Span Liftings, Fig. 2). -/
 
 @[expose] public section
 
@@ -29,7 +28,6 @@ theorem measurable_laplacePDF (a : ℝ) (b : ℝ≥0) : Measurable (laplacePDF a
   unfold laplacePDF
   fun_prop
 
-/-- The exponential density is measurable. -/
 @[fun_prop]
 theorem measurable_exponentialPDF (r : ℝ) : Measurable (exponentialPDF r) := by
   unfold exponentialPDF
@@ -81,7 +79,7 @@ end ProbabilityTheory
 
 namespace GradedDivergence
 
-variable {X : Type*} [MeasurableSpace X] {ε : ℝ≥0∞}
+variable {X : Type*} [MeasurableSpace X]
 
 /-! ## Bernoulli -/
 
@@ -135,10 +133,9 @@ theorem dp_laplace {a a' r : ℝ} (h : |a - a'| ≤ r) (b : ℝ≥0) :
   refine setLIntegral_mono (by fun_prop) fun x _ ↦ ?_
   rw [laplacePDF, laplacePDF, ← ENNReal.ofReal_mul (Real.exp_pos _).le]
   refine ENNReal.ofReal_le_ofReal ?_
-  rw [← mul_div_assoc, ← Real.exp_add]
-  refine div_le_div_of_nonneg_right (Real.exp_le_exp.2 ?_) (by positivity)
-  rw [← add_div]
-  exact div_le_div_of_nonneg_right (by linarith [abs_sub_le x a a']) b.2
+  rw [← mul_div_assoc, ← Real.exp_add, ← add_div]
+  gcongr
+  linarith [abs_sub_le x a a']
 
 end GradedDivergence
 

@@ -5,6 +5,8 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
 
+/-! Adequacy of the graded weakest precondition against the limit execution. -/
+
 @[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS ProbLang.Cfg
@@ -94,11 +96,19 @@ theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
 
 end Termination
 
+/-- A pure fact holds under an update followed by `n` step-updates at the empty mask. -/
+theorem fupd_step_fupdN_pure {PROP : Type _} [BI PROP] [BIFUpdate PROP] {p : Prop} (n : Nat)
+    (h : p) : ⊢@{PROP} |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ :=
+  calc (emp : PROP) ⊢ ⌜p⌝ := pure_intro h
+    _ ⊢ ▷^[n] ⌜p⌝ := laterN_intro n
+    _ ⊢ |={∅}[∅]▷=>^[n] ⌜p⌝ := step_fupdN_intro Std.LawfulSet.subset_refl
+    _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ := fupd_intro
+
 section Adequacy
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind]
-variable {GF : BundledGFunctors} [IA : MicrometerGS rT .hasNoLC GF] [BudgetGS B GF]
+variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetGS B GF]
 
 omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -117,28 +127,23 @@ theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
   iintro !> %σ₀ %⟨e₀', σ₀'⟩ %b₀ H
   simp only [Ψ]
   iintro HZ
-  icases H with ⟨%HVac | HZApp | HCpl⟩
-  · imodintro
-    iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-    ipureintro
-    exact HVac _ _ _
+  icases H with ⟨%hVac | HZApp | HCpl⟩
+  · iapply fupd_step_fupdN_pure n ?_
+    exact hVac _ _ _
   · iapply HZ $$ HZApp
-  · icases HCpl with ⟨%k, %μ₁, %μ₁', %R, %HAC, %Herase1, %Herase1', HCont⟩
+  · icases HCpl with ⟨%k, %μ₁, %μ₁', %R, %hAC, %hErase, %hErase', HCont⟩
     iapply BIFUpdate.mono
     · refine step_fupdN_mono (P := iprop(∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B) →
-        execCoupl L φ (R σ₂ ⟨e₂', σ₂'⟩) m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝ : IProp GF)) ?_
-      iintro %Hpure !%
-      exact lift_erasure_erasable HAC Herase1 Herase1' fun σ₂ ⟨e₂', σ₂'⟩ => Hpure σ₂ e₂' σ₂'
+        execCoupl L φ (R σ₂ ⟨e₂', σ₂'⟩) m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
+      iintro %hpure !%
+      exact lift_erasure_erasable hAC hErase hErase' fun σ₂ ⟨e₂', σ₂'⟩ => hpure σ₂ e₂' σ₂'
     iapply fupd_step_fupdN_plain_forall_3
     iintro %σ₂ %e₂' %σ₂'
     by_cases hR : R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)
     · simp only [hR, true_implies]
       imod HCont $$ %σ₂ %e₂' %σ₂' %hR with ⟨HΨ, -⟩
       iapply HΨ $$ HZ
-    · imodintro
-      iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-      ipureintro
-      exact fun h => absurd h hR
+    · iapply fupd_step_fupdN_pure n hR.elim
 
 omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -150,23 +155,20 @@ theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (Exp.toVal?_eq_none.mp Hnone) m]
   iintro HCpl Hcoupl
-  icases HCpl with ⟨%k, %μ₁', %R, %_, %Hexp, %Herase', Hcnt⟩
+  icases HCpl with ⟨%k, %μ₁', %R, %_, %hExp, %hErase', Hcnt⟩
   iapply BIFUpdate.mono
   · refine step_fupdN_mono (P := iprop(∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B) →
-      execCoupl L φ (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ : IProp GF)) ?_
-    iintro %Hpure !%
-    exact lift_erasure_erasable_exp_lhs_kanto Herase' Hexp
-      fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ => Hpure e₂ σ₂ e₂' σ₂'
+      execCoupl L φ (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
+    iintro %hpure !%
+    exact lift_erasure_erasable_exp_lhs_kanto hErase' hExp
+      fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ => hpure e₂ σ₂ e₂' σ₂'
   iapply fupd_step_fupdN_plain_forall_4
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases hR : R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)
   · simp only [hR, true_implies]
     imod Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %hR with Hcnt
     iapply Hcoupl $$ Hcnt
-  · imodintro
-    iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-    ipureintro
-    exact fun h => absurd h hR
+  · iapply fupd_step_fupdN_pure n hR.elim
 
 omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -198,6 +200,8 @@ theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
 
 set_option linter.auxLemma false in
 omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
+/-- The `match` auxiliary of `wpPre_value_Z_eq` is the one of `wpPre`, so `wp_unfold_mp` applies
+after rewriting with `wpPre_value_Z_eq`. -/
 theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
     (x : Option (Val rT)) (some_f : (v : Val rT) → motive (some v))
     (none_f : Unit → motive none) :
@@ -233,16 +237,18 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   imod wp_value_specCoupl_unfold ⊤ He $$ Hwp %σ %e' %σ' %b [$] with HspecC
   iapply wp_adequacy_spec_coupl_zero $$ HspecC
   iintro %σ₂ %e₂' %σ₂' %b₂ HZ
-  imod HZ with ⟨-, Hs', -, %v', Hv', %Hφrel⟩
+  imod HZ with ⟨-, Hs', -, %v', Hv', %hφ⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs' Hv'
-  imod BIFUpdate.subset (E2 := ∅) Std.LawfulSet.empty_subset with -
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
   iintro !%
   unfold execCoupl limExecV asExpr
   rw [execN_succ_isValue (ρ := ⟨Exp.ofVal v, σ₂⟩) v.isValue n,
       limExec_of_isVal (e := Exp.ofVal v') (σ := σ₂') v'.2]
   simp only [MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
-  exact rel_dirac ⟨v, v', Exp.toVal?_ofVal v, Exp.toVal?_ofVal v', Hφrel⟩ b₂
+  exact rel_dirac ⟨v, v', Exp.toVal?_ofVal v, Exp.toVal?_ofVal v', hφ⟩ b₂
 
+/-- The `n`-fuel execution of the left program is coupled with the limit execution of the right
+one, across `n` later steps. -/
 theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
@@ -251,21 +257,16 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : 
   induction n generalizing b e e' σ σ' with
   | zero =>
     iintro -
-    imod BIFUpdate.subset (E2 := ∅) Std.LawfulSet.empty_subset with -
-    imodintro
-    simp only [Nat.repeat]
-    ipureintro
+    imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
+    iapply fupd_step_fupdN_pure 0 ?_
     simp only [execCoupl, asExpr, execN_zero, MeasureTheory.Measure.map_zero]
     exact IsZeroLeft.zero_left _ _ _
   | succ n ih =>
     iintro ⟨Hσ, Hs, Hb, Hwp⟩
     by_cases He : e.isValue
     · obtain ⟨v, Hv⟩ := Exp.toVal?_eq_some_of_isValue He
-      imod wp_adequacy_val_fupd e e' σ σ' n φ v b Hv $$ [$] with %Hpure
-      imodintro
-      iapply (laterN_intro (n+1)).trans (step_fupdN_intro Std.LawfulSet.subset_refl)
-      ipureintro
-      exact Hpure
+      imod wp_adequacy_val_fupd e e' σ σ' n φ v b Hv $$ [$] with %hpure
+      iapply fupd_step_fupdN_pure (n + 1) hpure
     · have hnone : e.toVal? = none := Exp.toVal?_eq_none.mpr He
       imod wp_unfold_mp $$ Hwp %σ %e' %σ' %b [$] with Hwp
       iapply wp_adequacy_spec_coupl $$ Hwp
@@ -303,30 +304,25 @@ theorem wp_adequacy_spec_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp r
   iintro !> %σ₀ %⟨e₀', σ₀'⟩ %b₀ H
   simp only [Ψ]
   iintro %hterm₀ HZ
-  icases H with ⟨%HVac | HZApp | HCpl⟩
-  · imodintro
-    iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-    ipureintro
-    exact HVac _ _ _
+  icases H with ⟨%hVac | HZApp | HCpl⟩
+  · iapply fupd_step_fupdN_pure n ?_
+    exact hVac _ _ _
   · iapply HZ $$ %σ₀ %e₀' %σ₀' %b₀ %hterm₀ HZApp
-  · icases HCpl with ⟨%k, %μ₁, %μ₁', %R, %HAC, %Herase1, %Herase1', HCont⟩
+  · icases HCpl with ⟨%k, %μ₁, %μ₁', %R, %hAC, %hErase, %hErase', HCont⟩
     iapply BIFUpdate.mono
     · refine step_fupdN_mono (P := iprop(∀ σ₂ e₂' σ₂', ⌜execN m ⟨e₁, σ₂⟩ Set.univ = 1 →
         R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B) →
-        execCoupl L φ (R σ₂ ⟨e₂', σ₂'⟩) m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝ : IProp GF)) ?_
-      iintro %Hpure !%
-      exact execCoupl_erasable_of_term hterm₀ HAC Herase1 Herase1'
-        fun σ₂ ⟨e₂', σ₂'⟩ => Hpure σ₂ e₂' σ₂'
+        execCoupl L φ (R σ₂ ⟨e₂', σ₂'⟩) m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
+      iintro %hpure !%
+      exact execCoupl_erasable_of_term hterm₀ hAC hErase hErase'
+        fun σ₂ ⟨e₂', σ₂'⟩ => hpure σ₂ e₂' σ₂'
     iapply fupd_step_fupdN_plain_forall_3
     iintro %σ₂ %e₂' %σ₂'
     by_cases h : execN m ⟨e₁, σ₂⟩ Set.univ = 1 ∧ R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)
     · simp only [h.1, h.2, true_implies]
       imod HCont $$ %σ₂ %e₂' %σ₂' %h.2 with ⟨HΨ, -⟩
       iapply HΨ $$ %h.1 HZ
-    · imodintro
-      iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-      ipureintro
-      exact fun h₁ h₂ => absurd ⟨h₁, h₂⟩ h
+    · iapply fupd_step_fupdN_pure n fun h₁ h₂ => absurd ⟨h₁, h₂⟩ h
 
 omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp rT)
@@ -338,24 +334,21 @@ theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp r
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro HCpl Hcoupl
-  icases HCpl with ⟨%k, %μ₁', %R, %_, %Hexp, %Herase', Hcnt⟩
+  icases HCpl with ⟨%k, %μ₁', %R, %_, %hExp, %hErase', Hcnt⟩
   iapply BIFUpdate.mono
   · refine step_fupdN_mono (P := iprop(∀ e₂ σ₂ e₂' σ₂', ⌜execN m ⟨e₂, σ₂⟩ Set.univ = 1 →
       R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B) →
-      execCoupl L φ (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ : IProp GF)) ?_
-    iintro %Hpure !%
-    exact execCoupl_prog_of_term Hnone hterm Herase' Hexp
-      fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ => Hpure e₂ σ₂ e₂' σ₂'
+      execCoupl L φ (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
+    iintro %hpure !%
+    exact execCoupl_prog_of_term Hnone hterm hErase' hExp
+      fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ => hpure e₂ σ₂ e₂' σ₂'
   iapply fupd_step_fupdN_plain_forall_4
   iintro %e₂ %σ₂ %e₂' %σ₂'
   by_cases h : execN m ⟨e₂, σ₂⟩ Set.univ = 1 ∧ R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)
   · simp only [h.1, h.2, true_implies]
     imod Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %h.2 with Hcnt
     iapply Hcoupl $$ %e₂ %σ₂ %e₂' %σ₂' %_ %h.1 Hcnt
-  · imodintro
-    iapply (laterN_intro n).trans (step_fupdN_intro Std.LawfulSet.empty_subset)
-    ipureintro
-    exact fun h₁ h₂ => absurd ⟨h₁, h₂⟩ h
+  · iapply fupd_step_fupdN_pure n fun h₁ h₂ => absurd ⟨h₁, h₂⟩ h
 
 theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
     (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
@@ -369,11 +362,8 @@ theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
     iintro ⟨Hσ, Hs, Hb, Hwp⟩
     by_cases He : e.isValue
     · obtain ⟨v, Hv⟩ := Exp.toVal?_eq_some_of_isValue He
-      imod wp_adequacy_val_fupd e e' σ σ' n φ v b Hv $$ [$] with %Hpure
-      imodintro
-      iapply (laterN_intro (n+1)).trans (step_fupdN_intro Std.LawfulSet.subset_refl)
-      ipureintro
-      exact Hpure
+      imod wp_adequacy_val_fupd e e' σ σ' n φ v b Hv $$ [$] with %hpure
+      iapply fupd_step_fupdN_pure (n + 1) hpure
     · have hnone : e.toVal? = none := Exp.toVal?_eq_none.mpr He
       imod wp_unfold_mp $$ Hwp %σ %e' %σ' %b [$] with Hwp
       iapply wp_adequacy_spec_coupl_term (hterm := hterm) $$ Hwp
@@ -402,9 +392,15 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
 variable {GF : BundledGFunctors}
 variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
 
-omit [L.IsLeftContinuous] in
-theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
+omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.HasBind] [L.IsZeroLeft]
+  [L.IsLeftContinuous] in
+/-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
+theorem execCoupl_of_step_fupdN (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
+    (Hstep : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
+      appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
+        wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ := by
@@ -417,9 +413,19 @@ theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   let IAS : MicrometerGS rT .hasNoLC GF := { appGS := IA, specGS := ISpec, invGS := Hinv }
   let IBC : BudgetCreditGS B GF := { toBudgetCreditPreGS := IBCPre, γbc := γbc }
   ihave Hwp := Hwp IAS IBC $$ HspecFrag HbcFrag
-  iapply wp_adequacy_step_fupdN b e e' σ σ' n φ
+  iapply Hstep IAS IBC
   iframe
 
+omit [L.IsLeftContinuous] in
+/-- `wp_adequacy` for the execution with `n` fuel. -/
+theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
+    (φ : Val rT → Val rT → Prop) (b : B)
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
+  execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
+
+/-- A weakest precondition from a budget credit `b` couples the limit executions at budget `b`. -/
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -478,18 +484,9 @@ theorem wp_adequacy_exec_n_term (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
-    execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ := by
-  refine pure_soundness (PROP := IProp GF) ?_
-  refine step_fupdN_soundness (hlc := .hasNoLC) n 0 fun Hinv => ?_
-  iintro -
-  imod app_ra_init σ with ⟨%IA, HappAuth⟩
-  imod spec_ra_init e' σ' with ⟨%ISpec, HspecAuth, HspecFrag⟩
-  imod bc_alloc b with ⟨%γbc, HbcAuth, HbcFrag⟩
-  let IAS : MicrometerGS rT .hasNoLC GF := { appGS := IA, specGS := ISpec, invGS := Hinv }
-  let IBC : BudgetCreditGS B GF := { toBudgetCreditPreGS := IBCPre, γbc := γbc }
-  ihave Hwp := Hwp IAS IBC $$ HspecFrag HbcFrag
-  iapply wp_adequacy_step_fupdN_term b e e' σ σ' n φ hterm
-  iframe
+    execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
+  execCoupl_of_step_fupdN e e' σ σ' n φ b
+    (fun _ _ => wp_adequacy_step_fupdN_term b e e' σ σ' n φ hterm) Hwp
 
 /-- `wp_adequacy` for a program whose run has mass `1` within `n` steps: the limit is that run,
 so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term`). -/

@@ -4,13 +4,9 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.Bridges.AddCoupl
 public import Metrology.Couplings.Divergences.Tv
 
+/-! Adequacy at total variation: the generic statements at `codensity tv`, as additive couplings. -/
+
 @[expose] public section
-
-/-! # Adequacy at total variation
-
-The generic adequacy statements instantiated at `L := codensity tv` with budget `ℝ≥0∞`,
-read back as additive couplings.
-These are exactly the pre-codensity statements of `Adequacy.lean` and `AdequacyRel.lean`. -/
 
 open scoped ENNReal
 

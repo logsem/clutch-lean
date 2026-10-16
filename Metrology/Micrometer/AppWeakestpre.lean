@@ -12,6 +12,8 @@ public import Iris.BI.Lib.Fixpoint
 public import Iris.ProofMode.Classes
 public import Iris.ProofMode.InstancesUpdates
 
+/-! The Micrometer weakest precondition, its coupling modalities and lifting rules. -/
+
 @[expose] public section
 
 open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
@@ -167,7 +169,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : Sta
     iframe %
     iintro %σ₂ %e₂' %σ₂' %hR
     imod BIFUpdate.subset HE with Hclose
-    imod HCpl_cont $$ %σ₂ %e₂' %σ₂' %hR with HCpl_cont
+    imod HCpl_cont $$ %σ₂ %e₂' %σ₂' %hR
     imod Hclose
     imodintro
     iapply HCpl_cont $$ HZ
@@ -236,7 +238,7 @@ variable (L) in
 abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) : IProp GF := iprop%
   ∀ σ₁ e₁' σ₁' (b₁ : B),
-    stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp (GF := GF) b₁ -∗
+    stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b₁ -∗
     |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ =>
       match e₁.toVal? with
       | some v => iprop(|={∅, E}=> stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗
@@ -337,7 +339,7 @@ theorem wp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
   unfold wpPre
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
   rw [Exp.toVal?_ofVal]
-  imod BIFUpdate.subset (E1 := E) Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
   iapply specCoupl_ret
   imod Hclose
@@ -356,9 +358,9 @@ theorem wp_value_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT} {Φ : Val rT �
 
 abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF := iprop%
   □ ∀ σ ρ v (b : B),
-    stateInterp (rT := rT) σ ∗ SpecUpdateGS.specInterp (rT := rT) ρ ∗ budgetInterp (GF := GF) b ∗
+    stateInterp (rT := rT) σ ∗ SpecUpdateGS.specInterp (rT := rT) ρ ∗ budgetInterp b ∗
       Φ v ={E2}=∗
-    stateInterp (rT := rT) σ ∗ SpecUpdateGS.specInterp (rT := rT) ρ ∗ budgetInterp b ∗ Ψ v
+    stateInterp σ ∗ SpecUpdateGS.specInterp ρ ∗ budgetInterp b ∗ Ψ v
 
 variable (L) in
 noncomputable abbrev wpStrongMonoStmt : IProp GF := iprop%
@@ -495,13 +497,9 @@ theorem lintegral_le_of_clamped {α β : Type _} [MeasurableSpace α] [Measurabl
     (∫⁻ a, h₁ a ∂μ) ≤ (∫⁻ b, h₂ b ∂ν) + ε := by
   refine H.trans ?_
   calc (∫⁻ b, (h₂ b + ε₂) ⊓ 1 ∂ν) + ε₁ ≤ (∫⁻ b, (h₂ b + ε₂) ∂ν) + ε₁ := by gcongr; exact inf_le_left
-    _ = (∫⁻ b, h₂ b ∂ν) + ε₂ * ν Set.univ + ε₁ := by
-      rw [MeasureTheory.lintegral_add_right _ measurable_const, MeasureTheory.lintegral_const,
-        mul_comm]
-    _ ≤ (∫⁻ b, h₂ b ∂ν) + ε₂ + ε₁ := by
-      gcongr
-      calc ε₂ * ν Set.univ ≤ ε₂ * 1 := by gcongr
-        _ = ε₂ := mul_one _
+    _ = (∫⁻ b, h₂ b ∂ν) + (∫⁻ _, ε₂ ∂ν) + ε₁ := by
+      rw [MeasureTheory.lintegral_add_right _ measurable_const]
+    _ ≤ (∫⁻ b, h₂ b ∂ν) + ε₂ + ε₁ := by gcongr; exact lintegral_const_le hν ε₂
     _ ≤ (∫⁻ b, h₂ b ∂ν) + ε := by rw [add_assoc, add_comm ε₂ ε₁]; gcongr
 
 theorem lintegral_le_of_one_le {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
@@ -512,8 +510,9 @@ theorem lintegral_le_of_one_le {α β : Type _} [MeasurableSpace α] [Measurable
   calc (∫⁻ a, h₁ a ∂μ) ≤ ∫⁻ _, 1 ∂μ := MeasureTheory.lintegral_mono Hh₁
     _ ≤ 1 := lintegral_const_le hμ 1
     _ ≤ ε₂ := hε₂
-    _ ≤ ε := _root_.le_trans _root_.le_add_self Hε
-    _ ≤ _ := _root_.le_add_self
+    _ ≤ ε₁ + ε₂ := le_add_self
+    _ ≤ ε := Hε
+    _ ≤ _ := le_add_self
 
 /-- An additive coupling gives a coupling in expectation for any cost bounded on the relation
 (the `tv` form of `Rel.frame_le`). -/
@@ -551,7 +550,6 @@ theorem expCoupl_add_const {α β : Type _} [MeasurableSpace α] [MeasurableSpac
     · rw [inf_of_le_right (_root_.not_le.mp hlt).le]
       exact le_add_right (Hh₁ a)
   · exact lintegral_le_of_one_le Hε (_root_.not_le.mp hε₂).le hμ Hh₁
-
 
 /-- Introduce a spec coupling from a lifting of erasable distributions. -/
 theorem specCoupl_couple {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
@@ -659,9 +657,7 @@ theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLaw
     simp only [pexecN_zero]
     exact MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop)
   iapply specCoupl_couple_rel (S := fun σ₂ c => S σ₂ c.state ∧ c.expr = e₁') (n := 0) hb
-    (by
-      rw [heq]
-      exact Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩)
+    (heq ▸ Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩)
     Heras₁ Heras₁'
   iintro %σ₂ %e₂' %σ₂' %HS
   obtain ⟨HS, rfl⟩ := HS
@@ -961,10 +957,11 @@ theorem wp_ne_aux {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} {n : N
     (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp L E e Ψ := by
   induction n using Nat.strong_induction_on generalizing e Φ Ψ with
   | _ n IH =>
-    have heq1 : wp L E e Φ ≡{n}≡ wpPre L (wp L) E e Φ := OFE.eq_dist_1 wp_unfold n
-    have heq2 : wp L E e Ψ ≡{n}≡ wpPre L (wp L) E e Ψ := OFE.eq_dist_1 wp_unfold n
-    refine heq1.trans (OFE.Dist.trans ?_ heq2.symm)
-    exact wpPre_ne_aux HΦ fun m Hm _ => IH m Hm fun v => OFE.Dist.lt (HΦ v) Hm
+    calc wp L E e Φ
+      _ ≡{n}≡ wpPre L (wp L) E e Φ := OFE.eq_dist_1 wp_unfold n
+      _ ≡{n}≡ wpPre L (wp L) E e Ψ :=
+        wpPre_ne_aux HΦ fun m Hm _ => IH m Hm fun v => OFE.Dist.lt (HΦ v) Hm
+      _ ≡{n}≡ wp L E e Ψ := (OFE.eq_dist_1 wp_unfold n).symm
 
 instance wp_ne {E : CoPset} {e : Exp rT} : NonExpansive (wp L (GF := GF) E e) where
   ne _ _ _ H := wp_ne_aux H
@@ -1064,7 +1061,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
       imod HUpd $$ %ρ₂ Hs' with ⟨%ρ₃, %n, %Hstep, Hs'', HΦv⟩
       cases ρ₃ with
       | mk e₃' σ₃' =>
-        imod BIFUpdate.subset (E1 := E') Std.LawfulSet.empty_subset with Hclose
+        imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
         imodintro
         iapply specCoupl_steps_det Hstep
         iapply specCoupl_ret
@@ -1149,7 +1146,7 @@ theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT �
   iapply wp_unfold
   unfold wpPre
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-  imod HR with HR
+  imod HR
   imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
   imodintro
   iapply specCoupl_mono_spatial
@@ -1163,7 +1160,7 @@ theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT �
   iframe HLater
   iintro %σ₄ %ρ₄ %b₄ HFinal
   imod HFinal with ⟨Hσ', Hs', Hb', HwpInner⟩
-  imod HR with HR
+  imod HR
   imodintro
   iframe Hσ' Hs' Hb'
   iapply wp_mask_mono HE
@@ -1238,17 +1235,8 @@ instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : I
 instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {n : Nat} {io : InOut}
     {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where
-  elim_modal _ := by
-    simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
-    iintro ⟨HP, Hcnt⟩
-    ihave HP' := specUpdateN_specUpdate $$ HP
-    iapply specUpdate_wp
-    iintro %ρ Hρ
-    imod HP' $$ %ρ Hρ with ⟨%ρ', %n', %Hstep, Hρ', HPv⟩
-    imodintro
-    iexists ρ', n'
-    iframe %Hstep Hρ'
-    iapply Hcnt $$ HPv
+  elim_modal h :=
+    (sep_mono_left specUpdateN_specUpdate).trans ((elimModal_specUpdate_wp (io := io)).elim_modal h)
 
 /-! ## Lifting lemmas (ports `clutch/theories/approxis/lifting.v`) -/
 
@@ -1278,7 +1266,7 @@ theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : Co
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with H
+  imod H $$ %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb]
   imodintro
   iapply specCoupl_bind Std.LawfulSet.subset_refl
   iframe H
@@ -1299,7 +1287,7 @@ theorem wp_lift_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with H
+  imod H $$ %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb]
   imodintro
   iapply specCoupl_ret
   simp only [Hv]
@@ -1333,7 +1321,7 @@ theorem wp_lift_step_later_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val r
   simp only [Hv]
   iapply progCoupl_step_l_concentrated Hred (hSmeas σ₁) (hSconc σ₁)
   iintro %e₂ %σ₂ %Hmem
-  imod H $$ %e₂ %σ₂ %Hmem with H
+  imod H $$ %e₂ %σ₂ %Hmem
   iintro !> !>
   iapply specCoupl_ret
   imod H with ⟨Hσ', HwpNew⟩
@@ -1394,7 +1382,7 @@ theorem wp_lift_prim_steps_coupl {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   simp only [Hv]
   iapply progCoupl_steps hb Hred Hred' Hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %HS
-  imod H $$ %e₂ %σ₂ %e₂' %σ₂' %HS with H
+  imod H $$ %e₂ %σ₂ %e₂' %σ₂' %HS
   iintro !> !>
   iapply specCoupl_ret
   iexact H
@@ -1422,7 +1410,7 @@ theorem wp_lift_prim_step_l_erasable {E : CoPset} {e₁ : Exp rT} {Φ : Val rT �
   simp only [Hv]
   iapply progCoupl_step_l_erasable hb Hred Hcpl Heras
   iintro %e₂ %σ₂ %σ₂' %HS
-  imod H $$ %e₂ %σ₂ %σ₂' %HS with H
+  imod H $$ %e₂ %σ₂ %σ₂' %HS
   iintro !> !>
   iapply specCoupl_ret
   iexact H
@@ -1438,13 +1426,13 @@ theorem wp_lift_atomic_step_fupd_concentrated {E1 E2 : CoPset} {e₁ : Exp rT}
   iapply wp_lift_step_later_concentrated Hv hSmeas hSconc
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
-  imod BIFUpdate.subset (E1 := E1) Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
   iframe %Hred
   iintro %e₂ %σ₂ %Hmem
   imod Hclose
-  imod H $$ %e₂ %σ₂ %Hmem with H
-  imod BIFUpdate.subset (E1 := E2) Std.LawfulSet.empty_subset with Hclose
+  imod H $$ %e₂ %σ₂ %Hmem
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   iintro !> !>
   imod Hclose
   cases htv : e₂.toVal? with
@@ -1510,11 +1498,8 @@ theorem wp_lift_pure_det_step_concentrated {E E' : CoPset} {e₁ e₂ : Exp rT}
     {Φ : Val rT → IProp GF} (Hpure : PureStep e₁ e₂) :
     iprop(|={E}[E']▷=> wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
-  have Hv : e₁.toVal? = none := by
-    rcases htv : e₁.toVal? with _ | v
-    · rfl
-    · exact absurd (Exp.toVal?_isValue htv) (val_stuck (Hpure.safe default))
-  iapply wp_lift_step_concentrated (S := fun σ₁ => {(⟨e₂, σ₁⟩ : Cfg rT)}) Hv
+  have Hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr (val_stuck (Hpure.safe default))
+  iapply wp_lift_step_concentrated (S := fun σ₁ => {⟨e₂, σ₁⟩}) Hv
     (fun σ₁ => by measurability)
     (fun σ₁ => by
       show primStep ⟨e₁, σ₁⟩ _ = 0
@@ -1522,12 +1507,11 @@ theorem wp_lift_pure_det_step_concentrated {E E' : CoPset} {e₁ e₂ : Exp rT}
       simp)
   iintro %σ₁ Hσ
   imod H
-  imod BIFUpdate.subset (E1 := E') Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
   isplitr; · ipureintro; exact Hpure.safe σ₁
   iintro !> %e₂' %σ₂ %Hmem
-  have heq : (⟨e₂', σ₂⟩ : Cfg rT) = ⟨e₂, σ₁⟩ := Hmem
-  cases heq
+  cases Set.mem_singleton_iff.mp Hmem
   imod Hclose
   imod H
   imodintro
@@ -1566,10 +1550,9 @@ theorem wp_pure_step_fupd' {E E' : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n :
 theorem wp_pure_step_later' {E : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : Nat}
     {Φ : Val rT → IProp GF} [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
     iprop(▷^[n] wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
-  refine BI.Entails.trans ?_ (wp_pure_step_fupd' (E' := E) (e₂ := e₂) (n := n) Hφ)
+  refine .trans ?_ (wp_pure_step_fupd' (E' := E) (e₂ := e₂) (n := n) Hφ)
   induction n with
-  | zero =>
-    exact .rfl
+  | zero => exact .rfl
   | succ n ih =>
     refine (BI.later_mono ih).trans ?_
     simp only [Nat.repeat]
@@ -1607,7 +1590,7 @@ theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro
-  have Hhr : HeadReducible e₁ σ₁ := let ⟨ρ, hρ⟩ := Hhred; fun hz => by rw [hz] at hρ; simp at hρ
+  have Hhr : HeadReducible e₁ σ₁ := fun hz => by obtain ⟨ρ, hρ⟩ := Hhred; simp [hz] at hρ
   isplitr; · ipureintro; exact Reducible.toDiscrete hne (reducible_of_headReducible Hlc Hhr)
   iintro !> %e₂ %σ₂ %Hpstep
   have hpos : 0 < headStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩} :=
@@ -1616,12 +1599,9 @@ theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
 
 /-! ### Countability-free head-step rules
 
-The head-step rules gate on `headStep` rather than `primStep`. Head-reducibility
-is established *inside* the assertion (from the state interpretation), so the
-carrying set cannot simply be required to carry `primStep` at every `σ₁` — at a
-state where `e₁` is not head-reducible the redex may sit under a context and
-`primStep` moves elsewhere. The trick is to pad the carrying set to `Set.univ`
-off the head-reducible states, where concentration is free. -/
+The head-step rules gate on `headStep`, and head-reducibility is only known inside the assertion.
+Off the head-reducible states the redex may sit under a context and `primStep` moves elsewhere,
+so the carrying set is padded to `Set.univ` there, where concentration is free. -/
 
 open scoped Classical in
 theorem measurableSet_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)}

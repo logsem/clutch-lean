@@ -57,11 +57,11 @@ theorem findList_steps (m : List (Int × Int)) (k : Int) :
     obtain ⟨k', y⟩ := hd
     by_cases hk : k' = k
     · subst hk
-      simp [assocVal, alookup]
+      simp only [assocVal, alookup, ↓reduceIte]
       pure_steps
       simp only [beq_self_eq_true]
       pure_steps
-    · simp [assocVal, alookup, hk]
+    · simp only [assocVal, alookup, hk, ↓reduceIte]
       pure_steps
       have hkl : (BaseLit.int k' == BaseLit.int (rT := rT) k) = false :=
         beq_eq_false_iff_ne.mpr (by simp [hk])
@@ -82,10 +82,9 @@ theorem listLength_steps (l : List Int) :
   | cons n l ih =>
     simp only [intListVal]
     pure_step 5
-    refine PureSteps.trans (PureSteps.fill [EctxItem.binopR .plus _] ih) ?_
+    refine (PureSteps.fill [EctxItem.binopR .plus _] ih).trans ?_
     pure_steps
-    rw [show ((1 : Int) + (l.length : Int)) = (((n :: l).length : Nat) : Int) by
-      simp; omega]
+    rw [List.length_cons, Nat.cast_succ, add_comm]
     exact PureSteps.refl _
 
 omit [MeasurableSingletonClass rT] in
@@ -104,14 +103,13 @@ theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
       have hj : j < l.length := by simpa using hlen
       simp only [intListVal, List.getElem_cons_succ, List.eraseIdx_cons_succ]
       pure_step 9
-      rw [show ((j + 1 : Nat) : Int) - 1 = ((j : Nat) : Int) by omega]
-      refine PureSteps.trans (PureSteps.fill [EctxItem.case _ _] (ih j hj)) ?_
+      rw [Nat.cast_succ, add_sub_cancel_right]
+      refine (PureSteps.fill [EctxItem.case _ _] (ih j hj)).trans ?_
       pure_steps
 
 /-! ## Map operations: `wp` specifications
 
-Rocq source: clutch's `wp_init_map`/`spec_init_map`, `wp_get`/`spec_get`, `wp_set`/`spec_set`;
-the spec-side (`_r`) rules take the continuation as a hypothesis. -/
+Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions. -/
 
 section MapOps
 
@@ -200,8 +198,7 @@ theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int
   tp_bind (pl% !#(.loc ℓ))
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   tp_bind (Exp.store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((k, y) :: m))))
-  imod step_store (hv := Val.isVal_ofVal (assocVal ((k, y) :: m)))
-    (hnew := Exp.toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
+  imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   iapply Hcnt $$ Hj Hl
 
 end MapOps

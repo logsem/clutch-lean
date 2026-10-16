@@ -9,8 +9,6 @@ public import Mathlib.Basic.ENNReal.Basic
 
 @[expose] public section
 
-open scoped ENNReal
-
 variable {B : Type*}
 
 /-- Strictly above `b + c` means strictly above `b` after removing `c`. -/

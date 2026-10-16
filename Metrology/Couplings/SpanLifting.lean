@@ -36,8 +36,7 @@ theorem spanLifting_dirac [AddZeroClass B] [Preorder B] [Top B] [D.IsReflexive] 
     dirac ⟨(x, y), rfl⟩, inferInstance, inferInstance, IsReflexive.refl _, ?_, ?_⟩
   · obtain rfl := hz
     exact ⟨h, le_rfl⟩
-  · rw [map_dirac' (by fun_prop)]
-  · rw [map_dirac' (by fun_prop)]
+  all_goals rw [map_dirac' (by fun_prop)]
 
 /-- Zero on the left lifts against any right measure (Rocq `GCFamDZeroL_span_top`). -/
 theorem spanLifting_zero_left [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
@@ -60,9 +59,8 @@ theorem spanLifting_frame [AddSemigroup B] [Preorder B] [AddRightMono B] [Top B]
     (hB : ∀ a, a < ⊤ → a + c < ⊤) (h : D.spanLifting b R μ ν) :
     D.spanLifting (b + c) (fun x y ↦ R x y + c) μ ν := by
   obtain ⟨S, g₁, g₂, hg, hS, w⟩ := h
-  refine ⟨S, g₁, g₂ + c, ?_, fun z hz ↦ ⟨hB _ (hS z hz).1, add_le_add_left (hS z hz).2 c⟩, w⟩
-  rw [← add_assoc]
-  exact add_le_add_left hg c
+  exact ⟨S, g₁, g₂ + c, add_assoc g₁ g₂ c ▸ add_le_add_left hg c,
+    fun z hz ↦ ⟨hB _ (hS z hz).1, add_le_add_left (hS z hz).2 c⟩, w⟩
 
 /-- Witnesses move to the image of their support. -/
 theorem spanLifting_map [AddZeroClass B] [LE B] [LT B] [Top B] [D.IsReflexive] [D.IsComposable]
@@ -128,24 +126,27 @@ theorem spanLifting_le_codensity [AddSemigroup B] [Preorder B] [AddRightMono B] 
 
 /-! ## No absorbing budget, no lawfulness at product budgets -/
 
-/-- Spans have no absorbing budget: the leftover `⊤` leaves no support for a witness. -/
-theorem not_absorbing_spanLifting [Add B] [Preorder B] [Top B] (b : B) :
-    ¬D.spanLifting.Absorbing b := fun h ↦ by
-  obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ :=
-    h (fun _ _ ↦ (⊤ : B)) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit.{u + 1})
-  have : IsEmpty S := ⟨fun z ↦ (hS z z.2).1.false⟩
+/-- Point masses are not span-lifted when the leftover is never finite: no support is left for
+a witness. -/
+theorem not_spanLifting_dirac [Add B] [Preorder B] [Top B] (hR : ∀ x y, ¬R x y < ⊤) {x : X}
+    {y : Y} : ¬D.spanLifting b R (dirac x) (dirac y) := by
+  rintro ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩
+  have : IsEmpty S := ⟨fun z ↦ hR _ _ (hS z z.2).1⟩
   rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
   exact dirac_ne_zero hp.symm
+
+/-- Spans have no absorbing budget: the leftover `⊤` leaves no support for a witness. -/
+theorem not_absorbing_spanLifting [Add B] [Preorder B] [Top B] (b : B) :
+    ¬D.spanLifting.Absorbing b := fun h ↦
+  not_spanLifting_dirac (fun _ _ ↦ lt_irrefl _)
+    (h (fun _ _ ↦ ⊤) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit))
 
 /-- Spans are not lawful when two finite budgets add up to `⊤`: framing by one leaves no
 support for a witness. -/
 theorem not_isLawful_spanLifting_of_add [Add B] [Preorder B] [Top B] {a c : B} (ha : a < ⊤)
-    (hc : c < ⊤) (hac : ¬a + c < ⊤) : ¬D.spanLifting.IsLawful := fun hL ↦ by
-  obtain ⟨S, _, _, _, hS, p, _, _, _, _, hp, _⟩ :=
-    hL.frame hc (hL.pure (R := fun (_ _ : PUnit.{u + 1}) ↦ a) (x := .unit) (y := .unit) ha)
-  have : IsEmpty S := ⟨fun z ↦ hac (hS z z.2).1⟩
-  rw [p.eq_zero_of_isEmpty, Measure.map_zero] at hp
-  exact dirac_ne_zero hp.symm
+    (hc : c < ⊤) (hac : ¬a + c < ⊤) : ¬D.spanLifting.IsLawful := fun hL ↦
+  not_spanLifting_dirac (fun _ _ ↦ hac)
+    (hL.frame hc (hL.pure (R := fun (_ _ : PUnit.{u + 1}) ↦ a) (x := .unit) (y := .unit) ha))
 
 /-- Spans are lawful exactly when finite budgets stay finite under addition. -/
 theorem isLawful_spanLifting_iff [AddMonoid B] [Preorder B] [AddRightMono B]

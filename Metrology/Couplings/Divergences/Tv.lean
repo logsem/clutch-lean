@@ -68,6 +68,8 @@ instance isMassDetecting_tv : tv.{u}.IsMassDetecting (OrderAddMonoidHom.id ℝ�
 
 /-! ## The total variation codensity lifting -/
 
+section Codensity
+
 variable {μ : Measure X} {ν : Measure Y} {E : X → Y → ℝ≥0∞} {S : X → Y → Prop}
 
 /-- Reading a total variation codensity lifting on `[0, 1]`-valued test functions through mass
@@ -99,8 +101,7 @@ theorem codensity_tv_of_lintegral_le [IsSubProbabilityMeasure μ]
     fun x y ↦ tsub_le_iff_right.2 <| (tv_iff.1 (hkl x y) S hS).trans_eq (by ring)
   rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable]
   calc ∫⁻ x, k x S ∂μ
-      ≤ ∫⁻ x, (k x S - c) + c ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, k x S - c ∂μ + c := IsSubProbabilityMeasure.lintegral_add_const_le _ _
+      ≤ ∫⁻ x, k x S - c ∂μ + c := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
     _ ≤ ∫⁻ y, l y S ∂ν + (δ + c) := by
         rw [← add_assoc]
         gcongr
@@ -156,17 +157,6 @@ theorem tv_measure_le_add (h : (codensity tv).Rel δ S μ ν) {T : Set X} {T' : 
     (measurable_const.indicator hT) (measurable_const.indicator hT')
     (fun _ ↦ Set.indicator_le_self' (by simp) _) (fun _ ↦ Set.indicator_le_self' (by simp) _) hfg
 
-/-- A total variation lifting of equality at slack `δ` bounds every event up to `δ`. -/
-theorem tv_le_add_of_rel {μ ν : Measure X} (h : (codensity tv).Rel δ (· = ·) μ ν) {S : Set X}
-    (hS : MeasurableSet S) : μ S ≤ ν S + δ :=
-  tv_measure_le_add h hS hS fun _ _ hxy hx ↦ hxy ▸ hx
-
-/-- Exact total variation liftings of equality in both directions give equal measures. -/
-theorem tv_eq_of_rel {μ ν : Measure X} (h₁ : (codensity tv).Rel 0 (· = ·) μ ν)
-    (h₂ : (codensity tv).Rel 0 (· = ·) ν μ) : μ = ν :=
-  ext fun S hS ↦ le_antisymm (by simpa using tv_le_add_of_rel h₁ hS)
-    (by simpa using tv_le_add_of_rel h₂ hS)
-
 /-- Two point masses are related along the empty relation exactly at slack at least `1` (Rocq
 `GCF_AR_top_exact`). -/
 theorem codensity_tv_rel_false_iff :
@@ -186,5 +176,18 @@ theorem codensity_tv_rel_iff_dp [IsSubProbabilityMeasure μ] :
     (codensity tv).Rel δ S μ ν ↔ (codensity dp).Rel (0, δ) S μ ν := by
   rw [codensity_dp_rel_iff ENNReal.zero_ne_top, GradedLifting.Rel, codensity_tv_iff]
   simp only [expBudget_zero, one_mul, le_add_relCost_iff]
+
+end Codensity
+
+/-- A total variation lifting of equality at slack `δ` bounds every event up to `δ`. -/
+theorem tv_le_add_of_rel {μ ν : Measure X} (h : (codensity tv).Rel δ (· = ·) μ ν) {S : Set X}
+    (hS : MeasurableSet S) : μ S ≤ ν S + δ :=
+  tv_measure_le_add h hS hS fun _ _ hxy hx ↦ hxy ▸ hx
+
+/-- Exact total variation liftings of equality in both directions give equal measures. -/
+theorem tv_eq_of_rel {μ ν : Measure X} (h₁ : (codensity tv).Rel 0 (· = ·) μ ν)
+    (h₂ : (codensity tv).Rel 0 (· = ·) ν μ) : μ = ν :=
+  ext fun S hS ↦ le_antisymm (by simpa using tv_le_add_of_rel h₁ hS)
+    (by simpa using tv_le_add_of_rel h₂ hS)
 
 end GradedDivergence

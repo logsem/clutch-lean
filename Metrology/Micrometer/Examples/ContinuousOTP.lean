@@ -1,32 +1,36 @@
 module
 
+public import Metrology.Code.ContinuousOTP
+public import Metrology.Couplings.Divergences.Tv
+public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.ContinuousSampler
 public import Metrology.Micrometer.Soundness
 public import Metrology.ProbLang.Advantage
-import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
-public import Metrology.Micrometer.AdequacyRel
-public import Metrology.Code.ContinuousOTP
-public import Metrology.Couplings.Divergences.Tv
+import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # A continuous one-time pad -/
+/-! # A continuous one-time pad, adding a uniform key modulo one -/
 
 open scoped ENNReal
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS MeasureTheory
-  GradedLifting GradedDivergence
+open Iris Iris.BI Iris.ProofMode OFE COFE MicrometerWpGS MeasureTheory GradedLifting
+  GradedDivergence
 
 namespace ContinuousOTP
 
 variable {rT : Type} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
-  [BudgetCreditGS ℝ≥0∞ GF]
 
+section Abstract
+
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+
+/-- Encrypts by adding the key `m` modulo one. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
+/-- The evaluation context applying `otpLam m`. -/
 def otpKLam (m : rT) : Ectx rT := [EctxItem.appR (otpLam m)]
 
 private theorem refines_lit_real (r : rT) :
@@ -40,69 +44,64 @@ theorem otp_refines (m : rT)
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
     ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines (codensity tv) ⊤
-    ((otpKLam m).fill pl(urand))
-    (Ectx.fill ([] : Ectx rT) pl(urand)) lrel_real
+  show ⊢ refines (codensity tv) ⊤ ((otpKLam m).fill pl(urand)) (Ectx.fill [] pl(urand)) lrel_real
   iapply refines_couple_urands_lr _ hmp
   iintro %r %_
-  show ⊢@{IProp GF} refines (codensity tv) ⊤
-    (Ectx.fill ([] : Ectx rT) pl({otpLam m} #(.real r))) _ lrel_real
+  show ⊢ refines (codensity tv) ⊤ (Ectx.fill [] pl({otpLam m} #(.real r))) _ lrel_real
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   inext
   let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢@{IProp GF} refines (codensity tv) ⊤ (Kfrac.fill pl(#(.real m) + #(.real r))) _ lrel_real
+  show ⊢ refines (codensity tv) ⊤ (Kfrac.fill pl(#(.real m) + #(.real r))) _ lrel_real
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
-  show ⊢@{IProp GF} refines (codensity tv) ⊤
-    (Ectx.fill ([] : Ectx rT) pl(frac(#(.real (ProbLangℝ.realAdd m r))))) _ lrel_real
+  show ⊢ refines (codensity tv) ⊤
+    (Ectx.fill [] pl(frac(#(.real (ProbLangℝ.realAdd m r))))) _ lrel_real
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, rfl⟩
   inext
   exact refines_lit_real _
 
 /-! ### The reverse direction
 
-Couple the ideal sample against the encryption's key using the *inverse* rotation
-`g`, so that the encryption's combiner sends `g r` back to `r`. -/
+The ideal sample is coupled with the key through the inverse rotation `g`, so that the
+combiner sends `g r` back to `r`. -/
 
 theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
-    ⊢@{IProp GF} REL[codensity tv] otp_ideal << (otp_enc m) : lrel_real := by
+    ⊢@{IProp GF} REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines (codensity tv) ⊤
-    (Ectx.fill ([] : Ectx rT) pl(urand))
-    ((otpKLam m).fill pl(urand)) lrel_real
+  show ⊢ refines (codensity tv) ⊤ (Ectx.fill [] pl(urand)) ((otpKLam m).fill pl(urand)) lrel_real
   iapply refines_couple_urands_lr _ hmp
   iintro %r %hr
-  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
-    (Ectx.fill ([] : Ectx rT) pl({otpLam m} #(.real (g r)))) lrel_real
+  show ⊢ refines (codensity tv) ⊤ _ (Ectx.fill [] pl({otpLam m} #(.real (g r)))) lrel_real
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
-    (Kfrac.fill pl(#(.real m) + #(.real (g r)))) lrel_real
+  show ⊢ refines (codensity tv) ⊤ _ (Kfrac.fill pl(#(.real m) + #(.real (g r)))) lrel_real
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
-    (Ectx.fill ([] : Ectx rT) pl(frac(#(.real (ProbLangℝ.realAdd m (g r)))))) lrel_real
+  show ⊢ refines (codensity tv) ⊤ _
+    (Ectx.fill [] pl(frac(#(.real (ProbLangℝ.realAdd m (g r)))))) lrel_real
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, rfl⟩
   rw [hinv r hr]
   exact refines_lit_real r
 
+end Abstract
+
 /-! ### At `rT = ℝ`
 
-The abstract hypothesis is discharged by rotation invariance of `Uniform[0,1]`,
-so the refinement holds outright for the genuinely continuous instance. -/
+The measure-preservation hypothesis holds by rotation invariance of `Uniform[0,1]`. -/
 
 theorem otp_refines_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
     [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
     ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
+/-- The rotation undoing the addition of `m`. -/
 noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 
 theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
     [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} REL[codensity tv] otp_ideal << (otp_enc m) : lrel_real :=
+    ⊢@{IProp GF} REL[codensity tv] otp_ideal << otp_enc m : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
     show Int.fract (m + Int.fract (-m + r)) = r
@@ -114,17 +113,20 @@ theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
 `refines_coupling` turns each refinement into a statement about the limiting
 execution distributions, with no Iris in sight. -/
 
+/-- The two programs return the same real. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ r : rT, v = .real r ∧ v' = .real r
 
-theorem lrel_real_to_otpφ {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] (v v' : Val rT) :
-    ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
+theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hr
   iunfold lrel_real at Hr
   icases Hr with ⟨%r, %hv, %hv'⟩
-  ipureintro; exact ⟨r, hv, hv'⟩
+  ipureintro
+  exact ⟨r, hv, hv'⟩
 
 section Adequacy
+
 variable {GF : BundledGFunctors}
 
 theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
@@ -161,30 +163,27 @@ theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
 
 /-! ### Non-vacuity
 
-An equality of measures says nothing if both sides are the zero measure, so we
-pin down the mass. `urand` reaches a value in one step, hence `execN 2` already
-carries the whole mass; the a.e. step "every successor is a value" is exactly
-`Atomic.urand'`. -/
+An equality of measures says nothing if both sides are zero, so we pin down the mass.
+`urand` reaches a value in one step (`Atomic.urand'`), hence `execN 2` carries all of it. -/
 
 theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ = 1 := by
   have hnv : ¬ (pl(urand) : Exp ℝ).isValue := fun ⟨w⟩ => nomatch w
+  have hprim : primStep ⟨pl(urand), σ⟩ = Cfg.uniformReal σ :=
+    primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
+      (show Cfg.uniformReal σ ≠ 0 from IsProbabilityMeasure.ne_zero _))
   have hstep : execN 2 ⟨otp_ideal, σ⟩ Set.univ = 1 := by
     show execN 2 ⟨pl(urand), σ⟩ Set.univ = 1
-    rw [execN_succ_not_isValue hnv,
-        Measure.bind_apply MeasurableSet.univ (execN_measurable 1).aemeasurable]
     have hae : ∀ᵐ ρ' ∂(primStep ⟨pl(urand), σ⟩), execN 1 ρ' Set.univ = 1 := by
       rw [ae_iff]
       refine measure_mono_null ?_ (Atomic.urand' σ)
       intro ρ' hρ' hv
       exact hρ' (by rw [execN_succ_isValue hv]; simp)
-    rw [lintegral_congr_ae hae, lintegral_const, one_mul,
-        show primStep ⟨pl(urand), σ⟩ = Cfg.uniformReal σ from primStep_eq_headStep
-          (Exp.decompItem_none_of_lc_headReducible (by is_lc)
-            (show Cfg.uniformReal σ ≠ 0 from IsProbabilityMeasure.ne_zero _))]
+    rw [execN_succ_not_isValue hnv,
+      Measure.bind_apply MeasurableSet.univ (execN_measurable 1).aemeasurable,
+      lintegral_congr_ae hae, lintegral_const, one_mul, hprim]
     exact Cfg.uniformReal_isProbabilityMeasure.measure_univ
   show asExpr (limExec _) Set.univ = 1
-  rw [asExpr, Measure.map_apply Cfg.measurable_expr MeasurableSet.univ,
-      limExec_term hstep]
+  rw [asExpr, Measure.map_apply Cfg.measurable_expr MeasurableSet.univ, limExec_term hstep]
   simpa using hstep
 
 theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ Set.univ = 1 := by
@@ -192,10 +191,8 @@ theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ S
 
 /-! ## Contextual equivalence
 
-`GF` is a parameter in the Rocq sense (`refines_sound Σ`): the statement holds for any
-ghost-state bundle able to host the Micrometer resources. -/
-
-section Typing
+`GF` is explicit, as `Σ` in Rocq's `refines_sound`: any ghost-state bundle hosting the
+Micrometer resources works. -/
 
 omit [LawfulProbLangℝ rT] in
 theorem otp_ideal_typed : Typed (rT := rT) Tctx.empty otp_ideal .real := .urand
@@ -207,10 +204,8 @@ theorem otpLam_typed (m : rT) : Typed Tctx.empty (otpLam m) (.arrow .real .real)
 omit [LawfulProbLangℝ rT] in
 theorem otp_enc_typed (m : rT) : Typed Tctx.empty (otp_enc m) .real := .app (otpLam_typed m) .urand
 
-end Typing
-
 theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) :
-    ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
+    ∀ K σ₀ b,
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧
         x ∉ Ctx.payloadFv K) →
@@ -221,7 +216,7 @@ theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0�
     fun _ _ _ => otp_refines_real m
 
 theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) :
-    ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
+    ∀ K σ₀ b,
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧
         x ∉ Ctx.payloadFv K) →

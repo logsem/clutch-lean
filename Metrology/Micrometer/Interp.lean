@@ -8,7 +8,7 @@ public import Metrology.ProbLang.Syntax.Types
 
 @[expose] public section
 
-/-! # Type Interpretation -/
+/-! Semantic interpretation of types and the semantic typing judgement. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -20,8 +20,10 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 section TyEnvSetup
 variable {GF : BundledGFunctors}
 
+/-- A semantic type environment assigns a logical relation to each type variable. -/
 abbrev TyEnv (rT : Type) (GF : BundledGFunctors) := Nat → lrel rT GF
 
+/-- Extend a type environment with a new innermost variable. -/
 def TyEnv.cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
   | n + 1 => Δ n
@@ -38,6 +40,7 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
   | 0 => Dist.rfl
   | m + 1 => h m
 
+/-- The relation bound to type variable `x`. -/
 @[reducible] def ctxLookup (x : Nat) (Δ : TyEnv rT GF) : lrel rT GF := Δ x
 
 end TyEnvSetup
@@ -47,32 +50,35 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
+/-- A non-expansive map from type environments to logical relations. -/
 structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
   fn : TyEnv rT GF → lrel rT GF
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 
 namespace NEFun
-variable {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
 
+/-- The constant map to `L`. -/
 @[reducible] noncomputable def const (L : lrel rT GF) : NEFun rT GF :=
   { fn := fun _ => L, ne := fun _ => Dist.rfl }
 
+/-- The map looking up type variable `x`. -/
 @[reducible] def ofCtx (x : Nat) : NEFun rT GF :=
   { fn := fun Δ => ctxLookup x Δ, ne := fun h => h x }
 
+/-- Apply a binary relation constructor pointwise. -/
 @[reducible] noncomputable def map2 (F : lrel rT GF → lrel rT GF → lrel rT GF)
     [OFE.NonExpansive₂ F] (A B : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => F (A.fn Δ) (B.fn Δ)
     ne := fun h => OFE.NonExpansive₂.ne (A.ne h) (B.ne h) }
 
+/-- Apply a unary relation constructor pointwise. -/
 @[reducible] noncomputable def map1 (F : lrel rT GF → lrel rT GF)
     [OFE.NonExpansive F] (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => F (A.fn Δ)
     ne := fun h => OFE.NonExpansive.ne (A.ne h) }
 
+/-- The recursive relation binding the innermost type variable. -/
 @[reducible] noncomputable def rec' (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => lrel_rec
       { f := fun X => A.fn (TyEnv.cons X Δ)
@@ -80,10 +86,12 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
     ne := fun h => lrel_rec_ne (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
 
 variable (L) in
+/-- The universal relation binding the innermost type variable. -/
 @[reducible] noncomputable def forall' (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => lrel_forall L (fun X => A.fn (TyEnv.cons X Δ))
     ne := fun h => lrel_forall_ne L (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
 
+/-- The existential relation binding the innermost type variable. -/
 @[reducible] noncomputable def exists' (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => lrel_exists (fun X => A.fn (TyEnv.cons X Δ))
     ne := fun h => lrel_exists_ne (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
@@ -91,6 +99,7 @@ variable (L) in
 end NEFun
 
 variable (L) in
+/-- Interpret a type as a non-expansive function of the type environment. -/
 noncomputable def interpNE : Ty → NEFun rT GF
   | .unit         => NEFun.const lrel_unit
   | .int          => NEFun.const lrel_int
@@ -107,6 +116,7 @@ noncomputable def interpNE : Ty → NEFun rT GF
   | .exists' τ'   => NEFun.exists' (interpNE τ')
 
 variable (L) in
+/-- The logical relation interpreting type `τ` in the type environment `Δ`. -/
 noncomputable def interp (τ : Ty) (Δ : TyEnv rT GF) : lrel rT GF :=
   (interpNE L τ).fn Δ
 
@@ -150,12 +160,14 @@ end interp_closed
 
 /-! ## Unboxed-value predicate -/
 
+/-- Unboxed expressions are literals, possibly under a sum injection. -/
 @[simp] def Exp.isUnboxedV : Exp rT → Prop
   | .lit _ => True
   | .inl (.lit _) => True
   | .inr (.lit _) => True
   | _ => False
 
+/-- A value is unboxed when its underlying expression is. -/
 @[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
 
 /-! ## Soundness of the semantic type interpretation -/
@@ -250,9 +262,7 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
     ihave %hs2 := lrel_ref_shape _ _ _ $$ H2
     obtain ⟨l1, l2, rfl, rfl⟩ := hs1
     obtain ⟨r1, r2, rfl, rfl⟩ := hs2
-    have hloc : ∀ a b : Loc, ((.loc a : Val rT) = .loc b) ↔ a = b := fun a b =>
-      ⟨fun h => by injection Val.ext_iff.mp h with h; injection h, (· ▸ rfl)⟩
-    simp only [hloc]
+    simp only [Val.ext_iff, Exp.lit.injEq, BaseLit.loc.injEq]
     by_cases hl : l1 = r1
     · subst hl
       imod interp_ref_funct (interp L τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
@@ -271,12 +281,12 @@ end interp_sound
 
 /-! ## Relational environment typing -/
 
+/-- A relational typing context assigns a logical relation to each variable. -/
 abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
-variable {rT : Type} [LawfulProbLangℝ rT]
-variable {GF : BundledGFunctors}
 
+/-- The relation of the last entry for `x` in the list. -/
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
   | [], _ => none
   | (y, A) :: rest, x =>
@@ -290,21 +300,21 @@ theorem lookup_isSome_of_mem {Γ : RelCtx rT GF} {p : Var × lrel rT GF}
   induction Γ with
   | nil => cases h
   | cons q rest ih =>
-    simp only [RelCtx.lookup]
+    simp only [lookup]
     rcases List.mem_cons.mp h with rfl | hRest
-    · cases RelCtx.lookup rest p.1 <;> simp
+    · cases lookup rest p.1 <;> simp
     · have := ih hRest
-      cases hr : RelCtx.lookup rest p.1 <;> simp_all
+      cases hr : lookup rest p.1 <;> simp_all
 
 omit [LawfulProbLangℝ rT] in
 theorem mem_of_lookup_isSome {Γ : RelCtx rT GF} {y : Var}
     (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
-  | nil => simp [RelCtx.lookup] at h
+  | nil => simp [lookup] at h
   | cons q rest ih =>
     obtain ⟨k, B⟩ := q
-    simp only [RelCtx.lookup] at h
-    cases hr : RelCtx.lookup rest y with
+    simp only [lookup] at h
+    cases hr : lookup rest y with
     | some _ => simp [ih (by rw [hr]; rfl)]
     | none => rw [hr] at h; split_ifs at h <;> simp_all
 
@@ -319,7 +329,7 @@ theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
   | none => rfl
-  | some _ => exact absurd (RelCtx.mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
+  | some _ => exact absurd (mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
 
 end RelCtx
 
@@ -328,6 +338,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
+/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations. -/
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
@@ -340,17 +351,13 @@ instance env_ltyped2_persistent (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
 
 omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_domEq (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
-    env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ := by
-  unfold env_ltyped2
-  iintro ⟨%H, -, -⟩ !%
-  exact H
+    env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
+  sep_elim_left
 
 omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
-    env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ := by
-  unfold env_ltyped2
-  iintro ⟨-, %Hc, -⟩ !%
-  exact Hc
+    env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ :=
+  sep_elim_right.trans sep_elim_left
 
 theorem env_ltyped2_fst_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
@@ -369,12 +376,9 @@ theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   ihave %hDom := env_ltyped2_domEq Γ vs $$ Hvs
   ipureintro
   intro y hy
-  simp only [List.mem_toFinset, List.mem_map] at hy
-  obtain ⟨p, hpmem, rfl⟩ := hy
-  obtain ⟨q, hqmem, hqeq⟩ :=
-    ValSubstMap.mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hpmem))
-  simp only [List.mem_toFinset, List.mem_map]
-  exact ⟨q, hqmem, hqeq⟩
+  simp only [List.mem_toFinset, List.mem_map] at hy ⊢
+  obtain ⟨p, hp, rfl⟩ := hy
+  exact ValSubstMap.mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hp))
 
 omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
@@ -489,11 +493,13 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   [BudgetCreditGS B GF]
 
 variable (L) in
+/-- The semantic typing judgement: related substitutions give related expressions. -/
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
     (A : lrel rT GF) : IProp GF := iprop%
   ∀ vs, env_ltyped2 Γ vs -∗ refines L E (Exp.substMap vs.fst e) (Exp.substMap vs.snd e') A
 
 variable (L) in
+/-- The semantic typing judgement at a syntactic type. -/
 noncomputable abbrev bin_log_related_ty (E : CoPset) (Δ : TyEnv rT GF)
     (Γ : RelCtx rT GF) (e e' : Exp rT) (τ : Ty) : IProp GF :=
   bin_log_related L E Γ e e' (interp L τ Δ)
@@ -565,6 +571,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
+/-- Precompose a type environment with a renaming. -/
 @[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)
 
@@ -601,6 +608,7 @@ theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
   interp_rename τ (· + 1) (TyEnv.cons X Δ)
 
 variable (L) in
+/-- Interpret each type of a substitution in the type environment `Δ`. -/
 @[reducible] noncomputable def semSubst (σ : Nat → Ty) (Δ : TyEnv rT GF) : TyEnv rT GF :=
   fun n => interp L (σ n) Δ
 

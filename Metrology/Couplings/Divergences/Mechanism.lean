@@ -43,7 +43,7 @@ abbrev zCDP (m : Kernel X Y) (adj : Adjacency X) (ξ ρ : ℝ≥0∞) : Prop :=
 abbrev tCDP (m : Kernel X Y) (adj : Adjacency X) (ω : ℝ) (ρ : ℝ≥0∞) : Prop :=
   m.IsPrivate (tcdpDivergence ω) adj ρ
 
-variable {m : Kernel X Y} {α ω : ℝ} {ε ξ ρ : ℝ≥0∞} {δ : ℝ}
+variable {m : Kernel X Y} {α ω : ℝ} {ε ξ ρ : ℝ≥0∞}
 
 /-! ## Unfoldings -/
 
@@ -97,9 +97,8 @@ theorem IsPrivate.compProd [AddZeroClass B] [D.IsReflexive] [D.IsComposable]
   rw [Kernel.compProd_apply_eq_compProd_sectR, Kernel.compProd_apply_eq_compProd_sectR,
     compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine IsComposable.comp (h hx) fun y ↦ ?_
-  have hky : D c (k (x, y)) (k (x', y)) := hk y hx
   simpa [Kernel.prod_apply, Kernel.id_apply, dirac_prod] using
-    IsComposable.map (f := Prod.mk y) hky
+    IsComposable.map (f := Prod.mk y) (hk y hx)
 
 /-- DP composes along chains of adjacent inputs (group privacy). -/
 theorem DP.trans {adj' : Adjacency X} {ε₁ ε₂ δ₁ δ₂ : ℝ≥0∞} (h₁ : m.DP adj ε₁ δ₁)
@@ -132,6 +131,8 @@ theorem tCDP_iff_tcdpLifting_rel [IsSubMarkovKernel m] :
   isPrivate_iff_rel _
 
 /-! ## Conversions (Fig. 4) -/
+
+variable {δ : ℝ}
 
 /-- Pure differential privacy gives zero-concentrated differential privacy ([D/z]). -/
 theorem zCDP_of_DP [IsSubMarkovKernel m] (h : m.DP adj ε 0) : m.zCDP adj ε 0 :=

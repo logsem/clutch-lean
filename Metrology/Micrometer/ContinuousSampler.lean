@@ -5,9 +5,9 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.AppRelRules
 
-@[expose] public section
-
 /-! # Continuous sampler rules -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -15,7 +15,9 @@ open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+open LawfulProbLangℝ
+
+variable {rT : Type} [LawfulProbLangℝ rT]
 variable {B : Type} {L : GradedLifting.{0} B}
 
 /-! ## The real-literal injection
@@ -33,18 +35,15 @@ theorem Cfg.measurableEmbedding_realLit (σ : State rT) :
       (Exp.lit.measurableEmbedding.comp BaseLit.real.measurableEmbedding))
 
 theorem Cfg.realLit_image_eq (σ : State rT) :
-    {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ LawfulProbLangℝ.unifUnitSupport} =
-    (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) '' LawfulProbLangℝ.unifUnitSupport := by
-  ext ρ
-  simp only [Set.mem_image, Set.mem_ofPred_eq]
-  exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
+    {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} =
+    (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) '' unifUnitSupport := by
+  ext
+  simp [and_comm, eq_comm]
 
 theorem Cfg.measurableSet_realLit_image (σ : State rT) :
-    MeasurableSet {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧
-      r ∈ LawfulProbLangℝ.unifUnitSupport} := by
+    MeasurableSet {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} := by
   rw [Cfg.realLit_image_eq]
-  exact (Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr
-    LawfulProbLangℝ.unifUnitSupportMeasurable
+  exact (Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr unifUnitSupportMeasurable
 
 theorem headReducible_urand (σ : State rT) : HeadReducible pl(urand) σ :=
   show Cfg.uniformReal σ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
@@ -58,12 +57,11 @@ theorem primStep_urand (σ : State rT) : primStep ⟨pl(urand), σ⟩ = Cfg.unif
 
 theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     Concentrated (primStep ⟨pl(urand), σ⟩)
-      {ρ | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ LawfulProbLangℝ.unifUnitSupport} := by
+      {ρ | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} := by
   rw [primStep_urand σ, Cfg.uniformReal, Cfg.realLit_image_eq]
   exact concentratedOn_map (Cfg.measurable_realLit σ)
-    ((Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr
-      LawfulProbLangℝ.unifUnitSupportMeasurable)
-    LawfulProbLangℝ.unifUnitIsConcentrated
+    ((Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr unifUnitSupportMeasurable)
+    unifUnitIsConcentrated
 
 /-! ## Relational coupling of two continuous samplers
 
@@ -72,14 +70,13 @@ Unlike the discrete `unifInt_codensity_bij`, a bijection is not enough here:
 
 theorem Cfg.uniformReal_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f
-      (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) :
+    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
     L.Rel 0
-      (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ LawfulProbLangℝ.unifUnitSupport ∧
+      (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#(.real r)), σ⟩ ∧ c₂ = ⟨pl(#(.real (f r))), σ'⟩)
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') := by
-  have h := (rel_graph (L := L) LawfulProbLangℝ.unifUnit (f := f) hmp.measurable).restrict
-    LawfulProbLangℝ.unifUnitSupportMeasurable LawfulProbLangℝ.unifUnitIsConcentrated
+  have h := (rel_graph (L := L) unifUnit hmp.measurable).restrict
+    unifUnitSupportMeasurable unifUnitIsConcentrated
   rw [hmp.map_eq] at h
   exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (Cfg.measurable_realLit σ)
     (Cfg.measurable_realLit σ')
@@ -87,21 +84,23 @@ theorem Cfg.uniformReal_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
 of `Cfg.uniformReal_codensity_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f
-      (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) :
+    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
     AddCoupl 0
-      {p : Cfg rT × Cfg rT | ∃ r, r ∈ LawfulProbLangℝ.unifUnitSupport ∧
+      {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
   (Cfg.uniformReal_codensity_bij (L := GradedDivergence.tv.codensity) σ σ' f hmp).addCoupl
 
-section Unary
+section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
+
+section Unary
+variable [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+  [L.IsTopAbsorbing]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
-    (▷ ∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
+    (▷ ∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_step_concentrated Exp.urand_toVal?_eq_none
     Cfg.measurableSet_realLit_image Cfg.concentrated_primStep_urand
@@ -116,20 +115,18 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   iapply HΦ $$ %r %hr
 
 theorem wp_couple_urand_urand (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f
-      (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT)))
+    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit)
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(urand) ∗
-    (∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗ ⤇ K.fill pl(#(.real (f r))) -∗ Φ (.real r)) ⊢
+    (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#(.real (f r))) -∗ Φ (.real r)) ⊢
     wp L E pl(urand) Φ := by
   iintro ⟨Hj, Hcnt⟩
   iapply wp_lift_prim_steps_coupl Exp.urand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  ihave %Heq := specAuth_specFrag_agree $$ Hs Hj
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
-  let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ LawfulProbLangℝ.unifUnitSupport ∧
+  let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#(.real r)), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#(.real (f r))), σ₁'⟩
   iexists R, 0, b
   isplitr; · ipureintro; rw [zero_add]
@@ -139,10 +136,10 @@ theorem wp_couple_urand_urand (f : rT → rT)
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill Exp.urand_not_isValue, primStep_urand σ₁']
     exact (Cfg.uniformReal_codensity_bij (L := L) σ₁ σ₁' f hmp).map_right
-      (by rintro a b ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (Ectx.fillCfg.measurable K)
+      (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (Ectx.fillCfg.measurable K)
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
+  cases heq1
+  cases heq2
   iintro !> !>
   imod specProg_update (e3 := K.fill pl(#(.real (f r)))) $$ Hs Hj with ⟨Hs', Hj'⟩
   imod Hclose
@@ -156,20 +153,16 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]
+variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f
-      (LawfulProbLangℝ.unifUnit (T := rT)) (LawfulProbLangℝ.unifUnit (T := rT))) : iprop%
-    (∀ r, ⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ -∗
+    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) : iprop%
+    (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗
       refines L E (K.fill pl(#(.real r))) (K'.fill pl(#(.real (f r)))) A) ⊢
     refines L E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
-  iintro Hcnt
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K' pl(urand)] at Hj
   iapply MicrometerWpGS.wp_bind
   iapply wp_couple_urand_urand f hmp (K2.comp K') _ _
@@ -180,5 +173,7 @@ theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} 
   iapply Hcnt $$ %r %hrsupp %K2 %b HKres Hna Herr Hpos
 
 end Relational
+
+end Rules
 
 end ProbLang

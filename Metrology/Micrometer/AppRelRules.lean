@@ -11,8 +11,7 @@ public import Metrology.Micrometer.OpenInv
 
 /-! # Relational Rules -/
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting
+open Iris Iris.ProofMode ProbLang.MicrometerWpGS
 open scoped AppGS
 
 namespace ProbLang
@@ -87,22 +86,16 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
 omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF} :
     wp L ⊤ e1 (fun v => refines L E (K.fill v.1) t A) ⊢ refines L E (K.fill e1) t A := by
-  iintro He
   iunfold refines
-  iintro %K' %b HK Hna Herr Hpos
+  iintro He %K' %b HK Hna Herr Hpos
   iapply MicrometerWpGS.wp_bind (K := K)
-  let R : IProp GF := iprop% ⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝
-  ihave HR : R $$ [HK Hna Herr Hpos]
-  · isplitl [HK]; · iassumption
-    iframe
-  ihave HFrame : wp L ⊤ e1 (fun v => iprop(R ∗ refines L E (K.fill v.1) t A)) $$ [HR He]
-  · iapply MicrometerWpGS.wp_frame_l (Φ := fun v => refines L E (K.fill v.1) t A)
-    iframe HR He
-  iapply MicrometerWpGS.wp_mono $$ HFrame
+  iapply MicrometerWpGS.wp_frame_wand
+    (R := iprop(⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
+  iframe
+  iapply MicrometerWpGS.wp_mono $$ He
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
-  iintro ⟨⟨HK, Hna, Herr, Hpos⟩, HRefv⟩
-  iunfold refines at HRefv
+  iintro HRefv ⟨HK, Hna, Herr, Hpos⟩
   iapply HRefv $$ %K' %b HK Hna Herr Hpos
 
 omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
@@ -112,29 +105,20 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
       |={⊤, E'}=> wp L E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
         ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A)) ⊢
     refines L E (K.fill e1) t A := by
-  iintro Hlog
   iunfold refines
-  iintro %K' %b HK Hna Herr Hpos
+  iintro Hlog %K' %b HK Hna Herr Hpos
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_atomic Hopen
   imod Hlog $$ %K' HK with HW
   imodintro
-  let R : IProp GF := iprop% naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝
-  ihave HR : R $$ [Hna Herr Hpos]
-  · isplitl [Hna]; · iassumption
-    iframe
-  ihave HFrame : wp L E' e1 (fun v => iprop(R ∗
-      (|={E', ⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A))) $$ [HR HW]
-  · iapply MicrometerWpGS.wp_frame_l
-      (Φ := fun v => iprop(|={E',⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A))
-    iframe HR HW
-  iapply MicrometerWpGS.wp_mono $$ HFrame
+  iapply MicrometerWpGS.wp_frame_wand (R := iprop(naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
+  iframe
+  iapply MicrometerWpGS.wp_mono $$ HW
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
-  iintro ⟨⟨Hna, Herr, Hpos⟩, HFup⟩
+  iintro HFup ⟨Hna, Herr, Hpos⟩
   imod HFup with ⟨%t', HKt', HRef⟩
   imodintro
-  iunfold refines at HRef
   iapply HRef $$ %K' %b HKt' Hna Herr Hpos
 
 /-! ## Stateful reductions on the LHS -/
@@ -261,9 +245,8 @@ theorem refines_randU_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : l
     (Hz : 0 < z) : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
     refines L E e (K.fill pl(rand(#(.int z), #(.unit)))) A := by
-  iintro Hlog
   unfold refines
-  iintro %K' %b Hj Hna Herr Hpos
+  iintro Hlog %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_r (K'.comp K) Hz
   iframe Hj
@@ -277,9 +260,8 @@ theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : L
     specNatTape l z (n :: ns) ∗
     (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
     refines L E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
-  iintro ⟨Hα, Hlog⟩
   unfold refines
-  iintro %K' %b Hj Hna Herr Hpos
+  iintro ⟨Hα, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_tape_r (K'.comp K)
   iframe Hj Hα
@@ -292,9 +274,8 @@ theorem refines_randT_empty_r {E : CoPset} {K : Ectx rT} {l : Loc} {z : Int}
     specNatTape l z [] ∗
     (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
     refines L E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
-  iintro ⟨Hα, Hlog⟩
   unfold refines
-  iintro %K' %b Hj Hna Herr Hpos
+  iintro ⟨Hα, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_tape_empty_r (K'.comp K) Hz
   iframe Hj Hα
@@ -315,9 +296,8 @@ omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
     refines L E e (K.fill pl(tape(#(.int z)))) A := by
-  iintro Hlog
   unfold refines
-  iintro %K' %b Hj Hna Herr Hpos
+  iintro Hlog %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_alloc_tape_r (K'.comp K)
   iframe Hj
@@ -368,29 +348,26 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
   iapply H $$ %v1 %v2
   iintro !>
   iapply refines_ret rfl rfl
-  imodintro
-  iexact HA
+  iapply fupd_intro $$ HA
 
 /-! ## Budget-credit rules
 
 An absorbing credit discharges any refinement; amplification climbs from `↯b (s ε)` to the
-absorbing `↯b (s 1)`, which replaces the old contradiction at `↯ 1`. -/
+absorbing `↯b (s 1)`. -/
 
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
 theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
     {A : lrel rT GF} : ↯b c ⊢ refines L E e e' A := by
-  iintro Hc
   unfold refines
-  iintro %K %b - - - -
+  iintro Hc %K %b - - - -
   iapply wp_of_absorbing hc $$ Hc
 
 omit [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
 theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
-  iintro Hcnt
   unfold refines
-  iintro %K %b Hj Hna Herr %Hpos
+  iintro Hcnt %K %b Hj Hna Herr %Hpos
   obtain ⟨b₁, b₂, hb₁, hb₂, hle⟩ := hsplit b Hpos
   ihave ⟨Herr1, Herr2⟩ := (BudgetCredit.weaken hle).trans BudgetCredit.split $$ Herr
   iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
@@ -448,9 +425,8 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
-  iintro Hcnt
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_rand z f hdom hbij Hz (K2.comp K') ⊤ _
@@ -471,9 +447,8 @@ theorem refines_couple_rands_lr_adv {s : ENNReal →+o B}
       refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
-  iintro ⟨Hε, Hcnt⟩
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort hc (K2.comp K') ⊤ _
@@ -513,9 +488,8 @@ theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
       refines L E e e' A) ⊢
     refines L E e e' A := by
-  iintro ⟨Hα, Hαₛ, Hcnt⟩
   unfold refines
-  iintro %K %b Hj Hna Herr Hpos
+  iintro ⟨Hα, Hαₛ, Hcnt⟩ %K %b Hj Hna Herr Hpos
   iapply wp_couple_tapes_bij (αₛ := αₛ) (ns := ns) (nsₛ := nsₛ) f hdom hbij Hz
   iframe Hα Hαₛ
   iintro %n %hn HA HS
@@ -528,9 +502,8 @@ theorem refines_couple_TU {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
       refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.lbl α))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
-  iintro ⟨Hα, Hcnt⟩
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro ⟨Hα, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_tape_rand z f hdom hbij Hz (K2.comp K') ⊤ α _
@@ -547,9 +520,8 @@ theorem refines_couple_UT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
       refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.lbl α')))) A := by
-  iintro ⟨Hα', Hcnt⟩
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro ⟨Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_tape z f hdom hbij Hz (K2.comp K') ⊤ α' _
@@ -567,9 +539,8 @@ theorem refines_couple_TT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
       refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.lbl α))))
       (K'.fill pl(rand(#(.int z), #(.lbl α')))) A := by
-  iintro ⟨Hα, Hα', Hcnt⟩
   unfold refines
-  iintro %K2 %b Hj Hna Herr Hpos
+  iintro ⟨Hα, Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_lbl_rand_lbl z f hdom hbij Hz (K2.comp K') ⊤ α α' _

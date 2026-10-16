@@ -28,8 +28,9 @@ theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i �
   induction s using Finset.induction_on with
   | empty => simp
   | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at ha
     rw [Finset.sum_insert hj]
-    exact add_ne_bot_iff.2 ⟨ha j (by simp), ih fun i hi ↦ ha i (by simp [hi])⟩
+    exact add_ne_bot_iff.2 ⟨ha.1, ih ha.2⟩
 
 /-- Finite sums of converging extended reals converge, away from `⊥`. -/
 theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : ι → α → EReal}
@@ -39,11 +40,10 @@ theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : 
   induction s using Finset.induction_on with
   | empty => simpa using tendsto_const_nhds
   | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at hg ha
     simp only [Finset.sum_insert hj]
-    have hs : ∑ i ∈ s, a i ≠ ⊥ := sum_ne_bot s fun i hi ↦ ha i (by simp [hi])
-    exact (continuousAt_add (Or.inr hs) (Or.inl (ha j (by simp)))).tendsto.comp
-      ((hg j (by simp)).prodMk_nhds (ih (fun i hi ↦ hg i (by simp [hi]))
-        fun i hi ↦ ha i (by simp [hi])))
+    exact (continuousAt_add (Or.inr (sum_ne_bot s ha.2)) (Or.inl ha.1)).tendsto.comp
+      (hg.1.prodMk_nhds (ih hg.2 ha.2))
 
 theorem toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ i ∈ s, 0 ≤ x i) :
     (∑ i ∈ s, x i).toENNReal = ∑ i ∈ s, (x i).toENNReal := by
@@ -51,8 +51,9 @@ theorem toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ 
   induction s using Finset.induction_on with
   | empty => simp
   | insert j s hj ih =>
-    rw [Finset.sum_insert hj, Finset.sum_insert hj, toENNReal_add (hx j (by simp))
-      (Finset.sum_nonneg fun i hi ↦ hx i (by simp [hi])), ih fun i hi ↦ hx i (by simp [hi])]
+    rw [Finset.forall_mem_insert] at hx
+    rw [Finset.sum_insert hj, Finset.sum_insert hj, toENNReal_add hx.1 (Finset.sum_nonneg hx.2),
+      ih hx.2]
 
 end EReal
 
@@ -123,8 +124,8 @@ theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (
     filter_upwards [hlim.eventually (lt_mem_nhds hrs), eventually_ge_atTop (x + h),
       eventually_gt_atTop 0] with t h1 h2 h3
     rw [EReal.coe_le_coe_iff, le_div_iff₀ h3]
-    have h1' := mul_lt_mul_of_pos_right h1 h3
-    rw [add_mul, div_mul_cancel₀ _ h3.ne'] at h1'
+    replace h1 := mul_lt_mul_of_pos_right h1 h3
+    rw [add_mul, div_mul_cancel₀ _ h3.ne'] at h1
     linarith [hlow t h2]
   exact absurd (le_limsup_of_frequently_le hev.frequently) (not_le.2 hr)
 
@@ -179,20 +180,20 @@ theorem persp_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {a b : ℝ} (ha : 0 ≤ a) : 
 /-- The perspective of a convex weight is subadditive. -/
 theorem persp_add_le (hf : ConvexOn ℝ (Ici 0) f) {a a' b b' : ℝ} (ha : 0 ≤ a) (ha' : 0 ≤ a')
     (hb : 0 ≤ b) (hb' : 0 ≤ b') : persp f (a + a') (b + b') ≤ persp f a b + persp f a' b' := by
-  -- one-sided case: adding mass `a` against zero costs at most `a f'(∞)`
-  have side {a a' b' : ℝ} (ha : 0 ≤ a) (ha' : 0 ≤ a') (hb' : 0 < b') :
-      persp f (a + a') b' ≤ persp f a 0 + persp f a' b' := by
-    rcases ha.eq_or_lt with rfl | ha
+  -- one-sided case: adding mass `x` against zero costs at most `x f'(∞)`
+  have side {x y z : ℝ} (hx : 0 ≤ x) (hy : 0 ≤ y) (hz : 0 < z) :
+      persp f (x + y) z ≤ persp f x 0 + persp f y z := by
+    rcases hx.eq_or_lt with rfl | hx
     · simp
-    rw [persp_zero_right, persp_of_ne_zero hb'.ne', persp_of_ne_zero hb'.ne']
-    have key := le_derivAtTop hf (div_nonneg ha' hb'.le) (div_pos ha hb')
-    have hsplit : b' * f ((a + a') / b') = b' * f (a' / b') +
-        a * ((f (a' / b' + a / b') - f (a' / b')) / (a / b')) := by
-      rw [add_comm a a', add_div, add_comm (a' / b')]
+    rw [persp_zero_right, persp_of_ne_zero hz.ne', persp_of_ne_zero hz.ne']
+    have key := le_derivAtTop hf (div_nonneg hy hz.le) (div_pos hx hz)
+    have hsplit : z * f ((x + y) / z) = z * f (y / z) +
+        x * ((f (y / z + x / z) - f (y / z)) / (x / z)) := by
+      rw [add_comm x y, add_div, add_comm (y / z)]
       field_simp
       ring
     rw [hsplit, EReal.coe_add, add_comm, EReal.coe_mul]
-    exact add_le_add (mul_le_mul_of_nonneg_left key (EReal.coe_nonneg.2 ha.le)) le_rfl
+    exact add_le_add (mul_le_mul_of_nonneg_left key (EReal.coe_nonneg.2 hx.le)) le_rfl
   rcases hb.eq_or_lt with rfl | hb
   · rcases hb'.eq_or_lt with rfl | hb'
     · simp only [add_zero, persp_zero_right, EReal.coe_add]
@@ -225,10 +226,10 @@ theorem persp_sum_le (hf : ConvexOn ℝ (Ici 0) f) {ι : Type*} (s : Finset ι) 
   induction s using Finset.induction_on with
   | empty => simp
   | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at ha hb
     rw [Finset.sum_insert hj, Finset.sum_insert hj, Finset.sum_insert hj]
-    refine (persp_add_le hf (ha j (by simp)) (Finset.sum_nonneg fun i hi ↦ ha i (by simp [hi]))
-      (hb j (by simp)) (Finset.sum_nonneg fun i hi ↦ hb i (by simp [hi]))).trans ?_
-    exact add_le_add le_rfl (ih (fun i hi ↦ ha i (by simp [hi])) fun i hi ↦ hb i (by simp [hi]))
+    exact (persp_add_le hf ha.1 (Finset.sum_nonneg ha.2) hb.1 (Finset.sum_nonneg hb.2)).trans
+      (add_le_add le_rfl (ih ha.2 hb.2))
 
 /-- The perspective of a convex weight is continuous along sequences that keep the zero pattern
 of the limit. -/
@@ -250,7 +251,7 @@ theorem tendsto_persp (hf : ConvexOn ℝ (Ici 0) f) {p q : ℕ → ℝ} {p₀ q�
   have hlim : Tendsto (fun n ↦ q n * f (p n / q n)) atTop (𝓝 (q₀ * f (p₀ / q₀))) := by
     rcases hp₀.eq_or_lt with rfl | hp₀
     · simpa [fun n ↦ (hpz n).2 rfl] using hq.mul_const (f 0)
-    refine hq.mul (((hf.continuousOn_interior).continuousAt ?_).tendsto.comp (hp.div hq hq₀.ne'))
+    refine hq.mul ((hf.continuousOn_interior.continuousAt ?_).tendsto.comp (hp.div hq hq₀.ne'))
     rw [interior_Ici]
     exact Ioi_mem_nhds (div_pos hp₀ hq₀)
   rw [persp_of_ne_zero hq₀.ne']
@@ -266,9 +267,7 @@ theorem persp_integral_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
     (hG : ∀ x, 0 ≤ G x) (hGi : Integrable G ν) (hfG : Integrable (fun x ↦ f (G x)) ν)
     (hw : Measurable w) (hw0 : ∀ x, 0 ≤ w x) (hw1 : ∀ x, w x ≤ 1) :
     persp f (∫ x, w x * G x ∂ν) (∫ x, w x ∂ν) ≤ ((∫ x, w x * f (G x) ∂ν : ℝ) : EReal) := by
-  have hwb : ∀ᵐ x ∂ν, ‖w x‖ ≤ 1 := ae_of_all _ fun x ↦ by
-    rw [Real.norm_of_nonneg (hw0 x)]
-    exact hw1 x
+  have hwb : ∀ᵐ x ∂ν, ‖w x‖ ≤ 1 := .of_forall fun x ↦ (Real.norm_of_nonneg (hw0 x)).trans_le (hw1 x)
   have hwG : Integrable (fun x ↦ w x * G x) ν := hGi.bdd_mul hw.aestronglyMeasurable hwb
   have hwi : Integrable w ν := .of_bound hw.aestronglyMeasurable 1 hwb
   have hb0 : 0 ≤ ∫ x, w x ∂ν := integral_nonneg hw0
@@ -280,8 +279,7 @@ theorem persp_integral_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
   rw [persp_of_ne_zero hb.ne', EReal.coe_le_coe_iff]
   refine le_of_forall_lt_imp_le_of_dense fun y hy ↦ ?_
   obtain ⟨c, c', hle, heq⟩ := hf.exists_affine_le_of_lt_real
-    (mem_Ici.2 (div_nonneg (integral_nonneg fun x ↦ mul_nonneg (hw0 x) (hG x) :
-      0 ≤ ∫ x, w x * G x ∂ν) hb.le))
+    (mem_Ici.2 (div_nonneg (integral_nonneg fun x ↦ mul_nonneg (hw0 x) (hG x)) hb.le))
     ((div_lt_iff₀' hb).2 hy) isClosed_Ici (hf.continuousOn_Ici hf_cont).lowerSemicontinuousOn
   calc y = c * ∫ x, w x * G x ∂ν + c' * ∫ x, w x ∂ν := by
         rw [← div_mul_cancel₀ y hb.ne', ← heq]

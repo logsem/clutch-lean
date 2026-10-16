@@ -3,8 +3,7 @@ module
 public import Metrology.Couplings.Divergences.Renyi
 public import Metrology.Couplings.LiftingHom
 
-/-! Rényi curves and concentrated differential privacy as graded divergences (Approximate Span
-Liftings, Eqs. 6 and 7, Thms. 4.12 and 4.13). -/
+/-! Rényi curves and concentrated DP as graded divergences (Approximate Span Liftings, §4). -/
 
 @[expose] public section
 
@@ -83,9 +82,7 @@ theorem codensity_renyiCurve_iff {ρ : RenyiBudget} {R : X → Y → RenyiBudget
       · simpa [hβ] using renyiDivergence_top β.2 (k x) (l y)
     simpa using h hlt hkl' α
   rcases eq_or_ne (ρ α + c α) ⊤ with htop | hlt
-  · show renyiDivergence α (ρ α + c α) _ _
-    rw [htop]
-    exact renyiDivergence_top α.2 _ _
+  · simpa [htop] using renyiDivergence_top α.2 _ _
   · exact h α (lt_top_iff_ne_top.2 hlt) fun x y ↦ hkl x y α
 
 /-- A curve is absorbing exactly at `⊤` (Rocq `GCF_curve_top_exact`). -/
@@ -99,8 +96,14 @@ theorem absorbing_codensity_renyiCurve_iff {ρ : RenyiBudget} :
 
 /-! ## Concentrated divergences -/
 
-theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 := by
-  simpa using zero_lt_one.trans α.2
+theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 :=
+  (ENNReal.ofReal_pos.2 (zero_lt_one.trans α.2)).ne'
+
+theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
+    (h : ENNReal.ofReal α * ρ < t) : ∃ ρ', ρ < ρ' ∧ ENNReal.ofReal α * ρ' = t := by
+  have h0 := ofReal_ioi_ne_zero α
+  refine ⟨t / ENNReal.ofReal α, ?_, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top⟩
+  rwa [ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top), mul_comm]
 
 section Line
 
@@ -183,8 +186,7 @@ theorem concentratedDivergence_iff :
 theorem concentratedDivergence_iff' (hA : A ⊆ Ioi 1) :
     concentratedDivergence A (ξ, ρ) μ ν ↔
       ∀ α ∈ A, renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
-  concentratedDivergence_iff.trans
-    ⟨fun h α hα ↦ h ⟨α, hA hα⟩ hα, fun h α hα ↦ h α hα⟩
+  concentratedDivergence_iff.trans ⟨fun h α hα ↦ h ⟨α, hA hα⟩ hα, fun h α hα ↦ h α hα⟩
 
 theorem zcdpDivergence_iff :
     zcdpDivergence (ξ, ρ) μ ν ↔ ∀ α, 1 < α → renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
@@ -267,13 +269,10 @@ instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
 instance isBudgetClosed_tcdp : (tcdpDivergence.{u} ω).IsBudgetClosed where
   of_forall_gt {ρ} := fun h ↦ concentratedDivergence_of_forall fun α hα ↦
     IsBudgetClosed.of_forall_gt fun t ht ↦ by
-      have h0 := ofReal_ioi_ne_zero α
-      have hρ : ρ < t / ENNReal.ofReal α :=
-        (ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top)).2
-          (by simpa [mul_comm] using ht)
-      simpa [hα, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top] using h _ hρ α
+      obtain ⟨ρ', hρ, rfl⟩ := exists_lt_and_ofReal_mul_eq_of_mul_lt (by simpa [hα] using ht)
+      simpa [hα] using h ρ' hρ α
 
-variable {A ω}
+/-! ## Concentrated liftings -/
 
 omit [MeasurableSpace X] [MeasurableSpace Y] in
 @[simp]
@@ -281,9 +280,6 @@ theorem relCost_fst_add_mul_snd {S : X → Y → Prop} {x : X} {y : Y} (c : ℝ�
     (relCost S x y : ℝ≥0∞ × ℝ≥0∞).1 + c * (relCost S x y : ℝ≥0∞ × ℝ≥0∞).2 = relCost S x y := by
   by_cases hS : S x y <;> simp [hS]
 
-/-! ## Concentrated liftings -/
-
-variable (A) in
 /-- The Rényi-curve lifting read along the lines, so that every order is a homomorphic image
 (Rocq `GCF_zCDP`, `GCF_tCDP`). -/
 noncomputable def concentratedLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0∞) :=
@@ -293,12 +289,11 @@ noncomputable def concentratedLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0
 noncomputable abbrev zcdpLifting : GradedLifting.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   concentratedLifting (Ioi 1)
 
-variable (ω) in
 /-- The tCDP lifting: Rényi liftings along `α ρ` at the orders `1 < α < ω`. -/
 noncomputable def tcdpLifting : GradedLifting.{u} ℝ≥0∞ :=
   (concentratedLifting (Ioo 1 ω)).comap (Prod.mk 0)
 
-variable {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop} {ν : Measure Y}
+variable {A ω} {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop} {ν : Measure Y}
 
 /-- A concentrated lifting is a Rényi lifting along the line at every order of `A` (Rocq
 `gcf_zCDP_iff`). -/
@@ -337,6 +332,11 @@ theorem tcdpLifting_rel_iff :
     ext x y
     by_cases hS : S x y <;> simp [hS, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
   rw [this, GradedLifting.Rel]
+
+theorem codensity_tcdp_of_tcdpLifting [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    {R : X → Y → ℝ≥0∞} (h : tcdpLifting ω ρ R μ ν) : (tcdpDivergence ω).codensity ρ R μ ν :=
+  comap_codensity_le (φ := fun c ↦ concentratedLine (Ioo 1 ω) (0, c))
+    (fun _ _ ↦ by rw [← concentratedLine_add]; simp) h
 
 variable (A ω)
 
@@ -423,9 +423,7 @@ instance isTopAbsorbing_tcdpLifting : (tcdpLifting.{u} ω).IsTopAbsorbing :=
 
 /-- A tCDP lifting of equality is the tCDP divergence. -/
 instance isSound_tcdpLifting : (tcdpLifting.{u} ω).IsSound (tcdpDivergence ω) where
-  sound h := IsSound.sound (L := codensity (tcdpDivergence ω))
-    (comap_codensity_le (φ := fun ρ ↦ concentratedLine (Ioo 1 ω) (0, ρ))
-      (fun _ _ ↦ by rw [← concentratedLine_add]; simp) h)
+  sound h := IsSound.sound (L := codensity (tcdpDivergence ω)) (codensity_tcdp_of_tcdpLifting h)
 
 /-- The tCDP divergence gives a tCDP lifting of equality, order by order. -/
 instance isComplete_tcdpLifting : (tcdpLifting.{u} ω).IsComplete (tcdpDivergence ω) where
@@ -436,11 +434,8 @@ instance isComplete_tcdpLifting : (tcdpLifting.{u} ω).IsComplete (tcdpDivergenc
 instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
   of_forall_gt {_ _} _ _ ρ := fun h ↦ tcdpLifting_iff.2 fun α hα ↦
     GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity (renyiDivergence α)) fun t ht ↦ by
-      have h0 := ofReal_ioi_ne_zero α
-      have hρ : ρ < t / ENNReal.ofReal α :=
-        (ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top)).2
-          (by simpa [mul_comm] using ht)
-      simpa [ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top] using tcdpLifting_iff.1 (h _ hρ) α hα
+      obtain ⟨ρ', hρ, rfl⟩ := exists_lt_and_ofReal_mul_eq_of_mul_lt ht
+      exact tcdpLifting_iff.1 (h ρ' hρ) α hα
 
 variable {A ω}
 
@@ -511,8 +506,7 @@ noncomputable def tcdpToCodensity :
     LiftingHom (tcdpLifting.{u} ω) (codensity (tcdpDivergence.{u} ω)) where
   map b := b
   mono := monotone_id
-  map_lift := comap_codensity_le (φ := fun ρ ↦ concentratedLine (Ioo 1 ω) (0, ρ))
-    fun _ _ ↦ by rw [← concentratedLine_add]; simp
+  map_lift := codensity_tcdp_of_tcdpLifting
 
 end LiftingHom
 

@@ -2,8 +2,7 @@ module
 
 public import Metrology.Couplings.Divergences.FDiv
 
-/-! The partition characterisation of the `f`-divergence and the consequences that use it: data
-processing and lower semicontinuity (Approximate Span Liftings, Def. 2.7, Thm. 4.7). -/
+/-! Partition sums of `f`-divergences and data processing (Approximate Span Liftings, Thm. 4.7). -/
 
 @[expose] public section
 
@@ -15,6 +14,18 @@ namespace ProbabilityTheory
 variable {f g : ℝ → ℝ} {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
 
 /-! ## The partition characterisation -/
+
+/-- Above an integrable minorant `L`, the integral of `F` is the lower integral of `F - L` plus
+the integral of `L`. -/
+theorem coe_integral_eq_lintegral_add {F L : X → ℝ} (hF : Integrable F ν) (hL : Integrable L ν)
+    (hLF : ∀ x, L x ≤ F x) :
+    ((∫ x, F x ∂ν : ℝ) : EReal) =
+      ((∫⁻ x, ENNReal.ofReal (F x - L x) ∂ν : ℝ≥0∞) : EReal) + ((∫ x, L x ∂ν : ℝ) : EReal) := by
+  have h0 : 0 ≤ᵐ[ν] fun x ↦ F x - L x := ae_of_all _ fun x ↦ sub_nonneg.2 (hLF x)
+  have h := ofReal_integral_eq_lintegral_ofReal (hF.sub hL) h0
+  simp only [Pi.sub_apply] at h
+  rw [← h, EReal.coe_ennreal_ofReal, max_eq_left (integral_nonneg_of_ae h0), ← EReal.coe_add,
+    integral_sub hF hL, sub_add_cancel]
 
 /-- Above an affine minorant `ℓ`, the `f`-divergence is the lower integral of `f - ℓ` at the
 density, plus the integral of `ℓ`, plus the singular part. -/
@@ -32,11 +43,8 @@ theorem fDiv_eq_lintegral_sub (hf : ConvexOn ℝ (Ici 0) f)
   have hφ0 : 0 ≤ᵐ[ν] fun x ↦ f (G x) - (a * G x + c) :=
     ae_of_all _ fun x ↦ sub_nonneg.2 (h _ ENNReal.toReal_nonneg)
   by_cases hint : Integrable (fun x ↦ f (G x)) ν
-  · have h := ofReal_integral_eq_lintegral_ofReal (hint.sub hL) hφ0
-    simp only [Pi.sub_apply] at h
-    rw [fDiv_of_integrable hint, ← h, EReal.coe_ennreal_ofReal,
-      max_eq_left (integral_nonneg_of_ae hφ0), ← EReal.coe_add, integral_sub hint hL,
-      sub_add_cancel]
+  · rw [fDiv_of_integrable hint,
+      coe_integral_eq_lintegral_add hint hL fun _ ↦ h _ ENNReal.toReal_nonneg, add_assoc]
   have htop : ∫⁻ x, ENNReal.ofReal (f (G x) - (a * G x + c)) ∂ν = ⊤ := by
     by_contra hne
     have hfG := (hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
@@ -111,7 +119,6 @@ theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
     by_cases hx : x ∈ T
     · simp [k, hx, Fin.ext_iff, hjk, (hjN x).trans_lt (Nat.lt_succ_self N) |>.ne]
     · simp [k, hx]
-  -- masses inside `T` are integrals of the density
   have hμ (A : Set X) (hA : MeasurableSet A) (hAT : A ⊆ T) : (μ A).toReal = ∫ x in A, G x ∂ν := by
     rw [setIntegral_toReal_rnDeriv_eq_withDensity' hA, measureReal_def]
     conv_lhs => rw [← μ.singularPart_add_rnDeriv ν]
@@ -179,14 +186,9 @@ theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
   -- above `L`, the lower integrals of the partial maxima increase to that of `f`
   set E : ℕ → ℝ≥0∞ := fun N ↦ ∫⁻ x, ENNReal.ofReal (H N x - L x) ∂ν
   have hE (N : ℕ) :
-      ((∫ x, H N x ∂ν : ℝ) : EReal) = (E N : EReal) + ((∫ x, L x ∂ν : ℝ) : EReal) := by
-    have hHi : Integrable (H N) ν := integrable_partialSups_affine hG integrable_toReal_rnDeriv N
-    have hφ0 : 0 ≤ᵐ[ν] fun x ↦ H N x - L x := ae_of_all _ fun x ↦ sub_nonneg.2 (hHL N x)
-    have h := ofReal_integral_eq_lintegral_ofReal (hHi.sub hLi) hφ0
-    simp only [Pi.sub_apply] at h
-    rw [show E N = _ from h.symm, EReal.coe_ennreal_ofReal,
-      max_eq_left (integral_nonneg_of_ae hφ0), ← EReal.coe_add, integral_sub hHi hLi,
-      sub_add_cancel]
+      ((∫ x, H N x ∂ν : ℝ) : EReal) = (E N : EReal) + ((∫ x, L x ∂ν : ℝ) : EReal) :=
+    coe_integral_eq_lintegral_add (integrable_partialSups_affine hG integrable_toReal_rnDeriv N)
+      hLi (hHL N)
   have hElim : Tendsto E atTop (𝓝 (∫⁻ x, ENNReal.ofReal (f (G x) - L x) ∂ν)) :=
     lintegral_tendsto_of_tendsto_of_monotone
       (fun N ↦ ((measurable_partialSups_affine hG N).sub hLm).ennreal_ofReal.aemeasurable)

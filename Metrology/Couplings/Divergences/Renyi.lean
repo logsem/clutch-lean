@@ -15,7 +15,7 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 
-variable {X : Type*} [MeasurableSpace X] {f : ℝ → ℝ}
+variable {X : Type*} [MeasurableSpace X]
 
 /-! ## The weight `t ↦ t ^ α` -/
 
@@ -125,9 +125,8 @@ theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
 theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMeasure μ]
     [IsFiniteMeasure ν'] (h : ν ≤ ν') : fDiv (· ^ α) μ ν' ≤ fDiv (· ^ α) μ ν := by
   have := isFiniteMeasure_of_le ν' h
-  have hf := convexOn_rpow hα.le
-  have hf_cont := continuousWithinAt_rpow_zero (zero_lt_one.trans hα)
-  rw [fDiv_eq_iSup_partition hf hf_cont, fDiv_eq_iSup_partition hf hf_cont]
+  simp only [fDiv_eq_iSup_partition (convexOn_rpow hα.le)
+    (continuousWithinAt_rpow_zero (zero_lt_one.trans hα))]
   exact iSup_mono fun n ↦ iSup_mono fun k ↦ iSup_mono fun _ ↦ Finset.sum_le_sum fun i _ ↦
     persp_rpow_anti_right hα ENNReal.toReal_nonneg ENNReal.toReal_nonneg
       (ENNReal.toReal_mono (measure_ne_top ν' _) (Measure.le_iff'.1 h _))
@@ -136,9 +135,8 @@ theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMea
 theorem fDiv_rpow_mono_left (hα : 1 < α) {μ μ' ν : Measure X} [IsFiniteMeasure μ']
     [IsFiniteMeasure ν] (h : μ ≤ μ') : fDiv (· ^ α) μ ν ≤ fDiv (· ^ α) μ' ν := by
   have := isFiniteMeasure_of_le μ' h
-  have hf := convexOn_rpow hα.le
-  have hf_cont := continuousWithinAt_rpow_zero (zero_lt_one.trans hα)
-  rw [fDiv_eq_iSup_partition hf hf_cont, fDiv_eq_iSup_partition hf hf_cont]
+  simp only [fDiv_eq_iSup_partition (convexOn_rpow hα.le)
+    (continuousWithinAt_rpow_zero (zero_lt_one.trans hα))]
   exact iSup_mono fun n ↦ iSup_mono fun k ↦ iSup_mono fun _ ↦ Finset.sum_le_sum fun i _ ↦
     persp_rpow_mono_left hα ENNReal.toReal_nonneg
       (ENNReal.toReal_mono (measure_ne_top μ' _) (Measure.le_iff'.1 h _)) ENNReal.toReal_nonneg
@@ -243,7 +241,8 @@ theorem le_renyiThresh_of_forall_lt (hα : 1 < α) {x : EReal}
 
 end renyiThresh
 
-/-- `D_α(μ ‖ ν) ≤ ρ`, as the moment bound `∫ (dμ/dν)^α dν ≤ e^{(α - 1) ρ}` (Def. 2.2). -/
+/-- The Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ`, as the moment bound
+`∫ (dμ/dν)^α dν ≤ e^{(α - 1) ρ}` (Def. 2.2). -/
 noncomputable def renyiDivergence (α : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   fDivBound Unit (fun _ _ t ↦ t ^ α) fun ρ _ ↦ renyiThresh α ρ
 
@@ -331,13 +330,12 @@ instance isBudgetClosed_renyi : (renyiDivergence.{u} α).IsBudgetClosed :=
 instance isComposable_renyi : (renyiDivergence.{u} α).IsComposable :=
   isComposable_fDivBound_of_mul (fun _ _ ↦ convexOn_rpow hα.out.le)
     (fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out))
-    (fun _ _ _ M N _ μ₁ μ₂ _ _ κ η _ _ ↦ by
-      have : Nonempty (ULift.{u} (Fin M)) := ⟨⟨0⟩⟩
-      have hS : 0 ≤ ⨆ i, fDiv (· ^ α) (κ i) (η i) :=
-        le_iSup_of_le (Classical.arbitrary _) fDiv_rpow_nonneg
-      rw [max_eq_right fDiv_rpow_nonneg, max_eq_right hS]
-      exact fDiv_rpow_comp_le hα.out μ₁ μ₂ κ η)
-    (fun b c _ ↦ by
+    (fun _ _ _ ↦ by
+      intros
+      rw [max_eq_right fDiv_rpow_nonneg, max_eq_right ?_]
+      · exact fDiv_rpow_comp_le hα.out _ _ _ _
+      · exact le_iSup_of_le ⟨0⟩ fDiv_rpow_nonneg)
+    (fun _ _ _ ↦ by
       rw [renyiThresh_add, max_eq_right renyiThresh_nonneg, max_eq_right renyiThresh_nonneg])
     fun _ _ ↦ renyiThresh_nonneg
 

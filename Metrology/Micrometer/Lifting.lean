@@ -2,9 +2,9 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 
-@[expose] public section
-
 /-! # Lifting lemmas translating operational semantics rules into program-logic rules. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -38,8 +38,7 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
   imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hred, %hred', %hcpl, H⟩
   imodintro
   iapply progCoupl_steps_adv hb hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' %hR
-  imodintro
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
 /-- The same without splitting the budget: the leftover `R` is the new budget at each pair. -/
@@ -61,8 +60,7 @@ theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT 
   imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %hred, %hred', %hcpl, H⟩
   imodintro
   iapply progCoupl_steps_adv' hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' %hR
-  imodintro
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
 /-- The continuation may exit with an absorbing budget instead of proving the `wp` (Rocq

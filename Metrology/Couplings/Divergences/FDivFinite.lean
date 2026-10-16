@@ -2,8 +2,7 @@ module
 
 public import Metrology.Couplings.Divergences.FDivPartition
 
-/-! Chain rules for `f`-divergences from finite spaces, by dyadic discretisation (Approximate Span
-Liftings, Thms. 4.6, 4.8, App. C.3; Sato–Katsumata, Prop. 1). -/
+/-! Chain rules for `f`-divergences, lifted from finite spaces (Approximate Span Liftings, §4). -/
 
 @[expose] public section
 
@@ -17,12 +16,10 @@ namespace Discretize
 /-! ## Dyadic cells -/
 
 /-- The dyadic cell of `v ∈ [0, 1]` at level `n`: `0` exactly at `0`, else `⌈v 2ⁿ⌉`. -/
-noncomputable def cell (n : ℕ) (v : ℝ≥0∞) : Fin (2 ^ n + 1) := by
-  classical
-  exact if v = 0 then 0 else ⟨min ⌈v.toReal * 2 ^ n⌉₊ (2 ^ n), Nat.lt_succ_of_le (min_le_right _ _)⟩
+noncomputable def cell (n : ℕ) (v : ℝ≥0∞) : Fin (2 ^ n + 1) :=
+  if v = 0 then 0 else ⟨min ⌈v.toReal * 2 ^ n⌉₊ (2 ^ n), Nat.lt_succ_of_le (min_le_right _ _)⟩
 
 theorem measurable_cell (n : ℕ) : Measurable (cell n) := by
-  classical
   have hceil : Measurable (Nat.ceil : ℝ → ℕ) := Nat.ceil_mono.measurable
   refine Measurable.ite (measurableSet_singleton 0) measurable_const ?_
   exact measurable_of_countable (fun m : ℕ ↦
@@ -30,7 +27,6 @@ theorem measurable_cell (n : ℕ) : Measurable (cell n) := by
       (hceil.comp (ENNReal.measurable_toReal.mul_const _))
 
 theorem cell_eq_zero_iff {n : ℕ} {v : ℝ≥0∞} (hv : v ≤ 1) : cell n v = 0 ↔ v = 0 := by
-  classical
   refine ⟨fun h ↦ by_contra fun h0 ↦ ?_, fun h ↦ by simp [cell, h]⟩
   have hpos : 0 < v.toReal := ENNReal.toReal_pos h0 (hv.trans_lt ENNReal.one_lt_top).ne
   simp only [cell, h0, ↓reduceIte, Fin.ext_iff, Fin.val_zero] at h
@@ -41,7 +37,6 @@ theorem cell_eq_zero_iff {n : ℕ} {v : ℝ≥0∞} (hv : v ≤ 1) : cell n v = 
 /-- Values in the same nonzero dyadic cell differ by less than `2⁻ⁿ`. -/
 theorem abs_sub_lt_of_cell_eq {n : ℕ} {v w : ℝ≥0∞} (hv : v ≤ 1) (hw : w ≤ 1)
     (h : cell n v = cell n w) : |v.toReal - w.toReal| < (2 ^ n)⁻¹ := by
-  classical
   rcases eq_or_ne v 0 with rfl | hv0
   · rw [(cell_eq_zero_iff hw).1 (h.symm.trans ((cell_eq_zero_iff (n := n) zero_le_one).2 rfl))]
     simp
@@ -53,11 +48,11 @@ theorem abs_sub_lt_of_cell_eq {n : ℕ} {v w : ℝ≥0∞} (hv : v ≤ 1) (hw : 
       (hx.trans ENNReal.ofReal_one.ge))
   simp only [cell, hv0, hw0, ↓reduceIte, Fin.ext_iff, min_eq_left (hle v hv),
     min_eq_left (hle w hw)] at h
-  have hv' := Nat.ceil_lt_add_one (by positivity : 0 ≤ v.toReal * 2 ^ n)
-  have hw' := Nat.ceil_lt_add_one (by positivity : 0 ≤ w.toReal * 2 ^ n)
-  have hv'' := Nat.le_ceil (v.toReal * 2 ^ n)
-  have hw'' := Nat.le_ceil (w.toReal * 2 ^ n)
-  rw [h] at hv' hv''
+  have hv_lt := Nat.ceil_lt_add_one (by positivity : 0 ≤ v.toReal * 2 ^ n)
+  have hw_lt := Nat.ceil_lt_add_one (by positivity : 0 ≤ w.toReal * 2 ^ n)
+  have hv_le := Nat.le_ceil (v.toReal * 2 ^ n)
+  have hw_le := Nat.le_ceil (w.toReal * 2 ^ n)
+  rw [h] at hv_lt hv_le
   have hp : (0 : ℝ) < 2 ^ n := by positivity
   have key (a b : ℝ) (hab : a * 2 ^ n - b * 2 ^ n < 1) : a - b < (2 ^ n)⁻¹ :=
     calc a - b = (a * 2 ^ n - b * 2 ^ n) * (2 ^ n)⁻¹ := by field_simp
@@ -192,14 +187,14 @@ theorem tendsto_bind_disc {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubP
   have hKn (n : ℕ) : Measurable (K ∘ rep κ η n ∘ disc κ η n) :=
     hK.comp ((measurable_rep κ η n).comp (measurable_disc κ η hκ hη n))
   have := isSubProbabilityMeasure_bind μ K
-  have hpt (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
-    le_add_of_cell_eq (singleton_le_one (ρ := K x) i) (singleton_le_one i) (hcell n x i).symm
-  have hpt' (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
+  have hpt₁ (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
     le_add_of_cell_eq (singleton_le_one (ρ := K (rep κ η n (disc κ η n x))) i)
       (singleton_le_one i) (hcell n x i)
+  have hpt₂ (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
+    le_add_of_cell_eq (singleton_le_one (ρ := K x) i) (singleton_le_one i) (hcell n x i).symm
   exact tendsto_of_le_add (measure_ne_top _ _) hc
-    (fun n ↦ bind_le_add (hKn n) hK (fun x T ↦ measure_le_add_of_singleton (hpt' n x) T) T)
-    (fun n ↦ bind_le_add hK (hKn n) (fun x T ↦ measure_le_add_of_singleton (hpt n x) T) T)
+    (fun n ↦ bind_le_add (hKn n) hK (fun x T ↦ measure_le_add_of_singleton (hpt₁ n x) T) T)
+    (fun n ↦ bind_le_add hK (hKn n) (fun x T ↦ measure_le_add_of_singleton (hpt₂ n x) T) T)
 
 /-- Discretizing a kernel keeps exactly the same null singletons after binding. -/
 theorem bind_disc_singleton_eq_zero_iff {K : X → Measure (ULift.{u} (Fin N))}
@@ -237,7 +232,6 @@ theorem fDiv_eq_sum (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt 
     {I : Type*} [Fintype I] [MeasurableSpace I] [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I)
     [IsFiniteMeasure ρ₁] [IsFiniteMeasure ρ₂] :
     fDiv f ρ₁ ρ₂ = ∑ i, persp f (ρ₁ {i}).toReal (ρ₂ {i}).toReal := by
-  classical
   refine le_antisymm ?_ (by simpa using sum_persp_le_fDiv hf hf_cont (k := id) measurable_id)
   rw [fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun _ ↦ ?_
@@ -391,7 +385,6 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
   have hw {γ : ℝ} (hγ : γ ∈ Icc (0 : ℝ) 1) {a b : ℝ≥0∞} : 0 ≤ γ * a.toReal + (1 - γ) * b.toReal :=
     add_nonneg (mul_nonneg hγ.1 ENNReal.toReal_nonneg)
       (mul_nonneg (sub_nonneg.2 hγ.2) ENNReal.toReal_nonneg)
-  -- the coefficients of a convex combination of two sub-probability measures sum to at most one
   have hc (γ : ℝ) (hγ : γ ∈ Icc (0 : ℝ) 1) {K : ℕ} (ρ ρ' : Measure (ULift.{u} (Fin K)))
       [IsSubProbabilityMeasure ρ] [IsSubProbabilityMeasure ρ'] :
       ∑ i, ENNReal.ofReal (γ * (ρ {i}).toReal + (1 - γ) * (ρ' {i}).toReal) ≤ 1 := by

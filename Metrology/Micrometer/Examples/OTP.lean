@@ -1,37 +1,33 @@
 module
 
+public import Metrology.Code.OTP
+public import Metrology.Couplings.Divergences.Dp
+public import Metrology.Couplings.Divergences.Tv
+public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.Compatibility
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Micrometer.AppRelRules
-public import Metrology.Micrometer.AdequacyRel
-public import Metrology.Code.OTP
-public import Metrology.Couplings.Divergences.Tv
-public import Metrology.Couplings.Divergences.Dp
 
 @[expose] public section
 
-/-! # One-Time Pad refinement example, using modular addition as the combiner.
-
-Every result holds for any graded lifting `L` with the classes its rules need (the `_gen`
-statements); the `tv` statements and a `dp` statement are instances. -/
+/-! # One-time pad over `ℤ/N`, refining the ideal sampler in any graded lifting -/
 
 open scoped ENNReal
 
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS GradedLifting
-  GradedDivergence
+open Iris Iris.BI Iris.ProofMode OFE COFE MicrometerWpGS GradedLifting GradedDivergence
 
 namespace OTP
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
 
 /-! ### The bijection -/
 
-def addMod (m N : Int) (n : Int) : Int := (n + m) % N
+/-- Adds the key `m` modulo `N`. -/
+def addMod (m N n : Int) : Int := (n + m) % N
 
 private theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
-  ⟨Int.emod_nonneg _ (Int.ne_of_gt hN), Int.emod_lt_of_pos _ hN⟩
+  ⟨Int.emod_nonneg _ hN.ne', Int.emod_lt_of_pos _ hN⟩
 
 theorem addMod_dom (m N : Int) (hN : 0 < N) :
     ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
@@ -49,42 +45,47 @@ theorem addMod_bij (m N : Int) (hN : 0 < N) :
 
 /-! ### The OTP refinement -/
 
+section Refinement
+
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+
 section Generic
+
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
 
+/-- Encrypts by adding the key `m` modulo `N`. -/
 abbrev otpLam (m N : Int) : Exp rT := pl% fun k, (#(.int m) + k) % #(.int N)
 
+/-- The evaluation context applying `otpLam m N`. -/
 def otpKLam (m N : Int) : Ectx rT := [EctxItem.appR (otpLam m N)]
 
 omit [CanonicallyOrderedAdd B] in
 private theorem refines_lit_int (n : Int) :
     ⊢@{IProp GF} REL[L] (pl(#(.int n)) : Exp rT) << pl(#(.int n)) : lrel_int := by
   iapply refines_ret (v1 := .int n) (v2 := .int n) rfl rfl
-  iintro !>
+  imodintro
   iapply lrel_int_lit
 
 theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << (otp_ideal N) : lrel_int := by
+    ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines L ⊤
-    ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
-    (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit)))) lrel_int
+  show ⊢ refines L ⊤ ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
+    (Ectx.fill [] pl(rand(#(.int N), #(.unit)))) lrel_int
   iapply refines_couple_rands_lr (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN) hN
   iintro %n %_
-  show ⊢@{IProp GF} refines L ⊤ (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int n))) _ lrel_int
+  show ⊢ refines L ⊤ (Ectx.fill [] pl({otpLam m N} #(.int n))) _ lrel_int
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   inext
   let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢@{IProp GF} refines L ⊤ (Kmod.fill pl(#(.int m) + #(.int n))) _ lrel_int
+  show ⊢ refines L ⊤ (Kmod.fill pl(#(.int m) + #(.int n))) _ lrel_int
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
-  show ⊢@{IProp GF} refines L ⊤
-    (Ectx.fill ([] : Ectx rT) pl(#(.int (m + n)) % #(.int N))) _ lrel_int
+  show ⊢ refines L ⊤ (Ectx.fill [] pl(#(.int (m + n)) % #(.int N))) _ lrel_int
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
-  rw [show (m + n) % N = addMod m N n by unfold addMod; ring_nf]
+  rw [show (m + n) % N = addMod m N n by rw [addMod, Int.add_comm]]
   exact refines_lit_int _
 
 /-! ### Reverse direction -/
@@ -95,21 +96,18 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
 
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << (otp_enc m N) : lrel_int := by
+    ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines L ⊤
-    (Ectx.fill ([] : Ectx rT) pl(rand(#(.int N), #(.unit))))
+  show ⊢ refines L ⊤ (Ectx.fill [] pl(rand(#(.int N), #(.unit))))
     ((otpKLam m N).fill pl(rand(#(.int N), #(.unit)))) lrel_int
   iapply refines_couple_rands_lr (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN) hN
   iintro %n ⟨%hn0, %hnN⟩
-  show ⊢@{IProp GF} refines L ⊤ _
-    (Ectx.fill ([] : Ectx rT) pl({otpLam m N} #(.int (addMod (-m) N n)))) lrel_int
+  show ⊢ refines L ⊤ _ (Ectx.fill [] pl({otpLam m N} #(.int (addMod (-m) N n)))) lrel_int
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢@{IProp GF} refines L ⊤ _ (Kmod.fill pl(#(.int m) + #(.int (addMod (-m) N n)))) lrel_int
+  show ⊢ refines L ⊤ _ (Kmod.fill pl(#(.int m) + #(.int (addMod (-m) N n)))) lrel_int
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢@{IProp GF} refines L ⊤ _
-    (Ectx.fill ([] : Ectx rT) pl(#(.int (m + addMod (-m) N n)) % #(.int N))) lrel_int
+  show ⊢ refines L ⊤ _ (Ectx.fill [] pl(#(.int (m + addMod (-m) N n)) % #(.int N))) lrel_int
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   rw [show (m + addMod (-m) N n) % N = n from addMod_neg_inv m N n hn0 hnN]
   exact refines_lit_int n
@@ -117,27 +115,31 @@ theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
 end Generic
 
 theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (otp_enc (rT := rT) m N) << (otp_ideal N) : lrel_int :=
+    ⊢@{IProp GF} REL[codensity tv] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int :=
   otp_refines_gen m N hN
 
 theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (otp_ideal (rT := rT) N) << (otp_enc m N) : lrel_int :=
+    ⊢@{IProp GF} REL[codensity tv] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int :=
   otp_refines_rev_gen m N hN
+
+end Refinement
 
 /-! ## Adequacy: exit the logic
 
 The limit distributions of `otp_enc m N` and `otp_ideal N` are coupled by integer
 equality with zero error. -/
 
+/-- The two programs return the same integer. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
-theorem lrel_int_to_otpφ {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] (v v' : Val rT) :
-    ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
+theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iintro Hint
   iunfold lrel_int at Hint
   icases Hint with ⟨%n, %hv, %hv'⟩
-  ipureintro; exact ⟨n, hv, hv'⟩
+  ipureintro
+  exact ⟨n, hv, hv'⟩
 
 omit [LawfulProbLangℝ rT] in
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
@@ -145,6 +147,7 @@ theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e�
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
 
 section Generic
+
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
@@ -173,8 +176,8 @@ theorem otp_adequate_rev_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT)
 theorem otp_div_gen {D : GradedDivergence.{0} B} [L.IsSound D] (m N : Int) (hN : 0 < N)
     (σ σ' : State rT) :
     D 0 (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
-  IsSound.sound (L := L)
-    ((otp_adequate_closed_gen (L := L) m N hN σ σ').mono le_rfl adequacyRel_otpφ_subset_eq)
+  IsSound.sound ((otp_adequate_closed_gen (L := L) m N hN σ σ').mono le_rfl
+    adequacyRel_otpφ_subset_eq)
 
 end Generic
 

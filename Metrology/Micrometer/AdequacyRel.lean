@@ -9,18 +9,15 @@ public import Iris.Instances.Lib.WSat
 public import Iris.Instances.Lib.LaterCredits
 public import Iris.Instances.Lib.FUpd
 
-@[expose] public section
+/-! Relational adequacy: a parametric `refines` lifts to the limit executions. -/
 
-/-! # Relational adequacy: bridging parametric `refines` to a lifting on `limExecV`. -/
+@[expose] public section
 
 namespace ProbLang
 
 open Iris Iris.BI Iris.ProofMode OFE COFE Iris.Std DisjointLeibnizSet Auth HeapView
 open ProbLang.MicrometerWpGS
 open GradedLifting
-
-variable {rT : Type} [LawfulProbLangℝ rT]
-variable {B : Type}
 
 /-- The ghost-state slots that refinement adequacy allocates, with a budget camera over `B`. -/
 class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
@@ -34,6 +31,10 @@ class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
 attribute [reducible, instance] RefinesPreGS.app RefinesPreGS.spec RefinesPreGS.bc
   RefinesPreGS.inv RefinesPreGS.nainv
 
+section Spec
+
+variable {rT : Type} [LawfulProbLangℝ rT]
+
 theorem spec_eq_fill_nil {GF : BundledGFunctors} [SpecGS rT GF] (e : Exp rT) :
     (iprop(⤇ e) : IProp GF) = iprop(⤇ Ectx.fill ([] : Ectx rT) e) :=
   rfl
@@ -42,8 +43,11 @@ theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val r
     (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
   rfl
 
+end Spec
+
 section Coupling
-variable [MeasurableSingletonClass rT]
+
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [MeasurableSingletonClass rT]
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed]
@@ -107,6 +111,7 @@ theorem approximates_div {D : GradedDivergence.{0} B} [L.IsSound D] {GF : Bundle
 end Coupling
 
 section MicrometerFunctor
+
 variable (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 variable (B : Type) [AddCommMonoid B]
 

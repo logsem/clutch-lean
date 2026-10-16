@@ -23,7 +23,7 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {ε δ : ℝ≥0
 /-- A total variation codensity lifting is a coupling in expectation. -/
 theorem expCoupl_of_codensity_tv {E : X → Y → ℝ≥0∞} (h : tv.codensity δ E μ ν) :
     ExpCoupl δ E μ ν :=
-  fun _ _ hf hg hf1 hg1 hfg ↦ lintegral_le_of_codensity_tv h hf hg hf1 hg1 hfg
+  fun _ _ ↦ lintegral_le_of_codensity_tv h
 
 /-- Couplings in expectation are the total variation codensity lifting. -/
 theorem expCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {E : X → Y → ℝ≥0∞} :
@@ -46,8 +46,8 @@ theorem AddCoupl.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)} (h : 
 /-- A total variation codensity lifting is an additive coupling. -/
 theorem GradedLifting.Rel.addCoupl {S : X → Y → Prop} (h : (codensity tv).Rel δ S μ ν) :
     AddCoupl δ {p | S p.1 p.2} μ ν := fun f g hfg ↦
-  lintegral_le_of_codensity_tv h f.measurable g.measurable f.bounded g.bounded fun x y ↦ by
-    exact le_add_relCost_iff.2 hfg
+  lintegral_le_of_codensity_tv h f.measurable g.measurable f.bounded g.bounded
+    fun _ _ ↦ le_add_relCost_iff.2 hfg
 
 /-- Additive couplings are the total variation codensity lifting (Rocq `gcoupl_AR_eq`). -/
 theorem addCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {S : Set (X × Y)} :

@@ -53,14 +53,14 @@ instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded w
   top μ ν := IsGraded.top (D := D) μ.withBot ν.withBot
 
 instance isReflexive_onWithBot [Zero B] [D.IsReflexive] : D.onWithBot.IsReflexive where
-  refl {_} _ μ _ := IsReflexive.refl (D := D) μ.withBot
+  refl μ _ := IsReflexive.refl μ.withBot
 
 instance isGraded_leftUp [LE B] [Top B] [D.IsGraded] : D.leftUp.IsGraded where
-  mono _ _ hb _ _ _ _ _ _ := fun ⟨μ', hμ, _, h⟩ ↦ ⟨μ', hμ, ‹_›, IsGraded.mono hb h⟩
-  top {_} _ μ _ _ _ := ⟨μ, le_rfl, ‹_›, IsGraded.top _ _⟩
+  mono _ _ hb := fun ⟨μ', hμ, _, h⟩ ↦ ⟨μ', hμ, ‹_›, IsGraded.mono hb h⟩
+  top μ _ := ⟨μ, le_rfl, ‹_›, IsGraded.top _ _⟩
 
 instance isReflexive_leftUp [Zero B] [D.IsReflexive] : D.leftUp.IsReflexive where
-  refl {_} _ μ _ := ⟨μ, le_rfl, ‹_›, IsReflexive.refl μ⟩
+  refl μ _ := ⟨μ, le_rfl, ‹_›, IsReflexive.refl μ⟩
 
 /-- The zero measure grows to the right measure itself. -/
 instance isZeroLeft_leftUp [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
@@ -68,6 +68,6 @@ instance isZeroLeft_leftUp [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd 
   zero_left b {_} _ ν _ := ⟨ν, Measure.zero_le ν, ‹_›, IsGraded.mono zero_le (IsReflexive.refl ν)⟩
 
 instance isLeftAntitone_leftUp : D.leftUp.IsLeftAntitone where
-  left_anti _ _ _ _ _ _ _ _ hμ := fun ⟨μ', hμ', h⟩ ↦ ⟨μ', hμ.trans hμ', h⟩
+  left_anti _ := fun hμ ⟨μ', hμ', h⟩ ↦ ⟨μ', hμ.trans hμ', h⟩
 
 end GradedDivergence

@@ -86,17 +86,15 @@ theorem isComposable_fDivBound [Add B] {chain : EReal → EReal → EReal}
     (fDivBound.{u} K weight thresh).IsComposable where
   comp b c X Y _ _ μ₁ μ₂ _ _ κ η _ _ hμ hκ k := by
     cases isEmpty_or_nonempty X
-    · rw [show μ₁ = 0 from Subsingleton.elim _ _, show μ₂ = 0 from Subsingleton.elim _ _,
-        bind_zero_left, fDiv_zero_left_eq]
+    · rw [μ₁.eq_zero_of_isEmpty, μ₂.eq_zero_of_isEmpty, bind_zero_left, fDiv_zero_left_eq]
       simpa using hpos (b + c) k
     calc fDiv (weight (b + c) k) (κ ∘ₘ μ₁) (η ∘ₘ μ₂)
         ≤ chain (fDiv (weight b k) μ₁ μ₂) (⨆ x, fDiv (weight c k) (κ x) (η x)) := hweight b c k
       _ ≤ chain (thresh b k) (thresh c k) := hchain (hμ k) (iSup_le fun x ↦ hκ x k)
       _ ≤ thresh (b + c) k := hthresh b c k
 
-/-- Composability from a per-index chain rule between finite spaces, by the finite route
-(Thms. 4.6, 4.9). The chain must be globally monotone; multiplicative chains use
-`isComposable_fDivBound_of_mul`. -/
+/-- Composability from a globally monotone per-index chain rule between finite spaces
+(Thms. 4.6, 4.9); multiplicative chains use `isComposable_fDivBound_of_mul`. -/
 theorem isComposable_fDivBound_of_finite [Add B] (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b k))
     (hw_cont : ∀ b k, ContinuousWithinAt (weight b k) (Ici 0) 0) {chain : EReal → EReal → EReal}
     (hchain : ∀ ⦃a a' c c'⦄, a ≤ a' → c ≤ c' → chain a c ≤ chain a' c')
@@ -191,7 +189,7 @@ theorem fDiv_dpWeight_eq_iSup (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure �
   · refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
     set x : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal - Real.exp ε * (ν (k ⁻¹' {i})).toReal
     set P := Finset.univ.filter fun i ↦ 0 ≤ x i
-    refine le_iSup₂_of_le _ (hk (.of_discrete) : MeasurableSet (k ⁻¹' (P : Set (Fin n))))
+    refine le_iSup₂_of_le _ (hk .of_discrete : MeasurableSet (k ⁻¹' (P : Set (Fin n))))
       (le_of_eq ?_)
     have hsum (ρ : Measure X) [IsFiniteMeasure ρ] :
         ∑ i ∈ P, (ρ (k ⁻¹' {i})).toReal = (ρ (k ⁻¹' P)).toReal := by

@@ -8,9 +8,9 @@ public import Metrology.Micrometer.Interp
 public import Metrology.Micrometer.Fundamental
 public import Metrology.ProbLang.ContextualRefinement
 
-@[expose] public section
+/-! # Soundness of the logical relation for contextual refinement -/
 
-/-! # Soundness -/
+@[expose] public section
 
 namespace ProbLang
 
@@ -23,6 +23,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [Canonicall
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
+/-- The binders of each item of `K` avoid `S` and the binders of the items inside it. -/
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
   | [], _ => True
   | k :: K', S =>
@@ -43,14 +44,15 @@ theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
   obtain ⟨h1, h2, h3⟩ := Hb x (Finset.mem_union_right _ hxK')
   exact ⟨h1, h2, h3 ∘ Finset.mem_union_right _⟩
 
+section Bookkeeping
+
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing]
+
 theorem TctxRelated.empty_nil {Δ : TyEnv rT GF} :
     TctxRelated L Δ Tctx.empty ([] : RelCtx rT GF) := by
   intro x; simp [Tctx.empty, RelCtx.lookup]
 
-omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
 theorem TctxRelated.eq_nil_of_empty {Δ : TyEnv rT GF} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Tctx.empty Γrc) : Γrc = [] := by
   cases Γrc with
@@ -58,10 +60,8 @@ theorem TctxRelated.eq_nil_of_empty {Δ : TyEnv rT GF} {Γrc : RelCtx rT GF}
   | cons p rest =>
     have h := HCtx p.1
     simp only [Tctx.empty, RelCtx.lookup] at h
-    cases hr : RelCtx.lookup rest p.1 <;> rw [hr] at h <;> simp at h
+    split at h <;> simp at h
 
-omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
 theorem ctx_fill_lc_fv {Γtc : Tctx} {Γrc : RelCtx rT GF} {Δ : TyEnv rT GF} {K : Ctx rT}
     {e : Exp rT} {τ : Ty} (HCtxRel : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc (K.fill e) τ) :
     (K.fill e).IsLocallyClosed ∧ (K.fill e).fv ⊆ (Γrc.map (·.1)).toFinset :=
@@ -70,7 +70,7 @@ theorem ctx_fill_lc_fv {Γtc : Tctx} {Γrc : RelCtx rT GF} {Δ : TyEnv rT GF} {K
 omit [LawfulProbLangℝ rT] in
 theorem RelCtx.dom_cons (x : Var) (A : lrel rT GF) (Γrc : RelCtx rT GF) :
     (((x, A) :: Γrc).map (·.1)).toFinset = (Γrc.map (·.1)).toFinset ∪ {x} := by
-  simp [List.map_cons, List.toFinset_cons, Finset.union_comm]
+  simp [Finset.union_comm]
 
 theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {bAtoms : Finset Var} (hSingleton : bAtoms = {x})
@@ -78,8 +78,6 @@ theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Va
     Ctx.BindersFresh K' (((x, A) :: Γrc).map (·.1)).toFinset :=
   RelCtx.dom_cons x A Γrc ▸ hSingleton ▸ h
 
-omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
 theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {τ : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -87,27 +85,29 @@ theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF}
     ∀ y, y ∉ (Γrc'.map (·.1)).toFinset ∪ {x} ∪ Ke.fv ∪ Ke'.fv →
       ⊢ bin_log_related_ty L ⊤ Δ ((y, A) :: Γrc')
         (Exp.open' (Ke.close x) (.fvar y)) (Exp.open' (Ke'.close x) (.fvar y)) τ := by
-  intro y hyNotL
-  simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hyNotL
-  obtain ⟨⟨⟨hyNotRc, hyNotX⟩, hyNotFvKe⟩, hyNotFvKe'⟩ := hyNotL
+  intro y hy
+  simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hy
+  obtain ⟨⟨⟨hyRc, hyX⟩, hyKe⟩, hyKe'⟩ := hy
   rw [Exp.open_close_subst_lc x y _ hKe_lc, Exp.open_close_subst_lc x y _ hKe'_lc]
-  exact Hbody.trans (bin_log_related_ty_rename (Ne.symm hyNotX) hxRc hyNotRc hyNotFvKe hyNotFvKe')
+  exact Hbody.trans (bin_log_related_ty_rename (Ne.symm hyX) hxRc hyRc hyKe hyKe')
 
 omit [LawfulProbLangℝ rT] in
 theorem close_fv_in_outer_dom {Γrc' : RelCtx rT GF} {x : Var} {Ke : Exp rT} {A : lrel rT GF}
     (hKe_fv : Ke.fv ⊆ (((x, A) :: Γrc').map (·.1)).toFinset) {z : Var}
     (hz : z ∈ (Ke.close x).fv) : z ∈ (Γrc'.map (·.1)).toFinset := by
-  have hzKeDom := hKe_fv (Exp.close_fv_subset _ x hz)
-  rw [RelCtx.dom_cons] at hzKeDom
-  rcases Finset.mem_union.mp hzKeDom with hz_outer | hz_x
-  · exact hz_outer
-  · exact absurd (Finset.mem_singleton.mp hz_x ▸ hz) (Exp.close_var_not_fvar x Ke)
+  have hz' := hKe_fv (Exp.close_fv_subset _ x hz)
+  rw [RelCtx.dom_cons] at hz'
+  rcases Finset.mem_union.mp hz' with h | h
+  · exact h
+  · exact absurd (Finset.mem_singleton.mp h ▸ hz) (Exp.close_var_not_fvar x Ke)
 
 omit [LawfulProbLangℝ rT] in
 theorem open_close_subst_lc_at {Ke : Exp rT} (x y : Var) (hKe_lc : Ke.IsLocallyClosed) :
     (Exp.open' (Ke.close x) (.fvar y)).IsLocallyClosed := by
   rw [Exp.open_close_subst_lc x y _ hKe_lc]
   exact Exp.subst_lc hKe_lc (Exp.IsLocallyClosed.fvar y)
+
+end Bookkeeping
 
 theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {τ_arg τ_body : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
@@ -116,13 +116,11 @@ theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : 
     (hKe'_fv : Ke'.fv ⊆ (((x, interp L τ_arg Δ) :: Γrc').map (·.1)).toFinset)
     (Hbody : ⊢ bin_log_related_ty L ⊤ Δ ((x, interp L τ_arg Δ) :: Γrc') Ke Ke' τ_body) :
     ⊢ bin_log_related_ty L ⊤ Δ Γrc' (.lam (Ke.close x)) (.lam (Ke'.close x))
-      (.arrow τ_arg τ_body) := by
-  apply bin_log_related_lam _ _ ((Γrc'.map (·.1)).toFinset ∪ {x} ∪ Ke.fv ∪ Ke'.fv)
-  · exact fun y _ => open_close_subst_lc_at x y hKe_lc
-  · exact fun y _ => open_close_subst_lc_at x y hKe'_lc
-  · exact fun _ => close_fv_in_outer_dom hKe_fv
-  · exact fun _ => close_fv_in_outer_dom hKe'_fv
-  exact bin_log_related_close_cofinite hxRc hKe_lc hKe'_lc Hbody
+      (.arrow τ_arg τ_body) :=
+  bin_log_related_lam _ _ _
+    (fun y _ => open_close_subst_lc_at x y hKe_lc) (fun y _ => open_close_subst_lc_at x y hKe'_lc)
+    (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
+    (bin_log_related_close_cofinite hxRc hKe_lc hKe'_lc Hbody)
 
 theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : Var}
     {τ1 τ2 : Ty} {Ke Ke' : Exp rT} (hfRc : f ∉ (Γrc'.map (·.1)).toFinset)
@@ -132,13 +130,11 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
     (Hbody : ⊢ bin_log_related_ty L ⊤ Δ ((f, interp L (.arrow τ1 τ2) Δ) :: Γrc') Ke Ke'
       (.arrow τ1 τ2)) :
     ⊢ bin_log_related_ty L ⊤ Δ Γrc' (.fix (Ke.close f)) (.fix (Ke'.close f))
-      (.arrow τ1 τ2) := by
-  apply bin_log_related_fix _ _ ((Γrc'.map (·.1)).toFinset ∪ {f} ∪ Ke.fv ∪ Ke'.fv)
-  · exact fun y _ => open_close_subst_lc_at f y hKe_lc
-  · exact fun y _ => open_close_subst_lc_at f y hKe'_lc
-  · exact fun _ => close_fv_in_outer_dom hKe_fv
-  · exact fun _ => close_fv_in_outer_dom hKe'_fv
-  exact bin_log_related_close_cofinite hfRc hKe_lc hKe'_lc Hbody
+      (.arrow τ1 τ2) :=
+  bin_log_related_fix _ _ _
+    (fun y _ => open_close_subst_lc_at f y hKe_lc) (fun y _ => open_close_subst_lc_at f y hKe'_lc)
+    (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
+    (bin_log_related_close_cofinite hfRc hKe_lc hKe'_lc Hbody)
 
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
@@ -155,14 +151,11 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     cases HK
     exact Hrel Δ Γrc HCtx
   | cons k K' ih =>
-    intro Δ Γrc' HCtx Hfresh
-    cases HK with
-    | @cons _ _ _ _ _ _ _ _ HKitem HKtail =>
-    obtain ⟨HfreshHead, HfreshTail⟩ := Hfresh
+    intro Δ Γrc' HCtx ⟨HfreshHead, HfreshTail⟩
+    cases HK with | cons HKitem HKtail =>
     have HbindersK' := binders_tail Hbinders
     have IHinner := ih HKtail HbindersK' Δ
-    have Hfr : Ctx.BindersFresh K' (Γrc'.map (·.1)).toFinset :=
-      HfreshTail.mono Finset.subset_union_left
+    have Hfr := HfreshTail.mono Finset.subset_union_left
     have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
     have HtyK := TypedCtx.fill_typed Hty_e HKtail
       fun y hy => ⟨(HbindersK' y hy).1, (HbindersK' y hy).2.2⟩
@@ -225,18 +218,15 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     | unfold => iapply bin_log_related_unfold $$ %(IHinner Γrc' HCtx Hfr)
     | tapp => iapply bin_log_related_tapp $$ %(IHinner Γrc' HCtx Hfr)
     | @lam _ x τ _ =>
-      have hxRc : x ∉ (Γrc'.map (·.1)).toFinset := HfreshHead x (Finset.mem_singleton_self _)
-      have HCtxInner : TctxRelated L Δ (Γtc'.insert x τ) ((x, interp L τ Δ) :: Γrc') :=
-        HCtx.insert x τ (RelCtx.lookup_eq_none_of_not_mem hxRc)
+      have hxRc := HfreshHead x (Finset.mem_singleton_self _)
+      have HCtxInner := HCtx.insert x τ (RelCtx.lookup_eq_none_of_not_mem hxRc)
       obtain ⟨hKfe_lc, hKfe_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK
       obtain ⟨hKfe'_lc, hKfe'_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK'
       exact bin_log_related_lam_step hxRc hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv
         (IHinner _ HCtxInner (Ctx.BindersFresh.cons_extend rfl HfreshTail))
     | @fix _ f τ τ' =>
-      have hfRc : f ∉ (Γrc'.map (·.1)).toFinset := HfreshHead f (Finset.mem_singleton_self _)
-      have HCtxInner : TctxRelated L Δ (Γtc'.insert f (.arrow τ τ'))
-          ((f, interp L (.arrow τ τ') Δ) :: Γrc') :=
-        HCtx.insert f (.arrow τ τ') (RelCtx.lookup_eq_none_of_not_mem hfRc)
+      have hfRc := HfreshHead f (Finset.mem_singleton_self _)
+      have HCtxInner := HCtx.insert f (.arrow τ τ') (RelCtx.lookup_eq_none_of_not_mem hfRc)
       obtain ⟨hKfe_lc, hKfe_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK
       obtain ⟨hKfe'_lc, hKfe'_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK'
       exact bin_log_related_fix_step hfRc hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv
@@ -249,26 +239,25 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
       imodintro
       iapply ih HKtail HbindersK' (TyEnv.cons A Δ) Γrc' (HCtx.shift A) Hfr
     | @unpackL x e2 _ τ_pkg _ hxFvE2 Hty_e2 =>
-      have hRen := fun y (hy : y ∉ insert x e2.fv) => Typed.rename_unpack hxFvE2 Hty_e2 y hy
-      refine bin_log_related_unpack Δ Γrc' (insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset)
-        (IHinner Γrc' HCtx Hfr)
-        (fun y hyL => (hRen y (hyL ∘ Finset.mem_union_left _)).isLocallyClosed)
-        (fun y hyL => (hRen y (hyL ∘ Finset.mem_union_left _)).isLocallyClosed) fun A y hyL => ?_
-      exact fundamental L (hRen y (hyL ∘ Finset.mem_union_left _)) (TyEnv.cons A Δ) _
+      have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
+        Typed.rename_unpack hxFvE2 Hty_e2 y (hy ∘ Finset.mem_union_left _)
+      refine bin_log_related_unpack Δ Γrc' _ (IHinner Γrc' HCtx Hfr)
+        (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
+        fun A y hy => ?_
+      exact fundamental L (hRen y hy) (TyEnv.cons A Δ) _
         ((HCtx.shift A).insert y τ_pkg
-          (RelCtx.lookup_eq_none_of_not_mem (hyL ∘ Finset.mem_union_right _)))
+          (RelCtx.lookup_eq_none_of_not_mem (hy ∘ Finset.mem_union_right _)))
     | @unpackR x e1 _ τ_pkg _ Hty_e1 =>
-      have hxRc : x ∉ (Γrc'.map (·.1)).toFinset := HfreshHead x (Finset.mem_singleton_self _)
+      have hxRc := HfreshHead x (Finset.mem_singleton_self _)
       refine bin_log_related_unpack Δ Γrc'
         ((Γrc'.map (·.1)).toFinset ∪ {x} ∪ (Ctx.fill K' e).fv ∪ (Ctx.fill K' e').fv)
-        (Fund Hty_e1) ?_ ?_ ?_
-      · exact fun y _ => Exp.open_close_isLocallyClosed x y HtyK.isLocallyClosed
-      · exact fun y _ => Exp.open_close_isLocallyClosed x y HtyK'.isLocallyClosed
-      intro A y hyL
+        (Fund Hty_e1)
+        (fun y _ => Exp.open_close_isLocallyClosed x y HtyK.isLocallyClosed)
+        (fun y _ => Exp.open_close_isLocallyClosed x y HtyK'.isLocallyClosed) fun A y hy => ?_
       exact bin_log_related_close_cofinite hxRc HtyK.isLocallyClosed HtyK'.isLocallyClosed
         (ih HKtail HbindersK' (TyEnv.cons A Δ) _
           ((HCtx.shift A).insert x τ_pkg (RelCtx.lookup_eq_none_of_not_mem hxRc))
-          (Ctx.BindersFresh.cons_extend rfl HfreshTail)) y hyL
+          (Ctx.BindersFresh.cons_extend rfl HfreshTail)) y hy
 
 end Soundness
 
@@ -285,8 +274,7 @@ theorem lrel_bool_to_boolEqVal [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
   iintro Hbool
   iunfold lrel_bool at Hbool
   icases Hbool with ⟨%b, %h⟩
-  ipureintro
-  exact ⟨b, h⟩
+  exact pure_intro ⟨b, h⟩
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsReflexive]

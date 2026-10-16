@@ -33,8 +33,9 @@ variable {B : Type v} [LT B] [Top B] {L : GradedLifting.{u} B} {X Y X' Y' : Type
 
 variable (L) in
 /-- The law without a side condition, given by an unconditional bind. -/
-def canonical [L.HasBind] : BindLaw L :=
-  ⟨fun _ _ ↦ True, fun h _ hk ↦ HasBind.bind h hk⟩
+def canonical [L.HasBind] : BindLaw L where
+  side _ _ := True
+  sound h _ hk := HasBind.bind h hk
 
 @[simp]
 theorem side_canonical [L.HasBind] {ν : Measure Y} {g : Kernel Y Y'} : (canonical L).side ν g :=
