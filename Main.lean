@@ -42,7 +42,7 @@ public import Mathlib.Basic.Real.Basic
 inductive MyDepC' (n : Nat)
 | DepC' (depV : Fin n)
 
-/-- info: MyDepC'.DepC'.π {n : ℕ} : MyDepC' n → Option (Fin n) -/
+/-- info: MyDepC'.DepC'.π {n : ℕ} (x : MyDepC' n) : Option (Fin n) -/
 #guard_msgs in #check MyDepC'.DepC'.π
 
 @[uncurriedProjections, constructors]
@@ -81,7 +81,7 @@ inductive MyParamT (n : Sort 0) (α β : Type)
 | Val2 (y : β)
 | Rec (x1 : MyParamT n α β) (v2 : α)
 
-/-- info: MyParamT.Val2.π {n : Prop} {α β : Type} : MyParamT n α β → Option β -/
+/-- info: MyParamT.Val2.π {n : Prop} {α β : Type} (x : MyParamT n α β) : Option β -/
 #guard_msgs in #check MyParamT.Val2.π
 
 @[uncurriedProjections, constructors]

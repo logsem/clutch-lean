@@ -1,8 +1,6 @@
 module
 
 public import Metrology.Iris.ErrorCredits
-public import Metrology.Couplings.AdditiveCouplings
-public import Metrology.Couplings.Couplings
 public import Metrology.ProbLang.Exec
 public import Metrology.ProbLang.Erasable
 public import Metrology.ProbLang.Erasure
