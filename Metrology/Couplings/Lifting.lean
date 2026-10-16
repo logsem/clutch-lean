@@ -1,0 +1,287 @@
+module
+
+public import Metrology.Couplings.Divergence
+
+/-! Graded liftings of measures along per-pair leftovers (Approximate Span Liftings, §5). -/
+
+@[expose] public section
+
+universe u v
+
+open MeasureTheory Measure ProbabilityTheory
+open scoped ENNReal
+
+/-- A family of liftings: `L b R μ ν` relates `μ` and `ν` within budget `b`, leaving `R x y` for
+the continuation at each pair. Budget first: with the spaces first Lean fills them in early and
+`(codensity D).IsLawful` fails to elaborate. -/
+def GradedLifting (B : Type v) : Type (max v (u + 1)) :=
+  B → ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y],
+    (X → Y → B) → Measure X → Measure Y → Prop
+
+namespace GradedLifting
+
+/-! ## Relations as leftovers -/
+
+section relCost
+
+variable {B : Type v} {X Y : Type*} {S S' : X → Y → Prop} {x : X} {y : Y}
+
+/-- The leftover of a relation: `0` on it, `⊤` off it. -/
+noncomputable def relCost [Zero B] [Top B] (S : X → Y → Prop) (x : X) (y : Y) : B :=
+  {p : X × Y | ¬S p.1 p.2}.indicator (fun _ ↦ ⊤) (x, y)
+
+@[simp]
+theorem relCost_of [Zero B] [Top B] (h : S x y) : relCost (B := B) S x y = 0 :=
+  Set.indicator_of_notMem (not_not.2 h) _
+
+@[simp]
+theorem relCost_of_not [Zero B] [Top B] (h : ¬S x y) : relCost (B := B) S x y = ⊤ :=
+  Set.indicator_of_mem h _
+
+theorem relCost_lt_top_iff [AddZeroClass B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+    [Nontrivial B] : relCost (B := B) S x y < ⊤ ↔ S x y := by
+  refine ⟨fun h ↦ by_contra fun hS ↦ (relCost_of_not (B := B) hS ▸ h).false, fun h ↦ ?_⟩
+  rw [relCost_of h]
+  refine zero_le.lt_of_ne fun h0 ↦ ?_
+  obtain ⟨b, hb⟩ := exists_ne (0 : B)
+  exact hb ((h0 ▸ le_top).antisymm zero_le)
+
+theorem relCost_add_lt_top_iff [AddZeroClass B] [Preorder B] [Top B] [CanonicallyOrderedAdd B]
+    {c : B} : relCost S x y + c < ⊤ ↔ S x y ∧ c < ⊤ := by
+  by_cases hS : S x y
+  · simp [hS]
+  · simpa [hS] using (le_self_add (a := (⊤ : B)) (b := c)).not_gt
+
+theorem relCost_anti [Zero B] [Preorder B] [OrderTop B] (h : ∀ x y, S x y → S' x y) :
+    relCost (B := B) S' ≤ relCost S := fun x y ↦ by
+  by_cases hS : S x y
+  · rw [relCost_of hS, relCost_of (h x y hS)]
+  · exact (relCost_of_not (B := B) hS).symm ▸ le_top
+
+end relCost
+
+/-! ## Laws of a lifting -/
+
+section Classes
+
+variable {B : Type v} (L : GradedLifting.{u} B)
+
+/-- The lifting of a relation `S`: leftover `0` on `S` and `⊤` off it. -/
+def Rel [Zero B] [Top B] {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B)
+    (S : X → Y → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
+  L b (relCost S) μ ν
+
+/-- The structural laws of a lifting: Dirac pairs, zero measures, weakening, framing and
+pushforward. -/
+class IsLawful [Add B] [Preorder B] [Top B] : Prop where
+  pure {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {R : X → Y → B} {x : X} {y : Y} :
+    R x y < ⊤ → L (R x y) R (dirac x) (dirac y)
+  zero {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B) (R : X → Y → B) :
+    L b R (0 : Measure X) (0 : Measure Y)
+  mono {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b b' : B} {R R' : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    L b R μ ν → b ≤ b' → R' ≤ R → L b' R' μ ν
+  frame {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b c : B} {R : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} : c < ⊤ → L b R μ ν → L (b + c) (fun x y ↦ R x y + c) μ ν
+  map {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
+    [MeasurableSpace Y'] {b : B} {R : X' → Y' → B} {μ : Measure X} {ν : Measure Y} {f : X → X'}
+    {g : Y → Y'} (hf : Measurable f) (hg : Measurable g) :
+    L b (fun x y ↦ R (f x) (g y)) μ ν → L b R (μ.map f) (ν.map g)
+
+/-- Binding with sub-Markov kernels whose outputs are lifted wherever the leftover is finite. -/
+class HasBind [LT B] [Top B] : Prop where
+  bind {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
+    [MeasurableSpace Y'] {b : B} {R : X → Y → B} {R' : X' → Y' → B} {μ : Measure X}
+    {ν : Measure Y} {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f]
+    [IsSubMarkovKernel g] :
+    L b R μ ν → (∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) → L b R' (f ∘ₘ μ) (g ∘ₘ ν)
+
+/-- Lifting equality within a budget gives the divergence within that budget. -/
+class IsSound [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
+  sound {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] : L.Rel b (· = ·) μ ν → D b μ ν
+
+/-- The divergence within a budget gives a lifting of equality within that budget. -/
+class IsComplete [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
+  complete {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X}
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : D b μ ν → L.Rel b (· = ·) μ ν
+
+/-- The zero measure on the left lifts against every sub-probability measure. -/
+class IsZeroLeft : Prop where
+  zero_left {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B) (R : X → Y → B)
+    (ν : Measure Y) [IsSubProbabilityMeasure ν] : L b R (0 : Measure X) ν
+
+/-- A lifting along an increasing sequence on the left passes to its supremum. -/
+class IsLeftContinuous : Prop where
+  iSup_left {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
+    {μ : ℕ → Measure X} [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) {ν : Measure Y}
+    [IsSubProbabilityMeasure ν] : (∀ n, L b R (μ n) ν) → L b R (⨆ n, μ n) ν
+
+/-- Leftovers may be restricted to a set carrying the left measure (Rocq `gbl_head_supp`). -/
+class IsSupportLocal [Top B] : Prop where
+  restrict {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} {A : Set X} [DecidablePred (· ∈ A)] (hA : MeasurableSet A)
+    (hμ : μ Aᶜ = 0) : L b R μ ν → L b (A.piecewise R fun _ _ ↦ ⊤) μ ν
+
+/-- Every sub-probability measure lifts against itself along equality at budget `0`. -/
+class IsReflexive [Zero B] [Top B] : Prop where
+  refl {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsSubProbabilityMeasure μ] :
+    L.Rel 0 (· = ·) μ μ
+
+/-- A leftover keyed on the right sample is paid in expectation. -/
+class IsExpectationAdditive [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
+  add_right {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    {c : Y → ℝ≥0∞} (hc : Measurable c) :
+    L b R μ ν → L (b + s (∫⁻ y, c y ∂ν)) (fun x y ↦ R x y + s (c y)) μ ν
+
+/-- Events related at slack `s δ` differ in mass by at most `δ`. -/
+class IsMassDetecting [AddZeroClass B] [Preorder B] [Top B] (s : ℝ≥0∞ →+o B) : Prop where
+  measure_le_add {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
+    {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {T : Set X} {T' : Set Y} (hT : MeasurableSet T)
+    (hT' : MeasurableSet T') :
+    L.Rel (s δ) S μ ν → (∀ x y, S x y → x ∈ T → y ∈ T') → μ T ≤ ν T' + δ
+
+/-- Budgets are closed from above: a lifting at every larger budget gives the lifting. -/
+class IsBudgetClosed [LT B] : Prop where
+  of_forall_gt {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    (∀ b', b < b' → L b' R μ ν) → L b R μ ν
+
+/-- A budget at which every pair of sub-probability measures is related (Rocq `GCFTop`). -/
+def Absorbing (b : B) : Prop :=
+  ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (R : X → Y → B) (μ : Measure X)
+    (ν : Measure Y) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν], L b R μ ν
+
+end Classes
+
+/-! ## Derived laws -/
+
+variable {B : Type v} {L : GradedLifting.{u} B} {X Y X' Y' : Type u} [MeasurableSpace X]
+  [MeasurableSpace Y] [MeasurableSpace X'] [MeasurableSpace Y'] {b b' c : B}
+  {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
+
+theorem Rel.mono [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X → Y → Prop}
+    (h : L.Rel b S μ ν) (hb : b ≤ b') (hS : ∀ x y, S x y → S' x y) : L.Rel b' S' μ ν :=
+  IsLawful.mono h hb (relCost_anti hS)
+
+/-- Framing a relational lifting by `c` meets every leftover bounded by `c` on the relation. -/
+theorem Rel.frame_le [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrderedAdd B]
+    [L.IsLawful] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {R : X → Y → B}
+    (h : L.Rel b S μ ν) (hR : ∀ x y, S x y → R x y ≤ c) (hc : c < ⊤) : L (b + c) R μ ν :=
+  IsLawful.mono (IsLawful.frame hc h) le_rfl fun x y ↦ by
+    by_cases hS : S x y
+    · simpa [hS] using hR x y hS
+    · simpa [hS] using le_top.trans (le_self_add (a := (⊤ : B)) (b := c))
+
+theorem rel_dirac [AddZeroClass B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+    [Nontrivial B] [L.IsLawful] {x : X} {y : Y} (h : S x y) (b : B) :
+    L.Rel b S (dirac x) (dirac y) :=
+  IsLawful.mono (relCost_of (B := B) h ▸ IsLawful.pure (relCost_lt_top_iff.2 h)) zero_le le_rfl
+
+theorem Rel.map [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X' → Y' → Prop} {f : X → X'}
+    {g : Y → Y'} (h : L.Rel b S μ ν) (hS : ∀ x y, S x y → S' (f x) (g y))
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    L.Rel b S' (μ.map f) (ν.map g) :=
+  IsLawful.map hf hg (IsLawful.mono h le_rfl (relCost_anti (S' := fun x y ↦ S' (f x) (g y)) hS))
+
+theorem Rel.map_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X' → Y → Prop} {f : X → X'}
+    (h : L.Rel b S μ ν) (hS : ∀ x y, S x y → S' (f x) y) (hf : Measurable f := by fun_prop) :
+    L.Rel b S' (μ.map f) ν := by
+  simpa only [map_id] using h.map (g := id) hS hf
+
+theorem Rel.map_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X → Y' → Prop} {g : Y → Y'}
+    (h : L.Rel b S μ ν) (hS : ∀ x y, S x y → S' x (g y)) (hg : Measurable g := by fun_prop) :
+    L.Rel b S' μ (ν.map g) := by
+  simpa only [map_id] using h.map (f := id) hS measurable_id hg
+
+/-- A measure lifts against its pushforward along the graph of the map. -/
+theorem rel_graph [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    (μ : Measure X) [IsSubProbabilityMeasure μ] {f : X → Y} (hf : Measurable f := by fun_prop) :
+    L.Rel 0 (fun x y ↦ f x = y) μ (μ.map f) :=
+  (IsReflexive.refl μ).map_right (fun _ _ h ↦ congrArg f h) hf
+
+theorem Rel.restrict [Zero B] [Top B] [L.IsSupportLocal] {A : Set X} (h : L.Rel b S μ ν)
+    (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) : L.Rel b (fun x y ↦ S x y ∧ x ∈ A) μ ν := by
+  classical
+  unfold Rel
+  convert IsSupportLocal.restrict hA hμ h using 2
+  ext x y
+  by_cases hx : x ∈ A <;> by_cases hS : S x y <;> simp [hx, hS]
+
+/-- A Dirac measure lifts against a probability measure carried by `A`, relating its point to
+`A`. -/
+theorem rel_dirac_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    [L.IsSupportLocal] (ν : Measure Y) [IsProbabilityMeasure ν] {A : Set Y}
+    (hA : MeasurableSet A) (hν : ν Aᶜ = 0) (x₀ : X) :
+    L.Rel 0 (fun x y ↦ x = x₀ ∧ y ∈ A) (dirac x₀) ν := by
+  have h := ((IsReflexive.refl (L := L) ν).restrict hA hν).map (f := fun _ ↦ x₀) (g := id)
+    (S' := fun x y ↦ x = x₀ ∧ y ∈ A) fun _ _ h ↦ ⟨rfl, h.1 ▸ h.2⟩
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
+/-- A probability measure carried by `A` lifts against a Dirac measure, relating `A` to its
+point. -/
+theorem rel_dirac_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
+    [L.IsSupportLocal] (μ : Measure X) [IsProbabilityMeasure μ] {A : Set X}
+    (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) (y₀ : Y) :
+    L.Rel 0 (fun x y ↦ x ∈ A ∧ y = y₀) μ (dirac y₀) := by
+  have h := ((IsReflexive.refl (L := L) μ).restrict hA hμ).map (f := id) (g := fun _ ↦ y₀)
+    (S' := fun x y ↦ x ∈ A ∧ y = y₀) fun _ _ h ↦ ⟨h.2, rfl⟩
+  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+
+/-- Binding with measurable families of sub-probability measures. -/
+theorem HasBind.bind_fun [LT B] [Top B] [L.HasBind] {R : X → Y → B} {R' : X' → Y' → B}
+    (h : L b R μ ν) {f : X → Measure X'} {g : Y → Measure Y'}
+    [∀ x, IsSubProbabilityMeasure (f x)] [∀ y, IsSubProbabilityMeasure (g y)]
+    (hk : ∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) (hf : Measurable f := by fun_prop)
+    (hg : Measurable g := by fun_prop) : L b R' (μ.bind f) (ν.bind g) :=
+  HasBind.bind (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hk
+
+/-- Binding a relational lifting with continuations lifted at a finite budget `c` on the
+relation. -/
+theorem HasBind.bind_rel [AddZeroClass B] [Preorder B] [Top B] [CanonicallyOrderedAdd B]
+    [L.IsLawful] [L.HasBind] {R' : X' → Y' → B} (hc : c < ⊤) (h : L.Rel b S μ ν)
+    {f : X → Measure X'} {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
+    [∀ y, IsSubProbabilityMeasure (g y)] (hk : ∀ x y, S x y → L c R' (f x) (g y))
+    (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
+    L (b + c) R' (μ.bind f) (ν.bind g) :=
+  HasBind.bind_fun (IsLawful.frame hc h) (fun x y hxy ↦ by
+    obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
+    simpa [hS] using hk x y hS) hf hg
+
+/-- Binding with continuations whose budget `s (E y)` depends on the right sample pays only the
+expectation of `E`. -/
+theorem IsExpectationAdditive.bind_adv [AddZeroClass B] [Preorder B] [Top B]
+    [CanonicallyOrderedAdd B] {s : ℝ≥0∞ →+o B} [L.HasBind] [L.IsExpectationAdditive s]
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {R' : X' → Y' → B}
+    (h : L.Rel b S μ ν) {f : X → Measure X'} {g : Y → Measure Y'}
+    [∀ x, IsSubProbabilityMeasure (f x)] [∀ y, IsSubProbabilityMeasure (g y)] {E : Y → ℝ≥0∞}
+    (hk : ∀ x y, S x y → L (s (E y)) R' (f x) (g y)) (hf : Measurable f := by fun_prop)
+    (hg : Measurable g := by fun_prop) (hE : Measurable E := by fun_prop) :
+    L (b + s (∫⁻ y, E y ∂ν)) R' (μ.bind f) (ν.bind g) :=
+  HasBind.bind_fun (IsExpectationAdditive.add_right hE h) (fun x y hxy ↦ by
+    obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
+    simpa [hS] using hk x y hS) hf hg
+
+/-- An exact relational lifting bounds the mass of an event by that of its image. -/
+theorem IsMassDetecting.measure_le [AddZeroClass B] [Preorder B] [Top B] {s : ℝ≥0∞ →+o B}
+    [L.IsMassDetecting s] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {T : Set X}
+    {T' : Set Y} (hT : MeasurableSet T) (hT' : MeasurableSet T') (h : L.Rel 0 S μ ν)
+    (hS : ∀ x y, S x y → x ∈ T → y ∈ T') : μ T ≤ ν T' := by
+  simpa using IsMassDetecting.measure_le_add (s := s) (δ := 0) hT hT' (by rwa [map_zero]) hS
+
+theorem Absorbing.mono [Add B] [Preorder B] [Top B] [L.IsLawful] (h : L.Absorbing b)
+    (hb : b ≤ b') : L.Absorbing b' := fun R μ ν _ _ ↦ IsLawful.mono (h R μ ν) hb le_rfl
+
+/-- A budget is not absorbing once it fails to relate two point masses along the empty
+relation. -/
+theorem not_absorbing_of_refutes [Zero B] [Top B]
+    (h : ¬L.Rel b (fun _ _ ↦ False) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit.{u + 1})) :
+    ¬L.Absorbing b := fun hb ↦ h (hb _ _ _)
+
+end GradedLifting
