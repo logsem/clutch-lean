@@ -5,7 +5,7 @@ public import Metrology.Couplings.SubProbability
 public import Metrology.ProbLang.HeadStep
 public import Metrology.ProbLang.DetStep
 public import Metrology.ProbLang.Discrete
-public import Metrology.Couplings.CodensityLifting
+public import Metrology.Couplings.Lifting
 public import Metrology.Couplings.AdditiveCouplings
 
 @[expose] public section
@@ -285,6 +285,14 @@ theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 
 instance pexecN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (pexecN n ρ) := ⟨pexecN_univ_le_one n ρ⟩
 
+/-- Running a fixed expression `n` steps from a sub-probability measure of states keeps the mass
+at most one. -/
+instance isSubProbabilityMeasure_bind_pexecN (μ : Measure (State rT)) [IsSubProbabilityMeasure μ]
+    (e : Exp rT) (n : Nat) : IsSubProbabilityMeasure (μ.bind fun σ ↦ pexecN n ⟨e, σ⟩) :=
+  have hk : Measurable fun σ : State rT ↦ pexecN n ⟨e, σ⟩ :=
+    pexecN_measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
+  isSubProbabilityMeasure_bind _ _ hk.aemeasurable
+
 theorem pexecN_one (ρ : Cfg rT) : pexecN 1 ρ = stepOrFinal ρ := by
   show (stepOrFinal ρ).bind dirac = stepOrFinal ρ
   exact Measure.bind_dirac
@@ -396,29 +404,29 @@ theorem lintegral_limExec'
     exact le_iSup_of_le g (le_iSup_of_le hg le_rfl)
   · exact iSup_le fun n => lintegral_mono' (le_iSup (fun i => execN i ρ) n) le_rfl
 
-/-! ### Codensity lifting of the limiting execution (Micrometer glue) -/
+/-! ### Liftings of the limiting execution (Micrometer glue) -/
 
-section Codensity
+section Lifting
 
-variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
+open GradedLifting
 
-/-- The limit of the finite executions inherits a codensity lifting from every stage. -/
-theorem limExec_map_codensity [Δ.IsLeftContinuous] {γ β : Type*} [MeasurableSpace γ]
-    [MeasurableSpace β] {α : ι} {δ : ENNReal} {Φ : Set (γ × β)} {ρ : Cfg rT} {μ₂ : Measure β}
-    [IsSubProbabilityMeasure μ₂] {F : Cfg rT → γ} (hF : Measurable F)
-    (H : ∀ n, Δ.Codensity α δ Φ ((execN n ρ).map F) μ₂) :
-    Δ.Codensity α δ Φ ((limExec ρ).map F) μ₂ := by
+variable {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous]
+
+/-- The limit of the finite executions inherits a lifting from every stage. -/
+theorem limExec_map_lift {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y] {b : B}
+    {R : X → Y → B} {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν] {F : Cfg rT → X}
+    (hF : Measurable F) (H : ∀ n, L b R ((execN n ρ).map F) ν) :
+    L b R ((limExec ρ).map F) ν := by
   rw [limExec, Measure.map_iSup_of_monotone execN_monotone hF]
-  exact GradedDivergence.Codensity.iSup_left (fun _ _ h => Measure.map_mono (execN_mono h ρ) hF) H
+  exact IsLeftContinuous.iSup_left (fun _ _ h ↦ Measure.map_mono (execN_mono h ρ) hF) H
 
-/-- `limExec_map_codensity` at `F := Cfg.expr`: the form `adequacy` needs. -/
-theorem limExecV_codensity [Δ.IsLeftContinuous] {β : Type*} [MeasurableSpace β] {α : ι}
-    {δ : ENNReal} {Φ : Set (Exp rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
-    [IsSubProbabilityMeasure μ₂] (H : ∀ n, Δ.Codensity α δ Φ (asExpr (execN n ρ)) μ₂) :
-    Δ.Codensity α δ Φ (limExecV ρ) μ₂ :=
-  limExec_map_codensity Cfg.measurable_expr H
+/-- `limExec_map_lift` at `F := Cfg.expr`: the form `adequacy` needs. -/
+theorem limExecV_lift {Y : Type _} [MeasurableSpace Y] {b : B} {R : Exp rT → Y → B}
+    {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν]
+    (H : ∀ n, L b R (asExpr (execN n ρ)) ν) : L b R (limExecV ρ) ν :=
+  limExec_map_lift Cfg.measurable_expr H
 
-end Codensity
+end Lifting
 
 -- Rocq: lim_exec_ARcoupl, specialized to additive form.
 theorem limExec_AddCoupl

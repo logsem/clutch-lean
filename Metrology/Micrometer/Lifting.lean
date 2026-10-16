@@ -7,113 +7,124 @@ public import Metrology.Micrometer.AppWeakestpre
 /-! # Lifting lemmas translating operational semantics rules into program-logic rules. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
+  GradedLifting
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
 namespace ProbLang.MicrometerWpGS
 
-variable {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
+variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-theorem wp_lift_prim_steps_coupl_adv {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+/-- Lift a program step coupled with a spec step within `b₁`, adding the finite `b₂` to every
+leftover (Rocq `wp_lift_step_couple_adv`). -/
+theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
-      errInterp (rT := rT) ε -∗ |={E, ∅}=>
-      ∃ (X : Cfg rT → Cfg rT → ENNReal) (ε₁ ε₂ : ENNReal),
-        ⌜ε₁ + ε₂ ≤ ε⌝ ∗
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+      budgetInterp b -∗ |={E, ∅}=>
+      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
+        ⌜b₁ + b₂ ≤ b⌝ ∗
+        ⌜b₂ < (⊤ : B)⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜Δ.CodensityE 1 ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
+        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
-            errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂) ∗ wp Δ E e₂ Φ)) ⊢
-    wp Δ E e₁ Φ := by
+            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
+    wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
-  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hb₂, %hred, %hred', %hcpl, H⟩
   imodintro
-  iapply progCoupl_steps_adv hεsum hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
-  imod H $$ %e₂ %σ₂ %e₂' %σ₂' with ⟨Hσ', Hs', Hε', Hwp⟩
+  iapply progCoupl_steps_adv hb hb₂ hred hred' hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   imodintro
-  iframe
+  iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
+/-- The same without splitting the budget: the leftover `R` is the new budget at each pair. -/
 theorem wp_lift_prim_steps_coupl_adv' {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
-      errInterp (rT := rT) ε -∗ |={E, ∅}=>
-      ∃ (X : Cfg rT → Cfg rT → ENNReal),
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+      budgetInterp b -∗ |={E, ∅}=>
+      ∃ (R : Cfg rT → Cfg rT → B),
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜Δ.CodensityE 1 ε X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
+        ⌜L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
           stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
-            errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp Δ E e₂ Φ)) ⊢
-    wp Δ E e₁ Φ := by
+            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp L E e₂ Φ)) ⊢
+    wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
-  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%X, %hred, %hred', %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %hred, %hred', %hcpl, H⟩
   imodintro
   iapply progCoupl_steps_adv' hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
-  imod H $$ %e₂ %σ₂ %e₂' %σ₂' with ⟨Hσ', Hs', Hε', Hwp⟩
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   imodintro
-  iframe
+  iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
-theorem wp_lift_prim_steps_coupl_adv_err_le_1 {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF} (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
-      errInterp (rT := rT) ε -∗ |={E, ∅}=>
-      ∃ (X : Cfg rT → Cfg rT → ENNReal) (ε₁ ε₂ : ENNReal),
-        ⌜ε₁ + ε₂ ≤ ε⌝ ∗
+/-- The continuation may exit with an absorbing budget instead of proving the `wp` (Rocq
+`wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is `L.Absorbing b`). -/
+theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
+    [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+    (hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+      budgetInterp b -∗ |={E, ∅}=>
+      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
+        ⌜b₁ + b₂ ≤ b⌝ ∗
+        ⌜b₂ < (⊤ : B)⌝ ∗
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜Δ.CodensityE 1 ε₁ X (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
-          ⌜1 ≤ X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂⌝ ∨
+          ⌜L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)⌝ ∨
           (stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
-            errInterp (rT := rT) (X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂) ∗ wp Δ E e₂ Φ))) ⊢
-    wp Δ E e₁ Φ := by
+            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ))) ⊢
+    wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_couple
-  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%X, %ε₁, %ε₂, %hεsum, %hred, %hred', %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hb₂, %hred, %hred', %hcpl, H⟩
   imodintro
   iapply specCoupl_ret
   simp only [hv]
-  iapply progCoupl_steps_adv hεsum hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' !> !>
+  iapply progCoupl_steps_adv hb hb₂ hred hred' hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR !> !>
   ispecialize H $$ %e₂ %σ₂ %e₂' %σ₂'
-  by_cases hle : X ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + ε₂ < 1
+  by_cases habs : L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)
+  · iapply specCoupl_absorbing habs
   · iapply specCoupl_ret
     imod H with (%hge | H)
-    · exact absurd hle (_root_.not_lt.mpr hge)
-    · icases H with ⟨Hσ', Hs', Hε', Hwp⟩
+    · exact (habs fun R μ ν _ _ => hge R μ ν).elim
+    · icases H with ⟨Hσ', Hs', Hb', Hwp⟩
       imodintro
       iframe
-  · iapply specCoupl_err_ge_1 (_root_.not_lt.mp hle)
 
-theorem wp_couple_erasables {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    (∀ σ₁ e₁' σ₁' ε, stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
-      errInterp (rT := rT) ε -∗ |={E, ∅}=>
+/-- Run the erasable distributions of the program and the spec within a lifting of cost `0`
+(Rocq `wp_couple_erasables`). -/
+theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+      budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),
         ⌜ErasableExpr μ₁ σ₁⌝ ∗ ⌜ErasableExpr μ₁' σ₁'⌝ ∗
-        ⌜Δ.Codensity 1 0 {p | R p.1 p.2} μ₁ μ₁'⌝ ∗
+        ⌜L.Rel 0 R μ₁ μ₁'⌝ ∗
         (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={∅, E}=>
-          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₂'⟩ ∗ errInterp (rT := rT) ε ∗
-            wp Δ E e Φ)) ⊢
-    wp Δ E e Φ := by
+          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₂'⟩ ∗ budgetInterp b ∗
+            wp L E e Φ)) ⊢
+    wp L E e Φ := by
   iintro H
   iapply wp_lift_step_spec_couple
-  iintro %σ₁ %e₁' %σ₁' %α %ε ⟨Hσ, Hs, Hα, Hε⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %ε [$Hσ $Hs $Hε] with ⟨%R, %μ₁, %μ₁', %her, %her', %hcpl, H⟩
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %μ₁, %μ₁', %her, %her', %hcpl, H⟩
   imodintro
   iapply specCoupl_erasables (by rw [zero_add]) hcpl her her'
   iintro %σ₂ %σ₂' %hR !>
   iapply specCoupl_ret
-  imod H $$ %σ₂ %σ₂' %hR with ⟨Hσ', Hs', Hε', Hwp⟩
+  imod H $$ %σ₂ %σ₂' %hR with ⟨Hσ', Hs', Hb', Hwp⟩
   imodintro
   iframe
 

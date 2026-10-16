@@ -28,13 +28,14 @@ open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.TotalEris
 /-! ## Lemmas consumed by the tactics -/
 
 section
-variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
-  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+  [BudgetGS B GF] [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
+  [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
-    wp Δ E (K.fill e₂) Φ ⊢ wp Δ E (K.fill e₁) Φ := by
+    wp L E (K.fill e₂) Φ ⊢ wp L E (K.fill e₁) Φ := by
   have : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
   exact (BI.laterN_intro n).trans (wp_pure_step_later' Hφ)
 
@@ -56,20 +57,22 @@ public theorem specProgFrag_reshape {rT : Type} [LawfulProbLangℝ rT]
 
 section PureStepsConsumers
 
-variable {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors}
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors}
 
-public theorem wp_pure_steps [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
-    [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset} {e₁ e₂ : Exp rT}
+public theorem wp_pure_steps [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] [AddCommMonoid B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+    [L.IsTopAbsorbing] {E : CoPset} {e₁ e₂ : Exp rT}
     {Φ : Val rT → IProp GF} (h : PureSteps e₁ e₂) :
-    wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
+    wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   have := h.pureExec
   (BI.laterN_intro _).trans (wp_pure_step_later' trivial)
 
-public theorem wp_pure_steps_at [MicrometerWpGS (rT := rT) GF] [GradeGS ι GF]
-    [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
+public theorem wp_pure_steps_at [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] [AddCommMonoid B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+    [L.IsTopAbsorbing] {E : CoPset}
     {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF} (heq : e₁ = e₁') (h : PureSteps e₁' e₂) :
-    wp Δ E e₂ Φ ⊢ wp Δ E e₁ Φ :=
+    wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   heq ▸ wp_pure_steps h
 
 public theorem step_pure_steps_at {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
@@ -93,17 +96,18 @@ end PureStepsConsumers
 
 /-! ## WP-goal runner -/
 
-/-- A proof-mode goal `ehyps ⊢ wp Δ E e Φ`, its `wp` spine read positionally. -/
+/-- A proof-mode goal `ehyps ⊢ wp L E e Φ`, its `wp` spine read positionally. -/
 meta structure WpGoal where
   {u : Level}
   {α : Q(Type)}
   instPL : Q(ProbLang.LawfulProbLangℝ $α)
-  {ι : Q(Type)}
-  instMonoid : Q(Monoid $ι)
-  Δ : Q(GradedDivergence.{0} $ι)
+  {B : Q(Type)}
+  instPO : Q(PartialOrder $B)
+  instOT : Q(OrderTop $B)
+  L : Q(GradedLifting.{0} $B)
   {GF : Q(BundledGFunctors.{0, 0, 0})}
   instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF)
-  instGrade : Q(ProbLang.GradeGS $ι $GF)
+  instBudget : Q(ProbLang.BudgetGS $B $GF)
   /-- The full `wp` application, with `E`, `e`, `Φ` as the trailing arguments. -/
   wpApp : LeanExpr
   {prop : Q(Type u)}
@@ -117,11 +121,11 @@ meta structure WpGoal where
   hprop : $prop =Q IProp $GF
   hbi : $bi =Q UPred.instBIUPred
 
-/-- The leading `wp` arguments `rT, instPL, ι, instMonoid, Δ, GF, instWp, instGrade`, shared by
-every lemma the tactics apply (as `mkAppOptM` arguments; class instances on `Δ` follow as
+/-- The leading `wp` arguments `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget`, shared
+by every lemma the tactics apply (as `mkAppOptM` arguments; class instances on `L` follow as
 `none`). -/
 meta def WpGoal.prefix (g : WpGoal) : Array (Option LeanExpr) :=
-  #[g.α, g.instPL, g.ι, g.instMonoid, g.Δ, g.GF, g.instWp, g.instGrade]
+  #[g.α, g.instPL, g.B, g.instPO, g.instOT, g.L, g.GF, g.instWp, g.instBudget]
 
 meta def WpGoal.mkWp (g : WpGoal) (e : LeanExpr) (Φ : LeanExpr) : LeanExpr :=
   let args := g.wpApp.getAppArgs
@@ -141,26 +145,27 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     unless goalE.getAppFn.consumeMData.isConstOf ``ProbLang.MicrometerWpGS.wp do
       throwError "the goal {goal} must be a `wp`"
     let args := goalE.getAppArgs
-    -- `rT, instPL, ι, instMonoid, Δ, GF, instWp, instGrade, E, e, Φ`
-    unless args.size == 11 do
+    -- `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget, E, e, Φ`
+    unless args.size == 12 do
       throwError "unexpected `wp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
     have instPL : Q(ProbLang.LawfulProbLangℝ $α) := args[1]!
-    have ι : Q(Type) := args[2]!
-    have instMonoid : Q(Monoid $ι) := args[3]!
-    have Δ : Q(GradedDivergence.{0} $ι) := args[4]!
-    have instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF) := args[6]!
-    have instGrade : Q(ProbLang.GradeGS $ι $GF) := args[7]!
-    have E : Q(CoPset) := args[8]!
-    have e : Q(Exp $α) := args[9]!
-    let Φ : LeanExpr := args[10]!
-    k mvar { instPL, instMonoid, Δ, GF, instWp, instGrade, wpApp := goalE, hyps, E, e, Φ,
+    have B : Q(Type) := args[2]!
+    have instPO : Q(PartialOrder $B) := args[3]!
+    have instOT : Q(OrderTop $B) := args[4]!
+    have L : Q(GradedLifting.{0} $B) := args[5]!
+    have instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF) := args[7]!
+    have instBudget : Q(ProbLang.BudgetGS $B $GF) := args[8]!
+    have E : Q(CoPset) := args[9]!
+    have e : Q(Exp $α) := args[10]!
+    let Φ : LeanExpr := args[11]!
+    k mvar { instPL, instPO, instOT, L, GF, instWp, instBudget, wpApp := goalE, hyps, E, e, Φ,
              hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
 /-! ## `wp_bind` — focus on a subexpression by auto-discovering its context -/
 
-/-- `wp_bind e` rebases the goal `wp Δ E (K.fill e) Φ` to
-`wp Δ E e (fun v => wp Δ E (K.fill v) Φ)`, discovering `K` automatically. -/
+/-- `wp_bind e` rebases the goal `wp L E (K.fill e) Φ` to
+`wp L E e (fun v => wp L E (K.fill v) Φ)`, discovering `K` automatically. -/
 elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
   runTacticWp fun mvar g => do
     let { α, GF, hyps, e, .. } := g
@@ -170,7 +175,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
           m!"cannot unify {← ppExpr focus} with any evaluation context of {← ppExpr e}"
     have K : Q(Ectx $α) := res.K
     have e' : Q(Exp $α) := focus
-    -- Continuation `fun v => wp Δ E (K.fill (ofVal v)) Φ`, with `K` filled at the meta
+    -- Continuation `fun v => wp L E (K.fill (ofVal v)) Φ`, with `K` filled at the meta
     -- level so the continuation displays the clean refocused expression.
     let Φc : LeanExpr ←
       withLocalDeclDQ `v q(Val $α) fun v => do
@@ -179,7 +184,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
     let bindPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_bind
-      (g.prefix.append #[some K, some g.E, some e', some g.Φ])
+      (g.prefix.append #[none, none, none, some K, some g.E, some e', some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -224,7 +229,7 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let gs ← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
     let stepPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_pure_step_ctx
-      (g.prefix.append #[none, none, none, some K, some φ, some n,
+      (g.prefix.append #[none, none, none, none, none, none, some K, some φ, some n,
         some e₁, some e₂, some step.inst, some HΦ, some g.E, some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
@@ -244,7 +249,7 @@ macro "wp_pures" : tactic =>
 
 /-! ## `wp_value` — discharge a value WP -/
 
-/-- `wp_value` reduces a goal `wp Δ E v Φ` (with `v` a value) to `Φ v`
+/-- `wp_value` reduces a goal `wp L E v Φ` (with `v` a value) to `Φ v`
 (or `|={E}=> Φ v` if the postcondition cannot absorb the update). -/
 elab "wp_value" : tactic =>
   runTacticWp fun mvar g => do
@@ -288,38 +293,40 @@ elab "wp_value" : tactic =>
       (g.prefix.append #[some E, some e, some v, some g.Φ, some hproof])
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
-public theorem wp_value_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-    [GradeGS ι GF]
+public theorem wp_value_eq {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B]
+    [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
+    [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {E : CoPset} (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) {Φ : Val rT → IProp GF} :
-    Φ v ⊢ wp Δ E e Φ :=
+    Φ v ⊢ wp L E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
-public theorem wp_expr_eq {rT : Type} [LawfulProbLangℝ rT] {ι : Type} [Monoid ι]
-    {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-    [GradeGS ι GF]
+public theorem wp_expr_eq {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B]
+    [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
+    [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {E : CoPset} {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
-    wp Δ E e' Φ ⊢ wp Δ E e Φ :=
+    wp L E e' Φ ⊢ wp L E e Φ :=
   heq ▸ .rfl
 
-/-- `wp_show e'` refolds the goal `wp Δ E e Φ` to the definitionally equal `wp Δ E e' Φ`, e.g. a
+/-- `wp_show e'` refolds the goal `wp L E e Φ` to the definitionally equal `wp L E e' Φ`, e.g. a
 stepped β-residual back to its library form before applying an induction hypothesis. -/
 elab "wp_show" colGt ppSpace e':term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_expr_eq (e := $eS) (e' := $e') (by kernel_rfl)))
 
-/-- `wp_value_at v` closes `wp Δ E e Φ` with `e` only definitionally `Exp.ofVal v`, leaving
+/-- `wp_value_at v` closes `wp L E e Φ` with `e` only definitionally `Exp.ofVal v`, leaving
 `Φ v`. -/
 elab "wp_value_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_value_eq (e := $eS) $v (by kernel_rfl)))
 
 public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors} {hlc : HasLC}
-    [MicrometerGS rT hlc GF] [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] {E : CoPset}
+    {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+    {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
+    [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+    [L.IsTopAbsorbing] {E : CoPset}
     (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
-    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp Δ E ea Φ :=
+    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E ea Φ :=
   heq ▸ wp_alloc
 
-/-- `wp_alloc_at v` applies `wp_alloc` to `wp Δ E (alloc e) Φ` with `e` only definitionally
+/-- `wp_alloc_at v` applies `wp_alloc` to `wp L E (alloc e) Φ` with `e` only definitionally
 `Exp.ofVal v`. -/
 elab "wp_alloc_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_alloc_eq (ea := $eS) $v (by kernel_rfl)))

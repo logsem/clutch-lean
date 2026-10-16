@@ -13,6 +13,7 @@ public import Metrology.Iris.Countable
 /-! # Semantic Model -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
+  GradedLifting
 
 namespace ProbLang
 
@@ -116,23 +117,24 @@ end NaShorthand
 /-! ## Refinement judgement -/
 
 section Refines
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
-variable (Δ) in
-/-- `REL[Δ] e << e' @ E : A`: `e` refines `e'` at `A` under the graded divergence `Δ`. -/
+variable (L) in
+/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`. -/
 noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
-  ∀ (K : Ectx rT) (ε : ENNReal),
+  ∀ (K : Ectx rT) (b : B),
     ⤇ K.fill e' -∗
     naOwnP (rT := rT) E -∗
-    ↯ ε -∗
-    ⌜ (0 : ENNReal) < ε ⌝ -∗
-    wp Δ ⊤ e (fun v => iprop%
-      ∃ (v' : Val rT) (ε' : ENNReal),
+    ↯b b -∗
+    ⌜ (0 : B) < b ⌝ -∗
+    wp L ⊤ e (fun v => iprop%
+      ∃ (v' : Val rT) (b' : B),
         ⤇ K.fill v'.1 ∗
         naOwnP (rT := rT) ⊤ ∗
-        ↯ ε' ∗
-        ⌜ (0 : ENNReal) < ε' ⌝ ∗
+        ↯b b' ∗
+        ⌜ (0 : B) < b' ⌝ ∗
         A v v')
 
 end Refines
@@ -143,23 +145,24 @@ scoped syntax:100 (name := micrometerRel)
   "REL[" term "] " term " << " term (" @ " term)? " : " term : term
 
 macro_rules
-  | `(REL[$Δ] $e1 << $e2 $[@ $E]? : $A) => do
+  | `(REL[$L] $e1 << $e2 $[@ $E]? : $A) => do
     let E ← match E with | some E => pure E | none => `((⊤ : CoPset))
-    `(refines $Δ $E $e1 $e2 $A)
+    `(refines $L $E $e1 $e2 $A)
 
-/-- Print `refines` through `REL[Δ]`, dropping the mask when it is `⊤`. -/
+/-- Print `refines` through `REL[L]`, dropping the mask when it is `⊤`. -/
 @[app_unexpander ProbLang.refines]
 meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
-  | `($_ $Δ $E $e1 $e2 $A) =>
-    if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(REL[$Δ] $e1 << $e2 : $A)
-    else `(REL[$Δ] $e1 << $e2 @ $E : $A)
+  | `($_ $L $E $e1 $e2 $A) =>
+    if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(REL[$L] $e1 << $e2 : $A)
+    else `(REL[$L] $e1 << $e2 @ $E : $A)
   | _ => throw ()
 
 /-! ## Simple lrel constructors -/
 
 section SimpleLRels
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 omit [LawfulProbLangℝ rT] in
 theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
@@ -227,12 +230,12 @@ omit [LawfulProbLangℝ rT] in
 theorem lrel_real_lit (r : rT) : ⊢@{IProp GF} lrel_real.car (.real r : Val rT) (.real r) := by
   unfold lrel_real; iexists r; ipureintro; exact ⟨rfl, rfl⟩
 
-variable (Δ) in
+variable (L) in
 noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗
       □ (∀ (w1 w2 : Val rT), A1 w1 w2 -∗
-        refines Δ (⊤ : CoPset) (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
+        refines L (⊤ : CoPset) (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
@@ -278,13 +281,13 @@ noncomputable def lrel_exists (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗ ∃ A : lrel rT GF, C A v1 v2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
-variable (Δ) in
+variable (L) in
 noncomputable def lrel_forall (C : lrel rT GF → lrel rT GF) : lrel rT GF where
-  car v1 v2 := iprop% ∀ (A : lrel rT GF), (lrel_arr Δ lrel_unit (C A)).car v1 v2
+  car v1 v2 := iprop% ∀ (A : lrel rT GF), (lrel_arr L lrel_unit (C A)).car v1 v2
   closed v1 v2 := by
     iintro Hall
     ihave Hinst := Hall $$ %(default : lrel rT GF)
-    iapply (lrel_arr Δ lrel_unit (C default)).closed v1 v2 $$ Hinst
+    iapply (lrel_arr L lrel_unit (C default)).closed v1 v2 $$ Hinst
 
 noncomputable def lrel_true : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
@@ -344,15 +347,15 @@ instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) wh
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hB w1 w2)
 
 theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
-    (h : A ≡{n}≡ B) : refines Δ E e e' A ≡{n}≡ refines Δ E e e' B := by
+    (h : A ≡{n}≡ B) : refines L E e e' A ≡{n}≡ refines L E e e' B := by
   -- TODO: Remove when nonexp lands
   unfold refines
-  refine forall_ne fun K => forall_ne fun ε => ?_
+  refine forall_ne fun K => forall_ne fun b => ?_
   refine wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl ?_
-  refine NonExpansive.ne (f := wp Δ ⊤ e) fun v => exists_ne fun v' => exists_ne fun ε' => ?_
+  refine NonExpansive.ne (f := wp L ⊤ e) fun v => exists_ne fun v' => exists_ne fun b' => ?_
   exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl (h v v')
 
-instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr Δ (rT := rT) (GF := GF)) where
+instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     -- TODO: Remove when nonexp lands
     exact sep_ne.ne .rfl <| intuitionistically_ne.ne <| forall_ne fun w1 => forall_ne fun w2 =>
@@ -360,7 +363,7 @@ instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr Δ (rT := rT) (GF := GF))
 
 -- TODO: Can this be removed?
 theorem refines_proper {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
-    (h : A = B) : refines Δ E e e' A = refines Δ E e e' B :=
+    (h : A = B) : refines L E e e' A = refines L E e e' B :=
   OFE.eq_dist.mpr fun n => refines_ne (OFE.eq_dist_1 h n)
 
 noncomputable def lrel_ref (A : lrel rT GF) : lrel rT GF where
@@ -390,10 +393,10 @@ instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     exact exists_ne fun w1 => exists_ne fun w2 => sep_ne.ne .rfl <| sep_ne.ne .rfl (hAB w1 w2)
 
-variable (Δ) in
+variable (L) in
 theorem lrel_forall_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
-    (lrel_forall Δ C1 : lrel rT GF) ≡{n}≡ lrel_forall Δ C2 := by
+    (lrel_forall L C1 : lrel rT GF) ≡{n}≡ lrel_forall L C2 := by
   -- TODO: Tweak when nonexp lands
   intro v1 v2
   show iprop(∀ _, _) ≡{n}≡ iprop(∀ _, _)
@@ -413,8 +416,9 @@ end SimpleLRels
 /-! ### Semantic property lemmas -/
 
 section SemtypesProperties
-variable {hlc : HasLC} {ι : Type} {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
@@ -512,26 +516,28 @@ end SemtypesProperties
 /-! ## Monadic layer -/
 
 section Monadic
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι} {GF : BundledGFunctors}
-  [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
-    iprop(|={⊤}=> refines Δ E e t A) ⊢@{IProp GF} refines Δ E e t A := by
+    iprop(|={⊤}=> refines L E e t A) ⊢@{IProp GF} refines L E e t A := by
   unfold refines
   iintro >H
   iexact H
 
 /-- Sequence two refinements via evaluation-context framing. -/
-theorem refines_bind (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : Exp rT} :
-    ⊢ refines Δ E e e' A -∗
-      (∀ v v', A v v' -∗ refines Δ ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗
-      refines Δ E (K.fill e) (K'.fill e') A' := by
+theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {E : CoPset}
+    {A A' : lrel rT GF} {e e' : Exp rT} :
+    ⊢ refines L E e e' A -∗
+      (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗
+      refines L E (K.fill e) (K'.fill e') A' := by
   iintro Hm Hf
   iunfold refines at Hm
   iunfold refines
-  iintro %K'' %ε Hj Hna Herr Hpos
+  iintro %K'' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K'' K' e'] at Hj
-  ispecialize Hm $$ %(K''.comp K') %ε Hj Hna Herr Hpos
+  ispecialize Hm $$ %(K''.comp K') %b Hj Hna Herr Hpos
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply MicrometerWpGS.wp_mono
   -- Take the `wp` premise first: it pins the intermediate postcondition to the one of `Hm`,
@@ -541,33 +547,33 @@ theorem refines_bind (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : E
     iframe Hf
     iexact Hm
   intro v
-  change _ ⊢ wp Δ ⊤ (K.fill v.1) _
-  iintro ⟨Hf, %v', %ε', Hj, Hna, Herr, Hpos, HA⟩
+  change _ ⊢ wp L ⊤ (K.fill v.1) _
+  iintro ⟨Hf, %v', %b', Hj, Hna, Herr, Hpos, HA⟩
   ispecialize Hf $$ %v %v' HA
   iunfold refines at Hf
   isimp only [← Ectx.fill_comp K'' K' v'.1] at Hj
-  iapply Hf $$ %K'' %ε' Hj Hna Herr Hpos
+  iapply Hf $$ %K'' %b' Hj Hna Herr Hpos
 
 /-- Value introduction that consumes the local `na_own E` to produce
 `na_own ⊤` together with `A v1 v2`. -/
 theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) ⊤ ∗ A v1 v2)
-      ⊢@{IProp GF} refines Δ E e1 e2 A := by
+      ⊢@{IProp GF} refines L E e1 e2 A := by
   subst hv1 hv2
   unfold refines
-  iintro HFA %K %ε HK Hnais Herr Hpos
+  iintro HFA %K %b HK Hnais Herr Hpos
   iapply wp_value_fupd_of_toVal (e := v1.1) (Exp.toVal?_ofVal v1)
   imod HFA $$ Hnais with ⟨HF, HA⟩
   imodintro
-  iexists v2, ε
+  iexists v2, b
   iframe HK HF Herr Hpos HA
 
 /-- Dual of `refines_ret_na` splitting `⊤ = E ∪ (⊤ \ E)`. -/
 theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> naOwnP (rT := rT) ((⊤ : CoPset) \ E) ∗ A v1 v2)
-      ⊢@{IProp GF} refines Δ E e1 e2 A := by
+      ⊢@{IProp GF} refines L E e1 e2 A := by
   iintro HFA
   iapply refines_ret_na hv1 hv2
   iintro Hnais
@@ -583,7 +589,7 @@ theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A :
 
 theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
-    iprop(|={⊤}=> A v1 v2) ⊢@{IProp GF} refines Δ (⊤ : CoPset) e1 e2 A := by
+    iprop(|={⊤}=> A v1 v2) ⊢@{IProp GF} refines L (⊤ : CoPset) e1 e2 A := by
   iintro HA
   iapply refines_ret_na hv1 hv2
   iintro Hna
@@ -594,39 +600,39 @@ theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
 instance elim_fupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     (P : IProp GF) (A : lrel rT GF) :
     ElimModal True false io false (iprop(|={⊤}=> P)) P
-      (refines Δ E e t A) (refines Δ E e t A) where
+      (refines L E e t A) (refines L E e t A) where
   elim_modal _ := calc
-    _ ⊢ (|={⊤}=> P) ∗ (P -∗ refines Δ E e t A) := sep_mono_left intuitionisticallyIf_elim
-    _ ⊢ |={⊤}=> P ∗ (P -∗ refines Δ E e t A)   := fupd_frame_right
-    _ ⊢ |={⊤}=> refines Δ E e t A              := BIFUpdate.mono wand_elim_right
-    _ ⊢ refines Δ E e t A                      := fupd_refines
+    _ ⊢ (|={⊤}=> P) ∗ (P -∗ refines L E e t A) := sep_mono_left intuitionisticallyIf_elim
+    _ ⊢ |={⊤}=> P ∗ (P -∗ refines L E e t A)   := fupd_frame_right
+    _ ⊢ |={⊤}=> refines L E e t A              := BIFUpdate.mono wand_elim_right
+    _ ⊢ refines L E e t A                      := fupd_refines
 
 instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     (P : IProp GF) (A : lrel rT GF) :
     ElimModal True false io false (iprop(|==> P)) P
-      (refines Δ E e t A) (refines Δ E e t A) where
+      (refines L E e t A) (refines L E e t A) where
   elim_modal h :=
     (sep_mono_left (intuitionisticallyIf_mono BIUpdateFUpdate.fupd_of_bupd)).trans
       ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
 
 instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
-    IsExcept0 (refines Δ E e t A) where
+    IsExcept0 (refines L E e t A) where
   is_except0 := (except0_mono fupd_intro).trans (BIFUpdate.except0.trans fupd_refines)
 
 theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
-    iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) F ∗ refines Δ F e1 e2 A)
-      ⊢@{IProp GF} refines Δ E e1 e2 A := by
+    iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) F ∗ refines L F e1 e2 A)
+      ⊢@{IProp GF} refines L E e1 e2 A := by
   unfold refines
-  iintro Hupd %K %ε Hj Hna Herr Hpos
+  iintro Hupd %K %b Hj Hna Herr Hpos
   iapply MicrometerWpGS.fupd_wp
   imod Hupd $$ Hna with ⟨Hna, HR⟩
   imodintro
-  iapply HR $$ %K %ε Hj Hna Herr Hpos
+  iapply HR $$ %K %b Hj Hna Herr Hpos
 
 theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
-    iprop% (▷ P) ∗ (naInvP (rT := rT) N P -∗ refines Δ E e1 e2 A)
-      ⊢@{IProp GF} refines Δ E e1 e2 A := by
+    iprop% (▷ P) ∗ (naInvP (rT := rT) N P -∗ refines L E e1 e2 A)
+      ⊢@{IProp GF} refines L E e1 e2 A := by
   iintro ⟨HP, Hcont⟩
   iapply fupd_refines
   imod Iris.NonAtomicInvariant.inv_alloc $$ [$HP] with Hinv
@@ -636,8 +642,8 @@ theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Ex
 theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT} {A : lrel rT GF}
     (HNE : (↑N : CoPset) ⊆ E) :
     iprop% naInvP (rT := rT) N P ∗
-        ((▷ P) ∗ naCloseP (rT := rT) P N E -∗ refines Δ (E \ ↑N) e1 e2 A)
-      ⊢@{IProp GF} refines Δ E e1 e2 A := by
+        ((▷ P) ∗ naCloseP (rT := rT) P N E -∗ refines L (E \ ↑N) e1 e2 A)
+      ⊢@{IProp GF} refines L E e1 e2 A := by
   iintro ⟨Hinv, IH⟩
   iapply refines_na_update
   iintro Hnais
@@ -649,8 +655,8 @@ theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp 
 
 theorem refines_na_close {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
-    iprop% (▷ P) ∗ naCloseP (rT := rT) P N E ∗ refines Δ E e1 e2 A
-      ⊢@{IProp GF} refines Δ (E \ ↑N) e1 e2 A := by
+    iprop% (▷ P) ∗ naCloseP (rT := rT) P N E ∗ refines L E e1 e2 A
+      ⊢@{IProp GF} refines L (E \ ↑N) e1 e2 A := by
   iintro ⟨HP, Hclose, IH⟩
   iapply refines_na_update
   iintro HownFN

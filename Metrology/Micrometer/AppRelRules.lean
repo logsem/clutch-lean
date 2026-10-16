@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.ErrorCredits
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.CouplingRules
@@ -12,6 +13,7 @@ public import Metrology.Micrometer.OpenInv
 /-! # Relational Rules -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
+  GradedLifting
 open scoped AppGS
 
 namespace ProbLang
@@ -19,28 +21,28 @@ namespace ProbLang
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 section AppRelRules
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {Δ : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF] [GradeGS ι GF]
-  [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 /-! ## Forward reductions on the LHS -/
 
 theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
-    iprop% ▷^[n] refines Δ E (K.fill e') t A ⊢ refines Δ E (K.fill e) t A := by
+    iprop% ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
-  iintro H %K' %ε HK Hna Herr Hpos
+  iintro H %K' %b HK Hna Herr Hpos
   iapply MicrometerWpGS.wp_pure_step_later' (Hex := HexK) Hφ
   inext
   iapply H $$ HK Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
-    refines Δ E t (K.fill e') A ⊢ refines Δ E t (K.fill e) A := by
+    refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
   iunfold refines
-  iintro H %K' %ε Hj Hna Herr Hpos
+  iintro H %K' %b Hj Hna Herr Hpos
   rw [Ectx.fill_comp]
   ihave HStep := step_pure (K'.comp K) (Hex := Hex) Hφ $$ Hj
   iapply specUpdate_wp
@@ -48,15 +50,15 @@ theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   iframe HStep
   iintro HK'
   isimp only [← Ectx.fill_comp K' K e'] at HK'
-  iapply H $$ %K' %ε HK' Hna Herr Hpos
+  iapply H $$ %K' %b HK' Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
-      specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines Δ E e1 (K'.fill v.1) A))) ⊢
-    refines Δ E e1 (K'.fill e2) A := by
+      specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
+    refines L E e1 (K'.fill e2) A := by
   iunfold refines
-  iintro He %K'' %ε Hj Hna Herr Hpos
+  iintro He %K'' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K'' K' e2] at Hj
   ihave HStep := He $$ %(K''.comp K') Hj
   iapply specUpdate_wp
@@ -64,15 +66,15 @@ theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT
   iframe HStep
   iintro ⟨%v, HK'', Hrefines⟩
   isimp only [← Ectx.fill_comp K'' K' v.1] at HK''
-  iapply Hrefines $$ %K'' %ε HK'' Hna Herr Hpos
+  iapply Hrefines $$ %K'' %b HK'' Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
     {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
-    (|={⊤}=> refines Δ E e1 (K'.fill e2') A) -∗ refines Δ E e1 (K'.fill e2) A := by
+    (|={⊤}=> refines L E e1 (K'.fill e2') A) -∗ refines L E e1 (K'.fill e2) A := by
   iunfold refines
-  iintro Hupd Hlog %K'' %ε Hj Hna Herr Hpos
+  iintro Hupd Hlog %K'' %b Hj Hna Herr Hpos
   imod Hlog
   isimp only [Ectx.fill_comp K'' K'] at Hj
   ihave HStep := Hupd $$ %(K''.comp K') Hj
@@ -81,51 +83,51 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
   iframe HStep
   iintro HKres
   isimp only [← Ectx.fill_comp K'' K' e2'] at HKres
-  iapply Hlog $$ %K'' %ε HKres Hna Herr Hpos
+  iapply Hlog $$ %K'' %b HKres Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF} :
-    wp Δ ⊤ e1 (fun v => refines Δ E (K.fill v.1) t A) ⊢ refines Δ E (K.fill e1) t A := by
+    wp L ⊤ e1 (fun v => refines L E (K.fill v.1) t A) ⊢ refines L E (K.fill e1) t A := by
   iintro He
   iunfold refines
-  iintro %K' %ε HK Hna Herr Hpos
+  iintro %K' %b HK Hna Herr Hpos
   iapply MicrometerWpGS.wp_bind (K := K)
-  let R : IProp GF := iprop% ⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯ ε ∗ ⌜0 < ε⌝
+  let R : IProp GF := iprop% ⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝
   ihave HR : R $$ [HK Hna Herr Hpos]
   · isplitl [HK]; · iassumption
     iframe
-  ihave HFrame : wp Δ ⊤ e1 (fun v => iprop(R ∗ refines Δ E (K.fill v.1) t A)) $$ [HR He]
-  · iapply MicrometerWpGS.wp_frame_l (Φ := fun v => refines Δ E (K.fill v.1) t A)
+  ihave HFrame : wp L ⊤ e1 (fun v => iprop(R ∗ refines L E (K.fill v.1) t A)) $$ [HR He]
+  · iapply MicrometerWpGS.wp_frame_l (Φ := fun v => refines L E (K.fill v.1) t A)
     iframe HR He
   iapply MicrometerWpGS.wp_mono $$ HFrame
   intro v
   rw [show Exp.ofVal v = v.1 from rfl]
   iintro ⟨⟨HK, Hna, Herr, Hpos⟩, HRefv⟩
   iunfold refines at HRefv
-  iapply HRefv $$ %K' %ε HK Hna Herr Hpos
+  iapply HRefv $$ %K' %b HK Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
-    (Hopen : OpenInv Δ e1) : iprop%
+    (Hopen : OpenInv L e1) : iprop%
     (∀ (K' : Ectx rT), ⤇ K'.fill t -∗
-      |={⊤, E'}=> wp Δ E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
-        ⤇ K'.fill t' ∗ refines Δ E (K.fill v.1) t' A)) ⊢
-    refines Δ E (K.fill e1) t A := by
+      |={⊤, E'}=> wp L E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
+        ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A)) ⊢
+    refines L E (K.fill e1) t A := by
   iintro Hlog
   iunfold refines
-  iintro %K' %ε HK Hna Herr Hpos
+  iintro %K' %b HK Hna Herr Hpos
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_atomic Hopen
   imod Hlog $$ %K' HK with HW
   imodintro
-  let R : IProp GF := iprop% naOwnP (rT := rT) E ∗ ↯ ε ∗ ⌜0 < ε⌝
+  let R : IProp GF := iprop% naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝
   ihave HR : R $$ [Hna Herr Hpos]
   · isplitl [Hna]; · iassumption
     iframe
-  ihave HFrame : wp Δ E' e1 (fun v => iprop(R ∗
-      (|={E', ⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines Δ E (K.fill v.1) t' A))) $$ [HR HW]
+  ihave HFrame : wp L E' e1 (fun v => iprop(R ∗
+      (|={E', ⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A))) $$ [HR HW]
   · iapply MicrometerWpGS.wp_frame_l
-      (Φ := fun v => iprop(|={E',⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines Δ E (K.fill v.1) t' A))
+      (Φ := fun v => iprop(|={E',⊤}=> ∃ t', ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A))
     iframe HR HW
   iapply MicrometerWpGS.wp_mono $$ HFrame
   intro v
@@ -134,13 +136,13 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
   imod HFup with ⟨%t', HKt', HRef⟩
   imodintro
   iunfold refines at HRef
-  iapply HRef $$ %K' %ε HKt' Hna Herr Hpos
+  iapply HRef $$ %K' %b HKt' Hna Herr Hpos
 
 /-! ## Stateful reductions on the LHS -/
 
 theorem refines_alloc_l {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, l ↦ v -∗ refines Δ E (K.fill pl(#(.loc l))) t A) ⊢
-    refines Δ E (K.fill (.alloc v.1)) t A := by
+    iprop% (∀ l, l ↦ v -∗ refines L E (K.fill pl(#(.loc l))) t A) ⊢
+    refines L E (K.fill (.alloc v.1)) t A := by
   iintro Hlog
   iapply refines_wp_l
   rw [show Exp.alloc v.1 = Exp.alloc (Exp.ofVal v) from rfl]
@@ -149,8 +151,8 @@ theorem refines_alloc_l {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iapply Hlog $$ %l Hl
 
 theorem refines_load_l {E : CoPset} {K : Ectx rT} {l : Loc} {t : Exp rT} {A : lrel rT GF} :
-    iprop% (∃ v, l ↦ v ∗ (l ↦ v -∗ refines Δ E (K.fill v.1) t A)) ⊢
-    refines Δ E (K.fill pl(!#(.loc l))) t A := by
+    iprop% (∃ v, l ↦ v ∗ (l ↦ v -∗ refines L E (K.fill v.1) t A)) ⊢
+    refines L E (K.fill pl(!#(.loc l))) t A := by
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_load
@@ -160,8 +162,8 @@ theorem refines_load_l {E : CoPset} {K : Ectx rT} {l : Loc} {t : Exp rT} {A : lr
 
 theorem refines_store_l {E : CoPset} {K : Ectx rT} {l : Loc} {v' : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
-    (∃ v : Val rT, l ↦ v ∗ (l ↦ v' -∗ refines Δ E (K.fill pl(#(.unit))) t A)) ⊢
-    refines Δ E (K.fill (.store pl(#(.loc l)) v'.1)) t A := by
+    (∃ v : Val rT, l ↦ v ∗ (l ↦ v' -∗ refines L E (K.fill pl(#(.unit))) t A)) ⊢
+    refines L E (K.fill (.store pl(#(.loc l)) v'.1)) t A := by
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
   rw [show Exp.store pl(#(.loc l)) v'.1 = Exp.store pl(#(.loc l)) (Exp.ofVal v') from rfl]
@@ -172,10 +174,10 @@ theorem refines_store_l {E : CoPset} {K : Ectx rT} {l : Loc} {v' : Val rT} {t : 
 
 /-! ## Stateful reductions on the RHS -/
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, l ↦ₛ v -∗ refines Δ E t (K.fill pl(#(.loc l))) A) ⊢
-    refines Δ E t (K.fill (.alloc v.1)) A := by
+    iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#(.loc l))) A) ⊢
+    refines L E t (K.fill (.alloc v.1)) A := by
   iintro Hlog
   iapply refines_step_r
   iintro %K' Hj
@@ -187,11 +189,11 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iframe HKRes
   iapply Hlog $$ %l Hl
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
-    l ↦ₛ v ∗ (l ↦ₛ v -∗ refines Δ E t (K.fill v.1) A) ⊢
-    refines Δ E t (K.fill pl(!#(.loc l))) A := by
+    l ↦ₛ v ∗ (l ↦ₛ v -∗ refines L E t (K.fill v.1) A) ⊢
+    refines L E t (K.fill pl(!#(.loc l))) A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_step_r
   iintro %K' Hj
@@ -204,11 +206,11 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iframe HKRes
   iapply Hlog $$ HlRes
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
     {A : lrel rT GF} : iprop%
-    l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines Δ E e (K.fill pl(#(.unit))) A) ⊢
-    refines Δ E e (K.fill (.store pl(#(.loc l)) v'.1)) A := by
+    l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#(.unit))) A) ⊢
+    refines L E e (K.fill (.store pl(#(.loc l)) v'.1)) A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_step_r
   iintro %K' Hj
@@ -224,8 +226,8 @@ theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e 
 
 theorem refines_randU_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT} {A : lrel rT GF}
     (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E (K.fill pl(#(.int n))) t A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.unit)))) t A := by
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) t A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.unit)))) t A := by
   iintro Hlog
   iapply refines_wp_l
   iapply wp_rand Hz
@@ -235,8 +237,8 @@ theorem refines_randU_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT} {A : l
 theorem refines_randT_l {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {t : Exp rT} {A : lrel rT GF} : iprop%
     appNatTape l z (n :: ns) ∗
-    (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E (K.fill pl(#(.int n))) t A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.lbl l)))) t A := by
+    (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) t A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.lbl l)))) t A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_rand_tape
@@ -247,8 +249,8 @@ theorem refines_randT_l {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : L
 theorem refines_randT_empty_l {E : CoPset} {K : Ectx rT} {l : Loc} {z : Int}
     {t : Exp rT} {A : lrel rT GF} (Hz : 0 < z) : iprop%
     appNatTape l z [] ∗
-    (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E (K.fill pl(#(.int n))) t A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.lbl l)))) t A := by
+    (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) t A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.lbl l)))) t A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_rand_tape_empty Hz
@@ -258,77 +260,77 @@ theorem refines_randT_empty_l {E : CoPset} {K : Ectx rT} {l : Loc} {z : Int}
 
 theorem refines_randU_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF}
     (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E e (K.fill pl(#(.int n))) A) ⊢
-    refines Δ E e (K.fill pl(rand(#(.int z), #(.unit)))) A := by
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
+    refines L E e (K.fill pl(rand(#(.int z), #(.unit)))) A := by
   iintro Hlog
   unfold refines
-  iintro %K' %ε Hj Hna Herr Hpos
+  iintro %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_r (K'.comp K) Hz
   iframe Hj
   iintro %n %Hbnds HKRes
   isimp only [← Ectx.fill_comp K' K] at HKRes
-  iapply Hlog $$ %n %Hbnds %K' %ε HKRes Hna Herr Hpos
+  iapply Hlog $$ %n %Hbnds %K' %b HKRes Hna Herr Hpos
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {e : Exp rT} {A : lrel rT GF} : iprop%
     specNatTape l z (n :: ns) ∗
-    (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E e (K.fill pl(#(.int n))) A) ⊢
-    refines Δ E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
+    (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
+    refines L E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
   iintro ⟨Hα, Hlog⟩
   unfold refines
-  iintro %K' %ε Hj Hna Herr Hpos
+  iintro %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_tape_r (K'.comp K)
   iframe Hj Hα
   iintro HKRes HαNew %Hbnds
   isimp only [← Ectx.fill_comp K' K] at HKRes
-  iapply Hlog $$ HαNew %Hbnds %K' %ε HKRes Hna Herr Hpos
+  iapply Hlog $$ HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
 
 theorem refines_randT_empty_r {E : CoPset} {K : Ectx rT} {l : Loc} {z : Int}
     {e : Exp rT} {A : lrel rT GF} (Hz : 0 < z) : iprop%
     specNatTape l z [] ∗
-    (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E e (K.fill pl(#(.int n))) A) ⊢
-    refines Δ E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
+    (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
+    refines L E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
   iintro ⟨Hα, Hlog⟩
   unfold refines
-  iintro %K' %ε Hj Hna Herr Hpos
+  iintro %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_rand_tape_empty_r (K'.comp K) Hz
   iframe Hj Hα
   iintro %n HαNew HKRes %Hbnds
   isimp only [← Ectx.fill_comp K' K] at HKRes
-  iapply Hlog $$ %n HαNew %Hbnds %K' %ε HKRes Hna Herr Hpos
+  iapply Hlog $$ %n HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
 
 theorem refines_alloctape_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, appTapesFrag l (Tape.empty z) -∗ refines Δ E (K.fill pl(#(.lbl l))) t A) ⊢
-    refines Δ E (K.fill pl(tape(#(.int z)))) t A := by
+    iprop% (∀ l, appTapesFrag l (Tape.empty z) -∗ refines L E (K.fill pl(#(.lbl l))) t A) ⊢
+    refines L E (K.fill pl(tape(#(.int z)))) t A := by
   iintro Hlog
   iapply refines_wp_l
   iapply wp_alloctape
   iintro %l Hl
   iapply Hlog $$ %l Hl
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, specNatTape l z [] -∗ refines Δ E e (K.fill pl(#(.lbl l))) A) ⊢
-    refines Δ E e (K.fill pl(tape(#(.int z)))) A := by
+    iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
+    refines L E e (K.fill pl(tape(#(.int z)))) A := by
   iintro Hlog
   unfold refines
-  iintro %K' %ε Hj Hna Herr Hpos
+  iintro %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
   iapply wp_alloc_tape_r (K'.comp K)
   iframe Hj
   iintro %l HKRes Hl
   isimp only [← Ectx.fill_comp K' K] at HKRes
-  iapply Hlog $$ %l Hl %K' %ε HKRes Hna Herr Hpos
+  iapply Hlog $$ %l Hl %K' %b HKRes Hna Herr Hpos
 
 /-! ## Structural rules -/
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
-    refines Δ E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines Δ E e1 e2 A' := by
+    refines L E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines L E e1 e2 A' := by
   iintro He HAA
   have Hfill1 : e1 = Ectx.empty.fill e1 := rfl
   have Hfill2 : e2 = Ectx.empty.fill e2 := rfl
@@ -340,11 +342,12 @@ theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
   iapply refines_ret (v1 := v) (v2 := v') rfl rfl
   iapply HAA $$ %v %v' HA
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+  [L.IsTopAbsorbing] in
 theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
-    □ (∀ v1 v2, A v1 v2 -∗ refines Δ ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines Δ ⊤ v.1 v'.1 (lrel_arr Δ A A') := by
+    □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
   iapply refines_ret (v1 := v) (v2 := v') rfl rfl
   imodintro
@@ -353,12 +356,13 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
   iintro !> %w1 %w2 HA
   iapply H $$ %w1 %w2 HA
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
+omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+  [L.IsTopAbsorbing] in
 theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
-    □ (∀ (v1 v2 : Val rT), □ refines Δ ⊤ v1.1 v2.1 A -∗
-      refines Δ ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines Δ ⊤ v.1 v'.1 (lrel_arr Δ A A') := by
+    □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
+      refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
   iapply refines_arrow_val hv
   iintro !> %v1 %v2 #HA
@@ -368,49 +372,106 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
   imodintro
   iexact HA
 
-/-! ## Error-credit rules -/
+/-! ## Budget-credit rules
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
-theorem refines_get_ec {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
-    (∀ ε, ↯ ε -∗ ⌜0 < ε⌝ -∗ refines Δ E e e' A) ⊢ refines Δ E e e' A := by
+An absorbing credit discharges any refinement; amplification climbs from `↯b (s ε)` to the
+absorbing `↯b (s 1)`, which replaces the old contradiction at `↯ 1`. -/
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+/-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
+theorem wp_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
+    {Φ : Val rT → IProp GF} : ↯b c ⊢ wp L E e Φ := by
+  iintro Hc
+  iapply MicrometerWpGS.wp_unfold
+  unfold wpPre
+  iintro %σ₁ %e₁' %σ₁' %b₁ ⟨-, -, Hb⟩
+  ihave %hle := BudgetCredit.supply_bound $$ Hb Hc
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
+  imodintro
+  iapply specCoupl_absorbing (hc.mono hle)
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
+    {A : lrel rT GF} : ↯b c ⊢ refines L E e e' A := by
+  iintro Hc
+  unfold refines
+  iintro %K %b - - - -
+  iapply wp_of_absorbing hc $$ Hc
+
+omit [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
+    {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
+    (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
   iintro Hcnt
   unfold refines
-  iintro %K %ε Hj Hna HerrTot %HposTot
-  ihave HerrEq : ↯ (ε / 2 + ε / 2) $$ [HerrTot]
-  · rw [ENNReal.add_halves]; iexact HerrTot
-  ihave ⟨Herr1, Herr2⟩ := ErrorCredit.split $$ HerrEq
-  have hpos2 : 0 < ε / 2 := ENNReal.half_pos HposTot.ne'
-  iapply Hcnt $$ %(ε / 2) Herr1 %hpos2 %K %(ε / 2) Hj Hna Herr2 %hpos2
+  iintro %K %b Hj Hna Herr %Hpos
+  obtain ⟨b₁, b₂, hb₁, hb₂, hle⟩ := hsplit b Hpos
+  ihave ⟨Herr1, Herr2⟩ := (BudgetCredit.weaken hle).trans BudgetCredit.split $$ Herr
+  iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
-theorem refines_ind_amp {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} {k : NNReal}
+omit [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1` (Approxis
+`ec_ind_amp`). -/
+theorem budgetCredit_amplifying {s : ENNReal →+o B} {ε : ENNReal} {k : NNReal} {P : IProp GF}
+    (hε : 0 < ε) (hk : 1 < k) : iprop%
+    □ (↯b (s 1) -∗ P) ⊢
+      □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ P) -∗ ↯b (s ε') -∗ P) -∗
+      ↯b (s ε) -∗ P := by
+  iintro #Hexit #Hamp Hε
+  obtain ⟨n, hn⟩ := ErrorCredit.Induction.err_amp_power hε hk
+  iinduction n generalizing %ε %hε %hn Hε with
+  | zero =>
+    simp only [pow_zero, mul_one] at hn
+    iapply Hexit $$ [Hε]
+    iapply BudgetCredit.weaken (OrderHomClass.mono s hn) $$ Hε
+  | succ n IH =>
+    iapply Hamp $$ %_ %hε [] Hε
+    iintro !> Hε
+    iapply IH $$ %((k : ENNReal) * ε)
+      %(ENNReal.mul_pos_iff.mpr ⟨ENNReal.coe_pos.mpr (pos_of_gt hk), pos_of_gt hε⟩)
+      %(hn.trans (_root_.le_of_eq (by ring))) Hε
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
+    {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
+    (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
     (hk : 1 < k) : iprop%
-    □ (∀ (ε : ENNReal), ⌜0 < ε⌝ -∗ □ (↯ ((k : ENNReal) * ε) -∗ refines Δ E e e' A) -∗ ↯ ε -∗
-      refines Δ E e e' A) ⊢
-    refines Δ E e e' A := by
+    □ (∀ ε, ⌜0 < ε⌝ -∗ □ (↯b (s ((k : ENNReal) * ε)) -∗ refines L E e e' A) -∗ ↯b (s ε) -∗
+      refines L E e e' A) ⊢
+    refines L E e e' A := by
   iintro #Hamp
-  iapply refines_get_ec
-  iintro %ε Herr %hpos
-  iapply ErrorCredit.Induction.amplifying hpos hk $$ [] Herr
-  iintro !> %ε' %hε' #Hstep Hε'
-  iapply Hamp $$ %ε' %hε' Hstep Hε'
+  iapply refines_get_ec hsplit
+  iintro %b Herr %hpos
+  obtain ⟨ε, hε, hle⟩ := hslack b hpos
+  iapply budgetCredit_amplifying (s := s) hε hk $$ [] [] [Herr]
+  · iintro !> Hc
+    iapply refines_of_absorbing habs $$ Hc
+  · iintro !> %ε' %hε' #Hstep Hε'
+    iapply Hamp $$ %ε' %hε' Hstep Hε'
+  iapply BudgetCredit.weaken hle $$ Herr
 
-omit [Δ.IsReflexive] [Δ.IsComposable] [Δ.IsZeroLeft] in
-theorem refines_arrow_val_err {v v' : Val rT} {A A' : lrel rT GF} {k : NNReal}
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel rT GF}
+    {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
+    (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
     (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
-    □ (∀ (ε : ENNReal), ⌜0 < ε⌝ -∗
-      □ (↯ ((k : ENNReal) * ε) -∗
-        ∀ v1 v2, A v1 v2 -∗ refines Δ ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
-      ↯ ε -∗ ∀ v1 v2, A v1 v2 -∗ refines Δ ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines Δ ⊤ v.1 v'.1 (lrel_arr Δ A A') := by
+    □ (∀ ε, ⌜0 < ε⌝ -∗
+      □ (↯b (s ((k : ENNReal) * ε)) -∗
+        ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
+      ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #Hamp
   iapply refines_arrow_val hv
   iintro !> %v1 %v2 HA
-  iapply refines_get_ec
-  iintro %ε Herr %hpos
-  ihave Hall := ErrorCredit.Induction.amplifying
-      (P := iprop(∀ w1 w2, A w1 w2 -∗ refines Δ ⊤ (.app v.1 w1.1) (.app v'.1 w2.1) A')) hpos hk
-    $$ [] Herr
+  iapply refines_get_ec hsplit
+  iintro %b Herr %hpos
+  obtain ⟨ε, hε, hle⟩ := hslack b hpos
+  ihave Herr := BudgetCredit.weaken hle $$ Herr
+  ihave Hall := budgetCredit_amplifying
+      (P := iprop(∀ w1 w2, A w1 w2 -∗ refines L ⊤ (.app v.1 w1.1) (.app v'.1 w2.1) A')) hε hk
+    $$ [] [] Herr
+  · iintro !> Hc %w1 %w2 -
+    iapply refines_of_absorbing habs $$ Hc
   · iintro !> %ε' %hε' #Hstep Hε'
     iapply Hamp $$ %ε' %hε' Hstep Hε'
   iapply Hall $$ %v1 %v2 HA
@@ -420,12 +481,12 @@ theorem refines_arrow_val_err {v v' : Val rT} {A A' : lrel rT GF} {k : NNReal}
 theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.unit))))
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
   iintro Hcnt
   unfold refines
-  iintro %K2 %ε Hj Hna Herr Hpos
+  iintro %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_rand z f hdom hbij Hz (K2.comp K') ⊤ _
@@ -433,51 +494,52 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
   iintro %n %Hn HKres
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
-  iapply Hcnt $$ %n %Hn %K2 %ε HKres Hna Herr Hpos
+  iapply Hcnt $$ %n %Hn %K2 %b HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_adv [Δ.IsExpectationAdditive] {E : CoPset} {K K' : Ectx rT}
-    {A : lrel rT GF} {z : Int}
+theorem refines_couple_rands_lr_adv [Nontrivial B] {s : ENNReal →+o B}
+    [L.IsExpectationAdditive s] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (f : Int → Int) (ε₁ : ENNReal) (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) : iprop%
-    ↯ ε₁ ∗ (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ↯ ε₂ n -∗
-      refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.unit))))
+    (Hz : 0 < z) (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁)
+    (hc : IsAddLeftRegular (s ε₁)) : iprop%
+    ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ↯b (s (ε₂ n)) -∗
+      refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
   iintro ⟨Hε, Hcnt⟩
   unfold refines
-  iintro %K2 %ε Hj Hna Herr Hpos
+  iintro %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
-  iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort (K2.comp K') ⊤ _
+  iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort hc (K2.comp K') ⊤ _
   iframe Hj Hε
-  iintro %n %Hn Hec HKres
+  iintro %n %Hn - Hec HKres
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
-  iapply Hcnt $$ %n %Hn Hec %K2 %ε HKres Hna Herr Hpos
+  iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
-theorem refines_couple_rands_lr_avoid [Δ.IsExpectationAdditive] {E : CoPset} {K K' : Ectx rT}
-    {A : lrel rT GF} {z : Int}
-    (bad : Int) (Hz : 0 < z) : iprop%
-    ↯ (z.toNat : ENNReal)⁻¹ ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
-      refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int n))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.unit))))
+theorem refines_couple_rands_lr_avoid [Nontrivial B] {s : ENNReal →+o B}
+    [L.IsExpectationAdditive s] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
+    (bad : Int) (Hz : 0 < z) (habs : L.Absorbing (s 1))
+    (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) : iprop%
+    ↯b (s (z.toNat : ENNReal)⁻¹) ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
+      refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int n))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
   classical
   iintro ⟨Hε, Hcnt⟩
   iapply refines_couple_rands_lr_adv id (z.toNat : ENNReal)⁻¹ (fun n => if n = bad then 1 else 0)
-    id_dom_range id_bij_range Hz (avoid_one_amort bad)
+    id_dom_range id_bij_range Hz (avoid_one_amort bad) hc
   iframe Hε
   iintro %n %hn Hec
   by_cases hb : n = bad
   · rw [ite_eq_left hb]
-    iexfalso
-    iapply ErrorCredit.contradict (_root_.le_refl 1) $$ Hec
+    iapply refines_of_absorbing habs $$ Hec
   · simp only [id_eq]
     iapply Hcnt $$ %n %⟨hn, hb⟩
 
-omit [Δ.IsZeroLeft] in
+omit [L.IsSupportLocal] in
 theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {z : Int} {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -485,26 +547,26 @@ theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     (Hz : 0 < z) : iprop%
     appNatTape α z ns ∗ specNatTape αₛ z nsₛ ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
-      refines Δ E e e' A) ⊢
-    refines Δ E e e' A := by
+      refines L E e e' A) ⊢
+    refines L E e e' A := by
   iintro ⟨Hα, Hαₛ, Hcnt⟩
   unfold refines
-  iintro %K %ε Hj Hna Herr Hpos
+  iintro %K %b Hj Hna Herr Hpos
   iapply wp_couple_tapes_bij (αₛ := αₛ) (ns := ns) (nsₛ := nsₛ) f hdom hbij Hz
   iframe Hα Hαₛ
   iintro %n %hn HA HS
-  iapply Hcnt $$ %n %hn HA HS %K %ε Hj Hna Herr Hpos
+  iapply Hcnt $$ %n %hn HA HS %K %b Hj Hna Herr Hpos
 
 theorem refines_couple_TU {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ appNatTape α z [] ∗ (∀ n, appNatTape α z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.lbl α))))
+      refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.lbl α))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
   iintro ⟨Hα, Hcnt⟩
   unfold refines
-  iintro %K2 %ε Hj Hna Herr Hpos
+  iintro %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_tape_rand z f hdom hbij Hz (K2.comp K') ⊤ α _
@@ -512,18 +574,18 @@ theorem refines_couple_TU {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   iintro %n ⟨HαNew, HKres, %Hn⟩
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
-  iapply Hcnt $$ %n HαNew %Hn %K2 %ε HKres Hna Herr Hpos
+  iapply Hcnt $$ %n HαNew %Hn %K2 %b HKres Hna Herr Hpos
 
 theorem refines_couple_UT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ specNatTape α' z [] ∗ (∀ n, specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.unit))))
+      refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.lbl α')))) A := by
   iintro ⟨Hα', Hcnt⟩
   unfold refines
-  iintro %K2 %ε Hj Hna Herr Hpos
+  iintro %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_tape z f hdom hbij Hz (K2.comp K') ⊤ α' _
@@ -531,19 +593,19 @@ theorem refines_couple_UT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   iintro %n ⟨Hα'New, HKres, %Hn⟩
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
-  iapply Hcnt $$ %n Hα'New %Hn %K2 %ε HKres Hna Herr Hpos
+  iapply Hcnt $$ %n Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
 theorem refines_couple_TT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : Int}
     (α α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗
     (∀ n, appNatTape α z [] -∗ specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines Δ E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
-    refines Δ E (K.fill pl(rand(#(.int z), #(.lbl α))))
+      refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int z), #(.lbl α))))
       (K'.fill pl(rand(#(.int z), #(.lbl α')))) A := by
   iintro ⟨Hα, Hα', Hcnt⟩
   unfold refines
-  iintro %K2 %ε Hj Hna Herr Hpos
+  iintro %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind (K := K)
   iapply wp_couple_rand_lbl_rand_lbl z f hdom hbij Hz (K2.comp K') ⊤ α α' _
@@ -551,7 +613,7 @@ theorem refines_couple_TT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   iintro %n ⟨HαNew, Hα'New, HKres, %Hn⟩
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int n : Val rT) = pl(#(.int n)) from rfl]
-  iapply Hcnt $$ %n HαNew Hα'New %Hn %K2 %ε HKres Hna Herr Hpos
+  iapply Hcnt $$ %n HαNew Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
 end AppRelRules
 

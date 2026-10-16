@@ -11,6 +11,7 @@ public import Metrology.ProbLang.Syntax.Types
 /-! # Type Interpretation -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
+  GradedLifting
 
 namespace ProbLang
 
@@ -42,8 +43,9 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
 end TyEnvSetup
 
 section interp
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
@@ -51,8 +53,9 @@ structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 
 namespace NEFun
-variable {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 @[reducible] noncomputable def const (L : lrel rT GF) : NEFun rT GF :=
   { fn := fun _ => L, ne := fun _ => Dist.rfl }
@@ -76,10 +79,10 @@ variable {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
         ne := ⟨fun {_ _ _} hXY => A.ne (TyEnv.cons_ne_head hXY)⟩ }
     ne := fun h => lrel_rec_ne (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
 
-variable (D) in
+variable (L) in
 @[reducible] noncomputable def forall' (A : NEFun rT GF) : NEFun rT GF :=
-  { fn := fun Δ => lrel_forall D (fun X => A.fn (TyEnv.cons X Δ))
-    ne := fun h => lrel_forall_ne D (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
+  { fn := fun Δ => lrel_forall L (fun X => A.fn (TyEnv.cons X Δ))
+    ne := fun h => lrel_forall_ne L (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
 
 @[reducible] noncomputable def exists' (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => lrel_exists (fun X => A.fn (TyEnv.cons X Δ))
@@ -87,7 +90,7 @@ variable (D) in
 
 end NEFun
 
-variable (D) in
+variable (L) in
 noncomputable def interpNE : Ty → NEFun rT GF
   | .unit         => NEFun.const lrel_unit
   | .int          => NEFun.const lrel_int
@@ -97,50 +100,51 @@ noncomputable def interpNE : Ty → NEFun rT GF
   | .var x        => NEFun.ofCtx x
   | .prod τ1 τ2   => NEFun.map2 lrel_prod (interpNE τ1) (interpNE τ2)
   | .sum  τ1 τ2   => NEFun.map2 lrel_sum  (interpNE τ1) (interpNE τ2)
-  | .arrow τ1 τ2  => NEFun.map2 (lrel_arr D) (interpNE τ1) (interpNE τ2)
+  | .arrow τ1 τ2  => NEFun.map2 (lrel_arr L) (interpNE τ1) (interpNE τ2)
   | .ref τ        => NEFun.map1 lrel_ref (interpNE τ)
   | .rec' τ'      => NEFun.rec'    (interpNE τ')
-  | .forall' τ'   => NEFun.forall' D (interpNE τ')
+  | .forall' τ'   => NEFun.forall' L (interpNE τ')
   | .exists' τ'   => NEFun.exists' (interpNE τ')
 
-variable (D) in
+variable (L) in
 noncomputable def interp (τ : Ty) (Δ : TyEnv rT GF) : lrel rT GF :=
-  (interpNE D τ).fn Δ
+  (interpNE L τ).fn Δ
 
 theorem interp_ne_env (τ : Ty) {n : Nat} {Δ Δ' : TyEnv rT GF} (h : Δ ≡{n}≡ Δ') :
-    interp D τ Δ ≡{n}≡ interp D τ Δ' := (interpNE D τ).ne h
+    interp L τ Δ ≡{n}≡ interp L τ Δ' := (interpNE L τ).ne h
 
 /-! ### `interp` head-shape equations -/
 
-@[simp] theorem interp_unit (Δ : TyEnv rT GF) : interp D Ty.unit Δ = lrel_unit := rfl
-@[simp] theorem interp_int  (Δ : TyEnv rT GF) : interp D Ty.int  Δ = lrel_int  := rfl
-@[simp] theorem interp_bool (Δ : TyEnv rT GF) : interp D Ty.bool Δ = lrel_bool := rfl
-@[simp] theorem interp_real (Δ : TyEnv rT GF) : interp D Ty.real Δ = lrel_real := rfl
-@[simp] theorem interp_tape (Δ : TyEnv rT GF) : interp D Ty.tape Δ = lrel_tape := rfl
+@[simp] theorem interp_unit (Δ : TyEnv rT GF) : interp L Ty.unit Δ = lrel_unit := rfl
+@[simp] theorem interp_int  (Δ : TyEnv rT GF) : interp L Ty.int  Δ = lrel_int  := rfl
+@[simp] theorem interp_bool (Δ : TyEnv rT GF) : interp L Ty.bool Δ = lrel_bool := rfl
+@[simp] theorem interp_real (Δ : TyEnv rT GF) : interp L Ty.real Δ = lrel_real := rfl
+@[simp] theorem interp_tape (Δ : TyEnv rT GF) : interp L Ty.tape Δ = lrel_tape := rfl
 
 theorem interp_prod (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
-    interp D (Ty.prod τ1 τ2) Δ = lrel_prod (interp D τ1 Δ) (interp D τ2 Δ) := rfl
+    interp L (Ty.prod τ1 τ2) Δ = lrel_prod (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 theorem interp_sum (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
-    interp D (Ty.sum τ1 τ2) Δ = lrel_sum (interp D τ1 Δ) (interp D τ2 Δ) := rfl
+    interp L (Ty.sum τ1 τ2) Δ = lrel_sum (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 theorem interp_arrow (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
-    interp D (Ty.arrow τ1 τ2) Δ = lrel_arr D (interp D τ1 Δ) (interp D τ2 Δ) := rfl
+    interp L (Ty.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 theorem interp_ref (Δ : TyEnv rT GF) (τ : Ty) :
-    interp D (Ty.ref τ) Δ = lrel_ref (interp D τ Δ) := rfl
+    interp L (Ty.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
 end interp
 
 /-! ## Closedness of related values -/
 
 section interp_closed
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
-    (interp D τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
-  (interp D τ Δ).closed v v'
+    (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
+  (interp L τ Δ).closed v v'
 
 end interp_closed
 
@@ -157,11 +161,12 @@ end interp_closed
 /-! ## Soundness of the semantic type interpretation -/
 
 section interp_sound
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
-    (interp D τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
+    (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
   cases H
   · show iprop(⌜_⌝) ⊢ _
     iintro ⟨%h1, %h2⟩ !%
@@ -177,13 +182,13 @@ theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H :
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
 
 theorem unboxed_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
-    (interp D τ Δ).car v v' ⊢ ⌜Val.isUnboxed v ∧ Val.isUnboxed v'⌝ := by
+    (interp L τ Δ).car v v' ⊢ ⌜Val.isUnboxed v ∧ Val.isUnboxed v'⌝ := by
   refine (unboxed_type_lit_shape H).trans (pure_mono ?_)
   rintro ⟨_, _, h1, h2⟩
   exact ⟨by simp [Val.isUnboxed, h1], by simp [Val.isUnboxed, h2]⟩
 
 theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType τ) :
-    (interp D τ Δ).car v v' ⊢ ⌜v = v'⌝ := by
+    (interp L τ Δ).car v v' ⊢ ⌜v = v'⌝ := by
   induction H generalizing v v'
   · show iprop(⌜_⌝) ⊢ _
     iintro ⟨%h1, %h2⟩ !%
@@ -217,7 +222,7 @@ theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType �
       rw [h1, h2, heq]
 
 theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : EqType τ) :
-    (interp D τ Δ).car v1 v2 ⊢ (interp D τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
+    (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   iintro H1 H2
   ihave %heq1 := eq_type_sound H $$ H1
   ihave %heq2 := eq_type_sound H $$ H2
@@ -226,7 +231,6 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
   subst heq1 heq2
   exact .rfl
 
-omit [Monoid ι] in
 private theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
     (lrel_ref A).car v1 v2 ⊢ ⌜∃ l1 l2 : Loc, v1 = .loc l1 ∧ v2 = .loc l2⌝ := by
   unfold lrel_ref
@@ -234,7 +238,7 @@ private theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
   exact ⟨l1, l2, h1, h2⟩
 
 theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : UnboxedType τ) :
-    (interp D τ Δ).car v1 v2 ⊢ (interp D τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
+    (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   cases H
   · exact eq_type_eq_iff .unit
   · exact eq_type_eq_iff .int
@@ -251,13 +255,13 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
     simp only [hloc]
     by_cases hl : l1 = r1
     · subst hl
-      imod interp_ref_funct (interp D τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
+      imod interp_ref_funct (interp L τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
       imodintro
       ipureintro
       simp [h]
     · by_cases hr : l2 = r2
       · subst hr
-        imod interp_ref_inj (interp D τ' Δ) l2 l1 r1 CoPset.subseteq_top $$ H1 H2 with %h
+        imod interp_ref_inj (interp L τ' Δ) l2 l1 r1 CoPset.subseteq_top $$ H1 H2 with %h
         exact (hl h).elim
       · imodintro
         ipureintro
@@ -320,8 +324,9 @@ theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
 end RelCtx
 
 section env_typed
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
@@ -479,24 +484,25 @@ end env_typed
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
-variable (D) in
+variable (L) in
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
     (A : lrel rT GF) : IProp GF := iprop%
-  ∀ vs, env_ltyped2 Γ vs -∗ refines D E (Exp.substMap vs.fst e) (Exp.substMap vs.snd e') A
+  ∀ vs, env_ltyped2 Γ vs -∗ refines L E (Exp.substMap vs.fst e) (Exp.substMap vs.snd e') A
 
-variable (D) in
+variable (L) in
 noncomputable abbrev bin_log_related_ty (E : CoPset) (Δ : TyEnv rT GF)
     (Γ : RelCtx rT GF) (e e' : Exp rT) (τ : Ty) : IProp GF :=
-  bin_log_related D E Γ e e' (interp D τ Δ)
+  bin_log_related L E Γ e e' (interp L τ Δ)
 
 theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A : lrel rT GF}
     {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y) (hxNotDom : x ∉ (Γ.map (·.1)).toFinset)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
-    bin_log_related D E ((x, A) :: Γ) τE τE' B ⊢
-    bin_log_related D E ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) B := by
+    bin_log_related L E ((x, A) :: Γ) τE τE' B ⊢
+    bin_log_related L E ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) B := by
   unfold bin_log_related
   iintro Hold %vs #Hvs
   have hyHeadLookup : RelCtx.lookup ((y, A) :: Γ) y = some A := by
@@ -538,25 +544,26 @@ theorem bin_log_related_ty_rename {E : CoPset} {Δ : TyEnv rT GF} {Γ : RelCtx r
     {A : lrel rT GF} {τE τE' : Exp rT} {τ : Ty} (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)
     (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
-    bin_log_related_ty D E Δ ((x, A) :: Γ) τE τE' τ ⊢
-    bin_log_related_ty D E Δ ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) τ :=
+    bin_log_related_ty L E Δ ((x, A) :: Γ) τE τE' τ ⊢
+    bin_log_related_ty L E Δ ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) τ :=
   bin_log_related_rename hxy hxNotDom hyNotDom hyFvE hyFvE'
 
 end bin_log_related
 
 /-! ## Notation for the semantic typing judgement -/
 
-scoped notation:100 E "; " Δ "; " Γ " ⊨[" D "] " e " ≤log≤ " e' " : " τ =>
-  bin_log_related_ty D E Δ Γ e e' τ
+scoped notation:100 E "; " Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
+  bin_log_related_ty L E Δ Γ e e' τ
 
-scoped notation:100 Δ "; " Γ " ⊨[" D "] " e " ≤log≤ " e' " : " τ =>
-  bin_log_related_ty D (⊤ : CoPset) Δ Γ e e' τ
+scoped notation:100 Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
+  bin_log_related_ty L (⊤ : CoPset) Δ Γ e e' τ
 
 /-! ## Substitution lemmas on `interp` -/
 
 section interp_subst
-variable {hlc : HasLC} {ι : Type} [Monoid ι] {D : GradedDivergence.{0} ι}
-  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [GradeGS ι GF]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 @[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)
@@ -568,66 +575,66 @@ theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) 
 
 private theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
-      interp D (τ'.rename ξ) Δ = interp D τ' (TyEnv.comp Δ ξ))
+      interp L (τ'.rename ξ) Δ = interp L τ' (TyEnv.comp Δ ξ))
     (X : lrel rT GF) :
-    interp D (τ'.rename (Renaming.under ξ)) (TyEnv.cons X Δ) =
-      interp D τ' (TyEnv.cons X (TyEnv.comp Δ ξ)) :=
-  (ih _ _).trans (congrArg (interp D τ') (TyEnv.comp_upren X Δ ξ).symm)
+    interp L (τ'.rename (Renaming.under ξ)) (TyEnv.cons X Δ) =
+      interp L τ' (TyEnv.cons X (TyEnv.comp Δ ξ)) :=
+  (ih _ _).trans (congrArg (interp L τ') (TyEnv.comp_upren X Δ ξ).symm)
 
 theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
-    interp D (τ.rename ξ) Δ = interp D τ (TyEnv.comp Δ ξ) := by
+    interp L (τ.rename ξ) Δ = interp L τ (TyEnv.comp Δ ξ) := by
   induction τ generalizing ξ Δ with
   | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 ξ Δ) (ih2 ξ Δ)
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 ξ Δ) (ih2 ξ Δ)
-  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr D) (ih1 ξ Δ) (ih2 ξ Δ)
+  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 ξ Δ) (ih2 ξ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih ξ Δ)
   | rec' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
   | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne D fun X => (interp_rename_under ih X).dist
+    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_rename_under ih X).dist
   | exists' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
   | _ => rfl
 
 theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    interp D (Ty.shift τ) (TyEnv.cons X Δ) = interp D τ Δ :=
+    interp L (Ty.shift τ) (TyEnv.cons X Δ) = interp L τ Δ :=
   interp_rename τ (· + 1) (TyEnv.cons X Δ)
 
-variable (D) in
+variable (L) in
 @[reducible] noncomputable def semSubst (σ : Nat → Ty) (Δ : TyEnv rT GF) : TyEnv rT GF :=
-  fun n => interp D (σ n) Δ
+  fun n => interp L (σ n) Δ
 
 theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    ∀ n, semSubst D (up σ) (TyEnv.cons X Δ) n = TyEnv.cons X (semSubst D σ Δ) n
+    ∀ n, semSubst L (up σ) (TyEnv.cons X Δ) n = TyEnv.cons X (semSubst L σ Δ) n
   | 0 => rfl
   | k + 1 => interp_ren (σ k) X Δ
 
 private theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
     (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
-      interp D (τ'.subst σ) Δ = interp D τ' (semSubst D σ Δ))
+      interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
     (X : lrel rT GF) :
-    interp D (τ'.subst (up σ)) (TyEnv.cons X Δ) = interp D τ' (TyEnv.cons X (semSubst D σ Δ)) :=
+    interp L (τ'.subst (up σ)) (TyEnv.cons X Δ) = interp L τ' (TyEnv.cons X (semSubst L σ Δ)) :=
   (ih _ _).trans <| OFE.eq_dist.mpr fun _ => interp_ne_env τ' fun k => (semSubst_up σ X Δ k).dist
 
 theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
-    interp D (τ.subst σ) Δ = interp D τ (semSubst D σ Δ) := by
+    interp L (τ.subst σ) Δ = interp L τ (semSubst L σ Δ) := by
   induction τ generalizing σ Δ with
   | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 σ Δ) (ih2 σ Δ)
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 σ Δ) (ih2 σ Δ)
-  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr D) (ih1 σ Δ) (ih2 σ Δ)
+  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 σ Δ) (ih2 σ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
   | rec' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
   | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne D fun X => (interp_substG_under ih X).dist
+    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_substG_under ih X).dist
   | exists' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
   | _ => rfl
 
 theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
-    interp D (Ty.single τ τ') Δ = interp D τ (TyEnv.cons (interp D τ' Δ) Δ) := by
+    interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
   unfold Ty.single
-  refine (interp_substG τ _ Δ).trans (congrArg (interp D τ) ?_)
+  refine (interp_substG τ _ Δ).trans (congrArg (interp L τ) ?_)
   funext n; cases n <;> rfl
 
 end interp_subst

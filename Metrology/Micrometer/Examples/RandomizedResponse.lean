@@ -5,7 +5,8 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.WpTactics
 public import Metrology.Code.RandomizedResponse
-public import Metrology.Couplings.CodensityARCoupling
+public import Metrology.Couplings.Divergences.Dp
+public import Metrology.Couplings.Divergences.Mechanism
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -14,7 +15,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 Port of clutch-dp's `examples/randomized_response.v`. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS
+open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
+open GradedDivergence (dp codensity expBudget)
 open scoped ENNReal NNReal
 
 namespace ProbLang
@@ -65,16 +67,25 @@ theorem one_sub_quarter_le : (1 - 4⁻¹ : ℝ≥0∞) ≤ 3 * 4⁻¹ := by
   rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
     ENNReal.mul_inv_cancel (by norm_num) (by norm_num)]
 
-theorem exp_log_three : ENNReal.ofReal (Real.exp ((Real.log 3).toNNReal : ℝ)) = 3 := by
-  rw [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
+theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
+  rw [GradedDivergence.expBudget_of_ne_top ENNReal.ofReal_ne_top,
+    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
   norm_num
 
-/-- The two draws couple along equal reports at privacy cost `ln 3`. -/
+/-- The privacy budget `(ln 3, 0)`. -/
+noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.log 3), 0)
+
+/-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
+theorem isAddLeftRegular_budget : IsAddLeftRegular budget := fun x y h ↦
+  Prod.ext (ENNReal.isAddLeftRegular_of_ne_top ENNReal.ofReal_ne_top (congrArg Prod.fst h))
+    (by simpa using congrArg Prod.snd h)
+
+/-- The two draws couple along equal reports at privacy budget `(ln 3, 0)`. -/
 theorem rr_coupling (b b' : Bool) :
-    DPDiv.dp.Codensity (.ofAdd (Real.log 3).toNNReal) 0 {p | rrOut b p.1 = rrOut b' p.2}
+    (codensity dp).Rel budget (fun r r' ↦ rrOut b r = rrOut b' r')
       (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)) := by
-  refine codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦ ?_
-  rw [exp_log_three]
+  refine GradedDivergence.codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦ ?_
+  rw [expBudget_log_three]
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := one_sub_quarter_le
     _ ≤ _ := by gcongr; exact rrOut_fiber_ge b' c
@@ -83,20 +94,18 @@ end Coupling
 
 /-! ## The program logic proof -/
 
-variable {rT : Type} [LawfulProbLangℝ rT]
-
-/-- The privacy grade `ln 3`, as a multiplicative grade. -/
-noncomputable abbrev grade : Multiplicative ℝ≥0 := .ofAdd (Real.log 3).toNNReal
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 section Tail
 
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
-  [GradeCreditGS (Multiplicative ℝ≥0) GF]
+  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     Φ (.bool (bif d then b else !b)) ⊢
-      wp DPDiv.dp ⊤ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
+      wp (codensity dp) ⊤
+        pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
   cases d
   all_goals cases b
   all_goals
@@ -110,8 +119,9 @@ theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
 /-- The spec reports `bif d then b else !b`, under any evaluation context. -/
 theorem tp_report_fill (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
     ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗ wp DPDiv.dp ⊤ e Φ) ⊢
-      wp DPDiv.dp ⊤ e Φ := by
+      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗
+        wp (codensity dp) ⊤ e Φ) ⊢
+      wp (codensity dp) ⊤ e Φ := by
   cases d
   all_goals cases b
   all_goals
@@ -124,23 +134,24 @@ theorem tp_report_fill (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → 
 /-- The spec reports `bif d then b else !b`. -/
 theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
     ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp DPDiv.dp ⊤ e Φ) ⊢
-      wp DPDiv.dp ⊤ e Φ :=
+      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp (codensity dp) ⊤ e Φ) ⊢
+      wp (codensity dp) ⊤ e Φ :=
   tp_report_fill [] d b e Φ
 
 end Tail
 
 theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
-    [GradeCreditGS (Multiplicative ℝ≥0) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ⤇ rr (rT := rT) b' -∗ ↯g grade -∗ ↯ 0 -∗
-      wp DPDiv.dp ⊤ (rr b) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
-  iintro Hj Hg He
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
+    ⊢@{IProp GF} ⤇ rr (rT := rT) b' -∗ ↯b budget -∗
+      wp (codensity dp) ⊤ (rr b)
+        (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
+  iintro Hj Hb
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
-  iapply wp_couple_rand_rand_graded 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') grade 0
-    (rr_coupling b b')
-  iframe Hj Hg He
+  iapply wp_couple_rand_rand_spend 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') budget
+    isAddLeftRegular_budget (rr_coupling b b')
+  iframe Hj Hb
   iintro %r %r' %hR Hj
   wp_pures
   tp_pures
@@ -156,20 +167,20 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
 
 /-! ## The relational proof -/
 
-/-- Randomized response refines itself at equal reports, spending the grade `ln 3`. -/
+/-- Randomized response refines itself at equal reports, spending the budget `(ln 3, 0)`. -/
 theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [GradeCreditGS (Multiplicative ℝ≥0) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ↯g grade -∗ REL[DPDiv.dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iintro Hg
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
+    ⊢@{IProp GF} ↯b budget -∗
+      REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+  iintro Hb
   iunfold refines
   iintro %K %ε Hj Hna Herr %Hpos
-  imod ErrorCredit.zero with H0
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
-  iapply wp_couple_rand_rand_graded 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') grade 0
-    (rr_coupling b b')
-  iframe Hj Hg H0
+  iapply wp_couple_rand_rand_spend 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') budget
+    isAddLeftRegular_budget (rr_coupling b b')
+  iframe Hj Hb
   iintro %r %r' %hR Hj
   wp_pures
   tp_pures
@@ -186,46 +197,46 @@ theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
 
 /-! ## Adequacy: exit the logic -/
 
-theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF] [ECPreGS GF]
-    [GradeCreditPreGS (Multiplicative ℝ≥0) GF] [InvGpreS GF] (b b' : Bool) (σ σ' : State rT) :
-    DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 :=
-  wp_adequacy_div_graded (GF := GF) _ _ σ σ' grade 0 fun _ _ ↦ wp_rr b b'
+theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
+    [BudgetCreditPreGS (ℝ≥0∞ × ℝ≥0∞) GF] [InvGpreS GF] (b b' : Bool) (σ σ' : State rT) :
+    dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
+  wp_adequacy_div (GF := GF) (L := codensity dp) _ _ σ σ' budget
+    fun _ _ ↦ wp_rr b b'
 
 /-- `rr_dp_of`, through the refinement `rr_refines`. -/
-theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT GF]
-    [GradeCreditPreGS (Multiplicative ℝ≥0) GF] (b b' : Bool) (σ σ' : State rT) :
-    DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 := by
-  refine approximates_div_graded (GF := GF) (fun _ _ ↦ lrel_bool) _ _ σ σ' grade 0 ?_ ?_
+theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
+    (b b' : Bool) (σ σ' : State rT) :
+    dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) := by
+  refine approximates_div (GF := GF) (L := codensity dp)
+    (fun _ _ ↦ lrel_bool) _ _ σ σ' budget ?_ ?_
   · intro _ _ v v'
     iunfold lrel_bool
     iintro ⟨%c, %⟨rfl, rfl⟩⟩
     ipureintro
     rfl
   · intro _ _
-    iintro Hg -
-    iapply rr_refines b b' $$ Hg
+    iintro Hb
+    iapply rr_refines b b' $$ Hb
 
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
 (clutch-dp's `randomized_response.v`). -/
 theorem rr_dp (b b' : Bool) (σ σ' : State rT) :
-    DPDiv.dp grade (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) ≤ 0 :=
-  rr_dp_of (MicrometerGradedFunctor rT (Multiplicative ℝ≥0)) b b' σ σ'
+    dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
+  rr_dp_of (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) b b' σ σ'
 
 /-- Every event is at most three times as likely under one private bit as under the other. -/
 theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : MeasurableSet S) :
     limExecV ⟨rr b, σ⟩ S ≤ 3 * limExecV ⟨rr b', σ'⟩ S := by
-  have h := DPDiv.dp_le_iff.1 (rr_dp b b' σ σ') S hS
-  rwa [toAdd_ofAdd, exp_log_three, add_zero] at h
+  have h := (GradedDivergence.dp_iff ENNReal.ofReal_ne_top).1 (rr_dp b b' σ σ') S hS
+  rwa [expBudget_log_three, add_zero] at h
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
 noncomputable def rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=
   ⟨fun b ↦ limExecV ⟨rr b, σ⟩, .of_discrete⟩
 
 /-- Randomized response is `(ln 3, 0)`-differentially private for any two bits (Def. 2.1). -/
-theorem rr_DP (σ : State rT) : DP (rrMech σ) (fun _ _ ↦ True) (Real.log 3) 0 :=
-  fun b b' _ S hS ↦ by
-    rw [Real.exp_log (by norm_num), add_zero, ENNReal.ofReal_ofNat]
-    exact rr_event_le b b' σ σ S hS
+theorem rr_DP (σ : State rT) : (rrMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
+  fun b b' _ ↦ rr_dp b b' σ σ
 
 end RandomizedResponse
 end ProbLang

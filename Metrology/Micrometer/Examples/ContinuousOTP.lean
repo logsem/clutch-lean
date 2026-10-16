@@ -7,26 +7,30 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Code.ContinuousOTP
-public import Metrology.Couplings.CodensityTV
+public import Metrology.Couplings.Divergences.Tv
 
 @[expose] public section
 
 /-! # A continuous one-time pad -/
 
+open scoped ENNReal
+
 namespace ProbLang
-open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS MeasureTheory TVDiv
+open Iris Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS MeasureTheory
+  GradedLifting GradedDivergence
 
 namespace ContinuousOTP
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  [BudgetCreditGS ℝ≥0∞ GF]
 
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
 def otpKLam (m : rT) : Ectx rT := [EctxItem.appR (otpLam m)]
 
 private theorem refines_lit_real (r : rT) :
-    ⊢@{IProp GF} REL[tv] (pl(#(.real r)) : Exp rT) << pl(#(.real r)) : lrel_real := by
+    ⊢@{IProp GF} REL[codensity tv] (pl(#(.real r)) : Exp rT) << pl(#(.real r)) : lrel_real := by
   iapply refines_ret (v1 := .real r) (v2 := .real r) rfl rfl
   imodintro
   iapply lrel_real_lit
@@ -34,21 +38,22 @@ private theorem refines_lit_real (r : rT) :
 theorem otp_refines (m : rT)
     (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
-    ⊢@{IProp GF} REL[tv] (otp_enc m) << otp_ideal : lrel_real := by
+    ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines tv ⊤
+  show ⊢@{IProp GF} refines (codensity tv) ⊤
     ((otpKLam m).fill pl(urand))
     (Ectx.fill ([] : Ectx rT) pl(urand)) lrel_real
   iapply refines_couple_urands_lr _ hmp
   iintro %r %_
-  show ⊢@{IProp GF} refines tv ⊤ (Ectx.fill ([] : Ectx rT) pl({otpLam m} #(.real r))) _ lrel_real
+  show ⊢@{IProp GF} refines (codensity tv) ⊤
+    (Ectx.fill ([] : Ectx rT) pl({otpLam m} #(.real r))) _ lrel_real
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   inext
   let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢@{IProp GF} refines tv ⊤ (Kfrac.fill pl(#(.real m) + #(.real r))) _ lrel_real
+  show ⊢@{IProp GF} refines (codensity tv) ⊤ (Kfrac.fill pl(#(.real m) + #(.real r))) _ lrel_real
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
   inext
-  show ⊢@{IProp GF} refines tv ⊤
+  show ⊢@{IProp GF} refines (codensity tv) ⊤
     (Ectx.fill ([] : Ectx rT) pl(frac(#(.real (ProbLangℝ.realAdd m r))))) _ lrel_real
   iapply refines_pure_l ⟨IsVal.lit.toIsValue, rfl⟩
   inext
@@ -63,20 +68,21 @@ theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
-    ⊢@{IProp GF} REL[tv] otp_ideal << (otp_enc m) : lrel_real := by
+    ⊢@{IProp GF} REL[codensity tv] otp_ideal << (otp_enc m) : lrel_real := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢@{IProp GF} refines tv ⊤
+  show ⊢@{IProp GF} refines (codensity tv) ⊤
     (Ectx.fill ([] : Ectx rT) pl(urand))
     ((otpKLam m).fill pl(urand)) lrel_real
   iapply refines_couple_urands_lr _ hmp
   iintro %r %hr
-  show ⊢@{IProp GF} refines tv ⊤ _
+  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
     (Ectx.fill ([] : Ectx rT) pl({otpLam m} #(.real (g r)))) lrel_real
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
   let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢@{IProp GF} refines tv ⊤ _ (Kfrac.fill pl(#(.real m) + #(.real (g r)))) lrel_real
+  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
+    (Kfrac.fill pl(#(.real m) + #(.real (g r)))) lrel_real
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢@{IProp GF} refines tv ⊤ _
+  show ⊢@{IProp GF} refines (codensity tv) ⊤ _
     (Ectx.fill ([] : Ectx rT) pl(frac(#(.real (ProbLangℝ.realAdd m (g r)))))) lrel_real
   iapply refines_pure_r ⟨IsVal.lit.toIsValue, rfl⟩
   rw [hinv r hr]
@@ -88,15 +94,15 @@ The abstract hypothesis is discharged by rotation invariance of `Uniform[0,1]`,
 so the refinement holds outright for the genuinely continuous instance. -/
 
 theorem otp_refines_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [MicrometerRGS ℝ hlc GF] :
-    ⊢@{IProp GF} REL[tv] (otp_enc m) << otp_ideal : lrel_real :=
+    [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
+    ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
 noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 
 theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [MicrometerRGS ℝ hlc GF] :
-    ⊢@{IProp GF} REL[tv] otp_ideal << (otp_enc m) : lrel_real :=
+    [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
+    ⊢@{IProp GF} REL[codensity tv] otp_ideal << (otp_enc m) : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
     show Int.fract (m + Int.fract (-m + r)) = r
@@ -121,17 +127,17 @@ theorem lrel_real_to_otpφ {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] (v 
 section Adequacy
 variable {GF : BundledGFunctors}
 
-theorem otp_adequate_real [RefinesPreGS ℝ GF] (m : ℝ) (σ σ' : State ℝ) :
-    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩)
+theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩)
       (limExecV ⟨otp_ideal, σ'⟩) :=
-  refines_coupling (GF := GF) (fun _ => lrel_real) otpφ _ _ σ σ' (fun _ => lrel_real_to_otpφ)
-    fun _ => otp_refines_real m
+  refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
+    fun _ _ => otp_refines_real m
 
-theorem otp_adequate_rev_real [RefinesPreGS ℝ GF] (m : ℝ) (σ σ' : State ℝ) :
-    TVDiv.tv.{0}.Codensity 1 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩)
+theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩)
       (limExecV ⟨otp_enc m, σ'⟩) :=
-  refines_coupling (GF := GF) (fun _ => lrel_real) otpφ _ _ σ σ' (fun _ => lrel_real_to_otpφ)
-    fun _ => otp_refines_rev_real m
+  refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
+    fun _ _ => otp_refines_rev_real m
 
 end Adequacy
 
@@ -141,15 +147,17 @@ At the concrete model `MicrometerFunctor ℝ` every ghost-state hypothesis is
 discharged, leaving a self-contained theorem about `ℝ`-valued programs. -/
 
 omit [LawfulProbLangℝ rT] in
-theorem adequacyRel_otpφ_subset_eq : adequacyRel otpφ ⊆ {p : Exp rT × Exp rT | p.1 = p.2} := by
-  rintro ⟨e₁, e₂⟩ ⟨v, v', hv, hv', r, rfl, rfl⟩
+theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
+  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
 
 theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
     limExecV ⟨otp_enc m, σ⟩ = limExecV ⟨otp_ideal, σ'⟩ :=
-  GradedDivergence.Codensity.tv_eq_of_diag
-    ((otp_adequate_real (GF := MicrometerFunctor ℝ) m σ σ').mono_rel adequacyRel_otpφ_subset_eq)
-    ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ) m σ' σ).mono_rel adequacyRel_otpφ_subset_eq)
+  tv_eq_of_rel
+    ((otp_adequate_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ σ').mono le_rfl
+      adequacyRel_otpφ_subset_eq)
+    ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ' σ).mono le_rfl
+      adequacyRel_otpφ_subset_eq)
 
 /-! ### Non-vacuity
 
@@ -201,27 +209,29 @@ theorem otp_enc_typed (m : rT) : Typed Tctx.empty (otp_enc m) .real := .app (otp
 
 end Typing
 
-theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ) :
+theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) :
     ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧
         x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) _ _ .real (otp_enc_typed m) otp_ideal_typed
-    fun _ _ => otp_refines_real m
+  refines_sound_fresh (GF := GF) (L := codensity tv)
+    (OrderAddMonoidHom.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
+    fun _ _ _ => otp_refines_real m
 
-theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ) :
+theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) :
     ∀ (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool),
       TypedCtx K Tctx.empty .real Tctx.empty .bool → Ctx.BindersFresh K ∅ →
       (∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧
         x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) _ _ .real otp_ideal_typed (otp_enc_typed m)
-    fun _ _ => otp_refines_rev_real m
+  refines_sound_fresh (GF := GF) (L := codensity tv)
+    (OrderAddMonoidHom.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
+    fun _ _ _ => otp_refines_rev_real m
 
-theorem otp_ctx_equiv_real (GF : BundledGFunctors) [RefinesPreGS ℝ GF] (m : ℝ)
+theorem otp_ctx_equiv_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ)
     (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool) (hK : TypedCtx K Tctx.empty .real Tctx.empty .bool)
     (hbf : Ctx.BindersFresh K ∅) (hfresh : ∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧
       x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ Ctx.payloadFv K) :

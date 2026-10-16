@@ -3,7 +3,7 @@ module
 public import Metrology.Micrometer.Examples.SwitchingPRP
 public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
-public import Metrology.Couplings.CodensityTV
+public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -14,8 +14,8 @@ Port of clutch's `theories/approxis/examples/prp_prf_weak.v`: `Q` uniform querie
 function and to a random permutation over `[0, N)` are indistinguishable up to
 `Q (Q - 1) / (2 N)`. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS TVDiv
-open scoped AppGS
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open scoped AppGS ENNReal
 
 namespace ProbLang
 namespace Switching
@@ -42,7 +42,7 @@ theorem loopErr_succ (N : Int) (c q : Nat) :
 
 section Games
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
@@ -50,14 +50,15 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q)) ∗
-    ↯ (loopErr N m.length q) ∗
+    ↯b (loopErr N m.length q) ∗
     (ℓ ↦ (assocVal m : Val rT)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
     (ℓfv ↦ₛ (intListVal r : Val rT)) ∗
     (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
     (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    WP[tv] (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
+      @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hl, Hm, Hfv, HresL, HresS, Hcnt⟩
@@ -82,7 +83,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     wp_bind (pl% {rfQuery N ℓ} #(.int n))
     cases hlk : alookup n m with
     | some y =>
-      ihave Herr := ErrorCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
+      ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
       iapply wp_prpQuery_prev_r _ ℓm ℓfv m n y hlk
       iframe Hj Hm
       iintro Hj Hm
@@ -116,7 +117,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iexact Hcnt
     | none =>
       rw [loopErr_succ]
-      ihave ⟨Herr, Herr'⟩ := ErrorCredit.split $$ Herr
+      ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
       iapply wp_rfQuery_prpQuery_fresh _ N ℓ ℓm ℓfv m r n
         ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup
         le_rfl
@@ -155,12 +156,12 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
 theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (wPRP N Q) ∗ ↯ ε ∗
+    ⤇ K.fill (wPRP N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
-    WP[tv] (wPRF N Q) @ E {{ Φ }} := by
+    WP[codensity tv] (wPRF N Q) @ E {{ Φ }} := by
   rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
   iintro ⟨Hj, Herr, Hcnt⟩
-  ihave Herr := ErrorCredit.weaken hε $$ Herr
+  ihave Herr := BudgetCredit.weaken hε $$ Herr
   wp_bind (randomFunction N)
   iapply wp_randomFunction
   simp only [isRandomFunction]
@@ -222,14 +223,15 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q)) ∗
-    ↯ (loopErr N m.length q) ∗
+    ↯b (loopErr N m.length q) ∗
     (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT)) ∗
     (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
     (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    WP[tv] (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
+      @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hm, Hfv, Hl, HresL, HresS, Hcnt⟩
@@ -254,7 +256,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     wp_bind (pl% {prpQuery ℓm ℓfv} #(.int n))
     cases hlk : alookup n m with
     | some y =>
-      ihave Herr := ErrorCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
+      ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
       iapply wp_rfQuery_prev_r _ N ℓ m n y hlk
       iframe Hj Hl
       iintro Hj Hl
@@ -288,7 +290,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iexact Hcnt
     | none =>
       rw [loopErr_succ]
-      ihave ⟨Herr, Herr'⟩ := ErrorCredit.split $$ Herr
+      ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
       iapply wp_prpQuery_rfQuery_fresh _ N ℓ ℓm ℓfv m r n
         ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup
         le_rfl
@@ -327,12 +329,12 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
 theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (wPRF N Q) ∗ ↯ ε ∗
+    ⤇ K.fill (wPRF N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
-    WP[tv] (wPRP N Q) @ E {{ Φ }} := by
+    WP[codensity tv] (wPRP N Q) @ E {{ Φ }} := by
   rw [show (Q : Int) = ((Q.toNat : Nat) : Int) by omega]
   iintro ⟨Hj, Herr, Hcnt⟩
-  ihave Herr := ErrorCredit.weaken hε $$ Herr
+  ihave Herr := BudgetCredit.weaken hε $$ Herr
   wp_bind (randomPermutation N)
   iapply wp_randomPermutation
   simp only [isPRP]
@@ -374,14 +376,15 @@ end Games
 section AdequacyCor
 
 set_option linter.style.haveILetI false in
-theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
+theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
-    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
-  intro IGS ε' hε'
+  intro IGS IBC ε' hε'
   letI := IGS
+  letI := IBC
   iintro Hj Herr
   iapply wp_wPRF_wPRP ([] : Ectx rT) N Q hN hQ ε'
     (le_of_lt (lt_of_le_of_lt (loopErr_zero_le_birthday N Q.toNat) hε'))
@@ -396,20 +399,21 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
 
 theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
-    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
-  wPRF_wPRP_switching (MicrometerFunctor rT) N Q hN hQ σ σ'
+  wPRF_wPRP_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
 set_option linter.style.haveILetI false in
-theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
+theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
     (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
-    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
   apply wp_adequacy_error_lim (GF := GF)
-  intro IGS ε' hε'
+  intro IGS IBC ε' hε'
   letI := IGS
+  letI := IBC
   iintro Hj Herr
   iapply wp_wPRP_wPRF ([] : Ectx rT) N Q hN hQ ε'
     (le_of_lt (lt_of_le_of_lt (loopErr_zero_le_birthday N Q.toNat) hε'))
@@ -424,10 +428,10 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT GF]
 
 theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
     (σ σ' : State rT) :
-    TVDiv.tv.{0}.Codensity 1 (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
-  wPRP_wPRF_switching (MicrometerFunctor rT) N Q hN hQ σ σ'
+  wPRP_wPRF_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
 theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT)
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
@@ -435,10 +439,10 @@ theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : S
         + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
     limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S
         + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
-  ⟨GradedDivergence.Codensity.tv_le_add_of_diag
-    ((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono_rel adequacyRel_eq_subset) hS,
-   GradedDivergence.Codensity.tv_le_add_of_diag
-    ((wPRP_wPRF_switching_closed N Q hN hQ σ' σ).mono_rel adequacyRel_eq_subset) hS⟩
+  ⟨tv_le_add_of_rel
+    ((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono le_rfl adequacyRel_eq_subset) hS,
+   tv_le_add_of_rel
+    ((wPRP_wPRF_switching_closed N Q hN hQ σ' σ).mono le_rfl adequacyRel_eq_subset) hS⟩
 
 end AdequacyCor
 
