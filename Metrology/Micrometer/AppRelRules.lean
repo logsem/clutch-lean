@@ -350,7 +350,9 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
 /-! ## Budget-credit rules
 
 An absorbing credit discharges any refinement; amplification climbs from `↯b (s ε)` to the
-absorbing `↯b (s 1)`. -/
+absorbing `↯b (s 1)` along any slack map `s`. The `_of_bc` forms take the seed credit as an
+argument and work for every budget (dp included, at `s = dpSlack`); the unseeded forms draw the
+seed from the threaded budget, which needs every positive budget to carry slack (tv). -/
 
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
@@ -370,6 +372,19 @@ theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ �
   iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
 
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
+/-- A seed credit `↯b (s ε)` amplifies by `k` up to the absorbing `↯b (s 1)` (Rocq
+`refines_ind_amp`, seed made explicit). -/
+theorem refines_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {E : CoPset} {e e' : Exp rT}
+    {A : lrel rT GF} {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
+    □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ refines L E e e' A) -∗
+      ↯b (s ε') -∗ refines L E e e' A) ⊢
+    ↯b (s ε) -∗ refines L E e e' A := by
+  iintro #Hamp Hε
+  iapply BudgetCredit.amplifying hε hk $$ [] Hamp Hε
+  iintro !> Hc
+  iapply refines_of_absorbing habs $$ Hc
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
@@ -381,12 +396,24 @@ theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : 
   iapply refines_get_ec hsplit
   iintro %b Herr %hpos
   obtain ⟨ε, hε, hle⟩ := hslack b hpos
-  iapply BudgetCredit.amplifying (s := s) hε hk $$ [] [] [Herr]
-  · iintro !> Hc
-    iapply refines_of_absorbing habs $$ Hc
-  · iintro !> %ε' %hε' #Hstep Hε'
-    iapply Hamp $$ %ε' %hε' Hstep Hε'
+  iapply refines_ind_amp_of_bc hε habs hk $$ Hamp
   iapply BudgetCredit.weaken hle $$ Herr
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
+/-- A seed credit `↯b (s ε)` amplifies a function body uniformly in its arguments (Rocq
+`refines_arrow_val_err`, seed made explicit). -/
+theorem refines_app_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {v v' : Val rT}
+    {A A' : lrel rT GF} {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) :
+    iprop%
+    □ (∀ ε', ⌜0 < ε'⌝ -∗
+      □ (↯b (s ((k : ENNReal) * ε')) -∗
+        ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
+      ↯b (s ε') -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+    ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A' := by
+  iintro #Hamp Hε
+  iapply BudgetCredit.amplifying hε hk $$ [] Hamp Hε
+  iintro !> Hc %w1 %w2 -
+  iapply refines_of_absorbing habs $$ Hc
 
 omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel rT GF}
@@ -405,14 +432,7 @@ theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel
   iintro %b Herr %hpos
   obtain ⟨ε, hε, hle⟩ := hslack b hpos
   ihave Herr := BudgetCredit.weaken hle $$ Herr
-  ihave Hall := BudgetCredit.amplifying
-      (P := iprop(∀ w1 w2, A w1 w2 -∗ refines L ⊤ (.app v.1 w1.1) (.app v'.1 w2.1) A')) hε hk
-    $$ [] [] Herr
-  · iintro !> Hc %w1 %w2 -
-    iapply refines_of_absorbing habs $$ Hc
-  · iintro !> %ε' %hε' #Hstep Hε'
-    iapply Hamp $$ %ε' %hε' Hstep Hε'
-  iapply Hall $$ %v1 %v2 HA
+  iapply refines_app_ind_amp_of_bc hε habs hk $$ Hamp Herr %v1 %v2 HA
 
 /-! ## Coupling-driven rule -/
 
