@@ -448,7 +448,7 @@ instance : Inhabited (Val rT) := ⟨.unit⟩
 
 /-- Two `logN` invariants with incompatible bodies have equal names, so `l1 = l2` holds whenever
 equal names imply it. -/
-private theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
+theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
     {l1 l2 : Loc} (HE : (↑logN : CoPset) ⊆ E) (hp : p1 = p2 → l1 = l2)
     (hfalse : ⊢ P1 -∗ P2 -∗ False) :
     ⊢ Iris.inv (logN.@ p1) P1 -∗ Iris.inv (logN.@ p2) P2 -∗ |={E}=> ⌜l1 = l2⌝ := by

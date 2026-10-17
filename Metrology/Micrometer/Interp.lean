@@ -242,7 +242,8 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
   subst heq1 heq2
   exact .rfl
 
-private theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
+/-- Related values of a reference relation are both locations. -/
+theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
     (lrel_ref A).car v1 v2 ⊢ ⌜∃ l1 l2 : Loc, v1 = .loc l1 ∧ v2 = .loc l2⌝ := by
   unfold lrel_ref
   iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
@@ -579,7 +580,8 @@ theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) 
     TyEnv.cons X (TyEnv.comp Δ ξ) = TyEnv.comp (TyEnv.cons X Δ) (Renaming.under ξ) := by
   funext n; cases n <;> rfl
 
-private theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
+/-- The renaming hypothesis for a type body extends under a new relation binder. -/
+theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
       interp L (τ'.rename ξ) Δ = interp L τ' (TyEnv.comp Δ ξ))
     (X : lrel rT GF) :
@@ -616,7 +618,8 @@ theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
   | 0 => rfl
   | k + 1 => interp_ren (σ k) X Δ
 
-private theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
+/-- The substitution hypothesis for a type body extends under a new relation binder. -/
+theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
     (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
       interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
     (X : lrel rT GF) :
