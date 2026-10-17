@@ -540,7 +540,7 @@ theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
   iexact H
 
 /-- Sequence two refinements via evaluation-context framing. -/
-theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {E : CoPset}
+theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] (K K' : Ectx rT) {E : CoPset}
     {A A' : lrel rT GF} {e e' : Exp rT} :
     ⊢ refines L E e e' A -∗
       (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗

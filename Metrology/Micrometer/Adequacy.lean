@@ -37,16 +37,17 @@ theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e
 
 section Termination
 
-variable [Zero B] [Preorder B] [_root_.Top B] {L : GradedLifting.{0} B} [L.HasBind]
-  [L.IsSupportLocal]
+variable [Zero B] [Preorder B] [_root_.Top B] {L : GradedLifting.{0} B} [L.IsSupportLocal]
 
 /-- `lift_erasure_erasable` for a run of mass `1`: continuations are needed only at states from
 which the run still has mass `1` (Rocq `spec_coupl_adequacy_term`). -/
 theorem execCoupl_erasable_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁ μ₁' : MeasureTheory.Measure (State rT)} {φ : Val rT → Val rT → Prop} {b : B}
-    {R : State rT → Cfg rT → B} {k m : Nat} (hterm : execN m ⟨e₁, σ₁⟩ Set.univ = 1)
-    (hCoupl : L b R μ₁ (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩)) (hErase₁ : ErasableExpr μ₁ σ₁)
-    (hErase₁' : ErasableExpr μ₁' σ₁')
+    {R : State rT → Cfg rT → B} {k m : Nat} {law : L.BindLaw}
+    (hterm : execN m ⟨e₁, σ₁⟩ Set.univ = 1)
+    (hCoupl : L b R μ₁ (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩))
+    (hside : law.side (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩) limExecVKernel)
+    (hErase₁ : ErasableExpr μ₁ σ₁) (hErase₁' : ErasableExpr μ₁' σ₁')
     (hCont : ∀ σ₂ ρ', execN m ⟨e₁, σ₂⟩ Set.univ = 1 → R σ₂ ρ' < (⊤ : B) →
       execCoupl L φ (R σ₂ ρ') m ⟨e₁, σ₂⟩ ρ') :
     execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩ := by
@@ -62,8 +63,8 @@ theorem execCoupl_erasable_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State r
       Set.preimage_univ] at h
     rw [h, hterm]
   have hAc := MeasureTheory.ae_iff.1 (MeasureTheory.ae_measure_univ_eq_one_of_bind hek hmass)
-  refine lift_erasure_erasable (IsSupportLocal.restrict hA hAc hCoupl) hErase₁ hErase₁'
-    fun σ₂ ρ' hR => ?_
+  refine lift_erasure_erasable_law law (IsSupportLocal.restrict hA hAc hCoupl) hside hErase₁
+    hErase₁' fun σ₂ ρ' hR => ?_
   by_cases hσ : σ₂ ∈ {σ : State rT | execN m ⟨e₁, σ⟩ Set.univ = 1}
   · simp only [Set.piecewise_eq_of_mem _ _ _ hσ] at hR ⊢
     exact hCont σ₂ ρ' hσ hR
@@ -73,9 +74,10 @@ theorem execCoupl_erasable_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State r
 at configurations whose run has mass `1` (Rocq `prog_coupl_adequacy_term`). -/
 theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁' : MeasureTheory.Measure (State rT)} {φ : Val rT → Val rT → Prop} {b : B}
-    {R : Cfg rT → Cfg rT → B} {k m : Nat} (hnone : e₁.toVal? = none)
+    {R : Cfg rT → Cfg rT → B} {k m : Nat} {law : L.BindLaw} (hnone : e₁.toVal? = none)
     (hterm : execN (m + 1) ⟨e₁, σ₁⟩ Set.univ = 1) (hErase₁' : ErasableExpr μ₁' σ₁')
     (hExp : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩))
+    (hside : law.side (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩) limExecVKernel)
     (hCont : ∀ ρ ρ', execN m ρ Set.univ = 1 → R ρ ρ' < (⊤ : B) →
       execCoupl L φ (R ρ ρ') m ρ ρ') :
     execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩ := by
@@ -87,8 +89,8 @@ theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     at hterm ⊢
   have hAc := MeasureTheory.ae_iff.1
     (MeasureTheory.ae_measure_univ_eq_one_of_bind (execN_measurable m) hterm)
-  refine lift_erasure_erasable_exp_lhs_kanto hErase₁' (IsSupportLocal.restrict hA hAc hExp)
-    fun ρ ρ' hR => ?_
+  refine lift_erasure_erasable_exp_lhs_kanto_law law hErase₁'
+    (IsSupportLocal.restrict hA hAc hExp) hside fun ρ ρ' hR => ?_
   by_cases hρ : ρ ∈ {ρ : Cfg rT | execN m ρ Set.univ = 1}
   · simp only [Set.piecewise_eq_of_mem _ _ _ hρ] at hR ⊢
     exact hCont ρ ρ' hρ hR
@@ -99,18 +101,20 @@ end Termination
 section Adequacy
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind]
+  {L : GradedLifting.{0} B} [L.IsLawful]
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetGS B GF]
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] [L.HasBind] in
+omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A spec coupling whose continuations give `m`-fuel execution couplings at the states
 satisfying `P` gives one itself, given erasure at such states. -/
 theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ : Exp rT)
     (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
     (φ : Val rT → Val rT → Prop) (b : B) (hP : P σ₁)
     (herase : ∀ {σ₀ : State rT} {e₀' : Exp rT} {σ₀' : State rT} {b₀ : B}
-      {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)} {k : Nat},
-      P σ₀ → L b₀ R μ₁ (μ₁'.bind fun σ => pexecN k ⟨e₀', σ⟩) → ErasableExpr μ₁ σ₀ →
+      {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)} {k : Nat}
+      {law : L.BindLaw},
+      P σ₀ → L b₀ R μ₁ (μ₁'.bind fun σ => pexecN k ⟨e₀', σ⟩) →
+      law.side (μ₁'.bind fun σ => pexecN k ⟨e₀', σ⟩) limExecVKernel → ErasableExpr μ₁ σ₀ →
       ErasableExpr μ₁' σ₀' →
       (∀ σ₂ ρ', P σ₂ → R σ₂ ρ' < (⊤ : B) → execCoupl L φ (R σ₂ ρ') m ⟨e₁, σ₂⟩ ρ') →
       execCoupl L φ b₀ m ⟨e₁, σ₀⟩ ⟨e₀', σ₀'⟩) : iprop%
@@ -132,39 +136,42 @@ theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ :
   · iapply fupd_step_fupdN_pure n ?_
     exact hVac _ _ _
   · iapply HZ $$ %σ₀ %e₀' %σ₀' %b₀ %hP₀ HZApp
-  · icases HCpl with ⟨%k, %μ₁, %μ₁', %R, %hAC, %hErase, %hErase', HCont⟩
+  · icases HCpl with ⟨%law, %k, %μ₁, %μ₁', %R, %hAC, %hside, %hErase, %hErase', HCont⟩
     iapply BIFUpdate.mono
     · refine step_fupdN_mono (P := iprop(⌜∀ σ₂ e₂' σ₂', P σ₂ ∧ R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B) →
         execCoupl L φ (R σ₂ ⟨e₂', σ₂'⟩) m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
       iintro %hpure !%
-      exact herase hP₀ hAC hErase hErase' fun σ₂ ⟨e₂', σ₂'⟩ h₁ h₂ => hpure σ₂ e₂' σ₂' ⟨h₁, h₂⟩
+      exact herase hP₀ hAC hside hErase hErase' fun σ₂ ⟨e₂', σ₂'⟩ h₁ h₂ =>
+        hpure σ₂ e₂' σ₂' ⟨h₁, h₂⟩
     iapply step_fupdN_pure_imp_forall₃
     iintro %σ₂ %e₂' %σ₂' ⟨%hP₂, %hR⟩
     imod HCont $$ %σ₂ %e₂' %σ₂' %hR with ⟨HΨ, -⟩
     iapply HΨ $$ %hP₂ HZ
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] [L.HasBind] in
+omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A program coupling whose continuations give `m`-fuel execution couplings at the pairs
 satisfying `P` gives an `m + 1`-fuel one, given erasure at such pairs. -/
 theorem wp_adequacy_prog_coupl_guard (P : Exp rT → State rT → Prop) (n m : Nat) (e₁ : Exp rT)
     (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) (φ : Val rT → Val rT → Prop)
     (b : B)
-    (herase : ∀ {R : Cfg rT → Cfg rT → B} {μ₁' : MeasureTheory.Measure (State rT)} {k : Nat},
+    (herase : ∀ {R : Cfg rT → Cfg rT → B} {μ₁' : MeasureTheory.Measure (State rT)} {k : Nat}
+      {law : L.BindLaw},
       ErasableExpr μ₁' σ₁' → L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩) →
+      law.side (μ₁'.bind fun σ => pexecN k ⟨e₁', σ⟩) limExecVKernel →
       (∀ ρ ρ', P ρ.1 ρ.2 → R ρ ρ' < (⊤ : B) → execCoupl L φ (R ρ ρ') m ρ ρ') →
       execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩) : iprop%
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
     (∀ e₂ σ₂ e₂' σ₂' b', ⌜P e₂ σ₂⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
-  iintro ⟨%k, %μ₁', %R, %_, %hExp, %hErase', Hcnt⟩ Hcoupl
+  iintro ⟨%law, %k, %μ₁', %R, %_, %hExp, %hside, %hErase', Hcnt⟩ Hcoupl
   iapply BIFUpdate.mono
   · refine step_fupdN_mono (P := iprop(⌜∀ e₂ σ₂ e₂' σ₂', P e₂ σ₂ ∧
       R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B) →
       execCoupl L φ (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝)) ?_
     iintro %hpure !%
-    exact herase hErase' hExp fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ h₁ h₂ => hpure e₂ σ₂ e₂' σ₂' ⟨h₁, h₂⟩
+    exact herase hErase' hExp hside fun ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ h₁ h₂ => hpure e₂ σ₂ e₂' σ₂' ⟨h₁, h₂⟩
   iapply step_fupdN_pure_imp_forall₄
   iintro %e₂ %σ₂ %e₂' %σ₂' ⟨%hP₂, %hR⟩
   imod Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %hR with Hcnt
@@ -181,8 +188,9 @@ theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro Hspec HZ
   iapply wp_adequacy_spec_coupl_guard (fun _ => True) n m e₁ σ₁ e₁' σ₁' Z φ b trivial
-    (fun _ hAC hErase hErase' hCont =>
-      lift_erasure_erasable hAC hErase hErase' fun σ₂ ρ' => hCont σ₂ ρ' trivial) $$ Hspec
+    (fun _ hAC hside hErase hErase' hCont =>
+      lift_erasure_erasable_law _ hAC hside hErase hErase' fun σ₂ ρ' => hCont σ₂ ρ' trivial)
+    $$ Hspec
   iintro %σ₂ %e₂' %σ₂' %b' - HZ'
   iapply HZ $$ HZ'
 
@@ -198,9 +206,9 @@ theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro Hprog HZ
   iapply wp_adequacy_prog_coupl_guard (fun _ _ => True) n m e₁ σ₁ e₁' σ₁' Z φ b
-    (fun hErase' hExp hCont => by
+    (fun hErase' hExp hside hCont => by
       simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (Exp.toVal?_eq_none.mp hnone) m]
-      exact lift_erasure_erasable_exp_lhs_kanto hErase' hExp
+      exact lift_erasure_erasable_exp_lhs_kanto_law _ hErase' hExp hside
         fun ρ ρ' => hCont ρ ρ' trivial) $$ Hprog
   iintro %e₂ %σ₂ %e₂' %σ₂' %b' - HZ'
   iapply HZ $$ HZ'
@@ -215,7 +223,7 @@ theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT)
     |={∅}=> ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl 0 m e₁ σ₁ e₁' σ₁' Z φ b
 
-omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.HasBind] in
+omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] in
 variable (L) in
 /-- At a value, the continuation `match` of `wpPre` reduces to its `some` branch. -/
 theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
@@ -245,7 +253,7 @@ theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
     ProbLang.MicrometerWpGS.wpPre.match_1 motive x some_f none_f := by
   cases x <;> rfl
 
-omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.HasBind] in
+omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] in
 /-- A weakest precondition at a value unfolds to a spec coupling. -/
 theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
     (E : CoPset) (He : e.toVal? = some v) :
@@ -333,8 +341,8 @@ theorem wp_adequacy_spec_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp r
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl_guard (fun σ => execN m ⟨e₁, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
-    hterm fun hterm₀ hAC hErase hErase' hCont =>
-      execCoupl_erasable_of_term hterm₀ hAC hErase hErase' hCont
+    hterm fun hterm₀ hAC hside hErase hErase' hCont =>
+      execCoupl_erasable_of_term hterm₀ hAC hside hErase hErase' hCont
 
 omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- `wp_adequacy_prog_coupl` for a run of mass `1`. -/
@@ -347,7 +355,7 @@ theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp r
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_prog_coupl_guard (fun e σ => execN m ⟨e, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
-    fun hErase' hExp hCont => execCoupl_prog_of_term hnone hterm hErase' hExp hCont
+    fun hErase' hExp hside hCont => execCoupl_prog_of_term hnone hterm hErase' hExp hside hCont
 
 /-- `wp_adequacy_step_fupdN` for a run of mass `1`. -/
 theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
@@ -388,12 +396,11 @@ dropped. -/
 section Budget
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsZeroLeft] [L.IsLeftContinuous]
+  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
 variable {GF : BundledGFunctors}
 variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.HasBind] [L.IsZeroLeft]
-  [L.IsLeftContinuous] in
+omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous] in
 /-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
 theorem execCoupl_of_step_fupdN (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
@@ -476,7 +483,7 @@ end Budget
 section BudgetTerm
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
+  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsSupportLocal]
 variable {GF : BundledGFunctors}
 variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
 

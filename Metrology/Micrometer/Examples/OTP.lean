@@ -68,7 +68,7 @@ private theorem refines_lit_int (n : Int) :
   iapply lrel_int_lit
 
 theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] (m N : Int) (hN : 0 < N) :
+    [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢ refines L ⊤ ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
@@ -95,7 +95,7 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] (m N : Int) (hN : 0 < N) :
+    [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
   simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
   show ⊢ refines L ⊤ (Ectx.fill [] pl(rand(#(.int N), #(.unit))))

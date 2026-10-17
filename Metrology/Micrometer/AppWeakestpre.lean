@@ -66,12 +66,15 @@ instance : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
 instance : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
 variable (L) in
-/-- The coupling disjunct of `specCouplPre`: a lifting of erasable distributions within `b`, with
-`Φ` continuing at each pair whose leftover is finite (clutch-dp `spec_coupl_pre`). -/
+/-- The coupling disjunct of `specCouplPre`: a lifting of erasable distributions within `b`, by a
+bind law whose side holds on the spec's remaining run, with `Φ` continuing at each pair whose
+leftover is finite (clutch-dp `spec_coupl_pre`, Rocq `side_for_exec`). -/
 abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
-  (∃ (n : Nat) (μ₁ μ₁' : MeasureTheory.Measure (State rT)) (R : State rT → Cfg rT → B),
+  (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : MeasureTheory.Measure (State rT))
+      (R : State rT → Cfg rT → B),
       ⌜L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
+      ⌜law.side (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) limExecVKernel⌝ ∗
       ⌜ErasableExpr μ₁ σ₁⌝ ∗
       ⌜ErasableExpr μ₁' σ₁'⌝ ∗
       (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
@@ -100,8 +103,8 @@ instance specCouplPre_mono {E : CoPset} {Z : State rT → Cfg rT → B → IProp
     · ileft; iexact HVac
     · iright; ileft; iexact HZ
     · iright; iright
-      icases HCpl with ⟨%n, %μ₁, %μ₁', %R, %Hc, %Herase₁, %Herase₂, Hcont⟩
-      iexists n, μ₁, μ₁', R
+      icases HCpl with ⟨%law, %n, %μ₁, %μ₁', %R, %Hc, %Hside, %Herase₁, %Herase₂, Hcont⟩
+      iexists law, n, μ₁, μ₁', R
       iframe %
       iintro %σ₂ %e₂' %σ₂' %hR
       imod Hcont $$ %σ₂ %e₂' %σ₂' %hR with HΦ
@@ -161,8 +164,9 @@ theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : Sta
   · iapply specCoupl_absorbing HVac
   · iapply HZ $$ HZ1
   · iapply specCoupl_rec
-    icases HCpl with ⟨%n, %μ₁, %μ₁', %R, %HCpl_coupl, %HCpl_e1, %HCpl_e2, HCpl_cont⟩
-    iexists n, μ₁, μ₁', R
+    icases HCpl with ⟨%law, %n, %μ₁, %μ₁', %R, %HCpl_coupl, %HCpl_side, %HCpl_e1, %HCpl_e2,
+      HCpl_cont⟩
+    iexists law, n, μ₁, μ₁', R
     iframe %
     iintro %σ₂ %e₂' %σ₂' %hR
     imod BIFUpdate.subset HE with Hclose
@@ -185,14 +189,17 @@ theorem specCoupl_mono_spatial {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' :
 /-! ## `prog_coupl` modality
 
 Couples exactly one program step against any number of spec steps and an erasable distribution,
-by a lifting with per-pair leftovers (clutch-dp `prog_coupl`). -/
+by a lifting with per-pair leftovers and a bind law chosen for this step (clutch-dp `prog_coupl`).
+-/
 
 variable (L) in
 abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
-  (∃ (n : Nat) (μ₁' : MeasureTheory.Measure (State rT)) (R : Cfg rT → Cfg rT → B),
+  (∃ (law : L.BindLaw) (n : Nat) (μ₁' : MeasureTheory.Measure (State rT))
+      (R : Cfg rT → Cfg rT → B),
       ⌜Reducible e₁ σ₁⌝ ∗
       ⌜L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)⌝ ∗
+      ⌜law.side (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) limExecVKernel⌝ ∗
       ⌜ErasableExpr μ₁' σ₁'⌝ ∗
       (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
         Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)))
@@ -208,8 +215,9 @@ theorem progCoupl_ne {n : Nat} {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp r
     {b : B} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ≡{n}≡ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
-  refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
-  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) ?_
+  refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
+  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
+    sep_ne.ne (.of_eq rfl) ?_
   exact forall_ne fun _ => forall_ne fun _ => forall_ne fun _ => forall_ne fun _ =>
     wand_ne.ne (.of_eq rfl) (BIFUpdate.ne.ne (HZ _ _ _ _ _))
 
@@ -218,8 +226,8 @@ theorem progCoupl_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
     iprop% (∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   iintro ⟨HZ, HCpl⟩
-  icases HCpl with ⟨%n, %μ₁', %R, %Hred, %Hcpl, %Heras, HCont⟩
-  iexists n, μ₁', R
+  icases HCpl with ⟨%law, %n, %μ₁', %R, %Hred, %Hcpl, %Hside, %Heras, HCont⟩
+  iexists law, n, μ₁', R
   iframe %
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   imod HCont $$ %e₂ %σ₂ %e₂' %σ₂' %hR with HZ'
@@ -467,26 +475,39 @@ theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.deco
   rw [heq]
   exact primStep_atomic e σ hne
 
-/-- Introduce a spec coupling from a lifting of erasable distributions. -/
-theorem specCoupl_couple {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} {n : Nat} {R : State rT → Cfg rT → B}
-    {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+/-- Introduce a spec coupling from a lifting of erasable distributions, by a bind law whose side
+holds on the spec's remaining run (Rocq `side_for_exec`). -/
+theorem specCoupl_couple_law (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {n : Nat}
+    {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
     (Hcpl : L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+    (hside : law.side (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) limExecVKernel)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
       specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
   iintro H
   iapply specCoupl_rec
-  iexists n, μ₁, μ₁', R
+  iexists law, n, μ₁, μ₁', R
   iframe %
   iexact H
+
+/-- Introduce a spec coupling from a lifting of erasable distributions. -/
+theorem specCoupl_couple [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {n : Nat}
+    {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+    (Hcpl : L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+    (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
+    (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
+      specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
+    specCoupl L E σ₁ e₁' σ₁' b Z :=
+  specCoupl_couple_law (BindLaw.canonical L) Hcpl trivial Heras₁ Heras₁'
 
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
 related pair. -/
 theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b₁ b₂ b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} {n : Nat}
+    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} {n : Nat}
     {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -504,9 +525,9 @@ theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLa
 /-! ### `specCoupl` — derived lemmas -/
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget. -/
-theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
-    {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat}
-    {b₁ b : B} {Z : State rT → Cfg rT → B → IProp GF}
+theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
+    {E : CoPset} {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT}
+    {n : Nat} {b₁ b : B} {Z : State rT → Cfg rT → B → IProp GF}
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
@@ -526,19 +547,19 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {
     iexact HF
   · simp [R, hS] at hlt
 
-theorem fupd_specCoupl_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {σ : State rT}
-    {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
+theorem fupd_specCoupl_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
     (hb : b₁ ≤ b₂) :
     iprop(|={E}=> specCoupl L E σ e' σ' b₁ Z) ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_specCoupl_steps_det_of_le (pexecN_zero _) hb
 
-theorem specCoupl_mono_err [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {σ : State rT}
-    {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
+theorem specCoupl_mono_err [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
     (hb : b₁ ≤ b₂) : specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
-theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {σ : State rT}
-    {e' : Exp rT} {σ' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} :
+theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} :
     iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
   fupd_specCoupl_of_le le_rfl
 
@@ -555,8 +576,8 @@ theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp G
   iapply IH $$ %σ'' %c %b' HF
 
 theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b₁ b₂ b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → State rT → Prop}
+    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → State rT → Prop}
     {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ μ₁')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -576,8 +597,8 @@ theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLaw
   iapply H $$ %σ₂ %σ₂' %HS
 
 theorem specCoupl_erasable_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {n : Nat}
-    {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop}
+    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {n : Nat} {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop}
     {μ₁ : MeasureTheory.Measure (State rT)}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
@@ -587,22 +608,22 @@ theorem specCoupl_erasable_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.
     Heras₁ (ErasableExpr.dret σ₁')
 
 theorem specCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing]
-    {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {n : Nat} {b₁ b₂ b : B}
+    [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {n : Nat} {b₁ b₂ b : B}
     {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
     (Hcpl : L.Rel b₁ S (MeasureTheory.Measure.dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) :
     iprop% (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_erasable_steps hb Hcpl (ErasableExpr.dret σ₁)
 
-theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {σ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat} {b : B}
+theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat} {b : B}
     {Z : State rT → Cfg rT → B → IProp GF}
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) :
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)
 
 theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT}
+    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : Set
     (Cfg rT)} (Hred : Reducible e₁' σ₁')
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
@@ -623,7 +644,7 @@ theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] 
 
 @[discrete]
 theorem specCoupl_step [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
-    [L.IsSupportLocal] [L.IsTopAbsorbing] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
+    [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
     {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF}
     (Hred : Discrete.Reducible e₁' σ₁') (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
     (∀ e₂' σ₂', ⌜0 < primStep ⟨e₁', σ₁'⟩ {⟨e₂', σ₂'⟩}⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
@@ -636,22 +657,36 @@ theorem specCoupl_step [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] 
 theorem progCoupl_reducible {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Reducible e₁ σ₁⌝ := by
-  iintro ⟨%n, %μ₁', %R, %Hred, -⟩
+  iintro ⟨%law, %n, %μ₁', %R, %Hred, -⟩
   ipureintro; exact Hred
 
-theorem progCoupl_intro {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
-    {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
+/-- Introduce a program coupling by a bind law whose side holds on the spec's remaining run
+(Rocq `prog_coupl_intro`, `side_for_exec`). -/
+theorem progCoupl_intro_law (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
+    {μ₁' : MeasureTheory.Measure (State rT)} {R : Cfg rT → Cfg rT → B}
+    (Hred : Reducible e₁ σ₁)
+    (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+    (hside : law.side (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) limExecVKernel)
+    (Heras : ErasableExpr μ₁' σ₁') : iprop%
+    (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
+      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
+    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+  iintro H
+  iexists law, n, μ₁', R
+  iframe %
+  iexact H
+
+theorem progCoupl_intro [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
     {μ₁' : MeasureTheory.Measure (State rT)} {R : Cfg rT → Cfg rT → B}
     (Hred : Reducible e₁ σ₁)
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
-  iintro H
-  iexists n, μ₁', R
-  iframe %
-  iexact H
+    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  progCoupl_intro_law (BindLaw.canonical L) Hred Hcpl trivial Heras
 
 theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Reducible e₁' σ₁') :
     (MeasureTheory.Measure.dirac σ₁').bind (fun σ => pexecN 1 ⟨e₁', σ⟩) = primStep ⟨e₁', σ₁'⟩ := by
@@ -665,9 +700,9 @@ theorem progCoupl_strong_mono [L.IsSupportLocal] {e₁ : Exp rT} {σ₁ : State 
     iprop% (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   iintro ⟨Hm, HCpl⟩
-  icases HCpl with ⟨%n, %μ₁', %R, %Hred, %Hcpl, %Heras, HCont⟩
+  icases HCpl with ⟨%law, %n, %μ₁', %R, %Hred, %Hcpl, %Hside, %Heras, HCont⟩
   classical
-  iapply progCoupl_intro Hred (IsSupportLocal.restrict hSmeas hSconc Hcpl) Heras
+  iapply progCoupl_intro_law law Hred (IsSupportLocal.restrict hSmeas hSconc Hcpl) Hside Heras
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   by_cases hmem : (⟨e₂, σ₂⟩ : Cfg rT) ∈ S
   · simp only [Set.piecewise_eq_of_mem _ _ _ hmem] at hR ⊢
@@ -698,7 +733,7 @@ theorem progCoupl_ctx_bind [Add B] [L.IsLawful] {K : Ectx rT} {e₁ : Exp rT} {�
     progCoupl L e₁ σ₁ e₁' σ₁' b (fun e₂ => Z (K.fill e₂)) ⊢
     progCoupl L (K.fill e₁) σ₁ e₁' σ₁' b Z := by
   iintro HCpl
-  icases HCpl with ⟨%n, %μ₁', %R, %Hred, %Hcpl, %Heras, HCont⟩
+  icases HCpl with ⟨%law, %n, %μ₁', %R, %Hred, %Hcpl, %Hside, %Heras, HCont⟩
   classical
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e, Kinv (K.fill e) = some e := Function.partialInv_left (Ectx.fill_injective K)
@@ -709,7 +744,7 @@ theorem progCoupl_ctx_bind [Add B] [L.IsLawful] {K : Ectx rT} {e₁ : Exp rT} {�
     rw [primStep_fill hv, ← MeasureTheory.Measure.map_id (μ := μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩)]
     refine IsLawful.map (by fun_prop) measurable_id ?_
     simpa [R', Kinv_left] using Hcpl
-  iapply progCoupl_intro (Hred.fill K) Hcpl' Heras
+  iapply progCoupl_intro_law law (Hred.fill K) Hcpl' Hside Heras
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   rcases hKinv : Kinv e₂ with _ | e₃
   · simp [R', hKinv] at hR
@@ -723,9 +758,9 @@ theorem progCoupl_ctx_bind [Add B] [L.IsLawful] {K : Ectx rT} {e₁ : Exp rT} {�
 
 /-! ### `progCoupl` — coupling-intro lemmas -/
 
-theorem progCoupl_steps_adv' {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {R : Cfg rT → Cfg rT → B}
-    (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
+theorem progCoupl_steps_adv' [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    {R : Cfg rT → Cfg rT → B} (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
@@ -735,7 +770,7 @@ theorem progCoupl_steps_adv' {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
 /-- Couple one program step against one spec step within `b₁`, adding `b₂` to every
 leftover. -/
 theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    [L.IsTopAbsorbing] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b₁ b₂ b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     {R : Cfg rT → Cfg rT → B} (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁)
     (Hred' : Reducible e₁' σ₁')
@@ -749,28 +784,40 @@ theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawf
     (dirac_bind_pexecN_one Hred' ▸ IsLawful.mono (IsTopAbsorbing.frame Hcpl) hb le_rfl)
     (ErasableExpr.dret σ₁')
 
-/-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
-`b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
-theorem progCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {b₁ b₂ b : B} {S : Cfg rT → Cfg rT → Prop}
+/-- `progCoupl_steps` by a bind law whose side holds on the spec step's remaining run. -/
+theorem progCoupl_steps_law [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b₁ b₂ b : B} {S : Cfg rT → Cfg rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
-    (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
+    (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩))
+    (hside : law.side (primStep ⟨e₁', σ₁'⟩) limExecVKernel) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' b₂) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   iintro Hcnt
-  iapply progCoupl_intro Hred
+  iapply progCoupl_intro_law law Hred
     (dirac_bind_pexecN_one Hred' ▸ IsLawful.mono (IsTopAbsorbing.frame Hcpl) hb le_rfl)
-    (ErasableExpr.dret σ₁')
+    (dirac_bind_pexecN_one Hred' ▸ hside) (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
   rw [relCost_of hS, zero_add]
   iapply Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %hS
 
-theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] {e₁ : Exp rT} {σ₁ : State rT}
+/-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
+`b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
+theorem progCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
+    [L.IsTopAbsorbing] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
+    {σ₁' : State rT} {b₁ b₂ b : B} {S : Cfg rT → Cfg rT → Prop}
+    {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
+    (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
+    (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' b₂) ⊢
+    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  progCoupl_steps_law (BindLaw.canonical L) hb Hred Hred' Hcpl trivial
+
+theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {μ₁' : MeasureTheory.Measure (State rT)} {b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {R : Cfg rT → State rT → B}
     (Hred : Reducible e₁ σ₁) (Heras : ErasableExpr μ₁' σ₁')
@@ -794,7 +841,7 @@ theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] {e₁ : Exp rT} {σ�
   · simp [he] at hR
 
 theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    [L.IsTopAbsorbing] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {μ₁' : MeasureTheory.Measure (State rT)} {b₁ b₂ b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Cfg rT → State rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁)
@@ -813,7 +860,7 @@ theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L
   iapply Hcnt $$ %e₂ %σ₂ %σ₂' %hS
 
 theorem progCoupl_step_l_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] {e₁ : Exp rT} {σ₁ : State rT}
+    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Set (Cfg rT)}
     (Hred : Reducible e₁ σ₁)
@@ -861,8 +908,8 @@ variable (L) in
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
-theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} :
+theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {K : Ectx rT} {E : CoPset}
+    {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
   have Hloeb : ⊢@{IProp GF} wpBindStmt L K := by
     iapply loeb_wand
@@ -905,7 +952,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
 -- In ProbLang every head step is atomic (reduces to a value or single `primStep`),
 -- so state it with an explicit "atomic" predicate over `e` instead of an `Atomic` typeclass.
 
-theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
+theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     specUpdate rT E (wp L E e Φ) ⊢ wp L E e Φ := by
   unfold specUpdate
@@ -923,7 +970,7 @@ variable (L) in
 noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
 
-theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
+theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     wp L E e (fun v => specUpdate rT E (Φ v)) ⊢ wp L E e Φ := by
   have Hloeb : ⊢@{IProp GF} wpSpecUpdateStmt L (rT := rT) := by
@@ -1088,8 +1135,8 @@ instance elimModal_fupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P 
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
 
-instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : InOut} {E : CoPset}
-    {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
+instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {io : InOut}
+    {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := by
     simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
@@ -1102,8 +1149,8 @@ instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : I
     iframe %Hstep Hρ'
     iapply Hcnt $$ HPv
 
-instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {n : Nat} {io : InOut}
-    {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
+instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {n : Nat}
+    {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal h :=
     (sep_mono_left specUpdateN_specUpdate).trans ((elimModal_specUpdate_wp (io := io)).elim_modal h)
@@ -1123,8 +1170,8 @@ theorem wp_lift_step_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp 
                 wp L E e₃ Φ)) ⊢ wp L E e₁ Φ := by
   rw [wp_unfold]
 
-theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    {e₁ : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     (∀ (σ₁ : State rT) e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗ |={E, ∅}=>
       specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ => iprop(|={∅, E}=>
@@ -1172,7 +1219,7 @@ which build the exact coupling along a diagonal (`rel_dirac_left`/`_right`). -/
 
 section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
 theorem wp_lift_step_later_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none) (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
@@ -1224,6 +1271,36 @@ theorem wp_lift_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → 
   iframe %Hred
   iintro %e₂ %σ₂ %Hmem !> !>
   iapply H $$ %e₂ %σ₂ %Hmem
+
+omit [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
+/-- `wp_lift_prim_steps_coupl` by any bind law, whose side the step discharges on the spec's
+remaining run (Rocq `prog_coupl_intro`, `side_for_exec`). -/
+theorem wp_lift_prim_steps_coupl_law (law : L.BindLaw) {E : CoPset} {e₁ : Exp rT}
+    {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B),
+      stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
+      |={E, ∅}=> ∃ (S : Cfg rT → Cfg rT → Prop) (b₁ b₂ : B),
+        ⌜b₁ + b₂ ≤ b⌝ ∗
+        ⌜Reducible e₁ σ₁⌝ ∗
+        ⌜Reducible e₁' σ₁'⌝ ∗
+        ⌜L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        ⌜law.side (primStep ⟨e₁', σ₁'⟩) limExecVKernel⌝ ∗
+        (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> ▷ |={∅, E}=>
+          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗ budgetInterp b₂ ∗
+            wp L E e₂ Φ)) ⊢ wp L E e₁ Φ := by
+  iintro H
+  iapply wp_lift_step_couple
+  iintro %σ₁ %e₁' %σ₁' %b Hres
+  imod H $$ %σ₁ %e₁' %σ₁' %b Hres with ⟨%S, %b₁, %b₂, %hb, %Hred, %Hred', %Hcpl, %hside, H⟩
+  imodintro
+  iapply specCoupl_ret
+  simp only [Hv]
+  iapply progCoupl_steps_law law hb Hred Hred' Hcpl hside
+  iintro %e₂ %σ₂ %e₂' %σ₂' %HS
+  imod H $$ %e₂ %σ₂ %e₂' %σ₂' %HS
+  iintro !> !>
+  iapply specCoupl_ret
+  iexact H
 
 omit [L.IsReflexive] [L.IsSupportLocal] in
 /-- Couple a program step against a spec step within `b₁`, leaving `b₂` to the continuation out
@@ -1429,7 +1506,7 @@ theorem wp_pure_step_later' {E : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : N
 /-! ## Evaluation-context lifting lemmas (ports `clutch/theories/approxis/ectx_lifting.v`) -/
 
 omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem wp_lift_head_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗

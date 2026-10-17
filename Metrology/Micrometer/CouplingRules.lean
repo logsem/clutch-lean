@@ -511,7 +511,7 @@ section CouplingRules
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
 private theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
     ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
@@ -733,7 +733,7 @@ section CreditRules
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing]
+  [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, paying `s (ε₂ n)` to the continuation at
 the left draw `n` out of `↯b (s ε₁)`, where `ε₁` bounds the average of `ε₂`. -/

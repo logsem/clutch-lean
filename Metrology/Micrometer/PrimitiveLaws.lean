@@ -76,7 +76,7 @@ section Lifting
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing]
+  [L.IsTopAbsorbing] [L.HasBind]
 
 theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (.alloc (.ofVal v)) Φ := by

@@ -25,7 +25,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing]
+  [L.IsTopAbsorbing] [L.HasBind]
 
 /-! ## Tctx → RelCtx lifting -/
 
@@ -37,7 +37,7 @@ def TctxRelated (Δ : TyEnv rT GF) (Γtc : Tctx) (Γrc : RelCtx rT GF) : Prop :=
 /-! ## Compatibility lemmas -/
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem bin_log_related_var (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (x : Var) (τ : Ty)
     (hΓ : Γ.lookup x = some (interp L τ Δ)) :
     ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.fvar x) (.fvar x) τ := by
@@ -141,7 +141,7 @@ private theorem refines_beta {e e' : Exp rT} {v v' : Val rT} {A : lrel rT GF}
 `refines` rule for `f`. -/
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A C : lrel rT GF}
     {f : Exp rT → Exp rT} (hf : ∀ σ t, substMap σ (f t) = f (substMap σ t))
     (H : ∀ t t', refines L ⊤ t t' A ⊢ refines L ⊤ (f t) (f t') C) :
@@ -152,7 +152,7 @@ private theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A C :
   iapply H _ _ $$ (IH $$ %vs Hvs)
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem bin_log_related_lift2 {Γ : RelCtx rT GF} {e1 e2 e1' e2' : Exp rT}
     {A1 A2 C : lrel rT GF} {f : Exp rT → Exp rT → Exp rT}
     (hf : ∀ σ t1 t2, substMap σ (f t1 t2) = f (substMap σ t1) (substMap σ t2))
@@ -166,7 +166,7 @@ private theorem bin_log_related_lift2 {Γ : RelCtx rT GF} {e1 e2 e1' e2' : Exp r
   iapply H _ _ _ _ $$ (IH1 $$ %vs Hvs) (IH2 $$ %vs Hvs)
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' : Exp rT}
     {A0 A1 A2 C : lrel rT GF} {f : Exp rT → Exp rT → Exp rT → Exp rT}
     (hf : ∀ σ t0 t1 t2,
@@ -183,7 +183,7 @@ private theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' 
   iapply H _ _ _ _ _ _ $$ (IH0 $$ %vs Hvs) (IH1 $$ %vs Hvs) (IH2 $$ %vs Hvs)
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lrel rT GF}
     (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢@{IProp GF} bin_log_related L ⊤ Γ (.lit l) (.lit l) A := by
@@ -422,7 +422,7 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iapply lrel_unit_lit
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ▷ (interp L τ (TyEnv.cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
@@ -431,7 +431,7 @@ private theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
       ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (TyEnv.cons_ne_head hXY)⟩ })
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
     (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
@@ -730,7 +730,7 @@ theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2
   iapply lrel_bool_lit _
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
     (hv : v = .ofBaseLit l') (hv' : v' = .ofBaseLit l') (hll : l = l' ∨ ¬ (l == l') = true) :
     ⊢@{IProp GF} (∃ (b b' : Val rT), ⌜Pat.tryMatch (.lit l) v.1 = some b.1 ∧
@@ -749,7 +749,7 @@ private theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val
     exact ⟨Pat.tryMatch_lit_ne hne, Pat.tryMatch_lit_ne hne⟩
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
     (Hpat : PatTyped τs p τb) (v v' : Val rT) :
     (interp L τs Δ).car v v' ⊢@{IProp GF}
@@ -890,14 +890,14 @@ theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp
 Every well-typed expression is logically related to itself. -/
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem TctxRelated.lookup_isSome {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {x : Var} (hx : (Γtc x).isSome) : (Γrc.lookup x).isSome := by
   rw [← HCtx x]
   simpa using hx
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem TctxRelated.lookup_some {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {x : Var} {τ : Ty} (hx : Γtc x = some τ) :
     Γrc.lookup x = some (interp L τ Δ) := by
@@ -905,7 +905,7 @@ theorem TctxRelated.lookup_some {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx 
   rfl
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem TctxRelated.shift {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) (A : lrel rT GF) :
     TctxRelated L (TyEnv.cons A Δ) Γtc.shift Γrc := by
@@ -913,7 +913,7 @@ theorem TctxRelated.shift {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
   simpa [Tctx.shift, Option.map_map, Function.comp_def, interp_ren] using HCtx x
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
     TctxRelated L Δ (Γtc.insert x τ) ((x, interp L τ Δ) :: Γrc) := by
@@ -925,14 +925,14 @@ theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF
     cases Γtc y <;> simp [hyx]
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem fv_subset_relCtxDom {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset :=
   fun x hx => RelCtx.mem_of_lookup_isSome (HCtx.lookup_isSome (Hty.fvSubset x hx))
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 private theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {S : Finset Var} {e : Exp rT} {τ1 τ2 : Ty}
     (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :

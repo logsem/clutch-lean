@@ -1733,6 +1733,28 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
   exact (AddCoupl.bind_adv_lhs Measurable.of_discrete Measurable.of_discrete hE₂meas hmassk
     hBoundSum hCoupl fun {ρ σ₂'} hR => hCont ρ σ₂' hR).mono_grading hEpsSum
 
+/-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected, for a bind law whose side holds
+on the spec's remaining run: the leftover depends on both samples. -/
+theorem lift_erasure_erasable_exp_lhs_kanto_law [LT B] [Top B] [Zero B]
+    [MeasurableSingletonClass rT] (law : L.BindLaw)
+    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
+    {μ₁' : Measure (State rT)} {Φexp : Exp rT → Exp rT → Prop}
+    {b : B} {R : Cfg rT → Cfg rT → B} {n m : Nat}
+    (hErase₁' : ErasableExpr μ₁' σ₁')
+    (hExp : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)))
+    (hside : law.side (μ₁'.bind fun σ => pexecN m ⟨e₁', σ⟩) limExecVKernel)
+    (hCont : ∀ ρ ρ', R ρ ρ' < ⊤ →
+        L.Rel (R ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
+    L.Rel b Φexp
+      (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
+      (limExecV ⟨e₁', σ₁'⟩) := by
+  rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
+  unfold asExpr
+  rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
+      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  exact law.bind_fun hExp ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
+    limExecV.measurable hside hCont
+
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the leftover depends on both
 samples. -/
 theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
@@ -1746,21 +1768,16 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
         L.Rel (R ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
     L.Rel b Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
-      (limExecV ⟨e₁', σ₁'⟩) := by
-  rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  exact HasBind.bind_fun hExp hCont
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
+      (limExecV ⟨e₁', σ₁'⟩) :=
+  lift_erasure_erasable_exp_lhs_kanto_law (BindLaw.canonical L) hErase₁' hExp trivial hCont
 
-/-- Clutch-dp `spec_coupl` erasure, projected: erasable distributions on both sides, coupled by a
-lifting whose per-pair leftover is the continuation's budget. -/
-theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSingletonClass rT]
-    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
+/-- Clutch-dp `spec_coupl` erasure, projected, for a bind law whose side holds on the spec's
+remaining run. -/
+theorem lift_erasure_erasable_law [LT B] [Top B] [Zero B] [MeasurableSingletonClass rT]
+    (law : L.BindLaw) {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
     {Φexp : Exp rT → Exp rT → Prop} {b : B} {R : State rT → Cfg rT → B} {n m : Nat}
     (hCoupl : L b R μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
+    (hside : law.side (μ₁'.bind fun σ => pexecN m ⟨e₁', σ⟩) limExecVKernel)
     (hErase₁ : ErasableExpr μ₁ σ₁) (hErase₁' : ErasableExpr μ₁' σ₁')
     (hCont : ∀ σ₂ ρ', R σ₂ ρ' < ⊤ →
       L.Rel (R σ₂ ρ') Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
@@ -1771,9 +1788,20 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSin
   unfold asExpr
   rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
       Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
-  exact HasBind.bind_fun hCoupl hCont
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable)
+  exact law.bind_fun hCoupl ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
+    limExecV.measurable hside hCont
+
+/-- Clutch-dp `spec_coupl` erasure, projected: erasable distributions on both sides, coupled by a
+lifting whose per-pair leftover is the continuation's budget. -/
+theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSingletonClass rT]
+    {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
+    {Φexp : Exp rT → Exp rT → Prop} {b : B} {R : State rT → Cfg rT → B} {n m : Nat}
+    (hCoupl : L b R μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
+    (hErase₁ : ErasableExpr μ₁ σ₁) (hErase₁' : ErasableExpr μ₁' σ₁')
+    (hCont : ∀ σ₂ ρ', R σ₂ ρ' < ⊤ →
+      L.Rel (R σ₂ ρ') Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
+    L.Rel b Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) :=
+  lift_erasure_erasable_law (BindLaw.canonical L) hCoupl trivial hErase₁ hErase₁' hCont
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
 samples (the `tv` instance of `lift_erasure_erasable_exp_lhs_kanto`). -/

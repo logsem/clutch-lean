@@ -24,8 +24,10 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
 
-omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind] in
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
     (lrel_arr L A B).car v v' ⊢
     □ (∀ w1 w2, A w1 w2 -∗ refines L ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=

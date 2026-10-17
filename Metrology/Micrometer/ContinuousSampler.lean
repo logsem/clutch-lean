@@ -97,7 +97,7 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
 
 section Unary
 variable [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing]
+  [L.IsTopAbsorbing] [L.HasBind]
 
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (▷ ∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
@@ -154,7 +154,7 @@ end Unary
 
 section Relational
 variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) : iprop%

@@ -22,6 +22,7 @@ section AppRelRules
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
 
 /-! ## Forward reductions on the LHS -/
 
@@ -318,7 +319,7 @@ theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
   iapply HAA $$ %v %v' HA
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
@@ -332,7 +333,7 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
   iapply H $$ %w1 %w2 HA
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] in
+  [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
@@ -351,14 +352,14 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
 An absorbing credit discharges any refinement; amplification climbs from `↯b (s ε)` to the
 absorbing `↯b (s 1)`. -/
 
-omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
     {A : lrel rT GF} : ↯b c ⊢ refines L E e e' A := by
   unfold refines
   iintro Hc %K %b - - - -
   iapply wp_of_absorbing hc $$ Hc
 
-omit [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+omit [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
@@ -368,7 +369,7 @@ theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ �
   ihave ⟨Herr1, Herr2⟩ := (BudgetCredit.weaken hle).trans BudgetCredit.split $$ Herr
   iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
 
-omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
@@ -387,7 +388,7 @@ theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : 
     iapply Hamp $$ %ε' %hε' Hstep Hε'
   iapply BudgetCredit.weaken hle $$ Herr
 
-omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+omit [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] in
 theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel rT GF}
     {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))

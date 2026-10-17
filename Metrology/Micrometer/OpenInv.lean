@@ -44,7 +44,7 @@ theorem specCoupl_close_val {hlc : HasLC} {GF : BundledGFunctors}
 /-- After an atomic step, the closing update `|={E2, E1}=>` moves out to the `specCoupl`
 postcondition. -/
 theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
-    {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
+    [L.HasBind] {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {e : Exp rT} (h : Atomic' e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b₁ : B} {Φ : Val rT → IProp GF} : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
@@ -86,8 +86,8 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
     iframe
     iapply wp_value_of_toVal htv $$ HΦv
 
-theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] {e : Exp rT}
-    (h : Atomic' e) : OpenInv L e := by
+theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.HasBind]
+    {e : Exp rT} (h : Atomic' e) : OpenInv L e := by
   intro GF _ _ E1 E2 Φ
   iintro HF
   iapply MicrometerWpGS.wp_unfold
@@ -117,6 +117,7 @@ class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
 
 section Instances
 variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
+  [L.HasBind]
 
 instance : IsOpenInv L (rT := rT) .urand := ⟨OpenInv.of_atomic Atomic.urand'⟩
 

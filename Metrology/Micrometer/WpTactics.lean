@@ -28,7 +28,7 @@ section Wp
 variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
   [BudgetGS B GF] [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
@@ -173,7 +173,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
     let bindPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_bind
-      (g.prefix.append #[none, none, none, some K, some g.E, some e', some g.Φ])
+      (g.prefix.append #[none, none, none, none, some K, some g.E, some e', some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -218,7 +218,7 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let gs ← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
     let stepPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_pure_step_ctx
-      (g.prefix.append #[none, none, none, none, none, none, some K, some φ, some n,
+      (g.prefix.append #[none, none, none, none, none, none, none, some K, some φ, some n,
         some e₁, some e₂, some step.inst, some HΦ, some g.E, some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
@@ -313,7 +313,7 @@ public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSinglet
     {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
     [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] {E : CoPset}
+    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
     (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
     (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E ea Φ :=
   heq ▸ wp_alloc

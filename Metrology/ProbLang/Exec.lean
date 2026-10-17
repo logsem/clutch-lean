@@ -354,6 +354,13 @@ instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure
 instance limExecV.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExecV ρ) :=
   isSubProbabilityMeasure_map _ _
 
+/-- The limit execution over return values, as a kernel: the spec's remaining run that a bind
+law's side condition sees. -/
+def limExecVKernel : Kernel (Cfg rT) (Exp rT) := ⟨limExecV, limExecV.measurable⟩
+
+instance limExecVKernel.isSubMarkovKernel : IsSubMarkovKernel (limExecVKernel (rT := rT)) :=
+  ⟨limExecV.isSubProbabilityMeasure⟩
+
 /-- A run of mass `1` within `n` steps is the whole execution. -/
 theorem limExec_term {ρ : Cfg rT} {n : Nat} (Hv : (execN n ρ) Set.univ = 1) :
     limExec ρ = execN n ρ :=

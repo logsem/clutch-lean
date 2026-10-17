@@ -51,7 +51,7 @@ section Coupling
 
 variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [MeasurableSingletonClass rT]
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsZeroLeft] [L.IsLeftContinuous]
+  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed]
 
 /-- A refinement from `↯b b` couples the limit executions at budget `b` (clutch-dp's

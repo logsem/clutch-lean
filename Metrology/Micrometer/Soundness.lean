@@ -22,6 +22,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
 
 /-- The binders of each item of `K` avoid `S` and the binders of the items inside it. -/
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
@@ -47,7 +48,7 @@ theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
 section Bookkeeping
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing]
+  [L.IsTopAbsorbing] [L.HasBind]
 
 theorem TctxRelated.empty_nil {Δ : TyEnv rT GF} :
     TctxRelated L Δ Tctx.empty ([] : RelCtx rT GF) := by
