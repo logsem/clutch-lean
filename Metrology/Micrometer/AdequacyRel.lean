@@ -35,10 +35,12 @@ section Spec
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
+/-- Spec ownership of `e` is that of `e` in the empty context. -/
 theorem spec_eq_fill_nil {GF : BundledGFunctors} [SpecGS rT GF] (e : Exp rT) :
     (iprop(⤇ e) : IProp GF) = iprop(⤇ Ectx.fill ([] : Ectx rT) e) :=
   rfl
 
+/-- Spec ownership of a value in the empty context is that of the value. -/
 theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT) :
     (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
   rfl

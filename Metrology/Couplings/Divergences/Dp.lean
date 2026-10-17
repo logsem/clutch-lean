@@ -304,14 +304,6 @@ theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, �
       simpa [Kernel.mass_apply, dp_smul_dirac_iff] using hfg x y
   simpa [Kernel.mass_comp, dp_smul_dirac_iff, hε.lt_top] using hc
 
-/-- Cutting a constant off the integrand costs at most that constant. -/
-theorem _root_.MeasureTheory.IsSubProbabilityMeasure.lintegral_le_tsub_add
-    [IsSubProbabilityMeasure μ] (f : X → ℝ≥0∞) (c : ℝ≥0∞) :
-    ∫⁻ x, f x ∂μ ≤ ∫⁻ x, f x - c ∂μ + c :=
-  calc ∫⁻ x, f x ∂μ
-      ≤ ∫⁻ x, (f x - c) + c ∂μ := lintegral_mono fun _ ↦ le_tsub_add
-    _ ≤ ∫⁻ x, f x - c ∂μ + c := IsSubProbabilityMeasure.lintegral_add_const_le _ _
-
 /-- `[0, 1]`-valued test functions that the leftover relates give a DP codensity lifting: a
 test passed with slack `c` becomes a test function once `c.2` is cut off. -/
 theorem codensity_dp_of_lintegral_le [IsSubProbabilityMeasure μ]

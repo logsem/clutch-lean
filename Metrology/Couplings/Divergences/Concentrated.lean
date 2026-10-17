@@ -46,7 +46,7 @@ instance isReflexive_renyiCurve : renyiCurve.{u}.IsReflexive :=
 instance isComposable_renyiCurve : renyiCurve.{u}.IsComposable :=
   isComposable_pi
 
-/-- The zero measure is within every curve of every measure. -/
+/-- The zero measure is within every Rényi budget of every measure. -/
 instance isZeroLeft_renyiCurve : renyiCurve.{u}.IsZeroLeft :=
   isZeroLeft_pi
 
@@ -239,7 +239,7 @@ instance isBudgetClosed_concentrated : (concentratedDivergence.{u} A).IsBudgetCl
 instance isGraded_tcdp : (tcdpDivergence.{u} ω).IsGraded :=
   isGraded_comap (fun _ _ h ↦ Prod.mk_le_mk.2 ⟨le_rfl, h⟩) fun μ ν _ _ ↦ by
     simpa [tcdpDivergence, concentratedDivergence, comap_def, concentratedLine_snd_top] using
-      IsGraded.top (D := renyiCurve) μ ν
+      IsGraded.top μ ν
 
 /-- tCDP divergences are reflexive. -/
 instance isReflexive_tcdp : (tcdpDivergence.{u} ω).IsReflexive :=
@@ -328,7 +328,7 @@ theorem tcdpLifting_rel_iff :
     (tcdpLifting ω).Rel ρ S μ ν ↔ ∀ α : Ioi (1 : ℝ), (α : ℝ) < ω →
       (codensity (renyiDivergence α)).Rel (ENNReal.ofReal α * ρ) S μ ν := by
   refine tcdpLifting_iff.trans (forall₂_congr fun α _ ↦ ?_)
-  have : (fun x y ↦ ENNReal.ofReal α * relCost S x y) = relCost (B := ℝ≥0∞) S := by
+  have : (fun x y ↦ ENNReal.ofReal α * relCost S x y) = relCost S := by
     ext x y
     by_cases hS : S x y <;> simp [hS, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
   rw [this, GradedLifting.Rel]
@@ -348,10 +348,11 @@ instance isLawful_concentratedLifting : (concentratedLifting.{u} A).IsLawful :=
 instance hasBind_concentratedLifting : (concentratedLifting.{u} A).HasBind :=
   hasBind_comap (concentratedLine_top A)
 
-/-- Off `A` every order is at `⊤`; on `A` the line at `0` is `0`. -/
+/-- Concentrated liftings are reflexive: off `A` every order is at `⊤`, on `A` the line at `0`
+is `0`. -/
 instance isReflexive_concentratedLifting : (concentratedLifting.{u} A).IsReflexive where
   refl μ _ := concentratedLifting_rel_iff.2 fun α _ ↦ by
-    simpa using GradedLifting.IsReflexive.refl (L := codensity (renyiDivergence α)) μ
+    simpa using GradedLifting.IsReflexive.refl μ
 
 /-- The zero measure on the left lifts against everything. -/
 instance isZeroLeft_concentratedLifting : (concentratedLifting.{u} A).IsZeroLeft :=
@@ -369,7 +370,7 @@ instance isSupportLocal_concentratedLifting : (concentratedLifting.{u} A).IsSupp
 instance isTopAbsorbing_concentratedLifting : (concentratedLifting.{u} A).IsTopAbsorbing :=
   isTopAbsorbing_comap (concentratedLine_top A)
 
-/-- A concentrated lifting of equality is the concentrated divergence. -/
+/-- A concentrated lifting of equality gives the concentrated divergence. -/
 instance isSound_concentratedLifting :
     (concentratedLifting.{u} A).IsSound (concentratedDivergence A) where
   sound h := IsSound.sound (L := codensity (concentratedDivergence A))
@@ -379,12 +380,12 @@ instance isSound_concentratedLifting :
 instance isComplete_concentratedLifting :
     (concentratedLifting.{u} A).IsComplete (concentratedDivergence A) where
   complete h := concentratedLifting_rel_iff.2 fun α hα ↦
-    IsComplete.complete (L := codensity (renyiDivergence α)) (concentratedDivergence_iff.1 h α hα)
+    IsComplete.complete (concentratedDivergence_iff.1 h α hα)
 
 /-- A lifting at every larger budget is one at the budget: raise the shift `ξ`. -/
 instance isBudgetClosed_concentratedLifting : (concentratedLifting.{u} A).IsBudgetClosed where
   of_forall_gt {_ _} _ _ b := fun h ↦ concentratedLifting_iff.2 fun α hα ↦
-    GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity (renyiDivergence α)) fun t ht ↦ by
+    GradedLifting.IsBudgetClosed.of_forall_gt fun t ht ↦ by
       obtain ⟨ξ', hξ', rfl⟩ := exists_lt_and_add_eq_of_add_lt ht
       exact concentratedLifting_iff.1 (h (ξ', b.2) (Prod.mk_lt_mk_iff_left.2 hξ')) α hα
 
@@ -421,19 +422,19 @@ instance isSupportLocal_tcdpLifting : (tcdpLifting.{u} ω).IsSupportLocal :=
 instance isTopAbsorbing_tcdpLifting : (tcdpLifting.{u} ω).IsTopAbsorbing :=
   isTopAbsorbing_comap (L := codensity renyiCurve) (concentratedLine_snd_top _ 0)
 
-/-- A tCDP lifting of equality is the tCDP divergence. -/
+/-- A tCDP lifting of equality gives the tCDP divergence. -/
 instance isSound_tcdpLifting : (tcdpLifting.{u} ω).IsSound (tcdpDivergence ω) where
   sound h := IsSound.sound (L := codensity (tcdpDivergence ω)) (codensity_tcdp_of_tcdpLifting h)
 
 /-- The tCDP divergence gives a tCDP lifting of equality, order by order. -/
 instance isComplete_tcdpLifting : (tcdpLifting.{u} ω).IsComplete (tcdpDivergence ω) where
   complete h := tcdpLifting_rel_iff.2 fun α hα ↦
-    IsComplete.complete (L := codensity (renyiDivergence α)) (tcdpDivergence_iff.1 h α α.2 hα)
+    IsComplete.complete (tcdpDivergence_iff.1 h α α.2 hα)
 
 /-- A lifting at every larger budget is one at the budget: at order `α`, `ρ' = t / α`. -/
 instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
   of_forall_gt {_ _} _ _ ρ := fun h ↦ tcdpLifting_iff.2 fun α hα ↦
-    GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity (renyiDivergence α)) fun t ht ↦ by
+    GradedLifting.IsBudgetClosed.of_forall_gt fun t ht ↦ by
       obtain ⟨ρ', hρ, rfl⟩ := exists_lt_and_ofReal_mul_eq_of_mul_lt ht
       exact tcdpLifting_iff.1 (h ρ' hρ) α hα
 
@@ -441,8 +442,8 @@ variable {A ω}
 
 /-! ## Concentrated codensity liftings -/
 
-/-- Rényi liftings at every order of `A` give a concentrated lifting (Rocq `gcf_zCDP_iff`,
-`gcf_tCDP_iff`, one direction). -/
+/-- Rényi liftings at every order of `A` give a codensity lifting of the concentrated divergence
+(Rocq `gcf_zCDP_iff`, `gcf_tCDP_iff`, one direction). -/
 theorem codensity_concentrated_of_forall [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : ∀ α ∈ A, (renyiDivergence α).codensity (b.1 + ENNReal.ofReal α * b.2)
       (fun x y ↦ (R x y).1 + ENNReal.ofReal α * (R x y).2) μ ν) :

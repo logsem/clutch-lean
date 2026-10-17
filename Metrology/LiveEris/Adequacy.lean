@@ -249,13 +249,6 @@ section Iris
 
 variable {GF : BundledGFunctors} [LiveGS rT .hasNoLC GF] {Q : State rT → State rT → Prop}
 
-private theorem step_fupdN_pure_intro {P : Prop} (k : ℕ) (h : P) :
-    ⊢@{IProp GF} |={∅}=> |={∅}[∅]▷=>^[k] ⌜P⌝ := by
-  imodintro
-  iapply (laterN_intro k).trans (step_fupdN_intro Std.LawfulSet.subset_refl)
-  ipureintro
-  exact h
-
 theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
     (hφ : MeasurableSet {v : Val rT | φ v}) (i : Coord) (k : ℕ) {e : Exp rT} {σ : State rT}
     {c : Coord → ℝ≥0∞} {Z : Cfg rT → (Coord → ℝ≥0∞) → IProp GF} :
@@ -283,7 +276,7 @@ theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
     iintro %Hb
     imod HOT $$ %c' %Hb with HS
     icases HS with ⟨%Hsat | ⟨HΨ, -⟩⟩
-    · iapply step_fupdN_pure_intro k (AdeqBound.of_one_le (Hsat i))
+    · iapply fupd_step_fupdN_pure k (AdeqBound.of_one_le (Hsat i))
     · iapply HΨ $$ HZ
   · icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %_, %Hexp, %Hpgl, HCont⟩
     iapply BIFUpdate.mono
@@ -298,7 +291,7 @@ theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
     iintro %HR
     imod HCont $$ %ρ' %HR with HS
     icases HS with ⟨%Hsat | HZρ⟩
-    · iapply step_fupdN_pure_intro k (AdeqLeaf.of_one_le (Hsat i))
+    · iapply fupd_step_fupdN_pure k (AdeqLeaf.of_one_le (Hsat i))
     · iapply HZ $$ HZρ
 
 theorem lwp_adequacy_body (hD : MeasurableSet {σ : State rT | D σ})
@@ -323,7 +316,7 @@ theorem lwp_adequacy_body (hD : MeasurableSet {σ : State rT | D σ})
       obtain rfl : e' = Exp.ofVal v := (Exp.ofVal_of_toVal_some htv).symm
       imod HF with ⟨-, -, %hφv⟩
       imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with -
-      iapply step_fupdN_pure_intro (P := AdeqBound D φ i k _ c') k
+      iapply fupd_step_fupdN_pure (p := AdeqBound D φ i k _ c') k
         fun _ _ => tsub_le_self.trans (progressBound_val hφv)
     | none =>
       imod HF with HG
@@ -334,7 +327,7 @@ theorem lwp_adequacy_body (hD : MeasurableSet {σ : State rT | D σ})
         iapply BIFUpdate.mono (step_fupdN_mono (pure_mono AdeqBound.leaf))
         iapply HΨρ $$ %ρ.state %c₂ [$Hσ'' $Hc'']
       · cases k with
-        | zero => iapply step_fupdN_pure_intro (P := AdeqLeaf D φ i 0 ρ c₂) 0 fun _ _ => by omega
+        | zero => iapply fupd_step_fupdN_pure (p := AdeqLeaf D φ i 0 ρ c₂) 0 fun _ _ => by omega
         | succ k' =>
           rcases hck _ _ _ Hck with hDρ | h1
           · imodintro
@@ -346,7 +339,7 @@ theorem lwp_adequacy_body (hD : MeasurableSet {σ : State rT | D σ})
                 simpa [AdeqLeaf, hDρ] using hb m (by omega)
             iapply IH k' (Nat.lt_succ_self k') ρ.expr ρ.state c₂
             iframe
-          · iapply step_fupdN_pure_intro (k' + 1) (AdeqLeaf.of_one_le h1)
+          · iapply fupd_step_fupdN_pure (k' + 1) (AdeqLeaf.of_one_le h1)
   iapply HΨ $$ %σ %c [$Hσ $Hc]
 
 theorem lwp_adequacy_core (hD : MeasurableSet {σ : State rT | D σ})

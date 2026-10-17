@@ -29,6 +29,13 @@ theorem step_fupdN_except0 (E1 E2 : CoPset) {P : PROP} (n : Nat) : iprop%
     _ ⊢ |={E1}[E2]▷=>^[n] |={E1}[E2]▷=> P := step_fupdN_mono (step_fupd_except0 E1 E2)
     _ ⊢ |={E1}[E2]▷=>^[n+1] P := (step_fupdN_add (n := n) (m := 1)).mpr
 
+/-- A pure fact holds under an update followed by `n` step-updates at the empty mask. -/
+theorem fupd_step_fupdN_pure {p : Prop} (n : Nat) (h : p) : ⊢@{PROP} |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ :=
+  calc (emp : PROP) ⊢ ⌜p⌝ := pure_intro h
+    _ ⊢ ▷^[n] ⌜p⌝ := laterN_intro n
+    _ ⊢ |={∅}[∅]▷=>^[n] ⌜p⌝ := step_fupdN_intro Std.LawfulSet.subset_refl
+    _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ := fupd_intro
+
 theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
     (⌜p⌝ -∗ |={∅}=> P) ⊢ |={∅}=> (⌜p⌝ -∗ P) := by
   iintro HwP
@@ -89,6 +96,44 @@ theorem fupd_step_fupdN_plain_forall_4 {A B C D : Type _} (Ψ : A → B → C �
     |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c d, Ψ a b c d :=
   (forall_mono fun a => fupd_step_fupdN_plain_forall_3 (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall_1 _ n)
+
+/-- Pure facts that follow from a guard, for every triple, hold after `n` step-updates. -/
+theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → Prop} {n : Nat} : iprop%
+    (∀ a b c, ⌜G a b c⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c⌝) ⊢@{PROP}
+    |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c, G a b c → q a b c⌝ := by
+  classical
+  have hpure : (∀ a b c, ⌜G a b c → q a b c⌝) ⊢@{PROP} ⌜∀ a b c, G a b c → q a b c⌝ :=
+    (forall_mono fun a => (forall_mono fun b => pure_forall.2).trans pure_forall.2).trans
+      pure_forall.2
+  refine .trans ?_ ((fupd_step_fupdN_plain_forall_3
+    (fun a b c => iprop(⌜G a b c → q a b c⌝)) n).trans (BIFUpdate.mono (step_fupdN_mono hpure)))
+  iintro H %a %b %c
+  by_cases hG : G a b c
+  · ispecialize H $$ %a %b %c %hG
+    imod H
+    iintro !>
+    iapply step_fupdN_mono (pure_mono fun h _ => h) $$ H
+  · iapply fupd_step_fupdN_pure n fun h => absurd h hG
+
+/-- The four-variable version of `step_fupdN_pure_imp_forall₃`. -/
+theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C → D → Prop} {n : Nat} :
+    iprop% (∀ a b c d, ⌜G a b c d⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c d⌝) ⊢@{PROP}
+    |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c d, G a b c d → q a b c d⌝ := by
+  classical
+  have hpure : (∀ a b c d, ⌜G a b c d → q a b c d⌝) ⊢@{PROP}
+      ⌜∀ a b c d, G a b c d → q a b c d⌝ :=
+    (forall_mono fun a => (forall_mono fun b => (forall_mono fun c => pure_forall.2).trans
+      pure_forall.2).trans pure_forall.2).trans pure_forall.2
+  refine .trans ?_ ((fupd_step_fupdN_plain_forall_4
+    (fun a b c d => iprop(⌜G a b c d → q a b c d⌝)) n).trans
+    (BIFUpdate.mono (step_fupdN_mono hpure)))
+  iintro H %a %b %c %d
+  by_cases hG : G a b c d
+  · ispecialize H $$ %a %b %c %d %hG
+    imod H
+    iintro !>
+    iapply step_fupdN_mono (pure_mono fun h _ => h) $$ H
+  · iapply fupd_step_fupdN_pure n fun h => absurd h hG
 
 end StepFUpdPlain
 

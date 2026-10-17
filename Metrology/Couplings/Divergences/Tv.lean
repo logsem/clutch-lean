@@ -36,7 +36,7 @@ theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y 
 /-! ## Instances -/
 
 instance isGraded_tv : tv.{u}.IsGraded where
-  mono _ _ hb := IsGraded.mono (D := dp) (Prod.mk_le_mk.2 ⟨le_rfl, hb⟩)
+  mono _ _ hb := IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, hb⟩)
   top _ _ := tv_iff.2 fun _ _ ↦ by simp
 
 instance isReflexive_tv : tv.{u}.IsReflexive where
@@ -46,16 +46,16 @@ instance isComposable_tv : tv.{u}.IsComposable where
   comp _ _ := fun h hκη ↦ by simpa [tv] using IsComposable.comp (D := dp) h hκη
 
 instance isZeroLeft_tv : tv.{u}.IsZeroLeft where
-  zero_left δ := IsZeroLeft.zero_left (D := dp) (0, δ)
+  zero_left δ := IsZeroLeft.zero_left (0, δ)
 
 instance isLeftContinuous_tv : tv.{u}.IsLeftContinuous where
-  iSup_left δ := IsLeftContinuous.iSup_left (D := dp) (b := (0, δ))
+  iSup_left δ := IsLeftContinuous.iSup_left (b := (0, δ))
 
 instance isRightMonotone_tv : tv.{u}.IsRightMonotone where
-  right_mono δ := IsRightMonotone.right_mono (D := dp) (b := (0, δ))
+  right_mono δ := IsRightMonotone.right_mono (b := (0, δ))
 
 instance isLeftAntitone_tv : tv.{u}.IsLeftAntitone where
-  left_anti δ := IsLeftAntitone.left_anti (D := dp) (b := (0, δ))
+  left_anti δ := IsLeftAntitone.left_anti (b := (0, δ))
 
 instance isBudgetClosed_tv : tv.{u}.IsBudgetClosed where
   of_forall_gt := fun h h0 ↦ .of_forall_lt fun δ' hδ' ↦ h δ' hδ' h0

@@ -26,7 +26,7 @@ theorem wp_adequacy_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : 
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
-  (wp_adequacy (L := codensity tv) e e' σ σ' ε φ Hwp).addCoupl
+  (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
 /-- `wp_adequacy_error_lim` at `tv`. -/
 theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
@@ -35,7 +35,7 @@ theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNRe
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
-  (wp_adequacy_error_lim (L := codensity tv) e e' σ σ' ε φ Hwp).addCoupl
+  (wp_adequacy_error_lim e e' σ σ' ε φ Hwp).addCoupl
 
 /-- `wp_adequacy_div` at `tv`: programs whose results agree up to `ε` differ by at most `ε` on
 every event. -/
@@ -45,7 +45,7 @@ theorem wp_adequacy_div_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
-  tv_iff.1 (wp_adequacy_div (D := tv) (L := codensity tv) e e' σ σ' ε Hwp) S hS
+  tv_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
 
 /-- `wp_adequacy_div_error_lim` at `tv`. -/
 theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
@@ -54,7 +54,7 @@ theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : E
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
-  tv_iff.1 (wp_adequacy_div_error_lim (D := tv) (L := codensity tv) e e' σ σ' ε Hwp) S hS
+  tv_iff.1 (wp_adequacy_div_error_lim e e' σ σ' ε Hwp) S hS
 
 /-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
 theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)
@@ -62,7 +62,7 @@ theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
-  wp_adequacy_mass (L := codensity tv) (s := OrderAddMonoidHom.id ℝ≥0∞) e e' σ σ' φ ε Hwp
+  wp_adequacy_mass (s := OrderAddMonoidHom.id ℝ≥0∞) e e' σ σ' φ ε Hwp
 
 end
 
@@ -87,5 +87,30 @@ theorem refines_coupling_tv [MeasurableSingletonClass rT] [RefinesPreGS rT ℝ�
       ⊢@{IProp GF} refines (codensity tv) ⊤ e e' (A IR IBC)) :
     AddCoupl 0 {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (refines_coupling A φ e e' σ σ' HA Hlog).addCoupl
+
+section
+variable [MeasurableSingletonClass rT] [MicrometerWpGS (rT := rT) GF]
+
+/-- Step the left program against a right state that does not move, for an additive coupling
+with the right Dirac measure. -/
+theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
+    {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
+    (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁)
+    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁')) :
+    iprop% (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
+      progCoupl (codensity tv.{0}) e₁ σ₁ e₁' σ₁' ε Z := by
+  iintro H
+  have hconc : MeasureTheory.Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
+    rw [MeasureTheory.Measure.dirac_apply' _ (by measurability)]; simp
+  have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}
+      (primStep ⟨e₁, σ₁⟩) (MeasureTheory.Measure.dirac σ₁') :=
+    AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl
+  iapply progCoupl_step_l_erasable Hε Hred HcplR.codensity (ErasableExpr.dret σ₁')
+  iintro %e₂ %σ₂ %σ₂' %HR'
+  obtain ⟨HR, rfl⟩ := HR'
+  iapply H $$ %e₂ %σ₂ %HR
+
+end
 
 end ProbLang

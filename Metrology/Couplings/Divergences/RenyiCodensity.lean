@@ -22,7 +22,7 @@ theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
   rw [persp_rpow_mul hα hs hs ha hb, persp_self hs, Real.one_rpow, mul_one]
 
-/-- Weighting by `h` on the left and `h ^ (α / (α - 1))` on the right keeps the perspective. -/
+/-- The perspective of `t ↦ t ^ α` at `h` and `h ^ (α / (α - 1))` is `1`. -/
 theorem persp_rpow_conj (hα : 1 < α) {h : ℝ} (hh : 0 < h) :
     persp (· ^ α) h (h ^ (α / (α - 1))) = 1 := by
   have hα1 : α - 1 ≠ 0 := sub_ne_zero.2 hα.ne'

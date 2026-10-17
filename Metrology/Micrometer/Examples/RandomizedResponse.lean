@@ -170,9 +170,8 @@ theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
     ⊢@{IProp GF} ↯b budget -∗
       REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iintro Hb
   iunfold refines
-  iintro %K %ε Hj Hna Herr %Hpos
+  iintro Hb %K %ε Hj Hna Herr %Hpos
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
@@ -198,14 +197,13 @@ theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
 theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
     [BudgetCreditPreGS (ℝ≥0∞ × ℝ≥0∞) GF] [InvGpreS GF] (b b' : Bool) (σ σ' : State rT) :
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
-  wp_adequacy_div (GF := GF) (L := codensity dp) _ _ σ σ' budget
-    fun _ _ ↦ wp_rr b b'
+  wp_adequacy_div (GF := GF) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
 
 /-- `rr_dp_of`, through the refinement `rr_refines`. -/
 theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
     (b b' : Bool) (σ σ' : State rT) :
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) := by
-  refine approximates_div (GF := GF) (L := codensity dp)
+  refine approximates_div (GF := GF)
     (fun _ _ ↦ lrel_bool) _ _ σ σ' budget ?_ fun _ _ ↦ rr_refines b b'
   intro _ _ v v'
   iunfold lrel_bool

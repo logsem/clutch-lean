@@ -121,11 +121,11 @@ theorem codensity_isSound_iff [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGr
   refine ⟨fun _ X _ x ↦ IsSound.sound (L := codensity D) ?_, fun hD ↦ ⟨fun {X} _ b μ ν _ _ h ↦ ?_⟩⟩
   · exact relCost_of (B := B) rfl ▸ codensity_dirac x x
   refine IsGraded.of_lt_top fun hb ↦ ?_
-  simpa [id_comp] using h (k := Kernel.id) (l := Kernel.id) (c := 0) (by rwa [add_zero])
-    fun x y ↦ by
-      obtain rfl | hxy := eq_or_ne x y
-      · simpa [Kernel.id_apply] using hD x
-      · simpa [Kernel.id_apply, hxy] using IsGraded.top (dirac x) (dirac y)
+  have hkl (x y : X) : D (relCost (· = ·) x y + 0) (Kernel.id x) (Kernel.id y) := by
+    obtain rfl | hxy := eq_or_ne x y
+    · simpa [Kernel.id_apply] using hD x
+    · simpa [Kernel.id_apply, hxy] using IsGraded.top (dirac x) (dirac y)
+  simpa [id_comp] using h (c := 0) (by rwa [add_zero]) hkl
 
 /-- The codensity lifting of a graded reflexive divergence is sound for it. -/
 instance isSound_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded]
@@ -209,14 +209,15 @@ instance isMassDetecting_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D
     classical
     let k := Kernel.piecewise hT (Kernel.const X (dirac PUnit.unit.{u + 1})) 0
     let l := Kernel.piecewise hT' (Kernel.const Y (dirac PUnit.unit.{u + 1})) 0
-    have hkl : D (s δ) (k ∘ₘ μ) (l ∘ₘ ν) := IsGraded.of_lt_top fun hδ ↦
-      add_zero (s δ) ▸ h (c := 0) (by rwa [add_zero]) fun x y ↦ by
-        by_cases hxy : S x y
-        · by_cases hx : x ∈ T
-          · simpa [k, l, Kernel.piecewise_apply, hxy, hx, hS x y hxy hx] using
-              IsReflexive.refl (dirac PUnit.unit)
-          · simpa [k, Kernel.piecewise_apply, hxy, hx] using IsZeroLeft.zero_left 0 (l y)
-        · simpa [hxy] using IsGraded.top (k x) (l y)
+    have hxy (x : X) (y : Y) : D (relCost S x y + 0) (k x) (l y) := by
+      by_cases hxy : S x y
+      · by_cases hx : x ∈ T
+        · simpa [k, l, Kernel.piecewise_apply, hxy, hx, hS x y hxy hx] using
+            IsReflexive.refl (dirac PUnit.unit)
+        · simpa [k, Kernel.piecewise_apply, hxy, hx] using IsZeroLeft.zero_left 0 (l y)
+      · simpa [hxy] using IsGraded.top (k x) (l y)
+    have hkl : D (s δ) (k ∘ₘ μ) (l ∘ₘ ν) := IsGraded.of_lt_top fun hδ ↦ by
+      simpa using h (by rwa [add_zero]) hxy
     rw [piecewise_zero_comp, piecewise_zero_comp, const_comp, const_comp, restrict_apply_univ,
       restrict_apply_univ] at hkl
     exact IsMassDetecting.le_add_of (IsSubProbabilityMeasure.measure_le_one T)
@@ -273,7 +274,7 @@ theorem le_codensity [AddCommMagma B] [Zero B] [Preorder B] [Top B] [Canonically
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : L b R μ ν) : D.codensity b R μ ν := by
   intro I _ c hbc k l _ _ hkl
-  exact IsSound.sound (L := L) <| HasBind.bind (IsLawful.frame (le_add_self.trans_lt hbc) h)
+  exact IsSound.sound <| HasBind.bind (IsLawful.frame (le_add_self.trans_lt hbc) h)
     fun x y _ ↦ IsComplete.complete (hkl x y)
 
 end GradedLifting

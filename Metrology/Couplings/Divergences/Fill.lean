@@ -23,7 +23,7 @@ instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure 
     IsProbabilityMeasure μ.withBot :=
   ⟨by
     simpa [withBot, map_apply measurable_some .univ] using
-      add_tsub_cancel_of_le (IsSubProbabilityMeasure.measure_le_one (μ := μ) .univ)⟩
+      add_tsub_cancel_of_le (IsSubProbabilityMeasure.measure_le_one .univ)⟩
 
 end MeasureTheory.Measure
 
@@ -50,7 +50,7 @@ variable {D}
 
 instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded where
   mono _ _ hb := IsGraded.mono (D := D) hb
-  top μ ν := IsGraded.top (D := D) μ.withBot ν.withBot
+  top μ ν := IsGraded.top μ.withBot ν.withBot
 
 instance isReflexive_onWithBot [Zero B] [D.IsReflexive] : D.onWithBot.IsReflexive where
   refl μ _ := IsReflexive.refl μ.withBot

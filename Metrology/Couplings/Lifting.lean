@@ -50,7 +50,7 @@ theorem relCost_add_lt_top_iff [AddZeroClass B] [Preorder B] [Top B] [Canonicall
     {c : B} : relCost S x y + c < ⊤ ↔ S x y ∧ c < ⊤ := by
   by_cases hS : S x y
   · simp [hS]
-  · simpa [hS] using (le_self_add (a := (⊤ : B)) (b := c)).not_gt
+  · simpa [hS] using le_self_add.not_gt
 
 theorem relCost_anti [Zero B] [Preorder B] [OrderTop B] (h : ∀ x y, S x y → S' x y) :
     relCost (B := B) S' ≤ relCost S := fun x y ↦ by
@@ -179,7 +179,7 @@ theorem Rel.frame_le [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrde
   IsLawful.mono (IsLawful.frame hc h) le_rfl fun x y ↦ by
     by_cases hS : S x y
     · simpa [hS] using hR x y hS
-    · simpa [hS] using le_top.trans (le_self_add (a := (⊤ : B)) (b := c))
+    · simpa [hS] using le_top.trans le_self_add
 
 theorem rel_dirac [AddZeroClass B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     [Nontrivial B] [L.IsLawful] {x : X} {y : Y} (h : S x y) (b : B) :
@@ -216,9 +216,8 @@ theorem Rel.strength [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
 theorem rel_true [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (μ : Measure X) (ν : Measure Y) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
     L.Rel 0 (fun _ _ ↦ True) μ ν := by
-  have h := (IsReflexive.refl (L := L) (μ.prod ν)).map (f := Prod.fst) (g := Prod.snd)
+  simpa [map_fst_prod, map_snd_prod] using (IsReflexive.refl (L := L) (μ.prod ν)).map
     (S' := fun _ _ ↦ True) (fun _ _ _ ↦ trivial) measurable_fst measurable_snd
-  rwa [map_fst_prod, map_snd_prod, measure_univ, measure_univ, one_smul, one_smul] at h
 
 /-- A measure lifts against its pushforward along the graph of the map. -/
 theorem rel_graph [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
@@ -239,18 +238,16 @@ theorem Rel.restrict [Zero B] [Top B] [L.IsSupportLocal] {A : Set X} (h : L.Rel 
 theorem rel_const_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (μ : Measure X) [IsProbabilityMeasure μ] (y₀ : Y) :
     L.Rel 0 (fun _ y ↦ y = y₀) μ (dirac y₀) := by
-  have h := (IsReflexive.refl (L := L) μ).map (f := id) (g := fun _ ↦ y₀)
-    (S' := fun _ y ↦ y = y₀) fun _ _ _ ↦ rfl
-  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+  simpa [Measure.map_const] using (IsReflexive.refl (L := L) μ).map_right
+    (S' := fun _ y ↦ y = y₀) (g := fun _ ↦ y₀) fun _ _ _ ↦ rfl
 
 /-- The point mass at `x₀` lifts against a probability measure, relating `x₀` to everything
 (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
 theorem rel_const_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (ν : Measure Y) [IsProbabilityMeasure ν] (x₀ : X) :
     L.Rel 0 (fun x _ ↦ x = x₀) (dirac x₀) ν := by
-  have h := (IsReflexive.refl (L := L) ν).map (f := fun _ ↦ x₀) (g := id)
-    (S' := fun x _ ↦ x = x₀) fun _ _ _ ↦ rfl
-  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+  simpa [Measure.map_const] using (IsReflexive.refl (L := L) ν).map_left
+    (S' := fun x _ ↦ x = x₀) (f := fun _ ↦ x₀) fun _ _ _ ↦ rfl
 
 /-- A Dirac measure lifts against a probability measure carried by `A`, relating its point to
 `A`. -/
@@ -258,9 +255,8 @@ theorem rel_dirac_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [
     [L.IsSupportLocal] (ν : Measure Y) [IsProbabilityMeasure ν] {A : Set Y}
     (hA : MeasurableSet A) (hν : ν Aᶜ = 0) (x₀ : X) :
     L.Rel 0 (fun x y ↦ x = x₀ ∧ y ∈ A) (dirac x₀) ν := by
-  have h := ((IsReflexive.refl (L := L) ν).restrict hA hν).map (f := fun _ ↦ x₀) (g := id)
-    (S' := fun x y ↦ x = x₀ ∧ y ∈ A) fun _ _ h ↦ ⟨rfl, h.1 ▸ h.2⟩
-  rwa [Measure.map_const, measure_univ, one_smul, map_id] at h
+  simpa [Measure.map_const] using ((IsReflexive.refl (L := L) ν).restrict hA hν).map_left
+    (S' := fun x y ↦ x = x₀ ∧ y ∈ A) (f := fun _ ↦ x₀) fun _ _ h ↦ ⟨rfl, h.1 ▸ h.2⟩
 
 /-- A probability measure carried by `A` lifts against a Dirac measure, relating `A` to its
 point. -/
@@ -342,22 +338,20 @@ theorem IsTopAbsorbing.absorbing_top [Top B] [L.IsTopAbsorbing] : L.Absorbing �
   fun R μ ν _ _ ↦ IsTopAbsorbing.top R μ ν
 
 /-- A lifting holds once it holds at finite budgets, since everything is related at `⊤`. -/
-theorem IsTopAbsorbing.of_lt_top [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {R : X → Y → B}
-    (h : b < ⊤ → L b R μ ν) : L b R μ ν := by
-  by_cases hb : ⊤ ≤ b
-  · exact Absorbing.mono IsTopAbsorbing.absorbing_top hb R μ ν
-  · exact h (le_top.lt_of_not_ge hb)
+theorem IsTopAbsorbing.of_lt_top [PartialOrder B] [OrderTop B] [L.IsTopAbsorbing]
+    {R : X → Y → B} (h : b < ⊤ → L b R μ ν) : L b R μ ν := by
+  obtain rfl | hb := eq_or_ne b ⊤
+  · exact IsTopAbsorbing.top R μ ν
+  · exact h (lt_top_iff_ne_top.2 hb)
 
 /-- Framing by any `c`, finite or not. -/
-theorem IsTopAbsorbing.frame [AddCommMagma B] [Preorder B] [OrderTop B]
-    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L b R μ ν) :
-    L (b + c) (fun x y ↦ R x y + c) μ ν :=
+theorem IsTopAbsorbing.frame [AddCommMagma B] [PartialOrder B] [OrderTop B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] {R : X → Y → B}
+    (h : L b R μ ν) : L (b + c) (fun x y ↦ R x y + c) μ ν :=
   IsTopAbsorbing.of_lt_top fun hbc ↦ IsLawful.frame (le_add_self.trans_lt hbc) h
 
 /-- `Rel.frame_le` for any `c`, finite or not. -/
-theorem Rel.frame_le_of_isTopAbsorbing [AddCommMonoid B] [Preorder B] [OrderTop B]
+theorem Rel.frame_le_of_isTopAbsorbing [AddCommMonoid B] [PartialOrder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L.Rel b S μ ν)
     (hR : ∀ x y, S x y → R x y ≤ c) : L (b + c) R μ ν :=

@@ -150,17 +150,10 @@ theorem fDiv_rpow_comp_le (hα : 1 < α) {M N : ℕ} (μ₁ μ₂ : Measure (ULi
     fDiv (· ^ α) (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ fDiv (· ^ α) μ₁ μ₂ * ⨆ j, fDiv (· ^ α) (κ j) (η j) := by
   have hf := convexOn_rpow hα.le
   have hf_cont := continuousWithinAt_rpow_zero (zero_lt_one.trans hα)
-  have hb (μ : Measure (ULift.{u} (Fin M))) [IsSubProbabilityMeasure μ]
-      (κ : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
-      (i : ULift.{u} (Fin N)) :
-      ((κ ∘ₘ μ) {i}).toReal = ∑ j, (μ {j}).toReal * (κ j {i}).toReal := by
-    rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable,
-      lintegral_fintype, ENNReal.toReal_sum fun _ _ ↦ by finiteness]
-    exact Finset.sum_congr rfl fun j _ ↦ by rw [ENNReal.toReal_mul, mul_comm]
   have hP {a b : ℝ≥0∞} : 0 ≤ persp (· ^ α) a.toReal b.toReal :=
     persp_rpow_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg
   rw [fDiv_eq_sum hf hf_cont, fDiv_eq_sum hf hf_cont]
-  simp_rw [hb]
+  simp_rw [toReal_comp_singleton_eq_sum]
   calc ∑ i, persp (· ^ α) (∑ j, (μ₁ {j}).toReal * (κ j {i}).toReal)
         (∑ j, (μ₂ {j}).toReal * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, persp (· ^ α) ((μ₁ {j}).toReal * (κ j {i}).toReal)
@@ -251,7 +244,7 @@ variable {X : Type u} [MeasurableSpace X] {α : ℝ} {ρ : ℝ≥0∞} {μ ν : 
 theorem renyiDivergence_iff : renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ renyiThresh α ρ :=
   ⟨fun h ↦ h (), fun h _ ↦ h⟩
 
-/-- At a finite budget, the Rényi divergence bounds the `α`-th moment (Rocq
+/-- At a finite budget, the Rényi divergence bound is the `α`-th moment bound (Rocq
 `codensity_div_form`). -/
 theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
     renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
@@ -302,7 +295,7 @@ instance isGraded_renyi : (renyiDivergence.{u} α).IsGraded :=
 instance isReflexive_renyi : (renyiDivergence.{u} α).IsReflexive :=
   isReflexive_fDivBound fun _ ↦ by simp
 
-/-- The Rényi divergence vanishes against the zero measure on the left. -/
+/-- The zero measure is within every Rényi budget of every measure. -/
 instance isZeroLeft_renyi : (renyiDivergence.{u} α).IsZeroLeft :=
   isZeroLeft_fDivBound fun _ _ ↦ by
     simp [Real.zero_rpow (zero_lt_one.trans hα.out).ne', renyiThresh, EReal.coe_ennreal_nonneg]
@@ -332,9 +325,9 @@ instance isComposable_renyi : (renyiDivergence.{u} α).IsComposable :=
     (fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out))
     (fun _ _ _ ↦ by
       intros
-      rw [max_eq_right fDiv_rpow_nonneg, max_eq_right ?_]
-      · exact fDiv_rpow_comp_le hα.out _ _ _ _
-      · exact le_iSup_of_le ⟨0⟩ fDiv_rpow_nonneg)
+      rw [max_eq_right fDiv_rpow_nonneg,
+        max_eq_right (le_iSup_of_le (⟨0⟩ : ULift (Fin _)) fDiv_rpow_nonneg)]
+      exact fDiv_rpow_comp_le hα.out _ _ _ _)
     (fun _ _ _ ↦ by
       rw [renyiThresh_add, max_eq_right renyiThresh_nonneg, max_eq_right renyiThresh_nonneg])
     fun _ _ ↦ renyiThresh_nonneg
@@ -349,8 +342,8 @@ theorem not_absorbing_codensity_renyi (hα : 1 < α) (hρ : ρ < ⊤) :
     ¬(codensity (renyiDivergence.{u} α)).Absorbing ρ := by
   have : Fact (1 < α) := ⟨hα⟩
   refine not_absorbing_of_refutes fun h ↦ ?_
-  have := renyiDivergence_iff.1 <| h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
-    (k := Kernel.id) (l := 0) fun _ _ ↦ by simpa using IsGraded.top (D := renyiDivergence α) _ _
+  have := renyiDivergence_iff.1 <| h (by rwa [add_zero])
+    (k := Kernel.id) (l := 0) fun _ _ ↦ by simpa using IsGraded.top _ _
   simp [fDiv_zero_right_eq, derivAtTop_rpow hα, renyiThresh_of_ne_top hα.le hρ.ne] at this
 
 /-- A finite Rényi budget relates two measures along equality only if the first is absolutely
@@ -367,11 +360,11 @@ theorem absolutelyContinuous_of_codensity_renyi_rel_eq (hα : 1 < α) (hρ : ρ 
   have hF : Measurable (t.indicator (1 : X → ℝ≥0∞)) := measurable_one.indicator ht
   have hF1 (x : X) : t.indicator (1 : X → ℝ≥0∞) x ≤ 1 := Set.indicator_le_self' (by simp) x
   have := Kernel.isSubMarkovKernel_mass.{u} hF hF1
-  have key := h (I := PUnit.{u + 1}) (c := 0) (by simpa using hρ.lt_top)
+  have key := h (c := 0) (by simpa using hρ.lt_top)
     (k := Kernel.mass hF) (l := Kernel.mass hF) fun x y ↦ by
       by_cases hxy : x = y
       · subst hxy
-        simpa [relCost_of] using IsReflexive.refl (D := renyiDivergence α) (Kernel.mass hF x)
+        simpa [relCost_of] using IsReflexive.refl (Kernel.mass hF x)
       · simpa [relCost_of_not hxy] using renyiDivergence_top hα _ _
   have hγ : 0 < (α - 1) / α := div_pos (sub_pos.2 hα) (zero_lt_one.trans hα)
   rw [Kernel.mass_comp, Kernel.mass_comp, add_zero, lintegral_indicator_one ht,

@@ -89,11 +89,10 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
   simp only [hv]
   iapply progCoupl_steps_adv hb hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !> !>
-  ispecialize H $$ %e₂ %σ₂ %e₂' %σ₂'
   by_cases habs : L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)
   · iapply specCoupl_absorbing habs
   · iapply specCoupl_ret
-    imod H with (%hge | H)
+    imod H $$ %e₂ %σ₂ %e₂' %σ₂' with (%hge | H)
     · exact (habs fun R μ ν _ _ => hge R μ ν).elim
     · icases H with ⟨Hσ', Hs', Hb', Hwp⟩
       imodintro

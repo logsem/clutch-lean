@@ -56,6 +56,43 @@ section Games
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
+/-- The tail of a round: record `(n, y)` in both result lists, then run the next round. `loop` is
+the stepped goal's unfolded `wLoop N`. -/
+theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
+    {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)} {Φ : Val rT → IProp GF}
+    (hloop : loop = wLoop N := by rfl) : iprop%
+    ⤇ K.fill (pl% (#(.loc resS) ← inr(((#(.int n), #(.int y)), !#(.loc resS)));
+      {loop} {fS.fst} #(.loc resS) (#(.int ↑(q + 1)) - #1))) ∗
+    (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
+    (⤇ K.fill (pl% {wLoop N} {Exp.ofVal fS} #(.loc resS) #(.int q)) -∗
+      (resL ↦ (assocVal ((n, y) :: acc) : Val rT)) -∗
+      (resS ↦ₛ (assocVal ((n, y) :: acc) : Val rT)) -∗
+      WP[codensity tv] (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q)) @ E {{ Φ }}) ⊢
+    WP[codensity tv] (pl% (#(.loc resL) ← inr(((#(.int n), #(.int y)), !#(.loc resL)));
+      {loop} {fL.fst} #(.loc resL) (#(.int ↑(q + 1)) - #1))) @ E {{ Φ }} := by
+  subst hloop
+  iintro ⟨Hj, HresL, HresS, Hcnt⟩
+  tp_bind (pl% !#(.loc resS))
+  imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+  tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
+  imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+  tp_pure
+  tp_pure
+  wp_bind (pl% !#(.loc resL))
+  iapply wp_load
+  iframe HresL
+  iintro HresL
+  wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
+  iapply wp_store
+  iframe HresL
+  iintro HresL
+  wp_pure 1
+  wp_pure 1
+  rw [Nat.cast_succ, add_sub_cancel_right]
+  tp_bind (pl% {wLoop N} {Exp.ofVal fS} #(.loc resS) #(.int q))
+  wp_show (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q))
+  iapply Hcnt $$ Hj HresL HresS
+
 /-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`. -/
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
@@ -104,27 +141,10 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iframe Hl
       iintro Hl
       tp_pure
-      tp_bind (pl% !#(.loc resS))
-      imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
-      tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
-        with ⟨Hj, HresS⟩
-      tp_pure
-      tp_pure
-      wp_pures
-      wp_bind (pl% !#(.loc resL))
-      iapply wp_load
-      iframe HresL
-      iintro HresL
-      wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store
-      iframe HresL
-      iintro HresL
       wp_pure 1
-      wp_pure 1
-      rw [Nat.cast_succ, add_sub_cancel_right]
-      tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q))
-      wp_show (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
+      iapply wp_wLoop_record
+      iframe Hj HresL HresS
+      iintro Hj HresL HresS
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
       iframe
     | none =>
@@ -136,27 +156,10 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iframe Hj Herr Hl Hm Hfv
       iintro %y %hyr Hj Hl Hm Hfv
       tp_pure
-      tp_bind (pl% !#(.loc resS))
-      imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
-      tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
-        with ⟨Hj, HresS⟩
-      tp_pure
-      tp_pure
-      wp_pures
-      wp_bind (pl% !#(.loc resL))
-      iapply wp_load
-      iframe HresL
-      iintro HresL
-      wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store
-      iframe HresL
-      iintro HresL
       wp_pure 1
-      wp_pure 1
-      rw [Nat.cast_succ, add_sub_cancel_right]
-      tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q))
-      wp_show (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
+      iapply wp_wLoop_record
+      iframe Hj HresL HresS
+      iintro Hj HresL HresS
       iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
         (prpPerm_insert hperm n hyr)
         (fun k hk => (List.mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
@@ -192,8 +195,7 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   subst hg
   tp_pures
   tp_bind (Exp.alloc (Exp.ofVal (assocVal ([] : List (Int × Int)))))
-  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl
-    $$ Hj with ⟨%resS, Hj, HresS⟩
+  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%resS, Hj, HresS⟩
   tp_pure
   tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int Q.toNat))
   wp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int Q.toNat))
@@ -258,27 +260,10 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iframe Hm
       iintro Hm
       tp_pure
-      tp_bind (pl% !#(.loc resS))
-      imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
-      tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
-        with ⟨Hj, HresS⟩
-      tp_pure
-      tp_pure
-      wp_pures
-      wp_bind (pl% !#(.loc resL))
-      iapply wp_load
-      iframe HresL
-      iintro HresL
-      wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store
-      iframe HresL
-      iintro HresL
       wp_pure 1
-      wp_pure 1
-      rw [Nat.cast_succ, add_sub_cancel_right]
-      tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q))
-      wp_show (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
+      iapply wp_wLoop_record
+      iframe Hj HresL HresS
+      iintro Hj HresL HresS
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
       iframe
     | none =>
@@ -290,27 +275,10 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iframe Hj Herr Hm Hfv Hl
       iintro %y %hyr Hj Hm Hfv Hl
       tp_pure
-      tp_bind (pl% !#(.loc resS))
-      imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
-      tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS]
-        with ⟨Hj, HresS⟩
-      tp_pure
-      tp_pure
-      wp_pures
-      wp_bind (pl% !#(.loc resL))
-      iapply wp_load
-      iframe HresL
-      iintro HresL
-      wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
-      iapply wp_store
-      iframe HresL
-      iintro HresL
       wp_pure 1
-      wp_pure 1
-      rw [Nat.cast_succ, add_sub_cancel_right]
-      tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q))
-      wp_show (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
+      iapply wp_wLoop_record
+      iframe Hj HresL HresS
+      iintro Hj HresL HresS
       iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
         (prpPerm_insert hperm n hyr)
         (fun k hk => (List.mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
@@ -346,8 +314,7 @@ theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   subst hg
   tp_pures
   tp_bind (Exp.alloc (Exp.ofVal (assocVal ([] : List (Int × Int)))))
-  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl
-    $$ Hj with ⟨%resS, Hj, HresS⟩
+  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%resS, Hj, HresS⟩
   tp_pure
   tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int Q.toNat))
   wp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int Q.toNat))

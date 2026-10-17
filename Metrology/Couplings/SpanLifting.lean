@@ -77,7 +77,7 @@ theorem spanLifting_map [AddZeroClass B] [LE B] [LT B] [Top B] [D.IsReflexive] [
   · rw [map_map (by fun_prop) hφ, map_map hf (by fun_prop)]
     rfl
   · rw [map_map (by fun_prop) hφ]
-    exact (map_map hg (by fun_prop) (μ := q)).symm.trans_le (map_mono hq hg)
+    exact (map_map hg (by fun_prop)).symm.trans_le (map_mono hq hg)
 
 /-- Spans are lawful once finite budgets stay finite under addition. -/
 theorem isLawful_spanLifting [AddMonoid B] [Preorder B] [AddRightMono B] [CanonicallyOrderedAdd B]

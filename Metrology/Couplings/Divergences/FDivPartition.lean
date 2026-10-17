@@ -242,7 +242,7 @@ theorem fDiv_comp_le_of_isSubMarkovKernel (hf : ConvexOn ℝ (Ici 0) f)
     (fun i ↦ (κ.measurable_coe (hA i)).ennreal_toReal) (fun _ _ ↦ ENNReal.toReal_nonneg)
     (fun x ↦ ?_) (h.imp_left fun h x ↦ by rw [hw, h, ENNReal.toReal_one])
   rw [hw]
-  exact (IsSubProbabilityMeasure.toReal_mem_Icc (μ := κ x) _).2
+  exact (IsSubProbabilityMeasure.toReal_mem_Icc _).2
 
 /-- Data processing along a Markov kernel. -/
 theorem fDiv_comp_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)

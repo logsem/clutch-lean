@@ -156,6 +156,25 @@ theorem ENNReal.min_le_mul_min {a b c n : ℝ≥0∞} (h : a ≤ c * b) (hc : 1 
   · rw [min_eq_right hb]
     exact (min_le_right _ _).trans (le_mul_of_one_le_left' hc)
 
+/-- Enlarging the denominator of `a⁻¹ * S` to `a + d` loses at most `d / (a + d)` when `S ≤ a`. -/
+theorem ENNReal.inv_mul_le_inv_mul_add {a d : ℕ} (ha : a ≠ 0) {S : ℝ≥0∞} (hS : S ≤ a) :
+    (a : ℝ≥0∞)⁻¹ * S ≤ ((a : ℝ≥0∞) + d)⁻¹ * S + d / ((a : ℝ≥0∞) + d) := by
+  have hinvS : (a : ℝ≥0∞)⁻¹ * S ≤ 1 := by
+    calc (a : ℝ≥0∞)⁻¹ * S
+      _ ≤ (a : ℝ≥0∞)⁻¹ * a := by gcongr
+      _ = 1 := ENNReal.inv_mul_cancel (by positivity) (by finiteness)
+  calc (a : ℝ≥0∞)⁻¹ * S
+    _ = ((a + d : ℝ≥0∞)⁻¹ * (a + d)) * ((a : ℝ≥0∞)⁻¹ * S) := by
+        rw [ENNReal.inv_mul_cancel (by positivity) (by finiteness), one_mul]
+    _ = (a + d : ℝ≥0∞)⁻¹ * (a * ((a : ℝ≥0∞)⁻¹ * S) + d * ((a : ℝ≥0∞)⁻¹ * S)) := by
+        rw [mul_assoc, add_mul]
+    _ = (a + d : ℝ≥0∞)⁻¹ * (S + d * ((a : ℝ≥0∞)⁻¹ * S)) := by
+        rw [← mul_assoc (a : ℝ≥0∞), ENNReal.mul_inv_cancel (by positivity) (by finiteness),
+          one_mul]
+    _ ≤ (a + d : ℝ≥0∞)⁻¹ * (S + d * 1) := by gcongr
+    _ = ((a : ℝ≥0∞) + d)⁻¹ * S + d / ((a : ℝ≥0∞) + d) := by
+        rw [mul_one, mul_add, ENNReal.div_eq_inv_mul]
+
 theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) {x : ι → EReal}
     (hx : ∀ i ∈ s, 0 ≤ x i) : c * ∑ i ∈ s, x i = ∑ i ∈ s, c * x i := by
   classical
@@ -172,3 +191,28 @@ theorem EReal.le_coe_mul_iff {c : ℝ} (hc : 0 < c) {x y : EReal} :
   induction x <;> induction y <;>
     simp [EReal.coe_mul_top_of_pos hc, EReal.coe_mul_bot_of_pos hc, EReal.coe_mul_top_of_pos hc',
       EReal.coe_mul_bot_of_pos hc', ← EReal.coe_mul, inv_mul_le_iff₀ hc]
+
+/-- A sum composed with a map injective on `Ico 0 zL` and landing in `Ico 0 zR` is
+bounded by the full codomain sum. -/
+theorem Finset.sum_Ico_comp_le_of_injOn {zL zR : ℤ} {f : ℤ → ℤ}
+    (hdom : ∀ n : ℤ, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
+    (hinj : ∀ n₁ n₂ : ℤ, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂)
+    (g : ℤ → ℝ≥0∞) : ∑ n ∈ Finset.Ico 0 zL, g (f n) ≤ ∑ m ∈ Finset.Ico 0 zR, g m := by
+  calc ∑ n ∈ Finset.Ico 0 zL, g (f n)
+    _ = ∑ m ∈ (Finset.Ico 0 zL).image f, g m :=
+        (Finset.sum_image fun n hn m hm heq => by
+          simp only [Finset.coe_Ico, Set.mem_Ico] at hn hm
+          exact hinj n m hn.1 hn.2 hm.1 hm.2 heq).symm
+    _ ≤ ∑ m ∈ Finset.Ico 0 zR, g m := by
+        refine Finset.sum_le_sum_of_subset fun m hm => ?_
+        obtain ⟨n, hn, rfl⟩ := Finset.mem_image.1 hm
+        simp only [Finset.mem_Ico] at hn ⊢
+        exact hdom n hn.1 hn.2
+
+/-- A sum of `≤ 1` terms over `Ico 0 z` is at most `z.toNat`. -/
+theorem Finset.sum_Ico_le_toNat {z : ℤ} {g : ℤ → ℝ≥0∞} (hg : ∀ n, g n ≤ 1) :
+    ∑ n ∈ Finset.Ico 0 z, g n ≤ z.toNat := by
+  calc ∑ n ∈ Finset.Ico 0 z, g n
+    _ ≤ ∑ _n ∈ Finset.Ico 0 z, 1 := Finset.sum_le_sum fun n _ => hg n
+    _ = z.toNat := by
+        rw [Finset.sum_const, Int.card_Ico, nsmul_eq_mul, mul_one, Int.sub_zero]

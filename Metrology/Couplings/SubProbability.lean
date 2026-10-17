@@ -38,10 +38,17 @@ theorem IsSubProbabilityMeasure.lintegral_add_const_le {μ : Measure X} [IsSubPr
   gcongr
   exact mul_le_of_le_one_right' measure_univ_le_one
 
+/-- Cutting a constant off the integrand costs at most that constant. -/
+theorem IsSubProbabilityMeasure.lintegral_le_tsub_add {μ : Measure X} [IsSubProbabilityMeasure μ]
+    (f : X → ℝ≥0∞) (c : ℝ≥0∞) : ∫⁻ x, f x ∂μ ≤ ∫⁻ x, f x - c ∂μ + c :=
+  calc ∫⁻ x, f x ∂μ
+      ≤ ∫⁻ x, (f x - c) + c ∂μ := lintegral_mono fun _ ↦ le_tsub_add
+    _ ≤ ∫⁻ x, f x - c ∂μ + c := lintegral_add_const_le _ _
+
 /-- A function below `1` integrates to at most `1`. -/
 theorem IsSubProbabilityMeasure.lintegral_le_one {μ : Measure X} [IsSubProbabilityMeasure μ]
     {f : X → ℝ≥0∞} (hf : ∀ x, f x ≤ 1) : ∫⁻ x, f x ∂μ ≤ 1 :=
-  (lintegral_mono hf).trans (by simpa using measure_univ_le_one (μ := μ))
+  (lintegral_mono hf).trans (by simpa using measure_univ_le_one)
 
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
@@ -80,7 +87,7 @@ theorem ae_measure_univ_eq_one_of_bind {μ : Measure X} [IsSubProbabilityMeasure
   rw [Measure.bind_apply .univ hκ.aemeasurable] at h
   refine ae_eq_of_ae_le_of_lintegral_le (.of_forall fun _ ↦ measure_univ_le_one)
     (h ▸ one_ne_top) aemeasurable_const ?_
-  simpa [h] using measure_univ_le_one (μ := μ)
+  simpa [h] using measure_univ_le_one
 
 open Classical in
 /-- `μ` if it is finite, and `0` otherwise. -/

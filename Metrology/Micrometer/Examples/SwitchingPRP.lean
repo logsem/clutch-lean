@@ -134,8 +134,7 @@ theorem wp_randomPermutation_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
     (vv := intListVal ((List.range N.toNat).map Int.ofNat)) rfl $$ Hj with ⟨%ℓfv, Hj, Hfv⟩
   tp_pures
   tp_bind (Exp.alloc (Exp.ofVal (assocVal [])))
-  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl
-    $$ Hj with ⟨%ℓm, Hj, Hm⟩
+  imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%ℓm, Hj, Hm⟩
   tp_pures
   tp_bind (Exp.ofVal (prpQueryV ℓm ℓfv))
   iapply Hcnt $$ %(prpQueryV ℓm ℓfv) Hj

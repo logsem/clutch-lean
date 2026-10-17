@@ -88,9 +88,8 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
     wp L ⊤ e1 (fun v => refines L E (K.fill v.1) t A) ⊢ refines L E (K.fill e1) t A := by
   iunfold refines
   iintro He %K' %b HK Hna Herr Hpos
-  iapply MicrometerWpGS.wp_bind (K := K)
-  iapply MicrometerWpGS.wp_frame_wand
-    (R := iprop(⤇ K'.fill t ∗ naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
+  iapply MicrometerWpGS.wp_bind
+  iapply MicrometerWpGS.wp_frame_wand (R := iprop(⤇ K'.fill t ∗ naOwnP E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
   iframe
   iapply MicrometerWpGS.wp_mono $$ He
   intro v
@@ -107,11 +106,11 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
     refines L E (K.fill e1) t A := by
   iunfold refines
   iintro Hlog %K' %b HK Hna Herr Hpos
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_atomic Hopen
   imod Hlog $$ %K' HK with HW
   imodintro
-  iapply MicrometerWpGS.wp_frame_wand (R := iprop(naOwnP (rT := rT) E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
+  iapply MicrometerWpGS.wp_frame_wand (R := iprop(naOwnP E ∗ ↯b b ∗ ⌜(0 : B) < b⌝))
   iframe
   iapply MicrometerWpGS.wp_mono $$ HW
   intro v
@@ -150,7 +149,7 @@ theorem refines_store_l {E : CoPset} {K : Ectx rT} {l : Loc} {v' : Val rT} {t : 
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
   rw [show Exp.store pl(#(.loc l)) v'.1 = Exp.store pl(#(.loc l)) (Exp.ofVal v') from rfl]
-  iapply wp_store (v' := v)
+  iapply wp_store
   iframe Hl
   iintro Hl
   iapply Hlog $$ Hl
@@ -181,7 +180,7 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iapply refines_step_r
   iintro %K' Hj
   iapply specUpdate_mono
-  ihave HStep := step_load K' (v := v) $$ [$Hj $Hl]
+  ihave HStep := step_load K' $$ [$Hj $Hl]
   iframe HStep
   iintro ⟨HKRes, HlRes⟩
   isimp only [show Exp.ofVal v = v.1 from rfl] at HKRes
@@ -198,7 +197,7 @@ theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e 
   iapply refines_step_r
   iintro %K' Hj
   iapply specUpdate_mono
-  ihave HStep := step_store K' (v_old := v) v'.2 (Exp.toVal?_ofVal v') $$ [$Hj $Hl]
+  ihave HStep := step_store K' v'.2 (Exp.toVal?_ofVal v') $$ [$Hj $Hl]
   iframe HStep
   iintro ⟨HKRes, Hl'⟩
   iexists .unit
@@ -311,14 +310,11 @@ omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
     refines L E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines L E e1 e2 A' := by
   iintro He HAA
-  have Hfill1 : e1 = Ectx.empty.fill e1 := rfl
-  have Hfill2 : e2 = Ectx.empty.fill e2 := rfl
-  rw [Hfill1, Hfill2]
-  iapply refines_bind (K' := Ectx.empty) (A := A) $$ [He]
-  · rw [← Hfill1, ← Hfill2]; iexact He
+  ihave H := refines_bind [] [] $$ He
+  isimp only [Ectx.fill_nil] at H
+  iapply H
   iintro %v %v' HA
-  rw [← show v.1 = Ectx.empty.fill v.1 from rfl, ← show v'.1 = Ectx.empty.fill v'.1 from rfl]
-  iapply refines_ret (v1 := v) (v2 := v') rfl rfl
+  iapply refines_ret rfl rfl
   iapply HAA $$ %v %v' HA
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
@@ -328,7 +324,7 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
     refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
-  iapply refines_ret (v1 := v) (v2 := v') rfl rfl
+  iapply refines_ret rfl rfl
   imodintro
   unfold lrel_arr
   isplitr; · ipureintro; exact hv
@@ -428,7 +424,7 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_rand_rand z f hdom hbij Hz (K2.comp K') ⊤ _
   iframe Hj
   iintro %n %Hn HKres
@@ -450,7 +446,7 @@ theorem refines_couple_rands_lr_adv {s : ENNReal →+o B}
   unfold refines
   iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort hc (K2.comp K') ⊤ _
   iframe Hj Hε
   iintro %n %Hn - Hec HKres
@@ -490,7 +486,7 @@ theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     refines L E e e' A := by
   unfold refines
   iintro ⟨Hα, Hαₛ, Hcnt⟩ %K %b Hj Hna Herr Hpos
-  iapply wp_couple_tapes_bij (αₛ := αₛ) (ns := ns) (nsₛ := nsₛ) f hdom hbij Hz
+  iapply wp_couple_tapes_bij f hdom hbij Hz
   iframe Hα Hαₛ
   iintro %n %hn HA HS
   iapply Hcnt $$ %n %hn HA HS %K %b Hj Hna Herr Hpos
@@ -505,7 +501,7 @@ theorem refines_couple_TU {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro ⟨Hα, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_tape_rand z f hdom hbij Hz (K2.comp K') ⊤ α _
   iframe Hα Hj
   iintro %n ⟨HαNew, HKres, %Hn⟩
@@ -523,7 +519,7 @@ theorem refines_couple_UT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro ⟨Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_rand_tape z f hdom hbij Hz (K2.comp K') ⊤ α' _
   iframe Hα' Hj
   iintro %n ⟨Hα'New, HKres, %Hn⟩
@@ -542,7 +538,7 @@ theorem refines_couple_TT {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {z : In
   unfold refines
   iintro ⟨Hα, Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply wp_couple_rand_lbl_rand_lbl z f hdom hbij Hz (K2.comp K') ⊤ α α' _
   iframe Hα Hα' Hj
   iintro %n ⟨HαNew, Hα'New, HKres, %Hn⟩

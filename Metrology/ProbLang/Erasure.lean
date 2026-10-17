@@ -1573,7 +1573,7 @@ theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
       {p : { z : Int // 0 ≤ z ∧ z < N } × { z : Int // 0 ≤ z ∧ z < N } |
         ∃ n : Int, 0 ≤ n ∧ n < N ∧ p.1 = tapeIdxOf hN n ∧ p.2 = tapeIdxOf hN (f n)}
       (tapeIndexUniform N) (tapeIndexUniform N) :=
-  (tapeIndexUniform_codensity_bij (L := GradedDivergence.tv.codensity) hN f hdom hbij).addCoupl
+  (tapeIndexUniform_codensity_bij hN f hdom hbij).addCoupl
 
 theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }} (hσ : σ.tapes[α]? = some ⟨N, bs⟩) :
@@ -1614,7 +1614,7 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
         p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
         p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
       (tapePresample σ α) (tapePresample σ' α') :=
-  (tapePresample_codensity_bij (L := GradedDivergence.tv.codensity) hσ hσ' hN f hdom hbij).addCoupl
+  (tapePresample_codensity_bij hσ hσ' hN f hdom hbij).addCoupl
 
 /-- Running to the limit from a measure of states first runs `m` steps. -/
 theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
@@ -1791,7 +1791,7 @@ theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
     AddCoupl ε Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) :=
-  (lift_erasure_erasable_exp_lhs_kanto (L := GradedDivergence.tv.codensity) hErase₁'
+  (lift_erasure_erasable_exp_lhs_kanto hErase₁'
     (expCoupl_iff_codensity_tv.1 hExp) fun ρ ρ' _ => (hCont ρ ρ').codensity).addCoupl
 
 end Lifting

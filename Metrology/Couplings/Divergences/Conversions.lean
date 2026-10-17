@@ -107,14 +107,12 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
       (persp_rpow_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg)).trans hsum
   have hp : 0 ≤ p := ENNReal.toReal_nonneg
   have hq : 0 ≤ q := ENNReal.toReal_nonneg
-  -- reduce to the real inequality `p ≤ e^ε q + δ`
   suffices hpq : p ≤ exp (r + log (1 / δ) / (α - 1)) * q + δ by
     rw [← ENNReal.ofReal_toReal (measure_ne_top μ S), ← ENNReal.ofReal_toReal (measure_ne_top ν S),
       ← ENNReal.ofReal_mul (exp_pos _).le, ← ENNReal.ofReal_add (by positivity) hδ.le]
     exact ENNReal.ofReal_le_ofReal hpq
   rcases hq.eq_or_lt with hq0 | hq0
-  · -- an event of `ν`-mass zero has `μ`-mass zero
-    rcases hp.eq_or_lt with hp0 | hp0
+  · rcases hp.eq_or_lt with hp0 | hp0
     · rw [← hp0]
       positivity
     · rw [← hq0, persp_rpow_zero_right hα hp0] at hcell
@@ -136,9 +134,8 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
       _ ≤ E := hcell
   have hE : E = δ * exp ε ^ (α - 1) := by
     rw [← exp_mul, show ε * (α - 1) = (α - 1) * r + log (1 / δ) by
-      simp only [ε]; field_simp, exp_add, exp_log (by positivity)]
-    field_simp
-    rfl
+      simp only [ε]; field_simp, exp_add, exp_log (by positivity),
+      mul_left_comm, mul_one_div_cancel hδ.ne', mul_one]
   rw [hE] at key
   exact (lt_of_mul_lt_mul_right key (by positivity)).not_gt hpδ
 
@@ -189,7 +186,7 @@ theorem bound_of_forall_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {
     set t := √(log (1 / δ) / ρ)
     have ht : 0 < t := sqrt_pos.2 (div_pos hL hρ)
     have ht2 : t ^ 2 = log (1 / δ) / ρ := sq_sqrt (div_pos hL hρ).le
-    have := bound_of_fDiv_rpow_le (α := 1 + t) (by linarith) hδ (h (1 + t) (by linarith))
+    have := bound_of_fDiv_rpow_le (by linarith) hδ (h (1 + t) (by linarith))
     have hs : √(ρ * log (1 / δ)) = ρ * t := by
       rw [show ρ * log (1 / δ) = (ρ * t) ^ 2 by rw [mul_pow, ht2]; field_simp,
         sqrt_sq (by positivity)]
@@ -297,11 +294,10 @@ theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
   · exact (Prod.ext htop rfl : φ ⊤ = (⊤, (φ ⊤).2)) ▸ codensity_dp_top_left
   rcases eq_or_ne (φ b).1 ⊤ with hε | hε
   · exact (Prod.ext hε rfl : φ b = (⊤, (φ b).2)) ▸ codensity_dp_top_left
-  refine (codensity_dp_rel_iff hε).2
-    fun f g hf hg hf1 hg1 hfg ↦ ?_
+  refine (codensity_dp_rel_iff hε).2 fun f g hf hg hf1 hg1 hfg ↦ ?_
   have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
   have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
-  have hD := codensity_rel_iff.1 h (I := PUnit.{u + 1}) (c := 0) (by rwa [add_zero])
+  have hD := codensity_rel_iff.1 h (by rwa [add_zero])
     (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg) fun x y hS ↦ by
       simpa [Kernel.mass_apply] using zero_smul_dirac_of_le (hfg x y hS) (hg1 y)
   rw [add_zero] at hD

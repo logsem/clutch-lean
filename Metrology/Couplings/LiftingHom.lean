@@ -131,17 +131,13 @@ of measures, even when finite budgets map to `⊤` (the zCDP line at `(⊤, 0)`)
 theorem isLawful_comap_of_top [AddCommMagma B] [PartialOrder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [Add B'] [Preorder B'] [Top B'] [L.IsLawful] [L.IsTopAbsorbing]
     (hφ : Monotone φ) (hadd : ∀ a b, φ (a + b) = φ a + φ b) : (L.comap φ).IsLawful where
-  pure {_ _} _ _ R x y _ := by
-    rcases (le_top : φ (R x y) ≤ ⊤).lt_or_eq with hlt | htop
-    · exact IsLawful.pure (R := fun x y ↦ φ (R x y)) hlt
-    · exact comap_def.2 (htop ▸ IsTopAbsorbing.top _ _ _)
+  pure {_ _} _ _ R x y _ :=
+    comap_def.2 <| IsTopAbsorbing.of_lt_top fun h ↦
+      IsLawful.pure (R := fun x y ↦ φ (R x y)) h
   zero b _ := IsLawful.zero (φ b) _
   mono h hb hR := IsLawful.mono (L := L) h (hφ hb) fun x y ↦ hφ (hR x y)
-  frame {_ _} _ _ b c _ _ _ _ h := by
-    simp only [comap, hadd]
-    rcases (le_top : φ c ≤ ⊤).lt_or_eq with hlt | htop
-    · exact IsLawful.frame hlt h
-    · simpa only [htop, top_le_iff.1 le_add_self] using IsTopAbsorbing.top _ _ _
+  frame {_ _} _ _ _ c _ _ _ _ h := by
+    simpa only [comap, hadd] using IsTopAbsorbing.frame (c := φ c) h
   map hf hg h := IsLawful.map (L := L) hf hg h
 
 /-- A budget map keeping `⊤` regrades a lifting with bind. -/
@@ -172,7 +168,7 @@ theorem isReflexive_comap_of_lt_top [AddZeroClass B] [Preorder B] [OrderTop B]
     (h0 : φ 0 < ⊤) : (L.comap φ).IsReflexive where
   refl μ _ := by
     have := (IsReflexive.refl (L := L) μ).frame_le
-      (R := fun x y ↦ φ (relCost (B := B') (· = ·) x y)) (fun _ _ h ↦ by simp [h]) h0
+      (R := fun x y ↦ φ (relCost (· = ·) x y)) (fun _ _ h ↦ by simp [h]) h0
     rwa [zero_add] at this
 
 instance isZeroLeft_comap [L.IsZeroLeft] : (L.comap φ).IsZeroLeft where

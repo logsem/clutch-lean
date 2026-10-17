@@ -135,9 +135,8 @@ def otpφ (v v' : Val rT) : Prop :=
 
 theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
-  iintro Hint
-  iunfold lrel_int at Hint
-  icases Hint with ⟨%n, %hv, %hv'⟩
+  iunfold lrel_int
+  iintro ⟨%n, %hv, %hv'⟩
   ipureintro
   exact ⟨n, hv, hv'⟩
 

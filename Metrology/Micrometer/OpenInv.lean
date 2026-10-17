@@ -24,7 +24,8 @@ def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
 
 namespace OpenInv
 
-theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
+/-- At a value, the closing update `|={E2, E1}=>` moves out to the `specCoupl` postcondition. -/
+theorem specCoupl_close_val {hlc : HasLC} {GF : BundledGFunctors}
     [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] [InvGS_gen hlc GF] {E1 E2 : CoPset}
     {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b₁ : B}
     {Φ : Val rT → IProp GF} {v : Val rT} : iprop%
@@ -37,11 +38,12 @@ theorem specCoupl_atomic_bridge_some {hlc : HasLC} {GF : BundledGFunctors}
   iintro HSC
   iapply specCoupl_mono_spatial
   iframe
-  iintro %σ₂ %ρ' %b₂ HBody
-  imod HBody with ⟨Hσ, Hs, Hb, >HΦ⟩
+  iintro %σ₂ %ρ' %b₂ >⟨Hσ, Hs, Hb, >HΦ⟩
   iframe
 
-theorem specCoupl_atomic_bridge_none [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
+/-- After an atomic step, the closing update `|={E2, E1}=>` moves out to the `specCoupl`
+postcondition. -/
+theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {e : Exp rT} (h : Atomic' e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b₁ : B} {Φ : Val rT → IProp GF} : iprop%
@@ -63,7 +65,7 @@ theorem specCoupl_atomic_bridge_none [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.
   isplitr
   -- Take the `progCoupl` premise first: it pins the intermediate postcondition.
   swap
-  · iapply progCoupl_strengthen (S := {ρ : Cfg rT | ρ.1.isValue}) Cfg.isValue_measurableSet (h σ₂)
+  · iapply progCoupl_strengthen Cfg.isValue_measurableSet (h σ₂)
     iexact HBody
   iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ ⟨%he₃val, HInner⟩ !>
   iapply specCoupl_bind Std.LawfulSet.subset_refl
@@ -94,8 +96,8 @@ theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] {e 
   imod wp_unfold_mp $$ HF %σ₁ %e₁' %σ₁' %b₁ Hres with HSC
   imodintro
   cases htv : e.toVal? with
-  | some v => iapply specCoupl_atomic_bridge_some (v := v) $$ HSC
-  | none => iapply specCoupl_atomic_bridge_none h $$ HSC
+  | some v => iapply specCoupl_close_val $$ HSC
+  | none => iapply specCoupl_close_step_of_atomic h $$ HSC
 
 end OpenInv
 

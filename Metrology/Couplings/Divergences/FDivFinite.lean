@@ -38,7 +38,7 @@ theorem cell_eq_zero_iff {n : ℕ} {v : ℝ≥0∞} (hv : v ≤ 1) : cell n v = 
 theorem abs_sub_lt_of_cell_eq {n : ℕ} {v w : ℝ≥0∞} (hv : v ≤ 1) (hw : w ≤ 1)
     (h : cell n v = cell n w) : |v.toReal - w.toReal| < (2 ^ n)⁻¹ := by
   rcases eq_or_ne v 0 with rfl | hv0
-  · rw [(cell_eq_zero_iff hw).1 (h.symm.trans ((cell_eq_zero_iff (n := n) zero_le_one).2 rfl))]
+  · rw [(cell_eq_zero_iff hw).1 (h.symm.trans ((cell_eq_zero_iff zero_le_one).2 rfl))]
     simp
   have hw0 : w ≠ 0 := fun h0 ↦ hv0 ((cell_eq_zero_iff hv).1 (h.trans ((cell_eq_zero_iff hw).2 h0)))
   have hle (x : ℝ≥0∞) (hx : x ≤ 1) : ⌈x.toReal * 2 ^ n⌉₊ ≤ 2 ^ n := by
@@ -188,10 +188,9 @@ theorem tendsto_bind_disc {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubP
     hK.comp ((measurable_rep κ η n).comp (measurable_disc κ η hκ hη n))
   have := isSubProbabilityMeasure_bind μ K
   have hpt₁ (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
-    le_add_of_cell_eq (singleton_le_one (ρ := K (rep κ η n (disc κ η n x))) i)
-      (singleton_le_one i) (hcell n x i)
+    le_add_of_cell_eq (singleton_le_one i) (singleton_le_one i) (hcell n x i)
   have hpt₂ (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :=
-    le_add_of_cell_eq (singleton_le_one (ρ := K x) i) (singleton_le_one i) (hcell n x i).symm
+    le_add_of_cell_eq (singleton_le_one i) (singleton_le_one i) (hcell n x i).symm
   exact tendsto_of_le_add (measure_ne_top _ _) hc
     (fun n ↦ bind_le_add (hKn n) hK (fun x T ↦ measure_le_add_of_singleton (hpt₁ n x) T) T)
     (fun n ↦ bind_le_add hK (hKn n) (fun x T ↦ measure_le_add_of_singleton (hpt₂ n x) T) T)
@@ -212,8 +211,7 @@ theorem bind_disc_singleton_eq_zero_iff {K : X → Measure (ULift.{u} (Fin N))}
     lintegral_eq_zero_iff (f := fun x ↦ K x {i}) ((Measure.measurable_coe hi).comp hK)]
   refine Filter.eventually_congr (.of_forall fun x ↦ ?_)
   simp only [Pi.zero_apply, Function.comp_apply]
-  rw [← cell_eq_zero_iff (n := n) (singleton_le_one (ρ := K (rep κ η n (disc κ η n x))) i),
-    hcell, cell_eq_zero_iff (singleton_le_one i)]
+  rw [← cell_eq_zero_iff (singleton_le_one i), hcell, cell_eq_zero_iff (singleton_le_one i)]
 
 end Limits
 
@@ -227,12 +225,21 @@ variable {f f₁ f₂ g h : ℝ → ℝ}
 
 /-! ## Finite spaces -/
 
+/-- The mass of a point under a kernel pushforward is the sum over source points. -/
+theorem toReal_comp_singleton_eq_sum {M N : ℕ} (μ : Measure (ULift.{u} (Fin M)))
+    [IsSubProbabilityMeasure μ] (κ : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N)))
+    [IsSubMarkovKernel κ] (i : ULift.{u} (Fin N)) :
+    ((κ ∘ₘ μ) {i}).toReal = ∑ j, (μ {j}).toReal * (κ j {i}).toReal := by
+  rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable,
+    lintegral_fintype, ENNReal.toReal_sum fun _ _ ↦ by finiteness]
+  exact Finset.sum_congr rfl fun j _ ↦ by rw [ENNReal.toReal_mul, mul_comm]
+
 /-- On a finite space the `f`-divergence is the sum over points. -/
 theorem fDiv_eq_sum (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     {I : Type*} [Fintype I] [MeasurableSpace I] [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I)
     [IsFiniteMeasure ρ₁] [IsFiniteMeasure ρ₂] :
     fDiv f ρ₁ ρ₂ = ∑ i, persp f (ρ₁ {i}).toReal (ρ₂ {i}).toReal := by
-  refine le_antisymm ?_ (by simpa using sum_persp_le_fDiv hf hf_cont (k := id) measurable_id)
+  refine le_antisymm ?_ (by simpa using sum_persp_le_fDiv hf hf_cont measurable_id)
   rw [fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun _ ↦ ?_
   have hfib (ρ : Measure I) [IsFiniteMeasure ρ] (j : Fin n) :
@@ -375,13 +382,6 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
     [IsSubProbabilityMeasure μ₂] (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N)))
     [IsSubMarkovKernel κ] [IsSubMarkovKernel η] :
     fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ fDiv f₁ μ₁ μ₂ + ⨆ j, fDiv f₂ (κ j) (η j) := by
-  have hb (μ : Measure (ULift.{u} (Fin M))) [IsSubProbabilityMeasure μ]
-      (κ : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
-      (i : ULift.{u} (Fin N)) :
-      ((κ ∘ₘ μ) {i}).toReal = ∑ j, (μ {j}).toReal * (κ j {i}).toReal := by
-    rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable,
-      lintegral_fintype, ENNReal.toReal_sum fun _ _ ↦ by finiteness]
-    exact Finset.sum_congr rfl fun j _ ↦ by rw [ENNReal.toReal_mul, mul_comm]
   have hw {γ : ℝ} (hγ : γ ∈ Icc (0 : ℝ) 1) {a b : ℝ≥0∞} : 0 ≤ γ * a.toReal + (1 - γ) * b.toReal :=
     add_nonneg (mul_nonneg hγ.1 ENNReal.toReal_nonneg)
       (mul_nonneg (sub_nonneg.2 hγ.2) ENNReal.toReal_nonneg)
@@ -391,7 +391,7 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
     have hsum (ρ : Measure (ULift.{u} (Fin K))) [IsSubProbabilityMeasure ρ] :
         ∑ i, (ρ {i}).toReal ≤ 1 := by
       rw [← ENNReal.toReal_sum fun _ _ ↦ by finiteness, sum_measure_singleton]
-      exact (IsSubProbabilityMeasure.toReal_mem_Icc (μ := ρ) _).2
+      exact (IsSubProbabilityMeasure.toReal_mem_Icc _).2
     rw [← ENNReal.ofReal_sum_of_nonneg fun _ _ ↦ hw hγ, Finset.sum_add_distrib, ← Finset.mul_sum,
       ← Finset.mul_sum, ENNReal.ofReal_le_one]
     nlinarith [hsum ρ, hsum ρ', hγ.1, hγ.2]
@@ -401,7 +401,7 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
   set S := ⨆ j, (fDiv f₂ (κ j) (η j)).toENNReal
   have key : (fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂)).toENNReal ≤ (fDiv f₁ μ₁ μ₂).toENNReal + S := by
     rw [fDiv_eq_sum hf hf_cont, fDiv_eq_sum hf₁ hf₁_cont]
-    simp_rw [hb]
+    simp_rw [toReal_comp_singleton_eq_sum]
     calc (∑ i, persp f (∑ j, (μ₁ {j}).toReal * (κ j {i}).toReal)
           (∑ j, (μ₂ {j}).toReal * (η j {i}).toReal)).toENNReal
         ≤ (∑ i, ∑ j, persp f ((μ₁ {j}).toReal * (κ j {i}).toReal)
@@ -419,10 +419,11 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
             ENNReal.ofReal (β' * (μ₁ {j}).toReal + (1 - β') * (μ₂ {j}).toReal) *
               (persp f₂ (κ j {i}).toReal (η j {i}).toReal).toENNReal) := by
           refine Finset.sum_le_sum fun i _ ↦ Finset.sum_le_sum fun j _ ↦ ?_
-          refine (EReal.toENNReal_le_toENNReal (hA _ (IsSubProbabilityMeasure.toReal_mem_Icc
-            (μ := μ₂) _) _ (IsSubProbabilityMeasure.toReal_mem_Icc (μ := η j) _) _
-            (IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ₁) _) _
-            (IsSubProbabilityMeasure.toReal_mem_Icc (μ := κ j) _))).trans_eq ?_
+          refine (EReal.toENNReal_le_toENNReal (hA _
+            (IsSubProbabilityMeasure.toReal_mem_Icc _) _
+            (IsSubProbabilityMeasure.toReal_mem_Icc _) _
+            (IsSubProbabilityMeasure.toReal_mem_Icc _) _
+            (IsSubProbabilityMeasure.toReal_mem_Icc _))).trans_eq ?_
           rw [EReal.toENNReal_add
             (EReal.mul_nonneg (EReal.coe_nonneg.2 (hw hβ)) (hp hf₁₀))
             (EReal.mul_nonneg (EReal.coe_nonneg.2 (hw hβ')) (hp hf₂₀)),

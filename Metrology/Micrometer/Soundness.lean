@@ -266,14 +266,14 @@ open MeasureTheory
 variable {rT : Type} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors}
 
+/-- Two values are the same boolean. -/
 def boolEqVal (v v' : Val rT) : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
 theorem lrel_bool_to_boolEqVal [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
-  iintro Hbool
-  iunfold lrel_bool at Hbool
-  icases Hbool with ⟨%b, %h⟩
+  iunfold lrel_bool
+  iintro ⟨%b, %h⟩
   exact pure_intro ⟨b, h⟩
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -299,7 +299,7 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
   rw [hRewriteFb (K.fill e), hRewriteFb (K.fill e')]
   have hCpl : L.Rel 0 (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ₀⟩)
       (limExecV ⟨K.fill e', σ₀⟩) := by
-    apply refines_coupling (GF := GF) (A := fun _ _ => lrel_bool)
+    apply refines_coupling (GF := GF)
     · exact fun _ _ v v' => lrel_bool_to_boolEqVal v v'
     · intro IR IBC
       have HrelClosed : ⊢@{IProp GF}

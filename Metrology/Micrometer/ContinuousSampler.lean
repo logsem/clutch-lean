@@ -89,7 +89,7 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
       {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
-  (Cfg.uniformReal_codensity_bij (L := GradedDivergence.tv.codensity) σ σ' f hmp).addCoupl
+  (Cfg.uniformReal_codensity_bij σ σ' f hmp).addCoupl
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -135,13 +135,13 @@ theorem wp_couple_urand_urand (f : rT → rT)
   isplitr
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill Exp.urand_not_isValue, primStep_urand σ₁']
-    exact (Cfg.uniformReal_codensity_bij (L := L) σ₁ σ₁' f hmp).map_right
+    exact (Cfg.uniformReal_codensity_bij σ₁ σ₁' f hmp).map_right
       (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (Ectx.fillCfg.measurable K)
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
   cases heq2
   iintro !> !>
-  imod specProg_update (e3 := K.fill pl(#(.real (f r)))) $$ Hs Hj with ⟨Hs', Hj'⟩
+  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
   imod Hclose
   imodintro
   iframe Hσ Hs' Hb

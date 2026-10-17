@@ -324,7 +324,7 @@ noncomputable def lrelRec1 (C : lrel rT GF -n> lrel rT GF) (r : lrel rT GF) : lr
 instance lrelRec1_contractive (C : lrel rT GF -n> lrel rT GF) : OFE.Contractive (lrelRec1 C) where
   distLater_dist {n P Q} hPQ w1 w2 := by
     show iprop(_ ∗ ▷ _) ≡{n}≡ iprop(_ ∗ ▷ _)
-    exact sep_ne.ne .rfl <| Contractive.distLater_dist (f := (Iris.BI.later : IProp GF → IProp GF))
+    exact sep_ne.ne .rfl <| Contractive.distLater_dist
       fun k hk => C.ne.ne (show P ≡{k}≡ Q from hPQ k hk) w1 w2
 
 -- TODO: Tweak when fixpoints land
@@ -345,13 +345,13 @@ theorem lrel_rec_unfold (C : lrel rT GF -n> lrel rT GF) :
 
 -- TODO: Attempt to simplify once nonexp lands
 omit [LawfulProbLangℝ rT] in
-/-- `lrelRec1` guards the recursive occurrence under `▷`, so this is `fixpoint_dist`. -/
+/-- Recursive relations are `n`-close when their bodies are `n`-close pointwise. -/
 theorem lrel_rec_ne {n : Nat} {C1 C2 : lrel rT GF -n> lrel rT GF}
     (hC : ∀ A : lrel rT GF, C1 A ≡{n}≡ C2 A) :
     lrel_rec C1 ≡{n}≡ lrel_rec C2 :=
   fixpoint_dist fun r w1 w2 =>
     sep_ne.ne .rfl
-      (OFE.NonExpansive.ne (f := (Iris.BI.later : IProp GF → IProp GF)) (hC r w1 w2))
+      (OFE.NonExpansive.ne (hC r w1 w2))
 
 /-! ### Nonexpansive instances on simple lrel constructors -/
 
@@ -374,7 +374,7 @@ theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
   unfold refines
   refine forall_ne fun K => forall_ne fun b => ?_
   refine wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl ?_
-  refine NonExpansive.ne (f := wp L ⊤ e) fun v => exists_ne fun v' => exists_ne fun b' => ?_
+  refine NonExpansive.ne fun v => exists_ne fun v' => exists_ne fun b' => ?_
   exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl (h v v')
 
 instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) where
@@ -446,10 +446,15 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
 
 instance : Inhabited (Val rT) := ⟨.unit⟩
 
-private theorem fupd_of_inv_disj {E : CoPset} {P1 P2 Q : IProp GF} {p1 p2 : Loc × Loc}
-    (HE : (↑logN : CoPset) ⊆ E) (hne : p1 ≠ p2) (hfalse : ⊢ P1 -∗ P2 -∗ False) :
-    ⊢ Iris.inv (logN.@ p1) P1 -∗ Iris.inv (logN.@ p2) P2 -∗ |={E}=> Q := by
-  have hN_disj : logN.@ p1 ## logN.@ p2 := ndot_ne_disjoint _ hne
+/-- Two `logN` invariants with incompatible bodies have equal names, so `l1 = l2` holds whenever
+equal names imply it. -/
+private theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
+    {l1 l2 : Loc} (HE : (↑logN : CoPset) ⊆ E) (hp : p1 = p2 → l1 = l2)
+    (hfalse : ⊢ P1 -∗ P2 -∗ False) :
+    ⊢ Iris.inv (logN.@ p1) P1 -∗ Iris.inv (logN.@ p2) P2 -∗ |={E}=> ⌜l1 = l2⌝ := by
+  by_cases h : l1 = l2
+  · iintro - - !> !%; exact h
+  have hN_disj : logN.@ p1 ## logN.@ p2 := ndot_ne_disjoint _ (mt hp h)
   have h1 : (↑(logN.@ p1) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
   have h2 : (↑(logN.@ p2) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
   have h2' : (↑(logN.@ p2) : CoPset) ⊆ E \ (↑(logN.@ p1) : CoPset) :=
@@ -460,8 +465,8 @@ private theorem fupd_of_inv_disj {E : CoPset} {P1 P2 Q : IProp GF} {p1 p2 : Loc 
   ihave Hfalse : iprop% ▷ False $$ [HP1 HP2]
   · inext
     iapply hfalse $$ HP1 HP2
-  imod Hfalse with %h
-  exact h.elim
+  imod Hfalse with %hf
+  exact hf.elim
 
 /-- Reference type is functional in the program-side location. -/
 theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
@@ -470,16 +475,12 @@ theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
         (lrel_ref A).car (.loc l) (.loc l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
-  iintro H1 H2
-  icases H1 with ⟨%l', %l1', %Heq1, %Heq1', Hinv1⟩
-  icases H2 with ⟨%l'', %l2', %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l', %l1', %Heq1, %Heq1', Hinv1⟩ ⟨%l'', %l2', %Heq2, %Heq2', Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
-  by_cases h : l1 = l2
-  · imodintro; ipureintro; exact h
-  · iapply fupd_of_inv_disj HE (fun heq => h (by injection heq)) (by
-      iintro ⟨%wa1, %ws1, Hl1L, -⟩ ⟨%wa2, %ws2, Hl2L, -⟩
-      iapply appHeapFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
+  iapply fupd_eq_of_inv_excl HE (by simp) (by
+    iintro ⟨%wa1, %ws1, Hl1L, -⟩ ⟨%wa2, %ws2, Hl2L, -⟩
+    iapply appHeapFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
 /-- Reference type is injective on the program-side location. -/
 theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
@@ -488,16 +489,12 @@ theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
         (lrel_ref A).car (.loc l2) (.loc l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
-  iintro H1 H2
-  icases H1 with ⟨%l1', %l', %Heq1, %Heq1', Hinv1⟩
-  icases H2 with ⟨%l2', %l'', %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l1', %l', %Heq1, %Heq1', Hinv1⟩ ⟨%l2', %l'', %Heq2, %Heq2', Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
-  by_cases h : l1 = l2
-  · imodintro; ipureintro; exact h
-  · iapply fupd_of_inv_disj HE (fun heq => h (by injection heq)) (by
-      iintro ⟨%wa1, %ws1, -, Hs1L, -⟩ ⟨%wa2, %ws2, -, Hs2L, -⟩
-      iapply specHeapFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
+  iapply fupd_eq_of_inv_excl HE (by simp) (by
+    iintro ⟨%wa1, %ws1, -, Hs1L, -⟩ ⟨%wa2, %ws2, -, Hs2L, -⟩
+    iapply specHeapFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
 
 /-- Tape type is functional in the program-side location. -/
 theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
@@ -506,16 +503,12 @@ theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
-  iintro H1 H2
-  icases H1 with ⟨%l', %l1', %z1, %Heq1, %Heq1', Hinv1⟩
-  icases H2 with ⟨%l'', %l2', %z2, %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l', %l1', %z1, %Heq1, %Heq1', Hinv1⟩ ⟨%l'', %l2', %z2, %Heq2, %Heq2', Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
-  by_cases h : l1 = l2
-  · imodintro; ipureintro; exact h
-  · iapply fupd_of_inv_disj HE (fun heq => h (by injection heq)) (by
-      iintro ⟨Hl1L, -⟩ ⟨Hl2L, -⟩
-      iapply appTapesFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
+  iapply fupd_eq_of_inv_excl HE (by simp) (by
+    iintro ⟨Hl1L, -⟩ ⟨Hl2L, -⟩
+    iapply appTapesFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
 /-- Tape type is injective on the program-side location. -/
 theorem interp_tape_inj {E : CoPset} (l l1 l2 : Loc)
@@ -524,16 +517,12 @@ theorem interp_tape_inj {E : CoPset} (l l1 l2 : Loc)
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l2) (.lbl l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
-  iintro H1 H2
-  icases H1 with ⟨%l1', %l', %z1, %Heq1, %Heq1', Hinv1⟩
-  icases H2 with ⟨%l2', %l'', %z2, %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l1', %l', %z1, %Heq1, %Heq1', Hinv1⟩ ⟨%l2', %l'', %z2, %Heq2, %Heq2', Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
-  by_cases h : l1 = l2
-  · imodintro; ipureintro; exact h
-  · iapply fupd_of_inv_disj HE (fun heq => h (by injection heq)) (by
-      iintro ⟨-, Hs1L⟩ ⟨-, Hs2L⟩
-      iapply specTapesFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
+  iapply fupd_eq_of_inv_excl HE (by simp) (by
+    iintro ⟨-, Hs1L⟩ ⟨-, Hs2L⟩
+    iapply specTapesFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
 
 end SemtypesProperties
 
@@ -556,13 +545,11 @@ theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {E : CoPse
     ⊢ refines L E e e' A -∗
       (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗
       refines L E (K.fill e) (K'.fill e') A' := by
-  iintro Hm Hf
-  iunfold refines at Hm
-  iunfold refines
-  iintro %K'' %b Hj Hna Herr Hpos
+  unfold refines
+  iintro Hm Hf %K'' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K'' K' e'] at Hj
   ispecialize Hm $$ %(K''.comp K') %b Hj Hna Herr Hpos
-  iapply MicrometerWpGS.wp_bind (K := K)
+  iapply MicrometerWpGS.wp_bind
   iapply MicrometerWpGS.wp_mono
   -- Take the `wp` premise first: it pins the intermediate postcondition to the one of `Hm`,
   -- with the continuation `Hf` framed alongside it.
@@ -574,12 +561,10 @@ theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {E : CoPse
   change _ ⊢ wp L ⊤ (K.fill v.1) _
   iintro ⟨Hf, %v', %b', Hj, Hna, Herr, Hpos, HA⟩
   ispecialize Hf $$ %v %v' HA
-  iunfold refines at Hf
   isimp only [← Ectx.fill_comp K'' K' v'.1] at Hj
   iapply Hf $$ %K'' %b' Hj Hna Herr Hpos
 
-/-- Value introduction that consumes the local `na_own E` to produce
-`na_own ⊤` together with `A v1 v2`. -/
+/-- Values refine at `A` when `naOwnP E` updates to `naOwnP ⊤` together with `A v1 v2`. -/
 theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) ⊤ ∗ A v1 v2)
@@ -593,7 +578,7 @@ theorem refines_ret_na {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel 
   iexists v2, b
   iframe HK HF Herr Hpos HA
 
-/-- Dual of `refines_ret_na` splitting `⊤ = E ∪ (⊤ \ E)`. -/
+/-- Values refine at `A` when a `⊤` update gives the missing `naOwnP (⊤ \ E)` and `A v1 v2`. -/
 theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> naOwnP (rT := rT) ((⊤ : CoPset) \ E) ∗ A v1 v2)
@@ -641,7 +626,10 @@ instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
 
 instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
     IsExcept0 (refines L E e t A) where
-  is_except0 := (except0_mono fupd_intro).trans (BIFUpdate.except0.trans fupd_refines)
+  is_except0 := calc
+    ◇ refines L E e t A ⊢ ◇ |={⊤}=> refines L E e t A := except0_mono fupd_intro
+    _ ⊢ |={⊤}=> refines L E e t A := BIFUpdate.except0
+    _ ⊢ refines L E e t A := fupd_refines
 
 theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) F ∗ refines L F e1 e2 A)

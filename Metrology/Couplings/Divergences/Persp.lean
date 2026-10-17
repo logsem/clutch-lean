@@ -97,7 +97,7 @@ theorem le_derivAtTop_of_affine_le {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + 
   exact h t ht.le
 
 theorem derivAtTop_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ derivAtTop f := by
-  simpa using le_derivAtTop_of_affine_le (c := 0) (c' := 0) (by simpa using hf)
+  simpa using le_derivAtTop_of_affine_le (c := 0) (by simpa using hf)
 
 theorem derivAtTop_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) : derivAtTop f ≤ derivAtTop g := by
   refine limsup_le_limsup ?_
@@ -109,7 +109,7 @@ theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (
     (((f (x + h) - f x) / h : ℝ) : EReal) ≤ derivAtTop f := by
   set s := (f (x + h) - f x) / h
   have hlow (t : ℝ) (ht : x + h ≤ t) : f x + s * (t - x) ≤ f t := by
-    have := hf.secant_mono (a := x) hx (by simp only [mem_Ici]; linarith)
+    have := hf.secant_mono hx (by simp only [mem_Ici]; linarith)
       (by simp only [mem_Ici]; linarith) (by linarith) (by linarith) ht
     rw [add_sub_cancel_left] at this
     rwa [← le_sub_iff_add_le', ← le_div_iff₀ (by linarith)]
@@ -119,7 +119,7 @@ theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (
   -- `f t / t ≥ s + (f x - s x) / t`, which exceeds `r` for large `t`
   have hev : ∀ᶠ t in atTop, (r : EReal) ≤ ((f t / t : ℝ) : EReal) := by
     have hlim : Tendsto (fun t : ℝ ↦ s + (f x - s * x) / t) atTop (𝓝 s) := by
-      simpa using (tendsto_const_nhds (x := s)).add
+      simpa using tendsto_const_nhds.add
         ((tendsto_const_nhds (x := f x - s * x)).div_atTop tendsto_id)
     filter_upwards [hlim.eventually (lt_mem_nhds hrs), eventually_ge_atTop (x + h),
       eventually_gt_atTop 0] with t h1 h2 h3

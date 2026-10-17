@@ -111,7 +111,7 @@ theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
     iprop% ▷ refines L ⊤ b t A ⊢ refines L ⊤ (.app (.lam b) u.1) t A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
-  iapply refines_pure_l (e := .app (.lam b) u.1) (e' := Exp.open' b u.1) (n := 1)
+  iapply refines_pure_l (e' := Exp.open' b u.1)
     (φ := u.1.isValue ∧ (Exp.lam b).IsLocallyClosed) ⟨⟨u.2⟩, by is_lc⟩
   rw [show Ectx.fill [] (Exp.open' b u.1) = b from (Exp.open_lc 0 u.1 b hb).symm]
   inext
@@ -122,7 +122,7 @@ theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
     refines L ⊤ t b A ⊢ refines L ⊤ t (.app (.lam b) u.1) A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
-  iapply refines_pure_r (e := .app (.lam b) u.1) (e' := Exp.open' b u.1) (n := 1)
+  iapply refines_pure_r (e' := Exp.open' b u.1)
     (φ := u.1.isValue ∧ (Exp.lam b).IsLocallyClosed) ⟨⟨u.2⟩, by is_lc⟩
   rw [show Ectx.fill [] (Exp.open' b u.1) = b from (Exp.open_lc 0 u.1 b hb).symm]
   iexact H
@@ -176,8 +176,8 @@ theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iunfold lrel_prod at Hprod
   icases Hprod with ⟨%a1, %a2, %b1, %b2, %hv, %hv', HA, -⟩
   rw [Ectx.fill_fst, Ectx.fill_fst, hv, hv']
-  iapply refines_pure_ret (Hex := pureExec_fst_pair) (Hex' := pureExec_fst_pair)
-    ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩ rfl rfl $$ HA
+  iapply refines_pure_ret ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩
+    rfl rfl $$ HA
 
 theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : iprop%
     refines L ⊤ e0 e0' (lrel_sum A B) ⊢
@@ -196,7 +196,7 @@ theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : ipro
       w1.2.toIsValue w2.2.toIsValue
     inext
     iapply refines_app $$ IH1
-    iapply refines_ret (v1 := w1) (v2 := w2) rfl rfl
+    iapply refines_ret rfl rfl
     imodintro
     iexact HA
   · rw [hv, hv']
@@ -204,29 +204,27 @@ theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : ipro
       w1.2.toIsValue w2.2.toIsValue
     inext
     iapply refines_app $$ IH2
-    iapply refines_ret (v1 := w1) (v2 := w2) rfl rfl
+    iapply refines_ret rfl rfl
     imodintro
     iexact HB
 
 theorem refines_pure_both {e r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (hφ : φ)
     (hrv : IsVal r) {A : lrel rT GF} (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ e e A := by
-  iapply refines_pure_ret (Hex := Hex) (Hex' := Hex) (v := ⟨r, hrv, hrv.lc⟩)
-    (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
+  iapply refines_pure_ret (v := ⟨r, hrv, hrv.lc⟩) (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
   iapply HA
 
 theorem refines_binop_pure (op : BinOp) (v1 v2 r : Exp rT) (hv1 : IsVal v1) (hv2 : IsVal v2)
     (hrv : IsVal r) (heval : op.eval v1 v2 = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
-  refines_pure_both (φ := v1.isValue ∧ v2.isValue ∧ op.eval v1 v2 = some r)
-    ⟨hv1.toIsValue, hv2.toIsValue, heval⟩ hrv HA
+  refines_pure_both ⟨hv1.toIsValue, hv2.toIsValue, heval⟩ hrv HA
 
 theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal r)
     (heval : op.eval v = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ (.unop op v) (.unop op v) A :=
-  refines_pure_both (φ := v.isValue ∧ op.eval v = some r) ⟨hv.toIsValue, heval⟩ hrv HA
+  refines_pure_both ⟨hv.toIsValue, heval⟩ hrv HA
 
 /-! ### Discrete fragment: tape allocation and bounded sampling -/
 
@@ -285,9 +283,8 @@ theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
   iintro %l' Hl'
   iapply refines_alloc_l
   iintro %l Hl
-  imod Iris.inv_alloc (E := ⊤)
-    (P := iprop(∃ w1 w2, appHeapFrag l w1 ∗ specHeapFrag l' w2 ∗ A w1 w2)) $$ [Hl Hl' HA]
-    with #HInv
+  imod Iris.inv_alloc (P := iprop(∃ w1 w2, appHeapFrag l w1 ∗ specHeapFrag l' w2 ∗ A w1 w2))
+    $$ [Hl Hl' HA] with #HInv
   · iintro !>
     iexists v, v'
     iframe Hl Hl' HA
@@ -332,21 +329,17 @@ theorem refines_snd {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iunfold lrel_prod at Hprod
   icases Hprod with ⟨%a1, %a2, %b1, %b2, %hv, %hv', -, HB⟩
   rw [Ectx.fill_snd, Ectx.fill_snd, hv, hv']
-  iapply refines_pure_ret (Hex := pureExec_snd_pair) (Hex' := pureExec_snd_pair)
-    ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩ rfl rfl $$ HB
+  iapply refines_pure_ret ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩
+    rfl rfl $$ HB
 
 omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
     (_hC : OFE.NonExpansive C)
     (hCclosed : ∀ v v', (C A).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝) :
     refines L ⊤ e e' (C A) ⊢ refines L ⊤ e e' (lrel_exists C) := by
-  show _ ⊢ refines L ⊤ (Ectx.fill Ectx.empty e) (Ectx.fill Ectx.empty e') (lrel_exists C)
   iintro IH
-  iapply refines_bind Ectx.empty Ectx.empty $$ IH
-  iintro %v %v' HCA
-  iapply refines_ret (e1 := Ectx.fill Ectx.empty v.1) (e2 := Ectx.fill Ectx.empty v'.1)
-    (v1 := v) (v2 := v') rfl rfl
-  imodintro
+  iapply refines_wand $$ IH
+  iintro %v %v' HCA !>
   ihave %hcl := hCclosed v v' $$ HCA
   iunfold lrel_exists
   isplitr; · ipureintro; exact hcl
@@ -389,7 +382,7 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
   rw [show Ectx.fill [EctxItem.storeL w] v.1 = Exp.store v.1 w.1 from rfl,
     show Ectx.fill [EctxItem.storeL w'] v'.1 = Exp.store v'.1 w'.1 from rfl, heq, heq',
     Ectx.eq_fill_nil (Exp.store pl(#(.loc l)) w.1)]
-  iapply refines_atomic_l (E' := ⊤ \ ↑(logN.@ (l, l'))) (OpenInv.of_atomic (Atomic.store' l w))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.store' l w))
   iintro %K' Hr
   iinv Hinv with ⟨%v1, %v2, >Hv1, >Hv2, -⟩ Hclose
   imodintro
@@ -400,7 +393,7 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
   iintro ⟨HKRes, Hv2'⟩
   iapply specUpdate_ret
   rw [show Exp.store pl(#(.loc l)) w.1 = .store pl(#(.loc l)) (.ofVal w) from rfl]
-  iapply wp_store (v' := v1)
+  iapply wp_store
   iframe Hv1
   iintro Hw1'
   imod Hclose $$ [Hw1' Hv2' HwA] with -
@@ -410,8 +403,7 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
   imodintro
   iexists pl(#(.unit))
   iframe HKRes
-  iapply refines_ret (e1 := Ectx.fill [] pl(#(.unit))) (e2 := pl(#(.unit))) (v1 := .unit)
-    (v2 := .unit) rfl rfl
+  iapply refines_ret (e1 := Ectx.fill [] pl(#(.unit))) (v1 := .unit) (v2 := .unit) rfl rfl
   imodintro
   iapply lrel_unit_lit
 
@@ -424,7 +416,7 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
   iunfold lrel_ref at HRef
   icases HRef with ⟨%l, %l', %heq, %heq', #Hinv⟩
   rw [Ectx.fill_load, Ectx.fill_load, heq, heq', Ectx.eq_fill_nil (pl(!#(.loc l)) : Exp rT)]
-  iapply refines_atomic_l (E' := ⊤ \ ↑(logN.@ (l, l'))) (OpenInv.of_atomic (Atomic.load' l))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.load' l))
   iintro %K' Hr
   iinv Hinv with ⟨%w1, %w2, >Hw1, >Hw2, #HwAL⟩ Hclose
   imodintro
@@ -448,7 +440,7 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
   imodintro
   iexists Exp.ofVal w2
   iframe HKRes
-  iapply refines_ret (e1 := Ectx.fill [] w1.1) (e2 := Exp.ofVal w2) (v1 := w1) (v2 := w2) rfl rfl
+  iapply refines_ret (e1 := Ectx.fill [] w1.1) (e2 := Exp.ofVal w2) rfl rfl
   imodintro
   iexact HwA
 
@@ -465,7 +457,7 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
     refines L ⊤ pl(rand(#(.int z), #(.lbl α))) pl(rand(#(.int z), #(.lbl α'))) A := by
   iintro #Hinv
   rw [Ectx.eq_fill_nil (pl(rand(#(.int z), #(.lbl α))) : Exp rT)]
-  iapply refines_atomic_l (E' := ⊤ \ ↑(logN.@ (α, α'))) (OpenInv.of_atomic (Atomic.rand_lbl' z α))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl' z α))
   iintro %K' Hr
   iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
   imodintro
@@ -517,8 +509,7 @@ theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
   icases HPosNat with ⟨%M, %hM, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL w] v.1 = Exp.rand v.1 w.1 from rfl,
     show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
-  iapply refines_rand_lbl_of_pos (z := (M : Int)) (by exact_mod_cast hM)
-    (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
+  iapply refines_rand_lbl_of_pos (by exact_mod_cast hM) (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
 theorem refines_rand_unit {e e' : Exp rT} : iprop%
     refines L ⊤ e e' lrel_pos_nat ⊢@{IProp GF}
@@ -531,8 +522,7 @@ theorem refines_rand_unit {e e' : Exp rT} : iprop%
   icases HPosNat with ⟨%n, %hn, %hv, %hv'⟩
   rw [show Ectx.fill [EctxItem.randL .unit] v.1 = Exp.rand v.1 pl(#(.unit)) from rfl,
     show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, hv, hv']
-  iapply refines_rand_unit_of_pos (z := (n : Int)) (by exact_mod_cast hn)
-    fun m h0 _ => lrel_nat_lit h0
+  iapply refines_rand_unit_of_pos (by exact_mod_cast hn) fun m h0 _ => lrel_nat_lit h0
 
 theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     refines L ⊤ e1 e1' lrel_int ⊢@{IProp GF}
@@ -555,8 +545,7 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
   by_cases hnpos : 0 < n
   · iapply refines_rand_lbl_of_pos hnpos (fun m _ _ => lrel_int_lit m) $$ Hinv
   · rw [Ectx.eq_fill_nil (pl(rand(#(.int n), #(.lbl α))) : Exp rT)]
-    iapply refines_atomic_l (E' := ⊤ \ ↑(logN.@ (α, α')))
-      (OpenInv.of_atomic (Atomic.rand_lbl' n α))
+    iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl' n α))
     iintro %K' Hr
     iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
     imodintro
@@ -571,8 +560,8 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     imodintro
     iexists pl(#(.int (-1)))
     iframe HKRes
-    iapply refines_ret (e1 := Ectx.fill [] pl(#(.int (-1)))) (e2 := pl(#(.int (-1))))
-      (v1 := .int (-1)) (v2 := .int (-1)) rfl rfl
+    iapply refines_ret (e1 := Ectx.fill [] pl(#(.int (-1)))) (v1 := .int (-1)) (v2 := .int (-1))
+      rfl rfl
     imodintro
     iapply lrel_int_lit (-1)
 

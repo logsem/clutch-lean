@@ -47,7 +47,7 @@ multiplier is spent on the head (Rocq `dp_rhs_head_of_AR`). -/
 theorem codensity_dp_rhs_of_tv [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : (codensity tv).Rel δ₁ S μ ν) {D : Y → ℝ≥0∞} (hD : Measurable D) :
     dp.codensity (ε₂, δ₁ + ∫⁻ y, D y ∂ν) (fun x y ↦ if S x y then (ε₂, D y) else ⊤) μ ν := by
-  simpa using codensity_dp_rhs (ε₂ := ε₂) (codensity_tv_rel_iff_dp.1 h) hD
+  simpa using codensity_dp_rhs (codensity_tv_rel_iff_dp.1 h) hD
 
 open Classical in
 /-- Adaptive composition keyed on the left outcome: after a DP lifting of `S`, the budgets
@@ -101,7 +101,7 @@ theorem setLIntegral_le_of_codensity_dp [IsSubProbabilityMeasure μ] (hε₁ : �
       = ∫⁻ x, P.indicator (fun x ↦ f x - δ₂) x ∂μ := (lintegral_indicator hP _).symm
     _ ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * T.indicator g y) ∂ν + δ₁ := by
         refine (codensity_dp_rel_iff hε₁).1 h _ _ ((hf.sub_const δ₂).indicator hP)
-          (by fun_prop (disch := exact hT)) hf1' (fun _ ↦ min_le_left _ _) fun x y hS ↦ ?_
+          (by fun_prop) hf1' (fun _ ↦ min_le_left _ _) fun x y hS ↦ ?_
         by_cases hx : x ∈ P
         · rw [indicator_of_mem hx, indicator_of_mem (hPT x y hx hS)]
           exact le_min (tsub_le_self.trans (hf1 x)) (tsub_le_iff_right.2 (hfg x y hx hS))

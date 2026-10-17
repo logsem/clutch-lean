@@ -141,7 +141,6 @@ theorem isComposable_fDivBound_of_mul [Add B] (hw : ∀ b k, ConvexOn ℝ (Ici 0
     (hpos : ∀ b k, 0 ≤ thresh b k) :
     (fDivBound.{u} K weight thresh).IsComposable :=
   isComposable_fDivBound_of_finite hw hw_cont
-    (chain := fun a c ↦ max 0 a * max 0 c)
     (fun _ _ _ _ ha hc ↦ mul_le_mul (max_le_max le_rfl ha) (max_le_max le_rfl hc)
       (le_max_left _ _) ((le_max_left _ _).trans (max_le_max le_rfl ha)))
     hfin hthresh hpos
@@ -163,7 +162,7 @@ theorem continuous_dpWeight (ε : ℝ) : Continuous (dpWeight ε) :=
 theorem derivAtTop_dpWeight (ε : ℝ) : derivAtTop (dpWeight ε) = 1 := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
   have h : Tendsto (fun t : ℝ ↦ 1 - Real.exp ε / t) atTop (𝓝 1) := by
-    simpa using (tendsto_const_nhds (x := (1 : ℝ))).sub
+    simpa using tendsto_const_nhds.sub
       ((tendsto_const_nhds (x := Real.exp ε)).div_atTop tendsto_id)
   refine h.congr' ?_
   filter_upwards [eventually_gt_atTop (Real.exp ε)] with t ht

@@ -122,7 +122,7 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   wp_pures
   rw [show (Exp.alloc (.inl (.lit .unit)) : Exp rT) =
     .alloc (Exp.ofVal (assocVal [])) from rfl]
-  iapply wp_alloc (v := assocVal [])
+  iapply wp_alloc
   iexact HΦ
 
 theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
@@ -135,8 +135,7 @@ theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IP
   ihave Hj := specProgFrag_reshape
     (e₁ := Ectx.fill K (Exp.alloc (.inl (.lit .unit))))
     (e₂ := K.fill (Exp.alloc (Exp.ofVal (assocVal [])))) rfl $$ Hj
-  imod step_alloc_at K (Val.isVal_ofVal _) (vv := assocVal []) rfl
-    $$ Hj with ⟨%ℓ, Hj, Hl⟩
+  imod step_alloc_at K (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%ℓ, Hj, Hl⟩
   iapply Hcnt $$ %ℓ Hj Hl
 
 theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
@@ -182,7 +181,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
   rw [show (Exp.store pl(#(.loc ℓ))
       (.inr (.pair (.pair pl(#(.int k)) pl(#(.int y))) (Exp.ofVal (assocVal m)))) : Exp rT) =
     .store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((k, y) :: m))) from rfl]
-  iapply wp_store (v' := assocVal m) (v := assocVal ((k, y) :: m))
+  iapply wp_store
   iframe Hl
   iexact HΦ
 

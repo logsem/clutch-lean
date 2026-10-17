@@ -51,8 +51,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   [BudgetCreditGS B GF]
 
 /-- A non-expansive map from type environments to logical relations. -/
-structure NEFun (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (GF : BundledGFunctors) where
+structure NEFun (rT : Type) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
   fn : TyEnv rT GF → lrel rT GF
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 

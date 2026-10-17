@@ -119,9 +119,8 @@ def otpφ (v v' : Val rT) : Prop :=
 
 theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
-  iintro Hr
-  iunfold lrel_real at Hr
-  icases Hr with ⟨%r, %hv, %hv'⟩
+  iunfold lrel_real
+  iintro ⟨%r, %hv, %hv'⟩
   ipureintro
   exact ⟨r, hv, hv'⟩
 
@@ -211,7 +210,7 @@ theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0�
         x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) (L := codensity tv)
+  refines_sound_fresh (GF := GF)
     (OrderAddMonoidHom.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
     fun _ _ _ => otp_refines_real m
 
@@ -222,7 +221,7 @@ theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ�
         x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) (L := codensity tv)
+  refines_sound_fresh (GF := GF)
     (OrderAddMonoidHom.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ _ => otp_refines_rev_real m
 
