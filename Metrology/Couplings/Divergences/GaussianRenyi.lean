@@ -95,6 +95,13 @@ theorem zcdpDivergence_gaussianReal (hv : v ≠ 0) :
     rw [zero_add, ← ENNReal.ofReal_mul (by linarith), ← mul_div_assoc]
     exact renyiDivergence_gaussianReal hα.le hv
 
+/-- Two Gaussians of equal variance `v` couple along equal samples in the zCDP lifting at
+`(0, (a - a')² / (2 v))`. -/
+theorem zcdpLifting_rel_gaussianReal (hv : v ≠ 0) :
+    zcdpLifting.Rel (0, ENNReal.ofReal ((a - a') ^ 2 / (2 * v))) (· = ·) (gaussianReal a v)
+      (gaussianReal a' v) :=
+  concentratedLifting_complete (zcdpDivergence_gaussianReal hv)
+
 end GradedDivergence
 
 namespace Mechanism
