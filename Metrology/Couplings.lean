@@ -14,6 +14,7 @@ public import Metrology.Couplings.LiftingHom
 public import Metrology.Couplings.SpanLifting
 public import Metrology.Couplings.Divergences
 public import Metrology.Couplings.Bridges
+public import Metrology.Couplings.Examples
 
 /-! Graded divergences, graded liftings, and the codensity lifting (Approximate Span Liftings). -/
 
