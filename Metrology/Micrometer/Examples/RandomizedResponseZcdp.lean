@@ -339,12 +339,10 @@ theorem iInf_conversion_le (ξ : ℝ≥0∞) {δ : ℝ} :
 theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (hδ : 0 < δ) :
     dp (ENNReal.ofReal (Real.log 9), ENNReal.ofReal δ)
       (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
-  have h := (LiftingRelHom.zcdpToDp hδ).map_rel
+  have h := GradedDivergence.codensity_sound <| (LiftingRelHom.zcdpToDp hδ).map_rel
     (rr2_coupling_of (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) b₁ b₂ b₁' b₂' σ σ')
-  dsimp only [LiftingRelHom.zcdpToDp, LiftingRelHom.comp, LiftingRelHom.codensityZcdpToDp,
-    LiftingHom.toLiftingRelHom, LiftingHom.concentratedToCodensity, Function.comp] at h
-  exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩)
-    (IsSound.sound (D := dp) h)
+  simp only [LiftingRelHom.zcdpToDp_map] at h
+  exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
 
 /-- Randomized response on pairs of private bits, started from state `σ`. -/
 noncomputable def rr2Mech (σ : State rT) : Mechanism (Bool × Bool) (Exp rT) :=
