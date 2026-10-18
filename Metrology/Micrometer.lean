@@ -20,6 +20,7 @@ public import Metrology.Micrometer.Examples.OTP
 public import Metrology.Micrometer.Examples.Switching
 public import Metrology.Micrometer.Examples.ContinuousOTP
 public import Metrology.Micrometer.Examples.RandomizedResponse
+public import Metrology.Micrometer.Examples.RandomizedResponseZcdp
 
 @[expose] public section
 
