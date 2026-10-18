@@ -17,6 +17,7 @@ public import Metrology.Couplings.Divergences.Chi2
 public import Metrology.Couplings.Divergences.Conversions
 public import Metrology.Couplings.Divergences.Mechanism
 public import Metrology.Couplings.Divergences.Laplace
+public import Metrology.Couplings.Divergences.PureDpZcdp
 public import Metrology.Couplings.Divergences.Gaussian
 public import Metrology.Couplings.Divergences.GaussianRenyi
 public import Metrology.Couplings.Divergences.Fill
