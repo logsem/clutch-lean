@@ -292,6 +292,20 @@ theorem refines_alloctape_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT} {A
   iintro %l Hl
   iapply Hlog $$ %l Hl
 
+/-- `refines_alloctape_l` with the fresh tape as an empty `appNatTape`, the form the tape
+couplings consume. -/
+theorem refines_alloctape_nat_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT}
+    {A : lrel rT GF} : iprop%
+    (∀ l, appNatTape l z [] -∗ refines L E (K.fill pl(#(.lbl l))) t A) ⊢
+    refines L E (K.fill pl(tape(#(.int z)))) t A := by
+  iintro Hlog
+  iapply refines_alloctape_l
+  iintro %l Hl
+  iapply Hlog $$ %l
+  iapply appNatTape_fold (l := l) (z := z) (ns := []) (fs := []) rfl
+  rw [Tape.empty] at *
+  iexact Hl
+
 omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
@@ -317,6 +331,15 @@ theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
   iintro %v %v' HA
   iapply refines_ret rfl rfl
   iapply HAA $$ %v %v' HA
+
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+/-- `refines_bind` as an entailment from its two premises. -/
+theorem refines_bind_sep (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : Exp rT} : iprop%
+    refines L E e e' A ∗
+      (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') ⊢
+    refines L E (K.fill e) (K'.fill e') A' := by
+  iintro ⟨H, Hk⟩
+  iapply refines_bind K K' $$ H Hk
 
 omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
   [L.IsTopAbsorbing] [L.HasBind] in
@@ -494,6 +517,27 @@ theorem refines_couple_rands_lr_avoid {s : ENNReal →+o B}
     iapply refines_of_absorbing habs $$ Hec
   · simp only [id_eq]
     iapply Hcnt $$ %n %⟨hn, hb⟩
+
+omit [L.IsReflexive] [L.IsSupportLocal] in
+/-- Couple `rand N ~ rand N` along `S`, given a lifting of the two uniform draws within the
+cancelable budget `c`; spends `↯b c` (relational `wp_couple_rand_rand_spend`). -/
+theorem refines_couple_rands_spend {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (N : Int)
+    (HN : 0 < N) (S : Int → Int → Prop) (c : B) (hc : IsAddLeftRegular c)
+    (Hcpl : L.Rel c S (unifInt N HN) (unifInt N HN)) : iprop%
+    ↯b c ∗ (∀ r r', ⌜S r r'⌝ -∗
+      refines L E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int N), #(.unit))))
+      (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
+  unfold refines
+  iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
+  isimp only [Ectx.fill_comp K2 K'] at Hj
+  iapply MicrometerWpGS.wp_bind
+  iapply wp_couple_rand_rand_spend N HN S c hc Hcpl (K2.comp K') ⊤ _
+  iframe Hj Hc
+  iintro %r %r' %hS HKres
+  isimp only [← Ectx.fill_comp K2 K'] at HKres
+  rw [show Exp.ofVal (.int r : Val rT) = pl(#(.int r)) from rfl]
+  iapply Hcnt $$ %r %r' %hS %K2 %b HKres Hna Herr Hpos
 
 omit [L.IsSupportLocal] in
 theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}

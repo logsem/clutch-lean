@@ -4,6 +4,7 @@ public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.WpTactics
+public import Metrology.Micrometer.RelTactics
 public import Metrology.Code.RandomizedResponse
 public import Metrology.Couplings.Divergences.Dp
 public import Metrology.Couplings.Divergences.Mechanism
@@ -114,11 +115,10 @@ theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     imodintro
     iexact H
 
-/-- The spec reports `bif d then b else !b`, under any evaluation context. -/
-theorem tp_report_fill (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗
-        wp (codensity dp) ⊤ e Φ) ⊢
+/-- The spec reports `bif d then b else !b`. -/
+theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
+    ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
+      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp (codensity dp) ⊤ e Φ) ⊢
       wp (codensity dp) ⊤ e Φ := by
   cases d
   all_goals cases b
@@ -128,13 +128,6 @@ theorem tp_report_fill (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → 
     tp_pures
     iapply H
     iexact Hj
-
-/-- The spec reports `bif d then b else !b`. -/
-theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp (codensity dp) ⊤ e Φ) ⊢
-      wp (codensity dp) ⊤ e Φ :=
-  tp_report_fill [] d b e Φ
 
 end Tail
 
@@ -170,27 +163,15 @@ theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
     ⊢@{IProp GF} ↯b budget -∗
       REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iunfold refines
-  iintro Hb %K %ε Hj Hna Herr %Hpos
-  simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
-  wp_bind (pl% rand(#4, #.unit))
-  tp_bind (pl% rand(#4, #.unit))
-  iapply wp_couple_rand_rand_spend 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') budget
-    isAddLeftRegular_budget (rr_coupling b b')
-  iframe Hj Hb
-  iintro %r %r' %hR Hj
-  wp_pures
-  tp_pures
-  iapply tp_report_fill
-  iframe Hj
-  iintro Hj
-  iapply wp_report
-  iexists .bool (bif decide (r' < 3) then b' else !b'), ε
-  iframe Hj Hna Herr %Hpos
-  iunfold lrel_bool
-  iexists _
-  ipureintro
-  exact ⟨congrArg Val.bool (by simpa [rrOut] using hR), rfl⟩
+  iintro Hb
+  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') budget isAddLeftRegular_budget
+    (rr_coupling b b')
+  iframe Hb
+  iintro %r %r' %hR
+  rel_pures
+  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
+    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
+    rel_pures <;> rw [hR] <;> rel_values
 
 /-! ## Adequacy: exit the logic -/
 

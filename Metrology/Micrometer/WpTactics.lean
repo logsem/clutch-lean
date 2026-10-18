@@ -81,6 +81,39 @@ public theorem specProgFrag_reshape {e₁ e₂ : Exp rT} (h : e₁ = e₂) :
 
 end Spec
 
+/-! ## Erasing `openRec`/`closeRec` on spliced closed terms -/
+
+/-- `e` with its `openRec`/`closeRec` wrapper erased, when the wrapped leaf is headed by a
+non-constructor constant (a spliced `&(rr b)`) and kernel reduction shows it invariant. -/
+public meta def eraseOpenCloseLeaf? (e : LeanExpr) : MetaM (Option Simp.Step) := do
+  let e := e.consumeMData
+  unless e.isAppOfArity ``Exp.openRec 4 || e.isAppOfArity ``Exp.closeRec 4 do return none
+  let leaf := e.appArg!
+  if e.hasMVar then return none
+  let .const c _ := leaf.consumeMData.getAppFn | return none
+  if (← getEnv).isConstructor c then return none
+  let ty ← mkEq e leaf
+  let ok ← try ofExceptKernelException (Kernel.isDefEq (← getEnv) (← getLCtx) e leaf)
+    catch _ => pure false
+  unless ok do return none
+  return some (.done { expr := leaf, proof? := some (← mkExpectedTypeHint (← mkEqRefl leaf) ty) })
+
+public section
+
+/-- Shows a folded boolean negation as `!b`. -/
+@[pl_step_simp] theorem decide_not_eq_true (b : Bool) : decide (¬b = true) = !b := by
+  cases b <;> rfl
+
+/-- Erases `openRec` around a closed spliced constant. -/
+simproc [pl_step_simp] openRecClosedLeaf (Exp.openRec _ _ _) := fun e => do
+  return (← eraseOpenCloseLeaf? e).getD .continue
+
+/-- Erases `closeRec` around a closed spliced constant. -/
+simproc [pl_step_simp] closeRecClosedLeaf (Exp.closeRec _ _ _) := fun e => do
+  return (← eraseOpenCloseLeaf? e).getD .continue
+
+end
+
 /-! ## WP-goal runner -/
 
 /-- A proof-mode goal `ehyps ⊢ wp L E e Φ`, its `wp` spine read positionally. -/
@@ -339,7 +372,7 @@ meta def findSpecHyp {β : Q(Type)} (g : WpGoal) : ProofModeM (Option (Name × Q
 
 /-- Split `Ectx.fill Kctx inner`, where `Kctx` ends in an abstract tail `Kabs` (as in a
 library lemma), into `(some Kabs, inner')` by filling the concrete prefix into `inner`. -/
-meta partial def splitAbstractCtx {β : Q(Type)} (espec : Q(Exp $β)) :
+public meta partial def splitAbstractCtx {β : Q(Type)} (espec : Q(Exp $β)) :
     ProofModeM (Option Q(Ectx $β) × Q(Exp $β)) := do
   let e : Q(Exp $β) ← pure espec.consumeMData
   match e with
@@ -355,7 +388,7 @@ where
     | _ => return (some KctxW, inner)
 
 /-- Append the abstract tail split off by `splitAbstractCtx` to a discovered context. -/
-meta def appendAbstractCtx {β : Q(Type)} (Kd : Q(Ectx $β)) : Option Q(Ectx $β) → Q(Ectx $β)
+public meta def appendAbstractCtx {β : Q(Type)} (Kd : Q(Ectx $β)) : Option Q(Ectx $β) → Q(Ectx $β)
   | some Kabs => if Kd.isAppOf ``List.nil then Kabs else q($Kd ++ $Kabs)
   | none => Kd
 

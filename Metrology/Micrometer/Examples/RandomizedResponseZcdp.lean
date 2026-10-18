@@ -95,12 +95,6 @@ theorem wp_rr_step (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
   iapply H
   iexact Hj
 
-omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
-/-- `rr b` is closed, so opening and closing leave it alone. -/
-theorem rr_openRec_closeRec (n : Nat) (v : Exp rT) (x : Var) (b : Bool) :
-    Exp.openRec n v (Exp.closeRec n x (rr b)) = rr b := by
-  rfl
-
 /-- The two-bit program against the spec in context `K`, spending `(ln 3, 0)` per bit: both
 sides report the same pair. -/
 theorem wp_rr2_fill (K : Ectx rT) (b₁ b₂ b₁' b₂' : Bool) (Φ : Val rT → IProp GF) :
@@ -118,8 +112,6 @@ theorem wp_rr2_fill (K : Ectx rT) (b₁ b₂ b₁' b₂' : Bool) (Φ : Val rT �
   iintro %c₁ Hj
   wp_pures
   tp_pures
-  -- substituting the first report leaves the closed `rr b₂` stuck behind `openRec`/`closeRec`
-  simp only [rr_openRec_closeRec]
   wp_bind (rr b₂)
   tp_bind (rr b₂')
   iapply wp_rr_step

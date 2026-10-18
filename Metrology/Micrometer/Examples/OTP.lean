@@ -6,6 +6,7 @@ public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.Compatibility
+public import Metrology.Micrometer.RelTactics
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -54,39 +55,14 @@ section Generic
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
 
-/-- Encrypts by adding the key `m` modulo `N`. -/
-abbrev otpLam (m N : Int) : Exp rT := pl% fun k, (#(.int m) + k) % #(.int N)
-
-/-- The evaluation context applying `otpLam m N`. -/
-def otpKLam (m N : Int) : Ectx rT := [EctxItem.appR (otpLam m N)]
-
-omit [CanonicallyOrderedAdd B] in
-private theorem refines_lit_int (n : Int) :
-    ⊢@{IProp GF} REL[L] (pl(#(.int n)) : Exp rT) << pl(#(.int n)) : lrel_int := by
-  iapply refines_ret (v1 := .int n) (v2 := .int n) rfl rfl
-  imodintro
-  iapply lrel_int_lit
-
 theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
-  simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢ refines L ⊤ ((otpKLam m N).fill pl(rand(#(.int N), #(.unit))))
-    (Ectx.fill [] pl(rand(#(.int N), #(.unit)))) lrel_int
-  iapply refines_couple_rands_lr (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN) hN
+  rel_couple_UU (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN)
   iintro %n %_
-  show ⊢ refines L ⊤ (Ectx.fill [] pl({otpLam m N} #(.int n))) _ lrel_int
-  iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
-  inext
-  let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢ refines L ⊤ (Kmod.fill pl(#(.int m) + #(.int n))) _ lrel_int
-  iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  inext
-  show ⊢ refines L ⊤ (Ectx.fill [] pl(#(.int (m + n)) % #(.int N))) _ lrel_int
-  iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  inext
+  rel_pures
   rw [show (m + n) % N = addMod m N n by rw [addMod, Int.add_comm]]
-  exact refines_lit_int _
+  rel_values
 
 /-! ### Reverse direction -/
 
@@ -97,20 +73,11 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
-  simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢ refines L ⊤ (Ectx.fill [] pl(rand(#(.int N), #(.unit))))
-    ((otpKLam m N).fill pl(rand(#(.int N), #(.unit)))) lrel_int
-  iapply refines_couple_rands_lr (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN) hN
+  rel_couple_UU (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN)
   iintro %n ⟨%hn0, %hnN⟩
-  show ⊢ refines L ⊤ _ (Ectx.fill [] pl({otpLam m N} #(.int (addMod (-m) N n)))) lrel_int
-  iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
-  let Kmod : Ectx rT := [EctxItem.binopL .mod (.int N)]
-  show ⊢ refines L ⊤ _ (Kmod.fill pl(#(.int m) + #(.int (addMod (-m) N n)))) lrel_int
-  iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢ refines L ⊤ _ (Ectx.fill [] pl(#(.int (m + addMod (-m) N n)) % #(.int N))) lrel_int
-  iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
+  rel_pures
   rw [show (m + addMod (-m) N n) % N = n from addMod_neg_inv m N n hn0 hnN]
-  exact refines_lit_int n
+  rel_values
 
 end Generic
 

@@ -341,9 +341,9 @@ macro_rules
             -- Binders: open at a cofinite variable and reduce `open'`; this leaves
             -- `openRec _ _ e₀` stuck on each opaque leaf `e₀`, cleared by `← Exp.open_lc`.
             | (refine Exp.IsLocallyClosed.lam ∅ _ ?_ <;> intro _ _ <;>
-                 simp only [Exp.open', Exp.openRec])
+                 simp only [Exp.open', Exp.openRec, Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte])
             | (refine Exp.IsLocallyClosed.fix ∅ _ ?_ <;> intro _ _ <;>
-                 simp only [Exp.open', Exp.openRec])
+                 simp only [Exp.open', Exp.openRec, Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte])
             | rw [← Exp.open_lc]
             | apply Exp.IsLocallyClosed.app | apply Exp.IsLocallyClosed.unop
             | apply Exp.IsLocallyClosed.binop | apply Exp.IsLocallyClosed.cond
@@ -371,9 +371,9 @@ macro_rules
             | apply ProbLang.IsVal.inl | apply ProbLang.IsVal.inr | apply ProbLang.IsVal.pair
             -- `lam`/`fix` bodies that are not closed: see `is_lc`.
             | (refine Exp.IsLocallyClosed.lam ∅ _ ?_ <;> intro _ _ <;>
-                 simp only [Exp.open', Exp.openRec])
+                 simp only [Exp.open', Exp.openRec, Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte])
             | (refine Exp.IsLocallyClosed.fix ∅ _ ?_ <;> intro _ _ <;>
-                 simp only [Exp.open', Exp.openRec])
+                 simp only [Exp.open', Exp.openRec, Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte])
             | rw [← Exp.open_lc]
             | apply Exp.IsLocallyClosed.fvar
             | apply Exp.IsLocallyClosed.lit | apply Exp.IsLocallyClosed.app

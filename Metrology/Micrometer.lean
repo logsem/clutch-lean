@@ -23,6 +23,7 @@ public import Metrology.Micrometer.Examples.ContinuousOTP
 public import Metrology.Micrometer.Examples.RandomizedResponse
 public import Metrology.Micrometer.Examples.RandomizedResponseZcdp
 public import Metrology.Micrometer.Examples.GaussianZcdp
+public import Metrology.Micrometer.RelTacticsTest
 
 @[expose] public section
 

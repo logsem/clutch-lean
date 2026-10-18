@@ -4,6 +4,7 @@ public import Metrology.Code.ContinuousOTP
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.ContinuousSampler
+public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.Soundness
 public import Metrology.ProbLang.Advantage
 public import Metrology.ProbLang.Reals
@@ -30,35 +31,14 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [Budget
 /-- Encrypts by adding the key `m` modulo one. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
-/-- The evaluation context applying `otpLam m`. -/
-def otpKLam (m : rT) : Ectx rT := [EctxItem.appR (otpLam m)]
-
-private theorem refines_lit_real (r : rT) :
-    ⊢@{IProp GF} REL[codensity tv] (pl(#(.real r)) : Exp rT) << pl(#(.real r)) : lrel_real := by
-  iapply refines_ret (v1 := .real r) (v2 := .real r) rfl rfl
-  imodintro
-  iapply lrel_real_lit
-
 theorem otp_refines (m : rT)
     (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
     ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
-  simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢ refines (codensity tv) ⊤ ((otpKLam m).fill pl(urand)) (Ectx.fill [] pl(urand)) lrel_real
-  iapply refines_couple_urands_lr _ hmp
+  rel_couple_urands _ hmp
   iintro %r %_
-  show ⊢ refines (codensity tv) ⊤ (Ectx.fill [] pl({otpLam m} #(.real r))) _ lrel_real
-  iapply refines_pure_l (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
-  inext
-  let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢ refines (codensity tv) ⊤ (Kfrac.fill pl(#(.real m) + #(.real r))) _ lrel_real
-  iapply refines_pure_l ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  inext
-  show ⊢ refines (codensity tv) ⊤
-    (Ectx.fill [] pl(frac(#(.real (ProbLangℝ.realAdd m r))))) _ lrel_real
-  iapply refines_pure_l ⟨IsVal.lit.toIsValue, rfl⟩
-  inext
-  exact refines_lit_real _
+  rel_pures
+  rel_values
 
 /-! ### The reverse direction
 
@@ -70,20 +50,11 @@ theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
     ⊢@{IProp GF} REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
-  simp only [otp_enc, otp_ideal, Exp.close, Exp.closeRec, ↓reduceIte]
-  show ⊢ refines (codensity tv) ⊤ (Ectx.fill [] pl(urand)) ((otpKLam m).fill pl(urand)) lrel_real
-  iapply refines_couple_urands_lr _ hmp
+  rel_couple_urands _ hmp
   iintro %r %hr
-  show ⊢ refines (codensity tv) ⊤ _ (Ectx.fill [] pl({otpLam m} #(.real (g r)))) lrel_real
-  iapply refines_pure_r (Hex := pureExec_app_lam) ⟨IsVal.lit.toIsValue, by is_lc⟩
-  let Kfrac : Ectx rT := [EctxItem.unop .frac]
-  show ⊢ refines (codensity tv) ⊤ _ (Kfrac.fill pl(#(.real m) + #(.real (g r)))) lrel_real
-  iapply refines_pure_r ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, rfl⟩
-  show ⊢ refines (codensity tv) ⊤ _
-    (Ectx.fill [] pl(frac(#(.real (ProbLangℝ.realAdd m (g r)))))) lrel_real
-  iapply refines_pure_r ⟨IsVal.lit.toIsValue, rfl⟩
+  rel_pures
   rw [hinv r hr]
-  exact refines_lit_real r
+  rel_values
 
 end Abstract
 
