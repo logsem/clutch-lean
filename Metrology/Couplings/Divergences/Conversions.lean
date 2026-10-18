@@ -321,6 +321,12 @@ noncomputable def renyiToDp [hα : Fact (1 < α)] (hδ : 0 < δ) :
   map_rel := codensity_dp_rel_of_imp (D := renyiDivergence α) (fun _ ↦ dp_of_renyi hα.out hδ)
     (by simp)
 
+@[simp]
+theorem renyiToDp_map [Fact (1 < α)] (hδ : 0 < δ) (ρ : ℝ≥0∞) :
+    (renyiToDp.{u} (α := α) hδ).map ρ =
+      (ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)), ENNReal.ofReal δ) :=
+  rfl
+
 /-- zCDP codensity liftings of relations are DP liftings at every slack `δ > 0`, at the best
 order ([z/D]). -/
 noncomputable def codensityZcdpToDp (hδ : 0 < δ) :
@@ -331,6 +337,13 @@ noncomputable def codensityZcdpToDp (hδ : 0 < δ) :
   map_rel := codensity_dp_rel_of_imp (D := zcdpDivergence)
     (fun _ ↦ (dp_of_forall_renyi subset_rfl hδ fun _ hα ↦ renyi_of_zcdp hα ·))
     (by simp)
+
+@[simp]
+theorem codensityZcdpToDp_map (hδ : 0 < δ) (b : ℝ≥0∞ × ℝ≥0∞) :
+    (codensityZcdpToDp.{u} hδ).map b =
+      (⨅ α ∈ Ioi 1, b.1 + ENNReal.ofReal α * b.2 + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+        ENNReal.ofReal δ) :=
+  rfl
 
 /-- tCDP codensity liftings of relations are DP liftings at every slack `δ > 0`, at the best
 order below `ω` ([t/D]). -/
@@ -343,15 +356,36 @@ noncomputable def codensityTcdpToDp (hδ : 0 < δ) :
     (fun _ ↦ (dp_of_forall_renyi Ioo_subset_Ioi_self hδ fun _ hα ↦ renyi_of_tcdp hα.1 hα.2 ·))
     (by simp +contextual [ENNReal.mul_top, (zero_lt_one.trans _).ne'])
 
+@[simp]
+theorem codensityTcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
+    (codensityTcdpToDp.{u} (ω := ω) hδ).map ρ =
+      (⨅ α ∈ Ioo 1 ω, ENNReal.ofReal α * ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+        ENNReal.ofReal δ) :=
+  rfl
+
 /-- zCDP liftings of relations are DP liftings at every slack `δ > 0`, at the best order
 ([z/D]). -/
 noncomputable def zcdpToDp (hδ : 0 < δ) : LiftingRelHom zcdpLifting.{u} (codensity dp.{u}) :=
   (codensityZcdpToDp hδ).comp ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl)
 
+@[simp]
+theorem zcdpToDp_map (hδ : 0 < δ) (b : ℝ≥0∞ × ℝ≥0∞) :
+    (zcdpToDp.{u} hδ).map b =
+      (⨅ α ∈ Ioi 1, b.1 + ENNReal.ofReal α * b.2 + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+        ENNReal.ofReal δ) :=
+  rfl
+
 /-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, at the best order below
 `ω` ([t/D]). -/
 noncomputable def tcdpToDp (hδ : 0 < δ) : LiftingRelHom (tcdpLifting.{u} ω) (codensity dp.{u}) :=
   (codensityTcdpToDp hδ).comp ((LiftingHom.tcdpToCodensity ω).toLiftingRelHom rfl)
+
+@[simp]
+theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
+    (tcdpToDp.{u} (ω := ω) hδ).map ρ =
+      (⨅ α ∈ Ioo 1 ω, ENNReal.ofReal α * ρ + ENNReal.ofReal (log (1 / δ) / (α - 1)),
+        ENNReal.ofReal δ) :=
+  rfl
 
 end LiftingRelHom
 

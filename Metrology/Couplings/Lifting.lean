@@ -290,17 +290,37 @@ theorem HasBind.bind_of_ae [Preorder B] [Top B] [L.IsSupportLocal] [L.HasBind] {
   · simpa [hx] using hTk x hx y (by simpa [hx] using hxy)
   · simp [hx] at hxy
 
-/-- Binding a relational lifting with continuations lifted at a finite budget `c` on the
+/-- Binding a relational lifting with sub-Markov kernels lifted at a finite budget `c` on the
 relation. -/
 theorem HasBind.bind_rel [AddZeroClass B] [Preorder B] [Top B] [CanonicallyOrderedAdd B]
+    [L.IsLawful] [L.HasBind] {R' : X' → Y' → B} (hc : c < ⊤) (h : L.Rel b S μ ν)
+    {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f] [IsSubMarkovKernel g]
+    (hk : ∀ x y, S x y → L c R' (f x) (g y)) : L (b + c) R' (f ∘ₘ μ) (g ∘ₘ ν) := by
+  refine HasBind.bind (IsLawful.frame hc h) fun x y hxy ↦ ?_
+  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
+  simpa [hS] using hk x y hS
+
+/-- Binding a relational lifting with measurable families of sub-probability measures lifted at
+a finite budget `c` on the relation. -/
+theorem HasBind.bind_rel_fun [AddZeroClass B] [Preorder B] [Top B] [CanonicallyOrderedAdd B]
     [L.IsLawful] [L.HasBind] {R' : X' → Y' → B} (hc : c < ⊤) (h : L.Rel b S μ ν)
     {f : X → Measure X'} {g : Y → Measure Y'} [∀ x, IsSubProbabilityMeasure (f x)]
     [∀ y, IsSubProbabilityMeasure (g y)] (hk : ∀ x y, S x y → L c R' (f x) (g y))
     (hf : Measurable f := by fun_prop) (hg : Measurable g := by fun_prop) :
-    L (b + c) R' (μ.bind f) (ν.bind g) := by
-  refine HasBind.bind_fun (IsLawful.frame hc h) (fun x y hxy ↦ ?_) hf hg
-  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hxy
-  simpa [hS] using hk x y hS
+    L (b + c) R' (μ.bind f) (ν.bind g) :=
+  HasBind.bind_rel (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) hc h hk
+
+/-- Relational liftings of two independent pairs lift the product relation between the product
+measures, at the sum of the budgets. -/
+theorem Rel.prod [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrderedAdd B]
+    [L.IsLawful] [L.HasBind] [SFinite μ] [SFinite ν] {T : X' → Y' → Prop} {μ' : Measure X'}
+    {ν' : Measure Y'} [IsSubProbabilityMeasure μ'] [IsSubProbabilityMeasure ν']
+    (h : L.Rel b S μ ν) (hc : c < ⊤) (h' : L.Rel c T μ' ν') :
+    L.Rel (b + c) (fun p q ↦ S p.1 q.1 ∧ T p.2 q.2) (μ.prod μ') (ν.prod ν') := by
+  rw [← compProd_const, ← compProd_const, compProd_eq_comp_prod, compProd_eq_comp_prod]
+  refine HasBind.bind_rel hc h fun x y hS ↦ ?_
+  simpa [Rel, Kernel.prod_apply, Kernel.id_apply, dirac_prod] using
+    h'.map (f := Prod.mk x) (g := Prod.mk y) fun _ _ hT ↦ ⟨hS, hT⟩
 
 /-- Binding with continuations whose budget `s (E y)` depends on the right sample pays only the
 expectation of `E`. -/
@@ -356,5 +376,13 @@ theorem Rel.frame_le_of_isTopAbsorbing [AddCommMonoid B] [PartialOrder B] [Order
     [IsSubProbabilityMeasure ν] {R : X → Y → B} (h : L.Rel b S μ ν)
     (hR : ∀ x y, S x y → R x y ≤ c) : L (b + c) R μ ν :=
   IsTopAbsorbing.of_lt_top fun hbc ↦ h.frame_le hR (le_add_self.trans_lt hbc)
+
+/-- `Rel.prod` for any `c`, finite or not. -/
+theorem Rel.prod_of_isTopAbsorbing [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+    [CanonicallyOrderedAdd B] [L.IsLawful] [L.HasBind] [L.IsTopAbsorbing] [SFinite μ] [SFinite ν]
+    {T : X' → Y' → Prop} {μ' : Measure X'} {ν' : Measure Y'} [IsSubProbabilityMeasure μ']
+    [IsSubProbabilityMeasure ν'] (h : L.Rel b S μ ν) (h' : L.Rel c T μ' ν') :
+    L.Rel (b + c) (fun p q ↦ S p.1 q.1 ∧ T p.2 q.2) (μ.prod μ') (ν.prod ν') :=
+  IsTopAbsorbing.of_lt_top fun hbc ↦ h.prod (le_add_self.trans_lt hbc) h'
 
 end GradedLifting

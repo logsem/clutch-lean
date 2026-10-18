@@ -80,6 +80,11 @@ theorem isSubProbabilityMeasure_bind (μ : Measure X) (f : X → Measure Y)
     (hf : AEMeasurable f μ := by fun_prop) : IsSubProbabilityMeasure (μ.bind f) :=
   ⟨(Measure.bind_apply .univ hf).trans_le (lintegral_le_one fun _ ↦ measure_univ_le_one)⟩
 
+/-- Reweighting by a density bounded by `1` keeps a measure sub-probability. -/
+theorem isSubProbabilityMeasure_withDensity_of_le_one (μ : Measure X) [IsSubProbabilityMeasure μ]
+    {f : X → ℝ≥0∞} (hf : ∀ x, f x ≤ 1) : IsSubProbabilityMeasure (μ.withDensity f) :=
+  ⟨by simpa using lintegral_le_one (μ := μ) hf⟩
+
 /-- A bind of mass `1` comes from almost surely total continuations. -/
 theorem ae_measure_univ_eq_one_of_bind {μ : Measure X} [IsSubProbabilityMeasure μ]
     {κ : X → Measure Y} [∀ x, IsSubProbabilityMeasure (κ x)] (hκ : Measurable κ)

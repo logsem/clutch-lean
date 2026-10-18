@@ -373,14 +373,13 @@ instance isTopAbsorbing_concentratedLifting : (concentratedLifting.{u} A).IsTopA
 /-- A concentrated lifting of equality gives the concentrated divergence. -/
 instance isSound_concentratedLifting :
     (concentratedLifting.{u} A).IsSound (concentratedDivergence A) where
-  sound h := IsSound.sound (L := codensity (concentratedDivergence A))
-    (comap_codensity_le (concentratedLine_add A) h)
+  sound h := codensity_sound (comap_codensity_le (concentratedLine_add A) h)
 
 /-- The concentrated divergence gives a concentrated lifting of equality, order by order. -/
 instance isComplete_concentratedLifting :
     (concentratedLifting.{u} A).IsComplete (concentratedDivergence A) where
   complete h := concentratedLifting_rel_iff.2 fun α hα ↦
-    IsComplete.complete (concentratedDivergence_iff.1 h α hα)
+    codensity_complete (concentratedDivergence_iff.1 h α hα)
 
 /-- A lifting at every larger budget is one at the budget: raise the shift `ξ`. -/
 instance isBudgetClosed_concentratedLifting : (concentratedLifting.{u} A).IsBudgetClosed where
@@ -424,12 +423,12 @@ instance isTopAbsorbing_tcdpLifting : (tcdpLifting.{u} ω).IsTopAbsorbing :=
 
 /-- A tCDP lifting of equality gives the tCDP divergence. -/
 instance isSound_tcdpLifting : (tcdpLifting.{u} ω).IsSound (tcdpDivergence ω) where
-  sound h := IsSound.sound (L := codensity (tcdpDivergence ω)) (codensity_tcdp_of_tcdpLifting h)
+  sound h := codensity_sound (codensity_tcdp_of_tcdpLifting h)
 
 /-- The tCDP divergence gives a tCDP lifting of equality, order by order. -/
 instance isComplete_tcdpLifting : (tcdpLifting.{u} ω).IsComplete (tcdpDivergence ω) where
   complete h := tcdpLifting_rel_iff.2 fun α hα ↦
-    IsComplete.complete (tcdpDivergence_iff.1 h α α.2 hα)
+    codensity_complete (tcdpDivergence_iff.1 h α α.2 hα)
 
 /-- A lifting at every larger budget is one at the budget: at order `α`, `ρ' = t / α`. -/
 instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
@@ -439,6 +438,30 @@ instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
       exact tcdpLifting_iff.1 (h ρ' hρ) α hα
 
 variable {A ω}
+
+/-- A concentrated lifting of equality gives the concentrated divergence. -/
+theorem concentratedLifting_sound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (h : (concentratedLifting A).Rel b (· = ·) μ ν) :
+    concentratedDivergence A b μ ν :=
+  IsSound.sound (D := concentratedDivergence A) h
+
+/-- The concentrated divergence gives a concentrated lifting of equality. -/
+theorem concentratedLifting_complete {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (h : concentratedDivergence A b μ ν) :
+    (concentratedLifting A).Rel b (· = ·) μ ν :=
+  IsComplete.complete h
+
+/-- A tCDP lifting of equality gives the tCDP divergence. -/
+theorem tcdpLifting_sound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (h : (tcdpLifting ω).Rel ρ (· = ·) μ ν) :
+    tcdpDivergence ω ρ μ ν :=
+  IsSound.sound (D := tcdpDivergence ω) h
+
+/-- The tCDP divergence gives a tCDP lifting of equality. -/
+theorem tcdpLifting_complete {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (h : tcdpDivergence ω ρ μ ν) :
+    (tcdpLifting ω).Rel ρ (· = ·) μ ν :=
+  IsComplete.complete h
 
 /-! ## Concentrated codensity liftings -/
 
@@ -502,12 +525,21 @@ noncomputable def concentratedToCodensity :
   mono := monotone_id
   map_lift := comap_codensity_le (concentratedLine_add A)
 
+@[simp]
+theorem concentratedToCodensity_map (b : ℝ≥0∞ × ℝ≥0∞) :
+    (concentratedToCodensity.{u} A).map b = b :=
+  rfl
+
 /-- A tCDP lifting is a codensity lifting of the tCDP divergence. -/
 noncomputable def tcdpToCodensity :
     LiftingHom (tcdpLifting.{u} ω) (codensity (tcdpDivergence.{u} ω)) where
   map b := b
   mono := monotone_id
   map_lift := codensity_tcdp_of_tcdpLifting
+
+@[simp]
+theorem tcdpToCodensity_map (ρ : ℝ≥0∞) : (tcdpToCodensity.{u} ω).map ρ = ρ :=
+  rfl
 
 end LiftingHom
 

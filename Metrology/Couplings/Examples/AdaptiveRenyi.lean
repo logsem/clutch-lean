@@ -71,11 +71,6 @@ theorem renyiDivergence_randResp_escort :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (randResp false)
       (((Kernel.id : Kernel Bool Bool) ∘ₘ randResp true).withDensity
         fun b ↦ (expBudget (stageTwoCost b))⁻¹) := by
-  -- `fDiv_eq_sum` needs finiteness of the reweighted measure, which is not an instance
-  have : IsFiniteMeasure (((Kernel.id : Kernel Bool Bool) ∘ₘ randResp true).withDensity
-      fun b ↦ (expBudget (stageTwoCost b))⁻¹) := isFiniteMeasure_withDensity (by
-    simp [randResp, stageTwoCost, expBudget_log_three_halves]
-    exact ENNReal.mul_ne_top (by simp [ENNReal.div_eq_top]) (by simp))
   rw [renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
     fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)]
   simp [randResp, stageTwoCost, withDensity_apply _ (measurableSet_singleton _),
@@ -89,20 +84,17 @@ theorem renyiDivergence_randResp_escort :
 theorem renyiDivergence_adaptive :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (adaptive false) (adaptive true) := by
   have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
-  refine IsSound.sound (L := codensity (renyiDivergence 2))
-    (codensity_renyi_bind_escort (S := (· = ·)) .of_discrete Kernel.id
+  refine codensity_sound (codensity_renyi_bind_escort (S := (· = ·)) .of_discrete Kernel.id
       (fun _ ↦ by simp [Kernel.id_apply, ae_dirac_eq]) (fun x y hxy ↦ ?_)
       renyiDivergence_randResp_escort)
   subst hxy
   cases x
   · change (codensity (renyiDivergence 2)).Rel 0 (· = ·) (dirac (false, false))
       (dirac (false, false))
-    exact IsComplete.complete (L := codensity (renyiDivergence 2))
-      (IsReflexive.refl (D := renyiDivergence 2) _)
+    exact codensity_complete (IsReflexive.refl _)
   · change (codensity (renyiDivergence 2)).Rel (ENNReal.ofReal (Real.log (3 / 2))) (· = ·)
       ((randResp false).map (Prod.mk true)) ((randResp true).map (Prod.mk true))
-    exact (IsComplete.complete (L := codensity (renyiDivergence 2))
-      renyiDivergence_randResp).map fun _ _ h ↦ h ▸ rfl
+    exact (codensity_complete renyiDivergence_randResp).map fun _ _ h ↦ h ▸ rfl
 
 /-- The adaptive budget is strictly below the worst-case non-adaptive budget: the first stage's
 `log (3 / 2)` plus the largest second-stage cost. -/

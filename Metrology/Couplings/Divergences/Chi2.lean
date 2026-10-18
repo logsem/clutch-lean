@@ -336,11 +336,11 @@ instance isTopAbsorbing_powerLifting : (powerLifting.{u} α).IsTopAbsorbing :=
 
 /-- A power lifting of equality gives the power divergence. -/
 instance isSound_powerLifting : (powerLifting.{u} α).IsSound (powerDivergence α) where
-  sound h := IsSound.sound (L := codensity _) (D := renyiDivergence α) (powerLifting_rel_iff.1 h)
+  sound h := codensity_sound (D := renyiDivergence α) (powerLifting_rel_iff.1 h)
 
 /-- The power divergence gives a power lifting of equality. -/
 instance isComplete_powerLifting : (powerLifting.{u} α).IsComplete (powerDivergence α) where
-  complete h := powerLifting_rel_iff.2 (IsComplete.complete (L := codensity _) h)
+  complete h := powerLifting_rel_iff.2 (codensity_complete h)
 
 /-- Power budgets are closed from above, since every larger Rényi budget is a power budget. -/
 instance isBudgetClosed_powerLifting : (powerLifting.{u} α).IsBudgetClosed where
@@ -363,7 +363,7 @@ theorem powerLifting_bind [Fact (1 < α)] {c₁ c₂ : ℝ≥0∞} {S' : X' → 
   rcases eq_or_ne c₂ ⊤ with rfl | hc
   · rw [show ofENNReal (c₁ + ⊤ + c₁ * ⊤) = ⊤ by simp]
     exact IsTopAbsorbing.top _ _ _
-  exact HasBind.bind_rel (c := ofENNReal c₂) (lt_top_iff_ne_top.2 hc) h hk hf hg
+  exact HasBind.bind_rel_fun (c := ofENNReal c₂) (lt_top_iff_ne_top.2 hc) h hk hf hg
 
 /-- χ² liftings at `c₁` and `c₂` compose to `c₁ + c₂ + c₁ c₂` (Barthe–Olmedo, Thm. 2; Rocq
 `chi2_lift_dbind`). -/

@@ -24,6 +24,12 @@ variable {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [Measurabl
 theorem measurable_expBudget : Measurable expBudget :=
   expBudget_mono.measurable
 
+/-- Reweighting by `e^{-ε}` keeps a measure sub-probability. -/
+instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
+    [IsSubProbabilityMeasure μ] (ε : X → ℝ≥0∞) :
+    IsSubProbabilityMeasure (μ.withDensity fun x ↦ (expBudget (ε x))⁻¹) :=
+  isSubProbabilityMeasure_withDensity_of_le_one μ fun _ ↦ ENNReal.inv_le_one.2 (one_le_expBudget _)
+
 theorem expBudget_rpow {p : ℝ} (hp : 0 < p) (ε : ℝ≥0∞) :
     expBudget ε ^ p = expBudget (ENNReal.ofReal p * ε) := by
   rcases eq_or_ne ε ⊤ with rfl | hε
@@ -70,7 +76,7 @@ theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasur
       _ ≤ g y ^ (α / (α - 1)) := mul_le_of_le_one_right' (hr y)
   -- Hölder against the reduct, then average the rows
   have hcpl := (rdpCoupl_iff_codensity hρ).2
-    (IsComplete.complete (L := codensity (renyiDivergence α)) h)
+    (codensity_complete h)
   calc ∫⁻ x, f x ∂μ
       ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
           (∫⁻ x, f x ^ (α / (α - 1)) ∂(r ∘ₘ ν)) ^ ((α - 1) / α) :=
@@ -107,10 +113,7 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
   set w : X → ℝ≥0∞ := fun x ↦ (expBudget (ρ₂ x))⁻¹
   set r' := r.withDensity fun _ ↦ w
   have hr' (y : Y) : r' y = (r y).withDensity w := Kernel.withDensity_apply _ (by fun_prop) y
-  have : IsSubMarkovKernel r' := ⟨fun y ↦ ⟨by
-    rw [hr', withDensity_apply _ .univ, setLIntegral_univ]
-    exact IsSubProbabilityMeasure.lintegral_le_one fun x ↦ ENNReal.inv_le_one.2
-      (one_le_expBudget _)⟩⟩
+  have : IsSubMarkovKernel r' := ⟨fun y ↦ hr' y ▸ inferInstance⟩
   -- the leftover of the witness: `ρ₂ x` on `S`, `⊤` off it
   set E : X → Y → ℝ≥0∞ := fun x y ↦ if S x y then ρ₂ x else ⊤
   have hE : (renyiDivergence α).codensity ρ E μ ν := by
@@ -163,7 +166,7 @@ theorem exists_not_codensity_renyi_bind_lintegral :
     simp [μ, lintegral_smul_measure, lintegral_add_measure, mul_add]
   refine ⟨μ, κ, η, fun x ↦ cond x (ENNReal.ofReal (Real.log 2)) 0, inferInstance, inferInstance,
     inferInstance, fun x ↦ ?_, fun h ↦ ?_⟩
-  · refine IsComplete.complete (L := codensity (renyiDivergence 2)) (D := renyiDivergence 2) ?_
+  · refine codensity_complete ?_
     cases x
     · exact IsReflexive.refl _
     -- the second moment of the `true` branch is `2 = e^{log 2}`
@@ -178,7 +181,7 @@ theorem exists_not_codensity_renyi_bind_lintegral :
   have hbud : ∫⁻ x, cond x (ENNReal.ofReal (Real.log 2)) 0 ∂μ =
       ENNReal.ofReal (Real.log 2 / 2) := by
     simp [μ, lintegral_smul_measure, lintegral_add_measure, div_eq_inv_mul]
-  have := IsSound.sound (L := codensity (renyiDivergence 2)) (D := renyiDivergence 2) h
+  have := codensity_sound h
   rw [hbud, renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
     fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)] at this
   simp only [Fin.sum_univ_three, hcomp] at this

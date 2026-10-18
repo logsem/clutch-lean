@@ -132,6 +132,12 @@ instance isSound_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGrade
     [D.IsReflexive] : (codensity D).IsSound D :=
   codensity_isSound_iff.2 fun _ ↦ IsReflexive.refl _
 
+/-- A codensity lifting of equality gives the divergence within its budget. -/
+theorem codensity_sound [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded] [D.IsReflexive]
+    {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (h : (codensity D).Rel b (· = ·) μ ν) : D b μ ν :=
+  IsSound.sound (D := D) h
+
 /-- The codensity lifting of a divergence is complete for it exactly when the divergence is
 composable (Sato–Katsumata, Thm. 8.2). -/
 theorem codensity_isComplete_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
@@ -147,12 +153,18 @@ instance isComplete_codensity [AddZeroClass B] [Preorder B] [CanonicallyOrderedA
     [OrderTop B] [D.IsGraded] [D.IsComposable] : (codensity D).IsComplete D :=
   codensity_isComplete_iff.2 ‹_›
 
+/-- The divergence within a budget gives a codensity lifting of equality within it. -/
+theorem codensity_complete [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop B]
+    [D.IsGraded] [D.IsComposable] {μ ν : Measure X} [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (h : D b μ ν) : (codensity D).Rel b (· = ·) μ ν :=
+  IsComplete.complete h
+
 /-- The fundamental property: lifting equality is the divergence. -/
 theorem codensity_rel_eq_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (codensity D).Rel b (· = ·) μ ν ↔ D b μ ν :=
-  ⟨IsSound.sound, IsComplete.complete⟩
+  ⟨codensity_sound, codensity_complete⟩
 
 /-! ## Lifting classes from divergence classes -/
 

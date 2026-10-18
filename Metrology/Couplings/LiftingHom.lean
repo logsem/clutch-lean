@@ -48,6 +48,10 @@ def id : LiftingRelHom L₁ L₁ where
   mono := monotone_id
   map_rel h := h
 
+@[simp]
+theorem id_map (b : B₁) : (id L₁).map b = b :=
+  rfl
+
 variable {L₁ : GradedLifting.{u} B₁}
 
 /-- Composition of relational homomorphisms. -/
@@ -55,6 +59,11 @@ def comp (G : LiftingRelHom L₂ L₃) (F : LiftingRelHom L₁ L₂) : LiftingRe
   map := G.map ∘ F.map
   mono := G.mono.comp F.mono
   map_rel h := G.map_rel (F.map_rel h)
+
+@[simp]
+theorem comp_map (G : LiftingRelHom L₂ L₃) (F : LiftingRelHom L₁ L₂) (b : B₁) :
+    (G.comp F).map b = G.map (F.map b) :=
+  rfl
 
 end LiftingRelHom
 
@@ -70,6 +79,10 @@ def id : LiftingHom L₁ L₁ where
   mono := monotone_id
   map_lift h := h
 
+@[simp]
+theorem id_map (b : B₁) : (id L₁).map b = b :=
+  rfl
+
 variable {L₁ : GradedLifting.{u} B₁}
 
 /-- Composition of homomorphisms. -/
@@ -77,6 +90,11 @@ def comp (G : LiftingHom L₂ L₃) (F : LiftingHom L₁ L₂) : LiftingHom L₁
   map := G.map ∘ F.map
   mono := G.mono.comp F.mono
   map_lift h := G.map_lift (F.map_lift h)
+
+@[simp]
+theorem comp_map (G : LiftingHom L₂ L₃) (F : LiftingHom L₁ L₂) (b : B₁) :
+    (G.comp F).map b = G.map (F.map b) :=
+  rfl
 
 end LiftingHom
 
@@ -235,5 +253,11 @@ def toLiftingRelHom [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
   map := F.map
   mono := F.mono
   map_rel h := Rel.of_comap htop (F.map_lift h)
+
+@[simp]
+theorem toLiftingRelHom_map [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
+    [CanonicallyOrderedAdd B₂] [L₂.IsLawful] (F : LiftingHom L₁ L₂) (htop : F.map ⊤ = ⊤)
+    (b : B₁) : (F.toLiftingRelHom htop).map b = F.map b :=
+  rfl
 
 end LiftingHom

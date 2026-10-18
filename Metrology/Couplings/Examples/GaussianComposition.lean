@@ -11,30 +11,8 @@ reads off the DP bound (Approximate Span Liftings, §§4–5). -/
 
 @[expose] public section
 
-universe u v
-
 open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence Real Set
 open scoped ENNReal NNReal
-
-namespace GradedLifting
-
-variable {B : Type v} {L : GradedLifting.{u} B} {X Y X' Y' : Type u} [MeasurableSpace X]
-  [MeasurableSpace Y] [MeasurableSpace X'] [MeasurableSpace Y'] {b c : B}
-
-/-- Relational liftings of two independent pairs lift the product relation between the product
-measures, at the sum of the budgets. -/
-theorem Rel.prod [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrderedAdd B]
-    [L.IsLawful] [L.HasBind] {S : X → Y → Prop} {T : X' → Y' → Prop} {μ : Measure X}
-    {ν : Measure Y} {μ' : Measure X'} {ν' : Measure Y'} [SFinite μ] [SFinite ν]
-    [IsProbabilityMeasure μ'] [IsProbabilityMeasure ν'] (h : L.Rel b S μ ν) (hc : c < ⊤)
-    (h' : L.Rel c T μ' ν') :
-    L.Rel (b + c) (fun p q ↦ S p.1 q.1 ∧ T p.2 q.2) (μ.prod μ') (ν.prod ν') := by
-  rw [← compProd_const, ← compProd_const, compProd_eq_comp_prod, compProd_eq_comp_prod]
-  refine HasBind.bind_rel hc h (fun x y hS ↦ ?_) (Kernel.measurable _) (Kernel.measurable _)
-  simpa [Rel, Kernel.prod_apply, Kernel.id_apply, dirac_prod] using
-    h'.map (f := Prod.mk x) (g := Prod.mk y) fun _ _ hT ↦ ⟨hS, hT⟩
-
-end GradedLifting
 
 namespace Mechanism
 
@@ -93,14 +71,11 @@ theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - 
     rw [gaussianMechPow_zero_apply, gaussianMechPow_zero_apply, Nat.cast_zero, zero_mul]
     exact IsReflexive.refl _
   | succ k ih =>
-    have hstep := IsComplete.complete (L := zcdpLifting) (zCDP_gaussianMech hσ r h)
-    have hlt : ((0 : ℝ≥0∞), k * ρ) < ⊤ :=
-      lt_top_iff_ne_top.2 fun h ↦ by simpa using congrArg Prod.fst h
     have hb : ((0 : ℝ≥0∞), ((k + 1 : ℕ) : ℝ≥0∞) * ρ) = (0, ρ) + (0, k * ρ) := by
       rw [Prod.mk_add_mk, add_zero, Nat.cast_succ, add_one_mul, add_comm]
     rw [gaussianMechPow_succ_apply, gaussianMechPow_succ_apply, hb]
-    exact (hstep.prod hlt ih).map (fun p q h ↦ by rw [Prod.ext h.1 h.2])
-      (consEquiv k).symm.measurable (consEquiv k).symm.measurable
+    exact ((concentratedLifting_complete (zCDP_gaussianMech hσ r h)).prod_of_isTopAbsorbing
+      ih).map fun p q h ↦ by rw [Prod.ext h.1 h.2]
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ε, δ)`-DP for inputs at distance at
 most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`. -/
@@ -109,11 +84,8 @@ theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
       (⨅ α ∈ Ioi (1 : ℝ), ENNReal.ofReal α * (k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) +
         ENNReal.ofReal (log (1 / δ) / (α - 1)))
       (ENNReal.ofReal δ) := fun a a' h ↦ by
-  have h1 := (LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow hσ h k)
-  have h2 := IsSound.sound (D := dp) h1
-  dsimp only [LiftingRelHom.zcdpToDp, LiftingRelHom.comp, LiftingRelHom.codensityZcdpToDp,
-    LiftingHom.toLiftingRelHom, LiftingHom.concentratedToCodensity, Function.comp] at h2
-  simpa only [zero_add] using h2
+  simpa using codensity_sound
+    ((LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow hσ h k))
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for
 inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. -/
@@ -128,7 +100,7 @@ theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ�
     rw [ENNReal.ofReal_mul (Nat.cast_nonneg k), ENNReal.ofReal_natCast]
   have hz := ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl).map_rel
     (zcdpLifting_rel_gaussianMechPow hσ h k)
-  have := IsSound.sound (D := dp) (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
+  have := codensity_sound (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
   rwa [zero_add, hk, ENNReal.toReal_ofReal hρ, ← ENNReal.ofReal_add hρ (by positivity)] at this
 
 end Mechanism
