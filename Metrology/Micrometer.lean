@@ -3,6 +3,7 @@ module
 public meta import Metrology.Meta.Discrete
 public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.Micrometer.Lifting
+public import Metrology.Micrometer.CappedCredits
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.ContinuousSampler
 public import Metrology.Micrometer.CouplingRules
