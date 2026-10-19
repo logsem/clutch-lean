@@ -142,6 +142,20 @@ theorem wp_value_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT} {Φ : Val rT �
   rw [← Exp.ofVal_of_toVal_some h]
   exact wp_value
 
+/-- A weakest precondition at a value unfolds to a spec coupling. -/
+theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
+    (E : CoPset) (He : e.toVal? = some v) :
+    wp L E e Φ ⊢
+      ∀ σ₁ e₁' σ₁' b₁,
+        stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+          budgetInterp b₁ -∗
+          |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
+            iprop(|={∅, E}=>
+              stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ budgetInterp b₂ ∗ Φ v)) := by
+  rw [wp_unfold]
+  simp only [wpPre, He]
+  exact .rfl
+
 abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF := iprop%
   □ ∀ σ ρ v (b : B),
     stateInterp (rT := rT) σ ∗ SpecUpdateGS.specInterp (rT := rT) ρ ∗ budgetInterp b ∗

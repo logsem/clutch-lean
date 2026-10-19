@@ -15,7 +15,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type}
 
 section TyEnvSetup
 variable {GF : BundledGFunctors}
@@ -28,13 +28,11 @@ def TyEnv.cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
   | n + 1 => Δ n
 
-omit [LawfulProbLangℝ rT] in
 theorem TyEnv.cons_ne_head {n : Nat} {X Y : lrel rT GF} {Δ : TyEnv rT GF} (h : X ≡{n}≡ Y) :
     TyEnv.cons X Δ ≡{n}≡ TyEnv.cons Y Δ
   | 0 => h
   | _ + 1 => Dist.rfl
 
-omit [LawfulProbLangℝ rT] in
 theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h : Δ ≡{n}≡ Δ') :
     TyEnv.cons X Δ ≡{n}≡ TyEnv.cons X Δ'
   | 0 => Dist.rfl
@@ -43,11 +41,19 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
 /-- The relation bound to type variable `x`. -/
 @[reducible] def ctxLookup (x : Nat) (Δ : TyEnv rT GF) : lrel rT GF := Δ x
 
+/-- Precompose a type environment with a renaming. -/
+@[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
+  fun n => Δ (ξ n)
+
+theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) :
+    TyEnv.cons X (TyEnv.comp Δ ξ) = TyEnv.comp (TyEnv.cons X Δ) (Renaming.under ξ) := by
+  funext n; cases n <;> rfl
+
 end TyEnvSetup
 
 section interp
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
 /-- A non-expansive map from type environments to logical relations. -/
@@ -147,8 +153,8 @@ end interp
 /-! ## Closedness of related values -/
 
 section interp_closed
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
@@ -172,8 +178,8 @@ end interp_closed
 /-! ## Soundness of the semantic type interpretation -/
 
 section interp_sound
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
@@ -294,7 +300,6 @@ def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
     | some B => some B
     | none => if x = y then some A else none
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_isSome_of_mem {Γ : RelCtx rT GF} {p : Var × lrel rT GF}
     (h : p ∈ Γ) : (Γ.lookup p.1).isSome := by
   induction Γ with
@@ -306,7 +311,6 @@ theorem lookup_isSome_of_mem {Γ : RelCtx rT GF} {p : Var × lrel rT GF}
     · have := ih hRest
       cases hr : lookup rest p.1 <;> simp_all
 
-omit [LawfulProbLangℝ rT] in
 theorem mem_of_lookup_isSome {Γ : RelCtx rT GF} {y : Var}
     (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
@@ -318,13 +322,11 @@ theorem mem_of_lookup_isSome {Γ : RelCtx rT GF} {y : Var}
     | some _ => simp [ih (by rw [hr]; rfl)]
     | none => rw [hr] at h; split_ifs at h <;> simp_all
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
     RelCtx.lookup ((y, A) :: Γ) z = match Γ.lookup z with
       | some B => some B
       | none => if z = y then some A else none := rfl
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
@@ -334,9 +336,7 @@ theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
 end RelCtx
 
 section env_typed
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
+variable {GF : BundledGFunctors}
 
 /-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations. -/
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
@@ -349,27 +349,24 @@ instance env_ltyped2_persistent (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   unfold env_ltyped2
   infer_instance
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_domEq (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
   sep_elim_left
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ :=
   sep_elim_right.trans sep_elim_left
 
-theorem env_ltyped2_fst_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_fst_allClosed [LawfulProbLangℝ rT] (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     ValSubstMap.proj_allClosed Prod.fst fun p hp => (hc p hp).1
 
-theorem env_ltyped2_snd_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_snd_allClosed [LawfulProbLangℝ rT] (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     ValSubstMap.proj_allClosed Prod.snd fun p hp => (hc p hp).2
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜(Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset⌝ := by
   iintro Hvs
@@ -380,7 +377,6 @@ theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   obtain ⟨p, hp, rfl⟩ := hy
   exact ValSubstMap.mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hp))
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
     (hΓ : Γ.lookup x = some A) :
     env_ltyped2 Γ vs ⊢ ∃ v1 v2, ⌜vs.lookup x = some (v1, v2)⌝ ∗ A v1 v2 := by
@@ -391,7 +387,6 @@ theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
   iframe %hvs_eq
   iapply Hall $$ %x %A %v1 %v2 %hΓ %hvs_eq
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   unfold env_ltyped2
   isplitr
@@ -401,7 +396,6 @@ theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   iintro %x %A %v1 %v2 %hΓ
   simp [RelCtx.lookup] at hΓ
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
     env_ltyped2 ([] : RelCtx rT GF) vs ⊢ ⌜vs = []⌝ := by
   unfold env_ltyped2
@@ -415,7 +409,6 @@ theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
       cases ValSubstMap.lookup rest p.1 <;> simp
     simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
     (v1 v2 : Val rT) (hv1c : v1.1.isClosed .empty) (hv2c : v2.1.isClosed .empty) : iprop%
     A v1 v2 ∗ env_ltyped2 Γ vs ⊢ env_ltyped2 ((x, A) :: Γ) ((x, (v1, v2)) :: vs) := by
@@ -455,7 +448,6 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
       obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa [hvy] using hvs'
       iexact HA
 
-omit [LawfulProbLangℝ rT] in
 theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var) (A : lrel rT GF)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
     env_ltyped2 ((y, A) :: Γ) vs ⊢ env_ltyped2 Γ (vs.delete y) := by
@@ -488,8 +480,8 @@ end env_typed
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
 variable (L) in
@@ -567,18 +559,9 @@ scoped notation:100 Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
 /-! ## Substitution lemmas on `interp` -/
 
 section interp_subst
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
-
-/-- Precompose a type environment with a renaming. -/
-@[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
-  fun n => Δ (ξ n)
-
-omit [LawfulProbLangℝ rT] in
-theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) :
-    TyEnv.cons X (TyEnv.comp Δ ξ) = TyEnv.comp (TyEnv.cons X Δ) (Renaming.under ξ) := by
-  funext n; cases n <;> rfl
 
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
 theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}

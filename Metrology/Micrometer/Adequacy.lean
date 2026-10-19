@@ -15,17 +15,18 @@ open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type}
 variable {B : Type}
 
 /-- `φ` on expressions that are values. -/
 def adequacyRel (φ : Val rT → Val rT → Prop) (e e' : Exp rT) : Prop :=
   ∃ v v', e.toVal? = some v ∧ e'.toVal? = some v' ∧ φ v v'
 
-omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
 theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e = e' := by
   rintro ⟨v, v', hv, hv', rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+
+variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- The lifting at budget `b` of the finite executions of `ρ` against the limit execution of
 `ρ'`. -/
@@ -111,11 +112,9 @@ end Termination
 
 section Adequacy
 
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful]
-variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetGS B GF]
+variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A spec coupling whose continuations give `m`-fuel execution couplings at the states
 satisfying `P` gives one itself, given erasure at such states. -/
 theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ : Exp rT)
@@ -160,7 +159,6 @@ theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ :
     imod HCont $$ %σ₂ %⟨e₂', σ₂'⟩ %hR with ⟨HΨ, -⟩
     iapply HΨ $$ %hP₂ HZ
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A program coupling whose continuations give `m`-fuel execution couplings at the pairs
 satisfying `P` gives an `m + 1`-fuel one, given erasure at such pairs. -/
 theorem wp_adequacy_prog_coupl_guard (P : Exp rT → State rT → Prop) (n m : Nat) (e₁ : Exp rT)
@@ -193,7 +191,6 @@ theorem wp_adequacy_prog_coupl_guard (P : Exp rT → State rT → Prop) (n m : N
   imod Hcnt $$ %⟨e₂, σ₂⟩ %⟨e₂', σ₂'⟩ %hR with Hcnt
   iapply Hcoupl $$ %_ %_ %_ %_ %_ %hP₂ Hcnt
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A spec coupling whose continuations give `m`-fuel execution couplings gives one itself. -/
 theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
     (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
@@ -211,7 +208,6 @@ theorem wp_adequacy_spec_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
   iintro %σ₂ %e₂' %σ₂' %b' - HZ'
   iapply HZ $$ HZ'
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
 /-- A program coupling whose continuations give `m`-fuel execution couplings gives an
 `m + 1`-fuel one. -/
 theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -229,7 +225,7 @@ theorem wp_adequacy_prog_coupl (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e
         fun ρ ρ' => hCont ρ ρ' trivial) $$ Hprog
   iintro %e₂ %σ₂ %e₂' %σ₂' %b' - HZ'
   iapply HZ $$ HZ'
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
+
 /-- `wp_adequacy_spec_coupl` with no later steps. -/
 theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
     (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
@@ -240,52 +236,43 @@ theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT)
     |={∅}=> ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl 0 m e₁ σ₁ e₁' σ₁' Z φ b
 
-omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] in
-variable (L) in
-/-- At a value, the continuation `match` of `wpPre` reduces to its `some` branch. -/
-theorem wpPre_value_Z_eq {v : Val rT} {Φ : Val rT → IProp GF} (E : CoPset) :
-    (fun (σ₂ : State rT) (ρ' : Cfg rT) (b₂ : B) =>
-      iprop(|={∅, E}=> stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ budgetInterp b₂ ∗ Φ v))
-    = (fun (σ₂ : State rT) (ρ' : Cfg rT) (b₂ : B) =>
-      match (Exp.ofVal v).toVal? with
-      | some v => iprop(|={∅, E}=>
-          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ budgetInterp b₂ ∗ Φ v)
-      | none => iprop(progCoupl L (Exp.ofVal v) σ₂ ρ'.expr ρ'.state b₂
-          (fun e₃ σ₃ e₃' σ₃' b₃ =>
-            iprop(▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ (fun σ₄ ρ'' b₄ =>
-              iprop(|={∅, E}=>
-                stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗
-                  wp L E e₃ Φ)))))) := by
-  funext σ₂ ρ' b₂
-  rw [Exp.toVal?_ofVal]
+/-! #### Runs of mass `1` within the fuel
 
-set_option linter.auxLemma false in
-omit [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] in
-/-- The `match` auxiliary of `wpPre_value_Z_eq` is the one of `wpPre`, so `wp_unfold_mp` applies
-after rewriting with `wpPre_value_Z_eq`. -/
-theorem wpPre_match_eq (motive : Option (Val rT) → Sort u)
-    (x : Option (Val rT)) (some_f : (v : Val rT) → motive (some v))
-    (none_f : Unit → motive none) :
-    ProbLang.wpPre_value_Z_eq.match_1 motive x some_f none_f =
-    ProbLang.MicrometerWpGS.wpPre.match_1 motive x some_f none_f := by
-  cases x <;> rfl
+Continuations are needed only where the run still has mass `1`, so neither `IsZeroLeft` nor a
+limit is needed (Rocq `wp_adequacy_step_fupdN_term`). -/
 
-omit [AddCommMonoid B] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] in
-/-- A weakest precondition at a value unfolds to a spec coupling. -/
-theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
-    (E : CoPset) (He : e.toVal? = some v) :
-    wp L E e Φ ⊢
-      ∀ σ₁ e₁' σ₁' b₁,
-        stateInterp (rT := rT) σ₁ ∗ SpecUpdateGS.specInterp (rT := rT) ⟨e₁', σ₁'⟩ ∗
-          budgetInterp b₁ -∗
-          |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
-            iprop(|={∅, E}=>
-              stateInterp σ₂ ∗ SpecUpdateGS.specInterp ρ' ∗ budgetInterp b₂ ∗ Φ v)) := by
-  obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
-  rw [wpPre_value_Z_eq L E]
-  simp only [wpPre_match_eq]
-  iintro Hwp %σ₁ %e₁' %σ₁' %b₁ Hinterp
-  iapply wp_unfold_mp $$ Hwp %σ₁ %e₁' %σ₁' %b₁ Hinterp
+/-- `wp_adequacy_spec_coupl` for a run of mass `1`. -/
+theorem wp_adequacy_spec_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp rT)
+    (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
+    (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN m ⟨e₁, σ₁⟩ Set.univ = 1) : iprop%
+    specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
+    (∀ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₁, σ₂⟩ Set.univ = 1⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
+  wp_adequacy_spec_coupl_guard (fun σ => execN m ⟨e₁, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
+    hterm fun hterm₀ hf' hspec hhead hside hErase hErase' hCont =>
+      execCoupl_erasable_of_term hterm₀ hf' hspec hhead hside hErase hErase' hCont
+
+/-- `wp_adequacy_prog_coupl` for a run of mass `1`. -/
+theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp rT)
+    (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT)
+    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) (φ : Val rT → Val rT → Prop)
+    (b : B) (hnone : e₁.toVal? = none) (hterm : execN (m + 1) ⟨e₁, σ₁⟩ Set.univ = 1) : iprop%
+    progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
+    (∀ e₂ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₂, σ₂⟩ Set.univ = 1⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
+  wp_adequacy_prog_coupl_guard (fun e σ => execN m ⟨e, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
+    fun hErase' hf hprog hf' hspec hhead hside hCont =>
+      execCoupl_prog_of_term hnone hterm hErase' hf hprog hf' hspec hhead hside hCont
+
+section Wp
+
+variable [BudgetGS B GF]
+
+section Lawful
+
+variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
 /-- At a value, the program and spec values are related at any leftover budget; fuel `0` never
 reaches a value, so the run has at least one step. -/
@@ -343,38 +330,6 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : 
       imod HZ
       iapply ih b₄ e₃ e₄' σ₄ σ₄' $$ HZ
 
-/-! #### Runs of mass `1` within the fuel
-
-Continuations are needed only where the run still has mass `1`, so neither `IsZeroLeft` nor a
-limit is needed (Rocq `wp_adequacy_step_fupdN_term`). -/
-
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
-/-- `wp_adequacy_spec_coupl` for a run of mass `1`. -/
-theorem wp_adequacy_spec_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp rT)
-    (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
-    (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN m ⟨e₁, σ₁⟩ Set.univ = 1) : iprop%
-    specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
-    (∀ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₁, σ₂⟩ Set.univ = 1⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
-  wp_adequacy_spec_coupl_guard (fun σ => execN m ⟨e₁, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
-    hterm fun hterm₀ hf' hspec hhead hside hErase hErase' hCont =>
-      execCoupl_erasable_of_term hterm₀ hf' hspec hhead hside hErase hErase' hCont
-
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [BudgetGS B GF] in
-/-- `wp_adequacy_prog_coupl` for a run of mass `1`. -/
-theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (n m : Nat) (e₁ : Exp rT)
-    (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT)
-    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) (φ : Val rT → Val rT → Prop)
-    (b : B) (hnone : e₁.toVal? = none) (hterm : execN (m + 1) ⟨e₁, σ₁⟩ Set.univ = 1) : iprop%
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
-    (∀ e₂ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₂, σ₂⟩ Set.univ = 1⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
-  wp_adequacy_prog_coupl_guard (fun e σ => execN m ⟨e, σ⟩ Set.univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
-    fun hErase' hf hprog hf' hspec hhead hside hCont =>
-      execCoupl_prog_of_term hnone hterm hErase' hf hprog hf' hspec hhead hside hCont
-
 /-- `wp_adequacy_step_fupdN` for a run of mass `1`. -/
 theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
     (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
@@ -404,6 +359,10 @@ theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
       imod HZ
       iapply ih b₄ e₃ e₄' σ₄ σ₄' hterm₄ $$ HZ
 
+end Lawful
+
+end Wp
+
 end Adequacy
 
 /-! ### Adequacy from a budget credit
@@ -413,12 +372,10 @@ dropped. -/
 
 section Budget
 
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
-variable {GF : BundledGFunctors}
-variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
+variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF]
+  [InvGpreS GF]
 
-omit [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous] in
 /-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
 theorem execCoupl_of_step_fupdN (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
@@ -441,14 +398,40 @@ theorem execCoupl_of_step_fupdN (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   iapply Hstep IAS IBC
   iframe
 
-omit [L.IsLeftContinuous] in
+section Lawful
+
+variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
+
+/-- `wp_adequacy_exec_n` for a run of mass `1`. -/
+theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
+    (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
+  execCoupl_of_step_fupdN e e' σ σ' n φ b
+    (fun _ _ => wp_adequacy_step_fupdN_term b e e' σ σ' n φ hterm) Hwp
+
+/-- `wp_adequacy` for a program whose run has mass `1` within `n` steps: the limit is that run,
+so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term`). -/
+theorem wp_adequacy_term [L.IsSupportLocal] (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (b : B)
+    (φ : Val rT → Val rT → Prop) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
+      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+    L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
+  rw [limExecV, limExec_term hterm]
+  exact wp_adequacy_exec_n_term e e' σ σ' n φ b hterm Hwp
+
 /-- `wp_adequacy` for the execution with `n` fuel. -/
-theorem wp_adequacy_exec_n (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
+theorem wp_adequacy_exec_n [L.IsZeroLeft] (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
+
+section Limit
+
+variable [L.IsZeroLeft] [L.IsLeftContinuous]
 
 /-- A weakest precondition from a budget credit `b` couples the limit executions at budget `b`. -/
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT → Val rT → Prop)
@@ -494,36 +477,10 @@ theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s] (e e' : Exp
   IsMassDetecting.measure_le_add .univ .univ (wp_adequacy e e' σ σ' (s ε) φ Hwp)
     fun _ _ _ _ ↦ trivial
 
+end Limit
+
+end Lawful
+
 end Budget
-
-/-! ### Adequacy for runs of mass `1` within the fuel -/
-
-section BudgetTerm
-
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsSupportLocal]
-variable {GF : BundledGFunctors}
-variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
-
-/-- `wp_adequacy_exec_n` for a run of mass `1`. -/
-theorem wp_adequacy_exec_n_term (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
-    (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
-    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
-    execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
-  execCoupl_of_step_fupdN e e' σ σ' n φ b
-    (fun _ _ => wp_adequacy_step_fupdN_term b e e' σ σ' n φ hterm) Hwp
-
-/-- `wp_adequacy` for a program whose run has mass `1` within `n` steps: the limit is that run,
-so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term`). -/
-theorem wp_adequacy_term (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (b : B)
-    (φ : Val rT → Val rT → Prop) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
-    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
-    L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
-  rw [limExecV, limExec_term hterm]
-  exact wp_adequacy_exec_n_term e e' σ σ' n φ b hterm Hwp
-
-end BudgetTerm
 
 end ProbLang
