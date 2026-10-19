@@ -33,8 +33,6 @@ theorem unif_refines_skipZero {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC
   iframe Hε
   iintro %n ⟨%hn, %h0⟩
   rel_pures
-  rw [beq_eq_false_iff_ne.2 (by simpa using h0)]
-  rel_pures
   rel_values
 
 /-- On every event, `unif N` and `skipZero N` differ by at most `1/N`. -/

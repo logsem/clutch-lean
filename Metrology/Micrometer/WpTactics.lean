@@ -104,6 +104,13 @@ public section
 @[pl_step_simp] theorem decide_not_eq_true (b : Bool) : decide (¬b = true) = !b := by
   cases b <;> rfl
 
+/-- Compares integer literals by their integers, which `Int.reduceBEq` then decides. -/
+@[pl_step_simp] theorem BaseLit.int_beq_int {rT : Type _} [BEq rT] (n m : Int) :
+    (BaseLit.int (rT := rT) n == BaseLit.int m) = (n == m) :=
+  rfl
+
+attribute [pl_step_simp] beq_self_eq_true beq_false_of_ne
+
 /-- Erases `openRec` around a closed spliced constant. -/
 simproc [pl_step_simp] openRecClosedLeaf (Exp.openRec _ _ _) := fun e => do
   return (← eraseOpenCloseLeaf? e).getD .continue
@@ -113,6 +120,14 @@ simproc [pl_step_simp] closeRecClosedLeaf (Exp.closeRec _ _ _) := fun e => do
   return (← eraseOpenCloseLeaf? e).getD .continue
 
 end
+
+/-- `pl_step_disch` proves the side conditions of `pl_step_simp` (such as `n ≠ m` for
+`beq_false_of_ne`) from the context. -/
+macro "pl_step_disch" : tactic => `(tactic| first | assumption | omega | (simp_all; done))
+
+/-- `pl_step_finish` tidies a goal after a step with `pl_step_simp`. -/
+macro "pl_step_finish" : tactic =>
+  `(tactic| try simp (disch := pl_step_disch) only [pl_step_simp])
 
 /-! ## WP-goal runner -/
 
@@ -258,17 +273,17 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
 
 /-- `wp_pure [e]` takes one pure step (plus display cleanup). -/
 macro "wp_pure" focus:(ppSpace colGt term:max)? : tactic =>
-  `(tactic| (wp_pure_core $[$focus]?; try simp only [pl_step_simp]))
+  `(tactic| (wp_pure_core $[$focus]?; pl_step_finish))
 
 /-- `wp_pure n` takes exactly `n` pure steps, stopping before an inlined library call that
 `wp_pures` would step through. -/
 macro "wp_pure " n:num : tactic =>
-  `(tactic| iterate $n (wp_pure_core; try simp only [pl_step_simp]))
+  `(tactic| iterate $n (wp_pure_core; pl_step_finish))
 
 /-- `wp_pures` takes pure steps until none applies. -/
 macro "wp_pures" : tactic =>
-  `(tactic| ((repeat (wp_pure_core; try simp only [pl_step_simp]));
-             try simp only [pl_step_simp]))
+  `(tactic| ((repeat (wp_pure_core; pl_step_finish));
+             pl_step_finish))
 
 /-! ## `wp_value` — discharge a value WP -/
 
@@ -442,16 +457,16 @@ elab "tp_pure_core" : tactic => do
 /-- The trailing `simp only [pl_step_simp]` erases stuck `openRec`/`closeRec` wrappers on
 opaque leaves; without it they accumulate and every later step re-`whnf`s them. -/
 macro "tp_pure" : tactic =>
-  `(tactic| (tp_pure_core; try simp only [pl_step_simp]))
+  `(tactic| (tp_pure_core; pl_step_finish))
 
 /-- `tp_pure n` takes exactly `n` pure steps on the `⤇` hypothesis. -/
 macro "tp_pure " n:num : tactic =>
-  `(tactic| iterate $n (tp_pure_core; try simp only [pl_step_simp]))
+  `(tactic| iterate $n (tp_pure_core; pl_step_finish))
 
 /-- `tp_pures` takes pure steps on the `⤇` hypothesis until none applies. -/
 macro "tp_pures" : tactic =>
-  `(tactic| ((repeat (tp_pure_core; try simp only [pl_step_simp]));
-             try simp only [pl_step_simp]))
+  `(tactic| ((repeat (tp_pure_core; pl_step_finish));
+             pl_step_finish))
 
 /-- `tp_bind e` rewrites the `⤇` hypothesis to `⤇ Ectx.fill K e`, so spec-step lemmas
 (`step_load`, `step_store`, …) match syntactically. -/

@@ -45,8 +45,6 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   iframe Hδ
   iintro %r %_ %⟨rfl, hr⟩
   rel_pures
-  rw [beq_eq_false_iff_ne.2 (by simpa using hr)]
-  rel_pures
   iapply rr_refines b b' $$ Hε
 
 /-- `leakyRR N` on private bits, started from state `σ`. -/

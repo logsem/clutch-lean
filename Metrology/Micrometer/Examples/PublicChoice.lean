@@ -38,14 +38,11 @@ theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   iframe Hb
   iintro %r %_ %(rfl | rfl) Hr
   all_goals
-    rel_pures
-    by_cases h0 : r = 0
-    · subst h0
-      simp only [choiceBudget, Set.mem_singleton_iff, ↓reduceIte, beq_self_eq_true]
+    obtain rfl | h0 := eq_or_ne r 0
+    · simp only [choiceBudget, Set.mem_singleton_iff, ↓reduceIte]
       rel_pures
       iapply rr_refines b b' $$ Hr
-    · rw [beq_eq_false_iff_ne.2 (by simpa using h0)]
-      rel_pures
+    · rel_pures
       rel_values
 
 /-- `choice` on private bits, started from state `σ`. -/

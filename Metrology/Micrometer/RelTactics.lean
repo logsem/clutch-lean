@@ -304,7 +304,7 @@ elab "rel_pure_l_core" focus:(ppSpace colGt term:max)? : tactic => relPureCore .
 elab "rel_pure_r_core" focus:(ppSpace colGt term:max)? : tactic => relPureCore .r focus
 
 /-- `rel_finish` tidies the goal after a step with `pl_step_simp` (Rocq `rel_finish`). -/
-macro "rel_finish" : tactic => `(tactic| try simp only [pl_step_simp])
+macro "rel_finish" : tactic => `(tactic| pl_step_finish)
 
 /-- `rel_pure_l [e]` takes one pure step on the left program, at `e` if given
 (Rocq `rel_pure_l`). -/
@@ -402,6 +402,30 @@ elab "rel_bind " colGt e:term:max ppSpace colGt e':term:max : tactic =>
     let stx ← `(refines_bind_sep $(← Term.exprToSyntax K) $(← Term.exprToSyntax K')
       (e := $(← Term.exprToSyntax f)) (e' := $(← Term.exprToSyntax f')))
     applyRule `rel_bind mvar g stx
+
+/-- `e` with every `Exp.fix` subterm that is definitionally a `@[pl_fold]` constant replaced by
+that constant. -/
+meta def foldPlConsts (e : LeanExpr) : MetaM LeanExpr := do
+  let consts := (plFoldExt.getState (← getEnv)).toList
+  Meta.transform e (pre := fun x => do
+    unless x.isAppOfArity ``Exp.fix 2 do return .continue
+    for c in consts do
+      let some app ← withNewMCtxDepth (allowLevelAssignments := true) do
+          let cE ← mkConstWithFreshMVarLevels c
+          let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType cE)
+          let app := mkAppN cE mvs
+          unless ← isDefEq x app do return none
+          let app ← instantiateMVars app
+          return if app.hasMVar then none else some app
+        | continue
+      return .done app
+    return .continue)
+
+/-- `rel_fold` shows recursive calls on both sides by their `@[pl_fold]` names, e.g. after
+stepping into a loop body, so the goal matches a hypothesis about the loop. -/
+elab "rel_fold" : tactic => runTacticRel `rel_fold fun mvar g => do
+  let g' := { g with app := g.withSide .l (← foldPlConsts g.e) }
+  changeGoal mvar g (g'.withSide .r (← foldPlConsts g.t))
 
 /-! ## Heap and tape operations -/
 

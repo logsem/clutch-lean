@@ -59,13 +59,9 @@ theorem findList_steps (m : List (Int × Int)) (k : Int) :
     · subst hk
       simp only [assocVal, alookup, ↓reduceIte]
       pure_steps
-      simp only [beq_self_eq_true]
-      pure_steps
     · simp only [assocVal, alookup, hk, ↓reduceIte]
       pure_steps
-      have hkl : (BaseLit.int k' == BaseLit.int (rT := rT) k) = false :=
-        beq_eq_false_iff_ne.mpr (by simp [hk])
-      simp only [hkl]
+      simp only [beq_false_of_ne hk]
       pure_step
       pure_step
       exact ih

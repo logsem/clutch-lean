@@ -52,20 +52,13 @@ theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
   simp only [OrderAddMonoidHom.coe_id, id_eq]
   iframe Hε
   iintro %n %hn Hn
-  by_cases h0 : n = 0
-  · subst h0
-    rel_pures_r
+  obtain rfl | rfl : n = 0 ∨ n = 1 := by omega
+  · rel_pures_r
     rel_values
-  · have : n = 1 := by omega
-    subst this
-    simp only [flipCredit, one_ne_zero, ↓reduceIte]
-    -- Test the coin and stop at the recursive call.
+  · simp only [flipCredit, one_ne_zero, ↓reduceIte]
     rel_pure_r 2
-    ispecialize IH $$ Hn
-    -- Refold the recursive call as `retry`.
-    rel_bind_r (retry (rT := rT))
-    simp only [Ectx.fill_nil, retry]
-    iexact IH
+    rel_fold
+    iapply IH $$ Hn
 
 /-- On every event, `retry` is at least as likely as the value `0`. -/
 theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
