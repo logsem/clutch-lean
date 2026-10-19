@@ -190,5 +190,18 @@ example :
   rel_pures
   rel_values
 
+/-- Integer comparisons step from literals and from hypotheses in the context. -/
+example (n : Int) (h : n ≠ 0) :
+    ⊢@{IProp GF} REL[L] (pl(if #(.int n) = #0 then #1 else #2) : Exp rT) <<
+      pl(if #0 = #0 then #2 else #1) : lrel_int := by
+  rel_pures
+  rel_values
+
+/-- Pairs of literals close by `rel_values`. -/
+example :
+    ⊢@{IProp GF} REL[L] (pl((#1, #(.bool true))) : Exp rT) << pl((#1, #(.bool true))) :
+      lrel_prod lrel_int lrel_bool := by
+  rel_values
+
 end RelTacticsTest
 end ProbLang
