@@ -196,9 +196,9 @@ theorem dp_gaussian {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε) (hε₁
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
   rcases le_total a' a with haa | haa
   · exact dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ haa (le_of_abs_le h)
-  · have := dp_map (dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ (neg_le_neg haa)
-      (by linarith [(abs_le.1 h).1])) measurable_neg
-    simpa only [gaussianReal_map_neg, neg_neg] using this
+  · simpa only [gaussianReal_map_neg, neg_neg] using
+      dp_map (dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ (neg_le_neg haa)
+        (by linarith [(abs_le.1 h).1])) measurable_neg
 
 end GradedDivergence
 
