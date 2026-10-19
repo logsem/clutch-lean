@@ -15,6 +15,7 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.OpenInv
 public import Metrology.Micrometer.WpTactics
 public import Metrology.Micrometer.ContinuousSampler
+public import Metrology.Micrometer.UnifInt
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.LRel
 public import Metrology.Micrometer.Model
