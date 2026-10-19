@@ -9,6 +9,7 @@ public import Metrology.Micrometer.Examples.Retry
 public import Metrology.Micrometer.Examples.RandomizedResponse
 public import Metrology.Micrometer.Examples.RandomizedResponseLoop
 public import Metrology.Micrometer.Examples.PublicChoice
+public import Metrology.Micrometer.Examples.LeakyRR
 public import Metrology.Micrometer.Examples.NoisyCount
 public import Metrology.Micrometer.Examples.ContextualDp
 public import Metrology.Micrometer.Examples.RandomizedResponseRenyi
@@ -31,6 +32,7 @@ adequacy. Lifting-level examples (no programs) live in `Couplings/Examples`.
 | equality (any lifting) | `OTP`, `ContinuousOTP`, `Presample` |
 | total variation | `SkipZero`, `Retry`, `AbsorbingExit`, `Switching` |
 | pure DP | `RandomizedResponse`, `RandomizedResponseLoop`, `PublicChoice`, `NoisyCount`, `ContextualDp` |
+| approximate DP | `LeakyRR` |
 | Rényi at one order | `RandomizedResponseRenyi`, `RandomizedResponseAdaptive`, `Couplings.Examples.AdaptiveRenyi` |
 | Rényi curve | `RandomizedResponseCurve` |
 | zCDP | `RandomizedResponseZcdp`, `RandomizedResponseLoop`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition` |
@@ -42,12 +44,12 @@ adequacy. Lifting-level examples (no programs) live in `Couplings/Examples`.
 | --- | --- |
 | coupling draws by a bijection | `OTP`, `ContinuousOTP` (continuous samples) |
 | presampling with tapes | `Presample` |
-| spending a credit on one draw | `SkipZero`, `RandomizedResponse` |
+| spending a credit on one draw | `SkipZero`, `RandomizedResponse`, `LeakyRR` (δ) |
 | absorbing exit, capped credits | `AbsorbingExit` |
 | amplification | `Retry` |
 | recursion (`rec`, induction on the unfolded loop) | `RandomizedResponseLoop` |
 | non-canonical bind laws | `PublicChoice` (`dpChoice`), `RandomizedResponseAdaptive` (escort) |
-| programs as mechanisms (`progMech_isPrivate`) | `RandomizedResponseLoop`, `RandomizedResponseZcdp` |
+| programs as mechanisms (`progMech_isPrivate`) | `RandomizedResponseLoop`, `RandomizedResponseZcdp`, `LeakyRR` |
 | conversions between divergences | `RandomizedResponseZcdp`, `RandomizedResponseTcdp`, `RandomizedResponseCurve` |
 | samplers given by a spec | `GaussianZcdp`, `NoisyCount` |
 | contextual refinement | `ContextualDp` |

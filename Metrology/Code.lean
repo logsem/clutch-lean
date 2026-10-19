@@ -17,6 +17,7 @@ public import Metrology.Code.Retry
 public import Metrology.Code.NoisyCount
 public import Metrology.Code.RandomizedResponseAdaptive
 public import Metrology.Code.GaussianRelease
+public import Metrology.Code.LeakyRR
 
 @[expose] public section
 
