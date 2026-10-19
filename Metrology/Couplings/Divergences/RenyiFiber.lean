@@ -71,8 +71,9 @@ theorem fiberCond_comp_map [Fintype Z] (hf : Measurable f) [IsFiniteMeasure μ] 
   simp [fiberCond_apply, map_apply hf (measurableSet_singleton _), mul_comm]
 
 omit [DiscreteMeasurableSpace Z] in
-theorem comap_comp_eq_comp_map (κ : Kernel Z X) (hg : Measurable g) :
-    κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
+/-- Precomposing a kernel with `g` is pushing the measure forward along `g`. -/
+theorem _root_.ProbabilityTheory.Kernel.comap_comp_eq_comp_map (κ : Kernel Z X)
+    (hg : Measurable g) : κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
   ext A hA
   rw [bind_apply hA (Kernel.aemeasurable _), bind_apply hA (Kernel.aemeasurable _),
     lintegral_map (κ.measurable_coe hA) hg]
@@ -112,7 +113,7 @@ theorem codensity_renyi_rel_of_map (hf : Measurable f) (hg : Measurable g)
     (fun y ↦ ?_) ?_
   · exact lintegral_expBudget_relCost_cond_le hf y
   · have := IsComposable.comp_self (fiberCond μ f) h
-    rwa [fiberCond_comp_map hf, ← comap_comp_eq_comp_map _ hg] at this
+    rwa [fiberCond_comp_map hf, ← Kernel.comap_comp_eq_comp_map _ hg] at this
 
 end Renyi
 

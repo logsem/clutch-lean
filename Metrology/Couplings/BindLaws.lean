@@ -242,7 +242,7 @@ theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {B
         ae_cond_mem (μ := μ) (hf (measurableSet_singleton (g y)))
     · simp [Kernel.piecewise_apply, hy]
   · rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hνB),
-      comap_comp_eq_comp_map _ hg,
+      Kernel.comap_comp_eq_comp_map _ hg,
       fiberCond_comp_withDensity hf (w := fun z ↦ (expBudget (ρ₂ z))⁻¹)]
     have := IsComposable.comp_self (fiberCond μ f) h
     rwa [fiberCond_comp_map hf] at this
