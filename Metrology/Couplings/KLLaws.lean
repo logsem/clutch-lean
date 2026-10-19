@@ -143,6 +143,61 @@ theorem markovCodensity_restrict [Add B] [LT B] [Top B] {A : Set X} [DecidablePr
   filter_upwards [hkl, mem_ae_iff.2 (by rwa [compl_compl] : μ Aᶜᶜᶜ = 0)] with x hx hA y
   simpa [Set.piecewise_eq_of_mem _ _ _ (by simpa using hA)] using hx y
 
+/-- A Dirac pair passes every test at its leftover: a property holding almost everywhere under a
+point mass holds at the point, measurable or not. -/
+theorem markovCodensity_dirac [Add B] [LT B] [Top B] (x : X) (y : Y) :
+    D.markovCodensity (R x y) R (dirac x) (dirac y) := by
+  intro I _ c _ k l _ _ hkl
+  rw [dirac_bind k.measurable, dirac_bind l.measurable]
+  by_contra h
+  have h₁ := dirac_apply_of_mem (s := {x' | ¬∀ y, D (R x' y + c) (k x') (l y)}) fun hx ↦ h (hx y)
+  exact zero_ne_one ((ae_iff.1 hkl).symm.trans h₁)
+
+theorem markovCodensity_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
+    [D.IsGraded] [D.IsReflexive] (b : B) (R : X → Y → B) :
+    D.markovCodensity b R (0 : Measure X) (0 : Measure Y) := by
+  intro I _ c _ k l _ _ _
+  rw [bind_zero_left, bind_zero_left]
+  exact IsGraded.mono zero_le (IsReflexive.refl _)
+
+theorem markovCodensity_map [Add B] [LT B] [Top B] {X' Y' : Type u} [MeasurableSpace X']
+    [MeasurableSpace Y'] {R : X' → Y' → B} {f : X → X'} {g : Y → Y'} (hf : Measurable f)
+    (hg : Measurable g) (h : D.markovCodensity b (fun x y ↦ R (f x) (g y)) μ ν) :
+    D.markovCodensity b R (μ.map f) (ν.map g) := by
+  intro I _ c hbc k l _ _ hkl
+  rw [bind_map_eq μ hf, bind_map_eq ν hg]
+  exact h hbc (k := k.comap f hf) (l := l.comap g hg) <|
+    (ae_of_ae_map hf.aemeasurable hkl).mono fun x hx y ↦ hx (g y)
+
+/-- The Markov-tested lifting of a graded reflexive divergence is lawful. -/
+instance isLawful_markovCodensity [AddCommMonoid B] [Preorder B] [CanonicallyOrderedAdd B]
+    [Top B] [D.IsGraded] [D.IsReflexive] : (markovCodensity D).IsLawful where
+  pure _ := markovCodensity_dirac _ _
+  zero := markovCodensity_zero
+  mono := markovCodensity_mono
+  frame _ := markovCodensity_frame
+  map := markovCodensity_map
+
+/-- Leftovers may be set to `⊤` off a set carrying the left measure. -/
+instance isSupportLocal_markovCodensity [Add B] [LT B] [Top B] :
+    (markovCodensity D).IsSupportLocal :=
+  ⟨fun _ ↦ markovCodensity_restrict⟩
+
+/-- At budget `⊤` there is no test left. -/
+instance isTopAbsorbing_markovCodensity [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] :
+    (markovCodensity D).IsTopAbsorbing :=
+  ⟨fun _ _ _ _ _ _ hc ↦ (le_self_add.not_gt hc).elim⟩
+
+/-- Tests pass to the supremum of an increasing sequence: each measure lies below it, so the test
+premise holds almost everywhere under each. -/
+instance isLeftContinuous_markovCodensity [Add B] [LT B] [Top B] [D.IsLeftContinuous] :
+    (markovCodensity D).IsLeftContinuous where
+  iSup_left {X Y} _ _ b R μ _ hμ ν _ h := by
+    intro I _ c hbc k l _ _ hkl
+    rw [iSup_bind_of_monotone hμ k.measurable]
+    exact IsLeftContinuous.iSup_left (fun _ _ hmn ↦ bind_mono_left (hμ hmn) k.measurable)
+      fun n ↦ h n hbc (ae_mono (le_iSup μ n) hkl)
+
 /-- Lifting equality gives the divergence: test with the identity kernel at slack `0`. -/
 instance isSound_markovCodensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded]
     [D.IsReflexive] : (markovCodensity D).IsSound D where
@@ -195,6 +250,15 @@ theorem markovCodensity_hellinger_rel_eq_iff (α : ℝ) [hα : Fact (α ∈ Ioo 
   ⟨IsSound.sound, markovCodensity_complete (by
     intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ hm hμ hκ
     exact hellingerDivergence_comp_of_mass_eq hα.out.1 hα.out.2 hm hμ hκ)⟩
+
+/-- Reflexivity of the KL lifting is completeness at a measure and itself. -/
+instance isReflexive_markovCodensity_kl : (markovCodensity klDivergence.{u}).IsReflexive :=
+  ⟨fun μ _ ↦ markovCodensity_kl_rel_eq_iff.2 (IsReflexive.refl μ)⟩
+
+/-- Reflexivity of the `α`-Hellinger lifting is completeness at a measure and itself. -/
+instance isReflexive_markovCodensity_hellinger (α : ℝ) [Fact (α ∈ Ioo (0 : ℝ) 1)] :
+    (markovCodensity (hellingerDivergence.{u} α)).IsReflexive :=
+  ⟨fun μ _ ↦ (markovCodensity_hellinger_rel_eq_iff α).2 (IsReflexive.refl μ)⟩
 
 /-- A KL lifting of equality bounds Mathlib's KL divergence (Rocq
 `gcoupl_KL_full_implies_KL_classical`, here for sub-probability measures). -/
