@@ -494,16 +494,17 @@ theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iexists interp L τ' Δ
   iexact Hv
 
-theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
+/-- `unpack` compatibility, as an entailment from the relation of the unpacked term. -/
+theorem bin_log_related_unpack_wand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
-    (HIH1 : ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)
     (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
       ((x, interp L τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 := by
-  unfold bin_log_related_ty bin_log_related at HIH1 HIH2 ⊢
-  iintro %vs #Hvs
+    bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ) ⊢
+      bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 := by
+  unfold bin_log_related_ty bin_log_related at HIH2 ⊢
+  iintro HIH1 %vs #Hvs
   ihave HIH1' := HIH1 $$ %vs Hvs
   rw [substMap_app, substMap_app, substMap_lam, substMap_lam]
   ihave %hvs := env_ltyped2_allClosed_pair Γ vs $$ Hvs
@@ -526,6 +527,16 @@ theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finse
     hvsfst_closed hvssnd_closed hxFvE2 hxFvE2' hxNotDom hvc.1 hvc.2
   isimp only [hbridge_fst, hbridge_snd, interp_ren τ2 A Δ] at HBody
   iexact HBody
+
+theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
+    {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
+    (HIH1 : ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))
+    (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
+    (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)
+    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
+      ((x, interp L τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
+    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 :=
+  HIH1.trans (bin_log_related_unpack_wand Δ Γ S he2_lc he2'_lc HIH2)
 
 /-! ### Operator compatibility
 

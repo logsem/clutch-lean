@@ -7,6 +7,7 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.Interp
 public import Metrology.Micrometer.Fundamental
 public import Metrology.ProbLang.ContextualRefinement
+public import Metrology.Couplings.Divergences.Dp
 
 /-! # Soundness of the logical relation for contextual refinement -/
 
@@ -260,6 +261,104 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
           ((HCtx.shift A).insert x τ_pkg (RelCtx.lookup_eq_none_of_not_mem hxRc))
           (Ctx.BindersFresh.cons_extend rfl HfreshTail)) y hy
 
+/-- The item runs its hole at most once: it does not put the hole under a binder. -/
+def CtxItem.IsLinear : CtxItem rT → Prop
+  | .lam _ | .fix _ | .tlam | .unpackR _ _ => False
+  | _ => True
+
+/-- Every item of `K` runs its hole at most once, so `K` may consume a non-duplicable frame. -/
+def Ctx.IsLinear : Ctx rT → Prop
+  | [] => True
+  | k :: K' => k.IsLinear ∧ Ctx.IsLinear K'
+
+set_option hygiene false in
+/-- Specialize the induction hypothesis of `bin_log_related_under_linear_ctx` to the frame. -/
+local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc' HCtx $$ HP)
+
+/-- `bin_log_related_under_typed_ctx` under a frame `P` such as budget credits, for contexts
+that run the hole at most once (the context's own steps are budget-free). -/
+theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Exp rT} {τ : Ty}
+    {Γtc' : Tctx} {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
+    (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
+      ⊢ P -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
+    ∀ (Δ : TyEnv rT GF) (Γrc' : RelCtx rT GF), TctxRelated L Δ Γtc' Γrc' →
+      ⊢ P -∗ bin_log_related_ty L ⊤ Δ Γrc' (K.fill e) (K.fill e') τ' := by
+  induction K generalizing Γtc' τ' with
+  | nil =>
+    intro Δ Γrc HCtx
+    cases HK
+    exact Hrel Δ Γrc HCtx
+  | cons k K' ih =>
+    intro Δ Γrc' HCtx
+    cases HK with | cons HKitem HKtail =>
+    have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
+    simp only [Ctx.fill_cons, CtxItem.fill]
+    iintro HP
+    cases HKitem with
+    | lam | fix | tlam | unpackR => exact (Hlin.1 : False).elim
+    | appL Hty2 => ih_frame; iapply bin_log_related_app $$ H %(Fund Hty2)
+    | appR Hty1 => ih_frame; iapply bin_log_related_app $$ %(Fund Hty1) H
+    | pairL Hty2 => ih_frame; iapply bin_log_related_pair $$ H %(Fund Hty2)
+    | pairR Hty1 => ih_frame; iapply bin_log_related_pair $$ %(Fund Hty1) H
+    | fst => ih_frame; iapply bin_log_related_fst $$ H
+    | snd => ih_frame; iapply bin_log_related_snd $$ H
+    | inl => ih_frame; iapply bin_log_related_injl $$ H
+    | inr => ih_frame; iapply bin_log_related_injr $$ H
+    | caseL Hty1 Hty2 => ih_frame; iapply bin_log_related_case $$ H %(Fund Hty1) %(Fund Hty2)
+    | caseM Hty0 Hty2 => ih_frame; iapply bin_log_related_case $$ %(Fund Hty0) H %(Fund Hty2)
+    | caseR Hty0 Hty1 => ih_frame; iapply bin_log_related_case $$ %(Fund Hty0) %(Fund Hty1) H
+    | ifL Hty1 Hty2 => ih_frame; iapply bin_log_related_if $$ H %(Fund Hty1) %(Fund Hty2)
+    | ifM Hty0 Hty2 => ih_frame; iapply bin_log_related_if $$ %(Fund Hty0) H %(Fund Hty2)
+    | ifR Hty0 Hty1 => ih_frame; iapply bin_log_related_if $$ %(Fund Hty0) %(Fund Hty1) H
+    | alloc => ih_frame; iapply bin_log_related_alloc $$ H
+    | load => ih_frame; iapply bin_log_related_load $$ H
+    | storeL Hty2 => ih_frame; iapply bin_log_related_store $$ H %(Fund Hty2)
+    | storeR Hty1 => ih_frame; iapply bin_log_related_store $$ %(Fund Hty1) H
+    | allocTape => ih_frame; iapply bin_log_related_alloctape $$ H
+    | randL_unit Hty2 => ih_frame; iapply bin_log_related_rand_unit $$ H %(Fund Hty2)
+    | randL_tape Hty2 => ih_frame; iapply bin_log_related_rand_tape $$ H %(Fund Hty2)
+    | randR_unit Hty1 => ih_frame; iapply bin_log_related_rand_unit $$ %(Fund Hty1) H
+    | randR_tape Hty1 => ih_frame; iapply bin_log_related_rand_tape $$ %(Fund Hty1) H
+    | @unop_int _ op _ Hres => ih_frame; iapply bin_log_related_int_unop Δ Γrc' op Hres $$ H
+    | @unop_real _ op _ Hres => ih_frame; iapply bin_log_related_real_unop Δ Γrc' op Hres $$ H
+    | @unop_bool _ op _ Hres => ih_frame; iapply bin_log_related_bool_unop Δ Γrc' op Hres $$ H
+    | @binopL_real _ op _ _ Hty2 Hres =>
+      ih_frame
+      iapply bin_log_related_real_binop Δ Γrc' op Hres $$ H %(Fund Hty2)
+    | @binopR_real _ op _ _ Hty1 Hres =>
+      ih_frame
+      iapply bin_log_related_real_binop Δ Γrc' op Hres $$ %(Fund Hty1) H
+    | @binopL_int _ op _ _ Hty2 Hres =>
+      ih_frame
+      iapply bin_log_related_int_binop Δ Γrc' op Hres $$ H %(Fund Hty2)
+    | @binopR_int _ op _ _ Hty1 Hres =>
+      ih_frame
+      iapply bin_log_related_int_binop Δ Γrc' op Hres $$ %(Fund Hty1) H
+    | @binopL_bool _ op _ _ Hty2 Hres =>
+      ih_frame
+      iapply bin_log_related_bool_binop Δ Γrc' op Hres $$ H %(Fund Hty2)
+    | @binopR_bool _ op _ _ Hty1 Hres =>
+      ih_frame
+      iapply bin_log_related_bool_binop Δ Γrc' op Hres $$ %(Fund Hty1) H
+    | binopL_unboxedEq Hub Hty2 =>
+      ih_frame
+      iapply bin_log_related_unboxed_eq Δ Γrc' Hub $$ H %(Fund Hty2)
+    | binopR_unboxedEq Hub Hty1 =>
+      ih_frame
+      iapply bin_log_related_unboxed_eq Δ Γrc' Hub $$ %(Fund Hty1) H
+    | fold => ih_frame; iapply bin_log_related_fold $$ H
+    | unfold => ih_frame; iapply bin_log_related_unfold $$ H
+    | tapp => ih_frame; iapply bin_log_related_tapp $$ H
+    | @unpackL x e2 _ τ_pkg _ hxFvE2 Hty_e2 =>
+      ih_frame
+      have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
+        Typed.rename_unpack hxFvE2 Hty_e2 y (hy ∘ Finset.mem_union_left _)
+      iapply bin_log_related_unpack_wand Δ Γrc' _
+        (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
+        (fun A y hy => fundamental L (hRen y hy) (TyEnv.cons A Δ) _
+          ((HCtx.shift A).insert y τ_pkg
+            (RelCtx.lookup_eq_none_of_not_mem (hy ∘ Finset.mem_union_right _)))) $$ H
+
 end Soundness
 
 section RefinesSound
@@ -282,6 +381,29 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
   [RefinesPreGS rT B GF]
 
+/-- The runs of `ρ` that end in the boolean `b` are the mass of its results at `b`. -/
+theorem limExec_finalBool (ρ : Cfg rT) (b : Bool) :
+    limExec ρ (finalBool b) = limExecV ρ {pl(#(.bool b))} := by
+  unfold limExecV asExpr
+  rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
+  rfl
+
+omit [LawfulProbLangℝ rT] in
+/-- Results related along equal booleans end in `b` together. -/
+theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
+    (ha : a ∈ ({pl(#(.bool b))} : Set (Exp rT))) : a' ∈ ({pl(#(.bool b))} : Set (Exp rT)) := by
+  obtain ⟨v, v', hv, hv', b'', hvb1, hvb2⟩ := h
+  have hv1 : v.1 = pl(#(.bool b'')) := congrArg Val.fst hvb1
+  rw [show v.1 = pl(#(.bool b)) from (Exp.ofVal_of_toVal_some hv).trans ha] at hv1
+  obtain rfl : b'' = b := by simpa using hv1.symm
+  exact (Exp.ofVal_of_toVal_some hv').symm.trans (congrArg Val.fst hvb2)
+
+omit [LawfulProbLangℝ rT] in
+/-- Results related along equal booleans are equal. -/
+theorem adequacyRel_boolEqVal_eq (a a' : Exp rT) (h : adequacyRel boolEqVal a a') : a = a' :=
+  let ⟨v, v', hv, hv', _, h1, h2⟩ := h
+  adequacyRel_eq_subset a a' ⟨v, v', hv, hv', h1.trans h2.symm⟩
+
 variable (L) in
 theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
     (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
@@ -292,12 +414,7 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
       Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
   intro K σ₀ b Htyped HfreshK Hbinders
-  have hRewriteFb : ∀ e0, limExec ⟨e0, σ₀⟩ (finalBool b) = limExecV ⟨e0, σ₀⟩ {pl(#(.bool b))} := by
-    intro e0
-    unfold limExecV asExpr
-    rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
-    rfl
-  rw [hRewriteFb (K.fill e), hRewriteFb (K.fill e')]
+  rw [limExec_finalBool, limExec_finalBool]
   have hCpl : L.Rel 0 (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ₀⟩)
       (limExecV ⟨K.fill e', σ₀⟩) := by
     apply refines_coupling (GF := GF)
@@ -314,12 +431,8 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
         (interp L Ty.bool (default : TyEnv rT GF))
       iapply HrelClosed $$ %([] : ValSubstMap rT)
       iapply env_ltyped2_empty
-  refine IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl ?_
-  rintro a b' ⟨v, v', hv, hv', b'', hvb1, hvb2⟩ ha
-  have hv1 : v.1 = pl(#(.bool b'')) := congrArg Val.fst hvb1
-  rw [show v.1 = pl(#(.bool b)) from (Exp.ofVal_of_toVal_some hv).trans ha] at hv1
-  obtain rfl : b'' = b := by simpa using hv1.symm
-  exact (Exp.ofVal_of_toVal_some hv').symm.trans (congrArg Val.fst hvb2)
+  exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
+    adequacyRel_boolEqVal_mem
 
 theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
     (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
@@ -339,6 +452,96 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   show ⊢@{IProp GF} refines L ⊤ e e' (interp L τ Δ)
   exact Hlog IR IBC Δ
 
+
+/-! ### Contextual soundness under budget credits -/
+
+omit [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
+variable (L) in
+/-- A closed refinement at `bool` from `↯b β` couples the two runs at `β` along equal booleans. -/
+theorem refines_bool_coupling (β : B) (E E' : Exp rT) (σ σ' : State rT)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF),
+      ⊢@{IProp GF} ↯b β -∗ refines L ⊤ E E' (lrel_bool (rT := rT))) :
+    L.Rel β (adequacyRel boolEqVal) (limExecV ⟨E, σ⟩) (limExecV ⟨E', σ'⟩) :=
+  approximates_coupling (GF := GF) (fun _ _ => lrel_bool) boolEqVal E E' σ σ' β
+    (fun _ _ v v' => lrel_bool_to_boolEqVal v v') Hlog
+
+variable (L) in
+/-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
+booleans: the credits are a frame, and the context's own steps are budget-free. -/
+theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
+      (Δ : TyEnv rT GF), ⊢@{IProp GF} ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
+    (K : Ctx rT) (σ σ' : State rT) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
+    (Hlin : K.IsLinear) :
+    L.Rel β (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ⟩) (limExecV ⟨K.fill e', σ'⟩) := by
+  refine refines_bool_coupling L (GF := GF) β _ _ σ σ' fun IR IBC => ?_
+  have Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Tctx.empty Γrc →
+      ⊢@{IProp GF} ↯b β -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ := by
+    intro Δ Γrc HCtx
+    obtain rfl := HCtx.eq_nil_of_empty
+    unfold bin_log_related_ty bin_log_related
+    iintro Hb %vs Hvs
+    ihave ⟨%hvs_nil⟩ := env_ltyped2_empty_inv vs $$ Hvs
+    subst hvs_nil
+    iapply (show ⊢@{IProp GF} ↯b β -∗ refines L ⊤ (Exp.substMap (ValSubstMap.fst []) e)
+      (Exp.substMap (ValSubstMap.snd []) e') (interp L τ Δ) from Hlog IR IBC Δ) $$ Hb
+  have H := bin_log_related_under_linear_ctx HK Hlin Hrel (default : TyEnv rT GF) []
+    TctxRelated.empty_nil
+  unfold bin_log_related_ty bin_log_related at H
+  show ⊢@{IProp GF} ↯b β -∗ refines L ⊤
+    (Exp.substMap (ValSubstMap.fst ([] : ValSubstMap rT)) (K.fill e))
+    (Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) (K.fill e'))
+    (interp L Ty.bool (default : TyEnv rT GF))
+  iintro Hb
+  iapply H $$ Hb %([] : ValSubstMap rT)
+  iapply env_ltyped2_empty
+
+/-- A refinement from `↯b β` bounds the divergence of every linear boolean context's outputs by
+`β`, for a divergence `D` the lifting is sound for. -/
+theorem refines_ctx_div {D : GradedDivergence.{0} B} [L.IsSound D] (β : B) (e e' : Exp rT)
+    (τ : Ty) (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
+      (Δ : TyEnv rT GF), ⊢@{IProp GF} ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
+    (K : Ctx rT) (σ σ' : State rT) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
+    (Hlin : K.IsLinear) :
+    D β (limExecV ⟨K.fill e, σ⟩) (limExecV ⟨K.fill e', σ'⟩) :=
+  IsSound.sound ((refines_ctx_coupling L β e e' τ Hlog K σ σ' HK Hlin).mono le_rfl
+    adequacyRel_boolEqVal_eq)
+
+/-- A refinement from `↯b (s δ)` bounds the chance that a linear boolean context returns `b`
+by that of the other side plus `δ`. -/
+theorem refines_ctx_mass (s : ENNReal →+o B) [L.IsMassDetecting s] (δ : ENNReal)
+    (e e' : Exp rT) (τ : Ty)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
+      (Δ : TyEnv rT GF), ⊢@{IProp GF} ↯b (s δ) -∗ refines L ⊤ e e' (interp L τ Δ))
+    (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
+    (Hlin : K.IsLinear) :
+    limExec ⟨K.fill e, σ⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ'⟩ (finalBool b) + δ := by
+  rw [limExec_finalBool, limExec_finalBool]
+  exact IsMassDetecting.measure_le_add (.singleton _) (.singleton _)
+    (refines_ctx_coupling L (s δ) e e' τ Hlog K σ σ' HK Hlin) adequacyRel_boolEqVal_mem
+
 end RefinesSound
+
+section RefinesSoundDp
+open MeasureTheory GradedDivergence
+open scoped _root_.ENNReal
+variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+  [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
+
+/-- An `(ε, δ)`-DP refinement makes every linear boolean context `(ε, δ)`-DP:
+`P[K[e] = b] ≤ e^ε P[K[e'] = b] + δ`. -/
+theorem refines_ctx_dp {ε δ : ℝ≥0∞} (hε : ε ≠ ∞) (e e' : Exp rT) (τ : Ty)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF)
+      (Δ : TyEnv rT GF),
+        ⊢@{IProp GF} ↯b (ε, δ) -∗ refines (codensity dp) ⊤ e e' (interp (codensity dp) τ Δ))
+    (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
+    (Hlin : K.IsLinear) :
+    limExec ⟨K.fill e, σ⟩ (finalBool b) ≤
+      expBudget ε * limExec ⟨K.fill e', σ'⟩ (finalBool b) + δ := by
+  rw [limExec_finalBool, limExec_finalBool]
+  exact dp_measure_le_add hε (refines_ctx_coupling _ (ε, δ) e e' τ Hlog K σ σ' HK Hlin)
+    (.singleton _) (.singleton _) adequacyRel_boolEqVal_mem
+
+end RefinesSoundDp
 
 end ProbLang
