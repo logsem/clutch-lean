@@ -1,11 +1,10 @@
 module
 
 public import Mathlib.Probability.Kernel.Composition.WithDensity
-public import Metrology.Couplings.Divergences.RenyiCodensity
+public import Metrology.Couplings.Divergences.RenyiStrassen
 
-/-! Adaptive Rényi composition at outcome-dependent budgets, paid through a witness kernel; paying
-the average budget instead is unsound (Rocq `renyi_witness_adaptive.v`,
-`renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
+/-! Adaptive Rényi composition at outcome-dependent budgets, averaged under the escort; paying the
+average budget instead is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
 
 @[expose] public section
 
@@ -19,10 +18,7 @@ namespace GradedDivergence
 variable {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
   [MeasurableSpace Y'] {α : ℝ} {ρ : ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
 
-/-! ## The multiplier `e^ε` -/
-
-theorem measurable_expBudget : Measurable expBudget :=
-  expBudget_mono.measurable
+/-! ## Reweighting by `e^{-ε}` -/
 
 /-- Reweighting by `e^{-ε}` keeps a measure sub-probability. -/
 instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
@@ -30,64 +26,53 @@ instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
     IsSubProbabilityMeasure (μ.withDensity fun x ↦ (expBudget (ε x))⁻¹) :=
   isSubProbabilityMeasure_withDensity_of_le_one μ fun _ ↦ ENNReal.inv_le_one.2 (one_le_expBudget _)
 
-theorem expBudget_rpow {p : ℝ} (hp : 0 < p) (ε : ℝ≥0∞) :
-    expBudget ε ^ p = expBudget (ENNReal.ofReal p * ε) := by
-  rcases eq_or_ne ε ⊤ with rfl | hε
-  · simp [ENNReal.mul_top (ENNReal.ofReal_pos.2 hp).ne', ENNReal.top_rpow_of_pos hp]
-  rw [expBudget_of_ne_top hε, expBudget_of_ne_top (by finiteness),
-    ENNReal.ofReal_rpow_of_nonneg (Real.exp_pos _).le hp.le, ← Real.exp_mul, ENNReal.toReal_mul,
-    ENNReal.toReal_ofReal hp.le, mul_comm]
-
-/-! ## Witness kernels -/
-
-/-- A witness kernel gives the Rényi codensity lifting: if the rows of `r` pay for the leftover,
-`∫ e^{R x y} d(r y) ≤ 1`, and the reduct `r ∘ₘ ν` is within budget `ρ` of `μ`, then `μ` and `ν`
-lift `R` at `ρ` (Rocq `witness_adaptive` at `Cr = 1`). -/
-theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] {R : X → Y → ℝ≥0∞} (r : Kernel Y X) [IsSubMarkovKernel r]
-    (hR : ∀ y, ∀ᵐ x ∂r y, R x y < ⊤) (hr : ∀ y, ∫⁻ x, expBudget (R x y) ∂r y ≤ 1)
-    (h : renyiDivergence α ρ μ (r ∘ₘ ν)) : (renyiDivergence α).codensity ρ R μ ν := by
+open Real in
+/-- Scaling the right measure by `e^{-c}` raises the Rényi divergence by at most `c`. -/
+theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc : c ≠ ⊤)
+    {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure ν] (h : renyiDivergence α ρ μ ν) :
+    renyiDivergence α (ρ + c) μ ((expBudget c)⁻¹ • ν) := by
   rcases eq_or_ne ρ ⊤ with rfl | hρ
-  · intro I _ c hc
-    simp at hc
-  refine codensity_renyi_of_slackHolder fun f g hf hg hfg ↦ ?_
-  have hα0 : 0 < α := zero_lt_one.trans hα.out
-  have hα1 : 0 < α - 1 := sub_pos.2 hα.out
-  have hq : 0 < α / (α - 1) := div_pos hα0 hα1
-  have hcq : ENNReal.ofReal (α / (α - 1)) * ENNReal.ofReal ((α - 1) / α) = 1 := by
-    rw [← ENNReal.ofReal_mul hq.le, div_mul_div_cancel₀ hα1.ne', div_self hα0.ne',
-      ENNReal.ofReal_one]
-  -- each row of `r` carries at most the right test's moment
-  have hrow (y : Y) : ∫⁻ x, f x ^ (α / (α - 1)) ∂r y ≤ g y ^ (α / (α - 1)) := by
-    rcases eq_or_ne (g y) ⊤ with hg | hg
-    · simp [hg, ENNReal.top_rpow_of_pos hq]
-    calc ∫⁻ x, f x ^ (α / (α - 1)) ∂r y
-        ≤ ∫⁻ x, g y ^ (α / (α - 1)) * expBudget (R x y) ∂r y := by
-          refine lintegral_mono_ae ((hR y).mono fun x hx ↦ ?_)
-          calc f x ^ (α / (α - 1))
-              ≤ (expBudget (ENNReal.ofReal ((α - 1) / α) * R x y) * g y) ^ (α / (α - 1)) := by
-                gcongr
-                exact hfg x y hx
-            _ = g y ^ (α / (α - 1)) * expBudget (R x y) := by
-                rw [ENNReal.mul_rpow_of_nonneg _ _ hq.le, expBudget_rpow hq, ← mul_assoc, hcq,
-                  one_mul, mul_comm]
-      _ = g y ^ (α / (α - 1)) * ∫⁻ x, expBudget (R x y) ∂r y :=
-          lintegral_const_mul' _ _ (ENNReal.rpow_ne_top_of_nonneg hq.le hg)
-      _ ≤ g y ^ (α / (α - 1)) := mul_le_of_le_one_right' (hr y)
-  -- Hölder against the reduct, then average the rows
-  have hcpl := (rdpCoupl_iff_codensity hρ).2
-    (codensity_complete h)
-  calc ∫⁻ x, f x ∂μ
-      ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
-          (∫⁻ x, f x ^ (α / (α - 1)) ∂(r ∘ₘ ν)) ^ ((α - 1) / α) :=
-        hcpl hf hf fun _ _ hxy ↦ hxy ▸ le_rfl
-    _ = expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
-          (∫⁻ y, ∫⁻ x, f x ^ (α / (α - 1)) ∂r y ∂ν) ^ ((α - 1) / α) := by
-        rw [lintegral_bind r.aemeasurable (by fun_prop)]
-    _ ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
-          (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α) := by
-        gcongr with y
-        exact hrow y
+  · simpa using renyiDivergence_top hα μ ((expBudget c)⁻¹ • ν)
+  have : IsFiniteMeasure ((expBudget c)⁻¹ • ν) := ⟨by
+    rw [Measure.smul_apply, smul_eq_mul]
+    exact ENNReal.mul_lt_top (ENNReal.inv_lt_top.2 (zero_lt_one.trans_le (one_le_expBudget c)))
+      (measure_lt_top ν _)⟩
+  have hf := convexOn_rpow hα.le
+  have hf0 := continuousWithinAt_rpow_zero (zero_lt_one.trans hα)
+  rw [renyiDivergence_iff_of_ne_top hα.le hρ, fDiv_eq_iSup_partition hf hf0] at h
+  rw [renyiDivergence_iff_of_ne_top hα.le (by finiteness), fDiv_eq_iSup_partition hf hf0]
+  refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
+  set p : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal
+  set q : Fin n → ℝ := fun i ↦ (ν (k ⁻¹' {i})).toReal
+  have hsum : ∑ i, persp (· ^ α) (p i) (q i) ≤ _ :=
+    (le_iSup₂_of_le (f := fun n (k : X → Fin n) ↦ ⨆ (_ : Measurable k),
+      ∑ i, persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal) n k
+      (le_iSup_of_le hk le_rfl)).trans h
+  have hs : ((expBudget c)⁻¹).toReal = exp (-c.toReal) := by
+    rw [expBudget_of_ne_top hc, ← ENNReal.ofReal_inv_of_pos (exp_pos _),
+      ENNReal.toReal_ofReal (by positivity), exp_neg]
+  have hfin (i : Fin n) :
+      ((persp (· ^ α) (p i) (q i)).toReal : EReal) = persp (· ^ α) (p i) (q i) :=
+    have hnn (j : Fin n) : 0 ≤ persp (· ^ α) (p j) (q j) :=
+      persp_rpow_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg
+    EReal.coe_toReal (ne_top_of_le_ne_top (EReal.coe_ne_top _)
+      ((Finset.single_le_sum (fun j _ ↦ hnn j) (Finset.mem_univ i)).trans hsum))
+      (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hnn i))
+  -- each cell costs `e^{(α - 1) c}` times more
+  have hcell (i : Fin n) : persp (· ^ α) (p i) (((expBudget c)⁻¹ • ν) (k ⁻¹' {i})).toReal =
+      ((exp ((α - 1) * c.toReal) * (persp (· ^ α) (p i) (q i)).toReal : ℝ) : EReal) := by
+    rw [Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul, hs, ← one_mul (p i),
+      persp_rpow_mul hα zero_le_one (exp_pos _).le ENNReal.toReal_nonneg ENNReal.toReal_nonneg,
+      persp_rpow_of_pos α (exp_pos _), one_mul, ← hfin i, ← EReal.coe_mul, EReal.coe_eq_coe_iff,
+      one_div, ← exp_neg, neg_neg, ← exp_mul, ← exp_add, EReal.toReal_coe]
+    ring_nf
+  have hreal : ∑ i, (persp (· ^ α) (p i) (q i)).toReal ≤ exp ((α - 1) * ρ.toReal) := by
+    rw [← EReal.coe_le_coe_iff, EReal.coe_finset_sum]
+    simpa only [hfin] using hsum
+  rw [Finset.sum_congr rfl fun i _ ↦ hcell i]
+  rw [← EReal.coe_finset_sum, EReal.coe_le_coe_iff, ← Finset.mul_sum,
+    ENNReal.toReal_add hρ hc, mul_add, exp_add, mul_comm (exp ((α - 1) * ρ.toReal))]
+  gcongr
 
 /-! ## The escort rule -/
 
@@ -109,7 +94,7 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     (h : renyiDivergence α ρ μ ((r ∘ₘ ν).withDensity fun x ↦ (expBudget (ρ₂ x))⁻¹)) :
     (renyiDivergence α).codensity ρ R (κ ∘ₘ μ) (η ∘ₘ ν) := by
   classical
-  have hw : Measurable fun x ↦ (expBudget (ρ₂ x))⁻¹ := (measurable_expBudget.comp hρ₂).inv
+  have hw : Measurable fun x ↦ (expBudget (ρ₂ x))⁻¹ := by fun_prop
   set w : X → ℝ≥0∞ := fun x ↦ (expBudget (ρ₂ x))⁻¹
   set r' := r.withDensity fun _ ↦ w
   have hr' (y : Y) : r' y = (r y).withDensity w := Kernel.withDensity_apply _ (by fun_prop) y

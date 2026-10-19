@@ -2,6 +2,7 @@ module
 
 public import Metrology.Couplings.Divergences.DpShapes
 public import Metrology.Couplings.Divergences.RenyiAdaptive
+public import Metrology.Couplings.Divergences.RenyiFiber
 
 /-! Bind laws beyond the canonical one: adaptive and choice DP composition, and escort-adaptive
 Rényi composition (Rocq `instances_dp.v`). -/
@@ -199,4 +200,51 @@ noncomputable def escort (α : ℝ) [Fact (1 < α)] : BindLaw (codensity (renyiD
     · simpa [Set.piecewise_eq_of_mem _ _ _ hx.2] using hR x y hx.1 hxy
   side_supp _ := trivial
 
+/-- Escort heads shift: the escort continues at `ρ₂ + c` against the right measure reweighted by
+another `e^{-c}`, which costs `c` more. -/
+instance headShift_escort (α : ℝ) [hα : Fact (1 < α)] : (escort.{u} α).HeadShift where
+  shift := by
+    rintro _ _ _ _ _ c _ μ ν hc ⟨S, ρ₂, r, A, hr, hρ₂, hA, hμA, hμ, hν, hrS, hR, h⟩
+    refine ⟨S, fun x ↦ ρ₂ x + c, r, A, hr, hρ₂.add_const c, hA, hμA, hμ, hν, hrS,
+      fun x y hx hxy ↦ by simp only [hR x y hx hxy], ?_⟩
+    have hw : (fun x ↦ (expBudget (ρ₂ x + c))⁻¹) =
+        (expBudget c)⁻¹ • fun x ↦ (expBudget (ρ₂ x))⁻¹ := by
+      ext x
+      rw [expBudget_add, Pi.smul_apply, smul_eq_mul, mul_comm,
+        ENNReal.mul_inv (.inl (zero_lt_one.trans_le (one_le_expBudget _)).ne')
+        (.inr (zero_lt_one.trans_le (one_le_expBudget _)).ne')]
+    rw [hw, withDensity_smul _ (f := fun x ↦ (expBudget (ρ₂ x))⁻¹) (by fun_prop)]
+    exact renyiDivergence_smul_inv_expBudget hα.out hc.ne h
+
 end GradedLifting.BindLaw
+
+namespace GradedDivergence
+
+variable {X Y Z : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
+  [Fintype Z] [DiscreteMeasurableSpace Z] {f : X → Z} {g : Y → Z} {μ : Measure X}
+  {ν : Measure Y} {α : ℝ} {ρ : ℝ≥0∞} [Fact (1 < α)] [IsSubProbabilityMeasure μ]
+  [IsSubProbabilityMeasure ν]
+
+/-- A Rényi bound between the image of `μ` and the image of `ν` reweighted by `e^{-ρ₂}` gives an
+escort head on equal images inside supports `A` and `B`, continuing at `ρ₂` of the image. -/
+theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {B : Set Y}
+    (hA : MeasurableSet A) (hB : MeasurableSet B) (hμA : μ Aᶜ = 0) (hνB : ν Bᶜ = 0)
+    (ρ₂ : Z → ℝ≥0∞) {R : X → Y → ℝ≥0∞}
+    (hR : ∀ x y, x ∈ A → y ∈ B → f x = g y → R x y = ρ₂ (f x))
+    (h : renyiDivergence α ρ (μ.map f) ((ν.map g).withDensity fun z ↦ (expBudget (ρ₂ z))⁻¹)) :
+    BindLaw.EscortHead α μ ν R ρ := by
+  classical
+  refine ⟨fun x y ↦ y ∈ B ∧ f x = g y, fun x ↦ ρ₂ (f x),
+    Kernel.piecewise hB ((fiberCond μ f).comap g hg) 0, A, inferInstance, by fun_prop, hA, hμA,
+    inferInstance, inferInstance, fun y ↦ ?_, fun x y hx ⟨hy, hxy⟩ ↦ hR x y hx hy hxy, ?_⟩
+  · by_cases hy : y ∈ B
+    · simpa [Kernel.piecewise_apply, hy, fiberCond_apply] using
+        ae_cond_mem (μ := μ) (hf (measurableSet_singleton (g y)))
+    · simp [Kernel.piecewise_apply, hy]
+  · rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hνB),
+      comap_comp_eq_comp_map _ hg,
+      fiberCond_comp_withDensity hf (w := fun z ↦ (expBudget (ρ₂ z))⁻¹)]
+    have := IsComposable.comp_self (fiberCond μ f) h
+    rwa [fiberCond_comp_map hf] at this
+
+end GradedDivergence

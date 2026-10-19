@@ -115,6 +115,17 @@ theorem measurable_some {X : Type*} [MeasurableSpace X] : Measurable (some : X �
   refine measurable_comap_iff.2 ?_
   simpa [Function.comp_def, Equiv.optionEquivSumPUnit] using measurable_inl
 
+/-- Eliminating an option measurably. -/
+@[fun_prop]
+theorem measurable_option_elim {X Z : Type*} [MeasurableSpace X] [MeasurableSpace Z] {g : X → Z}
+    (hg : Measurable g) (z : Z) : Measurable fun o : Option X ↦ o.elim z g := by
+  have : (fun o : Option X ↦ o.elim z g) =
+      Sum.elim g (fun _ ↦ z) ∘ Equiv.optionEquivSumPUnit X := by
+    funext o
+    cases o <;> rfl
+  rw [this]
+  exact (hg.sumElim measurable_const).comp (comap_measurable _)
+
 /-- The lift of a discrete measurable space is discrete. -/
 instance discreteMeasurableSpace_uLift {α : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α] :
     DiscreteMeasurableSpace (ULift α) :=
@@ -145,6 +156,22 @@ theorem toReal_lintegral_ofReal_comp {Z : Type*} [MeasurableSpace Z] {n : ℕ} {
   rw [Measure.map_apply hπ (measurableSet_singleton j), ENNReal.toReal_mul,
     ENNReal.toReal_ofReal (hw j)]
 
+/-- Total mass of a measure on a finite space as a sum of real point masses. -/
+theorem sum_toReal_singleton {I : Type*} [Fintype I] [MeasurableSpace I]
+    [MeasurableSingletonClass I] (ρ : Measure I) [IsFiniteMeasure ρ] :
+    ∑ i, (ρ {i}).toReal = (ρ Set.univ).toReal := by
+  rw [← ENNReal.toReal_sum fun _ _ ↦ measure_ne_top _ _, sum_measure_singleton, Finset.coe_univ]
+
+/-- On a finite space the integral of `ofReal ∘ f` is the `ofReal` of the weighted sum. -/
+theorem lintegral_ofReal_eq_sum {Z : Type*} [Fintype Z] [MeasurableSpace Z]
+    [MeasurableSingletonClass Z] (P : Measure Z) [IsFiniteMeasure P] {f : Z → ℝ} (hf : 0 ≤ f) :
+    ∫⁻ z, ENNReal.ofReal (f z) ∂P = ENNReal.ofReal (∑ z, (P {z}).toReal * f z) := by
+  rw [lintegral_fintype, ENNReal.ofReal_sum_of_nonneg fun z _ ↦
+    mul_nonneg ENNReal.toReal_nonneg (hf z)]
+  refine Finset.sum_congr rfl fun z _ ↦ ?_
+  rw [ENNReal.ofReal_mul ENNReal.toReal_nonneg, ENNReal.ofReal_toReal (measure_ne_top _ _),
+    mul_comm]
+
 end MeasureTheory
 
 /-- Capping at `n` keeps a bound `a ≤ c b` with `1 ≤ c`. -/
@@ -161,10 +188,10 @@ theorem ENNReal.inv_mul_le_inv_mul_add {a d : ℕ} (ha : a ≠ 0) {S : ℝ≥0�
     (a : ℝ≥0∞)⁻¹ * S ≤ ((a : ℝ≥0∞) + d)⁻¹ * S + d / ((a : ℝ≥0∞) + d) := by
   have hinvS : (a : ℝ≥0∞)⁻¹ * S ≤ 1 := by
     calc (a : ℝ≥0∞)⁻¹ * S
-      _ ≤ (a : ℝ≥0∞)⁻¹ * a := by gcongr
+        ≤ (a : ℝ≥0∞)⁻¹ * a := by gcongr
       _ = 1 := ENNReal.inv_mul_cancel (by positivity) (by finiteness)
   calc (a : ℝ≥0∞)⁻¹ * S
-    _ = ((a + d : ℝ≥0∞)⁻¹ * (a + d)) * ((a : ℝ≥0∞)⁻¹ * S) := by
+      = ((a + d : ℝ≥0∞)⁻¹ * (a + d)) * ((a : ℝ≥0∞)⁻¹ * S) := by
         rw [ENNReal.inv_mul_cancel (by positivity) (by finiteness), one_mul]
     _ = (a + d : ℝ≥0∞)⁻¹ * (a * ((a : ℝ≥0∞)⁻¹ * S) + d * ((a : ℝ≥0∞)⁻¹ * S)) := by
         rw [mul_assoc, add_mul]
@@ -199,12 +226,12 @@ theorem Finset.sum_Ico_comp_le_of_injOn {zL zR : ℤ} {f : ℤ → ℤ}
     (hinj : ∀ n₁ n₂ : ℤ, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂)
     (g : ℤ → ℝ≥0∞) : ∑ n ∈ Finset.Ico 0 zL, g (f n) ≤ ∑ m ∈ Finset.Ico 0 zR, g m := by
   calc ∑ n ∈ Finset.Ico 0 zL, g (f n)
-    _ = ∑ m ∈ (Finset.Ico 0 zL).image f, g m :=
-        (Finset.sum_image fun n hn m hm heq => by
+      = ∑ m ∈ (Finset.Ico 0 zL).image f, g m :=
+        (Finset.sum_image fun n hn m hm heq ↦ by
           simp only [Finset.coe_Ico, Set.mem_Ico] at hn hm
           exact hinj n m hn.1 hn.2 hm.1 hm.2 heq).symm
     _ ≤ ∑ m ∈ Finset.Ico 0 zR, g m := by
-        refine Finset.sum_le_sum_of_subset fun m hm => ?_
+        refine Finset.sum_le_sum_of_subset fun m hm ↦ ?_
         obtain ⟨n, hn, rfl⟩ := Finset.mem_image.1 hm
         simp only [Finset.mem_Ico] at hn ⊢
         exact hdom n hn.1 hn.2
@@ -213,6 +240,6 @@ theorem Finset.sum_Ico_comp_le_of_injOn {zL zR : ℤ} {f : ℤ → ℤ}
 theorem Finset.sum_Ico_le_toNat {z : ℤ} {g : ℤ → ℝ≥0∞} (hg : ∀ n, g n ≤ 1) :
     ∑ n ∈ Finset.Ico 0 z, g n ≤ z.toNat := by
   calc ∑ n ∈ Finset.Ico 0 z, g n
-    _ ≤ ∑ _n ∈ Finset.Ico 0 z, 1 := Finset.sum_le_sum fun n _ => hg n
+      ≤ ∑ _n ∈ Finset.Ico 0 z, 1 := Finset.sum_le_sum fun n _ ↦ hg n
     _ = z.toNat := by
         rw [Finset.sum_const, Int.card_Ico, nsmul_eq_mul, mul_one, Int.sub_zero]

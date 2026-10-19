@@ -25,7 +25,8 @@ variable (D) in
 /-- The codensity lifting: every test whose kernels are within the leftover plus a slack at each
 pair stays within the budget plus that slack after binding (Sato–Katsumata, §7). Tests where the
 budget plus slack is `⊤` are left out: they are vacuous under `IsGraded`, and dropping them makes
-framing free and `le_codensity` independent of `IsGraded`. -/
+framing free and `le_codensity` independent of `IsGraded`. `markovCodensity` restricts the tests
+to Markov kernels. -/
 def codensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],

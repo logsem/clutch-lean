@@ -2,12 +2,8 @@ module
 
 public import Metrology.Couplings.Divergences.GaussianRenyi
 
-/-! # Composing Gaussian queries through the zCDP lifting
-
-`k` independent Gaussian queries of the same input are `(ε, δ)`-DP with `ε` of order `√k`. Each
-query lifts equality in the zCDP lifting (completeness), the queries chain by binding, the
-conversion `LiftingRelHom.zcdpToDp` turns the composed lifting into a DP lifting, and soundness
-reads off the DP bound (Approximate Span Liftings, §§4–5). -/
+/-! `k` Gaussian queries composed through the zCDP lifting are `(ε, δ)`-DP with `ε` of order `√k`
+(Approximate Span Liftings, §§4–5). -/
 
 @[expose] public section
 
@@ -78,7 +74,8 @@ theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - 
       ih).map fun p q h ↦ by rw [Prod.ext h.1 h.2]
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ε, δ)`-DP for inputs at distance at
-most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`. -/
+most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`:
+convert the composed lifting by `LiftingRelHom.zcdpToDp`, then read off soundness. -/
 theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
       (⨅ α ∈ Ioi (1 : ℝ), ENNReal.ofReal α * (k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) +

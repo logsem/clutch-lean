@@ -27,6 +27,49 @@ instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure 
 
 end MeasureTheory.Measure
 
+section Kernel
+
+variable {Y : Type*} [MeasurableSpace Y]
+
+namespace ProbabilityTheory.Kernel
+
+/-- The kernel `κ` with its lost mass at each point sent to `none` (Rocq `dcomplete`). -/
+noncomputable def withBot (κ : Kernel X Y) : Kernel X (Option Y) where
+  toFun x := (κ x).withBot
+  measurable' := Measure.measurable_of_measurable_coe _ fun s hs ↦ by
+    simp only [Measure.withBot, Measure.add_apply, Measure.map_apply measurable_some hs,
+      Measure.smul_apply, smul_eq_mul]
+    exact (κ.measurable_coe (measurable_some hs)).add
+      ((measurable_const.sub (κ.measurable_coe .univ)).mul_const _)
+
+theorem withBot_apply (κ : Kernel X Y) (x : X) : κ.withBot x = (κ x).withBot := rfl
+
+/-- Filling the lost mass makes a sub-Markov kernel Markov. -/
+instance isMarkovKernel_withBot (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsMarkovKernel κ.withBot :=
+  ⟨fun x ↦ by rw [withBot_apply]; infer_instance⟩
+
+/-- The sub-Markov kernel forgetting `none`. -/
+noncomputable def dropBot : Kernel (Option X) X where
+  toFun o := o.elim 0 dirac
+  measurable' := measurable_option_elim measurable_dirac 0
+
+instance isSubMarkovKernel_dropBot : IsSubMarkovKernel (dropBot : Kernel (Option X) X) :=
+  ⟨fun o ↦ by cases o <;> simp [dropBot] <;> infer_instance⟩
+
+theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ := by
+  ext x s hs
+  have hm := (dropBot : Kernel (Option Y) Y).measurable_coe hs
+  rw [Kernel.comp_apply' _ _ _ hs, withBot_apply, Measure.withBot, lintegral_add_measure,
+    MeasureTheory.lintegral_map hm measurable_some, lintegral_smul_measure, lintegral_dirac' _ hm]
+  simp only [dropBot, Kernel.coe_mk, Option.elim_none, Option.elim_some, Measure.coe_zero,
+    Pi.zero_apply, smul_zero, add_zero]
+  simp_rw [dirac_apply' _ hs]
+  exact lintegral_indicator_one hs
+
+end ProbabilityTheory.Kernel
+
+end Kernel
+
 namespace GradedDivergence
 
 variable {B : Type v} (D : GradedDivergence.{u} B)

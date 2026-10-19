@@ -3,11 +3,7 @@ module
 public import Metrology.Couplings.KLLaws
 public import Mathlib.Probability.Distributions.Bernoulli
 
-/-! # KL budgets add along two coin flips
-
-Two independent flips of a `p`-coin are within twice the KL budget of one flip from two flips of a
-`q`-coin. One flip lifts equality at its KL divergence (completeness), and the second flip binds
-by the KL law `BindLaw.kl`, whose side condition holds since coin flips lose no mass. -/
+/-! KL budgets add along two coin flips, through the KL bind law. -/
 
 @[expose] public section
 
@@ -43,7 +39,8 @@ theorem flipAgain_rel (a : Bool) : (markovCodensity klDivergence).Rel (klDiv (co
       · simp [relCost_of_not h]
 
 /-- Two flips of a `p`-coin are within twice the KL divergence of one flip from two flips of a
-`q`-coin. -/
+`q`-coin: the first flip lifts equality by completeness, and the second binds by `BindLaw.kl`,
+whose side condition holds since coin flips lose no mass. -/
 theorem klDiv_two_flips_le :
     klDiv (flipAgain p ∘ₘ coin p) (flipAgain q ∘ₘ coin q) ≤ 2 * klDiv (coin p) (coin q) := by
   rw [two_mul]

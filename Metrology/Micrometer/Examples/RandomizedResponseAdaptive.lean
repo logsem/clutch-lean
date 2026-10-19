@@ -4,9 +4,8 @@ public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Code.RandomizedResponseAdaptive
 public import Metrology.Couplings.Examples.AdaptiveRenyi
-public import Metrology.Couplings.Divergences.RenyiFiber
-public import Metrology.Couplings.Divergences.Chi2
-public import Metrology.Couplings.EscortHeadShift
+public import Metrology.Couplings.BindLaws
+public import Metrology.Couplings.Divergences.Power
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section

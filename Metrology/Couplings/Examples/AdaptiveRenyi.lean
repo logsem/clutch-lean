@@ -19,7 +19,7 @@ namespace AdaptiveRenyi
 noncomputable def randResp (d : Bool) : Measure Bool :=
   (2 / 3 : ℝ≥0∞) • dirac d + (1 / 3 : ℝ≥0∞) • dirac (!d)
 
-instance (d : Bool) : IsProbabilityMeasure (randResp d) := ⟨by
+instance isProbabilityMeasure_randResp (d : Bool) : IsProbabilityMeasure (randResp d) := ⟨by
   simp [randResp]
   rw [div_eq_mul_inv, ← add_one_mul, two_add_one_eq_three,
     ENNReal.mul_inv_cancel (by norm_num) (by norm_num)]⟩
@@ -29,7 +29,7 @@ release nothing new. It outputs both reports. -/
 noncomputable def stageTwo (d : Bool) : Kernel Bool (Bool × Bool) :=
   ⟨fun b ↦ cond b ((randResp d).map (Prod.mk true)) (dirac (false, false)), .of_discrete⟩
 
-instance (d : Bool) : IsMarkovKernel (stageTwo d) := ⟨by
+instance isMarkovKernel_stageTwo (d : Bool) : IsMarkovKernel (stageTwo d) := ⟨by
   rintro (_ | _)
   · exact inferInstanceAs (IsProbabilityMeasure (dirac _))
   · exact inferInstanceAs (IsProbabilityMeasure (map _ _))⟩
@@ -42,7 +42,7 @@ noncomputable def stageTwoCost (b : Bool) : ℝ≥0∞ :=
 noncomputable def adaptive (d : Bool) : Measure (Bool × Bool) :=
   stageTwo d ∘ₘ randResp d
 
-instance (d : Bool) : IsProbabilityMeasure (adaptive d) := by
+instance isProbabilityMeasure_adaptive (d : Bool) : IsProbabilityMeasure (adaptive d) := by
   unfold adaptive
   infer_instance
 

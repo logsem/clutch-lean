@@ -6,7 +6,7 @@ public import Metrology.Couplings.Divergences.RenyiCodensity
 
 /-! The Rényi–Strassen theorem: a Rényi codensity lifting is witnessed by a kernel that moves mass
 along the cost and lands within the Rényi budget (Rocq `renyi_kernel_algebra_final.v`,
-`renyi_strassen.v`). -/
+`renyi_strassen.v`, `renyi_witness_adaptive.v`). -/
 
 @[expose] public section
 
@@ -14,20 +14,6 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting
 open scoped ENNReal
-
-namespace MeasureTheory
-
-/-- On a finite space the integral of `ofReal ∘ f` is the `ofReal` of the weighted sum. -/
-theorem lintegral_ofReal_eq_sum {Z : Type*} [Fintype Z] [MeasurableSpace Z]
-    [MeasurableSingletonClass Z] (P : Measure Z) [IsFiniteMeasure P] {f : Z → ℝ} (hf : 0 ≤ f) :
-    ∫⁻ z, ENNReal.ofReal (f z) ∂P = ENNReal.ofReal (∑ z, (P {z}).toReal * f z) := by
-  rw [lintegral_fintype, ENNReal.ofReal_sum_of_nonneg fun z _ ↦
-    mul_nonneg ENNReal.toReal_nonneg (hf z)]
-  refine Finset.sum_congr rfl fun z _ ↦ ?_
-  rw [ENNReal.ofReal_mul ENNReal.toReal_nonneg, ENNReal.ofReal_toReal (measure_ne_top _ _),
-    mul_comm]
-
-end MeasureTheory
 
 namespace ProbabilityTheory
 
@@ -200,16 +186,12 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α : ℝ} {ρ :
 /-! ## Soundness -/
 
 /-- Raising `e^{(α - 1) ε / α}` to the conjugate exponent `α / (α - 1)` gives `e^ε`. -/
-theorem expBudget_conj_rpow (hα : 1 < α) {ε : ℝ≥0∞} (hε : ε ≠ ⊤) :
+theorem expBudget_conj_rpow (hα : 1 < α) (ε : ℝ≥0∞) :
     expBudget (ENNReal.ofReal ((α - 1) / α) * ε) ^ (α / (α - 1)) = expBudget ε := by
-  have hα1 : α - 1 ≠ 0 := by linarith
-  have hγ : 0 ≤ (α - 1) / α := div_nonneg (by linarith) (by linarith)
-  have hβ : 0 ≤ α / (α - 1) := div_nonneg (by linarith) (by linarith)
-  rw [expBudget_of_ne_top (ENNReal.mul_ne_top ENNReal.ofReal_ne_top hε), expBudget_of_ne_top hε,
-    ENNReal.ofReal_rpow_of_nonneg (Real.exp_pos _).le hβ,
-    ← Real.exp_mul, ENNReal.toReal_mul, ENNReal.toReal_ofReal hγ]
-  congr 2
-  field_simp
+  have hα0 : 0 < α := by linarith
+  have hα1 : 0 < α - 1 := by linarith
+  rw [expBudget_rpow (div_pos hα0 hα1), ← mul_assoc, ← ENNReal.ofReal_mul (by positivity),
+    div_mul_div_cancel₀ hα1.ne', div_self hα0.ne', ENNReal.ofReal_one, one_mul]
 
 /-- A kernel whose `e^E`-weighted mass is at most `1` everywhere is sub-Markov. -/
 theorem isSubMarkovKernel_of_lintegral_expBudget_le {r : Kernel Y X}
@@ -219,34 +201,32 @@ theorem isSubMarkovKernel_of_lintegral_expBudget_le {r : Kernel Y X}
       _ ≤ ∫⁻ x, expBudget (E x y) ∂(r y) := lintegral_mono fun x ↦ one_le_expBudget _
       _ ≤ 1 := hr y⟩
 
-/-- A kernel `r` with `∫ e^{E x y} d(r y) ≤ 1` and `D_α(μ ‖ r ∘ ν) ≤ ρ` witnesses the Rényi
-codensity lifting of `μ` and `ν` at the cost `E` (Rocq `witness_soundness`,
-`Kant_exact_uncond`). -/
-theorem codensity_renyi_of_kernel [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (hE : ∀ y, Measurable fun x ↦ E x y) {r : Kernel Y X}
-    (hr : ∀ y, ∫⁻ x, expBudget (E x y) ∂(r y) ≤ 1) (hD : renyiDivergence α ρ μ (r ∘ₘ ν)) :
-    (renyiDivergence α).codensity ρ E μ ν := by
+/-- A witness kernel gives the Rényi codensity lifting: if the rows of `r` pay for the leftover,
+`∫ e^{R x y} d(r y) ≤ 1`, and the reduct `r ∘ₘ ν` is within budget `ρ` of `μ`, then `μ` and `ν`
+lift `R` at `ρ`. Along each row `f ^ β ≤ e^R g(y) ^ β`, then Hölder against the reduct (Rocq
+`witness_adaptive` at `Cr = 1`, `witness_soundness`). -/
+theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {R : X → Y → ℝ≥0∞} (r : Kernel Y X) [IsSubMarkovKernel r]
+    (hR : ∀ y, ∀ᵐ x ∂r y, R x y < ⊤) (hr : ∀ y, ∫⁻ x, expBudget (R x y) ∂r y ≤ 1)
+    (h : renyiDivergence α ρ μ (r ∘ₘ ν)) : (renyiDivergence α).codensity ρ R μ ν := by
   rcases eq_or_ne ρ ⊤ with rfl | hρ
-  · exact codensity_top E μ ν
-  have := isSubMarkovKernel_of_lintegral_expBudget_le hr
+  · exact codensity_top R μ ν
   have hcoupl : RdpCoupl α ρ (· = ·) μ (r ∘ₘ ν) :=
-    (rdpCoupl_iff_codensity hρ).2 (codensity_rel_eq_iff.2 hD)
+    (rdpCoupl_iff_codensity hρ).2 (codensity_complete h)
   refine codensity_renyi_of_slackHolder fun f g hf hg hfg ↦ ?_
-  have hγ : 0 ≤ (α - 1) / α := div_nonneg (by linarith [hα.out]) (by linarith [hα.out])
-  have hβ : 0 ≤ α / (α - 1) := div_nonneg (by linarith [hα.out]) (by linarith [hα.out])
-  -- along each fiber `r y`, `f ^ β` is at most `e^E g(y) ^ β`, which integrates to `g(y) ^ β`
-  have hfiber (y : Y) : ∫⁻ x, f x ^ (α / (α - 1)) ∂(r y) ≤ g y ^ (α / (α - 1)) := by
-    have hEy : Measurable fun x ↦ expBudget (E x y) := expBudget_mono.measurable.comp (hE y)
-    have hfin : ∀ᵐ x ∂(r y), E x y < ⊤ := by
-      filter_upwards [ae_lt_top hEy (ne_top_of_le_ne_top ENNReal.one_ne_top (hr y))] with x hx
-      exact expBudget_lt_top_iff.1 hx
-    calc ∫⁻ x, f x ^ (α / (α - 1)) ∂(r y)
-        ≤ ∫⁻ x, expBudget (E x y) * g y ^ (α / (α - 1)) ∂(r y) := by
+  have hα0 : 0 < α := zero_lt_one.trans hα.out
+  have hα1 : 0 < α - 1 := sub_pos.2 hα.out
+  have hβ : 0 < α / (α - 1) := div_pos hα0 hα1
+  have hrow (y : Y) : ∫⁻ x, f x ^ (α / (α - 1)) ∂r y ≤ g y ^ (α / (α - 1)) := by
+    rcases eq_or_ne (g y) ⊤ with hgy | hgy
+    · simp [hgy, ENNReal.top_rpow_of_pos hβ]
+    calc ∫⁻ x, f x ^ (α / (α - 1)) ∂r y
+        ≤ ∫⁻ x, expBudget (R x y) * g y ^ (α / (α - 1)) ∂r y := by
           refine lintegral_mono_ae ?_
-          filter_upwards [hfin] with x hx
-          grw [hfg x y hx, ENNReal.mul_rpow_of_nonneg _ _ hβ, expBudget_conj_rpow hα.out hx.ne]
-      _ = (∫⁻ x, expBudget (E x y) ∂(r y)) * g y ^ (α / (α - 1)) :=
-          lintegral_mul_const _ hEy
+          filter_upwards [hR y] with x hx
+          grw [hfg x y hx, ENNReal.mul_rpow_of_nonneg _ _ hβ.le, expBudget_conj_rpow hα.out]
+      _ = (∫⁻ x, expBudget (R x y) ∂r y) * g y ^ (α / (α - 1)) :=
+          lintegral_mul_const' _ _ (ENNReal.rpow_ne_top_of_nonneg hβ.le hgy)
       _ ≤ g y ^ (α / (α - 1)) := mul_le_of_le_one_left' (hr y)
   calc ∫⁻ x, f x ∂μ
       ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
@@ -254,8 +234,20 @@ theorem codensity_renyi_of_kernel [hα : Fact (1 < α)] [IsSubProbabilityMeasure
         hcoupl hf hf fun _ _ h ↦ h ▸ le_rfl
     _ ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
           (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α) := by
-        rw [Measure.lintegral_bind r.measurable.aemeasurable (hf.pow_const _).aemeasurable]
-        exact mul_le_mul_right (ENNReal.rpow_le_rpow (lintegral_mono hfiber) hγ) _
+        rw [Measure.lintegral_bind r.aemeasurable (by fun_prop)]
+        gcongr with y
+        exact hrow y
+
+/-- A kernel `r` with `∫ e^{E x y} d(r y) ≤ 1` and `D_α(μ ‖ r ∘ ν) ≤ ρ` witnesses the Rényi
+codensity lifting of `μ` and `ν` at a measurable cost `E` (Rocq `witness_soundness`,
+`Kant_exact_uncond`). -/
+theorem codensity_renyi_of_kernel [Fact (1 < α)] [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] (hE : ∀ y, Measurable fun x ↦ E x y) {r : Kernel Y X}
+    (hr : ∀ y, ∫⁻ x, expBudget (E x y) ∂(r y) ≤ 1) (hD : renyiDivergence α ρ μ (r ∘ₘ ν)) :
+    (renyiDivergence α).codensity ρ E μ ν :=
+  have := isSubMarkovKernel_of_lintegral_expBudget_le hr
+  codensity_renyi_of_witness r (fun y ↦ (ae_lt_top (by fun_prop)
+    (ne_top_of_le_ne_top ENNReal.one_ne_top (hr y))).mono fun _ ↦ expBudget_lt_top_iff.1) hr hD
 
 /-! ## Completeness on finite spaces -/
 

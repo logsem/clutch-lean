@@ -2,7 +2,7 @@ module
 
 public import Metrology.Micrometer.Examples.RandomizedResponse
 public import Metrology.Code.RandomizedResponseTwice
-public import Metrology.Couplings.Divergences.Conversions
+public import Metrology.Couplings.Divergences.RenyiFiber
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section

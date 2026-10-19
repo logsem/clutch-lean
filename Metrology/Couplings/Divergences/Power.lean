@@ -2,7 +2,8 @@ module
 
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! Power divergences and χ² as regradings of the Rényi divergence (Rocq `regrade.v`). -/
+/-! Power divergences and their order-2 case χ², as regradings of the Rényi divergence (Rocq
+`regrade.v`). -/
 
 @[expose] public section
 
@@ -26,11 +27,11 @@ def PowerBudget : Type :=
 namespace PowerBudget
 
 /-- Power budgets are ordered as in `ℝ≥0∞`. -/
-noncomputable instance : CompleteLinearOrder PowerBudget :=
+noncomputable instance instCompleteLinearOrder : CompleteLinearOrder PowerBudget :=
   inferInstanceAs (CompleteLinearOrder ℝ≥0∞)
 
 /-- There are at least two power budgets. -/
-instance : Nontrivial PowerBudget :=
+instance instNontrivial : Nontrivial PowerBudget :=
   inferInstanceAs (Nontrivial ℝ≥0∞)
 
 /-- A budget in `ℝ≥0∞` as a power budget. -/
@@ -50,11 +51,11 @@ theorem ofENNReal_toENNReal (c : PowerBudget) : ofENNReal (toENNReal c) = c :=
   rfl
 
 /-- The zero power budget is `0`. -/
-noncomputable instance : Zero PowerBudget :=
+noncomputable instance instZero : Zero PowerBudget :=
   ⟨ofENNReal 0⟩
 
 /-- Power budgets compose as `a + b + a b` (Barthe–Olmedo's `γ = 1` law). -/
-noncomputable instance : Add PowerBudget :=
+noncomputable instance instAdd : Add PowerBudget :=
   ⟨fun a b ↦ ofENNReal (toENNReal a + toENNReal b + toENNReal a * toENNReal b)⟩
 
 @[simp]
@@ -75,7 +76,7 @@ theorem ofENNReal_top : ofENNReal ⊤ = ⊤ :=
   rfl
 
 /-- Power budgets form a monoid, isomorphic to `[1, ⊤]` under multiplication along `c ↦ 1 + c`. -/
-noncomputable instance : AddCommMonoid PowerBudget where
+noncomputable instance instAddCommMonoid : AddCommMonoid PowerBudget where
   add_assoc a b c := toENNReal.injective <| by simp only [toENNReal_add]; ring
   zero_add a := toENNReal.injective <| by simp
   add_zero a := toENNReal.injective <| by simp
@@ -102,14 +103,14 @@ theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) 
     ((ENNReal.add_right_inj hc).1 h)
 
 /-- Composing power budgets is monotone. -/
-instance : IsOrderedAddMonoid PowerBudget where
+instance instIsOrderedAddMonoid : IsOrderedAddMonoid PowerBudget where
   add_le_add_left a b h c := toENNReal.le_iff_le.1 <| by
     have h := toENNReal.monotone h
     simp only [toENNReal_add]
     gcongr
 
 /-- Every larger power budget is reached by adding `(b - a) / (1 + a)`. -/
-instance : CanonicallyOrderedAdd PowerBudget where
+instance instCanonicallyOrderedAdd : CanonicallyOrderedAdd PowerBudget where
   exists_add_of_le {a b} h := by
     refine ⟨ofENNReal ((toENNReal b - toENNReal a) / (1 + toENNReal a)), toENNReal.injective ?_⟩
     have h := toENNReal.monotone h

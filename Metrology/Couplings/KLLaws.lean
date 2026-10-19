@@ -1,21 +1,12 @@
 module
 
 public import Metrology.Couplings.Codensity
-public import Metrology.Couplings.Divergences.Bof
+public import Metrology.Couplings.Divergences.Hellinger
+public import Metrology.Couplings.Divergences.Kl
 public import Metrology.Couplings.Divergences.Fill
 
 /-! A lifting and a bind law for generalized KL and `α`-Hellinger without filling (Rocq
-`GC_KL_full`, `GBL_KL_full`).
-
-The plain codensity lifting `codensity klDivergence` is sound and binds unconditionally, but a KL
-bound does not give a lifting of equality: completeness needs `IsComposable`, which fails
-(`not_isComposable_kl`). We therefore restrict the tests to Markov kernels, checked almost
-everywhere on the left (`markovCodensity`). Markov tests lose no mass, so equal-mass composition
-makes the lifting complete as well as sound for KL and `α`-Hellinger
-(`markovCodensity_kl_rel_eq_iff`). Binding then needs continuation kernels that lose the same mass
-at related pairs (`BindLaw.massEq`): a Markov test after a sub-Markov kernel is no longer Markov,
-so it is filled on `none`, which costs nothing at equal mass, and the fill is dropped again by
-data processing. -/
+`GC_KL_full`, `GBL_KL_full`). -/
 
 @[expose] public section
 
@@ -24,54 +15,11 @@ universe u v
 open MeasureTheory Measure ProbabilityTheory Set GradedLifting InformationTheory
 open scoped ENNReal
 
-/-! ## Filling and dropping lost mass -/
+/-! ## Filling costs nothing at equal mass -/
 
 section Fill
 
-variable {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
-
-theorem measurable_option_elim {g : X → Z} (hg : Measurable g) (z : Z) :
-    Measurable fun o : Option X ↦ o.elim z g := by
-  have : (fun o : Option X ↦ o.elim z g) = Sum.elim g (fun _ ↦ z) ∘ Equiv.optionEquivSumPUnit X := by
-    funext o
-    cases o <;> rfl
-  rw [this]
-  exact (hg.sumElim measurable_const).comp (comap_measurable _)
-
-namespace ProbabilityTheory.Kernel
-
-/-- The kernel `κ` with its lost mass at each point sent to `none` (Rocq `dcomplete`). -/
-noncomputable def withBot (κ : Kernel X Y) : Kernel X (Option Y) where
-  toFun x := (κ x).withBot
-  measurable' := Measure.measurable_of_measurable_coe _ fun s hs ↦ by
-    simp only [Measure.withBot, Measure.add_apply, Measure.map_apply measurable_some hs,
-      Measure.smul_apply, smul_eq_mul]
-    exact (κ.measurable_coe (measurable_some hs)).add
-      ((measurable_const.sub (κ.measurable_coe .univ)).mul_const _)
-
-theorem withBot_apply (κ : Kernel X Y) (x : X) : κ.withBot x = (κ x).withBot := rfl
-
-instance (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsMarkovKernel κ.withBot :=
-  ⟨fun x ↦ by rw [withBot_apply]; infer_instance⟩
-
-/-- The sub-Markov kernel forgetting `none`. -/
-noncomputable def dropBot : Kernel (Option X) X where
-  toFun o := o.elim 0 dirac
-  measurable' := measurable_option_elim measurable_dirac 0
-
-instance : IsSubMarkovKernel (dropBot : Kernel (Option X) X) :=
-  ⟨fun o ↦ by cases o <;> simp [dropBot] <;> infer_instance⟩
-
-theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ := by
-  ext x s hs
-  have hm := (dropBot : Kernel (Option Y) Y).measurable_coe hs
-  rw [Kernel.comp_apply' _ _ _ hs, withBot_apply, Measure.withBot, lintegral_add_measure,
-    MeasureTheory.lintegral_map hm measurable_some, lintegral_smul_measure, lintegral_dirac' _ hm]
-  simp only [dropBot, Kernel.coe_mk, Option.elim_none, Option.elim_some, Measure.coe_zero, Pi.zero_apply, smul_zero, add_zero]
-  simp_rw [dirac_apply' _ hs]
-  exact lintegral_indicator_one hs
-
-end ProbabilityTheory.Kernel
+variable {X : Type*} [MeasurableSpace X]
 
 /-- Adding the same finite mass at `none` to both sides does not raise an `f`-divergence with
 `f 1 = 0`. -/
@@ -105,7 +53,10 @@ theorem fDiv_withBot_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
 
 end Fill
 
-/-! ## The Markov-tested codensity lifting -/
+/-! ## The Markov-tested codensity lifting
+
+`codensity klDivergence` is not complete, since KL is not composable (`not_isComposable_kl`).
+Markov tests lose no mass, so equal-mass composition makes this variant complete. -/
 
 namespace GradedDivergence
 
@@ -113,7 +64,7 @@ variable {B : Type v} {D : GradedDivergence.{u} B} {X Y : Type u} [MeasurableSpa
   [MeasurableSpace Y] {b : B} {R : X → Y → B} {μ : Measure X} {ν : Measure Y}
 
 variable (D) in
-/-- The codensity lifting with Markov tests whose premise is checked almost everywhere on the left
+/-- `codensity` with Markov tests whose premise is checked almost everywhere on the left
 (Sato–Katsumata, §7; Rocq `GC_KL_full` tests with functions instead). -/
 def markovCodensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
@@ -277,7 +228,10 @@ theorem not_absorbing_markovCodensity_kl (hb : b ≠ ⊤) :
 
 end GradedDivergence
 
-/-! ## The equal-mass bind law -/
+/-! ## The equal-mass bind law
+
+A Markov test after a sub-Markov kernel is no longer Markov, so it is filled on `none`, which
+costs nothing at equal mass; data processing drops the fill again. -/
 
 namespace GradedLifting.BindLaw
 

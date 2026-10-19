@@ -153,12 +153,24 @@ theorem expBudget_lt_top_iff : expBudget ε < ⊤ ↔ ε < ⊤ := by
 theorem expBudget_mono : Monotone expBudget :=
   fun _ _ h ↦ EReal.exp_monotone (EReal.coe_ennreal_le_coe_ennreal_iff.2 h)
 
+@[fun_prop]
+theorem measurable_expBudget : Measurable expBudget :=
+  expBudget_mono.measurable
+
 @[gcongr]
 theorem expBudget_le_expBudget (h : ε ≤ ε') : expBudget ε ≤ expBudget ε' :=
   expBudget_mono h
 
 theorem expBudget_add (ε ε' : ℝ≥0∞) : expBudget (ε + ε') = expBudget ε * expBudget ε' := by
   simp [expBudget, EReal.coe_ennreal_add, EReal.exp_add]
+
+theorem expBudget_rpow {p : ℝ} (hp : 0 < p) (ε : ℝ≥0∞) :
+    expBudget ε ^ p = expBudget (ENNReal.ofReal p * ε) := by
+  rcases eq_or_ne ε ⊤ with rfl | hε
+  · simp [ENNReal.mul_top (ENNReal.ofReal_pos.2 hp).ne', ENNReal.top_rpow_of_pos hp]
+  rw [expBudget_of_ne_top hε, expBudget_of_ne_top (by finiteness),
+    ENNReal.ofReal_rpow_of_nonneg (exp_pos _).le hp.le, ← exp_mul, ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal hp.le, mul_comm]
 
 end expBudget
 

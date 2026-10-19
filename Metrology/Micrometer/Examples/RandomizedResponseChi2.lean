@@ -1,7 +1,7 @@
 module
 
 public import Metrology.Micrometer.Examples.RandomizedResponseRenyi
-public import Metrology.Couplings.Divergences.Chi2
+public import Metrology.Couplings.Divergences.Power
 
 @[expose] public section
 
