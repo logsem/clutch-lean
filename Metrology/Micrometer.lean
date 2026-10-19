@@ -21,25 +21,7 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.AdequacyTV
 public import Metrology.Micrometer.Soundness
 public import Metrology.Micrometer.Mechanism
-public import Metrology.Micrometer.Examples.OTP
-public import Metrology.Micrometer.Examples.Switching
-public import Metrology.Micrometer.Examples.ContinuousOTP
-public import Metrology.Micrometer.Examples.RandomizedResponse
-public import Metrology.Micrometer.Examples.RandomizedResponseZcdp
-public import Metrology.Micrometer.Examples.RandomizedResponseLoop
-public import Metrology.Micrometer.Examples.GaussianZcdp
-public import Metrology.Micrometer.Examples.SkipZero
-public import Metrology.Micrometer.Examples.AbsorbingExit
-public import Metrology.Micrometer.Examples.Presample
-public import Metrology.Micrometer.Examples.PublicChoice
-public import Metrology.Micrometer.Examples.Retry
-public import Metrology.Micrometer.Examples.NoisyCount
-public import Metrology.Micrometer.Examples.RandomizedResponseRenyi
-public import Metrology.Micrometer.Examples.RandomizedResponseCurve
-public import Metrology.Micrometer.Examples.RandomizedResponseChi2
-public import Metrology.Micrometer.Examples.RandomizedResponseTcdp
-public import Metrology.Micrometer.Examples.RandomizedResponseAdaptive
-public import Metrology.Micrometer.Examples.ContextualDp
+public import Metrology.Micrometer.Examples
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 
