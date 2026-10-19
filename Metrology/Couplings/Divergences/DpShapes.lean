@@ -96,7 +96,10 @@ theorem setLIntegral_le_of_codensity_dp [IsSubProbabilityMeasure μ] (hε₁ : �
     (hfg : ∀ x y, x ∈ P → S x y → f x ≤ expBudget ε₂ * g y + δ₂) :
     ∫⁻ x in P, f x - δ₂ ∂μ ≤ expBudget (ε₁ + ε₂) * ∫⁻ y in T, g y ∂ν + δ₁ := by
   have hf1' (x : X) : P.indicator (fun x ↦ f x - δ₂) x ≤ 1 :=
-    (indicator_le_self' (fun _ _ ↦ zero_le) x).trans (tsub_le_self.trans (hf1 x))
+    calc P.indicator (fun x ↦ f x - δ₂) x
+        ≤ f x - δ₂ := indicator_le_self' (fun _ _ ↦ zero_le) x
+      _ ≤ f x := tsub_le_self
+      _ ≤ 1 := hf1 x
   calc ∫⁻ x in P, f x - δ₂ ∂μ
       = ∫⁻ x, P.indicator (fun x ↦ f x - δ₂) x ∂μ := (lintegral_indicator hP _).symm
     _ ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * T.indicator g y) ∂ν + δ₁ := by

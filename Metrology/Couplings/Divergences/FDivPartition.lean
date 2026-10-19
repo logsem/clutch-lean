@@ -302,6 +302,9 @@ supremum is at most the supremum of the `f`-divergences. -/
 theorem fDiv_iSup_left_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     {μ : ℕ → Measure X} (hμ : Monotone μ) [IsFiniteMeasure (⨆ n, μ n)] [IsFiniteMeasure ν] :
     fDiv f (⨆ n, μ n) ν ≤ ⨆ n, fDiv f (μ n) ν :=
-  (fDiv_le_liminf_of_monotone hf hf_cont hμ).trans <| (liminf_le_limsup).trans limsup_le_iSup
+  calc fDiv f (⨆ n, μ n) ν
+      ≤ liminf (fun n ↦ fDiv f (μ n) ν) atTop := fDiv_le_liminf_of_monotone hf hf_cont hμ
+    _ ≤ limsup (fun n ↦ fDiv f (μ n) ν) atTop := liminf_le_limsup
+    _ ≤ ⨆ n, fDiv f (μ n) ν := limsup_le_iSup
 
 end ProbabilityTheory
