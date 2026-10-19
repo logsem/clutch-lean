@@ -14,10 +14,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # The noisy count is `1/b`-differentially private
 
-A Laplace sampler `lap` of scale `b` perturbs the count of a database. Databases differing in one
-entry have counts at distance at most `1`, so one credit `↯b (1/b, 0)` pays for the release in
-the `codensity dp` lifting. The sampler is not a language primitive: every result is conditional
-on its relational spec `LaplaceSpec`. -/
+Adjacent databases have counts at distance at most `1`, so one credit `↯b (1/b, 0)` pays for the
+Laplace noise. Every result is conditional on the sampler spec `LaplaceSpec`. -/
 
 open scoped ENNReal NNReal
 

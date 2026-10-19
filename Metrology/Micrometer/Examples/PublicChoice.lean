@@ -10,10 +10,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # The DP choice law: a public coin picks one of two mechanisms
 
-The coin is coupled along equality at no cost; the choice law then leaves `↯b (ln 3, 0)` to the
-randomized response branch and `↯b 0` to the constant branch, so the program is `ln 3`-DP, the
-larger of the two costs. Since the constant branch is free, the single budget `(ln 3, 0)` with the
-canonical law would also do; the example shows the choice law's shape. -/
+The choice law charges the larger branch cost, `ln 3`. The constant branch is free, so a single
+budget `(ln 3, 0)` with the canonical law would also do; the example shows the choice law. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity)

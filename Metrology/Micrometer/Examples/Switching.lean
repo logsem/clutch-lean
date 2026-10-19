@@ -8,11 +8,10 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # The weak PRF/PRP switching lemma
+/-! # The weak PRF/PRP switching lemma (clutch `approxis/examples/prp_prf_weak.v`)
 
-Port of clutch's `theories/approxis/examples/prp_prf_weak.v`: `Q` uniform queries to a random
-function and to a random permutation over `[0, N)` are indistinguishable up to
-`Q (Q - 1) / (2 N)`. -/
+`Q` uniform queries to a random function and to a random permutation over `[0, N)` are
+indistinguishable up to `Q (Q - 1) / (2 N)`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal

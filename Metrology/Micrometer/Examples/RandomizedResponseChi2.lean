@@ -7,9 +7,8 @@ public import Metrology.Couplings.Divergences.Power
 
 /-! # Randomized response has bounded χ² divergence
 
-At order `2` one round has moment `7/3` (`fDiv_rrOut`), so it is within χ² budget `4/3`. χ²
-budgets compose as `c₁ + c₂ + c₁ c₂` (Barthe–Olmedo), and the loop refinement runs in the χ²
-lifting: `k` rounds have `∫ (dμ/dν)² dν ≤ (7/3)^k`. -/
+One round is within χ² budget `4/3`; χ² budgets compose as `c₁ + c₂ + c₁ c₂` (Barthe–Olmedo), so
+`k` rounds have `∫ (dμ/dν)² dν ≤ (7/3)^k`. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence GradedDivergence.PowerBudget
 open scoped ENNReal

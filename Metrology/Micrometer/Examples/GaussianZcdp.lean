@@ -13,12 +13,10 @@ import Mathlib.Algebra.Regular.Prod
 
 @[expose] public section
 
-/-! # Repeated Gaussian release is zCDP
+/-! # Repeated Gaussian release is zCDP (Rocq `gen_zcdp_gaussian.v`)
 
-`k` draws of a Gaussian sampler at the private input are proved zCDP inside Micrometer, each draw
-spending a `(0, (a - a')² / (2 v))` credit in the zCDP lifting; `zcdpToDp` then gives `(ε, δ)`-DP
-with `ε` of order `√k` (Rocq `gen_zcdp_gaussian.v`, branch `graded-couplings`). The sampler is
-not a language primitive: every result is conditional on its relational spec `GaussSpec`. -/
+Each of `k` draws spends `(0, (a - a')² / (2 v))` in the zCDP lifting; `zcdpToDp` then gives DP
+with `ε` of order `√k`. Every result is conditional on the sampler spec `GaussSpec`. -/
 
 open scoped ENNReal NNReal
 

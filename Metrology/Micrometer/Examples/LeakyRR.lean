@@ -10,10 +10,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # Approximate DP: randomized response that leaks its input with probability `1/N`
 
-The two first draws are coupled along the identity, avoiding the leak `0` for `↯b (0, 1/N)`;
-the leak releases the input outright, so no multiplicative factor bounds it and it is paid in
-`δ`, not `ε`. Randomized response then spends `↯b (ln 3, 0)`, so `leakyRR N` is
-`(ln 3, 1/N)`-DP. -/
+Avoiding the leak costs `↯b (0, 1/N)`, paid in `δ` because no factor bounds an outright release;
+randomized response then spends `↯b (ln 3, 0)`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity codensity_dp_avoid)

@@ -9,10 +9,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # Randomized response in a loop
 
-`rrCount b k` runs randomized response on the bit `b` in a ProbLang loop of `k` iterations and
-counts the `true` reports. The refinement unfolds the `rec` once per iteration and spends one
-`(ln 3, 0)` credit per round, by induction on `k`; adequacy gives `(k ln 3, 0)`-DP, and the same
-proof in the zCDP lifting gives `(k ln 3, 0)`-zCDP. -/
+`rrCount b k` counts the `true` reports of `k` rounds; the refinement spends one credit per round
+by induction on `k`, in any lifting, giving `(k ln 3, 0)`-DP and `(k ln 3, 0)`-zCDP. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity zcdpDivergence zcdpLifting)

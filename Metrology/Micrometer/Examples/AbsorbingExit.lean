@@ -9,9 +9,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # The absorbing exit: an exhausted budget proves anything
 
-A credit at an absorbing budget (`(ε, δ)` with `δ ≥ 1` for `codensity dp`, `δ ≥ 1` for
-`codensity tv`) closes every refinement, even a false one. With capped credits the same budgets
-are invalid, so such a branch is unreachable. -/
+A credit at an absorbing budget closes every refinement, even a false one; with capped credits
+the same budgets are invalid, so such a branch is unreachable. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal

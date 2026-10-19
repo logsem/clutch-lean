@@ -6,10 +6,8 @@ public import Metrology.Micrometer.Examples.RandomizedResponseRenyi
 
 /-! # The whole Rényi profile of randomized response
 
-The Rényi-curve lifting carries a budget at every order at once. One round couples at the curve
-`α ↦ ρ_α` of `RandomizedResponseRenyi`, so the loop refinement gives `k` rounds the curve `k ρ`,
-the whole RDP profile in one proof. Every `ρ_α` is at most `ln 3`, so the curve lies below the
-zCDP line `(k ln 3, 0)`. -/
+The loop refinement in the Rényi-curve lifting gives `k` rounds the curve `α ↦ k ρ_α` in one
+proof; every `ρ_α ≤ ln 3`, so the curve lies below the zCDP line `(k ln 3, 0)`. -/
 
 open MeasureTheory GradedLifting GradedDivergence
 open scoped ENNReal

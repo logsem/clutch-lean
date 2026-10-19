@@ -7,9 +7,8 @@ public import Metrology.Micrometer.Examples.RandomizedResponse
 
 /-! # Randomized response stays private inside a boolean context
 
-The refinement `rr_refines` lifts through any linear boolean context: here the report is negated
-by `if [·] then false else true`. Contexts must be linear because the budget credit `↯b` is
-spent once, while a context that runs its hole twice (under a `λ`) would spend it twice. -/
+`rr_refines` lifts through any linear context, here `if [·] then false else true`; linear
+because the credit `↯b` is spent once, and a hole run twice would spend it twice. -/
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence
 open scoped ENNReal

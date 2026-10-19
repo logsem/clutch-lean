@@ -7,10 +7,8 @@ public import Metrology.Couplings.Divergences.RenyiFiber
 
 /-! # Randomized response is Rényi private at each order
 
-One round reports its bit with probability `3/4`, so at order `α` it costs exactly
-`ρ_α = log ((3^α + 3^{1-α}) / 4) / (α - 1)`. Conditioning the draws on their reports turns this
-bound into a coupling (`codensity_renyi_rel_of_map`), and the loop refinement of
-`RandomizedResponseLoop` runs unchanged in the Rényi lifting: `k` rounds are `(α, k ρ_α)`-RDP. -/
+At order `α` one round costs `ρ_α = log ((3^α + 3^{1-α}) / 4) / (α - 1)`, and the loop
+refinement runs unchanged in the Rényi lifting: `k` rounds are `(α, k ρ_α)`-RDP. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence
 open scoped ENNReal

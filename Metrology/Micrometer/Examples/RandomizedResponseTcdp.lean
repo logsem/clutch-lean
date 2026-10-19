@@ -6,9 +6,8 @@ public import Metrology.Micrometer.Examples.RandomizedResponseLoop
 
 /-! # Randomized response is tCDP
 
-The zCDP coupling of one round maps into the tCDP lifting along `zcdpToTcdp`, so the loop
-refinement of `RandomizedResponseLoop` runs at `tcdpLifting ω`: `k` rounds are `k ln 3`-tCDP
-below any order `ω`. Mapping the closed coupling along `tcdpToDp` gives DP at every slack. -/
+The zCDP coupling of one round maps along `zcdpToTcdp`, so `k` rounds are `k ln 3`-tCDP below
+any order `ω`; mapping along `tcdpToDp` gives DP at every slack. -/
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence
 open scoped ENNReal

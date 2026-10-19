@@ -9,9 +9,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response on two bits is zCDP
 
-Each bit is randomized as in `RandomizedResponse`, but the proof runs in the zCDP lifting: each
-draw spends a `(ln 3, 0)` credit, adequacy gives `(ln 9, 0)`-zCDP, and `zcdpToDp` turns the
-lifting into `(ln 9, δ)`-DP for every `δ > 0`. -/
+Each draw spends `(ln 3, 0)` in the zCDP lifting, so the pair is `(ln 9, 0)`-zCDP, and `zcdpToDp`
+gives `(ln 9, δ)`-DP for every `δ > 0`. -/
 
 open scoped ENNReal
 

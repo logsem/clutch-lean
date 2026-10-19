@@ -12,12 +12,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Adaptive randomized response, with the escort law
 
-`rrAdaptive` randomizes a bit and, only after a reported `true`, randomizes it again: the program
-form of `Couplings/Examples/AdaptiveRenyi`. Its first draw is coupled by the escort bind law
-(`rel_couple_UU_law`): the second round costs `log (3/2)` after a `true` and nothing after a
-`false`, and the escort pays this cost reweighted under the first round instead of in the worst
-case. The runs on `false` and `true` are within Rényi budget `log (19/12)` at order `2`, below the
-`log (9/4)` of composing worst cases. -/
+The program form of `Couplings/Examples/AdaptiveRenyi`: the escort law pays the second round's
+cost on average, giving Rényi budget `log (19/12)` at order `2` rather than `log (9/4)`. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi
 open scoped ENNReal

@@ -11,9 +11,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Amplification: flipping a coin until heads returns `0` almost surely
 
-The spec runs `retry` against the value `0`. Each flip moves a credit `↯b ε` onto tails as
-`↯b (2ε)` and onto heads as nothing; amplification (`refines_ind_amp`) turns any positive credit
-into the absorbing `↯b 1`, so the refinement needs no budget at all. -/
+Each flip moves `↯b ε` onto tails as `↯b (2ε)`; amplification (`refines_ind_amp`) turns any
+positive credit into the absorbing `↯b 1`, so the refinement needs no budget. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
