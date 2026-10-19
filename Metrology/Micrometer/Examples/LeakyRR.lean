@@ -22,7 +22,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace LeakyRR
 
-open RandomizedResponse (rr_refines lrel_bool_eq)
+open RandomizedResponse (rr_refines)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
@@ -48,14 +48,14 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   iapply rr_refines b b' $$ Hε
 
 /-- `leakyRR N` on private bits, started from state `σ`. -/
-noncomputable def leakyRRMech (N : Int) (σ : State rT) : Mechanism Bool (Exp rT) :=
+noncomputable abbrev leakyRRMech (N : Int) (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech (leakyRR N) σ
 
 /-- `leakyRR N` is `(ln 3, 1/N)`-differentially private for any two bits (Def. 2.1). -/
 theorem leakyRR_DP (N : Int) (hN : 0 < N) (σ : State rT) :
     (leakyRRMech N σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) (N.toNat : ℝ≥0∞)⁻¹ :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) (leakyRR N) σ _
-    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_eq) fun b b' _ _ _ ↦ leakyRR_refines N hN b b'
+    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ leakyRR_refines N hN b b'
 
 end LeakyRR
 end ProbLang

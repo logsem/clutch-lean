@@ -5,7 +5,7 @@ public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.WpTactics
 public import Metrology.Couplings.Divergences.Laplace
-public import Metrology.Couplings.Divergences.Mechanism
+public import Metrology.Micrometer.Mechanism
 public import Metrology.ProbLang.Reals
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
@@ -68,17 +68,12 @@ theorem wp_noisyCount [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .
     (codensity_complete (dp_laplace (abs_count_sub_le h) b))
   iframe Hj Hb
   iintro %x %_ %rfl Hj
-  iexists .real x
-  ihave Hj := specProgFrag_reshape (e₁ := Ectx.fill [] pl(#(.real x))) (e₂ := Exp.ofVal (.real x))
-    rfl $$ Hj
-  iframe Hj
-  ipureintro
-  rfl
+  iapply spec_fill_nil_exists (.real x) $$ Hj
 
 /-- The noisy count on databases, started from state `σ`. -/
-noncomputable def noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
+noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
     Mechanism (Fin n → Bool) (Exp ℝ) :=
-  ⟨fun db ↦ limExecV ⟨noisyCount lap db, σ⟩, .of_discrete⟩
+  progMech (noisyCount lap) σ
 
 /-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1). Conditional on the
 sampler spec `hlap`. -/

@@ -97,7 +97,7 @@ theorem rrCount_RDP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).RDP ⊤ α (k * rrRenyi α) := fun b b' _ ↦ by
   rw [← nsmul_eq_mul]
   exact approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (fun _ _ ↦ lrel_int) _ _ σ σ _
-    (fun _ _ ↦ lrel_int_eq) fun _ _ ↦ rrCount_refines_renyi α b b' k
+    (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦ rrCount_refines_renyi α b b' k
 
 end Logic
 

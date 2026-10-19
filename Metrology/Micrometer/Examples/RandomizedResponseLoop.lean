@@ -32,21 +32,6 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
-/-- One round of randomized response refines itself at equal reports, spending `↯b c`, given
-a coupling of the two draws at `c`. -/
-theorem rr_refines_of (c : B) (hc : IsAddLeftRegular c)
-    (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num))) (b b' : Bool) :
-    ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iintro Hb
-  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
-  iframe Hb
-  iintro %r %r' %hR
-  rel_pures
-  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
-    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
-    rel_pures <;> rw [hR] <;> rel_values
-
 /-- The loop refines itself at equal counts, spending `↯b c` per iteration, given a refinement
 of one round at `c`. -/
 theorem rrCount_refines_of (c : B)
@@ -64,7 +49,6 @@ theorem rrCount_refines_of (c : B)
     iintro Hb
     icases BudgetCredit.split $$ Hb with ⟨Hk, H1⟩
     simp only [rrCount]
-    -- Unfold one iteration on each side, stopping at the recursive call.
     rel_pure_l 5
     rel_pure_r 5
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
@@ -97,7 +81,7 @@ theorem rrCount_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) (k : ℕ) :
     ⊢@{IProp GF} ↯b (loopBudget k) -∗
       REL[codensity dp] (rrCount (rT := rT) b k) << (rrCount b' k) : lrel_int :=
-  nsmul_budget k ▸ rrCount_refines_of budget (rr_refines_of budget isAddLeftRegular_budget rr_coupling) b b' k
+  nsmul_budget k ▸ rrCount_refines_of budget rr_refines b b' k
 
 /-- The loop refines itself at equal counts in the zCDP lifting, spending `(ln 3, 0)` per
 iteration. -/
@@ -105,24 +89,17 @@ theorem rrCount_refines_zcdp {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC 
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) (k : ℕ) :
     ⊢@{IProp GF} ↯b (loopBudget k) -∗
       REL[zcdpLifting] (rrCount (rT := rT) b k) << (rrCount b' k) : lrel_int :=
-  nsmul_budget k ▸ rrCount_refines_of budget (rr_refines_of budget isAddLeftRegular_budget rr_zcdp_coupling) b b' k
+  nsmul_budget k ▸ rrCount_refines_of budget
+    (rr_refines_of budget isAddLeftRegular_budget rr_zcdp_coupling) b b' k
 
 /-! ## Adequacy: exit the logic -/
-
-/-- `lrel_int` relates only equal values. -/
-theorem lrel_int_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_int (rT := rT) (GF := GF)).car v v' -∗ ⌜v = v'⌝ := by
-  iunfold lrel_int
-  iintro ⟨%n, %⟨rfl, rfl⟩⟩
-  ipureintro
-  rfl
 
 /-- The loop of `k` rounds is `(k ln 3, 0)`-DP for any two private bits, through
 `rrCount_refines`. -/
 theorem rrCount_dp_of (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
     (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
     dp (loopBudget k) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
-  approximates_div (GF := GF) (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_eq)
+  approximates_div (GF := GF) (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq)
     fun _ _ ↦ rrCount_refines b b' k
 
 /-- The loop of `k` rounds is `(k ln 3, 0)`-zCDP for any two private bits, through
@@ -131,10 +108,10 @@ theorem rrCount_zcdp_of (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × 
     (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
     zcdpDivergence (loopBudget k) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
   approximates_div (GF := GF) (L := zcdpLifting) (fun _ _ ↦ lrel_int) _ _ σ σ' _
-    (fun _ _ ↦ lrel_int_eq) fun _ _ ↦ rrCount_refines_zcdp b b' k
+    (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦ rrCount_refines_zcdp b b' k
 
 /-- The loop of `k` rounds on private bits, started from state `σ`. -/
-noncomputable def rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp rT) :=
+noncomputable abbrev rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech (rrCount · k) σ
 
 /-- Randomized response in a loop of `k` rounds is `(k ln 3, 0)`-DP for any two bits
@@ -142,14 +119,14 @@ noncomputable def rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp rT
 theorem rrCount_DP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).DP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) _ σ (loopBudget k)
-    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_eq) fun b b' _ _ _ ↦ rrCount_refines b b' k
+    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_car_eq) fun b b' _ _ _ ↦ rrCount_refines b b' k
 
 /-- Randomized response in a loop of `k` rounds is `(k ln 3, 0)`-zCDP for any two bits
 (Def. 2.4). -/
 theorem rrCount_zCDP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ (loopBudget k)
-    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_eq) fun b b' _ _ _ ↦ rrCount_refines_zcdp b b' k
+    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_car_eq) fun b b' _ _ _ ↦ rrCount_refines_zcdp b b' k
 
 end RandomizedResponse
 end ProbLang

@@ -46,14 +46,14 @@ theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
       rel_values
 
 /-- `choice` on private bits, started from state `σ`. -/
-noncomputable def choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
-  ⟨fun b ↦ limExecV ⟨choice b, σ⟩, .of_discrete⟩
+noncomputable abbrev choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
+  progMech choice σ
 
 /-- The public choice is `(ln 3, 0)`-DP for any two bits (Def. 2.1). -/
 theorem choice_DP (σ : State rT) : (choiceMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
   fun b b' _ ↦ approximates_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp)
     (fun _ _ ↦ lrel_bool) _ _ σ σ budget
-    (fun _ _ _ _ ↦ by iunfold lrel_bool; iintro ⟨%c, %⟨rfl, rfl⟩⟩; ipureintro; rfl)
+    (fun _ _ ↦ lrel_bool_car_eq)
     fun _ _ ↦ choice_refines b b'
 
 end PublicChoice

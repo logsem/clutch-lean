@@ -45,10 +45,25 @@ theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val r
     (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
   rfl
 
+/-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
+theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT) :
+    ⤇ Ectx.fill ([] : Ectx rT) v.1 ⊢@{IProp GF} ∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝ := by
+  rw [spec_fill_nil_eq_ofVal]
+  iintro Hj
+  iexists v
+  iframe Hj
+  ipureintro
+  rfl
+
 /-- `lrel_int` relates only equal values. -/
 theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
   unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+
+/-- `lrel_bool` relates only equal values. -/
+theorem lrel_bool_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_bool; iintro ⟨%b, %⟨rfl, rfl⟩⟩; ipureintro; rfl
 
 /-- A product of relations between equal values relates only equal values. -/
 theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
@@ -63,6 +78,12 @@ theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT
   exact Val.ext (h.trans h'.symm)
 
 end Spec
+
+/-- A value runs to itself. -/
+theorem limExecV_of_isVal {rT : Type} [LawfulProbLangℝ rT] {e : Exp rT} (σ : State rT)
+    (hv : IsVal e) : limExecV ⟨e, σ⟩ = MeasureTheory.Measure.dirac e := by
+  rw [limExecV, limExec_of_isVal hv, asExpr,
+    MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
 
 section Coupling
 

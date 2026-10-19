@@ -86,7 +86,6 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     iintro ⟨Hj, Hb, H⟩
     icases BudgetCredit.split $$ Hb with ⟨Hb₁, Hb₂⟩
     simp only [release]
-    -- Unfold one iteration on each side, stopping at the recursive call.
     wp_pure 6
     tp_pure 6
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
@@ -112,17 +111,13 @@ theorem wp_release (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLifting gau
     (a a' : ℝ) (k : ℕ) :
     ⊢@{IProp GF} ⤇ release gauss a' k -∗ ↯b ((0 : ℝ≥0∞), (k : ℝ≥0∞) * cost v a a') -∗
       wp zcdpLifting ⊤ (release gauss a k) (fun w => iprop(∃ w', ⤇ Exp.ofVal w' ∗ ⌜w = w'⌝)) := by
+  rw [spec_eq_fill_nil]
   iintro Hj Hb
   iapply wp_release_fill hv hgauss a a' k []
-  ihave Hj := specProgFrag_reshape (e₁ := release gauss a' k)
-    (e₂ := Ectx.fill [] (release gauss a' k)) rfl $$ Hj
   iframe Hj Hb
   iintro %w Hj
-  iexists w
-  ihave Hj := specProgFrag_reshape (e₁ := Ectx.fill [] (Exp.ofVal w)) (e₂ := Exp.ofVal w) rfl $$ Hj
-  iframe Hj
-  ipureintro
-  rfl
+  rw [Exp.ofVal]
+  iapply spec_fill_nil_exists w $$ Hj
 
 end Logic
 

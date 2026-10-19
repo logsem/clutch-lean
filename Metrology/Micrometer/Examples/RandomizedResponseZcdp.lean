@@ -42,58 +42,12 @@ section Logic
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
-/-- The program reports `bif d then b else !b`. -/
-theorem wp_report_zcdp (d b : Bool) (Φ : Val rT → IProp GF) :
-    Φ (.bool (bif d then b else !b)) ⊢
-      wp zcdpLifting ⊤ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
-  cases d
-  all_goals cases b
-  all_goals
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true]
-    iintro H
-    wp_pures
-    wp_value
-    imodintro
-    iexact H
-
-/-- The spec reports `bif d then b else !b`, under any evaluation context. -/
-theorem tp_report_zcdp (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗ wp zcdpLifting ⊤ e Φ) ⊢
-      wp zcdpLifting ⊤ e Φ := by
-  cases d
-  all_goals cases b
-  all_goals
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true]
-    iintro ⟨Hj, H⟩
-    tp_pures
-    iapply H
-    iexact Hj
-
 /-- One round of randomized response against the spec in context `K`, spending `(ln 3, 0)`:
 both sides report the same bit. -/
 theorem wp_rr_step (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
     ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#(.bool c)) -∗ Φ (.bool c)) ⊢
-      wp zcdpLifting ⊤ (rr b) Φ := by
-  iintro ⟨Hj, Hb, H⟩
-  simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
-  wp_bind (pl% rand(#4, #.unit))
-  tp_bind (pl% rand(#4, #.unit))
-  iapply wp_couple_rand_rand_spend 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') budget
-    isAddLeftRegular_budget (rr_zcdp_coupling b b')
-  iframe Hj Hb
-  iintro %r %r' %hR Hj
-  wp_pures
-  tp_pures
-  iapply tp_report_zcdp
-  iframe Hj
-  iintro Hj
-  iapply wp_report_zcdp
-  have hc : (bif decide (r < 3) then b else !b) = (bif decide (r' < 3) then b' else !b') := by
-    simpa [rrOut] using hR
-  rw [hc]
-  iapply H
-  iexact Hj
+      wp zcdpLifting ⊤ (rr b) Φ :=
+  wp_rr_of budget isAddLeftRegular_budget rr_zcdp_coupling K b b' Φ
 
 /-- The two-bit program against the spec in context `K`, spending `(ln 3, 0)` per bit: both
 sides report the same pair. -/
@@ -129,17 +83,13 @@ theorem wp_rr2_fill (K : Ectx rT) (b₁ b₂ b₁' b₂' : Bool) (Φ : Val rT �
 theorem wp_rr2 (b₁ b₂ b₁' b₂' : Bool) :
     ⊢@{IProp GF} ⤇ rr2 (rT := rT) b₁' b₂' -∗ ↯b (budget + budget) -∗
       wp zcdpLifting ⊤ (rr2 b₁ b₂) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
+  rw [spec_eq_fill_nil]
   iintro Hj Hb
   iapply wp_rr2_fill []
-  ihave Hj := specProgFrag_reshape (e₁ := rr2 b₁' b₂') (e₂ := Ectx.fill [] (rr2 b₁' b₂')) rfl $$ Hj
   iframe Hj Hb
   iintro %c₁ %c₂ Hj
-  iexists .pair (.bool c₁) (.bool c₂)
-  ihave Hj := specProgFrag_reshape (e₁ := Ectx.fill [] (Exp.ofVal (.pair (.bool c₁) (.bool c₂))))
-    (e₂ := Exp.ofVal (.pair (.bool c₁) (.bool c₂))) rfl $$ Hj
-  iframe Hj
-  ipureintro
-  rfl
+  rw [Exp.ofVal]
+  iapply spec_fill_nil_exists _ $$ Hj
 
 end Logic
 
@@ -151,26 +101,24 @@ theorem rr2_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b₁ b₂ b₁' b₂' : Bool) :
     ⊢@{IProp GF} ↯b (budget + budget) -∗
       REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') : lrel_prod lrel_bool lrel_bool := by
-  iunfold refines
-  iintro Hb %K %ε Hj Hna Herr %Hpos
-  iapply wp_rr2_fill
-  iframe Hj Hb
-  iintro %c₁ %c₂ Hj
-  iexists .pair (.bool c₁) (.bool c₂), ε
-  ihave Hj := specProgFrag_reshape (e₁ := K.fill (Exp.ofVal (.pair (.bool c₁) (.bool c₂))))
-    (e₂ := K.fill (Val.pair (.bool c₁) (.bool c₂)).1) rfl $$ Hj
-  iframe Hj Hna Herr %Hpos
-  iunfold lrel_prod
-  iexists .bool c₁, .bool c₁, .bool c₂, .bool c₂
-  isplitr
-  · ipureintro
-    rfl
-  isplitr
-  · ipureintro
-    rfl
-  isplitr
-  · iapply lrel_bool_lit
-  iapply lrel_bool_lit
+  iintro Hb
+  icases BudgetCredit.split $$ Hb with ⟨Hb₁, Hb₂⟩
+  simp only [rr2]
+  rel_bind (rr b₁) (rr b₁')
+  isplitl [Hb₁]
+  · iapply rr_refines_of _ isAddLeftRegular_budget rr_zcdp_coupling b₁ b₁' $$ Hb₁
+  iintro %v %v' Hv
+  iunfold lrel_bool at Hv
+  icases Hv with ⟨%c₁, %⟨rfl, rfl⟩⟩
+  rel_pures
+  rel_bind (rr b₂) (rr b₂')
+  isplitl [Hb₂]
+  · iapply rr_refines_of _ isAddLeftRegular_budget rr_zcdp_coupling b₂ b₂' $$ Hb₂
+  iintro %w %w' Hw
+  iunfold lrel_bool at Hw
+  icases Hw with ⟨%c₂, %⟨rfl, rfl⟩⟩
+  rel_pures
+  rel_values
 
 /-! ## Adequacy: exit the logic -/
 
@@ -200,24 +148,12 @@ theorem rr2_zcdp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
   wp_adequacy_div (GF := GF) (L := zcdpLifting) _ _ σ σ' budget2 fun _ _ ↦
     budget_add_budget ▸ wp_rr2 b₁ b₂ b₁' b₂'
 
-/-- Pairs of booleans relate only equal values. -/
-theorem lrel_prod_bool_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_prod (lrel_bool (rT := rT)) lrel_bool).car v v' -∗ ⌜v = v'⌝ := by
-  iunfold lrel_prod
-  iintro ⟨%a, %a', %c, %c', %hv, %hv', Ha, Hc⟩
-  iunfold lrel_bool at Ha Hc
-  icases Ha with ⟨%x, %⟨rfl, rfl⟩⟩
-  icases Hc with ⟨%y, %⟨rfl, rfl⟩⟩
-  ipureintro
-  exact Val.ext (hv.trans hv'.symm)
-
 /-- `rr2_zcdp_of`, through the refinement `rr2_refines`. -/
 theorem rr2_zcdp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
     (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) :
     zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) :=
   approximates_div (GF := GF) (L := zcdpLifting) (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) _ _
-    σ σ' budget2 (fun _ _ ↦ lrel_prod_bool_eq) fun _ _ ↦
+    σ σ' budget2 (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq) fun _ _ ↦
       budget_add_budget ▸ rr2_refines b₁ b₂ b₁' b₂'
 
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP, for any two pairs of private bits. -/
@@ -254,7 +190,7 @@ theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (h�
   exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
 
 /-- Randomized response on pairs of private bits, started from state `σ`. -/
-noncomputable def rr2Mech (σ : State rT) : Mechanism (Bool × Bool) (Exp rT) :=
+noncomputable abbrev rr2Mech (σ : State rT) : Mechanism (Bool × Bool) (Exp rT) :=
   progMech (fun b ↦ rr2 b.1 b.2) σ
 
 /-- `rr2_refines` packaged for the mechanism rule, on any two pairs of bits. -/
@@ -268,7 +204,7 @@ theorem rr2_refines_mech {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP for any two pairs of bits (Def. 2.4). -/
 theorem rr2_zCDP (σ : State rT) : (rr2Mech σ).zCDP ⊤ (ENNReal.ofReal (Real.log 9)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ budget2
-    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_bool_eq)
+    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
     fun b b' _ _ _ ↦ rr2_refines_mech b b'
 
 /-- Randomized response on two bits is `(ln 9, δ)`-DP for any two pairs of bits and every
@@ -279,11 +215,10 @@ theorem rr2_DP (σ : State rT) {δ : ℝ} (hδ : 0 < δ) :
   have hz : zcdpLifting.Rel budget2 (· = ·) (limExecV ⟨rr2 b.1 b.2, σ⟩)
       (limExecV ⟨rr2 b'.1 b'.2, σ⟩) :=
     progMech_rel (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ σ (hp := .of_discrete) budget2
-      (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_bool_eq)
+      (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
       (fun b b' _ _ _ ↦ rr2_refines_mech b b') hb
   have h := GradedDivergence.codensity_sound ((LiftingRelHom.zcdpToDp hδ).map_rel hz)
   simp only [LiftingRelHom.zcdpToDp_map] at h
-  show dp _ (limExecV ⟨rr2 b.1 b.2, σ⟩) (limExecV ⟨rr2 b'.1 b'.2, σ⟩)
   exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
 
 end RandomizedResponse

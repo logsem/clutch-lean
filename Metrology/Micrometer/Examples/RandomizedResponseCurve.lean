@@ -61,7 +61,7 @@ loop refinement in the Rényi-curve lifting spends the curve once per round. -/
 theorem rrCount_curve (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k * rrRenyi α := fun b b' _ ↦ by
   have h := approximates_div (GF := MicrometerFunctor rT RenyiBudget) (D := renyiCurve)
-    (fun _ _ ↦ lrel_int) _ _ σ σ _ (fun _ _ ↦ lrel_int_eq) fun _ _ ↦
+    (fun _ _ ↦ lrel_int) _ _ σ σ _ (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦
       rrCount_refines_of _ (rr_refines_of _ isAddLeftRegular_rrCurve rr_curve_coupling) b b' k
   convert h using 1 <;> try rfl
   ext α

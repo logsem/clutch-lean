@@ -52,12 +52,6 @@ theorem drawAB_refines_drawBA (N : Int) (hN : 0 < N) :
   iintro %_
   rel_pures
   rel_values
-  imodintro
-  iunfold lrel_prod
-  iexists .int x, .int x, .int y, .int y
-  isplitr; · ipureintro; rfl
-  isplitr; · ipureintro; rfl
-  isplitl <;> iapply lrel_int_lit
 
 /-- A draw from a fresh tape refines a plain draw. -/
 theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :

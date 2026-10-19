@@ -353,15 +353,19 @@ elab "rel_values_core" : tactic => runTacticRel `rel_values fun mvar g => do
     (v2 := $(← Term.exprToSyntax v₂)) (by kernel_rfl) (by kernel_rfl))
   applyRule `rel_values mvar g stx
 
-/-- `rel_values` closes a refinement between values, discharging base relations at equal
-literals, else leaving `|={⊤}=> A v v'` (Rocq `rel_values`). -/
-macro "rel_values" : tactic => `(tactic| (
-  rel_values_core
-  try (imodintro; first
+/-- `rel_lit` proves `A v v` for a base relation `A` at a literal `v`, or a product of such. -/
+syntax "rel_lit" : tactic
+macro_rules
+  | `(tactic| rel_lit) => `(tactic| first
     | iapply lrel_int_lit
     | iapply lrel_bool_lit
     | iapply lrel_unit_lit
-    | iapply lrel_real_lit)))
+    | iapply lrel_real_lit
+    | (iapply lrel_prod_pair; isplitl [] <;> rel_lit))
+
+/-- `rel_values` closes a refinement between values, discharging base relations at equal
+literals and their pairs, else leaving `|={⊤}=> A v v'` (Rocq `rel_values`). -/
+macro "rel_values" : tactic => `(tactic| (rel_values_core; try (imodintro; rel_lit)))
 
 /-! ## Binding -/
 

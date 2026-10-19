@@ -14,9 +14,7 @@ import Mathlib.Algebra.Regular.Prod
 
 @[expose] public section
 
-/-! # Randomized response is `ln 3`-differentially private
-
-Port of clutch-dp's `examples/randomized_response.v`. -/
+/-! # Randomized response is `ln 3`-differentially private (clutch-dp `randomized_response.v`) -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity expBudget expBudget_of_ne_top codensity_dp_of_fiber dp_iff)
@@ -92,57 +90,47 @@ theorem rr_coupling (b b' : Bool) :
 
 end Coupling
 
-/-! ## The program logic proof -/
+/-! ## The program logic proof, in any lifting -/
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-section Tail
+section Logic
 
-variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
-  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
+  [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
 
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     Φ (.bool (bif d then b else !b)) ⊢
-      wp (codensity dp) ⊤
-        pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
-  cases d
-  all_goals cases b
-  all_goals
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true]
-    iintro H
-    wp_pures
-    wp_value
-    imodintro
-    iexact H
+      wp L ⊤ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
+  cases d <;> cases b <;>
+    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
+    iintro H <;> wp_pures <;> wp_value <;> imodintro <;> iexact H
 
-/-- The spec reports `bif d then b else !b`. -/
-theorem tp_report (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ pl(#(.bool (bif d then b else !b))) -∗ wp (codensity dp) ⊤ e Φ) ⊢
-      wp (codensity dp) ⊤ e Φ := by
-  cases d
-  all_goals cases b
-  all_goals
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true]
-    iintro ⟨Hj, H⟩
-    tp_pures
-    iapply H
-    iexact Hj
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
+/-- The spec reports `bif d then b else !b`, under any evaluation context. -/
+theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
+    ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
+      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗ wp L ⊤ e Φ) ⊢ wp L ⊤ e Φ := by
+  cases d <;> cases b <;>
+    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
+    iintro ⟨Hj, H⟩ <;> tp_pures <;> iapply H <;> iexact Hj
 
-end Tail
-
-theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ⤇ rr (rT := rT) b' -∗ ↯b budget -∗
-      wp (codensity dp) ⊤ (rr b)
-        (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
-  iintro Hj Hb
+/-- One round against the spec in context `K`, spending `↯b c` given a coupling of the two
+draws at `c`: both sides report the same bit. -/
+theorem wp_rr_of (c : B) (hc : IsAddLeftRegular c)
+    (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
+      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)))
+    (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
+    ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#(.bool d)) -∗ Φ (.bool d)) ⊢
+      wp L ⊤ (rr b) Φ := by
+  iintro ⟨Hj, Hb, H⟩
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
-  iapply wp_couple_rand_rand_spend 4 (by norm_num) (fun r r' ↦ rrOut b r = rrOut b' r') budget
-    isAddLeftRegular_budget (rr_coupling b b')
+  iapply wp_couple_rand_rand_spend 4 (by norm_num) _ c hc (hcpl b b')
   iframe Hj Hb
   iintro %r %r' %hR Hj
   wp_pures
@@ -151,28 +139,56 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   iframe Hj
   iintro Hj
   iapply wp_report
-  iexists .bool (bif decide (r' < 3) then b' else !b')
-  ihave Hj := specProgFrag_reshape (e₁ := pl(#(.bool _))) (e₂ := Exp.ofVal (.bool _)) rfl $$ Hj
-  iframe Hj
-  ipureintro
-  exact congrArg Val.bool (by simpa [rrOut] using hR)
+  rw [show (bif decide (r < 3) then b else !b) = bif decide (r' < 3) then b' else !b' by
+    simpa [rrOut] using hR]
+  iapply H $$ Hj
 
-/-! ## The relational proof -/
+end Logic
 
-/-- Randomized response refines itself at equal reports, spending the budget `(ln 3, 0)`. -/
-theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ↯b budget -∗
-      REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+    ⊢@{IProp GF} ⤇ rr (rT := rT) b' -∗ ↯b budget -∗
+      wp (codensity dp) ⊤ (rr b)
+        (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
+  rw [spec_eq_fill_nil]
+  iintro Hj Hb
+  iapply wp_rr_of budget isAddLeftRegular_budget rr_coupling
+  iframe Hj Hb
+  iintro %d Hj
+  iapply spec_fill_nil_exists (.bool d) $$ Hj
+
+/-! ## The relational proof, in any lifting -/
+
+section Rel
+
+variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+  [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
+
+/-- One round of randomized response refines itself at equal reports, spending `↯b c`, given
+a coupling of the two draws at `c`. -/
+theorem rr_refines_of (c : B) (hc : IsAddLeftRegular c)
+    (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
+      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num))) (b b' : Bool) :
+    ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
-  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') budget isAddLeftRegular_budget
-    (rr_coupling b b')
+  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
   iframe Hb
   iintro %r %r' %hR
   rel_pures
   by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
     simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
     rel_pures <;> rw [hR] <;> rel_values
+
+end Rel
+
+/-- Randomized response refines itself at equal reports, spending the budget `(ln 3, 0)`. -/
+theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
+    ⊢@{IProp GF} ↯b budget -∗
+      REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
+  rr_refines_of budget isAddLeftRegular_budget rr_coupling b b'
 
 /-! ## Adequacy: exit the logic -/
 
@@ -181,19 +197,11 @@ theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
   wp_adequacy_div (GF := GF) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
 
-/-- `lrel_bool` relates only equal values. -/
-theorem lrel_bool_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_bool (rT := rT) (GF := GF)).car v v' -∗ ⌜v = v'⌝ := by
-  iunfold lrel_bool
-  iintro ⟨%c, %⟨rfl, rfl⟩⟩
-  ipureintro
-  rfl
-
 /-- `rr_dp_of`, through the refinement `rr_refines`. -/
 theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
     (b b' : Bool) (σ σ' : State rT) :
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
-  approximates_div (GF := GF) (fun _ _ ↦ lrel_bool) _ _ σ σ' budget (fun _ _ ↦ lrel_bool_eq)
+  approximates_div (GF := GF) (fun _ _ ↦ lrel_bool) _ _ σ σ' budget (fun _ _ ↦ lrel_bool_car_eq)
     fun _ _ ↦ rr_refines b b'
 
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
@@ -209,13 +217,13 @@ theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : M
   rwa [expBudget_log_three, add_zero] at h
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
-noncomputable def rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=
+noncomputable abbrev rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech rr σ
 
 /-- Randomized response is `(ln 3, 0)`-differentially private for any two bits (Def. 2.1). -/
 theorem rr_DP (σ : State rT) : (rrMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) rr σ budget
-    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_eq) fun b b' _ _ _ ↦ rr_refines b b'
+    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ rr_refines b b'
 
 end RandomizedResponse
 end ProbLang

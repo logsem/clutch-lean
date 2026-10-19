@@ -38,7 +38,7 @@ theorem rrCount_tcdp_coupling (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
       (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) := by
   rw [← nsmul_eq_mul]
   exact (approximates_coupling (GF := MicrometerFunctor rT ℝ≥0∞) (fun _ _ ↦ lrel_int) _ _ _ σ σ'
-    _ (fun _ _ ↦ lrel_int_eq) fun _ _ ↦ rrCount_refines_tcdp ω b b' k).mono le_rfl
+    _ (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦ rrCount_refines_tcdp ω b b' k).mono le_rfl
     adequacyRel_eq_subset
 
 /-- Randomized response in a loop of `k` rounds is `k ln 3`-tCDP below the order `ω`

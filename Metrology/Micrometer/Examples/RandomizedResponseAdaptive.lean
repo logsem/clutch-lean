@@ -112,8 +112,6 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
       Bool.not_false, Bool.not_true, stageTwoCost, Bool.cond_true, Bool.cond_false] at hR ⊢ <;>
     simp at hR <;> rel_pures
   · rel_values
-    iapply lrel_prod_pair
-    isplitl [] <;> iapply lrel_bool_lit
   · rel_couple_UU_spend (fun r r' ↦ rr3Out false r = rr3Out true r') _
       (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 rr3_coupling
     iframe Hb
@@ -121,19 +119,7 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
     rel_pures
     by_cases hd : r < 2 <;> by_cases hd' : r' < 2 <;>
       simp only [rr3Out, hd, hd', ↓reduceIte, decide_true, decide_false, Bool.not_false,
-        Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values <;>
-      iapply lrel_prod_pair <;> isplitl [] <;> iapply lrel_bool_lit
-
-/-- Pairs of related bits are equal. -/
-theorem lrel_prod_bool_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_prod lrel_bool lrel_bool).car v v' -∗ ⌜v = v'⌝ := by
-  iunfold lrel_prod
-  iintro ⟨%a, %a', %c, %c', %hv, %hv', Ha, Hc⟩
-  iunfold lrel_bool at Ha Hc
-  icases Ha with ⟨%x, %⟨rfl, rfl⟩⟩
-  icases Hc with ⟨%y, %⟨rfl, rfl⟩⟩
-  ipureintro
-  exact Val.ext (hv.trans hv'.symm)
+        Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values
 
 end Logic
 
@@ -145,7 +131,7 @@ theorem rrAdaptive_renyi (σ σ' : State rT) :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12)))
       (limExecV ⟨rrAdaptive false, σ⟩) (limExecV ⟨rrAdaptive true, σ'⟩) :=
   approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (fun _ _ ↦ lrel_prod lrel_bool lrel_bool)
-    _ _ σ σ' _ (fun _ _ ↦ lrel_prod_bool_eq) fun _ _ ↦ rrAdaptive_refines
+    _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq) fun _ _ ↦ rrAdaptive_refines
 
 end RandomizedResponse
 end ProbLang
