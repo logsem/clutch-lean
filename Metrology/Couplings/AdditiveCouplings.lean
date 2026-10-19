@@ -17,6 +17,8 @@ public import Mathlib.Analysis.Real.OfDigits
 
 public import Metrology.Couplings.ApproximateCouplings
 
+/-! Additive couplings: approximate couplings up to `x ↦ x + ε` (the old core). -/
+
 @[expose] public section
 
 section AdditiveCoupling
@@ -356,7 +358,8 @@ theorem concentrated_L {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} 
   rw [lintegral_congr_ae hae]
   exact H F ⟨g, Hgm, Hgb⟩ HFG
 
-private theorem measure_compl_atoms_null [Countable α] (μ : Measure α) :
+/-- A measure on a countable space lives on its atoms. -/
+theorem MeasureTheory.measure_compl_atoms_null [Countable α] (μ : Measure α) :
     μ {a | μ {a} ≠ 0}ᶜ = 0 := by
   rw [show {a | μ {a} ≠ 0}ᶜ = ⋃ a ∈ {a | μ {a} = 0}, ({a} : Set α) by ext; simp,
     measure_biUnion_null_iff (Set.to_countable _)]
@@ -370,8 +373,10 @@ theorem pos_R [Countable α] [Countable β]
     (H : AddCoupl ε S μₗ μᵣ) :
     AddCoupl ε (fun v => S v ∧ μₗ {v.1} ≠ 0 ∧ μᵣ {v.2} ≠ 0) μₗ μᵣ :=
   mono_rel (by rintro ⟨a, b⟩ ⟨⟨hS, haL⟩, hbR⟩; exact ⟨hS, haL, hbR⟩) <|
-    concentrated_R (Set.to_countable _).measurableSet (measure_compl_atoms_null μᵣ) <|
-    concentrated_L (Set.to_countable _).measurableSet (measure_compl_atoms_null μₗ) H
+    concentrated_R (Set.to_countable _).measurableSet
+      (MeasureTheory.measure_compl_atoms_null μᵣ) <|
+    concentrated_L (Set.to_countable _).measurableSet
+      (MeasureTheory.measure_compl_atoms_null μₗ) H
 
 /-- Rocq `ARcoupl_eq_elim`. -/
 theorem eq_elim {ε : ENNReal} {μ ν : Measure α}

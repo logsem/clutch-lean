@@ -15,11 +15,15 @@ public import Mathlib.Probability.ProbabilityMassFunction.Basic
 public import Mathlib.Probability.ProbabilityMassFunction.Constructions
 public import Mathlib.Analysis.Real.OfDigits
 
+/-! Approximate relational couplings, tested by bounded measurable functions (the old core). -/
+
 @[expose] public section
 
+/-- A function into `[0, 1]`. -/
 def BoundedFunction {α : Type _} (f : α → ENNReal) : Prop :=
   ∀ a, f a ≤ 1
 
+/-- A measurable test function into `[0, 1]`. -/
 def CouplingFunction (α : Type _) [MeasurableSpace α] :=
   { f : α → ENNReal // Measurable f ∧ BoundedFunction f}
 
@@ -29,7 +33,8 @@ theorem CouplingFunction.measurable {α : Type _} [MeasurableSpace α] (f : Coup
 theorem CouplingFunction.bounded {α : Type _} [MeasurableSpace α] (f : CouplingFunction α) :
     ∀ a, f.1 a ≤ 1 := f.property.2
 
-instance {α : Type _} [MeasurableSpace α] : CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
+instance CouplingFunction.instCoeFun {α : Type _} [MeasurableSpace α] :
+    CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
   coe := (·.1)
 
 section ApproximateCoupling
@@ -38,6 +43,8 @@ variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
 
 open MeasureTheory
 
+/-- A coupling up to `F`: every pair of tests ordered on `Φ` has its left integral below `F` of
+the right one. -/
 def ARCoupling (F : ENNReal → ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) :=
   ∀ (f : CouplingFunction α) (g : CouplingFunction β),
     (∀ {a b}, Φ (a, b) → f a ≤ g b) →

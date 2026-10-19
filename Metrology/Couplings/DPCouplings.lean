@@ -17,18 +17,22 @@ public import Mathlib.Analysis.Real.OfDigits
 
 public import Metrology.Couplings.ApproximateCouplings
 
+/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ` (the old core). -/
+
 @[expose] public section
 
 noncomputable section DPCoupling
 
 open MeasureTheory Measure EReal
 
+/-- The DP error map `x ↦ e^ε x + δ`. -/
 abbrev DPF (ε δ x : ENNReal) := exp ε * x + δ
 
 variable {α β α' β' : Type _}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [MeasurableSpace β']
 variable (ε δ : ENNReal)
 
+/-- An `(ε, δ)`-DP coupling. -/
 abbrev ARCoupling.DP (S : Set (α × β)) := ARCoupling (DPF ε δ) S
 
 theorem ARCoupling.DP.trivial_δ {μₗ : Measure α} {μᵣ : Measure β} {S} (Hδ : μₗ .univ ≤ δ) :
