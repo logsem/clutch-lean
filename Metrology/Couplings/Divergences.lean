@@ -23,6 +23,7 @@ public import Metrology.Couplings.Divergences.Gaussian
 public import Metrology.Couplings.Divergences.GaussianRenyi
 public import Metrology.Couplings.Divergences.Fill
 public import Metrology.Couplings.Divergences.Bof
+public import Metrology.Couplings.Divergences.DpAvoid
 
 /-! The concrete graded divergences: dp, tv, f-divergences, Rényi, zCDP/tCDP, and mechanisms. -/
 
