@@ -20,6 +20,7 @@ public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.LRel
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.Interp
+public import Metrology.Micrometer.AppRelRulesPure
 public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.SpecAdvRules
 public import Metrology.Micrometer.RelTactics
