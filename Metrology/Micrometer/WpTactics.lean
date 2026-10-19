@@ -27,8 +27,7 @@ section Wp
 
 variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-  [BudgetGS B GF] [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
+  [BudgetGS B GF] [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
@@ -266,7 +265,7 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let gs ← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
     let stepPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_pure_step_ctx
-      (g.prefix.append #[none, none, none, none, none, none, none, some K, some φ, some n,
+      (g.prefix.append #[none, none, none, some K, some φ, some n,
         some e₁, some e₂, some step.inst, some HΦ, some g.E, some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
