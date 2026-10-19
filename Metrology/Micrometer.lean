@@ -14,6 +14,7 @@ public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.SpecAdvRules
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.Compatibility
+public import Metrology.Micrometer.CompatibilityState
 public import Metrology.Micrometer.Fundamental
 public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel

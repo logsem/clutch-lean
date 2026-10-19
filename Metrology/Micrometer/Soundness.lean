@@ -18,12 +18,33 @@ namespace ProbLang
 open GradedLifting ProbLang.Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
 open ProbLang.MicrometerWpGS
 
+section Syntax
+variable {rT : Type} {GF : BundledGFunctors}
+
+theorem RelCtx.dom_cons (x : Var) (A : lrel rT GF) (Γrc : RelCtx rT GF) :
+    (((x, A) :: Γrc).map (·.1)).toFinset = (Γrc.map (·.1)).toFinset ∪ {x} := by
+  simp [Finset.union_comm]
+
+theorem close_fv_in_outer_dom {Γrc' : RelCtx rT GF} {x : Var} {Ke : Exp rT} {A : lrel rT GF}
+    (hKe_fv : Ke.fv ⊆ (((x, A) :: Γrc').map (·.1)).toFinset) {z : Var}
+    (hz : z ∈ (Ke.close x).fv) : z ∈ (Γrc'.map (·.1)).toFinset := by
+  have hz' := hKe_fv (Exp.close_fv_subset _ x hz)
+  rw [RelCtx.dom_cons] at hz'
+  rcases Finset.mem_union.mp hz' with h | h
+  · exact h
+  · exact absurd (Finset.mem_singleton.mp h ▸ hz) (Exp.close_var_not_fvar x Ke)
+
+theorem open_close_subst_lc_at {Ke : Exp rT} (x y : Var) (hKe_lc : Ke.IsLocallyClosed) :
+    (Exp.open' (Ke.close x) (.fvar y)).IsLocallyClosed := by
+  rw [Exp.open_close_subst_lc x y _ hKe_lc]
+  exact Exp.subst_lc hKe_lc (Exp.IsLocallyClosed.fvar y)
+
+end Syntax
+
 section Soundness
-variable {rT : Type} [LawfulProbLangℝ rT]
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
-  [L.HasBind]
+variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
+  [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
 /-- The binders of each item of `K` avoid `S` and the binders of the items inside it. -/
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
@@ -48,9 +69,6 @@ theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
 
 section Bookkeeping
 
-omit [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] [L.HasBind]
-
 theorem TctxRelated.empty_nil {Δ : TyEnv rT GF} :
     TctxRelated L Δ Tctx.empty ([] : RelCtx rT GF) := by
   intro x; simp [Tctx.empty, RelCtx.lookup]
@@ -68,11 +86,6 @@ theorem ctx_fill_lc_fv {Γtc : Tctx} {Γrc : RelCtx rT GF} {Δ : TyEnv rT GF} {K
     {e : Exp rT} {τ : Ty} (HCtxRel : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc (K.fill e) τ) :
     (K.fill e).IsLocallyClosed ∧ (K.fill e).fv ⊆ (Γrc.map (·.1)).toFinset :=
   ⟨Hty.isLocallyClosed, fv_subset_relCtxDom HCtxRel Hty⟩
-
-omit [LawfulProbLangℝ rT] in
-theorem RelCtx.dom_cons (x : Var) (A : lrel rT GF) (Γrc : RelCtx rT GF) :
-    (((x, A) :: Γrc).map (·.1)).toFinset = (Γrc.map (·.1)).toFinset ∪ {x} := by
-  simp [Finset.union_comm]
 
 theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {bAtoms : Finset Var} (hSingleton : bAtoms = {x})
@@ -93,23 +106,10 @@ theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF}
   rw [Exp.open_close_subst_lc x y _ hKe_lc, Exp.open_close_subst_lc x y _ hKe'_lc]
   exact Hbody.trans (bin_log_related_ty_rename (Ne.symm hyX) hxRc hyRc hyKe hyKe')
 
-omit [LawfulProbLangℝ rT] in
-theorem close_fv_in_outer_dom {Γrc' : RelCtx rT GF} {x : Var} {Ke : Exp rT} {A : lrel rT GF}
-    (hKe_fv : Ke.fv ⊆ (((x, A) :: Γrc').map (·.1)).toFinset) {z : Var}
-    (hz : z ∈ (Ke.close x).fv) : z ∈ (Γrc'.map (·.1)).toFinset := by
-  have hz' := hKe_fv (Exp.close_fv_subset _ x hz)
-  rw [RelCtx.dom_cons] at hz'
-  rcases Finset.mem_union.mp hz' with h | h
-  · exact h
-  · exact absurd (Finset.mem_singleton.mp h ▸ hz) (Exp.close_var_not_fvar x Ke)
-
-omit [LawfulProbLangℝ rT] in
-theorem open_close_subst_lc_at {Ke : Exp rT} (x y : Var) (hKe_lc : Ke.IsLocallyClosed) :
-    (Exp.open' (Ke.close x) (.fvar y)).IsLocallyClosed := by
-  rw [Exp.open_close_subst_lc x y _ hKe_lc]
-  exact Exp.subst_lc hKe_lc (Exp.IsLocallyClosed.fvar y)
-
 end Bookkeeping
+
+section Steps
+variable [L.IsLawful] [L.IsTopAbsorbing]
 
 theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {τ_arg τ_body : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
@@ -124,6 +124,9 @@ theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : 
     (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
     (bin_log_related_close_cofinite hxRc hKe_lc hKe'_lc Hbody)
 
+section Bind
+variable [L.HasBind]
+
 theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : Var}
     {τ1 τ2 : Ty} {Ke Ke' : Exp rT} (hfRc : f ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -137,6 +140,9 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
     (fun y _ => open_close_subst_lc_at f y hKe_lc) (fun y _ => open_close_subst_lc_at f y hKe'_lc)
     (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
     (bin_log_related_close_cofinite hfRc hKe_lc hKe'_lc Hbody)
+
+section Prim
+variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal]
 
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
@@ -359,36 +365,28 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
           ((HCtx.shift A).insert y τ_pkg
             (RelCtx.lookup_eq_none_of_not_mem (hy ∘ Finset.mem_union_right _)))) $$ H
 
+end Prim
+
+end Bind
+
+end Steps
+
 end Soundness
 
 section RefinesSound
 open MeasureTheory
-variable {rT : Type} [LawfulProbLangℝ rT]
-variable {GF : BundledGFunctors}
+variable {rT : Type} {GF : BundledGFunctors}
 
 /-- Two values are the same boolean. -/
 def boolEqVal (v v' : Val rT) : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
-theorem lrel_bool_to_boolEqVal [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
+theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
     ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iunfold lrel_bool
   iintro ⟨%b, %h⟩
   exact pure_intro ⟨b, h⟩
 
-variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
-  [RefinesPreGS rT B GF]
-
-/-- The runs of `ρ` that end in the boolean `b` are the mass of its results at `b`. -/
-theorem limExec_finalBool (ρ : Cfg rT) (b : Bool) :
-    limExec ρ (finalBool b) = limExecV ρ {pl(#(.bool b))} := by
-  unfold limExecV asExpr
-  rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
-  rfl
-
-omit [LawfulProbLangℝ rT] in
 /-- Results related along equal booleans end in `b` together. -/
 theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
     (ha : a ∈ ({pl(#(.bool b))} : Set (Exp rT))) : a' ∈ ({pl(#(.bool b))} : Set (Exp rT)) := by
@@ -398,11 +396,36 @@ theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel bo
   obtain rfl : b'' = b := by simpa using hv1.symm
   exact (Exp.ofVal_of_toVal_some hv').symm.trans (congrArg Val.fst hvb2)
 
-omit [LawfulProbLangℝ rT] in
 /-- Results related along equal booleans are equal. -/
 theorem adequacyRel_boolEqVal_eq (a a' : Exp rT) (h : adequacyRel boolEqVal a a') : a = a' :=
   let ⟨v, v', hv, hv', _, h1, h2⟩ := h
   adequacyRel_eq_subset a a' ⟨v, v', hv, hv', h1.trans h2.symm⟩
+
+section Budget
+variable [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
+  [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed] [RefinesPreGS rT B GF]
+
+/-- The runs of `ρ` that end in the boolean `b` are the mass of its results at `b`. -/
+theorem limExec_finalBool (ρ : Cfg rT) (b : Bool) :
+    limExec ρ (finalBool b) = limExecV ρ {pl(#(.bool b))} := by
+  unfold limExecV asExpr
+  rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
+  rfl
+
+/-! ### Contextual soundness under budget credits -/
+
+variable (L) in
+/-- A closed refinement at `bool` from `↯b β` couples the two runs at `β` along equal booleans. -/
+theorem refines_bool_coupling (β : B) (E E' : Exp rT) (σ σ' : State rT)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF),
+      ⊢@{IProp GF} ↯b β -∗ refines L ⊤ E E' (lrel_bool (rT := rT))) :
+    L.Rel β (adequacyRel boolEqVal) (limExecV ⟨E, σ⟩) (limExecV ⟨E', σ'⟩) :=
+  approximates_coupling (GF := GF) (fun _ _ => lrel_bool) boolEqVal E E' σ σ' β
+    (fun _ _ v v' => lrel_bool_to_boolEqVal v v') Hlog
+
+section Bind
+variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 variable (L) in
 theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
@@ -451,19 +474,6 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   iclear Hvs
   show ⊢@{IProp GF} refines L ⊤ e e' (interp L τ Δ)
   exact Hlog IR IBC Δ
-
-
-/-! ### Contextual soundness under budget credits -/
-
-omit [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] in
-variable (L) in
-/-- A closed refinement at `bool` from `↯b β` couples the two runs at `β` along equal booleans. -/
-theorem refines_bool_coupling (β : B) (E E' : Exp rT) (σ σ' : State rT)
-    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ↯b β -∗ refines L ⊤ E E' (lrel_bool (rT := rT))) :
-    L.Rel β (adequacyRel boolEqVal) (limExecV ⟨E, σ⟩) (limExecV ⟨E', σ'⟩) :=
-  approximates_coupling (GF := GF) (fun _ _ => lrel_bool) boolEqVal E E' σ σ' β
-    (fun _ _ v v' => lrel_bool_to_boolEqVal v v') Hlog
 
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
@@ -519,6 +529,10 @@ theorem refines_ctx_mass (s : ENNReal →+o B) [L.IsMassDetecting s] (δ : ENNRe
   rw [limExec_finalBool, limExec_finalBool]
   exact IsMassDetecting.measure_le_add (.singleton _) (.singleton _)
     (refines_ctx_coupling L (s δ) e e' τ Hlog K σ σ' HK Hlin) adequacyRel_boolEqVal_mem
+
+end Bind
+
+end Budget
 
 end RefinesSound
 

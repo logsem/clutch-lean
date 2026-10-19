@@ -30,6 +30,7 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
 /-- The loop refines itself at equal counts, spending `↯b c` per iteration, given a refinement
 of one round at `c`. -/
 theorem rrCount_refines_of (c : B)

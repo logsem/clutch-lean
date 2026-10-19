@@ -101,6 +101,7 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     Φ (.bool (bif d then b else !b)) ⊢
@@ -118,6 +119,7 @@ theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp
     simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
     iintro ⟨Hj, H⟩ <;> tp_pures <;> iapply H <;> iexact Hj
 
+omit [L.IsReflexive] in
 /-- One round against the spec in context `K`, spending `↯b c` given a coupling of the two
 draws at `c`: both sides report the same bit. -/
 theorem wp_rr_of (c : B) (hc : IsAddLeftRegular c)
@@ -166,6 +168,7 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
+omit [L.IsReflexive] in
 /-- One round of randomized response refines itself at equal reports, spending `↯b c`, given
 a coupling of the two draws at `c`. -/
 theorem rr_refines_of (c : B) (hc : IsAddLeftRegular c)
