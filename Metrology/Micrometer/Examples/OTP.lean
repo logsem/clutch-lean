@@ -27,7 +27,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- Adds the key `m` modulo `N`. -/
 def addMod (m N n : Int) : Int := (n + m) % N
 
-private theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
+theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
   ⟨Int.emod_nonneg _ hN.ne', Int.emod_lt_of_pos _ hN⟩
 
 theorem addMod_dom (m N : Int) (hN : 0 < N) :

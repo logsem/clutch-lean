@@ -27,32 +27,41 @@ public import Metrology.Couplings.Examples
 Each file proves a short refinement in Micrometer and reads a standard statement off it through
 adequacy. Lifting-level examples (no programs) live in `Couplings/Examples`.
 
-| Divergence | Examples |
-| --- | --- |
-| equality (any lifting) | `OTP`, `ContinuousOTP`, `Presample` |
-| total variation | `SkipZero`, `Retry`, `AbsorbingExit`, `Switching` |
-| pure DP | `RandomizedResponse`, `RandomizedResponseLoop`, `PublicChoice`, `NoisyCount`, `ContextualDp` |
-| approximate DP | `LeakyRR` |
-| Rényi at one order | `RandomizedResponseRenyi`, `RandomizedResponseAdaptive`, `Couplings.Examples.AdaptiveRenyi` |
-| Rényi curve | `RandomizedResponseCurve` |
-| zCDP | `RandomizedResponseZcdp`, `RandomizedResponseLoop`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition` |
-| tCDP | `RandomizedResponseTcdp` |
-| χ² | `RandomizedResponseChi2` |
-| KL | `Couplings.Examples.KLCoinFlips` (lifting level only) |
+By divergence:
+* equality (any lifting): `OTP`, `ContinuousOTP`, `Presample`
+* total variation: `SkipZero`, `Retry`, `AbsorbingExit`, `Switching`
+* pure DP: `RandomizedResponse`, `RandomizedResponseLoop`, `PublicChoice`, `NoisyCount`,
+  `ContextualDp`
+* approximate DP: `LeakyRR`
+* Rényi at one order: `RandomizedResponseRenyi`, `RandomizedResponseAdaptive`,
+  `Couplings.Examples.AdaptiveRenyi`
+* Rényi curve: `RandomizedResponseCurve`
+* zCDP: `RandomizedResponseZcdp`, `RandomizedResponseLoop`, `GaussianZcdp`,
+  `Couplings.Examples.GaussianComposition`
+* tCDP: `RandomizedResponseTcdp`
+* χ²: `RandomizedResponseChi2`
+* KL: `Couplings.Examples.KLCoinFlips` (lifting level only)
 
-| Rule | Examples |
-| --- | --- |
-| coupling draws by a bijection | `OTP`, `ContinuousOTP` (continuous samples) |
-| presampling with tapes | `Presample` |
-| spending a credit on one draw | `SkipZero`, `RandomizedResponse`, `LeakyRR` (δ) |
-| absorbing exit, capped credits | `AbsorbingExit` |
-| amplification | `Retry` |
-| recursion (`rec`, induction on the unfolded loop) | `RandomizedResponseLoop` |
-| non-canonical bind laws | `PublicChoice` (`dpChoice`), `RandomizedResponseAdaptive` (escort) |
-| programs as mechanisms (`progMech_isPrivate`) | `RandomizedResponseLoop`, `RandomizedResponseZcdp`, `LeakyRR` |
-| conversions between divergences | `RandomizedResponseZcdp`, `RandomizedResponseTcdp`, `RandomizedResponseCurve` |
-| samplers given by a spec | `GaussianZcdp`, `NoisyCount` |
-| contextual refinement | `ContextualDp` |
+By rule:
+* coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
+* presampling with tapes: `Presample`
+* spending a credit on one draw: `SkipZero`, `RandomizedResponse`, `LeakyRR` (δ)
+* absorbing exit, capped credits: `AbsorbingExit`
+* amplification: `Retry`
+* recursion (`rec`, `rel_fold`, induction on the unfolded loop): `Retry`, `RandomizedResponseLoop`,
+  `GaussianZcdp`
+* one proof in any lifting (`rr_refines_of`, `rrCount_refines_of`): `RandomizedResponseLoop`,
+  `RandomizedResponseZcdp`, `RandomizedResponseRenyi`, `RandomizedResponseCurve`,
+  `RandomizedResponseTcdp`, `RandomizedResponseChi2`
+* non-canonical bind laws: `PublicChoice` (`dpChoice`), `RandomizedResponseAdaptive` (escort)
+* programs as mechanisms (`progMech_isPrivate`): `RandomizedResponse`, `RandomizedResponseLoop`,
+  `RandomizedResponseZcdp`, `PublicChoice`, `LeakyRR`
+* conversions between divergences: `RandomizedResponseZcdp`, `RandomizedResponseTcdp`,
+  `RandomizedResponseCurve`
+* samplers given by a spec: `GaussianZcdp`, `NoisyCount`
+* contextual refinement: `ContextualDp`, `ContinuousOTP`
+* weakest preconditions against a spec (`wp_*`, `tp_*`): `RandomizedResponse`,
+  `RandomizedResponseZcdp`, `NoisyCount`, `GaussianZcdp`, `Switching`
 -/
 
 @[expose] public section

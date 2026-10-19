@@ -67,5 +67,10 @@ theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet
     (fun _ _ ↦ lrel_int) _ _ σ σ' 0 (fun _ _ ↦ lrel_int_car_eq)
     fun _ _ ↦ by iintro -; iapply zero_refines_retry) S hS
 
+/-- `retry` returns `0` with probability `1`. -/
+theorem retry_eq_zero (σ : State rT) : limExecV ⟨retry, σ⟩ {pl(#0)} = 1 :=
+  le_antisymm (MeasureTheory.IsSubProbabilityMeasure.measure_le_one _) <| by
+    simpa [limExecV_of_isVal σ .lit] using zero_le_retry σ σ (measurableSet_singleton pl(#0))
+
 end Retry
 end ProbLang

@@ -44,7 +44,10 @@ theorem alookup_eq_none_iff {k : Int} {m : List (Int × Int)} :
 
 /-! ## Pure recursions -/
 
-omit [MeasurableSingletonClass rT] in
+section Recursions
+
+omit [MeasurableSingletonClass rT]
+
 /-- `findList` computes association-list lookup. -/
 theorem findList_steps (m : List (Int × Int)) (k : Int) :
     PureSteps (pl% &findList {Exp.ofVal (assocVal m)} #(.int k))
@@ -66,7 +69,6 @@ theorem findList_steps (m : List (Int × Int)) (k : Int) :
       pure_step
       exact ih
 
-omit [MeasurableSingletonClass rT] in
 /-- `listLength` computes list length. -/
 theorem listLength_steps (l : List Int) :
     PureSteps (pl% &listLength {Exp.ofVal (intListVal l)})
@@ -83,7 +85,6 @@ theorem listLength_steps (l : List Int) :
     rw [List.length_cons, Nat.cast_succ, add_comm]
     exact PureSteps.refl _
 
-omit [MeasurableSingletonClass rT] in
 /-- `listRemoveNth` removes the `i`-th element, returning `SOME (lᵢ, l \ i)`. -/
 theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
     PureSteps (pl% &listRemoveNth {Exp.ofVal (intListVal l)} #(.int i))
@@ -102,6 +103,8 @@ theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
       rw [Nat.cast_succ, add_sub_cancel_right]
       refine (PureSteps.fill [EctxItem.case _ _] (ih j hj)).trans ?_
       pure_steps
+
+end Recursions
 
 /-! ## Map operations: `wp` specifications
 

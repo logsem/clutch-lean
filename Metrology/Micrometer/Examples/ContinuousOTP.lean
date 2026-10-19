@@ -164,15 +164,18 @@ theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ S
 `GF` is explicit, as `Σ` in Rocq's `refines_sound`: any ghost-state bundle hosting the
 Micrometer resources works. -/
 
-omit [LawfulProbLangℝ rT] in
+section Typing
+
+omit [LawfulProbLangℝ rT]
+
 theorem otp_ideal_typed : Typed (rT := rT) Tctx.empty otp_ideal .real := .urand
 
-omit [LawfulProbLangℝ rT] in
 theorem otpLam_typed (m : rT) : Typed Tctx.empty (otpLam m) (.arrow .real .real) :=
   Typed.lam ∅ fun _ _ => .unop_real (.binop_real .lit_real (.fvar (by simp [Tctx.insert])) rfl) rfl
 
-omit [LawfulProbLangℝ rT] in
 theorem otp_enc_typed (m : rT) : Typed Tctx.empty (otp_enc m) .real := .app (otpLam_typed m) .urand
+
+end Typing
 
 theorem otp_ctx_refines_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) :
     ∀ K σ₀ b,

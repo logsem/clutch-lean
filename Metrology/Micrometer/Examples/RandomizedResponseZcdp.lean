@@ -100,7 +100,8 @@ bit. -/
 theorem rr2_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b₁ b₂ b₁' b₂' : Bool) :
     ⊢@{IProp GF} ↯b (budget + budget) -∗
-      REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') : lrel_prod lrel_bool lrel_bool := by
+      REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') :
+        lrel_prod lrel_bool lrel_bool := by
   iintro Hb
   icases BudgetCredit.split $$ Hb with ⟨Hb₁, Hb₂⟩
   simp only [rr2]
@@ -204,22 +205,15 @@ theorem rr2_refines_mech {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP for any two pairs of bits (Def. 2.4). -/
 theorem rr2_zCDP (σ : State rT) : (rr2Mech σ).zCDP ⊤ (ENNReal.ofReal (Real.log 9)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ budget2
-    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
+    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool)
+    (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
     fun b b' _ _ _ ↦ rr2_refines_mech b b'
 
 /-- Randomized response on two bits is `(ln 9, δ)`-DP for any two pairs of bits and every
 `δ > 0` (Def. 2.1). -/
 theorem rr2_DP (σ : State rT) {δ : ℝ} (hδ : 0 < δ) :
-    (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) := by
-  intro b b' hb
-  have hz : zcdpLifting.Rel budget2 (· = ·) (limExecV ⟨rr2 b.1 b.2, σ⟩)
-      (limExecV ⟨rr2 b'.1 b'.2, σ⟩) :=
-    progMech_rel (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ σ (hp := .of_discrete) budget2
-      (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
-      (fun b b' _ _ _ ↦ rr2_refines_mech b b') hb
-  have h := GradedDivergence.codensity_sound ((LiftingRelHom.zcdpToDp hδ).map_rel hz)
-  simp only [LiftingRelHom.zcdpToDp_map] at h
-  exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
+    (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) :=
+  fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ
 
 end RandomizedResponse
 end ProbLang

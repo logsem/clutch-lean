@@ -131,7 +131,8 @@ theorem rrAdaptive_renyi (σ σ' : State rT) :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12)))
       (limExecV ⟨rrAdaptive false, σ⟩) (limExecV ⟨rrAdaptive true, σ'⟩) :=
   approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (fun _ _ ↦ lrel_prod lrel_bool lrel_bool)
-    _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq) fun _ _ ↦ rrAdaptive_refines
+    _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
+    fun _ _ ↦ rrAdaptive_refines
 
 end RandomizedResponse
 end ProbLang

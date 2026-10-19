@@ -62,7 +62,8 @@ theorem rrCount_fDiv_sq_le (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
     fDiv (· ^ (2 : ℝ)) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) ≤
       (((7 / 3 : ℝ≥0∞) ^ k : ℝ≥0∞) : EReal) := by
   have h := approximates_div (GF := MicrometerFunctor rT PowerBudget) (D := chi2Divergence)
-    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦ rrCount_refines_chi2 b b' k
+    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq)
+    fun _ _ ↦ rrCount_refines_chi2 b b' k
   rwa [chi2Divergence_iff, one_add_toENNReal_nsmul, toENNReal_ofENNReal,
     one_add_four_thirds] at h
 

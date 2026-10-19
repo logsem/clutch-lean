@@ -12,7 +12,8 @@ import Mathlib.Algebra.Regular.Prod
 
 The coin is coupled along equality at no cost; the choice law then leaves `↯b (ln 3, 0)` to the
 randomized response branch and `↯b 0` to the constant branch, so the program is `ln 3`-DP, the
-larger of the two costs rather than their sum. -/
+larger of the two costs. Since the constant branch is free, the single budget `(ln 3, 0)` with the
+canonical law would also do; the example shows the choice law's shape. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity)
@@ -51,10 +52,8 @@ noncomputable abbrev choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
 
 /-- The public choice is `(ln 3, 0)`-DP for any two bits (Def. 2.1). -/
 theorem choice_DP (σ : State rT) : (choiceMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
-  fun b b' _ ↦ approximates_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp)
-    (fun _ _ ↦ lrel_bool) _ _ σ σ budget
-    (fun _ _ ↦ lrel_bool_car_eq)
-    fun _ _ ↦ choice_refines b b'
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) choice σ budget
+    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ choice_refines b b'
 
 end PublicChoice
 end ProbLang

@@ -261,7 +261,7 @@ theorem prpPerm_insert {N : Int} {m : List (Int × Int)} {r : List Int}
     (List.Perm.append_left _ (List.perm_cons_erase hy).symm)
 
 /-- The side conditions of the injective `rand`/`rand` coupling along `i ↦ r[i]`. -/
-private theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int}
+theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int}
     {ε : ENNReal} (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)
     (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
     (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε) :

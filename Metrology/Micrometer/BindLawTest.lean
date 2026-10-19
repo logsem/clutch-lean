@@ -43,7 +43,8 @@ theorem progCoupl_dpRhs {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
 
 open Classical in
 /-- A program step coupled by the DP choice rule while `c` of the budget rides through it on every
-leftover, so the head spends only part of `b` (Rocq `GBL_DP_choice_head_shift`, `wp_couple_spend`). -/
+leftover, so the head spends only part of `b`
+(Rocq `GBL_DP_choice_head_shift`, `wp_couple_spend`). -/
 theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {c b : ℝ≥0∞ × ℝ≥0∞} {S₁ S₂ : Cfg rT → Cfg rT → Prop}
     {P : Set (Cfg rT)} {T : Set (Cfg rT)}
