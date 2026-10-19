@@ -114,9 +114,6 @@ theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
 
 /-! ### Constructors that bind their operands -/
 
-section Bind
-variable [L.HasBind]
-
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e1 e1' A ⊢
     refines L ⊤ e2 e2' B -∗ refines L ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by
@@ -294,8 +291,6 @@ theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel r
   isplitr; · ipureintro; exact hcl
   iexists A
   iexact HCA
-
-end Bind
 
 end Steps
 

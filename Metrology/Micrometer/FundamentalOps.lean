@@ -151,9 +151,6 @@ theorem refines_unop_val (op : UnOp) (w : Val rT) {l : BaseLit rT} {A : lrel rT 
     ⊢@{IProp GF} refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
-section Bind
-variable [L.HasBind]
-
 theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT) {A C : lrel rT GF}
     {e1 e2 e1' e2' : Exp rT} (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e1 e1' A ⊢
@@ -365,7 +362,7 @@ theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp
     iapply lrel_unit_lit
 
 section Prim
-variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal]
+variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
 theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
     ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
@@ -430,8 +427,6 @@ theorem bin_log_related_rand_unit (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     iapply refines_rand_unit_int $$ IH1
 
 end Prim
-
-end Bind
 
 end Steps
 

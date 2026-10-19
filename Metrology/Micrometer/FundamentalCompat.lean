@@ -70,9 +70,6 @@ theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iintro !> %A
   iapply Hbody A $$ Hvs
 
-section Bind
-variable [L.HasBind]
-
 theorem bin_log_related_pair (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ1 τ2 : Ty} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' τ1 ⊢
@@ -292,8 +289,6 @@ theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finse
       ((x, interp L τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
     ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 :=
   HIH1.trans (bin_log_related_unpack_wand Δ Γ S he2_lc he2'_lc HIH2)
-
-end Bind
 
 end Steps
 

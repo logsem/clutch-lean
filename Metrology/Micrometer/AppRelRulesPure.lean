@@ -191,9 +191,6 @@ theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A
   isimp only [← Ectx.fill_comp K' K] at HKRes
   iapply Hlog $$ %l Hl %K' %b HKRes Hna Herr Hpos
 
-section Bind
-variable [L.HasBind]
-
 /-! ## Structural rules -/
 
 theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
@@ -214,7 +211,6 @@ theorem refines_bind_sep (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e'
   iintro ⟨H, Hk⟩
   iapply refines_bind K K' $$ H Hk
 
-end Bind
 
 end Steps
 

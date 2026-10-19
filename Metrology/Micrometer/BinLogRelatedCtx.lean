@@ -122,9 +122,6 @@ theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : 
     (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
     (bin_log_related_close_cofinite hxRc hKe_lc hKe'_lc Hbody)
 
-section Bind
-variable [L.HasBind]
-
 theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : Var}
     {τ1 τ2 : Ty} {Ke Ke' : Exp rT} (hfRc : f ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -140,7 +137,7 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
     (bin_log_related_close_cofinite hfRc hKe_lc hKe'_lc Hbody)
 
 section Prim
-variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal]
+variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
@@ -364,8 +361,6 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
             (RelCtx.lookup_eq_none_of_not_mem (hy ∘ Finset.mem_union_right _)))) $$ H
 
 end Prim
-
-end Bind
 
 end Steps
 
