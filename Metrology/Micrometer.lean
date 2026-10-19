@@ -11,7 +11,6 @@ public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.Interp
 public import Metrology.Micrometer.AppRelRules
-public import Metrology.Micrometer.ChoiceRules
 public import Metrology.Micrometer.SpecAdvRules
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.Compatibility

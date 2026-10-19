@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.RelTactics
+public import Metrology.Couplings.BindLaws
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -8,9 +9,10 @@ import Metrology.ProbLang.Syntax.Notation
 set_option linter.discrete false
 
 /-! Coupling two uniform draws by a step of any bind law whose heads shift, spending a credit, in
-`wp` and in refinements. -/
+`wp` and in refinements; the DP choice rule is the instance at `BindLaw.dpChoice`. -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
+open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open scoped ENNReal
 
 namespace ProbLang
 
@@ -47,6 +49,8 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
     ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ := by
   by_contra hne
   simp only [Cfg.drawCost, hne, dite_false, lt_self_iff_false] at h
+
+section Law
 
 variable [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B]
@@ -149,5 +153,121 @@ spending `↯b c` and leaving `↯b (R r r')` (relational `wp_couple_rand_rand_l
 macro "rel_couple_UU_law " law:term:max ppSpace R:term:max ppSpace c:term:max ppSpace
     hc:term:max ppSpace hhead:term:max ppSpace hside:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_rands_law $law _ _ $R $c $hc $hhead $hside))
+
+end Law
+
+/-! ## The DP choice rule
+
+Two DP couplings of the draws, one keeping a set `P` of left draws inside `T` and one keeping its
+complement outside `T`, pay `max (ε₁ + ε₂) (ε₁' + ε₂')` once and leave `ε₂` or `ε₂'` to the
+continuation, by which side of `P` the draw fell (Rocq `GBL_DP_choice`). -/
+
+section Choice
+
+variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+  {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
+
+/-- The continuation budget of a choice draw: `(ε₂, δ₂)` on `P`, `(ε₂', δ₂)` off it. -/
+noncomputable def choiceBudget (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞) (r : Int) : ℝ≥0∞ × ℝ≥0∞ := by
+  classical exact if r ∈ P then (ε₂, δ₂) else (ε₂', δ₂)
+
+open Classical in
+/-- The leftover of the choice draws: the choice budget on either coupling, `⊤` elsewhere. -/
+noncomputable def choiceCost (S₁ S₂ : Int → Int → Prop) (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞)
+    (n m : Int) : ℝ≥0∞ × ℝ≥0∞ :=
+  if S₁ n m ∨ S₂ n m then choiceBudget P ε₂ ε₂' δ₂ n else (⊤ : ℝ≥0∞ × ℝ≥0∞)
+
+theorem choiceCost_of_lt_top {n m : Int}
+    (h : choiceCost S₁ S₂ P ε₂ ε₂' δ₂ n m < (⊤ : ℝ≥0∞ × ℝ≥0∞)) :
+    (S₁ n m ∨ S₂ n m) ∧ choiceCost S₁ S₂ P ε₂ ε₂' δ₂ n m = choiceBudget P ε₂ ε₂' δ₂ n := by
+  by_cases hS : S₁ n m ∨ S₂ n m
+  · exact ⟨hS, ite_eq_left hS⟩
+  · simp [choiceCost, hS] at h
+
+/-- The DP choice head for the draws `rand N ~ K[rand N]`, pushed to configurations. -/
+theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State rT)
+    (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
+    (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
+    (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T) :
+    BindLaw.dpChoice.head ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
+      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+      (Cfg.drawCost σ σ' K (choiceCost S₁ S₂ P ε₂ ε₂' δ₂))
+      (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) := by
+  classical
+  let lft : Int → Cfg rT := fun n ↦ ⟨pl(#(.int n)), σ⟩
+  let rgt : Int → Cfg rT := fun m ↦ ⟨K.fill pl(#(.int m)), σ'⟩
+  have hlft : Function.Injective lft := fun n n' h ↦ by simpa [lft] using h
+  have hrgt : Function.Injective rgt := fun m m' h ↦ by
+    simpa [rgt] using Ectx.fill_injective K ((Cfg.mk.injEq ..).mp h).1
+  let lift (S : Int → Int → Prop) : Cfg rT → Cfg rT → Prop :=
+    fun ρ ρ' ↦ ∃ n m, S n m ∧ ρ = lft n ∧ ρ' = rgt m
+  have hcost {n m : Int} (h : S₁ n m ∨ S₂ n m) :
+      Cfg.drawCost σ σ' K (choiceCost S₁ S₂ P ε₂ ε₂' δ₂) (lft n) (rgt m) =
+        choiceBudget P ε₂ ε₂' δ₂ n := by
+    rw [Cfg.drawCost_apply, choiceCost, ite_eq_left h]
+  refine ⟨ε₁, δ₁, ε₁', δ₁', ε₂, ε₂', δ₂, lift S₁, lift S₂, lft '' P, rgt '' T,
+    (P.to_countable.image _).measurableSet, (T.to_countable.image _).measurableSet,
+    inferInstance, inferInstance,
+    h₁.map (fun n m h ↦ ⟨n, m, h, rfl, rfl⟩) .of_discrete .of_discrete,
+    h₂.map (fun n m h ↦ ⟨n, m, h, rfl, rfl⟩) .of_discrete .of_discrete, ?_, ?_, ?_, ?_, le_rfl⟩
+  · rintro _ _ ⟨n, hn, rfl⟩ ⟨n', m, hS, hn', rfl⟩
+    obtain rfl := hlft hn'
+    exact ⟨m, hPT₁ _ _ hn hS, rfl⟩
+  · rintro _ _ hn ⟨n, m, hS, rfl, rfl⟩ ⟨m', hm', hmm⟩
+    obtain rfl := hrgt hmm
+    exact hPT₂ _ _ (fun h ↦ hn ⟨n, h, rfl⟩) hS hm'
+  · rintro _ _ ⟨n, hn, rfl⟩ ⟨n', m, hS, hn', rfl⟩
+    obtain rfl := hlft hn'
+    rw [hcost (.inl hS), choiceBudget, ite_eq_left hn]
+  · rintro _ _ hn ⟨n, m, hS, rfl, rfl⟩
+    rw [hcost (.inr hS), choiceBudget, ite_eq_right fun h ↦ hn ⟨n, h, rfl⟩]
+
+/-- Couple `rand N ~ K[rand N]` by the DP choice rule, spending the choice budget and handing
+`choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
+theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (HN : 0 < N)
+    (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
+    (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
+    (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
+    (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞))
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
+    (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
+      ⤇ K.fill pl(#(.int r')) -∗ Φ (.int r)) ⊢
+    wp (codensity dp) E pl(rand(#(.int N), #(.unit))) Φ := by
+  iintro ⟨Hj, Hc, Hcnt⟩
+  iapply wp_couple_rand_rand_law BindLaw.dpChoice N HN _ _ hc K
+    (fun σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂) (fun _ _ _ _ _ ↦ trivial)
+  iframe Hj Hc
+  iintro %n %m %hR
+  obtain ⟨hS, hcost⟩ := choiceCost_of_lt_top hR
+  rw [hcost]
+  iapply Hcnt $$ %n %m %hS
+
+/-- Couple `rand N ~ rand N` by the DP choice rule, spending the choice budget and handing
+`choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
+theorem refines_couple_rands_dpChoice {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF}
+    (N : Int) (HN : 0 < N)
+    (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
+    (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
+    (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
+    (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) :
+    iprop%
+    ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
+    (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
+      refines (codensity dp) E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
+    refines (codensity dp) E (K.fill pl(rand(#(.int N), #(.unit))))
+      (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
+  iintro ⟨Hc, Hcnt⟩
+  iapply refines_couple_rands_law BindLaw.dpChoice N HN _ _ hc
+    (fun K σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂) (fun _ _ _ _ _ ↦ trivial)
+  iframe Hc
+  iintro %n %m %hR
+  obtain ⟨hS, hcost⟩ := choiceCost_of_lt_top hR
+  rw [hcost]
+  iapply Hcnt $$ %n %m %hS
+
+end Choice
 
 end ProbLang

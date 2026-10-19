@@ -1,7 +1,7 @@
 module
 
 public import Metrology.Code.PublicChoice
-public import Metrology.Micrometer.ChoiceRules
+public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.Examples.RandomizedResponse
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod

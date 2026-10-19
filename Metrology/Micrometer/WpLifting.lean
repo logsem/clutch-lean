@@ -101,8 +101,8 @@ theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) {E : CoPset} {e₁ : 
 
 /-- `wp_lift_prim_steps_coupl` by a step of any bind law whose heads shift: the step's head is at
 `b₁`, and `b₂` rides through it on every leftover (Rocq `wp_couple_spend`). -/
-theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
+theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] {E : CoPset}
+    {e₁ : Exp rT} {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
       stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
       |={E, ∅}=> ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
