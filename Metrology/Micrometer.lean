@@ -35,6 +35,7 @@ public import Metrology.Micrometer.Fundamental
 public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.AdequacyTV
+public import Metrology.Micrometer.BinLogRelatedCtx
 public import Metrology.Micrometer.Soundness
 public import Metrology.Micrometer.Mechanism
 public import Metrology.Micrometer.Examples
