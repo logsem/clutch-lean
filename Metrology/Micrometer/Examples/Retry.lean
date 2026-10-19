@@ -1,0 +1,78 @@
+module
+
+public import Metrology.Code.Retry
+public import Metrology.Micrometer.SpecAdvRules
+public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.RelTactics
+public import Metrology.Couplings.Divergences.Tv
+import Metrology.ProbLang.Syntax.Notation
+
+@[expose] public section
+
+/-! # Amplification: flipping a coin until heads returns `0` almost surely
+
+The spec runs `retry` against the value `0`. Each flip moves a credit `↯b ε` onto tails as
+`↯b (2ε)` and onto heads as nothing; amplification (`refines_ind_amp`) turns any positive credit
+into the absorbing `↯b 1`, so the refinement needs no budget at all. -/
+
+open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open scoped ENNReal
+
+namespace ProbLang
+namespace Retry
+
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+
+/-- Credits on the two flips: nothing on heads, `2ε` on tails. -/
+noncomputable def flipCredit (ε : ℝ≥0∞) (n : Int) : ℝ≥0∞ :=
+  if n = 0 then 0 else ((2 : NNReal) : ℝ≥0∞) * ε
+
+theorem flipCredit_avg (ε : ℝ≥0∞) :
+    (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int).toNat ≤ ε := by
+  rw [show Finset.Ico (0 : Int) 2 = {0, 1} by decide]
+  simp [flipCredit]
+  exact ENNReal.div_le_of_le_mul (mul_comm _ _).le
+
+/-- The value `0` refines `retry`, with no budget: the spec terminates almost surely. -/
+theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    [BudgetCreditGS ℝ≥0∞ GF] :
+    ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
+  iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
+    (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by
+      rw [ENNReal.add_halves]⟩)
+    (fun b hb ↦ ⟨b, hb, le_rfl⟩) absorbing_codensity_tv_one (by norm_num)
+  simp only [OrderAddMonoidHom.coe_id, id_eq]
+  iintro !> %ε %_ #IH Hε
+  by_cases h1 : 1 ≤ ε
+  · iapply refines_of_absorbing (absorbing_codensity_tv_one.mono h1) $$ Hε
+  simp only [retry]
+  rel_pures_r
+  rel_apply_r (refines_randU_r_adv (s := .id ℝ≥0∞) 2 (by norm_num) ε (flipCredit ε)
+    (flipCredit_avg ε) (IsAddRegular.of_ne_top (by simpa using (not_le.1 h1).ne_top)).1)
+  simp only [OrderAddMonoidHom.coe_id, id_eq]
+  iframe Hε
+  iintro %n %hn Hn
+  by_cases h0 : n = 0
+  · subst h0
+    rel_pures_r
+    rel_values
+  · have : n = 1 := by omega
+    subst this
+    simp only [flipCredit, one_ne_zero, ↓reduceIte]
+    -- Test the coin and stop at the recursive call.
+    rel_pure_r 2
+    ispecialize IH $$ Hn
+    -- Refold the recursive call as `retry`.
+    rel_bind_r (retry (rT := rT))
+    simp only [Ectx.fill_nil, retry]
+    iexact IH
+
+/-- On every event, `retry` is at least as likely as the value `0`. -/
+theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
+    limExecV ⟨pl(#0), σ⟩ S ≤ limExecV ⟨retry, σ'⟩ S := by
+  simpa using tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (L := codensity tv)
+    (fun _ _ ↦ lrel_int) _ _ σ σ' 0 (fun _ _ ↦ lrel_int_car_eq)
+    fun _ _ ↦ by iintro -; iapply zero_refines_retry) S hS
+
+end Retry
+end ProbLang

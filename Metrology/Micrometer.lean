@@ -10,6 +10,8 @@ public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.Interp
 public import Metrology.Micrometer.AppRelRules
+public import Metrology.Micrometer.ChoiceRules
+public import Metrology.Micrometer.SpecAdvRules
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.Compatibility
 public import Metrology.Micrometer.Fundamental
@@ -25,6 +27,12 @@ public import Metrology.Micrometer.Examples.RandomizedResponse
 public import Metrology.Micrometer.Examples.RandomizedResponseZcdp
 public import Metrology.Micrometer.Examples.RandomizedResponseLoop
 public import Metrology.Micrometer.Examples.GaussianZcdp
+public import Metrology.Micrometer.Examples.SkipZero
+public import Metrology.Micrometer.Examples.AbsorbingExit
+public import Metrology.Micrometer.Examples.Presample
+public import Metrology.Micrometer.Examples.PublicChoice
+public import Metrology.Micrometer.Examples.Retry
+public import Metrology.Micrometer.Examples.NoisyCount
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 

@@ -10,6 +10,11 @@ public import Metrology.Code.ContinuousOTP
 public import Metrology.Code.RandomizedResponse
 public import Metrology.Code.RandomizedResponseTwice
 public import Metrology.Code.RandomizedResponseLoop
+public import Metrology.Code.SkipZero
+public import Metrology.Code.Presample
+public import Metrology.Code.PublicChoice
+public import Metrology.Code.Retry
+public import Metrology.Code.NoisyCount
 public import Metrology.Code.GaussianRelease
 
 @[expose] public section

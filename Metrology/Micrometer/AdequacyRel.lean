@@ -45,6 +45,23 @@ theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val r
     (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
   rfl
 
+/-- `lrel_int` relates only equal values. -/
+theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+
+/-- A product of relations between equal values relates only equal values. -/
+theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    {A A' : lrel rT GF} (hA : ∀ v v', ⊢@{IProp GF} A.car v v' -∗ ⌜v = v'⌝)
+    (hA' : ∀ v v', ⊢@{IProp GF} A'.car v v' -∗ ⌜v = v'⌝) (v v' : Val rT) :
+    ⊢@{IProp GF} (lrel_prod A A').car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_prod
+  iintro ⟨%a, %a', %b, %b', %h, %h', Ha, Hb⟩
+  ihave %rfl := hA a a' $$ Ha
+  ihave %rfl := hA' b b' $$ Hb
+  ipureintro
+  exact Val.ext (h.trans h'.symm)
+
 end Spec
 
 section Coupling
