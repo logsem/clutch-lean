@@ -79,6 +79,20 @@ noncomputable def dpLhs : BindLaw (codensity dp.{u}) where
     simpa [Set.piecewise_eq_of_mem _ _ _ hx] using hR x y hxy
   side_supp _ := trivial
 
+/-- The left-keyed head survives adding a budget to every leftover and to the output, since `μ` has
+mass at most one (Rocq `gbl_head_shift`; no Rocq instance). -/
+instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
+  shift := by
+    rintro _ _ _ _ _ ⟨c₁, c₂⟩ _ μ _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩
+    refine ⟨ε₁, ε₂ + c₁, δ₁, fun x ↦ D x + c₂, S, hD.add_const _, hμ, hν, hS,
+      fun x y h ↦ by simp [hR x y h], ?_⟩
+    obtain ⟨hb₁, hb₂⟩ := Prod.mk_le_mk.1 hb
+    refine Prod.mk_le_mk.2 ⟨by rw [← add_assoc]; gcongr, ?_⟩
+    rw [lintegral_add_right _ measurable_const, lintegral_const, ← add_assoc]
+    calc δ₁ + ∫⁻ x, D x ∂μ + c₂ * μ Set.univ ≤ δ₁ + ∫⁻ x, D x ∂μ + c₂ * 1 := by
+          gcongr; exact hμ.measure_univ_le_one
+      _ ≤ _ := by rw [mul_one]; gcongr
+
 /-! ## DP choice -/
 
 /-- The head of the DP choice rule: two DP liftings of the same pair, chosen by a measurable left
@@ -127,6 +141,20 @@ noncomputable def dpChoice : BindLaw (codensity dp.{u}) where
     · simpa [Set.piecewise_eq_of_mem _ _ _ hxA] using hR₁ x y hx h
     · simpa [Set.piecewise_eq_of_mem _ _ _ hxA] using hR₂ x y hx h
   side_supp _ := trivial
+
+/-- The choice head survives adding a budget to every leftover and to the output (Rocq
+`GBL_DP_choice_head_shift`). -/
+instance headShift_dpChoice : (dpChoice.{u}).HeadShift where
+  shift := by
+    rintro _ _ _ _ _ ⟨c₁, c₂⟩ _ _ _ _ ⟨ε₁, δ₁, ε₁', δ₁', ε₂, ε₂', δ₂, S₁, S₂, P, T, hP, hT, hμ, hν,
+      h₁, h₂, hPT₁, hPT₂, hR₁, hR₂, hb⟩
+    refine ⟨ε₁, δ₁, ε₁', δ₁', ε₂ + c₁, ε₂' + c₁, δ₂ + c₂, S₁, S₂, P, T, hP, hT, hμ, hν, h₁, h₂,
+      hPT₁, hPT₂, fun x y hx h ↦ by simp [hR₁ x y hx h], fun x y hx h ↦ by simp [hR₂ x y hx h],
+      ?_⟩
+    obtain ⟨hb₁, hb₂⟩ := Prod.mk_le_mk.1 hb
+    refine Prod.mk_le_mk.2 ⟨?_, by rw [← add_assoc]; gcongr⟩
+    rw [← add_assoc, ← add_assoc, max_add_add_right]
+    gcongr
 
 /-! ## Escort-adaptive Rényi -/
 
