@@ -2,7 +2,7 @@ module
 
 public import Metrology.Micrometer.CompatibilityState
 public import Metrology.Micrometer.ContinuousSampler
-public import Metrology.Micrometer.Interp
+public import Metrology.Micrometer.BinLogRelated
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section

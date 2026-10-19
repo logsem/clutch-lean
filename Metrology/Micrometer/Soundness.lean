@@ -4,7 +4,7 @@ public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.AdequacyRel
-public import Metrology.Micrometer.Interp
+public import Metrology.Micrometer.BinLogRelated
 public import Metrology.Micrometer.Fundamental
 public import Metrology.ProbLang.ContextualRefinement
 public import Metrology.Couplings.Divergences.Dp
