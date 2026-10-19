@@ -7,7 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response
 
-Proved differentially private in `Micrometer/Examples/RandomizedResponse`. -/
+Proved differentially private in `Micrometer/Examples/RandomizedResponse/Dp`. -/
 
 namespace ProbLang
 namespace RandomizedResponse

@@ -2,7 +2,7 @@ module
 
 public import Metrology.Code.PublicChoice
 public import Metrology.Micrometer.CouplingRulesLaw
-public import Metrology.Micrometer.Examples.RandomizedResponse
+public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
 

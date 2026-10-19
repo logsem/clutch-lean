@@ -1,7 +1,7 @@
 module
 
 public import Metrology.Micrometer.Soundness
-public import Metrology.Micrometer.Examples.RandomizedResponse
+public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 
 @[expose] public section
 

@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Adaptive randomized response
 
-Proved Rényi private with the escort law in `Micrometer/Examples/RandomizedResponseAdaptive`. -/
+Proved Rényi private with the escort law in
+`Micrometer/Examples/RandomizedResponse/Adaptive`. -/
 
 namespace ProbLang
 namespace RandomizedResponse

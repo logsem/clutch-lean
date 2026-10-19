@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response on two bits
 
-Proved zero-concentrated differentially private in `Micrometer/Examples/RandomizedResponseZcdp`. -/
+Proved zero-concentrated differentially private in
+`Micrometer/Examples/RandomizedResponse/Twice`. -/
 
 namespace ProbLang
 namespace RandomizedResponse
