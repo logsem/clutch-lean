@@ -322,21 +322,22 @@ theorem tendsto_fDiv_bind_disc (hf : ConvexOn ℝ (Ici 0) f)
     (fun _ ↦ ENNReal.toReal_nonneg) (fun _ ↦ ENNReal.toReal_nonneg) (hzero hκ μ₁ cell_fst)
     (hzero hη μ₂ cell_snd)
 
-/-- A chain rule between finite spaces holds between all spaces: approximate the input by finite
-pushforwards, discretise it, and use data processing (Thm. 4.6). -/
-theorem fDiv_comp_le_of_finite (hf : ConvexOn ℝ (Ici 0) f)
+/-- A chain rule between finite spaces for kernel pairs whose pointwise masses satisfy `Q` holds
+between all spaces for such pairs: approximate the input by finite pushforwards, discretise it,
+and use data processing; both steps keep the pointwise masses (Thm. 4.6). -/
+theorem fDiv_comp_le_of_finite_of_mass (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hg : ConvexOn ℝ (Ici 0) g)
     (hg_cont : ContinuousWithinAt g (Ici 0) 0) (hh : ConvexOn ℝ (Ici 0) h)
     (hh_cont : ContinuousWithinAt h (Ici 0) 0) {chain : EReal → EReal → EReal}
-    (hchain : ∀ ⦃a a' b b'⦄, a ≤ a' → b ≤ b' → chain a b ≤ chain a' b')
+    (hchain : ∀ ⦃a a' b b'⦄, a ≤ a' → b ≤ b' → chain a b ≤ chain a' b') (Q : ℝ≥0∞ → ℝ≥0∞ → Prop)
     (hfin : ∀ {M N : ℕ} [NeZero M] {μ₁ μ₂ : Measure (ULift.{u} (Fin M))}
       [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
       {κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))} [IsSubMarkovKernel κ]
-      [IsSubMarkovKernel η],
+      [IsSubMarkovKernel η], (∀ i, Q (κ i univ) (η i univ)) →
       fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ chain (fDiv g μ₁ μ₂) (⨆ i, fDiv h (κ i) (η i)))
     {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] [Nonempty X] {μ₁ μ₂ : Measure X}
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂] (κ η : Kernel X Y)
-    [IsSubMarkovKernel κ] [IsSubMarkovKernel η] :
+    [IsSubMarkovKernel κ] [IsSubMarkovKernel η] (hQ : ∀ x, Q (κ x univ) (η x univ)) :
     fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ chain (fDiv g μ₁ μ₂) (⨆ x, fDiv h (κ x) (η x)) := by
   rw [fDiv_eq_iSup_map hf hf_cont]
   refine iSup_le fun N ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
@@ -354,11 +355,31 @@ theorem fDiv_comp_le_of_finite (hf : ConvexOn ℝ (Ici 0) f)
           bind_map_eq μ₂ hd ((η.map k).comap _ he).measurable]
         rfl
     _ ≤ chain (fDiv g (μ₁.map d) (μ₂.map d))
-          (⨆ j, fDiv h ((κ.map k).comap _ he j) ((η.map k).comap _ he j)) := hfin
+          (⨆ j, fDiv h ((κ.map k).comap _ he j) ((η.map k).comap _ he j)) := hfin fun j ↦ by
+        simpa [Kernel.comap_apply, Kernel.map_apply _ hk, Measure.map_apply hk MeasurableSet.univ]
+          using hQ _
     _ ≤ chain (fDiv g μ₁ μ₂) (⨆ x, fDiv h (κ x) (η x)) := by
         refine hchain (fDiv_map_le hg hg_cont hd) (iSup_le fun j ↦ ?_)
         simp only [Kernel.comap_apply, Kernel.map_apply _ hk]
         exact (fDiv_map_le hh hh_cont hk).trans (le_iSup (fun x ↦ fDiv h (κ x) (η x)) _)
+
+/-- A chain rule between finite spaces holds between all spaces (Thm. 4.6). -/
+theorem fDiv_comp_le_of_finite (hf : ConvexOn ℝ (Ici 0) f)
+    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hg : ConvexOn ℝ (Ici 0) g)
+    (hg_cont : ContinuousWithinAt g (Ici 0) 0) (hh : ConvexOn ℝ (Ici 0) h)
+    (hh_cont : ContinuousWithinAt h (Ici 0) 0) {chain : EReal → EReal → EReal}
+    (hchain : ∀ ⦃a a' b b'⦄, a ≤ a' → b ≤ b' → chain a b ≤ chain a' b')
+    (hfin : ∀ {M N : ℕ} [NeZero M] {μ₁ μ₂ : Measure (ULift.{u} (Fin M))}
+      [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
+      {κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))} [IsSubMarkovKernel κ]
+      [IsSubMarkovKernel η],
+      fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ chain (fDiv g μ₁ μ₂) (⨆ i, fDiv h (κ i) (η i)))
+    {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] [Nonempty X] {μ₁ μ₂ : Measure X}
+    [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂] (κ η : Kernel X Y)
+    [IsSubMarkovKernel κ] [IsSubMarkovKernel η] :
+    fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂) ≤ chain (fDiv g μ₁ μ₂) (⨆ x, fDiv h (κ x) (η x)) :=
+  fDiv_comp_le_of_finite_of_mass hf hf_cont hg hg_cont hh hh_cont hchain (fun _ _ ↦ True)
+    (fun _ ↦ hfin) κ η fun _ ↦ trivial
 
 /-! ## Additive chain rules from split perspectives -/
 
