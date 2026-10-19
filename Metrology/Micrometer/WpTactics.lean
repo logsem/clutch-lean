@@ -444,6 +444,10 @@ opaque leaves; without it they accumulate and every later step re-`whnf`s them. 
 macro "tp_pure" : tactic =>
   `(tactic| (tp_pure_core; try simp only [pl_step_simp]))
 
+/-- `tp_pure n` takes exactly `n` pure steps on the `⤇` hypothesis. -/
+macro "tp_pure " n:num : tactic =>
+  `(tactic| iterate $n (tp_pure_core; try simp only [pl_step_simp]))
+
 /-- `tp_pures` takes pure steps on the `⤇` hypothesis until none applies. -/
 macro "tp_pures" : tactic =>
   `(tactic| ((repeat (tp_pure_core; try simp only [pl_step_simp]));

@@ -9,6 +9,7 @@ public import Metrology.Code.OTP
 public import Metrology.Code.ContinuousOTP
 public import Metrology.Code.RandomizedResponse
 public import Metrology.Code.RandomizedResponseTwice
+public import Metrology.Code.RandomizedResponseLoop
 public import Metrology.Code.GaussianRelease
 
 @[expose] public section

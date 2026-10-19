@@ -835,9 +835,19 @@ meta def delabExpFix : Delab := do
     let cExpr ← mkConstWithFreshMVarLevels c
     let (mvars, _, _) ← forallMetaTelescopeReducing (← inferType cExpr)
     isDefEq e (mkAppN cExpr mvars)
+  -- The matched application `c a₁ … aₙ`, when its arguments are determined.
+  let matchApp (c : Name) : DelabM (Option Lean.Expr) := withNewMCtxDepth do
+    let cExpr ← mkConstWithFreshMVarLevels c
+    let (mvars, _, _) ← forallMetaTelescopeReducing (← inferType cExpr)
+    unless ← isDefEq e (mkAppN cExpr mvars) do return none
+    let app ← instantiateMVars (mkAppN cExpr mvars)
+    return if app.hasMVar then some cExpr else some app
   for c in (plFoldExt.getState env).toList do
-    if ← matchesConst c then
-      return ← `(pl(&$(mkIdent (← unresolveNameGlobal c))))
+    if let some app ← matchApp c then
+      let stx ← if app.isConst then pure ⟨mkIdent (← unresolveNameGlobal c)⟩
+        else Lean.PrettyPrinter.delab app
+      if let `($i:ident) := stx then return ← `(pl(&$i))
+      return ← `(pl(&($stx)))
   for (c, names) in (plBinderNamesExt.getState env).toList do
     if ← matchesConst c then
       let (args, body) ← descendNamed names.toList

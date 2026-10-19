@@ -74,6 +74,8 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
   | zero =>
     iintro ⟨Hj, -, H⟩
     simp only [release]
+    wp_pures
+    tp_pures
     wp_value
     imodintro
     iapply H
@@ -84,6 +86,10 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     iintro ⟨Hj, Hb, H⟩
     icases BudgetCredit.split $$ Hb with ⟨Hb₁, Hb₂⟩
     simp only [release]
+    -- Unfold one iteration on each side, stopping at the recursive call.
+    wp_pure 6
+    tp_pure 6
+    rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
     wp_bind (release gauss a k)
     tp_bind (release gauss a' k)
     iapply ih

@@ -316,6 +316,13 @@ macro "rel_pure_l" focus:(ppSpace colGt term:max)? : tactic =>
 macro "rel_pure_r" focus:(ppSpace colGt term:max)? : tactic =>
   `(tactic| (rel_pure_r_core $[$focus]?; rel_finish))
 
+/-- `rel_pure_l n` takes exactly `n` pure steps on the left, e.g. to unfold one iteration of a
+loop and stop at its recursive call. -/
+macro "rel_pure_l " n:num : tactic => `(tactic| iterate $n rel_pure_l)
+
+/-- `rel_pure_r n` takes exactly `n` pure steps on the right. -/
+macro "rel_pure_r " n:num : tactic => `(tactic| iterate $n rel_pure_r)
+
 /-- `rel_pures_l` takes pure steps on the left until none applies (Rocq `rel_pures_l`). -/
 macro "rel_pures_l" : tactic => `(tactic| repeat rel_pure_l)
 
