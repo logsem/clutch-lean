@@ -16,8 +16,7 @@ open scoped ENNReal
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp zcdpDivergence zcdpLifting)
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 /-! ## The program logic proof -/
 
@@ -33,7 +32,7 @@ both sides report the same bit. -/
 theorem wp_rr_step (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
     ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#(.bool c)) -∗ Φ (.bool c)) ⊢
       wp zcdpLifting ⊤ (rr b) Φ :=
-  wp_rr_of budget isAddLeftRegular_budget rr_zcdp_coupling K b b' Φ
+  wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp K b b' Φ
 
 /-- The two-bit program against the spec in context `K`, spending `(ln 3, 0)` per bit: both
 sides report the same pair. -/
@@ -93,14 +92,14 @@ theorem rr2_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   simp only [rr2]
   rel_bind (rr b₁) (rr b₁')
   isplitl [Hb₁]
-  · iapply rr_refines_of _ isAddLeftRegular_budget rr_zcdp_coupling b₁ b₁' $$ Hb₁
+  · iapply rr_refines_of _ isAddLeftRegular_budget rrCoupling_zcdp b₁ b₁' $$ Hb₁
   iintro %v %v' Hv
   iunfold lrel_bool at Hv
   icases Hv with ⟨%c₁, %⟨rfl, rfl⟩⟩
   rel_pures
   rel_bind (rr b₂) (rr b₂')
   isplitl [Hb₂]
-  · iapply rr_refines_of _ isAddLeftRegular_budget rr_zcdp_coupling b₂ b₂' $$ Hb₂
+  · iapply rr_refines_of _ isAddLeftRegular_budget rrCoupling_zcdp b₂ b₂' $$ Hb₂
   iintro %w %w' Hw
   iunfold lrel_bool at Hw
   icases Hw with ⟨%c₂, %⟨rfl, rfl⟩⟩
@@ -183,5 +182,4 @@ theorem rr2_DP (σ : State rT) {δ : ℝ} (hδ : 0 < δ) :
     (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) :=
   fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

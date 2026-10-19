@@ -24,8 +24,7 @@ open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (expBudget expBudget_of_ne_top)
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 /-! ## The reported bit -/
 
@@ -36,15 +35,18 @@ open MeasureTheory ProbabilityTheory
 /-- The reported bit as a function of the draw. -/
 def rrOut (b : Bool) (r : Int) : Bool := if r < 3 then b else !b
 
-theorem unifInt_four_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) :
-    unifInt 4 (by norm_num) {k} = 4⁻¹ := by
-  rw [unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
+/-- The draw of one round, uniform on `{0, 1, 2, 3}`. -/
+noncomputable abbrev draw : Measure Int :=
+  unifInt 4 (by norm_num)
+
+theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹ := by
+  rw [draw, unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
     PMF.uniformOfFinset_apply_of_mem _ (Finset.mem_Ico.2 ⟨h0, h4⟩)]
   rfl
 
 /-- One round reports its bit with probability `3/4`. -/
 theorem map_rrOut_singleton (b c : Bool) :
-    (unifInt 4 (by norm_num)).map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
+    draw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
   rw [Measure.map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
     show Finset.Ico (0 : Int) 4 = {0, 1, 2, 3} by decide]
   cases b <;> cases c <;> norm_num [rrOut, Set.indicator, Finset.filter_insert,
@@ -57,28 +59,27 @@ theorem rrOut_zero_three (b c : Bool) :
   decide +revert
 
 /-- One fiber of the reported bit misses a draw, so it has mass at most `3/4`. -/
-theorem rrOut_fiber_le (b c : Bool) : unifInt 4 (by norm_num) (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
+theorem rrOut_fiber_le (b c : Bool) : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
   obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k ≠ c := by
     rcases rrOut_zero_three b c with ⟨-, h⟩ | ⟨-, h⟩
     · exact ⟨3, by norm_num, by norm_num, h⟩
     · exact ⟨0, by norm_num, by norm_num, h⟩
-  calc _ ≤ unifInt 4 (by norm_num) {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
+  calc _ ≤ draw {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
     _ = 1 - 4⁻¹ := by
-        rw [prob_compl_eq_one_sub (measurableSet_singleton k), unifInt_four_singleton hk0 hk4]
+        rw [prob_compl_eq_one_sub (measurableSet_singleton k), draw_singleton hk0 hk4]
 
 /-- Every fiber of the reported bit contains a draw, so it has mass at least `1/4`. -/
-theorem rrOut_fiber_ge (b c : Bool) : 4⁻¹ ≤ unifInt 4 (by norm_num) (rrOut b ⁻¹' {c}) := by
+theorem rrOut_fiber_ge (b c : Bool) : 4⁻¹ ≤ draw (rrOut b ⁻¹' {c}) := by
   obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k = c := by
     rcases rrOut_zero_three b c with ⟨h, -⟩ | ⟨h, -⟩
     · exact ⟨0, by norm_num, by norm_num, h⟩
     · exact ⟨3, by norm_num, by norm_num, h⟩
-  rw [← unifInt_four_singleton hk0 hk4]
+  rw [← draw_singleton hk0 hk4]
   exact measure_mono (Set.singleton_subset_iff.2 hk)
 
 /-- Each fiber's mass under one bit is at most three times its mass under the other. -/
 theorem rrOut_fiber_le_three (b b' c : Bool) :
-    unifInt 4 (by norm_num) (rrOut b ⁻¹' {c}) ≤
-      3 * unifInt 4 (by norm_num) (rrOut b' ⁻¹' {c}) :=
+    draw (rrOut b ⁻¹' {c}) ≤ 3 * draw (rrOut b' ⁻¹' {c}) :=
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := by
         rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
@@ -87,8 +88,7 @@ theorem rrOut_fiber_le_three (b b' c : Bool) :
 
 /-- The `α`-th moment between rounds on different bits is `(3^α + 3^{1-α}) / 4`. -/
 theorem fDiv_rrOut {α : ℝ} (hα : 1 < α) (b : Bool) :
-    fDiv (· ^ α) ((unifInt 4 (by norm_num)).map (rrOut b))
-      ((unifInt 4 (by norm_num)).map (rrOut !b)) = (((3 ^ α + 3 ^ (1 - α)) / 4 : ℝ) : EReal) := by
+    fDiv (· ^ α) (draw.map (rrOut b)) (draw.map (rrOut !b)) = ((3 ^ α + 3 ^ (1 - α)) / 4 : ℝ) := by
   rw [fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero (by linarith)),
     Fintype.sum_bool, map_rrOut_singleton, map_rrOut_singleton, map_rrOut_singleton,
     map_rrOut_singleton, Real.rpow_sub (by norm_num), Real.rpow_one]
@@ -115,6 +115,10 @@ noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.
 theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 /-! ## The program logic, in any lifting -/
+
+/-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`. -/
+def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
+  ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
@@ -144,8 +148,7 @@ theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp
 draws at `c`: both sides report the same bit. -/
 theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
     (hc : IsAddLeftRegular c)
-    (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)))
+    (hcpl : RRCoupling L c)
     (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
     ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#(.bool d)) -∗ Φ (.bool d)) ⊢
       wp L ⊤ (rr b) Φ := by
@@ -176,8 +179,7 @@ variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS 
 at `c`. -/
 theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
     (hc : IsAddLeftRegular c)
-    (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num))) (b b' : Bool) :
+    (hcpl : RRCoupling L c) (b b' : Bool) :
     ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
   rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
@@ -234,8 +236,7 @@ noncomputable abbrev rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsSupportLocal] [L.HasBind] [L.IsZeroLeft]
   [L.IsLeftContinuous] [L.IsBudgetClosed] (c : B) (hc : IsAddLeftRegular c)
-  (hcpl : ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r')
-    (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)))
+  (hcpl : RRCoupling L c)
 include hc hcpl
 
 /-- `k` rounds couple equal outputs at `k • c`, given a coupling of one round's draws at `c`. -/
@@ -258,5 +259,4 @@ theorem rrCount_isPrivate {D : GradedDivergence.{0} B} [L.IsSound D] (k : ℕ) (
 
 end Adequacy
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

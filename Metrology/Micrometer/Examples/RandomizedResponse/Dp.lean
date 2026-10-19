@@ -13,16 +13,12 @@ open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity codensity_dp_of_fiber dp_iff)
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
-/-- The two draws couple along equal reports at privacy budget `(ln 3, 0)`. -/
-theorem rr_coupling (b b' : Bool) :
-    (codensity dp).Rel budget (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)) :=
-  codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦ by
-    rw [expBudget_log_three]
-    exact rrOut_fiber_le_three b b' c
+/-- One round couples at `(ln 3, 0)`: each report is at most three times likelier under one bit. -/
+theorem rrCoupling_dp : RRCoupling (codensity dp) budget := fun b b' ↦
+  codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦
+    expBudget_log_three ▸ rrOut_fiber_le_three b b' c
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
@@ -33,7 +29,7 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
       wp (codensity dp) ⊤ (rr b) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
-  iapply wp_rr_of budget isAddLeftRegular_budget rr_coupling
+  iapply wp_rr_of budget isAddLeftRegular_budget rrCoupling_dp
   iframe Hj Hb
   iintro %d Hj
   iapply spec_fill_nil_exists (.bool d) $$ Hj
@@ -42,7 +38,7 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
 theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
     ⊢@{IProp GF} ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
-  rr_refines_of budget isAddLeftRegular_budget rr_coupling b b'
+  rr_refines_of budget isAddLeftRegular_budget rrCoupling_dp b b'
 
 /-- Randomized response is `(ln 3, 0)`-DP for any two private bits, through `wp_rr`. -/
 theorem rr_dp (b b' : Bool) (σ σ' : State rT) :
@@ -67,7 +63,6 @@ theorem rr_DP (σ : State rT) : (rrMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3))
 theorem rrCount_DP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).DP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
   simpa [nsmul_eq_mul] using
-    rrCount_isPrivate (L := codensity dp) budget isAddLeftRegular_budget rr_coupling k σ
+    rrCount_isPrivate (L := codensity dp) budget isAddLeftRegular_budget rrCoupling_dp k σ
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

@@ -13,8 +13,18 @@ One round costs `ρ_α = log ((3^α + 3^{1-α}) / 4) / (α - 1)` at order `α`, 
 open GradedLifting GradedDivergence
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
+
+variable {α : ℝ} [hα : Fact (1 < α)]
+
+/-- A Rényi bound between the reports on different bits couples the draws: condition on the
+report. -/
+theorem rrCoupling_of_renyi {ρ : ℝ≥0∞}
+    (h : ∀ b, renyiDivergence α ρ (draw.map (rrOut b)) (draw.map (rrOut !b))) :
+    RRCoupling (codensity (renyiDivergence α)) ρ := fun b b' ↦
+  codensity_renyi_rel_of_map .of_discrete .of_discrete <| by
+    rcases Bool.eq_or_eq_not b' b with rfl | rfl
+    exacts [IsGraded.mono zero_le (IsReflexive.refl _), h b]
 
 /-- The Rényi divergence of order `α` between rounds on different bits. -/
 noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
@@ -25,31 +35,24 @@ noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
 theorem one_le_rrMoment {α : ℝ} (hα : 1 ≤ α) : 1 ≤ ((3 : ℝ) ^ α + 3 ^ (1 - α)) / 4 := by
   have ht : (3 : ℝ) ≤ 3 ^ α := by
     simpa using Real.rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 3) hα
-  have hpos : (0 : ℝ) < 3 ^ α := by positivity
   rw [Real.rpow_sub (by norm_num), Real.rpow_one, le_div_iff₀ (by norm_num), ← sub_nonneg,
     show 3 ^ α + 3 / 3 ^ α - 1 * 4 = ((3 : ℝ) ^ α - 1) * (3 ^ α - 3) / 3 ^ α by
       field_simp; ring]
-  exact div_nonneg (mul_nonneg (by linarith) (by linarith)) hpos.le
+  exact div_nonneg (mul_nonneg (by linarith) (by linarith)) (by positivity)
 
-variable (α : ℝ) [hα : Fact (1 < α)]
+/-- One round couples at `ρ_α`. -/
+theorem rrCoupling_renyi : RRCoupling (codensity (renyiDivergence α)) (rrRenyi α) :=
+  rrCoupling_of_renyi fun b ↦ by
+    have := one_le_rrMoment hα.out.le
+    rw [rrRenyi, renyiDivergence_iff_of_ne_top hα.out.le ENNReal.ofReal_ne_top, fDiv_rrOut hα.out,
+      ENNReal.toReal_ofReal (div_nonneg (Real.log_nonneg this) (by linarith [hα.out])),
+      mul_div_cancel₀ _ (by linarith [hα.out]), Real.exp_log (by linarith)]
 
-/-- The two draws couple along equal reports at `ρ_α`: condition on the reports. -/
-theorem rr_renyi_coupling (b b' : Bool) :
-    (codensity (renyiDivergence α)).Rel (rrRenyi α) (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)) := by
-  refine codensity_renyi_rel_of_map .of_discrete .of_discrete ?_
-  obtain rfl | rfl : b' = b ∨ b' = !b := by cases b <;> cases b' <;> simp
-  · exact IsGraded.mono (by simp) (IsReflexive.refl _)
-  have hX := one_le_rrMoment hα.out.le
-  rw [rrRenyi, renyiDivergence_iff_of_ne_top hα.out.le ENNReal.ofReal_ne_top, fDiv_rrOut hα.out,
-    ENNReal.toReal_ofReal (div_nonneg (Real.log_nonneg hX) (by linarith [hα.out])),
-    mul_div_cancel₀ _ (by linarith [hα.out]), Real.exp_log (by linarith)]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- `k` rounds are `(α, k ρ_α)`-RDP (Def. 2.3). -/
-theorem rrCount_RDP {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (k : ℕ)
-    (σ : State rT) : (rrCountMech k σ).RDP ⊤ α (k * rrRenyi α) := by
-  simpa [nsmul_eq_mul] using rrCount_isPrivate (L := codensity (renyiDivergence α)) (rrRenyi α)
-    (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 (rr_renyi_coupling α) k σ
+theorem rrCount_RDP (k : ℕ) (σ : State rT) : (rrCountMech k σ).RDP ⊤ α (k * rrRenyi α) :=
+  nsmul_eq_mul k (rrRenyi α) ▸
+    rrCount_isPrivate _ (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 rrCoupling_renyi k σ
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

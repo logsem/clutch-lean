@@ -12,8 +12,7 @@ One round couples at the curve `α ↦ ρ_α`, order by order, so `k` rounds are
 open MeasureTheory GradedLifting GradedDivergence
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 /-- The Rényi profile of one round, as a curve. -/
 noncomputable def rrCurve : RenyiBudget :=
@@ -23,17 +22,15 @@ noncomputable def rrCurve : RenyiBudget :=
 theorem isAddLeftRegular_rrCurve : IsAddLeftRegular rrCurve := fun _ _ h ↦
   funext fun α ↦ (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 (congrFun h α)
 
-/-- The two draws couple along equal reports at the curve: couple at each order. -/
-theorem rr_curve_coupling (b b' : Bool) :
-    (codensity renyiCurve).Rel rrCurve (fun r r' ↦ rrOut b r = rrOut b' r')
-      (unifInt 4 (by norm_num)) (unifInt 4 (by norm_num)) :=
+/-- One round couples at the curve, order by order. -/
+theorem rrCoupling_curve : RRCoupling (codensity renyiCurve) rrCurve := fun b b' ↦
   codensity_renyiCurve_iff.2 fun α ↦ by
     have hcost : (fun r r' ↦ (relCost (fun r r' ↦ rrOut b r = rrOut b' r') r r' : RenyiBudget) α) =
         relCost fun r r' ↦ rrOut b r = rrOut b' r' := by
       ext r r'
       by_cases h : rrOut b r = rrOut b' r' <;> simp [h]
     rw [hcost]
-    exact rr_renyi_coupling α b b'
+    exact rrCoupling_renyi (α := α) b b'
 
 /-- The Rényi profile of one round is at most `ln 3` at every order: `(3^α + 3^{1-α}) / 4` is at
 most `3^{α-1}`. -/
@@ -58,7 +55,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 theorem rrCount_curve (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k * rrRenyi α := by
   convert rrCount_isPrivate (L := codensity renyiCurve) (D := renyiCurve) rrCurve
-    isAddLeftRegular_rrCurve rr_curve_coupling k σ using 1
+    isAddLeftRegular_rrCurve rrCoupling_curve k σ using 1
   ext α
   simp [rrCurve]
 
@@ -72,5 +69,4 @@ theorem rrCount_zCDP_of_curve (k : ℕ) (σ : State rT) :
   exact IsGraded.mono (D := renyiCurve) (μ := limExecV ⟨rrCount b k, σ⟩)
     (ν := limExecV ⟨rrCount b' k, σ⟩) hle (rrCount_curve k σ h)
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

@@ -102,6 +102,24 @@ theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) 
   exact toENNReal.injective <| (ENNReal.mul_right_inj (by simp) (by simpa using hc)).1
     ((ENNReal.add_right_inj hc).1 h)
 
+/-- A real power budget, `0` below `0`. -/
+noncomputable def ofReal (c : ℝ) : PowerBudget :=
+  ofENNReal (ENNReal.ofReal c)
+
+@[simp]
+theorem toENNReal_ofReal (c : ℝ) : toENNReal (ofReal c) = ENNReal.ofReal c :=
+  rfl
+
+theorem isAddLeftRegular_ofReal (c : ℝ) : IsAddLeftRegular (ofReal c) :=
+  isAddLeftRegular_of_ne_top (by simp)
+
+/-- `k` composed budgets `c` are `(1 + c)^k - 1`. -/
+theorem nsmul_ofReal {c : ℝ} (hc : 0 ≤ c) (k : ℕ) : k • ofReal c = ofReal ((1 + c) ^ k - 1) := by
+  apply toENNReal.injective
+  rw [toENNReal_ofReal, ENNReal.ofReal_sub _ zero_le_one, ENNReal.ofReal_pow (by positivity),
+    ENNReal.ofReal_add zero_le_one hc, ENNReal.ofReal_one, ← toENNReal_ofReal c,
+    ← one_add_toENNReal_nsmul, ENNReal.add_sub_cancel_left ENNReal.one_ne_top]
+
 /-- Composing power budgets is monotone. -/
 instance instIsOrderedAddMonoid : IsOrderedAddMonoid PowerBudget where
   add_le_add_left a b h c := toENNReal.le_iff_le.1 <| by
@@ -245,6 +263,12 @@ theorem chi2Divergence_iff_renyi : chi2Divergence c μ ν ↔ renyiDivergence 2 
 theorem chi2Divergence_iff :
     chi2Divergence c μ ν ↔ fDiv (· ^ (2 : ℝ)) μ ν ≤ ((1 + toENNReal c : ℝ≥0∞) : EReal) :=
   powerDivergence_iff one_lt_two
+
+/-- A real power divergence bound is the `α`-th moment bound `∫ (dμ/dν)^α dν ≤ 1 + c`. -/
+theorem powerDivergence_ofReal_iff (hα : 1 < α) {c : ℝ} (hc : 0 ≤ c) :
+    powerDivergence α (ofReal c) μ ν ↔ fDiv (· ^ α) μ ν ≤ ((1 + c : ℝ) : EReal) := by
+  rw [powerDivergence_iff hα, toENNReal_ofReal, ← ENNReal.ofReal_one,
+    ← ENNReal.ofReal_add zero_le_one hc, EReal.coe_ennreal_ofReal, max_eq_left (by linarith)]
 
 /-! ## Instances -/
 
