@@ -17,17 +17,17 @@ open Std Iris Iris.Std COFE ProbLang
 
 variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
 
-instance : COFE (Exp rT) := COFE.ofDiscrete _
-instance : OFE.Discrete (Exp rT) := ⟨id⟩
-instance (x : Exp rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
+instance cofe_exp : COFE (Exp rT) := COFE.ofDiscrete _
+instance discrete_exp : OFE.Discrete (Exp rT) := ⟨id⟩
+instance discreteE_exp (x : Exp rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
-instance : COFE Tape := COFE.ofDiscrete _
-instance : OFE.Discrete Tape := ⟨id⟩
-instance (x : Tape) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
+instance cofe_tape : COFE Tape := COFE.ofDiscrete _
+instance discrete_tape : OFE.Discrete Tape := ⟨id⟩
+instance discreteE_tape (x : Tape) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
-instance : COFE (Val rT) := COFE.ofDiscrete _
-instance : OFE.Discrete (Val rT) := ⟨id⟩
-instance (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
+instance cofe_val : COFE (Val rT) := COFE.ofDiscrete _
+instance discrete_val : OFE.Discrete (Val rT) := ⟨id⟩
+instance discreteE_val (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
 abbrev SpecProg (α : Type _) [ProbLang.LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))

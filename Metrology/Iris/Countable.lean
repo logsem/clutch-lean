@@ -26,13 +26,13 @@ theorem Pos.toNat_ofNat (n : Nat) : (Pos.ofNat n).toNat = n + 1 := by
   | zero => rfl
   | succ k ih => simp [Pos.ofNat, Pos.toNat_succ, ih]
 
-instance : Pos.Countable Nat where
+instance posCountable_nat : Pos.Countable Nat where
   encode n := Pos.ofNat n
   decode p := some (p.toNat - 1)
   decode_encode n := by simp [Pos.toNat_ofNat]
 
 /-- Encode `Int` into `Nat` via the standard zigzag: `n ≥ 0 ↦ 2n`, `n < 0 ↦ -2n - 1`. -/
-instance : Pos.Countable Int where
+instance posCountable_int : Pos.Countable Int where
   encode z :=
     Pos.Countable.encode (A := Nat)
       (if 0 ≤ z then 2 * z.toNat else 2 * (-z - 1).toNat + 1)
@@ -50,7 +50,8 @@ instance : Pos.Countable Int where
       congr 1
       omega
 
-instance {A B : Type} [Pos.Countable A] [Pos.Countable B] : Pos.Countable (A × B) where
+instance posCountable_prod {A B : Type} [Pos.Countable A] [Pos.Countable B] :
+    Pos.Countable (A × B) where
   encode p := Pos.flatten [Pos.Countable.encode p.1, Pos.Countable.encode p.2]
   decode p := match Pos.unflatten p with
     | some [a, b] =>

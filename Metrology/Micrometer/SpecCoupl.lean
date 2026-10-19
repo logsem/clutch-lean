@@ -25,8 +25,8 @@ state carries the budget. -/
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
-instance : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
-instance : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
+instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
+instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
 variable (L) in
 /-- The coupling disjunct of `specCouplPre`: a step of a bind law within `b` between erasable

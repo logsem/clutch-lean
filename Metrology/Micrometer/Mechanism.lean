@@ -28,8 +28,9 @@ theorem progMech_apply (p : X → Exp rT) (σ : State rT) {hp} (x : X) :
     progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
   rfl
 
-instance (p : X → Exp rT) (σ : State rT) {hp} : IsSubMarkovKernel (progMech p σ hp) :=
-  ⟨fun _ ↦ limExecV.isSubProbabilityMeasure _⟩
+instance isSubMarkovKernel_progMech (p : X → Exp rT) (σ : State rT) {hp} :
+    IsSubMarkovKernel (progMech p σ hp) where
+  isSubProbabilityMeasure _ := limExecV.isSubProbabilityMeasure _
 
 variable [MeasurableSingletonClass rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]

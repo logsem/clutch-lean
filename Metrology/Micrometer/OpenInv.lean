@@ -119,20 +119,24 @@ section Instances
 variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
   [L.HasBind]
 
-instance : IsOpenInv L (rT := rT) .urand := ⟨OpenInv.of_atomic Atomic.urand'⟩
+instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where
+  out := OpenInv.of_atomic Atomic.urand'
 
-instance (l : Loc) : IsOpenInv L (rT := rT) pl(!#(.loc l)) := ⟨OpenInv.of_atomic (Atomic.load' l)⟩
+instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#(.loc l)) where
+  out := OpenInv.of_atomic (Atomic.load' l)
 
-instance (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#(.loc l)) v.1) :=
-  ⟨OpenInv.of_atomic (Atomic.store' l v)⟩
+instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#(.loc l)) v.1) where
+  out := OpenInv.of_atomic (Atomic.store' l v)
 
-instance (v : Val rT) : IsOpenInv L (Exp.alloc v.1) := ⟨OpenInv.of_atomic (Atomic.alloc' v)⟩
+instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (Exp.alloc v.1) where
+  out := OpenInv.of_atomic (Atomic.alloc' v)
 
-instance (z : Int) : IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.unit))) :=
-  ⟨OpenInv.of_atomic (Atomic.rand_unit' z)⟩
+instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.unit))) where
+  out := OpenInv.of_atomic (Atomic.rand_unit' z)
 
-instance (z : Int) (l : Loc) : IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
-  ⟨OpenInv.of_atomic (Atomic.rand_lbl' z l)⟩
+instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
+    IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.lbl l))) where
+  out := OpenInv.of_atomic (Atomic.rand_lbl' z l)
 
 end Instances
 
