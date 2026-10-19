@@ -9,6 +9,7 @@ public import Metrology.Couplings.Budget
 public import Metrology.Couplings.Divergence
 public import Metrology.Couplings.Lifting
 public import Metrology.Couplings.BindLaw
+public import Metrology.Couplings.BindLaws
 public import Metrology.Couplings.Codensity
 public import Metrology.Couplings.LiftingHom
 public import Metrology.Couplings.SpanLifting

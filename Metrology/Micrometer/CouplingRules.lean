@@ -603,7 +603,6 @@ theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
   iintro %n ⟨-, Hj', %hn⟩
   iapply Hcnt $$ %n %hn Hj'
 
-omit [L.IsSupportLocal] in
 theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     {z : Int} {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -733,11 +732,11 @@ section CreditRules
 
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
+  [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal]
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, paying `s (ε₂ n)` to the continuation at
 the left draw `n` out of `↯b (s ε₁)`, where `ε₁` bounds the average of `ε₂`. -/
-theorem wp_couple_rand_rand_adv [L.IsReflexive] [L.IsSupportLocal]
+theorem wp_couple_rand_rand_adv [L.IsReflexive]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z : Int) (f : Int → Int) (ε₁ : ENNReal)
     (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -791,7 +790,7 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive] [L.IsSupportLocal]
 
 /-- Couple `rand z ~ K[rand z]` along the identity, avoiding the outcome `bad` for
 `↯b (s (1 / z))` when `s 1` is absorbing. -/
-theorem wp_couple_rand_rand_avoid [L.IsReflexive] [L.IsSupportLocal]
+theorem wp_couple_rand_rand_avoid [L.IsReflexive]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z bad : Int) (Hz : 0 < z)
     (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) (K : Ectx rT) (E : CoPset)

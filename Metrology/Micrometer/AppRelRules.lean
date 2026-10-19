@@ -36,7 +36,7 @@ theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   inext
   iapply H $$ HK Hna Herr Hpos
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
@@ -51,7 +51,7 @@ theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K' K e'] at HK'
   iapply H $$ %K' %b HK' Hna Herr Hpos
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
       specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
@@ -67,7 +67,7 @@ theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K'' K' v.1] at HK''
   iapply Hrefines $$ %K'' %b HK'' Hna Herr Hpos
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
     {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
@@ -157,7 +157,7 @@ theorem refines_store_l {E : CoPset} {K : Ectx rT} {l : Loc} {v' : Val rT} {t : 
 
 /-! ## Stateful reductions on the RHS -/
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#(.loc l))) A) ⊢
     refines L E t (K.fill (.alloc v.1)) A := by
@@ -172,7 +172,7 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iframe HKRes
   iapply Hlog $$ %l Hl
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v -∗ refines L E t (K.fill v.1) A) ⊢
@@ -189,7 +189,7 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iframe HKRes
   iapply Hlog $$ HlRes
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#(.unit))) A) ⊢
@@ -254,7 +254,7 @@ theorem refines_randU_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : l
   isimp only [← Ectx.fill_comp K' K] at HKRes
   iapply Hlog $$ %n %Hbnds %K' %b HKRes Hna Herr Hpos
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {e : Exp rT} {A : lrel rT GF} : iprop%
     specNatTape l z (n :: ns) ∗
@@ -306,7 +306,7 @@ theorem refines_alloctape_nat_l {E : CoPset} {K : Ectx rT} {z : Int} {t : Exp rT
   rw [Tape.empty] at *
   iexact Hl
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
     refines L E e (K.fill pl(tape(#(.int z)))) A := by
@@ -518,7 +518,7 @@ theorem refines_couple_rands_lr_avoid {s : ENNReal →+o B}
   · simp only [id_eq]
     iapply Hcnt $$ %n %⟨hn, hb⟩
 
-omit [L.IsReflexive] [L.IsSupportLocal] in
+omit [L.IsReflexive] in
 /-- Couple `rand N ~ rand N` along `S`, given a lifting of the two uniform draws within the
 cancelable budget `c`; spends `↯b c` (relational `wp_couple_rand_rand_spend`). -/
 theorem refines_couple_rands_spend {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (N : Int)
@@ -539,7 +539,6 @@ theorem refines_couple_rands_spend {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF
   rw [show Exp.ofVal (.int r : Val rT) = pl(#(.int r)) from rfl]
   iapply Hcnt $$ %r %r' %hS %K2 %b HKres Hna Herr Hpos
 
-omit [L.IsSupportLocal] in
 theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
     {z : Int} {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)

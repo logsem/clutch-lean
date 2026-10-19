@@ -119,7 +119,7 @@ theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
   inext
   iexact H
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     refines L ⊤ t b A ⊢ refines L ⊤ t (.app (.lam b) u.1) A := by
   iintro H

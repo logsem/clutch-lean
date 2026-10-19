@@ -19,7 +19,8 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 /-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
 (Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
+      {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
@@ -42,7 +43,8 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
 /-- The same without splitting the budget: the leftover `R` is the new budget at each pair. -/
-theorem wp_lift_prim_steps_coupl_adv' [L.HasBind] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
+    {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
@@ -66,7 +68,8 @@ theorem wp_lift_prim_steps_coupl_adv' [L.HasBind] {E : CoPset} {e₁ : Exp rT} {
 /-- The continuation may exit with an absorbing budget instead of proving the `wp` (Rocq
 `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is `L.Absorbing b`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
-    [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+    [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
+      {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
@@ -101,7 +104,8 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
 /-- Run the erasable distributions of the program and the spec within a lifting of cost `0`
 (Rocq `wp_couple_erasables`). -/
 theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e : Exp rT}
+      {Φ : Val rT → IProp GF} : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),

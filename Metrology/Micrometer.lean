@@ -25,6 +25,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponseZcdp
 public import Metrology.Micrometer.Examples.RandomizedResponseLoop
 public import Metrology.Micrometer.Examples.GaussianZcdp
 public import Metrology.Micrometer.RelTacticsTest
+public import Metrology.Micrometer.BindLawTest
 
 @[expose] public section
 

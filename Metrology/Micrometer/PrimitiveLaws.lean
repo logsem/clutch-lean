@@ -405,7 +405,7 @@ theorem wp_rand_lbl_nonpos_r {E : CoPset} (K : Ectx rT) {l : Loc} {z N : Int} {e
   iintro %_ %rfl Hl Hj'
   iapply Hwp $$ Hl Hj'
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem wp_alloc_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(tape(#(.int z))) ∗
@@ -417,7 +417,7 @@ theorem wp_alloc_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
   ihave HlNat := spec_empty_to_natTape $$ Hl
   iapply Hwp $$ %l Hj' HlNat
 
-omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] in
+omit [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem wp_rand_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {n : Int} {ns : List Int}
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z (n :: ns) ∗
