@@ -1,13 +1,14 @@
 module
 
-public import Metrology.Micrometer.CouplingRules
+public import Metrology.Micrometer.RelTactics
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
 set_option linter.discrete false
 
-/-! Coupling two uniform draws by a step of any bind law whose heads shift, spending a credit. -/
+/-! Coupling two uniform draws by a step of any bind law whose heads shift, spending a credit, in
+`wp` and in refinements. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 
@@ -50,7 +51,11 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
 variable [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC} {GF : BundledGFunctors}
-  [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF] [BudgetCreditGS B GF]
+  [MeasurableSingletonClass rT] [BudgetCreditGS B GF]
+
+section Wp
+
+variable [MicrometerGS rT hlc GF]
 
 /-- Couple `rand N ~ K[rand N]` by a step of `law`, spending `↯b c` on its head and handing the
 leftover `R n m` to the draws `n` and `m`; the law's side condition must hold outright (Rocq
@@ -107,5 +112,42 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   iframe Hσ Hs' Hb
   iapply wp_value_of_toVal rfl
   iapply Hcnt $$ %n %m %(lt_of_le_of_lt le_self_add hR) Hfrag Hj'
+
+end Wp
+
+/-- Couple `rand N ~ rand N` by a step of `law`, spending `↯b c` on its head and handing the
+leftover `R r r'` to the draws (relational `wp_couple_rand_rand_law`). -/
+theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.IsSupportLocal]
+    [L.HasBind] (law : L.BindLaw) [law.HeadShift] {E : CoPset} {K K' : Ectx rT}
+    {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B)
+    (hc : IsAddLeftRegular c)
+    (hhead : ∀ (K : Ectx rT) σ σ', law.head
+      ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
+      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+      (Cfg.drawCost σ σ' K R) c)
+    (hside : ∀ {X Y X' Y' : Type} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
+      [MeasurableSpace Y'] (μ : MeasureTheory.Measure X) (ν : MeasureTheory.Measure Y)
+      (R' : X → Y → B) (k₁ : ProbabilityTheory.Kernel X X') (k₂ : ProbabilityTheory.Kernel Y Y'),
+      law.side μ ν R' k₁ k₂) : iprop%
+    ↯b c ∗ (∀ r r', ⌜R r r' < (⊤ : B)⌝ -∗ ↯b (R r r') -∗
+      refines L E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
+    refines L E (K.fill pl(rand(#(.int N), #(.unit))))
+      (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
+  unfold refines
+  iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
+  isimp only [Ectx.fill_comp K2 K'] at Hj
+  iapply MicrometerWpGS.wp_bind
+  iapply wp_couple_rand_rand_law law N HN R c hc (K2.comp K') (hhead _) hside ⊤ _
+  iframe Hj Hc
+  iintro %r %r' %hR Hr HKres
+  isimp only [← Ectx.fill_comp K2 K'] at HKres
+  rw [show Exp.ofVal (.int r : Val rT) = pl(#(.int r)) from rfl]
+  iapply Hcnt $$ %r %r' %hR Hr %K2 %b HKres Hna Herr Hpos
+
+/-- `rel_couple_UU_law law R c hc hhead hside` couples `rand N ~ rand N` by a step of `law`,
+spending `↯b c` and leaving `↯b (R r r')` (relational `wp_couple_rand_rand_law`). -/
+macro "rel_couple_UU_law " law:term:max ppSpace R:term:max ppSpace c:term:max ppSpace
+    hc:term:max ppSpace hhead:term:max ppSpace hside:term:max : tactic =>
+  `(tactic| rel_apply (refines_couple_rands_law $law _ _ $R $c $hc $hhead $hside))
 
 end ProbLang

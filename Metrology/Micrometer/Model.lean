@@ -269,6 +269,15 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     · rw [h2]; exact Exp.IsLocallyClosed.pair hAcl.2.1 hBcl.2.1
     · rw [h2]; simp [Exp.fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
+omit [LawfulProbLangℝ rT] in
+theorem lrel_prod_pair {A B : lrel rT GF} {a a' b b' : Val rT} :
+    iprop% A a a' ∗ B b b' ⊢ (lrel_prod A B).car (.pair a b) (.pair a' b') := by
+  iintro ⟨HA, HB⟩
+  iunfold lrel_prod
+  iexists a, a', b, b'
+  iframe HA HB
+  isplitr <;> ipureintro <;> rfl
+
 /-- Sums related when both are injections of the same side, with related payloads. -/
 noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%

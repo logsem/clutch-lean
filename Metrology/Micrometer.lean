@@ -38,6 +38,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponseRenyi
 public import Metrology.Micrometer.Examples.RandomizedResponseCurve
 public import Metrology.Micrometer.Examples.RandomizedResponseChi2
 public import Metrology.Micrometer.Examples.RandomizedResponseTcdp
+public import Metrology.Micrometer.Examples.RandomizedResponseAdaptive
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 

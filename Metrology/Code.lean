@@ -15,6 +15,7 @@ public import Metrology.Code.Presample
 public import Metrology.Code.PublicChoice
 public import Metrology.Code.Retry
 public import Metrology.Code.NoisyCount
+public import Metrology.Code.RandomizedResponseAdaptive
 public import Metrology.Code.GaussianRelease
 
 @[expose] public section
