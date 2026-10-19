@@ -82,6 +82,25 @@ noncomputable instance : AddCommMonoid PowerBudget where
   add_comm a b := toENNReal.injective <| by simp only [toENNReal_add]; ring
   nsmul := nsmulRec
 
+/-- `k` composed budgets `c` multiply `1 + c` out `k` times. -/
+theorem one_add_toENNReal_nsmul (k : ℕ) (c : PowerBudget) :
+    1 + toENNReal (k • c) = (1 + toENNReal c) ^ k := by
+  induction k with
+  | zero => simp
+  | succ k ih => rw [succ_nsmul, toENNReal_add, pow_succ, ← ih]; ring
+
+/-- A finite power budget cancels. -/
+theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) :
+    IsAddLeftRegular c := fun a b h ↦ by
+  have key (x : PowerBudget) :
+      toENNReal (c + x) = toENNReal c + (1 + toENNReal c) * toENNReal x := by
+    rw [toENNReal_add]
+    ring
+  have h := congrArg toENNReal h
+  rw [key, key] at h
+  exact toENNReal.injective <| (ENNReal.mul_right_inj (by simp) (by simpa using hc)).1
+    ((ENNReal.add_right_inj hc).1 h)
+
 /-- Composing power budgets is monotone. -/
 instance : IsOrderedAddMonoid PowerBudget where
   add_le_add_left a b h c := toENNReal.le_iff_le.1 <| by

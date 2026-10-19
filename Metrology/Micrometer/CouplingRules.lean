@@ -128,6 +128,11 @@ theorem lintegral_unifInt {z : Int} (hz : 0 < z) (φ : Int → ENNReal) :
   rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
     PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
 
+/-- `unifInt z` gives each set the share of `[0, z)` it contains. -/
+theorem unifInt_apply {z : Int} (hz : 0 < z) (S : Set Int) :
+    unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, S.indicator 1 n := by
+  rw [← lintegral_unifInt, lintegral_indicator_one MeasurableSet.of_discrete]
+
 /-- `unifInt z` is carried by `[0, z)`. -/
 theorem unifInt_compl_Ico {z : Int} (hz : 0 < z) : unifInt z hz (Set.Ico 0 z)ᶜ = 0 := by
   rw [unifInt, PMF.toMeasure_apply_eq_zero_iff _ measurableSet_Ico.compl]

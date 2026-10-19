@@ -554,4 +554,8 @@ noncomputable def zcdpToTcdp (ω : ℝ) : LiftingRelHom zcdpLifting.{u} (tcdpLif
     (concentratedLifting_rel_iff.1 h α α.2).mono
       (by simpa [α.2.out, hα] using concentratedLine_ioi_le_ioo (ω := ω) b α) fun _ _ h ↦ h
 
+@[simp]
+theorem zcdpToTcdp_map (ω : ℝ) (b : ℝ≥0∞ × ℝ≥0∞) : (zcdpToTcdp.{u} ω).map b = b.1 + b.2 :=
+  rfl
+
 end LiftingRelHom

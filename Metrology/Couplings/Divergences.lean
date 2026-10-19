@@ -12,6 +12,7 @@ public import Metrology.Couplings.Divergences.Renyi
 public import Metrology.Couplings.Divergences.RenyiCodensity
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 public import Metrology.Couplings.Divergences.RenyiStrassen
+public import Metrology.Couplings.Divergences.RenyiFiber
 public import Metrology.Couplings.Divergences.Concentrated
 public import Metrology.Couplings.Divergences.Chi2
 public import Metrology.Couplings.Divergences.Conversions
