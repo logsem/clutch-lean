@@ -1032,7 +1032,7 @@ variable (L) in
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
-theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] {K : Ectx rT} {E : CoPset}
+theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset}
     {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
   have Hloeb : ⊢@{IProp GF} wpBindStmt L K := by

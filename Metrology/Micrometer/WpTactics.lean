@@ -206,7 +206,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
     let bindPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_bind
-      (g.prefix.append #[none, none, none, none, some K, some g.E, some e', some g.Φ])
+      (g.prefix.append #[none, none, none, some K, some g.E, some e', some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
