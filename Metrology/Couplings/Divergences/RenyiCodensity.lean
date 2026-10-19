@@ -26,9 +26,11 @@ theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 
 theorem persp_rpow_conj (hα : 1 < α) {h : ℝ} (hh : 0 < h) :
     persp (· ^ α) h (h ^ (α / (α - 1))) = 1 := by
   have hα1 : α - 1 ≠ 0 := sub_ne_zero.2 hα.ne'
-  rw [persp_rpow_of_pos α (Real.rpow_pos_of_pos hh _), ← EReal.coe_one, EReal.coe_eq_coe_iff,
-    Real.div_rpow hh.le (Real.rpow_nonneg hh.le _), ← Real.rpow_mul hh.le, mul_div_assoc',
-    ← Real.rpow_add hh, ← Real.rpow_sub hh]
+  rw [persp_rpow_of_pos α (Real.rpow_pos_of_pos hh _)]
+  rw [← EReal.coe_one, EReal.coe_eq_coe_iff]
+  rw [Real.div_rpow hh.le (Real.rpow_nonneg hh.le _)]
+  rw [← Real.rpow_mul hh.le, mul_div_assoc']
+  rw [← Real.rpow_add hh, ← Real.rpow_sub hh]
   convert Real.rpow_zero h using 2
   field_simp
   ring
@@ -44,8 +46,9 @@ theorem persp_rpow_sum_le (hα : 1 < α) {ι : Type*} (s : Finset ι) {h p q : �
     fun i _ ↦ mul_nonneg (Real.rpow_nonneg (hh i) _) (hq i)).trans
     (Finset.sum_le_sum fun i _ ↦ ?_)
   rcases (hh i).eq_or_lt with h0 | hpos
-  · rw [← h0, Real.zero_rpow hβ.ne', zero_mul, zero_mul,
-      persp_rpow_zero_left (zero_lt_one.trans hα) le_rfl]
+  · rw [← h0]
+    rw [Real.zero_rpow hβ.ne', zero_mul, zero_mul]
+    rw [persp_rpow_zero_left (zero_lt_one.trans hα) le_rfl]
     exact persp_rpow_nonneg (hp i) (hq i)
   · rw [persp_rpow_mul hα (hh i) (Real.rpow_nonneg (hh i) _) (hp i) (hq i),
       persp_rpow_conj hα hpos, one_mul]
@@ -65,7 +68,7 @@ theorem exists_sum_persp_rpow_le (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
     simp [ite_mul, apply_ite (· ^ (α / (α - 1))), Real.zero_rpow hβ.ne', hqj,
       persp_rpow_zero_right hα hpj]
   push Not at hsing
-  have hp0 (i : ι) (hi : q i = 0) : p i = 0 := le_antisymm (hsing i hi) (hp i)
+  have hp0 (i : ι) (hi : q i = 0) : p i = 0 := (hsing i hi).antisymm (hp i)
   set g : ι → ℝ := fun i ↦ (p i / q i) ^ (α - 1)
   have hg (i : ι) : 0 ≤ g i := Real.rpow_nonneg (div_nonneg (hp i) (hq i)) _
   set T := 1 + ∑ i, g i
@@ -99,9 +102,10 @@ theorem exists_sum_persp_rpow_le (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
   have hsum₂ : ∑ i, (g i / T) ^ (α / (α - 1)) * q i = T⁻¹ ^ (α / (α - 1)) * S := by
     simp_rw [S, ← hgq, Finset.mul_sum, div_eq_inv_mul,
       Real.mul_rpow (inv_nonneg.2 hT.le) (hg _), mul_assoc]
-  rw [hsum₁, hsum₂, persp_rpow_mul hα (inv_nonneg.2 hT.le)
-    (Real.rpow_nonneg (inv_nonneg.2 hT.le) _) hS hS, persp_rpow_conj hα (inv_pos.2 hT), one_mul,
-    persp_self hS, Real.one_rpow, mul_one]
+  rw [hsum₁, hsum₂]
+  rw [persp_rpow_mul hα (inv_nonneg.2 hT.le)
+    (Real.rpow_nonneg (inv_nonneg.2 hT.le) _) hS hS]
+  rw [persp_rpow_conj hα (inv_pos.2 hT), one_mul, persp_self hS, Real.one_rpow, mul_one]
   simp_rw [hpersp, S, EReal.coe_finset_sum, le_refl]
 
 end ProbabilityTheory
@@ -136,10 +140,11 @@ theorem fDiv_mass_comp_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : �
     (P Q : Measure I) [IsFiniteMeasure P] [IsFiniteMeasure Q] :
     fDiv (· ^ α) (Kernel.mass.{u} hF ∘ₘ P) (Kernel.mass.{u} hG ∘ₘ Q) =
       persp (· ^ α) (∑ j, a j * (P (π ⁻¹' {j})).toReal) (∑ j, b j * (Q (π ⁻¹' {j})).toReal) := by
-  rw [Kernel.mass_comp, Kernel.mass_comp, fDiv_smul_dirac (convexOn_rpow hα.le)
+  rw [Kernel.mass_comp, Kernel.mass_comp]
+  rw [fDiv_smul_dirac (convexOn_rpow hα.le)
     (continuousWithinAt_rpow_zero (zero_lt_one.trans hα)) (lintegral_ne_top_of_le_one P hF1)
-    (lintegral_ne_top_of_le_one Q hG1), toReal_lintegral_ofReal_comp hπ ha,
-    toReal_lintegral_ofReal_comp hπ hb]
+    (lintegral_ne_top_of_le_one Q hG1)]
+  rw [toReal_lintegral_ofReal_comp hπ ha, toReal_lintegral_ofReal_comp hπ hb]
 
 /-- Tests into a point at slack `0` decide the Rényi codensity lifting: a test into a finite
 partition becomes one into a point by weighting its cells with the optimal Hölder weights, and the
@@ -190,9 +195,9 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
     simp only [Finset.mul_sum, mul_assoc]
   have key := h (Kernel.mass.{u} hF ∘ₖ k) (Kernel.mass.{u} hG ∘ₖ l) fun x y hR ↦ by
     rw [Kernel.comp_apply, Kernel.comp_apply, renyiDivergence_iff_of_ne_top hα1.le hR.ne, hmass]
-    have hkl' := (renyiDivergence_iff_of_ne_top hα1.le
+    have hklR := (renyiDivergence_iff_of_ne_top hα1.le
       (ENNReal.add_ne_top.2 ⟨hR.ne, hc.ne⟩)).1 (hkl x y)
-    refine (mul_le_mul_of_nonneg_left (le_trans ?_ hkl') (EReal.coe_nonneg.2 hs.le)).trans_eq ?_
+    refine (mul_le_mul_of_nonneg_left (le_trans ?_ hklR) (EReal.coe_nonneg.2 hs.le)).trans_eq ?_
     · exact (persp_rpow_sum_le hα1 _ (fun j ↦ (hw j).1) (fun _ ↦ ENNReal.toReal_nonneg)
         fun _ ↦ ENNReal.toReal_nonneg).trans (sum_persp_le_fDiv hf hf_cont hπ)
     · rw [← EReal.coe_mul, hs_def, ← Real.exp_add, ENNReal.toReal_add hR.ne hc.ne]
@@ -294,19 +299,24 @@ theorem slackHolder_truncated_of_codensity [hα : Fact (1 < α)] [IsSubProbabili
   have := Kernel.isSubMarkovKernel_mass.{u} hG fun y ↦ hcapβ (g y)
   have key := renyiDivergence_comp_of_codensity h (k := Kernel.mass.{u} hF)
     (l := Kernel.mass.{u} hG) fun x y hR ↦ by
-      rw [Kernel.mass_apply, Kernel.mass_apply, renyiDivergence_smul_dirac_iff hα.out hR.ne
+      rw [Kernel.mass_apply, Kernel.mass_apply]
+      rw [renyiDivergence_smul_dirac_iff hα.out hR.ne
         (ne_top_of_le_ne_top ENNReal.one_ne_top (hcap _))
-        (ne_top_of_le_ne_top ENNReal.one_ne_top (hcapβ _)), ← ENNReal.rpow_mul, hβγ,
-        ENNReal.rpow_one, mul_left_comm]
+        (ne_top_of_le_ne_top ENNReal.one_ne_top (hcapβ _))]
+      rw [← ENNReal.rpow_mul, hβγ, ENNReal.rpow_one]
+      rw [mul_left_comm]
       gcongr
       exact ENNReal.min_le_mul_min (hfg x y hR) (one_le_expBudget _)
-  rw [Kernel.mass_comp, Kernel.mass_comp, renyiDivergence_smul_dirac_iff hα.out hρ
+  rw [Kernel.mass_comp, Kernel.mass_comp] at key
+  rw [renyiDivergence_smul_dirac_iff hα.out hρ
     (lintegral_ne_top_of_le_one μ fun x ↦ hcap (f x))
-    (lintegral_ne_top_of_le_one ν fun y ↦ hcapβ (g y)),
-    lintegral_const_mul _ (by fun_prop)] at key
+    (lintegral_ne_top_of_le_one ν fun y ↦ hcapβ (g y))] at key
+  rw [lintegral_const_mul _ (by fun_prop)] at key
   simp_rw [ENNReal.mul_rpow_of_nonneg _ _ hβ.le] at key
-  rw [lintegral_const_mul _ (by fun_prop), ENNReal.mul_rpow_of_nonneg _ _ hγ.le,
-    ← ENNReal.rpow_mul, hβγ, ENNReal.rpow_one, mul_left_comm] at key
+  rw [lintegral_const_mul _ (by fun_prop)] at key
+  rw [ENNReal.mul_rpow_of_nonneg _ _ hγ.le] at key
+  rw [← ENNReal.rpow_mul, hβγ, ENNReal.rpow_one] at key
+  rw [mul_left_comm] at key
   refine ((ENNReal.mul_le_mul_iff_right ht0 htop).1 key).trans ?_
   gcongr with y
   exact min_le_left _ _
@@ -324,7 +334,7 @@ theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure 
   calc ∫⁻ x, f x ∂μ
       = ∫⁻ x, ⨆ N : ℕ, min (f x) (N + 1) ∂μ := by simp_rw [hsup]
     _ = ⨆ N : ℕ, ∫⁻ x, min (f x) (N + 1) ∂μ :=
-        lintegral_iSup (fun _ ↦ by fun_prop) fun _ _ hNM _ ↦ by gcongr
+        lintegral_iSup (fun _ ↦ by fun_prop) fun _ _ _ _ ↦ by gcongr
     _ ≤ _ := iSup_le htrunc
 
 /-- The Rényi codensity lifting at a finite budget is the slack-Hölder head (Rocq
