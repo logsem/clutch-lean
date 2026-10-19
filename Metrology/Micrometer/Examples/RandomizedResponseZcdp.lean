@@ -200,14 +200,10 @@ theorem rr2_zcdp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
   wp_adequacy_div (GF := GF) (L := zcdpLifting) _ _ σ σ' budget2 fun _ _ ↦
     budget_add_budget ▸ wp_rr2 b₁ b₂ b₁' b₂'
 
-/-- `rr2_zcdp_of`, through the refinement `rr2_refines`. -/
-theorem rr2_zcdp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
-    (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) :
-    zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
-  refine approximates_div (GF := GF) (L := zcdpLifting)
-    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) _ _ σ σ' budget2 ?_ fun _ _ ↦
-      budget_add_budget ▸ rr2_refines b₁ b₂ b₁' b₂'
-  intro _ _ v v'
+/-- Pairs of booleans relate only equal values. -/
+theorem lrel_prod_bool_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    (v v' : Val rT) :
+    ⊢@{IProp GF} (lrel_prod (lrel_bool (rT := rT)) lrel_bool).car v v' -∗ ⌜v = v'⌝ := by
   iunfold lrel_prod
   iintro ⟨%a, %a', %c, %c', %hv, %hv', Ha, Hc⟩
   iunfold lrel_bool at Ha Hc
@@ -215,6 +211,14 @@ theorem rr2_zcdp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞
   icases Hc with ⟨%y, %⟨rfl, rfl⟩⟩
   ipureintro
   exact Val.ext (hv.trans hv'.symm)
+
+/-- `rr2_zcdp_of`, through the refinement `rr2_refines`. -/
+theorem rr2_zcdp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
+    (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) :
+    zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) :=
+  approximates_div (GF := GF) (L := zcdpLifting) (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) _ _
+    σ σ' budget2 (fun _ _ ↦ lrel_prod_bool_eq) fun _ _ ↦
+      budget_add_budget ▸ rr2_refines b₁ b₂ b₁' b₂'
 
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP, for any two pairs of private bits. -/
 theorem rr2_zcdp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) :
@@ -251,17 +255,36 @@ theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (h�
 
 /-- Randomized response on pairs of private bits, started from state `σ`. -/
 noncomputable def rr2Mech (σ : State rT) : Mechanism (Bool × Bool) (Exp rT) :=
-  ⟨fun b ↦ limExecV ⟨rr2 b.1 b.2, σ⟩, .of_discrete⟩
+  progMech (fun b ↦ rr2 b.1 b.2) σ
+
+/-- `rr2_refines` packaged for the mechanism rule, on any two pairs of bits. -/
+theorem rr2_refines_mech {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool × Bool) :
+    ⊢@{IProp GF} ↯b budget2 -∗
+      REL[zcdpLifting] (rr2 (rT := rT) b.1 b.2) << (rr2 b'.1 b'.2) :
+        lrel_prod lrel_bool lrel_bool :=
+  budget_add_budget ▸ rr2_refines b.1 b.2 b'.1 b'.2
 
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP for any two pairs of bits (Def. 2.4). -/
 theorem rr2_zCDP (σ : State rT) : (rr2Mech σ).zCDP ⊤ (ENNReal.ofReal (Real.log 9)) 0 :=
-  fun b b' _ ↦ rr2_zcdp b.1 b.2 b'.1 b'.2 σ σ
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ budget2
+    (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_bool_eq)
+    fun b b' _ _ _ ↦ rr2_refines_mech b b'
 
 /-- Randomized response on two bits is `(ln 9, δ)`-DP for any two pairs of bits and every
 `δ > 0` (Def. 2.1). -/
 theorem rr2_DP (σ : State rT) {δ : ℝ} (hδ : 0 < δ) :
-    (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) :=
-  fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ
+    (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) := by
+  intro b b' hb
+  have hz : zcdpLifting.Rel budget2 (· = ·) (limExecV ⟨rr2 b.1 b.2, σ⟩)
+      (limExecV ⟨rr2 b'.1 b'.2, σ⟩) :=
+    progMech_rel (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ σ (hp := .of_discrete) budget2
+      (fun _ _ ↦ lrel_prod lrel_bool lrel_bool) (fun _ _ ↦ lrel_prod_bool_eq)
+      (fun b b' _ _ _ ↦ rr2_refines_mech b b') hb
+  have h := GradedDivergence.codensity_sound ((LiftingRelHom.zcdpToDp hδ).map_rel hz)
+  simp only [LiftingRelHom.zcdpToDp_map] at h
+  show dp _ (limExecV ⟨rr2 b.1 b.2, σ⟩) (limExecV ⟨rr2 b'.1 b'.2, σ⟩)
+  exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
 
 end RandomizedResponse
 end ProbLang

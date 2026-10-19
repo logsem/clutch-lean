@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.Mechanism
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.WpTactics
 public import Metrology.Micrometer.RelTactics
@@ -180,17 +181,20 @@ theorem rr_dp_of (GF : BundledGFunctors) [AppPreGS rT GF] [SpecPreGS rT GF]
     dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
   wp_adequacy_div (GF := GF) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
 
-/-- `rr_dp_of`, through the refinement `rr_refines`. -/
-theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
-    (b b' : Bool) (σ σ' : State rT) :
-    dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) := by
-  refine approximates_div (GF := GF)
-    (fun _ _ ↦ lrel_bool) _ _ σ σ' budget ?_ fun _ _ ↦ rr_refines b b'
-  intro _ _ v v'
+/-- `lrel_bool` relates only equal values. -/
+theorem lrel_bool_eq {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
+    ⊢@{IProp GF} (lrel_bool (rT := rT) (GF := GF)).car v v' -∗ ⌜v = v'⌝ := by
   iunfold lrel_bool
   iintro ⟨%c, %⟨rfl, rfl⟩⟩
   ipureintro
   rfl
+
+/-- `rr_dp_of`, through the refinement `rr_refines`. -/
+theorem rr_dp_of_refines (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
+    (b b' : Bool) (σ σ' : State rT) :
+    dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
+  approximates_div (GF := GF) (fun _ _ ↦ lrel_bool) _ _ σ σ' budget (fun _ _ ↦ lrel_bool_eq)
+    fun _ _ ↦ rr_refines b b'
 
 /-- Randomized response is `ln 3`-differentially private, for any two private bits
 (clutch-dp's `randomized_response.v`). -/
@@ -206,11 +210,12 @@ theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT)) (hS : M
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
 noncomputable def rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=
-  ⟨fun b ↦ limExecV ⟨rr b, σ⟩, .of_discrete⟩
+  progMech rr σ
 
 /-- Randomized response is `(ln 3, 0)`-differentially private for any two bits (Def. 2.1). -/
 theorem rr_DP (σ : State rT) : (rrMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
-  fun b b' _ ↦ rr_dp b b' σ σ
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) rr σ budget
+    (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_eq) fun b b' _ _ _ ↦ rr_refines b b'
 
 end RandomizedResponse
 end ProbLang

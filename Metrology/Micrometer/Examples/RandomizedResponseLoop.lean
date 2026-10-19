@@ -135,19 +135,21 @@ theorem rrCount_zcdp_of (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × 
 
 /-- The loop of `k` rounds on private bits, started from state `σ`. -/
 noncomputable def rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp rT) :=
-  ⟨fun b ↦ limExecV ⟨rrCount b k, σ⟩, .of_discrete⟩
+  progMech (rrCount · k) σ
 
 /-- Randomized response in a loop of `k` rounds is `(k ln 3, 0)`-DP for any two bits
 (Def. 2.1). -/
 theorem rrCount_DP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).DP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
-  fun b b' _ ↦ rrCount_dp_of (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) b b' k σ σ
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) _ σ (loopBudget k)
+    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_eq) fun b b' _ _ _ ↦ rrCount_refines b b' k
 
 /-- Randomized response in a loop of `k` rounds is `(k ln 3, 0)`-zCDP for any two bits
 (Def. 2.4). -/
 theorem rrCount_zCDP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
-  fun b b' _ ↦ rrCount_zcdp_of (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) b b' k σ σ
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ (loopBudget k)
+    (fun _ _ ↦ lrel_int) (fun _ _ ↦ lrel_int_eq) fun b b' _ _ _ ↦ rrCount_refines_zcdp b b' k
 
 end RandomizedResponse
 end ProbLang
