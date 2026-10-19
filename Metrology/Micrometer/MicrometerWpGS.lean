@@ -27,6 +27,7 @@ The ghost state does not depend on the lifting: `L` is an explicit argument of `
 coupling modalities (`wp L E e Φ`, notation `WP[L] e @ E {{ Φ }}`), never a class parameter, so
 the modality instances (`ElimModal`, `Frame`, ...) unify without an `L` metavariable. -/
 
+/-- The ghost state of `wp`: spec updates, invariants and the program-state interpretation. -/
 class MicrometerWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
   hlc : HasLC

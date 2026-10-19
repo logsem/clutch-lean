@@ -22,6 +22,8 @@ section Wp
 variable [BudgetGS B GF]
 
 variable (L) in
+/-- One unfolding of `wp`: a spec coupling into either the postcondition at a value or a
+program coupling continuing, after a later, with `wp` (Rocq `wp_pre`). -/
 abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) : IProp GF := iprop%
   ∀ σ₁ e₁' σ₁' (b₁ : B),
@@ -34,6 +36,7 @@ abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
           ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
             stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp E e₃ Φ)
 
+/-- The type of `wp` as a function of its mask, expression and postcondition. -/
 abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
 
 theorem wpPre_ne_aux {n : Nat} {wp wp' : WpType (rT := rT) (GF := GF)} {E : CoPset}
@@ -61,6 +64,7 @@ instance wpPre_contractive : Contractive (wpPre L (rT := rT) (GF := GF)) where
     wpPre_ne_aux (fun _ => .of_eq rfl) fun _ Hm e₃ => DistLater.dist_lt (Hwp · · E e₃ Φ) Hm
 
 variable (L) in
+/-- The Micrometer weakest precondition under the lifting `L`, the fixpoint of `wpPre`. -/
 noncomputable def wp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   fixpoint (wpPre L) E e Φ
 
@@ -107,6 +111,7 @@ meta def unexpandWp : Lean.PrettyPrinter.Unexpander
   | _ => throw ()
 
 variable (L) in
+/-- The continuation `wpPre` runs after a program step. -/
 noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
     (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
   iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
@@ -156,6 +161,7 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   simp only [wpPre, He]
   exact .rfl
 
+/-- The postcondition update `wp_strong_mono` asks for, framing the interpretations. -/
 abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF := iprop%
   □ ∀ σ ρ v (b : B),
     stateInterp (rT := rT) σ ∗ SpecUpdateGS.specInterp (rT := rT) ρ ∗ budgetInterp b ∗
@@ -163,11 +169,12 @@ abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF :
     stateInterp σ ∗ SpecUpdateGS.specInterp ρ ∗ budgetInterp b ∗ Ψ v
 
 variable (L) in
+/-- The statement of `wp_strong_mono`, proved by Löb induction. -/
 noncomputable abbrev wpStrongMonoStmt : IProp GF := iprop%
   ∀ E1 E2 (e : Exp rT) Φ Ψ, ⌜E1 ⊆ E2⌝ -∗ wp L E1 e Φ -∗ wpStrongMonoCont (B := B) E2 Φ Ψ -∗
     wp L E2 e Ψ
 
-theorem wp_strong_mono' {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HE : E1 ⊆ E2) :
+theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HE : E1 ⊆ E2) :
     iprop% wp L E1 e Φ ∗ wpStrongMonoCont (B := B) E2 Φ Ψ ⊢ wp L E2 e Ψ := by
   iintro ⟨HW, HΦ⟩
   have Hloeb : ⊢@{IProp GF} wpStrongMonoStmt L (rT := rT) := by
@@ -208,7 +215,7 @@ theorem wp_strong_mono' {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp 
 theorem wp_wand {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
     iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ := by
   iintro ⟨HW, #HΦ⟩
-  iapply wp_strong_mono' Std.LawfulSet.subset_refl
+  iapply wp_strong_mono Std.LawfulSet.subset_refl
   iframe HW
   iintro !> %σ %ρ %v %b ⟨Hσ, Hs, Hb, HΦv⟩ !>
   iframe
@@ -217,7 +224,7 @@ theorem wp_wand {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
 theorem wp_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e (fun v => iprop(|={E}=> Φ v)) ⊢ wp L E e Φ := by
   iintro HW
-  iapply wp_strong_mono' Std.LawfulSet.subset_refl
+  iapply wp_strong_mono Std.LawfulSet.subset_refl
   iframe HW
   iintro !> %σ %ρ %v %b ⟨Hσ, Hs, Hb, HΦ⟩
   imod HΦ
@@ -233,10 +240,6 @@ theorem fupd_wp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
 
 /-! ## Derived WP lemmas -/
 
-theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HE : E1 ⊆ E2) :
-    iprop% wp L E1 e Φ ∗ wpStrongMonoCont (B := B) E2 Φ Ψ ⊢ wp L E2 e Ψ :=
-  wp_strong_mono' HE
-
 theorem wp_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF}
     (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ := by
   iintro HW
@@ -248,7 +251,7 @@ theorem wp_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF}
 theorem wp_mask_mono {E1 E2 : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (HE : E1 ⊆ E2) :
     wp L E1 e Φ ⊢ wp L E2 e Φ := by
   iintro HW
-  iapply wp_strong_mono' HE
+  iapply wp_strong_mono HE
   iframe HW
   iintro !> %σ %ρ %v %b ⟨Hσ, Hs, Hb, HΦ⟩ !>
   iframe

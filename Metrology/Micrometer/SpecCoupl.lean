@@ -22,6 +22,7 @@ Optionally prepends spec-side steps and erasable distributions on both sides bef
 state carries the budget. -/
 
 -- TODO remove when fixpoint is added
+/-- The argument of the `specCoupl` fixpoint: program state, spec configuration and budget. -/
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
@@ -44,12 +45,14 @@ abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' 
       (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=> Φ (σ₂, f' ρ, R σ₂ ρ)))
 
 variable (L) in
+/-- The body of the `specCoupl` fixpoint: absorbed, done, or one more coupling step. -/
 abbrev specCouplPre (E : CoPset) (Z : State rT → Cfg rT → B → IProp GF)
     (Φ : SpecCouplState rT B → IProp GF) : SpecCouplState rT B → IProp GF :=
   fun ⟨σ₁, ⟨e₁', σ₁'⟩, b⟩ => iprop%
     ⌜L.Absorbing b⌝ ∨ Z σ₁ ⟨e₁', σ₁'⟩ b ∨ specCouplCouple L E σ₁ e₁' σ₁' b Φ
 
 variable (L) in
+/-- Spec steps and erasable distributions coupled by bind laws before `Z` (Rocq `spec_coupl`). -/
 abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
     (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)

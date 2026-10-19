@@ -26,6 +26,7 @@ noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ 
           exact ⟨le_refl _, by omega⟩⟩)
   else 0
 
+/-- The labels of the allocated tapes of `σ`. -/
 def getActive (σ : State rT) : List Loc := σ.tapes.keys
 
 omit [LawfulProbLangℝ rT] in

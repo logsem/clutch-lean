@@ -3,11 +3,7 @@ module
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! # Programs as mechanisms
-
-A ProbLang program family `p : X → Exp rT`, run from a fixed state, is a mechanism on its
-inputs. A refinement of `p x` by `p x'` at equal results from `↯b b`, for all adjacent `x x'`,
-makes that mechanism `b`-private for every divergence the lifting is sound for. -/
+/-! ProbLang program families as mechanisms, and their privacy from refinements. -/
 
 @[expose] public section
 

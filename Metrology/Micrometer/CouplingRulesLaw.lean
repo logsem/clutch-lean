@@ -8,8 +8,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 set_option linter.discrete false
 
-/-! Coupling two uniform draws by a step of any bind law whose heads shift, spending a credit, in
-`wp` and in refinements; the DP choice rule is the instance at `BindLaw.dpChoice`. -/
+/-! Coupling two uniform draws by any bind law whose heads shift; DP choice is an instance. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal

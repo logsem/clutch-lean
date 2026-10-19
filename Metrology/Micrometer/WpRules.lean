@@ -22,6 +22,7 @@ variable [BudgetGS B GF]
 /-! ## WP — structural lemmas -/
 
 variable (L) in
+/-- The statement of `wp_bind` at the context `K`, proved by Löb induction. -/
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
@@ -84,6 +85,7 @@ theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
     iapply specCoupl_steps_det Hstep $$ HW'
 
 variable (L) in
+/-- The statement of `wp_specUpdate`, proved by Löb induction. -/
 noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
 
@@ -131,6 +133,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
 /-! ## WP — framing lemmas -/
 
 variable (L) in
+/-- The statement of `wp_frame_l`, proved by Löb induction. -/
 noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) R Φ, R -∗ wp L E e Φ -∗ wp L E e fun v => iprop(R ∗ Φ v)
 

@@ -61,9 +61,9 @@ variable (L) in
 /-- A closed refinement at `bool` from `↯b β` couples the two runs at `β` along equal booleans. -/
 theorem refines_bool_coupling (β : B) (E E' : Exp rT) (σ σ' : State rT)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ↯b β -∗ refines L ⊤ E E' (lrel_bool (rT := rT))) :
+      ⊢@{IProp GF} ↯b β -∗ refines L ⊤ E E' (lrel_bool)) :
     L.Rel β (adequacyRel boolEqVal) (limExecV ⟨E, σ⟩) (limExecV ⟨E', σ'⟩) :=
-  approximates_coupling (GF := GF) (fun _ _ => lrel_bool) boolEqVal E E' σ σ' β
+  approximates_coupling (fun _ _ => lrel_bool) boolEqVal E E' σ σ' β
     (fun _ _ v v' => lrel_bool_to_boolEqVal v v') Hlog
 
 section Bind

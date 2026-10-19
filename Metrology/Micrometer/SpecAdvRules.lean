@@ -7,10 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 set_option linter.discrete false
 
-/-! # Spec draws with expectation-preserving credits
-
-A draw of the spec alone splits a credit `↯b (s ε₁)` into `↯b (s (ε₂ n))` at the outcome `n`,
-whenever `ε₂` averages to at most `ε₁` (the spec-side `wp_couple_rand_adv_comp` of Eris). -/
+/-! Spec draws that split a credit by outcome (Eris `wp_couple_rand_adv_comp`, spec side). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open scoped ENNReal AppGS

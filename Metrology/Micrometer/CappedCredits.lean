@@ -4,10 +4,7 @@ public import Metrology.Iris.CappedCredits
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! Capped credits for a graded lifting: the bad budgets are the absorbing ones, so a credit at an
-absorbing budget is contradictory (Rocq `gccredit_top_False`). For `codensity dp`, `codensity tv`
-and `codensity (renyiDivergence α)` every valid budget cancels, so any credit can be spent. For
-Rényi curves this fails: a curve that is `⊤` at some orders only is valid but does not cancel. -/
+/-! Credits capped at the absorbing budgets of a graded lifting (Rocq `gccredit_top_False`). -/
 
 @[expose] public section
 
@@ -42,7 +39,10 @@ namespace GradedDivergence
 
 open MeasureTheory GradedLifting
 
-/-! ## Which budgets are absorbing -/
+/-! ## Which budgets are absorbing
+
+For `codensity dp`, `codensity tv` and `codensity (renyiDivergence α)` every valid budget cancels,
+so any credit can be spent; a Rényi curve that is `⊤` at some orders only is valid but does not. -/
 
 /-- A DP budget is absorbing exactly when its multiplier is `⊤` or its slack is at least `1`. -/
 theorem absorbing_codensity_dp_iff {ε δ : ℝ≥0∞} :
