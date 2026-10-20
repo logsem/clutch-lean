@@ -269,7 +269,7 @@ theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
         ⌜AdeqBound D φ i k ρ c'⌝ : IProp GF)) ?_
       iintro %Hpure !%
       exact AdeqBound.of_bump Hpure
-    iapply fupd_step_fupdN_plain_forall_1
+    iapply fupd_step_fupdN_plain_forall
     iintro %c'
     iapply BIFUpdate.mono (step_fupdN_pure_wand_intro ∅ k)
     iapply fupd_pure_wand_intro
@@ -284,7 +284,7 @@ theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
         ⌜AdeqLeaf D φ i k ρ' (X₂ ρ')⌝ : IProp GF)) ?_
       iintro %Hpure !%
       exact AdeqBound.of_primStep hD hφ Hred HRmeas Hexp Hpgl Hpure
-    iapply fupd_step_fupdN_plain_forall_1
+    iapply fupd_step_fupdN_plain_forall
     iintro %ρ'
     iapply BIFUpdate.mono (step_fupdN_pure_wand_intro ∅ k)
     iapply fupd_pure_wand_intro
