@@ -55,6 +55,6 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- `k` rounds are `(α, k ρ_α)`-RDP (Def. 2.3). -/
 theorem rrCount_RDP (k : ℕ) (σ : State rT) : (rrCountMech k σ).RDP ⊤ α (k * rrRenyi α) :=
   nsmul_eq_mul k (rrRenyi α) ▸
-    rrCount_isPrivate _ (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 rrCoupling_renyi k σ
+    rrCount_isPrivate _ (ENNReal.isAddLeftRegular_ofReal _) rrCoupling_renyi k σ
 
 end ProbLang.RandomizedResponse

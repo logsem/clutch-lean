@@ -108,7 +108,7 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
   iintro Hb
   -- the escort law has no side condition (last argument)
   rel_couple_UU_law (BindLaw.escort 2) adaptiveCost (ENNReal.ofReal (Real.log (19 / 12)))
-    (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 escortHead_rr3 (fun _ _ _ _ _ ↦ trivial)
+    (ENNReal.isAddLeftRegular_ofReal _) escortHead_rr3 (fun _ _ _ _ _ ↦ trivial)
   iframe Hb
   iintro %n %m %hR Hb
   rel_pures
@@ -120,7 +120,7 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
   -- report `true`, spend the remaining `log (3/2)` on the second draw
   · rel_values
   · rel_couple_UU_spend (fun r r' ↦ rr3Out false r = rr3Out true r') _
-      (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 rr3_coupling
+      (ENNReal.isAddLeftRegular_ofReal _) rr3_coupling
     iframe Hb
     iintro %r %r' %hr
     rel_pures

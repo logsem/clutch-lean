@@ -245,3 +245,7 @@ theorem Finset.sum_Ico_le_toNat {z : ℤ} {g : ℤ → ℝ≥0∞} (hg : ∀ n, 
       ≤ ∑ _n ∈ Finset.Ico 0 z, 1 := Finset.sum_le_sum fun n _ ↦ hg n
     _ = z.toNat := by
         rw [Finset.sum_const, Int.card_Ico, nsmul_eq_mul, mul_one, Int.sub_zero]
+
+/-- Finite budgets `ENNReal.ofReal x` cancel on the left. -/
+theorem ENNReal.isAddLeftRegular_ofReal (x : ℝ) : IsAddLeftRegular (ENNReal.ofReal x) :=
+  (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1
