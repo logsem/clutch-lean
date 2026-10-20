@@ -182,7 +182,6 @@ theorem snd_delete (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).snd = vs.snd.filter fun p => !decide (p.1 = x) :=
   proj_delete Prod.snd vs x
 
-
 end ValSubstMap
 
 end ProbLang
