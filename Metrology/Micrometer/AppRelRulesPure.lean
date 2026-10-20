@@ -268,10 +268,19 @@ seed from the threaded budget, which needs every positive budget to carry slack 
 section Credits
 variable [CanonicallyOrderedAdd B]
 
+variable (B) in
+omit [OrderTop B] [CanonicallyOrderedAdd B] in
+/-- Every positive budget splits into two positive budgets (true for tv, where halving works). -/
+abbrev PosSplits : Prop := ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
+
+omit [OrderTop B] [CanonicallyOrderedAdd B] in
+/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`). -/
+abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
+
 /-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b` (needs
 every positive budget to split, `hsplit`). This is the only way to reach the positive credit
 threaded through `refines`. (`ec` is Rocq's "error credit"; here it is a budget credit.) -/
-theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
+theorem refines_get_ec (hsplit : PosSplits B)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
   unfold refines
@@ -302,8 +311,8 @@ theorem refines_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {E : CoPset} 
   iapply refines_of_absorbing habs $$ Hc
 
 theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
-    {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
-    (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
+    {k : NNReal} (hsplit : PosSplits B)
+    (hslack : HasSlack s) (habs : L.Absorbing (s 1))
     (hk : 1 < k) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗ □ (↯b (s ((k : ENNReal) * ε)) -∗ refines L E e e' A) -∗ ↯b (s ε) -∗
       refines L E e e' A) ⊢
@@ -332,8 +341,8 @@ theorem refines_app_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {v v' : V
   iapply refines_of_absorbing habs $$ Hc
 
 theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel rT GF}
-    {k : NNReal} (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
-    (hslack : ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b) (habs : L.Absorbing (s 1))
+    {k : NNReal} (hsplit : PosSplits B)
+    (hslack : HasSlack s) (habs : L.Absorbing (s 1))
     (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗
       □ (↯b (s ((k : ENNReal) * ε)) -∗
