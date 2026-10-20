@@ -79,6 +79,12 @@ class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
   side_diag {X X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace Y']
     (μ : Measure X) (R : X → X → B) (f : Kernel X X') (g : Kernel X Y') : law.side μ μ R f g
 
+/-- The side condition always holds, so a rule may drop it. -/
+class SideFree (law : BindLaw L) : Prop where
+  side {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
+    [MeasurableSpace Y'] (μ : Measure X) (ν : Measure Y) (R : X → Y → B) (f : Kernel X X')
+    (g : Kernel Y Y') : law.side μ ν R f g
+
 /-! ## The canonical law -/
 
 variable (L) in
@@ -113,6 +119,11 @@ instance headDiag_canonical [AddZeroClass B] [L.IsLawful] [L.HasBind] [L.IsSuppo
   diag μ _ _ hb := by simpa using IsLawful.frame hb (IsReflexive.refl (L := L) μ)
   side_diag _ _ _ _ := trivial
 
+/-- The canonical law has no side condition. -/
+instance sideFree_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] :
+    (canonical L).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
+
 /-! ## The unit law -/
 
 variable (L) in
@@ -141,6 +152,10 @@ theorem unit_head_dirac [Add B] [L.IsLawful] {b : B} {R : X → Y → B} {x : X}
 theorem side_unit [Add B] [L.IsLawful] {μ : Measure X} {ν : Measure Y} {R : X → Y → B}
     {f : Kernel X X'} {g : Kernel Y Y'} : (unit L).side μ ν R f g :=
   trivial
+
+/-- The unit law has no side condition. -/
+instance sideFree_unit [Add B] [L.IsLawful] : (unit L).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
 
 end BindLaw
 

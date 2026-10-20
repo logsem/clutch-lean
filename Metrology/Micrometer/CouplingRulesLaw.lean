@@ -6,7 +6,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Law-driven `rand` couplings
 
-`wp_couple_rand_rand_law` couples `rand N ~ K[rand N]` by any bind law with `HeadShift`, leaving
+`wp_couple_rand_rand_law` couples `rand N ~ K[rand N]` by any `HeadShift`, `SideFree` law, leaving
 `R n m` at the draws (`refines` form: tactic `rel_couple_UU_law`); DP choice is an instance. -/
 
 @[expose] public section
@@ -71,18 +71,12 @@ section Wp
 variable [MicrometerGS rT hlc GF]
 
 /-- Couple `rand N ~ K[rand N]` by a step of `law`, spending `↯b c` on its head and handing the
-leftover `R n m` to the draws `n` and `m`; the law's side condition must hold outright (Rocq
-`wp_couple_spend`). -/
-theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN : 0 < N)
-    (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c) (K : Ectx rT)
+leftover `R n m` to the draws `n` and `m` (Rocq `wp_couple_spend`). -/
+theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (N : Int)
+    (HN : 0 < N) (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c) (K : Ectx rT)
     (hhead : ∀ σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K R) c)
-    (hside : ∀ {X Y X' Y' : Type} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
-      [MeasurableSpace Y'] (μ : MeasureTheory.Measure X) (ν : MeasureTheory.Measure Y)
-      (R' : X → Y → B)
-      (k₁ : ProbabilityTheory.Kernel X X') (k₂ : ProbabilityTheory.Kernel Y Y'),
-      law.side μ ν R' k₁ k₂)
     (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
     ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯b c ∗
     (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#(.int m)) -∗ Φ (.int n)) ⊢
@@ -111,7 +105,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
     exact hhead σ₁ σ₁'
   iapply progCoupl_steps_spend_law law hr.ge hrTop (randUnit_uniform_step HN σ₁).1.toReducible
     ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hheadStep
-    (.of_forall fun k₁ k₂ ↦ hside _ _ _ k₁ k₂)
+    (.of_forall fun k₁ k₂ ↦ BindLaw.SideFree.side _ _ _ k₁ k₂)
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   -- R n m + r < ⊤ gives R n m < ⊤, so the pair is a drawn one
   obtain ⟨n, m, h1, h2⟩ := Cfg.exists_of_drawCost_lt_top (lt_of_le_of_lt le_self_add hR)
@@ -134,17 +128,13 @@ end Wp
 /-- Couple `rand N ~ rand N` by a step of `law`, spending `↯b c` on its head and handing the
 leftover `R r r'` to the draws (relational `wp_couple_rand_rand_law`). -/
 theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.IsSupportLocal]
-    [L.HasBind] (law : L.BindLaw) [law.HeadShift] {E : CoPset} {K K' : Ectx rT}
+    [L.HasBind] (law : L.BindLaw) [law.HeadShift] [law.SideFree] {E : CoPset} {K K' : Ectx rT}
     {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B)
     (hc : IsAddLeftRegular c)
     (hhead : ∀ (K : Ectx rT) σ σ', law.head
       ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
-      (Cfg.drawCost σ σ' K R) c)
-    (hside : ∀ {X Y X' Y' : Type} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
-      [MeasurableSpace Y'] (μ : MeasureTheory.Measure X) (ν : MeasureTheory.Measure Y)
-      (R' : X → Y → B) (k₁ : ProbabilityTheory.Kernel X X') (k₂ : ProbabilityTheory.Kernel Y Y'),
-      law.side μ ν R' k₁ k₂) : iprop%
+      (Cfg.drawCost σ σ' K R) c) : iprop%
     ↯b c ∗ (∀ r r', ⌜R r r' < (⊤ : B)⌝ -∗ ↯b (R r r') -∗
       refines L E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
     refines L E (K.fill pl(rand(#(.int N), #(.unit))))
@@ -153,18 +143,18 @@ theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.Is
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
   iapply MicrometerWpGS.wp_bind
-  iapply wp_couple_rand_rand_law law N HN R c hc (K2.comp K') (hhead _) hside ⊤ _
+  iapply wp_couple_rand_rand_law law N HN R c hc (K2.comp K') (hhead _) ⊤ _
   iframe Hj Hc
   iintro %r %r' %hR Hr HKres
   isimp only [← Ectx.fill_comp K2 K'] at HKres
   rw [show Exp.ofVal (.int r : Val rT) = pl(#(.int r)) from rfl]
   iapply Hcnt $$ %r %r' %hR Hr %K2 %b HKres Hna Herr Hpos
 
-/-- `rel_couple_UU_law law R c hc hhead hside` couples `rand N ~ rand N` by a step of `law`,
+/-- `rel_couple_UU_law law R c hc hhead` couples `rand N ~ rand N` by a step of `law`,
 spending `↯b c` and leaving `↯b (R r r')` (relational `wp_couple_rand_rand_law`). -/
 macro "rel_couple_UU_law " law:term:max ppSpace R:term:max ppSpace c:term:max ppSpace
-    hc:term:max ppSpace hhead:term:max ppSpace hside:term:max : tactic =>
-  `(tactic| rel_apply (refines_couple_rands_law $law _ _ $R $c $hc $hhead $hside))
+    hc:term:max ppSpace hhead:term:max : tactic =>
+  `(tactic| rel_apply (refines_couple_rands_law $law _ _ $R $c $hc $hhead))
 
 end Law
 
@@ -253,7 +243,7 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} {GF : BundledGFunctors} [Micr
     wp (codensity dp) E pl(rand(#(.int N), #(.unit))) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_couple_rand_rand_law BindLaw.dpChoice N HN _ _ hc K
-    (fun σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂) (fun _ _ _ _ _ ↦ trivial)
+    (fun σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)
   iframe Hj Hc
   iintro %n %m %hR
   obtain ⟨hS, hcost⟩ := choiceCost_of_lt_top hR
@@ -277,7 +267,7 @@ theorem refines_couple_rands_dpChoice {GF : BundledGFunctors} [MicrometerRGS rT 
       (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
   iintro ⟨Hc, Hcnt⟩
   iapply refines_couple_rands_law BindLaw.dpChoice N HN _ _ hc
-    (fun K σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂) (fun _ _ _ _ _ ↦ trivial)
+    (fun K σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)
   iframe Hc
   iintro %n %m %hR
   obtain ⟨hS, hcost⟩ := choiceCost_of_lt_top hR

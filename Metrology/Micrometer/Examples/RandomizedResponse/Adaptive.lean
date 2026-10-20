@@ -103,9 +103,8 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
       REL[codensity (renyiDivergence 2)] (rrAdaptive (rT := rT) false) << (rrAdaptive true) :
         lrel_prod lrel_bool lrel_bool := by
   iintro Hb
-  -- the escort law has no side condition (last argument)
   rel_couple_UU_law (BindLaw.escort 2) adaptiveCost (ENNReal.ofReal (Real.log (19 / 12)))
-    (ENNReal.isAddLeftRegular_ofReal _) escortHead_rr3 (fun _ _ _ _ _ ↦ trivial)
+    (ENNReal.isAddLeftRegular_ofReal _) escortHead_rr3
   iframe Hb
   iintro %n %m %hR Hb
   rel_pures

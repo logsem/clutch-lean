@@ -54,6 +54,10 @@ noncomputable def dpRhs : BindLaw (codensity dp.{u}) where
     simpa [Set.piecewise_eq_of_mem _ _ _ hx] using hR x y hxy
   side_supp _ := trivial
 
+/-- The right-keyed DP law has no side condition. -/
+instance sideFree_dpRhs : (dpRhs.{u}).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
+
 /-! ## DP, adaptive on the left outcome -/
 
 /-- The head of left-keyed adaptive DP composition: a DP lifting of `S` within `(ε₁, δ₁)` whose
@@ -99,6 +103,10 @@ instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
     calc δ₁ + ∫⁻ x, D x ∂μ + c₂ * μ Set.univ ≤ δ₁ + ∫⁻ x, D x ∂μ + c₂ * 1 := by
           gcongr; exact hμ.measure_univ_le_one
       _ ≤ _ := by rw [mul_one]; gcongr
+
+/-- The left-keyed DP law has no side condition. -/
+instance sideFree_dpLhs : (dpLhs.{u}).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
 
 /-! ## DP choice -/
 
@@ -164,6 +172,10 @@ instance headShift_dpChoice : (dpChoice.{u}).HeadShift where
     rw [← add_assoc, ← add_assoc, max_add_add_right]
     gcongr
 
+/-- The DP choice law has no side condition. -/
+instance sideFree_dpChoice : (dpChoice.{u}).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
+
 /-! ## Escort-adaptive Rényi -/
 
 /-- The head of escort-adaptive Rényi composition: an `S`-supported witness kernel `r` such that
@@ -224,6 +236,10 @@ instance headShift_escort (α : ℝ) [hα : Fact (1 < α)] : (escort.{u} α).Hea
         (.inr (zero_lt_one.trans_le (one_le_expBudget _)).ne')]
     rw [hw, withDensity_smul _ (f := fun x ↦ (expBudget (ρ₂ x))⁻¹) (by fun_prop)]
     exact renyiDivergence_smul_inv_expBudget hα.out hc.ne h
+
+/-- The escort law has no side condition. -/
+instance sideFree_escort (α : ℝ) [Fact (1 < α)] : (escort.{u} α).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
 
 end GradedLifting.BindLaw
 

@@ -34,12 +34,6 @@ def codensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
     (∀ x y, D (R x y + c) (k x) (l y)) → D (b + c) (k ∘ₘ μ) (l ∘ₘ ν)
 
-theorem codensity_def [Add B] [LT B] [Top B] :
-    D.codensity b R μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
-      ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
-      (∀ x y, D (R x y + c) (k x) (l y)) → D (b + c) (k ∘ₘ μ) (l ∘ₘ ν) :=
-  Iff.rfl
-
 /-- Unfolding of a relational codensity lifting: tests are constrained only on related pairs. -/
 theorem codensity_rel_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
     [D.IsGraded] {S : X → Y → Prop} :
