@@ -14,6 +14,7 @@ open scoped ENNReal NNReal
 /-! ## The Laplace distribution -/
 
 namespace ProbabilityTheory
+open ENNReal
 
 /-- The density `exp (-|x - a| / b) / (2 b)` of the Laplace distribution. -/
 noncomputable def laplacePDF (a : ℝ) (b : ℝ≥0) (x : ℝ) : ℝ≥0∞ :=
@@ -23,11 +24,13 @@ noncomputable def laplacePDF (a : ℝ) (b : ℝ≥0) (x : ℝ) : ℝ≥0∞ :=
 noncomputable def laplace (a : ℝ) (b : ℝ≥0) : Measure ℝ :=
   volume.withDensity (laplacePDF a b)
 
+/-- The Laplace density is measurable. -/
 @[fun_prop]
 theorem measurable_laplacePDF (a : ℝ) (b : ℝ≥0) : Measurable (laplacePDF a b) := by
   unfold laplacePDF
   fun_prop
 
+/-- The exponential density `exponentialPDF r` is measurable. -/
 @[fun_prop]
 theorem measurable_exponentialPDF (r : ℝ) : Measurable (exponentialPDF r) := by
   unfold exponentialPDF
@@ -38,18 +41,18 @@ theorem laplacePDF_eq (a : ℝ) {b : ℝ≥0} (hb : 0 < b) {x : ℝ} (hx : x ≠
     laplacePDF a b x = 2⁻¹ * (exponentialPDF b⁻¹ (x - a) + exponentialPDF b⁻¹ (a - x)) := by
   have hb' : (0 : ℝ) < b := hb
   have h2 : (2⁻¹ : ℝ≥0∞) = ENNReal.ofReal 2⁻¹ := by
-    rw [ENNReal.ofReal_inv_of_pos two_pos, ENNReal.ofReal_ofNat]
+    rw [ofReal_inv_of_pos two_pos, ofReal_ofNat]
   rw [exponentialPDF_eq, exponentialPDF_eq, h2, laplacePDF]
   rcases hx.lt_or_gt with h | h
   · simp only [show ¬0 ≤ x - a by linarith, show 0 ≤ a - x by linarith, ↓reduceIte,
-      ENNReal.ofReal_zero, zero_add]
-    rw [← ENNReal.ofReal_mul (by norm_num), abs_of_neg (sub_neg.2 h)]
+      ofReal_zero, zero_add]
+    rw [← ofReal_mul (by norm_num), abs_of_neg (sub_neg.2 h)]
     congr 1
     field_simp
     ring_nf
   · simp only [show 0 ≤ x - a by linarith, show ¬0 ≤ a - x by linarith, ↓reduceIte,
-      ENNReal.ofReal_zero, add_zero]
-    rw [← ENNReal.ofReal_mul (by norm_num), abs_of_pos (sub_pos.2 h)]
+      ofReal_zero, add_zero]
+    rw [← ofReal_mul (by norm_num), abs_of_pos (sub_pos.2 h)]
     congr 1
     field_simp
 
@@ -68,6 +71,7 @@ instance isProbabilityMeasure_laplace (a : ℝ) {b : ℝ≥0} [hb : Fact (0 < b)
       lintegral_exponentialPDF_eq_one hr, one_add_one_eq_two,
       ENNReal.inv_mul_cancel two_ne_zero ENNReal.ofNat_ne_top]
 
+/-- The Laplace distribution with scale `b` is measurable in its location parameter. -/
 @[fun_prop]
 theorem measurable_laplace (b : ℝ≥0) : Measurable fun a ↦ laplace a b := by
   refine Measure.measurable_of_measurable_coe _ fun S hS ↦ ?_
@@ -78,6 +82,7 @@ theorem measurable_laplace (b : ℝ≥0) : Measurable fun a ↦ laplace a b := b
 end ProbabilityTheory
 
 namespace GradedDivergence
+open ENNReal
 
 variable {X : Type*} [MeasurableSpace X]
 
@@ -87,6 +92,14 @@ variable {X : Type*} [MeasurableSpace X]
 theorem dp_bernoulli_self (x y : X) (p : I) :
     dp 0 (bernoulliMeasure x y p) (bernoulliMeasure x y p) :=
   IsReflexive.refl _
+
+/-- Scaling `b ≥ m` by the ratio `M / m` dominates any `a ≤ M`, in `ℝ≥0∞`. -/
+theorem ofReal_le_ofReal_div_mul {a b m M : ℝ} (hm : 0 < m) (hmM : m ≤ M) (ha : a ≤ M)
+    (hb : m ≤ b) : ENNReal.ofReal a ≤ ENNReal.ofReal (M / m) * ENNReal.ofReal b := by
+  rw [← ofReal_mul (div_pos (hm.trans_le hmM) hm).le]
+  refine ofReal_le_ofReal (ha.trans ?_)
+  rw [div_mul_eq_mul_div, le_div_iff₀ hm]
+  exact mul_le_mul_of_nonneg_left hb (hm.le.trans hmM)
 
 /-- Complementary Bernoulli parameters are at DP budget `log (max p (1-p) / min p (1-p))`
 ([DP-Bern]). -/
@@ -98,27 +111,19 @@ theorem dp_bernoulli_symm (x y : X) {p : I} (hp₀ : 0 < (p : ℝ)) (hp₁ : (p 
   have hmin : 0 < min (p : ℝ) (σ p) := lt_min hp₀ hq₀
   have hratio : 0 < max (p : ℝ) (σ p) / min (p : ℝ) (σ p) :=
     div_pos (hmin.trans_le min_le_max) hmin
-  have key {a b : ℝ} (ha : a ≤ max (p : ℝ) (σ p)) (hb : min (p : ℝ) (σ p) ≤ b) (hb0 : 0 ≤ b) :
-      ENNReal.ofReal a ≤ ENNReal.ofReal (max (p : ℝ) (σ p) / min (p : ℝ) (σ p)) *
-        ENNReal.ofReal b := by
-    rw [← ENNReal.ofReal_mul hratio.le]
-    refine ENNReal.ofReal_le_ofReal (ha.trans ?_)
-    rw [div_mul_eq_mul_div, le_div_iff₀ hmin]
-    exact mul_le_mul_of_nonneg_left hb ((le_max_left _ _).trans' p.2.1)
   refine dp_of_forall_le fun S hS ↦ ?_
   rw [expBudget_ofReal (Real.log_nonneg ((one_le_div hmin).2 min_le_max)),
     Real.exp_log hratio, bernoulliMeasure_apply _ hS, bernoulliMeasure_apply _ hS, symm_symm]
-  have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p :=
-    (ENNReal.ofReal_eq_coe_nnreal p.2.1).symm
+  have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p := (ofReal_eq_coe_nnreal p.2.1).symm
   have hq : ((toNNReal (σ p) : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal (σ p) :=
-    (ENNReal.ofReal_eq_coe_nnreal (σ p).2.1).symm
+    (ofReal_eq_coe_nnreal (σ p).2.1).symm
   split_ifs
-  · rw [mul_one, ← ENNReal.ofReal_one]
-    exact ENNReal.ofReal_le_ofReal ((one_le_div hmin).2 min_le_max)
+  · rw [mul_one, ← ofReal_one]
+    exact ofReal_le_ofReal ((one_le_div hmin).2 min_le_max)
   · rw [hp, hq]
-    exact key (le_max_left _ _) (min_le_right _ _) (σ p).2.1
+    exact ofReal_le_ofReal_div_mul hmin min_le_max (le_max_left _ _) (min_le_right _ _)
   · rw [hp, hq]
-    exact key (le_max_right _ _) (min_le_left _ _) p.2.1
+    exact ofReal_le_ofReal_div_mul hmin min_le_max (le_max_right _ _) (min_le_left _ _)
   · simp
 
 /-! ## Laplace -/
@@ -131,8 +136,8 @@ theorem dp_laplace {a a' r : ℝ} (h : |a - a'| ≤ r) (b : ℝ≥0) :
     withDensity_apply _ hS, withDensity_apply _ hS,
     ← lintegral_const_mul _ (measurable_laplacePDF _ _)]
   refine setLIntegral_mono (by fun_prop) fun x _ ↦ ?_
-  rw [laplacePDF, laplacePDF, ← ENNReal.ofReal_mul (Real.exp_pos _).le]
-  refine ENNReal.ofReal_le_ofReal ?_
+  rw [laplacePDF, laplacePDF, ← ofReal_mul (Real.exp_pos _).le]
+  refine ofReal_le_ofReal ?_
   rw [← mul_div_assoc, ← Real.exp_add, ← add_div]
   gcongr
   linarith [abs_sub_le x a a']

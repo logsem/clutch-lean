@@ -13,6 +13,7 @@ open MeasureTheory Measure Set Filter Topology
 open scoped ENNReal
 
 namespace ProbabilityTheory
+open ENNReal (toReal_nonneg)
 
 variable {f g : ℝ → ℝ}
 
@@ -28,11 +29,14 @@ noncomputable def fDiv (f : ℝ → ℝ) (μ ν : Measure X) : EReal :=
     ((∫ x, f (μ.rnDeriv ν x).toReal ∂ν : ℝ) : EReal) + derivAtTop f * μ.singularPart ν univ
   else ⊤
 
+/-- When `f ∘ dμ/dν` is integrable, the `f`-divergence is its integral plus the singular part
+contribution `f'(∞) · μₛ(univ)`. -/
 theorem fDiv_of_integrable (h : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
     fDiv f μ ν =
       ((∫ x, f (μ.rnDeriv ν x).toReal ∂ν : ℝ) : EReal) + derivAtTop f * μ.singularPart ν univ := by
   simp [fDiv, h]
 
+/-- If `f ∘ (dμ/dν)` is not integrable, the `f`-divergence is `⊤`. -/
 theorem fDiv_of_not_integrable (h : ¬Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
     fDiv f μ ν = ⊤ := by
   simp [fDiv, h]
@@ -40,11 +44,20 @@ theorem fDiv_of_not_integrable (h : ¬Integrable (fun x ↦ f (μ.rnDeriv ν x).
 /-- A function continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
 theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
     (hG : Measurable G) (hG0 : ∀ x, 0 ≤ G x) : Measurable fun x ↦ f (G x) := by
-  have : Continuous fun t ↦ f (max t 0) :=
-    hf.comp_continuous (continuous_id.max continuous_const) fun t ↦ le_max_right t 0
   have h : (fun x ↦ f (G x)) = (fun t ↦ f (max t 0)) ∘ G :=
     funext fun x ↦ by simp [max_eq_left (hG0 x)]
-  exact h ▸ this.measurable.comp hG
+  exact h ▸ (hf.comp_continuous (continuous_id.max continuous_const)
+    fun t ↦ le_max_right t 0).measurable.comp hG
+
+/-- A real multiple of `D` below `m` is a real multiple of some `d`, with `d ≥ 0` when `D ≥ 0`. -/
+theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0) (hbot : D ≠ ⊥) :
+    ∃ d : ℝ, (∀ r : ℝ, 0 ≤ r → r ≤ m → (r : EReal) * D = (r * d : ℝ)) ∧ (0 ≤ D → 0 ≤ d) := by
+  by_cases hDtop : D = ⊤
+  · refine ⟨0, fun r hr hrm ↦ ?_, fun _ ↦ le_rfl⟩
+    obtain rfl : r = 0 := le_antisymm (by simpa [hD hDtop] using hrm) hr
+    simp
+  · refine ⟨D.toReal, fun r _ _ ↦ ?_, EReal.toReal_nonneg⟩
+    rw [EReal.coe_mul, EReal.coe_toReal hDtop hbot]
 
 /-- Weighted partition sums are below the `f`-divergence: Jensen on the density part, the slope
 at infinity on the singular part. -/
@@ -79,30 +92,18 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
   · rw [fDiv_of_integrable hint, htop.1,
       EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 htop.2)), EReal.coe_add_top]
     exact le_top
-  -- otherwise the singular part costs a real `d` per unit of mass
-  obtain ⟨d, hd, hd0⟩ : ∃ d : ℝ, (∀ r : ℝ, 0 ≤ r → r ≤ μs.real univ →
-      (r : EReal) * derivAtTop f = (r * d : ℝ)) ∧ (0 ≤ derivAtTop f → 0 ≤ d) := by
-    by_cases hDtop : derivAtTop f = ⊤
-    · refine ⟨0, fun r hr hrm ↦ ?_, fun _ ↦ le_rfl⟩
-      have h0 : μs univ = 0 := by_contra fun h0 ↦ htop ⟨hDtop, h0⟩
-      obtain rfl : r = 0 := le_antisymm (by simpa [measureReal_def, h0] using hrm) hr
-      simp
-    · refine ⟨(derivAtTop f).toReal, fun r _ _ ↦ ?_, EReal.toReal_nonneg⟩
-      rw [EReal.coe_mul, EReal.coe_toReal hDtop (derivAtTop_ne_bot hf)]
+  obtain ⟨d, hd, hd0⟩ := exists_real_mul_eq_coe_mul (derivAtTop f) (μs.real univ)
+    (fun hD ↦ by simp [measureReal_def, not_not.1 (not_and.1 htop hD)]) (derivAtTop_ne_bot hf)
   have hterm (i) (hi : i ∈ s) : persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν) ≤
       ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) := by
     have hs0 : 0 ≤ ∫ x, w i x ∂μs := integral_nonneg (hw0 i)
     rw [hsplit i hi, ← add_zero (∫ x, w i x ∂ν), EReal.coe_add]
     calc _ ≤ persp f (∫ x, w i x * G x ∂ν) (∫ x, w i x ∂ν) + persp f (∫ x, w i x ∂μs) 0 :=
-          persp_add_le hf (integral_nonneg fun x ↦ mul_nonneg (hw0 i x) ENNReal.toReal_nonneg)
+          persp_add_le hf (integral_nonneg fun x ↦ mul_nonneg (hw0 i x) toReal_nonneg)
             hs0 (integral_nonneg (hw0 i)) le_rfl
-      _ ≤ _ := add_le_add (persp_integral_le hf hf_cont (fun _ ↦ ENNReal.toReal_nonneg)
+      _ ≤ _ := add_le_add (persp_integral_le hf hf_cont (fun _ ↦ toReal_nonneg)
             integrable_toReal_rnDeriv hint (hw i) (hw0 i) (hwi i hi))
             (by rw [persp_zero_right, hd _ hs0 (hsing (hint_w i hi _) (hwi i hi))])
-  have hsum_int : Integrable (fun x ↦ (∑ i ∈ s, w i x) * f (G x)) ν :=
-    hint.bdd_mul (Finset.measurable_sum _ fun i _ ↦ hw i).aestronglyMeasurable
-      (ae_of_all _ fun x ↦
-        (Real.norm_of_nonneg (Finset.sum_nonneg fun i _ ↦ hw0 i x)).le.trans (hw1 x))
   calc ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν)
       ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) :=
         Finset.sum_le_sum hterm
@@ -117,11 +118,14 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
         rw [EReal.coe_le_coe_iff]
         rcases h with h | h
         · simp [h]
-        exact add_le_add (integral_mono hsum_int hint fun x ↦
-          mul_le_of_le_one_left (h _ ENNReal.toReal_nonneg) (hw1 x))
+        refine add_le_add (integral_mono ?_ hint fun x ↦
+          mul_le_of_le_one_left (h _ toReal_nonneg) (hw1 x))
           (mul_le_mul_of_nonneg_right
             (hsing (integrable_finsetSum _ fun i hi ↦ hint_w i hi _) hw1)
             (hd0 (derivAtTop_nonneg h)))
+        exact hint.bdd_mul (Finset.measurable_sum _ fun i _ ↦ hw i).aestronglyMeasurable
+          (ae_of_all _ fun x ↦
+            (Real.norm_of_nonneg (Finset.sum_nonneg fun i _ ↦ hw0 i x)).le.trans (hw1 x))
     _ = fDiv f μ ν := by
         rw [fDiv_of_integrable hint, EReal.coe_add, ← hd _ measureReal_nonneg le_rfl, mul_comm,
           measureReal_def, EReal.coe_ennreal_toReal (measure_ne_top _ _)]
@@ -133,12 +137,12 @@ theorem sum_persp_le_fDiv (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
     ∑ i, persp f (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤ fDiv f μ ν := by
   have hA (i : ι) : MeasurableSet (k ⁻¹' {i}) := hk (measurableSet_singleton i)
   have hsum (x : X) : ∑ i, (k ⁻¹' {i}).indicator (1 : X → ℝ) x = 1 := by
-    rw [Finset.sum_eq_single (k x) (fun i _ hi ↦ by simp [Ne.symm hi]) (by simp)]
+    rw [Finset.sum_eq_single (k x) (fun i _ hi ↦ by simp [hi.symm]) (by simp)]
     simp
-  have := sum_persp_integral_le_fDiv (μ := μ) (ν := ν) hf hf_cont Finset.univ
-    (fun i ↦ measurable_const.indicator (hA i))
-    (fun i x ↦ indicator_nonneg (fun _ _ ↦ zero_le_one) x) (fun x ↦ (hsum x).le) (.inl hsum)
-  simpa only [integral_indicator_const _ (hA _), smul_eq_mul, mul_one, measureReal_def] using this
+  simpa only [integral_indicator_const _ (hA _), smul_eq_mul, mul_one, measureReal_def] using
+    sum_persp_integral_le_fDiv (μ := μ) (ν := ν) hf hf_cont Finset.univ
+      (fun i ↦ measurable_const.indicator (hA i))
+      (fun i x ↦ indicator_nonneg (fun _ _ ↦ zero_le_one) x) (fun x ↦ (hsum x).le) (.inl hsum)
 
 /-- A larger weight gives a larger `f`-divergence; only the smaller weight needs to be convex, so
 that its integral is bounded below. -/
@@ -155,12 +159,12 @@ theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f 
   have hfG : Integrable (fun x ↦ f (G x)) ν :=
     integrable_of_le_of_le
       ((hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
-        fun _ ↦ ENNReal.toReal_nonneg).aestronglyMeasurable
-      (ae_of_all _ fun _ ↦ hac _ ENNReal.toReal_nonneg)
-      (ae_of_all _ fun _ ↦ h _ ENNReal.toReal_nonneg)
+        fun _ ↦ toReal_nonneg).aestronglyMeasurable
+      (ae_of_all _ fun _ ↦ hac _ toReal_nonneg)
+      (ae_of_all _ fun _ ↦ h _ toReal_nonneg)
       ((integrable_toReal_rnDeriv.const_mul a).add (integrable_const c)) hg
   rw [fDiv_of_integrable hfG, fDiv_of_integrable hg]
-  exact add_le_add (EReal.coe_le_coe_iff.2 (integral_mono hfG hg fun _ ↦ h _ ENNReal.toReal_nonneg))
+  exact add_le_add (EReal.coe_le_coe_iff.2 (integral_mono hfG hg fun _ ↦ h _ toReal_nonneg))
     (mul_le_mul_of_nonneg_right (derivAtTop_mono h) (EReal.coe_ennreal_nonneg _))
 
 /-! ## Values and data processing -/
@@ -174,6 +178,7 @@ theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
     singularPart_self]
   simp [measureReal_def]
 
+/-- The `f`-divergence of a measure from itself vanishes when `f 1 = 0`. -/
 theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [SigmaFinite μ] : fDiv f μ μ = 0 := by
   have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ 0 :=
     μ.rnDeriv_self.mono fun x hx ↦ by simp [hx, hf1]
@@ -190,6 +195,7 @@ theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
     singularPart_zero]
   simp [measureReal_def]
 
+/-- The `f`-divergence from the zero measure vanishes when `f 0 = 0`. -/
 theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
   have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ 0 :=
     (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx, hf0]
@@ -197,17 +203,21 @@ theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
     singularPart_zero]
   simp
 
+/-- For a sub-probability measure `μ`, `μ(univ) * c ≤ max 0 c`. -/
 theorem toReal_univ_mul_le_max (μ : Measure X) [IsSubProbabilityMeasure μ] (c : ℝ) :
     (μ univ).toReal * c ≤ max 0 c := by
   obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ) univ
   exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
     (mul_le_of_le_one_left (le_max_left _ _) h1)
 
+/-- The `f`-divergence of a sub-probability measure with itself is at most `max 0 (f 1)`. -/
 theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
     fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
   rw [fDiv_self_eq, EReal.coe_le_coe_iff]
   exact toReal_univ_mul_le_max μ _
 
+/-- The `f`-divergence of the zero measure from a sub-probability measure `ν` is at most
+`max 0 (f 0)`. -/
 theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
     fDiv f 0 ν ≤ ((max 0 (f 0) : ℝ) : EReal) := by
   rw [fDiv_zero_left_eq, EReal.coe_le_coe_iff]
@@ -228,10 +238,11 @@ theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
     exact h rfl
   · exact absurd (fDiv_of_not_integrable hint) h
 
+/-- A nonnegative function has nonnegative `f`-divergence. -/
 theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f μ ν := by
   by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
   · rw [fDiv_of_integrable hint]
-    exact add_nonneg (EReal.coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ ENNReal.toReal_nonneg))
+    exact add_nonneg (EReal.coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ toReal_nonneg))
       (mul_nonneg (derivAtTop_nonneg hf) (EReal.coe_ennreal_nonneg _))
   · simp [fDiv_of_not_integrable hint]
 

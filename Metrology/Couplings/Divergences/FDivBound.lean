@@ -22,6 +22,7 @@ def fDivBound (K : Type w) (weight : B → K → ℝ → ℝ) (thresh : B → K 
     GradedDivergence.{u} B :=
   fun b _ _ μ ν ↦ ∀ k, fDiv (weight b k) μ ν ≤ thresh b k
 
+/-- A graded `f`-divergence bound holds iff `fDiv (weight b k) μ ν ≤ thresh b k` for every `k`. -/
 theorem fDivBound_def {b : B} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
     fDivBound K weight thresh b μ ν ↔ ∀ k, fDiv (weight b k) μ ν ≤ thresh b k :=
   Iff.rfl
@@ -59,10 +60,11 @@ theorem isLeftContinuous_fDivBound (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b
     (hw_cont : ∀ b k, ContinuousWithinAt (weight b k) (Ici 0) 0) :
     (fDivBound.{u} K weight thresh).IsLeftContinuous where
   iSup_left b X _ μ _ hμ ν _ h k := by
-    have : IsFiniteMeasure (⨆ n, μ n) := ⟨by
+    have : IsFiniteMeasure (⨆ n, μ n) := by
+      refine ⟨?_⟩
       rw [iSup_apply_of_monotone hμ MeasurableSet.univ]
       exact (iSup_le fun n ↦ IsSubProbabilityMeasure.measure_univ_le_one).trans_lt
-        ENNReal.one_lt_top⟩
+        ENNReal.one_lt_top
     exact (fDiv_iSup_left_le (hw b k) (hw_cont b k) hμ).trans (iSup_le fun n ↦ h n k)
 
 /-- With weights fixed across budgets, thresholds closed from above give closed budgets. -/
@@ -123,9 +125,8 @@ theorem isComposable_fDivBound_of_perspSplit [Add B]
     (hpos : ∀ b k, 0 ≤ thresh b k) :
     (fDivBound.{u} K weight thresh).IsComposable :=
   isComposable_fDivBound_of_finite hw hw_cont (fun _ _ _ _ ↦ add_le_add)
-    (fun b c k ↦ fDiv_comp_le_of_perspSplit (hw _ k) (hw_cont _ k)
-      (hw b k) (hw_cont b k) (hw c k) (hw_cont c k) (hw₀ _ k) (hw₀ b k) (hw₀ c k) hβ hβ'
-      (hA b c k) _ _ _ _) hthresh hpos
+    (fun b c k ↦ fDiv_comp_le_of_perspSplit (hw _ k) (hw_cont _ k) (hw b k) (hw_cont b k)
+      (hw c k) (hw_cont c k) (hw₀ _ k) (hw₀ b k) (hw₀ c k) hβ hβ' (hA b c k) ..) hthresh hpos
 
 /-- Multiplicative chain rules (Rényi shape) go through the clamped chain `max 0 a * max 0 c`,
 which is globally monotone. -/
@@ -148,28 +149,33 @@ theorem isComposable_fDivBound_of_mul [Add B] (hw : ∀ b k, ConvexOn ℝ (Ici 0
 end GradedDivergence
 
 namespace ProbabilityTheory
+open Real ENNReal
 
 /-- The weight `t ↦ max 0 (t - e^ε)` of `(ε, δ)`-differential privacy (Def. 2.6). -/
 noncomputable def dpWeight (ε t : ℝ) : ℝ := max 0 (t - Real.exp ε)
 
+/-- The weight `t ↦ max 0 (t - exp ε)` defining the `ε`-hockey-stick divergence is convex on
+`[0, ∞)`. -/
 theorem convexOn_dpWeight (ε : ℝ) : ConvexOn ℝ (Ici 0) (dpWeight ε) :=
   (convexOn_const 0 (convex_Ici 0)).sup
-    ((convexOn_id (convex_Ici 0)).sub (concaveOn_const (Real.exp ε) (convex_Ici 0)))
+    ((convexOn_id (convex_Ici 0)).sub (concaveOn_const (exp ε) (convex_Ici 0)))
 
+/-- The hockey-stick weight `t ↦ max 0 (t - ε)` is continuous. -/
 theorem continuous_dpWeight (ε : ℝ) : Continuous (dpWeight ε) :=
   continuous_const.max (continuous_id.sub continuous_const)
 
+/-- The slope at infinity of the `Dp` weight is `1`. -/
 theorem derivAtTop_dpWeight (ε : ℝ) : derivAtTop (dpWeight ε) = 1 := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
-  have h : Tendsto (fun t : ℝ ↦ 1 - Real.exp ε / t) atTop (𝓝 1) := by
-    simpa using tendsto_const_nhds.sub
-      ((tendsto_const_nhds (x := Real.exp ε)).div_atTop tendsto_id)
+  have h : Tendsto (fun t : ℝ ↦ 1 - exp ε / t) atTop (𝓝 1) := by
+    simpa using tendsto_const_nhds.sub ((tendsto_const_nhds (x := exp ε)).div_atTop tendsto_id)
   refine h.congr' ?_
-  filter_upwards [eventually_gt_atTop (Real.exp ε)] with t ht
-  have ht0 : 0 < t := (Real.exp_pos ε).trans ht
+  filter_upwards [eventually_gt_atTop (exp ε)] with t ht
+  have ht0 : 0 < t := (exp_pos ε).trans ht
   rw [dpWeight, max_eq_right (by linarith)]
   field_simp
 
+/-- The perspective of the hockey-stick weight is `max 0 (a - exp ε * b)`. -/
 theorem persp_dpWeight (ε : ℝ) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (dpWeight ε) a b = ((max 0 (a - Real.exp ε * b) : ℝ) : EReal) := by
   rcases hb.eq_or_lt with rfl | hb
@@ -179,37 +185,53 @@ theorem persp_dpWeight (ε : ℝ) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
 
 variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
 
+/-- Summing masses of cells in a finite set `P` gives the mass of their union. -/
+theorem sum_toReal_preimage_singleton {X : Type*} [MeasurableSpace X] {n : ℕ} (ρ : Measure X)
+    [IsFiniteMeasure ρ] {k : X → Fin n} (hk : Measurable k) (P : Finset (Fin n)) :
+    ∑ i ∈ P, (ρ (k ⁻¹' {i})).toReal = (ρ (k ⁻¹' P)).toReal := by
+  rw [← toReal_sum (fun _ _ ↦ measure_ne_top _ _),
+    sum_measure_preimage_singleton _ fun _ _ ↦ hk (measurableSet_singleton _)]
+
+/-- Every finite measurable partition gives a value at most the largest gap over events. -/
+theorem sum_persp_dpWeight_le_iSup {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
+    (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] {n : ℕ} {k : X → Fin n} (hk : Measurable k) :
+    ∑ i, persp (dpWeight ε) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤
+      ⨆ (S : Set X) (_ : MeasurableSet S),
+        (((μ S).toReal - exp ε * (ν S).toReal : ℝ) : EReal) := by
+  set x : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal - exp ε * (ν (k ⁻¹' {i})).toReal
+  set P := Finset.univ.filter fun i ↦ 0 ≤ x i
+  refine le_iSup₂_of_le _ (hk .of_discrete : MeasurableSet (k ⁻¹' (P : Set (Fin n))))
+    (le_of_eq ?_)
+  simp_rw [persp_dpWeight ε toReal_nonneg toReal_nonneg, ← EReal.coe_finset_sum,
+    ← sum_toReal_preimage_singleton μ hk, ← sum_toReal_preimage_singleton ν hk, Finset.mul_sum,
+    ← Finset.sum_sub_distrib]
+  congr 1
+  rw [Finset.sum_filter]
+  exact Finset.sum_congr rfl fun i _ ↦ by split_ifs with h <;> simp [x, h, le_of_not_ge]
+
+/-- The gap on an event is at most the supremum over finite measurable partitions. -/
+theorem coe_gap_le_iSup_partition {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
+    (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] {S : Set X} (hS : MeasurableSet S) :
+    (((μ S).toReal - exp ε * (ν S).toReal : ℝ) : EReal) ≤
+      ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
+        ∑ i, persp (dpWeight ε) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal := by
+  classical
+  let k : X → Fin 2 := fun x ↦ if x ∈ S then 0 else 1
+  refine le_iSup_of_le 2 <| le_iSup_of_le k <|
+    le_iSup_of_le (measurable_const.ite hS measurable_const) ?_
+  simp only [Fin.sum_univ_two, (by ext; simp [k] : k ⁻¹' {0} = S),
+    persp_dpWeight ε toReal_nonneg toReal_nonneg]
+  rw [← EReal.coe_add, EReal.coe_le_coe_iff]
+  exact (le_max_right _ _).trans (le_add_of_nonneg_right (le_max_left _ _))
+
 /-- The DP `f`-divergence is the largest gap `μ S - e^ε ν S` over measurable events. -/
 theorem fDiv_dpWeight_eq_iSup (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv (dpWeight ε) μ ν = ⨆ (S : Set X) (_ : MeasurableSet S),
       (((μ S).toReal - Real.exp ε * (ν S).toReal : ℝ) : EReal) := by
   rw [fDiv_eq_iSup_partition (convexOn_dpWeight ε) (continuous_dpWeight ε).continuousWithinAt]
-  apply le_antisymm
-  · refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
-    set x : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal - Real.exp ε * (ν (k ⁻¹' {i})).toReal
-    set P := Finset.univ.filter fun i ↦ 0 ≤ x i
-    refine le_iSup₂_of_le _ (hk .of_discrete : MeasurableSet (k ⁻¹' (P : Set (Fin n))))
-      (le_of_eq ?_)
-    have hsum (ρ : Measure X) [IsFiniteMeasure ρ] :
-        ∑ i ∈ P, (ρ (k ⁻¹' {i})).toReal = (ρ (k ⁻¹' P)).toReal := by
-      rw [← ENNReal.toReal_sum (fun _ _ ↦ measure_ne_top _ _),
-        sum_measure_preimage_singleton _ fun _ _ ↦ hk (measurableSet_singleton _)]
-    simp_rw [persp_dpWeight ε ENNReal.toReal_nonneg ENNReal.toReal_nonneg,
-      ← EReal.coe_finset_sum, ← hsum μ, ← hsum ν, Finset.mul_sum, ← Finset.sum_sub_distrib]
-    congr 1
-    rw [Finset.sum_filter]
-    exact Finset.sum_congr rfl fun i _ ↦ by split_ifs with h <;> simp [x, h, le_of_not_ge]
-  · refine iSup₂_le fun S hS ↦ ?_
-    classical
-    let k : X → Fin 2 := fun x ↦ if x ∈ S then 0 else 1
-    have hk : Measurable k := measurable_const.ite hS measurable_const
-    have h0 : k ⁻¹' {0} = S := by
-      ext
-      simp [k]
-    refine le_iSup_of_le 2 <| le_iSup_of_le k <| le_iSup_of_le hk ?_
-    simp only [Fin.sum_univ_two, h0, persp_dpWeight ε ENNReal.toReal_nonneg ENNReal.toReal_nonneg]
-    rw [← EReal.coe_add, EReal.coe_le_coe_iff]
-    exact (le_max_right _ _).trans (le_add_of_nonneg_right (le_max_left _ _))
+  exact le_antisymm
+    (iSup_le fun _ ↦ iSup_le fun _ ↦ iSup_le fun hk ↦ sum_persp_dpWeight_le_iSup ε hk)
+    (iSup₂_le fun _ hS ↦ coe_gap_le_iSup_partition ε hS)
 
 /-- A DP `f`-divergence bound is the DP inequality on events. -/
 theorem fDiv_dpWeight_le_iff (ε : ℝ) (δ : ℝ≥0∞) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
@@ -220,9 +242,8 @@ theorem fDiv_dpWeight_le_iff (ε : ℝ) (δ : ℝ≥0∞) [IsFiniteMeasure μ] [
   rcases eq_or_ne δ ⊤ with rfl | hδ
   · simp
   rw [← EReal.coe_ennreal_toReal hδ, EReal.coe_le_coe_iff,
-    ← ENNReal.toReal_le_toReal (measure_ne_top _ _) (by finiteness),
-    ENNReal.toReal_add (by finiteness) hδ, ENNReal.toReal_mul,
-    ENNReal.toReal_ofReal (Real.exp_pos ε).le, sub_le_iff_le_add']
+    ← toReal_le_toReal (measure_ne_top _ _) (by finiteness), toReal_add (by finiteness) hδ,
+    toReal_mul, toReal_ofReal (exp_pos ε).le, sub_le_iff_le_add']
 
 end ProbabilityTheory
 
