@@ -176,6 +176,11 @@ noncomputable def log : PowerBudget ≃+o ℝ≥0∞ where
 theorem log_apply (c : PowerBudget) : log c = (ENNReal.log (1 + toENNReal c)).toENNReal :=
   rfl
 
+/-- A real power budget `c ≥ 0` has log coordinate `log (1 + c)`. -/
+theorem log_ofReal {c : ℝ} (hc : 0 ≤ c) : log (ofReal c) = ENNReal.ofReal (Real.log (1 + c)) := by
+  rw [log_apply, toENNReal_ofReal, ← ENNReal.ofReal_one, ← ENNReal.ofReal_add zero_le_one hc,
+    ENNReal.log_ofReal_of_pos (by positivity), EReal.real_coe_toENNReal]
+
 theorem coe_log (c : PowerBudget) : (log c : EReal) = ENNReal.log (1 + toENNReal c) :=
   EReal.coe_toENNReal (log_one_add_nonneg c)
 

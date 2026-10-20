@@ -32,7 +32,7 @@ By divergence (`RR` is `RandomizedResponse`):
 * zCDP: `RR.Zcdp`, `RR.Twice`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition`,
   `PublicChoiceZcdp` (from two-way pure DP)
 * tCDP: `RR.Tcdp`
-* χ²: `RR.Chi2`
+* χ²: `RR.Chi2`, `RR.AdaptiveChi2`
 * KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP),
   `Couplings.Examples.KLCoinFlips` (lifting level)
 
@@ -47,7 +47,8 @@ By rule:
   `GaussianZcdp`
 * one proof in any lifting (`rr_refines_of`, `rrCount_refines_of`, `rrCount_isPrivate`):
   `RR.Basic`, instantiated by `RR.Dp`, `RR.Zcdp`, `RR.Tcdp`, `RR.Renyi`, `RR.Curve`, `RR.Chi2`
-* non-canonical bind laws: `PublicChoice` (`dpChoice`), `RR.Adaptive` (escort)
+* non-canonical bind laws: `PublicChoice` (`dpChoice`), `RR.Adaptive` (escort),
+  `RR.AdaptiveChi2` (`escortPower`)
 * programs as mechanisms (`progMech_isPrivate`): `RR.Dp`, `RR.Twice`, `PublicChoice`, `LeakyRR`
   (`RR.Basic` states `IsPrivate` directly from `rrCount_div`)
 * conversions between divergences: `RR.Twice`, `RR.Tcdp`, `RR.Curve`
