@@ -37,7 +37,7 @@ theorem execN_tape_presample_expr_eq
       simp_rw [hstep]
       have hkdir : Measurable (fun σ' : State rT => Measure.dirac (⟨e, σ'⟩ : Cfg rT)) :=
         Cfg.measurable_dirac_mk (fe := fun _ => e) measurable_const measurable_id
-      rw [Measure.bind_map_comm' _ _ _ hkdir.aemeasurable Cfg.measurable_expr]
+      rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hkdir.aemeasurable]
       -- explicit kernel equality: `simp_rw` leaves metavariables here
       have hker : (fun σ' : State rT => Measure.map (·.expr) (Measure.dirac (⟨e, σ'⟩ : Cfg rT)))
           = (fun _ => Measure.dirac e) := by
@@ -63,7 +63,7 @@ theorem execN_tape_presample_expr_eq
       have hbind_ker : Measurable (fun σ' : State rT =>
           (headStep (⟨e_red, σ'⟩ : Cfg rT)).bind (execN m ∘ K.fillCfg)) :=
         (Measure.measurable_join.comp (Measure.measurable_map _ hg_exec)).comp hker_hs
-      simp_rw [hprim, Measure.bind_map' (Ectx.fillCfg.measurable K) (execN_measurable m)]
+      simp_rw [hprim, Measure.bind_map (Ectx.fillCfg.measurable K) (execN_measurable m)]
       refine Measure.ext fun S hS => ?_
       rw [Measure.map_apply Cfg.measurable_expr hS,
           Measure.map_apply Cfg.measurable_expr hS,

@@ -206,37 +206,13 @@ theorem tapePresample_bind_dirac_measurable {α : Loc}
 
 /-! ## Bind-map distributivity -/
 
-theorem Measure.bind_map_comm {α β γ : Type*}
+/-- `Measure.bind_map_comm` when every space is discrete, so no measurability side conditions. -/
+theorem Measure.bind_map_comm_of_discrete {α β γ : Type*}
     [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β]
-    [DiscreteMeasurableSpace γ]
+    [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β] [DiscreteMeasurableSpace γ]
     (μ : Measure α) (k : α → Measure β) (f : β → γ) :
-    (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
-  refine Measure.ext fun S hS => ?_
-  rw [Measure.map_apply .of_discrete hS,
-      Measure.bind_apply (by exact .of_discrete) Measurable.of_discrete.aemeasurable,
-      Measure.bind_apply hS Measurable.of_discrete.aemeasurable]
-  simp_rw [Measure.map_apply .of_discrete hS]
-
-theorem Measure.bind_map_comm' {α β γ : Type*}
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    (μ : Measure α) (k : α → Measure β) (f : β → γ)
-    (hk : AEMeasurable k μ) (hf : Measurable f) :
-    (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
-  have hkmap : AEMeasurable (fun a => (k a).map f) μ :=
-    (Measure.measurable_map f hf).comp_aemeasurable hk
-  refine Measure.ext fun S hS => ?_
-  rw [Measure.map_apply hf hS,
-      Measure.bind_apply (hf hS) hk,
-      Measure.bind_apply hS hkmap]
-  simp_rw [Measure.map_apply hf hS]
-
-theorem Measure.bind_map' {α β γ : Type*}
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    {μ : Measure α} {f : α → β} {g : β → Measure γ}
-    (hf : Measurable f) (hg : Measurable g) :
-    (μ.map f).bind g = μ.bind (g ∘ f) := by
-  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
+    (μ.bind k).map f = μ.bind (fun a => (k a).map f) :=
+  Measure.bind_map_comm μ k f .of_discrete Measurable.of_discrete.aemeasurable
 
 /-! ## Tape persistence through a prim step -/
 

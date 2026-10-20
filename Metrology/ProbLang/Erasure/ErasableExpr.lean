@@ -58,7 +58,7 @@ theorem execN_tapePresampleIter_expr_eq [Countable rT] [MeasurableSingletonClass
     rw [Measure.bind_bind
           Measurable.of_discrete.aemeasurable
           Measurable.of_discrete.aemeasurable,
-        Measure.bind_map_comm]
+        Measure.bind_map_comm_of_discrete]
     refine Measure.ext fun S hS => ?_
     rw [Measure.bind_apply hS Measurable.of_discrete.aemeasurable]
     calc ∫⁻ σ₁, ((tapePresample σ₁ α).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S
@@ -154,7 +154,7 @@ theorem dbind [Countable rT] [MeasurableSingletonClass rT]
   rw [Measure.bind_bind
         Measurable.of_discrete.aemeasurable
         Measurable.of_discrete.aemeasurable,
-      Measure.bind_map_comm]
+      Measure.bind_map_comm_of_discrete]
   have hker : (fun σ' : State rT =>
       Measure.map (·.expr : Cfg rT → Exp rT)
         ((μ₂ σ').bind (fun σ'' => execN m ⟨e, σ''⟩)))
@@ -164,7 +164,7 @@ theorem dbind [Countable rT] [MeasurableSingletonClass rT]
     have := h₂ σ' e m
     unfold asExpr at this
     exact this
-  rw [hker, ← Measure.bind_map_comm]
+  rw [hker, ← Measure.bind_map_comm_of_discrete]
   have := h₁ e m
   unfold asExpr at this
   exact this

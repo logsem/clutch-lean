@@ -105,7 +105,7 @@ theorem tapePresample_update_heap_comm
         (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) : Measure (State rT)))
         (tapeIndexUniform N) :=
       (measurable_dirac.comp Measurable.of_discrete).aemeasurable
-    rw [Measure.bind_map_comm' _ _ _ hker hmap]
+    rw [Measure.bind_map_comm _ _ _ hmap hker]
     congr 1
     funext n'
     rw [Measure.map_dirac (f := (·.update_heap f)) (σ.update_tapes (·.insert α ⟨N, bs ++ [n']⟩))]
@@ -134,7 +134,7 @@ theorem tapePresample_update_tapes_ne_comm
         (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) : Measure (State rT)))
         (tapeIndexUniform N) :=
       (measurable_dirac.comp Measurable.of_discrete).aemeasurable
-    rw [Measure.bind_map_comm' _ _ _ hker hmap]
+    rw [Measure.bind_map_comm _ _ _ hmap hker]
     congr 1
     funext n'
     rw [show Measure.dirac ((σ.update_tapes (·.insert β v)).update_tapes

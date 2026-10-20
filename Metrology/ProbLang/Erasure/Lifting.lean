@@ -132,8 +132,8 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
     le_rfl
   rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
+      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
   exact IsExpectationAdditive.bind_adv hCoupl hCont
     ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
     ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable) hE₂meas
@@ -211,15 +211,9 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
     fun _ => IsSubProbabilityMeasure.measure_univ_le_one
   rw [← hErase₁'.lim_exec e₁']
   unfold asExpr
-  rw [Measure.bind_map_comm, Measure.bind_map_comm]
+  rw [Measure.bind_map_comm_of_discrete, Measure.bind_map_comm_of_discrete]
   exact (AddCoupl.bind_adv_lhs Measurable.of_discrete Measurable.of_discrete hE₂meas hmassk
     hBoundSum hCoupl fun {ρ σ₂'} hR => hCont ρ σ₂' hR).mono_grading hEpsSum
-
-/-- Binding after a pushforward binds the composite. -/
-theorem _root_.MeasureTheory.Measure.bind_map_of_measurable {α β γ : Type*} [MeasurableSpace α]
-    [MeasurableSpace β] [MeasurableSpace γ] {μ : Measure α} {f : α → β} {g : β → Measure γ}
-    (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
-  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
 
 /-- The value distributions of the `m`-step runs, as a kernel: the program's remaining run that a
 bind law's side condition sees. -/
@@ -275,11 +269,11 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
       (limExecV ⟨e₁', σ₁'⟩) := by
   rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr, hprog,
-      hspec, MeasureTheory.Measure.bind_map_of_measurable
+  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr (execN_measurable n).aemeasurable,
+      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable, hprog,
+      hspec, Measure.bind_map
         (g := fun ρ => (execN n ρ).map (·.expr)) hf (execVKernel n).measurable,
-      MeasureTheory.Measure.bind_map_of_measurable
+      Measure.bind_map
         (g := fun ρ => (limExec ρ).map (·.expr)) hf' limExecVKernel.measurable]
   exact law.sound (f := (execVKernel n).comap f hf) (g := limExecVKernel.comap f' hf') hhead
     (hside n f hf hf') hCont
@@ -300,8 +294,8 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
       (limExecV ⟨e₁', σ₁'⟩) := by
   rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ (execN_measurable n).aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr (execN_measurable n).aemeasurable,
+      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
   exact HasBind.bind_fun hExp hCont
     ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
     limExecV.measurable
@@ -324,9 +318,9 @@ theorem lift_erasure_erasable_law [Preorder B] [Top B] [Zero B] [MeasurableSingl
     (execN_measurable n).comp hh
   rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr, hspec,
-      MeasureTheory.Measure.bind_map_of_measurable
+  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
+      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable, hspec,
+      Measure.bind_map
         (g := fun ρ => (limExec ρ).map (·.expr)) hf' limExecVKernel.measurable]
   exact law.sound (f := (execVKernel n).comap _ hh) (g := limExecVKernel.comap f' hf') hhead
     (hside n _ hh hf') hCont
@@ -345,8 +339,8 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSin
     (execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
   rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
   unfold asExpr
-  rw [Measure.bind_map_comm' _ _ _ hek.aemeasurable Cfg.measurable_expr,
-      Measure.bind_map_comm' _ _ _ limExec.measurable.aemeasurable Cfg.measurable_expr]
+  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
+      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
   exact HasBind.bind_fun hCoupl hCont ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
     limExecV.measurable
 

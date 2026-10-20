@@ -96,7 +96,7 @@ theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     exact MeasureTheory.IsSubProbabilityMeasure.measure_univ_le_one⟩
   simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (Exp.toVal?_eq_none.mp hnone) m]
     at hterm ⊢
-  rw [hprog, MeasureTheory.Measure.bind_map_of_measurable hf (execN_measurable m)] at hterm
+  rw [hprog, Measure.bind_map hf (execN_measurable m)] at hterm
   have (ρ : Cfg rT) : MeasureTheory.IsSubProbabilityMeasure ((execN m ∘ f) ρ) :=
     execN.isSubProbabilityMeasure m (f ρ)
   have hAc := MeasureTheory.ae_iff.1

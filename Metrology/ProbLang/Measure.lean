@@ -269,25 +269,22 @@ theorem map_singleton_pos {α β : Type _} [MeasurableSpace α] [MeasurableSpace
     rw [Set.preimage_singleton_eq_empty.mpr hb] at h
     simp at h
 
-theorem Measure.bind_map {α β γ : Type} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    [DiscreteMeasurableSpace β] {μ : Measure α} {f : α → β} {g : β → Measure γ}
-    (hf : Measurable f) (hg : Measurable g) : g ∘ₘ (μ.map f) = (g ∘ f) ∘ₘ μ := by
-  refine ext fun S HS => ?_
-  unfold Measure.bind
-  rw [map_map hg hf]
+/-- Binding after a pushforward binds the composite kernel. -/
+theorem Measure.bind_map {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    {μ : Measure α} {f : α → β} {g : β → Measure γ}
+    (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
+  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
 
+/-- Pushing a bind forward pushes each kernel measure forward. -/
 theorem Measure.bind_map_comm {α β γ : Type*}
     [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    (μ : Measure α) (k : α → Measure β) (f : β → γ) (Hf : Measurable f) (Hae : AEMeasurable k μ):
+    (μ : Measure α) (k : α → Measure β) (f : β → γ) (hf : Measurable f) (hk : AEMeasurable k μ) :
     (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
   refine Measure.ext fun S hS => ?_
-  have H1 : MeasurableSet (f ⁻¹' S) := MeasurableSet.preimage hS Hf
-  have H2 : AEMeasurable (fun a ↦ map f (k a)) μ :=
-    (measurable_map f Hf).comp_aemeasurable' Hae
-  rw [Measure.map_apply Hf hS,
-      Measure.bind_apply H1 Hae,
-      Measure.bind_apply hS H2]
-  simp_rw [Measure.map_apply Hf hS]
+  have hkmap : AEMeasurable (fun a ↦ map f (k a)) μ :=
+    (measurable_map f hf).comp_aemeasurable' hk
+  rw [Measure.map_apply hf hS, Measure.bind_apply (hf hS) hk, Measure.bind_apply hS hkmap]
+  simp_rw [Measure.map_apply hf hS]
 
 /-- Counting measure reweighted by the density `f`. -/
 abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
