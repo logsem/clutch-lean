@@ -191,10 +191,6 @@ open scoped AppGS
 
 variable {GF : BundledGFunctors} [AppGS rT GF]
 
-/-- Every entry lies in `[0, z)`. -/
-def Tape.inBounds (z : Int) (ns : List Int) : Prop :=
-  ∀ n ∈ ns, 0 ≤ n ∧ n < z
-
 /-- The tape at `l` of bound `z` holds exactly the integers `ns` (Rocq `nat_tape`). -/
 noncomputable def appNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
   iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },

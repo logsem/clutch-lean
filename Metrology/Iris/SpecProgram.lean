@@ -59,6 +59,15 @@ theorem LocHeap.asAgree_get? [OFE V] (h : LocHeap V) (l : Loc) :
   simp only [LocHeap.asAgree, PartialMap.map, LawfulPartialMap.get?_bindAlter]
   cases PartialMap.get? h l <;> rfl
 
+/-- The operational semantics updates heaps with `ExtTreeMap.insert`, the ghost-state lemmas with
+`PartialMap.insert`; they agree. -/
+theorem Std.ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
+    (h : LocHeap V) (l : Loc) (v : V) :
+    h.insert l v = PartialMap.insert h l v :=
+  ExtTreeMap.ext_getElem? fun k => by
+    show (h.insert l v)[k]? = (h.alter l (fun _ => some v))[k]?
+    simp [ExtTreeMap.getElem?_insert, ExtTreeMap.getElem?_alter]
+
 theorem LocHeap.asAgree_insert [OFE V] (h : LocHeap V) (l : Loc) (v : V) :
     LocHeap.asAgree (PartialMap.insert h l v) =
       PartialMap.insert (LocHeap.asAgree h) l (toAgree v) := by

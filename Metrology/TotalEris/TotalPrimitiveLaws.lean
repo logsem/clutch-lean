@@ -3,7 +3,6 @@ module
 public import Metrology.TotalEris.ErisGS
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.TotalEris.TotalLifting
-public import Metrology.Iris.SpecRules  -- for `ExtTreeMap.insert_eq_PartialMap_insert`
 
 @[expose] public section
 

@@ -56,14 +56,6 @@ theorem pexecN_of_PureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
     pexecN n (⟨e1, σ⟩ : Cfg rT) = MeasureTheory.Measure.dirac ⟨e2, σ⟩ :=
   pexecN_of_DetExec (DetExec.of_nsteps_PureStep σ (h.pure_exec hφ))
 
-/-- Bridge: `ExtTreeMap.insert` and `PartialMap.insert` agree extensionally. -/
-theorem ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
-    (h : LocHeap V) (l : Loc) (v : V) :
-    h.insert l v = PartialMap.insert h l v :=
-  ExtTreeMap.ext_getElem? fun k => by
-    show (h.insert l v)[k]? = (h.alter l (fun _ => some v))[k]?
-    simp [ExtTreeMap.getElem?_insert, ExtTreeMap.getElem?_alter]
-
 /-! ## Tape head steps (heap ones are in `DetStep.lean`) -/
 
 /-- Tape allocation: `tape #z` deterministically allocates a fresh empty tape of
