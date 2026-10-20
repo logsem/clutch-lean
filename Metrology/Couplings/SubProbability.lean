@@ -99,27 +99,6 @@ theorem ae_measure_univ_eq_one_of_bind {μ : Measure X} [IsSubProbabilityMeasure
     (h ▸ one_ne_top) aemeasurable_const ?_
   simpa [h] using measure_univ_le_one
 
-open Classical in
-/-- `μ` if it is finite, and `0` otherwise. -/
-noncomputable def Measure.finiteOrZero (μ : Measure X) : Measure X :=
-  if IsFiniteMeasure μ then μ else 0
-
-namespace Measure
-
-/-- `finiteOrZero` is finite. -/
-instance isFiniteMeasure_finiteOrZero (μ : Measure X) : IsFiniteMeasure μ.finiteOrZero := by
-  unfold finiteOrZero
-  split <;> infer_instance
-
-theorem finiteOrZero_eq (μ : Measure X) [h : IsFiniteMeasure μ] : μ.finiteOrZero = μ := by
-  simp [finiteOrZero, h]
-
-@[fun_prop]
-theorem measurable_finiteOrZero : Measurable (finiteOrZero : Measure X → Measure X) :=
-  Measurable.ite FiniteMeasure.measurableSet_isFiniteMeasure measurable_id measurable_const
-
-end Measure
-
 end MeasureTheory
 
 namespace ProbabilityTheory

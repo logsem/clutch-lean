@@ -56,9 +56,9 @@ theorem addCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {S : Set (X × Y)
 
 /-- An additive coupling gives a coupling in expectation for any cost bounded on the relation. -/
 theorem expCoupl_of_addCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    {R : X → Y → Prop} {Y' : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞} (Hε : ε₁ + ε₂ ≤ δ)
-    (HY : ∀ a b, R a b → Y' a b ≤ ε₂) (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ ν) :
-    ExpCoupl δ Y' μ ν :=
+    {R : X → Y → Prop} {c : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞} (Hε : ε₁ + ε₂ ≤ δ)
+    (HY : ∀ a b, R a b → c a b ≤ ε₂) (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ ν) :
+    ExpCoupl δ c μ ν :=
   fun f g hf hg hf1 hg1 hfg ↦
     (expCoupl_iff_codensity_tv.2
       ((addCoupl_iff_codensity_tv.1 Hcpl).frame_le_of_isTopAbsorbing HY)
@@ -66,8 +66,8 @@ theorem expCoupl_of_addCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasu
 
 /-- Adding a constant to the cost of a coupling in expectation adds it to the bound. -/
 theorem expCoupl_add_const [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    {X₂ : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞}
-    (Hε : ε₁ + ε₂ ≤ δ) (H : ExpCoupl ε₁ X₂ μ ν) : ExpCoupl δ (fun a b ↦ X₂ a b + ε₂) μ ν :=
+    {c : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞}
+    (Hε : ε₁ + ε₂ ≤ δ) (H : ExpCoupl ε₁ c μ ν) : ExpCoupl δ (fun a b ↦ c a b + ε₂) μ ν :=
   fun f g hf hg hf1 hg1 hfg ↦
     (expCoupl_iff_codensity_tv.2 (IsTopAbsorbing.frame (expCoupl_iff_codensity_tv.1 H))
       f g hf hg hf1 hg1 hfg).trans (by gcongr)

@@ -235,22 +235,22 @@ variable {X Y Z : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpa
   [IsSubProbabilityMeasure ν]
 
 /-- A Rényi bound between the image of `μ` and the image of `ν` reweighted by `e^{-ρ₂}` gives an
-escort head on equal images inside supports `A` and `B`, continuing at `ρ₂` of the image. -/
-theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {B : Set Y}
-    (hA : MeasurableSet A) (hB : MeasurableSet B) (hμA : μ Aᶜ = 0) (hνB : ν Bᶜ = 0)
+escort head on equal images inside supports `A` and `T`, continuing at `ρ₂` of the image. -/
+theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T : Set Y}
+    (hA : MeasurableSet A) (hT : MeasurableSet T) (hμA : μ Aᶜ = 0) (hνT : ν Tᶜ = 0)
     (ρ₂ : Z → ℝ≥0∞) {R : X → Y → ℝ≥0∞}
-    (hR : ∀ x y, x ∈ A → y ∈ B → f x = g y → R x y = ρ₂ (f x))
+    (hR : ∀ x y, x ∈ A → y ∈ T → f x = g y → R x y = ρ₂ (f x))
     (h : renyiDivergence α ρ (μ.map f) ((ν.map g).withDensity fun z ↦ (expBudget (ρ₂ z))⁻¹)) :
     BindLaw.EscortHead α μ ν R ρ := by
   classical
-  refine ⟨fun x y ↦ y ∈ B ∧ f x = g y, fun x ↦ ρ₂ (f x),
-    Kernel.piecewise hB ((fiberCond μ f).comap g hg) 0, A, inferInstance, by fun_prop, hA, hμA,
+  refine ⟨fun x y ↦ y ∈ T ∧ f x = g y, fun x ↦ ρ₂ (f x),
+    Kernel.piecewise hT ((fiberCond μ f).comap g hg) 0, A, inferInstance, by fun_prop, hA, hμA,
     inferInstance, inferInstance, fun y ↦ ?_, fun x y hx ⟨hy, hxy⟩ ↦ hR x y hx hy hxy, ?_⟩
-  · by_cases hy : y ∈ B
+  · by_cases hy : y ∈ T
     · simpa [Kernel.piecewise_apply, hy, fiberCond_apply] using
         ae_cond_mem (μ := μ) (hf (measurableSet_singleton (g y)))
     · simp [Kernel.piecewise_apply, hy]
-  · rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hνB),
+  · rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hνT),
       Kernel.comap_comp_eq_comp_map _ hg,
       fiberCond_comp_withDensity hf (w := fun z ↦ (expBudget (ρ₂ z))⁻¹)]
     have := IsComposable.comp_self (fiberCond μ f) h

@@ -189,14 +189,14 @@ theorem persp_dpWeight (ε : ℝ) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
 variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
 
 /-- Summing masses of cells in a finite set `P` gives the mass of their union. -/
-theorem sum_toReal_preimage_singleton {X : Type*} [MeasurableSpace X] {n : ℕ} (ρ : Measure X)
+theorem sum_toReal_preimage_singleton {n : ℕ} (ρ : Measure X)
     [IsFiniteMeasure ρ] {k : X → Fin n} (hk : Measurable k) (P : Finset (Fin n)) :
     ∑ i ∈ P, (ρ (k ⁻¹' {i})).toReal = (ρ (k ⁻¹' P)).toReal := by
   rw [← toReal_sum (fun _ _ ↦ measure_ne_top _ _),
     sum_measure_preimage_singleton _ fun _ _ ↦ hk (measurableSet_singleton _)]
 
 /-- Every finite measurable partition gives a value at most the largest gap over events. -/
-theorem sum_persp_dpWeight_le_iSup {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
+theorem sum_persp_dpWeight_le_iSup
     (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] {n : ℕ} {k : X → Fin n} (hk : Measurable k) :
     ∑ i, persp (dpWeight ε) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤
       ⨆ (S : Set X) (_ : MeasurableSet S),
@@ -213,7 +213,7 @@ theorem sum_persp_dpWeight_le_iSup {X : Type*} [MeasurableSpace X] {μ ν : Meas
   exact Finset.sum_congr rfl fun i _ ↦ by split_ifs with h <;> simp [x, h, le_of_not_ge]
 
 /-- The gap on an event is at most the supremum over finite measurable partitions. -/
-theorem coe_gap_le_iSup_partition {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
+theorem coe_gap_le_iSup_partition
     (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] {S : Set X} (hS : MeasurableSet S) :
     (((μ S).toReal - exp ε * (ν S).toReal : ℝ) : EReal) ≤
       ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),

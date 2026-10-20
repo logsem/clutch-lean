@@ -245,10 +245,6 @@ theorem codensity_top [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] (R 
     (μ : Measure X) (ν : Measure Y) : D.codensity ⊤ R μ ν :=
   fun _ _ _ hc ↦ (le_self_add.not_gt hc).elim
 
-theorem absorbing_codensity_top [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] :
-    (codensity D).Absorbing ⊤ :=
-  fun R μ ν _ _ ↦ codensity_top R μ ν
-
 /-- The codensity lifting relates everything at `⊤`, where no test is left. -/
 instance isTopAbsorbing_codensity [Add B] [Preorder B] [Top B] [CanonicallyOrderedAdd B] :
     (codensity D).IsTopAbsorbing :=

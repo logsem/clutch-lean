@@ -47,7 +47,7 @@ theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (�
 theorem Bound.mono (h : Bound c δ μ ν) (hc : c ≤ c') (hδ : δ ≤ δ') : Bound c' δ' μ ν :=
   fun S hS ↦ (h S hS).trans (by gcongr)
 
-theorem bound_zero_left (c δ : ℝ≥0∞) (ν : Measure X) : Bound c δ 0 ν :=
+theorem Bound.zero_left (c δ : ℝ≥0∞) (ν : Measure X) : Bound c δ 0 ν :=
   fun _ _ ↦ by simp
 
 /-- DP inequalities are preserved by measurable post-processing. -/
@@ -278,7 +278,7 @@ instance isComposable_dp : dp.{u}.IsComposable where
 
 /-- The zero measure is DP-bounded by any measure. -/
 instance isZeroLeft_dp : dp.{u}.IsZeroLeft where
-  zero_left _ _ _ ν _ _ := bound_zero_left _ _ ν
+  zero_left _ _ _ ν _ _ := Bound.zero_left _ _ ν
 
 /-- DP is continuous in the left measure along monotone suprema. -/
 instance isLeftContinuous_dp : dp.{u}.IsLeftContinuous where
