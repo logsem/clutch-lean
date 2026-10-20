@@ -6,7 +6,7 @@ public import Metrology.ProbLang.Erasure.ErasableExpr
 
 /-! # Erasure as a lifting rule
 
-Presample couplings (`tapePresample_codensity_bij`) and erasure rules that turn a lifting of
+Presample couplings (`tapePresample_rel_bij`) and erasure rules that turn a lifting of
 erasable state distributions into a lifting of executions. Micrometer adequacy uses
 `lift_erasure_erasable_law` and `lift_erasure_erasable_exp_lhs_kanto_law`; the `AddCoupl_*` forms
 are `tv` corollaries. -/
@@ -39,7 +39,7 @@ theorem tapeIndexUniform_map_bijOn {N : Int} (hN : 0 < N) (f : Int → Int)
   rw [tapeIdxOf_val hN (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2]
 
 /-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
-theorem tapeIndexUniform_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+theorem tapeIndexUniform_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [L.IsReflexive] {N : Int} (hN : 0 < N) (f : Int → Int)
     (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
     (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
@@ -52,7 +52,7 @@ theorem tapeIndexUniform_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B
     ⟨p.val, p.2.1, p.2.2, Subtype.ext (tapeIdxOf_val hN p.2.1 p.2.2).symm, hp.symm⟩
 
 /-- Uniform presample coupling on the index type, along a bijection of `[0, N)`
-(the `tv` instance of `tapeIndexUniform_codensity_bij`). -/
+(the `tv` instance of `tapeIndexUniform_rel_bij`). -/
 theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
     (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
     (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
@@ -60,7 +60,7 @@ theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
       {p : { z : Int // 0 ≤ z ∧ z < N } × { z : Int // 0 ≤ z ∧ z < N } |
         ∃ n : Int, 0 ≤ n ∧ n < N ∧ p.1 = tapeIdxOf hN n ∧ p.2 = tapeIdxOf hN (f n)}
       (tapeIndexUniform N) (tapeIndexUniform N) :=
-  (tapeIndexUniform_codensity_bij hN f hdom hbij).addCoupl
+  (tapeIndexUniform_rel_bij hN f hdom hbij).addCoupl
 
 theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }} (hσ : σ.tapes[α]? = some ⟨N, bs⟩) :
@@ -70,7 +70,7 @@ theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
   rw [Measure.bind_dirac_eq_map _ Measurable.of_discrete]
 
 /-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`. -/
-theorem tapePresample_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+theorem tapePresample_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [L.IsReflexive] {σ σ' : State rT} {α α' : Loc} {N : Int}
     {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
     (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
@@ -83,13 +83,13 @@ theorem tapePresample_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [
         τ' = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩))
       (tapePresample σ α) (tapePresample σ' α') := by
   rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
-  refine (tapeIndexUniform_codensity_bij hN f hdom hbij).map ?_ Measurable.of_discrete
+  refine (tapeIndexUniform_rel_bij hN f hdom hbij).map ?_ Measurable.of_discrete
     Measurable.of_discrete
   rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
 
 /-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`
-(the `tv` instance of `tapePresample_codensity_bij`). -/
+(the `tv` instance of `tapePresample_rel_bij`). -/
 theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
     {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
     (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
@@ -101,7 +101,7 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
         p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
         p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
       (tapePresample σ α) (tapePresample σ' α') :=
-  (tapePresample_codensity_bij hσ hσ' hN f hdom hbij).addCoupl
+  (tapePresample_rel_bij hσ hσ' hN f hdom hbij).addCoupl
 
 /-- Running to the limit from a measure of states first runs `m` steps. -/
 theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :

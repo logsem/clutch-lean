@@ -78,24 +78,6 @@ theorem execN_tapePresampleIter_expr_eq [Countable rT] [MeasurableSingletonClass
       _ = (execN m ⟨e, σ⟩).map (·.expr) S := by
           rw [ih h, Measure.map_apply Measurable.of_discrete hS]
 
-theorem execN_iterM_tape_presample_expr_eq [Countable rT] [MeasurableSingletonClass rT]
-    {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape} (n : Nat)
-    (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
-    asExpr (((Nat.rec (motive := fun _ => Measure (State rT))
-                (Measure.dirac σ)
-                (fun _ μ => μ.bind (fun σ' => tapePresample σ' α))) n).bind
-       (fun σ' => execN m ⟨e, σ'⟩)) =
-      asExpr (execN m ⟨e, σ⟩) := by
-  have hiter_eq : (Nat.rec (motive := fun _ => Measure (State rT))
-                    (Measure.dirac σ)
-                    (fun _ μ => μ.bind (fun σ' => tapePresample σ' α))) n
-                = tapePresampleIter α σ n := by
-    induction n with
-    | zero => rfl
-    | succ k ih => show _ = (tapePresampleIter α σ k).bind _; rw [← ih]
-  rw [hiter_eq]
-  exact execN_tapePresampleIter_expr_eq n h hN
-
 /-! ## `ErasableExpr` -/
 
 /-- Erasability up to the expression projection, the analogue of `Erasable` (which compares full

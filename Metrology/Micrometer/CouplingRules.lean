@@ -173,7 +173,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     tapePresample σ₁ α, tapePresample σ₁' αₛ
   have her := ErasableExpr.tapePresample hlk Hz
   have herₛ := ErasableExpr.tapePresample hlkₛ Hz
-  have hcpl := tapePresample_codensity_bij (L := L) hlk hlkₛ Hz f hdom hbij
+  have hcpl := tapePresample_rel_bij (L := L) hlk hlkₛ Hz f hdom hbij
   iframe %her %herₛ %hcpl
   iintro %σ₂ %σ₂' %⟨n, hn0, hnz, rfl, rfl⟩
   imod app_state_update_tape $$ Hσ Hα with ⟨Hσ', Hα'⟩
