@@ -533,7 +533,7 @@ theorem bigStep_fillItem (Ki : EctxItem rT) (e : Exp rT) (σ : State rT) :
 /-- `bigStep` is closed under small steps. -/
 theorem bigStep_primStep {e : Exp rT} {σ : State rT} (hnv : ¬e.isValue) :
     (primStep ⟨e, σ⟩).bind bigStep = bigStep ⟨e, σ⟩ := by
-  induction h : e.height using Nat.strong_induction_on generalizing e σ with
+  induction h : e.size using Nat.strong_induction_on generalizing e σ with
   | _ k ih =>
   cases hdec : e.decompItem with
   | none =>
@@ -542,7 +542,7 @@ theorem bigStep_primStep {e : Exp rT} {σ : State rT} (hnv : ¬e.isValue) :
     rw [bigStepF_head bigStep_retVal hdec hnv]
   | some p =>
     obtain ⟨Ki, e'⟩ := p
-    have hlt := h ▸ Exp.decompItem_height hdec
+    have hlt := h ▸ Exp.decompItem_size hdec
     obtain ⟨rfl, hnv'⟩ := Exp.decompItem_fill hdec
     rw [primStep_fillItem Ki hnv', map_bind_discrete, bigStep_fillItem, ← ih _ hlt hnv' rfl,
       bind_bind_discrete]

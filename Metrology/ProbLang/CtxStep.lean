@@ -112,7 +112,7 @@ theorem EctxItem.fillItemCfg_injective [LawfulProbLangℝ rT] (K : EctxItem rT) 
     Function.Injective K.fillItemCfg := by
   rintro ⟨e1, σ1⟩ ⟨e2, σ2⟩ ha
   simp only [EctxItem.fillItemCfg, Cfg.mk.injEq] at ha
-  have _ := @Ectx.fillItem_injective rT K e1 e2
+  have _ := @EctxItem.fillItem_injective rT K e1 e2
   grind
 
 /-- One step of the primitive semantics: decompose into a context and a redex, take a head step. -/
@@ -297,11 +297,6 @@ theorem irreducible_fill_inv [LawfulProbLangℝ rT]
     (hirr : ¬ Reducible (K.fill e) σ) : ¬ Reducible e σ :=
   fun hred => hirr (hred.fill K)
 
-theorem Reducible.headStep_zero [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
-    (he : e.IsLocallyClosed) (hirr : ¬ Reducible e σ) :
-    headStep ⟨e, σ⟩ = 0 := by
-  by_contra h; exact hirr <| reducible_of_headReducible he h
-
 /-! ## Context decomposition -/
 
 theorem head_ctx_step_val_ectx [LawfulProbLangℝ rT] (K : Ectx rT) (e : Exp rT) (σ : State rT)
@@ -330,7 +325,7 @@ theorem step_by_val [LawfulProbLangℝ rT] (K' K_redex : Ectx rT) (e1' e1_redex 
         (Ectx.fill_noVal (Exp.not_isValue_of_not_isValueR hv))
         (Ectx.fill_noVal (val_head_stuck hstep)) hfill
       subst hKi
-      obtain ⟨K'', hK''⟩ := ih K_redex_rest e1_redex (Ectx.fillItem_injective hfill) hstep
+      obtain ⟨K'', hK''⟩ := ih K_redex_rest e1_redex (EctxItem.fillItem_injective hfill) hstep
       exact ⟨K'', by rw [hK'']; simp [Ectx.comp, List.append_assoc]⟩
 
 theorem not_headReducible_iff [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT} :
@@ -340,15 +335,14 @@ theorem not_headReducible_iff [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT
 
 theorem head_redex_unique [LawfulProbLangℝ rT] (K K' : Ectx rT) (e e' : Exp rT) (σ : State rT)
     (hfill : K.fill e = K'.fill e') (hred : HeadReducible e σ) (hred' : HeadReducible e' σ) :
-    -- FIXME: Make this just be K = K'
-    K = K'.comp [] ∧ e = e' := by
+    K = K' ∧ e = e' := by
   obtain ⟨K'', rfl⟩ := step_by_val K K' e e' σ hfill (val_head_stuck_R hred) hred'
   rw [← Ectx.fill_comp] at hfill
   have he := Ectx.fill_injective _ hfill
   rcases @head_ctx_step_val_ectx rT _ K'' e' σ (he ▸ hred) with hval | rfl
   · exact absurd hval (val_head_stuck_R hred')
   · simp [Ectx.fill] at he
-    exact ⟨rfl, he⟩
+    exact ⟨by simp [Ectx.comp], he⟩
 
 /-! ## primStep characterization -/
 
@@ -437,9 +431,8 @@ theorem measurableSet_primStep_support [LawfulProbLangℝ rT] (e : Exp rT) (σ :
       Measure.countable_meas_level_set_pos (μ := primStep ⟨e, σ⟩) measurable_id
   exact hc.measurableSet
 
-theorem measurableSet_possible_support [LawfulProbLangℝ rT] :
-    MeasurableSet
-      {ρ | (fun σ₁ ρ ↦ Possible ρ (primStep (rT := rT) { expr := e₁, state := σ₁ })) σ₁ ρ} := by
+theorem measurableSet_possible_support [LawfulProbLangℝ rT] {e₁ : Exp rT} {σ₁ : State rT} :
+    MeasurableSet {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)} := by
   have hset :
       {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)} = {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} :=
     Set.ext fun ρ => possible_iff_pos

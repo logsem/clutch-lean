@@ -22,11 +22,11 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 namespace ProbLang.Exp
 
-/-! ### `Exp.height` -/
+/-! ### `Exp.size` -/
 
-theorem height.measurable [MeasurableSpace rT] :
-    Measurable (Exp.height : Exp rT → Nat) := by
-  apply_arms measurable_struct_rec (f := Exp.height)
+theorem size.measurable [MeasurableSpace rT] :
+    Measurable (Exp.size : Exp rT → Nat) := by
+  apply_arms measurable_struct_rec (f := Exp.size)
 
 /-! ### `Exp.subst` -/
 
@@ -790,8 +790,8 @@ theorem decompItem.measurable [MeasurableSpace rT] :
       measurable_fst measurable_snd
 
 -- `decomp` recurses on the subterm `decompItem` returns, not structurally, so
--- `measurable_struct_rec` does not apply; we iterate `decompItem` `height e` times instead.
-/-- `Exp.decomp` with explicit fuel; agrees with it once `n ≥ e.height`. -/
+-- `measurable_struct_rec` does not apply; we iterate `decompItem` `size e` times instead.
+/-- `Exp.decomp` with explicit fuel; agrees with it once `n ≥ e.size`. -/
 private def decompN {α : Type _} : ℕ → Exp α → Ectx α × Exp α
   | 0, e => ([], e)
   | n+1, e =>
@@ -802,7 +802,7 @@ private def decompN {α : Type _} : ℕ → Exp α → Ectx α × Exp α
       (K ++ [Ki], e'')
 
 private theorem decompN_eq_decomp {α : Type _} :
-    ∀ (n : ℕ) (e : Exp α), n ≥ e.height → decompN n e = e.decomp := by
+    ∀ (n : ℕ) (e : Exp α), n ≥ e.size → decompN n e = e.decomp := by
   intro n
   induction n with
   | zero =>
@@ -810,7 +810,7 @@ private theorem decompN_eq_decomp {α : Type _} :
     have hdec : e.decompItem = none := by
       rcases hne : e.decompItem with _ | ⟨Ki, e'⟩
       · rfl
-      · have := Exp.decompItem_height hne
+      · have := Exp.decompItem_size hne
         omega
     show ([], e) = e.decomp
     conv_rhs => rw [Exp.decomp_unfold]
@@ -821,7 +821,7 @@ private theorem decompN_eq_decomp {α : Type _} :
     conv_rhs => rw [Exp.decomp_unfold]
     rcases hdec : e.decompItem with _ | ⟨Ki, e'⟩
     · simp
-    · have := Exp.decompItem_height hdec
+    · have := Exp.decompItem_size hdec
       simp [ih e' (by omega)]
 
 private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
@@ -856,12 +856,12 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
 @[fun_prop]
 theorem decomp.measurable [MeasurableSpace rT] :
     Measurable (Exp.decomp : Exp rT → Ectx rT × Exp rT) := by
-  have hrw : (Exp.decomp : Exp rT → Ectx rT × Exp rT) = fun e => decompN e.height e := by
-    funext e; exact (decompN_eq_decomp e.height e (Nat.le_refl _)).symm
+  have hrw : (Exp.decomp : Exp rT → Ectx rT × Exp rT) = fun e => decompN e.size e := by
+    funext e; exact (decompN_eq_decomp e.size e (Nat.le_refl _)).symm
   rw [hrw]
   have hjoint : Measurable (fun p : ℕ × Exp rT => decompN p.1 p.2) :=
     measurable_from_prod_countable_right decompN_measurable
-  exact hjoint.comp (height.measurable.prodMk measurable_id)
+  exact hjoint.comp (size.measurable.prodMk measurable_id)
 
 /-! ### Constructor extractors -/
 

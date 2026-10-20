@@ -462,28 +462,28 @@ attribute [scoped grind .]
   IsLocallyClosed.urand
   IsLocallyClosed.scrut
 
-/-- Measure for well-founded recursion. -/
+/-- Number of nodes; the termination measure for `Exp.decomp`. -/
 @[simp]
-def height : Exp α → Nat
+def size : Exp α → Nat
   | bvar _ | fvar _ | lit _ => 1
-  | lam e => 1 + e.height
-  | fix e => 1 + e.height
-  | app e1 e2 => 1 + e1.height + e2.height
-  | binop _ e1 e2 => 1 + e1.height + e2.height
-  | pair e1 e2 => 1 + e1.height + e2.height
-  | store e1 e2 => 1 + e1.height + e2.height
-  | rand e1 e2 => 1 + e1.height + e2.height
-  | unop _ e => 1 + e.height
-  | fst e => 1 + e.height
-  | snd e => 1 + e.height
-  | inl e => 1 + e.height
-  | inr e => 1 + e.height
-  | alloc e => 1 + e.height
-  | load e => 1 + e.height
-  | tape e => 1 + e.height
-  | .cond e0 e1 e2 => 1 + e0.height + e1.height + e2.height
-  | .case e0 e1 e2 => 1 + e0.height + e1.height + e2.height
-  | scrut e _ => 1 + e.height
+  | lam e => 1 + e.size
+  | fix e => 1 + e.size
+  | app e1 e2 => 1 + e1.size + e2.size
+  | binop _ e1 e2 => 1 + e1.size + e2.size
+  | pair e1 e2 => 1 + e1.size + e2.size
+  | store e1 e2 => 1 + e1.size + e2.size
+  | rand e1 e2 => 1 + e1.size + e2.size
+  | unop _ e => 1 + e.size
+  | fst e => 1 + e.size
+  | snd e => 1 + e.size
+  | inl e => 1 + e.size
+  | inr e => 1 + e.size
+  | alloc e => 1 + e.size
+  | load e => 1 + e.size
+  | tape e => 1 + e.size
+  | .cond e0 e1 e2 => 1 + e0.size + e1.size + e2.size
+  | .case e0 e1 e2 => 1 + e0.size + e1.size + e2.size
+  | scrut e _ => 1 + e.size
   | fail => 1
   | urand => 1
 
@@ -511,20 +511,20 @@ theorem lcb_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
       · simp only [lcb, decide_eq_true_eq]; omega
   | _ => intro h; simp_all [lcb, openRec]
 
-theorem height_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
-    (openRec k (fvar x) e).height = e.height := by
+theorem size_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
+    (openRec k (fvar x) e).size = e.size := by
   intro k e
   induction e generalizing k with
   | bvar j => simp only [openRec]; split <;> rfl
-  | _ => simp_all [openRec, Exp.height]
+  | _ => simp_all [openRec, Exp.size]
 
-private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.height ≤ n → lcb 0 e = true →
+private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lcb 0 e = true →
     IsLocallyClosed e := by
   intro n
-  -- Fuel on height: the `lam`/`fix` cases recurse on `open' e (fvar x)`, not a subterm
-  -- (`height_openRec_fvar`).
+  -- Fuel on size: the `lam`/`fix` cases recurse on `open' e (fvar x)`, not a subterm
+  -- (`size_openRec_fvar`).
   induction n with
-  | zero => intro e he _; exfalso; cases e <;> simp [Exp.height] at he
+  | zero => intro e he _; exfalso; cases e <;> simp [Exp.size] at he
   | succ n ih =>
       intro e hle hlc
       cases e with
@@ -536,64 +536,64 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.height ≤ n → 
       | lam e =>
           refine .lam ∅ e (fun x _ => ?_)
           refine ih (open' e (fvar x)) ?_ ?_
-          · rw [open', height_openRec_fvar]; simp only [Exp.height] at hle; omega
+          · rw [open', size_openRec_fvar]; simp only [Exp.size] at hle; omega
           · exact lcb_openRec_fvar x 0 e (by simpa [lcb] using hlc)
       | fix e =>
           refine .fix ∅ e (fun x _ => ?_)
           refine ih (open' e (fvar x)) ?_ ?_
-          · rw [open', height_openRec_fvar]; simp only [Exp.height] at hle; omega
+          · rw [open', size_openRec_fvar]; simp only [Exp.size] at hle; omega
           · exact lcb_openRec_fvar x 0 e (by simpa [lcb] using hlc)
       | app e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .app (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | unop op e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .unop op (ih e (by omega) hlc)
       | binop op e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .binop op (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | cond e0 e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .cond (ih e0 (by omega) hlc.1.1) (ih e1 (by omega) hlc.1.2) (ih e2 (by omega) hlc.2)
       | pair e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .pair (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | fst e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .fst (ih e (by omega) hlc)
       | snd e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .snd (ih e (by omega) hlc)
       | inl e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .inl (ih e (by omega) hlc)
       | inr e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .inr (ih e (by omega) hlc)
       | case e0 e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .case (ih e0 (by omega) hlc.1.1) (ih e1 (by omega) hlc.1.2) (ih e2 (by omega) hlc.2)
       | alloc e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .alloc (ih e (by omega) hlc)
       | load e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .load (ih e (by omega) hlc)
       | store e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .store (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | tape e =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .tape (ih e (by omega) hlc)
       | rand e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.height] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
           exact .rand (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | scrut e p =>
-          simp only [lcb] at hlc; simp only [Exp.height] at hle
+          simp only [lcb] at hlc; simp only [Exp.size] at hle
           exact .scrut p (ih e (by omega) hlc)
 
 theorem lcb_imp_lc {e : Exp α} (h : lcb 0 e = true) : IsLocallyClosed e :=
-  lcb_imp_lc_aux e.height e le_rfl h
+  lcb_imp_lc_aux e.size e le_rfl h
 
 theorem lcb_openRec_fvar_rev (x : Var) : ∀ (k : Nat) (e : Exp α),
     lcb k (openRec k (fvar x) e) = true → lcb (k+1) e = true := by
@@ -1192,7 +1192,7 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
     e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none
   | _ => none
 
-theorem Ectx.fillItem_injective : Function.Injective (EctxItem.fillItem K) := by
+theorem EctxItem.fillItem_injective : Function.Injective (EctxItem.fillItem K) := by
   cases K <;> simp [Function.Injective, EctxItem.fillItem]
 
 theorem EctxItem.fillItem_isValue {K : EctxItem α} : (K.fillItem e).isValue → e.isValue := by
@@ -1236,7 +1236,7 @@ abbrev Ectx α := List (EctxItem α)
 def Ectx.empty : Ectx α := []
 
 /-- Composition: `(comp K1 K2).fill e = K1.fill (K2.fill e)`. -/
-def Ectx.comp (e1 e2 : Ectx α) : Ectx α := e2 ++ e1
+def Ectx.comp (K1 K2 : Ectx α) : Ectx α := K2 ++ K1
 
 /-- Plugs `e` into the context. -/
 def Ectx.fill (K : Ectx α) (e : Exp α) : Exp α := K.foldl (flip EctxItem.fillItem) e
@@ -1330,7 +1330,7 @@ theorem Ectx.fill_comp (K1 K2 : Ectx α) (e : Exp α) :
 theorem Ectx.fill_injective (K : Ectx α) : Function.Injective K.fill := by
   induction K with
   | nil => intro _ _ h; exact h
-  | cons Ki K ih => exact fun _ _ h => Ectx.fillItem_injective (ih h)
+  | cons Ki K ih => exact fun _ _ h => EctxItem.fillItem_injective (ih h)
 
 theorem Ectx.fill_noVal {K : Ectx α} {e : Exp α} (hv : ¬e.isValue) : ¬(K.fill e).isValue := by
   induction K generalizing e with
@@ -1351,8 +1351,8 @@ theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
   | nil => exact h
   | cons Ki K ih => exact EctxItem.fillItem_isLocallyClosed (ih h)
 
-theorem Exp.decompItem_height {e : Exp α} (h : e.decompItem = some (Ki, e')) :
-    e'.height < e.height := by
+theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
+    e'.size < e.size := by
   simp only [decompItem, toVal?] at h
   cases e <;> simp_all <;>
     (split at h <;> simp_all <;> try omega) <;>
@@ -1365,8 +1365,8 @@ def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
       let (K, e'') := decomp e'
       (K ++ [Ki], e'')
   | none => ([], e)
-  termination_by e.height
-  decreasing_by exact Exp.decompItem_height _h
+  termination_by e.size
+  decreasing_by exact Exp.decompItem_size _h
 
 theorem Exp.decomp_unfold (e : Exp α) :
     e.decomp =
@@ -1435,9 +1435,6 @@ theorem Exp.decomp_snd_fill {K : Ectx α} {e : Exp α} (hv : ¬e.isValue)
     (hd : e.decompItem = none) : (K.fill e).decomp.2 = e := by
   have he : e.decomp = ([], e) := by rw [Exp.decomp_unfold, hd]
   rw [Exp.decomp_fill_comp hv he]
-
-/-- `x` does not occur free in `e`. -/
-def Exp.Fresh (x : Var) (e : Exp α) : Prop := x ∉ e.fv
 
 end WithRealParam
 end ProbLang
