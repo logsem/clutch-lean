@@ -46,8 +46,15 @@ theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
   imod Hfalse with %hf
   exact hf.elim
 
-/-- Reference type is functional in the program-side location. -/
-theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
+/-- Related values of a reference relation are both locations. -/
+theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
+    (lrel_ref A).car v1 v2 ⊢ ⌜∃ l1 l2 : Loc, v1 = .loc l1 ∧ v2 = .loc l2⌝ := by
+  unfold lrel_ref
+  iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
+  exact ⟨l1, l2, h1, h2⟩
+
+/-- Reference type is functional in the program-side location. (Rocq `interp_ref_funct`). -/
+theorem lrel_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_ref A).car (.loc l) (.loc l1) -∗
         (lrel_ref A).car (.loc l) (.loc l2) -∗
@@ -60,8 +67,8 @@ theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     iintro ⟨%wa1, %ws1, Hl1L, -⟩ ⟨%wa2, %ws2, Hl2L, -⟩
     iapply appHeapFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Reference type is injective on the program-side location. -/
-theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
+/-- Reference type is injective on the program-side location. (Rocq `interp_ref_inj`). -/
+theorem lrel_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_ref A).car (.loc l1) (.loc l) -∗
         (lrel_ref A).car (.loc l2) (.loc l) -∗
@@ -74,8 +81,8 @@ theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     iintro ⟨%wa1, %ws1, -, Hs1L, -⟩ ⟨%wa2, %ws2, -, Hs2L, -⟩
     iapply specHeapFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
 
-/-- Tape type is functional in the program-side location. -/
-theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
+/-- Tape type is functional in the program-side location. (Rocq `interp_tape_funct`). -/
+theorem lrel_tape_funct {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l1) -∗
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l2) -∗
@@ -88,8 +95,8 @@ theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
     iintro ⟨Hl1L, -⟩ ⟨Hl2L, -⟩
     iapply appTapesFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Tape type is injective on the program-side location. -/
-theorem interp_tape_inj {E : CoPset} (l l1 l2 : Loc)
+/-- Tape type is injective on the program-side location. (Rocq `interp_tape_inj`). -/
+theorem lrel_tape_inj {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l1) (.lbl l) -∗
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l2) (.lbl l) -∗

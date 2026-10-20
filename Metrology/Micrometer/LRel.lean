@@ -415,11 +415,6 @@ instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) 
     exact sep_ne.ne .rfl <| intuitionistically_ne.ne <| forall_ne fun w1 => forall_ne fun w2 =>
       wand_ne.ne (hA w1 w2) (refines_ne hB)
 
--- TODO: Can this be removed?
-theorem refines_proper {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
-    (h : A = B) : refines L E e e' A = refines L E e e' B :=
-  OFE.eq_dist.mpr fun n => refines_ne (OFE.eq_dist_1 h n)
-
 instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
   ne {n A B} hAB v1 v2 := by
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)

@@ -51,7 +51,22 @@ theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) 
 
 end TyEnvSetup
 
+/-! ## Unboxed-value predicate -/
+
+/-- Unboxed expressions are literals, possibly under a sum injection. -/
+@[simp] def Exp.isUnboxedV : Exp rT → Prop
+  | .lit _ => True
+  | .inl (.lit _) => True
+  | .inr (.lit _) => True
+  | _ => False
+
+/-- A value is unboxed when its underlying expression is. -/
+@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
+
 section interp
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
@@ -148,39 +163,17 @@ theorem interp_arrow (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
 theorem interp_ref (Δ : TyEnv rT GF) (τ : Ty) :
     interp L (Ty.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
-end interp
 
 /-! ## Closedness of related values -/
 
-section interp_closed
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
     (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
   (interp L τ Δ).closed v v'
 
-end interp_closed
-
-/-! ## Unboxed-value predicate -/
-
-/-- Unboxed expressions are literals, possibly under a sum injection. -/
-@[simp] def Exp.isUnboxedV : Exp rT → Prop
-  | .lit _ => True
-  | .inl (.lit _) => True
-  | .inr (.lit _) => True
-  | _ => False
-
-/-- A value is unboxed when its underlying expression is. -/
-@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
 
 /-! ## Soundness of the semantic type interpretation -/
 
-section interp_sound
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
@@ -248,13 +241,6 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
   subst heq1 heq2
   exact .rfl
 
-/-- Related values of a reference relation are both locations. -/
-theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
-    (lrel_ref A).car v1 v2 ⊢ ⌜∃ l1 l2 : Loc, v1 = .loc l1 ∧ v2 = .loc l2⌝ := by
-  unfold lrel_ref
-  iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
-  exact ⟨l1, l2, h1, h2⟩
-
 theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   cases H
@@ -271,26 +257,21 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
     simp only [Val.ext_iff, Exp.lit.injEq, BaseLit.loc.injEq]
     by_cases hl : l1 = r1
     · subst hl
-      imod interp_ref_funct (interp L τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
+      imod lrel_ref_funct (interp L τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
       imodintro
       ipureintro
       simp [h]
     · by_cases hr : l2 = r2
       · subst hr
-        imod interp_ref_inj (interp L τ' Δ) l2 l1 r1 CoPset.subseteq_top $$ H1 H2 with %h
+        imod lrel_ref_inj (interp L τ' Δ) l2 l1 r1 CoPset.subseteq_top $$ H1 H2 with %h
         exact (hl h).elim
       · imodintro
         ipureintro
         exact iff_of_false hl hr
 
-end interp_sound
 
 /-! ## Substitution lemmas on `interp` -/
 
-section interp_subst
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
 
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
 theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
@@ -359,6 +340,6 @@ theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
   refine (interp_substG τ _ Δ).trans (congrArg (interp L τ) ?_)
   funext n; cases n <;> rfl
 
-end interp_subst
+end interp
 
 end ProbLang
