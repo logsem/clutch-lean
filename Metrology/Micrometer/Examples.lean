@@ -33,8 +33,9 @@ By divergence (`RR` is `RandomizedResponse`):
   `PublicChoiceZcdp` (from two-way pure DP)
 * tCDP: `RR.Tcdp`
 * χ²: `RR.Chi2`, `RR.AdaptiveChi2`
-* KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP), `RR.AdaptiveFillKl` (adaptive, chain rule),
-  `Couplings.Examples.KLCoinFlips`, `Couplings.Examples.AdaptiveFillKl` (lifting level)
+* KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP),
+  `RR.AdaptiveFillKl` (adaptive, chain rule), `Couplings.Examples.KLCoinFlips`,
+  `Couplings.Examples.AdaptiveFillKl` (lifting level)
 
 By rule:
 * coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
