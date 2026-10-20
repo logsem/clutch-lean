@@ -419,3 +419,73 @@ theorem KlDualBound.comp {b c : ℝ≥0∞} {m₁ Q₁ : Measure Ω} [IsSubProba
         ring
 
 end ProbabilityTheory
+
+namespace GradedDivergence
+
+variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ ν : Measure X} {r : ℝ≥0∞}
+
+/-! ## Filled KL is the test bound -/
+
+theorem isSubProbabilityMeasure_map_some (μ : Measure X) [IsSubProbabilityMeasure μ] :
+    IsSubProbabilityMeasure (μ.map some) :=
+  ⟨by rw [map_apply measurable_some .univ]; exact IsSubProbabilityMeasure.measure_le_one _⟩
+
+/-- A filled KL bound is the Donsker–Varadhan test bound of the relabelled left measure against the
+filled right measure. -/
+theorem fill_kl_iff [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    fill klDivergence r μ ν ↔ KlDualBound r (μ.map some) ν.withBot := by
+  refine ⟨fun ⟨μ', hle, _, hD⟩ ↦ ?_, fun h ↦ ?_⟩
+  · have hkl : klDiv μ'.withBot ν.withBot ≤ r := klDivergence_iff.1 hD
+    exact (klDualBound_of_le ((map_mono hle measurable_some).trans
+      (map_some_le_withBot μ'))).mono hkl
+  · have : IsSubProbabilityMeasure (μ.map some) := isSubProbabilityMeasure_map_some μ
+    obtain ⟨P, hP, hle, hkl⟩ := exists_le_klDiv_le_of_klDualBound
+      (IsSubProbabilityMeasure.measure_le_one _) h
+    refine ⟨Kernel.dropBot ∘ₘ P, Kernel.le_dropBot_comp hle, isSubProbabilityMeasure_bind _ _, ?_⟩
+    change klDivergence r (Kernel.dropBot ∘ₘ P).withBot ν.withBot
+    rw [Kernel.withBot_dropBot_comp]
+    exact klDivergence_iff.2 hkl
+
+/-! ## The laws of filled KL -/
+
+/-- Filled KL composes: the test bounds of the fillings compose, so no filling of the kernel has
+to be chosen (Rocq `FillDiv_composable`, which chooses one on the support of the head). -/
+instance isComposable_fill_kl : (fill klDivergence.{u}).IsComposable where
+  comp b c X Y _ _ μ₁ μ₂ _ _ κ η _ _ hμ hκ := by
+    have : IsSubProbabilityMeasure (μ₁.map some) := isSubProbabilityMeasure_map_some μ₁
+    have : IsSubProbabilityMeasure (κ ∘ₘ μ₁) := isSubProbabilityMeasure_bind μ₁ _
+    have : IsSubProbabilityMeasure (η ∘ₘ μ₂) := isSubProbabilityMeasure_bind μ₂ _
+    rw [fill_kl_iff] at hμ ⊢
+    have hK : (κ ∘ₘ μ₁).map some = ((κ.map some) ∘ₖ Kernel.dropBot) ∘ₘ μ₁.map some := by
+      rw [← Measure.comp_assoc, Kernel.dropBot_comp_map_some, Measure.map_comp _ _ measurable_some]
+    rw [hK, Kernel.withBot_comp]
+    refine KlDualBound.comp hμ fun o ↦ ?_
+    cases o with
+    | none =>
+      simpa [Kernel.comp_apply, Kernel.dropBot] using klDualBound_zero_left _ _
+    | some x =>
+      have h := fill_kl_iff.1 (hκ x)
+      simpa [Kernel.comp_apply, Kernel.dropBot, Kernel.map_apply _ measurable_some,
+        Measure.dirac_bind (Kernel.measurable _)] using h
+
+/-- Filled KL passes to the supremum of an increasing sequence on the left: tests pass to it by
+monotone convergence (Rocq `FillDiv_lim`, which extracts a convergent subsequence of fillings). -/
+instance isLeftContinuous_fill_kl : (fill klDivergence.{u}).IsLeftContinuous where
+  iSup_left b X _ μ _ hμ ν _ h := by
+    have : IsSubProbabilityMeasure (⨆ n, μ n) := ⟨by
+      rw [iSup_apply_of_monotone hμ .univ]
+      exact iSup_le fun n ↦ IsSubProbabilityMeasure.measure_le_one _⟩
+    rw [fill_kl_iff]
+    intro g hg h0 hb
+    rw [lintegral_map hg.ennreal_ofReal measurable_some,
+      lintegral_iSup_of_monotone hμ (f := fun x ↦ ENNReal.ofReal (g (some x)))
+        (hg.comp measurable_some).ennreal_ofReal]
+    refine iSup_le fun n ↦ ?_
+    have := fill_kl_iff.1 (h n) hg h0 hb
+    rwa [lintegral_map hg.ennreal_ofReal measurable_some] at this
+
+/-- Filled KL has closed budgets: so do test bounds. -/
+instance isBudgetClosed_fill_kl : (fill klDivergence.{u}).IsBudgetClosed where
+  of_forall_gt h := fill_kl_iff.2 (klDualBound_of_forall_gt fun _ hr ↦ fill_kl_iff.1 (h _ hr))
+
+end GradedDivergence
