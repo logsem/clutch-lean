@@ -7,6 +7,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Tcdp
 public import Metrology.Micrometer.Examples.RandomizedResponse.Renyi
 public import Metrology.Micrometer.Examples.RandomizedResponse.Curve
 public import Metrology.Micrometer.Examples.RandomizedResponse.Chi2
+public import Metrology.Micrometer.Examples.RandomizedResponse.FillKl
 public import Metrology.Micrometer.Examples.RandomizedResponse.Twice
 public import Metrology.Micrometer.Examples.RandomizedResponse.Adaptive
 
