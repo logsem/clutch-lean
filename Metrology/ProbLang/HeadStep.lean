@@ -1525,7 +1525,7 @@ macro "cfg_dirac" h:ident : tactic =>
   `(tactic| (rw [dirac_singleton_pos] at $h:ident
              have ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp $h:ident))
 
-/-- No `MeasurableSingletonClass rT` needed: the singleton-mass reasoning happens on `Int`. -/
+/-- Every integer in `[0, z)` is a possible outcome of `Cfg.uniform z σ`. -/
 theorem Cfg.uniform_possible {z v : Int} {σ : State rT}
     (Hz : 0 < z) (Hv0 : 0 ≤ v) (Hvz : v < z) :
     Possible (⟨.lit (.int v), σ⟩ : Cfg rT) (Cfg.uniform z σ) := by
