@@ -82,14 +82,8 @@ theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT
 
 /-! ## The fundamental theorem -/
 
-section Steps
-variable [L.IsLawful] [L.IsTopAbsorbing]
-
-section Bind
-variable [L.HasBind]
-
-section Prim
-variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal]
+variable [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [CanonicallyOrderedAdd B] [L.IsReflexive]
+  [L.IsSupportLocal]
 
 variable (L) in
 /-- Every well-typed expression is related to itself under any related contexts. -/
@@ -171,12 +165,6 @@ theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tct
   have Hfund := fundamental L Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])
   iapply bin_log_related_nil_elim
   iapply Hfund
-
-end Prim
-
-end Bind
-
-end Steps
 
 end Fundamental
 

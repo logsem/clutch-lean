@@ -71,8 +71,9 @@ class HeadShift [Add B] (law : BindLaw L) : Prop where
     c < ⊤ → law.head μ ν R b → law.head μ ν (fun x y ↦ R x y + c) (b + c)
 
 /-- A law has diagonal heads: a probability measure against itself, at leftover
-`relCost (· = ·) + b`, is a head at any finite budget `b`, and the side condition always holds for
-a measure against itself (so `massEq` has no `HeadDiag`); steps that leave the spec in place ask
+`relCost (· = ·) + b`, is a head at any finite budget `b`, and with `μ` on both sides the side
+condition holds for every leftover and every pair of continuation kernels (`massEq`'s equal-mass
+side does not, so it has no `HeadDiag`); steps that leave the spec in place ask
 this (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
 class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
   diag {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsProbabilityMeasure μ] {b : B} :

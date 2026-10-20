@@ -25,6 +25,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- Credits on the two flips: nothing on heads, `2ε` on tails. -/
 noncomputable def flipCredit (ε : ℝ≥0∞) (n : Int) : ℝ≥0∞ :=
+  -- written as the cast of `k = (2 : ℝ≥0)` to match `refines_ind_amp`'s `↯b ((k : ℝ≥0∞) * ε)`
   if n = 0 then 0 else ((2 : NNReal) : ℝ≥0∞) * ε
 
 /-- The flip credits average to `ε`, as `refines_randU_r_adv` requires. -/

@@ -366,7 +366,9 @@ theorem hellingerDivergence_comp_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {b c
 /-! ## Failure of composition with mass loss -/
 
 /-- `α`-Hellinger does not compose once kernels may lose mass: point masses `δ`, `¼ δ` and
-kernels `δ`, `¼ δ` give squared-Hellinger values `1/4` and `9/16 > 15/32` at `α = 1/2`. -/
+kernels `δ`, `¼ δ` give squared-Hellinger values `1/4` and `9/16 > 15/32` at `α = 1/2`: each budget
+has threshold `1/4`, so the composed threshold is `θ(b+b) = 1/4 + 1/4 - ½·¼·¼ = 15/32`
+(`bofReal_add`, `γ = -1/2`). -/
 theorem not_isComposable_hellinger_half : ¬ (hellingerDivergence.{u} (1 / 2)).IsComposable := by
   intro h
   have hα0 : (0 : ℝ) < 1 / 2 := by norm_num

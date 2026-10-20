@@ -2,7 +2,7 @@ module
 
 public import Metrology.Couplings.Divergences.FDivBound
 
-/-! Barthe–Olmedo divergences (Barthe–Olmedo, ICALP 2013): the threshold `θ_γ(r) = (e^{γr} - 1)/γ`
+/-! `bof` = Barthe–Olmedo f-divergence (ICALP 2013): the threshold `θ_γ(r) = (e^{γr} - 1)/γ`
 (`bofReal_add`: `θ(s+t) = θs + θt + γ θs θt`) and `bofDivergence`, an `f`-divergence below `θ_γ` of
 the budget. KL (`γ = 0`) and Hellinger (`γ = α - 1`) are instances; lost mass is not filled in, so
 they compose only along kernels of equal mass (`*_comp_of_mass_eq`, used via `BindLaw.massEq`). -/

@@ -337,8 +337,18 @@ theorem DetHeadStep.toDetStep {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
 class DetExec (n : ℕ) (cfg1 cfg2 : Cfg rT) : Prop where
   det_exec : nsteps DetStep n cfg1 cfg2
 
+/-- One step, then the rest found by instance search (for `DetExec` synthesis). -/
 theorem DetExec.succ {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
     (hstep : DetStep cfg1 cfg2) [hrest : DetExec n cfg2 cfg3] :
+    DetExec (n + 1) cfg1 cfg3 where
+  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
+
+theorem DetExec.refl (cfg : Cfg rT) : DetExec 0 cfg cfg where
+  det_exec := rfl
+
+/-- `DetExec.succ` with the rest given explicitly. -/
+theorem DetExec.cons {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
+    (hstep : DetStep cfg1 cfg2) (hrest : DetExec n cfg2 cfg3) :
     DetExec (n + 1) cfg1 cfg3 where
   det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
 
@@ -350,14 +360,6 @@ theorem DetStep.fill (K : Ectx rT) {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) 
     obtain ⟨e1, σ1⟩ := cfg1
     rw [primStep_fill (val_stuck h.safe), h.det]
     exact map_dirac' (Ectx.fillCfg.measurable K) _
-
-theorem DetExec.refl (cfg : Cfg rT) : DetExec 0 cfg cfg where
-  det_exec := rfl
-
-theorem DetExec.cons {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
-    (hstep : DetStep cfg1 cfg2) (hrest : DetExec n cfg2 cfg3) :
-    DetExec (n + 1) cfg1 cfg3 where
-  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
 
 /-! ## Deterministic head steps of each construct
 

@@ -293,7 +293,9 @@ theorem Measurable.option_map {α β : Type _} [MeasurableSpace α] [MeasurableS
 /-! ## Shape-stratified measurability
 
 Measurability is assembled from cells `{p | shape p = s ∧ f p ∈ U}`, one per shape. Cells are over
-`β × T`, where `β` is a measurable parameter. -/
+`β × T`, where `β` is a measurable parameter. Used by `CoreMeasures/Recurrences.lean` to prove
+structural recursions on `Exp` measurable: split the preimage by top constructor (`shape`) and
+prove each cell measurable. -/
 
 namespace StructRec
 
@@ -303,7 +305,8 @@ variable {Sh : Type _} (shape : T → Sh)
 variable {β : Type _} [MeasurableSpace β]
 variable {g : β → T → α}
 
-/-- Cell of a data leaf such as `lit (b' : β') (e : T)`. -/
+/-- The cell of a constructor `ctor : γ → T` that carries data only: measurable when `g`
+restricted to that constructor (`c`) is. -/
 theorem cell_dataLeaf_param {γ : Type _} [MeasurableSpace γ]
     {ctor : γ → T} {s : Sh} {c : β → γ → α} {U : Set α}
     (h_emb : MeasurableEmbedding ctor)

@@ -254,7 +254,10 @@ end interp
 
 /-! ## Equality on `EqType` and `UnboxedType` -/
 
-/-- Unboxed expressions are literals, possibly under a sum injection. -/
+/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`).
+
+The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
+`unboxed_type_lit_shape` instead. -/
 @[simp] def Exp.isUnboxedV : Exp rT → Prop
   | .lit _ => True
   | .inl (.lit _) => True

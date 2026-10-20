@@ -10,7 +10,8 @@ public import Metrology.Couplings.Divergences.Dp
 
 A refinement from `↯b β` bounds by `β` the divergence, event masses or DP of every linear boolean
 context (`refines_ctx_div`, `_mass`, `_dp`, all from `refines_ctx_coupling`); without credits, every
-typed context satisfies the `CtxRefines` inequality (`refines_sound_open_fresh`). -/
+typed boolean context whose binders are fresh satisfies the inequality inside `CtxRefines`
+(`refines_sound_open_fresh`; `CtxRefines` itself is not concluded). -/
 
 @[expose] public section
 
@@ -124,7 +125,8 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
 
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
-booleans: the credits are a frame, and the context's own steps are budget-free. -/
+booleans: the credit is a resource carried through the linear context once
+(`bin_log_related_under_linear_ctx`), and the context's own steps are budget-free. -/
 theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       (Δ : TyEnv rT GF), ⊢@{IProp GF} ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))

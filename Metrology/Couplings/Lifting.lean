@@ -77,7 +77,9 @@ def Rel [Zero B] [Top B] {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] 
 /-! ## Laws of a lifting -/
 
 /-- The structural laws of a lifting: Dirac pairs, zero measures, weakening, framing and
-pushforward. -/
+pushforward. The `< ⊤` guards on `pure` and `frame` are needed by span liftings
+(`isLawful_spanLifting_iff`) and by regradings (`isLawful_comap`); the codensity lifting satisfies
+both laws without them. -/
 class IsLawful [Add B] [Preorder B] [Top B] : Prop where
   pure {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {R : X → Y → B} {x : X} {y : Y} :
     R x y < ⊤ → L (R x y) R (dirac x) (dirac y)
@@ -132,7 +134,8 @@ class IsLeftContinuous : Prop where
     {μ : ℕ → Measure X} [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) {ν : Measure Y}
     [IsSubProbabilityMeasure ν] : (∀ n, L b R (μ n) ν) → L b R (⨆ n, μ n) ν
 
-/-- Leftovers may be restricted to a set carrying the left measure (Rocq `gbl_head_supp`). -/
+/-- Leftovers may be set to `⊤` off a measurable set carrying the left measure: the continuation
+owes nothing at left states `μ` never reaches (Rocq `gbl_head_supp`). -/
 class IsSupportLocal [Top B] : Prop where
   restrict {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
     {μ : Measure X} {ν : Measure Y} {A : Set X} [DecidablePred (· ∈ A)] (hA : MeasurableSet A)
@@ -258,7 +261,7 @@ theorem Rel.restrict [Zero B] [Top B] [L.IsSupportLocal] {A : Set X} (h : L.Rel 
   by_cases hx : x ∈ A <;> by_cases hS : S x y <;> simp [hx, hS]
 
 /-- A probability measure lifts against the point mass at `y₀`, relating everything to `y₀`
-(Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+(from reflexivity by `map_right`). -/
 theorem rel_const_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (μ : Measure X) [IsProbabilityMeasure μ] (y₀ : Y) :
     L.Rel 0 (fun _ y ↦ y = y₀) μ (dirac y₀) := by
@@ -266,7 +269,7 @@ theorem rel_const_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] 
     (S' := fun _ y ↦ y = y₀) (g := fun _ ↦ y₀) fun _ _ _ ↦ rfl
 
 /-- The point mass at `x₀` lifts against a probability measure, relating `x₀` to everything
-(Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+(from reflexivity by `map_left`). -/
 theorem rel_const_left [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
     (ν : Measure Y) [IsProbabilityMeasure ν] (x₀ : X) :
     L.Rel 0 (fun x _ ↦ x = x₀) (dirac x₀) ν := by

@@ -10,7 +10,8 @@ public import Metrology.ProbLang.ContextualRefinement
 /-! # Plugging into a context
 
 From `e ≤log e'` to `K[e] ≤log K[e']` for a typed context `K`: `bin_log_related_under_typed_ctx`
-for a valid hypothesis, `bin_log_related_under_linear_ctx` for one under a frame `P` (credits). -/
+for a valid hypothesis, `bin_log_related_under_linear_ctx` for one under a resource `P`
+(e.g. budget credits). -/
 
 @[expose] public section
 
@@ -291,24 +292,25 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
           ((HCtx.shift A).insert x τ_pkg (RelCtx.lookup_eq_none_of_not_mem hxRc))
           (Ctx.BindersFresh.cons_extend rfl HfreshTail)) y hy
 
-/-! ## Linear contexts: carrying a frame `P` -/
+/-! ## Linear contexts: carrying a resource `P` -/
 
 /-- The item runs its hole at most once: it does not put the hole under a binder. -/
 def CtxItem.IsLinear : CtxItem rT → Prop
   | .lam _ | .fix _ | .tlam | .unpackR _ _ => False
   | _ => True
 
-/-- Every item of `K` runs its hole at most once, so `K` may consume a non-duplicable frame. -/
+/-- Every item of `K` runs its hole at most once, so `K` may consume a non-duplicable resource. -/
 def Ctx.IsLinear : Ctx rT → Prop
   | [] => True
   | k :: K' => k.IsLinear ∧ Ctx.IsLinear K'
 
 set_option hygiene false in
-/-- Specialize the induction hypothesis of `bin_log_related_under_linear_ctx` to the frame. -/
+/-- Specialize the induction hypothesis of `bin_log_related_under_linear_ctx` to the resource `P`,
+spending it once. -/
 local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc' HCtx $$ HP)
 
-/-- `bin_log_related_under_typed_ctx` under a frame `P` such as budget credits, for linear contexts
-(the context's own steps are budget-free). -/
+/-- `bin_log_related_under_typed_ctx` under a resource `P` such as budget credits, for
+linear contexts (the context's own steps are budget-free). -/
 theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Exp rT} {τ : Ty}
     {Γtc' : Tctx} {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
@@ -326,7 +328,8 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
     have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
     simp only [Ctx.fill_cons, CtxItem.fill]
     iintro HP
-    -- `ih_frame` spends `HP` on the hole once; the other premises come from `Fund` at no cost
+    -- `ih_frame` spends the resource `HP` on the hole once; the other premises come from `Fund`
+    -- at no cost
     cases HKitem with
     | lam | fix | tlam | unpackR => exact (Hlin.1 : False).elim
     | appL Hty2 => ih_frame; iapply bin_log_related_app $$ H %(Fund Hty2)

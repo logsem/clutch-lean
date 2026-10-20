@@ -67,6 +67,8 @@ theorem codensity_dp_lhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
   obtain ⟨hε₁, hε₂⟩ := ENNReal.add_ne_top.1 hε
   refine codensity_dp_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
   have hf1' (x : X) : f x - D x ≤ 1 := tsub_le_self.trans (hf1 x)
+  -- pay `D` on the μ side: test the head with `f - D` and add `∫ D dμ` back, so no `e^{ε₁}`
+  -- multiplies it
   calc ∫⁻ x, f x ∂μ
       ≤ ∫⁻ x, (f x - D x) + D x ∂μ := lintegral_mono fun _ ↦ le_tsub_add
     _ = ∫⁻ x, f x - D x ∂μ + ∫⁻ x, D x ∂μ := lintegral_add_right _ hD

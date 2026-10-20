@@ -23,7 +23,7 @@ variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [Measur
 def AddCoupl (ε : ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) : Prop :=
   ARCoupling (· + ε) Φ μₗ μᵣ
 
--- reducible so an `ExpCoupl` hypothesis still applies directly to its six arguments
+-- reducible so an `ExpCoupl` hypothesis still applies directly to its test functions and hypotheses
 /-- Coupling in expectation at cost `E₂`: every pair of `[0,1]` tests with `h₁ a ≤ h₂ b + E₂ a b`
 has `∫ h₁ dμ₁ ≤ ∫ h₂ dμ₂ + ε`; for sub-probability `μ₁` this is `tv.codensity ε E₂`
 (`expCoupl_iff_codensity_tv`). -/

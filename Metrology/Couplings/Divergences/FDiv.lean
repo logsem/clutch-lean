@@ -124,7 +124,8 @@ theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f
 
 /-! ## Partition sums are below the `f`-divergence
 
-Jensen on each cell gives the lower bound; `fDiv_nonneg` and `fDiv_mono` follow. -/
+Jensen on each cell gives the lower bound; `fDiv_nonneg` follows. `fDiv_mono` compares two
+weights directly. -/
 
 /-- A function continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
 theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
@@ -176,12 +177,14 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
       ∫ x, φ x ∂μs ≤ μs.real univ :=
     calc ∫ x, φ x ∂μs ≤ ∫ _, (1 : ℝ) ∂μs := integral_mono hφ (integrable_const 1) hφ1
       _ = μs.real univ := by simp
+  -- infinite slope with singular mass makes fDiv = ⊤; otherwise trade the slope for a real `d`
   by_cases htop : derivAtTop f = ⊤ ∧ μs univ ≠ 0
   · rw [fDiv_of_integrable hint, htop.1,
       EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 htop.2)), EReal.coe_add_top]
     exact le_top
   obtain ⟨d, hd, hd0⟩ := exists_real_mul_eq_coe_mul (derivAtTop f) (μs.real univ)
     (fun hD ↦ by simp [measureReal_def, not_not.1 (not_and.1 htop hD)]) (derivAtTop_ne_bot hf)
+  -- per cell: split ∫w dμ into density and singular parts; Jensen on the first, slope on the second
   have hterm (i) (hi : i ∈ s) : persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν) ≤
       ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) := by
     have hs0 : 0 ≤ ∫ x, w i x ∂μs := integral_nonneg (hw0 i)
@@ -192,6 +195,7 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
       _ ≤ _ := add_le_add (persp_integral_le hf hf_cont (fun _ ↦ toReal_nonneg)
             integrable_toReal_rnDeriv hint (hw i) (hw0 i) (hwi i hi))
             (by rw [persp_zero_right, hd _ hs0 (hsing (hint_w i hi _) (hwi i hi))])
+  -- sum the cells; total weight ≤ 1 (or f ≥ 0) drops the uncovered part
   calc ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν)
       ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) :=
         Finset.sum_le_sum hterm

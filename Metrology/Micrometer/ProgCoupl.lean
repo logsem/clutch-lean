@@ -237,7 +237,7 @@ theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift] {e�
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
-  -- both primitive steps are probability measures, as the head lemmas below need
+  -- `HeadShift.shift` needs both primitive steps to be probability measures
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   progCoupl_steps_law law Hred Hred' (law.mono_out (BindLaw.HeadShift.shift hb₂ hhead) hb) hside
@@ -266,7 +266,7 @@ theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawf
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
-  -- both primitive steps are probability measures, as the head lemmas below need
+  -- `IsTopAbsorbing.frame` needs both primitive steps to be probability measures
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   progCoupl_steps_adv' (R := fun ρ₁ ρ₂ => R ρ₁ ρ₂ + b₂) Hred Hred'
@@ -328,6 +328,8 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
     iprop(∀ e₂ σ₂, |={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   have := prim_step_mass Hred
   iintro H
+  -- couple the step with itself (`HeadDiag.diag`: leftover `relCost (· = ·) ρ ρ' + b`), with `f'`
+  -- sending the right copy to `⟨e₁', σ₁'⟩`; a finite leftover forces `ρ = ρ'`, so `b` is left
   iapply progCoupl_intro_map (n := 0) (μ₁' := MeasureTheory.Measure.dirac σ₁')
     (f' := fun _ => ⟨e₁', σ₁'⟩) law Hred measurable_id MeasureTheory.Measure.map_id.symm
     measurable_const

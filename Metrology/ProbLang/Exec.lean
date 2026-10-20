@@ -451,7 +451,7 @@ theorem limExec_map_AddCoupl
   simp_rw [lintegral_map hf hF]
   exact le_of_eq (lintegral_limExec ρ (fun a => f (F a)))
 
-/-- `limExec_map_AddCoupl` at `F := Cfg.expr`: the form `adequacy` needs. -/
+/-- `limExec_map_AddCoupl` at `F := Cfg.expr`: the additive-coupling form of `limExecV_lift`. -/
 theorem limExecV_AddCoupl
     {β : Type*} [MeasurableSpace β] {ε : ENNReal}
     {Φ : Set (Exp rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}

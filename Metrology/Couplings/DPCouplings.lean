@@ -51,15 +51,14 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     refine tsub_le_iff_left.mpr (.trans ?_ le_add_self)
     refine (lintegral_le_iSup_mul (f := f')).trans ?_
     exact Left.mul_le_one (iSup_le (Hf'b ·)) Hfsprob
-  -- Idea: feed the first coupling the outer tests `F a = (∫ f' d(f a) - δ')⁺` and
+  -- Idea: feed the first coupling the outer tests `F a = ∫ f' d(f a) - δ'` (truncated) and
   -- `G b = min 1 (e^{ε'} ∫ g' d(g b))`; `Hbind` orders them on `S`, and the `δ'` slack is paid
   -- outside while `e^{ε'}` is paid inside `G`.
-  let F : CouplingFunction α := .mk (max 0 <| ∫⁻ y, f' y ∂ f · - δ') ⟨?Fm, fun a => ?Fb⟩
+  let F : CouplingFunction α := .mk (∫⁻ y, f' y ∂ f · - δ') ⟨?Fm, fun a => ?Fb⟩
   case Fm =>
-    refine measurable_const.max ?_
     refine .sub ?_ measurable_const
     exact measurable_lintegral Hf'm |>.comp Hfm
-  case Fb => exact max_le (zero_le_one' _) (Hf'le _)
+  case Fb => exact Hf'le _
   let G : CouplingFunction β := .mk (min 1 <| (exp ε') * ∫⁻ y, g' y ∂ g ·) ⟨?Gm, fun b => ?Gb⟩
   case Gm =>
     refine measurable_const.min ?_
@@ -74,7 +73,7 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     _ ≤ δ' + δ + exp ε * ∫⁻ b, G b ∂μᵣ := ?_
     _ ≤ δ' + δ + exp ε * ∫⁻ b, exp ε' * ∫⁻ b', g' b' ∂g b ∂μᵣ := ?_
   · refine lintegral_mono (fun x => ?_)
-    simp only [zero_le, sup_of_le_right, F]
+    simp only [F]
     exact le_add_tsub
   · rw [lintegral_add_left measurable_const, lintegral_const]
     refine (ENNReal.add_le_add_iff_right ?_).mpr ?_
@@ -87,7 +86,7 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     rw [add_comm]
     refine Hcpl F G (fun {a b} HS => ?_)
     simp only [G]
-    refine max_le zero_le (le_min ?_ ?_)
+    refine le_min ?_ ?_
     · exact Hf'le _
     · refine tsub_le_iff_left.mpr ?_
       rw [add_comm]; exact Hbind HS ⟨f', ⟨Hf'm, Hf'b⟩⟩ ⟨g', ⟨Hg'm, Hg'b⟩⟩ Hf'g'

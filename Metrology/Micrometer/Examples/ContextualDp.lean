@@ -23,7 +23,8 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 def negCtx : Ctx rT := [.ifL (.lit (.bool false)) (.lit (.bool true))]
 
 /-- The negated randomized-response report is `(ln 3, 0)`-DP: every result is at most three times as
-likely under one private bit as under the other. -/
+likely under one private bit as under the other. Stated as `refines_ctx_dp` states it: on
+configurations (`limExec`), with `finalBool c` the configurations that returned the boolean `c`. -/
 theorem rr_negCtx_le (b b' c : Bool) (σ σ' : State rT) :
     limExec ⟨negCtx.fill (rr b), σ⟩ (finalBool c) ≤
       3 * limExec ⟨negCtx.fill (rr b'), σ'⟩ (finalBool c) := by

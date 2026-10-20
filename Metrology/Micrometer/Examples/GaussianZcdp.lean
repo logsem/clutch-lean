@@ -37,7 +37,8 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF] [BudgetCreditGS B GF]
 
 /-- The assumed spec of `gauss`: `gauss #a` couples with a spec copy of `gauss #a'` like a primitive
-sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`). -/
+sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`).
+Same shape as `NoisyCount.LaplaceSpec`, with law `gaussianReal a v`. -/
 def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :=
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
     IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →

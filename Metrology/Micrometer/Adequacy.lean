@@ -306,7 +306,7 @@ theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT →
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   limExecV_lift fun n => wp_adequacy_exec_n e e' σ σ' n φ b Hwp
 
-/-- `wp_adequacy` with a budget credit strictly above `b`. -/
+/-- `wp_adequacy` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
 theorem wp_adequacy_error_lim [L.IsBudgetClosed] (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
@@ -324,7 +324,7 @@ theorem wp_adequacy_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp r
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   IsSound.sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
-/-- `wp_adequacy_div` with a budget credit strictly above `b`. -/
+/-- `wp_adequacy_div` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
 theorem wp_adequacy_div_error_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L.IsBudgetClosed]
     (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →

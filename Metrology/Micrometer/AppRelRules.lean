@@ -5,9 +5,10 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Relational rules: left state steps and coupled draws
 
-Rules needing `[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`: left heap and tape steps, draws,
-and coupled draws (`U` = unlabelled draw, `T` = tape draw, left program first). The main rule is
-`refines_couple_rands_spend`. -/
+Rules needing `[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`: left heap and tape steps,
+unlabelled and empty-tape draws on either side, and coupled draws (`U` = unlabelled draw, `T` = tape
+draw, left program first). The main rule is `refines_couple_rands_spend`. Right heap/tape steps and
+`refines_randT_r` need no extra instances and are in `AppRelRulesPure`. -/
 
 @[expose] public section
 
@@ -155,7 +156,11 @@ theorem refines_randT_empty_r {E : CoPset} {K : Ectx rT} {l : Loc} {z : Int}
   isimp only [← Ectx.fill_comp K' K] at HKRes
   iapply Hlog $$ %n HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
 
-/-! ## Coupled draws within a budget -/
+/-! ## Coupled draws within a budget
+
+Every coupled-draw rule is proved the same way: unfold `refines`, merge the spec context `K2` with
+`K'` (`Ectx.fill_comp`), apply the `wp` coupling rule, then split the context again for the
+continuation. -/
 
 omit [L.IsReflexive] in
 /-- Couple `rand N ~ rand N` along `S`, given a lifting of the two uniform draws within the
@@ -189,8 +194,6 @@ theorem refines_couple_rands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} {
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#(.int n))) (K'.fill pl(#(.int (f n)))) A) ⊢
     refines L E (K.fill pl(rand(#(.int z), #(.unit))))
       (K'.fill pl(rand(#(.int z), #(.unit)))) A := by
-  -- Each coupled-draw rule: unfold `refines`, merge the spec context `K2` with `K'`, apply the
-  -- unary `wp` coupling rule, then split the context again for the continuation.
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj

@@ -52,7 +52,7 @@ By rule:
   `NoisyCount`, `GaussianZcdp`, `Switching`
 
 By exit (the adequacy theorem that leaves the logic):
-* `approximates_coupling`, `approximates_div`: a relational refinement from `↯ b` gives a coupling
+* `approximates_coupling`, `approximates_div`: a relational refinement from `↯b b` gives a coupling
   or a divergence bound (`RR.Basic`; `SkipZero`)
 * `refines_coupling`: a relational refinement at budget 0 (`OTP`)
 * `wp_adequacy`, `wp_adequacy_div`: a weakest precondition against a spec `⤇ e'` (`RR.Twice`,
@@ -63,7 +63,7 @@ By exit (the adequacy theorem that leaves the logic):
   `ContinuousOTP`)
 
 Naming: lowercase `_dp`, `_zcdp` states a divergence between two runs; uppercase `_DP`, `_zCDP`
-is the mechanism definition (Def. 2.x).
+is the mechanism definition (Approximate Span Liftings, Def. 2.1–2.5; `Mechanism.DP`, `.zCDP`, ...).
 -/
 
 @[expose] public section

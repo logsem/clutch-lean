@@ -24,7 +24,8 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## The error budget -/
 
-/-- With `c` entries memoised and `q` rounds to go, round `i` costs `(c + i) / N`. -/
+/-- Total error of `q` coupled rounds from `c` memoised entries: `∑_{i<q} (c + i) / N`, since
+round `i` meets a collision with probability `(c + i) / N`. -/
 noncomputable def loopErr (N : Int) (c q : Nat) : ENNReal :=
   (∑ i ∈ Finset.range q, ((c + i : Nat) : ENNReal)) / (N.toNat : ENNReal)
 
@@ -62,8 +63,9 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetC
 
 /-! ### One round: recording the answer -/
 
-/-- The tail of a round: record `(n, y)` in both result lists, then run the next round. `loop` is
-the stepped goal's unfolded `wLoop N`. -/
+/-- The tail of a round: record `(n, y)` in both result lists, then run the next round.
+`loop` matches whatever form of `wLoop N` the goal holds after `wp_pures` (not syntactically
+`wLoop N`); `hloop` checks it by `rfl`, so callers just `iapply` the lemma. -/
 theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
     {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)} {Φ : Val rT → IProp GF}
     (hloop : loop = wLoop N := by rfl) : iprop%
@@ -136,6 +138,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     tp_pures
     wp_bind (pl% rand(#(.int N), #.unit))
     tp_bind (pl% rand(#(.int N), #.unit))
+    -- couple the two input draws by the identity
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj
@@ -259,6 +262,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     tp_pures
     wp_bind (pl% rand(#(.int N), #.unit))
     tp_bind (pl% rand(#(.int N), #.unit))
+    -- couple the two input draws by the identity
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj

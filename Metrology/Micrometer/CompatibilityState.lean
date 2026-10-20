@@ -320,7 +320,8 @@ theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
     show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, hv, hv']
   by_cases hnpos : 0 < n
   · iapply refines_rand_unit_of_pos hnpos fun m _ _ => lrel_int_lit m
-  · iunfold refines
+  · -- n ≤ 0: both sides return -1 deterministically, no coupling needed.
+    iunfold refines
     iintro %K %b HK Hna Herr Hpos
     iapply wp_rand_nonpos_r K hnpos
     iframe HK

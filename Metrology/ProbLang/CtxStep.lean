@@ -442,6 +442,8 @@ theorem Stuck.fill [LawfulProbLangℝ rT]
 
 /-! ## Atomicity and the discrete bridge -/
 
+/-- The atoms of `primStep ⟨e, σ⟩` form a measurable set: a finite measure has countably many atoms
+(`countable_meas_level_set_pos`), and singletons are measurable. -/
 theorem measurableSet_primStep_support [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) :
     MeasurableSet {ρ : Cfg rT | 0 < primStep ⟨e, σ⟩ {ρ}} := by
   have : IsFiniteMeasure (primStep ⟨e, σ⟩) :=

@@ -92,6 +92,8 @@ theorem sqrt_exp_one_div_two_pi_le : √(exp 1 / (2 * π)) ≤ 0.66 := by
   rw [sqrt_le_left (by norm_num), div_le_iff₀ (by positivity)]
   nlinarith [exp_one_lt_d9, pi_gt_d2]
 
+/-- For `c > (1 + √3)/2` the tail point `c - 1/(2c)` exceeds `1`; this is where the side condition
+on `c` in `[DP-G]` comes from. -/
 theorem one_lt_sub_one_div_two_mul {c : ℝ} (hc : (1 + √3) / 2 < c) : 1 < c - 1 / (2 * c) := by
   have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
   have h3 : √3 ^ 2 = 3 := sq_sqrt (by norm_num)

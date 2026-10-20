@@ -12,6 +12,7 @@ public import Metrology.Couplings.AdditiveCouplings
 of `X` and `Y`; `tvDist_le_of_addCoupl_eq` turns two-sided equality couplings into such bounds.
 We use total variation rather than Clutch's point-mass `|Pr[X = v] − Pr[Y = v]|`, which vanishes
 on diffuse outputs; the two agree on discrete languages.
+`tvDist μ ν ≤ δ` is the two-sided version of `GradedDivergence.tv`: `tv δ μ ν ∧ tv δ ν μ`.
 -/
 
 namespace ProbLang

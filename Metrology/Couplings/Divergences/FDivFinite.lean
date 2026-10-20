@@ -8,7 +8,9 @@ Main result `fDiv_comp_le_of_finite` (tutorial (M5), Thm. 4.6 of Approximate Spa
 `f`-divergence chain rule proved on finite spaces holds on all spaces, by pushing the output to
 `Fin N` (`fDiv_eq_iSup_map`) and bucketing inputs by dyadic cells (`disc`/`rep`,
 `tendsto_fDiv_bind_disc`).
-Also the additive chain rule from split perspectives (`fDiv_comp_le_of_perspSplit`). -/
+Also the additive chain rule from split perspectives (`fDiv_comp_le_of_perspSplit`).
+`fDiv_comp_le_of_finite_of_mass` keeps a side condition `Q` on the kernels' total masses through
+both steps; the KL/Hellinger equal-mass chain rules use it. -/
 
 @[expose] public section
 

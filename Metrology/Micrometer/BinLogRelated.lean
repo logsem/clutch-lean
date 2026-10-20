@@ -23,9 +23,11 @@ abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
 
-/-- The relation of the last entry for `x` in the list.
+/-- The relation of the entry for `x` deepest in the list (the earliest bound; head entries do not
+shadow).
 
-Same order as `ValSubstMap.lookup`; callers only cons fresh variables, so shadowing never arises. -/
+Same order as `ValSubstMap.lookup`; callers only cons fresh variables, so the
+choice never matters. -/
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
   | [], _ => none
   | (y, A) :: rest, x =>

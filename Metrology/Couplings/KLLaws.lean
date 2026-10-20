@@ -29,7 +29,8 @@ variable {B : Type v} {D : GradedDivergence.{u} B} {X Y : Type u} [MeasurableSpa
   [MeasurableSpace Y] {b : B} {R : X → Y → B} {μ : Measure X} {ν : Measure Y}
 
 variable (D) in
-/-- `codensity` with Markov tests whose premise is checked almost everywhere on the left
+/-- `codensity` with Markov tests whose premise is checked almost everywhere on the left, so that
+completeness (`markovCodensity_complete`) can replace a test kernel on a null set by the right one
 (Sato–Katsumata, §7; Rocq `GC_KL_full` tests with functions instead). -/
 def markovCodensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →

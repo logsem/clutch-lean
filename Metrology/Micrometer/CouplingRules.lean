@@ -389,7 +389,8 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
 /-! ### Outcome-dependent credits -/
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, turning `↯b (s ε₁)` into `↯b (s (ε₂ n))` at
-draw `n`, where `ε₁` bounds the average of `ε₂` (advanced composition). -/
+draw `n`, where `ε₁` bounds the average of `ε₂` (credits paid in expectation,
+Eris `wp_couple_rand_adv_comp`). -/
 theorem wp_couple_rand_rand_adv [L.IsReflexive]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z : Int) (f : Int → Int) (ε₁ : ENNReal)
     (ε₂ : Int → ENNReal)

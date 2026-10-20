@@ -188,7 +188,8 @@ macro "head_split2" goal1:ident goal2:ident : tactic =>
 /-- Split `headStep` into its cases, with named goals for every `isValM`/`asValM`/match branch.
 Goals are `<ctor>.redex`, `<ctor>.no_redex[_i]` (guard failed), `load|store.segfault` (dangling
 location) and `rand.tape.{unalloc,empty,deterministic,mismatch}`; the `scrut` goals are
-`scrut_success`, `scrut_failure`, `scrut_no_redex`. -/
+`scrut_success`, `scrut_failure`, `scrut_no_redex`. Unsplit branches keep the `head_case_names`
+names: `cond.true`, `cond.false`, `tape`, `rand.plain`, `urand`, `default`. -/
 macro "head_case" : tactic =>
   `(tactic| (
     head_case_names
@@ -304,7 +305,7 @@ theorem head_step_mass {e : Exp rT} {σ : State rT} :
     cases op.eval e1 e2
     · simp [Option.unwrapM]
     · simpa [Option.unwrapM] using dirac.isProbabilityMeasure
-  case rand.plain | rand.tape | rand.tape.mismatch =>
+  case rand.plain | rand.tape.empty | rand.tape.mismatch =>
     intro _; exact Cfg.uniform_isProbabilityMeasure
   case urand => intro _; exact Cfg.uniformReal_isProbabilityMeasure
 
@@ -1767,7 +1768,7 @@ theorem headStep_support_of_pos
     obtain ⟨rfl, ⟨hpos, v, rfl, hv0, hvz⟩ | ⟨hpos, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
     · exact .RandNoTapeS hpos hv0 hvz
     · exact .RandNonposS hpos
-  case rand.tape =>
+  case rand.tape.empty =>
     intro h
     obtain ⟨rfl, ⟨hpos, v, rfl, hv0, hvz⟩ | ⟨hpos, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
     · exact .RandTapeEmptyS hpos ‹_› rfl hv0 hvz rfl
@@ -1847,7 +1848,7 @@ theorem headStep_exists_support_of_ne_zero
     by_cases hz : 0 < z
     · exact ⟨_, .RandNoTapeS hz (le_refl 0) hz⟩
     · exact ⟨_, .RandNonposS hz⟩
-  case rand.tape =>
+  case rand.tape.empty =>
     rename_i z α optT ns htape
     by_cases hz : 0 < z
     · exact ⟨_, .RandTapeEmptyS hz htape rfl (le_refl 0) hz rfl⟩

@@ -20,7 +20,10 @@ namespace ProbLang.MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-/-! ## Coupled steps with a leftover `R` -/
+/-! ## Coupled steps with a leftover `R`
+
+`_adv'`: canonical law, leftover `R` at the whole budget; `_adv`: lifting at `b₁`, with `b₂` added
+to every leftover (see ProgCoupl's 'One program step against one spec step'). -/
 
 /-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
 (Rocq `wp_lift_step_couple_adv`). -/

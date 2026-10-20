@@ -33,9 +33,11 @@ noncomputable def Cfg.drawCost [_root_.Top B] (σ σ' : State rT) (K : Ectx rT)
     R h.choose h.choose_spec.choose
   else ⊤
 
+/-- At the configurations drawn as `n` and `m`, `drawCost` is `R n m`. -/
 theorem Cfg.drawCost_apply [_root_.Top B] (σ σ' : State rT) (K : Ectx rT) (R : Int → Int → B)
     (n m : Int) :
     Cfg.drawCost σ σ' K R ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int m)), σ'⟩ = R n m := by
+  -- `choose` returns `n, m` back: integer literals and `K.fill` are injective
   have key (h : ∃ n' m' : Int, (⟨pl(#(.int n)), σ⟩ : Cfg rT) = ⟨pl(#(.int n')), σ⟩ ∧
       (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT) = ⟨K.fill pl(#(.int m')), σ'⟩) :
       R h.choose h.choose_spec.choose = R n m := by
@@ -50,6 +52,7 @@ theorem Cfg.drawCost_apply [_root_.Top B] (σ σ' : State rT) (K : Ectx rT) (R :
   rw [Cfg.drawCost, dite_eq_left_of_eq_true (eq_true ⟨n, m, rfl, rfl⟩)]
   exact key _
 
+/-- A finite `drawCost` forces both configurations to be drawn ones. -/
 theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State rT} {K : Ectx rT}
     {R : Int → Int → B} {ρ ρ' : Cfg rT} (h : Cfg.drawCost σ σ' K R ρ ρ' < (⊤ : B)) :
     ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ := by
@@ -191,6 +194,7 @@ noncomputable def choiceCost (S₁ S₂ : Int → Int → Prop) (P : Set Int) (�
     (n m : Int) : ℝ≥0∞ × ℝ≥0∞ :=
   if S₁ n m ∨ S₂ n m then choiceBudget P ε₂ ε₂' δ₂ n else (⊤ : ℝ≥0∞ × ℝ≥0∞)
 
+/-- A finite `choiceCost` forces `S₁ ∨ S₂` and equals the choice budget. -/
 theorem choiceCost_of_lt_top {n m : Int}
     (h : choiceCost S₁ S₂ P ε₂ ε₂' δ₂ n m < (⊤ : ℝ≥0∞ × ℝ≥0∞)) :
     (S₁ n m ∨ S₂ n m) ∧ choiceCost S₁ S₂ P ε₂ ε₂' δ₂ n m = choiceBudget P ε₂ ε₂' δ₂ n := by

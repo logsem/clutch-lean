@@ -430,7 +430,8 @@ namespace GradedDivergence
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ : Measure X} {ν : Measure Y}
   [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S : X → Y → Prop} {α ω δ : ℝ}
 
-/-- zCDP liftings of relations are DP liftings at every slack `0 < δ < 1`, in closed form
+/-- Codensity liftings of the zCDP divergence (reached from `zcdpLifting` by
+`LiftingHom.concentratedToCodensity`) are DP liftings at every slack `0 < δ < 1`, in closed form
 ([z/D]). -/
 theorem codensity_dp_rel_of_zcdp {ξ ρ : ℝ≥0∞} (hδ : 0 < δ) (hδ₁ : δ < 1)
     (h : (codensity zcdpDivergence).Rel (ξ, ρ) S μ ν) :
@@ -440,7 +441,8 @@ theorem codensity_dp_rel_of_zcdp {ξ ρ : ℝ≥0∞} (hδ : 0 < δ) (hδ₁ : �
       (b.1 + b.2 + ENNReal.ofReal (2 * √(b.2.toReal * log (1 / δ))), ENNReal.ofReal δ))
     (fun _ ↦ dp_of_zcdp hδ hδ₁) (by simp) h
 
-/-- tCDP liftings of relations are DP liftings at every slack `δ > 0`, at a fixed order
+/-- Codensity liftings of the tCDP divergence (reached from `tcdpLifting` by
+`LiftingHom.tcdpToCodensity`) are DP liftings at every slack `δ > 0`, at a fixed order
 `1 < α < ω` ([t/D]). -/
 theorem codensity_dp_rel_of_tcdp {ρ : ℝ≥0∞} (hα : 1 < α) (hαω : α < ω) (hδ : 0 < δ)
     (h : (codensity (tcdpDivergence ω)).Rel ρ S μ ν) :
