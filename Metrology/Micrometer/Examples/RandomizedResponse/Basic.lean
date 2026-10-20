@@ -16,11 +16,9 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # Randomized response in any lifting
 
-One round and the `k`-round loop refine themselves in every lifting, given a coupling of the two
-draws; adequacy then bounds the outputs in every divergence the lifting is sound for. The files
-in `RandomizedResponse/` instantiate this at one lifting each. It also holds the arithmetic of one
-round that they share: the fiber bound `rrOut_fiber_le_three` (DP, zCDP) and the moment
-`fDiv_rrOut` (Rényi, χ²). -/
+One round and the `k`-round loop refine themselves in any graded lifting given `RRCoupling L c`, so
+the loop is `k • c`-private in every divergence the lifting is sound for (`rrCount_isPrivate`).
+Also the one-round arithmetic and the budget `(ln 3, 0)` that the per-divergence files share. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (expBudget expBudget_of_ne_top)
@@ -120,7 +118,7 @@ noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.
 /-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
 theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
-/-! ## The program logic, in any lifting -/
+/-! ## One round, in any lifting -/
 
 /-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`.
 This is the one fact each divergence file proves; `rr_refines_of` consumes it as `hcpl`. -/
@@ -130,6 +128,31 @@ def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : P
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   [L.IsLawful] [L.IsTopAbsorbing]
+
+section Rel
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+
+/-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
+at `c`. -/
+theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
+    (hc : IsAddLeftRegular c)
+    (hcpl : RRCoupling L c) (b b' : Bool) :
+    ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+  iintro Hb
+  -- couple the draws along equal reports; afterwards both sides are deterministic
+  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
+  iframe Hb
+  iintro %r %r' %hR
+  rel_pures
+  -- four branch combinations; in each, hR equates the two returned bits
+  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
+    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
+    rel_pures <;> rw [hR] <;> rel_values
+
+end Rel
+
+/-! ## The same round, against a spec -/
 
 section Wp
 
@@ -164,6 +187,7 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
+  -- couple the draws along equal reports, then run both `if`s to their reported bits
   iapply wp_couple_rand_rand_spend 4 (by norm_num) _ c hc (hcpl b b')
   iframe Hj Hb
   iintro %r %r' %hR Hj
@@ -179,26 +203,11 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
 
 end Wp
 
-section Rel
+/-! ## The loop, in any lifting -/
+
+section Loop
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-
-/-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
-at `c`. -/
-theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
-    (hc : IsAddLeftRegular c)
-    (hcpl : RRCoupling L c) (b b' : Bool) :
-    ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iintro Hb
-  -- couple the draws along equal reports; afterwards both sides are deterministic
-  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
-  iframe Hb
-  iintro %r %r' %hR
-  rel_pures
-  -- four branch combinations; in each, hR equates the two returned bits
-  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
-    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
-    rel_pures <;> rw [hR] <;> rel_values
 
 /-- The loop refines itself at equal counts, spending `↯b c` per round, given a refinement of one
 round at `c`. -/
@@ -236,7 +245,7 @@ theorem rrCount_refines_of (c : B)
     icases Hw with ⟨%d, %⟨rfl, rfl⟩⟩
     cases d <;> rel_pures <;> rel_values
 
-end Rel
+end Loop
 
 /-! ## Adequacy, in any lifting -/
 

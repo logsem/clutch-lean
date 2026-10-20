@@ -4,7 +4,8 @@ public import Metrology.Couplings.Lifting
 
 /-! # Bind laws
 
-Ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`). -/
+`BindLaw L`: a head, a side condition and soundness for composing a lifted step with lifted
+continuations (Rocq `bind_law.v`); the laws `canonical` and `unit`; `HeadShift` and `HeadDiag`. -/
 
 @[expose] public section
 
@@ -52,6 +53,35 @@ namespace BindLaw
 variable {B : Type v} [Preorder B] [Top B] {L : GradedLifting.{u} B} {X Y X' Y' : Type u}
   [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X'] [MeasurableSpace Y']
 
+/-- A bind law applied to measurable families of sub-probability measures. -/
+theorem bind_fun (law : BindLaw L) {b : B} {R : X → Y → B} {R' : X' → Y' → B} {μ : Measure X}
+    {ν : Measure Y} (h : law.head μ ν R b) {f : X → Measure X'} {g : Y → Measure Y'}
+    [∀ x, IsSubProbabilityMeasure (f x)] [∀ y, IsSubProbabilityMeasure (g y)]
+    (hf : Measurable f) (hg : Measurable g) (hside : law.side μ ν R ⟨f, hf⟩ ⟨g, hg⟩)
+    (hk : ∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (μ.bind f) (ν.bind g) :=
+  law.sound (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hside hk
+
+/-! ## Optional properties of a law -/
+
+/-- A head survives adding a finite budget to every leftover and to the output budget; the credit
+rules ask this of a law (Rocq `gbl_head_shift`). -/
+class HeadShift [Add B] (law : BindLaw L) : Prop where
+  shift {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b c : B} {R : X → Y → B}
+    {μ : Measure X} {ν : Measure Y} :
+    c < ⊤ → law.head μ ν R b → law.head μ ν (fun x y ↦ R x y + c) (b + c)
+
+/-- A law has diagonal heads: a probability measure against itself, at leftover
+`relCost (· = ·) + b`, is a head at any finite budget `b`, and the side condition always holds for
+a measure against itself (so `massEq` has no `HeadDiag`); steps that leave the spec in place ask
+this (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
+  diag {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsProbabilityMeasure μ] {b : B} :
+    b < ⊤ → law.head μ μ (fun x y ↦ relCost (· = ·) x y + b) b
+  side_diag {X X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace Y']
+    (μ : Measure X) (R : X → X → B) (f : Kernel X X') (g : Kernel X Y') : law.side μ μ R f g
+
+/-! ## The canonical law -/
+
 variable (L) in
 /-- The law whose head is a lifting of the step, bound unconditionally (Rocq `GBL_uniform`). -/
 def canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] : BindLaw L where
@@ -73,6 +103,19 @@ theorem side_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {μ :
     (canonical L).side μ ν R f g :=
   trivial
 
+/-- The canonical law shifts heads by `IsLawful.frame`. -/
+instance headShift_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] :
+    (canonical L).HeadShift :=
+  ⟨fun hc h ↦ IsLawful.frame hc h⟩
+
+/-- The canonical law has diagonal heads by reflexivity of the lifting. -/
+instance headDiag_canonical [AddZeroClass B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
+    [L.IsReflexive] : (canonical L).HeadDiag where
+  diag μ _ _ hb := by simpa using IsLawful.frame hb (IsReflexive.refl (L := L) μ)
+  side_diag _ _ _ _ := trivial
+
+/-! ## The unit law -/
+
 variable (L) in
 /-- The law for deterministic steps: point masses on both sides at a finite leftover below the
 output budget; sound from `IsLawful` alone, with no `HasBind` (Rocq `GBL_unit_law`). -/
@@ -86,10 +129,12 @@ def unit [Add B] [L.IsLawful] : BindLaw L where
   mono_out := fun ⟨x, y, hμ, hν, hlt, hle⟩ hb ↦ ⟨x, y, hμ, hν, hlt, hle.trans hb⟩
   head_supp := by
     rintro _ _ _ _ _ _ _ _ A _ _ hμ ⟨x, y, rfl, rfl, hlt, hle⟩
+    -- `μ = dirac x` gives `Aᶜ` no mass, so `x ∈ A` and the piecewise leftover is `R x y`
     have hx : x ∈ A := by_contra fun hx ↦ by simp [dirac_apply_of_mem (s := Aᶜ) hx] at hμ
     exact ⟨x, y, rfl, rfl, by simpa [hx] using hlt, by simpa [hx] using hle⟩
   side_supp _ := trivial
 
+/-- Two point masses at a finite leftover below `b` form a head of the unit law. -/
 theorem unit_head_dirac [Add B] [L.IsLawful] {b : B} {R : X → Y → B} {x : X} {y : Y}
     (hlt : R x y < ⊤) (hle : R x y ≤ b) : (unit L).head (dirac x) (dirac y) R b :=
   ⟨x, y, rfl, rfl, hlt, hle⟩
@@ -98,44 +143,6 @@ theorem unit_head_dirac [Add B] [L.IsLawful] {b : B} {R : X → Y → B} {x : X}
 theorem side_unit [Add B] [L.IsLawful] {μ : Measure X} {ν : Measure Y} {R : X → Y → B}
     {f : Kernel X X'} {g : Kernel Y Y'} : (unit L).side μ ν R f g :=
   trivial
-
-/-- A bind law applied to measurable families of sub-probability measures. -/
-theorem bind_fun (law : BindLaw L) {b : B} {R : X → Y → B} {R' : X' → Y' → B} {μ : Measure X}
-    {ν : Measure Y} (h : law.head μ ν R b) {f : X → Measure X'} {g : Y → Measure Y'}
-    [∀ x, IsSubProbabilityMeasure (f x)] [∀ y, IsSubProbabilityMeasure (g y)]
-    (hf : Measurable f) (hg : Measurable g) (hside : law.side μ ν R ⟨f, hf⟩ ⟨g, hg⟩)
-    (hk : ∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (μ.bind f) (ν.bind g) :=
-  law.sound (f := ⟨f, hf⟩) (g := ⟨g, hg⟩) h hside hk
-
-/-! ## Optional properties of a law -/
-
-/-- A head survives adding a finite budget to every leftover and to the output budget; the credit
-rules ask this of a law (Rocq `gbl_head_shift`). -/
-class HeadShift [Add B] (law : BindLaw L) : Prop where
-  shift {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b c : B} {R : X → Y → B}
-    {μ : Measure X} {ν : Measure Y} :
-    c < ⊤ → law.head μ ν R b → law.head μ ν (fun x y ↦ R x y + c) (b + c)
-
-/-- A probability measure is a head against itself along the diagonal at any finite budget, and
-the side condition holds for a measure against itself for every leftover and every pair of
-kernels (so `massEq` has no `HeadDiag`); program steps that leave the spec in place ask this
-of a law (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
-class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
-  diag {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsProbabilityMeasure μ] {b : B} :
-    b < ⊤ → law.head μ μ (fun x y ↦ relCost (· = ·) x y + b) b
-  side_diag {X X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace Y']
-    (μ : Measure X) (R : X → X → B) (f : Kernel X X') (g : Kernel X Y') : law.side μ μ R f g
-
-/-- The canonical law shifts heads by `IsLawful.frame`. -/
-instance headShift_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] :
-    (canonical L).HeadShift :=
-  ⟨fun hc h ↦ IsLawful.frame hc h⟩
-
-/-- The canonical law has diagonal heads by reflexivity of the lifting. -/
-instance headDiag_canonical [AddZeroClass B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
-    [L.IsReflexive] : (canonical L).HeadDiag where
-  diag μ _ _ hb := by simpa using IsLawful.frame hb (IsReflexive.refl (L := L) μ)
-  side_diag _ _ _ _ := trivial
 
 end BindLaw
 

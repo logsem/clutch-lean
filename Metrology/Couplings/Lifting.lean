@@ -2,7 +2,10 @@ module
 
 public import Metrology.Couplings.Divergence
 
-/-! Graded liftings of measures along per-pair leftovers (Approximate Span Liftings, §5). -/
+/-! # Graded liftings
+
+`GradedLifting B` relates two measures within a budget along a per-pair leftover (Approximate Span
+Liftings, §5); this file gives its law classes and derived laws such as `Rel.prod`. -/
 
 @[expose] public section
 
@@ -20,7 +23,9 @@ def GradedLifting (B : Type v) : Type (max v (u + 1)) :=
 
 namespace GradedLifting
 
-/-! ## Relations as leftovers -/
+/-! ## Relations as leftovers
+
+A relation `S` is the leftover `relCost S` (`0` on `S`, `⊤` off it); `Rel` lifts it. -/
 
 section relCost
 
@@ -60,8 +65,6 @@ theorem relCost_anti [Zero B] [Preorder B] [OrderTop B] (h : ∀ x y, S x y → 
 
 end relCost
 
-/-! ## Laws of a lifting -/
-
 section Classes
 
 variable {B : Type v} (L : GradedLifting.{u} B)
@@ -70,6 +73,8 @@ variable {B : Type v} (L : GradedLifting.{u} B)
 def Rel [Zero B] [Top B] {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B)
     (S : X → Y → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
   L b (relCost S) μ ν
+
+/-! ## Laws of a lifting -/
 
 /-- The structural laws of a lifting: Dirac pairs, zero measures, weakening, framing and
 pushforward. -/
@@ -100,6 +105,8 @@ class HasBind [LT B] [Top B] : Prop where
     [IsSubMarkovKernel g] :
     L b R μ ν → (∀ x y, R x y < ⊤ → L (R x y) R' (f x) (g y)) → L b R' (f ∘ₘ μ) (g ∘ₘ ν)
 
+/-! ## Soundness and completeness -/
+
 /-- Lifting equality within a budget gives the divergence within that budget. -/
 class IsSound [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
   sound {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
@@ -109,6 +116,8 @@ class IsSound [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
 class IsComplete [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
   complete {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : D b μ ν → L.Rel b (· = ·) μ ν
+
+/-! ## Further properties used by the logic -/
 
 /-- The zero measure on the left lifts against every sub-probability measure; lifting analogue of
 `GradedDivergence.IsZeroLeft`. -/
@@ -172,12 +181,13 @@ class IsTopAbsorbing [Top B] : Prop where
 
 end Classes
 
-/-! ## Derived laws -/
+/-! ## Derived laws for relational liftings -/
 
 variable {B : Type v} {L : GradedLifting.{u} B} {X Y X' Y' : Type u} [MeasurableSpace X]
   [MeasurableSpace Y] [MeasurableSpace X'] [MeasurableSpace Y'] {b b' c : B}
   {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
 
+/-- Weakening a relational lifting: a larger budget and a larger relation. -/
 theorem Rel.mono [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X → Y → Prop}
     (h : L.Rel b S μ ν) (hb : b ≤ b') (hS : ∀ x y, S x y → S' x y) : L.Rel b' S' μ ν :=
@@ -192,11 +202,13 @@ theorem Rel.frame_le [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrde
     · simpa [hS] using hR x y hS
     · simpa [hS] using le_top.trans le_self_add
 
+/-- Related points lift as point masses, at any budget. -/
 theorem rel_dirac [AddZeroClass B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     [Nontrivial B] [L.IsLawful] {x : X} {y : Y} (h : S x y) (b : B) :
     L.Rel b S (dirac x) (dirac y) :=
   IsLawful.mono (relCost_of (B := B) h ▸ IsLawful.pure (relCost_lt_top_iff.2 h)) zero_le le_rfl
 
+/-- Pushing a relational lifting forward along measurable maps on both sides. -/
 theorem Rel.map [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {S' : X' → Y' → Prop} {f : X → X'}
     {g : Y → Y'} (h : L.Rel b S μ ν) (hS : ∀ x y, S x y → S' (f x) (g y))
@@ -236,6 +248,7 @@ theorem rel_graph [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsR
     L.Rel 0 (fun x y ↦ f x = y) μ (μ.map f) :=
   (IsReflexive.refl μ).map_right (fun _ _ h ↦ congrArg f h) hf
 
+/-- Restricting a relational lifting to a set carrying the left measure. -/
 theorem Rel.restrict [Zero B] [Top B] [L.IsSupportLocal] {A : Set X} (h : L.Rel b S μ ν)
     (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) : L.Rel b (fun x y ↦ S x y ∧ x ∈ A) μ ν := by
   classical
@@ -276,6 +289,8 @@ theorem rel_dirac_right [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] 
     (hA : MeasurableSet A) (hμ : μ Aᶜ = 0) (y₀ : Y) :
     L.Rel 0 (fun x y ↦ x ∈ A ∧ y = y₀) μ (dirac y₀) :=
   ((rel_const_right μ y₀).restrict hA hμ).mono le_rfl fun _ _ h ↦ ⟨h.2, h.1⟩
+
+/-! ## Derived laws for binding -/
 
 /-- Binding with measurable families of sub-probability measures. -/
 theorem HasBind.bind_fun [LT B] [Top B] [L.HasBind] {R : X → Y → B} {R' : X' → Y' → B}
@@ -334,6 +349,8 @@ theorem Rel.prod [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrderedA
   simpa [Rel, Kernel.prod_apply, Kernel.id_apply, dirac_prod] using
     h'.map (f := Prod.mk x) (g := Prod.mk y) fun _ _ hT ↦ ⟨hS, hT⟩
 
+/-! ## Slack paid in expectation; event masses -/
+
 /-- Binding with continuations whose budget `s (E y)` depends on the right sample pays only the
 expectation of `E`. -/
 theorem IsExpectationAdditive.bind_adv [AddZeroClass B] [Preorder B] [Top B]
@@ -355,6 +372,9 @@ theorem IsMassDetecting.measure_le [AddZeroClass B] [Preorder B] [Top B] {s : �
     (hS : ∀ x y, S x y → x ∈ T → y ∈ T') : μ T ≤ ν T' := by
   simpa using IsMassDetecting.measure_le_add (s := s) (δ := 0) hT hT' (by rwa [map_zero]) hS
 
+/-! ## Absorbing budgets and the top budget -/
+
+/-- A budget above an absorbing one is absorbing. -/
 theorem Absorbing.mono [Add B] [Preorder B] [Top B] [L.IsLawful] (h : L.Absorbing b)
     (hb : b ≤ b') : L.Absorbing b' := fun R μ ν _ _ ↦ IsLawful.mono (h R μ ν) hb le_rfl
 
@@ -363,8 +383,6 @@ relation. -/
 theorem not_absorbing_of_refutes [Zero B] [Top B]
     (h : ¬L.Rel b (fun _ _ ↦ False) (dirac PUnit.unit.{u + 1}) (dirac PUnit.unit.{u + 1})) :
     ¬L.Absorbing b := fun hb ↦ h (hb _ _ _)
-
-/-! ## Top budget -/
 
 theorem IsTopAbsorbing.absorbing_top [Top B] [L.IsTopAbsorbing] : L.Absorbing ⊤ :=
   fun R μ ν _ _ ↦ IsTopAbsorbing.top R μ ν

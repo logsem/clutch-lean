@@ -9,9 +9,11 @@ public import Iris.Instances.Lib.WSat
 public import Iris.Instances.Lib.LaterCredits
 public import Iris.Instances.Lib.FUpd
 
-/-! Relational adequacy: a refinement proved for every ghost-state instance gives a lifting of the
-two limit executions (`approximates_coupling`). Also defines `RefinesPreGS` and
-`MicrometerFunctor`. -/
+/-! # Relational adequacy
+
+A closed refinement proved for every ghost-state instance gives a lifting `L.Rel b (adequacyRel φ)`
+of the two limit outputs (`approximates_coupling`), and a divergence bound at equal results
+(`approximates_div`). -/
 
 @[expose] public section
 
@@ -21,7 +23,10 @@ open Iris Iris.BI Iris.ProofMode OFE COFE Iris.Std DisjointLeibnizSet Auth HeapV
 open ProbLang.MicrometerWpGS
 open GradedLifting
 
-/-- The ghost-state slots that refinement adequacy allocates, with a budget camera over `B`. -/
+/-! ## Ghost state that adequacy allocates -/
+
+/-- A functor list `GF` with slots for every camera that refinement adequacy allocates, including a
+budget camera over `B`. -/
 class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
     [MeasurableSingletonClass rT] (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
   [app : AppPreGS rT GF]
@@ -32,6 +37,8 @@ class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
 
 attribute [reducible, instance] RefinesPreGS.app RefinesPreGS.spec RefinesPreGS.bc
   RefinesPreGS.inv RefinesPreGS.nainv
+
+/-! ## Support: spec ownership in the empty context, values -/
 
 section Spec
 
@@ -59,43 +66,13 @@ theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT)
 
 end Spec
 
-/-! ### Relations that relate only equal values
-
-The side condition of `approximates_div` and of the examples' adequacy. -/
-
-section EqRelations
-
-variable {rT : Type} [LawfulProbLangℝ rT]
-
-/-- `lrel_int` relates only equal values. -/
-theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
-  unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
-
-/-- `lrel_bool` relates only equal values. -/
-theorem lrel_bool_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
-  unfold lrel_bool; iintro ⟨%b, %⟨rfl, rfl⟩⟩; ipureintro; rfl
-
-/-- A product of relations between equal values relates only equal values. -/
-theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    {A A' : lrel rT GF} (hA : ∀ v v', ⊢@{IProp GF} A.car v v' -∗ ⌜v = v'⌝)
-    (hA' : ∀ v v', ⊢@{IProp GF} A'.car v v' -∗ ⌜v = v'⌝) (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_prod A A').car v v' -∗ ⌜v = v'⌝ := by
-  unfold lrel_prod
-  iintro ⟨%a, %a', %b, %b', %h, %h', Ha, Hb⟩
-  ihave %rfl := hA a a' $$ Ha
-  ihave %rfl := hA' b b' $$ Hb
-  ipureintro
-  exact Val.ext (h.trans h'.symm)
-
-end EqRelations
-
 /-- A value runs to itself. -/
 theorem limExecV_of_isVal {rT : Type} [LawfulProbLangℝ rT] {e : Exp rT} (σ : State rT)
     (hv : IsVal e) : limExecV ⟨e, σ⟩ = MeasureTheory.Measure.dirac e := by
   rw [limExecV, limExec_of_isVal hv, asExpr,
     MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
+
+/-! ## Adequacy for closed refinements -/
 
 section Coupling
 
@@ -104,7 +81,7 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed]
 
-/-- A refinement from `↯b b` couples the limit executions at budget `b` (clutch-dp's
+/-- A refinement from `↯b b` gives a lifting at budget `b` of the two limit outputs (clutch-dp's
 `adequacy_rel.v`). -/
 theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
     (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
@@ -127,6 +104,7 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
   iunfold refines at HlogR
   rw [spec_eq_fill_nil e']
   ispecialize HlogR $$ %([] : Ectx rT) %r He' Htok Hr %hr
+  -- Postcondition weakening: drop the token and leftover credit, and get `φ` from `HA`.
   iapply MicrometerWpGS.wp_mono $$ HlogR
   intro v
   iintro ⟨%v', %_, Hspec, -, -, -, HAv⟩
@@ -164,12 +142,46 @@ theorem approximates_div {D : GradedDivergence.{0} B} [L.IsSound D] {GF : Bundle
 
 end Coupling
 
+/-! ## Relations that relate only equal values
+
+The side condition of `approximates_div` and of the examples' adequacy. -/
+
+section EqRelations
+
+variable {rT : Type} [LawfulProbLangℝ rT]
+
+/-- `lrel_int` relates only equal values. -/
+theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+
+/-- `lrel_bool` relates only equal values. -/
+theorem lrel_bool_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    (v v' : Val rT) : ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_bool; iintro ⟨%b, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+
+/-- A product of relations between equal values relates only equal values. -/
+theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+    {A A' : lrel rT GF} (hA : ∀ v v', ⊢@{IProp GF} A.car v v' -∗ ⌜v = v'⌝)
+    (hA' : ∀ v v', ⊢@{IProp GF} A'.car v v' -∗ ⌜v = v'⌝) (v v' : Val rT) :
+    ⊢@{IProp GF} (lrel_prod A A').car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_prod
+  iintro ⟨%a, %a', %b, %b', %h, %h', Ha, Hb⟩
+  ihave %rfl := hA a a' $$ Ha
+  ihave %rfl := hA' b b' $$ Hb
+  ipureintro
+  exact Val.ext (h.trans h'.symm)
+
+end EqRelations
+
+/-! ## A concrete functor list -/
+
 section MicrometerFunctor
 
 variable (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 variable (B : Type) [AddCommMonoid B]
 
-/-- The ghost-state functors of a closed refinement, with a budget camera over `B` in slot `7`. -/
+/-- A concrete `RefinesPreGS` functor list, with the budget camera over `B` in slot `7`. -/
 noncomputable def MicrometerFunctor : BundledGFunctors := fun
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩

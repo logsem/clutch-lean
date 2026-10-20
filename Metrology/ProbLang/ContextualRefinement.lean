@@ -8,8 +8,9 @@ public import Metrology.ProbLang.Exec
 /-!
 # Contextual refinement
 
-Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`.
-Main results: `CtxRefines.refl`, `CtxRefines.trans`, `CtxRefines.congr`.
+Program contexts `Ctx` (the hole may sit under a binder), their typing `TypedCtx`, and contextual
+refinement `Γ ⊨ e ≤ctx≤ e' : τ`, a preorder and a congruence (`CtxRefines.congr`). Port of Clutch's
+`theories/prob_lang/typing/contextual_refinement.v`.
 -/
 
 namespace ProbLang
@@ -246,7 +247,146 @@ inductive TypedCtx : Ctx rT → Tctx → Ty → Tctx → Ty → Prop
       TypedCtx K Γ1 τ1 Γ2 τ2 →
       TypedCtx (k :: K) Γ1 τ1 Γ3 τ3
 
-/-! ## Basic metatheory
+/-! ## Filling typed contexts -/
+
+/-- Filling a well-typed frame with a well-typed term is well typed (Clutch
+`typed_ctx_item_typed`). -/
+theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
+    (he : Typed Γ e τ) (hk : TypedCtxItem k Γ τ Γ' τ') :
+    Typed Γ' (k.fill e) τ' := by
+  induction hk with
+  | @lam _ x =>
+      exact Typed.lam (insert x e.fv)
+        (Typed.rename_lam he)
+  | @fix _ f =>
+      exact Typed.fix (insert f e.fv)
+        (Typed.rename_fix he)
+  | appL h2     => exact .app he h2
+  | appR h1     => exact .app h1 he
+  | unop_int hop       => exact .unop_int he hop
+  | unop_bool hop      => exact .unop_bool he hop
+  | binopL_int h2 hop  => exact .binop_int he h2 hop
+  | binopR_int h1 hop  => exact .binop_int h1 he hop
+  | binopL_bool h2 hop => exact .binop_bool he h2 hop
+  | binopR_bool h1 hop => exact .binop_bool h1 he hop
+  | unop_real hop       => exact .unop_real he hop
+  | binopL_real h2 hop  => exact .binop_real he h2 hop
+  | binopR_real h1 hop  => exact .binop_real h1 he hop
+  | binopL_unboxedEq hu h2 => exact .unboxed_eq hu he h2
+  | binopR_unboxedEq hu h1 => exact .unboxed_eq hu h1 he
+  | ifL h1 h2   => exact .cond he h1 h2
+  | ifM h0 h2   => exact .cond h0 he h2
+  | ifR h0 h1   => exact .cond h0 h1 he
+  | pairL h2    => exact .pair he h2
+  | pairR h1    => exact .pair h1 he
+  | fst         => exact .fst he
+  | snd         => exact .snd he
+  | inl         => exact .inl he
+  | inr         => exact .inr he
+  | caseL h1 h2 => exact .case he h1 h2
+  | caseM h0 h2 => exact .case h0 he h2
+  | caseR h0 h1 => exact .case h0 h1 he
+  | alloc       => exact .alloc he
+  | load        => exact .load he
+  | storeL h2   => exact .store he h2
+  | storeR h1   => exact .store h1 he
+  | fold        => exact .tfold he
+  | unfold      => exact (.tunfold he : Typed _ (.app _root_.ProbLang.recUnfold _) _)
+  | tlam        => exact .tlam he
+  | tapp        => exact .tapp he
+  | @unpackL x e2 _ _ _ _ h2 =>
+      exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack h2)
+  | @unpackR x _ _ _ _ h1 =>
+      exact Typed.tunpack (insert x e.fv) h1
+        (Typed.rename_unpack he)
+  | allocTape   => exact .alloc_tape he
+  | randL_unit h2 => exact .rand_unit he h2
+  | randL_tape h2 => exact .rand he h2
+  | randR_unit h1 => exact .rand_unit h1 he
+  | randR_tape h1 => exact .rand h1 he
+
+/-- Filling a well-typed context with a well-typed term is well typed (Clutch `typed_ctx_typed`). -/
+theorem TypedCtx.fill_typed {K : Ctx rT} {Γ τ Γ' τ'} {e : Exp rT}
+    (he : Typed Γ e τ) (hK : TypedCtx K Γ τ Γ' τ') :
+    Typed Γ' (K.fill e) τ' := by
+  induction hK with
+  | nil => exact he
+  | @cons K k _ _ _ _ _ _ hk _ ih =>
+      rw [Ctx.fill_cons]
+      exact hk.fill_typed (ih he)
+
+/-- Well-typed contexts compose (Clutch `typed_ctx_compose`). -/
+theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
+    (hK : TypedCtx K Γ1 τ1 Γ2 τ2) (hK' : TypedCtx K' Γ2 τ2 Γ3 τ3) :
+    TypedCtx (K' ++ K) Γ1 τ1 Γ3 τ3 := by
+  induction hK' with
+  | nil => exact hK
+  | cons hk _ ih => exact .cons hk (ih hK)
+
+/-! ## Contextual refinement -/
+
+/-- The configurations that have returned the boolean `b`. -/
+def finalBool (b : Bool) : Set (Cfg rT) :=
+  { ρ | ρ.expr = .lit (.bool b) }
+
+/-- `Γ ⊨ e ≤ctx≤ e' : τ`: every Bool-typed closing context and initial state gives `K[e]` at most
+the mass of `K[e']` on each Bool result; unlike Clutch's `ctx_refines`, mass is in `ENNReal`. -/
+def CtxRefines (Γ : Tctx) (e e' : Exp rT) (τ : Ty) : Prop :=
+  ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool),
+    TypedCtx K Γ τ Tctx.empty .bool →
+    limExec ⟨K.fill e,  σ₀⟩ (finalBool b) ≤
+    limExec ⟨K.fill e', σ₀⟩ (finalBool b)
+
+@[inherit_doc]
+scoped notation Γ " ⊨ " e " ≤ctx≤ " e' " : " τ => CtxRefines Γ e e' τ
+
+namespace CtxRefines
+
+theorem refl {Γ τ} (e : Exp rT) : CtxRefines Γ e e τ :=
+  fun _ _ _ _ => le_rfl
+
+theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
+    (h12 : CtxRefines Γ e1 e2 τ) (h23 : CtxRefines Γ e2 e3 τ) :
+    CtxRefines Γ e1 e3 τ :=
+  fun K σ₀ b hK => (h12 K σ₀ b hK).trans (h23 K σ₀ b hK)
+
+/-- Contextual refinement is a congruence (Clutch `ctx_refines_congruence`). -/
+theorem congr {Γ Γ' τ τ'} {e1 e2 : Exp rT} {K : Ctx rT}
+    (hK : TypedCtx K Γ τ Γ' τ')
+    (href : CtxRefines Γ e1 e2 τ) :
+    CtxRefines Γ' (K.fill e1) (K.fill e2) τ' := by
+  -- `K'[K[e]] = (K' ++ K)[e]`, and `K' ++ K` is a typed closing context for `e`
+  intro K' σ₀ b hty
+  rw [← Ctx.fill_append, ← Ctx.fill_append]
+  exact href (K' ++ K) σ₀ b (hK.compose hty)
+
+end CtxRefines
+
+/-! ## Contextual equivalence -/
+
+/-- Contextual equivalence: refinement in both directions. -/
+def CtxEquiv (Γ : Tctx) (e1 e2 : Exp rT) (τ : Ty) : Prop :=
+  CtxRefines Γ e1 e2 τ ∧ CtxRefines Γ e2 e1 τ
+
+@[inherit_doc]
+scoped notation Γ " ⊨ " e " =ctx= " e' " : " τ => CtxEquiv Γ e e' τ
+
+namespace CtxEquiv
+
+theorem refl {Γ τ} (e : Exp rT) : CtxEquiv Γ e e τ :=
+  ⟨.refl e, .refl e⟩
+
+theorem symm {Γ τ} {e1 e2 : Exp rT} (h : CtxEquiv Γ e1 e2 τ) : CtxEquiv Γ e2 e1 τ :=
+  ⟨h.2, h.1⟩
+
+theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
+    (h12 : CtxEquiv Γ e1 e2 τ) (h23 : CtxEquiv Γ e2 e3 τ) :
+    CtxEquiv Γ e1 e3 τ :=
+  ⟨h12.1.trans h23.1, h23.2.trans h12.2⟩
+
+end CtxEquiv
+
+/-! ## Free variables and binders of contexts
 
 `binderAtoms` and `payloadFv` bound the atoms a context can capture or contribute; Soundness's
 precongruence picks atoms fresh for them. -/
@@ -311,6 +451,7 @@ theorem Exp.closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
 theorem Exp.close_fv_subset (e : Exp α) (x : Var) : (Exp.close e x).fv ⊆ e.fv :=
   fun y hy => Exp.closeRec_fv_subset e x 0 y hy
 
+/-- Filling a frame adds at most the free variables stored in the frame. -/
 theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     (k.fill body).fv ⊆ k.payloadFv ∪ body.fv := by
   intro y hy
@@ -323,62 +464,6 @@ theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     | (rename_i x _; exact hy.imp_left fun h => Exp.close_fv_subset _ x h)
     | (rename_i x _; exact hy.symm.imp_right fun h => Exp.close_fv_subset _ x h)
 
-/-- Filling a well-typed frame with a well-typed term is well typed (Clutch
-`typed_ctx_item_typed`). -/
-theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
-    (he : Typed Γ e τ) (hk : TypedCtxItem k Γ τ Γ' τ') :
-    Typed Γ' (k.fill e) τ' := by
-  induction hk with
-  | @lam _ x =>
-      exact Typed.lam (insert x e.fv)
-        (Typed.rename_lam he)
-  | @fix _ f =>
-      exact Typed.fix (insert f e.fv)
-        (Typed.rename_fix he)
-  | appL h2     => exact .app he h2
-  | appR h1     => exact .app h1 he
-  | unop_int hop       => exact .unop_int he hop
-  | unop_bool hop      => exact .unop_bool he hop
-  | binopL_int h2 hop  => exact .binop_int he h2 hop
-  | binopR_int h1 hop  => exact .binop_int h1 he hop
-  | binopL_bool h2 hop => exact .binop_bool he h2 hop
-  | binopR_bool h1 hop => exact .binop_bool h1 he hop
-  | unop_real hop       => exact .unop_real he hop
-  | binopL_real h2 hop  => exact .binop_real he h2 hop
-  | binopR_real h1 hop  => exact .binop_real h1 he hop
-  | binopL_unboxedEq hu h2 => exact .unboxed_eq hu he h2
-  | binopR_unboxedEq hu h1 => exact .unboxed_eq hu h1 he
-  | ifL h1 h2   => exact .cond he h1 h2
-  | ifM h0 h2   => exact .cond h0 he h2
-  | ifR h0 h1   => exact .cond h0 h1 he
-  | pairL h2    => exact .pair he h2
-  | pairR h1    => exact .pair h1 he
-  | fst         => exact .fst he
-  | snd         => exact .snd he
-  | inl         => exact .inl he
-  | inr         => exact .inr he
-  | caseL h1 h2 => exact .case he h1 h2
-  | caseM h0 h2 => exact .case h0 he h2
-  | caseR h0 h1 => exact .case h0 h1 he
-  | alloc       => exact .alloc he
-  | load        => exact .load he
-  | storeL h2   => exact .store he h2
-  | storeR h1   => exact .store h1 he
-  | fold        => exact .tfold he
-  | unfold      => exact (.tunfold he : Typed _ (.app _root_.ProbLang.recUnfold _) _)
-  | tlam        => exact .tlam he
-  | tapp        => exact .tapp he
-  | @unpackL x e2 _ _ _ _ h2 =>
-      exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack h2)
-  | @unpackR x _ _ _ _ h1 =>
-      exact Typed.tunpack (insert x e.fv) h1
-        (Typed.rename_unpack he)
-  | allocTape   => exact .alloc_tape he
-  | randL_unit h2 => exact .rand_unit he h2
-  | randL_tape h2 => exact .rand he h2
-  | randR_unit h1 => exact .rand_unit h1 he
-  | randR_tape h1 => exact .rand h1 he
-
 /-- The atoms bound by the frames of a context. -/
 def Ctx.binderAtoms (K : Ctx rT) : Finset Var :=
   K.foldr (fun k acc => k.binderAtoms ∪ acc) ∅
@@ -387,6 +472,7 @@ def Ctx.binderAtoms (K : Ctx rT) : Finset Var :=
 def Ctx.payloadFv (K : Ctx rT) : Finset Var :=
   K.foldr (fun k acc => k.payloadFv ∪ acc) ∅
 
+/-- Filling a context adds at most the free variables stored in its frames. -/
 theorem Ctx.fv_fill_subset (K : Ctx rT) (e : Exp rT) :
     (K.fill e).fv ⊆ Ctx.payloadFv K ∪ e.fv := by
   induction K with
@@ -396,85 +482,5 @@ theorem Ctx.fv_fill_subset (K : Ctx rT) (e : Exp rT) :
       refine (CtxItem.fv_fill_subset k (Ctx.fill K e)).trans ?_
       simp only [Ctx.payloadFv, List.foldr_cons, Finset.union_assoc]
       exact Finset.union_subset_union subset_rfl ih
-
-/-- Filling a well-typed context with a well-typed term is well typed (Clutch `typed_ctx_typed`). -/
-theorem TypedCtx.fill_typed {K : Ctx rT} {Γ τ Γ' τ'} {e : Exp rT}
-    (he : Typed Γ e τ) (hK : TypedCtx K Γ τ Γ' τ') :
-    Typed Γ' (K.fill e) τ' := by
-  induction hK with
-  | nil => exact he
-  | @cons K k _ _ _ _ _ _ hk _ ih =>
-      rw [Ctx.fill_cons]
-      exact hk.fill_typed (ih he)
-
-/-- Well-typed contexts compose (Clutch `typed_ctx_compose`). -/
-theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
-    (hK : TypedCtx K Γ1 τ1 Γ2 τ2) (hK' : TypedCtx K' Γ2 τ2 Γ3 τ3) :
-    TypedCtx (K' ++ K) Γ1 τ1 Γ3 τ3 := by
-  induction hK' with
-  | nil => exact hK
-  | cons hk _ ih => exact .cons hk (ih hK)
-
-/-! ## Contextual refinement -/
-
-/-- The configurations that have returned the boolean `b`. -/
-def finalBool (b : Bool) : Set (Cfg rT) :=
-  { ρ | ρ.expr = .lit (.bool b) }
-
-/-- `Γ ⊨ e ≤ctx≤ e' : τ`: every Bool-typed closing context and initial state gives `K[e]` at most
-the mass of `K[e']` on each Bool result. Unlike Clutch, mass is in `ENNReal`. -/
-def CtxRefines (Γ : Tctx) (e e' : Exp rT) (τ : Ty) : Prop :=
-  ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool),
-    TypedCtx K Γ τ Tctx.empty .bool →
-    limExec ⟨K.fill e,  σ₀⟩ (finalBool b) ≤
-    limExec ⟨K.fill e', σ₀⟩ (finalBool b)
-
-@[inherit_doc]
-scoped notation Γ " ⊨ " e " ≤ctx≤ " e' " : " τ => CtxRefines Γ e e' τ
-
-namespace CtxRefines
-
-theorem refl {Γ τ} (e : Exp rT) : CtxRefines Γ e e τ :=
-  fun _ _ _ _ => le_rfl
-
-theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
-    (h12 : CtxRefines Γ e1 e2 τ) (h23 : CtxRefines Γ e2 e3 τ) :
-    CtxRefines Γ e1 e3 τ :=
-  fun K σ₀ b hK => (h12 K σ₀ b hK).trans (h23 K σ₀ b hK)
-
-/-- Contextual refinement is a congruence (Clutch `ctx_refines_congruence`). -/
-theorem congr {Γ Γ' τ τ'} {e1 e2 : Exp rT} {K : Ctx rT}
-    (hK : TypedCtx K Γ τ Γ' τ')
-    (href : CtxRefines Γ e1 e2 τ) :
-    CtxRefines Γ' (K.fill e1) (K.fill e2) τ' := by
-  intro K' σ₀ b hty
-  rw [← Ctx.fill_append, ← Ctx.fill_append]
-  exact href (K' ++ K) σ₀ b (hK.compose hty)
-
-end CtxRefines
-
-/-! ## Contextual equivalence -/
-
-/-- Contextual equivalence: refinement in both directions. -/
-def CtxEquiv (Γ : Tctx) (e1 e2 : Exp rT) (τ : Ty) : Prop :=
-  CtxRefines Γ e1 e2 τ ∧ CtxRefines Γ e2 e1 τ
-
-@[inherit_doc]
-scoped notation Γ " ⊨ " e " =ctx= " e' " : " τ => CtxEquiv Γ e e' τ
-
-namespace CtxEquiv
-
-theorem refl {Γ τ} (e : Exp rT) : CtxEquiv Γ e e τ :=
-  ⟨.refl e, .refl e⟩
-
-theorem symm {Γ τ} {e1 e2 : Exp rT} (h : CtxEquiv Γ e1 e2 τ) : CtxEquiv Γ e2 e1 τ :=
-  ⟨h.2, h.1⟩
-
-theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
-    (h12 : CtxEquiv Γ e1 e2 τ) (h23 : CtxEquiv Γ e2 e3 τ) :
-    CtxEquiv Γ e1 e3 τ :=
-  ⟨h12.1.trans h23.1, h23.2.trans h12.2⟩
-
-end CtxEquiv
 
 end ProbLang

@@ -2,7 +2,10 @@ module
 
 public import Metrology.Micrometer.ProgCoupl
 
-/-! The Micrometer weakest precondition, its notation and monotonicity. -/
+/-! # Micrometer weakest precondition
+
+`wpPre` (a spec phase, then a value or one coupled program step, a later and another spec phase),
+its guarded fixpoint `wp` with `wp_unfold`, the `WP[L] e @ E {{ Φ }}` notation, `wp_strong_mono`. -/
 
 @[expose] public section
 
@@ -16,7 +19,7 @@ namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 
-/-! ## Weakest precondition -/
+/-! ## `wpPre` and its fixpoint `wp` -/
 
 section Wp
 variable [BudgetGS B GF]
@@ -25,8 +28,8 @@ variable [BudgetGS B GF]
 abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
 
 variable (L) in
-/-- One unfolding of `wp`: a spec coupling into either the postcondition at a value or a
-program coupling continuing, after a later, with `wp` (Rocq `wp_pre`). -/
+/-- One unfolding of `wp`: open the invariants, run a spec phase, then either finish at a value or
+take one coupled program step followed by a later and another spec phase (Rocq `wp_pre`). -/
 abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) : IProp GF := iprop%
   ∀ σ₁ e₁' σ₁' (b₁ : B),
@@ -39,6 +42,7 @@ abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
           ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
             stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp E e₃ Φ)
 
+/-- `wpPre` is non-expansive in the postcondition and needs `wp` to agree only one step lower. -/
 theorem wpPre_ne_aux {n : Nat} {wp wp' : WpType (rT := rT) (GF := GF)} {E : CoPset}
     {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
     (Hwp : ∀ m, m < n → ∀ e₃, wp E e₃ Φ ≡{m}≡ wp' E e₃ Ψ) :
@@ -58,6 +62,7 @@ theorem wpPre_ne_aux {n : Nat} {wp wp' : WpType (rT := rT) (GF := GF)} {E : CoPs
     exact BIFUpdate.ne.ne <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
       sep_ne.ne (.of_eq rfl) (Hwp m Hm e₃)
 
+/-- The later after the program step makes `wpPre` contractive, so its fixpoint `wp` exists. -/
 instance wpPre_contractive : Contractive (wpPre L (rT := rT) (GF := GF)) where
   distLater_dist Hwp E _ Φ :=
     wpPre_ne_aux (fun _ => .of_eq rfl) fun _ Hm e₃ => DistLater.dist_lt (Hwp · · E e₃ Φ) Hm
@@ -76,6 +81,8 @@ theorem wp_unfold {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
 theorem wp_unfold_mp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
   (BI.equiv_iff.mp wp_unfold).1
+
+/-! ## The continuation after a program step -/
 
 variable (L) in
 /-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
@@ -125,7 +132,7 @@ meta def unexpandWp : Lean.PrettyPrinter.Unexpander
     else `(WP[$L] $e @ $E {{ $post }})
   | _ => throw ()
 
-/-! ## WP structural lemmas -/
+/-! ## Values -/
 
 theorem wp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop(|={E}=> Φ v) ⊢ wp L E (Exp.ofVal v) Φ := by
@@ -150,6 +157,11 @@ theorem wp_value_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT} {Φ : Val rT �
   rw [← Exp.ofVal_of_toVal_some h]
   exact wp_value
 
+theorem wp_value_fupd_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
+    (h : e.toVal? = some v) : iprop(|={E}=> Φ v) ⊢ wp L E e Φ := by
+  rw [← Exp.ofVal_of_toVal_some h]
+  exact wp_value_fupd
+
 /-- A weakest precondition at a value unfolds to a spec coupling. -/
 theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
     (E : CoPset) (He : e.toVal? = some v) :
@@ -164,6 +176,8 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   simp only [wpPre, He]
   exact .rfl
 
+/-! ## Monotonicity and updates -/
+
 /-- The postcondition update `wp_strong_mono` asks for, framing the interpretations. -/
 abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF := iprop%
   □ ∀ σ ρ v (b : B),
@@ -177,9 +191,13 @@ noncomputable abbrev wpStrongMonoStmt : IProp GF := iprop%
   ∀ E1 E2 (e : Exp rT) Φ Ψ, ⌜E1 ⊆ E2⌝ -∗ wp L E1 e Φ -∗ wpStrongMonoCont (B := B) E2 Φ Ψ -∗
     wp L E2 e Ψ
 
+/-- `wp` is monotone in the mask and in the postcondition, where the postcondition update may
+use the state, spec and budget interpretations. -/
 theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HE : E1 ⊆ E2) :
     iprop% wp L E1 e Φ ∗ wpStrongMonoCont (B := B) E2 Φ Ψ ⊢ wp L E2 e Ψ := by
   iintro ⟨HW, HΦ⟩
+  -- Löb induction on the statement generalized over masks, expression and postconditions: rebind
+  -- the spec phase with `specCoupl_bind`, then recurse under the later after the program step.
   have Hloeb : ⊢@{IProp GF} wpStrongMonoStmt L (rT := rT) := by
     iapply loeb_wand
     iintro !> IH %E1' %E2' %e' %Φ' %Ψ' %HE' HW' #HΦ'
@@ -241,7 +259,7 @@ theorem fupd_wp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
   imod HF with HW
   iapply wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ Hres
 
-/-! ## Derived WP lemmas -/
+/-! ## Derived monotonicity -/
 
 theorem wp_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF}
     (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ := by
@@ -267,11 +285,9 @@ theorem wp_wand_r {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
     iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ :=
   wp_wand
 
-theorem wp_value_fupd_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT} {Φ : Val rT → IProp GF}
-    (h : e.toVal? = some v) : iprop(|={E}=> Φ v) ⊢ wp L E e Φ := by
-  rw [← Exp.ofVal_of_toVal_some h]
-  exact wp_value_fupd
+/-! ## Non-expansiveness -/
 
+/-- `wp` is non-expansive in the postcondition, by strong induction on the step index. -/
 theorem wp_ne_aux {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} {n : Nat}
     (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp L E e Ψ := by
   induction n using Nat.strong_induction_on generalizing e Φ Ψ with

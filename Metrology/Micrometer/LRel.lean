@@ -8,7 +8,10 @@ public import Iris.Instances.Lib.Invariants
 public import Metrology.Iris.Countable
 import Metrology.ProbLang.Syntax.Notation
 
-/-! Value relations, the refinement judgement and the basic relation constructors. -/
+/-! # Value relations and the refinement judgement
+
+Defines value relations `lrel` with a relation constructor per type former, and the refinement
+judgement `refines` (`REL[L] e << e' : A`); `lrel_arr` and `lrel_forall` refer back to `refines`. -/
 
 @[expose] public section
 
@@ -19,25 +22,9 @@ namespace ProbLang
 
 variable {rT : Type}
 
-/-! ## Log-relation namespace -/
+/-! ## Value relations -/
 
-/-- The namespace of the invariants of the logical relation. -/
-def logN : Namespace := nroot.@ (1 : Pos)
-
-/-! ## `MicrometerRGS` ghost-state bundle -/
-
-/-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
-class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (hlc : outParam HasLC) (GF : BundledGFunctors) where
-  micrometerGS : MicrometerGS rT hlc GF
-  naInvG     : NaInvG GF
-  nais       : NaInvPoolName
-
-attribute [reducible, instance] MicrometerRGS.micrometerGS MicrometerRGS.naInvG
-
-/-! ## Logical relation type -/
-
-/-- A value relation: persistent, and only relating closed values. -/
+/-- A value relation: a persistent Iris relation on values that only relates closed values. -/
 structure lrel (rT : Type) (GF : BundledGFunctors) where
   car : Val rT → Val rT → IProp GF
   [persistent : ∀ v1 v2, Persistent (car v1 v2)]
@@ -47,14 +34,14 @@ attribute [instance] lrel.persistent
 
 instance coeFun_lrel {GF} : CoeFun (lrel rT GF) (fun _ => Val rT → Val rT → IProp GF) := ⟨lrel.car⟩
 
-/-! ## OFE/COFE structure on `lrel` -/
-
 theorem lrel.ext {GF : BundledGFunctors} {A B : lrel rT GF}
     (h : ∀ v1 v2, A.car v1 v2 = B.car v1 v2) : A = B := by
   obtain ⟨carA, _⟩ := A
   obtain ⟨carB, _⟩ := B
   obtain rfl : carA = carB := funext fun v1 => funext (h v1)
   rfl
+
+/-! ### OFE and COFE structure, used for recursive relations -/
 
 /-- Value relations are an OFE under pointwise distance. -/
 instance ofe_lrel {GF : BundledGFunctors} : OFE (lrel rT GF) where
@@ -68,8 +55,7 @@ instance ofe_lrel {GF : BundledGFunctors} : OFE (lrel rT GF) where
     ⟨fun h _ _ _ => h ▸ .rfl, fun h => lrel.ext fun _ _ => OFE.eq_dist.mpr fun _ => h _ _ _⟩
   dist_lt hd hmn v1 v2 := OFE.dist_lt (hd v1 v2) hmn
 
-/-- Project an `lrel`-valued chain into the underlying function-space chain. Used by `isCOFE_lrel`
-to take limits pointwise and show that the limit is still persistent and closed. -/
+/-- The chain of underlying relations of a chain of `lrel`s, used to take limits pointwise. -/
 noncomputable def lrel.toFunChain {GF : BundledGFunctors}
     (c : Chain (lrel rT GF)) : Chain (Val rT → Val rT → IProp GF) where
   chain k := (c.chain k).car
@@ -79,6 +65,7 @@ noncomputable def lrel.toFunChain {GF : BundledGFunctors}
 abbrev lrel.appAt {GF : BundledGFunctors} (v1 v2 : Val rT) :
     (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
 
+/-- Evaluation at a pair of values is nonexpansive. -/
 instance lrel.appAt_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
     OFE.NonExpansive (lrel.appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
@@ -101,77 +88,12 @@ instance inhabited_lrel {GF : BundledGFunctors} : Inhabited (lrel rT GF) where
     { car := fun _ _ => iprop(False)
       closed := fun _ _ => Iris.BI.false_elim }
 
+/-- A relation's proposition at a fixed pair of values is nonexpansive in the relation. -/
 instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
     OFE.NonExpansive (fun A : lrel rT GF => A.car v1 v2) where
   ne {_ _ _} hAB := hAB v1 v2
 
-/-! ## `na_own` / `na_inv` abbreviations keyed on the pool name -/
-
-section NaShorthand
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-
-/-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/
-@[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
-  Iris.NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
-
-/-- The non-atomic invariant `P` at namespace `N`, in the pool of `MicrometerRGS`. -/
-@[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
-  Iris.NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
-
-/-- The update that closes the non-atomic invariant `P` at `N`, opened from mask `E`. -/
-@[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
-  iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ ↑N) ={⊤}=∗ naOwnP (rT := rT) E
-
-end NaShorthand
-
-/-! ## Refinement judgement -/
-
-section Refines
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
-
-variable (L) in
-/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`.
-
-The right context `K` is quantified so `refines_bind` can work inside a larger spec context;
-`naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
-threaded positive credit `b` must come back as some positive `b'` (see `approximates_coupling`). -/
-noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
-  ∀ (K : Ectx rT) (b : B),
-    ⤇ K.fill e' -∗
-    naOwnP (rT := rT) E -∗
-    ↯b b -∗
-    ⌜ (0 : B) < b ⌝ -∗
-    wp L ⊤ e (fun v => iprop%
-      ∃ (v' : Val rT) (b' : B),
-        ⤇ K.fill v'.1 ∗
-        naOwnP (rT := rT) ⊤ ∗
-        ↯b b' ∗
-        ⌜ (0 : B) < b' ⌝ ∗
-        A v v')
-
-end Refines
-
-/-! ## Notation for the refinement judgement -/
-
-scoped syntax:100 (name := micrometerRel)
-  "REL[" term "] " term " << " term (" @ " term)? " : " term : term
-
-macro_rules
-  | `(REL[$L] $e1 << $e2 $[@ $E]? : $A) => do
-    let E ← match E with | some E => pure E | none => `((⊤ : CoPset))
-    `(refines $L $E $e1 $e2 $A)
-
-/-- Print `refines` through `REL[L]`, dropping the mask when it is `⊤`. -/
-@[app_unexpander ProbLang.refines]
-meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
-  | `($_ $L $E $e1 $e2 $A) =>
-    if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(REL[$L] $e1 << $e2 : $A)
-    else `(REL[$L] $e1 << $e2 @ $E : $A)
-  | _ => throw ()
-
-/-! ## Simple lrel constructors -/
+/-! ## Relation constructors that do not mention `refines` -/
 
 section SimpleLRels
 variable {GF : BundledGFunctors}
@@ -361,6 +283,84 @@ theorem lrel_exists_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
 
 end SimpleLRels
 
+/-! ## Ghost state of the logical relation -/
+
+/-- The namespace of the invariants of the logical relation. -/
+def logN : Namespace := nroot.@ (1 : Pos)
+
+/-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
+class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    (hlc : outParam HasLC) (GF : BundledGFunctors) where
+  micrometerGS : MicrometerGS rT hlc GF
+  naInvG     : NaInvG GF
+  nais       : NaInvPoolName
+
+attribute [reducible, instance] MicrometerRGS.micrometerGS MicrometerRGS.naInvG
+
+section NaShorthand
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+
+/-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/
+@[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
+  Iris.NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
+
+/-- The non-atomic invariant `P` at namespace `N`, in the pool of `MicrometerRGS`. -/
+@[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
+  Iris.NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
+
+/-- The update that closes the non-atomic invariant `P` at `N`, opened from mask `E`. -/
+@[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
+  iprop% (▷ P) ∗ naOwnP (rT := rT) (E \ ↑N) ={⊤}=∗ naOwnP (rT := rT) E
+
+end NaShorthand
+
+/-! ## Refinement judgement -/
+
+section Refines
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
+
+variable (L) in
+/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`.
+
+The right context `K` is quantified so `refines_bind` can work inside a larger spec context;
+`naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
+threaded positive credit `b` must come back as some positive `b'` (see `approximates_coupling`). -/
+noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
+  ∀ (K : Ectx rT) (b : B),
+    ⤇ K.fill e' -∗
+    naOwnP (rT := rT) E -∗
+    ↯b b -∗
+    ⌜ (0 : B) < b ⌝ -∗
+    wp L ⊤ e (fun v => iprop%
+      ∃ (v' : Val rT) (b' : B),
+        ⤇ K.fill v'.1 ∗
+        naOwnP (rT := rT) ⊤ ∗
+        ↯b b' ∗
+        ⌜ (0 : B) < b' ⌝ ∗
+        A v v')
+
+end Refines
+
+/-! ### Notation `REL[L] e << e' @ E : A` -/
+
+scoped syntax:100 (name := micrometerRel)
+  "REL[" term "] " term " << " term (" @ " term)? " : " term : term
+
+macro_rules
+  | `(REL[$L] $e1 << $e2 $[@ $E]? : $A) => do
+    let E ← match E with | some E => pure E | none => `((⊤ : CoPset))
+    `(refines $L $E $e1 $e2 $A)
+
+/-- Print `refines` through `REL[L]`, dropping the mask when it is `⊤`. -/
+@[app_unexpander ProbLang.refines]
+meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
+  | `($_ $L $E $e1 $e2 $A) =>
+    if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(REL[$L] $e1 << $e2 : $A)
+    else `(REL[$L] $e1 << $e2 @ $E : $A)
+  | _ => throw ()
+
 /-! ## Relations that refer to the logic -/
 
 -- TODO: Remove the hand-written nonexpansiveness proofs below when nonexp lands
@@ -371,7 +371,7 @@ variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [Part
   [BudgetCreditGS B GF]
 
 variable (L) in
-/-- Closed values whose applications to `A1`-related arguments refine at `A2`. -/
+/-- Closed functions whose applications to `A1`-related arguments refine at `A2`. -/
 noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗
@@ -380,7 +380,7 @@ noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 variable (L) in
-/-- Thunks related by `C A` for every relation `A`. -/
+/-- Type abstractions: thunks whose applications to `()` refine at `C A` for every `A`. -/
 noncomputable def lrel_forall (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ∀ (A : lrel rT GF), (lrel_arr L lrel_unit (C A)).car v1 v2
   closed v1 v2 := by

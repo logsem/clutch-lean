@@ -2,9 +2,11 @@ module
 
 public import Metrology.Couplings.BindLaw
 
-/-! The codensity lifting of a graded divergence (Sato–Katsumata, §7): lawful and binding under
-`IsGraded`, `codensity_rel_eq_iff` for composable divergences, and the largest sound and complete
-lawful lifting (`le_codensity`). -/
+/-! # The codensity lifting
+
+`codensity D` lifts a graded divergence by testing (Sato–Katsumata, §7): it is lawful and binds
+(`codensity_bind`), is complete iff `D` is composable (`codensity_isComplete_iff`), and is the
+largest lawful, binding, sound and complete lifting (`le_codensity`). -/
 
 @[expose] public section
 
@@ -24,11 +26,11 @@ variable {B : Type v} {D : GradedDivergence.{u} B} {X Y X' Y' : Type u} [Measura
 /-! ## The codensity lifting -/
 
 variable (D) in
-/-- The codensity lifting: every test whose kernels are within the leftover plus a slack at each
-pair stays within the budget plus that slack after binding (Sato–Katsumata, §7). Tests where the
-budget plus slack is `⊤` are left out: they are vacuous under `IsGraded`, and dropping them makes
-framing free and `le_codensity` independent of `IsGraded`. `markovCodensity` restricts the tests
-to Markov kernels. -/
+/-- The codensity lifting: every test whose kernels are within the leftover plus a slack `c` at
+each pair stays within the budget plus `c` after binding (Sato–Katsumata, §7). Tests with
+`b + c = ⊤` are left out: they hold anyway under `IsGraded`, and dropping them makes framing free
+and `le_codensity` independent of `IsGraded`. `markovCodensity` restricts the tests to Markov
+kernels. -/
 def codensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
@@ -40,7 +42,7 @@ theorem codensity_def [Add B] [LT B] [Top B] :
       (∀ x y, D (R x y + c) (k x) (l y)) → D (b + c) (k ∘ₘ μ) (l ∘ₘ ν) :=
   Iff.rfl
 
-/-- Relational unfolding: off the relation the test obligation is vacuous. -/
+/-- Unfolding of a relational codensity lifting: tests are constrained only on related pairs. -/
 theorem codensity_rel_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
     [D.IsGraded] {S : X → Y → Prop} :
     (codensity D).Rel b S μ ν ↔ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
@@ -52,14 +54,16 @@ theorem codensity_rel_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B
   · simpa [hS] using hkl x y hS
   · exact IsGraded.of_top_le (by simp [hS]) _ _
 
-/-! ## Structural laws -/
+/-! ## Lawfulness and bind -/
 
+/-- Point masses are related at their leftover: the test premise is the conclusion. -/
 theorem codensity_dirac [Add B] [LT B] [Top B] (x : X) (y : Y) :
     D.codensity (R x y) R (dirac x) (dirac y) := by
   intro I _ c _ k l _ _ hkl
   rw [dirac_bind k.measurable, dirac_bind l.measurable]
   exact hkl x y
 
+/-- The zero measures are related at every budget. -/
 theorem codensity_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
     [D.IsGraded] [D.IsReflexive] (b : B) (R : X → Y → B) :
     D.codensity b R (0 : Measure X) (0 : Measure Y) := by
@@ -67,6 +71,7 @@ theorem codensity_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [
   rw [bind_zero_left, bind_zero_left]
   exact IsGraded.mono zero_le (IsReflexive.refl _)
 
+/-- Monotonicity: a codensity lifting holds at a larger budget and a smaller leftover. -/
 theorem codensity_mono [Add B] [Preorder B] [AddRightMono B] [Top B] [D.IsGraded]
     {b' : B} {R' : X → Y → B} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : D.codensity b R μ ν) (hb : b ≤ b') (hR : R' ≤ R) : D.codensity b' R' μ ν := by
@@ -74,12 +79,14 @@ theorem codensity_mono [Add B] [Preorder B] [AddRightMono B] [Top B] [D.IsGraded
   exact IsGraded.mono (add_le_add_left hb c) <| h ((add_le_add_left hb c).trans_lt hbc)
     fun x y ↦ IsGraded.mono (add_le_add_left (hR x y) c) (hkl x y)
 
+/-- Framing: adding `c` to the budget and every leftover preserves a codensity lifting. -/
 theorem codensity_frame [AddSemigroup B] [LT B] [Top B] {c : B} (h : D.codensity b R μ ν) :
     D.codensity (b + c) (fun x y ↦ R x y + c) μ ν := by
   intro I _ c' hbc k l _ _ hkl
   rw [add_assoc] at hbc ⊢
   exact h hbc fun x y ↦ add_assoc (R x y) c c' ▸ hkl x y
 
+/-- Pushing both measures forward: precompose the test kernels with `f` and `g`. -/
 theorem codensity_map [Add B] [LT B] [Top B] {R : X' → Y' → B} {f : X → X'} {g : Y → Y'}
     (hf : Measurable f) (hg : Measurable g) (h : D.codensity b (fun x y ↦ R (f x) (g y)) μ ν) :
     D.codensity b R (μ.map f) (ν.map g) := by
@@ -87,8 +94,8 @@ theorem codensity_map [Add B] [LT B] [Top B] {R : X' → Y' → B} {f : X → X'
   rw [bind_map_eq μ hf, bind_map_eq ν hg]
   exact h hbc (k := k.comap f hf) (l := l.comap g hg) fun x y ↦ hkl (f x) (g y)
 
-/-- Binding with kernels lifted wherever the leftover is finite; the other pairs pass every test
-by `IsGraded.top`. -/
+/-- Binding with continuations lifted wherever the leftover is finite; the other pairs pass every
+test by `IsGraded.top`. Needs only grading, nothing specific to the divergence. -/
 theorem codensity_bind [Add B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop B]
     [D.IsGraded] {R' : X' → Y' → B} {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f]
     [IsSubMarkovKernel g] (h : D.codensity b R μ ν)
@@ -96,6 +103,7 @@ theorem codensity_bind [Add B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop 
     D.codensity b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
   intro I _ c hbc k l _ _ hkl
   rw [comp_assoc, comp_assoc]
+  -- the test `k, l` for the composite yields the test `k ∘ f, l ∘ g` for `μ, ν`
   refine h hbc fun x y ↦ ?_
   rw [Kernel.comp_apply, Kernel.comp_apply]
   exact IsGraded.of_lt_top fun hRc ↦ hfg x y (le_self_add.trans_lt hRc) hRc hkl
@@ -164,7 +172,7 @@ theorem codensity_complete [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd 
     [IsSubProbabilityMeasure ν] (h : D b μ ν) : (codensity D).Rel b (· = ·) μ ν :=
   IsComplete.complete h
 
-/-- The fundamental property: lifting equality is the divergence. -/
+/-- For a reflexive, composable divergence, the codensity lifting of equality is the divergence. -/
 theorem codensity_rel_eq_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
@@ -273,6 +281,8 @@ theorem absorbing_codensity_of_hasSlack [AddZeroClass B] [Preorder B] [Canonical
   exact codensity_of_measure_univ_le (IsSubProbabilityMeasure.measure_le_one _)
 
 end GradedDivergence
+
+/-! ## Maximality -/
 
 namespace GradedLifting
 

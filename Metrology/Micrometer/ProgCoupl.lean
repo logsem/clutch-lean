@@ -2,7 +2,10 @@ module
 
 public import Metrology.Micrometer.SpecCoupl
 
-/-! The `prog_coupl` modality: one program step coupled with spec steps by a bind law. -/
+/-! # The program-step modality `progCoupl`
+
+`progCoupl` couples one program step with spec steps by a bind law, in the shape adequacy consumes.
+The file gives its structural rules and intro rules for the common step shapes. -/
 
 @[expose] public section
 
@@ -16,7 +19,7 @@ namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 
-/-! ## `prog_coupl` modality
+/-! ## The `progCoupl` modality
 
 Couples exactly one program step against any number of spec steps and an erasable distribution,
 by a lifting with per-pair leftovers and a bind law chosen for this step (clutch-dp `prog_coupl`).
@@ -40,6 +43,7 @@ abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : S
       (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
         Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')))
 
+/-- `progCoupl` is non-expansive in its continuation. -/
 theorem progCoupl_ne {n : Nat} {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b : B} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
@@ -51,6 +55,7 @@ theorem progCoupl_ne {n : Nat} {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp r
   exact forall_ne fun _ => forall_ne fun _ =>
     wand_ne.ne (.of_eq rfl) (BIFUpdate.ne.ne (HZ _ _ _ _ _))
 
+/-- `progCoupl` is monotone in its continuation. -/
 theorem progCoupl_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
     {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF} :
     iprop% (∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
@@ -65,13 +70,14 @@ theorem progCoupl_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
   imodintro
   iapply HZ $$ HZ'
 
-/-! ## `progCoupl` — derived lemmas -/
-
+/-- A `progCoupl` step is only possible from a reducible program configuration. -/
 theorem progCoupl_reducible {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Reducible e₁ σ₁⌝ := by
   iintro ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, -⟩
   ipureintro; exact Hred
+
+/-! ## Introducing `progCoupl` -/
 
 /-- Introduce a program coupling by a step of any bind law, whose program and spec distributions
 are images of the law's head measures under `f` and `f'` (Rocq `prog_coupl_intro_map`). -/
@@ -86,6 +92,7 @@ theorem progCoupl_intro_map (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT}
     (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
       Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+  -- paired up so that `iframe %` closes the two `⌜Measurable _ ∧ _ = _.map _⌝` conjuncts
   have hF := And.intro hf hprog
   have hF' := And.intro hf' hspec
   iintro H
@@ -125,10 +132,7 @@ theorem progCoupl_intro [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {e�
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCoupl_intro_law (BindLaw.canonical L) Hred Hcpl (.of_forall fun _ _ => trivial) Heras
 
-theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Reducible e₁' σ₁') :
-    (MeasureTheory.Measure.dirac σ₁').bind (fun σ => pexecN 1 ⟨e₁', σ⟩) = primStep ⟨e₁', σ₁'⟩ := by
-  rw [MeasureTheory.Measure.dirac_bind (by fun_prop), pexecN_one,
-    stepOrFinal_not_isValue (val_stuck Hred')]
+/-! ## Structural rules -/
 
 /-- Continuations need only cover a set carrying the program step (via the law's `head_supp`). -/
 theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
@@ -193,16 +197,20 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT}
   simp only [Function.comp_apply]
   iexact HCont
 
-/-! ### `progCoupl` — coupling-intro lemmas
+/-! ## One program step against one spec step
 
-One program step against one spec step, in five forms:
+Five forms:
 * `_law`: any law, per-pair leftover `R`;
 * `_spend_law`: a `HeadShift` law, head at `b₁`, `b₂` added to every leftover;
 * `_adv'` (`adv` is Rocq's "advanced", a per-pair leftover): canonical law, leftover `R` at `b`;
 * `_adv`: canonical law at `b₁`, `b₂` added to every leftover;
-* plain `progCoupl_steps`: relational lifting `L.Rel b₁ S`, continuation at `b₂`.
+* plain `progCoupl_steps`: relational lifting `L.Rel b₁ S`, continuation at `b₂`. -/
 
-The `step_l` variants leave the spec in place or take it to an erasable state distribution. -/
+/-- One spec step from a reducible configuration, written as a `pexecN 1` run from `δ σ₁'`. -/
+theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Reducible e₁' σ₁') :
+    (MeasureTheory.Measure.dirac σ₁').bind (fun σ => pexecN 1 ⟨e₁', σ⟩) = primStep ⟨e₁', σ₁'⟩ := by
+  rw [MeasureTheory.Measure.dirac_bind (by fun_prop), pexecN_one,
+    stepOrFinal_not_isValue (val_stuck Hred')]
 
 /-- Couple one program step against one spec step by a step of any bind law (Rocq
 `prog_coupl_one_step_top`). -/
@@ -229,6 +237,7 @@ theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift] {e�
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  -- both primitive steps are probability measures, as the head lemmas below need
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   progCoupl_steps_law law Hred Hred' (law.mono_out (BindLaw.HeadShift.shift hb₂ hhead) hb) hside
@@ -257,6 +266,7 @@ theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawf
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  -- both primitive steps are probability measures, as the head lemmas below need
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   progCoupl_steps_adv' (R := fun ρ₁ ρ₂ => R ρ₁ ρ₂ + b₂) Hred Hred'
@@ -278,6 +288,10 @@ theorem progCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
   obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
   rw [relCost_of hS, zero_add]
   iapply Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %hS
+
+/-! ## Program steps that leave the spec in place
+
+The spec stays put, or moves only to an erasable state distribution (Rocq `step_l` variants). -/
 
 /-- A deterministic program step with the spec in place, by a step of the unit law (Rocq
 `prog_coupl_det_step`). -/

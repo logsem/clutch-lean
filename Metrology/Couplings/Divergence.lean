@@ -3,7 +3,10 @@ module
 public import Metrology.Couplings.Budget
 public import Metrology.Couplings.SubProbability
 
-/-! Graded divergences with yes/no budgets (Approximate Span Liftings, §4). -/
+/-! # Graded divergences
+
+`GradedDivergence`: yes/no predicates `D b μ ν` indexed by a budget, their property classes, the
+data processing laws that composability gives, and the constructions `comap` and `pi` (ASL §4). -/
 
 @[expose] public section
 
@@ -18,11 +21,11 @@ def GradedDivergence (B : Type v) : Type (max v (u + 1)) :=
 
 namespace GradedDivergence
 
-/-! ## Properties of a divergence -/
-
 section Classes
 
 variable {B : Type v} (D : GradedDivergence.{u} B)
+
+/-! ## The core properties: graded, reflexive, composable -/
 
 /-- Larger budgets are easier to meet, and the top budget always holds. -/
 class IsGraded [LE B] [Top B] : Prop where
@@ -35,12 +38,14 @@ class IsGraded [LE B] [Top B] : Prop where
 class IsReflexive [Zero B] : Prop where
   refl {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsSubProbabilityMeasure μ] : D 0 μ μ
 
-/-- Composing with kernels adds the kernels' pointwise budget to the budget. -/
+/-- Chain rule: binding with kernels that are pointwise within `c` adds `c` to the budget. -/
 class IsComposable [Add B] : Prop where
   comp ⦃b c : B⦄ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] ⦃μ₁ μ₂ : Measure X⦄
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂] ⦃κ η : Kernel X Y⦄
     [IsSubMarkovKernel κ] [IsSubMarkovKernel η] :
     D b μ₁ μ₂ → (∀ x, D c (κ x) (η x)) → D (b + c) (κ ∘ₘ μ₁) (η ∘ₘ μ₂)
+
+/-! ## Further properties -/
 
 /-- The zero measure is within every budget of every sub-probability measure. -/
 class IsZeroLeft : Prop where
@@ -84,7 +89,7 @@ class IsMassDetecting [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : P
 
 end Classes
 
-/-! ## Derived laws -/
+/-! ## Derived laws: data processing, products, relabelling -/
 
 section Laws
 
@@ -139,13 +144,15 @@ theorem IsComposable.map_iff_of_measurableEmbedding [AddZeroClass B] [D.IsReflex
     D b (μ.map f) (ν.map f) ↔ D b μ ν := by
   refine ⟨fun h ↦ ?_, (IsComposable.map · hf.measurable)⟩
   cases isEmpty_or_nonempty X
-  · convert IsComposable.comp_self (0 : Kernel Y X) h <;> exact Subsingleton.elim _ _
+  · -- empty `X`: every measure on it is zero
+    convert IsComposable.comp_self (0 : Kernel Y X) h <;> exact Subsingleton.elim _ _
+  -- otherwise map back along a measurable left inverse `g` of `f`
   obtain ⟨g, hg, hgf⟩ := hf.exists_measurable_extend measurable_id fun _ ↦ inferInstance
   simpa [map_map hg hf.measurable, hgf] using IsComposable.map h hg
 
 end Laws
 
-/-! ## Regrading -/
+/-! ## Regrading along a budget map (`comap`) -/
 
 section Comap
 
@@ -204,7 +211,7 @@ instance isLeftAntitone_comap [D.IsLeftAntitone] : (D.comap φ).IsLeftAntitone w
 
 end Comap
 
-/-! ## Families -/
+/-! ## Families of divergences (`pi`) -/
 
 section Pi
 
@@ -256,6 +263,7 @@ instance isBudgetClosed_pi [∀ i, Preorder (B i)] [∀ i, (D i).IsBudgetClosed]
     (pi D).IsBudgetClosed where
   of_forall_gt {b} := fun h i ↦ by
     classical
+    -- raise only coordinate `i` to `t`
     exact IsBudgetClosed.of_forall_gt fun t ht ↦ by
       simpa using h (Function.update b i t) (lt_update_self_iff.2 ht) i
 

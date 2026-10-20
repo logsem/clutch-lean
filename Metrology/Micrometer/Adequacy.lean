@@ -5,9 +5,10 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
 
-/-! Adequacy: a `wp` proof from `↯b b` gives `L.Rel b` of the limit executions (`wp_adequacy`) and
-`D b` for a sound `L` (`wp_adequacy_div`). Layers: `wp_adequacy_step_fupdN` (inside Iris), `exec_n`
-(ghost allocation), limit; the `_term` section repeats them for runs of mass 1. -/
+/-! # Adequacy of the Micrometer logic
+
+A `wp` proof from `↯b b` gives `L.Rel b (adequacyRel φ)` of the two limit outputs (`wp_adequacy`),
+and `D b` for every divergence `D` that `L` is sound for (`wp_adequacy_div`). -/
 
 @[expose] public section
 
@@ -19,6 +20,8 @@ namespace ProbLang
 
 variable {rT : Type}
 variable {B : Type}
+
+/-! ## Execution couplings -/
 
 /-- `φ` on expressions that are values. -/
 def adequacyRel (φ : Val rT → Val rT → Prop) (e e' : Exp rT) : Prop :=
@@ -36,6 +39,11 @@ variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 @[reducible] def execCoupl [Zero B] [_root_.Top B] (L : GradedLifting.{0} B)
     (φ : Val rT → Val rT → Prop) (b : B) (n : Nat) (ρ ρ' : Cfg rT) : Prop :=
   L.Rel b (adequacyRel φ) (asExpr (execN n ρ)) (limExecV ρ')
+
+/-! ## Consuming one spec phase and one program step
+
+Each `specCoupl` round is closed by `lift_erasure_erasable_law` and each `progCoupl` step by
+`lift_erasure_erasable_exp_lhs_kanto_law`. -/
 
 section Adequacy
 
@@ -166,6 +174,8 @@ theorem wp_adequacy_spec_coupl_zero (m : Nat) (e₁ : Exp rT) (σ₁ : State rT)
     |={∅}=> ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl 0 m e₁ σ₁ e₁' σ₁' Z φ b
 
+/-! ## Inside the logic: one fuel per later -/
+
 section Wp
 
 variable [BudgetGS B GF]
@@ -196,8 +206,8 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   simp only [MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
   exact rel_dirac ⟨v, v', Exp.toVal?_ofVal v, Exp.toVal?_ofVal v', hφ⟩ b₂
 
-/-- The `n`-fuel execution of the left program is coupled with the limit execution of the right
-one, across `n` later steps. -/
+/-- Inside the logic, a `wp` gives the coupling of the `n`-fuel left run with the right limit run
+after `n` later steps: each `▷` pays for one program step. -/
 theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
@@ -238,10 +248,10 @@ end Wp
 
 end Adequacy
 
-/-! ### Adequacy from a budget credit
+/-! ## Leaving the logic, then taking the limit
 
-Starting from `↯b b`, the executions are related at budget `b`; the budget left at the end is
-dropped. -/
+Ghost state is allocated from `↯b b`, so the runs are related at budget `b`; the budget left at the
+end is dropped. -/
 
 section Budget
 
@@ -282,6 +292,8 @@ theorem wp_adequacy_exec_n [L.IsZeroLeft] (e e' : Exp rT) (σ σ' : State rT) (n
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
+
+/-! ### Taking the limit on the left -/
 
 section Limit
 
@@ -337,7 +349,7 @@ end Lawful
 
 end Budget
 
-/-! ### Runs of mass `1`
+/-! ## Runs of mass `1`
 
 Continuations are needed only where the run still has mass `1`, so neither `IsZeroLeft` nor a
 limit is needed (Rocq `wp_adequacy_step_fupdN_term`). -/

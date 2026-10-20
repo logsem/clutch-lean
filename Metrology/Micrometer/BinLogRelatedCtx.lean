@@ -7,7 +7,10 @@ public import Metrology.Micrometer.BinLogRelated
 public import Metrology.Micrometer.Fundamental
 public import Metrology.ProbLang.ContextualRefinement
 
-/-! The semantic typing judgement under typed and linear contexts. -/
+/-! # Plugging into a context
+
+From `e ≤log e'` to `K[e] ≤log K[e']` for a typed context `K`: `bin_log_related_under_typed_ctx`
+for a valid hypothesis, `bin_log_related_under_linear_ctx` for one under a frame `P` (credits). -/
 
 @[expose] public section
 
@@ -15,6 +18,8 @@ namespace ProbLang
 
 open GradedLifting Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
 open ProbLang.MicrometerWpGS
+
+/-! ## Closing a binder over a hole -/
 
 section Syntax
 variable {rT : Type} {GF : BundledGFunctors}
@@ -46,12 +51,15 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
+/-! ## Binder freshness -/
+
 /-- The binders of each item of `K` avoid `S` and the binders of the items enclosing it. -/
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
   | [], _ => True
   | k :: K', S =>
     (∀ x ∈ k.binderAtoms, x ∉ S) ∧ Ctx.BindersFresh K' (S ∪ k.binderAtoms)
 
+/-- `Ctx.BindersFresh` is antitone in the set to avoid. -/
 theorem Ctx.BindersFresh.mono {K : Ctx rT} {S T : Finset Var} (hST : S ⊆ T)
     (h : Ctx.BindersFresh K T) : Ctx.BindersFresh K S := by
   induction K generalizing S T with
@@ -67,6 +75,8 @@ theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
   intro x hxK'
   obtain ⟨h1, h2, h3⟩ := Hb x (Finset.mem_union_right _ hxK')
   exact ⟨h1, h2, h3 ∘ Finset.mem_union_right _⟩
+
+/-! ## Bookkeeping for binder frames -/
 
 section Bookkeeping
 
@@ -114,6 +124,8 @@ theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF}
 
 end Bookkeeping
 
+/-! ## Compatibility at `lam` and `fix` frames -/
+
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
@@ -149,10 +161,11 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
 section Prim
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
-/-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`: the hole
-comes from the induction hypothesis, every other premise from `fundamental`. `Hrel` must be
-valid (⊢) because binder frames run the hole under □; `Hbinders` keeps the context's binders
-fresh for the plugged terms, `Ctx.BindersFresh` for the relational context. -/
+/-! ## Typed contexts -/
+
+/-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
+`Hrel` is valid (⊢) because binder frames run the hole under □; `Hbinders` keeps the context's
+binders fresh for the plugged terms, `Ctx.BindersFresh` for the relational context. -/
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
     (Hty_e' : Typed Γtc e' τ)
@@ -177,6 +190,7 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     have HtyK := TypedCtx.fill_typed Hty_e HKtail
     have HtyK' := TypedCtx.fill_typed Hty_e' HKtail
     simp only [Ctx.fill_cons, CtxItem.fill]
+    -- each frame is one compatibility lemma: the hole premise from `IHinner`, the rest from `Fund`
     cases HKitem with
     | appL Hty2 => iapply bin_log_related_app $$ %(IHinner Γrc' HCtx Hfr) %(Fund Hty2)
     | appR Hty1 => iapply bin_log_related_app $$ %(Fund Hty1) %(IHinner Γrc' HCtx Hfr)
@@ -248,6 +262,7 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
       obtain ⟨hKfe'_lc, hKfe'_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK'
       exact bin_log_related_fix_step hfRc hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv
         (IHinner _ HCtxInner (Ctx.BindersFresh.cons_extend rfl HfreshTail))
+    -- type binders extend `Δ`, so they call `ih` at `TyEnv.cons A Δ` instead of `IHinner`
     | tlam =>
       have HCtxShift := HCtx.shift (default : lrel rT GF)
       obtain ⟨hKfe_lc, hKfe_fv⟩ := ctx_fill_lc_fv HCtxShift HtyK
@@ -276,6 +291,8 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
           ((HCtx.shift A).insert x τ_pkg (RelCtx.lookup_eq_none_of_not_mem hxRc))
           (Ctx.BindersFresh.cons_extend rfl HfreshTail)) y hy
 
+/-! ## Linear contexts: carrying a frame `P` -/
+
 /-- The item runs its hole at most once: it does not put the hole under a binder. -/
 def CtxItem.IsLinear : CtxItem rT → Prop
   | .lam _ | .fix _ | .tlam | .unpackR _ _ => False
@@ -290,8 +307,8 @@ set_option hygiene false in
 /-- Specialize the induction hypothesis of `bin_log_related_under_linear_ctx` to the frame. -/
 local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc' HCtx $$ HP)
 
-/-- `bin_log_related_under_typed_ctx` under a frame `P` such as budget credits, for contexts
-that run the hole at most once (the context's own steps are budget-free). -/
+/-- `bin_log_related_under_typed_ctx` under a frame `P` such as budget credits, for linear contexts
+(the context's own steps are budget-free). -/
 theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Exp rT} {τ : Ty}
     {Γtc' : Tctx} {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
@@ -309,6 +326,7 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
     have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
     simp only [Ctx.fill_cons, CtxItem.fill]
     iintro HP
+    -- `ih_frame` spends `HP` on the hole once; the other premises come from `Fund` at no cost
     cases HKitem with
     | lam | fix | tlam | unpackR => exact (Hlin.1 : False).elim
     | appL Hty2 => ih_frame; iapply bin_log_related_app $$ H %(Fund Hty2)

@@ -6,9 +6,11 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.ContextualRefinement
 public import Metrology.Couplings.Divergences.Dp
 
-/-! Soundness: a refinement from `↯b β` bounds the divergence (or event masses, or DP) of every
-linear boolean context by `β` (`refines_ctx_coupling` and corollaries); the budget-free forms give
-the contextual-refinement inequality (`refines_sound_open_fresh`). -/
+/-! # Contextual soundness
+
+A refinement from `↯b β` bounds by `β` the divergence, event masses or DP of every linear boolean
+context (`refines_ctx_div`, `_mass`, `_dp`, all from `refines_ctx_coupling`); without credits, every
+typed context satisfies the `CtxRefines` inequality (`refines_sound_open_fresh`). -/
 
 @[expose] public section
 
@@ -20,6 +22,8 @@ open ProbLang.MicrometerWpGS
 section RefinesSound
 open MeasureTheory
 variable {rT : Type} {GF : BundledGFunctors}
+
+/-! ## Equal booleans: the pure content of `lrel_bool` -/
 
 /-- Two values are the same boolean. -/
 def boolEqVal (v v' : Val rT) : Prop :=
@@ -58,7 +62,7 @@ theorem limExec_finalBool (ρ : Cfg rT) (b : Bool) :
   rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
   rfl
 
-/-! ### Contextual soundness under budget credits -/
+/-! ## Closed programs at `bool` -/
 
 variable (L) in
 /-- A closed refinement at `bool` from `↯b β` couples the two runs at `β` along equal booleans. -/
@@ -71,6 +75,8 @@ theorem refines_bool_coupling (β : B) (e e' : Exp rT) (σ σ' : State rT)
 
 section Bind
 variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+
+/-! ## Contextual refinement without credits -/
 
 variable (L) in
 /-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
@@ -114,6 +120,8 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   iapply bin_log_related_nil_intro
   iapply Hlog IR IBC Δ
 
+/-! ## Contextual soundness under budget credits -/
+
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
 booleans: the credits are a frame, and the context's own steps are budget-free. -/
@@ -123,7 +131,9 @@ theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     (K : Ctx rT) (σ σ' : State rT) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
     (Hlin : K.IsLinear) :
     L.Rel β (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ⟩) (limExecV ⟨K.fill e', σ'⟩) := by
+  -- Adequacy at `lrel_bool` leaves a closed refinement of the filled programs.
   refine refines_bool_coupling L (GF := GF) β _ _ σ σ' fun IR IBC => ?_
+  -- The closed refinement `Hlog` is an open one at the empty context.
   have Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Tctx.empty Γrc →
       ⊢@{IProp GF} ↯b β -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ := by
     intro Δ Γrc HCtx
@@ -131,8 +141,10 @@ theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     iintro Hb
     iapply bin_log_related_nil_intro
     iapply Hlog IR IBC Δ $$ Hb
+  -- The credit passes through the linear context as a frame.
   have H := bin_log_related_under_linear_ctx HK Hlin Hrel (default : TyEnv rT GF) []
     TctxRelated.empty_nil
+  -- `interp L .bool _` is `lrel_bool` by `rfl`.
   show ⊢@{IProp GF} ↯b β -∗ refines L ⊤ (K.fill e) (K.fill e') (interp L .bool default)
   iintro Hb
   iapply bin_log_related_nil_elim

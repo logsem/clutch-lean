@@ -17,8 +17,8 @@ public import Metrology.Couplings.Examples
 
 /-! # Examples, by divergence and by program-logic rule
 
-Each file proves a short refinement in Micrometer and reads a standard statement off it through
-adequacy. Lifting-level examples (no programs) live in `Couplings/Examples`.
+Each file proves a short Micrometer refinement and reads a standard statement off it by adequacy.
+Start with `RR.Basic`, one proof in any lifting. Lifting-only examples: `Couplings.Examples`.
 
 By divergence (`RR` is `RandomizedResponse`):
 * equality (any lifting): `OTP`, `ContinuousOTP`, `Presample` (one direction)
