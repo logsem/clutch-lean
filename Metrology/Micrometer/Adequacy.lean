@@ -309,7 +309,7 @@ theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT →
   limExecV_lift fun n => wp_adequacy_exec_n e e' σ σ' n φ b Hwp
 
 /-- `wp_adequacy` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
-theorem wp_adequacy_error_lim [L.IsBudgetClosed] (e e' : Exp rT) (σ σ' : State rT) (b : B)
+theorem wp_adequacy_budget_lim [L.IsBudgetClosed] (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -327,13 +327,13 @@ theorem wp_adequacy_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp r
   IsSound.sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- `wp_adequacy_div` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
-theorem wp_adequacy_div_error_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L.IsBudgetClosed]
+theorem wp_adequacy_div_budget_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L.IsBudgetClosed]
     (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   IsSound.sound
-    ((wp_adequacy_error_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
+    ((wp_adequacy_budget_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- A `wp` proof from `↯b (s ε)` bounds the left output mass by the right output mass plus `ε`. -/
 theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s] (e e' : Exp rT)

@@ -56,7 +56,7 @@ By exit (the adequacy theorem that leaves the logic):
   or a divergence bound (`RR.Basic`; `SkipZero`)
 * `refines_coupling`: a relational refinement at budget 0 (`OTP`)
 * `wp_adequacy`, `wp_adequacy_div`: a weakest precondition against a spec `⤇ e'` (`RR.Twice`,
-  `RR.Dp`); `wp_adequacy_error_lim` takes a limit of credits (`Switching`)
+  `RR.Dp`); `wp_adequacy_budget_lim` takes a limit of credits (`Switching`)
 * `progMech_isPrivate`: a refinement for every pair of inputs gives `Mechanism.IsPrivate`
   (`RR.Dp`)
 * `refines_ctx_dp`, `refines_sound_fresh`: contextual refinement (`ContextualDp`,

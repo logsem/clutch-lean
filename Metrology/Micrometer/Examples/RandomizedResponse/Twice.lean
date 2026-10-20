@@ -140,7 +140,8 @@ theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (h�
   have h := GradedDivergence.codensity_sound <| (LiftingRelHom.zcdpToDp hδ).map_rel
     (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
   simp only [LiftingRelHom.zcdpToDp_map] at h
-  exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
+  exact GradedDivergence.IsGraded.mono
+    (Prod.mk_le_mk.2 ⟨LiftingRelHom.zcdpToDp_budget_le_of_rho_zero _, le_rfl⟩) h
 
 /-! ## The mechanism form -/
 

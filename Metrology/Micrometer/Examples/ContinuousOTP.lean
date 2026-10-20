@@ -146,7 +146,7 @@ theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
 /-! ### Non-vacuity
 
 An equality of measures says nothing if both sides are zero, so we pin down the mass.
-`urand` reaches a value in one step (`Atomic.urand'`), hence `execN 2` carries all of it. -/
+`urand` reaches a value in one step (`Atomic.urand`), hence `execN 2` carries all of it. -/
 
 theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ = 1 := by
   have hnv : ¬ (pl(urand) : Exp ℝ).isValue := fun ⟨w⟩ => nomatch w
@@ -157,7 +157,7 @@ theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ 
     show execN 2 ⟨pl(urand), σ⟩ Set.univ = 1
     have hae : ∀ᵐ ρ' ∂(primStep ⟨pl(urand), σ⟩), execN 1 ρ' Set.univ = 1 := by
       rw [ae_iff]
-      refine measure_mono_null ?_ (Atomic.urand' σ)
+      refine measure_mono_null ?_ (Atomic.urand σ)
       intro ρ' hρ' hv
       exact hρ' (by rw [execN_succ_isValue hv]; simp)
     rw [execN_succ_not_isValue hnv,

@@ -346,7 +346,7 @@ theorem fupd_specCoupl_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset
   fupd_specCoupl_steps_det_of_le (pexecN_zero _) hb
 
 /-- A spec coupling at a smaller budget proves one at a larger budget. -/
-theorem specCoupl_mono_err [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
+theorem specCoupl_mono_budget [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
     (hb : b₁ ≤ b₂) : specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)

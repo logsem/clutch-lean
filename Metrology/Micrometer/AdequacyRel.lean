@@ -74,7 +74,7 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢@{IProp GF} ↯b b -∗ refines L ⊤ e e' (A IR IBC)) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
-  refine wp_adequacy_error_lim (GF := GF) e e' σ σ' b φ fun IGS IBC b' hb' => ?_
+  refine wp_adequacy_budget_lim (GF := GF) e e' σ σ' b φ fun IGS IBC b' hb' => ?_
   -- Adequacy gives a credit b' > b. Split it as b + r: the user's proof takes ↯b b, and r > 0
   -- becomes the credit threaded through refines.
   obtain ⟨r, rfl⟩ := le_iff_exists_add.1 hb'.le

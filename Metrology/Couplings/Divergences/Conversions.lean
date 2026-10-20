@@ -405,7 +405,7 @@ end LiftingRelHom
 
 /-- At `ρ = 0` the budget of `zcdpToDp_map` is at most `ξ`: send the order to infinity. So pure
 zCDP liftings are DP at `(ξ, δ)` for every `δ > 0`. -/
-theorem iInf_conversion_le (ξ : ℝ≥0∞) {δ : ℝ} :
+theorem LiftingRelHom.zcdpToDp_budget_le_of_rho_zero (ξ : ℝ≥0∞) {δ : ℝ} :
     ⨅ α ∈ Set.Ioi (1 : ℝ), ξ + ENNReal.ofReal α * 0 +
       ENNReal.ofReal (Real.log (1 / δ) / (α - 1)) ≤ ξ := by
   refine ENNReal.le_of_forall_pos_le_add fun t ht _ ↦ ?_

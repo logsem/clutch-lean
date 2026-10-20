@@ -34,14 +34,14 @@ theorem wp_adequacy_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : 
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
-/-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_error_lim`). -/
-theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
+/-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_budget_lim`). -/
+theorem wp_adequacy_budget_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
-  (wp_adequacy_error_lim e e' σ σ' ε φ Hwp).addCoupl
+  (wp_adequacy_budget_lim e e' σ σ' ε φ Hwp).addCoupl
 
 /-- `wp_adequacy_div` at `tv`: programs whose results agree up to `ε` differ by at most `ε` on
 every event. -/
@@ -53,14 +53,14 @@ theorem wp_adequacy_div_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
 
-/-- As `wp_adequacy_div_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_div_error_lim`). -/
-theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
+/-- As `wp_adequacy_div_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_div_budget_lim`). -/
+theorem wp_adequacy_div_budget_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
-  tv_iff.1 (wp_adequacy_div_error_lim e e' σ σ' ε Hwp) S hS
+  tv_iff.1 (wp_adequacy_div_budget_lim e e' σ σ' ε Hwp) S hS
 
 /-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
 theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT → Val rT → Prop)

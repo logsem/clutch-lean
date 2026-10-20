@@ -98,7 +98,7 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
   iunfold lrel_ref at HRef
   icases HRef with ⟨%l, %l', %heq, %heq', #Hinv⟩
   rw [Ectx.fill_load, Ectx.fill_load, heq, heq', Ectx.eq_fill_nil (pl(!#(.loc l)) : Exp rT)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.load' l))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.load l))
   iintro %K' Hr
   iinv Hinv with ⟨%w1, %w2, >Hw1, >Hw2, #HwAL⟩ Hclose
   imodintro
@@ -145,7 +145,7 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
   rw [show Ectx.fill [EctxItem.storeL w] v.1 = Exp.store v.1 w.1 from rfl,
     show Ectx.fill [EctxItem.storeL w'] v'.1 = Exp.store v'.1 w'.1 from rfl, heq, heq',
     Ectx.eq_fill_nil (Exp.store pl(#(.loc l)) w.1)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.store' l w))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.store l w))
   iintro %K' Hr
   iinv Hinv with ⟨%v1, %v2, >Hv1, >Hv2, -⟩ Hclose
   imodintro
@@ -186,7 +186,7 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
     refines L ⊤ pl(rand(#(.int z), #(.lbl α))) pl(rand(#(.int z), #(.lbl α'))) A := by
   iintro #Hinv
   rw [Ectx.eq_fill_nil (pl(rand(#(.int z), #(.lbl α))) : Exp rT)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl' z α))
+  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl z α))
   iintro %K' Hr
   iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
   imodintro
@@ -285,7 +285,7 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
   by_cases hnpos : 0 < n
   · iapply refines_rand_lbl_of_pos hnpos (fun m _ _ => lrel_int_lit m) $$ Hinv
   · rw [Ectx.eq_fill_nil (pl(rand(#(.int n), #(.lbl α))) : Exp rT)]
-    iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl' n α))
+    iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl n α))
     iintro %K' Hr
     iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
     imodintro

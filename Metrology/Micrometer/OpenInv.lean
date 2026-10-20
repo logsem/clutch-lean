@@ -51,7 +51,7 @@ theorem specCoupl_close_val {hlc : HasLC} {GF : BundledGFunctors}
 postcondition. -/
 theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
     [L.HasBind] {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
-    {e : Exp rT} (h : Atomic' e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {e : Exp rT} (h : Atomic e) {E1 E2 : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {b₁ : B} {Φ : Val rT → IProp GF} : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
       progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
@@ -96,7 +96,7 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
 
 /-- Atomic expressions are `OpenInv`. -/
 theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.HasBind]
-    {e : Exp rT} (h : Atomic' e) : OpenInv L e := by
+    {e : Exp rT} (h : Atomic e) : OpenInv L e := by
   intro GF _ _ E1 E2 Φ
   iintro HF
   iapply MicrometerWpGS.wp_unfold
@@ -128,23 +128,23 @@ variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
   [L.HasBind]
 
 instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where
-  out := OpenInv.of_atomic Atomic.urand'
+  out := OpenInv.of_atomic Atomic.urand
 
 instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#(.loc l)) where
-  out := OpenInv.of_atomic (Atomic.load' l)
+  out := OpenInv.of_atomic (Atomic.load l)
 
 instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#(.loc l)) v.1) where
-  out := OpenInv.of_atomic (Atomic.store' l v)
+  out := OpenInv.of_atomic (Atomic.store l v)
 
 instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (Exp.alloc v.1) where
-  out := OpenInv.of_atomic (Atomic.alloc' v)
+  out := OpenInv.of_atomic (Atomic.alloc v)
 
 instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.unit))) where
-  out := OpenInv.of_atomic (Atomic.rand_unit' z)
+  out := OpenInv.of_atomic (Atomic.rand_unit z)
 
 instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
     IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.lbl l))) where
-  out := OpenInv.of_atomic (Atomic.rand_lbl' z l)
+  out := OpenInv.of_atomic (Atomic.rand_lbl z l)
 
 end Instances
 

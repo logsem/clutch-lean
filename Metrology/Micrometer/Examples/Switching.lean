@@ -360,7 +360,7 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
-  apply wp_adequacy_error_lim (GF := GF)
+  apply wp_adequacy_budget_lim (GF := GF)
   intro _ _ ε' hε'
   iintro Hj Herr
   iapply wp_wPRF_wPRP ([] : Ectx rT) N Q hN hQ ε'
@@ -388,7 +388,7 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·))
       (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
-  apply wp_adequacy_error_lim (GF := GF)
+  apply wp_adequacy_budget_lim (GF := GF)
   intro _ _ ε' hε'
   iintro Hj Herr
   iapply wp_wPRP_wPRF ([] : Ectx rT) N Q hN hQ ε'
