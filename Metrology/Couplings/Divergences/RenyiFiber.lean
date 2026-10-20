@@ -99,6 +99,66 @@ theorem fiberCond_comp_withDensity (hf : Measurable f) (ξ : Measure Z) (w : Z �
 
 end FiberCond
 
+/-! ## Liftings of equal images for composable divergences -/
+
+section Composable
+
+variable {Z : Type u} [MeasurableSpace Z] [Fintype Z] [DiscreteMeasurableSpace Z] {f : X → Z}
+  {g : Y → Z} {B : Type*} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
+  [OrderTop B] {D : GradedDivergence.{u} B} [D.IsGraded] [D.IsReflexive] [D.IsComposable]
+  [D.IsZeroLeft] {ρ : B} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+
+/-- A bound between the images of `μ` and `ν` lifts equal images in the codensity lifting of a
+composable divergence, when no image charged by `μ` is null for `ν`: bind the fibers. -/
+theorem codensity_rel_of_map (hf : Measurable f) (hg : Measurable g)
+    (hfib : ∀ z, ν (g ⁻¹' {z}) = 0 → μ (f ⁻¹' {z}) = 0) (h : D ρ (μ.map f) (ν.map g)) :
+    (codensity D).Rel ρ (fun x y ↦ f x = g y) μ ν := by
+  classical
+  rw [codensity_rel_iff]
+  intro I _ c _ k l _ _ hkl
+  have e1 : k ∘ₘ μ = (k ∘ₖ fiberCond μ f) ∘ₘ μ.map f := by
+    rw [← Measure.comp_assoc, fiberCond_comp_map hf]
+  have e2 : l ∘ₘ ν = (l ∘ₖ fiberCond ν g) ∘ₘ ν.map g := by
+    rw [← Measure.comp_assoc, fiberCond_comp_map hg]
+  rw [e1, e2]
+  refine IsComposable.comp h fun z ↦ ?_
+  rw [Kernel.comp_apply, Kernel.comp_apply, fiberCond_apply, fiberCond_apply]
+  by_cases hμz : μ (f ⁻¹' {z}) = 0
+  · rw [cond_eq_zero_of_meas_eq_zero hμz, bind_zero_left]
+    exact IsZeroLeft.zero_left _ _
+  have hνz : ν (g ⁻¹' {z}) ≠ 0 := fun h0 ↦ hμz (hfib z h0)
+  have hF : MeasurableSet (f ⁻¹' {z}) := hf (measurableSet_singleton z)
+  have hG : MeasurableSet (g ⁻¹' {z}) := hg (measurableSet_singleton z)
+  have : IsProbabilityMeasure μ[|f ⁻¹' {z}] := cond_isProbabilityMeasure hμz
+  have : IsProbabilityMeasure ν[|g ⁻¹' {z}] := cond_isProbabilityMeasure hνz
+  -- on the product of the two fibers the tests are related; elsewhere use `l` on both sides
+  set π := (μ[|f ⁻¹' {z}]).prod (ν[|g ⁻¹' {z}])
+  have hS : MeasurableSet ((f ⁻¹' {z}) ×ˢ (g ⁻¹' {z})) := hF.prod hG
+  set L := l.comap Prod.snd measurable_snd
+  set K := Kernel.piecewise hS (k.comap Prod.fst measurable_fst) L
+  have hK (p : X × Y) : D c (K p) (L p) := by
+    by_cases hp : p ∈ (f ⁻¹' {z}) ×ˢ (g ⁻¹' {z})
+    · simp only [K, L, Kernel.piecewise_apply, hp, ↓reduceIte, Kernel.comap_apply]
+      exact hkl _ _ ((Set.mem_singleton_iff.1 hp.1).trans (Set.mem_singleton_iff.1 hp.2).symm)
+    · simp only [K, Kernel.piecewise_apply, hp, ↓reduceIte]
+      exact IsGraded.mono zero_le (IsReflexive.refl _)
+  have hπ : ∀ᵐ p ∂π, p ∈ (f ⁻¹' {z}) ×ˢ (g ⁻¹' {z}) := by
+    rw [Measure.ae_prod_mem_iff_ae_ae_mem hS]
+    filter_upwards [ae_cond_mem hF] with x hx
+    filter_upwards [ae_cond_mem hG] with y hy
+    exact ⟨hx, hy⟩
+  have hKπ : K ∘ₘ π = k ∘ₘ μ[|f ⁻¹' {z}] := by
+    rw [Measure.comp_congr (κ := K) (η := k.comap Prod.fst measurable_fst)
+        (hπ.mono fun p hp ↦ by simp [K, Kernel.piecewise_apply, hp]),
+      Kernel.comap_comp_eq_comp_map _ measurable_fst, Measure.map_fst_prod, measure_univ, one_smul]
+  have hLπ : L ∘ₘ π = l ∘ₘ ν[|g ⁻¹' {z}] := by
+    rw [Kernel.comap_comp_eq_comp_map _ measurable_snd, Measure.map_snd_prod, measure_univ,
+      one_smul]
+  rw [← hKπ, ← hLπ]
+  exact zero_add c ▸ IsComposable.comp (IsReflexive.refl π) hK
+
+end Composable
+
 /-! ## Rényi liftings of equal images -/
 
 section Renyi
