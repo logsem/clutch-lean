@@ -61,15 +61,13 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
       simp only [hKfillnone]
       -- e' steps: push K through the program step, recurse by Löb
       iapply progCoupl_ctx_bind hv
-      iapply progCoupl_mono (Z₁ := wpProgBody L E' fun v => wp L E' (K.fill (Exp.ofVal v)) Φ')
+      iapply progCoupl_mono
       iframe HBody
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater !>
-      iapply specCoupl_mono_spatial
+      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+      iapply wpProgBody_wand
       iframe HLater
-      iintro %σ₄ %ρ₄ %b₄ HF
-      imod HF with ⟨Hσ', Hs', Hb', HwpInner⟩
+      iintro !> HwpInner
       imodintro
-      iframe Hσ' Hs' Hb'
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
 
@@ -123,15 +121,13 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
         iframe
     | none =>
       iapply specCoupl_ret
-      iapply progCoupl_mono (Z₁ := wpProgBody L E' fun v => specUpdate rT E' (Φ' v))
+      iapply progCoupl_mono
       iframe HBody
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater !>
-      iapply specCoupl_mono_spatial
+      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+      iapply wpProgBody_wand
       iframe HLater
-      iintro %σ₄ %ρ₄ %b₄ HF
-      imod HF with ⟨Hσ', Hs', Hb', HwpInner⟩
+      iintro !> HwpInner
       imodintro
-      iframe Hσ' Hs' Hb'
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
 
@@ -164,13 +160,11 @@ theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IPr
     | none =>
       iapply progCoupl_mono
       iframe HBody
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater !>
-      iapply specCoupl_mono_spatial
+      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+      iapply wpProgBody_wand
       iframe HLater
-      iintro %σ₄ %ρ₄ %b₄ HFinal
-      imod HFinal with ⟨Hσ', Hs', Hb', HwpInner⟩
+      iintro !> HwpInner
       imodintro
-      iframe
       iapply IH $$ %E' %e₃ %R' %Φ' HR HwpInner
   iintro ⟨HR, HW⟩
   iapply Hloeb $$ %E %e %R %Φ HR HW
@@ -202,14 +196,12 @@ theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT �
   simp only [hv]
   iapply progCoupl_mono
   iframe HBody
-  iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater !>
-  iapply specCoupl_mono_spatial
+  iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+  iapply wpProgBody_wand
   iframe HLater
-  iintro %σ₄ %ρ₄ %b₄ HFinal
-  imod HFinal with ⟨Hσ', Hs', Hb', HwpInner⟩
+  iintro !> HwpInner
   imod HR
   imodintro
-  iframe Hσ' Hs' Hb'
   iapply wp_mask_mono HE
   ihave HwpInner := wp_frame_l $$ [$HR $HwpInner]
   iapply wp_wand
@@ -232,14 +224,8 @@ theorem wp_frame_step_l {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val r
 /-- Frame a resource available only after one step into the postcondition, on the right. -/
 theorem wp_frame_step_r {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF}
     (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
-    wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) := by
-  iintro ⟨HW, HR⟩
-  iapply wp_step_fupd HE hv
-  iframe HR
-  iapply wp_wand
-  iframe HW
-  iintro !> %v HΦ HR'
-  iframe
+    wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) :=
+  (sep_comm.1.trans (wp_frame_step_l HE hv)).trans (wp_mono fun _ => sep_comm.1)
 
 /-! ## Proof-mode instances -/
 

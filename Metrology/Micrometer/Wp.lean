@@ -98,6 +98,21 @@ theorem wpProgBody_absorbing {E : CoPset} {Φ : Val rT → IProp GF} {b : B} (hb
   iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
   iapply specCoupl_absorbing hb
 
+/-- The continuation can be mapped under its later by an update from the old `wp` to a new one,
+which may change the mask, the expression and the postcondition. -/
+theorem wpProgBody_wand {E E' : CoPset} {Φ Ψ : Val rT → IProp GF} {e₃ e₄ : Exp rT}
+    {σ₃ : State rT} {e₃' : Exp rT} {σ₃' : State rT} {b : B} : iprop%
+    wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b ∗ ▷ (wp L E e₃ Φ ={E, E'}=∗ wp L E' e₄ Ψ) ⊢
+      wpProgBody L E' Ψ e₄ σ₃ e₃' σ₃' b := by
+  iintro ⟨HBody, HWand⟩ !>
+  iapply specCoupl_mono_spatial
+  iframe HBody
+  iintro %σ₄ %ρ₄ %b₄ HF
+  imod HF with ⟨Hσ, Hs, Hb, Hwp⟩
+  imod HWand $$ Hwp with Hwp
+  imodintro
+  iframe
+
 /-! ## `WP[L] e @ E {{ Φ }}` notation
 
 The postcondition is either a function `{{ Φ }}` or a binder form `{{ v, P }}`; the mask
@@ -222,14 +237,12 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
       iapply specCoupl_ret
       iapply progCoupl_mono
       iframe HZ₁
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HCont !>
-      iapply specCoupl_mono_spatial
-      iframe HCont
-      iintro %σ₄ %ρ₄ %b₄ HInner
-      imod HInner with ⟨Hσ', Hs', Hb', HwpInner⟩
+      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+      iapply wpProgBody_wand
+      iframe HLater
+      iintro !> HwpInner
       imod Hclose
       imodintro
-      iframe
       iapply IH $$ %E1' %E2' %e₃ %Φ' %Ψ' %HE' HwpInner HΦ'
   iapply Hloeb $$ %E1 %E2 %e %Φ %Ψ %HE HW HΦ
 

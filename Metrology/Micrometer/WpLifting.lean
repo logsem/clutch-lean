@@ -6,7 +6,7 @@ public import Metrology.Micrometer.WpRules
 
 Rules that peel the unfolded `wpPre` down to "couple one program step against the spec, then
 continue at each related pair"; main result `wp_lift_prim_steps_coupl` (Rocq `approxis/lifting.v`).
--/
+`WpEctxLifting.lean` restates the step rules for head steps. -/
 
 @[expose] public section
 
