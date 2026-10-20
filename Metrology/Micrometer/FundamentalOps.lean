@@ -5,9 +5,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Compatibility lemmas for open terms: operators, pattern matching, sampling and heap
 
-Compatibility lemmas for `bin_log_related` on unary and binary operators, equality, `scrut`, `urand`
-and the heap and tape primitives. Continues `FundamentalCompat`; also holds the closed operator
-helpers `refines_{un,bin}op_{val,bind}`. `fundamental` is in `Fundamental.lean`. -/
+Compatibility lemmas for operators, equality, `scrut`, `urand` and the heap and tape primitives,
+continuing `FundamentalCompat`. -/
 
 @[expose] public section
 

@@ -68,7 +68,6 @@ theorem progMech_isPrivate (GF : BundledGFunctors) [RefinesPreGS rT B GF]
     (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF)
       (IBC : BudgetCreditGS B GF), ⊢@{IProp GF} ↯b b -∗ refines L ⊤ (p x) (p x') (A IR IBC)) :
     (progMech p σ hp).IsPrivate D adj b :=
-  -- soundness of `L` for `D` turns the coupling of `progMech_rel` into the divergence bound
   fun _ _ hx ↦ IsSound.sound (progMech_rel GF p σ b A HA Hlog hx)
 
 end ProbLang

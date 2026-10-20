@@ -4,9 +4,8 @@ public import Metrology.Couplings.BindLaw
 
 /-! # The codensity lifting
 
-`codensity D` lifts a graded divergence by testing (Sato–Katsumata, §7): it is lawful and binds
-(`codensity_bind`), is complete iff `D` is composable (`codensity_isComplete_iff`), and is the
-largest lawful, binding, sound and complete lifting (`le_codensity`). -/
+`codensity D` lifts a graded divergence by testing (Sato–Katsumata, §7); it is the largest lawful,
+binding, sound and complete lifting (`le_codensity`). -/
 
 @[expose] public section
 
@@ -29,8 +28,7 @@ variable (D) in
 /-- The codensity lifting: every test whose kernels are within the leftover plus a slack `c` at
 each pair stays within the budget plus `c` after binding (Sato–Katsumata, §7). Tests with
 `b + c = ⊤` are left out: they hold anyway under `IsGraded`, and dropping them makes framing free
-and `le_codensity` independent of `IsGraded`. `markovCodensity` restricts the tests to Markov
-kernels. -/
+and `le_codensity` independent of `IsGraded`. -/
 def codensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
@@ -96,7 +94,7 @@ theorem codensity_map [Add B] [LT B] [Top B] {R : X' → Y' → B} {f : X → X'
   exact h hbc (k := k.comap f hf) (l := l.comap g hg) fun x y ↦ hkl (f x) (g y)
 
 /-- Binding with continuations lifted wherever the leftover is finite; the other pairs pass every
-test by `IsGraded.top`. Needs only grading, nothing specific to the divergence. -/
+test by `IsGraded.top`. -/
 theorem codensity_bind [Add B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop B]
     [D.IsGraded] {R' : X' → Y' → B} {f : Kernel X X'} {g : Kernel Y Y'} [IsSubMarkovKernel f]
     [IsSubMarkovKernel g] (h : D.codensity b R μ ν)
@@ -104,7 +102,6 @@ theorem codensity_bind [Add B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop 
     D.codensity b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
   intro I _ c hbc k l _ _ hkl
   rw [comp_assoc, comp_assoc]
-  -- the test `k, l` for the composite yields the test `k ∘ f, l ∘ g` for `μ, ν`
   refine h hbc fun x y ↦ ?_
   rw [Kernel.comp_apply, Kernel.comp_apply]
   exact IsGraded.of_lt_top fun hRc ↦ hfg x y (le_self_add.trans_lt hRc) hRc hkl
@@ -155,7 +152,6 @@ composable (Sato–Katsumata, Thm. 8.2). -/
 theorem codensity_isComplete_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] : (codensity D).IsComplete D ↔ D.IsComposable := by
   refine ⟨fun _ ↦ ⟨fun _ _ ↦ fun h hκη ↦ ?_⟩,
-    -- complete from composable: a test on equality is exactly `IsComposable.comp`
     fun _ ↦ ⟨fun {X} _ b μ ν _ _ h ↦ codensity_rel_iff.2 fun I _ c _ k l _ _ hkl ↦
       IsComposable.comp h fun x ↦ hkl x x rfl⟩⟩
   -- composable from complete: lift μ₁ μ₂ along equality, then test it with κ, η at slack c

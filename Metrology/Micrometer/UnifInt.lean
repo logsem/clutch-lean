@@ -304,8 +304,7 @@ theorem unifInt_addCoupl_rev_inj {zL zR : Int} (HzR : 0 < zR) (Hle : zR ≤ zL) 
         gcongr
         exact_mod_cast Int.toNat_le_toNat Hle
 
-/-- Uniform coupling along an injection, smaller bound on the left:
-`rand zL ~ rand zR` for `zL ≤ zR` along `f`, with error `(zR - zL)/zR`. -/
+/-- `unifInt_addCoupl_inj` pushed to configurations. -/
 theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
     (HzL : 0 < zL) (Hle : zL ≤ zR) (σ σ' : State rT) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
@@ -320,9 +319,7 @@ theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
   rintro n _ ⟨h0, h1, hm⟩
   exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
-/-- Uniform coupling along an injection, smaller bound on the right:
-`rand zL ~ rand zR` for `zR ≤ zL` along `f : [0, zR) ↪ [0, zL)`; the left draw is
-`f m` when the right draw is `m`, with error `(zL - zR)/zL`. -/
+/-- `unifInt_addCoupl_rev_inj` pushed to configurations. -/
 theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
     (HzR : 0 < zR) (Hle : zR ≤ zL) (σ σ' : State rT) (f : Int → Int)
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)

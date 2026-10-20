@@ -117,10 +117,7 @@ theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [Budget
     (|={E1, E2}=> wp L E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp L E1 e Φ :=
   h
 
-/-! ## `IsOpenInv` instances
-
-`OpenInv` is a plain `Prop`, so the concrete atomic expressions register in the class `IsOpenInv`
-for instance search. -/
+/-! ## `IsOpenInv` instances -/
 
 /-- Registers `OpenInv L e` for instance search. -/
 class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where

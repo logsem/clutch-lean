@@ -4,8 +4,7 @@ public import Metrology.Couplings.Divergences.Conversions
 
 /-! # Rényi and zCDP liftings of equal images
 
-Lifts the relation `f x = g y`, witnessed (`codensity_renyi_of_kernel`) by conditioning `μ` on the
-fibers of `f`. Used by the randomized-response examples. Main results:
+Lifts the relation `f x = g y` by conditioning `μ` on the fibers of `f`. Main results:
 `codensity_renyi_rel_of_map`, `zcdpLifting_rel_of_fiber`. -/
 
 @[expose] public section

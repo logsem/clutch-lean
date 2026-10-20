@@ -25,9 +25,7 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
-/-- The discrete `COFE` on `SpecCouplState`. -/
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
-/-- `SpecCouplState` is a discrete `OFE`. -/
 instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
 variable (L) in
@@ -336,8 +334,7 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
       rw [hR]
       iexact HF
     · simp [R, hS] at hlt
-  · -- b₁ = ⊤: b = ⊤ is absorbing
-    iintro -
+  · iintro -
     iapply specCoupl_absorbing
     exact (top_le_iff.1 hb) ▸ IsTopAbsorbing.absorbing_top
 
@@ -354,8 +351,7 @@ theorem specCoupl_mono_err [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     (hb : b₁ ≤ b₂) : specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
-/-- A spec coupling absorbs a leading fancy update (by a unit-law round; `IsTopAbsorbing` covers
-budget `⊤`). -/
+/-- A spec coupling absorbs a leading fancy update. -/
 theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} :
     iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=

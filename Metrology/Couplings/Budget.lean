@@ -5,10 +5,7 @@ public import Mathlib.Algebra.Regular.Pi
 public import Mathlib.Algebra.Regular.Prod
 public import Mathlib.Basic.ENNReal.Basic
 
-/-! # Budget order facts
-
-Two facts about canonically ordered budgets: room strictly above `b + c` gives room strictly above
-`b`, and `⊤` never cancels. -/
+/-! # Budget order facts -/
 
 @[expose] public section
 
@@ -22,8 +19,7 @@ theorem exists_lt_and_add_eq_of_add_lt [AddCommSemigroup B] [Preorder B]
   rw [add_right_comm]
   exact add_le_add_left hb c
 
-/-- The top budget is not left-cancellable, since `⊤ + b = ⊤` for every `b`
-(Rocq `budget_spend_top_fails`). -/
+/-- The top budget is not left-cancellable (Rocq `budget_spend_top_fails`). -/
 theorem not_isAddLeftRegular_top [AddZeroClass B] [PartialOrder B] [OrderTop B]
     [CanonicallyOrderedAdd B] [Nontrivial B] : ¬IsAddLeftRegular (⊤ : B) := fun h ↦ by
   obtain ⟨b, hb⟩ := exists_ne (0 : B)

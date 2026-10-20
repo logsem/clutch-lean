@@ -40,7 +40,6 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam, interp_arrow]
-  -- (1) the two closures are related at the arrow relation
   ihave %hvs := env_ltyped2_allClosed_pair Γ vs $$ Hvs
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
   have hlam_closed := substMap_lam_closed hvs hΓdomVs he_lc he'_lc he_fv he'_fv
@@ -48,7 +47,7 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   obtain ⟨hvsfst_closed, hvssnd_closed⟩ := hvs
   iapply refines_arrow_val (v := ⟨.lam (substMap vs.fst e), IsVal.lam (by is_lc), by is_lc⟩)
     (v' := ⟨.lam (substMap vs.snd e'), IsVal.lam (by is_lc), by is_lc⟩) hlam_closed
-  -- (2) extend the substitution with a fresh x; Hbody is valid, so usable under □
+  -- Hbody is valid, so it stays usable under □.
   iintro !> %v1 %v2 #HA
   ihave %hv1v2_closed := interp_closed τ1 v1 v2 $$ HA
   obtain ⟨x, hxL, hxFvE, hxFvE', hxNotDom⟩ := exists_fresh_var S e e' vs
@@ -58,7 +57,6 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   obtain ⟨hbridge_fst, hbridge_snd⟩ := substMap_open_fresh_pair
     hvsfst_closed hvssnd_closed hxFvE hxFvE' hxNotDom hv1v2_closed.1 hv1v2_closed.2
   isimp only [hbridge_fst, hbridge_snd] at HBody
-  -- (3) one β-step on each side
   iapply refines_beta hlam_lc hlam'_lc
   inext
   iexact HBody

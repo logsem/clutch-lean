@@ -7,9 +7,8 @@ public import Iris.ProofMode
 
 /-! # Step-update lemmas
 
-Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s, with the main results
-`step_fupdN_pure_imp_forall₃`/`₄`, which adequacy (`Micrometer/Adequacy`) uses to extract a pure
-conclusion from `|={∅}=> |={∅}[∅]▷=>^[n] ⌜_⌝`. -/
+Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s; the main results
+`step_fupdN_pure_imp_forall₃`/`₄` let adequacy pull a pure fact out of the step-updates. -/
 
 open Std Iris.Std Iris.BI Iris.ProofMode
 

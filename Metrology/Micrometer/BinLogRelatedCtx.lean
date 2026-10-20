@@ -9,9 +9,8 @@ public import Metrology.ProbLang.ContextualRefinement
 
 /-! # Plugging into a context
 
-From `e ≤log e'` to `K[e] ≤log K[e']` for a typed context `K`: `bin_log_related_under_typed_ctx`
-for a valid hypothesis, and `bin_log_related_under_linear_ctx` for one under a resource `P`
-(e.g. budget credits) when `K.IsLinear`. -/
+From `e ≤log e'` to `K[e] ≤log K[e']` for a typed context `K` (`bin_log_related_under_typed_ctx`),
+and under a resource `P` such as budget credits when `K.IsLinear`. -/
 
 @[expose] public section
 
@@ -330,10 +329,7 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
     have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
     simp only [Ctx.fill_cons, CtxItem.fill]
     iintro HP
-    -- `ih_frame` spends the resource `HP` on the hole once; the other premises come from `Fund`
-    -- at no cost
     cases HKitem with
-    -- the four frames that put the hole inside a function body are excluded by `Hlin`
     | lam | fix | tlam | unpackR => exact (Hlin.1 : False).elim
     | appL Hty2 => ih_frame; iapply bin_log_related_app $$ H %(Fund Hty2)
     | appR Hty1 => ih_frame; iapply bin_log_related_app $$ %(Fund Hty1) H

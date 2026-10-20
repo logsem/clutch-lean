@@ -4,9 +4,8 @@ public import Metrology.Micrometer.AppWeakestpre
 
 /-! # Further lifting rules
 
-Coupled-step rules for `wp` that keep the per-pair leftover `R` (with budget splitting, or with an
-absorbing exit), and `wp_couple_erasables` for presampling both sides at cost `0` (Rocq
-`approxis/lifting.v`). -/
+Coupled-step rules for `wp` that keep the per-pair leftover `R`, and `wp_couple_erasables` for
+presampling both sides at cost `0` (Rocq `approxis/lifting.v`). -/
 
 @[expose] public section
 
@@ -20,10 +19,7 @@ namespace ProbLang.MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-/-! ## Coupled steps with a leftover `R`
-
-`_adv'`: canonical law, leftover `R` at the whole budget; `_adv`: lifting at `b₁`, with `b₂` added
-to every leftover (see ProgCoupl's 'One program step against one spec step'). -/
+/-! ## Coupled steps with a leftover `R` -/
 
 /-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
 (Rocq `wp_lift_step_couple_adv`). -/

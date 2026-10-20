@@ -228,8 +228,7 @@ the trade reaches `1` credit, which `contradict` refutes. -/
 
 namespace Induction
 
-/-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1` (pure arithmetic; also used
-by `BudgetCredit.amplifying`). -/
+/-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1`. -/
 theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ ε * (k : ℝ≥0∞) ^ n := by
   obtain rfl | hε' := eq_or_ne ε ∞
@@ -264,9 +263,7 @@ theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk
   suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε' -∗ P by
     iapply haux _ le_rfl
   iintro %ε' %hle #Hamp Hε
-  -- Each use of the amplifier turns `ε` into `kε`, a net gain of `(k-1)ε`. `err_amp_mult` picks
-  -- `n` with `n(k-1)ε + ε' ≥ 1`, so after `n` rounds the credit reaches `1`, and `contradict`
-  -- closes.
+  -- Each round gains `(k-1)ε`; `err_amp_mult` picks `n` rounds that reach `1` credit.
   obtain ⟨n, hn⟩ := err_amp_mult hε hle hk
   iinduction n generalizing %ε' %hle %hn Hε with
   | zero =>

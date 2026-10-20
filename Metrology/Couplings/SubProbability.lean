@@ -5,9 +5,8 @@ public import Metrology.Couplings.Measure
 
 /-! # Sub-probability measures and sub-Markov kernels
 
-`IsSubProbabilityMeasure` (mass at most `1`) and `IsSubMarkovKernel` (every output has mass at
-most `1`), with instances showing both are closed under `map`, `prod`, `bind`, `∘ₖ`, `⊗ₖ`, etc.
-(Approximate Span Liftings, Def. 3.1). -/
+`IsSubProbabilityMeasure` and `IsSubMarkovKernel` (mass at most `1`), closed under `map`, `prod`,
+`bind`, `∘ₖ`, `⊗ₖ` (Approximate Span Liftings, Def. 3.1). -/
 
 @[expose] public section
 
@@ -223,8 +222,6 @@ theorem Kernel.mass_comp (hf : Measurable f) (μ : Measure X) :
   simp [Kernel.mass_apply, lintegral_mul_const _ hf]
 
 end ProbabilityTheory
-
-/-! ## Restricting a composite -/
 
 open ProbabilityTheory in
 /-- A kernel cut off outside `s` composes with the restriction of the measure to `s`. -/

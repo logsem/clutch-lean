@@ -30,7 +30,7 @@ theorem pexecN_1_of_DetStep {ρ ρ' : Cfg rT} (h : DetStep ρ ρ') :
   rw [stepOrFinal_not_isValue hnv]
   exact h2
 
-/-- `n`-step version: `DetExec n ρ ρ'` makes `n`-step execution the Dirac measure at `ρ'`. -/
+/-- `n`-step version of `pexecN_1_of_DetStep`. -/
 theorem pexecN_of_DetExec {n : ℕ} {ρ ρ' : Cfg rT} (h : DetExec n ρ ρ') :
     pexecN n ρ = MeasureTheory.Measure.dirac ρ' := by
   induction n generalizing ρ with
@@ -87,10 +87,8 @@ theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
 
 section Rules
 
-/-! Each rule unfolds `specUpdate` at the current spec configuration `ρ`, checks `ρ` against the
-`⤇` fragment, updates the ghost state, and exhibits the deterministic step. These rules use
-`defaultSpecUpdateGS`, so `specInterp ρ` is `Cfg.specAuth ρ` (Micrometer's instance agrees by
-`rfl`: `micrometerWpGS_specInterp_eq`). -/
+/-! Each rule checks the configuration against `⤇`, updates the ghost state and exhibits the
+deterministic step, at `defaultSpecUpdateGS` (where `specInterp` is `Cfg.specAuth`). -/
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
 

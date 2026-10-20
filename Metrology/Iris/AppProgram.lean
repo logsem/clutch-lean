@@ -15,9 +15,8 @@ public import Metrology.ProbLang.Syntax.Notation
 /-!
 # Program-side ghost state
 
-Ghost state for the program's heap and tapes (`appStateAuth`, points-to `l ↦ v`, `l ↪ₐ t`), with
-lookup, update and alloc rules. `app` is the implementation side (naming from Approxis); the spec
-side is `SpecProgram.lean`. `↦` and `↪N⟨z; ns⟩` need `open scoped AppGS`; `↪ₐ` is global.
+Ghost state for the program heap and tapes (`appStateAuth`, `l ↦ v`, `l ↪ₐ t`) with lookup, update
+and alloc rules; the spec side is `SpecProgram.lean`. `↦` and `↪N⟨z; ns⟩` need `open scoped AppGS`.
 -/
 
 section AppProgramRA
@@ -248,8 +247,6 @@ theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
   iframe %hxs Hl
 
 end NatTapeInterface
-
-/-! ## Initialisation -/
 
 /-- Allocating the program ghost state from any initial state `σ`. -/
 theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF]

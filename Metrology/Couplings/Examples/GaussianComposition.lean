@@ -4,8 +4,7 @@ public import Metrology.Couplings.Divergences.GaussianRenyi
 
 /-! # Gaussian composition
 
-`gaussianMechPow σ k` runs `k` Gaussian queries; the zCDP lifting composes them
-(`zcdpLifting_rel_gaussianMechPow`), giving `(ε, δ)`-DP with `ε` of order `√k`
+`k` Gaussian queries composed in the zCDP lifting are `(ε, δ)`-DP with `ε` of order `√k`
 (`DP_gaussianMechPow_sqrt`; Approximate Span Liftings, §§4–5). -/
 
 @[expose] public section
@@ -63,8 +62,7 @@ theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
 variable {σ : ℝ≥0} {r δ : ℝ}
 
 /-- `k` Gaussian queries of inputs at distance at most `r` lift equality in the zCDP lifting at
-`k` times the budget `r² / (2 σ²)` of one query: one query by completeness, joined to the other `k`
-by `Rel.prod_of_isTopAbsorbing` (no finiteness side condition), then reassembled by `map`. -/
+`k` times the budget `r² / (2 σ²)` of one query. -/
 theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - a'| ≤ r) (k : ℕ) :
     zcdpLifting.Rel (0, k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) (· = ·)
       (gaussianMechPow σ k a) (gaussianMechPow σ k a') := by
@@ -81,8 +79,7 @@ theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - 
       ih).map fun p q h ↦ by rw [Prod.ext h.1 h.2]
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ε, δ)`-DP for inputs at distance at
-most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`:
-convert the composed lifting by `LiftingRelHom.zcdpToDp`, then read off soundness. -/
+most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`. -/
 theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
       (⨅ α ∈ Ioi (1 : ℝ), ENNReal.ofReal α * (k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) +
@@ -92,9 +89,7 @@ theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
     ((LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow hσ h k))
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for
-inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. The
-closed form comes from `codensity_dp_rel_of_zcdp`, stated for the codensity lifting of
-`zcdpDivergence`, so the lifting is first moved there by `concentratedToCodensity`. -/
+inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. -/
 theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ₁ : δ < 1) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
       (ENNReal.ofReal (k * (r ^ 2 / (2 * σ ^ 2)) +
@@ -104,6 +99,7 @@ theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ�
   have hk : (k : ℝ≥0∞) * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2)) =
       ENNReal.ofReal (k * (r ^ 2 / (2 * (σ : ℝ) ^ 2))) := by
     rw [ENNReal.ofReal_mul (Nat.cast_nonneg k), ENNReal.ofReal_natCast]
+  -- `codensity_dp_rel_of_zcdp` is stated for the codensity lifting of `zcdpDivergence`.
   have hz := ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl).map_rel
     (zcdpLifting_rel_gaussianMechPow hσ h k)
   have := codensity_sound (codensity_dp_rel_of_zcdp hδ hδ₁ hz)

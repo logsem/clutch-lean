@@ -4,9 +4,8 @@ public import Metrology.Couplings.ApproximateCouplings
 
 /-! # `(ε, δ)`-DP couplings (Approxis style)
 
-`ARCoupling.DP ε δ S` is an approximate coupling with error map `x ↦ e^ε x + δ`; the main result
-is sequential composition `ARCoupling.DP.bind`. `Bridges/AddCoupl.lean` identifies the DP instance
-with `(codensity dp).Rel`. -/
+Approximate couplings with error map `x ↦ e^ε x + δ`, and their composition `ARCoupling.DP.bind`;
+`Bridges/AddCoupl.lean` identifies them with `(codensity dp).Rel`. -/
 
 @[expose] public section
 

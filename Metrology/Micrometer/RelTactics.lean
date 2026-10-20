@@ -35,10 +35,7 @@ meta def Side.isL : Side → Bool
   | .l => true
   | .r => false
 
-/-- A proof-mode goal `hyps ⊢ refines L E e t A`.
-
-`refines` ends with the arguments `E e e' A`, so counting from the end of `args`: `E` is
-`size - 4`, `e` is `size - 3`, `e'` is `size - 2`. -/
+/-- A proof-mode goal `hyps ⊢ refines L E e t A`. -/
 meta structure RelGoal where
   {u : Level}
   {prop : Q(Type u)}

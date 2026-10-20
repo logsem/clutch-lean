@@ -109,7 +109,7 @@ theorem specUpdate_bind {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : ipr
 
 /-! ## Monotonicity, fancy updates and framing -/
 
-/-- Monotonicity along a fancy update. -/
+/-- Monotonicity of `specUpdateN` along a fancy update. -/
 theorem specUpdateN_mono_fupd {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdateN rT n E P ∗ (P ={E}=∗ Q) ⊢ specUpdateN rT n E Q := by
   unfold specUpdateN
@@ -122,7 +122,7 @@ theorem specUpdateN_mono_fupd {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
   ipureintro
   assumption
 
-/-- Monotonicity along a fancy update. -/
+/-- Monotonicity of `specUpdate` along a fancy update. -/
 theorem specUpdate_mono_fupd {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdate rT E P ∗ (P ={E}=∗ Q) ⊢ specUpdate rT E Q := by
   unfold specUpdate
@@ -135,7 +135,7 @@ theorem specUpdate_mono_fupd {E : CoPset} {P Q : IProp GF} : iprop%
   ipureintro
   assumption
 
-/-- Monotonicity in the postcondition. -/
+/-- Monotonicity of `specUpdateN` in the postcondition. -/
 theorem specUpdateN_mono {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdateN rT n E P ∗ (P -∗ Q) ⊢ specUpdateN rT n E Q := by
   iintro ⟨HP, HPQ⟩
@@ -144,7 +144,7 @@ theorem specUpdateN_mono {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
   iintro _ !>
   iapply HPQ $$ [$]
 
-/-- Monotonicity in the postcondition. -/
+/-- Monotonicity of `specUpdate` in the postcondition. -/
 theorem specUpdate_mono {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdate rT E P ∗ (P -∗ Q) ⊢ specUpdate rT E Q := by
   iintro ⟨HP, HPQ⟩
@@ -169,7 +169,7 @@ theorem fupd_specUpdate {E : CoPset} {P : IProp GF} : iprop%
   imod H
   iapply H $$ [$]
 
-/-- Frame a resource `R` around a spec update. -/
+/-- Frame a resource `R` around `specUpdateN`. -/
 theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
     R ∗ specUpdateN rT n E P ⊢ specUpdateN rT n E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩
@@ -178,7 +178,7 @@ theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
   iintro _
   iframe
 
-/-- Frame a resource `R` around a spec update. -/
+/-- Frame a resource `R` around `specUpdate`. -/
 theorem specUpdate_frame_l {E : CoPset} {R P : IProp GF} :
     iprop(R ∗ specUpdate rT E P) ⊢@{IProp GF} specUpdate rT E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩

@@ -5,10 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # Smoke tests for the `rel_*` tactics
-
-Each `example` proves a small refinement `REL[L] e << e' : τ` with the tactics of `RelTactics`
-(find the redex, apply the rule), grouped by the kind of step they exercise. -/
+/-! # Smoke tests for the `rel_*` tactics -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS
 open scoped AppGS

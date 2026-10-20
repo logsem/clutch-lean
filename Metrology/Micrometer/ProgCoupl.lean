@@ -4,9 +4,8 @@ public import Metrology.Micrometer.SpecCoupl
 
 /-! # The program-step modality `progCoupl`
 
-`progCoupl` couples one program step with spec steps through a bind law, in exactly the shape the
-one-step lemma `lift_erasure_erasable_exp_lhs_kanto_law` consumes in adequacy. The file gives its
-structural rules and intro rules for the common step shapes. -/
+`progCoupl` couples one program step with spec steps through a bind law, in the shape adequacy's
+one-step lemma `lift_erasure_erasable_exp_lhs_kanto_law` consumes. -/
 
 @[expose] public section
 
@@ -20,10 +19,7 @@ namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 
-/-! ## The `progCoupl` modality
-
-Its conjuncts are the hypotheses of `lift_erasure_erasable_exp_lhs_kanto_law`, with the
-lifted-continuation premise replaced by an Iris continuation `Z` at pairs with finite leftover. -/
+/-! ## The `progCoupl` modality -/
 
 variable (L) in
 /-- One program step coupled with `n` spec steps from an erasable spec-state distribution by a
@@ -202,12 +198,7 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT}
 
 /-! ## One program step against one spec step
 
-Five forms:
-* `_law`: any law, per-pair leftover `R`;
-* `_spend_law`: a `HeadShift` law, head at `b₁`, `b₂` added to every leftover;
-* `_adv'` (`adv` is Rocq's "advanced", a per-pair leftover): canonical law, leftover `R` at `b`;
-* `_adv`: canonical law at `b₁`, `b₂` added to every leftover;
-* plain `progCoupl_steps`: relational lifting `L.Rel b₁ S`, continuation at `b₂`. -/
+(`adv`, Rocq's "advanced", marks a per-pair leftover.) -/
 
 /-- One spec step from a reducible configuration, written as a `pexecN 1` run from `δ σ₁'`. -/
 theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Reducible e₁' σ₁') :

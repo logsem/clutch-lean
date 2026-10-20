@@ -39,12 +39,10 @@ instance discreteE_val (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discret
 /-- Ghost state for the spec-side program: an exclusive expression. -/
 abbrev SpecProg (α : Type _) [ProbLang.LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))
-/-- Heap camera with values in `Agree`; used for both the spec heap and the program heap
-(`AppProgram`). -/
+/-- Heap camera with values in `Agree`. -/
 abbrev SpecHeap (rT : Type _) [ProbLang.LawfulProbLangℝ rT] :=
   HeapView Loc (Agree (Val rT)) LocHeap
-/-- Tape camera with tapes in `Agree`; used for both the spec tapes and the program tapes
-(`AppProgram`). -/
+/-- Tape camera with tapes in `Agree`. -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
 
 /-- Authoritative element of `SpecProg`: the spec program is `e`. -/
@@ -52,11 +50,9 @@ def SpecProg.auth (e : Exp rT) : SpecProg rT := ● (some <| .excl e)
 /-- Fragment of `SpecProg`: ownership of the spec program `e`. -/
 def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
 
-/-! ## Heaps of `Agree` values
+/-! ## Heaps of `Agree` values -/
 
-The ghost heap stores each value in `Agree`; these lemmas move between it and the plain heap. -/
-
-/-- Wraps every heap value in `Agree` (also used by `AppProgram`). -/
+/-- Wraps every heap value in `Agree`. -/
 def LocHeap.asAgree [OFE V] (h : LocHeap V) : LocHeap (Agree V) :=
   PartialMap.map LocHeap toAgree h
 

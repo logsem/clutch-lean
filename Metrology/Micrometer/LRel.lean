@@ -10,9 +10,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Value relations and the refinement judgement
 
-Value relations `lrel` (a COFE, so `lrel_rec` is a fixpoint) with one constructor per type
-former, and the refinement judgement `refines` (`REL[L] e << e' @ E : A`); `lrel_arr` and
-`lrel_forall` refer back to `refines`. -/
+Value relations `lrel` (a COFE, so `lrel_rec` is a fixpoint), one constructor per type former,
+and the refinement judgement `refines` (`REL[L] e << e' @ E : A`). -/
 
 @[expose] public section
 

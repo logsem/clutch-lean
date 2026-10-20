@@ -180,8 +180,6 @@ theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSu
     ↯b a ⊢@{IProp GF} ↯b b ∗ ↯b (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
-/-! ### Amplification -/
-
 /-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1`, where `s` embeds additive error
 into budgets. Unlike error credits, `↯b (s 1)` is not contradictory, so the caller supplies the exit
 `□ (↯b (s 1) -∗ P)` (Approxis `ec_ind_amp`). -/
@@ -205,8 +203,6 @@ theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} 
       %(hn.trans (le_of_eq (by ring))) Hε
 
 end BudgetCredit
-
-/-! ## Allocation -/
 
 /-- Allocating a fresh budget `b` yields both the authority and a credit `b`. -/
 theorem bc_alloc {B : Type} [AddCommMonoid B] {GF : BundledGFunctors}

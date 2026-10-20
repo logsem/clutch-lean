@@ -18,8 +18,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-- Pointwise form: every successor of positive mass is a value; converted to `Atomic'` by
-`toAtomic'` when the redex is not `urand`. -/
+/-- Pointwise form: every successor of positive mass is a value. -/
 def Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
@@ -62,7 +61,6 @@ private theorem alloc_decompItem (v : Val rT) : (Exp.alloc v.1).decompItem = non
 
 /-! ## `Atomic` for heap and sampling redexes -/
 
-/-- Loading from a location is atomic. -/
 theorem load (l : Loc) : Atomic (rT := rT) pl(!#(.loc l)) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
@@ -71,14 +69,12 @@ theorem load (l : Loc) : Atomic (rT := rT) pl(!#(.loc l)) :=
       subst he'
       exact v.2.toIsValue
 
-/-- Storing a value at a location is atomic. -/
 theorem store (l : Loc) (v : Val rT) :
     Atomic (.store pl(#(.loc l)) v.1) :=
   of_headStepSupport (store_decompItem l v) fun _ _ _ h => by
     cases h with
     | StoreS _ _ _ => exact IsVal.lit.toIsValue
 
-/-- Allocation is atomic. -/
 theorem alloc (v : Val rT) : Atomic (.alloc v.1) :=
   of_headStepSupport (alloc_decompItem v) fun _ _ _ h => by
     cases h with
@@ -91,7 +87,6 @@ theorem rand_unit (z : Int) : Atomic (rT := rT) pl(rand(#(.int z), #(.unit))) :=
     | RandNoTapeS _ _ _ => exact IsVal.lit.toIsValue
     | RandNonposS _ => exact IsVal.lit.toIsValue
 
-/-- `rand` on a labelled tape is atomic. -/
 theorem rand_lbl (z : Int) (l : Loc) :
     Atomic (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
   of_headStepSupport rfl fun _ _ _ h => by
@@ -99,8 +94,7 @@ theorem rand_lbl (z : Int) (l : Loc) :
 
 /-! ## `Atomic'` for the redexes the program logic opens invariants around
 
-Each is `toAtomic'` of the matching lemma above; `decomp.2 ≠ .urand` reduces because the redex is
-a concrete constructor. `urand'` is proved directly. -/
+`decomp.2 ≠ .urand` reduces because each redex is a concrete constructor. -/
 
 theorem load' (l : Loc) : Atomic' (rT := rT) pl(!#(.loc l)) :=
   toAtomic' (load l) (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)

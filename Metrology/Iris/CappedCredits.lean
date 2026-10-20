@@ -223,8 +223,6 @@ theorem difference [Sub B] [OrderedSub B] {a b : B} (h : b ≤ a) :
     ↯c a ⊢@{IProp GF} ↯c b ∗ ↯c (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
-/-! ### Timelessness -/
-
 /-- Credits are timeless. -/
 instance timeless_cc (c : B) : BI.Timeless (↯c c : IProp GF) := iOwn_timeless
 
@@ -232,8 +230,6 @@ instance timeless_cc (c : B) : BI.Timeless (↯c c : IProp GF) := iOwn_timeless
 instance timeless_ccAuth (s : B) : BI.Timeless (●↯c s : IProp GF) := iOwn_timeless
 
 end CappedCredit
-
-/-! ## Allocation -/
 
 /-- Allocating a fresh valid budget `b` yields both the authority and a credit `b`
 (Rocq `gccredit_alloc`). -/

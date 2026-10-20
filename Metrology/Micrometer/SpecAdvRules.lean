@@ -10,9 +10,8 @@ set_option linter.discrete false
 
 /-! # Spec-side advanced composition
 
-A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome credits `↯b (s (ε₂ n))`,
-as in Eris `wp_couple_rand_adv_comp` (spec side): `wp_rand_r_adv`, and `refines_randU_r_adv` for
-refinements. -/
+A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome credits `↯b (s (ε₂ n))`
+(Eris `wp_couple_rand_adv_comp`, spec side). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open scoped ENNReal AppGS
@@ -38,7 +37,6 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     wp L E e Φ := by
   classical
   iintro ⟨Hj, Hc, Hcnt⟩
-  -- spec-only step: `wp_lift_step_spec_couple` asks for a coupling of the spec draw
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj

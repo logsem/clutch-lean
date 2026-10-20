@@ -5,8 +5,7 @@ public import Mathlib.Probability.Distributions.Bernoulli
 
 /-! # KL over two coins
 
-KL budgets add along two coin flips, through the KL bind law (`BindLaw.kl`).
-Main result: `klDiv_two_flips_le`, two flips cost at most twice the one-flip KL. -/
+Two coin flips cost at most twice the one-flip KL, by the KL bind law (`klDiv_two_flips_le`). -/
 
 @[expose] public section
 
@@ -42,10 +41,8 @@ theorem flipAgain_rel (a : Bool) : (markovCodensity klDivergence).Rel (klDiv (co
       · simp [relCost_of_not h]
 
 /-- The KL divergence between two flips of a `p`-coin and of a `q`-coin is at most twice that
-between one flip of each.
-
-Proof: the first flip (`coin_rel`) gives one budget, the second flip (`flipAgain_rel`) gives the
-other, and `BindLaw.kl` adds them; its mass side condition holds since coin flips lose no mass. -/
+between one flip of each, by `BindLaw.kl`; its mass side condition holds since coin flips lose
+no mass. -/
 theorem klDiv_two_flips_le :
     klDiv (flipAgain p ∘ₘ coin p) (flipAgain q ∘ₘ coin q) ≤ 2 * klDiv (coin p) (coin q) := by
   rw [two_mul]

@@ -33,7 +33,6 @@ theorem progCoupl_dpRhs {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
       (ε₁ + ε₂, δ₁ + expBudget ε₁ * ∫⁻ ρ, D ρ ∂primStep ⟨e₁', σ₁'⟩) Z := by
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
-  -- Per-pair continuation budget: `(ε₂, D ρ')` on `S`-related pairs, `⊤` (unusable) elsewhere.
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' => if S ρ ρ' then (ε₂, D ρ') else ⊤
   iintro H
   iapply progCoupl_steps_law (R := R) BindLaw.dpRhs Hred Hred'
@@ -64,7 +63,6 @@ theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp
     progCoupl (codensity dp) e₁ σ₁ e₁' σ₁' b Z := by
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
-  -- Per-pair budget: the `P`-split choice on pairs related by `S₁` or `S₂`, `⊤` elsewhere.
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' =>
     if S₁ ρ ρ' ∨ S₂ ρ ρ' then (if ρ ∈ P then (ε₂, δ₂) else (ε₂', δ₂))
     else (⊤ : ℝ≥0∞ × ℝ≥0∞)
@@ -78,7 +76,7 @@ theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp
   · simp only [R, hS, ↓reduceIte]
     iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hS
   · simp only [R, hS, ↓reduceIte] at hR
-    -- unrelated pairs carry budget `⊤ + c = ⊤`, which `hR` rules out
+    -- unrelated pairs carry budget `⊤`, which `hR` rules out
     have htop : (⊤ : ℝ≥0∞ × ℝ≥0∞) + c = (⊤ : ℝ≥0∞ × ℝ≥0∞) :=
       Prod.ext (top_add c.1) (top_add c.2)
     exact absurd htop hR.ne

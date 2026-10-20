@@ -9,9 +9,8 @@ import Mathlib.Data.List.GetD
 
 /-! # Specs of the random function and random permutation
 
-Representation predicates, creation and query specs for the closures of `Code/Switching`, and the
-fresh-query coupling `wp_rfQuery_prpQuery_fresh` (switching step, cost `m.length / N`).
-Ported from clutch's `is_random_function`/`is_prp` (`theories/approxis/examples/{prf,prp}.v`). -/
+Specs for the closures of `Code/Switching` and the fresh-query coupling `wp_rfQuery_prpQuery_fresh`.
+Rocq source: clutch's `is_random_function`/`is_prp` (`theories/approxis/examples/{prf,prp}.v`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal

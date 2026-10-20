@@ -4,9 +4,8 @@ public import Metrology.Micrometer.WpLifting
 
 /-! # Head-step lifting rules of `wp`
 
-The step-lifting rules of `WpLifting` restated for `headStep`: the atomic rule
-`wp_lift_atomic_head_step` (used by `wp_alloc`, `wp_load`, `wp_rand`) and its variants over a
-carrying set (Rocq `approxis/ectx_lifting.v`). -/
+The step-lifting rules of `WpLifting` restated for `headStep`, mainly `wp_lift_atomic_head_step`
+(Rocq `approxis/ectx_lifting.v`). -/
 
 @[expose] public section
 
@@ -70,8 +69,7 @@ theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
 
 The head-step rules gate on `headStep`, and head-reducibility is only known inside the assertion.
 Off the head-reducible states the redex may sit under a context and `primStep` moves elsewhere,
-so the carrying set is padded to `Set.univ` there, where concentration is free
-(`measurableSet_headPad`, `concentrated_headPad`). -/
+so the carrying set is padded to `Set.univ` there, where concentration is free. -/
 
 open scoped Classical in
 /-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, is measurable. -/

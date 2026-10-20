@@ -7,8 +7,7 @@ public import Metrology.Couplings.LiftingHom
 
 /-! # Additive and DP couplings as codensity liftings
 
-Additive couplings, couplings in expectation and test-function DP couplings are the codensity
-liftings of `tv` and `dp`: `addCoupl_iff_codensity_tv`, `arCoupling_dp_iff_codensity`
+Additive couplings and test-function DP couplings are the codensity liftings of `tv` and `dp`
 (Approximate Span Liftings, §6). -/
 
 @[expose] public section

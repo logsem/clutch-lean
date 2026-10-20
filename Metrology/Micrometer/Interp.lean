@@ -232,8 +232,7 @@ theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 σ Δ) (ih2 σ Δ)
   | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 σ Δ) (ih2 σ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
-  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
-  -- (OFE.eq_dist) via the constructor's _ne lemma.
+  -- Binder cases: as in `interp_rename`.
   | rec' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
   | forall' τ' ih =>
@@ -242,8 +241,7 @@ theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
     exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
   | _ => rfl
 
-/-- Substituting `τ'` for the innermost variable interprets it as `⟦τ'⟧Δ`:
-`⟦τ[τ'/0]⟧Δ = ⟦τ⟧(⟦τ'⟧Δ :: Δ)`. -/
+/-- Substituting `τ'` for the innermost variable interprets it as `⟦τ'⟧Δ`. -/
 theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
     interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
   unfold Ty.single

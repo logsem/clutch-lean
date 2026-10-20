@@ -79,8 +79,7 @@ variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
-booleans: the credit is a resource carried through the linear context once
-(`bin_log_related_under_linear_ctx`), and the context's own steps are budget-free. -/
+booleans. -/
 theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       (Δ : TyEnv rT GF), ⊢@{IProp GF} ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
@@ -168,7 +167,7 @@ variable {rT : Type} {GF : BundledGFunctors}
   [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed] [RefinesPreGS rT B GF]
 variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
-/-! ## Without credits: the inequality inside `CtxRefines` -/
+/-! ## Without credits -/
 
 variable (L) in
 /-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
@@ -197,9 +196,7 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
   exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
     adequacyRel_boolEqVal_mem
 
-/-- A closed budget-free refinement makes each typed boolean context with fresh binders return `b`
-on the left no more often than on the right, from the same state (the inequality inside
-`CtxRefines`). -/
+/-- `refines_sound_open_fresh` for closed programs. -/
 theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
     (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)

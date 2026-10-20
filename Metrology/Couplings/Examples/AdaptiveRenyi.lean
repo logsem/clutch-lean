@@ -4,10 +4,8 @@ public import Metrology.Couplings.Divergences.RenyiAdaptive
 
 /-! # Adaptive Rényi example: two-stage randomized response
 
-A second randomized response runs only when the first report is `true`. The escort rule
-(`codensity_renyi_bind_escort`) gives Rényi budget `log (19 / 12)` at order `2`
-(`renyiDivergence_adaptive`, Rocq `escort_adaptive`), strictly below the non-adaptive
-`2 · log (3 / 2)` (`log_nineteen_twelfths_lt`). -/
+A second randomized response runs only when the first report is `true`; the escort rule gives
+Rényi budget `log (19 / 12)` at order `2` (`renyiDivergence_adaptive`), below the non-adaptive one. -/
 
 @[expose] public section
 
@@ -85,8 +83,7 @@ theorem renyiDivergence_randResp_escort :
   norm_num [Real.exp_log]
 
 /-- The adaptive mechanism on adjacent inputs is within Rényi budget `log (19 / 12)` at order
-`2` (Rocq `escort_adaptive`). Uses `codensity_renyi_bind_escort`, the lemma behind
-`BindLaw.escort`. -/
+`2` (Rocq `escort_adaptive`). -/
 theorem renyiDivergence_adaptive :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (adaptive false) (adaptive true) := by
   have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩

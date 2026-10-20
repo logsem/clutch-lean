@@ -4,9 +4,8 @@ public import Metrology.Couplings.Codensity
 
 /-! # Lifting homomorphisms and regrading
 
-Monotone budget maps between graded liftings (`LiftingRelHom`, `LiftingHom`), and regrading a
-lifting along a budget map (`GradedLifting.comap`) with its transport lemmas (Rocq `morphism.v`,
-`regrade.v`). -/
+Budget maps between graded liftings (`LiftingRelHom`, `LiftingHom`) and regrading a lifting
+along one (`GradedLifting.comap`) (Rocq `morphism.v`, `regrade.v`). -/
 
 @[expose] public section
 
@@ -104,10 +103,7 @@ end LiftingHom
 
 namespace GradedLifting
 
-/-! ## Regrading along a budget map
-
-`L.comap φ` reads budget and leftovers through `φ`; the lemmas below say which lifting
-properties survive, under which conditions on `φ`. -/
+/-! ## Regrading along a budget map -/
 
 variable {B : Type v} {B' : Type w} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
   {φ : B' → B} {L : GradedLifting.{u} B} {b : B'} {S : X → Y → Prop} {μ : Measure X}

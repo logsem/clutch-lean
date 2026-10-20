@@ -7,9 +7,8 @@ public import Iris.BI.Lib.Fixpoint
 /-!
 # Fixpoint and discrete-OFE lemmas
 
-Provides `least_fixpoint_ne_outer`, the non-expansiveness step for `wp` and `specCoupl` (both
-least fixpoints), and `nonExpansive_of_discrete_leibniz`, which supplies the `[NonExpansive Ψ]`
-argument of fixpoint induction.
+Non-expansiveness of least fixpoints (for `wp` and `specCoupl`) and of functions out of discrete
+COFEs (the `[NonExpansive Ψ]` argument of fixpoint induction).
 -/
 
 open Iris Iris.BI OFE

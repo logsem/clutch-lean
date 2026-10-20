@@ -23,11 +23,8 @@ abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
 
-/-- The relation of the entry for `x` deepest in the list (the earliest bound; head entries do not
-shadow).
-
-Same order as `ValSubstMap.lookup`; callers only cons fresh variables, so the
-choice never matters. -/
+/-- The relation of the deepest entry for `x` in the list, as in `ValSubstMap.lookup`; callers
+only cons fresh variables, so the order never matters. -/
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
   | [], _ => none
   | (y, A) :: rest, x =>
@@ -75,9 +72,8 @@ end RelCtx
 section env_typed
 variable {GF : BundledGFunctors}
 
-/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations. The
-closedness conjunct covers every entry of `vs`, including shadowed ones that `lookup` cannot
-reach; `substMap` lemmas need it (`SubstMap.AllClosed`). -/
+/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations; the
+closedness conjunct also covers shadowed entries, as `SubstMap.AllClosed` needs. -/
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
