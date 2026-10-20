@@ -564,7 +564,7 @@ theorem Measure.measurable_map_uncurry {α β γ : Type _}
   exact ProbabilityTheory.Kernel.measurable_kernel_prodMk_left hT
 
 /-- A monotone sequence of measurable measure-valued maps has a measurable supremum. -/
-theorem Measure.measurable_iSup_countable {α β : Type _}
+theorem Measure.measurable_iSup_of_monotone {α β : Type _}
     [MeasurableSpace α] [MeasurableSpace β]
     {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))
     (hmono : ∀ a, Monotone (fun i => μ i a)) :

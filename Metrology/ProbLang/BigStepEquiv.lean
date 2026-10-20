@@ -95,6 +95,13 @@ theorem map_bind_discrete (μ : Measure (Cfg rT)) (f : Cfg rT → Cfg rT)
     (g : Cfg rT → Measure (Cfg rT)) : (μ.map f).bind g = μ.bind (g ∘ f) := by
   rw [Measure.bind, Measure.bind, Measure.map_map Measurable.of_discrete Measurable.of_discrete]
 
+/-- Monotone convergence for a countable sum over configurations (via counting measure). -/
+theorem Cfg.tsum_iSup_of_monotone {f : ℕ → Cfg rT → ENNReal}
+    (hf : ∀ a, Monotone (f · a)) (hm : ∀ x, Measurable (f x)) :
+    ∑' a, ⨆ n, f n a = ⨆ n, ∑' a, f n a := by
+  simp_rw [← MeasureTheory.lintegral_count]
+  exact MeasureTheory.lintegral_iSup (fun _ => hm _) (fun _ _ hmn a => hf a hmn)
+
 /-- `bind` is continuous in its measure argument. -/
 theorem iSup_bind_discrete {μ : ℕ → Measure (Cfg rT)} (hμ : Monotone μ)
     (f : Cfg rT → Measure (Cfg rT)) : (⨆ n, μ n).bind f = ⨆ n, (μ n).bind f := by
@@ -105,7 +112,7 @@ theorem iSup_bind_discrete {μ : ℕ → Measure (Cfg rT)} (hμ : Monotone μ)
     lintegral_countable']
   simp_rw [bind_apply hs Measurable.of_discrete.aemeasurable, lintegral_countable',
     iSup_measure_apply hμ (MeasurableSet.singleton _), ENNReal.mul_iSup]
-  exact ENNReal.tsum_iSup_of_monotone_cts (fun c _ _ h => mul_le_mul_right (hμ h _) _)
+  exact Cfg.tsum_iSup_of_monotone (fun c _ _ h => mul_le_mul_right (hμ h _) _)
     fun _ => Measurable.of_discrete
 
 /-! ## The big-step semantics -/

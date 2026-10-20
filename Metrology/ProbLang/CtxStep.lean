@@ -416,27 +416,27 @@ theorem ectxi_language_subRedexesAreValues [LawfulProbLangℝ rT] {e : Exp rT}
 /-! ## Stuck and not-stuck configurations -/
 
 /-- The expression is a value or can step. -/
-def notStuck [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
+def NotStuck [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
   e.isValue ∨ Reducible e σ
 
 theorem NotStuck.of_fill [LawfulProbLangℝ rT]
     (K : Ectx rT) {e : Exp rT} {σ : State rT}
-    (h : notStuck (K.fill e) σ) : notStuck e σ := by
+    (h : NotStuck (K.fill e) σ) : NotStuck e σ := by
   rcases h with hv | hred
   · exact .inl (Ectx.fill_isValue hv)
   · exact if hv : e.isValue then .inl hv
     else .inr (hred.of_fill K hv)
 
 /-- The expression is neither a value nor reducible. -/
-def stuck [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
+def Stuck [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
   ¬ e.isValue ∧ ¬ Reducible e σ
 
 theorem stuck_iff_not_notStuck [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT} :
-    stuck e σ ↔ ¬ notStuck e σ := by simp [stuck, notStuck]
+    Stuck e σ ↔ ¬ NotStuck e σ := by simp [Stuck, NotStuck]
 
 theorem Stuck.fill [LawfulProbLangℝ rT]
     (K : Ectx rT) {e : Exp rT} {σ : State rT}
-    (h : stuck e σ) : stuck (K.fill e) σ :=
+    (h : Stuck e σ) : Stuck (K.fill e) σ :=
   ⟨fun hv => h.1 (Ectx.fill_isValue hv),
    fun hred => h.2 (hred.of_fill K h.1)⟩
 

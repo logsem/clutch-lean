@@ -135,7 +135,7 @@ theorem asExpr.measurable :
 
 @[fun_prop]
 theorem limExec.measurable : Measurable (limExec : Cfg rT → Measure (Cfg rT)) :=
-  Measure.measurable_iSup_countable (fun n => execN_measurable n)
+  Measure.measurable_iSup_of_monotone (fun n => execN_measurable n)
     (fun ρ _ _ h => execN_mono h ρ)
 
 @[fun_prop]
@@ -346,13 +346,6 @@ theorem lintegral_limExec
     rw [lintegral_def]
     exact le_iSup_of_le g (le_iSup_of_le hg le_rfl)
   · exact iSup_le fun n => lintegral_mono' (le_iSup (fun i => execN i ρ) n) le_rfl
-
-/-- Monotone convergence for a countable sum over configurations (via counting measure). -/
-theorem ENNReal.tsum_iSup_of_monotone_cts {f : ℕ → Cfg rT → ENNReal}
-    (hf : ∀ a, Monotone (f · a)) (hm : ∀ x, Measurable (f x)) :
-    ∑' a, ⨆ n, f n a = ⨆ n, ∑' a, f n a := by
-  simp_rw [← MeasureTheory.lintegral_count]
-  exact MeasureTheory.lintegral_iSup (fun _ => hm _) (fun _ _ hmn a => hf a hmn)
 
 /-! ## Splitting `execN` by termination time -/
 

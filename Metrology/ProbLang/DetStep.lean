@@ -88,7 +88,7 @@ theorem PureExec.not_val {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
   exact val_stuck (hstep.safe default)
 
 /-- Pure steps from a value reach only that value. -/
-theorem rtc_pure_step_val {n : ℕ} {v : Val rT} {e : Exp rT}
+theorem nsteps_pureStep_of_val {n : ℕ} {v : Val rT} {e : Exp rT}
     (h : nsteps PureStep n v.1 e) :
     e.toVal? = some v := by
   cases n with
