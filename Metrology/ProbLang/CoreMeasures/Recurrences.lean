@@ -1754,6 +1754,100 @@ theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] [MeasurableSin
   apply measurable_from_prod_countable_right
   exact tryMatch_fixed.measurable
 
+/-- The set where `Pat.shape` of a measurable `Exp × Pat`-valued map is `s` is measurable,
+given the cell hypothesis at `s`. -/
+theorem tryMatch.measurableSet_shape_preimage [LawfulProbLangℝ rT] {s : Pat.Shape}
+    {α : Type*} [MeasurableSpace α]
+    (ih : ∀ {U : Set (Option (Exp rT))}, MeasurableSet U →
+      MeasurableSet {q : Exp rT × Pat rT | Pat.shape q.2 = s ∧
+        Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
+    {g : α → Exp rT × Pat rT} (hg : Measurable g) :
+    MeasurableSet {q : α | Pat.shape (g q).2 = s} := by
+  convert (ih MeasurableSet.univ).preimage hg using 1
+  ext q; simp
+
+/-- The cell of a pattern shape `sw` wrapping `s'` by a unary constructor (`inl` or `inr`) is
+measurable: the wrapped match splits on whether the `Exp` is built by `ctorE` (cell IH) or not
+(`none`). -/
+theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
+    {ctorE : Exp rT → Exp rT} {ctorP : Pat rT → Pat rT}
+    (hE : MeasurableEmbedding ctorE) (hP : MeasurableEmbedding ctorP)
+    (hcases : ∀ p, Pat.shape p = sw → ∃ p', p = ctorP p' ∧ Pat.shape p' = s')
+    (hshape : ∀ p', Pat.shape (ctorP p') = sw ↔ Pat.shape p' = s')
+    (hA : ∀ e' p', Pat.tryMatch (ctorP p') (ctorE e') = Pat.tryMatch p' e')
+    (hB : ∀ e p', (¬ ∃ e', ctorE e' = e) → Pat.tryMatch (ctorP p') e = none)
+    (ih : ∀ {U : Set (Option (Exp rT))}, MeasurableSet U →
+      MeasurableSet {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
+        Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
+    {U : Set (Option (Exp rT))} (hU : MeasurableSet U) :
+    MeasurableSet {q : Exp rT × Pat rT | Pat.shape q.2 = sw ∧
+      Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U} := by
+  have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = sw ∧
+        Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
+      = (Prod.map (id : Exp rT → Exp rT) ctorP) ''
+        {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧ Pat.tryMatch (ctorP q.2) q.1 ∈ U} := by
+    ext ⟨e, p⟩
+    constructor
+    · rintro ⟨hsh, hp⟩
+      obtain ⟨p', rfl, hs'⟩ := hcases p hsh
+      exact ⟨(e, p'), ⟨hs', hp⟩, by simp [Prod.map_apply]⟩
+    · rintro ⟨⟨e0, p0⟩, ⟨hsh, hp⟩, hheq⟩
+      simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at hheq
+      obtain ⟨rfl, rfl⟩ := hheq
+      exact ⟨(hshape _).2 hsh, hp⟩
+  rw [hcell]
+  refine (MeasurableEmbedding.id.prodMap hP).measurableSet_image' ?_
+  have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
+          Pat.tryMatch (ctorP q.2) q.1 ∈ U}
+      = ((Prod.map ctorE (id : Pat rT → Pat rT)) ''
+          {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
+            Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
+        ∪ ({q : Exp rT × Pat rT | q.1 ∉ Set.range ctorE ∧
+            Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}) := by
+    ext ⟨e, p'⟩
+    simp only [Set.mem_ofPred_eq, Set.mem_union, Set.mem_image, Set.mem_range]
+    constructor
+    · rintro ⟨hsh, hp⟩
+      by_cases hrange : ∃ e', ctorE e' = e
+      · left
+        obtain ⟨e', rfl⟩ := hrange
+        refine ⟨(e', p'), ⟨hsh, ?_⟩, ?_⟩
+        · show Pat.tryMatch p' e' ∈ U
+          rw [← hA]; exact hp
+        · simp [Prod.map_apply]
+      · right
+        refine ⟨hrange, hsh, ?_⟩
+        rw [hB _ _ hrange] at hp
+        exact hp
+    · rintro (⟨⟨e0, p0⟩, ⟨hsh, hp⟩, heq⟩ | ⟨hne, hsh, hnone⟩)
+      · simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
+        obtain ⟨rfl, rfl⟩ := heq
+        refine ⟨hsh, ?_⟩
+        rw [hA]; exact hp
+      · refine ⟨hsh, ?_⟩
+        rw [hB _ _ hne]; exact hnone
+  rw [h_inner_eq]
+  refine MeasurableSet.union ?_ ?_
+  · refine (hE.prodMap MeasurableEmbedding.id).measurableSet_image' ?_
+    exact ih hU
+  · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
+    · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range ctorE ∧
+          Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}
+          = (((Set.range ctorE)ᶜ ×ˢ (Set.univ : Set (Pat rT)))
+              ∩ {q : Exp rT × Pat rT | Pat.shape q.2 = s'}) := by
+        ext ⟨e, p'⟩
+        simp [hnoneU]
+      rw [hB_eq2]
+      exact (MeasurableSet.prod hE.measurableSet_range.compl MeasurableSet.univ).inter
+        (tryMatch.measurableSet_shape_preimage ih measurable_id)
+    · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range ctorE ∧
+          Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U} = ∅ := by
+        ext ⟨e, p'⟩
+        simp [hnoneU]
+      rw [hB_eq2]
+      exact MeasurableSet.empty
+
+
 /-- Unlike `tryMatch.measurable`, needs no `Countable rT`. `tryMatch` recurses on both
 arguments, so each `Pat.shape` cell is computed by hand: the pattern constructor's
 embedding factors out, and the `Exp` argument splits into the matching constructor's
@@ -1836,172 +1930,16 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       · exact MeasurableSet.empty
     | inl s' ih =>
       intro U hU
-      have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.inl s' ∧
-            Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-          = (Prod.map (id : Exp rT → Exp rT) Pat.inl) ''
-            {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              Pat.tryMatch (Pat.inl q.2) q.1 ∈ U} := by
-        ext ⟨e, p⟩
-        constructor
-        · rintro ⟨hsh, hp⟩
-          cases p
-          case wildcard => simp at hsh
-          case lit b => simp at hsh
-          case pair p1 p2 => simp at hsh
-          case inl p' =>
-            simp only [Pat.shape_inl, Pat.Shape.inl.injEq] at hsh
-            exact ⟨(e, p'), ⟨hsh, hp⟩, by simp [Prod.map_apply]⟩
-          case inr p' => simp at hsh
-        · rintro ⟨⟨e0, p0⟩, ⟨hsh, hp⟩, hheq⟩
-          simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at hheq
-          obtain ⟨rfl, rfl⟩ := hheq
-          exact ⟨by simp [hsh], hp⟩
-      rw [hcell]
-      refine (MeasurableEmbedding.id.prodMap Pat.inl.measurableEmbedding).measurableSet_image' ?_
-      have hA_eq : ∀ (e' : Exp rT) (p' : Pat rT),
-          Pat.tryMatch (Pat.inl p') (Exp.inl e') = Pat.tryMatch p' e' := fun _ _ => rfl
-      have hB_eq : ∀ (e : Exp rT) (p' : Pat rT), (¬ ∃ e', Exp.inl e' = e) →
-          Pat.tryMatch (Pat.inl p') e = none := by
-        intro e p' h
-        cases e
-        all_goals first
-          | rfl
-          | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
-      have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              Pat.tryMatch (Pat.inl q.2) q.1 ∈ U}
-          = ((Prod.map (Exp.inl : Exp rT → Exp rT) (id : Pat rT → Pat rT)) ''
-              {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-                Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
-            ∪ ({q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inl : Exp rT → Exp rT) ∧
-                Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}) := by
-        ext ⟨e, p'⟩
-        simp only [Set.mem_ofPred_eq, Set.mem_union, Set.mem_image, Set.mem_range]
-        constructor
-        · rintro ⟨hsh, hp⟩
-          by_cases hrange : ∃ e', Exp.inl e' = e
-          · left
-            obtain ⟨e', rfl⟩ := hrange
-            refine ⟨(e', p'), ⟨hsh, ?_⟩, ?_⟩
-            · show Pat.tryMatch p' e' ∈ U
-              rw [← hA_eq]; exact hp
-            · simp [Prod.map_apply]
-          · right
-            refine ⟨hrange, hsh, ?_⟩
-            rw [hB_eq _ _ hrange] at hp
-            exact hp
-        · rintro (⟨⟨e0, p0⟩, ⟨hsh, hp⟩, heq⟩ | ⟨hne, hsh, hnone⟩)
-          · simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
-            obtain ⟨rfl, rfl⟩ := heq
-            refine ⟨hsh, ?_⟩
-            rw [hA_eq]; exact hp
-          · refine ⟨hsh, ?_⟩
-            rw [hB_eq _ _ hne]; exact hnone
-      rw [h_inner_eq]
-      refine MeasurableSet.union ?_ ?_
-      · refine (Exp.inl.measurableEmbedding.prodMap MeasurableEmbedding.id).measurableSet_image' ?_
-        exact ih hU
-      · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
-        · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inl : Exp rT → Exp rT) ∧
-              Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}
-              = (((Set.range (Exp.inl : Exp rT → Exp rT))ᶜ ×ˢ (Set.univ : Set (Pat rT)))
-                  ∩ {q : Exp rT × Pat rT | Pat.shape q.2 = s'}) := by
-            ext ⟨e, p'⟩
-            simp [hnoneU]
-          rw [hB_eq2]
-          refine MeasurableSet.inter (MeasurableSet.prod ?_ MeasurableSet.univ) ?_
-          · exact Exp.inl.measurableEmbedding.measurableSet_range.compl
-          · have hih_univ := ih (MeasurableSet.univ (α := Option (Exp rT)))
-            convert hih_univ using 1
-            ext ⟨e, p'⟩; simp
-        · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inl : Exp rT → Exp rT) ∧
-              Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U} = ∅ := by
-            ext ⟨e, p'⟩
-            simp [hnoneU]
-          rw [hB_eq2]
-          exact MeasurableSet.empty
+      refine tryMatch.measurableSet_wrap Exp.inl.measurableEmbedding Pat.inl.measurableEmbedding
+        (fun p hsh => by cases p <;> simp_all) (fun p' => by simp) (fun _ _ => rfl) ?_ ih hU
+      intro e p' h
+      cases e <;> first | rfl | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
     | inr s' ih =>
       intro U hU
-      have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.inr s' ∧
-            Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-          = (Prod.map (id : Exp rT → Exp rT) Pat.inr) ''
-            {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              Pat.tryMatch (Pat.inr q.2) q.1 ∈ U} := by
-        ext ⟨e, p⟩
-        constructor
-        · rintro ⟨hsh, hp⟩
-          cases p
-          case wildcard => simp at hsh
-          case lit b => simp at hsh
-          case pair p1 p2 => simp at hsh
-          case inl p' => simp at hsh
-          case inr p' =>
-            simp only [Pat.shape_inr, Pat.Shape.inr.injEq] at hsh
-            exact ⟨(e, p'), ⟨hsh, hp⟩, by simp [Prod.map_apply]⟩
-        · rintro ⟨⟨e0, p0⟩, ⟨hsh, hp⟩, hheq⟩
-          simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at hheq
-          obtain ⟨rfl, rfl⟩ := hheq
-          exact ⟨by simp [hsh], hp⟩
-      rw [hcell]
-      refine (MeasurableEmbedding.id.prodMap Pat.inr.measurableEmbedding).measurableSet_image' ?_
-      have hA_eq : ∀ (e' : Exp rT) (p' : Pat rT),
-          Pat.tryMatch (Pat.inr p') (Exp.inr e') = Pat.tryMatch p' e' := fun _ _ => rfl
-      have hB_eq : ∀ (e : Exp rT) (p' : Pat rT), (¬ ∃ e', Exp.inr e' = e) →
-          Pat.tryMatch (Pat.inr p') e = none := by
-        intro e p' h
-        cases e
-        all_goals first
-          | rfl
-          | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
-      have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-              Pat.tryMatch (Pat.inr q.2) q.1 ∈ U}
-          = ((Prod.map (Exp.inr : Exp rT → Exp rT) (id : Pat rT → Pat rT)) ''
-              {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-                Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
-            ∪ ({q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inr : Exp rT → Exp rT) ∧
-                Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}) := by
-        ext ⟨e, p'⟩
-        simp only [Set.mem_ofPred_eq, Set.mem_union, Set.mem_image, Set.mem_range]
-        constructor
-        · rintro ⟨hsh, hp⟩
-          by_cases hrange : ∃ e', Exp.inr e' = e
-          · left
-            obtain ⟨e', rfl⟩ := hrange
-            refine ⟨(e', p'), ⟨hsh, ?_⟩, ?_⟩
-            · show Pat.tryMatch p' e' ∈ U
-              rw [← hA_eq]; exact hp
-            · simp [Prod.map_apply]
-          · right
-            refine ⟨hrange, hsh, ?_⟩
-            rw [hB_eq _ _ hrange] at hp
-            exact hp
-        · rintro (⟨⟨e0, p0⟩, ⟨hsh, hp⟩, heq⟩ | ⟨hne, hsh, hnone⟩)
-          · simp only [Prod.map_apply, id_eq, Prod.mk.injEq] at heq
-            obtain ⟨rfl, rfl⟩ := heq
-            refine ⟨hsh, ?_⟩
-            rw [hA_eq]; exact hp
-          · refine ⟨hsh, ?_⟩
-            rw [hB_eq _ _ hne]; exact hnone
-      rw [h_inner_eq]
-      refine MeasurableSet.union ?_ ?_
-      · refine (Exp.inr.measurableEmbedding.prodMap MeasurableEmbedding.id).measurableSet_image' ?_
-        exact ih hU
-      · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
-        · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inr : Exp rT → Exp rT) ∧
-              Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}
-              = (((Set.range (Exp.inr : Exp rT → Exp rT))ᶜ ×ˢ (Set.univ : Set (Pat rT)))
-                  ∩ {q : Exp rT × Pat rT | Pat.shape q.2 = s'}) := by
-            ext ⟨e, p'⟩; simp [hnoneU]
-          rw [hB_eq2]
-          refine MeasurableSet.inter (MeasurableSet.prod ?_ MeasurableSet.univ) ?_
-          · exact Exp.inr.measurableEmbedding.measurableSet_range.compl
-          · have hih_univ := ih (MeasurableSet.univ (α := Option (Exp rT)))
-            convert hih_univ using 1
-            ext ⟨e, p'⟩; simp
-        · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range (Exp.inr : Exp rT → Exp rT) ∧
-              Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U} = ∅ := by
-            ext ⟨e, p'⟩; simp [hnoneU]
-          rw [hB_eq2]
-          exact MeasurableSet.empty
+      refine tryMatch.measurableSet_wrap Exp.inr.measurableEmbedding Pat.inr.measurableEmbedding
+        (fun p hsh => by cases p <;> simp_all) (fun p' => by simp) (fun _ _ => rfl) ?_ ih hU
+      intro e p' h
+      cases e <;> first | rfl | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
     | pair s1 s2 ih1 ih2 =>
       intro U hU
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.pair s1 s2 ∧
@@ -2103,23 +2041,15 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
                 ((measurable_snd.comp measurable_fst).prodMk measurable_snd))
         set V : Set (Option (Exp rT) × Option (Exp rT)) := qfun ⁻¹' U with hV_def
         have hV : MeasurableSet V := hqfun_meas hU
-        suffices hgeneric :
-            ∀ V' : Set (Option (Exp rT) × Option (Exp rT)), MeasurableSet V' →
-              MeasurableSet
-                {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
-                  Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
-                  (Pat.tryMatch q.2.1 q.1.1, Pat.tryMatch q.2.2 q.1.2) ∈ V'} by
-          have hconv : {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
-                  Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
-                  ((Pat.tryMatch q.2.1 q.1.1).bind fun b1 =>
-                    (Pat.tryMatch q.2.2 q.1.2).bind fun b2 => some (Exp.pair b1 b2)) ∈ U}
-              = {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
-                  Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
-                  (Pat.tryMatch q.2.1 q.1.1, Pat.tryMatch q.2.2 q.1.2) ∈ V} := by
-            ext q; simp [hV_def, hqfun]
-          rw [hconv]
-          exact hgeneric V hV
-        intro V' hV'
+        have hconv : {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
+                Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
+                ((Pat.tryMatch q.2.1 q.1.1).bind fun b1 =>
+                  (Pat.tryMatch q.2.2 q.1.2).bind fun b2 => some (Exp.pair b1 b2)) ∈ U}
+            = {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
+                Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
+                (Pat.tryMatch q.2.1 q.1.1, Pat.tryMatch q.2.2 q.1.2) ∈ V} := by
+          ext q; simp [hV_def, hqfun]
+        rw [hconv]
         have hgen : (Prod.instMeasurableSpace : MeasurableSpace (Option (Exp rT) × Option (Exp rT)))
             = .generateFrom (Set.image2 (· ×ˢ ·) {S : Set (Option (Exp rT)) | MeasurableSet S}
                                                   {S : Set (Option (Exp rT)) | MeasurableSet S}) :=
@@ -2133,7 +2063,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           fun V'' => {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
             Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
             (Pat.tryMatch q.2.1 q.1.1, Pat.tryMatch q.2.2 q.1.2) ∈ V''} with hJoint_def
-        suffices h : ∀ V'', MeasurableSet V'' → MeasurableSet (Joint V'') by exact h V' hV'
+        suffices h : ∀ V'', MeasurableSet V'' → MeasurableSet (Joint V'') by exact h V hV
         intro V'' hV''
         refine MeasurableSpace.induction_on_inter
           (C := fun V''' _ => MeasurableSet (Joint V''')) hgen hpi ?_ ?_ ?_ ?_ V'' hV''
@@ -2164,26 +2094,14 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             ext q; simp [hJoint_def]; tauto
           rw [heq]
           refine MeasurableSet.diff ?_ IH
-          have hih1_univ := ih1 (MeasurableSet.univ (α := Option (Exp rT)))
-          have hih2_univ := ih2 (MeasurableSet.univ (α := Option (Exp rT)))
           have h1 : MeasurableSet
-              {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.1 = s1} := by
-            have : {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.1 = s1}
-                = (fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) => (q.1.1, q.2.1)) ⁻¹'
-                  {x : Exp rT × Pat rT | Pat.shape x.2 = s1 ∧
-                    Function.uncurry (fun e p => Pat.tryMatch p e) x ∈ Set.univ} := by
-              ext q; simp
-            rw [this]
-            exact MeasurableSet.preimage hih1_univ (by fun_prop)
+              {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.1 = s1} :=
+            tryMatch.measurableSet_shape_preimage ih1
+              (g := fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) => (q.1.1, q.2.1)) (by fun_prop)
           have h2 : MeasurableSet
-              {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.2 = s2} := by
-            have : {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.2 = s2}
-                = (fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) => (q.1.2, q.2.2)) ⁻¹'
-                  {x : Exp rT × Pat rT | Pat.shape x.2 = s2 ∧
-                    Function.uncurry (fun e p => Pat.tryMatch p e) x ∈ Set.univ} := by
-              ext q; simp
-            rw [this]
-            exact MeasurableSet.preimage hih2_univ (by fun_prop)
+              {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) | Pat.shape q.2.2 = s2} :=
+            tryMatch.measurableSet_shape_preimage ih2
+              (g := fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) => (q.1.2, q.2.2)) (by fun_prop)
           convert h1.inter h2 using 1
           measurability
         · intro F _ _ IH
@@ -2206,26 +2124,12 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           rw [hB_eq2]
           refine MeasurableSet.inter (MeasurableSet.prod ?_ MeasurableSet.univ) ?_
           · exact Exp.pair.measurableEmbedding.measurableSet_range.compl
-          · have hih1_univ := ih1 (MeasurableSet.univ (α := Option (Exp rT)))
-            have hih2_univ := ih2 (MeasurableSet.univ (α := Option (Exp rT)))
-            have h1 : MeasurableSet
-                {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.1 = s1} := by
-              have : {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.1 = s1}
-                  = (fun q : Exp rT × Pat rT × Pat rT => (q.1, q.2.1)) ⁻¹'
-                    {x : Exp rT × Pat rT | Pat.shape x.2 = s1 ∧
-                      Function.uncurry (fun e p => Pat.tryMatch p e) x ∈ Set.univ} := by
-                ext q; simp
-              rw [this]
-              exact MeasurableSet.preimage hih1_univ (by fun_prop)
-            have h2 : MeasurableSet
-                {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.2 = s2} := by
-              have : {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.2 = s2}
-                  = (fun q : Exp rT × Pat rT × Pat rT => (q.1, q.2.2)) ⁻¹'
-                    {x : Exp rT × Pat rT | Pat.shape x.2 = s2 ∧
-                      Function.uncurry (fun e p => Pat.tryMatch p e) x ∈ Set.univ} := by
-                ext q; simp
-              rw [this]
-              exact MeasurableSet.preimage hih2_univ (by fun_prop)
+          · have h1 : MeasurableSet {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.1 = s1} :=
+              tryMatch.measurableSet_shape_preimage ih1
+                (g := fun q : Exp rT × Pat rT × Pat rT => (q.1, q.2.1)) (by fun_prop)
+            have h2 : MeasurableSet {q : Exp rT × Pat rT × Pat rT | Pat.shape q.2.2 = s2} :=
+              tryMatch.measurableSet_shape_preimage ih2
+                (g := fun q : Exp rT × Pat rT × Pat rT => (q.1, q.2.2)) (by fun_prop)
             convert h1.inter h2 using 1
             measurability
         · have hB_eq2 : {q : Exp rT × Pat rT × Pat rT |
