@@ -220,8 +220,7 @@ theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Ex
   iintro %v %v' Hv
   isimp only [interp_rec_car Δ τ v v'] at Hv
   icases Hv with ⟨-, HvL⟩
-  rw [show Ectx.fill [EctxItem.appR recUnfold] v.1 = .app (.lam (.bvar 0)) v.1 from rfl,
-    show Ectx.fill [EctxItem.appR recUnfold] v'.1 = .app (.lam (.bvar 0)) v'.1 from rfl]
+  rw [Ectx.fill_appR, Ectx.fill_appR, recUnfold]
   have hopen : ∀ w : Exp rT, open' (.bvar 0) w = w := fun w => by simp [open', openRec]
   iapply refines_beta (by is_lc) (by is_lc)
   rw [hopen, hopen]

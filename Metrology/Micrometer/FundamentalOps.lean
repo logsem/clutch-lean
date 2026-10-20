@@ -158,20 +158,17 @@ theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT) {A C :
     (∀ i1 i2, refines L ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) C) -∗
     refines L ⊤ (.binop op e1 e2) (.binop op e1' e2') C := by
   iintro IH1 IH2 Hcont
-  rw [show binop op e1 e2 = Ectx.fill [EctxItem.binopR op e1] e2 from rfl,
-    show binop op e1' e2' = Ectx.fill [EctxItem.binopR op e1'] e2' from rfl]
+  rw [← Ectx.fill_binopR op e1 e2, ← Ectx.fill_binopR op e1' e2']
   iapply refines_bind [EctxItem.binopR op e1] [EctxItem.binopR op e1'] $$ IH2
   iintro %v2 %v2' Hv2
   icases hA v2 v2' $$ Hv2 with ⟨%i2, %hv2, %hv2'⟩
-  rw [show Ectx.fill [EctxItem.binopR op e1] v2.1 = binop op e1 v2.1 from rfl,
-    show Ectx.fill [EctxItem.binopR op e1'] v2'.1 = binop op e1' v2'.1 from rfl, hv2, hv2',
+  rw [Ectx.fill_binopR, Ectx.fill_binopR, hv2, hv2',
     show binop op e1 (V i2).1 = Ectx.fill [EctxItem.binopL op (V i2)] e1 from rfl,
     show binop op e1' (V i2).1 = Ectx.fill [EctxItem.binopL op (V i2)] e1' from rfl]
   iapply refines_bind [EctxItem.binopL op (V i2)] [EctxItem.binopL op (V i2)] $$ IH1
   iintro %v1 %v1' Hv1
   icases hA v1 v1' $$ Hv1 with ⟨%i1, %hv1, %hv1'⟩
-  rw [show Ectx.fill [EctxItem.binopL op (V i2)] v1.1 = binop op v1.1 (V i2).1 from rfl,
-    show Ectx.fill [EctxItem.binopL op (V i2)] v1'.1 = binop op v1'.1 (V i2).1 from rfl, hv1, hv1']
+  rw [Ectx.fill_binopL, Ectx.fill_binopL, Exp.ofVal, hv1, hv1']
   iapply Hcont $$ %i1 %i2
 
 theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) {A C : lrel rT GF}
@@ -180,13 +177,11 @@ theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) {A C : l
     (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
     refines L ⊤ (.unop op e) (.unop op e') C := by
   iintro IH Hcont
-  rw [show unop op e = Ectx.fill [EctxItem.unop op] e from rfl,
-    show unop op e' = Ectx.fill [EctxItem.unop op] e' from rfl]
+  rw [← Ectx.fill_unop op e, ← Ectx.fill_unop op e']
   iapply refines_bind [EctxItem.unop op] [EctxItem.unop op] $$ IH
   iintro %v %v' Hv
   icases hA v v' $$ Hv with ⟨%i, %hv, %hv'⟩
-  rw [show Ectx.fill [EctxItem.unop op] v.1 = unop op v.1 from rfl,
-    show Ectx.fill [EctxItem.unop op] v'.1 = unop op v'.1 from rfl, hv, hv']
+  rw [Ectx.fill_unop, Ectx.fill_unop, hv, hv']
   iapply Hcont $$ %i
 
 theorem bin_log_related_int_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
@@ -298,9 +293,7 @@ theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2
   · iapply unboxed_type_eq HUnboxed $$ Hv1 Hv2
   icases unboxed_type_lit_shape HUnboxed $$ Hv1 with ⟨%l1, %l1', %hv1eq, %hv1'eq⟩
   icases unboxed_type_lit_shape HUnboxed $$ Hv2 with ⟨%l2, %l2', %hv2eq, %hv2'eq⟩
-  rw [show Ectx.fill [EctxItem.binopL .eq v2] v1.1 = .binop .eq v1.1 v2.1 from rfl,
-    show Ectx.fill [EctxItem.binopL .eq v2'] v1'.1 = .binop .eq v1'.1 v2'.1 from rfl,
-    hv1eq, hv2eq, hv1'eq, hv2'eq]
+  rw [Ectx.fill_binopL, Ectx.fill_binopL, Exp.ofVal, Exp.ofVal, hv1eq, hv2eq, hv1'eq, hv2'eq]
   imod Heq with %heqIff
   have hval : ∀ {w w' : Val rT} {m m' : BaseLit rT}, w.1 = .lit m → w'.1 = .lit m' →
       (w = w' ↔ m = m') := fun hw hw' => by simp [Val.ext_iff, hw, hw']
@@ -331,8 +324,8 @@ theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp
   rw [substMap_scrut, substMap_scrut, ← Ectx.fill_scrut p, ← Ectx.fill_scrut p]
   iapply refines_bind [EctxItem.scrut p] [EctxItem.scrut p] $$ (IH $$ %vs Hvs)
   iintro %v %v' #Hv
-  rw [show Ectx.fill [EctxItem.scrut p] v.1 = Ectx.fill [] (.scrut v.1 p) from rfl,
-    show Ectx.fill [EctxItem.scrut p] v'.1 = Ectx.fill [] (.scrut v'.1 p) from rfl]
+  rw [Ectx.fill_scrut, Ectx.fill_scrut, Ectx.eq_fill_nil (.scrut v.1 p),
+    Ectx.eq_fill_nil (.scrut v'.1 p)]
   icases pat_match_related Hpat v v' $$ Hv with (⟨%bb, %bb', %hr, Hbnd⟩ | %hn)
   · iapply refines_pure_l (Hex := pureExec_scrut_some) ⟨v.2.toIsValue, hr.1⟩
     inext
@@ -369,7 +362,7 @@ theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
   unfold bin_log_related_ty bin_log_related
   iintro %vs -
   rw [substMap_urand, substMap_urand, interp_real,
-    show (Exp.urand : Exp rT) = Ectx.fill [] Exp.urand from rfl]
+    Ectx.eq_fill_nil (Exp.urand : Exp rT)]
   iapply refines_couple_urands_lr id (MeasureTheory.MeasurePreserving.id _)
   iintro %r -
   simp only [id_eq, Ectx.fill_nil]
