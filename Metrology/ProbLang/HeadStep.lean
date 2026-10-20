@@ -1336,12 +1336,13 @@ def headStepKernel : Kernel (Cfg rT) (Cfg rT) where
 theorem val_head_stuck {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValue := by
   head_case <;> simp_all [Exp.isValue_iff_isValueR, Exp.isValueR]
 
-theorem Discrete.val_head_stuck_R {e : Exp rT} {σ : State rT} {ρ : Cfg rT} :
-    0 < headStep ⟨e, σ⟩ {ρ} → ¬e.isValueR := by
-  head_case <;> simp_all [Exp.isValueR]
-
 theorem val_head_stuck_R {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValueR := by
   head_case <;> simp_all [Exp.isValueR]
+
+/-- Singleton-mass form of `val_head_stuck_R`. -/
+theorem Discrete.val_head_stuck_R {e : Exp rT} {σ : State rT} {ρ : Cfg rT}
+    (h : 0 < headStep ⟨e, σ⟩ {ρ}) : ¬e.isValueR :=
+  _root_.ProbLang.val_head_stuck_R fun h0 => h.ne' (by rw [h0]; rfl)
 
 theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
   intro h; by_contra hne; rw [Exp.toVal?_eq_none.mpr hne] at h; exact absurd h (by simp)
