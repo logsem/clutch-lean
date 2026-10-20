@@ -15,17 +15,6 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-variable {α : ℝ} [hα : Fact (1 < α)]
-
-/-- A Rényi bound between the reports on different bits couples the draws: condition on the
-report. -/
-theorem rrCoupling_of_renyi {ρ : ℝ≥0∞}
-    (h : ∀ b, renyiDivergence α ρ (draw.map (rrOut b)) (draw.map (rrOut !b))) :
-    RRCoupling (codensity (renyiDivergence α)) ρ := fun b b' ↦
-  codensity_renyi_rel_of_map .of_discrete .of_discrete <| by
-    rcases Bool.eq_or_eq_not b' b with rfl | rfl
-    exacts [IsGraded.mono zero_le (IsReflexive.refl _), h b]
-
 /-- The Rényi divergence of order `α` between rounds on different bits. -/
 noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
   ENNReal.ofReal (Real.log ((3 ^ α + 3 ^ (1 - α)) / 4) / (α - 1))
@@ -40,10 +29,23 @@ theorem one_le_rrMoment {α : ℝ} (hα : 1 ≤ α) : 1 ≤ ((3 : ℝ) ^ α + 3 
       field_simp; ring]
   exact div_nonneg (mul_nonneg (by linarith) (by linarith)) (by positivity)
 
+variable {α : ℝ} [hα : Fact (1 < α)]
+
+/-- A Rényi bound between the reports on different bits couples the draws: condition on the
+report. -/
+theorem rrCoupling_of_renyi {ρ : ℝ≥0∞}
+    (h : ∀ b, renyiDivergence α ρ (draw.map (rrOut b)) (draw.map (rrOut !b))) :
+    RRCoupling (codensity (renyiDivergence α)) ρ := fun b b' ↦
+  codensity_renyi_rel_of_map .of_discrete .of_discrete <| by
+    rcases Bool.eq_or_eq_not b' b with rfl | rfl
+    exacts [IsGraded.mono zero_le (IsReflexive.refl _), h b]
+
 /-- One round couples at `ρ_α`. -/
 theorem rrCoupling_renyi : RRCoupling (codensity (renyiDivergence α)) (rrRenyi α) :=
   rrCoupling_of_renyi fun b ↦ by
     have := one_le_rrMoment hα.out.le
+    -- unfold to `M ≤ exp ((α-1) · log M / (α-1))`; `1 ≤ M` makes `toReal ∘ ofReal` the identity,
+    -- leaving `M ≤ M`
     rw [rrRenyi, renyiDivergence_iff_of_ne_top hα.out.le ENNReal.ofReal_ne_top, fDiv_rrOut hα.out,
       ENNReal.toReal_ofReal (div_nonneg (Real.log_nonneg this) (by linarith [hα.out])),
       mul_div_cancel₀ _ (by linarith [hα.out]), Real.exp_log (by linarith)]

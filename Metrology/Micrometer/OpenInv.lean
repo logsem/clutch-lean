@@ -4,7 +4,7 @@ public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.ProbLang.Atomic
 import Metrology.ProbLang.Syntax.Notation
 
-/-! # `OpenInv e`: the logical-atomicity predicate enabling mask-shift around evaluating `e`. -/
+/-! # `OpenInv e`: `wp` of `e` may open invariants around it. -/
 
 @[expose] public section
 
@@ -16,7 +16,8 @@ namespace ProbLang
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
-/-- Evaluating `e` is logically atomic: `wp` may open invariants around it. -/
+/-- `wp` of `e` may open invariants around it: a mask-changing update before `e` can be closed after
+its single step. Holds for physically atomic `e` (`OpenInv.of_atomic`). -/
 def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
   ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%

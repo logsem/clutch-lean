@@ -9,3 +9,13 @@ public import Metrology.ProbLang.CoreMeasures.EctxItem
 public import Metrology.ProbLang.CoreMeasures.State
 public import Metrology.ProbLang.CoreMeasures.Cfg
 public import Metrology.ProbLang.CoreMeasures.Recurrences
+
+/-!
+# Measurable structure of ProbLang syntax
+
+- `Discrete`: the `⊤` σ-algebra on atoms.
+- `Shapes` and `CylinderGen`: the `deriving MeasurableSpace` handler, with `T ≃ Σ shape, leaves`.
+- `BaseLit`, `Pat`, `Exp`, `EctxItem`: instances derived with it.
+- `Val`: the comap of `Val.fst`. `State`: heaps. `Cfg`: tapes, states and configurations.
+- `Recurrences`: measurability of substitution, opening, `decomp`, `eval` and `tryMatch`.
+-/

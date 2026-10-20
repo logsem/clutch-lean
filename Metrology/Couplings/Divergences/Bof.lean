@@ -2,8 +2,9 @@ module
 
 public import Metrology.Couplings.Divergences.FDivBound
 
-/-! Barthe–Olmedo divergences on sub-probability measures, without filling (Barthe–Olmedo,
-ICALP 2013). -/
+/-! Barthe–Olmedo divergences (Barthe–Olmedo, ICALP 2013): the threshold `θ_γ(r) = (e^{γr} - 1)/γ`
+(`bofReal_add`: `θ(s+t) = θs + θt + γ θs θt`) and `bofDivergence`, an `f`-divergence below `θ_γ` of
+the budget. KL (`γ = 0`) and Hellinger (`γ = α - 1`) are instances; lost mass is not filled in. -/
 
 @[expose] public section
 

@@ -6,7 +6,13 @@ public import Iris.Instances.Lib.FUpd
 
 @[expose] public section
 
-/-! # Spec-side update modality -/
+/-!
+# Spec-side update modality
+
+`specUpdate E P`: from any spec configuration, take some deterministic spec steps
+(`pexecN n ρ = dirac ρ'`) under `|={E}=>` and give `P`. The `step_*` rules in `SpecRules.lean`
+produce it.
+-/
 
 open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure Measurable
 

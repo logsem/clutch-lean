@@ -8,9 +8,10 @@ public import Metrology.Couplings.Bridges.AddCoupl
 
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-/-! Uniform integer draws, their couplings, the steps of `rand`, and timeless tape predicates. -/
+/-! Uniform integer draws, the steps of `rand`, their couplings, and timeless tape predicates. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -20,64 +21,6 @@ namespace ProbLang
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 variable {B : Type} {L : GradedLifting.{0} B}
-
-/-! ## `id` as a coupling bijection -/
-
-theorem id_dom_range {z : Int} : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
-  fun _ h0 hlt => ⟨h0, hlt⟩
-
-theorem avoid_one_amort {z : Int} (bad : Int) :
-    (∑ n ∈ Finset.Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
-      (z.toNat : ENNReal)⁻¹ := by
-  rw [← one_div]
-  gcongr
-  rw [Finset.sum_ite_eq']
-  split <;> simp
-
-theorem id_bij_range {z : Int} : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ id n = m :=
-  fun m h0 hlt => ⟨m, ⟨⟨h0, hlt⟩, rfl⟩, fun _ ⟨_, heq⟩ => heq⟩
-
-/-! ## Timeless instances for tape predicates -/
-
-section TimelessTapes
-
-variable {GF : BundledGFunctors}
-
-instance heapView_tape_frag_discreteE (l : Loc) (t : Tape) :
-    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree t)) :=
-  View.frag_discrete
-
-instance appTapesFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF] (l : Loc) (t : Tape) :
-    BI.Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
-
-instance specTapesFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (t : Tape) : BI.Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
-
-instance heapView_heap_frag_discreteE (l : Loc) (v : Val rT) :
-    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree v)) :=
-  View.frag_discrete
-
-instance appHeapFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
-    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ v : IProp GF) := by
-  unfold appHeapFrag
-  exact iOwn_timeless
-
-instance specHeapFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ₛ v : IProp GF) := by
-  unfold specHeapFrag
-  exact iOwn_timeless
-
-instance appNatTape_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
-    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (appNatTape l z ns : IProp GF) := by
-  unfold appNatTape
-  infer_instance
-
-instance specNatTape_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (specNatTape l z ns : IProp GF) := by
-  unfold specNatTape
-  infer_instance
-
-end TimelessTapes
 
 /-! ## Uniform coupling under a bijection -/
 
@@ -159,6 +102,76 @@ theorem Cfg.uniform_codensity_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L
   exact h.map hS Measurable.of_discrete Measurable.of_discrete
 
 end UniformInt
+
+/-! ## Steps of `rand` -/
+
+/-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) (σ : State rT) :
+    primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ := by
+  have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ⟩ ⟨pl(#(.int 0)), σ⟩ :=
+    .RandNoTapeS Hz le_rfl Hz
+  rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
+    (HeadReducible.of_headStepSupport Hwitness))]
+  rfl
+
+/-- `rand z` on the unit label is discretely reducible and steps to `Cfg.uniform z σ`. -/
+theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+    (σ : State rT) :
+    Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
+      primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ :=
+  ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
+    primStep_rand_unit Hz σ⟩
+
+/-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
+theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State rT} {l : Loc}
+    {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ ρ) :
+    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ =
+      match σ.tapes[l]? with
+      | none => 0
+      | some ⟨M, ns⟩ =>
+        if M = z then
+          match ns with
+          | [] => Cfg.uniform z σ
+          | n :: ns => MeasureTheory.Measure.dirac ⟨.lit <| .int n,
+              σ.update_tapes fun t => t.insert l ⟨M, ns⟩⟩
+        else Cfg.uniform z σ := by
+  rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
+    (HeadReducible.of_headStepSupport Hwit))]
+  rfl
+
+/-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
+    (HneM : z ≠ M) (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
+    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
+    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
+  rw [primStep_rand_lbl_eq (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl), Hlk]
+  simp only [ite_eq_right (Ne.symm HneM)]
+
+/-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+    (σ : State rT) (l : Loc) (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
+    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
+  rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
+  simp only [↓reduceIte]
+
+/-- `primStep_rand_lbl_empty` with discrete reducibility. -/
+theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+    {σ : State rT} {l : Loc} (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
+    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
+      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
+  ⟨.of_headStepSupport (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl) (by is_lc),
+    primStep_rand_lbl_empty Hz σ l Hlk⟩
+
+/-- `primStep_rand_lbl_wrong` with discrete reducibility. -/
+theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
+    (HneM : z ≠ M) {σ : State rT} {l : Loc} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
+    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
+    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
+      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
+  ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
+    primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
+
+/-! ## Couplings of draws along a bijection -/
 
 /-- The outcome of a coupled draw: the left draw is `n`, the right draw is `f n` under `K`. -/
 @[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
@@ -351,65 +364,6 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT] {zL zR :
   rintro _ m ⟨h0, h1, hm⟩
   exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
 
-theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) (σ : State rT) :
-    primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ := by
-  have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ⟩ ⟨pl(#(.int 0)), σ⟩ :=
-    .RandNoTapeS Hz le_rfl Hz
-  rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
-    (HeadReducible.of_headStepSupport Hwitness))]
-  rfl
-
-theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
-    (σ : State rT) :
-    Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ :=
-  ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
-    primStep_rand_unit Hz σ⟩
-
-theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State rT} {l : Loc}
-    {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ ρ) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ =
-      match σ.tapes[l]? with
-      | none => 0
-      | some ⟨M, ns⟩ =>
-        if M = z then
-          match ns with
-          | [] => Cfg.uniform z σ
-          | n :: ns => MeasureTheory.Measure.dirac ⟨.lit <| .int n,
-              σ.update_tapes fun t => t.insert l ⟨M, ns⟩⟩
-        else Cfg.uniform z σ := by
-  rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
-    (HeadReducible.of_headStepSupport Hwit))]
-  rfl
-
-theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
-    (HneM : z ≠ M) (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
-    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
-  rw [primStep_rand_lbl_eq (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl), Hlk]
-  simp only [ite_eq_right (Ne.symm HneM)]
-
-theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
-    (σ : State rT) (l : Loc) (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
-  rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
-  simp only [↓reduceIte]
-
-theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
-    {σ : State rT} {l : Loc} (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
-  ⟨.of_headStepSupport (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl) (by is_lc),
-    primStep_rand_lbl_empty Hz σ l Hlk⟩
-
-theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
-    (HneM : z ≠ M) {σ : State rT} {l : Loc} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
-    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
-  ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
-    primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
-
 /-! ## Coupling under an evaluation context -/
 
 open MeasureTheory in
@@ -440,6 +394,7 @@ noncomputable def Cfg.advLeftover [_root_.Top B] (s : ENNReal → B) (z : Int) (
     exact if h : CoupledDraw z f σ σ' K ρ₁ ρ₂ then s (ε₂ h.choose) else ⊤
 
 omit [LawfulProbLangℝ rT] in
+/-- At the pair drawn from `n`, the leftover is `s (ε₂ n)`. -/
 theorem Cfg.advLeftover_apply [_root_.Top B] (s : ENNReal → B) {z : Int} (f : Int → Int)
     (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) {n : Int} (h0 : 0 ≤ n) (hn : n < z) :
     Cfg.advLeftover s z f σ σ' K ε₂ ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int (f n))), σ'⟩ =
@@ -491,5 +446,63 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
     exact (Cfg.advLeftover_apply s f σ σ' K ε₂ h0 h1).le
   · simp only [relCost_of_not (S := fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) hnm]
     exact le_top.trans le_self_add
+
+/-! ## `id` helpers for the coupling rules -/
+
+theorem id_dom_range {z : Int} : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
+  fun _ h0 hlt => ⟨h0, hlt⟩
+
+theorem avoid_one_amort {z : Int} (bad : Int) :
+    (∑ n ∈ Finset.Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
+      (z.toNat : ENNReal)⁻¹ := by
+  rw [← one_div]
+  gcongr
+  rw [Finset.sum_ite_eq']
+  split <;> simp
+
+theorem id_bij_range {z : Int} : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ id n = m :=
+  fun m h0 hlt => ⟨m, ⟨⟨h0, hlt⟩, rfl⟩, fun _ ⟨_, heq⟩ => heq⟩
+
+/-! ## Timeless instances for tape predicates -/
+
+section TimelessTapes
+
+variable {GF : BundledGFunctors}
+
+instance heapView_tape_frag_discreteE (l : Loc) (t : Tape) :
+    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree t)) :=
+  View.frag_discrete
+
+instance appTapesFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF] (l : Loc) (t : Tape) :
+    BI.Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
+
+instance specTapesFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
+    (l : Loc) (t : Tape) : BI.Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
+
+instance heapView_heap_frag_discreteE (l : Loc) (v : Val rT) :
+    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree v)) :=
+  View.frag_discrete
+
+instance appHeapFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
+    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ v : IProp GF) := by
+  unfold appHeapFrag
+  exact iOwn_timeless
+
+instance specHeapFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
+    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ₛ v : IProp GF) := by
+  unfold specHeapFrag
+  exact iOwn_timeless
+
+instance appNatTape_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
+    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (appNatTape l z ns : IProp GF) := by
+  unfold appNatTape
+  infer_instance
+
+instance specNatTape_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
+    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (specNatTape l z ns : IProp GF) := by
+  unfold specNatTape
+  infer_instance
+
+end TimelessTapes
 
 end ProbLang

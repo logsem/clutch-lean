@@ -21,12 +21,6 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 :=
   (ENNReal.ofReal_pos.2 (zero_lt_one.trans α.2)).ne'
 
-theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
-    (h : ENNReal.ofReal α * ρ < t) : ∃ ρ', ρ < ρ' ∧ ENNReal.ofReal α * ρ' = t := by
-  have h0 := ofReal_ioi_ne_zero α
-  refine ⟨t / ENNReal.ofReal α, ?_, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top⟩
-  rwa [ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top), mul_comm]
-
 section Line
 
 variable (A : Set ℝ)
@@ -88,11 +82,13 @@ noncomputable abbrev zcdpDivergence : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥
   concentratedDivergence (Ioi 1)
 
 /-- `(ρ, ω)`-tCDP: Rényi bounds `α ρ` at the orders `1 < α < ω` (Eq. 7). -/
+-- a `def`, not an `abbrev`: its instances are proved by unfolding (`isGraded_tcdp`, ...)
 noncomputable def tcdpDivergence (ω : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   (concentratedDivergence (Ioo 1 ω)).comap (Prod.mk 0)
 
 variable {A : Set ℝ} {b : ℝ≥0∞ × ℝ≥0∞} {ξ ρ : ℝ≥0∞} {ω : ℝ} {μ ν : Measure X}
 
+/-- A Rényi bound at every order in `A` gives the concentrated bound. -/
 theorem concentratedDivergence_of_forall
     (h : ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → renyiDivergence α (b.1 + ENNReal.ofReal α * b.2) μ ν) :
     concentratedDivergence A b μ ν := fun α ↦ by
@@ -100,11 +96,13 @@ theorem concentratedDivergence_of_forall
   · simpa [concentratedLine, hα] using h α hα
   · simpa [concentratedLine, hα] using renyiDivergence_top α.2 μ ν
 
+/-- The concentrated bound is a Rényi bound at every order in `A` (as a subtype of `(1, ∞)`). -/
 theorem concentratedDivergence_iff :
     concentratedDivergence A b μ ν ↔
       ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → renyiDivergence α (b.1 + ENNReal.ofReal α * b.2) μ ν :=
   ⟨fun h α hα ↦ by simpa [hα] using h α, concentratedDivergence_of_forall⟩
 
+/-- Same as `concentratedDivergence_iff` with real orders, when `A ⊆ (1, ∞)`. -/
 theorem concentratedDivergence_iff' (hA : A ⊆ Ioi 1) :
     concentratedDivergence A (ξ, ρ) μ ν ↔
       ∀ α ∈ A, renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
@@ -187,6 +185,12 @@ instance isRightMonotone_tcdp : (tcdpDivergence.{u} ω).IsRightMonotone :=
 instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
   GradedDivergence.isLeftAntitone_comap
 
+theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
+    (h : ENNReal.ofReal α * ρ < t) : ∃ ρ', ρ < ρ' ∧ ENNReal.ofReal α * ρ' = t := by
+  have h0 := ofReal_ioi_ne_zero α
+  refine ⟨t / ENNReal.ofReal α, ?_, ENNReal.mul_div_cancel h0 ENNReal.ofReal_ne_top⟩
+  rwa [ENNReal.lt_div_iff_mul_lt (.inl h0) (.inl ENNReal.ofReal_ne_top), mul_comm]
+
 /-- A bound at every larger budget is one at the budget: at order `α`, `ρ' = t / α`. -/
 instance isBudgetClosed_tcdp : (tcdpDivergence.{u} ω).IsBudgetClosed where
   of_forall_gt {ρ} := fun h ↦ concentratedDivergence_of_forall fun α hα ↦
@@ -197,6 +201,7 @@ instance isBudgetClosed_tcdp : (tcdpDivergence.{u} ω).IsBudgetClosed where
 /-! ## Concentrated liftings -/
 
 omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- Both components of `relCost` are `0` or `⊤`, so a line through it is `relCost` again. -/
 @[simp]
 theorem relCost_fst_add_mul_snd {S : X → Y → Prop} {x : X} {y : Y} (c : ℝ≥0∞) :
     (relCost S x y : ℝ≥0∞ × ℝ≥0∞).1 + c * (relCost S x y : ℝ≥0∞ × ℝ≥0∞).2 = relCost S x y := by
@@ -255,6 +260,7 @@ theorem tcdpLifting_rel_iff :
     by_cases hS : S x y <;> simp [hS, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
   rw [this, GradedLifting.Rel]
 
+/-- A tCDP lifting is a codensity lifting of the tCDP divergence. -/
 theorem codensity_tcdp_of_tcdpLifting [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     {R : X → Y → ℝ≥0∞} (h : tcdpLifting ω ρ R μ ν) : (tcdpDivergence ω).codensity ρ R μ ν :=
   comap_codensity_le (φ := fun c ↦ concentratedLine (Ioo 1 ω) (0, c))
@@ -262,7 +268,8 @@ theorem codensity_tcdp_of_tcdpLifting [IsSubProbabilityMeasure μ] [IsSubProbabi
 
 variable (A ω)
 
-/-- Concentrated liftings are lawful although finite budgets such as `(⊤, 0)` reach `⊤`. -/
+/-- Concentrated liftings are lawful, although budgets below `⊤` such as `(⊤, 0)` have line `⊤`
+(so `isLawful_comap` does not apply; use top-absorption of codensity). -/
 instance isLawful_concentratedLifting : (concentratedLifting.{u} A).IsLawful :=
   isLawful_comap_codensity (concentratedLine_mono A) (concentratedLine_add A)
 
@@ -395,6 +402,7 @@ theorem codensity_concentrated_of_forall [IsSubProbabilityMeasure μ] [IsSubProb
     (concentratedDivergence A).codensity b R μ ν :=
   comap_codensity_le (concentratedLine_add A) (concentratedLifting_iff.2 fun α hα ↦ h α hα)
 
+/-- A relational concentrated bound follows from a codensity Rényi bound at every order in `A`. -/
 theorem codensity_concentrated_rel_of_forall [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν]
     (h : ∀ α ∈ A, (codensity (renyiDivergence α)).Rel (ξ + ENNReal.ofReal α * ρ) S μ ν) :

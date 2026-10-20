@@ -2,7 +2,10 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 
-/-! # Lifting lemmas translating operational semantics rules into program-logic rules. -/
+/-! # Budget-splitting lifting rules
+
+Per-pair leftovers (`_adv`), an absorbing exit, and erasable presampling (Rocq `approxis/lifting.v`,
+`wp_lift_step_couple_adv*`, `wp_couple_erasables`). -/
 
 @[expose] public section
 
@@ -92,11 +95,12 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
   simp only [hv]
   iapply progCoupl_steps_adv hb hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !> !>
+  -- decide absorption first: it picks specCoupl_absorbing vs specCoupl_ret
   by_cases habs : L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)
   · iapply specCoupl_absorbing habs
   · iapply specCoupl_ret
     imod H $$ %e₂ %σ₂ %e₂' %σ₂' with (%hge | H)
-    · exact (habs fun R μ ν _ _ => hge R μ ν).elim
+    · exact (habs hge).elim
     · icases H with ⟨Hσ', Hs', Hb', Hwp⟩
       imodintro
       iframe

@@ -216,6 +216,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   have hα1 := hα.out
   have hf := convexOn_rpow hα1.le
   have hf_cont := continuousWithinAt_rpow_zero (zero_lt_one.trans hα1)
+  -- `s` absorbs the slack `c`: scale both test masses by `s`
   set s := exp (-((α - 1) * c.toReal)) with hs_def
   have hs : 0 < s := exp_pos _
   have hs1 : s ≤ 1 :=
@@ -228,6 +229,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   refine hle.trans ?_
   -- the test into a point: masses `s w` on the left and `s w ^ (α / (α - 1))` on the right
   obtain ⟨K, L, _, _, hmass⟩ := exists_mass_fDiv_eq hα1 hπ hs hs1 hw
+  -- the point test `K ∘ k`, `L ∘ l` passes at `R x y` because `s` cancels the `c` in `R x y + c`
   have key := h (K ∘ₖ k) (L ∘ₖ l) fun x y hR ↦ by
     rw [Kernel.comp_apply, Kernel.comp_apply, renyiDivergence_iff_of_ne_top hα1.le hR.ne, hmass]
     calc _ ≤ ((s : ℝ) : EReal) * fDiv (· ^ α) (k x) (l y) :=
@@ -243,6 +245,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   rw [← comp_assoc, ← comp_assoc, renyiDivergence_iff_of_ne_top hα1.le hρ.ne, hmass] at key
   set A := persp (· ^ α) (∑ j, w j * ((k ∘ₘ μ) (π ⁻¹' {j})).toReal)
     (∑ j, w j ^ (α / (α - 1)) * ((l ∘ₘ ν) (π ⁻¹' {j})).toReal)
+  -- undo the scaling by `s`
   calc A = ((s⁻¹ : ℝ) : EReal) * (s * A) := by
         rw [← mul_assoc, ← EReal.coe_mul, inv_mul_cancel₀ hs.ne', EReal.coe_one, one_mul]
     _ ≤ ((s⁻¹ : ℝ) : EReal) * ((exp ((α - 1) * ρ.toReal) : ℝ) : EReal) :=

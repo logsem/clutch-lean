@@ -29,17 +29,20 @@ variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTo
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
   [BudgetGS B GF] [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
+/-- One `PureExec` step at a redex under `K`. -/
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     wp L E (K.fill e₂) Φ ⊢ wp L E (K.fill e₁) Φ := by
   have : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
   exact (BI.laterN_intro n).trans (wp_pure_step_later' Hφ)
 
+/-- A run of pure steps, from `PureSteps`. -/
 public theorem wp_pure_steps {E : CoPset} {e₁ e₂ : Exp rT} {Φ : Val rT → IProp GF}
     (h : PureSteps e₁ e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   have := h.pureExec
   (BI.laterN_intro _).trans (wp_pure_step_later' trivial)
 
+/-- `wp_pure_steps` with the source only equal to the goal's expression. -/
 public theorem wp_pure_steps_at {E : CoPset} {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF}
     (heq : e₁ = e₁') (h : PureSteps e₁' e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   heq ▸ wp_pure_steps h
@@ -59,6 +62,7 @@ public theorem step_pure_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT) {φ 
   subst h₁ h₂
   exact step_pure K Hφ
 
+/-- `step_pure_at` for a run of pure steps. -/
 public theorem step_pure_steps_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT)
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (h : PureSteps e e') :
     ⤇ e₁full ⊢@{IProp GF} specUpdate rT E (⤇ e₂full) := by
@@ -75,12 +79,13 @@ public theorem step_alloc_at (K : Ectx rT) {v : Exp rT} (hv : IsVal v) {vv : Val
   subst hvv
   exact step_alloc K hv
 
+/-- Rewrite the expression of a `⤇` hypothesis along an equality. -/
 public theorem specProgFrag_reshape {e₁ e₂ : Exp rT} (h : e₁ = e₂) :
     (⤇ e₁) ⊢@{IProp GF} (⤇ e₂) := h ▸ .rfl
 
 end Spec
 
-/-! ## Erasing `openRec`/`closeRec` on spliced closed terms -/
+/-! ## `pl_step_simp`: display cleanup after a step -/
 
 /-- `e` with its `openRec`/`closeRec` wrapper erased, when the wrapped leaf is headed by a
 non-constructor constant (a spliced `&(rr b)`) and kernel reduction shows it invariant. -/
@@ -297,6 +302,7 @@ elab "wp_value" : tactic =>
     let (v, hproof) ← show ProofModeM (Q(Val $α) × LeanExpr) from
       match e0 with
       | ~q(Exp.ofVal $v) => return (v, q(Exp.toVal?_ofVal $v))
+      -- Val.fst v is Exp.ofVal v unfolded
       | ~q(Val.fst $v) => return (v, q(Exp.toVal?_ofVal $v))
       | _ => do
         -- A closure's value check goes through the kernel (`Exp.closedFunVal?`).
@@ -336,10 +342,12 @@ variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTo
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
   [BudgetGS B GF] {E : CoPset}
 
+/-- Close a value `wp` whose expression is only equal to `Exp.ofVal v`. -/
 public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v)
     {Φ : Val rT → IProp GF} : Φ v ⊢ wp L E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
+/-- Refold the expression of a `wp` along an equality. -/
 public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
     wp L E e' Φ ⊢ wp L E e Φ :=
   heq ▸ .rfl
@@ -356,6 +364,7 @@ elab "wp_show" colGt ppSpace e':term : tactic =>
 elab "wp_value_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_value_eq (e := $eS) $v (by kernel_rfl)))
 
+/-- `wp_alloc` with the allocated value anchored by an equality. -/
 public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}

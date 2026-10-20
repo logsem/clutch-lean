@@ -25,11 +25,13 @@ namespace TotalEris
 /-!
 # Graded lifting modality
 
-The error-graded `glm'` (a least fixpoint over prim steps, erasable steps and credit bumps), and
-its monotonicity, bind and introduction rules.
+The error-graded `glm'` (zero or more erasable steps and credit bumps, then exactly one prim step
+into `Z`), and its monotonicity, bind and introduction rules. Primed names are the
+total-correctness versions; `LiveEris/Glm.lean` has the unrelated vector-credit `glm`.
 -/
 
-/-- The predicate `φ` fails with `μ`-probability at most `ε`. -/
+/-- The predicate `φ` fails with `μ`-probability at most `ε` (Eris `pgl`, probability of good
+lifting). -/
 def Pgl {α : Type _} [MeasurableSpace α] (ε : ENNReal) (φ : α → Prop)
   (μ : MeasureTheory.Measure α) : Prop := μ {x | ¬ φ x} ≤ ε
 
@@ -105,7 +107,9 @@ abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNRe
 instance : COFE (GlmState rT) := COFE.ofDiscrete _
 instance : OFE.Discrete (GlmState rT) := ⟨id⟩
 
-/-- Take a real program step, splitting the budget `ε` over the outcomes. -/
+/-- Take a real program step, splitting the budget `ε` over the outcomes.
+`R`: the outcomes kept, failing with probability `≤ ε₁` (`Pgl`); `X₂ ρ`: the budget passed to
+outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`; `r`: a uniform bound on `X₂` (adequacy does not use it). -/
 abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
   iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal) (r : ENNReal),
@@ -117,6 +121,7 @@ abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
 
 /-- Advance only the state by an expression-erasable measure `μ`, spending error per outcome.
+`R`, `ε₁`, `X₂`, `r` are as in `glmPrimStep'`.
 Total adequacy needs the witness `MeasurableSet {σ' | R σ'}` to split the `μ`-mass on `R`. -/
 abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
@@ -179,7 +184,8 @@ theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
   iintro HΦ
   iapply HΦΨ $$ HΦ
 
-/-- One unfolding of `glm'`: a credit bump, a prim step, or an erasable step. -/
+/-- One unfolding of `glm'`: a credit bump or an erasable step, which recurse into `Φ`, or one
+prim step, which ends in the continuation `Z`. -/
 abbrev glmPre' (Z : Cfg rT → ENNReal → IProp GF)
     (Φ : GlmState rT → IProp GF) : GlmState rT → IProp GF :=
   fun ⟨ρ, ε⟩ => iprop(

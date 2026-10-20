@@ -27,8 +27,8 @@ section Logic
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
-/-- One round of randomized response against the spec in context `K`, spending `(ln 3, 0)`:
-both sides report the same bit. -/
+/-- `wp_rr_of` at the zCDP coupling `rrCoupling_zcdp`: one round against the spec in context `K`,
+spending `(ln 3, 0)`. -/
 theorem wp_rr_step (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
     ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#(.bool c)) -∗ Φ (.bool c)) ⊢
       wp zcdpLifting ⊤ (rr b) Φ :=

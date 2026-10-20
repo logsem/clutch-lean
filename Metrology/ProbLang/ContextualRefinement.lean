@@ -8,8 +8,9 @@ public import Metrology.ProbLang.Exec
 /-!
 # Contextual refinement
 
-Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`. As in Clutch, `fold` is
-subsumption while `unfold` wraps its body in `recUnfold`, so `CtxItem.fill` mirrors that asymmetry.
+Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`. As in Clutch, `fold` fills
+to the term itself while `unfold` applies `recUnfold`, so `CtxItem.fill` mirrors that asymmetry.
+Main results: `CtxRefines.refl`, `CtxRefines.trans`, `CtxRefines.congr`.
 -/
 
 namespace ProbLang
@@ -20,8 +21,9 @@ open MeasureTheory
 
 /-! ## Single-frame context items -/
 
-/-- A single-frame evaluation-context hole. Binder frames carry the atom the hole is open at;
-Clutch's `letrec f x body` is the two frames `fix f :: lam x :: K`. -/
+/-- One frame of a general program context; unlike `Ectx` the hole may be under a binder
+(`lam`/`fix`/`unpack` close the plugged term at the given atom). Clutch's `letrec f x body` is the
+two frames `fix f :: lam x :: K`. -/
 inductive CtxItem (rT : Type _) [LawfulProbLangℝ rT]
   | lam (x : Var)
   | fix (f : Var)
@@ -276,6 +278,7 @@ def CtxItem.payloadFv : CtxItem rT → Finset Var
   | .randR e1 => e1.fv
   | _ => ∅
 
+/-- Closing a term at an atom introduces no new free variables. -/
 theorem Exp.closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
     (hy : y ∈ (Exp.closeRec k x e).fv) : y ∈ e.fv := by
   induction e generalizing k with
@@ -301,6 +304,7 @@ theorem Exp.closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
       simp only [Exp.closeRec, Exp.fv, Finset.mem_union] at hy ⊢
       exact hy.imp (Or.imp (ih0 k) (ih1 k)) (ih2 k)
 
+/-- Closing a term introduces no new free variables. -/
 theorem Exp.close_fv_subset (e : Exp α) (x : Var) : (Exp.close e x).fv ⊆ e.fv :=
   fun y hy => Exp.closeRec_fv_subset e x 0 y hy
 

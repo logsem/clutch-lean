@@ -15,7 +15,8 @@ namespace GaussianRelease
 variable {rT : Type _}
 
 /-- Release one draw of the sampler `g` at the input `a` per iteration, as nested pairs ending
-in `()`; the sampler is an argument, so the loop body splices no abstract value. -/
+in `()`. The sampler `g` is passed as an argument rather than spliced in, so `releaseLoop a`
+contains no opaque `Val` and steps by computation. -/
 def releaseLoop (a : rT) : Exp rT :=
   pl% rec loop g n := if n = #0 then #.unit else (g #(.real a), loop g (n - #1))
 

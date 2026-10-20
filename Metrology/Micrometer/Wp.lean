@@ -21,6 +21,9 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 section Wp
 variable [BudgetGS B GF]
 
+/-- The type of `wp` as a function of its mask, expression and postcondition. -/
+abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
+
 variable (L) in
 /-- One unfolding of `wp`: a spec coupling into either the postcondition at a value or a
 program coupling continuing, after a later, with `wp` (Rocq `wp_pre`). -/
@@ -35,9 +38,6 @@ abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
       | none => progCoupl L e₁ σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
           ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
             stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp E e₃ Φ)
-
-/-- The type of `wp` as a function of its mask, expression and postcondition. -/
-abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
 
 theorem wpPre_ne_aux {n : Nat} {wp wp' : WpType (rT := rT) (GF := GF)} {E : CoPset}
     {e : Exp rT} {Φ Ψ : Val rT → IProp GF} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
@@ -67,10 +67,12 @@ variable (L) in
 noncomputable def wp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   fixpoint (wpPre L) E e Φ
 
+/-- `wp` is its own one-step unfolding. -/
 theorem wp_unfold {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e Φ = wpPre L (wp L) E e Φ :=
   congrFun (congrFun (congrFun (fixpoint_unfold ⟨wpPre L, OFE.ne_of_contractive _⟩) E) e) Φ
 
+/-- The forward direction of `wp_unfold`. -/
 theorem wp_unfold_mp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
   (BI.equiv_iff.mp wp_unfold).1
@@ -110,7 +112,8 @@ meta def unexpandWp : Lean.PrettyPrinter.Unexpander
   | _ => throw ()
 
 variable (L) in
-/-- The continuation `wpPre` runs after a program step. -/
+/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
+verbatim. -/
 noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
     (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
   iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>

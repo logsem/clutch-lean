@@ -17,7 +17,10 @@ public import Mathlib.Analysis.Real.OfDigits
 
 /-! # Approximate couplings
 
-Couplings up to a function `F`, tested by measurable functions into `[0, 1]`. -/
+Couplings up to a function `F`, tested by measurable functions into `[0, 1]`.
+
+The older Approxis notion; `Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with
+`codensity tv` and `codensity dp`. -/
 
 @[expose] public section
 

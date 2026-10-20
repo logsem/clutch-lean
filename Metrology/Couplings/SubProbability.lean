@@ -78,7 +78,8 @@ instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubPr
     rw [← univ_prod_univ, Measure.prod_prod]
     exact mul_le_one' measure_univ_le_one measure_univ_le_one
 
-/-- Not an instance: `Measure.bind` is junk for non-measurable kernels. -/
+/-- Binding a sub-probability measure with a.e.-measurable sub-probability continuations is
+sub-probability. Not an instance: `Measure.bind` is junk for non-measurable kernels. -/
 theorem isSubProbabilityMeasure_bind (μ : Measure X) (f : X → Measure Y)
     [IsSubProbabilityMeasure μ] [∀ x, IsSubProbabilityMeasure (f x)]
     (hf : AEMeasurable f μ := by fun_prop) : IsSubProbabilityMeasure (μ.bind f) :=

@@ -17,7 +17,10 @@ public import Mathlib.Analysis.Real.OfDigits
 
 public import Metrology.Couplings.ApproximateCouplings
 
-/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ`. -/
+/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ`.
+
+The older Approxis notion; `Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with
+`codensity tv` and `codensity dp`. -/
 
 @[expose] public section
 
@@ -49,17 +52,16 @@ theorem ARCoupling.DP.dirac {a : α} {b : β} (S : Set (α × β)) :
 
 -- TODO: remove ε ≠ ⊤ case by reduction (needs g ≠ 0?)
 theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β → Measure β'} {S T}
-   {μₗ μᵣ} (Hfm : Measurable f) (Hgm : Measurable g) (Huniv : μₗ .univ ≤ 1) (Hε : ε ≠ ⊤)
-   (Hfsprob : ∀ {a}, (f a) Set.univ ≤ 1)
-   (Hcpl : ARCoupling.DP ε δ S μₗ μᵣ)
-   (Hbind : ∀ {a b}, S (a, b) → ARCoupling.DP ε' δ' T (f a) (g b)) :
-   ARCoupling.DP (ε + ε') (δ + δ') T (μₗ.bind f) (μᵣ.bind g) := by
+    {μₗ μᵣ} (Hfm : Measurable f) (Hgm : Measurable g) (Huniv : μₗ .univ ≤ 1) (Hε : ε ≠ ⊤)
+    (Hfsprob : ∀ {a}, (f a) Set.univ ≤ 1)
+    (Hcpl : ARCoupling.DP ε δ S μₗ μᵣ)
+    (Hbind : ∀ {a b}, S (a, b) → ARCoupling.DP ε' δ' T (f a) (g b)) :
+    ARCoupling.DP (ε + ε') (δ + δ') T (μₗ.bind f) (μᵣ.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
   have Hf'le a : ∫⁻ (y : α'), f' y ∂f a - δ' ≤ 1 := by
     refine tsub_le_iff_left.mpr (.trans ?_ le_add_self)
     refine (lintegral_le_iSup_mul (f := f')).trans ?_
     exact Left.mul_le_one (iSup_le (Hf'b ·)) Hfsprob
-
   let F : CouplingFunction α := .mk (max 0 <| ∫⁻ y, f' y ∂ f · - δ') ⟨?Fm, fun a => ?Fb⟩
   case Fm =>
     refine measurable_const.max ?_
@@ -72,7 +74,6 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     refine measurable_const.mul ?_
     exact measurable_lintegral Hg'm |>.comp Hgm
   case Gb => exact min_le_left _ _
-
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   calc  ∫⁻ a, ∫⁻ (x : α'), f' x ∂f a ∂μₗ

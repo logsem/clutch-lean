@@ -249,6 +249,9 @@ meta def mkNamedFix (b : NamedBinder) (body : Term) : TermElabM Term := do
 
 mutual
 
+/-- Translates `pl_exp` syntax to an `Exp` term. `env` maps in-scope source names to fresh
+`.internal` atoms; each binder `Exp.close`s its atom right away, so atoms never escape. An unbound
+identifier `x` becomes `fvar (.named "x")`. -/
 meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) :
     TSyntax `pl_exp → TermElabM Term
   | `(pl_exp|($e : $τ)) => do
@@ -341,6 +344,7 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) :
       elabPL env st (← `(pl_exp|if $e then #.unit else fail))
   | e => throwErrorAt e s!"unrecognised pl expression: {e}"
 
+/-- Elaborates the body of a binder under its argument pattern, building the lambda with `named`. -/
 meta partial def elabBindArg (env : NameEnv) (st : IO.Ref AtomState)
     (arg : TSyntax `pl_arg) (body : TSyntax `pl_exp)
     (named : NamedBinder → Term → TermElabM Term) : TermElabM Term := do
@@ -354,6 +358,8 @@ meta partial def elabBindArg (env : NameEnv) (st : IO.Ref AtomState)
       named b (← elabPL env' st body)
   | _ => throwErrorAt arg "unrecognised pl_arg"
 
+/-- A `case` branch: a lambda over the bindings tree that `scrut` returns, projecting each
+pattern variable out of it (`projectPattern`). -/
 meta partial def mkCaseBranch (env : NameEnv) (st : IO.Ref AtomState)
     (pat : TSyntax `pl_pat) (body : TSyntax `pl_exp) : TermElabM Term := do
   let atom ← genAtom st
@@ -431,10 +437,12 @@ meta def unpackPLExp [Monad m] [MonadQuotation m] : Term → m (TSyntax `pl_exp)
   | `($i:ident)   => `(pl_exp|&$i)
   | `($t)         => `(pl_exp|{$t})
 
+/-- Strips `pl_ty(...)`; panics on any other term. -/
 meta def unpackPLTy [Monad m] [MonadQuotation m] : Term → m (TSyntax `pl_ty)
   | `(pl_ty($τ)) => pure τ
   | `($_)        => panic! "unknown type"
 
+/-- Strips `pl_pat(...)`; panics on any other term. -/
 meta def unpackPLPat [Monad m] [MonadQuotation m] : Term → m (TSyntax `pl_pat)
   | `(pl_pat($p)) => pure p
   | `($_)         => panic! "unknown pattern"
@@ -628,7 +636,7 @@ meta def unexpScrut : Unexpander
   | `($_ $e $p) => do `(pl(scrut $(← unpackPLExp e) with $(← unpackPLPat p)))
   | _ => throw ()
 
-/-! ### Binders: `Exp.lam` / `Exp.fix` with `MData` name hints -/
+/-! ### Binder naming machinery -/
 
 meta def buildArgFromName [Monad m] [MonadQuotation m]
     (name : String) : m (TSyntax `pl_arg) := do
@@ -803,6 +811,8 @@ meta initialize registerBuiltinAttribute {
     modifyEnv fun env => plBinderNamesExt.addEntry env (decl, names)
 }
 
+/-! ### `Exp.lam` / `Exp.fix` delaborators -/
+
 open Lean.PrettyPrinter.Delaborator Lean.Meta in
 @[delab app.ProbLang.Exp.lam]
 meta def delabExpLam : Delab := do
@@ -877,6 +887,8 @@ meta def delabExpFix : Delab := do
       `(pl(rec $fArg _ := $bodyPL))
 
 open Lean.PrettyPrinter.Delaborator in
+/-- Display-only: shows the raw `Exp.case` (whose branches are functions of the payload) with `_`
+patterns; it does not round-trip to `case`/`case!`. -/
 @[delab app.ProbLang.Exp.case]
 meta def delabExpCase : Delab := do
   let e ← SubExpr.getExpr

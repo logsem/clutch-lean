@@ -131,7 +131,11 @@ variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [Part
   [BudgetCreditGS B GF]
 
 variable (L) in
-/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`. -/
+/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`.
+
+The right context `K` is quantified so `refines_bind` can work inside a larger spec context;
+`naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
+threaded positive credit `b` must come back as some positive `b'` (see `approximates_coupling`). -/
 noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
   ∀ (K : Ectx rT) (b : B),
     ⤇ K.fill e' -∗
@@ -171,6 +175,7 @@ meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
 section SimpleLRels
 variable {GF : BundledGFunctors}
 
+/-- Two units are closed. -/
 theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
     ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢@{IProp GF} ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ := by
   iintro %h !%

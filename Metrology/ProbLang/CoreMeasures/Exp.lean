@@ -15,7 +15,7 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on expressions
+/-! # Measurable space on expressions
 
 Derives the σ-algebra on `Exp`. -/
 

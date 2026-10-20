@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.BindLaw
 
-/-! The codensity lifting of a graded divergence (Sato–Katsumata, §7). -/
+/-! The codensity lifting of a graded divergence (Sato–Katsumata, §7): lawful and binding under
+`IsGraded`, `codensity_rel_eq_iff` for composable divergences, and the largest sound and complete
+lawful lifting (`le_codensity`). -/
 
 @[expose] public section
 
@@ -205,7 +207,7 @@ instance isReflexive_codensity [AddZeroClass B] [LT B] [Top B] [D.IsReflexive] [
     intro I _ c _ k l _ _ hkl
     exact IsComposable.comp (IsReflexive.refl μ) fun x ↦ by simpa using hkl x x
 
-/-- A larger budget `b' + c` comes from a larger budget `b'` at the same slack. -/
+/-- Budget closure of `D` passes to its codensity lifting. -/
 instance isBudgetClosed_codensity [AddCommSemigroup B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] [D.IsBudgetClosed] : (codensity D).IsBudgetClosed where
   of_forall_gt {X Y} _ _ b R μ ν _ _ h := by

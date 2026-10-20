@@ -277,7 +277,7 @@ def BinOp.realResTy : BinOp → Option Ty
 
 /-! ## Typing contexts
 
-A typing context `Tctx` maps atoms (`Var = Nat`) to types. -/
+A typing context `Tctx` maps free variables (`Var`) to types. -/
 
 /-- A typing context. -/
 abbrev Tctx := Var → Option Ty
@@ -380,21 +380,27 @@ inductive Typed : Tctx → Exp rT → Ty → Prop
       Typed Γ e1 (.arrow τ1 τ2) →
       Typed Γ e2 τ1 →
       Typed Γ (.app e1 e2) τ2
+  /-- Type abstraction is a thunk `λ_. e`; `e` is typed under the shifted context. -/
   | tlam {Γ e τ} :
       Typed Γ.shift e τ →
       Typed Γ (.lam e) (.forall' τ)
+  /-- Type application forces the thunk with `()`. -/
   | tapp {Γ e τ τ'} :
       Typed Γ e (.forall' τ) →
       Typed Γ (.app e (.lit .unit)) (τ.single τ')
+  /-- `fold` is erased: no term change. -/
   | tfold {Γ e τ} :
       Typed Γ e (τ.single (.rec' τ)) →
       Typed Γ e (.rec' τ)
+  /-- `unfold` is `recUnfold e`, so it takes one step. -/
   | tunfold {Γ e τ} :
       Typed Γ e (.rec' τ) →
       Typed Γ (.app recUnfold e) (τ.single (.rec' τ))
+  /-- `pack` is erased: no term change. -/
   | tpack {Γ e τ τ'} :
       Typed Γ e (τ.single τ') →
       Typed Γ e (.exists' τ)
+  /-- `unpack e1 as x in e2` is `(λx. e2) e1`. -/
   | tunpack (L : Finset Var) {Γ e1 e2 τ τ2} :
       Typed Γ e1 (.exists' τ) →
       (∀ x ∉ L, Typed (Γ.shift.insert x τ) (Exp.open' e2 (.fvar x)) τ2.shift) →

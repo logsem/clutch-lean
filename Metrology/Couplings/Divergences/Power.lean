@@ -304,7 +304,7 @@ instance isRightMonotone_power : (powerDivergence.{u} α).IsRightMonotone :=
 instance isLeftAntitone_power : (powerDivergence.{u} α).IsLeftAntitone :=
   GradedDivergence.isLeftAntitone_comap
 
-/-- Power budgets are closed from above, since every larger Rényi budget is a power budget. -/
+/-- Power divergences are budget closed, since every larger Rényi budget is a power budget. -/
 instance isBudgetClosed_power : (powerDivergence.{u} α).IsBudgetClosed where
   of_forall_gt h := IsBudgetClosed.of_forall_gt (D := renyiDivergence α) fun _ hρ ↦ by
     obtain ⟨c', hc, rfl⟩ := exists_lt_toRenyi_eq hα.out hρ
@@ -325,6 +325,7 @@ noncomputable abbrev chi2Lifting : GradedLifting.{u} PowerBudget :=
 
 variable {R : X → Y → PowerBudget} {S : X → Y → Prop} {ν : Measure Y}
 
+/-- A power lifting of a relation at `c` is a Rényi lifting at `toRenyi α c`. -/
 theorem powerLifting_rel_iff :
     (powerLifting α).Rel c S μ ν ↔ (codensity (renyiDivergence α)).Rel (toRenyi α c) S μ ν :=
   comap_rel_iff toRenyi_zero toRenyi_top
@@ -346,7 +347,7 @@ theorem powerLifting_iff_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasur
   refine h (lt_of_not_ge fun hc ↦ ?_) hkl
   simp [top_le_iff.1 hc] at hρ
 
-section Instances
+section LiftingInstances
 
 variable (α) [hα : Fact (1 < α)]
 
@@ -386,13 +387,13 @@ instance isSound_powerLifting : (powerLifting.{u} α).IsSound (powerDivergence �
 instance isComplete_powerLifting : (powerLifting.{u} α).IsComplete (powerDivergence α) where
   complete h := powerLifting_rel_iff.2 (codensity_complete h)
 
-/-- Power budgets are closed from above, since every larger Rényi budget is a power budget. -/
+/-- Power liftings are budget closed, since every larger Rényi budget is a power budget. -/
 instance isBudgetClosed_powerLifting : (powerLifting.{u} α).IsBudgetClosed where
   of_forall_gt h := GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity _) fun _ hρ ↦ by
     obtain ⟨c', hc, rfl⟩ := exists_lt_toRenyi_eq hα.out hρ
     exact h c' hc
 
-end Instances
+end LiftingInstances
 
 /-! ## Bind laws -/
 

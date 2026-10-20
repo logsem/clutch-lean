@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Two labelled draws, in either order
 
-Proved equal in distribution in `Micrometer/Examples/Presample`. -/
+Proved, event by event, at most as likely as the reverse order in
+`Micrometer/Examples/Presample`. -/
 
 namespace ProbLang
 namespace Presample

@@ -5,6 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
 /-! Coupling rules for `rand` in `wp`: draws against draws and tapes, with and without credits. -/

@@ -111,6 +111,7 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   rw [hIcc, hIcc]
   have hlo : (0:ℝ) ≤ 1 - m := by linarith
   have hhi : (1:ℝ) - m ≤ 1 := by linarith
+  -- Block `[0, 1-m)`: `frac (m + r) = m + r`, a shift onto `[m, 1)`.
   have hA : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m)
       = (fun r : ℝ => m + r) ⁻¹' (S ∩ Ico m 1) := by
     ext r
@@ -122,6 +123,7 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
       exact ⟨by rwa [hfr hr0 hr1] at hSr, by linarith, by linarith⟩
     · rintro ⟨hSr, hge, hlt⟩
       exact ⟨by rwa [hfr (by linarith) (by linarith)], by linarith, by linarith⟩
+  -- Block `[1-m, 1)`: `frac (m + r) = m + r - 1`, a shift onto `[0, m)`.
   have hB : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)
       = (fun r : ℝ => (m - 1) + r) ⁻¹' (S ∩ Ico (0:ℝ) m) := by
     ext r
@@ -141,6 +143,7 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
     Set.Ico_union_Ico_eq_Ico hlo hhi
   have hunion2 : Ico (0:ℝ) m ∪ Ico m (1:ℝ) = Ico (0:ℝ) 1 :=
     Set.Ico_union_Ico_eq_Ico hm0 (le_of_lt hm1)
+  -- Split both sides along the blocks; translations preserve volume.
   have hL : volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) 1)
       = volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m))
         + volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)) := by
@@ -159,26 +162,23 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   rw [hL, hR, hA, hB, measure_preimage_add, measure_preimage_add]
   exact add_comm _ _
 
+/-- Reducing the second summand modulo 1 does not change the fractional part of a sum. -/
+public theorem fract_add_fract_right (x y : ℝ) :
+    Int.fract (x + Int.fract y) = Int.fract (x + y) := by
+  have h : x + Int.fract y = (x + y) - (⌊y⌋ : ℝ) := by
+    have := Int.fract_add_floor y; linarith
+  rw [h, Int.fract_sub_intCast]
+
 /-- Adding any real `m` modulo 1 preserves `Uniform[0,1]`. -/
 public theorem measurePreserving_fracAdd (m : ℝ) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit := by
   have hper : (fun r : ℝ => Int.fract (m + r))
-      = fun r : ℝ => Int.fract (Int.fract m + r) := by
-    funext r
-    have hshift : Int.fract m + r = (m + r) - (⌊m⌋ : ℝ) := by
-      have := Int.fract_add_floor m
-      linarith
-    rw [hshift, Int.fract_sub_intCast]
+      = fun r : ℝ => Int.fract (Int.fract m + r) :=
+    funext fun r => by rw [add_comm (Int.fract m) r, fract_add_fract_right, add_comm]
   show MeasurePreserving (fun r : ℝ => Int.fract (m + r)) _ _
   rw [hper]
   exact measurePreserving_fracAdd_aux (Int.fract_nonneg m) (Int.fract_lt_one m)
-
-public theorem fract_add_fract_right (x y : ℝ) :
-    Int.fract (x + Int.fract y) = Int.fract (x + y) := by
-  have h : x + Int.fract y = (x + y) - (⌊y⌋ : ℝ) := by
-    have := Int.fract_add_floor y; linarith
-  rw [h, Int.fract_sub_intCast]
 
 end ProbLang

@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # A uniform draw that never reports `0`
 
-Proved within `1/N` of a uniform draw in `Micrometer/Examples/SkipZero`. -/
+Proved at most `1/N` less likely than a uniform draw on every event, in
+`Micrometer/Examples/SkipZero`. -/
 
 namespace ProbLang
 namespace SkipZero

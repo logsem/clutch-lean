@@ -68,6 +68,7 @@ variable {PROP : Type _} [Sbi PROP] [BIFUpdate PROP] [BIFUpdateSbi PROP] [BIAffi
 
 open Iris.BI.BIBase
 
+/-- A plain `∀` commutes with an update followed by `n` step-updates at the empty mask. -/
 theorem fupd_step_fupdN_plain_forall_1 (Φ : A → PROP) [∀ x, Plain (Φ x)] (n : Nat) : iprop%
     (∀ x, |={∅}=> |={∅}[∅]▷=>^[n] Φ x) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ x, Φ x := by
   cases n with
@@ -81,6 +82,8 @@ theorem fupd_step_fupdN_plain_forall_1 (Φ : A → PROP) [∀ x, Plain (Φ x)] (
       _ ⊢ |={∅}[∅]▷=>^[n+1] ◇ ∀ x, Φ x := fupd_laterN_to_step_fupdN ∅ n
       _ ⊢ |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := step_fupdN_except0 ∅ ∅ n
       _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := fupd_intro
+
+/-! Iterations of `_1` for two to four binders. -/
 
 theorem fupd_step_fupdN_plain_forall_2 {A B : Type _} (Ψ : A → B → PROP)
     [∀ a b, Plain (Ψ a b)] (n : Nat) : iprop%

@@ -72,7 +72,7 @@ def initMap : Exp rT := pl% fun _u, alloc(inl(#.unit))
 
 /-! ## The idealised random function -/
 
-/-- The query closure of `randomFunction N` once its map is allocated at `ℓ`. -/
+/-- After allocating its map at `ℓ`, `randomFunction N` steps to this closure. -/
 def rfQuery (N : Int) (ℓ : Loc) : Exp rT := pl%
   fun x,
     case! (&getMap #(.loc ℓ) x)
@@ -89,8 +89,8 @@ def randomFunction (N : Int) : Exp rT := pl%
 
 /-! ## The idealised random permutation -/
 
-/-- The query closure of `randomPermutation N` once its map is at `ℓm` and its list of
-unsampled values at `ℓfv`. -/
+/-- After allocating its map at `ℓm` and its list of unsampled values at `ℓfv`,
+`randomPermutation N` steps to this closure. -/
 def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
   fun x,
     case! (&getMap #(.loc ℓm) x)
@@ -98,12 +98,13 @@ def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
       (let ln := &listLength (!#(.loc ℓfv));
        let n := rand(ln, #.unit);
        case! (&listRemoveNth (!#(.loc ℓfv)) n)
-       | inl(_u) => #0
+       | inl(_u) => #0 -- unreachable: `n` is in range
        | inr(p) => (&setMap #(.loc ℓm) x (fst(p)); #(.loc ℓfv) ← snd(p); fst(p)))
     | inr(y) => y
 
 /-- A lazily sampled random permutation of `{0, …, N-1}`. -/
 def randomPermutation (N : Int) : Exp rT := pl%
+  -- `.1`: the expression of the list value
   let fv := alloc({(intListVal ((List.range N.toNat).map Int.ofNat)).1});
   let m := &initMap #.unit;
   fun x,
@@ -112,7 +113,7 @@ def randomPermutation (N : Int) : Exp rT := pl%
       (let ln := &listLength (!fv);
        let n := rand(ln, #.unit);
        case! (&listRemoveNth (!fv) n)
-       | inl(_u) => #0
+       | inl(_u) => #0 -- unreachable: `n` is in range
        | inr(p) => (&setMap m x (fst(p)); fv ← snd(p); fst(p)))
     | inr(y) => y
 
@@ -157,6 +158,7 @@ theorem setMap_fv : (setMap : Exp rT).fv = ∅ := rfl
 theorem rfQuery_fv (N : Int) (ℓ : Loc) : (rfQuery N ℓ : Exp rT).fv = ∅ := rfl
 theorem prpQuery_fv (ℓm ℓfv : Loc) : (prpQuery ℓm ℓfv : Exp rT).fv = ∅ := rfl
 theorem randomFunction_fv (N : Int) : (randomFunction N : Exp rT).fv = ∅ := rfl
+theorem wLoop_fv (N : Int) : (wLoop N : Exp rT).fv = ∅ := rfl
 
 @[pl_step_simp] theorem openRec_findList (k : Nat) (t : Exp rT) :
     Exp.openRec k t (findList : Exp rT) = findList :=
@@ -220,8 +222,6 @@ theorem randomFunction_fv (N : Int) : (randomFunction N : Exp rT).fv = ∅ := rf
 @[pl_step_simp] theorem closeRec_randomFunction (k : Nat) (x : Var) (N : Int) :
     Exp.closeRec k x (randomFunction N : Exp rT) = randomFunction N :=
   Exp.closeRec_fresh x _ k (by simp [randomFunction_fv])
-
-theorem wLoop_fv (N : Int) : (wLoop N : Exp rT).fv = ∅ := rfl
 
 @[pl_step_simp] theorem openRec_wLoop (k : Nat) (t : Exp rT) (N : Int) :
     Exp.openRec k t (wLoop N : Exp rT) = wLoop N :=

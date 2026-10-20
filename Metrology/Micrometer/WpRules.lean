@@ -41,6 +41,8 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
     | some v =>
+      -- e' is a value: run the inner wp's spec phase in place of the outer one
+      -- (fupd_specCoupl, hence IsTopAbsorbing)
       iapply fupd_specCoupl
       rw [show e' = Exp.ofVal v from (Exp.ofVal_of_toVal_some htv).symm]
       imod HBody with ⟨Hσ', Hs', Hb', HInner⟩
@@ -53,6 +55,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
       have hKfillnone : (K.fill e').toVal? = none := Exp.toVal?_eq_none.mpr hvKfill
       iapply specCoupl_ret
       simp only [hKfillnone]
+      -- e' steps: push K through the program step, recurse by Löb
       iapply progCoupl_ctx_bind hv
       iapply progCoupl_mono (Z₁ := wpProgBody L E' fun v => wp L E' (K.fill (Exp.ofVal v)) Φ')
       iframe HBody
@@ -65,9 +68,6 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
       iframe Hσ' Hs' Hb'
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
-
--- TODO: `wp_atomic` (for atomic `e`, an inner `|={E2, E1}=>` can be absorbed), stated with the
--- `Atomic'` predicate rather than a typeclass.
 
 /-- A spec update before a `wp` can be absorbed into it. -/
 theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}

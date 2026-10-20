@@ -239,6 +239,8 @@ theorem primStep_fillItem [LawfulProbLangℝ rT]
 -- TODO: This generalized to continuous, though really I imagine it can't be used in any
 -- continuous way. I won't mark it as discrete, but I'd guess this should really be changed to be
 -- primStep_fill
+/-- Filling a context preserves the mass of each successor configuration (by injectivity of
+`K.fill`). -/
 theorem primStep_fill_singleton [LawfulProbLangℝ rT] {K : Ectx rT} {e1 e2 : Exp rT}
     {σ1 σ2 : State rT} (hv : ¬e1.isValue) :
     primStep ⟨e1, σ1⟩ {⟨e2, σ2⟩} = primStep ⟨K.fill e1, σ1⟩ {⟨K.fill e2, σ2⟩} := by
@@ -397,7 +399,7 @@ theorem ectxi_language_subRedexesAreValues [LawfulProbLangℝ rT] {e : Exp rT}
   · simp only [Ectx.fill_snoc] at hfill
     exact absurd (Ectx.fill_isValue (h Ki _ hfill)) hv
 
-/-! ## notStuck_discrete / stuck_discrete -/
+/-! ## Stuck and not-stuck configurations -/
 
 /-- The expression is a value or can step. -/
 def notStuck [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
@@ -423,6 +425,8 @@ theorem Stuck.fill [LawfulProbLangℝ rT]
     (h : stuck e σ) : stuck (K.fill e) σ :=
   ⟨fun hv => h.1 (Ectx.fill_isValue hv),
    fun hred => h.2 (hred.of_fill K h.1)⟩
+
+/-! ## Atomicity and the discrete bridge -/
 
 theorem measurableSet_primStep_support [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) :
     MeasurableSet {ρ : Cfg rT | 0 < primStep ⟨e, σ⟩ {ρ}} := by

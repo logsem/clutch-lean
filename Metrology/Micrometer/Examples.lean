@@ -21,7 +21,7 @@ Each file proves a short refinement in Micrometer and reads a standard statement
 adequacy. Lifting-level examples (no programs) live in `Couplings/Examples`.
 
 By divergence (`RR` is `RandomizedResponse`):
-* equality (any lifting): `OTP`, `ContinuousOTP`, `Presample`
+* equality (any lifting): `OTP`, `ContinuousOTP`, `Presample` (one direction)
 * total variation: `SkipZero`, `Retry`, `AbsorbingExit`, `Switching`
 * pure DP: `RR.Dp`, `PublicChoice`, `NoisyCount`, `ContextualDp`
 * approximate DP: `LeakyRR`

@@ -20,12 +20,14 @@ variable {α : ℝ}
 /-- The normalized `α`-Hellinger generator `(α t + 1 - α - t ^ α) / (1 - α)`. -/
 noncomputable def hellFun (α t : ℝ) : ℝ := (α * t + (1 - α) - t ^ α) / (1 - α)
 
-/-- The pointwise `α`-Hellinger term `(α p + (1 - α) q - p ^ α q ^ (1 - α)) / (1 - α)`. -/
+/-- The pointwise `α`-Hellinger term `(α p + (1 - α) q - p ^ α q ^ (1 - α)) / (1 - α)`; it is
+`persp (hellFun α) p q` (`persp_hellFun`), as a real number so that finite sums stay in `ℝ`. -/
 noncomputable def hellTerm (α p q : ℝ) : ℝ :=
   (α * p + (1 - α) * q - p ^ α * q ^ (1 - α)) / (1 - α)
 
 theorem hellFun_one (α : ℝ) : hellFun α 1 = 0 := by simp [hellFun]
 
+/-- Weighted AM–GM for two terms. -/
 theorem rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     p ^ α * q ^ (1 - α) ≤ α * p + (1 - α) * q :=
   Real.geom_mean_le_arith_mean2_weighted hα0.le (by linarith) hp hq (by ring)
@@ -91,6 +93,7 @@ theorem hellTerm_mul (hα1 : α < 1) {p q k l : ℝ} (hp : 0 ≤ p) (hk : 0 ≤ 
   field_simp
   ring
 
+/-- The Hellinger term of sums is at most the sum of the terms (joint convexity). -/
 theorem hellTerm_sum_le (hα0 : 0 < α) (hα1 : α < 1) {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
     (ha : ∀ i ∈ s, 0 ≤ a i) (hb : ∀ i ∈ s, 0 ≤ b i) :
     hellTerm α (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, hellTerm α (a i) (b i) := by
@@ -109,8 +112,8 @@ theorem fDiv_hellFun_eq_sum (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype
   exact Finset.sum_congr rfl fun i _ ↦
     persp_hellFun hα1 ENNReal.toReal_nonneg ENNReal.toReal_nonneg
 
-/-- The Bhattacharyya mass of two sub-probability measures on a finite space is at most one minus
-`1 - α` times their Hellinger divergence. -/
+/-- On a finite space, the Bhattacharyya sum `Σ pᵢ ^ α * qᵢ ^ (1 - α)` is at most
+`1 - (1 - α) * Σ hellTerm α pᵢ qᵢ`, for sub-probability `p`, `q`. -/
 theorem sum_rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsSubProbabilityMeasure ρ₁]
     [IsSubProbabilityMeasure ρ₂] :
@@ -179,6 +182,7 @@ theorem mul_hellClamp_le_one (a : EReal) : (1 - α) * hellClamp α a ≤ 1 := by
   calc (1 - α) * hellClamp α a ≤ (1 - α) * (1 - α)⁻¹ := by gcongr
     _ = 1 := mul_inv_cancel₀ (sub_pos.2 hα1).ne'
 
+/-- The clamped chain is monotone, as `fDiv_comp_le_of_finite_of_mass` requires. -/
 theorem hellChain_mono ⦃a a' d d' : EReal⦄ (ha : a ≤ a') (hd : d ≤ d') :
     hellChain α a d ≤ hellChain α a' d' := by
   simp only [hellChain, EReal.coe_le_coe_iff]
@@ -225,6 +229,8 @@ theorem fDiv_hellFun_comp_le_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {M N : �
   rw [fDiv_hellFun_eq_sum hα0 hα1, fDiv_hellFun_eq_sum hα0 hα1 μ₁ μ₂, hellChain,
     hellClamp_coe (hsum₀ _ _) (sum_hellTerm_le_inv hα0 hα1 _ _), EReal.coe_le_coe_iff]
   simp_rw [toReal_comp_singleton_eq_sum]
+  -- split each cell with `hellTerm_mul`; the cross term `(q - w) (Σ η - Σ κ)` vanishes exactly
+  -- because the kernels lose equal mass (`hmass`)
   calc ∑ i, hellTerm α (∑ j, p j * (κ j {i}).toReal) (∑ j, q j * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, hellTerm α (p j * (κ j {i}).toReal) (q j * (η j {i}).toReal) :=
         Finset.sum_le_sum fun i _ ↦ hellTerm_sum_le hα0 hα1 _ (fun _ _ ↦ by positivity)

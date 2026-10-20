@@ -323,8 +323,9 @@ variable {μ : Measure X} {ν : Measure Y} {R : X → Y → ℝ≥0∞ × ℝ≥
 
 /-- With infinite multiplicative budget, the `(ε, δ)`-DP codensity holds for any `δ`. -/
 theorem codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν := by
-  intro I _ c _ k l _ _ _ h
-  simp at h
+  intro I _ c _ k l _ _ _ hε
+  -- the guard `(⊤ + c).1 < ⊤` is false
+  simp at hε
 
 /-- The codensity of the DP divergence absorbs any grade with first component `⊤`. -/
 theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ) :=
@@ -364,6 +365,8 @@ theorem codensity_dp_of_lintegral_le [IsSubProbabilityMeasure μ]
   simp only [Prod.fst_add, Prod.snd_add] at hεc ⊢
   obtain ⟨-, hc⟩ := add_lt_top.1 hεc
   have hlS := l.measurable_coe hS
+  -- test with `f = k · S - c.2` (cut the slack) and `g = min 1 (e^{c.1} l · S)` (truncate to
+  -- `[0, 1]`)
   have hfg := h (fun x ↦ k x S - c.2) (fun y ↦ min 1 (expBudget c.1 * l y S))
     ((k.measurable_coe hS).sub measurable_const) (measurable_const.min (measurable_const.mul hlS))
     (fun _ ↦ tsub_le_self.trans (IsSubProbabilityMeasure.measure_le_one S))

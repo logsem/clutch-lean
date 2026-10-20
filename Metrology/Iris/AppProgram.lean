@@ -16,7 +16,8 @@ public import Metrology.ProbLang.Syntax.Notation
 # Program-side ghost state
 
 Program heap and tapes for the Micrometer WP; the spec side lives in `SpecProgram.lean` and reuses
-the same CMRAs (`SpecHeap`, `SpecTapes`).
+the same CMRAs (`SpecHeap`, `SpecTapes`). `app` means the left (implementation) program, as opposed
+to the spec; the naming follows Approxis.
 -/
 
 section AppProgramRA
@@ -90,10 +91,7 @@ theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
   ihave %hv := internalCmraValid_discrete $$ Hv
   ipureintro
   obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  rw [LocHeap.asAgree_get?] at hlookup
-  obtain ⟨w, hw, rfl⟩ := Option.map_eq_some_iff.mp hlookup
-  show PartialMap.get? σ.heap l = some v
-  rwa [Agree.toAgree_included.mp hinc]
+  exact LocHeap.get?_of_asAgree_get? hlookup hinc
 
 theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↦ v ==∗
@@ -121,16 +119,13 @@ theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
         σ.heap.fresh ↦ v := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩
-  have hfresh : PartialMap.get? (LocHeap.asAgree σ.heap) σ.heap.fresh = none := by
-    rw [LocHeap.asAgree_get?]
-    show (σ.heap[σ.heap.fresh]?).map toAgree = none
-    rw [ExtTreeMap.fresh_get?]; rfl
   have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.heap) σ.heap.fresh (toAgree v)) •
         HeapView.Frag σ.heap.fresh (.own 1) (toAgree v) :=
-    HeapView.update_one_alloc hfresh DFrac.valid_own_one fun _ => by simp
+    HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.heap) DFrac.valid_own_one
+      fun _ => by simp
   imod (iOwn_update hupd) $$ Hh with Hu
   imodintro
   ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
@@ -145,10 +140,7 @@ theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
   ihave %hv := internalCmraValid_discrete $$ Hv
   ipureintro
   obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  rw [LocHeap.asAgree_get?] at hlookup
-  obtain ⟨w, hw, rfl⟩ := Option.map_eq_some_iff.mp hlookup
-  show PartialMap.get? σ.tapes l = some t
-  rwa [Agree.toAgree_included.mp hinc]
+  exact LocHeap.get?_of_asAgree_get? hlookup hinc
 
 theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↪ₐ t ==∗
@@ -176,16 +168,13 @@ theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
         σ.tapes.fresh ↪ₐ t := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩
-  have hfresh : PartialMap.get? (LocHeap.asAgree σ.tapes) σ.tapes.fresh = none := by
-    rw [LocHeap.asAgree_get?]
-    show (σ.tapes[σ.tapes.fresh]?).map toAgree = none
-    rw [ExtTreeMap.fresh_get?]; rfl
   have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.tapes) σ.tapes.fresh (toAgree t)) •
         HeapView.Frag σ.tapes.fresh (.own 1) (toAgree t) :=
-    HeapView.update_one_alloc hfresh DFrac.valid_own_one fun _ => by simp
+    HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.tapes) DFrac.valid_own_one
+      fun _ => by simp
   imod (iOwn_update hupd) $$ Ht with Hu
   imodintro
   ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu

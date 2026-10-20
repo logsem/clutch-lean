@@ -28,7 +28,10 @@ theorem rr_negCtx_le (b b' c : Bool) (σ σ' : State rT) :
       3 * limExec ⟨negCtx.fill (rr b'), σ'⟩ (finalBool c) := by
   simpa [expBudget_log_three] using refines_ctx_dp (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞))
     ENNReal.ofReal_ne_top (rr b) (rr b') .bool (fun _ _ _ ↦ rr_refines b b') negCtx σ σ' c
-    (.cons (.ifL .lit_bool .lit_bool) .nil) ⟨trivial, trivial⟩
+    -- `negCtx` is typed bool → bool
+    (.cons (.ifL .lit_bool .lit_bool) .nil)
+    -- and linear (its hole runs once)
+    ⟨trivial, trivial⟩
 
 end RandomizedResponse
 end ProbLang

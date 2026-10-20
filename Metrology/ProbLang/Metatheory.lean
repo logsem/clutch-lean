@@ -6,6 +6,11 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 
 @[expose] public section
 
+/-! # ProbLang metatheory
+
+Port of Clutch `metatheory.v`: closedness, sequential substitution maps, the Det/Prob/stuck
+head-step trichotomy `det_or_prob_or_zero` used by erasure, and tape-update lemmas. -/
+
 namespace ProbLang
 open Cslib Exp
 
@@ -722,7 +727,7 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
 
 Clutch's `metatheory.v` ~1448–1713, minus Laplace/Tick. -/
 
-/-- The head redexes that reduce deterministically. -/
+/-- Non-sampling head redexes; the step is a Dirac but may read the heap or tapes. -/
 inductive DetHeadStepPred : Exp rT → State rT → Prop
   | betaLam {e1 e2 σ} : e2.isValue →
       DetHeadStepPred (.app (.lam e1) e2) σ
@@ -753,7 +758,8 @@ inductive DetHeadStepPred : Exp rT → State rT → Prop
   | scrutFailure {e p σ} : e.isValue → Pat.tryMatch p e = none →
       DetHeadStepPred (.scrut e p) σ
 
-/-- The head redexes that sample (`rand`, `urand`). -/
+/-- `rand` redexes, split by tape situation (including non-positive bounds, which step to `-1`),
+and `urand`. -/
 inductive ProbHeadStepPred : Exp rT → State rT → Prop
   | randNoTape {z σ} : 0 < z →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit .unit)) σ
@@ -1062,6 +1068,8 @@ theorem State.fresh_loc_lookup {σ : State α} {α : Loc} {bs : Tape} {t : Tape}
     split <;> simp_all
   simp [hcmp, h]
 
+/-! ## `Cfg.uniform` -/
+
 theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
     Cfg.uniform z σ = MeasureTheory.Measure.dirac ⟨.lit (.int (-1)), σ⟩ := by
   unfold Cfg.uniform Int.isPos
@@ -1124,9 +1132,12 @@ theorem Cfg.lintegral_uniform [Countable rT] [MeasurableSingletonClass rT]
         φ (⟨.lit (.int n), σ⟩ : Cfg rT) :=
   Cfg.lintegral_uniform' Hz σ Measurable.of_discrete
 
+/-! ## Tape updates preserve head-step shape -/
+
 -- The `simpa` below runs under `all_goals try`: the linter sees one branch where the
 -- goal-side `simp` is idle, but other branches need it.
 set_option linter.unnecessarySimpa false in
+/-- Overwriting an existing tape cannot unstick a stuck head redex. -/
 theorem State.head_step_dzero_upd_tapes [MeasurableSingletonClass rT]
     {e : Exp rT} {σ : State rT} {α : Loc} {bs bs' : Tape}
     (hmem : σ.tapes[α]? = some bs)
@@ -1179,6 +1190,7 @@ theorem State.head_step_dzero_upd_tapes [MeasurableSingletonClass rT]
   case urand h0 =>
     exact absurd h0 (MeasureTheory.IsProbabilityMeasure.ne_zero _)
 
+/-- Overwriting a tape preserves deterministic head redexes. -/
 theorem State.det_head_step_upd_tapes
     {e : Exp rT} {σ : State rT} {α : Loc} {bs' : Tape}
     (hdet : ProbLang.DetHeadStepPred e σ) :

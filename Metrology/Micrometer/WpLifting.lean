@@ -19,6 +19,7 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 section Wp
 variable [BudgetGS B GF]
 
+/-- `wp_unfold` read right to left: the body of `wpPre` proves `wp`. -/
 theorem wp_lift_step_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗
@@ -33,6 +34,7 @@ theorem wp_lift_step_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp 
   rw [wp_unfold]
   exact .rfl
 
+/-- A spec phase before re-entering `wp`. -/
 theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {e₁ : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     (∀ (σ₁ : State rT) e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
@@ -54,6 +56,7 @@ theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : Co
   imodintro
   iexact HW'
 
+/-- For a non-value, skip both spec phases: a program coupling straight into `wp`. -/
 theorem wp_lift_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
@@ -77,8 +80,8 @@ theorem wp_lift_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
 
 /-! ### Coupled steps -/
 
-/-- Couple a program step against a spec step by a step of any bind law, the continuation
-receiving the law's leftover (Rocq `wp_couple`). -/
+/-- Couple a program step against one spec step by a step of `law`, the continuation getting the
+law's leftover; the base of the lemmas below. -/
 theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
@@ -99,8 +102,8 @@ theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) {E : CoPset} {e₁ : 
   iapply progCoupl_steps_law law Hred Hred' Hhead Hside
   iexact H
 
-/-- `wp_lift_prim_steps_coupl` by a step of any bind law whose heads shift: the step's head is at
-`b₁`, and `b₂` rides through it on every leftover (Rocq `wp_couple_spend`). -/
+/-- `wp_lift_prim_steps_coupl_of_head` for a law whose heads shift: the head is at `b₁` and `b₂`
+rides along on every leftover (Rocq `wp_couple_spend`). -/
 theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] {E : CoPset}
     {e₁ : Exp rT} {Φ : Val rT → IProp GF} (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
@@ -129,7 +132,7 @@ theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] {
   iframe %Hred %Hred' %Hhead' %Hside H
 
 /-- Couple a program step against a spec step within `b₁`, leaving `b₂` to the continuation out
-of the budget `b` (clutch-dp's `wp_couple`). -/
+of the budget `b` (Rocq `wp_couple`). -/
 theorem wp_lift_prim_steps_coupl [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF}
@@ -196,7 +199,12 @@ theorem wp_lift_prim_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B]
 /-! ### Rules that pair the program step with a Dirac on the other side
 
 Everything below routes through `specCoupl_step_concentrated` or `progCoupl_step_l_concentrated`,
-which build the exact coupling along a diagonal (`rel_dirac_left`/`_right`). -/
+which build the exact coupling along a diagonal (`rel_dirac_left`/`_right`).
+
+`_concentrated` rules take any measurable set carrying the step, so they work for a diffuse `rT`
+(e.g. `urand`). The `@[discrete]` rules take that set to be the support `{ρ | 0 < primStep ρ}`,
+which carries the step only for non-`urand` redexes (hence `hne`); `@[discrete]` marks them as the
+discrete fragment (see `Meta/Discrete.lean`). -/
 
 section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]

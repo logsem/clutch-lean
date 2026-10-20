@@ -68,7 +68,9 @@ private theorem tglWpPre_mono {wp₁ wp₂ : CoPset → Exp rT → (Val rT → I
     iframe Hσ' Hε'
     iapply Hwand $$ HW
 
-/-- `tglWpPre` with the postcondition fixed, as a functional on `TglWpState`. -/
+/-- `tglWpPre` with the postcondition fixed, as a functional on `TglWpState`.
+`Φ` never changes across recursive calls of `tglWpPre`, so the fixpoint can be taken over (mask,
+expression) alone. -/
 abbrev tglWpPreFixed (Φ : Val rT → IProp GF)
     (wp : TglWpState rT → IProp GF) : TglWpState rT → IProp GF :=
   fun ⟨E, e⟩ => tglWpPre (fun E' e' _ => wp ⟨E', e'⟩) E e Φ

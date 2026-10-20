@@ -4,7 +4,9 @@ public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Metrology.Couplings.Divergences.Bof
 
 /-! Generalized KL on sub-probability measures, the Barthe–Olmedo divergence at `γ = 0`
-(Barthe–Olmedo, ICALP 2013). -/
+(Barthe–Olmedo, ICALP 2013).
+Main results: composition for kernels of equal mass (`klDivergence_comp_of_mass_eq`), and a
+counterexample to general composability (`not_isComposable_kl`). -/
 
 @[expose] public section
 
@@ -15,6 +17,7 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 
+/-- KL has infinite slope at `∞`, so mass singular to `ν` costs `⊤`. -/
 theorem derivAtTop_klFun : derivAtTop klFun = ⊤ := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
   have h : Tendsto (fun t : ℝ ↦ Real.log t + (1 / t - 1)) atTop atTop :=
@@ -49,6 +52,7 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
 /-- The pointwise generalized KL term `p log (p / q) + q - p`. -/
 noncomputable def klTerm (p q : ℝ) : ℝ := p * Real.log (p / q) + q - p
 
+/-- Away from `q = 0 < p`, the perspective of `klFun` is the pointwise KL term. -/
 theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
     persp klFun p q = klTerm p q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -155,6 +159,7 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   rw [fDiv_klFun_eq_sum _ _ hbind, fDiv_klFun_eq_sum _ _ fun j h ↦ hμ h, hdR, ← EReal.coe_add,
     EReal.coe_le_coe_iff]
   simp_rw [toReal_comp_singleton_eq_sum]
+  -- log-sum (klTerm_sum_le)
   calc ∑ i, klTerm (∑ j, (μ₁ {j}).toReal * (κ j {i}).toReal)
         (∑ j, (μ₂ {j}).toReal * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, klTerm ((μ₁ {j}).toReal * (κ j {i}).toReal)
@@ -164,6 +169,7 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
             rcases mul_eq_zero.1 h with h | h
             · rw [hp0 j h, zero_mul]
             · rw [hk0 j i h, mul_zero]
+    -- klTerm_mul, then swap sums
     _ = ∑ j, ((∑ i, (κ j {i}).toReal) * klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal +
           (μ₁ {j}).toReal * ∑ i, klTerm (κ j {i}).toReal (η j {i}).toReal +
           ((μ₂ {j}).toReal - (μ₁ {j}).toReal) *
@@ -174,12 +180,14 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
           ENNReal.toReal_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg (hp0 j) (hk0 j i)]
         simp only [Finset.sum_add_distrib, ← Finset.sum_mul, ← Finset.mul_sum,
           Finset.sum_sub_distrib]
+    -- the cross term vanishes by equal mass; bound the κ-mass by 1
     _ ≤ ∑ j, (klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal + (μ₁ {j}).toReal * d.toReal) := by
         refine Finset.sum_le_sum fun j _ ↦ ?_
         rw [hmassR j, sub_self, mul_zero, add_zero]
         gcongr
         · exact mul_le_of_le_one_left (hg0 j) ((hmassR j).symm ▸ hm1 j)
         · exact hD j
+    -- bound the μ₁-mass by 1
     _ ≤ ∑ j, klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal + d.toReal := by
         rw [Finset.sum_add_distrib, ← Finset.sum_mul]
         gcongr

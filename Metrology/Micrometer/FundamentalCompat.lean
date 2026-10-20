@@ -140,6 +140,8 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   let fixv' : Val rT := ⟨.fix (substMap vs.snd e'), IsVal.fix (by is_lc), by is_lc⟩
   iapply refines_ret (v1 := fixv) (v2 := fixv') rfl rfl
   imodintro
+  -- Löb induction: assume (under ▷) that the two fix values are related at τ1 → τ2; the body
+  -- needs this for the recursive binding f.
   iapply loeb_wand
   iintro !> #IH
   unfold lrel_arr

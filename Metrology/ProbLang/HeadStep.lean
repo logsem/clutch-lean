@@ -50,7 +50,7 @@ theorem Exp.isValM_some' [MeasurableSpace T] {e : Exp α} {m : Measure T} (w : I
 def Int.isPos (z : Int) : Option { z : Int // 0 < z } :=
   if H : 0 < z then some ⟨z, H⟩ else none
 
-/-- Uniform sampler of `⟨.lit (.int n), σ⟩` for `n < z`; the constant `-1` when `z ≤ 0`. -/
+/-- Uniform sampler of `⟨.lit (.int n), σ⟩` for `0 ≤ n < z`; the constant `-1` when `z ≤ 0`. -/
 def Cfg.uniform (z : Int) (σ : State rT) : Measure (Cfg rT) :=
   match z.isPos with
   | some ⟨z, Hz⟩ =>
@@ -64,7 +64,8 @@ def Cfg.uniformReal (σ : State rT) : Measure (Cfg rT) :=
 
 -- TODO: Do we need these value checks? Finding the redex, and enforcing evaluation
 -- order, should be governed by the reduction context.
-/-- One head-reduction step of a configuration, as a sub-probability measure on configurations. -/
+/-- One head-reduction step of a configuration, as a sub-probability measure; the zero measure means
+there is no head redex (stuck). -/
 def headStep : Cfg rT → Measure (Cfg rT)
 | ⟨.app (.lam e1) e2, σ⟩ =>
   e2.isValM <|
@@ -372,6 +373,18 @@ theorem Exp.asValM.measurable {T γ : Type _} [MeasurableSpace T] [MeasurableSpa
   · exact (MeasurableEmbedding.some_mk.prodMap .id).measurableSet_image'
       (hg.comp (measurable_snd.prodMk measurable_fst) hS)
 
+/-- Pushing a fixed s-finite measure through a jointly measurable map is measurable in the
+parameter. -/
+theorem measurable_map_const_uncurry {α β γ : Type _}
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    (μ : Measure β) [SFinite μ] {h : α × β → γ} (hh : Measurable h) :
+    Measurable (fun a : α => μ.map (fun b => h (a, b))) :=
+  @Measure.measurable_map_uncurry α β γ _ _ _ h hh (fun _ => μ) measurable_const
+    (by
+      have : ProbabilityTheory.Kernel.mk (fun _ : α => μ) measurable_const
+          = ProbabilityTheory.Kernel.const α μ := rfl
+      rw [this]; infer_instance)
+
 theorem Cfg.uniform.measurable :
     Measurable (fun (p : Int × State rT) => Cfg.uniform p.1 p.2) := by
   apply measurable_from_prod_countable_right
@@ -382,43 +395,26 @@ theorem Cfg.uniform.measurable :
   | none => exact Cfg.measurable_dirac_mk measurable_const measurable_id
   | some w =>
     obtain ⟨w, hw⟩ := w
-    set μ : Measure Int := (PMF.uniformOfFinset (Finset.Ico 0 w)
-      (Finset.nonempty_Ico.mpr hw)).toMeasure with hμ_def
-    have hμ_prob : IsProbabilityMeasure μ := by
-      rw [hμ_def]; infer_instance
-    have hk_const : Measurable (fun _ : State rT => μ) := measurable_const
-    have hker_sfinite : ProbabilityTheory.IsSFiniteKernel
-        (ProbabilityTheory.Kernel.mk (fun _ : State rT => μ) hk_const) := by
-      have hSF : MeasureTheory.SFinite μ := inferInstance
-      have : ProbabilityTheory.Kernel.mk (fun _ : State rT => μ) hk_const
-          = ProbabilityTheory.Kernel.const (State rT) μ := rfl
-      rw [this]; infer_instance
-    have hh : Measurable (fun p : State rT × Int => Cfg.mk (.lit (.int p.2)) p.1) :=
-      Cfg.measurable_iff.mpr
-        ⟨Exp.lit.measurable.comp (BaseLit.int.measurable.comp measurable_snd), measurable_fst⟩
-    exact @Measure.measurable_map_uncurry (State rT) Int (Cfg rT) _ _ _
-      _ hh (fun _ => μ) hk_const hker_sfinite
+    exact measurable_map_const_uncurry
+      (PMF.uniformOfFinset (Finset.Ico 0 w) (Finset.nonempty_Ico.mpr hw)).toMeasure
+      (h := fun p : State rT × Int => Cfg.mk (.lit (.int p.2)) p.1)
+      (Cfg.measurable_iff.mpr
+        ⟨Exp.lit.measurable.comp (BaseLit.int.measurable.comp measurable_snd), measurable_fst⟩)
 
 theorem Cfg.uniformReal.measurable :
-    Measurable (fun σ : State rT => Cfg.uniformReal σ) := by
-  unfold Cfg.uniformReal
-  set μ : Measure rT := LawfulProbLangℝ.unifUnit (T := rT) with hμ_def
-  have hk_const : Measurable (fun _ : State rT => μ) := measurable_const
-  have hker_sfinite : ProbabilityTheory.IsSFiniteKernel
-      (ProbabilityTheory.Kernel.mk (fun _ : State rT => μ) hk_const) := by
-    have : ProbabilityTheory.Kernel.mk (fun _ : State rT => μ) hk_const
-        = ProbabilityTheory.Kernel.const (State rT) μ := rfl
-    rw [this]; infer_instance
-  have hh : Measurable (fun p : State rT × rT => Cfg.mk (.lit (.real p.2)) p.1) :=
-    Cfg.measurable_iff.mpr
-      ⟨Exp.lit.measurable.comp (BaseLit.real.measurable.comp measurable_snd), measurable_fst⟩
-  exact @Measure.measurable_map_uncurry (State rT) rT (Cfg rT) _ _ _
-    _ hh (fun _ => μ) hk_const hker_sfinite
+    Measurable (fun σ : State rT => Cfg.uniformReal σ) :=
+  measurable_map_const_uncurry (LawfulProbLangℝ.unifUnit (T := rT))
+    (h := fun p : State rT × rT => Cfg.mk (.lit (.real p.2)) p.1)
+    (Cfg.measurable_iff.mpr
+      ⟨Exp.lit.measurable.comp (BaseLit.real.measurable.comp measurable_snd), measurable_fst⟩)
 
 /-! ### `headStep` per-branch continuations
 
 Each non-trivial branch of `headStep` is a named `def` with its own measurability
-theorem (for elaboration speed); `headStep.measurable` assembles them. -/
+theorem (for elaboration speed); `headStep.measurable` assembles them. Each branch is rewritten as
+`Exp.casesOn` with all arms `0` except the relevant one; the `exp_zero_<ctor>_apply c, h` /
+`baseLit_zero_<ctor>_apply` macros (`CoreMeasures/Recurrences.lean`) close such goals from the
+measurability `h` of that one arm. -/
 
 /-- The `headStep` branch for a unary operation, uncurried over the state and arguments. -/
 @[simp] def headStep.c_unop (p : State rT × UnOp × Exp rT) : Measure (Cfg rT) :=
@@ -1408,11 +1404,13 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   σ.heap[ℓ]?.isSome →
   σ' = σ.update_heap (·.insert ℓ v) →
   HeadStepSupport ⟨.store (.lit (.loc ℓ)) e, σ⟩ ⟨.lit .unit, σ'⟩
+/-- No tape, `0 < z`: sample uniformly below `z`. -/
 | RandNoTapeS :
   0 < z →
   0 ≤ v →
   v < z →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int v), σ⟩
+/-- No tape, `z ≤ 0`: return `-1`. -/
 | RandNonposS :
   ¬ 0 < z →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int (-1)), σ⟩
@@ -1420,12 +1418,14 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   ℓ = σ.tapes.fresh →
   σ' = σ.update_tapes (·.insert ℓ (.empty z)) →
   HeadStepSupport ⟨.tape (.lit (.int z)), σ⟩ ⟨.lit (.lbl ℓ), σ'⟩
+/-- Non-empty tape with bound `z`: pop the head. -/
 | RandTapeS :
   σ.tapes[α]? = some ⟨N, nn :: ns⟩ →
   z = N →
   v = nn.1 →
   σ' = σ.update_tapes (·.insert α ⟨N, ns⟩) →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+/-- Empty tape with bound `z`, `0 < z`: sample uniformly, tape unchanged. -/
 | RandTapeEmptyS :
   0 < z →
   σ.tapes[α]? = some ⟨N, []⟩ →
@@ -1434,6 +1434,7 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   v < z →
   σ' = σ →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+/-- Tape bound `≠ z`, `0 < z`: ignore the tape, sample uniformly. -/
 | RandTapeOtherS :
   0 < z →
   σ.tapes[α]? = some ⟨N, L⟩ →
@@ -1442,11 +1443,13 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   v < z →
   σ' = σ →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+/-- Empty tape with bound `z`, `z ≤ 0`: return `-1`. -/
 | RandTapeNonposEmptyS :
   ¬ 0 < z →
   σ.tapes[α]? = some ⟨N, []⟩ →
   z = N →
   HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
+/-- Tape bound `≠ z`, `z ≤ 0`: return `-1`. -/
 | RandTapeNonposOtherS :
   ¬ 0 < z →
   σ.tapes[α]? = some ⟨N, L⟩ →
@@ -1819,9 +1822,16 @@ theorem head_step_mass {e : Exp rT} {σ : State rT} :
     intro _; exact Cfg.uniform_isProbabilityMeasure
   case urand => intro _; exact Cfg.uniformReal_isProbabilityMeasure
 
+theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
+  obtain ⟨e, σ⟩ := ρ
+  by_cases h : headStep ⟨e, σ⟩ = 0
+  · simp [h]
+  · exact (head_step_mass h).measure_univ.le
+
 /-! ### Pure atomicity of `headStep`
 
-Countability-free replacement for the discrete `Pgl.zero_positive`. -/
+Every head step except `urand` is purely atomic (`headStep_atomic`), with no countability
+assumption on `rT`. -/
 
 /-- A measure that gives zero mass to the set of its own null singletons. -/
 def IsAtomicSupport {α : Type _} [MeasurableSpace α] (μ : Measure α) : Prop :=
@@ -1967,61 +1977,5 @@ theorem IsAtomicSupport.concentrated_atoms {α : Type _} [MeasurableSpace α]
   have hset : {x | 0 < μ {x}}ᶜ = {x | μ {x} = 0} := by
     ext x; simp [Set.mem_compl_iff, not_lt, nonpos_iff_eq_zero]
   rw [Concentrated, hset]; exact h
-
-theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
-  have hisValM_le : ∀ {T : Type _} [MeasurableSpace T] (e : Exp rT) (m : Measure T),
-      m Set.univ ≤ 1 → (e.isValM m) Set.univ ≤ 1 := by
-    intro T _ e m hm
-    by_cases hv : e.isValue
-    · rw [Exp.isValM_some hv]; exact hm
-    · rw [Exp.isValM_none hv]; simp
-  have hasValM_le : ∀ {T : Type _} [MeasurableSpace T] (e : Exp rT) (f : Val rT → Measure T),
-      (∀ v, (f v) Set.univ ≤ 1) → (e.asValM f) Set.univ ≤ 1 := by
-    intro T _ e f hf
-    unfold Exp.asValM
-    rcases hv : e.toVal? with _ | v
-    · simp
-    · exact hf v
-  have hunwrapM_le : ∀ {α T : Type _} [MeasurableSpace T] (o : Option α) (f : α → Measure T),
-      (∀ a, (f a) Set.univ ≤ 1) → (o.unwrapM f) Set.univ ≤ 1 := by
-    intro α T _ o f hf
-    cases o
-    · simp [Option.unwrapM]
-    · simp [Option.unwrapM]; exact hf _
-  have hdirac : ∀ {T : Type _} [MeasurableSpace T] (x : T), (Measure.dirac x) Set.univ ≤ 1 :=
-    fun _ => prob_le_one
-  have huniform : ∀ z (σ : State rT), (Cfg.uniform z σ) Set.univ ≤ 1 :=
-    fun _ _ => prob_le_one
-  obtain ⟨e, σ⟩ := ρ
-  head_case_names
-  case beta.lam | beta.fix | case.left | case.right => exact hisValM_le _ _ (hdirac _)
-  case fst | snd => exact hisValM_le _ _ (hisValM_le _ _ (hdirac _))
-  case unop => exact hisValM_le _ _ (hunwrapM_le _ _ fun _ => hdirac _)
-  case binop => exact hisValM_le _ _ (hisValM_le _ _ (hunwrapM_le _ _ fun _ => hdirac _))
-  case cond.true | cond.false | tape => exact hdirac _
-  case alloc => exact hasValM_le _ _ fun _ => hdirac _
-  case load =>
-    split
-    · simp
-    · apply hdirac
-  case store =>
-    apply hasValM_le; intro _
-    split
-    · simp
-    · apply hdirac
-  case rand.plain => apply huniform
-  case rand.tape =>
-    split
-    · simp
-    · split
-      · split
-        · apply huniform
-        · apply hdirac
-      · apply huniform
-  case scrut =>
-    apply hisValM_le
-    split <;> apply hdirac
-  case urand => exact Cfg.uniformReal_isProbabilityMeasure.measure_univ.le
-  case default => simp
 
 end ProbLang

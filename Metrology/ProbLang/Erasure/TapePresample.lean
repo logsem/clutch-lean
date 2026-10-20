@@ -14,6 +14,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
+/-- An event holds a.s. after presampling if it holds after appending each possible value. -/
 theorem tapePresample_ae
     {σ : State rT} {α : Loc} {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }} (h : σ.tapes[α]? = some ⟨N, bs⟩)
@@ -82,6 +83,7 @@ theorem tapePresample_bind_pull_heap [Countable rT] [MeasurableSingletonClass rT
     show k (σ.update_tapes _).heap _ = k σ.heap _
     simp [State.update_tapes]
 
+/-- Presampling commutes with any heap update. -/
 theorem tapePresample_update_heap_comm
     {σ : State rT} {α : Loc}
     (f : Std.ExtTreeMap Loc (Val rT) compare → Std.ExtTreeMap Loc (Val rT) compare)
@@ -111,6 +113,7 @@ theorem tapePresample_update_heap_comm
     rw [Measure.map_dirac (f := (·.update_heap f)) (σ.update_tapes (·.insert α ⟨N, bs ++ [n']⟩))]
     simp [State.update_tapes, State.update_heap]
 
+/-- Presampling `α` commutes with writing a different tape `β`. -/
 theorem tapePresample_update_tapes_ne_comm
     {σ : State rT} {α β : Loc} {v : Tape} (hne : β ≠ α) :
     tapePresample (σ.update_tapes (·.insert β v)) α =
@@ -143,6 +146,7 @@ theorem tapePresample_update_tapes_ne_comm
             (·.update_tapes (·.insert β v)) from by
       rw [Measure.map_dirac]; congr 1; exact State.upd_diff_tape_comm (Ne.symm hne)]
 
+/-- Integrating against a presample is integrating over the appended index. -/
 theorem tapePresample_lintegral
     {σ : State rT} {α : Loc} {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }}
@@ -279,10 +283,10 @@ theorem tapePresample_bind_cfgUniform_comm
             (fun σ'' => Measure.dirac (⟨ρ'.expr, σ''⟩ : Cfg rT)))
           hk2]
 
-/-! ## Uniform sampling against presampling
+/-! ## Change of variables: `tapeIndexUniform` vs `Cfg.uniform` -/
 
-Presampling changes the final tape content, so only the expression projection is invariant. -/
-
+/-- Integrating over a presampled index equals integrating over `Cfg.uniform N σ`; this closes the
+key erasure case. -/
 theorem tapeIndexUniform_lintegral_eq_cfg_uniform
     {N : Int} (hN : 0 < N) (σ : State rT)
     (f : Cfg rT → ENNReal) (hf : Measurable f) :

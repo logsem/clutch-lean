@@ -5,7 +5,9 @@ public import Metrology.ProbLang.CoreMeasures
 
 @[expose] public section
 
-/-! # Discreteness lifting for ProbLang measure spaces -/
+/-! # Discreteness lifting for ProbLang measure spaces
+
+Measurable singletons for the ProbLang types, and the default `LawfulProbLangℝ Int` instance. -/
 
 noncomputable section ProbLangDiscrete
 
@@ -83,25 +85,26 @@ end SynthCheck
 
 /-! ## Default `LawfulProbLangℝ` instance on `Int` -/
 
-/-- On `Int`, the "reals" are the integers themselves. -/
+/-- On `Int`, the "reals" are the integers themselves; rationals round down (so `1/2` becomes `0`)
+and `unifUnit` is a fair coin on `{0, 1}` (so `urand` flips a fair coin). -/
 instance instProbLangℝInt : ProbLang.LawfulProbLangℝ Int where
   instDecidableEq := inferInstance
   unifUnit := (PMF.uniformOfFinset ({0, 1} : Finset Int) (by decide)).toMeasure
-  unifUnit_isProbabilityMeasure := PMF.toMeasure.isProbabilityMeasure _
   unifUnitSupport := ↑({0, 1} : Finset Int)
-  unifUnitSupportMeasurable := .of_discrete
-  unifUnitIsConcentrated := by
-    rw [PMF.toMeasure_apply_eq_zero_iff _ (.of_discrete), PMF.support_uniformOfFinset]
-    exact disjoint_compl_right
   realLt a b := decide (a < b)
   realLe a b := decide (a ≤ b)
-  measurable_realLt := .of_discrete
-  measurable_realLe := .of_discrete
   realAdd a b := a + b
   realNeg a := -a
   realOfInt z := z
   realOfRat q := q.floor
   realFrac _ := 0
+  unifUnit_isProbabilityMeasure := PMF.toMeasure.isProbabilityMeasure _
+  unifUnitSupportMeasurable := .of_discrete
+  unifUnitIsConcentrated := by
+    rw [PMF.toMeasure_apply_eq_zero_iff _ (.of_discrete), PMF.support_uniformOfFinset]
+    exact disjoint_compl_right
+  measurable_realLt := .of_discrete
+  measurable_realLe := .of_discrete
   measurable_realAdd := .of_discrete
   measurable_realNeg := .of_discrete
   measurable_realFrac := .of_discrete

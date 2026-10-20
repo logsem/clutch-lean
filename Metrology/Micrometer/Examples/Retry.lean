@@ -26,6 +26,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 noncomputable def flipCredit (ε : ℝ≥0∞) (n : Int) : ℝ≥0∞ :=
   if n = 0 then 0 else ((2 : NNReal) : ℝ≥0∞) * ε
 
+/-- The flip credits average to `ε`, as `refines_randU_r_adv` requires. -/
 theorem flipCredit_avg (ε : ℝ≥0∞) :
     (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int).toNat ≤ ε := by
   rw [show Finset.Ico (0 : Int) 2 = {0, 1} by decide]
@@ -36,12 +37,14 @@ theorem flipCredit_avg (ε : ℝ≥0∞) :
 theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS ℝ≥0∞ GF] :
     ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
+  -- any positive budget splits in two; the step map is the identity
   iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
     (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by
       rw [ENNReal.add_halves]⟩)
     (fun b hb ↦ ⟨b, hb, le_rfl⟩) absorbing_codensity_tv_one (by norm_num)
   simp only [OrderAddMonoidHom.coe_id, id_eq]
   iintro !> %ε %_ #IH Hε
+  -- `ε ≥ 1` is absorbing; otherwise `ε` is finite and can be spent on the flip
   by_cases h1 : 1 ≤ ε
   · iapply refines_of_absorbing (absorbing_codensity_tv_one.mono h1) $$ Hε
   simp only [retry]

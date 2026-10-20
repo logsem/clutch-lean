@@ -17,7 +17,8 @@ namespace GradedLifting
 /-- One way to compose a step with its continuations: a head premise on the step, a side condition
 on the continuation kernels, and soundness (Rocq `GradedBindLaw`). -/
 structure BindLaw {B : Type v} [Preorder B] [Top B] (L : GradedLifting.{u} B) where
-  /-- The premise on the step's two measures, per-pair leftovers and output budget. -/
+  /-- `head μ ν R b`: the premise on the step's measures `μ ν`, per-pair leftovers `R` and output
+  budget `b` (budget last, unlike `L b R μ ν`). -/
   head : ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y],
     Measure X → Measure Y → (X → Y → B) → B → Prop
   /-- The side condition on both step measures, the leftovers and both continuation kernels; it
@@ -73,8 +74,8 @@ theorem side_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {μ :
   trivial
 
 variable (L) in
-/-- The no-progress step: point masses on both sides, continued at a finite leftover below the
-output budget (Rocq `GBL_unit_law`). -/
+/-- The law for deterministic steps: point masses on both sides at a finite leftover below the
+output budget; sound from `IsLawful` alone, with no `HasBind` (Rocq `GBL_unit_law`). -/
 def unit [Add B] [L.IsLawful] : BindLaw L where
   head μ ν R b := ∃ x y, μ = dirac x ∧ ν = dirac y ∧ R x y < ⊤ ∧ R x y ≤ b
   side _ _ _ _ _ := True

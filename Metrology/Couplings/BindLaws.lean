@@ -38,6 +38,8 @@ noncomputable def dpRhs : BindLaw (codensity dp.{u}) where
     classical
     rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩ _ hk
     refine IsLawful.mono (L := codensity dp) ?_ hb le_rfl
+    -- `codensity_dp_rhs` leaves `if S x y then (ε₂, D y) else ⊤`: on S this is `R x y`, off S
+    -- nothing is owed
     · exact HasBind.bind (codensity_dp_rhs hS hD) fun x y hxy ↦ by
         by_cases hxy' : S x y
         · simpa [hxy', hR x y hxy'] using hk x y (by simpa [hR x y hxy', hxy'] using hxy)
@@ -69,6 +71,8 @@ noncomputable def dpLhs : BindLaw (codensity dp.{u}) where
     classical
     rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩ _ hk
     refine IsLawful.mono (L := codensity dp) ?_ hb le_rfl
+    -- `codensity_dp_lhs` leaves `if S x y then (ε₂, D x) else ⊤`: on S this is `R x y`, off S
+    -- nothing is owed
     · exact HasBind.bind (codensity_dp_lhs hS hD) fun x y hxy ↦ by
         by_cases hxy' : S x y
         · simpa [hxy', hR x y hxy'] using hk x y (by simpa [hR x y hxy', hxy'] using hxy)
@@ -82,8 +86,9 @@ noncomputable def dpLhs : BindLaw (codensity dp.{u}) where
     simpa [Set.piecewise_eq_of_mem _ _ _ hx] using hR x y hxy
   side_supp _ := trivial
 
-/-- The left-keyed head survives adding a budget to every leftover and to the output, since `μ` has
-mass at most one (Rocq `gbl_head_shift`; no Rocq instance). -/
+/-- The left-keyed head shifts: the extra slack `c₂` is folded into `D`, costing at most `c₂`
+because `μ` has mass at most one. Instance of Rocq `gbl_head_shift`, which Rocq does not prove for
+this law. -/
 instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
   shift := by
     rintro _ _ _ _ _ ⟨c₁, c₂⟩ _ μ _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩
@@ -120,6 +125,8 @@ noncomputable def dpChoice : BindLaw (codensity dp.{u}) where
       ⟨ε₁, δ₁, ε₁', δ₁', ε₂, ε₂', δ₂, S₁, S₂, P, T, hP, hT, hμ, hν, h₁, h₂, hPT₁, hPT₂, hR₁, hR₂,
         hb⟩ _ hk
     refine IsLawful.mono (L := codensity dp) ?_ hb le_rfl
+    -- `codensity_dp_choice` leaves `(ε₂, δ₂)` on `S₁` if `x ∈ P`, `(ε₂', δ₂)` on `S₂` otherwise,
+    -- and `⊤` off the relation: on it this is `R x y`, off it nothing is owed
     · refine HasBind.bind (codensity_dp_choice h₁ h₂ hP hT hPT₁ hPT₂) fun x y hxy ↦ ?_
       by_cases hx : x ∈ P
       · by_cases hxy' : S₁ x y

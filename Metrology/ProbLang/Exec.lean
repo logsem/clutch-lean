@@ -22,7 +22,8 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-- Execution for at most `n` steps (zero if `n` steps do not suffice to reach a value). -/
+/-- The final configurations of runs that reach a value within `n - 1` steps; runs still going are
+dropped (so `execN 0 = 0`). -/
 def execN (n : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
   match n with
   | 0 => 0
@@ -111,23 +112,6 @@ theorem iSup_measure_apply {f : ℕ → Measure (Cfg rT)} (hf : Monotone f)
     (⨆ i, f i) S = ⨆ i, f i S :=
   Measure.iSup_apply_of_monotone hf HS
 
-theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
-    (μ : Measure α) (f g : α → Measure β) (Hf : Measurable f) (Hg : Measurable g)
-    (h : ∀ a, f a ≤ g a) :
-    μ.bind f ≤ μ.bind g := by
-  refine le_intro fun S HS HNE => ?_
-  rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
-  exact lintegral_mono (fun a => h a S)
-
-theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
-  induction n generalizing ρ with
-  | zero => exact bot_le
-  | succ k ih =>
-    rw [execN, execN]
-    split
-    · exact le_rfl
-    · exact Measure.bind_mono_right' _ _ _ (execN_measurable _) (execN_measurable _) ih
-
 /-! ### Primitive unfoldings -/
 
 @[simp] theorem execN_zero (ρ : Cfg rT) : execN 0 ρ = 0 := rfl
@@ -155,16 +139,26 @@ theorem stepOrFinal_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) :
 @[fun_prop]
 theorem stepOrFinal.measurable :
     Measurable (stepOrFinal : Cfg rT → Measure (Cfg rT)) := by
-  have hpred : MeasurableSet {ρ : Cfg rT | ρ.expr.isValue} := by
-    -- `isValue` also requires local closedness: `{isValue} = {isValueR} ∩ {lcb 0 = true}`
-    have : {ρ : Cfg rT | ρ.expr.isValue}
-        = (fun ρ : Cfg rT => ρ.expr) ⁻¹' ({e | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) := by
-      ext ρ; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
-    rw [this]
-    exact Cfg.measurable_expr ((Exp.isValueR.measurable.setOf).inter Exp.lcb_zero.measurableSet)
-  exact Measurable.ite hpred measurable_dirac primStep.measurable
+  exact Measurable.ite Cfg.isValue_measurableSet measurable_dirac primStep.measurable
 
 /-! ### Monotonicity (ported from `SampCert/SLang.lean`) -/
+
+theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    (μ : Measure α) (f g : α → Measure β) (Hf : Measurable f) (Hg : Measurable g)
+    (h : ∀ a, f a ≤ g a) :
+    μ.bind f ≤ μ.bind g := by
+  refine le_intro fun S HS HNE => ?_
+  rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
+  exact lintegral_mono (fun a => h a S)
+
+theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
+  induction n generalizing ρ with
+  | zero => exact bot_le
+  | succ k ih =>
+    rw [execN, execN]
+    split
+    · exact le_rfl
+    · exact Measure.bind_mono_right' _ _ _ (execN_measurable _) (execN_measurable _) ih
 
 theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ execN m ρ := by
   induction h with
@@ -381,6 +375,8 @@ theorem lintegral_limExec
     (ρ : Cfg rT) (f : Cfg rT → ENNReal) :
     ∫⁻ x, f x ∂(limExec ρ) = ⨆ n, ∫⁻ x, f x ∂(execN n ρ) := by
   unfold limExec
+  -- ≤: reduce to simple functions g, whose integral is Σ x · μ(g⁻¹{x}); each term commutes with
+  -- the monotone sup. ≥: monotonicity.
   apply le_antisymm
   · rw [lintegral_def]
     refine iSup_le fun g => iSup_le fun hg => ?_

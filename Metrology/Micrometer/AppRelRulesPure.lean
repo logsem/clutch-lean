@@ -7,9 +7,11 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.OpenInv
 
-@[expose] public section
+/-! Relational rules that need only `[L.IsLawful] [L.IsTopAbsorbing]`: pure steps, embedding a left
+`wp` (`refines_wp_l`, `refines_atomic_l`), right-side heap/tape steps, value rules and credit rules.
+Rules needing more of `L` are in `AppRelRules`. -/
 
-/-! Relational rules without coupled draws: pure steps, spec-side reductions, values and credits. -/
+@[expose] public section
 
 open Iris Iris.ProofMode ProbLang.MicrometerWpGS
 open scoped AppGS
@@ -52,6 +54,7 @@ theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K' K e'] at HK'
   iapply H $$ %K' %b HK' Hna Herr Hpos
 
+/-- Run the right program by a spec update that ends in a value. -/
 theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
       specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
@@ -67,6 +70,7 @@ theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT
   isimp only [← Ectx.fill_comp K'' K' v.1] at HK''
   iapply Hrefines $$ %K'' %b HK'' Hna Herr Hpos
 
+/-- Rewrite the right program by any spec update. -/
 theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
     {A : lrel rT GF} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
@@ -215,6 +219,7 @@ end Steps
 
 /-! ## Value rules -/
 
+/-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
 theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
@@ -227,6 +232,7 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
   iintro !> %w1 %w2 HA
   iapply H $$ %w1 %w2 HA
 
+/-- `refines_arrow_val` with the argument hypothesis given as a refinement. -/
 theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
     (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
@@ -250,6 +256,8 @@ seed from the threaded budget, which needs every positive budget to carry slack 
 section Credits
 variable [CanonicallyOrderedAdd B]
 
+/-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b` (needs
+every positive budget to split, `hsplit`). -/
 theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
@@ -294,8 +302,9 @@ theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : 
   iapply refines_ind_amp_of_bc hε habs hk $$ Hamp
   iapply BudgetCredit.weaken hle $$ Herr
 
-/-- A seed credit `↯b (s ε)` amplifies a function body uniformly in its arguments (Rocq
-`refines_arrow_val_err`, seed made explicit). -/
+/-- A seed credit `↯b (s ε)` amplifies a function body uniformly in its arguments (the core of Rocq
+`refines_arrow_val_err`; `refines_arrow_val_err` below wraps it with a seed from the threaded
+budget). -/
 theorem refines_app_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {v v' : Val rT}
     {A A' : lrel rT GF} {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) :
     iprop%

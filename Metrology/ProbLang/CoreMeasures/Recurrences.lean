@@ -9,10 +9,11 @@ meta import Metrology.ProbLang.CoreMeasures.ArmTactics
 @[expose] public section
 
 /-!
-# Measurability of recursive functions on `Exp`
+# Measurability of the syntax functions the semantics uses
 
-Most proofs apply `Exp.measurable_struct_rec(_param)` with one combinator per constructor
-and close the side goals by `rfl` or `fun_prop`.
+Main results: `toVal_question.measurable`, `decomp.measurable`, `UnOp_eval.measurable`,
+`BinOp_eval.measurable` and `tryMatch.measurable_joint`. Structural recursions go through
+`apply_arms Exp.measurable_struct_rec(_param)`; `toVal?`, `decomp` and `tryMatch` need hand proofs.
 -/
 
 noncomputable section ProbLangMeasures
@@ -116,6 +117,7 @@ private theorem measurable_of_lit_only [MeasurableSpace rT] {α : Type _} [Measu
 
 theorem UnOp.eval_op_measurable [LawfulProbLangℝ rT] (op : UnOp) :
     Measurable (fun v : Exp rT => UnOp.eval op v) := by
+  -- each operator acts only on literals: `measurable_of_lit_only` reduces to a map on `BaseLit`
   cases op with
   | neg =>
     refine measurable_of_lit_only none
@@ -324,7 +326,9 @@ instance instLocalOption [MeasurableSpace α] : MeasurableSpace (Option α) :=
 /-! ### `Exp.toVal?`
 
 `IsVal.check?` has a dependent codomain, so `toVal?` is handled through its value set
-`{e | e.isValue}` rather than the recursion keystone. -/
+`{e | e.isValue}` rather than `measurable_struct_rec`.
+`Val` has the comap σ-algebra of `Val.fst`, and `fst (toVal? e) = e` on the measurable set of
+values, so the proof is preimage bookkeeping on that set. -/
 
 theorem toVal_question.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (Val rT)) := instLocalOption
@@ -706,42 +710,6 @@ theorem decompItem.measurable [MeasurableSpace rT] :
     let _ : MeasurableSpace (Option (EctxItem rT × Exp rT)) := instLocalOption
     Measurable (Exp.decompItem : Exp rT → Option (EctxItem rT × Exp rT)) := by
   intro mOpt
-  have hrw : (Exp.decompItem : Exp rT → Option (EctxItem rT × Exp rT)) = fun e =>
-      Exp.casesOn (motive := fun _ => Option (EctxItem rT × Exp rT)) e
-        (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-        (fun e1 e2 =>
-          e2.toVal?.casesOn (some (.appR e1, e2)) fun v2 =>
-          e1.toVal?.casesOn (some (.appL v2, e1)) fun _ => none)
-        (fun op e1 =>
-          e1.toVal?.casesOn (some (.unop op, e1)) fun _ => none)
-        (fun op e1 e2 =>
-          e2.toVal?.casesOn (some (.binopR op e1, e2)) fun v2 =>
-          e1.toVal?.casesOn (some (.binopL op v2, e1)) fun _ => none)
-        (fun ec et ef =>
-          ec.toVal?.casesOn (some (.condC et ef, ec)) fun _ => none)
-        (fun e1 e2 =>
-          e2.toVal?.casesOn (some (.pairR e1, e2)) fun v2 =>
-          e1.toVal?.casesOn (some (.pairL v2, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.fst, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.snd, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.inl, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.inr, e1)) fun _ => none)
-        (fun ec el er =>
-          ec.toVal?.casesOn (some (.case el er, ec)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.alloc, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.load, e1)) fun _ => none)
-        (fun e1 e2 =>
-          e2.toVal?.casesOn (some (.storeR e1, e2)) fun v2 =>
-          e1.toVal?.casesOn (some (.storeL v2, e1)) fun _ => none)
-        (fun e1 => e1.toVal?.casesOn (some (.tape, e1)) fun _ => none)
-        (fun e1 e2 =>
-          e2.toVal?.casesOn (some (.randR e1, e2)) fun v2 =>
-          e1.toVal?.casesOn (some (.randL v2, e1)) fun _ => none)
-        none
-        none
-        (fun e1 p => e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none) := by
-    funext e; cases e <;> rfl
-  rw [hrw]
   have htv : @Measurable (Exp rT) (Option (Val rT)) _ instLocalOption Exp.toVal? :=
     toVal_question.measurable
   have hunary : ∀ {β : Type _} [MeasurableSpace β] (K : β → EctxItem rT) (proj : β → Exp rT),
@@ -776,54 +744,18 @@ theorem decompItem.measurable [MeasurableSpace rT] :
     exact Option.measurable_elim_param (f := fun b => (projR b).toVal?)
       (htv.comp hprojR) (MeasurableEmbedding.some_mk.measurable.comp (hKR.prodMk hprojR))
       h_some_branch
-  refine Exp.measurable_casesOn
-    (c_bvar := fun _ => none) (c_fvar := fun _ => none) (c_lit := fun _ => none)
-    (c_lam := fun _ => none) (c_fix := fun _ => none)
-    (c_app := fun (q : Exp rT × Exp rT) =>
-      q.2.toVal?.casesOn (some (EctxItem.appR q.1, q.2)) fun v2 =>
-      q.1.toVal?.casesOn (some (EctxItem.appL v2, q.1)) fun _ => none)
-    (c_unop := fun (q : UnOp × Exp rT) =>
-      q.2.toVal?.casesOn (some (EctxItem.unop q.1, q.2)) fun _ => none)
-    (c_binop := fun (q : BinOp × Exp rT × Exp rT) =>
-      q.2.2.toVal?.casesOn (some (EctxItem.binopR q.1 q.2.1, q.2.2)) fun v2 =>
-      q.2.1.toVal?.casesOn (some (EctxItem.binopL q.1 v2, q.2.1)) fun _ => none)
-    (c_cond := fun (q : Exp rT × Exp rT × Exp rT) =>
-      q.1.toVal?.casesOn (some (EctxItem.condC q.2.1 q.2.2, q.1)) fun _ => none)
-    (c_pair := fun (q : Exp rT × Exp rT) =>
-      q.2.toVal?.casesOn (some (EctxItem.pairR q.1, q.2)) fun v2 =>
-      q.1.toVal?.casesOn (some (EctxItem.pairL v2, q.1)) fun _ => none)
-    (c_fst := fun e1 => e1.toVal?.casesOn (some (EctxItem.fst, e1)) fun _ => none)
-    (c_snd := fun e1 => e1.toVal?.casesOn (some (EctxItem.snd, e1)) fun _ => none)
-    (c_inl := fun e1 => e1.toVal?.casesOn (some (EctxItem.inl, e1)) fun _ => none)
-    (c_inr := fun e1 => e1.toVal?.casesOn (some (EctxItem.inr, e1)) fun _ => none)
-    (c_case := fun (q : Exp rT × Exp rT × Exp rT) =>
-      q.1.toVal?.casesOn (some (EctxItem.case q.2.1 q.2.2, q.1)) fun _ => none)
-    (c_alloc := fun e1 => e1.toVal?.casesOn (some (EctxItem.alloc, e1)) fun _ => none)
-    (c_load := fun e1 => e1.toVal?.casesOn (some (EctxItem.load, e1)) fun _ => none)
-    (c_store := fun (q : Exp rT × Exp rT) =>
-      q.2.toVal?.casesOn (some (EctxItem.storeR q.1, q.2)) fun v2 =>
-      q.1.toVal?.casesOn (some (EctxItem.storeL v2, q.1)) fun _ => none)
-    (c_tape := fun e1 => e1.toVal?.casesOn (some (EctxItem.tape, e1)) fun _ => none)
-    (c_rand := fun (q : Exp rT × Exp rT) =>
-      q.2.toVal?.casesOn (some (EctxItem.randR q.1, q.2)) fun v2 =>
-      q.1.toVal?.casesOn (some (EctxItem.randL v2, q.1)) fun _ => none)
-    (c_fail := fun _ => none)
-    (c_urand := fun _ => none)
-    (c_scrut := fun (q : Exp rT × Pat rT) =>
-      q.1.toVal?.casesOn (some (EctxItem.scrut q.2, q.1)) fun _ => none)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  iterate 3 exact measurable_const
-  · exact hbinary
+  -- each arm tests the right operand, then the left, for being a value
+  apply_arms Exp.measurable_cases
+  case h_app =>
+    exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.appR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.appL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.appR.ι.measurable.comp measurable_fst)
       (EctxItem.appL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · exact hunary (β := UnOp × Exp rT)
-      (K := fun q => EctxItem.unop q.1) (proj := fun q => q.2)
-      (EctxItem.unop.ι.measurable.comp measurable_fst) measurable_snd
-  · exact hbinary
+  case h_binop =>
+    exact hbinary
       (KR := fun q : BinOp × Exp rT × Exp rT => EctxItem.binopR q.1 q.2.1)
       (KL := fun (q : (BinOp × Exp rT × Exp rT) × Val rT) => EctxItem.binopL q.1.1 q.2)
       (projL := fun q => q.2.1) (projR := fun q => q.2.2)
@@ -832,57 +764,33 @@ theorem decompItem.measurable [MeasurableSpace rT] :
       (EctxItem.binopL.ι.measurable.comp
         ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
       (measurable_fst.comp measurable_snd) (measurable_snd.comp measurable_snd)
-  · exact hunary (β := Exp rT × Exp rT × Exp rT)
-      (K := fun q => EctxItem.condC q.2.1 q.2.2)
-      (proj := fun q => q.1)
-      (EctxItem.condC.ι.measurable.comp
-        ((measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)))
-      measurable_fst
-  · exact hbinary
+  case h_pair =>
+    exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.pairR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.pairL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.pairR.ι.measurable.comp measurable_fst)
       (EctxItem.pairL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.fst) (proj := id)
-      measurable_const measurable_id
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.snd) (proj := id)
-      measurable_const measurable_id
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.inl) (proj := id)
-      measurable_const measurable_id
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.inr) (proj := id)
-      measurable_const measurable_id
-  · exact hunary (β := Exp rT × Exp rT × Exp rT)
-      (K := fun q => EctxItem.case q.2.1 q.2.2) (proj := fun q => q.1)
-      (EctxItem.case.ι.measurable.comp
-        ((measurable_fst.comp measurable_snd).prodMk (measurable_snd.comp measurable_snd)))
-      measurable_fst
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.alloc) (proj := id)
-      measurable_const measurable_id
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.load) (proj := id)
-      measurable_const measurable_id
-  · exact hbinary
+  case h_store =>
+    exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.storeR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.storeL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.storeR.ι.measurable.comp measurable_fst)
       (EctxItem.storeL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · exact hunary (β := Exp rT) (K := fun _ => EctxItem.tape) (proj := id)
-      measurable_const measurable_id
-  · exact hbinary
+  case h_rand =>
+    exact hbinary
       (KR := fun q : Exp rT × Exp rT => EctxItem.randR q.1)
       (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.randL q.2)
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.randR.ι.measurable.comp measurable_fst)
       (EctxItem.randL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
-  · exact hunary (β := Exp rT × Pat rT)
-      (K := fun q => EctxItem.scrut q.2) (proj := fun q => q.1)
-      (EctxItem.scrut.ι.measurable.comp measurable_snd)
-      measurable_fst
 
+-- `decomp` recurses on the subterm `decompItem` returns, not structurally, so
+-- `measurable_struct_rec` does not apply; we iterate `decompItem` `height e` times instead.
 /-- `Exp.decomp` with explicit fuel; agrees with it once `n ≥ e.height`. -/
 private def decompN {α : Type _} : ℕ → Exp α → Ectx α × Exp α
   | 0, e => ([], e)
@@ -1175,20 +1083,23 @@ def liftEq (p : Exp rT × Exp rT) : Option (Exp rT) :=
 /-! `liftEq` splits on the first operand into one continuation per live shape
 (`.lit`, `.inl`, `.inr`); a direct `cases` on both operands is too large. -/
 
-/-- `liftEq (.lit l1, v2)`, taking `(v2, l1)`. -/
+/-- `liftEq (.lit l1, v2)` as a function of `(v2, l1)`: the parameter `v2` first, as
+`Exp.measurable_casesOn_param` takes it. -/
 def liftEq_litK [DecidableEq (BaseLit rT)] (p : Exp rT × BaseLit rT) : Option (Exp rT) :=
   match p.1 with
   | .lit l2 => some (Exp.lit (.bool (decide (p.2 = l2))))
   | _ => none
 
-/-- `liftEq (.inl e1', v2)`, taking `(e1', v2)`. -/
+/-- `liftEq (.inl e1', v2)` as a function of `(e1', v2)`, in the order of
+`Exp.measurable_casesOn_param`. -/
 def liftEq_inlK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inl (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
   | .lit _, .inr (.lit _) => some (Exp.lit (.bool false))
   | _, _ => none
 
-/-- `liftEq (.inr e1', v2)`, taking `(e1', v2)`. -/
+/-- `liftEq (.inr e1', v2)` as a function of `(e1', v2)`, in the order of
+`Exp.measurable_casesOn_param`. -/
 def liftEq_inrK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inr (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
@@ -1649,35 +1560,7 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
       · exact (MeasurableSet.singleton l).compl
       · exact MeasurableSet.empty
   | pair p1 p2 ih1 ih2 =>
-    have hrw : (fun e : Exp rT => Pat.tryMatch (.pair p1 p2) e)
-        = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
-            (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun _ => none) (fun _ => none)
-            (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-            (fun e1 e2 =>
-              (Pat.tryMatch p1 e1).bind fun b1 =>
-              (Pat.tryMatch p2 e2).bind fun b2 =>
-              some (.pair b1 b2))
-            (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-            (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-      funext e; cases e <;> rfl
-    rw [hrw]
-    apply Exp.measurable_casesOn
-      (c_bvar := fun _ => none) (c_fvar := fun _ => none) (c_lit := fun _ => none)
-      (c_lam := fun _ => none) (c_fix := fun _ => none)
-      (c_app := fun _ => none) (c_unop := fun _ => none) (c_binop := fun _ => none)
-      (c_cond := fun _ => none)
-      (c_pair := fun q : Exp rT × Exp rT =>
-        (Pat.tryMatch p1 q.1).bind fun b1 =>
-        (Pat.tryMatch p2 q.2).bind fun b2 =>
-        some (Exp.pair b1 b2))
-      (c_fst := fun _ => none) (c_snd := fun _ => none)
-      (c_inl := fun _ => none) (c_inr := fun _ => none) (c_case := fun _ => none)
-      (c_alloc := fun _ => none) (c_load := fun _ => none) (c_store := fun _ => none)
-      (c_tape := fun _ => none) (c_rand := fun _ => none) (c_fail := fun _ => none)
-      (c_urand := fun _ => none)
-      (c_scrut := fun _ => none)
+    apply_arms Exp.measurable_cases
     case h_pair =>
       let _ : MeasurableSpace (Option (Exp rT)) := instLocalOption
       refine Option.measurable_bind_param (β := Exp rT) (γ := Exp rT)
@@ -1693,66 +1576,21 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
         · exact ih2.comp (measurable_snd.comp measurable_fst)
         · exact MeasurableEmbedding.some_mk.measurable.comp (Exp.pair.measurable.comp
             ((measurable_snd.comp measurable_fst).prodMk measurable_snd))
-    all_goals exact measurable_const
   | inl p ih =>
-    have hrw : (fun e : Exp rT => Pat.tryMatch (.inl p) e)
-        = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
-            (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun _ => none) (fun _ => none)
-            (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-            (fun _ _ => none) (fun _ => none) (fun _ => none)
-            (fun e' => Pat.tryMatch p e')
-            (fun _ => none)
-            (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-            (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-      funext e; cases e <;> rfl
-    rw [hrw]
-    apply Exp.measurable_casesOn
-      (c_bvar := fun _ => none) (c_fvar := fun _ => none) (c_lit := fun _ => none)
-      (c_lam := fun _ => none) (c_fix := fun _ => none)
-      (c_app := fun _ => none) (c_unop := fun _ => none) (c_binop := fun _ => none)
-      (c_cond := fun _ => none) (c_pair := fun _ => none)
-      (c_fst := fun _ => none) (c_snd := fun _ => none)
-      (c_inl := fun e' : Exp rT => Pat.tryMatch p e')
-      (c_inr := fun _ => none) (c_case := fun _ => none)
-      (c_alloc := fun _ => none) (c_load := fun _ => none) (c_store := fun _ => none)
-      (c_tape := fun _ => none) (c_rand := fun _ => none) (c_fail := fun _ => none)
-      (c_urand := fun _ => none)
-      (c_scrut := fun _ => none)
-    case h_inl => exact ih
-    all_goals exact measurable_const
+    apply_arms Exp.measurable_cases
   | inr p ih =>
-    have hrw : (fun e : Exp rT => Pat.tryMatch (.inr p) e)
-        = fun e => Exp.casesOn (motive := fun _ => Option (Exp rT)) e
-            (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun _ => none) (fun _ => none)
-            (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
-            (fun _ _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
-            (fun e' => Pat.tryMatch p e')
-            (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-            (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
-      funext e; cases e <;> rfl
-    rw [hrw]
-    apply Exp.measurable_casesOn
-      (c_bvar := fun _ => none) (c_fvar := fun _ => none) (c_lit := fun _ => none)
-      (c_lam := fun _ => none) (c_fix := fun _ => none)
-      (c_app := fun _ => none) (c_unop := fun _ => none) (c_binop := fun _ => none)
-      (c_cond := fun _ => none) (c_pair := fun _ => none)
-      (c_fst := fun _ => none) (c_snd := fun _ => none)
-      (c_inl := fun _ => none)
-      (c_inr := fun e' : Exp rT => Pat.tryMatch p e')
-      (c_case := fun _ => none)
-      (c_alloc := fun _ => none) (c_load := fun _ => none) (c_store := fun _ => none)
-      (c_tape := fun _ => none) (c_rand := fun _ => none) (c_fail := fun _ => none)
-      (c_urand := fun _ => none)
-      (c_scrut := fun _ => none)
-    case h_inr => exact ih
-    all_goals exact measurable_const
+    apply_arms Exp.measurable_cases
 
 theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] :
     Measurable (fun (q : Pat rT × Exp rT) => Pat.tryMatch q.1 q.2) := by
   apply measurable_from_prod_countable_right
   exact tryMatch_fixed.measurable
+
+/-! ### `Pat.tryMatch` jointly, without `Countable rT`
+
+A cell of shape `s` is `{(e, p) | Pat.shape p = s ∧ tryMatch p e ∈ U}`;
+`StructRec.measurable_of_cells_param` reduces measurability to every cell being measurable, proved
+by induction on `s`. -/
 
 /-- The set where `Pat.shape` of a measurable `Exp × Pat`-valued map is `s` is measurable,
 given the cell hypothesis at `s`. -/
@@ -1940,6 +1778,7 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       intro e p' h
       cases e <;> first | rfl | (rename_i e'; exact absurd ⟨e', rfl⟩ h)
     | pair s1 s2 ih1 ih2 =>
+      -- match on the product of the two sub-cells, by a π-system argument on rectangles
       intro U hU
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.pair s1 s2 ∧
             Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}

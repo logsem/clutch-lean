@@ -48,7 +48,9 @@ theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 
   exact h ▸ (hf.comp_continuous (continuous_id.max continuous_const)
     fun t ↦ le_max_right t 0).measurable.comp hG
 
-/-- A real multiple of `D` below `m` is a real multiple of some `d`, with `d ≥ 0` when `D ≥ 0`. -/
+/-- A real multiple of `D` below `m` is a real multiple of some `d`, with `d ≥ 0` when `D ≥ 0`.
+It replaces the slope `derivAtTop f` by a real number on the singular part
+(`sum_persp_integral_le_fDiv`), which is legitimate when the slope is `⊤` only on zero mass. -/
 theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0) (hbot : D ≠ ⊥) :
     ∃ d : ℝ, (∀ r : ℝ, 0 ≤ r → r ≤ m → (r : EReal) * D = (r * d : ℝ)) ∧ (0 ≤ D → 0 ≤ d) := by
   by_cases hDtop : D = ⊤
@@ -59,7 +61,8 @@ theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0
     rw [EReal.coe_mul, EReal.coe_toReal hDtop hbot]
 
 /-- Weighted partition sums are below the `f`-divergence: Jensen on the density part, the slope
-at infinity on the singular part. -/
+at infinity on the singular part. Either the weights cover everything (a partition or Markov
+kernel), or `f ≥ 0` so the uncovered part only drops a nonnegative amount. -/
 theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     {ι : Type*} (s : Finset ι) {w : ι → X → ℝ} (hw : ∀ i, Measurable (w i))

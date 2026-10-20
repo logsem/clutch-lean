@@ -19,6 +19,7 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞
 noncomputable def tv : GradedDivergence.{u} ℝ≥0∞ :=
   fun δ ↦ dp (0, δ)
 
+/-- Unfolded: every measurable event gains at most `δ` from `ν` to `μ`. -/
 theorem tv_iff {μ ν : Measure X} : tv δ μ ν ↔ ∀ S, MeasurableSet S → μ S ≤ ν S + δ := by
   simp [tv, dp_iff]
 
@@ -58,6 +59,7 @@ instance isLeftAntitone_tv : tv.{u}.IsLeftAntitone where
   left_anti δ := IsLeftAntitone.left_anti (b := (0, δ))
 
 instance isBudgetClosed_tv : tv.{u}.IsBudgetClosed where
+  -- `h0` is the dp guard `0 < ⊤`; close the event bound under `δ' ↓ δ`
   of_forall_gt := fun h h0 ↦ .of_forall_lt fun δ' hδ' ↦ h δ' hδ' h0
 
 instance hasSlack_tv : tv.{u}.HasSlack (OrderAddMonoidHom.id ℝ≥0∞) where

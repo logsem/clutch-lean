@@ -128,8 +128,7 @@ theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Redu
   rw [MeasureTheory.Measure.dirac_bind (by fun_prop), pexecN_one,
     stepOrFinal_not_isValue (val_stuck Hred')]
 
-/-- Continuations need only cover a set carrying the program step, by the law's `head_supp`
-(Rocq `prog_coupl_strengthen`). -/
+/-- Continuations need only cover a set carrying the program step (via the law's `head_supp`). -/
 theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     {σ₁' : State rT} {b : B} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
@@ -157,6 +156,7 @@ theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     iframe %hmem' HZ₁
   · simp [Set.piecewise_eq_of_notMem _ _ _ hmem] at hR
 
+/-- The continuation may assume the program landed in `S` (Rocq `prog_coupl_strengthen`). -/
 theorem progCoupl_strengthen {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :

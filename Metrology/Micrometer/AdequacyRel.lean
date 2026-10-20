@@ -9,7 +9,9 @@ public import Iris.Instances.Lib.WSat
 public import Iris.Instances.Lib.LaterCredits
 public import Iris.Instances.Lib.FUpd
 
-/-! Relational adequacy: a parametric `refines` lifts to the limit executions. -/
+/-! Relational adequacy: a refinement proved for every ghost-state instance gives a lifting of the
+two limit executions (`approximates_coupling`). Also defines `RefinesPreGS` and
+`MicrometerFunctor`. -/
 
 @[expose] public section
 
@@ -103,6 +105,8 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
       ⊢@{IProp GF} ↯b b -∗ refines L ⊤ e e' (A IR IBC)) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
   refine wp_adequacy_error_lim (GF := GF) e e' σ σ' b φ fun IGS IBC b' hb' => ?_
+  -- Adequacy gives a credit b' > b. Split it as b + r: the user's proof takes ↯b b, and r > 0
+  -- becomes the credit threaded through refines.
   obtain ⟨r, rfl⟩ := le_iff_exists_add.1 hb'.le
   have hr : (0 : B) < r := pos_iff_ne_zero.2 fun h => by simp [h] at hb'
   iintro He' Herr

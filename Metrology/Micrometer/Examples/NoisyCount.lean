@@ -74,7 +74,8 @@ noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
   progMech (noisyCount lap) σ
 
 /-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1). Conditional on the
-sampler spec `hlap`. -/
+sampler spec `hlap`, which is assumed for every ghost-state instance because adequacy allocates
+its own. -/
 theorem noisyCount_DP [Fact (0 < b)]
     (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
       (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),

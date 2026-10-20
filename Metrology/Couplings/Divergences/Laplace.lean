@@ -118,6 +118,7 @@ theorem dp_bernoulli_symm (x y : X) {p : I} (hp₀ : 0 < (p : ℝ)) (hp₁ : (p 
   have hp : ((toNNReal p : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal p := (ofReal_eq_coe_nnreal p.2.1).symm
   have hq : ((toNNReal (σ p) : ℝ≥0) : ℝ≥0∞) = ENNReal.ofReal (σ p) :=
     (ofReal_eq_coe_nnreal (σ p).2.1).symm
+  -- cases: `S` ∋ x, y (mass 1 each) / only x (`p` vs `1 - p`) / only y (`1 - p` vs `p`) / neither
   split_ifs
   · rw [mul_one, ← ofReal_one]
     exact ofReal_le_ofReal ((one_le_div hmin).2 min_le_max)

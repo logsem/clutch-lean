@@ -44,6 +44,7 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
   set p : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal
   set q : Fin n → ℝ := fun i ↦ (ν (k ⁻¹' {i})).toReal
+  -- partition form: each cell costs `e^{(α - 1) c}` times more, so the sum does
   have hsum : ∑ i, persp (· ^ α) (p i) (q i) ≤ _ :=
     (le_iSup₂_of_le (f := fun n (k : X → Fin n) ↦ ⨆ (_ : Measurable k),
       ∑ i, persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal) n k
@@ -51,6 +52,7 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
   have hs : ((expBudget c)⁻¹).toReal = exp (-c.toReal) := by
     rw [expBudget_of_ne_top hc, ← ENNReal.ofReal_inv_of_pos (exp_pos _),
       ENNReal.toReal_ofReal (by positivity), exp_neg]
+  -- every cell is finite (the sum is bounded by `h`), so we can work in ℝ
   have hfin (i : Fin n) :
       ((persp (· ^ α) (p i) (q i)).toReal : EReal) = persp (· ^ α) (p i) (q i) :=
     have hnn (j : Fin n) : 0 ≤ persp (· ^ α) (p j) (q j) :=
@@ -58,7 +60,6 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
     EReal.coe_toReal (ne_top_of_le_ne_top (EReal.coe_ne_top _)
       ((Finset.single_le_sum (fun j _ ↦ hnn j) (Finset.mem_univ i)).trans hsum))
       (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hnn i))
-  -- each cell costs `e^{(α - 1) c}` times more
   have hcell (i : Fin n) : persp (· ^ α) (p i) (((expBudget c)⁻¹ • ν) (k ⁻¹' {i})).toReal =
       ((exp ((α - 1) * c.toReal) * (persp (· ^ α) (p i) (q i)).toReal : ℝ) : EReal) := by
     rw [Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul, hs, ← one_mul (p i),

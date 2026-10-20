@@ -74,7 +74,8 @@ theorem integrable_partialSups_affine [IsFiniteMeasure ν] {a c : ℕ → ℝ} {
   exact Finset.single_le_sum (f := fun i ↦ |a i * G x + c i|) (fun _ _ ↦ abs_nonneg _) hi
 
 /-- Finitely many affine minorants: the integral of their maximum at the density, plus the
-singular part, is at most a partition sum. -/
+singular part, is at most a partition sum. On the `ν`-carrying set, cell `i ≤ N` collects the points
+where minorant `i` is the first to attain the maximum; the last cell `N + 1` is the singular set. -/
 theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
     (h : ∀ i t, 0 ≤ t → a i * t + c i ≤ f t) [IsFiniteMeasure μ] [IsFiniteMeasure ν] (N : ℕ) :
     ∃ k : X → Fin (N + 2), Measurable k ∧

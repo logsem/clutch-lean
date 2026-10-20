@@ -184,7 +184,7 @@ namespace GradedDivergence
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α : ℝ} {ρ : ℝ≥0∞}
   {E : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
 
-/-! ## Soundness -/
+/-! ## Witnesses give liftings -/
 
 /-- Raising `e^{(α - 1) ε / α}` to the conjugate exponent `α / (α - 1)` gives `e^ε`. -/
 theorem expBudget_conj_rpow (hα : 1 < α) (ε : ℝ≥0∞) :

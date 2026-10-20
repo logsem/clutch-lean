@@ -55,7 +55,7 @@ theorem tvDist_triangle (μ ν ρ : Measure α) :
       _ = tvDist μ ν + tvDist ν ρ + μ S := by
           rw [tvDist_comm ν μ, tvDist_comm ρ ν]; ring
 
-/-- Turns `refines_coupling` into a security statement. -/
+/-- Equality couplings within `ε` in both directions bound the total variation distance by `ε`. -/
 theorem tvDist_le_of_addCoupl_eq {ε : ENNReal} {μ ν : Measure α}
     (h₁ : AddCoupl ε {p : α × α | p.1 = p.2} μ ν)
     (h₂ : AddCoupl ε {p : α × α | p.1 = p.2} ν μ) :

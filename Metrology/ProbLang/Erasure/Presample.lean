@@ -57,7 +57,7 @@ theorem tapeIndexUniform_univ_eq_one {N : Int} (hN : 0 < N) :
   rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
   simp only [Set.preimage_univ, measure_univ]
 
-/-- The clamping injection `Int → [0, N)` used by `tapeIndexUniform`. -/
+/-- The clamping map `Int → [0, N)` (out-of-range values go to `0`). -/
 noncomputable def tapeIdxOf {N : Int} (hN : 0 < N) (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
   if hz : 0 ≤ n ∧ n < N then ⟨n, hz⟩ else ⟨0, ⟨_root_.le_refl _, hN⟩⟩
 
@@ -102,8 +102,32 @@ instance tapeIndexUniform.instSFinite {N : Int} : SFinite (tapeIndexUniform N) :
   unfold tapeIndexUniform
   split <;> infer_instance
 
+theorem tapeIndexUniform_univ_le_one {N : Int} :
+    (tapeIndexUniform N) Set.univ ≤ 1 := by
+  unfold tapeIndexUniform
+  split
+  next h =>
+    have : IsProbabilityMeasure
+        (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure :=
+      PMF.toMeasure.isProbabilityMeasure _
+    rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
+    simp
+  next => simp
+
+theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
+    (tapePresample σ α) Set.univ ≤ 1 := by
+  cases hsome : σ.tapes[α]? with
+  | none => simp [tapePresample, hsome]
+  | some t =>
+    obtain ⟨N, bs⟩ := t
+    simp only [tapePresample, hsome]
+    rw [Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
+    simpa using tapeIndexUniform_univ_le_one
+
 theorem tapePresample.measurable {α : Loc} :
     Measurable (fun σ : State rT => tapePresample σ α) := by
+  -- `tapePresample σ α = leaf (σ, σ.tapes[α]?)`; `Option Tape` is countable, so check each
+  -- branch: a map of the constant kernel `tapeIndexUniform N`.
   let leaf : State rT × Option Tape → Measure (State rT) :=
     fun p =>
       match p.2 with
@@ -155,28 +179,6 @@ theorem tapePresample.measurable {α : Loc} :
     measurable_id.prodMk ((LocHeap.measurable_getElem? α).comp State.measurable_tapes)
   show Measurable (fun σ : State rT => leaf (σ, σ.tapes[α]?))
   exact hleaf.comp hproj
-
-theorem tapeIndexUniform_univ_le_one {N : Int} :
-    (tapeIndexUniform N) Set.univ ≤ 1 := by
-  unfold tapeIndexUniform
-  split
-  next h =>
-    have : IsProbabilityMeasure
-        (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure :=
-      PMF.toMeasure.isProbabilityMeasure _
-    rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
-    simp
-  next => simp
-
-theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
-    (tapePresample σ α) Set.univ ≤ 1 := by
-  cases hsome : σ.tapes[α]? with
-  | none => simp [tapePresample, hsome]
-  | some t =>
-    obtain ⟨N, bs⟩ := t
-    simp only [tapePresample, hsome]
-    rw [Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
-    simpa using tapeIndexUniform_univ_le_one
 
 instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
     IsSubProbabilityMeasure (tapeIndexUniform N) :=

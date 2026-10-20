@@ -15,7 +15,7 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on patterns
+/-! # Measurable space on patterns
 
 Derives the σ-algebra on `Pat`. -/
 

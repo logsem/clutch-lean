@@ -132,6 +132,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     wp_bind (pl% {rfQuery N ℓ} #(.int n))
     cases hlk : alookup n m with
     | some y =>
+      -- cached input: both sides return the memoised `y`, nothing spent
       ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
       iapply wp_prpQuery_prev_r _ ℓm ℓfv m n y hlk
       iframe Hj Hm
@@ -147,6 +148,7 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
       iframe
     | none =>
+      -- fresh input: pay `m.length / N` to couple the draw with the PRP's fresh value
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
       iapply wp_rfQuery_prpQuery_fresh _ N ℓ ℓm ℓfv m r n
@@ -251,6 +253,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     wp_bind (pl% {prpQuery ℓm ℓfv} #(.int n))
     cases hlk : alookup n m with
     | some y =>
+      -- cached input: both sides return the memoised `y`, nothing spent
       ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
       iapply wp_rfQuery_prev_r _ N ℓ m n y hlk
       iframe Hj Hl
@@ -266,6 +269,7 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
       iframe
     | none =>
+      -- fresh input: pay `m.length / N` to couple the draw with the PRP's fresh value
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
       iapply wp_prpQuery_rfQuery_fresh _ N ℓ ℓm ℓfv m r n

@@ -4,7 +4,11 @@ public import Metrology.ProbLang.Erasure.TapePresample
 
 @[expose] public section
 
-/-! Per-head-step cases of the erasure theorem for `execN`. -/
+/-! # Head-step cases of erasure
+
+Each lemma closes one head-step case of `execN_tape_presample_expr_eq`: presampling, then taking
+the head step of `e_h` and running `m` more steps under `K`, equals taking the step without
+presampling, measured on `S`. `ErasureIHFill` is the induction hypothesis in that form. -/
 
 namespace ProbLang
 
@@ -12,7 +16,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-! ## Case-closing helpers for `execN_tape_presample_expr_eq` -/
+/-! ## Closers by step shape (Dirac, uniform int, uniform real) -/
 
 /-- The induction hypothesis of `execN_tape_presample_expr_eq`, under the evaluation context `K`. -/
 abbrev ErasureIHFill (m : Nat) (K : Ectx rT) (S : Set (Exp rT)) (α : Loc) : Prop :=
@@ -154,7 +158,7 @@ theorem erasure_uniformReal_close
     _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by rw [hstep_σ]
 
-/-! ### Per-head-step case closers -/
+/-! ## Closers for heap and tape redexes (load, alloc, store, tape, stuck) -/
 
 /-- A heap `load` commutes with presampling. -/
 theorem erasure_load_close

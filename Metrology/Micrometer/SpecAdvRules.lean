@@ -5,6 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
 /-! Spec draws that split a credit by outcome (Eris `wp_couple_rand_adv_comp`, spec side). -/
@@ -54,6 +55,8 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     rw [dirac_bind_pexecN_one hredR, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
       Cfg.uniform_eq_map HN, MeasureTheory.Measure.map_map (by fun_prop) Measurable.of_discrete,
       ← MeasureTheory.Measure.map_id (μ := MeasureTheory.Measure.dirac σ₁)]
+    -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
+    -- frame the remainder r, push to configurations
     have h₀ := IsTopAbsorbing.frame (c := r) <| IsExpectationAdditive.add_right (s := s)
       (c := ε₂) Measurable.of_discrete <|
         rel_dirac_left (L := L) (unifInt N HN) (A := Set.Ico 0 N) MeasurableSet.of_discrete
@@ -63,7 +66,8 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
       gcongr
       rw [zero_add, lintegral_unifInt, ← ENNReal.div_eq_inv_mul] at *
       exact OrderHomClass.mono s hamort
-    · intro σ n
+    · -- on drawn pairs the leftover is s(ε₂ n) + r, elsewhere ⊤
+      intro σ n
       dsimp only [id, Function.comp_apply]
       by_cases h : σ = σ₁ ∧ 0 ≤ n ∧ n < N
       · obtain ⟨h, h0, hN⟩ := h

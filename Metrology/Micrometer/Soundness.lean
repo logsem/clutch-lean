@@ -6,7 +6,9 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.ContextualRefinement
 public import Metrology.Couplings.Divergences.Dp
 
-/-! Soundness of the logical relation for contextual refinement. -/
+/-! Soundness: a refinement from `↯b β` bounds the divergence (or event masses, or DP) of every
+linear boolean context by `β` (`refines_ctx_coupling` and corollaries); the budget-free forms give
+the contextual-refinement inequality (`refines_sound_open_fresh`). -/
 
 @[expose] public section
 

@@ -6,7 +6,9 @@ public import Metrology.ProbLang.CoreMeasures.State
 
 @[expose] public section
 
-/-! # Measurable structure on states and configurations -/
+/-! # Measurable structure on tapes, states and configurations
+
+Tapes are discrete; states and configurations carry the product σ-algebra of their fields. -/
 
 noncomputable section
 open Classical MeasureTheory

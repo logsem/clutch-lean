@@ -8,7 +8,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # Total variation with credits: a sampler that skips `0` is within `1/N` of uniform
+/-! # Total variation with credits: a sampler that skips `0` is at most `1/N` below uniform
 
 The two draws are coupled along the identity; the one outcome where the programs disagree is
 paid for with a credit `↯b (1/N)` in the `codensity tv` lifting. -/
@@ -35,7 +35,7 @@ theorem unif_refines_skipZero {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC
   rel_pures
   rel_values
 
-/-- On every event, `unif N` and `skipZero N` differ by at most `1/N`. -/
+/-- On every event, `unif N` is at most `1/N` more likely than `skipZero N`. -/
 theorem unif_le_skipZero (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Exp rT)}
     (hS : MeasurableSet S) :
     limExecV ⟨unif N, σ⟩ S ≤ limExecV ⟨skipZero N, σ'⟩ S + (N.toNat : ℝ≥0∞)⁻¹ :=

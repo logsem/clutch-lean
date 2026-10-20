@@ -64,10 +64,7 @@ theorem ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
     show (h.insert l v)[k]? = (h.alter l (fun _ => some v))[k]?
     simp [ExtTreeMap.getElem?_insert, ExtTreeMap.getElem?_alter]
 
-/-! ## Per-redex `DetHeadStep` lemmas (tape-flavored)
-
-The heap variants `DetHeadStep.alloc`/`load`/`store` already live in `DetStep.lean`.
-The two below are tape-specific and used by `step_alloctape` / `step_rand`. -/
+/-! ## Tape head steps (heap ones are in `DetStep.lean`) -/
 
 /-- Tape allocation: `tape #z` deterministically allocates a fresh empty tape of
 bound `z`. -/
@@ -96,6 +93,9 @@ theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
 /-! ## Stepping rules over `Cfg.specAuth` -/
 
 section Rules
+
+/-! These rules use `defaultSpecUpdateGS`, so `specInterp ρ` is `Cfg.specAuth ρ` (Micrometer's
+instance agrees by `rfl`: `micrometerWpGS_specInterp_eq`). -/
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
 

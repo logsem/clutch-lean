@@ -102,6 +102,7 @@ theorem derivAtTop_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) : derivAtTop f ≤ 
   filter_upwards [eventually_gt_atTop 0] with t ht
   exact EReal.coe_le_coe_iff.2 (div_le_div_of_nonneg_right (h t ht.le) ht.le)
 
+/-- Every secant slope of a convex weight is at most its slope at `∞`. -/
 theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (hh : 0 < h) :
     (((f (x + h) - f x) / h : ℝ) : EReal) ≤ derivAtTop f := by
   set s := (f (x + h) - f x) / h
@@ -141,6 +142,7 @@ theorem derivAtTop_mul_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {m : ℝ≥0∞} (hm
     · simp [EReal.top_mul_of_pos (EReal.coe_pos.2 h0)]
   | coe l => exact EReal.coe_mul l _ ▸ EReal.coe_ne_bot _
 
+/-- An affine minorant of `f` bounds its perspective. -/
 theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) {a b : ℝ} (ha : 0 ≤ a)
     (hb : 0 ≤ b) : ((c * a + c' * b : ℝ) : EReal) ≤ persp f a b := by
   rcases hb.eq_or_lt with rfl | hb
@@ -214,6 +216,7 @@ theorem persp_add_le (hf : ConvexOn ℝ (Ici 0) f) {a a' b b' : ℝ} (ha : 0 ≤
         mul_le_mul_of_nonneg_left this (add_pos hb hb').le
     _ = b * f (a / b) + b' * f (a' / b') := by field_simp
 
+/-- Finite Jensen: the perspective of sums is at most the sum of perspectives. -/
 theorem persp_sum_le (hf : ConvexOn ℝ (Ici 0) f) {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
     (ha : ∀ i ∈ s, 0 ≤ a i) (hb : ∀ i ∈ s, 0 ≤ b i) :
     persp f (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, persp f (a i) (b i) := by

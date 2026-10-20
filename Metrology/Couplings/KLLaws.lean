@@ -5,8 +5,9 @@ public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.Kl
 public import Metrology.Couplings.Divergences.Fill
 
-/-! A lifting and a bind law for generalized KL and `α`-Hellinger without filling (Rocq
-`GC_KL_full`, `GBL_KL_full`). -/
+/-! The Markov-tested codensity lifting `markovCodensity` and the equal-mass bind law `massEq`
+(instances `kl`, `hellinger`) for generalized KL and `α`-Hellinger, which are not composable on
+sub-probability measures (Rocq `GC_KL_full`, `GBL_KL_full`). -/
 
 @[expose] public section
 
@@ -36,6 +37,8 @@ theorem fDiv_map_some_add_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
     rw [Measure.add_apply, ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
       Measure.map_apply measurable_some (hk (measurableSet_singleton i))]
     rfl
+  -- per partition cell: split off the none-mass, subadditivity of persp, and the none part
+  -- costs s * f 1 = 0
   simp_rw [hev]
   refine (Finset.sum_le_sum fun i _ ↦ persp_add_le hf ENNReal.toReal_nonneg ENNReal.toReal_nonneg
     ENNReal.toReal_nonneg ENNReal.toReal_nonneg).trans ?_
@@ -239,8 +242,9 @@ open GradedDivergence
 
 variable {f : ℝ → ℝ} {γ : ℝ}
 
-/-- Binding a Barthe–Olmedo lifting with continuation kernels that lose the same mass at related
-pairs (Rocq `GBL_KL_full`, whose `kl_sat_side` asks the right continuation to keep mass). -/
+/-- The bind law for the Markov-tested lifting of a thresholded f-divergence `bofDivergence f γ`,
+with continuation kernels that lose the same mass at every pair with finite leftover (Rocq
+`GBL_KL_full`, whose `kl_sat_side` asks the right continuation to keep mass). -/
 noncomputable def massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     (hf1 : f 1 = 0) (hf₀ : ∀ t, 0 ≤ t → 0 ≤ f t) :
     BindLaw (markovCodensity (bofDivergence.{u} f γ)) :=
@@ -251,6 +255,7 @@ noncomputable def massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
     sound := by
       rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨hμ, hν, h⟩ hside hk I _ c hbc k l _ _ hkl
       have hae := Measure.ae_ae_of_ae_comp hkl
+      -- test the head with the filled (Markov) kernels; equal mass makes filling free
       have hout := h hbc (k := (k ∘ₖ f).withBot) (l := (l ∘ₖ g).withBot) <|
         hae.mono fun x hx y ↦ by
           rcases lt_or_ge (R x y + c) ⊤ with hRc | hRc
@@ -262,6 +267,7 @@ noncomputable def massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
             exact bofDivergence_iff.2 ((fDiv_withBot_le hf hf_cont hf1 hm).trans h₁)
           · rw [top_le_iff.1 hRc]
             exact IsGraded.top _ _
+      -- the fill is dropped again by data processing
       rw [Measure.comp_assoc, Measure.comp_assoc, ← Kernel.dropBot_comp_withBot (k ∘ₖ f),
         ← Kernel.dropBot_comp_withBot (l ∘ₖ g), ← Measure.comp_assoc, ← Measure.comp_assoc]
       exact bofDivergence_comp_self hf hf_cont hf₀ _ hout
@@ -273,6 +279,7 @@ noncomputable def massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
       · exact h x y (by simpa [hx] using hxy)
       · simp [hx] at hxy }
 
+/-- Equal-mass heads shift by framing. -/
 instance headShift_massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     (hf1 : f 1 = 0) (hf₀ : ∀ t, 0 ≤ t → 0 ≤ f t) :
     (massEq (γ := γ) hf hf_cont hf1 hf₀).HeadShift :=
@@ -283,7 +290,7 @@ instance headShift_massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
 noncomputable def kl : BindLaw (markovCodensity klDivergence.{u}) :=
   massEq convexOn_klFun continuous_klFun.continuousWithinAt klFun_one fun _ ↦ klFun_nonneg
 
-/-- The `α`-Hellinger bind law; budgets add along the Barthe–Olmedo regrading. -/
+/-- The `α`-Hellinger bind law, `massEq` at `hellFun α`. -/
 noncomputable def hellinger (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
     BindLaw (markovCodensity (hellingerDivergence.{u} α)) :=
   massEq (convexOn_hellFun hα.out.1 hα.out.2) (continuous_hellFun hα.out.1.le).continuousWithinAt

@@ -8,10 +8,11 @@ public import Lean
 public import Qq
 
 /-!
-# Elaborator-based `twp_*` tactics for `tglWp`
+# Evaluation-context tactic engine and `twp_*` tactics
 
-The tactics discover the evaluation context `K` themselves. ProbLang has no language
-hierarchy, so they match the concrete `tglWp` head rather than iris's `Wp` abstractions.
+The engine (`findECtx`, `pureStepResult`, `reduceExp`, ...) is shared with Micrometer's
+`wp_*`/`rel_*` tactics; the file also defines `twp_bind`/`twp_pure`/`twp_value` for `tglWp` and
+`pure_step(s)` for `PureSteps` goals.
 -/
 
 namespace ProbLang.TotalEris
@@ -381,6 +382,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     let r : Q(Option (Exp $α)) ← whnf q(@UnOp.eval $α
       (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1)
     match r with
+    -- The only bool-valued unop is `neg` on a literal, so `reduce` always lands on `true`/`false`.
     | ~q(some (Exp.lit (.bool $b)))          => do
         let b' : Q(Bool) ← Lean.Meta.reduce b
         return some (e, q(Exp.lit (.bool $b')), #[])
@@ -491,8 +493,8 @@ live in the defeq-only `reduceExp`. -/
 macro "twp_pure" focus:(ppSpace colGt term:max)? : tactic =>
   `(tactic| (twp_pure_core $[$focus]?; try simp only [pl_step_simp]))
 
-/-- `twp_pure_at e₁ ↦ e₂` pins both endpoints, for when `PureExec` synthesis cannot see
-through an opaque definition in `e₁`. -/
+/-- `twp_pure_at e₁ ↦ e₂` takes one `PureExec` step from `e₁` to `e₂`, given explicitly, for when
+synthesis cannot see through an opaque definition in `e₁`. -/
 macro "twp_pure_at " e1:term:max " ↦ " e2:term:max : tactic =>
   `(tactic| iapply (ErisWpGS.twp_pure_step_fupd
       (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))

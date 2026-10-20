@@ -19,13 +19,16 @@ meta import Metrology.Meta
 
 /-! # ProbLang syntax
 
-Expressions, values, states and evaluation contexts of ProbLang, with local closedness and
-evaluation-context decomposition. -/
+The reals interface (`ProbLangℝ`, `LawfulProbLangℝ`), the syntax (`Exp`, `Ty`, `Pat`), values
+(`IsVal`, `Val`), operator evaluation, states and configurations, and evaluation contexts with
+their decomposition (`Exp.decomp`). -/
 
 @[expose] public section
 
 open Std
 open Cslib
+
+/-! ## Library helpers -/
 
 /-- A key larger than every key in the map. -/
 def Std.ExtTreeMap.fresh (t : ExtTreeMap Int V) : Int :=
@@ -109,6 +112,8 @@ abbrev Loc : Type := Int
 /-- Tape labels. -/
 abbrev Lbl : Type := Int
 
+/-! ## The type of reals -/
+
 /-- The operations ProbLang needs on its type of reals. This class is pure data, so a
 computable type such as `Float` can be an instance and run in the interpreter; the laws
 the semantics needs live in `LawfulProbLangℝ`. -/
@@ -127,13 +132,15 @@ class ProbLangℝ (T : Type _) extends BEq T, Inhabited T where
   per instance. -/
   realFrac : T → T
 
-/-- A type of reals with a σ-algebra and the laws the semantics needs. Expressions are
-discrete when the reals are. -/
+/-- A type of reals with a σ-algebra and the laws the semantics needs. -/
 class LawfulProbLangℝ (T : Type _) extends ProbLangℝ T, MeasurableSpace T, LawfulBEq T,
     MeasurableEq T where
+  /-- Decidable equality, kept as data to avoid a diamond with `BEq`. -/
   instDecidableEq : DecidableEq T
+  /-- The uniform distribution on the unit interval, sampled by `urand`. -/
   unifUnit : MeasureTheory.Measure T
   unifUnit_isProbabilityMeasure : MeasureTheory.IsProbabilityMeasure unifUnit
+  /-- A measurable set carrying all of `unifUnit`'s mass (at `ℝ`: `(0, 1)`). -/
   unifUnitSupport : Set T
   unifUnitSupportMeasurable : MeasurableSet unifUnitSupport
   unifUnitIsConcentrated : unifUnit unifUnitSupportᶜ = 0
@@ -514,6 +521,8 @@ theorem height_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
 private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.height ≤ n → lcb 0 e = true →
     IsLocallyClosed e := by
   intro n
+  -- Fuel on height: the `lam`/`fix` cases recurse on `open' e (fvar x)`, not a subterm
+  -- (`height_openRec_fvar`).
   induction n with
   | zero => intro e he _; exfalso; cases e <;> simp [Exp.height] at he
   | succ n ih =>
@@ -609,6 +618,7 @@ theorem lc_imp_lcb {e : Exp α} (h : IsLocallyClosed e) : lcb 0 e = true := by
 
 end Exp
 
+-- Hand-written: `BaseLit` derives only `BEq`, and this instance needs just `[DecidableEq α]`.
 instance [DecidableEq α] : DecidableEq (BaseLit α)
   | .int z1, .int z2 => decidable_of_iff (z1 = z2) (by simp)
   | .bool b1, .bool b2 => decidable_of_iff (b1 = b2) (by simp)
@@ -624,7 +634,8 @@ instance [DecidableEq α] : DecidableEq (BaseLit α)
   | .real _, .int _ | .real _, .bool _ | .real _, .unit | .real _, .loc _ | .real _, .lbl _ =>
       isFalse (by intro h; cases h)
 
-/-- Matches a pattern against an expression, returning the bound result if it matches. -/
+/-- Matches `p` against `e`. On success returns the bindings: `e` itself at a wildcard, `()` at a
+literal, the pair of sub-bindings at a pair, and the inner bindings under inl/inr. -/
 def Pat.tryMatch : Pat rT → Exp rT → Option (Exp rT)
   | .wildcard, e => some e
   | .lit b, .lit b' => if b == b' then some (.lit .unit) else none
@@ -743,7 +754,8 @@ theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .inl w => .inl w.lc
   | _, .inr w => .inr w.lc
 
-/-- A `structure`, not `(e : Exp α) × IsVal e`, so that `Val α` does not reduce to `Sigma`:
+/-- A value: an expression with a witness that it is a value, and its local closedness.
+A `structure`, not `(e : Exp α) × IsVal e`, so that `Val α` does not reduce to `Sigma`:
 its measurable space (`CoreMeasures/Val.lean`) is the comap of `Val.fst`, not the coarser
 `Sigma.instMeasurableSpace`. -/
 structure Val (α : Type _) where
@@ -752,7 +764,8 @@ structure Val (α : Type _) where
   /-- Lets proofs rewrite `open'` on an abstract value to the value itself (`open_lc`). -/
   lc : fst.IsLocallyClosed
 
-/-- `@[reducible]`: the proof-mode unifier (`iapply`) matches at reducible transparency. -/
+/-- The value of a literal. `@[reducible]` because the proof-mode unifier (`iapply`) matches at
+reducible transparency. -/
 @[reducible, coe] def Val.ofBaseLit (b : BaseLit rT) : Val rT :=
   ⟨.lit b, .lit, Exp.IsLocallyClosed.lit b⟩
 
@@ -939,34 +952,9 @@ theorem Exp.rand_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.rand e₁ e₂).toVa
 theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.urand_not_isValue
 
-/-- The underlying expression of a value. -/
+/-- Same as `Val.fst`, under its own head symbol so that frame lemmas (`fillItem`) and the
+`delabExpOfVal` delaborator can match it syntactically. -/
 def Exp.ofVal (v : Val α) : Exp α := v.1
-
-/-- A random tape: a bound and the presampled values in `[0, bound)`. -/
-structure Tape where
-  bound : Int
-  presamples : List { z : Int // 0 ≤ z ∧ z < bound}
-  deriving Inhabited, Countable
-
-/-- An empty tape with the given bound. -/
-def Tape.empty (z : Int) : Tape := ⟨z, []⟩
-
-/-- Hides the representation from typeclass inference. -/
-@[reducible] def LocHeap (V : Type _) : Type _ := ExtTreeMap Loc V compare
-
-instance : Inhabited (LocHeap V) := inferInstanceAs (Inhabited (ExtTreeMap _ _ _))
-
-instance [Countable V] : Countable (LocHeap V) :=
-  inferInstanceAs (Countable (ExtTreeMap _ _ _))
-
-instance : GetElem? (LocHeap V) Loc V (fun (m : ExtTreeMap Loc V compare) k => k ∈ m) :=
-  inferInstanceAs (GetElem? (ExtTreeMap Loc V compare) _ _ _)
-
-/-- Machine state: the heap and the random tapes. -/
-structure State (α : Type _) where
-  heap  : LocHeap (Val α)
-  tapes : LocHeap Tape
-  deriving Inhabited, Countable
 
 theorem Exp.toVal?_ofVal (v : Val α) : (Exp.ofVal v).toVal? = some v := by
   obtain ⟨e, w, hlc⟩ := v
@@ -991,9 +979,122 @@ theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v
 theorem Exp.ofVal_injective : Function.Injective (@Exp.ofVal α) :=
   fun _ _ h => Val.ext h
 
+/-! ## Operator evaluation -/
+
+/-- Evaluates a unary operator on a value. -/
+def UnOp.eval [ProbLangℝ α] (op : UnOp) (v : Exp α) : Option (Exp α) :=
+  match op, v with
+  | neg, .lit (.bool b) => some <| .lit <| .bool <| ¬ b
+  | minus, .lit (.int z) => some <| .lit <| .int <| z.neg
+  | minus, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realNeg r
+  | toReal, .lit (.int z) => some <| .lit <| .real <| ProbLangℝ.realOfInt z
+  | toReal, .lit (.real r) => some <| .lit <| .real r
+  -- Integer literals must be coerced with `toReal` first.
+  | frac, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realFrac r
+  | _, _ => none
+
+/-- Evaluates a binary operator on two values. -/
+def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
+  match op, v1, v2 with
+  | plus,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 + z2)
+  | minus, .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 - z2)
+  | mult,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * z2)
+  -- Total (n / 0 = 0, n % 0 = n), agreeing with Rocq's `Z.quot`/`Z.rem`.
+  | div,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / z2)
+  | mod,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 % z2)
+  | and,   .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 && b2)
+  | or,    .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 || b2)
+  | xor,   .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 ^^ b2)
+  | eq,    .lit l1,         .lit l2         => some <| .lit <| .bool (l1 == l2)
+  | eq,    .inl (.lit l1),  .inl (.lit l2)  => some <| .lit <| .bool (l1 == l2)
+  | eq,    .inr (.lit l1),  .inr (.lit l2)  => some <| .lit <| .bool (l1 == l2)
+  | eq,    .inl (.lit _),   .inr (.lit _)   => some <| .lit <| .bool false
+  | eq,    .inr (.lit _),   .inl (.lit _)   => some <| .lit <| .bool false
+  | lt,    .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .bool (decide (z1 < z2))
+  | le,    .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .bool (decide (z1 ≤ z2))
+  | lt,    .lit (.real r1), .lit (.real r2) => some <| .lit <| .bool (ProbLangℝ.realLt r1 r2)
+  | le,    .lit (.real r1), .lit (.real r2) => some <| .lit <| .bool (ProbLangℝ.realLe r1 r2)
+  -- Mixed int/real operands are stuck: programs coerce with `UnOp.toReal`.
+  | plus,  .lit (.real r1), .lit (.real r2) => some <| .lit <| .real (ProbLangℝ.realAdd r1 r2)
+  -- A negative shift amount counts as 0.
+  | shl,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * 2 ^ z2.toNat)
+  | shr,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / 2 ^ z2.toNat)
+  |_,      _,        _        => none
+
+/-! ## States and configurations -/
+
+/-- A random tape: a bound `N` and a queue of presampled values in `[0, N)`; `rand` reads from the
+front, presampling appends at the back. -/
+structure Tape where
+  bound : Int
+  presamples : List { z : Int // 0 ≤ z ∧ z < bound}
+  deriving Inhabited, Countable
+
+/-- An empty tape with the given bound. -/
+def Tape.empty (z : Int) : Tape := ⟨z, []⟩
+
+/-- Finite maps keyed by `Int` (heap locations and tape labels). Hides the representation from
+typeclass inference. -/
+@[reducible] def LocHeap (V : Type _) : Type _ := ExtTreeMap Loc V compare
+
+instance : Inhabited (LocHeap V) := inferInstanceAs (Inhabited (ExtTreeMap _ _ _))
+
+instance [Countable V] : Countable (LocHeap V) :=
+  inferInstanceAs (Countable (ExtTreeMap _ _ _))
+
+instance : GetElem? (LocHeap V) Loc V (fun (m : ExtTreeMap Loc V compare) k => k ∈ m) :=
+  inferInstanceAs (GetElem? (ExtTreeMap Loc V compare) _ _ _)
+
+/-- Machine state: the heap and the random tapes. -/
+structure State (α : Type _) where
+  heap  : LocHeap (Val α)
+  tapes : LocHeap Tape
+  deriving Inhabited, Countable
+
+/-- Applies `f` to the heap. -/
+def State.update_heap (σ : State α) (f : ExtTreeMap Loc (Val α) → ExtTreeMap Loc (Val α))
+    : State α :=
+  ⟨f σ.heap, σ.tapes⟩
+
+/-- Applies `f` to the tapes. -/
+def State.update_tapes (σ : State α) (f : ExtTreeMap Loc Tape → ExtTreeMap Loc Tape) : State α :=
+  ⟨σ.heap, f σ.tapes⟩
+
+theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
+    (σ.update_tapes (·.insert l xs)).update_tapes (·.insert l ys) =
+    σ.update_tapes (·.insert l ys) := by
+  unfold State.update_tapes; simp; grind
+
+theorem State.update_tapes_same {σ σ' : State α}
+    (h : σ.update_tapes (·.insert l xs) = σ'.update_tapes (·.insert l ys)) :
+    xs = ys := by
+  simpa [State.update_tapes, LocHeap] using congrArg (·.tapes[l]?) h
+
+theorem State.update_tapes_no_change {σ : State α} (h : σ.tapes[l]? = some ys) :
+    σ.update_tapes (·.insert l ys) = σ := by
+  unfold State.update_tapes; congr 2; grind
+
+theorem State.update_tapes_same' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
+    {x y : { z : Int // 0 ≤ z ∧ z < n }}
+    (h : σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) = σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩)) :
+    x = y := by
+  simpa [Tape.mk.injEq] using State.update_tapes_same h
+
+theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
+    {x y : { z : Int // 0 ≤ z ∧ z < n }} (hne : x ≠ y) :
+    σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
+  (hne <| State.update_tapes_same' ·)
+
+/-- A configuration: an expression and a state. -/
+structure Cfg α where
+  expr : Exp α
+  state : State α
+  deriving Countable
+
 /-! ## Evaluation contexts -/
 
-/-- One-hole evaluation-context frames. -/
+/-- One-hole frames. `…L v` has the hole in the left operand with the right already a value;
+`…R e` has the hole in the right operand. Evaluation is right-to-left, as in Clutch/HeapLang. -/
 @[uncurriedProjections, constructors]
 inductive EctxItem (α : Type _)
   | appL (v2 : Val α)
@@ -1048,7 +1149,8 @@ theorem EctxItem.fillItem_isLocallyClosed {Ki : EctxItem α} {e : Exp α}
     (h : (Ki.fillItem e).IsLocallyClosed) : e.IsLocallyClosed := by
   cases Ki <;> (simp only [fillItem] at h; cases h; assumption)
 
-/-- Splits off the outermost frame whose hole is the next subterm to evaluate. -/
+/-- Splits off the outermost frame whose hole is the next subterm to evaluate, trying the
+right operand first. -/
 def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   match e with
   | app e1 e2 =>
@@ -1089,88 +1191,6 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   | scrut e1 p =>
     e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none
   | _ => none
-
-/-! ## Deterministic evaluation helpers -/
-
-/-- Evaluates a unary operator on a value. -/
-def UnOp.eval [ProbLangℝ α] (op : UnOp) (v : Exp α) : Option (Exp α) :=
-  match op, v with
-  | neg, .lit (.bool b) => some <| .lit <| .bool <| ¬ b
-  | minus, .lit (.int z) => some <| .lit <| .int <| z.neg
-  | minus, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realNeg r
-  | toReal, .lit (.int z) => some <| .lit <| .real <| ProbLangℝ.realOfInt z
-  | toReal, .lit (.real r) => some <| .lit <| .real r
-  -- Integer literals must be coerced with `toReal` first.
-  | frac, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realFrac r
-  | _, _ => none
-
-/-- Evaluates a binary operator on two values. -/
-def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
-  match op, v1, v2 with
-  | plus,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 + z2)
-  | minus, .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 - z2)
-  | mult,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * z2)
-  -- Total (n / 0 = 0, n % 0 = n), agreeing with Rocq's `Z.quot`/`Z.rem`.
-  | div,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / z2)
-  | mod,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 % z2)
-  | and,   .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 && b2)
-  | or,    .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 || b2)
-  | xor,   .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 ^^ b2)
-  | eq,    .lit l1,         .lit l2         => some <| .lit <| .bool (l1 == l2)
-  | eq,    .inl (.lit l1),  .inl (.lit l2)  => some <| .lit <| .bool (l1 == l2)
-  | eq,    .inr (.lit l1),  .inr (.lit l2)  => some <| .lit <| .bool (l1 == l2)
-  | eq,    .inl (.lit _),   .inr (.lit _)   => some <| .lit <| .bool false
-  | eq,    .inr (.lit _),   .inl (.lit _)   => some <| .lit <| .bool false
-  | lt,    .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .bool (decide (z1 < z2))
-  | le,    .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .bool (decide (z1 ≤ z2))
-  | lt,    .lit (.real r1), .lit (.real r2) => some <| .lit <| .bool (ProbLangℝ.realLt r1 r2)
-  | le,    .lit (.real r1), .lit (.real r2) => some <| .lit <| .bool (ProbLangℝ.realLe r1 r2)
-  -- Mixed int/real operands are stuck: programs coerce with `UnOp.toReal`.
-  | plus,  .lit (.real r1), .lit (.real r2) => some <| .lit <| .real (ProbLangℝ.realAdd r1 r2)
-  -- A negative shift amount counts as 0.
-  | shl,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * 2 ^ z2.toNat)
-  | shr,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / 2 ^ z2.toNat)
-  |_,      _,        _        => none
-
-/-- Applies `f` to the heap. -/
-def State.update_heap (σ : State α) (f : ExtTreeMap Loc (Val α) → ExtTreeMap Loc (Val α))
-    : State α :=
-  ⟨f σ.heap, σ.tapes⟩
-
-/-- Applies `f` to the tapes. -/
-def State.update_tapes (σ : State α) (f : ExtTreeMap Loc Tape → ExtTreeMap Loc Tape) : State α :=
-  ⟨σ.heap, f σ.tapes⟩
-
-theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
-    (σ.update_tapes (·.insert l xs)).update_tapes (·.insert l ys) =
-    σ.update_tapes (·.insert l ys) := by
-  unfold State.update_tapes; simp; grind
-
-theorem State.update_tapes_same {σ σ' : State α}
-    (h : σ.update_tapes (·.insert l xs) = σ'.update_tapes (·.insert l ys)) :
-    xs = ys := by
-  simpa [State.update_tapes, LocHeap] using congrArg (·.tapes[l]?) h
-
-theorem State.update_tapes_no_change {σ : State α} (h : σ.tapes[l]? = some ys) :
-    σ.update_tapes (·.insert l ys) = σ := by
-  unfold State.update_tapes; congr 2; grind
-
-theorem State.update_tapes_same' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
-    {x y : { z : Int // 0 ≤ z ∧ z < n }}
-    (h : σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) = σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩)) :
-    x = y := by
-  simpa [Tape.mk.injEq] using State.update_tapes_same h
-
-theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
-    {x y : { z : Int // 0 ≤ z ∧ z < n }} (hne : x ≠ y) :
-    σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
-  (hne <| State.update_tapes_same' ·)
-
-/-- A configuration: an expression and a state. -/
-structure Cfg α where
-  expr : Exp α
-  state : State α
-  deriving Countable
 
 theorem Ectx.fillItem_injective : Function.Injective (EctxItem.fillItem K) := by
   cases K <;> simp [Function.Injective, EctxItem.fillItem]
@@ -1301,6 +1321,8 @@ theorem Ectx.fill_randR (e1 : Exp α) (e : Exp α) :
 theorem Ectx.fill_scrut (p : Pat α) (e : Exp α) :
     Ectx.fill [.scrut p] e = .scrut e p := rfl
 
+/-! ### Multi-frame decomposition: `Exp.decomp` -/
+
 theorem Ectx.fill_comp (K1 K2 : Ectx α) (e : Exp α) :
     K1.fill (K2.fill e) = (K1.comp K2).fill e := by
   simp [Ectx.comp, Ectx.fill_append]
@@ -1399,6 +1421,7 @@ theorem Exp.decomp_val_empty {K : Ectx α} {e e' : Exp α}
     rw [(decomp_inv_nil hK).2] at hKi
     exact absurd hv (decompItem_fill hKi).2
 
+/-- Decomposing `K[e]` for a non-value `e` is `e`'s decomposition with `K` appended outside. -/
 theorem Exp.decomp_fill_comp {e e' : Exp α} {K K' : Ectx α}
     (hv : ¬e.isValue) (hd : e.decomp = (K', e')) :
     (K.fill e).decomp = (K' ++ K, e') := by

@@ -12,7 +12,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-! ## Iterated and limit variants -/
+/-! ## Iterated presampling -/
 
 /-- `n`-fold presampling on tape `α`; the `Nat.rec` in Clutch's `erasure.v` tape batching. -/
 noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure (State rT)
@@ -107,13 +107,16 @@ def ErasableExpr (μ : Measure (State rT)) (σ : State rT) : Prop :=
 
 namespace ErasableExpr
 
+/-- Erasability implies erasability up to the expression projection. -/
 theorem of_erasable {μ : Measure (State rT)} {σ : State rT} (h : Erasable μ σ) :
     ErasableExpr μ σ := by
   intro e m
   rw [h e m]
 
+/-- An expression-erasable distribution has mass 1. -/
 theorem mass {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ) :
     μ Set.univ = 1 := by
+  -- run the value `()` one step: the LHS mass is `μ univ`, the RHS is 1
   have hv : IsVal (Exp.lit (rT := rT) .unit) := .lit
   have hstep : ∀ σ' : State rT,
       execN 1 ((⟨.lit .unit, σ'⟩ : Cfg rT)) = Measure.dirac (⟨.lit .unit, σ'⟩ : Cfg rT) :=
@@ -136,15 +139,18 @@ theorem isProbabilityMeasure {μ : Measure (State rT)} {σ : State rT} (h : Eras
     IsProbabilityMeasure μ :=
   ⟨h.mass⟩
 
+/-- A Dirac state distribution is erasable. -/
 theorem dret (σ : State rT) : ErasableExpr (Measure.dirac σ) σ :=
   of_erasable (Erasable.dret σ)
 
+/-- Presampling a tape with positive bound is erasable up to expressions. -/
 theorem tapePresample
     {σ : State rT} {α : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
     ErasableExpr (tapePresample σ α) σ :=
   fun _ _ => execN_tape_presample_expr_eq h hN
 
+/-- Sequencing preserves erasability; discreteness gives the measurability for free. -/
 theorem dbind [Countable rT] [MeasurableSingletonClass rT]
     {μ₁ : Measure (State rT)} {μ₂ : State rT → Measure (State rT)} {σ : State rT}
     (h₁ : ErasableExpr μ₁ σ) (h₂ : ∀ σ', ErasableExpr (μ₂ σ') σ') :
@@ -169,6 +175,7 @@ theorem dbind [Countable rT] [MeasurableSingletonClass rT]
   unfold asExpr at this
   exact this
 
+/-- Erasability passes from every bounded run to the limit (monotone convergence). -/
 theorem lim_exec
     {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ)
     (e : Exp rT) :
@@ -177,47 +184,28 @@ theorem lim_exec
   have hexpr : Measurable (·.expr : Cfg rT → Exp rT) := Cfg.measurable_expr
   have hmk : Measurable (fun σ' : State rT => (⟨e, σ'⟩ : Cfg rT)) := by fun_prop
   unfold asExpr limExecV asExpr
+  -- as `Erasable.lim_exec`, on the event `(·.expr) ⁻¹' S`
   refine Measure.ext fun S hS => ?_
-  rw [Measure.map_apply hexpr hS,
-      Measure.map_apply hexpr hS,
+  rw [Measure.map_apply hexpr hS, Measure.map_apply hexpr hS,
       Measure.bind_apply (hexpr hS)
         (show Measurable (fun σ' : State rT => limExec (⟨e, σ'⟩ : Cfg rT)) from
           limExec.measurable.comp hmk).aemeasurable]
-  have hind : ∀ ρ : Cfg rT,
-      limExec ρ ((·.expr) ⁻¹' S)
-        = ∫⁻ x, (((·.expr) ⁻¹' S) : Set (Cfg rT)).indicator 1 x ∂(limExec ρ) := by
-    intro ρ
-    rw [lintegral_indicator_one (hexpr hS)]
-  simp_rw [hind, lintegral_limExec]
-  rw [lintegral_iSup
-        (fun n => by
-          have hrw : (fun σ' => ∫⁻ x,
-                  (((·.expr) ⁻¹' S) : Set (Cfg rT)).indicator 1 x ∂(execN n ⟨e, σ'⟩))
-                = (fun σ' => (execN n ⟨e, σ'⟩) ((·.expr) ⁻¹' S)) := by
-            funext σ'; exact lintegral_indicator_one (hexpr hS)
-          rw [hrw]
-          exact (Measure.measurable_coe (hexpr hS)).comp ((execN_measurable n).comp hmk))
-        (fun i j hij σ' =>
-          lintegral_mono' (execN_mono hij ⟨e, σ'⟩) (le_refl _))]
-  refine iSup_congr fun n => ?_
+  simp_rw [limExec_apply _ (hexpr hS)]
+  rw [lintegral_iSup (fun n => ?measurable) ?mono]
+  case measurable =>
+    exact (Measure.measurable_coe (hexpr hS)).comp ((execN_measurable n).comp hmk)
+  case mono => exact fun n m hnm a => execN_mono hnm ⟨e, a⟩ _
+  suffices hbind : ∀ n, ∫⁻ σ', (execN n ⟨e, σ'⟩) ((·.expr) ⁻¹' S) ∂μ
+      = (execN n ⟨e, σ⟩) ((·.expr) ⁻¹' S) by
+    simp [hbind]
+  intro n
   have hn := h e n
   unfold asExpr at hn
-  have hval : (μ.bind (fun σ' => execN n ⟨e, σ'⟩)).map (·.expr) S
-            = (execN n ⟨e, σ⟩).map (·.expr) S := by
-    rw [hn]
-  rw [Measure.map_apply hexpr hS,
-      Measure.map_apply hexpr hS,
+  have hval := congrArg (· S) hn
+  rwa [Measure.map_apply hexpr hS, Measure.map_apply hexpr hS,
       Measure.bind_apply (hexpr hS)
         (show Measurable (fun σ' : State rT => execN n (⟨e, σ'⟩ : Cfg rT)) from
           (execN_measurable n).comp hmk).aemeasurable] at hval
-  rw [show (∫⁻ x, (((·.expr) ⁻¹' S) : Set (Cfg rT)).indicator 1 x ∂(execN n ⟨e, σ⟩))
-        = (execN n ⟨e, σ⟩) ((·.expr) ⁻¹' S)
-      from lintegral_indicator_one (hexpr hS)]
-  simp_rw [show ∀ σ' : State rT,
-        (∫⁻ x, (((·.expr) ⁻¹' S) : Set (Cfg rT)).indicator 1 x ∂(execN n ⟨e, σ'⟩))
-          = (execN n ⟨e, σ'⟩) ((·.expr) ⁻¹' S)
-      from fun σ' => lintegral_indicator_one (hexpr hS)]
-  exact hval
 
 end ErasableExpr
 

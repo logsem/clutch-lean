@@ -132,6 +132,8 @@ def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
 /-- The substitution of right values. -/
 def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
 
+/-! Lemmas for any projection `f` of the value pair; `fst_*`/`snd_*` below instantiate `f`. -/
+
 section proj
 variable (f : Val rT × Val rT → Val rT)
 

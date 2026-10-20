@@ -16,7 +16,7 @@ public import Qq
 
 `rel_*` tactics for goals `REL[L] e << e' @ E : A`, after Approxis's `rel_tactics.v`, for any
 lifting `L`. Each finds its redex in the evaluation context of its side and applies the matching
-rule of `AppRelRules.lean` there. -/
+rule of `AppRelRulesPure.lean` and `AppRelRules.lean` there. -/
 
 namespace ProbLang.RelTactics
 
@@ -35,7 +35,10 @@ meta def Side.isL : Side → Bool
   | .l => true
   | .r => false
 
-/-- A proof-mode goal `hyps ⊢ refines L E e t A`. -/
+/-- A proof-mode goal `hyps ⊢ refines L E e t A`.
+
+`refines` ends with the arguments `E e e' A`, so counting from the end of `args`: `E` is
+`size - 4`, `e` is `size - 3`, `e'` is `size - 2`. -/
 meta structure RelGoal where
   {u : Level}
   {prop : Q(Type u)}

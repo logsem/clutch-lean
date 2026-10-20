@@ -23,8 +23,8 @@ namespace ProbLang
 instance instMeasurableSpaceIsVal {α : Type _} {e : Exp α} : MeasurableSpace (IsVal e) := ⊤
 
 /-- The comap of `Val.fst`. `Sigma.instMeasurableSpace` would be `⊤` here (since `IsVal e`
-is `⊤`), breaking measurability of `Exp.toVal?`. `Val` is a `structure`, not a `Sigma`, so that
-this instance is the one found. -/
+is `⊤`), breaking measurability of `Exp.toVal?`. `Val` is a `structure`, not a `Sigma`; the
+high priority keeps this instance over any generic one. -/
 instance (priority := 10000) instMeasurableSpaceVal {α : Type _} [MeasurableSpace α] :
     MeasurableSpace (Val α) :=
   MeasurableSpace.comap Val.fst inferInstance
@@ -41,6 +41,7 @@ theorem _root_.ProbLang.Exp.ofVal.measurable {α : Type _} [MeasurableSpace α] 
     Measurable (Exp.ofVal : Val α → Exp α) :=
   Val.fst.measurable
 
+/-- Trivial: the σ-algebra on `Σ e, IsVal e` is `⊤`. -/
 @[fun_prop]
 theorem mk.measurable {α : Type _} [MeasurableSpace α] :
     Measurable (fun (p : Σ e : Exp α, IsVal e) => (Val.mk p.1 p.2 p.2.lc : Val α)) := by

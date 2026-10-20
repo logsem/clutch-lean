@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.Divergences.FDivPartition
 
-/-! Chain rules for `f`-divergences, lifted from finite spaces (Approximate Span Liftings, §4). -/
+/-! Thm. 4.6: a chain rule proved between finite spaces holds between all spaces (Approximate Span
+Liftings, §4). Push the output to `Fin N` (`fDiv_eq_iSup_map`), then bucket inputs by the dyadic
+cells of their kernels' point masses (`disc`/`rep`), which converges (`tendsto_fDiv_bind_disc`). -/
 
 @[expose] public section
 
@@ -113,6 +115,7 @@ noncomputable def rep [Nonempty X] (n : ℕ) (j : ULift.{u} (Fin (Fintype.card (
   else Classical.arbitrary X
 
 omit [MeasurableSpace X] in
+/-- The representative of a cell has the same cell vector as the point. -/
 theorem cellVec_rep_disc [Nonempty X] (n : ℕ) (x : X) :
     cellVec κ η n (rep κ η n (disc κ η n x)) = cellVec κ η n x := by
   have h : ∃ y, cellVec κ η n y = (Fintype.equivFin _).symm (disc κ η n x).down :=

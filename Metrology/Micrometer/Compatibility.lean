@@ -114,6 +114,10 @@ theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
 
 /-! ### Constructors that bind their operands -/
 
+/-! Each proof restates the goal as `Ectx.fill [item] e` so `refines_bind` unifies, binds the right
+operand first (ProbLang evaluates right to left), then re-reads the same term with the hole in the
+left operand (a definitional `rw [show ... from rfl]`). -/
+
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e1 e1' A ⊢
     refines L ⊤ e2 e2' B -∗ refines L ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by

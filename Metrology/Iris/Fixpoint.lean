@@ -4,7 +4,13 @@ public import Iris.BI.Lib.Fixpoint
 
 @[expose] public section
 
-/-! # Least-fixpoint utilities -/
+/-!
+# Fixpoint and discrete-OFE lemmas
+
+`least_fixpoint_ne_outer` (used for wp and specCoupl non-expansiveness), and two facts that make
+every function on a discrete OFE non-expansive (for the `[NonExpansive Ψ]` arguments of fixpoint
+induction).
+-/
 
 open Iris Iris.BI OFE
 

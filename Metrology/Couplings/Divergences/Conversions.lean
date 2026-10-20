@@ -4,7 +4,9 @@ public import Metrology.Couplings.Divergences.Concentrated
 public import Metrology.Couplings.LiftingHom
 public import Metrology.Couplings.Divergences.RenyiStrassen
 
-/-! Conversions between DP and its Rényi relaxations (Approximate Span Liftings, Fig. 4). -/
+/-! Conversions between DP and its Rényi relaxations (Approximate Span Liftings, Fig. 4).
+Tags `[X/Y]` name the arrow `X → Y` of Fig. 4 (`D` = pure DP, `R` = Rényi, `z` = zCDP,
+`t` = tCDP). -/
 
 @[expose] public section
 
@@ -34,6 +36,8 @@ theorem renyi_of_dp (hα : 1 < α) {ε : ℝ≥0∞} [IsSubProbabilityMeasure μ
     (continuousWithinAt_rpow_zero (zero_lt_one.trans hα))]
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
   set e := ε.toReal
+  -- partition form: on each cell `p ≤ e^ε q`, so `q (p/q)^α ≤ e^{(α-1)ε} p`; summing gives
+  -- `≤ e^{(α-1)ε}`
   have hcell (i : Fin n) : persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤
       ((exp ((α - 1) * e) * (μ (k ⁻¹' {i})).toReal : ℝ) : EReal) := by
     set p := (μ (k ⁻¹' {i})).toReal
@@ -119,6 +123,7 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
     · rw [← hq0, persp_rpow_zero_right hα hp0] at hcell
       exact absurd hcell (by simp)
   rw [persp_rpow_of_pos α hq0, EReal.coe_le_coe_iff] at hcell
+  -- if `p > e^ε q + δ` then `q (p/q)^α > δ e^{ε(α-1)} = e^{(α-1) r}`, contradicting `hcell`
   by_contra! hcon
   have hpδ : δ < p := lt_of_le_of_lt (le_add_of_nonneg_left (by positivity)) hcon
   set ε := r + log (1 / δ) / (α - 1)

@@ -18,7 +18,9 @@ import Mathlib.Algebra.Regular.Prod
 
 One round and the `k`-round loop refine themselves in every lifting, given a coupling of the two
 draws; adequacy then bounds the outputs in every divergence the lifting is sound for. The files
-in `RandomizedResponse/` instantiate this at one lifting each. -/
+in `RandomizedResponse/` instantiate this at one lifting each. It also holds the arithmetic of one
+round that they share: the fiber bound `rrOut_fiber_le_three` (DP, zCDP) and the moment
+`fDiv_rrOut` (Rényi, χ²). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (expBudget expBudget_of_ne_top)
@@ -26,7 +28,7 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-/-! ## The reported bit -/
+/-! ## The reported bit and its arithmetic -/
 
 section Distribution
 
@@ -39,6 +41,7 @@ def rrOut (b : Bool) (r : Int) : Bool := if r < 3 then b else !b
 noncomputable abbrev draw : Measure Int :=
   unifInt 4 (by norm_num)
 
+/-- Each of the four draws has mass `1/4`. -/
 theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹ := by
   rw [draw, unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
     PMF.uniformOfFinset_apply_of_mem _ (Finset.mem_Ico.2 ⟨h0, h4⟩)]
@@ -92,6 +95,8 @@ theorem fDiv_rrOut {α : ℝ} (hα : 1 < α) (b : Bool) :
   rw [fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero (by linarith)),
     Fintype.sum_bool, map_rrOut_singleton, map_rrOut_singleton, map_rrOut_singleton,
     map_rrOut_singleton, Real.rpow_sub (by norm_num), Real.rpow_one]
+  -- the two perspectives are `(3/4)^α (1/4)^{1-α}` and `(1/4)^α (3/4)^{1-α}`; move to ℝ and
+  -- clear denominators
   cases b
   all_goals
     norm_num [persp_rpow_of_pos, Real.div_rpow]
@@ -103,6 +108,7 @@ end Distribution
 
 /-! ## The budget `(ln 3, 0)` -/
 
+/-- The DP factor of budget `ln 3` is `3`. -/
 theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
   rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
     ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
@@ -207,9 +213,11 @@ theorem rrCount_refines_of (c : B)
     iintro Hb
     icases BudgetCredit.split $$ Hb with ⟨Hk, H1⟩
     simp only [rrCount]
+    -- unfold `rec` into its else branch
     rel_pure_l 5
     rel_pure_r 5
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
+    -- `+` evaluates its right operand first: the recursive call, then the round
     rel_bind (rrCount b k) (rrCount b' k)
     isplitl [Hk]
     · iapply ih $$ Hk

@@ -34,39 +34,25 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
   iintro %v %v' Hint
   iunfold lrel_int at Hint
   icases Hint with ⟨%n, %hv, %hv'⟩
-  rw [Ectx.fill_tape, Ectx.fill_tape, hv, hv']
-  iunfold refines
-  iintro %K %b Hj Hna Herr Hpos
-  ihave HStep := step_alloctape K n $$ Hj
-  iapply specUpdate_wp
-  iapply specUpdate_bind Std.LawfulSet.subset_refl
-  iframe HStep
-  iintro ⟨%l', HKRes, Hl'frag⟩
-  iapply specUpdate_ret
-  iapply wp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
-  iintro %σ₁ Hσ !>
-  isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.TapeS rfl rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
-  | TapeS hl hσ =>
-    subst hl hσ
-    imod app_state_tape_alloc (Tape.empty n) $$ Hσ with ⟨Hσ', Hlfrag⟩
-    set lL := σ₁.tapes.fresh
-    imod Iris.inv_alloc (P := iprop(appTapesFrag lL ⟨n, []⟩ ∗ specTapesFrag l' ⟨n, []⟩))
-      $$ [Hlfrag Hl'frag] with #HInv
-    · rw [← show Tape.empty n = ⟨n, []⟩ from rfl]
-      iintro !>; iframe Hlfrag Hl'frag
-    imodintro
-    simp only [micrometerWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert,
-      Exp.toVal?_lit]
-    iframe Hσ'
-    iexists (.lbl l' : Val _), b
-    iframe HKRes Hna Herr Hpos
-    iunfold lrel_tape
-    iexists lL, l', n
-    iframe HInv
-    itrivial
+  rw [Ectx.fill_tape, Ectx.fill_tape, hv, hv',
+    Ectx.eq_fill_nil (pl(tape(#(.int n))) : Exp rT)]
+  iapply refines_alloctape_r
+  iintro %l' Hl'
+  iapply refines_alloctape_l
+  iintro %l Hl
+  imod Iris.inv_alloc (P := iprop(appTapesFrag l ⟨n, []⟩ ∗ specTapesFrag l' ⟨n, []⟩))
+    $$ [Hl Hl'] with #HInv
+  · ihave Hl'e := spec_natTape_to_empty $$ Hl'
+    rw [← show Tape.empty n = ⟨n, []⟩ from rfl]
+    iintro !>
+    iframe Hl Hl'e
+  iapply refines_ret (e1 := Ectx.fill [] pl(#(.lbl l))) (e2 := Ectx.fill [] pl(#(.lbl l')))
+    (v1 := .lbl l) (v2 := .lbl l') rfl rfl
+  imodintro
+  iunfold lrel_tape
+  iexists l, l', n
+  iframe HInv
+  itrivial
 
 theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
     refines L ⊤ e e' A ⊢ refines L ⊤ (.alloc e) (.alloc e') (lrel_ref A) := by
@@ -155,6 +141,7 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
   iintro ⟨HKRes, Hw2'⟩
   iapply specUpdate_ret
   have HE : (∅ : CoPset) ⊆ ⊤ \ ↑(logN.@ (l, l')) := Std.LawfulSet.empty_subset
+  -- `A w1 w2` from the invariant is still under ▷; spend the load's step to remove it.
   iapply wp_step_fupd HE Exp.load_toVal?_eq_none
   isplitl [HwAL]
   · iapply step_fupd_intro HE $$ HwAL
@@ -179,6 +166,8 @@ theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
     ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
   (sep_mono app_natTape_to_empty spec_natTape_to_empty).trans later_intro
 
+/-- Two draws `rand z` from tapes shared through an `lrel_tape` invariant, coupled along the
+identity; the tape bound `N` need not equal `z`. -/
 theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     Iris.inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
@@ -252,6 +241,7 @@ theorem refines_rand_unit {e e' : Exp rT} : iprop%
     show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#(.unit)) from rfl, hv, hv']
   iapply refines_rand_unit_of_pos (by exact_mod_cast hn) fun m h0 _ => lrel_nat_lit h0
 
+/-- Compatibility of `rand` at `int`; a non-positive bound returns `-1` on both sides. -/
 theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     refines L ⊤ e1 e1' lrel_int ⊢@{IProp GF}
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
@@ -293,6 +283,7 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     imodintro
     iapply lrel_int_lit (-1)
 
+/-- Compatibility of `rand` at `int`; a non-positive bound returns `-1` on both sides. -/
 theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
     refines L ⊤ e e' lrel_int ⊢@{IProp GF}
     refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')

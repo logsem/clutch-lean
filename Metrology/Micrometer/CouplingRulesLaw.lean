@@ -6,9 +6,11 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-/-! Coupling two uniform draws by any bind law whose heads shift; DP choice is an instance. -/
+/-! Coupling `rand N ~ rand N` by any bind law whose heads shift, in `wp` and in `refines` (with
+tactic `rel_couple_UU_law`); DP choice is an instance. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -86,6 +88,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   imodintro
   by_cases hrTop : r < (⊤ : B)
   swap
+  -- r = ⊤: the budget c + ⊤ = ⊤ is absorbing
   · iapply specCoupl_absorbing
     exact IsTopAbsorbing.absorbing_top.mono (hr ▸ not_lt_top_iff.1 hrTop ▸ le_add_self)
   iapply specCoupl_ret
@@ -101,6 +104,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
     ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hheadStep
     (.of_forall fun k₁ k₂ ↦ hside _ _ _ k₁ k₂)
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
+  -- R n m + r < ⊤ gives R n m < ⊤, so the pair is a drawn one
   obtain ⟨n, m, h1, h2⟩ := Cfg.exists_of_drawCost_lt_top (lt_of_le_of_lt le_self_add hR)
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h2

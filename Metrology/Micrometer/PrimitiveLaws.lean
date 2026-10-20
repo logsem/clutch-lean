@@ -14,6 +14,7 @@ Weakest-precondition rules for heap, tape and `rand` operations, on the program 
 
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
@@ -63,7 +64,7 @@ end MicrometerInstance
 
 attribute [simp] ExtTreeMap.insert_eq_PartialMap_insert
 
-/-! ## Primitive WP laws -/
+/-! ## Head-step facts -/
 
 omit [MeasurableSingletonClass rT] in
 /-- A non-positive bound on an empty tape steps to `-1`, whether or not it matches the tape's. -/
@@ -74,7 +75,9 @@ theorem HeadStepSupport.rand_lbl_nonpos {σ : State rT} {l : Loc} {z N : Int} (H
   · exact .RandTapeNonposEmptyS Hz hlook rfl
   · exact .RandTapeNonposOtherS Hz hlook hN.symm
 
-section Lifting
+/-! ## Primitive WP laws -/
+
+section PrimitiveLaws
 
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
@@ -468,6 +471,6 @@ theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {n
   · iunfold specNatTape; iexists fs; iframe %hmap Hαb
   iapply Hwp $$ [$HαNat $Hj'] %hn
 
-end Lifting
+end PrimitiveLaws
 
 end ProbLang

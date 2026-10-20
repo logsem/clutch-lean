@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.Divergences.Conversions
 
-/-! Mechanisms and their privacy (Approximate Span Liftings, §2, Defs. 2.1–2.5). -/
+/-! Mechanisms and their privacy (Approximate Span Liftings, §2, Defs. 2.1–2.5).
+Generic `Kernel.IsPrivate` with DP/RDP/zCDP/tCDP as instances, its post-processing and composition
+laws, privacy as a lifting of equality (`isPrivate_iff_rel`), and the Fig. 4 conversions. -/
 
 @[expose] public section
 
@@ -72,6 +74,7 @@ theorem tCDP_iff :
 
 /-! ## Laws of privacy -/
 
+/-- Privacy at a budget gives privacy at every larger budget. -/
 theorem IsPrivate.mono [LE B] [Top B] [D.IsGraded] [IsSubMarkovKernel m]
     (h : m.IsPrivate D adj b) {b' : B} (hb : b ≤ b') : m.IsPrivate D adj b' :=
   fun _ _ hx ↦ IsGraded.mono hb (h hx)
@@ -122,10 +125,12 @@ theorem isPrivate_iff_codensity_rel [AddZeroClass B] [Preorder B] [CanonicallyOr
     m.IsPrivate D adj b ↔ ∀ ⦃x x'⦄, adj x x' → (codensity D).Rel b (· = ·) (m x) (m x') :=
   isPrivate_iff_rel (codensity D)
 
+/-- A mechanism is zCDP exactly when the zCDP lifting relates adjacent outputs along equality. -/
 theorem zCDP_iff_zcdpLifting_rel [IsSubMarkovKernel m] :
     m.zCDP adj ξ ρ ↔ ∀ ⦃x x'⦄, adj x x' → zcdpLifting.Rel (ξ, ρ) (· = ·) (m x) (m x') :=
   isPrivate_iff_rel _
 
+/-- A mechanism is tCDP exactly when the tCDP lifting relates adjacent outputs along equality. -/
 theorem tCDP_iff_tcdpLifting_rel [IsSubMarkovKernel m] :
     m.tCDP adj ω ρ ↔ ∀ ⦃x x'⦄, adj x x' → (tcdpLifting ω).Rel ρ (· = ·) (m x) (m x') :=
   isPrivate_iff_rel _

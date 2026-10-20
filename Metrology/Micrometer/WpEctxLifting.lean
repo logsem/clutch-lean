@@ -38,6 +38,8 @@ section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
+/-- Atomic head step, discrete form: reducibility and outcomes read off the head-step support (used
+by `wp_alloc`, `wp_load`, `wp_rand`). -/
 @[discrete]
 theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocallyClosed := by is_lc)
@@ -64,12 +66,14 @@ Off the head-reducible states the redex may sit under a context and `primStep` m
 so the carrying set is padded to `Set.univ` there, where concentration is free. -/
 
 open scoped Classical in
+/-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, is measurable. -/
 theorem measurableSet_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)}
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁)) (σ₁ : State rT) :
     MeasurableSet (if HeadReducible e₁ σ₁ then S σ₁ else Set.univ) := by
   split_ifs; exacts [hSmeas σ₁, MeasurableSet.univ]
 
 open scoped Classical in
+/-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, carries `primStep`. -/
 theorem concentrated_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)} (Hlc : e₁.IsLocallyClosed)
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁))
     (σ₁ : State rT) :
@@ -80,6 +84,7 @@ theorem concentrated_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)} (Hl
   · exact Concentrated.univ
 
 open scoped Classical in
+/-- Head step on a measurable set carrying `headStep`, in any `rT`. -/
 theorem wp_lift_head_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
@@ -98,6 +103,7 @@ theorem wp_lift_head_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT
   iapply H $$ %e₂ %σ₂ %Hmem
 
 open scoped Classical in
+/-- Atomic head step over a mask change, on a set carrying `headStep`. -/
 theorem wp_lift_atomic_head_step_fupd_concentrated {E1 E2 : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none)
     (Hlc : e₁.IsLocallyClosed := by is_lc)
@@ -118,6 +124,7 @@ theorem wp_lift_atomic_head_step_fupd_concentrated {E1 E2 : CoPset} {e₁ : Exp 
   iapply H $$ %e₂ %σ₂ %Hmem
 
 open scoped Classical in
+/-- Atomic head step on a set carrying `headStep`. -/
 theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none)
     (Hlc : e₁.IsLocallyClosed := by is_lc)

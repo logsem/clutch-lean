@@ -52,9 +52,8 @@ theorem PureHeadStep.toPureStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) :
 theorem PureStep.fill (K : Ectx rT) {e1 e2 : Exp rT} (h : PureStep e1 e2) :
     PureStep (K.fill e1) (K.fill e2) := by
   refine ⟨fun σ => (h.safe σ).fill K, fun σ => ?_⟩
-  have hm : Measurable (fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT)) := by measurability
   rw [primStep_fill (val_stuck (h.safe σ)), h.det σ]
-  exact map_dirac' hm _
+  exact map_dirac' (Ectx.fillCfg.measurable K) _
 
 theorem PureStep.fill_nsteps (K : Ectx rT) {n : ℕ} {e1 e2 : Exp rT}
     (h : nsteps PureStep n e1 e2) :
@@ -360,9 +359,8 @@ theorem DetStep.fill (K : Ectx rT) {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) 
   safe := h.safe.fill K
   det := by
     obtain ⟨e1, σ1⟩ := cfg1
-    have hm : Measurable (fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT)) := by measurability
     rw [primStep_fill (val_stuck h.safe), h.det]
-    exact map_dirac' hm _
+    exact map_dirac' (Ectx.fillCfg.measurable K) _
 
 theorem DetExec.refl (cfg : Cfg rT) : DetExec 0 cfg cfg where
   det_exec := rfl

@@ -6,7 +6,10 @@ public import Metrology.ProbLang.CtxStep
 
 @[expose] public section
 
-/-! # Atomic Expressions -/
+/-! # Atomic expressions
+
+Redexes whose single step lands on a value, so the program logic may open invariants around them
+(`Micrometer.OpenInv.of_atomic`). -/
 
 namespace ProbLang
 
@@ -59,7 +62,7 @@ private theorem alloc_decompItem (v : Val rT) : (Exp.alloc v.1).decompItem = non
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
 
-/-! ## Instances for the ops used by Compatibility -/
+/-! ## `Atomic` for heap and sampling redexes -/
 
 theorem load (l : Loc) : Atomic (rT := rT) pl(!#(.loc l)) :=
   of_headStepSupport rfl fun _ _ _ h => by

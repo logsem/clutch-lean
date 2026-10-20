@@ -18,7 +18,6 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
 /-! ## `spec_coupl` modality -/
 
--- TODO remove when fixpoint is added
 /-- The argument of the `specCoupl` fixpoint: program state, spec configuration and budget. -/
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
@@ -78,12 +77,14 @@ instance specCouplPre_mono {E : CoPset} {Z : State rT → Cfg rT → B → IProp
       iapply Hwand $$ HΦ
   mono_pred_ne := specCouplState_ne
 
+/-- Exit by the first disjunct: an absorbing budget. -/
 theorem specCoupl_absorbing {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z : State rT → Cfg rT → B → IProp GF} (hb : L.Absorbing b) :
     ⊢ specCoupl L E σ e' σ' b Z := by
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   ileft; ipureintro; exact hb
 
+/-- Exit by the second disjunct: the continuation now. -/
 theorem specCoupl_ret {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z : State rT → Cfg rT → B → IProp GF} :
     Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := by
@@ -91,6 +92,7 @@ theorem specCoupl_ret {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; ileft; iexact HZ
 
+/-- One more coupled round (third disjunct). -/
 theorem specCoupl_rec {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z : State rT → Cfg rT → B → IProp GF} :
     specCouplCouple L E σ e' σ' b
@@ -100,6 +102,7 @@ theorem specCoupl_rec {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; iright; iexact HCpl
 
+/-- Weaken the continuation `Z` under a persistent implication. -/
 theorem specCoupl_mono {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} : iprop%
     □ (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
@@ -115,6 +118,7 @@ theorem specCoupl_mono {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State r
   · iright; iright
     iexact HCpl
 
+/-- Run a second spec coupling from each exit of the first. -/
 theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} (HE : E1 ⊆ E2) : iprop%
     (∀ σ₂ ρ₂ b', Z₁ σ₂ ρ₂ b' -∗ specCoupl L E2 σ₂ ρ₂.expr ρ₂.state b' Z₂) ∗
@@ -141,6 +145,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : Sta
     imodintro
     iapply HCpl_cont $$ HZ
 
+/-- `specCoupl_mono` with a spatial implication. -/
 theorem specCoupl_mono_spatial {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
     {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} : iprop%
     (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
@@ -246,6 +251,7 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
+  -- the unit law only carries a finite budget; at b₁ = ⊤ exit through absorption
   rcases lt_or_eq_of_le (le_top : b₁ ≤ (⊤ : B)) with hb₁ | rfl
   · iintro HF
     let R : State rT → Cfg rT → B := fun s c => if s = σ ∧ c = ⟨e₂', σ₂'⟩ then b₁ else (⊤ : B)
@@ -262,7 +268,8 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
       rw [hR]
       iexact HF
     · simp [R, hS] at hlt
-  · iintro -
+  · -- b₁ = ⊤: b = ⊤ is absorbing
+    iintro -
     iapply specCoupl_absorbing
     exact (top_le_iff.1 hb) ▸ IsTopAbsorbing.absorbing_top
 
@@ -282,6 +289,7 @@ theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
   fupd_specCoupl_of_le le_rfl
 
+/-- Induction on the least fixpoint. -/
 theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp GF} : iprop%
     □ (∀ σ c b, specCouplPre L E Z (fun s => iprop(Ψ s.1 s.2.1 s.2.2 ∧
       specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z)) (σ, c, b) -∗ Ψ σ c b) ⊢
@@ -294,6 +302,7 @@ theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp G
   obtain ⟨σ'', c, b'⟩ := s
   iapply IH $$ %σ'' %c %b' HF
 
+/-- Couple two erasable distributions before `Z`, leaving `b₂` to the continuation. -/
 theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
       {σ₁' : State rT}
@@ -316,6 +325,7 @@ theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLaw
   obtain ⟨HS, rfl⟩ := HS
   iapply H $$ %σ₂ %σ₂' %HS
 
+/-- Couple an erasable distribution against `n` spec steps. -/
 theorem specCoupl_erasable_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
       {σ₁' : State rT}
@@ -328,6 +338,7 @@ theorem specCoupl_erasable_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.
   specCoupl_couple_rel (n := n) hb (by rwa [MeasureTheory.Measure.dirac_bind (by fun_prop)])
     Heras₁ (ErasableExpr.dret σ₁')
 
+/-- Couple a Dirac program state against `n` spec steps. -/
 theorem specCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing]
     [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
       {n : Nat} {b₁ b₂ b : B}
@@ -337,6 +348,7 @@ theorem specCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_erasable_steps hb Hcpl (ErasableExpr.dret σ₁)
 
+/-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on the coupling at its end. -/
 theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat} {b : B}
     {Z : State rT → Cfg rT → B → IProp GF}
@@ -344,6 +356,7 @@ theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)
 
+/-- Couple a Dirac program state against one spec step, on a measurable set carrying the step. -/
 theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : Set
@@ -364,6 +377,7 @@ theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] 
   obtain ⟨rfl, Hmem⟩ := HS
   iapply H $$ %e₂' %σ₂' %Hmem
 
+/-- `specCoupl_step_concentrated` on the step's support, for a non-`urand` redex. -/
 @[discrete]
 theorem specCoupl_step [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
     [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}

@@ -13,6 +13,11 @@ public import Metrology.Couplings.Measure
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure
 
+/-! # Measure-theory support for ProbLang
+
+The `Possible` predicate, measurability of `Option`/`List`/Σ constructions, and shape-stratified
+measurability used by `CoreMeasures`. -/
+
 /-! ## `Possible`: a positive-mass point of a measure -/
 
 /-- `ρ` carries positive mass under `μ`; stated without `{ρ}` so it needs no
@@ -249,8 +254,8 @@ theorem MeasurableSet.cover_inter_preimage_of_subtype
   rw [← Set.inter_self cov, Set.inter_assoc, ← Subtype.image_preimage_coe]
   exact MeasurableSet.subtype_image hcov ((subtype_preimage_eq f G) ▸ h hG)
 
-/-- Non-discrete variant of `Discrete.map_singleton_pos`. Injectivity is essential: a constant
-`f` collapses non-atomic mass onto one point. -/
+/-- A positive-mass point of an injective pushforward comes from a positive-mass point.
+Injectivity is essential: a constant `f` collapses non-atomic mass onto one point. -/
 theorem map_singleton_pos {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     [MeasurableSingletonClass α] [MeasurableSingletonClass β]
     {f : α → β} {μ : Measure α} {b : β} (hf : Measurable f) (hinj : Function.Injective f)

@@ -23,6 +23,7 @@ theorem RelCtx.dom_cons (x : Var) (A : lrel rT GF) (Γrc : RelCtx rT GF) :
     (((x, A) :: Γrc).map (·.1)).toFinset = (Γrc.map (·.1)).toFinset ∪ {x} := by
   simp [Finset.union_comm]
 
+/-- Closing `x` in a term with free variables in `x :: Γrc'` leaves them in `Γrc'`. -/
 theorem close_fv_in_outer_dom {Γrc' : RelCtx rT GF} {x : Var} {Ke : Exp rT} {A : lrel rT GF}
     (hKe_fv : Ke.fv ⊆ (((x, A) :: Γrc').map (·.1)).toFinset) {z : Var}
     (hz : z ∈ (Ke.close x).fv) : z ∈ (Γrc'.map (·.1)).toFinset := by
@@ -32,6 +33,7 @@ theorem close_fv_in_outer_dom {Γrc' : RelCtx rT GF} {x : Var} {Ke : Exp rT} {A 
   · exact h
   · exact absurd (Finset.mem_singleton.mp h ▸ hz) (Exp.close_var_not_fvar x Ke)
 
+/-- Closing `x` then opening with `fvar y` keeps a locally closed term locally closed. -/
 theorem open_close_subst_lc_at {Ke : Exp rT} (x y : Var) (hKe_lc : Ke.IsLocallyClosed) :
     (Exp.open' (Ke.close x) (.fvar y)).IsLocallyClosed := by
   rw [Exp.open_close_subst_lc x y _ hKe_lc]
@@ -39,12 +41,12 @@ theorem open_close_subst_lc_at {Ke : Exp rT} (x y : Var) (hKe_lc : Ke.IsLocallyC
 
 end Syntax
 
-section Soundness
+section CtxLemmas
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
-/-- The binders of each item of `K` avoid `S` and the binders of the items inside it. -/
+/-- The binders of each item of `K` avoid `S` and the binders of the items enclosing it. -/
 def Ctx.BindersFresh : Ctx rT → Finset Var → Prop
   | [], _ => True
   | k :: K', S =>
@@ -58,6 +60,7 @@ theorem Ctx.BindersFresh.mono {K : Ctx rT} {S T : Finset Var} (hST : S ⊆ T)
     exact ⟨fun y hy hyS => h.1 y hy (hST hyS),
       ih (Finset.union_subset_union hST Finset.Subset.rfl) h.2⟩
 
+/-- The binder-freshness hypothesis restricted to the inner context. -/
 theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
     (Hb : ∀ x ∈ Ctx.binderAtoms (k :: K'), x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv (k :: K')) :
     ∀ x ∈ Ctx.binderAtoms K', x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K' := by
@@ -80,11 +83,13 @@ theorem TctxRelated.eq_nil_of_empty {Δ : TyEnv rT GF} {Γrc : RelCtx rT GF}
     simp only [Tctx.empty, RelCtx.lookup] at h
     split at h <;> simp at h
 
+/-- A typed context filling is locally closed with free variables in the relation context. -/
 theorem ctx_fill_lc_fv {Γtc : Tctx} {Γrc : RelCtx rT GF} {Δ : TyEnv rT GF} {K : Ctx rT}
     {e : Exp rT} {τ : Ty} (HCtxRel : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc (K.fill e) τ) :
     (K.fill e).IsLocallyClosed ∧ (K.fill e).fv ⊆ (Γrc.map (·.1)).toFinset :=
   ⟨Hty.isLocallyClosed, fv_subset_relCtxDom HCtxRel Hty⟩
 
+/-- Binder freshness for a context transfers when a singleton binder `x` is added to the domain. -/
 theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {bAtoms : Finset Var} (hSingleton : bAtoms = {x})
     (h : Ctx.BindersFresh K' ((Γrc.map (·.1)).toFinset ∪ bAtoms)) :
@@ -364,6 +369,6 @@ end Prim
 
 end Steps
 
-end Soundness
+end CtxLemmas
 
 end ProbLang

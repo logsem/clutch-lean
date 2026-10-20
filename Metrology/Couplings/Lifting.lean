@@ -106,12 +106,14 @@ class IsComplete [Zero B] [Top B] (D : GradedDivergence.{u} B) : Prop where
   complete {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : D b μ ν → L.Rel b (· = ·) μ ν
 
-/-- The zero measure on the left lifts against every sub-probability measure. -/
+/-- The zero measure on the left lifts against every sub-probability measure; lifting analogue of
+`GradedDivergence.IsZeroLeft`. -/
 class IsZeroLeft : Prop where
   zero_left {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B) (R : X → Y → B)
     (ν : Measure Y) [IsSubProbabilityMeasure ν] : L b R (0 : Measure X) ν
 
-/-- A lifting along an increasing sequence on the left passes to its supremum. -/
+/-- A lifting along an increasing sequence on the left passes to its supremum; lifting analogue of
+`GradedDivergence.IsLeftContinuous`. -/
 class IsLeftContinuous : Prop where
   iSup_left {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
     {μ : ℕ → Measure X} [∀ n, IsSubProbabilityMeasure (μ n)] (hμ : Monotone μ) {ν : Measure Y}
@@ -123,7 +125,8 @@ class IsSupportLocal [Top B] : Prop where
     {μ : Measure X} {ν : Measure Y} {A : Set X} [DecidablePred (· ∈ A)] (hA : MeasurableSet A)
     (hμ : μ Aᶜ = 0) : L b R μ ν → L b (A.piecewise R fun _ _ ↦ ⊤) μ ν
 
-/-- Every sub-probability measure lifts against itself along equality at budget `0`. -/
+/-- Every sub-probability measure lifts against itself along equality at budget `0`; lifting
+analogue of `GradedDivergence.IsReflexive`. -/
 class IsReflexive [Zero B] [Top B] : Prop where
   refl {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsSubProbabilityMeasure μ] :
     L.Rel 0 (· = ·) μ μ
@@ -135,7 +138,8 @@ class IsExpectationAdditive [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o 
     {c : Y → ℝ≥0∞} (hc : Measurable c) :
     L b R μ ν → L (b + s (∫⁻ y, c y ∂ν)) (fun x y ↦ R x y + s (c y)) μ ν
 
-/-- Events related at slack `s δ` differ in mass by at most `δ`. -/
+/-- Events related at slack `s δ` differ in mass by at most `δ`; lifting analogue of
+`GradedDivergence.IsMassDetecting`. -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] [Top B] (s : ℝ≥0∞ →+o B) : Prop where
   measure_le_add {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
     {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ]
@@ -143,7 +147,8 @@ class IsMassDetecting [AddZeroClass B] [Preorder B] [Top B] (s : ℝ≥0∞ →+
     (hT' : MeasurableSet T') :
     L.Rel (s δ) S μ ν → (∀ x y, S x y → x ∈ T → y ∈ T') → μ T ≤ ν T' + δ
 
-/-- Budgets are closed from above: a lifting at every larger budget gives the lifting. -/
+/-- Budgets are closed from above: a lifting at every larger budget gives the lifting; lifting
+analogue of `GradedDivergence.IsBudgetClosed`. -/
 class IsBudgetClosed [LT B] : Prop where
   of_forall_gt {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :

@@ -45,7 +45,8 @@ theorem rr3_coupling :
     rw [map_unifInt_three (d := false) rfl rfl rfl, map_unifInt_three (d := true) rfl rfl rfl]
     exact renyiDivergence_randResp
 
-/-- The leftover of the first draw: the second round's cost after the common report. -/
+/-- The budget handed to the continuation after first draws `n`, `m`: the second round's cost
+`stageTwoCost` of their common report, or `⊤` if the reports differ. -/
 noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
   if rr3Out false n = rr3Out true m then stageTwoCost (rr3Out false n) else ⊤
 
@@ -59,6 +60,8 @@ theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
       (Cfg.drawCost σ σ' K adaptiveCost) (ENNReal.ofReal (Real.log (19 / 12))) := by
   classical
   have hK (a b : Exp rT) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
+  -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
+  -- at draw `2`, right reports `true` at draws `0, 1`)
   have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#(.int 2)), σ⟩) :=
     measurable_to_bool <| by
       convert measurableSet_singleton (⟨pl(#(.int 2)), σ⟩ : Cfg rT)
@@ -107,6 +110,8 @@ theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
     simp only [adaptiveCost, rr3Out, hn, hm, ↓reduceIte, decide_true, decide_false,
       Bool.not_false, Bool.not_true, stageTwoCost, Bool.cond_true, Bool.cond_false] at hR ⊢ <;>
     simp at hR <;> rel_pures
+  -- mismatched reports close by `hR`; first goal: report `false`, no second round; second goal:
+  -- report `true`, spend the remaining `log (3/2)` on the second draw
   · rel_values
   · rel_couple_UU_spend (fun r r' ↦ rr3Out false r = rr3Out true r') _
       (IsAddRegular.of_ne_top ENNReal.ofReal_ne_top).1 rr3_coupling

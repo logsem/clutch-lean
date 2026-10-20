@@ -119,6 +119,7 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     WP[codensity tv] (pl% &initMap #.unit) @ E {{ Φ }} := by
   iintro HΦ
   wp_pures
+  -- restate the literal as `Exp.ofVal` of the map value so `wp_alloc` applies
   rw [show (Exp.alloc (.inl (.lit .unit)) : Exp rT) =
     .alloc (Exp.ofVal (assocVal [])) from rfl]
   iapply wp_alloc
@@ -177,6 +178,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
   iapply wp_load
   iframe Hl
   iintro Hl
+  -- restate the stored literal as `Exp.ofVal` of the map value so `wp_store` applies
   rw [show (Exp.store pl(#(.loc ℓ))
       (.inr (.pair (.pair pl(#(.int k)) pl(#(.int y))) (Exp.ofVal (assocVal m)))) : Exp rT) =
     .store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((k, y) :: m))) from rfl]

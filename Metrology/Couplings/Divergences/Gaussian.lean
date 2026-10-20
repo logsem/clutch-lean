@@ -7,7 +7,9 @@ public import Mathlib.Analysis.Real.Pi.Bounds
 public import Mathlib.Analysis.Complex.ExponentialBounds
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! The Gaussian mechanism is differentially private (Approximate Span Liftings, Fig. 2). -/
+/-! The Gaussian mechanism is differentially private (Approximate Span Liftings, Fig. 2).
+The tag `[DP-G]` is that figure's arrow label; the proof follows Dwork–Roth Thm. A.1 and
+Sato 2016, Lemma A.11. -/
 
 @[expose] public section
 
@@ -20,6 +22,8 @@ namespace ProbabilityTheory
 theorem gaussianReal_Ioi_le {a H : ℝ} (hH : a < H) {v : ℝ≥0} (hv : v ≠ 0) :
     gaussianReal a v (Ioi H) ≤ ENNReal.ofReal (v * gaussianPDFReal a v H / (H - a)) := by
   have hv' : (0 : ℝ) < v := NNReal.coe_pos.2 (pos_iff_ne_zero.2 hv)
+  -- `F = -v·pdf` is an antiderivative of `(x - a)·pdf`; on `(H, ∞)` bound `pdf` by
+  -- `(x - a)·pdf / (H - a)`
   set F : ℝ → ℝ := fun x ↦ -(v * gaussianPDFReal a v x)
   have hF (x : ℝ) : HasDerivAt F ((x - a) * gaussianPDFReal a v x) x := by
     have h : HasDerivAt (fun x ↦ -(x - a) ^ 2 / (2 * (v : ℝ))) (-(x - a) / v) x := by

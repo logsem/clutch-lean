@@ -12,8 +12,9 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-- Clutch `prim_coupl_upd_tapes_dom`, projected to expressions. `0 < t.bound` is needed:
-otherwise `tapePresample σ α = 0`. -/
+/-- Presampling tape `α` before running `m` steps leaves the distribution of the final expression
+unchanged (Clutch `prim_coupl_upd_tapes_dom`, projected). `0 < t.bound` is needed: otherwise
+`tapePresample σ α = 0`. -/
 theorem execN_tape_presample_expr_eq
     {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
@@ -69,6 +70,7 @@ theorem execN_tape_presample_expr_eq
           Measure.map_apply Cfg.measurable_expr hS,
           Measure.bind_apply (Cfg.measurable_expr hS) hbind_ker.aemeasurable]
       simp_rw [Measure.bind_apply (Cfg.measurable_expr hS) hg_exec.aemeasurable]
+      -- the IH, evaluated on `S` and pushed under `K`
       have ih_pointwise : ∀ (e' : Exp rT) (σ' : State rT) (t' : Tape),
           σ'.tapes[α]? = some t' → 0 < t'.bound →
           ∫⁻ σ'', (execN m ⟨e', σ''⟩) ((fun x => x.expr) ⁻¹' S) ∂tapePresample σ' α
@@ -100,6 +102,7 @@ theorem execN_tape_presample_expr_eq
       rcases det_or_prob_or_zero e_red σ with hdet | hprob | hzero
       · clear_value e_red K
         cases hdet with
+        -- deterministic, state-independent redexes: `erasure_det_close`
         | betaLam hv2 =>
           rename_i e1 e2
           refine det_close_state_pres _ (Exp.open' e1 e2) fun σ' => ?_
@@ -152,6 +155,7 @@ theorem execN_tape_presample_expr_eq
           refine det_close_state_pres _ (.inr (.lit .unit)) fun σ' => ?_
           show Exp.isValM e_s (match Pat.tryMatch p e_s with | some b => _ | none => _) = _
           rw [Exp.isValM_some hv, hmatch]
+        -- heap/tape allocation and access: commute with presampling
         | load hlook =>
           rename_i ℓ v
           exact erasure_load_close (v := v) h hN ih_fill hlook
@@ -174,6 +178,7 @@ theorem execN_tape_presample_expr_eq
           subst hzN
           by_cases hαeq : α = α_lbl
           · subst hαeq
+            -- rand on tape `α`, non-empty: the popped head is unchanged by appending
             have ht_eq : t = ⟨z_r, nn :: ns⟩ := by
               rw [h] at htapes; exact Option.some.inj htapes
             subst ht_eq
@@ -210,7 +215,8 @@ theorem execN_tape_presample_expr_eq
                   ((erasure_integrand_measurable hS).comp
                     (Cfg.measurable_mk.comp (measurable_const.prodMk measurable_id)))]
             simp_rw [State.update_tapes_twice]
-          · have hstep_rw : ∀ (σ₀ : State rT), σ₀.tapes[α_lbl]? = some ⟨z_r, nn :: ns⟩ →
+          · -- other tape: the same pop from every presampled state
+            have hstep_rw : ∀ (σ₀ : State rT), σ₀.tapes[α_lbl]? = some ⟨z_r, nn :: ns⟩ →
                 headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ₀⟩ : Cfg rT) =
                   Measure.dirac ⟨.lit (.int nn),
                     σ₀.update_tapes (·.insert α_lbl ⟨z_r, ns⟩)⟩ := by
@@ -247,6 +253,8 @@ theorem execN_tape_presample_expr_eq
           subst hzN
           by_cases hαeq : α = α_lbl
           · subst hαeq
+            -- KEY CASE: rand on the empty tape `α` pops exactly the presampled value
+            -- (`State.update_tapes_no_change` + `tapeIndexUniform_lintegral_eq_cfg_uniform`)
             have ht_eq : t = ⟨z_r, []⟩ := by
               rw [h] at htapes; exact Option.some.inj htapes
             subst ht_eq
@@ -274,12 +282,14 @@ theorem execN_tape_presample_expr_eq
             exact tapeIndexUniform_lintegral_eq_cfg_uniform hz σ
               (fun ρ => ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S))
               (erasure_integrand_measurable hS)
-          · have hstep_σ : headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ⟩ : Cfg rT)
+          · -- other tape: the same uniform step from every presampled state
+            have hstep_σ : headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ⟩ : Cfg rT)
                 = Cfg.uniform z_r σ := by simp [headStep, htapes]
             refine uniform_close _ z_r hz ?_ hstep_σ
             filter_upwards [tapePresample_tape_ne_ae h (Ne.symm hαeq)] with σ' htape_eq
             simp [headStep, htape_eq.trans htapes]
         | @randTapeOther z_r α_lbl _ N_b L hz htapes hzN =>
+          -- bound mismatch: the same uniform step from every presampled state
           have hrand_uniform : ∀ (σ₀ : State rT) {M : Int} {ns : List _},
               σ₀.tapes[α_lbl]? = some ⟨M, ns⟩ → M ≠ z_r →
               headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ₀⟩ : Cfg rT)

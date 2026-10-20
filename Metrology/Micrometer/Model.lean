@@ -14,6 +14,9 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
+/-- Values are inhabited by `()`. -/
+instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
+
 /-! ### Semantic property lemmas -/
 
 section SemtypesProperties
@@ -21,11 +24,8 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
-/-- Values are inhabited by `()`. -/
-instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
-
-/-- Two `logN` invariants with incompatible bodies have equal names, so `l1 = l2` holds whenever
-equal names imply it. -/
+/-- If two `logN` invariants have bodies that cannot hold together, their names must be equal
+(otherwise both open at once); so `l1 = l2` follows when equal names imply it. -/
 theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
     {l1 l2 : Loc} (HE : (↑logN : CoPset) ⊆ E) (hp : p1 = p2 → l1 = l2)
     (hfalse : ⊢ P1 -∗ P2 -∗ False) :
@@ -182,6 +182,7 @@ theorem refines_ret_na_compl {E : CoPset} {e1 e2 : Exp rT} {v1 v2 : Val rT} {A :
   iapply hun
   iframe Hnais HF
 
+/-- Two values refine each other at `A` when they are related at `A` after a `⊤` update. -/
 theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
     (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
     iprop(|={⊤}=> A v1 v2) ⊢ refines L (⊤ : CoPset) e1 e2 A := by
@@ -220,6 +221,7 @@ instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
     _ ⊢ |={⊤}=> refines L E e t A := BIFUpdate.except0
     _ ⊢ refines L E e t A := fupd_refines
 
+/-- Update the non-atomic mask from `E` to `F` before continuing the refinement at `F`. -/
 theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
     iprop(naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) F ∗ refines L F e1 e2 A)
       ⊢ refines L E e1 e2 A := by
@@ -230,6 +232,7 @@ theorem refines_na_update {E F : CoPset} {e1 e2 : Exp rT} {A : lrel rT GF} :
   imodintro
   iapply HR $$ %K %b Hj Hna Herr Hpos
 
+/-- Allocate a non-atomic invariant `N` for `P` and continue the refinement. -/
 theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
     iprop% (▷ P) ∗ (naInvP (rT := rT) N P -∗ refines L E e1 e2 A)
@@ -240,6 +243,8 @@ theorem refines_na_alloc {P : IProp GF} (N : Namespace) {E : CoPset} {e1 e2 : Ex
   imodintro
   iapply Hcont $$ Hinv
 
+/-- Open the non-atomic invariant `N` around a refinement, which then runs at mask `E \ N` with the
+closing update. -/
 theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT} {A : lrel rT GF}
     (HNE : (↑N : CoPset) ⊆ E) :
     iprop% naInvP (rT := rT) N P ∗
@@ -254,6 +259,7 @@ theorem refines_na_inv {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp 
   iframe Hnais
   iapply IH $$ [$HP $Hclose]
 
+/-- Close the non-atomic invariant `N` by returning `▷ P`, continuing at mask `E`. -/
 theorem refines_na_close {P : IProp GF} {E : CoPset} {N : Namespace} {e1 e2 : Exp rT}
     {A : lrel rT GF} :
     iprop% (▷ P) ∗ naCloseP (rT := rT) P N E ∗ refines L E e1 e2 A

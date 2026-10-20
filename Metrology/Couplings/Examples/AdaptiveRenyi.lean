@@ -65,8 +65,8 @@ theorem renyiDivergence_randResp :
     ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
   norm_num [Real.exp_log]
 
-/-- The escort side condition: the first stage is within budget `log (19 / 12)` of its neighbour
-reweighted by `e^{-ρ₂}`. -/
+/-- The escort head premise, with witness kernel `Kernel.id`: the first stage is within Rényi
+budget `log (19 / 12)` of its neighbour reweighted by `e^{-ρ₂}`. -/
 theorem renyiDivergence_randResp_escort :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (randResp false)
       (((Kernel.id : Kernel Bool Bool) ∘ₘ randResp true).withDensity

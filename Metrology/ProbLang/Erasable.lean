@@ -8,7 +8,8 @@ public import Metrology.ProbLang.Exec
 # Erasable and rewritable distributions
 
 Port of Clutch's `erasable.v`. Clutch compares final values; ours compares whole `Measure Cfg`s,
-so it is stronger: `tapePresample` is not erasable here, and `Erasure.lean` states it as a coupling.
+so it is stronger: `tapePresample` is not erasable here; it satisfies the expression-projected
+`ErasableExpr` (`Erasure/ErasableExpr.lean`).
 -/
 
 namespace ProbLang
@@ -26,10 +27,12 @@ def Erasable (μ : Measure (State rT)) (σ : State rT) : Prop :=
 
 namespace Erasable
 
+/-- A Dirac state distribution is erasable. -/
 theorem dret (σ : State rT) : Erasable (Measure.dirac σ) σ := by
   intro e m
   rw [Measure.dirac_bind (by measurability)]
 
+/-- Sequencing preserves erasability. -/
 theorem dbind
     {μ₁ : Measure (State rT)} {μ₂ : State rT → Measure (State rT)} {σ : State rT}
     (h₁ : Erasable μ₁ σ) (h₂ : ∀ σ', Erasable (μ₂ σ') σ') (hm₂ : AEMeasurable μ₂ μ₁) :
@@ -39,6 +42,7 @@ theorem dbind
   simp only [fun σ' => h₂ σ' e m]
   exact h₁ e m
 
+/-- Erasability passes from every bounded run to the limit (monotone convergence). -/
 theorem lim_exec
     {μ : Measure (State rT)} {σ : State rT} (h : Erasable μ σ) (e : Exp rT) :
     μ.bind (fun σ' => limExec ⟨e, σ'⟩) = limExec ⟨e, σ⟩ := by
@@ -54,6 +58,7 @@ theorem lim_exec
   intro n
   rw [← h e n, bind_apply HS (by measurability)]
 
+/-- Pairing a value with an erasable state distribution gives the Dirac at the value in `σ`. -/
 theorem dret_final {μ : Measure (State rT)} {σ : State rT} {e : Exp rT} (hv : IsVal e)
     (h : Erasable μ σ) :
     μ.bind (fun σ' => Measure.dirac (⟨e, σ'⟩ : Cfg rT)) =
@@ -76,6 +81,7 @@ theorem pexecN_lim_exec
   simp only [fun σ' => (limExec_pexecN n ⟨e, σ'⟩).symm]
   exact h.lim_exec e
 
+/-- An erasable distribution is a probability measure (run `()` one step). -/
 theorem mass
     {μ : Measure (State rT)} {σ : State rT} (h : Erasable μ σ) :
     μ Set.univ = 1 := by

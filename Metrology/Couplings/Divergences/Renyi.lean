@@ -3,8 +3,8 @@ module
 public import Metrology.Couplings.Divergences.FDivBound
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 
-/-! The Rényi divergence as a graded divergence (Approximate Span Liftings, Def. 2.2, Thm. 4.11,
-App. C.4). -/
+/-! The Rényi divergence as a graded divergence: the moment bound `fDiv (·^α) ≤ e^{(α-1)ρ}`, its
+value `renyiDiv`, and its classes, chiefly composability (`isComposable_renyi`, Thm. 4.11). -/
 
 @[expose] public section
 
@@ -26,6 +26,7 @@ theorem continuousWithinAt_rpow_zero (hα : 0 < α) :
     ContinuousWithinAt (· ^ α : ℝ → ℝ) (Ici 0) 0 :=
   (continuousAt_rpow_const 0 α (.inr hα.le)).continuousWithinAt
 
+/-- For `α > 1`, `t ^ α` grows faster than linearly, so singular mass costs `⊤`. -/
 theorem derivAtTop_rpow (hα : 1 < α) : derivAtTop (· ^ α) = ⊤ := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
   refine (tendsto_rpow_atTop (sub_pos.2 hα)).congr' ?_
@@ -55,6 +56,8 @@ theorem persp_rpow_pos (hα : 1 < α) {x y : ℝ} (hx : 0 < x) (hy : 0 ≤ y) :
   · rw [persp_rpow_of_pos α hy]
     exact EReal.coe_pos.2 (mul_pos hy (rpow_pos_of_pos (div_pos hx hy) _))
 
+/-- The perspective of `t ↦ t ^ α` is multiplicative; this gives the product chain rule
+`fDiv_rpow_comp_le`. -/
 theorem persp_rpow_mul (hα : 1 < α) {a b c d : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (hc : 0 ≤ c)
     (hd : 0 ≤ d) : persp (· ^ α) (a * c) (b * d) = persp (· ^ α) a b * persp (· ^ α) c d := by
   have hα0 : 0 < α := by linarith
@@ -344,6 +347,8 @@ instance isBudgetClosed_renyi : (renyiDivergence.{u} α).IsBudgetClosed :=
 
 /-- Moments multiply under composition, so Rényi budgets add (Thm. 4.11, by Thm. 4.6). -/
 instance isComposable_renyi : (renyiDivergence.{u} α).IsComposable :=
+  -- the `_of_mul` chain is stated with `max 0 _`, which is the identity on Rényi moments (they
+  -- are nonnegative)
   isComposable_fDivBound_of_mul (fun _ _ ↦ convexOn_rpow hα.out.le)
     (fun _ _ ↦ continuousWithinAt_rpow_zero (zero_lt_one.trans hα.out))
     (fun _ _ _ ↦ by

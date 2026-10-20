@@ -28,13 +28,16 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
     ⊢@{IProp GF} ↯b budget -∗ REL[codensity dp] (choice (rT := rT) b) << choice b' : lrel_bool := by
+  -- put `budget` in the choice law's shape `(max (ε₁+ε₂) (ε₁'+ε₂'), δ₁+δ₁'+δ₂)`
   rw [show budget = (max (0 + ENNReal.ofReal (Real.log 3)) (0 + 0), 0 + 0 + 0) by simp]
   iintro Hb
+  -- both draws coupled by identity; draw `0` (run `rr`) gets `(ln 3, 0)`, draw `1` gets `(0, 0)`
   rel_apply (refines_couple_rands_dpChoice (ε₁ := 0) (δ₁ := 0) (ε₁' := 0) (δ₁' := 0)
     (ε₂ := ENNReal.ofReal (Real.log 3)) (ε₂' := 0) (δ₂ := 0) (P := {0}) (T := {0}) 2 (by norm_num)
     (IsReflexive.refl _) (IsReflexive.refl _) (fun _ _ h e ↦ e ▸ h) (fun _ _ h e ↦ e ▸ h)
     (by simp))
   iframe Hb
+  -- either coupling is equality
   iintro %r %_ %(rfl | rfl) Hr
   all_goals
     obtain rfl | h0 := eq_or_ne r 0

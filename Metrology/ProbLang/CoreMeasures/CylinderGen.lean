@@ -19,8 +19,9 @@ proves measurable its constructors and the functions defined on it by cases or b
 recursion.
 
 A value of `T` is its *shape* (its constructors and its countable, *base*, fields) together with its
-*leaves* (its other, *data*, fields), so `T ≃ Σ s : T.Shape, T.Leaves s`, and `T` gets the
-σ-algebra of that sum. Every term is built as an `Expr` (with the builders of
+*leaves* (its other, *data*, fields). For a recursive type the shape is the whole constructor tree
+and the leaves are the data fields of every node. So `T ≃ Σ s : T.Shape, T.Leaves s`, and `T` gets
+the σ-algebra of that sum. Every term is built as an `Expr` (with the builders of
 `CylinderGen/Ctx.lean`), and every proof instantiates lemmas of `Shapes.lean`. In order, it
 declares:
 
@@ -163,7 +164,8 @@ def Ctx.addLeftInverse (ctx : Ctx) : MetaM Unit := do
   ctx.declare (ctx.T ++ `ofSigma_toSigma) (← inferType proof) proof
 
 /-- `T.toSigma_ofSigma : toSigma (ofSigma ⟨s, v⟩) = ⟨s, v⟩`, by induction on `s`: both sides are
-`G` of the values at the recursive fields, on which the motive gives a congruence. -/
+`G Es := ⟨c (base fields, shapes of Es), (leaves of v, leaves of Es)⟩` applied to the values `Es`
+at the recursive fields, so congruence with the motive closes it. -/
 def Ctx.addRightInverse (ctx : Ctx) : MetaM Unit := do
   let σ ← ctx.sigma
   let roundTrip (s v : Expr) : MetaM Expr := do
@@ -173,7 +175,6 @@ def Ctx.addRightInverse (ctx : Ctx) : MetaM Unit := do
     let ihs := (slots.zip vs).filterMap fun
       | (.recursive _ ih, vi) => some (mkApp ih vi)
       | _ => none
-    -- `G Es = ⟨c (base fields, shapes of Es), (leaves of v, leaves of Es)⟩`
     let G ← withLocalDeclsDND (ihs.map fun _ => (`E, σ)) fun Es => do
       let mut (rest, parts) := (Es.toList, #[])
       for slot in slots, vi in vs do

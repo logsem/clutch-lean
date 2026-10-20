@@ -20,6 +20,7 @@ namespace Exp
 variable {rT : Type _}
 variable {x y : Var} {e e' u t : Exp rT}
 
+/-- If opening at `i` leaves `openRec j v e` unchanged for `i ≠ j`, it leaves `e` unchanged. -/
 theorem openRec_aux (e : Exp rT) (j v i u) (neq : i ≠ j)
     (heq : openRec j v e = openRec i u (openRec j v e)) : e = openRec i u e := by
   induction e generalizing i j <;> grind
@@ -86,6 +87,8 @@ theorem close_var_not_fvar_rec (x) (k) (e : Exp rT) : x ∉ (closeRec k x e).fv 
 theorem close_var_not_fvar (x : Var) (e : Exp rT) : x ∉ (close e x).fv :=
   close_var_not_fvar_rec x 0 e
 
+/-- Opening a locally closed term does nothing. Stated right-to-left so `rw [← open_lc]` erases a
+stuck `openRec` on an opaque leaf. -/
 @[scoped grind =_]
 theorem open_lc (k : Nat) (t : Exp rT) (e : Exp rT) (he : e.IsLocallyClosed) :
     e = openRec k t e := by
@@ -191,6 +194,7 @@ theorem open_close_isLocallyClosed {e : Exp rT} (x y : Var) (he : IsLocallyClose
   rw [open_close_subst_lc x y e he]
   exact subst_lc he (IsLocallyClosed.fvar y)
 
+/-- Opening `close e x` with any locally closed `v` substitutes `v` for `x`. -/
 theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
     (he : IsLocallyClosed e) (hv : IsLocallyClosed v) :
     open' (close e x) v = subst e x v := by
@@ -200,6 +204,7 @@ theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
   have hzv : z ∉ v.fv := fun h => hz (Finset.mem_insert_of_mem (Finset.mem_union_right _ h))
   have hzcl : z ∉ (close e x).fv := close_preserve_not_fvar e hze
   rw [subst_intro z v (close e x) hzcl hv, open_close_subst_lc x z e he]
+  -- Rename `x` to the fresh `z`, then substitute `v` for `z`.
   have subst_rename : ∀ e : Exp rT, z ∉ e.fv → subst (subst e x (fvar z)) z v = subst e x v := by
     intro e hze
     induction e with

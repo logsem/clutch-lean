@@ -10,8 +10,12 @@ public import Mathlib.Algebra.Order.Hom.Monoid
 public import Mathlib.Basic.ENNReal.Basic
 import Metrology.Iris.ErrorCredits
 
-/-! Budget credits: an authoritative budget `●↯b s` and spendable fragments `↯b c` over an
-additive budget type (Rocq `gconeUR`). -/
+/-!
+# Budget credits
+
+The credit camera Micrometer's wp uses: authority `●↯b s` in the state interpretation, fragments
+`↯b c` held by the user (Rocq `gconeUR`).
+-/
 
 @[expose] public section
 

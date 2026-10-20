@@ -12,7 +12,11 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # A continuous one-time pad, adding a uniform key modulo one -/
+/-! # A continuous one-time pad, adding a uniform key modulo one
+
+The encryption and `urand` have equal distributions (`otp_distribution_eq`), every typed boolean
+context sees them equal (`otp_ctx_equiv_real`), and no distinguisher has advantage
+(`otp_advantage_zero`). -/
 
 open scoped ENNReal
 
@@ -28,7 +32,8 @@ section Abstract
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
-/-- Encrypts by adding the key `m` modulo one. -/
+/-- The body of `otp_enc m` as a lambda: `otp_enc m` is `otpLam m` applied to `urand`, which is how
+`otp_enc_typed` types it. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
 /-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
@@ -97,6 +102,11 @@ theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS 
   ipureintro
   exact ⟨r, hv, hv'⟩
 
+omit [LawfulProbLangℝ rT] in
+theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
+  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
+  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+
 section Adequacy
 
 variable {GF : BundledGFunctors}
@@ -119,11 +129,6 @@ end Adequacy
 
 At the concrete model `MicrometerFunctor ℝ` every ghost-state hypothesis is
 discharged, leaving a self-contained theorem about `ℝ`-valued programs. -/
-
-omit [LawfulProbLangℝ rT] in
-theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
-  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
-  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
 
 /-- The encrypted and ideal samples have the same distribution. -/
 theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :

@@ -7,9 +7,11 @@ import Mathlib.Data.List.GetD
 
 @[expose] public section
 
-/-! # The idealised random function and random permutation
+/-! # Specifications of the random function and random permutation
 
-Rocq source: clutch's `is_random_function`/`is_prp` and their query lemmas
+Specs of `Code/Switching`: representation predicates, creation, queries, and the fresh-query
+coupling `wp_rfQuery_prpQuery_fresh` that costs `m.length / N`. Rocq source:
+clutch's `is_random_function`/`is_prp` and their query lemmas
 (`theories/approxis/examples/{prf,prp}.v`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
@@ -289,6 +291,7 @@ At a fresh input, the random function's `rand N` draw is coupled with the permut
 `rand r.length` draw along `i ↦ r[i]`, for `m.length / N` credits. Port of the fresh-query case
 of clutch's `wp_prf_prp_couple_eq_err`. -/
 
+/-- A fresh query to the random function against the random permutation costs `m.length / N`. -/
 theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv : Loc)
     (m : List (Int × Int)) (r : List Int) (n : Int) (ε : ENNReal)
     (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)

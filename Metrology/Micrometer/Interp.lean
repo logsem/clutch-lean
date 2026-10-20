@@ -171,16 +171,20 @@ theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
   cases H
-  · show iprop(⌜_⌝) ⊢ _
+  · -- unit
+    show iprop(⌜_⌝) ⊢ _
     iintro ⟨%h1, %h2⟩ !%
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
-  · show iprop(∃ _, _) ⊢ _
+  · -- int
+    show iprop(∃ _, _) ⊢ _
     iintro ⟨%n, %h1, %h2⟩ !%
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
-  · show iprop(∃ _, _) ⊢ _
+  · -- bool
+    show iprop(∃ _, _) ⊢ _
     iintro ⟨%b, %h1, %h2⟩ !%
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
-  · show iprop(∃ _ _, _) ⊢ _
+  · -- ref
+    show iprop(∃ _ _, _) ⊢ _
     iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
 
@@ -193,16 +197,20 @@ theorem unboxed_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : Unb
 theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜v = v'⌝ := by
   induction H generalizing v v'
-  · show iprop(⌜_⌝) ⊢ _
+  · -- unit
+    show iprop(⌜_⌝) ⊢ _
     iintro ⟨%h1, %h2⟩ !%
     rw [h1, h2]
-  · show iprop(∃ _, _) ⊢ _
+  · -- int
+    show iprop(∃ _, _) ⊢ _
     iintro ⟨%n, %h1, %h2⟩ !%
     rw [h1, h2]
-  · show iprop(∃ _, _) ⊢ _
+  · -- bool
+    show iprop(∃ _, _) ⊢ _
     iintro ⟨%b, %h1, %h2⟩ !%
     rw [h1, h2]
-  · rename_i _ _ _ _ ih1 ih2
+  · -- prod
+    rename_i _ _ _ _ ih1 ih2
     unfold interp at ih1 ih2
     show iprop(∃ _ _ _ _, _) ⊢ _
     iintro ⟨%a1, %a2, %b1, %b2, %h1, %h2, HA, HB⟩
@@ -211,7 +219,8 @@ theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType �
     ipureintro
     apply Val.ext
     rw [h1, h2, heq1, heq2]
-  · rename_i _ _ _ _ ih1 ih2
+  · -- sum
+    rename_i _ _ _ _ ih1 ih2
     unfold interp at ih1 ih2
     show iprop(∃ _ _, _) ⊢ _
     iintro ⟨%w1, %w2, ⟨%h1, %h2, HA⟩ | ⟨%h1, %h2, HB⟩⟩

@@ -17,7 +17,7 @@ instance fact_one_lt_coe_ioi (α : Ioi (1 : ℝ)) : Fact (1 < (α : ℝ)) :=
 
 namespace GradedDivergence
 
-/-- Budgets indexed by the orders `α > 1`, so the budget order is a canonical partial order. -/
+/-- A budget `ρ α` for every order `α > 1`, with the pointwise order and addition of `ℝ≥0∞`. -/
 abbrev RenyiBudget :=
   Ioi (1 : ℝ) → ℝ≥0∞
 
@@ -43,7 +43,7 @@ instance isReflexive_renyiCurve : renyiCurve.{u}.IsReflexive :=
 instance isComposable_renyiCurve : renyiCurve.{u}.IsComposable :=
   isComposable_pi
 
-/-- The zero measure is within every Rényi budget of every measure. -/
+/-- The zero measure is within every curve of every measure. -/
 instance isZeroLeft_renyiCurve : renyiCurve.{u}.IsZeroLeft :=
   isZeroLeft_pi
 

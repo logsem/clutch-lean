@@ -8,8 +8,10 @@ public import Metrology.ProbLang.Measure
 # Types as sums over shapes
 
 A value of an inductive type `T` is a *shape* (constructors and countable fields) with *leaves*
-(other fields), so `T ≃ Σ s, V s`. Deriving `MeasurableSpace` uses this file to show constructors
-are measurable embeddings, maps out of `T` are measurable shape by shape, and singletons measurable.
+(other fields), so `T ≃ Σ s, V s`. For a recursive type the shape is the whole constructor tree
+(`T.Shape` has a recursive field wherever `T` does) and the leaves are the data fields of every
+node. Deriving `MeasurableSpace` uses this file to show constructors are measurable embeddings,
+maps out of `T` are measurable shape by shape, and singletons measurable.
 -/
 
 open MeasureTheory Set

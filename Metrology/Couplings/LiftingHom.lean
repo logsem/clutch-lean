@@ -24,8 +24,8 @@ structure LiftingRelHom {B₁ : Type v} {B₂ : Type w} [Preorder B₁] [Zero B�
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     L₁.Rel b S μ ν → L₂.Rel (map b) S μ ν
 
-/-- The per-pair strengthening of `LiftingRelHom`: leftovers are carried along the budget map
-too, which needs every test of `L₂` to come from a test of `L₁`. -/
+/-- The per-pair strengthening of `LiftingRelHom`: every lifting with leftover `R` maps to one at
+`map b` with leftover `map ∘ R`. -/
 structure LiftingHom {B₁ : Type v} {B₂ : Type w} [Preorder B₁] [Preorder B₂]
     (L₁ : GradedLifting.{u} B₁) (L₂ : GradedLifting.{u} B₂) where
   /-- The budget map. -/

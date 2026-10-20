@@ -5,7 +5,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! Relational rules for the stateful and sampling fragment on the left and coupled draws. -/
+/-! Relational rules needing `[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`: left heap and tape
+steps, draws, and coupled draws (`U` = unlabelled draw, `T` = tape draw, left program first). -/
 
 open Iris Iris.ProofMode ProbLang.MicrometerWpGS
 open scoped AppGS

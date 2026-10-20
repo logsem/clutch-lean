@@ -17,13 +17,17 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on evaluation-context items
+/-! # Measurable space on evaluation-context items
 
 Derives the σ-algebra on `EctxItem`. -/
 
 namespace ProbLang.EctxItem
 
 /-! Deriving `MeasurableSpace` generates the cylinder σ-algebra, measurable constructors, embeddings
-and projections, and the `casesOn` keystones `measurable_casesOn` / `measurable_casesOn_param`. -/
+and projections, and the lemmas `measurable_casesOn(_param)` (functions by `casesOn`). -/
 
 deriving instance MeasurableSpace for EctxItem
+
+end EctxItem
+end ProbLang
+end ProbLangMeasures

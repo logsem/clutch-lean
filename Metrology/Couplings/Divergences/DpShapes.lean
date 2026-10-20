@@ -3,8 +3,8 @@ module
 public import Metrology.Couplings.Divergences.Dp
 public import Metrology.Couplings.Divergences.Tv
 
-/-! The DP bind shapes beyond uniform composition, as DP codensity liftings (Rocq
-`instances_dp.v`). -/
+/-! Adaptive DP composition shapes (budget keyed on the right or left outcome, choice), the
+keystones of `BindLaw.dpRhs`/`dpLhs`/`dpChoice` in `BindLaws.lean` (Rocq `instances_dp.v`). -/
 
 @[expose] public section
 
@@ -29,6 +29,8 @@ theorem codensity_dp_rhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
   · exact hε ▸ codensity_dp_top_left
   obtain ⟨hε₁, hε₂⟩ := ENNReal.add_ne_top.1 hε
   refine codensity_dp_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
+  -- apply the head to the right test `min 1 (e^{ε₂} g + D)`: `D` moves into `∫ dν` and is scaled
+  -- by `e^{ε₁}`
   calc ∫⁻ x, f x ∂μ
       ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * g y + D y) ∂ν + δ₁ :=
         (codensity_dp_rel_iff hε₁).1 h _ _ hf (by fun_prop) hf1 (fun _ ↦ min_le_left _ _)

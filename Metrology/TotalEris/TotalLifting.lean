@@ -51,6 +51,8 @@ theorem twp_lift_step_fupd_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : E
   imodintro
   iapply glm'_prim_step
   specialize hRmeas σ₁
+  -- No failure mass (`R` is concentrated); every outcome keeps the full budget `ε₁`, whose
+  -- expectation is `≤ ε₁` since `primStep` has mass `≤ 1`.
   have hbnd : ∀ ρ : Cfg rT, (fun _ => ε₁) ρ ≤ ε₁ := fun _ => le_rfl
   have hpgl : Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩) := Pgl.of_concentrated (hconc σ₁)
   have hexp : 0 + ∫⁻ ρ, (fun _ => ε₁) ρ ∂primStep ⟨e₁, σ₁⟩ ≤ ε₁ := by

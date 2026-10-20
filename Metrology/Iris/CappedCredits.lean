@@ -7,8 +7,12 @@ public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
 
-/-! Capped credits: budget credits whose validity rules out an upward-closed set of bad budgets,
-an authoritative budget `●↯c s` and spendable fragments `↯c c` (Rocq `gcappedUR`). -/
+/-!
+# Capped credits
+
+Budget credits whose validity rules out an upward-closed set of bad budgets: authority `●↯c s`,
+fragments `↯c c` (Rocq `gcappedUR`). Optional layer, not used by wp.
+-/
 
 @[expose] public section
 
