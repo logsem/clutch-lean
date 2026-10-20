@@ -129,6 +129,8 @@ theorem rr2_zcdp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) :
     zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) :=
   GradedLifting.IsSound.sound (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
 
+/-! ## From zCDP to DP -/
+
 /-- The two-bit program is `(ln 9, δ)`-DP for every `δ > 0`, converting the zCDP coupling with
 `zcdpToDp`. -/
 theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (hδ : 0 < δ) :

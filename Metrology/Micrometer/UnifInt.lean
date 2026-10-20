@@ -109,7 +109,7 @@ theorem unifInt_apply {z : Int} (hz : 0 < z) (S : Set Int) :
     unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, S.indicator 1 n := by
   rw [← lintegral_unifInt, lintegral_indicator_one MeasurableSet.of_discrete]
 
-/-- `unifInt z` gives the singleton `{0}` mass `1/z`. -/
+/-- `unifInt N` gives the singleton `{0}` mass `1/N`. -/
 theorem unifInt_singleton_zero {N : Int} (hN : 0 < N) :
     unifInt N hN {0} = (N.toNat : ENNReal)⁻¹ := by
   rw [unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
