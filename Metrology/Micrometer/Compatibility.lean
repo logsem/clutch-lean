@@ -35,7 +35,8 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 
 /-! ### Pure-step constructors -/
 
-/-- β-step on the left for a constant function: the body `b` is locally closed, so it ignores the argument. -/
+/-- β-step on the left for a constant function: the body `b` is locally closed, so it
+ignores the argument. -/
 theorem refines_beta_const_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     iprop% ▷ refines L ⊤ b t A ⊢ refines L ⊤ (.app (.lam b) u.1) t A := by
   iintro H
@@ -46,7 +47,8 @@ theorem refines_beta_const_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : 
   inext
   iexact H
 
-/-- β-step on the right for a constant function: the body `b` is locally closed, so it ignores the argument. -/
+/-- β-step on the right for a constant function: the body `b` is locally closed, so it
+ignores the argument. -/
 theorem refines_beta_const_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     refines L ⊤ t b A ⊢ refines L ⊤ t (.app (.lam b) u.1) A := by
   iintro H

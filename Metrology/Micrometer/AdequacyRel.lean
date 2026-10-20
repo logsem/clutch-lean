@@ -59,7 +59,9 @@ theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT)
 
 end Spec
 
-/-! ### Relations that relate only equal values (the side condition of `approximates_div` and the examples' adequacy) -/
+/-! ### Relations that relate only equal values
+
+The side condition of `approximates_div` and of the examples' adequacy. -/
 
 section EqRelations
 
