@@ -101,18 +101,6 @@ theorem substMap_fix_closed {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Ex
       (fun _ hy => ValSubstMap.snd_lookup_eq_none_of_not_mem hy) he'_lc,
       substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
-theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
-    (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ▷ (interp L τ (TyEnv.cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
-  congrArg (fun A => A.car v v') (lrel_rec_unfold
-    { f := fun X => interp L τ (TyEnv.cons X Δ)
-      ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (TyEnv.cons_ne_head hXY)⟩ })
-
-theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
-    (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
-  rfl
-
 /-! ## Lifting `refines` rules to `bin_log_related`
 
 `bin_log_related_lift{1,2,3}` push `substMap` through a constructor `f` and apply a

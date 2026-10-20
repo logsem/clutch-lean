@@ -158,6 +158,20 @@ theorem interp_arrow (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
 theorem interp_ref (Δ : TyEnv rT GF) (τ : Ty) :
     interp L (Ty.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
+/-- `⟦μX.τ⟧` unfolds once, with the recursive occurrence under `▷`. -/
+theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
+    (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+      ▷ (interp L τ (TyEnv.cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
+  congrArg (fun A => A.car v v') (lrel_rec_unfold
+    { f := fun X => interp L τ (TyEnv.cons X Δ)
+      ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (TyEnv.cons_ne_head hXY)⟩ })
+
+/-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
+theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
+    (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+      ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
+  rfl
+
 /-! ## Closedness of related values -/
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :

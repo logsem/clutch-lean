@@ -35,7 +35,8 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 
 /-! ### Pure-step constructors -/
 
-theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
+/-- β-step on the left for a constant function: the body `b` is locally closed, so it ignores the argument. -/
+theorem refines_beta_const_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     iprop% ▷ refines L ⊤ b t A ⊢ refines L ⊤ (.app (.lam b) u.1) t A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
@@ -45,7 +46,8 @@ theorem refines_beta_l {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLo
   inext
   iexact H
 
-theorem refines_beta_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
+/-- β-step on the right for a constant function: the body `b` is locally closed, so it ignores the argument. -/
+theorem refines_beta_const_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : b.IsLocallyClosed) :
     refines L ⊤ t b A ⊢ refines L ⊤ t (.app (.lam b) u.1) A := by
   iintro H
   rw [Ectx.eq_fill_nil (Exp.app (.lam b) u.1)]
@@ -110,9 +112,9 @@ theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
   · ipureintro
     exact ⟨⟨by is_lc, by simpa [Exp.fv] using he_fv⟩, ⟨by is_lc, by simpa [Exp.fv] using he'_fv⟩⟩
   iintro !> %u %u' -
-  iapply refines_beta_l he
+  iapply refines_beta_const_l he
   inext
-  iapply refines_beta_r he'
+  iapply refines_beta_const_r he'
   iapply H
 
 /-! ### Constructors that bind their operands -/
@@ -206,9 +208,9 @@ theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
   iapply refines_bind [EctxItem.appR (.lam e2)] [EctxItem.appR (.lam e2')] $$ IH1
   iintro %v %v' -
   rw [Ectx.fill_appR, Ectx.fill_appR]
-  iapply refines_beta_l he2
+  iapply refines_beta_const_l he2
   inext
-  iapply refines_beta_r he2'
+  iapply refines_beta_const_r he2'
   iexact IH2
 
 theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%

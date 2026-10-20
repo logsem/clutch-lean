@@ -57,6 +57,14 @@ theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT)
   ipureintro
   rfl
 
+end Spec
+
+/-! ### Relations that relate only equal values (the side condition of `approximates_div` and the examples' adequacy) -/
+
+section EqRelations
+
+variable {rT : Type} [LawfulProbLangℝ rT]
+
 /-- `lrel_int` relates only equal values. -/
 theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
@@ -79,7 +87,7 @@ theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT
   ipureintro
   exact Val.ext (h.trans h'.symm)
 
-end Spec
+end EqRelations
 
 /-- A value runs to itself. -/
 theorem limExecV_of_isVal {rT : Type} [LawfulProbLangℝ rT] {e : Exp rT} (σ : State rT)
