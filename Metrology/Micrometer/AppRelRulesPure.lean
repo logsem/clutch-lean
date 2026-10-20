@@ -274,7 +274,8 @@ omit [OrderTop B] [CanonicallyOrderedAdd B] in
 abbrev PosSplits : Prop := ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
 
 omit [OrderTop B] [CanonicallyOrderedAdd B] in
-/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`). -/
+/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`); unrelated to
+the divergence class `GradedDivergence.HasSlack`. -/
 abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
 
 /-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b` (needs
