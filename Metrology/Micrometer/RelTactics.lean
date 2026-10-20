@@ -4,7 +4,7 @@ public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.ContinuousSampler
 public import Metrology.Micrometer.WpTactics
 public meta import Metrology.Micrometer.WpTactics
-public meta import Metrology.TotalEris.WpTactics
+public meta import Metrology.ProbLang.EctxTactic
 public import Metrology.ProbLang.Syntax.Notation
 public meta import Metrology.ProbLang.Syntax.Notation
 public import Iris.ProofMode.ProofModeM
@@ -22,7 +22,7 @@ namespace ProbLang.RelTactics
 
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
-open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.TotalEris ProbLang.MicrometerWpGS
+open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.MicrometerWpGS
 
 /-! ## Goal decomposition -/
 

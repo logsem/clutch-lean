@@ -3,8 +3,8 @@ module
 public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Iris.SpecRules
-public import Metrology.TotalEris.WpTactics
-public meta import Metrology.TotalEris.WpTactics
+public import Metrology.ProbLang.EctxTactic
+public meta import Metrology.ProbLang.EctxTactic
 public import Metrology.ProbLang.Syntax.Notation
 public meta import Metrology.ProbLang.Syntax.Notation
 public import Iris.ProofMode.ProofModeM
@@ -13,13 +13,13 @@ public import Lean
 public import Qq
 
 /-! # `wp_*` and `tp_*` tactics for the Micrometer `wp`, on the evaluation-context engine of
-`TotalEris/WpTactics.lean`. -/
+`ProbLang/EctxTactic.lean`. -/
 
 namespace ProbLang.MicrometerWpGS
 
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
-open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.TotalEris
+open Meta Elab Tactic Qq Iris Iris.ProofMode
 
 /-! ## Lemmas consumed by the tactics -/
 

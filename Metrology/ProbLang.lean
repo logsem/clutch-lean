@@ -9,6 +9,7 @@ public import Metrology.ProbLang.Comp
 public import Metrology.ProbLang.ContextualRefinement
 public import Metrology.ProbLang.CtxStep
 public import Metrology.ProbLang.DetStep
+public import Metrology.ProbLang.EctxTactic
 public import Metrology.ProbLang.Erasable
 public import Metrology.ProbLang.EnvStep
 public import Metrology.ProbLang.EnvStepEquiv
