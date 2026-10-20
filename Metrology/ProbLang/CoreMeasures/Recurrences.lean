@@ -1847,7 +1847,6 @@ theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
       rw [hB_eq2]
       exact MeasurableSet.empty
 
-
 /-- Unlike `tryMatch.measurable`, needs no `Countable rT`. `tryMatch` recurses on both
 arguments, so each `Pat.shape` cell is computed by hand: the pattern constructor's
 embedding factors out, and the `Exp` argument splits into the matching constructor's
