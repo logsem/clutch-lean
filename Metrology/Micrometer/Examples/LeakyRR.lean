@@ -24,11 +24,6 @@ open RandomizedResponse (rr_refines)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-theorem unifInt_singleton_zero {N : Int} (hN : 0 < N) :
-    unifInt N hN {0} = (N.toNat : ℝ≥0∞)⁻¹ := by
-  rw [unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-    PMF.uniformOfFinset_apply_of_mem _ (Finset.mem_Ico.2 ⟨le_rfl, hN⟩), Int.card_Ico, sub_zero]
-
 /-- `leakyRR N b` refines `leakyRR N b'` at equal reports, spending `(ln 3, 1/N)`. -/
 theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N) (b b' : Bool) :

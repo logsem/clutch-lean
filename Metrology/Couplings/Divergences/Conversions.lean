@@ -390,6 +390,22 @@ theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
 
 end LiftingRelHom
 
+/-- Without the quadratic term, the best Rényi conversion of `(ξ, 0)` costs nothing over `ξ`:
+send the order to infinity. -/
+theorem iInf_conversion_le (ξ : ℝ≥0∞) {δ : ℝ} :
+    ⨅ α ∈ Set.Ioi (1 : ℝ), ξ + ENNReal.ofReal α * 0 +
+      ENNReal.ofReal (Real.log (1 / δ) / (α - 1)) ≤ ξ := by
+  refine ENNReal.le_of_forall_pos_le_add fun t ht _ ↦ ?_
+  set l := Real.log (1 / δ)
+  have hl : 0 < |l| + 1 := by positivity
+  have ht' : (0 : ℝ) < t := ht
+  refine (iInf₂_le (1 + (|l| + 1) / t) (lt_add_of_pos_right _ (div_pos hl ht'))).trans ?_
+  rw [mul_zero, add_zero, add_sub_cancel_left]
+  gcongr
+  refine ENNReal.ofReal_le_of_le_toReal ?_
+  rw [ENNReal.coe_toReal, div_div_eq_mul_div, div_le_iff₀ hl]
+  nlinarith [le_abs_self l]
+
 namespace GradedDivergence
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ : Measure X} {ν : Measure Y}
