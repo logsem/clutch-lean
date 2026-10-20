@@ -86,9 +86,9 @@ theorem codensity_dp_lhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
         ring
 
 open Classical in
-/-- Kantorovich-style head (Rocq `dp_kanto_head`): the `if S then E else ⊤` version of
-`codensity_dp_of_lintegral_le`, whose test premise only constrains pairs in `S`. -/
-theorem codensity_dp_of_kanto [IsSubProbabilityMeasure μ] {E : X → Y → ℝ≥0∞ × ℝ≥0∞}
+/-- The `if S then E else ⊤` version of `codensity_dp_of_lintegral_le`, whose test premise only
+constrains pairs in `S` (Rocq `dp_kanto_head`). -/
+theorem codensity_dp_ite_of_lintegral_le [IsSubProbabilityMeasure μ] {E : X → Y → ℝ≥0∞ × ℝ≥0∞}
     (h : ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) → (∀ y, g y ≤ 1) →
       (∀ x y, S x y → (E x y).1 < ⊤ → f x ≤ expBudget (E x y).1 * g y + (E x y).2) →
       ∫⁻ x, f x ∂μ ≤ expBudget ε * ∫⁻ y, g y ∂ν + δ) :

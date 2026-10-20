@@ -99,7 +99,7 @@ section SimpleLRels
 variable {GF : BundledGFunctors}
 
 /-- Two units are closed. -/
-theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
+theorem lrel_unit_closed (v1 v2 : Val rT) :
     ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢@{IProp GF} ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ := by
   iintro %h !%
   exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
@@ -107,7 +107,7 @@ theorem lrel_closed_lit_pair (v1 v2 : Val rT) :
 /-- Values related when both are `()`. -/
 noncomputable def lrel_unit : lrel rT GF where
   car v1 v2 := iprop% ⌜ v1 = .unit ∧ v2 = .unit ⌝
-  closed v1 v2 := lrel_closed_lit_pair v1 v2
+  closed v1 v2 := lrel_unit_closed v1 v2
 
 /-- Values related when both are the same boolean. -/
 noncomputable def lrel_bool : lrel rT GF where
