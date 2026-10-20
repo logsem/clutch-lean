@@ -25,14 +25,36 @@ variable {B : Type*} {L : GradedLifting.{0} B}
 
 /-! ## Erasure rules for a graded lifting -/
 
-/-- Running to the limit from a measure of states equals first running `m` steps; the erasure rules
-use it to let the spec side run `m` steps first. -/
+/-- Running to the limit from a measure of states equals first running `m` steps. -/
 theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
     μ.bind (fun σ => limExec ⟨e, σ⟩) = (μ.bind fun σ => pexecN m ⟨e, σ⟩).bind limExec := by
   have hpk : Measurable fun σ : State rT => pexecN m (⟨e, σ⟩ : Cfg rT) :=
     pexecN_measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
   rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
   exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e, σ⟩)
+
+/-- `asExpr` of a bind is the bind of `asExpr`. -/
+theorem asExpr_bind {α : Type*} [MeasurableSpace α] (μ : Measure α) (k : α → Measure (Cfg rT))
+    (hk : Measurable k) : asExpr (μ.bind k) = μ.bind fun a => asExpr (k a) :=
+  Measure.bind_map_comm _ _ _ Cfg.measurable_expr hk.aemeasurable
+
+/-- The program side of an erasure rule: the run from `σ` is the run from a state sampled from an
+erasable `μ`. -/
+theorem asExpr_execN_eq_bind_of_erasable {μ : Measure (State rT)} {σ : State rT}
+    (h : ErasableExpr μ σ) (e : Exp rT) (n : Nat) :
+    asExpr (execN n ⟨e, σ⟩) = μ.bind fun σ' => asExpr (execN n ⟨e, σ'⟩) := by
+  rw [← h e n]
+  exact asExpr_bind _ _
+    ((execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩))
+
+/-- The spec side of an erasure rule: the limit from `σ` is the limit after sampling a state from
+an erasable `μ` and running `m` steps. Each erasure rule rewrites both sides this way, then
+applies a bind rule of the lifting. -/
+theorem limExecV_eq_bind_of_erasable {μ : Measure (State rT)} {σ : State rT}
+    (h : ErasableExpr μ σ) (e : Exp rT) (m : Nat) :
+    limExecV ⟨e, σ⟩ = (μ.bind fun σ' => pexecN m ⟨e, σ'⟩).bind limExecV := by
+  rw [← h.lim_exec e, bind_limExec_eq_pexecN _ _ m, asExpr_bind _ _ limExec.measurable]
+  rfl
 
 /-- A lifting of an erasable state distribution `μ₁` and the `m`-step spec run relates the
 program run from `σ₁` to the spec limit from `σ₁'`; the continuation's grade depends on the spec
@@ -59,15 +81,9 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
   have := hErase₁'.isProbabilityMeasure
   refine IsLawful.mono ?_ ((add_le_add le_rfl (OrderHomClass.mono s hBoundSum)).trans hEpsSum)
     le_rfl
-  -- Every erasure rule has this shape: replace `σ₁`, `σ₁'` by the erasable distributions, let the
-  -- spec run `m` steps, push `asExpr` inside the binds, then apply a bind rule of the lifting.
-  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
-      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
-  exact IsExpectationAdditive.bind_adv hCoupl hCont
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp limExec.measurable) hE₂meas
+  rw [asExpr_execN_eq_bind_of_erasable hErase₁ e₁ n, limExecV_eq_bind_of_erasable hErase₁' e₁' m]
+  exact IsExpectationAdditive.bind_adv hCoupl hCont (asExpr.measurable.comp hek)
+    limExecV.measurable hE₂meas
 
 /-- A lifting of erasable state distributions on both sides relates the program run from `σ₁` to
 the spec limit from `σ₁'`, with the per-pair leftover as the continuation's grade (Clutch-dp
@@ -82,12 +98,8 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind]
     L.Rel b Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
   have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
     (execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
-  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
-      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
-  exact HasBind.bind_fun hCoupl hCont ((Measure.measurable_map _ Cfg.measurable_expr).comp hek)
-    limExecV.measurable
+  rw [asExpr_execN_eq_bind_of_erasable hErase₁ e₁ n, limExecV_eq_bind_of_erasable hErase₁' e₁' m]
+  exact HasBind.bind_fun hCoupl hCont (asExpr.measurable.comp hek) limExecV.measurable
 
 /-- A lifting of the program's prim step and the `m`-step spec run relates the program run to the
 spec limit; the continuation grade depends on both samples (Clutch
@@ -103,12 +115,8 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
     L.Rel b Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
-  rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr (execN_measurable n).aemeasurable,
-      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable]
-  exact HasBind.bind_fun hExp hCont
-    ((Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable n))
+  rw [asExpr_bind _ _ (execN_measurable n), limExecV_eq_bind_of_erasable hErase₁' e₁' m]
+  exact HasBind.bind_fun hExp hCont (asExpr.measurable.comp (execN_measurable n))
     limExecV.measurable
 
 /-! ## Erasure rules for a bind law -/
@@ -166,14 +174,9 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
     L.Rel b Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
-  rw [← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr (execN_measurable n).aemeasurable,
-      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable, hprog,
-      hspec, Measure.bind_map
-        (g := fun ρ => (execN n ρ).map (·.expr)) hf (execVKernel n).measurable,
-      Measure.bind_map
-        (g := fun ρ => (limExec ρ).map (·.expr)) hf' limExecVKernel.measurable]
+  rw [asExpr_bind _ _ (execN_measurable n), limExecV_eq_bind_of_erasable hErase₁' e₁' m, hprog,
+    hspec, Measure.bind_map (g := fun ρ => asExpr (execN n ρ)) hf (execVKernel n).measurable,
+    Measure.bind_map (g := limExecV) hf' limExecV.measurable]
   exact law.sound (f := (execVKernel n).comap f hf) (g := limExecVKernel.comap f' hf') hhead
     (hside n f hf hf') hCont
 
@@ -193,14 +196,8 @@ theorem lift_erasure_erasable_law [Preorder B] [Top B] [Zero B]
     L.Rel b Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
   have hh : Measurable (fun σ : State rT => (⟨e₁, σ⟩ : Cfg rT)) :=
     Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
-  have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
-    (execN_measurable n).comp hh
-  rw [← hErase₁ e₁ n, ← hErase₁'.lim_exec e₁', bind_limExec_eq_pexecN _ _ m]
-  unfold asExpr
-  rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hek.aemeasurable,
-      Measure.bind_map_comm _ _ _ Cfg.measurable_expr limExec.measurable.aemeasurable, hspec,
-      Measure.bind_map
-        (g := fun ρ => (limExec ρ).map (·.expr)) hf' limExecVKernel.measurable]
+  rw [asExpr_execN_eq_bind_of_erasable hErase₁ e₁ n, limExecV_eq_bind_of_erasable hErase₁' e₁' m,
+    hspec, Measure.bind_map (g := limExecV) hf' limExecV.measurable]
   exact law.sound (f := (execVKernel n).comap _ hh) (g := limExecVKernel.comap f' hf') hhead
     (hside n _ hh hf') hCont
 
