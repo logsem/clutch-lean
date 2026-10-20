@@ -165,7 +165,7 @@ theorem dbind_comm {α β γ : Type _}
   ring
 
 /-- Monotone convergence / swap between `tsum` and `⨆` over `ℕ` on a countable
-index set. Mirrors `ProbLang/Exec.lean:ENNReal.tsum_iSup_of_monotone` without
+index set. Mirrors `Cfg.tsum_iSup_of_monotone` (ProbLang/BigStepEquiv.lean) without
 specializing to `Cfg`. -/
 theorem ENNReal.tsum_iSup_of_monotone' {α : Type _}
     [MeasurableSpace α] [MeasurableSingletonClass α] [Countable α]
