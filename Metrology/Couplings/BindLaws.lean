@@ -445,4 +445,59 @@ theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T
     have := IsComposable.comp_self (fiberCond μ f) h
     rwa [fiberCond_comp_map hf] at this
 
+/-- A filled-KL bound between the images of `μ` and `ν` gives a chain-rule head relating equal
+images inside supports `A` and `T`, continuing at `ρ₂` of the image, when `μ` and `ν` charge the
+same images (used by adaptive randomized response). -/
+theorem fillKlHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T : Set Y}
+    (hA : MeasurableSet A) (hT : MeasurableSet T) (hμA : μ Aᶜ = 0) (hνT : ν Tᶜ = 0)
+    (hfib : ∀ z, μ (f ⁻¹' {z}) = 0 ↔ ν (g ⁻¹' {z}) = 0) (ρ₂ : Z → ℝ≥0∞) {R : X → Y → ℝ≥0∞}
+    (hR : ∀ x y, x ∈ A → y ∈ T → f x = g y → R x y = ρ₂ (f x)) {ε b : ℝ≥0∞}
+    (h : fill klDivergence ε (μ.map f) (ν.map g)) (hb : ε + ∫⁻ z, ρ₂ z ∂μ.map f ≤ b) :
+    BindLaw.fillKl.head μ ν R b := by
+  classical
+  -- the witnesses recombine the products of the two fibers along each image
+  let J : Kernel Z (X × Y) := ⟨fun z ↦ (fiberCond μ f z).prod (fiberCond ν g z), .of_discrete⟩
+  have hJ (z : Z) : J z = (fiberCond μ f z).prod (fiberCond ν g z) := rfl
+  have : IsSubMarkovKernel J := ⟨fun z ↦ by rw [hJ]; infer_instance⟩
+  set S : Set (X × Y) := (A ×ˢ T) ∩ {p | f p.1 = g p.2}
+  have hS : MeasurableSet S := (hA.prod hT).inter
+    (measurableSet_eq_fun (hf.comp measurable_fst) (hg.comp measurable_snd))
+  -- each product of fibers lies on equal images inside the supports
+  have hJS (z : Z) : J z Sᶜ = 0 := by
+    refine mem_ae_iff.1 ?_
+    change ∀ᵐ p ∂(fiberCond μ f z).prod (fiberCond ν g z), p ∈ S
+    rw [Measure.ae_prod_mem_iff_ae_ae_mem hS, fiberCond_apply, fiberCond_apply]
+    filter_upwards [ae_cond_mem (hf (measurableSet_singleton z)),
+      cond_absolutelyContinuous.ae_le (mem_ae_iff.2 hμA)] with x hx hxA
+    filter_upwards [ae_cond_mem (hg (measurableSet_singleton z)),
+      cond_absolutelyContinuous.ae_le (mem_ae_iff.2 hνT)] with y hy hyT
+    exact ⟨⟨hxA, hyT⟩, (Set.mem_singleton_iff.1 hx).trans (Set.mem_singleton_iff.1 hy).symm⟩
+  -- on images charged by both measures each fiber is a probability measure, so the marginals
+  -- recombine to `μ` and `ν`
+  have h₁ : (J ∘ₘ μ.map f).map Prod.fst = μ := by
+    rw [Measure.map_comp _ _ measurable_fst]
+    conv_rhs => rw [← fiberCond_comp_map hf (μ := μ)]
+    refine Measure.comp_congr (ae_iff_of_countable.2 fun z hz ↦ ?_)
+    have hν : ν (g ⁻¹' {z}) ≠ 0 := fun h0 ↦
+      hz (by rw [map_apply hf (measurableSet_singleton z)]; exact (hfib z).2 h0)
+    have := cond_isProbabilityMeasure hν
+    rw [Kernel.map_apply _ measurable_fst, hJ, fiberCond_apply, fiberCond_apply,
+      Measure.map_fst_prod, measure_univ, one_smul]
+  have h₂ : (J ∘ₘ ν.map g).map Prod.snd = ν := by
+    rw [Measure.map_comp _ _ measurable_snd]
+    conv_rhs => rw [← fiberCond_comp_map hg (μ := ν)]
+    refine Measure.comp_congr (ae_iff_of_countable.2 fun z hz ↦ ?_)
+    have hμ : μ (f ⁻¹' {z}) ≠ 0 := fun h0 ↦
+      hz (by rw [map_apply hg (measurableSet_singleton z)]; exact (hfib z).1 h0)
+    have := cond_isProbabilityMeasure hμ
+    rw [Kernel.map_apply _ measurable_snd, hJ, fiberCond_apply, fiberCond_apply,
+      Measure.map_snd_prod, measure_univ, one_smul]
+  refine ⟨X × Y, inferInstance, J ∘ₘ μ.map f, J ∘ₘ ν.map g, Prod.fst, Prod.snd, S, ε,
+    fun x ↦ ρ₂ (f x), measurable_fst, measurable_snd, Measurable.of_discrete.comp hf, hS, ?_,
+    inferInstance, inferInstance, h₁, h₂, IsComposable.comp_self J h,
+    fun p hp ↦ hR p.1 p.2 hp.1.1 hp.1.2 hp.2, ?_⟩
+  · rw [Measure.bind_apply hS.compl (Kernel.aemeasurable _)]
+    simp [hJS]
+  · rwa [lintegral_map .of_discrete hf] at hb
+
 end GradedDivergence

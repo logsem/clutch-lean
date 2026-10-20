@@ -11,12 +11,14 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.FillKl
 public import Metrology.Micrometer.Examples.RandomizedResponse.Twice
 public import Metrology.Micrometer.Examples.RandomizedResponse.Adaptive
 public import Metrology.Micrometer.Examples.RandomizedResponse.AdaptiveChi2
+public import Metrology.Micrometer.Examples.RandomizedResponse.AdaptiveFillKl
 
 /-! # Randomized response, one file per divergence
 
 `Basic` proves one round and the `k`-round loop in any lifting (`rrCount_isPrivate`); each other
 file supplies one coupling of the draws and reads off its divergence. `Twice` (two bits) and
-`Adaptive` (Rényi-2; χ² in `AdaptiveChi2`) are separate programs. -/
+`Adaptive` (Rényi-2; χ² in `AdaptiveChi2`, filled KL in `AdaptiveFillKl`) are separate
+programs. -/
 
 @[expose] public section
 

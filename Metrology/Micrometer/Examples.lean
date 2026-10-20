@@ -33,8 +33,8 @@ By divergence (`RR` is `RandomizedResponse`):
   `PublicChoiceZcdp` (from two-way pure DP)
 * tCDP: `RR.Tcdp`
 * χ²: `RR.Chi2`, `RR.AdaptiveChi2`
-* KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP), `Couplings.Examples.KLCoinFlips` (lifting level),
-  `Couplings.Examples.AdaptiveFillKl` (adaptive, chain rule, lifting level)
+* KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP), `RR.AdaptiveFillKl` (adaptive, chain rule),
+  `Couplings.Examples.KLCoinFlips`, `Couplings.Examples.AdaptiveFillKl` (lifting level)
 
 By rule:
 * coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
@@ -48,7 +48,7 @@ By rule:
 * one proof in any lifting (`rr_refines_of`, `rrCount_refines_of`, `rrCount_isPrivate`):
   `RR.Basic`, instantiated by `RR.Dp`, `RR.Zcdp`, `RR.Tcdp`, `RR.Renyi`, `RR.Curve`, `RR.Chi2`
 * non-canonical bind laws: `PublicChoice` (`dpChoice`), `RR.Adaptive` (escort),
-  `RR.AdaptiveChi2` (`escortPower`)
+  `RR.AdaptiveChi2` (`escortPower`), `RR.AdaptiveFillKl` (`fillKl`)
 * programs as mechanisms (`progMech_isPrivate`): `RR.Dp`, `RR.Twice`, `PublicChoice`, `LeakyRR`
   (`RR.Basic` states `IsPrivate` directly from `rrCount_div`)
 * conversions between divergences: `RR.Twice`, `RR.Tcdp`, `RR.Curve`
