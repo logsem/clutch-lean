@@ -30,6 +30,43 @@ instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure 
     simpa [withBot, map_apply measurable_some .univ] using
       add_tsub_cancel_of_le (IsSubProbabilityMeasure.measure_le_one .univ)⟩
 
+/-- `none` is a measurable point of `Option X`. -/
+theorem _root_.measurableSet_none : MeasurableSet ({none} : Set (Option X)) := by
+  have : ({none} : Set (Option X)) = (fun o : Option X ↦ o.elim true fun _ ↦ false) ⁻¹' {true} := by
+    ext o
+    cases o <;> simp
+  rw [this]
+  exact measurable_option_elim measurable_const true (measurableSet_singleton true)
+
+/-- Off `none`, filling changes nothing. -/
+theorem withBot_apply_of_none_notMem (μ : Measure X) {s : Set (Option X)} (hs : MeasurableSet s)
+    (hn : none ∉ s) : μ.withBot s = μ (some ⁻¹' s) := by
+  simp [withBot, map_apply measurable_some hs, dirac_apply' _ hs, hn]
+
+/-- Integrating against a filled measure adds the lost mass times the value at `none`. -/
+theorem lintegral_withBot (μ : Measure X) {f : Option X → ℝ≥0∞} (hf : Measurable f) :
+    ∫⁻ o, f o ∂μ.withBot = ∫⁻ x, f (some x) ∂μ + (1 - μ Set.univ) * f none := by
+  rw [withBot, lintegral_add_measure, lintegral_map hf measurable_some, lintegral_smul_measure,
+    lintegral_dirac' _ hf, smul_eq_mul]
+
+/-- A probability measure loses no mass, so filling only relabels it. -/
+theorem withBot_of_isProbabilityMeasure (μ : Measure X) [IsProbabilityMeasure μ] :
+    μ.withBot = μ.map some := by
+  simp [withBot]
+
+/-- The relabelled measure lies below its filling. -/
+theorem map_some_le_withBot (μ : Measure X) : μ.map some ≤ μ.withBot :=
+  Measure.le_add_right le_rfl
+
+/-- Two probability measures on `Option X` that agree off `none` are equal. -/
+theorem ext_option {P P' : Measure (Option X)} [IsProbabilityMeasure P] [IsProbabilityMeasure P']
+    (h : ∀ s, MeasurableSet s → none ∉ s → P s = P' s) : P = P' := by
+  ext s hs
+  by_cases hn : none ∈ s
+  · rw [← compl_compl s, prob_compl_eq_one_sub hs.compl, prob_compl_eq_one_sub hs.compl,
+      h _ hs.compl fun h' ↦ h' hn]
+  · exact h s hs hn
+
 end MeasureTheory.Measure
 
 /-! ## Filling kernels -/
@@ -76,6 +113,62 @@ theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ 
   simp_rw [dirac_apply' _ hs]
   exact lintegral_indicator_one hs
 
+/-- Forgetting `none` on a relabelled measure gives the measure back. -/
+theorem dropBot_comp_map_some (μ : Measure X) : dropBot ∘ₘ μ.map some = μ := by
+  ext s hs
+  rw [Measure.bind_apply hs (Kernel.aemeasurable _),
+    MeasureTheory.lintegral_map ((dropBot : Kernel (Option X) X).measurable_coe hs)
+      measurable_some]
+  simp only [dropBot, Kernel.coe_mk, Option.elim_some]
+  simp_rw [dirac_apply' _ hs]
+  exact lintegral_indicator_one hs
+
+/-- A measure on `Option X` above `μ.map some` forgets `none` to a measure above `μ`. -/
+theorem le_dropBot_comp {μ : Measure X} {P : Measure (Option X)} (h : μ.map some ≤ P) :
+    μ ≤ dropBot ∘ₘ P := by
+  rw [← dropBot_comp_map_some μ]
+  exact Measure.bind_mono_left h
+
+/-- Filling the measure that forgets `none` gives back a probability measure on `Option X`. -/
+theorem withBot_dropBot_comp (P : Measure (Option X)) [IsProbabilityMeasure P] :
+    (dropBot ∘ₘ P).withBot = P := by
+  have : IsSubProbabilityMeasure (dropBot ∘ₘ P) := isSubProbabilityMeasure_bind P _
+  refine Measure.ext_option fun s hs hn ↦ ?_
+  rw [Measure.withBot_apply_of_none_notMem _ hs hn,
+    Measure.bind_apply (measurable_some hs) (Kernel.aemeasurable _)]
+  have : (fun o ↦ dropBot o (some ⁻¹' s)) = s.indicator 1 := by
+    funext o
+    cases o with
+    | none => simp [dropBot, hn]
+    | some x =>
+      simp only [dropBot, coe_mk, Option.elim_some, dirac_apply' _ (measurable_some hs)]
+      rfl
+  rw [this, lintegral_indicator_one hs]
+
+/-- The kernel on `Option X` that fills `κ` at each point and keeps `none` at `none`. -/
+noncomputable def liftBot (κ : Kernel X Y) : Kernel (Option X) (Option Y) where
+  toFun o := o.elim (dirac none) fun x ↦ (κ x).withBot
+  measurable' := measurable_option_elim κ.withBot.measurable _
+
+@[simp] theorem liftBot_none (κ : Kernel X Y) : κ.liftBot none = dirac none := rfl
+
+@[simp] theorem liftBot_some (κ : Kernel X Y) (x : X) : κ.liftBot (some x) = (κ x).withBot := rfl
+
+/-- The filled kernel is Markov. -/
+instance isMarkovKernel_liftBot (κ : Kernel X Y) [IsSubMarkovKernel κ] :
+    IsMarkovKernel κ.liftBot :=
+  ⟨fun o ↦ by cases o <;> simp only [liftBot_none, liftBot_some] <;> infer_instance⟩
+
+/-- Filling a bind is binding the filled measure with the filled kernel. -/
+theorem withBot_comp (κ : Kernel X Y) [IsSubMarkovKernel κ] (μ : Measure X)
+    [IsSubProbabilityMeasure μ] : (κ ∘ₘ μ).withBot = κ.liftBot ∘ₘ μ.withBot := by
+  have : IsSubProbabilityMeasure (κ ∘ₘ μ) := isSubProbabilityMeasure_bind μ _
+  refine Measure.ext_option fun s hs hn ↦ ?_
+  rw [Measure.withBot_apply_of_none_notMem _ hs hn, Measure.bind_apply hs (Kernel.aemeasurable _),
+    Measure.lintegral_withBot _ (κ.liftBot.measurable_coe hs),
+    Measure.bind_apply (measurable_some hs) (Kernel.aemeasurable _)]
+  simp [Measure.withBot_apply_of_none_notMem _ hs hn, dirac_apply' _ hs, hn]
+
 end ProbabilityTheory.Kernel
 
 end Kernel
@@ -111,6 +204,27 @@ instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded w
 /-- Filling lost mass preserves reflexivity. -/
 instance isReflexive_onWithBot [Zero B] [D.IsReflexive] : D.onWithBot.IsReflexive where
   refl μ _ := IsReflexive.refl μ.withBot
+
+/-- Filling lost mass preserves closed budgets. -/
+instance isBudgetClosed_onWithBot [LT B] [D.IsBudgetClosed] : D.onWithBot.IsBudgetClosed where
+  of_forall_gt h := IsBudgetClosed.of_forall_gt (D := D) h
+
+/-- A divergence that composes along Markov kernels between probability measures composes after
+filling: filled kernels are Markov (Rocq `dcomplete_dbind`). -/
+theorem isComposable_onWithBot [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
+    [D.IsGraded] [D.IsReflexive]
+    (hcomp : ∀ ⦃b c : B⦄ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
+      ⦃μ₁ μ₂ : Measure X⦄ [IsProbabilityMeasure μ₁] [IsProbabilityMeasure μ₂]
+      ⦃κ η : Kernel X Y⦄ [IsMarkovKernel κ] [IsMarkovKernel η],
+      D b μ₁ μ₂ → (∀ x, D c (κ x) (η x)) → D (b + c) (κ ∘ₘ μ₁) (η ∘ₘ μ₂)) :
+    D.onWithBot.IsComposable where
+  comp b c X Y _ _ μ₁ μ₂ _ _ κ η _ _ hμ hκ := by
+    change D _ _ _
+    rw [Kernel.withBot_comp, Kernel.withBot_comp]
+    refine hcomp hμ fun o ↦ ?_
+    cases o with
+    | none => exact IsGraded.mono zero_le (IsReflexive.refl _)
+    | some x => exact hκ x
 
 /-- Growing the left measure preserves gradedness. -/
 instance isGraded_leftUp [LE B] [Top B] [D.IsGraded] : D.leftUp.IsGraded where
