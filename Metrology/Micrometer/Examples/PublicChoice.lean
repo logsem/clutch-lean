@@ -3,6 +3,7 @@ module
 public import Metrology.Code.PublicChoice
 public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
+public import Metrology.Micrometer.MechanismZcdp
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
 
@@ -11,7 +12,9 @@ import Mathlib.Algebra.Regular.Prod
 /-! # The DP choice law: a public coin picks one of two mechanisms
 
 `choice_refines` proves `choice b ≲ choice b'` from the budget `(ln 3, 0)` via the DP choice law
-(which charges the larger branch cost); `choice_DP` turns it into `(ln 3, 0)`-DP of `choice`. -/
+(which charges the larger branch cost); `choice_DP` turns it into `(ln 3, 0)`-DP of `choice`.
+Refining both ways makes `choice` also `(0, (ln 3)² / 2)`-zCDP once it terminates almost surely
+(`choice_zCDP`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity)
@@ -56,6 +59,26 @@ noncomputable abbrev choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
 theorem choice_DP (σ : State rT) : (choiceMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := codensity dp) choice σ budget
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ choice_refines b b'
+
+/-- The public choice is `(0, (ln 3)² / 2)`-zCDP, given that it terminates almost surely: it
+refines both ways at `(ln 3, 0)` (Bun–Steinke 2016, Prop. 3.3). -/
+theorem choice_zCDP (σ : State rT) [ProbabilityTheory.IsMarkovKernel (choiceMech σ)] :
+    (choiceMech σ).zCDP ⊤ 0 (ENNReal.ofReal (Real.log 3 ^ 2 / 2)) := by
+  have := progMech_zCDP_of_dp (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ (adj := ⊤)
+    (Real.log 3).toNNReal (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq)
+    (fun b b' _ _ _ ↦ choice_refines b b') fun b b' _ _ _ ↦ choice_refines b' b
+  rwa [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num))] at this
+
+/-- The public choice is `((ln 3)² / 2 + 2 √((ln 3)² / 2 · log (1 / δ)), δ)`-DP at every slack
+`0 < δ < 1`, given that it terminates almost surely. -/
+theorem choice_DP_sqrt (σ : State rT) [ProbabilityTheory.IsMarkovKernel (choiceMech σ)] {δ : ℝ}
+    (hδ : 0 < δ) (hδ₁ : δ < 1) :
+    (choiceMech σ).DP ⊤
+      (ENNReal.ofReal (Real.log 3 ^ 2 / 2 + 2 * √(Real.log 3 ^ 2 / 2 * Real.log (1 / δ))))
+      (ENNReal.ofReal δ) := by
+  have := ProbabilityTheory.Kernel.DP_of_zCDP_sq (ε := (Real.log 3).toNNReal) hδ hδ₁
+    (by rw [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num))]; exact choice_zCDP σ)
+  rwa [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num))] at this
 
 end PublicChoice
 end ProbLang

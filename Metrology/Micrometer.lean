@@ -49,6 +49,7 @@ public import Metrology.Micrometer.AdequacyTV
 public import Metrology.Micrometer.BinLogRelatedCtx
 public import Metrology.Micrometer.Soundness
 public import Metrology.Micrometer.Mechanism
+public import Metrology.Micrometer.MechanismZcdp
 
 -- examples and tests
 public import Metrology.Micrometer.Examples
