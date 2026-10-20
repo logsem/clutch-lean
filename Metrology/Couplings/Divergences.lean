@@ -28,7 +28,11 @@ public import Metrology.Couplings.Divergences.DpAvoid
 public import Metrology.Couplings.Divergences.Kl
 public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.FillKl
+<<<<<<< HEAD
 public import Metrology.Couplings.Divergences.RenyiFillKl
+=======
+public import Metrology.Couplings.Divergences.FillHellinger
+>>>>>>> eebea10 (Filled Hellinger: Hölder test bound, optimal filling, composable/left-continuous/budget-closed)
 
 /-! Concrete graded divergences: dp, tv, f-divergences, Rényi, power/χ², zCDP/tCDP, mechanisms. -/
 

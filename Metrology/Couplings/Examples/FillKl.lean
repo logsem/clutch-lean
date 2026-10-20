@@ -2,12 +2,14 @@ module
 
 public import Metrology.Couplings.Codensity
 public import Metrology.Couplings.Divergences.FillKl
+public import Metrology.Couplings.Divergences.FillHellinger
 
 /-! # The filled-KL codensity lifting
 
 `codensity (fill klDivergence)` has every lifting law the program logic asks for, by the generic
 codensity instances (`codensity_fill_kl_laws`), and lifts of equality read back as KL bounds
-(`klDiv_le_of_codensity_fill_kl`). -/
+(`klDiv_le_of_codensity_fill_kl`). Filled `α`-Hellinger has the same laws
+(`codensity_fill_hellinger_laws`). -/
 
 @[expose] public section
 
@@ -51,5 +53,20 @@ theorem codensity_fill_kl_rel_eq_iff_of_isProbabilityMeasure [IsProbabilityMeasu
 theorem klDiv_le_of_codensity_fill_kl [IsProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : (codensity (fill klDivergence)).Rel b (· = ·) μ ν) : klDiv μ ν ≤ b :=
   klDiv_le_of_fill (codensity_sound h)
+
+/-- The codensity lifting of filled `α`-Hellinger has the same laws as filled KL. -/
+theorem codensity_fill_hellinger_laws (α : ℝ) [Fact (α ∈ Set.Ioo (0 : ℝ) 1)] :
+    (codensity (fill (hellingerDivergence.{u} α))).IsLawful ∧
+      (codensity (fill (hellingerDivergence.{u} α))).HasBind ∧
+      GradedLifting.IsReflexive (codensity (fill (hellingerDivergence.{u} α))) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsSupportLocal ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsTopAbsorbing ∧
+      GradedLifting.IsZeroLeft (codensity (fill (hellingerDivergence.{u} α))) ∧
+      GradedLifting.IsLeftContinuous (codensity (fill (hellingerDivergence.{u} α))) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsSound (fill (hellingerDivergence α)) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsComplete (fill (hellingerDivergence α)) ∧
+      GradedLifting.IsBudgetClosed (codensity (fill (hellingerDivergence.{u} α))) :=
+  ⟨inferInstance, inferInstance, inferInstance, inferInstance, inferInstance, inferInstance,
+    inferInstance, inferInstance, inferInstance, inferInstance⟩
 
 end GradedDivergence
