@@ -295,13 +295,11 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
     ∫⁻ (a : { z : Int // 0 ≤ z ∧ z < N }),
         f ⟨.lit (.int ↑a), σ⟩ ∂tapeIndexUniform N
       = ∫⁻ (ρ : Cfg rT), f ρ ∂Cfg.uniform N σ := by
-  unfold tapeIndexUniform Cfg.uniform Int.isPos
-  have hNonempty : (Finset.Ico 0 N).Nonempty := ⟨0, Finset.mem_Ico.mpr ⟨le_refl _, hN⟩⟩
-  rw [dite_eq_left hNonempty, dite_eq_left hN]
-  simp only
-  have hm_sub : Measurable (fun z : Int => if hz : 0 ≤ z ∧ z < N then
-      (⟨z, hz⟩ : {z // 0 ≤ z ∧ z < N}) else ⟨0, ⟨le_refl _, by omega⟩⟩) :=
-    Measurable.of_discrete
+  rw [tapeIndexUniform_eq_map hN]
+  unfold Cfg.uniform Int.isPos
+  have hNonempty : (Finset.Ico 0 N).Nonempty := Finset.nonempty_Ico.mpr hN
+  rw [dite_eq_left hN]
+  have hm_sub : Measurable (tapeIdxOf hN) := Measurable.of_discrete
   have hm_cfg : Measurable (fun x : Int => (⟨Exp.lit (BaseLit.int x), σ⟩ : Cfg rT)) :=
     Measurable.of_discrete
   have hm_f_sub : Measurable (fun (a : {z // 0 ≤ z ∧ z < N}) => f ⟨.lit (.int ↑a), σ⟩) :=
@@ -318,6 +316,6 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
     have hmem : a ∈ Finset.Ico 0 N := by
       rwa [PMF.mem_support_uniformOfFinset_iff] at ha
     have hab : 0 ≤ a ∧ a < N := Finset.mem_Ico.mp hmem
-    simp [dite_eq_left hab]
+    simp [tapeIdxOf_val hN hab.1 hab.2]
 
 end ProbLang

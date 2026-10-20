@@ -17,17 +17,26 @@ open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
 /-! ## Local uniform-presample distribution -/
 
+/-- The clamping map `Int → [0, N)` (out-of-range values go to `0`). -/
+noncomputable def tapeIdxOf {N : Int} (hN : 0 < N) (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
+  if hz : 0 ≤ n ∧ n < N then ⟨n, hz⟩ else ⟨0, ⟨_root_.le_refl _, hN⟩⟩
+
+@[simp] theorem tapeIdxOf_val {N : Int} (hN : 0 < N) {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
+    (tapeIdxOf hN n).val = n := by
+  simp [tapeIdxOf, h0, hn]
+
 /-- The uniform distribution on `[0, N)` as a subtype; `0` when `N ≤ 0`. -/
 noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ z < N } :=
-  if h : (Finset.Ico 0 N).Nonempty then
-    (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure.map
-      (fun z =>
-        if hz : 0 ≤ z ∧ z < N then ⟨z, hz⟩
-        else ⟨0, by
-          rcases h with ⟨w, hw⟩
-          simp [Finset.mem_Ico] at hw
-          exact ⟨le_refl _, by omega⟩⟩)
+  if hN : 0 < N then
+    (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure.map
+      (tapeIdxOf hN)
   else 0
+
+theorem tapeIndexUniform_eq_map {N : Int} (hN : 0 < N) :
+    tapeIndexUniform N =
+      (PMF.uniformOfFinset (Finset.Ico (0 : Int) N)
+        (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN) :=
+  dite_eq_left hN
 
 /-- The labels of the allocated tapes of `σ`. -/
 def getActive (σ : State rT) : List Loc := σ.tapes.keys
@@ -49,29 +58,11 @@ noncomputable def tapePresample (σ : State rT) (α : Loc) : Measure (State rT) 
 
 theorem tapeIndexUniform_univ_eq_one {N : Int} (hN : 0 < N) :
     (tapeIndexUniform N) Set.univ = 1 := by
-  unfold tapeIndexUniform
-  have hNonempty : (Finset.Ico 0 N).Nonempty := ⟨0, Finset.mem_Ico.mpr ⟨le_refl _, hN⟩⟩
-  rw [dite_eq_left hNonempty]
   have : IsProbabilityMeasure
-      (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).toMeasure :=
+      (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure :=
     PMF.toMeasure.isProbabilityMeasure _
-  rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
+  rw [tapeIndexUniform_eq_map hN, Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
   simp only [Set.preimage_univ, measure_univ]
-
-/-- The clamping map `Int → [0, N)` (out-of-range values go to `0`). -/
-noncomputable def tapeIdxOf {N : Int} (hN : 0 < N) (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
-  if hz : 0 ≤ n ∧ n < N then ⟨n, hz⟩ else ⟨0, ⟨_root_.le_refl _, hN⟩⟩
-
-@[simp] theorem tapeIdxOf_val {N : Int} (hN : 0 < N) {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
-    (tapeIdxOf hN n).val = n := by
-  simp [tapeIdxOf, h0, hn]
-
-theorem tapeIndexUniform_eq_map {N : Int} (hN : 0 < N) :
-    tapeIndexUniform N =
-      (PMF.uniformOfFinset (Finset.Ico (0 : Int) N)
-        (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN) := by
-  unfold tapeIndexUniform tapeIdxOf
-  rw [dite_eq_left ⟨0, Finset.mem_Ico.mpr ⟨_root_.le_refl _, hN⟩⟩]
 
 theorem lintegral_tapeIndexUniform {N : Int} (hN : 0 < N)
     (ψ : { z : Int // 0 ≤ z ∧ z < N } → ENNReal) :
@@ -105,15 +96,9 @@ instance tapeIndexUniform.instSFinite {N : Int} : SFinite (tapeIndexUniform N) :
 
 theorem tapeIndexUniform_univ_le_one {N : Int} :
     (tapeIndexUniform N) Set.univ ≤ 1 := by
-  unfold tapeIndexUniform
-  split
-  next h =>
-    have : IsProbabilityMeasure
-        (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure :=
-      PMF.toMeasure.isProbabilityMeasure _
-    rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
-    simp
-  next => simp
+  by_cases hN : 0 < N
+  · exact (tapeIndexUniform_univ_eq_one hN).le
+  · simp [tapeIndexUniform, hN]
 
 theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
     (tapePresample σ α) Set.univ ≤ 1 := by
