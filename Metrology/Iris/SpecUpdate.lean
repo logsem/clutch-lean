@@ -55,7 +55,7 @@ theorem specUpdateN_specUpdate {n : Nat} {E : CoPset} {P : IProp GF} :
   ipureintro
   assumption
 
-theorem specUpdate_zero {E : CoPset} {P : IProp GF} : P ⊢ specUpdateN rT 0 E P := by
+theorem specUpdateN_zero {E : CoPset} {P : IProp GF} : P ⊢ specUpdateN rT 0 E P := by
   unfold specUpdateN
   iintro HP %ρ Hρ !>
   iexists ρ
@@ -66,7 +66,7 @@ theorem specUpdate_zero {E : CoPset} {P : IProp GF} : P ⊢ specUpdateN rT 0 E P
 theorem specUpdate_ret {E : CoPset} {P : IProp GF} : P ⊢ specUpdate rT E P := by
   iintro _
   iapply specUpdateN_specUpdate
-  iapply specUpdate_zero $$ [$]
+  iapply specUpdateN_zero $$ [$]
 
 theorem specUpdateN_bind {n m : Nat} {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : iprop%
     specUpdateN rT n E1 P ∗ (P -∗ specUpdateN rT m E2 Q) ⊢ specUpdateN rT (n + m) E2 Q := by

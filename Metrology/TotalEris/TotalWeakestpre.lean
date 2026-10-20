@@ -350,21 +350,7 @@ theorem tglWp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IPro
 theorem tglWp_bind_value {K : Ectx rT} {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     tglWp E (Exp.ofVal v) (fun v' => tglWp E (K.fill (Exp.ofVal v')) Φ) ⊢
       tglWp E (K.fill (Exp.ofVal v)) Φ := by
-  iintro HW
-  iapply tglWp_unfold
-  iintro %σ %ε ⟨Hσ, Hε⟩
-  isimp only [tglWp_unfold_value] at HW
-  ispecialize HW $$ %σ %ε [$Hσ $Hε]
-  cases htv : (K.fill (Exp.ofVal v)).toVal? with
-  | some v' =>
-    imod HW with ⟨Hσ', Hε', HInner⟩
-    rw [← Exp.ofVal_of_toVal_some htv]
-    iapply tglWp_value_inv_with_state
-    iframe
-  | none =>
-    imod HW with ⟨Hσ', Hε', HInner⟩
-    isimp only [tglWp_unfold_step htv] at HInner
-    iapply HInner $$ %σ %ε [$Hσ' $Hε']
+  exact tglWp_bind
 
 end ErisWpGS
 end TotalEris

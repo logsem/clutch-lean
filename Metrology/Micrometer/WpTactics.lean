@@ -34,13 +34,13 @@ public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ :
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     wp L E (K.fill e₂) Φ ⊢ wp L E (K.fill e₁) Φ := by
   have : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
-  exact (BI.laterN_intro n).trans (wp_pure_step_later' Hφ)
+  exact (BI.laterN_intro n).trans (wp_pure_step_later Hφ)
 
 /-- A run of pure steps, from `PureSteps`. -/
 public theorem wp_pure_steps {E : CoPset} {e₁ e₂ : Exp rT} {Φ : Val rT → IProp GF}
     (h : PureSteps e₁ e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   have := h.pureExec
-  (BI.laterN_intro _).trans (wp_pure_step_later' trivial)
+  (BI.laterN_intro _).trans (wp_pure_step_later trivial)
 
 /-- `wp_pure_steps` with the source only equal to the goal's expression. -/
 public theorem wp_pure_steps_at {E : CoPset} {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF}

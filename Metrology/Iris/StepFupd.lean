@@ -91,17 +91,17 @@ theorem fupd_step_fupdN_plain_forall_2 {A B : Type _} (Ψ : A → B → PROP)
   (forall_mono fun a => fupd_step_fupdN_plain_forall_1 (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall_1 _ n)
 
-theorem fupd_step_fupdN_plain_forall_3 {A B C : Type _} (Ψ : A → B → C → PROP)
+theorem fupd_step_fupdN_plain_forall₃ {A B C : Type _} (Ψ : A → B → C → PROP)
     [∀ a b c, Plain (Ψ a b c)] (n : Nat) : iprop%
     (∀ a b c, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b c) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c, Ψ a b c :=
   (forall_mono fun a => fupd_step_fupdN_plain_forall_2 (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall_1 _ n)
 
-theorem fupd_step_fupdN_plain_forall_4 {A B C D : Type _} (Ψ : A → B → C → D → PROP)
+theorem fupd_step_fupdN_plain_forall₄ {A B C D : Type _} (Ψ : A → B → C → D → PROP)
     [∀ a b c d, Plain (Ψ a b c d)] (n : Nat) : iprop%
     (∀ a b c d, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b c d) ⊢
     |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c d, Ψ a b c d :=
-  (forall_mono fun a => fupd_step_fupdN_plain_forall_3 (Ψ a) n).trans
+  (forall_mono fun a => fupd_step_fupdN_plain_forall₃ (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall_1 _ n)
 
 /-- Pure facts that follow from a guard, for every triple, hold after `n` step-updates. -/
@@ -112,7 +112,7 @@ theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → 
   have hpure : (∀ a b c, ⌜G a b c → q a b c⌝) ⊢@{PROP} ⌜∀ a b c, G a b c → q a b c⌝ :=
     (forall_mono fun a => (forall_mono fun b => pure_forall.2).trans pure_forall.2).trans
       pure_forall.2
-  refine .trans ?_ ((fupd_step_fupdN_plain_forall_3
+  refine .trans ?_ ((fupd_step_fupdN_plain_forall₃
     (fun a b c => iprop(⌜G a b c → q a b c⌝)) n).trans (BIFUpdate.mono (step_fupdN_mono hpure)))
   iintro H %a %b %c
   by_cases hG : G a b c
@@ -131,7 +131,7 @@ theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C �
       ⌜∀ a b c d, G a b c d → q a b c d⌝ :=
     (forall_mono fun a => (forall_mono fun b => (forall_mono fun c => pure_forall.2).trans
       pure_forall.2).trans pure_forall.2).trans pure_forall.2
-  refine .trans ?_ ((fupd_step_fupdN_plain_forall_4
+  refine .trans ?_ ((fupd_step_fupdN_plain_forall₄
     (fun a b c d => iprop(⌜G a b c d → q a b c d⌝)) n).trans
     (BIFUpdate.mono (step_fupdN_mono hpure)))
   iintro H %a %b %c %d

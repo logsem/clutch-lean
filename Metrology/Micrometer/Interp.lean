@@ -38,9 +38,6 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
   | 0 => Dist.rfl
   | m + 1 => h m
 
-/-- The relation bound to type variable `x`. -/
-@[reducible] def ctxLookup (x : Nat) (Δ : TyEnv rT GF) : lrel rT GF := Δ x
-
 /-- Precompose a type environment with a renaming. -/
 @[reducible] def TyEnv.comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)
@@ -75,13 +72,13 @@ structure NEFun (rT : Type) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
 
 namespace NEFun
 
-/-- The constant map to `L`. -/
-@[reducible] noncomputable def const (L : lrel rT GF) : NEFun rT GF :=
-  { fn := fun _ => L, ne := fun _ => Dist.rfl }
+/-- The constant map to the relation `A`. -/
+@[reducible] noncomputable def const (A : lrel rT GF) : NEFun rT GF :=
+  { fn := fun _ => A, ne := fun _ => Dist.rfl }
 
 /-- The map looking up type variable `x`. -/
 @[reducible] def ofCtx (x : Nat) : NEFun rT GF :=
-  { fn := fun Δ => ctxLookup x Δ, ne := fun h => h x }
+  { fn := fun Δ => Δ x, ne := fun h => h x }
 
 /-- Apply a binary relation constructor pointwise. -/
 @[reducible] noncomputable def map2 (F : lrel rT GF → lrel rT GF → lrel rT GF)

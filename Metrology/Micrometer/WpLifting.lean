@@ -351,7 +351,7 @@ section PureSteps
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 /-- A pure step, by a step of the unit law; at budget `⊤` the spec coupling is absorbing. -/
-theorem wp_lift_pure_det_step_concentrated {E E' : CoPset} {e₁ e₂ : Exp rT}
+theorem wp_lift_pure_det_step {E E' : CoPset} {e₁ e₂ : Exp rT}
     {Φ : Val rT → IProp GF} (Hpure : PureStep e₁ e₂) :
     iprop(|={E}[E']▷=> wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
@@ -373,14 +373,14 @@ theorem wp_lift_pure_det_step_concentrated {E E' : CoPset} {e₁ e₂ : Exp rT}
     iframe
   · iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
 
-theorem wp_pure_step_one' {E : CoPset} {e₁ e₂ : Exp rT} {Φ : Val rT → IProp GF}
+theorem wp_pure_step_one {E : CoPset} {e₁ e₂ : Exp rT} {Φ : Val rT → IProp GF}
     (Hstep : PureStep e₁ e₂) : iprop(▷ wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
-  iapply wp_lift_pure_det_step_concentrated Hstep
+  iapply wp_lift_pure_det_step Hstep
   iintro !> !> !>
   iexact H
 
-theorem wp_pure_step_fupd' {E E' : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : Nat}
+theorem wp_pure_step_fupd {E E' : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : Nat}
     {Φ : Val rT → IProp GF} [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
     iprop(|={E}[E']▷=>^[n] wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   have Hsteps := Hex.pure_exec Hφ
@@ -394,14 +394,14 @@ theorem wp_pure_step_fupd' {E E' : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n :
     obtain ⟨c, Hstep, Hrest⟩ := Hsteps
     simp only [Nat.repeat]
     iintro H
-    iapply wp_lift_pure_det_step_concentrated Hstep
+    iapply wp_lift_pure_det_step Hstep
     imod H; imodintro; iintro !>; imod H; imodintro
     iapply IH Hrest $$ H
 
-theorem wp_pure_step_later' {E : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : Nat}
+theorem wp_pure_step_later {E : CoPset} {e₁ e₂ : Exp rT} {φ : Prop} {n : Nat}
     {Φ : Val rT → IProp GF} [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
     iprop(▷^[n] wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
-  refine .trans ?_ (wp_pure_step_fupd' (E' := E) (e₂ := e₂) Hφ)
+  refine .trans ?_ (wp_pure_step_fupd (E' := E) (e₂ := e₂) Hφ)
   induction n with
   | zero => exact .rfl
   | succ n ih =>

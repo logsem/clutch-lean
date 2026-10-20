@@ -36,7 +36,7 @@ theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
   iintro H %K' %b HK Hna Herr Hpos
-  iapply MicrometerWpGS.wp_pure_step_later' (Hex := HexK) Hφ
+  iapply MicrometerWpGS.wp_pure_step_later (Hex := HexK) Hφ
   inext
   iapply H $$ HK Hna Herr Hpos
 
