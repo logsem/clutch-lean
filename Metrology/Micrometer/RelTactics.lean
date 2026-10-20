@@ -581,6 +581,18 @@ macro "rel_couple_UU_spend " S:term:max ppSpace c:term:max ppSpace hc:term:max p
     H:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_rands_spend _ _ $S $c $hc $H))
 
+/-- `rel_couple_UU_adv f ε₁ ε₂ hdom hbij hamort hc` couples `rand z ~ rand z` along the bijection
+`f`, paying `s (ε₂ n)` out of `s ε₁`; `0 < z` is left as a goal (relational
+`wp_couple_rand_rand_adv`). -/
+macro "rel_couple_UU_adv " f:term:max ppSpace e₁:term:max ppSpace e₂:term:max ppSpace
+    hdom:term:max ppSpace hbij:term:max ppSpace ham:term:max ppSpace hc:term:max : tactic =>
+  `(tactic| rel_apply (refines_couple_rands_lr_adv $f $e₁ $e₂ $hdom $hbij ?_ $ham $hc))
+
+/-- `rel_couple_UU_avoid bad habs hc` couples `rand z ~ rand z` identically, avoiding `bad` for
+`s (1/z)`; `0 < z` is left as a goal (relational `wp_couple_rand_rand_avoid`). -/
+macro "rel_couple_UU_avoid " bad:term:max ppSpace habs:term:max ppSpace hc:term:max : tactic =>
+  `(tactic| rel_apply (refines_couple_rands_lr_avoid $bad ?_ $habs $hc))
+
 /-- `rel_couple_urands f hmp` couples `urand ~ urand` along the measure-preserving `f`. -/
 macro "rel_couple_urands " f:term:max ppSpace hmp:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_urands_lr $f $hmp))

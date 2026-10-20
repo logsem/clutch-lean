@@ -274,6 +274,12 @@ theorem refines_couple_rands_dpChoice {GF : BundledGFunctors} [MicrometerRGS rT 
   rw [hcost]
   iapply Hcnt $$ %n %m %hS
 
+/-- `rel_couple_UU_dpChoice h₁ h₂ hPT₁ hPT₂ hc` couples `rand N ~ rand N` by the DP choice rule
+(relational `wp_couple_rand_rand_dpChoice`). -/
+macro "rel_couple_UU_dpChoice " h₁:term:max ppSpace h₂:term:max ppSpace hPT₁:term:max ppSpace
+    hPT₂:term:max ppSpace hc:term:max : tactic =>
+  `(tactic| rel_apply (refines_couple_rands_dpChoice _ _ $h₁ $h₂ $hPT₁ $hPT₂ $hc))
+
 end Choice
 
 end ProbLang
