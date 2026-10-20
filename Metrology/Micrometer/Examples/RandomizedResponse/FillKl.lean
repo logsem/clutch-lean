@@ -1,15 +1,20 @@
 module
 
-public import Metrology.Micrometer.Examples.RandomizedResponse.Basic
-public import Metrology.Couplings.Divergences.FillKl
-public import Metrology.Couplings.Divergences.RenyiFiber
+public import Metrology.Micrometer.Examples.RandomizedResponse.Renyi
+public import Metrology.Micrometer.Examples.RandomizedResponse.Zcdp
+public import Metrology.Couplings.Divergences.RenyiFillKl
 
 @[expose] public section
 
 /-! # Randomized response in filled KL
 
 One round is within KL `(log 3) / 2` (`klDivergence_rrOut`), so it couples at that budget in
-`codensity (fill klDivergence)`, and `k` rounds are `k (log 3) / 2`-private in filled KL. -/
+`codensity (fill klDivergence)`, and `k` rounds are `k (log 3) / 2`-private in filled KL.
+
+The same coupling can be read off the Rényi and zCDP ones, since the draw is a probability measure:
+`k ρ_α` for every order `α > 1` (`rrCount_fillKl_of_renyi`) and `k ln 3` (`rrCount_fillKl_of_zcdp`).
+Both are weaker than `rrCount_fillKl`: `ρ_α` decreases to the KL cost `(log 3) / 2` as `α → 1`, and
+the zCDP line pays the DP cost `ln 3`, twice the KL cost. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence
 open scoped ENNReal
@@ -43,5 +48,31 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 theorem rrCount_fillKl (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • ENNReal.ofReal (Real.log 3 / 2)) :=
   rrCount_isPrivate _ (ENNReal.isAddLeftRegular_ofReal _) rrCoupling_fillKl k σ
+
+/-! ## Read off the Rényi and zCDP couplings -/
+
+/-- One round couples at `ρ_α` in filled KL, read off the Rényi coupling. -/
+theorem rrCoupling_fillKl_of_renyi (α : ℝ) [Fact (1 < α)] :
+    RRCoupling (codensity klDivergence.fill) (rrRenyi α) := fun b b' ↦
+  codensity_fill_kl_rel_of_renyi_of_isProbabilityMeasure (rrCoupling_renyi b b')
+
+/-- One round couples at `ln 3` in filled KL, read off the zCDP coupling at `(ln 3, 0)`. -/
+theorem rrCoupling_fillKl_of_zcdp :
+    RRCoupling (codensity klDivergence.fill) (ENNReal.ofReal (Real.log 3)) := fun b b' ↦ by
+  simpa using codensity_fill_kl_rel_of_zcdp_of_isProbabilityMeasure (rrCoupling_zcdp b b')
+
+/-- `k` rounds are `k ρ_α`-private in filled KL, for every order `α > 1`. -/
+theorem rrCount_fillKl_of_renyi (α : ℝ) [Fact (1 < α)] (k : ℕ) (σ : State rT) :
+    (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • rrRenyi α) :=
+  rrCount_isPrivate _ (ENNReal.isAddLeftRegular_ofReal _) (rrCoupling_fillKl_of_renyi α) k σ
+
+/-- `k` rounds are `k ln 3`-private in filled KL, through zCDP. -/
+theorem rrCount_fillKl_of_zcdp (k : ℕ) (σ : State rT) :
+    (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • ENNReal.ofReal (Real.log 3)) :=
+  rrCount_isPrivate _ (ENNReal.isAddLeftRegular_ofReal _) rrCoupling_fillKl_of_zcdp k σ
+
+/-- The direct filled-KL budget `(log 3) / 2` is half the one read off zCDP. -/
+theorem rrFillKl_le_zcdp : ENNReal.ofReal (Real.log 3 / 2) ≤ ENNReal.ofReal (Real.log 3) :=
+  ENNReal.ofReal_le_ofReal (half_le_self (Real.log_nonneg (by norm_num)))
 
 end ProbLang.RandomizedResponse

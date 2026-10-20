@@ -28,6 +28,7 @@ public import Metrology.Couplings.Divergences.DpAvoid
 public import Metrology.Couplings.Divergences.Kl
 public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.FillKl
+public import Metrology.Couplings.Divergences.RenyiFillKl
 
 /-! Concrete graded divergences: dp, tv, f-divergences, Rényi, power/χ², zCDP/tCDP, mechanisms. -/
 
