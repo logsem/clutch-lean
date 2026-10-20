@@ -3,11 +3,13 @@ module
 public import Metrology.Couplings.Divergences.DpShapes
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 public import Metrology.Couplings.Divergences.RenyiFiber
+public import Metrology.Couplings.Divergences.Power
 
 /-! # Adaptive bind laws
 
 Bind laws beyond `BindLaw.canonical`: adaptive DP (`dpRhs`, `dpLhs`), DP choice (`dpChoice`) and
-escort-adaptive Rényi (`escort α`), each sound by a codensity lemma (Rocq `instances_dp.v`). -/
+escort-adaptive Rényi (`escort α`), each sound by a codensity lemma (Rocq `instances_dp.v`); the
+escort law regraded to power and χ² liftings (`escortPower α`). -/
 
 @[expose] public section
 
@@ -58,6 +60,14 @@ noncomputable def dpRhs : BindLaw (codensity dp.{u}) where
 instance sideFree_dpRhs : (dpRhs.{u}).SideFree :=
   ⟨fun _ _ _ _ _ ↦ trivial⟩
 
+/-- Right-keyed DP heads are diagonal: the step against itself at `(0, 0)`, continuing at the
+whole budget. -/
+instance headDiag_dpRhs : (dpRhs.{u}).HeadDiag where
+  diag μ _ b _ := ⟨0, b.1, 0, fun _ ↦ b.2, (· = ·), measurable_const, inferInstance,
+    inferInstance, IsReflexive.refl (L := codensity dp) μ, fun x y h ↦ by subst h; simp,
+    by simp [expBudget_zero]⟩
+  side_diag _ _ _ _ := trivial
+
 /-! ## DP, adaptive on the left outcome -/
 
 /-- The head of left-keyed adaptive DP composition: a DP lifting of `S` within `(ε₁, δ₁)` whose
@@ -107,6 +117,14 @@ instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
 /-- The left-keyed DP law has no side condition. -/
 instance sideFree_dpLhs : (dpLhs.{u}).SideFree :=
   ⟨fun _ _ _ _ _ ↦ trivial⟩
+
+/-- Left-keyed DP heads are diagonal: the step against itself at `(0, 0)`, continuing at the
+whole budget. -/
+instance headDiag_dpLhs : (dpLhs.{u}).HeadDiag where
+  diag μ _ b _ := ⟨0, b.1, 0, fun _ ↦ b.2, (· = ·), measurable_const, inferInstance,
+    inferInstance, IsReflexive.refl (L := codensity dp) μ, fun x y h ↦ by subst h; simp,
+    by simp⟩
+  side_diag _ _ _ _ := trivial
 
 /-! ## DP choice -/
 
@@ -176,6 +194,15 @@ instance headShift_dpChoice : (dpChoice.{u}).HeadShift where
 instance sideFree_dpChoice : (dpChoice.{u}).SideFree :=
   ⟨fun _ _ _ _ _ ↦ trivial⟩
 
+/-- DP choice heads are diagonal: both branches are the step against itself at `(0, 0)`, with
+`P` and `T` everything. -/
+instance headDiag_dpChoice : (dpChoice.{u}).HeadDiag where
+  diag μ _ b _ := ⟨0, 0, 0, 0, b.1, b.1, b.2, (· = ·), (· = ·), Set.univ, Set.univ,
+    .univ, .univ, inferInstance, inferInstance, IsReflexive.refl (L := codensity dp) μ,
+    IsReflexive.refl (L := codensity dp) μ, fun _ _ _ _ ↦ trivial, fun _ _ hx ↦ (hx trivial).elim,
+    fun x y _ h ↦ by subst h; simp, fun x y _ h ↦ by subst h; simp, by simp⟩
+  side_diag _ _ _ _ := trivial
+
 /-! ## Escort-adaptive Rényi -/
 
 /-- The head of escort-adaptive Rényi composition: an `S`-supported witness kernel `r` such that
@@ -240,6 +267,53 @@ instance headShift_escort (α : ℝ) [hα : Fact (1 < α)] : (escort.{u} α).Hea
 /-- The escort law has no side condition. -/
 instance sideFree_escort (α : ℝ) [Fact (1 < α)] : (escort.{u} α).SideFree :=
   ⟨fun _ _ _ _ _ ↦ trivial⟩
+
+/-- Escort heads are diagonal on spaces with measurable singletons: the identity witness against
+the step reweighted by `e^{-b}`, which costs exactly `b`. Not a `HeadDiag` instance: on a space
+whose σ-algebra does not separate points, no witness kernel is carried by the diagonal. -/
+theorem escort_head_diag (α : ℝ) [hα : Fact (1 < α)] [MeasurableSingletonClass X]
+    (μ : Measure X) [IsSubProbabilityMeasure μ] {b : ℝ≥0∞} (hb : b < ⊤) :
+    (escort α).head μ μ (fun x y ↦ relCost (· = ·) x y + b) b := by
+  refine ⟨(· = ·), fun _ ↦ b, Kernel.id, Set.univ, inferInstance, measurable_const, .univ,
+    by simp, inferInstance, inferInstance, fun y ↦ by simp [Kernel.id_apply, ae_dirac_eq],
+    fun x y _ h ↦ by subst h; simp, ?_⟩
+  rw [Measure.id_comp, withDensity_const]
+  simpa using renyiDivergence_smul_inv_expBudget hα.out hb.ne
+    (GradedDivergence.IsReflexive.refl (D := renyiDivergence α) μ)
+
+/-! ## Escort-adaptive power divergences -/
+
+section Power
+
+open PowerBudget
+
+variable (α : ℝ) [hα : Fact (1 < α)]
+
+/-- Escort-adaptive composition for power liftings (χ² at `α = 2`): the escort law read along
+`c ↦ log (1 + c) / (α - 1)`. -/
+noncomputable def escortPower : BindLaw (powerLifting.{u} α) :=
+  (escort α).comap toRenyi_mono toRenyi_top
+
+variable {α}
+
+@[simp]
+theorem head_escortPower {b : PowerBudget} {R : X → Y → PowerBudget} {μ : Measure X}
+    {ν : Measure Y} : (escortPower α).head μ ν R b ↔
+      EscortHead α μ ν (fun x y ↦ toRenyi α (R x y)) (toRenyi α b) :=
+  Iff.rfl
+
+variable (α)
+
+/-- Escort power heads shift, since `toRenyi α` is additive. -/
+instance headShift_escortPower : (escortPower.{u} α).HeadShift :=
+  headShift_comap (law := escort α) (hφ := toRenyi_mono) (htop := toRenyi_top) toRenyi_add
+    fun _ ↦ toRenyi_lt_top hα.out
+
+/-- The escort power law has no side condition. -/
+instance sideFree_escortPower : (escortPower.{u} α).SideFree :=
+  sideFree_comap (law := escort α)
+
+end Power
 
 end GradedLifting.BindLaw
 

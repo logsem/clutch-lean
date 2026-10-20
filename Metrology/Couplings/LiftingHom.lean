@@ -270,3 +270,74 @@ theorem toLiftingRelHom_map [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop
   rfl
 
 end LiftingHom
+
+/-! ## Regrading bind laws -/
+
+namespace GradedLifting.BindLaw
+
+variable {B : Type v} {B' : Type w} [Preorder B] [Top B] [PartialOrder B'] [OrderTop B']
+  {L : GradedLifting.{u} B} {φ : B' → B} {X Y X' Y' : Type u} [MeasurableSpace X]
+  [MeasurableSpace Y] [MeasurableSpace X'] [MeasurableSpace Y']
+
+omit [Preorder B] [MeasurableSpace X] [MeasurableSpace Y] in
+/-- Reading a leftover set to `⊤` off `A` through a map keeping `⊤`. -/
+theorem comp_piecewise_top {A : Set X} [DecidablePred (· ∈ A)] {R : X → Y → B'}
+    (htop : φ ⊤ = ⊤) :
+    (fun x y ↦ φ (A.piecewise R (fun _ _ ↦ ⊤) x y)) =
+      A.piecewise (fun x y ↦ φ (R x y)) fun _ _ ↦ ⊤ := by
+  ext x y
+  by_cases hx : x ∈ A <;> simp [hx, htop]
+
+/-- A bind law regraded along a monotone budget map keeping `⊤`: head and side condition read
+budgets and leftovers through `φ`, as `GradedLifting.comap` does. -/
+def comap (law : BindLaw L) (hφ : Monotone φ) (htop : φ ⊤ = ⊤) : BindLaw (L.comap φ) where
+  head μ ν R b := law.head μ ν (fun x y ↦ φ (R x y)) (φ b)
+  side μ ν R f g := law.side μ ν (fun x y ↦ φ (R x y)) f g
+  sound h hs hk := law.sound h hs fun x y hR ↦
+    hk x y <| lt_top_iff_ne_top.2 fun hxy ↦ hR.ne (by rw [hxy, htop])
+  mono_out h hb := law.mono_out h (hφ hb)
+  head_supp := by
+    rintro _ _ _ _ b R μ ν A _ hA hμ h
+    show law.head μ ν (fun x y ↦ φ (A.piecewise R (fun _ _ ↦ ⊤) x y)) (φ b)
+    rw [comp_piecewise_top htop]
+    exact law.head_supp hA hμ h
+  side_supp := by
+    rintro _ _ _ _ _ _ _ _ R μ ν f g A _ h
+    show law.side μ ν (fun x y ↦ φ (A.piecewise R (fun _ _ ↦ ⊤) x y)) f g
+    rw [comp_piecewise_top htop]
+    exact law.side_supp h
+
+variable {law : BindLaw L} {hφ : Monotone φ} {htop : φ ⊤ = ⊤}
+
+@[simp]
+theorem head_comap {b : B'} {R : X → Y → B'} {μ : Measure X} {ν : Measure Y} :
+    (law.comap hφ htop).head μ ν R b ↔ law.head μ ν (fun x y ↦ φ (R x y)) (φ b) :=
+  Iff.rfl
+
+@[simp]
+theorem side_comap {R : X → Y → B'} {μ : Measure X} {ν : Measure Y} {f : Kernel X X'}
+    {g : Kernel Y Y'} : (law.comap hφ htop).side μ ν R f g ↔
+      law.side μ ν (fun x y ↦ φ (R x y)) f g :=
+  Iff.rfl
+
+/-- An additive regrading keeping finite budgets finite keeps heads shiftable. -/
+theorem headShift_comap [Add B] [Add B'] [law.HeadShift] (hadd : ∀ a b, φ (a + b) = φ a + φ b)
+    (hlt : ∀ a, a < ⊤ → φ a < ⊤) : (law.comap hφ htop).HeadShift where
+  shift hc h := by
+    simpa only [head_comap, hadd] using HeadShift.shift (law := law) (hlt _ hc) h
+
+/-- An additive regrading keeping `0`, `⊤` and finite budgets keeps heads diagonal. -/
+theorem headDiag_comap [Zero B] [Add B] [Zero B'] [Add B'] [law.HeadDiag] (h0 : φ 0 = 0)
+    (hadd : ∀ a b, φ (a + b) = φ a + φ b) (hlt : ∀ a, a < ⊤ → φ a < ⊤) :
+    (law.comap hφ htop).HeadDiag where
+  diag {X} _ μ _ b hb := by
+    have hrel (x y : X) : φ (relCost (B := B') (· = ·) x y) = relCost (· = ·) x y := by
+      by_cases hxy : x = y <;> simp [hxy, h0, htop]
+    simpa only [head_comap, hadd, hrel] using HeadDiag.diag (law := law) μ (hlt b hb)
+  side_diag μ R f g := HeadDiag.side_diag (law := law) μ _ f g
+
+/-- Regrading keeps a law free of side conditions. -/
+theorem sideFree_comap [law.SideFree] : (law.comap hφ htop).SideFree :=
+  ⟨fun μ ν _ f g ↦ SideFree.side (law := law) μ ν _ f g⟩
+
+end GradedLifting.BindLaw
