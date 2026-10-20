@@ -15,8 +15,8 @@ open Classical MeasureTheory ProbabilityTheory Measure
 
 /-! # Measure-theory support for ProbLang
 
-The `Possible` predicate, measurability of `Option`/`List`/Σ constructions, and shape-stratified
-measurability used by `CoreMeasures`. -/
+The `Possible`, `IsAtomicSupport` and `Concentrated` predicates, measurability of `Option`/`List`/Σ
+constructions, and shape-stratified measurability used by `CoreMeasures`. -/
 
 /-! ## `Possible`: a positive-mass point of a measure -/
 
@@ -77,6 +77,80 @@ theorem possible_iff_pos {α : Type _} [MeasurableSpace α] [MeasurableSingleton
       simp only [Pi.one_apply, mul_one]
       exact measure_mono (Set.singleton_subset_iff.mpr hρs)
     · rw [Set.indicator_of_notMem hρs]; simp
+
+namespace ProbLang
+
+/-! ### Pure atomicity -/
+
+/-- A measure that gives zero mass to the set of its own null singletons. -/
+def IsAtomicSupport {α : Type _} [MeasurableSpace α] (μ : Measure α) : Prop :=
+  μ {x | μ {x} = 0} = 0
+
+theorem isAtomicSupport_zero {α : Type _} [MeasurableSpace α] :
+    IsAtomicSupport (0 : Measure α) := by simp [IsAtomicSupport]
+
+theorem PMF.toMeasure_isAtomicSupport {α : Type _} [MeasurableSpace α]
+    [MeasurableSingletonClass α] (p : PMF α) : IsAtomicSupport p.toMeasure := by
+  unfold IsAtomicSupport
+  have hset : {x : α | p.toMeasure {x} = 0} = (p.support : Set α)ᶜ := by
+    ext x
+    rw [Set.mem_ofPred_eq, p.toMeasure_apply_singleton x (measurableSet_singleton x),
+      Set.mem_compl_iff, PMF.mem_support_iff, not_not]
+  rw [hset, p.toMeasure_apply_eq_zero_iff p.support_countable.measurableSet.compl]
+  exact disjoint_compl_right
+
+theorem isAtomicSupport_dirac {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α]
+    (a : α) : IsAtomicSupport (Measure.dirac a) := by
+  unfold IsAtomicSupport
+  refine measure_mono_null (t := {a}ᶜ) ?_ ?_
+  · intro x hx
+    rw [Set.mem_compl_iff, Set.mem_singleton_iff]
+    rintro rfl
+    rw [Set.mem_ofPred_eq, Measure.dirac_apply_of_mem (Set.mem_singleton x)] at hx
+    exact one_ne_zero hx
+  · rw [Measure.dirac_apply' _ (measurableSet_singleton a).compl, Set.indicator_of_notMem (by simp)]
+
+/-! ### `Concentrated`: the unary support-lifting
+
+Unlike atomicity, concentration survives diffuse measures: a pushforward is
+concentrated on the image of its source support (`concentratedOn_map`). -/
+
+/-- The measure `μ` gives zero mass to the complement of `S`. -/
+def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set α) : Prop :=
+  μ Sᶜ = 0
+
+theorem Concentrated.univ {α : Type _} [MeasurableSpace α] {μ : Measure α} :
+    Concentrated μ Set.univ := by simp [Concentrated]
+
+theorem concentratedOn_zero {α : Type _} [MeasurableSpace α] {S : Set α} :
+    Concentrated (0 : Measure α) S := by simp [Concentrated]
+
+theorem Concentrated.mono {α : Type _} [MeasurableSpace α] {μ : Measure α} {S T : Set α}
+    (hST : S ⊆ T) (h : Concentrated μ S) : Concentrated μ T :=
+  MeasureTheory.measure_mono_null (Set.compl_subset_compl.mpr hST) h
+
+theorem concentratedOn_dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
+    (hS : MeasurableSet S) (h : a ∈ S) : Concentrated (Measure.dirac a) S := by
+  unfold Concentrated
+  rw [Measure.dirac_apply' a hS.compl, Set.indicator_of_notMem (by simpa using h)]
+
+theorem concentratedOn_map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+    {f : α → β} (hf : Measurable f) {ν : Measure α} {T : Set α}
+    (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
+    Concentrated (ν.map f) (f '' T) := by
+  unfold Concentrated at h ⊢
+  rw [Measure.map_apply hf hfT.compl]
+  refine MeasureTheory.measure_mono_null (fun x hx => ?_) h
+  simp only [Set.mem_preimage, Set.mem_compl_iff] at hx ⊢
+  exact fun hxT => hx ⟨x, hxT, rfl⟩
+
+theorem IsAtomicSupport.concentrated_atoms {α : Type _} [MeasurableSpace α]
+    {μ : Measure α} (h : IsAtomicSupport μ) : Concentrated μ {x | 0 < μ {x}} := by
+  have hset : {x | 0 < μ {x}}ᶜ = {x | μ {x} = 0} := by
+    ext x; simp [Set.mem_compl_iff, not_lt, nonpos_iff_eq_zero]
+  rw [Concentrated, hset]; exact h
+
+end ProbLang
 
 /-! ### Option-cylinders -/
 
@@ -172,12 +246,6 @@ theorem Measurable.option_of_cov
   · cases hc with
     | some hS => exact h_some _ hS
 
-theorem Set.image_eq_range_inter_preimage_option
-    {α β : Type _} (c : α → β) (π : β → Option α)
-    (hπ : ∀ x, π (c x) = some x) (T : Set α) :
-    c '' T = Set.range c ∩ π ⁻¹' (some '' T) := by
-  ext b; aesop
-
 @[simp] theorem Option.map_preimage_some {α β : Type _} (f : α → β) (S : Set β) :
     Option.map f ⁻¹' (some '' S) = some '' (f ⁻¹' S) := by
   ext x; cases x <;> simp [Option.map]
@@ -192,67 +260,6 @@ theorem Measurable.option_map {α β : Type _} [MeasurableSpace α] [MeasurableS
     (fun S hS => by
       simp only [Option.map_preimage_some]
       exact MeasurableEmbedding.some_mk.measurableSet_image.mpr (hf hS))
-
-/-- Pair two options, `none` if either is `none`. -/
-def Option.pair {α β : Type _} : Option α × Option β → Option (α × β)
-  | (some a, some b) => some (a, b)
-  | _ => none
-
-@[simp] theorem Option.pair_preimage_some {α β : Type _} (S : Set (α × β)) :
-    Option.pair ⁻¹' (some '' S) = (Prod.map some some) '' S := by
-  ext ⟨x, y⟩; cases x <;> cases y <;> simp [Option.pair, Prod.map]
-
-@[fun_prop]
-theorem Measurable.option_pair {α β : Type _} [MeasurableSpace α] [MeasurableSpace β] :
-    Measurable (Option.pair : Option α × Option β → Option (α × β)) :=
-  Measurable.option_of_cov
-    (cov := ({none} : Set (Option α))ᶜ ×ˢ ({none} : Set (Option β))ᶜ)
-    (MeasurableSet.singleton_none.compl.prod MeasurableSet.singleton_none.compl)
-    (by ext ⟨x, y⟩; cases x <;> cases y <;> simp [Option.pair])
-    (fun S hS => by
-      simp only [Option.pair_preimage_some]
-      exact ((MeasurableEmbedding.some_mk (α := α)).prodMap
-        MeasurableEmbedding.some_mk).measurableSet_image.mpr hS)
-
-/-! ### Cover-restricted measurability -/
-
-theorem MeasurableSet.cover_inter_preimage_of_gen
-    {α β : Type _} [MeasurableSpace α] [mβ : MeasurableSpace β]
-    {𝒞 : Set (Set β)} (hβ : mβ = MeasurableSpace.generateFrom 𝒞)
-    {cov : Set α} (hcov : MeasurableSet cov) (f : α → β)
-    (hgen : ∀ G ∈ 𝒞, MeasurableSet (cov ∩ f ⁻¹' G)) :
-    ∀ G : Set β, MeasurableSet G → MeasurableSet (cov ∩ f ⁻¹' G) := by
-  intro G hG
-  rw [hβ] at hG
-  induction hG with
-  | basic G' hG' => exact hgen G' hG'
-  | empty => simp
-  | compl G' _ ih =>
-    rw [Set.preimage_compl, ← Set.sdiff_eq, ← Set.sdiff_self_inter]
-    exact hcov.diff ih
-  | iUnion G' _ ih =>
-    rw [Set.preimage_iUnion, Set.inter_iUnion]
-    exact .iUnion ih
-
-private theorem subtype_preimage_eq {α β : Type _} {cov : Set α} (f : α → β) (G : Set β) :
-    (fun (b : ↥cov) => f b.val) ⁻¹' G = (Subtype.val : ↥cov → α) ⁻¹' (cov ∩ f ⁻¹' G) := by
-  ext ⟨b, hb⟩; simp
-
-theorem Measurable.of_cover_inter_preimage
-    {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    {cov : Set α} {f : α → β}
-    (h : ∀ G : Set β, MeasurableSet G → MeasurableSet (cov ∩ f ⁻¹' G)) :
-    Measurable (fun (b : ↥cov) => f b.val) := fun G hG => by
-  rw [subtype_preimage_eq]
-  exact MeasurableSet.preimage (h G hG) measurable_subtype_coe
-
-theorem MeasurableSet.cover_inter_preimage_of_subtype
-    {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    {cov : Set α} (hcov : MeasurableSet cov) {f : α → β}
-    (h : Measurable (fun (b : ↥cov) => f b.val)) :
-    ∀ G : Set β, MeasurableSet G → MeasurableSet (cov ∩ f ⁻¹' G) := fun G hG => by
-  rw [← Set.inter_self cov, Set.inter_assoc, ← Subtype.image_preimage_coe]
-  exact MeasurableSet.subtype_image hcov ((subtype_preimage_eq f G) ▸ h hG)
 
 /-- A positive-mass point of an injective pushforward comes from a positive-mass point.
 Injectivity is essential: a constant `f` collapses non-atomic mass onto one point. -/

@@ -1833,34 +1833,6 @@ theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
 Every head step except `urand` is purely atomic (`headStep_atomic`), with no countability
 assumption on `rT`. -/
 
-/-- A measure that gives zero mass to the set of its own null singletons. -/
-def IsAtomicSupport {α : Type _} [MeasurableSpace α] (μ : Measure α) : Prop :=
-  μ {x | μ {x} = 0} = 0
-
-theorem isAtomicSupport_zero {α : Type _} [MeasurableSpace α] :
-    IsAtomicSupport (0 : Measure α) := by simp [IsAtomicSupport]
-
-theorem PMF.toMeasure_isAtomicSupport {α : Type _} [MeasurableSpace α]
-    [MeasurableSingletonClass α] (p : PMF α) : IsAtomicSupport p.toMeasure := by
-  unfold IsAtomicSupport
-  have hset : {x : α | p.toMeasure {x} = 0} = (p.support : Set α)ᶜ := by
-    ext x
-    rw [Set.mem_ofPred_eq, p.toMeasure_apply_singleton x (measurableSet_singleton x),
-      Set.mem_compl_iff, PMF.mem_support_iff, not_not]
-  rw [hset, p.toMeasure_apply_eq_zero_iff p.support_countable.measurableSet.compl]
-  exact disjoint_compl_right
-
-theorem isAtomicSupport_dirac {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α]
-    (a : α) : IsAtomicSupport (Measure.dirac a) := by
-  unfold IsAtomicSupport
-  refine measure_mono_null (t := {a}ᶜ) ?_ ?_
-  · intro x hx
-    rw [Set.mem_compl_iff, Set.mem_singleton_iff]
-    rintro rfl
-    rw [Set.mem_ofPred_eq, Measure.dirac_apply_of_mem (Set.mem_singleton x)] at hx
-    exact one_ne_zero hx
-  · rw [Measure.dirac_apply' _ (measurableSet_singleton a).compl, Set.indicator_of_notMem (by simp)]
-
 omit [LawfulProbLangℝ rT] in
 theorem isAtomicSupport_isValM {T : Type _} [MeasurableSpace T] (e : Exp rT) {m : Measure T}
     (hm : IsAtomicSupport m) : IsAtomicSupport (e.isValM m) := by
@@ -1937,45 +1909,5 @@ theorem headStep_atomic (e : Exp rT) (σ : State rT) (hne : e ≠ .urand) :
     rename_i heq
     exact absurd (congrArg Cfg.expr heq) hne
   case default => exact isAtomicSupport_zero
-
-/-! ### `Concentrated`: the unary support-lifting
-
-Unlike atomicity, concentration survives diffuse measures: a pushforward is
-concentrated on the image of its source support (`concentratedOn_map`). -/
-
-/-- The measure `μ` gives zero mass to the complement of `S`. -/
-def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set α) : Prop :=
-  μ Sᶜ = 0
-
-theorem Concentrated.univ {α : Type _} [MeasurableSpace α] {μ : Measure α} :
-    Concentrated μ Set.univ := by simp [Concentrated]
-
-theorem concentratedOn_zero {α : Type _} [MeasurableSpace α] {S : Set α} :
-    Concentrated (0 : Measure α) S := by simp [Concentrated]
-
-theorem Concentrated.mono {α : Type _} [MeasurableSpace α] {μ : Measure α} {S T : Set α}
-    (hST : S ⊆ T) (h : Concentrated μ S) : Concentrated μ T :=
-  MeasureTheory.measure_mono_null (Set.compl_subset_compl.mpr hST) h
-
-theorem concentratedOn_dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
-    (hS : MeasurableSet S) (h : a ∈ S) : Concentrated (Measure.dirac a) S := by
-  unfold Concentrated
-  rw [Measure.dirac_apply' a hS.compl, Set.indicator_of_notMem (by simpa using h)]
-
-theorem concentratedOn_map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    {f : α → β} (hf : Measurable f) {ν : Measure α} {T : Set α}
-    (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
-    Concentrated (ν.map f) (f '' T) := by
-  unfold Concentrated at h ⊢
-  rw [Measure.map_apply hf hfT.compl]
-  refine MeasureTheory.measure_mono_null (fun x hx => ?_) h
-  simp only [Set.mem_preimage, Set.mem_compl_iff] at hx ⊢
-  exact fun hxT => hx ⟨x, hxT, rfl⟩
-
-theorem IsAtomicSupport.concentrated_atoms {α : Type _} [MeasurableSpace α]
-    {μ : Measure α} (h : IsAtomicSupport μ) : Concentrated μ {x | 0 < μ {x}} := by
-  have hset : {x | 0 < μ {x}}ᶜ = {x | μ {x} = 0} := by
-    ext x; simp [Set.mem_compl_iff, not_lt, nonpos_iff_eq_zero]
-  rw [Concentrated, hset]; exact h
 
 end ProbLang

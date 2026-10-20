@@ -22,13 +22,6 @@ def nsteps (r : α → α → Prop) : ℕ → α → α → Prop
   | 0,   a, b => a = b
   | n+1, a, b => ∃ c, r a c ∧ nsteps r n c b
 
-/-- `Measure.map_dirac` without `MeasurableSingletonClass`, which general `rT` lacks. -/
-theorem map_dirac' {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    {f : α → β} (hf : Measurable f) (a : α) : (dirac a).map f = dirac (f a) := by
-  ext s hs
-  rw [Measure.map_apply hf hs, Measure.dirac_apply' _ (hf hs), Measure.dirac_apply' _ hs]
-  rfl
-
 /-- `e1` steps to `e2` deterministically in every state. -/
 structure PureStep (e1 e2 : Exp rT) : Prop where
   safe : ∀ σ, Reducible e1 σ
