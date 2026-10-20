@@ -1212,11 +1212,6 @@ theorem EctxItem.fillItem_noVal {Ki : EctxItem α} {e : Exp α} (hv : ¬e.isValu
 /-- Evaluation contexts: a list of frames, innermost first. -/
 abbrev Ectx α := List (EctxItem α)
 
-theorem List.eq_nil_or_snoc (l : List α) : l = [] ∨ ∃ l' x, l = l' ++ [x] := by
-  rcases List.eq_nil_or_concat l with h | ⟨l', x, h⟩
-  · exact .inl h
-  · exact .inr ⟨l', x, List.concat_eq_append .. ▸ h⟩
-
 /-- The empty context. -/
 def Ectx.empty : Ectx α := []
 
@@ -1226,7 +1221,7 @@ def Ectx.comp (e1 e2 : Ectx α) : Ectx α := e2 ++ e1
 /-- Plugs `e` into the context. -/
 def Ectx.fill (K : Ectx α) (e : Exp α) : Exp α := K.foldl (flip EctxItem.fillItem) e
 
-theorem fill_app (K1 K2 : Ectx α) e : (K1 ++ K2).fill e = K2.fill (K1.fill e) :=
+theorem Ectx.fill_append (K1 K2 : Ectx α) e : (K1 ++ K2).fill e = K2.fill (K1.fill e) :=
   List.foldl_append
 
 @[simp] theorem Ectx.fill_snoc (K : Ectx α) (Ki : EctxItem α) (e : Exp α) :
@@ -1308,7 +1303,7 @@ theorem Ectx.fill_scrut (p : Pat α) (e : Exp α) :
 
 theorem Ectx.fill_comp (K1 K2 : Ectx α) (e : Exp α) :
     K1.fill (K2.fill e) = (K1.comp K2).fill e := by
-  simp [Ectx.comp, fill_app]
+  simp [Ectx.comp, Ectx.fill_append]
 
 theorem Ectx.fill_injective (K : Ectx α) : Function.Injective K.fill := by
   induction K with

@@ -108,7 +108,7 @@ theorem Ectx.measurableSet_fillCfg_image [LawfulProbLangℝ rT] (K : Ectx rT)
 @[simp] def EctxItem.fillItemCfg [LawfulProbLangℝ rT] (K : EctxItem rT) (ρ : Cfg rT) : Cfg rT :=
   ⟨K.fillItem ρ.expr, ρ.state⟩
 
-theorem Ectx.fillItemCfg_injective [LawfulProbLangℝ rT] (K : EctxItem rT) :
+theorem EctxItem.fillItemCfg_injective [LawfulProbLangℝ rT] (K : EctxItem rT) :
     Function.Injective K.fillItemCfg := by
   rintro ⟨e1, σ1⟩ ⟨e2, σ2⟩ ha
   simp only [EctxItem.fillItemCfg, Cfg.mk.injEq] at ha
@@ -227,7 +227,7 @@ theorem primStep_fill [LawfulProbLangℝ rT] {K : Ectx rT} {e : Exp rT} {σ : St
   rw [Measure.map_map (by measurability) (by measurability)]
   congr 1
   funext ⟨e', σ'⟩
-  simp [Function.comp, fill_app]
+  simp [Function.comp, Ectx.fill_append]
 
 theorem primStep_fillItem [LawfulProbLangℝ rT]
     (Ki : EctxItem rT) {e : Exp rT} {σ : State rT} (hv : ¬e.isValue) :
@@ -279,14 +279,10 @@ theorem Reducible.of_fill [LawfulProbLangℝ rT] (K : Ectx rT) {e : Exp rT} {σ 
   rw [primStep_fill hv] at hred
   exact fun h0 => hred (by rw [h0]; simp)
 
-theorem Reducible.of_head [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
-    (he : e.IsLocallyClosed) (hred : HeadReducible e σ) :
-    Reducible e σ := reducible_of_headReducible he hred
-
 theorem Reducible.of_head_fill [LawfulProbLangℝ rT] (K : Ectx rT) {e : Exp rT} {σ : State rT}
     (he : e.IsLocallyClosed)
     (hred : HeadReducible e σ) : Reducible (K.fill e) σ :=
-  Reducible.of_head he hred |>.fill K
+  (reducible_of_headReducible he hred).fill K
 
 /-! ## Irreducible: contrapositives -/
 
@@ -308,7 +304,7 @@ theorem Reducible.headStep_zero [LawfulProbLangℝ rT] {e : Exp rT} {σ : State 
 
 theorem head_ctx_step_val_ectx [LawfulProbLangℝ rT] (K : Ectx rT) (e : Exp rT) (σ : State rT)
     (hstep : HeadReducible (K.fill e) σ) : e.isValueR ∨ K = [] := by
-  rcases List.eq_nil_or_snoc K with rfl | ⟨K'', Ki, rfl⟩
+  rcases List.eq_nil_or_concat' K with rfl | ⟨K'', Ki, rfl⟩
   · exact .inr rfl
   · simp only [Ectx.fill_snoc] at hstep
     exact .inl (Ectx.fill_isValueR (head_ctx_step_val hstep))
@@ -323,7 +319,7 @@ theorem step_by_val [LawfulProbLangℝ rT] (K' K_redex : Ectx rT) (e1' e1_redex 
   | nil => exact ⟨K_redex, (List.append_nil K_redex).symm⟩
   | append_singleton K'_rest Ki' ih =>
     simp only [Ectx.fill_snoc] at hfill
-    rcases List.eq_nil_or_snoc K_redex with rfl | ⟨K_redex_rest, Ki_redex, rfl⟩
+    rcases List.eq_nil_or_concat' K_redex with rfl | ⟨K_redex_rest, Ki_redex, rfl⟩
     · simp only [Ectx.fill, List.foldl_nil] at hfill
       subst hfill
       exact absurd (Ectx.fill_isValueR (head_ctx_step_val hstep)) hv
@@ -396,7 +392,7 @@ theorem ectxi_language_subRedexesAreValues [LawfulProbLangℝ rT] {e : Exp rT}
     (h : ∀ (Ki : EctxItem rT) (e' : Exp rT), e = Ki.fillItem e' → e'.isValue) :
     subRedexesAreValues e := by
   intro K e' hfill hv
-  rcases List.eq_nil_or_snoc K with rfl | ⟨K'', Ki, rfl⟩
+  rcases List.eq_nil_or_concat' K with rfl | ⟨K'', Ki, rfl⟩
   · rfl
   · simp only [Ectx.fill_snoc] at hfill
     exact absurd (Ectx.fill_isValue (h Ki _ hfill)) hv

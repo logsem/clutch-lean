@@ -283,12 +283,6 @@ theorem tapePresample_bind_cfgUniform_comm
 
 Presampling changes the final tape content, so only the expression projection is invariant. -/
 
-omit [LawfulProbLangℝ rT] in
-theorem State.update_tapes_insert_id {σ : State rT} {α : Loc} {t : Tape}
-    (h : σ.tapes[α]? = some t) :
-    σ.update_tapes (·.insert α t) = σ :=
-  State.update_tapes_no_change h
-
 theorem tapeIndexUniform_lintegral_eq_cfg_uniform
     {N : Int} (hN : 0 < N) (σ : State rT)
     (f : Cfg rT → ENNReal) (hf : Measurable f) :

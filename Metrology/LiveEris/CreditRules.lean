@@ -185,7 +185,7 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨n, -, rfl⟩; rfl
   have hred : ∀ σ₁ : State rT, Reducible (pl(rand(#(.int z), #(.unit))) : Exp rT) σ₁ :=
-    fun σ₁ => Reducible.of_head (by is_lc) (rand_headReducible Hz σ₁)
+    fun σ₁ => reducible_of_headReducible (by is_lc) (rand_headReducible Hz σ₁)
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     apply Set.Countable.measurableSet
     apply Set.Countable.mono (s₂ := (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) '' Set.univ)

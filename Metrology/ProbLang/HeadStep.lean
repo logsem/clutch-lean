@@ -1517,10 +1517,6 @@ theorem Cfg.uniform_singleton_pos_inv [MeasurableSingletonClass rT]
     have ⟨h1, h2⟩ := (Cfg.mk.injEq ..).mp h
     exact ⟨h2.symm, .inr ⟨hpos, h1.symm⟩⟩
 
--- DISCRETE: `Discrete.Cfg.uniform_singleton_pos_of_mem [Countable rT]`
---   `[MeasurableSingletonClass rT] {z v : Int} {σ : State rT}`
---   `(Hz : 0 < z) (Hv0 : 0 ≤ v) (Hvz : v < z) : 0 < Cfg.uniform z σ {⟨.lit (.int v), σ⟩}`
-
 /-- Decompose `0 < (dirac a) {b}` into Cfg component equalities, then substitute. -/
 macro "cfg_dirac" h:ident : tactic =>
   `(tactic| (rw [dirac_singleton_pos] at $h:ident
@@ -1830,9 +1826,6 @@ Countability-free replacement for the discrete `Pgl.zero_positive`. -/
 /-- A measure that gives zero mass to the set of its own null singletons. -/
 def IsAtomicSupport {α : Type _} [MeasurableSpace α] (μ : Measure α) : Prop :=
   μ {x | μ {x} = 0} = 0
-
--- DISCRETE: `isAtomicSupport_of_countable {α} [MeasurableSpace α] [Countable α]`
---   `[MeasurableSingletonClass α] (μ : Measure α) : IsAtomicSupport μ`
 
 theorem isAtomicSupport_zero {α : Type _} [MeasurableSpace α] :
     IsAtomicSupport (0 : Measure α) := by simp [IsAtomicSupport]

@@ -187,7 +187,7 @@ theorem twp_lift_pure_det_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e�
   have hd : e₁.decompItem = none := Exp.decompItem_none_of_lc_headReducible hlc (hhr default)
   iapply twp_lift_pure_det_step hv
     (hatom := fun σ => by rw [primStep_eq_headStep hd]; exact headStep_atomic e₁ σ hne)
-    (hsafe := fun σ => .of_head hlc (hhr σ))
+    (hsafe := fun σ => reducible_of_headReducible hlc (hhr σ))
   refine fun σ e₂' σ₂ hp => hdet σ e₂' σ₂ ?_
   rwa [← primStep_eq_headStep hd]
 

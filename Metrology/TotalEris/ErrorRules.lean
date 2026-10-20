@@ -222,7 +222,7 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨n, _, _, rfl⟩; rfl
   have hred : ∀ σ₁, Reducible (pl(rand(#(.int z), #(.unit)))) σ₁ :=
-    fun σ₁ => Reducible.of_head (by is_lc) (hhead σ₁)
+    fun σ₁ => reducible_of_headReducible (by is_lc) (hhead σ₁)
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     apply Set.Countable.measurableSet
     apply Set.Countable.mono (s₂ := (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) '' Set.univ)

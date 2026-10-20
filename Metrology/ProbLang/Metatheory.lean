@@ -124,16 +124,6 @@ theorem Exp.subst_isClosed {X : ClosedCtx} {e v : Exp α} {x : Var}
     · exact hx
   · exact hv.2 h
 
-theorem Exp.subst_is_closed {e : Exp α} {x : Var} {v : Exp α} {X : ClosedCtx}
-    (he : e.isClosed (X.insert x)) (hv : v.isClosed X) :
-    (Exp.subst e x v).isClosed X :=
-  Exp.subst_isClosed he hv
-
-theorem Exp.subst_is_closed_empty {e : Exp α} {x : Var} {v : Exp α}
-    (he : e.isClosed (ClosedCtx.empty.insert x)) (hv : v.isClosed .empty) :
-    (Exp.subst e x v).isClosed .empty :=
-  Exp.subst_is_closed he hv
-
 /-! ### Commutation of substitutions -/
 
 /-- Substitutions at different variables commute when `v'` has no `x` free. -/
@@ -1133,12 +1123,6 @@ theorem Cfg.lintegral_uniform [Countable rT] [MeasurableSingletonClass rT]
       ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Finset.Ico (0 : Int) z,
         φ (⟨.lit (.int n), σ⟩ : Cfg rT) :=
   Cfg.lintegral_uniform' Hz σ Measurable.of_discrete
-
--- DISCRETE: `Cfg.uniform_one_eq_dirac [Countable rT] [MeasurableSingletonClass rT]`
---   `(σ : State rT) : Cfg.uniform 1 σ = Measure.dirac ⟨.lit (.int 0), σ⟩`
-
--- DISCRETE: `Cfg.uniform_singleton_ne_one [Countable rT] [MeasurableSingletonClass rT]`
---   `{z : Int} {σ : State rT} {ρ : Cfg rT} (Hz : 1 < z) : Cfg.uniform z σ {ρ} ≠ 1`
 
 -- The `simpa` below runs under `all_goals try`: the linter sees one branch where the
 -- goal-side `simp` is idle, but other branches need it.

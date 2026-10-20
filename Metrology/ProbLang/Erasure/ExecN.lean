@@ -270,7 +270,7 @@ theorem execN_tape_presample_expr_eq
               rw [State.update_tapes_twice]
             simp only [List.nil_append]
             simp_rw [hstep_upd, lintegral_dirac]
-            rw [State.update_tapes_insert_id htapes]
+            rw [State.update_tapes_no_change htapes]
             exact tapeIndexUniform_lintegral_eq_cfg_uniform hz σ
               (fun ρ => ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S))
               (erasure_integrand_measurable hS)
