@@ -51,8 +51,8 @@ structure Ctor where
 def Field.indexed (f : Field) : Bool := f.kind != .data
 
 /-- Whether the arm takes `f` of the field rather than its value: at a recursive field of a
-structural recursion (`recursive`). -/
-def Field.callsF (recursive : Bool) (f : Field) : Bool := recursive && f.kind == .recursive
+structural recursion (`structural`). -/
+def Field.callsF (structural : Bool) (f : Field) : Bool := structural && f.kind == .recursive
 
 /-- Whether the constructor has a recursive field. -/
 def Ctor.isRecursive (c : Ctor) : Bool := c.fields.any (·.kind == .recursive)

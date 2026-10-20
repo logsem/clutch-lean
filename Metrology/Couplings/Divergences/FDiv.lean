@@ -5,7 +5,7 @@ public import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 public import Metrology.Couplings.Divergences.Persp
 public import Metrology.Couplings.SubProbability
 
-/-! Integral `f`-divergences (Approximate Span Liftings, Def. 2.7, Thm. 4.7). -/
+/-! Integral `f`-divergences (Approximate Span Liftings, Def. 2.7). -/
 
 @[expose] public section
 
@@ -132,7 +132,7 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
         rw [fDiv_of_integrable hint, EReal.coe_add, ← hd _ measureReal_nonneg le_rfl, mul_comm,
           measureReal_def, EReal.coe_ennreal_toReal (measure_ne_top _ _)]
 
-/-- Partition sums are below the `f`-divergence. -/
+/-- Partition sums are below the `f`-divergence (the ≤ half of Thm. 4.7). -/
 theorem sum_persp_le_fDiv (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ι : Type*} [Fintype ι] [MeasurableSpace ι]
     [MeasurableSingletonClass ι] {k : X → ι} (hk : Measurable k) :

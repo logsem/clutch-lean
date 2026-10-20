@@ -75,7 +75,7 @@ constructor. -/
 structure Recursion where
   /-- Structural recursion: the arms take `f` at recursive fields (else: by cases, the arms take
   the fields). -/
-  recursive : Bool
+  structural : Bool
   f : Expr
   /-- The type of the parameter, if `f : β → T → α`. -/
   β? : Option Expr
@@ -117,7 +117,7 @@ measurable by `hvi`: for a function by cases, `x` itself; for a structural recur
 def Ctx.recursiveArg (ctx : Ctx) (r : Recursion) (shift? : Option (Expr × Expr)) (b? : Option Arg)
     (s ih vi hvi : Expr) : MetaM Arg := do
   let x ← ctx.ofLeaves s vi
-  if !r.recursive then
+  if !r.structural then
     let hsymm ← mkAppM ``Shapes.measurable_symm_mk #[ctx.equiv, s]
     return { field := x, arm := x, measurable := ← mkAppM ``Measurable.comp #[hsymm, hvi] }
   match b? with

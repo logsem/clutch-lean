@@ -276,7 +276,8 @@ theorem fDiv_smul_dirac (hf : ConvexOn ℝ (Ici 0) f)
   simp only [Finset.univ_unique, PUnit.default_eq_unit, Finset.sum_singleton, Measure.smul_apply,
     dirac_apply_of_mem (mem_singleton _), smul_eq_mul, mul_one]
 
-/-- An `f`-divergence is the supremum of its pushforwards to finite spaces (Thm. 4.7). -/
+/-- An `f`-divergence is the supremum of its pushforwards to finite spaces (corollary of Thm. 4.7,
+`fDiv_eq_iSup_partition`). -/
 theorem fDiv_eq_iSup_map (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
     {X : Type u} [MeasurableSpace X] (μ ν : Measure X) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv f μ ν = ⨆ (n : ℕ) (k : X → ULift.{u} (Fin n)) (_ : Measurable k),

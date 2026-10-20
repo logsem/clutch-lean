@@ -323,33 +323,33 @@ def Ctx.measured (ctx : Ctx) (param : Bool) : Array Ctor :=
   ctx.ctors.filter fun c => param || c.fields.any (·.kind != .base)
 
 /-- `∀ b xs, f b (T.c xs) = arm b args`, with the parameter `b : β` if `β?`, where `args` are the
-fields, or with `recursive`, `f (t b)` at the recursive fields, for the shift `t` if `shift?`. -/
-def Ctx.eqType (ctx : Ctx) (c : Ctor) (recursive : Bool) (f arm : Expr) (β? shift? : Option Expr) :
-    MetaM Expr :=
+fields, or with `structural`, `f (t b)` at the recursive fields, for the shift `t` if `shift?`. -/
+def Ctx.eqType (ctx : Ctx) (c : Ctor) (structural : Bool) (f arm : Expr)
+    (β? shift? : Option Expr) : MetaM Expr :=
   ctx.withArgs β? c fun bs xs => do
     let b := match shift? with | some t => bs.map (mkApp t) | none => bs
     let args := (c.fields.zip xs).map fun (fd, x) =>
-      if fd.callsF recursive then mkAppN f (b.push x) else x
+      if fd.callsF structural then mkAppN f (b.push x) else x
     let lhs := mkAppN f (bs.push (mkAppN (ctx.const c.name) xs))
     mkForallFVars (bs ++ xs) (← mkEq lhs (mkAppN arm (bs ++ args)))
 
-/-- `T.measurable_cases` (or with `recursive`, `T.measurable_struct_rec`; with `param`, their
+/-- `T.measurable_cases` (or with `structural`, `T.measurable_struct_rec`; with `param`, their
 `_param` variants): a function given by its equations on the constructors is measurable if its
 arms are. The arms of `measurable_struct_rec` take the function at the recursive fields, and
 those of `measurable_cases` the fields themselves. With `param`, the function takes a parameter,
 which a recursive call may change by a shift `t_c` (by default `id`). -/
-def Ctx.addRecursion (ctx : Ctx) (recursive param : Bool) : MetaM Unit := do
-  let name := ctx.T ++ match recursive, param with
+def Ctx.addRecursion (ctx : Ctx) (structural param : Bool) : MetaM Unit := do
+  let name := ctx.T ++ match structural, param with
     | false, false => `measurable_cases
     | false, true => `measurable_cases_param
     | true, false => `measurable_struct_rec
     | true, true => `measurable_struct_rec_param
-  let shifted := if recursive && param then ctx.ctors.filter (·.isRecursive) else #[]
+  let shifted := if structural && param then ctx.ctors.filter (·.isRecursive) else #[]
   let measured := ctx.measured param
   ctx.withTypeVars param fun α iα βs => do
   let β? := βs[0]?
   let armTys (c : Ctor) := β?.toArray ++ c.fields.map fun fd =>
-    if fd.callsF recursive then α else ctx.fieldType fd
+    if fd.callsF structural then α else ctx.fieldType fd
   -- `t_c : β → β := id`
   let shiftTy ← β?.mapM fun β => do
     mkAppM ``optParam #[← mkArrow β β, ← withLocalDeclD `b β fun b => mkLambdaFVars #[b] b]
@@ -362,7 +362,7 @@ def Ctx.addRecursion (ctx : Ctx) (recursive param : Bool) : MetaM Unit := do
   let tOf := ctx.spread shifted ts
   let eqDecls := ctx.ctors.map fun c =>
     decl (c.named "eq") .default
-      (ctx.eqType c recursive f arms[c.idx]! (β? := β?) (shift? := tOf[c.idx]!))
+      (ctx.eqType c structural f arms[c.idx]! (β? := β?) (shift? := tOf[c.idx]!))
   withLocalDecls eqDecls fun eqs => do
   let hDecls := measured.map fun c =>
     decl (c.named "h") .default do mkAppM ``Measurable #[← uncurryN arms[c.idx]! (armTys c)]
@@ -371,7 +371,7 @@ def Ctx.addRecursion (ctx : Ctx) (recursive param : Bool) : MetaM Unit := do
     decl (c.named "ht") .default (mkAppM ``Measurable #[t])
   withLocalDecls htDecls fun hts => do
   let proof ← ctx.fiberProof
-    { recursive, f, β?, arms := ctx.mkArms arms eqs measured hs shifted (ts.zip hts) }
+    { structural, f, β?, arms := ctx.mkArms arms eqs measured hs shifted (ts.zip hts) }
   let conclusion ← mkAppM ``Measurable #[← if param then mkAppM ``Function.uncurry #[f] else pure f]
   ctx.declare name conclusion proof (insts := true)
     (binders := #[α, iα] ++ βs ++ #[f] ++ arms ++ ts ++ eqs ++ hs ++ hts)
@@ -415,7 +415,7 @@ def Ctx.addCasesOn (ctx : Ctx) (param : Bool) : MetaM Unit := do
   let eqs ← ctx.ctors.mapM fun c => ctx.withArgs β? c fun bs xs => do
     mkLambdaFVars (bs ++ xs) (← mkEqRefl (mkAppN cases (bs.push (mkAppN (ctx.const c.name) xs))))
   let proof ← ctx.fiberProof
-    { recursive := false, f := cases, β?, arms := ctx.mkArms arms eqs measured hs }
+    { structural := false, f := cases, β?, arms := ctx.mkArms arms eqs measured hs }
   let (type, proof) ← match β? with
     | none => pure (← mkAppM ``Measurable #[cases], proof)
     | some β => ctx.measurableSwapped β cases proof
