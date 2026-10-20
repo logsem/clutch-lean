@@ -20,6 +20,7 @@ public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.SpecAdvRules
 public import Metrology.Micrometer.ContinuousSampler
+public import Metrology.Micrometer.ContinuousCouplings
 public import Metrology.Micrometer.CappedCredits
 
 -- tactics
