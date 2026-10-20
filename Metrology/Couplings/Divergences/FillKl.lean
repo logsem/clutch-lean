@@ -446,6 +446,49 @@ theorem fill_kl_iff [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     rw [Kernel.withBot_dropBot_comp]
     exact klDivergence_iff.2 hkl
 
+/-! ## Filling before comparing composes for KL and Hellinger -/
+
+/-- KL between filled measures composes: filled kernels are Markov. -/
+instance isComposable_onWithBot_kl : (klDivergence.{u}).onWithBot.IsComposable :=
+  isComposable_onWithBot fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ ↦
+    klDivergence_comp_of_mass_eq fun _ ↦ by simp
+
+/-- `α`-Hellinger between filled measures composes: filled kernels are Markov. -/
+instance isComposable_onWithBot_hellinger (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
+    (hellingerDivergence.{u} α).onWithBot.IsComposable :=
+  isComposable_onWithBot fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ ↦
+    hellingerDivergence_comp_of_mass_eq hα.out.1 hα.out.2 fun _ ↦ by simp
+
+/-! ## Reading filled KL back -/
+
+/-- A filled KL bound is a generalized KL bound for some completion of the left measure: forget
+`none` by data processing. -/
+theorem exists_le_klDivergence_of_fill [IsSubProbabilityMeasure ν]
+    (h : fill klDivergence r μ ν) :
+    ∃ μ', μ ≤ μ' ∧ IsSubProbabilityMeasure μ' ∧ klDivergence r μ' ν := by
+  obtain ⟨μ', hle, hμ', hD⟩ := h
+  refine ⟨μ', hle, hμ', ?_⟩
+  have := klDivergence_comp_self Kernel.dropBot hD
+  rwa [Kernel.dropBot_comp_withBot', Kernel.dropBot_comp_withBot'] at this
+
+/-- Against a left probability measure, filled KL bounds Mathlib's KL divergence. -/
+theorem klDiv_le_of_fill [IsProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (h : fill klDivergence r μ ν) : klDiv μ ν ≤ r := by
+  obtain ⟨μ', hle, hμ', hD⟩ := exists_le_klDivergence_of_fill h
+  have h1 : μ' univ ≤ 1 := hμ'.measure_univ_le_one
+  obtain rfl : μ = μ' := Measure.eq_of_le_of_measure_univ_eq hle
+    (le_antisymm (by simpa using hle univ) (by simpa using h1))
+  exact klDivergence_iff.1 hD
+
+/-- Between probability measures (terminating programs), filled KL is KL. -/
+theorem fill_kl_iff_of_isProbabilityMeasure [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
+    fill klDivergence r μ ν ↔ klDivergence r μ ν := by
+  refine ⟨fun h ↦ klDivergence_iff.2 (klDiv_le_of_fill h), fun h ↦ ⟨μ, le_rfl, inferInstance, ?_⟩⟩
+  change klDivergence r μ.withBot ν.withBot
+  rw [withBot_of_isProbabilityMeasure, withBot_of_isProbabilityMeasure,
+    ← deterministic_comp_eq_map measurable_some, ← deterministic_comp_eq_map measurable_some]
+  exact klDivergence_comp_self _ h
+
 /-! ## The laws of filled KL -/
 
 /-- Filled KL composes: the test bounds of the fillings compose, so no filling of the kernel has

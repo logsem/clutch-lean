@@ -4,7 +4,9 @@ public import Metrology.Couplings.Divergence
 
 /-! # Filling lost mass
 `withBot` puts the lost mass on a fresh point `none` and `Kernel.dropBot` forgets it (used by
-`BindLaw.massEq`); the Rocq `FillDiv` divergences (`fill`) are ported but unused by the liftings. -/
+`BindLaw.massEq`); `fill D` is the Rocq `FillDiv`. Filling before comparing composes whenever `D`
+composes along Markov kernels (`isComposable_onWithBot`); the laws of `fill klDivergence` are in
+`FillKl`. -/
 
 @[expose] public section
 
@@ -144,6 +146,16 @@ theorem withBot_dropBot_comp (P : Measure (Option X)) [IsProbabilityMeasure P] :
       simp only [dropBot, coe_mk, Option.elim_some, dirac_apply' _ (measurable_some hs)]
       rfl
   rw [this, lintegral_indicator_one hs]
+
+/-- Forgetting `none` undoes filling a measure. -/
+theorem dropBot_comp_withBot' (μ : Measure X) : dropBot ∘ₘ μ.withBot = μ := by
+  ext s hs
+  rw [Measure.bind_apply hs (Kernel.aemeasurable _),
+    Measure.lintegral_withBot _ ((dropBot : Kernel (Option X) X).measurable_coe hs)]
+  simp only [dropBot, coe_mk, Option.elim_some, Option.elim_none, Measure.coe_zero, Pi.zero_apply,
+    mul_zero, add_zero]
+  simp_rw [dirac_apply' _ hs]
+  exact lintegral_indicator_one hs
 
 /-- The kernel on `Option X` that fills `κ` at each point and keeps `none` at `none`. -/
 noncomputable def liftBot (κ : Kernel X Y) : Kernel (Option X) (Option Y) where
