@@ -10,9 +10,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Presampling with tapes: the order of two labelled draws does not matter
 
-Both tapes are presampled before either program draws, coupling each left tape with its right
-twin; the draws then only read the tapes. A draw from a fresh tape is a plain draw. Only
-`drawAB ≤ drawBA` is stated; the reverse is the same proof with the tapes swapped. -/
+Main result: `drawAB_refines_drawBA` (drawing from tape `α` then `β` refines the reverse order), and
+by adequacy at `codensity tv`, `drawAB_le_drawBA`. The reverse direction is the same proof. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -29,7 +28,19 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
-/-- Drawing from `α` then `β` refines drawing from `β` then `α`, at budget `0`. -/
+/-- A draw from a fresh tape refines a plain draw. -/
+theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
+    ⊢@{IProp GF} REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
+  rel_alloctape_l α as Hα
+  rel_pures
+  rel_couple_TU α
+  iframe Hα
+  iintro %n Hα %_
+  rel_values
+
+/-- Drawing from `α` then `β` refines drawing from `β` then `α`, at budget `0`.
+Both tapes are presampled, each left tape coupled with its right twin along `id`, before either
+program draws; afterwards every draw only reads its tape. -/
 theorem drawAB_refines_drawBA (N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
   rel_alloctape_l α as Hα
@@ -54,17 +65,9 @@ theorem drawAB_refines_drawBA (N : Int) (hN : 0 < N) :
   rel_pures
   rel_values
 
-/-- A draw from a fresh tape refines a plain draw. -/
-theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
-  rel_alloctape_l α as Hα
-  rel_pures
-  rel_couple_TU α
-  iframe Hα
-  iintro %n Hα %_
-  rel_values
-
 end Rel
+
+/-! ## Adequacy: from the refinement to a bound on executions -/
 
 /-- On every event, drawing in the order `α, β` is at most as likely as in the order `β, α`. -/
 theorem drawAB_le_drawBA (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Exp rT)}

@@ -5,7 +5,7 @@ public import Metrology.TotalEris.TotalWeakestpre
 /-!
 # Total-WP lifting lemmas
 
-Rules proving `tglWp` of a non-value from its prim step, down to pure and `PureExec` steps.
+Rules proving `tglWp` of a non-value from its prim step: general, atomic, pure, head, `PureExec`.
 -/
 
 @[expose] public section
@@ -19,6 +19,8 @@ namespace ErisWpGS
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
+
+/-! ## From the step modality `glm'` to prim-step rules -/
 
 /-- Prove `tglWp` of a non-value from `glm'` on its state and error interpretations. -/
 theorem twp_lift_step_fupd_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
@@ -86,6 +88,8 @@ theorem twp_lift_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp r
           = {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
       rw [hset]; exact (hatom σ₁).concentrated_atoms)
 
+/-! ## Atomic steps -/
+
 /-- Lift an atomic prim step whose results are values. -/
 theorem twp_lift_atomic_step_fupd {E₁ : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none)
@@ -111,6 +115,8 @@ theorem twp_lift_atomic_step_fupd {E₁ : CoPset} {Φ : Val rT → IProp GF} {e�
   cases htv : e₂.toVal? with
   | some v => iapply tglWp_value_of_toVal htv $$ [$]
   | none => iexfalso; iexact HΦv
+
+/-! ## Pure steps -/
 
 /-- Lift a pure prim step, which leaves the state unchanged. -/
 theorem twp_lift_pure_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
@@ -154,6 +160,8 @@ theorem twp_lift_pure_det_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e�
   obtain ⟨_, rfl⟩ := hpuredet σ e₂' σ hstep
   iexact H
 
+/-! ## Head steps -/
+
 /-- Lift an atomic head step. -/
 theorem twp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (hlc : e₁.IsLocallyClosed)
@@ -193,7 +201,7 @@ theorem twp_lift_pure_det_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e�
   refine fun σ e₂' σ₂ hp => hdet σ e₂' σ₂ ?_
   rwa [← primStep_eq_headStep hd]
 
-/-! ## `PureStep` / `PureExec` integration -/
+/-! ## `PureStep` and `PureExec` -/
 
 /-- Lift a `PureStep`. -/
 theorem twp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp GF}

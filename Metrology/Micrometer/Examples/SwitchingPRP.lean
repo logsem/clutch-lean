@@ -7,12 +7,11 @@ import Mathlib.Data.List.GetD
 
 @[expose] public section
 
-/-! # Specifications of the random function and random permutation
+/-! # Specs of the random function and random permutation
 
-Specs of `Code/Switching`: representation predicates, creation, queries, and the fresh-query
-coupling `wp_rfQuery_prpQuery_fresh` that costs `m.length / N`. Rocq source:
-clutch's `is_random_function`/`is_prp` and their query lemmas
-(`theories/approxis/examples/{prf,prp}.v`). -/
+Representation predicates, creation and query specs for the closures of `Code/Switching`, and the
+fresh-query coupling `wp_rfQuery_prpQuery_fresh` (switching step, cost `m.length / N`).
+Ported from clutch's `is_random_function`/`is_prp` (`theories/approxis/examples/{prf,prp}.v`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -46,7 +45,7 @@ facts. -/
 def isRandomFunction (N : Int) (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
   ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ (assocVal m : Val rT))
 
-/-- Spec-side `isRandomFunction`. -/
+/-- `isRandomFunction` for the spec-side program (points-to `↦ₛ`). -/
 def isSRandomFunction (N : Int) (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
   ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ₛ (assocVal m : Val rT))
 
@@ -61,7 +60,7 @@ def isPRP (N : Int) (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp 
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
     (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT))
 
-/-- Spec-side `isPRP`. -/
+/-- `isPRP` for the spec-side program (points-to `↦ₛ`). -/
 def isSPRP (N : Int) (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp GF := iprop%
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
     (ℓm ↦ₛ (assocVal m : Val rT)) ∗ (ℓfv ↦ₛ (intListVal r : Val rT))

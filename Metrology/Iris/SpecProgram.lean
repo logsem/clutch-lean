@@ -12,7 +12,7 @@ public import Metrology.ProbLang.Discrete
 
 @[expose] public section
 
-/-! # Spec-side resource algebra
+/-! # Spec-side ghost state
 
 Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules.
 `AppProgram` reuses the heap and tape cameras for the program side. -/
@@ -21,6 +21,8 @@ section SpecRA
 open Std Iris Iris.Std COFE ProbLang
 
 variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+
+/-! ## Cameras and discrete OFE instances -/
 
 instance cofe_exp : COFE (Exp rT) := COFE.ofDiscrete _
 instance discrete_exp : OFE.Discrete (Exp rT) := ⟨id⟩
@@ -45,15 +47,20 @@ abbrev SpecHeap (rT : Type _) [ProbLang.LawfulProbLangℝ rT] :=
 (`AppProgram`). -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
 
-/-- Authoritative element of `SpecProg`. -/
+/-- Authoritative element of `SpecProg`: the spec program is `e`. -/
 def SpecProg.auth (e : Exp rT) : SpecProg rT := ● (some <| .excl e)
-/-- Fragment of `SpecProg`. -/
+/-- Fragment of `SpecProg`: ownership of the spec program `e`. -/
 def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
+
+/-! ## Heaps of `Agree` values
+
+The ghost heap stores each value in `Agree`; these lemmas move between it and the plain heap. -/
 
 /-- Wraps every heap value in `Agree` (also used by `AppProgram`). -/
 def LocHeap.asAgree [OFE V] (h : LocHeap V) : LocHeap (Agree V) :=
   PartialMap.map LocHeap toAgree h
 
+/-- Reading the wrapped heap is reading the heap, then wrapping. -/
 theorem LocHeap.asAgree_get? [OFE V] (h : LocHeap V) (l : Loc) :
     PartialMap.get? (LocHeap.asAgree h) l = (PartialMap.get? h l).map toAgree := by
   simp only [LocHeap.asAgree, PartialMap.map, LawfulPartialMap.get?_bindAlter]
@@ -68,6 +75,7 @@ theorem Std.ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
     show (h.insert l v)[k]? = (h.alter l (fun _ => some v))[k]?
     simp [ExtTreeMap.getElem?_insert, ExtTreeMap.getElem?_alter]
 
+/-- Wrapping commutes with insertion. -/
 theorem LocHeap.asAgree_insert [OFE V] (h : LocHeap V) (l : Loc) (v : V) :
     LocHeap.asAgree (PartialMap.insert h l v) =
       PartialMap.insert (LocHeap.asAgree h) l (toAgree v) := by
@@ -80,18 +88,22 @@ theorem LocHeap.asAgree_insert [OFE V] (h : LocHeap V) (l : Loc) (v : V) :
   · rw [LocHeap.asAgree_get?, LawfulPartialMap.get?_insert_ne hk,
         LawfulPartialMap.get?_insert_ne hk, LocHeap.asAgree_get?]
 
+/-- The fresh location is unmapped in the wrapped heap. -/
 theorem LocHeap.asAgree_get?_fresh [OFE V] (h : LocHeap V) :
     PartialMap.get? (LocHeap.asAgree h) h.fresh = none := by
   rw [LocHeap.asAgree_get?]
   show (h[h.fresh]?).map toAgree = none
   rw [ExtTreeMap.fresh_get?]; rfl
 
+/-- A fragment included in the wrapped heap's value pins down the plain heap's value. -/
 theorem LocHeap.get?_of_asAgree_get? [OFE V] {h : LocHeap V} {l : Loc} {v : V} {a : Agree V}
     (hget : PartialMap.get? (LocHeap.asAgree h) l = some a) (hinc : toAgree v ≼ a) :
     PartialMap.get? h l = some v := by
   rw [LocHeap.asAgree_get?] at hget
   obtain ⟨w, hw, rfl⟩ := Option.map_eq_some_iff.mp hget
   rw [hw, Agree.toAgree_included.mp hinc]
+
+/-! ## Ghost-state classes -/
 
 /-- Ghost-state resources needed for the spec side. -/
 class SpecPreGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors) where
@@ -109,6 +121,8 @@ class SpecGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : Bund
   γtapes : GName
 
 section Resources
+
+/-! ## Spec ownership assertions -/
 
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 
@@ -148,7 +162,10 @@ variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 
 open ProbLang.Cfg
 
+/-! ## Authority-fragment lemmas -/
+
 omit [LawfulProbLangℝ rT] in
+/-- Inclusion of exclusive elements forces equality. -/
 theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT} (H : some (Excl.excl e1) ≼ some (Excl.excl e2)) :
     e1 = e2 := by
   have h := Option.inc_iff.mp H
@@ -157,6 +174,7 @@ theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT} (H : some (Excl.excl e1) ≼ 
   · exact h
   · simpa using Excl.inc_iff.mp h
 
+/-- The authority and the fragment `⤇ e2` agree on the spec expression. -/
 theorem specAuth_specFrag_agree {e1 e2 : Exp rT} {σ : State rT} :
     ⊢@{IProp GF} specAuth ⟨e1, σ⟩ -∗ ⤇ e2 -∗ ⌜e1 = e2⌝ := by
   unfold specAuth specProgAuth specProgFrag
@@ -167,6 +185,7 @@ theorem specAuth_specFrag_agree {e1 e2 : Exp rT} {σ : State rT} :
   obtain ⟨hinc, _⟩ := Auth.auth_both_valid_discrete.mp hv
   exact some_excl_inc_excl_exp_eq hinc |>.symm
 
+/-- Authority and fragment of the spec program are updated together, e.g. when the spec steps. -/
 theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
     ⊢@{IProp GF} specAuth ⟨e1, σ⟩ -∗ ⤇ e2 ==∗ specAuth ⟨e3, σ⟩ ∗ ⤇ e3 := by
   iintro Ha Hf
@@ -181,6 +200,7 @@ theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
   ihave ⟨Hf, Ha⟩ := iOwn_op $$ Hu
   iframe
 
+/-- A points-to `l ↦ₛ v` agrees with the authoritative heap. -/
 theorem spec_auth_lookup_heap {e : Exp rT} {σ : State rT} {l : Loc} {v : Val rT} :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ -∗ l ↦ₛ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold specAuth specHeapAuth specHeapFrag
@@ -191,6 +211,7 @@ theorem spec_auth_lookup_heap {e : Exp rT} {σ : State rT} {l : Loc} {v : Val rT
   obtain ⟨_, _, _, hget, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
   exact LocHeap.get?_of_asAgree_get? hget hinc
 
+/-- Overwriting a spec location updates the authoritative heap and the points-to together. -/
 theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val rT} :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ -∗ l ↦ₛ v ==∗
       specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)⟩ ∗
@@ -205,6 +226,7 @@ theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val 
   simp only [State.update_heap, LocHeap.asAgree_insert]
   iframe
 
+/-- Allocating a fresh spec location. -/
 theorem spec_auth_heap_alloc {e : Exp rT} {σ : State rT} (v : Val rT) :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ ==∗
       specAuth ⟨e, σ.update_heap
@@ -220,6 +242,7 @@ theorem spec_auth_heap_alloc {e : Exp rT} {σ : State rT} (v : Val rT) :
   simp only [State.update_heap, LocHeap.asAgree_insert]
   iframe
 
+/-- A tape points-to `l ↪ₛ t` agrees with the authoritative tapes. -/
 theorem spec_auth_lookup_tape {e : Exp rT} {σ : State rT} {l : Loc} {t : Tape} :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ -∗ l ↪ₛ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold specAuth specTapesAuth specTapesFrag
@@ -230,6 +253,7 @@ theorem spec_auth_lookup_tape {e : Exp rT} {σ : State rT} {l : Loc} {t : Tape} 
   obtain ⟨_, _, _, hget, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
   exact LocHeap.get?_of_asAgree_get? hget hinc
 
+/-- Overwriting a spec tape updates the authoritative tapes and the points-to together. -/
 theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape} :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ -∗ l ↪ₛ t ==∗
       specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)⟩ ∗
@@ -244,6 +268,7 @@ theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape
   simp only [State.update_tapes, LocHeap.asAgree_insert]
   iframe
 
+/-- Allocating a fresh spec tape. -/
 theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
     ⊢@{IProp GF} specAuth ⟨e, σ⟩ ==∗
       specAuth ⟨e, σ.update_tapes
@@ -259,9 +284,10 @@ theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
   simp only [State.update_tapes, LocHeap.asAgree_insert]
   iframe
 
-/-! ## Allocation
+/-! ## Allocation -/
 
-Produces only the authoritative state and `⤇ e`; heap and tape fragments are not allocated. -/
+/-- Initialises the spec ghost state for configuration `⟨e, σ⟩`, giving `specAuth` and `⤇ e`
+(no heap or tape fragments). -/
 theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
     (e : Exp rT) (σ : State rT) :
     ⊢@{IProp GF} |==> ∃ IS : SpecGS rT GF,
@@ -288,7 +314,9 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
 
 end Algebra
 
-/-! ## Spec-side tapes over plain integers (analogue of `appNatTape`) -/
+/-! ## Spec tapes over plain integers
+
+Analogue of `appNatTape`. -/
 
 section NatSpecTape
 
@@ -301,6 +329,7 @@ noncomputable def specNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
 
 notation:51 l:51 " ↪ₛN⟨" z:51 "; " ns:51 "⟩" => specNatTape l z ns
 
+/-- An empty integer tape is an empty spec tape. -/
 theorem spec_natTape_to_empty {l : Loc} {z : Int} :
     specNatTape (GF := GF) l z [] ⊢ l ↪ₛ ⟨z, []⟩ := by
   unfold specNatTape
@@ -308,6 +337,7 @@ theorem spec_natTape_to_empty {l : Loc} {z : Int} :
   obtain rfl := List.map_eq_nil_iff.mp hmap
   iexact Hl
 
+/-- An empty spec tape is an empty integer tape. -/
 theorem spec_empty_to_natTape {l : Loc} {z : Int} :
     (l ↪ₛ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢@{IProp GF}
       specNatTape l z [] := by
@@ -317,6 +347,7 @@ theorem spec_empty_to_natTape {l : Loc} {z : Int} :
   isplitr; · ipureintro; rfl
   iexact Hl
 
+/-- Reading the head of an integer tape exposes the head of the spec tape, with a way back. -/
 theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
     specNatTape (GF := GF) l z (n :: ns) ⊢
       iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z })
@@ -336,11 +367,12 @@ theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
 
 end NatSpecTape
 
-/-! ## Two full spec fragments at one location are inconsistent -/
+/-! ## Exclusivity of points-to assertions -/
 
 section ValidHelpers
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 
+/-- Two heap points-to assertions at one location are contradictory. -/
 theorem specHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
     ⊢@{IProp GF} specHeapFrag l v1 -∗ specHeapFrag l v2 -∗ False := by
   unfold specHeapFrag
@@ -350,6 +382,7 @@ theorem specHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
   exfalso
   exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
 
+/-- Two tape points-to assertions at one location are contradictory. -/
 theorem specTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
     ⊢@{IProp GF} specTapesFrag l t1 -∗ specTapesFrag l t2 -∗ False := by
   unfold specTapesFrag

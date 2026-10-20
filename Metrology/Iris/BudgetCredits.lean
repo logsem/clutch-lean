@@ -14,12 +14,15 @@ import Metrology.Iris.ErrorCredits
 # Budget credits
 
 The credit camera Micrometer's wp uses: authority `●↯b s` in the state interpretation, fragments
-`↯b c` held by the user (Rocq `gconeUR`).
+`↯b c` held by the user (Rocq `gconeUR`). Main results: `split`/`combine`, `supply_decrease`,
+`supply_increase`, `bc_alloc`.
 -/
 
 @[expose] public section
 
 open Iris
+
+/-! ## The camera -/
 
 /-- Budgets as a camera: the operation is `+`, with unit `0` and no validity bound. -/
 def BudgetCredit (B : Type*) : Type _ := B
@@ -63,6 +66,8 @@ theorem alloc_local_update : (s, 0) ~l~> (s + c, c) :=
 
 end BudgetCredit
 
+/-! ## Ghost state and the resources `●↯b`, `↯b` -/
+
 /-- The ghost-state slot for an authoritative budget camera. -/
 class BudgetCreditPreGS (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
   bc : ElemG GF (constOF (Auth (BudgetCredit B)))
@@ -92,6 +97,14 @@ end Resources
 namespace BudgetCredit
 
 variable {B : Type} [AddCommMonoid B] {GF : BundledGFunctors} [IBC : BudgetCreditGS B GF]
+
+/-- Credits are timeless. -/
+instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
+
+/-- The authoritative budget is timeless. -/
+instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_timeless
+
+/-! ### Splitting and combining credits -/
 
 /-- Fragments add like the budgets they carry. -/
 theorem frag_add {a b : B} :
@@ -125,6 +138,8 @@ theorem weaken [LE B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
 /-- The zero credit is free. -/
 theorem zero : ⊢@{IProp GF} |==> ↯b (0 : B) :=
   iOwn_unit (ε := UCMRA.unit)
+
+/-! ### Authority and credits -/
 
 /-- A credit never exceeds the authoritative budget. -/
 theorem supply_bound [LE B] [CanonicallyOrderedAdd B] {s c : B} :
@@ -165,11 +180,7 @@ theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSu
     ↯b a ⊢@{IProp GF} ↯b b ∗ ↯b (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
-/-- Credits are timeless. -/
-instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
-
-/-- The authoritative budget is timeless. -/
-instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_timeless
+/-! ### Amplification -/
 
 /-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1`, where `s` embeds additive error
 into budgets. Unlike error credits, `↯b (s 1)` is not contradictory, so the caller supplies the exit
@@ -194,6 +205,8 @@ theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} 
       %(hn.trans (le_of_eq (by ring))) Hε
 
 end BudgetCredit
+
+/-! ## Allocation -/
 
 /-- Allocating a fresh budget `b` yields both the authority and a credit `b`. -/
 theorem bc_alloc {B : Type} [AddCommMonoid B] {GF : BundledGFunctors}

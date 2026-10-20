@@ -7,7 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response on two bits
 
-Proved zero-concentrated differentially private in
+Defines `rr2`, randomized response run on two private bits. Its zCDP and DP proofs are in
 `Micrometer/Examples/RandomizedResponse/Twice`. -/
 
 namespace ProbLang

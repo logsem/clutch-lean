@@ -4,7 +4,10 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.Bridges.AddCoupl
 public import Metrology.Couplings.Divergences.Tv
 
-/-! Adequacy at total variation: the generic statements at `codensity tv`, as additive couplings. -/
+/-! # Adequacy at total variation
+
+The generic adequacy theorems at `codensity tv`, restated as additive couplings `AddCoupl ε` (or as
+`μ S ≤ ν S + ε`), plus a left-step rule against a frozen right state. -/
 
 @[expose] public section
 
@@ -16,11 +19,14 @@ open Iris Iris.BI ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 
 variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
 
+/-! ## Unary adequacy at `tv` -/
+
 section
 variable [MeasurableSingletonClass rT] [AppPreGS rT GF] [SpecPreGS rT GF]
   [BudgetCreditPreGS ℝ≥0∞ GF] [InvGpreS GF]
 
-/-- `wp_adequacy` at `tv`: an additive coupling of the limit executions. -/
+/-- A `wp` proof at `codensity tv` with credit `ε` gives an additive coupling of the limit
+executions (`wp_adequacy`). -/
 theorem wp_adequacy_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε -∗
@@ -28,7 +34,7 @@ theorem wp_adequacy_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal) (φ : 
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
-/-- `wp_adequacy_error_lim` at `tv`. -/
+/-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_error_lim`). -/
 theorem wp_adequacy_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
@@ -47,7 +53,7 @@ theorem wp_adequacy_div_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
 
-/-- `wp_adequacy_div_error_lim` at `tv`. -/
+/-- As `wp_adequacy_div_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_div_error_lim`). -/
 theorem wp_adequacy_div_error_lim_tv (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢@{IProp GF} ⤇ e' -∗ ↯b ε' -∗
@@ -66,7 +72,10 @@ theorem wp_adequacy_mass_tv (e e' : Exp rT) (σ σ' : State rT) (φ : Val rT →
 
 end
 
-/-- `approximates_coupling` at `tv`. -/
+/-! ## Relational adequacy at `tv` -/
+
+/-- A refinement at `codensity tv` from credit `ε` gives an additive coupling with error `ε`
+(`approximates_coupling`). -/
 theorem approximates_coupling_tv [MeasurableSingletonClass rT] [RefinesPreGS rT ℝ≥0∞ GF]
     (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF), lrel rT GF)
     (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT) (ε : ENNReal)
@@ -77,7 +86,8 @@ theorem approximates_coupling_tv [MeasurableSingletonClass rT] [RefinesPreGS rT 
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (approximates_coupling A φ e e' σ σ' ε HA Hlog).addCoupl
 
-/-- `refines_coupling` at `tv`. -/
+/-- A refinement at `codensity tv` gives an additive coupling with error `0`
+(`refines_coupling`). -/
 theorem refines_coupling_tv [MeasurableSingletonClass rT] [RefinesPreGS rT ℝ≥0∞ GF]
     (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF), lrel rT GF)
     (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
@@ -87,6 +97,8 @@ theorem refines_coupling_tv [MeasurableSingletonClass rT] [RefinesPreGS rT ℝ�
       ⊢@{IProp GF} refines (codensity tv) ⊤ e e' (A IR IBC)) :
     AddCoupl 0 {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (refines_coupling A φ e e' σ σ' HA Hlog).addCoupl
+
+/-! ## Stepping against a frozen right state -/
 
 section
 variable [MeasurableSingletonClass rT] [MicrometerWpGS (rT := rT) GF]
@@ -101,6 +113,8 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     iprop% (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
       progCoupl (codensity tv.{0}) e₁ σ₁ e₁' σ₁' ε Z := by
   iintro H
+  -- A Dirac measure is concentrated on `σ₁'`, so the coupling can be restricted to `p.2 = σ₁'`;
+  -- the right side is then the erasable `dret σ₁'`.
   have hconc : MeasureTheory.Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
     rw [MeasureTheory.Measure.dirac_apply' _ (by measurability)]; simp
   have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}

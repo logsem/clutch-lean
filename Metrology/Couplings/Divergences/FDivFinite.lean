@@ -2,9 +2,13 @@ module
 
 public import Metrology.Couplings.Divergences.FDivPartition
 
-/-! Thm. 4.6: a chain rule proved between finite spaces holds between all spaces (Approximate Span
-Liftings, §4). Push the output to `Fin N` (`fDiv_eq_iSup_map`), then bucket inputs by the dyadic
-cells of their kernels' point masses (`disc`/`rep`), which converges (`tendsto_fDiv_bind_disc`). -/
+/-! # Finite chain rules lift to general spaces
+
+Main result `fDiv_comp_le_of_finite` (tutorial (M5), Thm. 4.6 of Approximate Span Liftings): an
+`f`-divergence chain rule proved on finite spaces holds on all spaces, by pushing the output to
+`Fin N` (`fDiv_eq_iSup_map`) and bucketing inputs by dyadic cells (`disc`/`rep`,
+`tendsto_fDiv_bind_disc`).
+Also the additive chain rule from split perspectives (`fDiv_comp_le_of_perspSplit`). -/
 
 @[expose] public section
 
@@ -134,6 +138,7 @@ theorem measurable_disc (hκ : Measurable κ) (hη : Measurable η) (n : ℕ) :
   have hS := Measure.measurable_coe (.of_discrete : MeasurableSet {(⟨i⟩ : ULift.{u} (Fin N))})
   exact ((measurable_cell n).comp (hS.comp hκ)).prodMk ((measurable_cell n).comp (hS.comp hη))
 
+/-- `rep` is measurable, since its domain is finite. -/
 theorem measurable_rep [Nonempty X] (n : ℕ) : Measurable (rep κ η n) :=
   (measurable_of_countable fun j ↦ rep κ η n ⟨j⟩).comp measurable_down
 
@@ -292,7 +297,7 @@ theorem fDiv_eq_iSup_map (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
   simp only [Measure.map_apply hk' (measurable_down (measurableSet_singleton _))]
   exact le_rfl
 
-/-! ## Approximation and the finite route -/
+/-! ## From finite chain rules to general ones (M5) -/
 
 /-- Binding through the discretised input approximates the `f`-divergence of the binds
 (Thm. 4.8, App. C.3). -/
@@ -395,7 +400,7 @@ theorem fDiv_comp_le_of_finite (hf : ConvexOn ℝ (Ici 0) f)
   fDiv_comp_le_of_finite_of_mass hf hf_cont hg hg_cont hh hh_cont hchain (fun _ _ ↦ True)
     (fun _ ↦ hfin) κ η fun _ ↦ trivial
 
-/-! ## Additive chain rules from split perspectives -/
+/-! ## Additive chain rule from split perspectives -/
 
 /-- The perspective of `f` at a product splits into those of `f₁` and `f₂`, weighted by convex
 combinations with coefficients `β, β'` (condition (A') of Sato–Katsumata, Prop. 1). -/

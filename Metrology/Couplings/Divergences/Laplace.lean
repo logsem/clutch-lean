@@ -4,7 +4,10 @@ public import Mathlib.Probability.Distributions.Bernoulli
 public import Mathlib.Probability.Distributions.Exponential
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! DP bounds for Bernoulli and Laplace distributions, and the Laplace mechanism (Approximate Span
+/-! # Laplace and Bernoulli DP bounds
+
+The Laplace distribution, and the `(ε, 0)`-DP bounds for Bernoulli and Laplace leaves
+(`dp_bernoulli_symm`, `dp_laplace`), ending in `Mechanism.DP_laplaceMech` (Approximate Span
 Liftings, Fig. 2). -/
 
 @[expose] public section
@@ -139,6 +142,7 @@ theorem dp_laplace {a a' r : ℝ} (h : |a - a'| ≤ r) (b : ℝ≥0) :
   rw [expBudget_ofReal (div_nonneg ((abs_nonneg _).trans h) b.coe_nonneg), laplace, laplace,
     withDensity_apply _ hS, withDensity_apply _ hS,
     ← lintegral_const_mul _ (measurable_laplacePDF _ _)]
+  -- pointwise: `exp (-|x - a| / b) ≤ exp (r / b) * exp (-|x - a'| / b)` by the triangle inequality
   refine setLIntegral_mono (by fun_prop) fun x _ ↦ ?_
   rw [laplacePDF, laplacePDF, ← ofReal_mul (Real.exp_pos _).le]
   refine ofReal_le_ofReal ?_

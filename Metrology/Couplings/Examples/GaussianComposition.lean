@@ -2,8 +2,11 @@ module
 
 public import Metrology.Couplings.Divergences.GaussianRenyi
 
-/-! `k` Gaussian queries composed through the zCDP lifting are `(ε, δ)`-DP with `ε` of order `√k`
-(Approximate Span Liftings, §§4–5). -/
+/-! # Gaussian composition
+
+`gaussianMechPow σ k` runs `k` Gaussian queries; the zCDP lifting composes them
+(`zcdpLifting_rel_gaussianMechPow`), giving `(ε, δ)`-DP with `ε` of order `√k`
+(`DP_gaussianMechPow_sqrt`; Approximate Span Liftings, §§4–5). -/
 
 @[expose] public section
 
@@ -11,6 +14,8 @@ open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence Real
 open scoped ENNReal NNReal
 
 namespace Mechanism
+
+/-! ## `k` independent Gaussian queries -/
 
 /-- Splitting off the first coordinate of a tuple of reals. -/
 noncomputable abbrev consEquiv (k : ℕ) : (Fin (k + 1) → ℝ) ≃ᵐ ℝ × (Fin k → ℝ) :=
@@ -52,6 +57,8 @@ theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
   | succ k ih =>
     rw [gaussianMechPow_succ_apply, ih]
     exact ((measurePreserving_piFinSuccAbove (fun _ ↦ gaussianReal a (σ ^ 2)) 0).symm _).map_eq
+
+/-! ## Composition in the zCDP lifting and DP bounds -/
 
 variable {σ : ℝ≥0} {r δ : ℝ}
 

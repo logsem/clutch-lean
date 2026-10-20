@@ -9,7 +9,11 @@ meta import Metrology.Meta
 
 @[expose] public section
 
-/-! # Measurable space on values -/
+/-! # Measurable space on values
+
+The σ-algebra on `Val α` (the pullback along `Val.fst`), with measurability of `Val.fst`, `Val.mk`
+and `Exp.ofVal`, and measurable singletons.
+-/
 
 noncomputable section ProbLangMeasures
 
@@ -20,26 +24,28 @@ namespace ProbLang
 /-- Proofs that `e` is a value carry the discrete σ-algebra. -/
 instance instMeasurableSpaceIsVal {α : Type _} {e : Exp α} : MeasurableSpace (IsVal e) := ⊤
 
-/-- The comap of `Val.fst`. `Sigma.instMeasurableSpace` would be `⊤` here (since `IsVal e`
-is `⊤`), breaking measurability of `Exp.toVal?`. `Val` is a `structure`, not a `Sigma`; the
-high priority keeps this instance over any generic one. -/
+/-- The σ-algebra on values: the pullback along `Val.fst`. A `Sigma` instance would be `⊤`
+here (since `IsVal e` is `⊤`), breaking measurability of `Exp.toVal?`; the high priority keeps
+this one. -/
 instance (priority := 10000) instMeasurableSpaceVal {α : Type _} [MeasurableSpace α] :
     MeasurableSpace (Val α) :=
   MeasurableSpace.comap Val.fst inferInstance
 
 namespace Val
 
+/-- `Val.fst` is measurable, by definition of the σ-algebra. -/
 @[fun_prop]
 theorem fst.measurable {α : Type _} [MeasurableSpace α] :
     Measurable (Val.fst : Val α → Exp α) :=
   fun _ hS => MeasurableSpace.measurableSet_comap.mpr ⟨_, hS, rfl⟩
 
+/-- `Exp.ofVal` is measurable (it is `Val.fst`). -/
 @[fun_prop]
 theorem _root_.ProbLang.Exp.ofVal.measurable {α : Type _} [MeasurableSpace α] :
     Measurable (Exp.ofVal : Val α → Exp α) :=
   Val.fst.measurable
 
-/-- Trivial: the σ-algebra on `Σ e, IsVal e` is `⊤`. -/
+/-- `Val.mk` is measurable on `Σ e, IsVal e`, whose σ-algebra is `⊤`. -/
 @[fun_prop]
 theorem mk.measurable {α : Type _} [MeasurableSpace α] :
     Measurable (fun (p : Σ e : Exp α, IsVal e) => (Val.mk p.1 p.2 p.2.lc : Val α)) := by

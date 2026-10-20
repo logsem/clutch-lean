@@ -2,9 +2,12 @@ module
 
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 
-/-! A worked example of adaptive Rényi composition through the escort rule: randomized response,
-followed by a second randomized response only when the first report is `true` (Rocq
-`escort_adaptive`). -/
+/-! # Adaptive Rényi example: two-stage randomized response
+
+A second randomized response runs only when the first report is `true`. The escort rule
+(`codensity_renyi_bind_escort`) gives Rényi budget `log (19 / 12)` at order `2`
+(`renyiDivergence_adaptive`, Rocq `escort_adaptive`), strictly below the non-adaptive
+`2 · log (3 / 2)` (`log_nineteen_twelfths_lt`). -/
 
 @[expose] public section
 
@@ -46,7 +49,7 @@ instance isProbabilityMeasure_adaptive (d : Bool) : IsProbabilityMeasure (adapti
   unfold adaptive
   infer_instance
 
-/-! ## The budget -/
+/-! ## The budget of each stage -/
 
 /-- The multiplier of the expensive branch is `3 / 2`. -/
 theorem expBudget_log_three_halves :
@@ -64,6 +67,8 @@ theorem renyiDivergence_randResp :
   rw [persp_of_ne_zero (by norm_num), persp_of_ne_zero (by norm_num), ← EReal.coe_add,
     ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
   norm_num [Real.exp_log]
+
+/-! ## The adaptive bound -/
 
 /-- The escort head premise, with witness kernel `Kernel.id`: the first stage is within Rényi
 budget `log (19 / 12)` of its neighbour reweighted by `e^{-ρ₂}`. -/
@@ -98,6 +103,8 @@ theorem renyiDivergence_adaptive :
   · change (codensity (renyiDivergence 2)).Rel (ENNReal.ofReal (Real.log (3 / 2))) (· = ·)
       ((randResp false).map (Prod.mk true)) ((randResp true).map (Prod.mk true))
     exact (codensity_complete renyiDivergence_randResp).map fun _ _ h ↦ h ▸ rfl
+
+/-! ## Adaptivity helps -/
 
 /-- The adaptive budget is strictly below the worst-case non-adaptive budget: the first stage's
 `log (3 / 2)` plus the largest second-stage cost. -/

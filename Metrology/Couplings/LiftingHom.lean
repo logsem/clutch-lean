@@ -2,7 +2,10 @@ module
 
 public import Metrology.Couplings.Codensity
 
-/-! Maps between graded liftings and regrading along a budget map (Rocq `morphism.v`,
+/-! # Lifting homomorphisms and regrading
+
+Monotone budget maps between graded liftings (`LiftingRelHom`, `LiftingHom`), and regrading a
+lifting along a budget map (`GradedLifting.comap`) with its transport lemmas (Rocq `morphism.v`,
 `regrade.v`). -/
 
 @[expose] public section
@@ -11,7 +14,7 @@ universe u v w x
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting
 
-/-! ## Homomorphisms -/
+/-! ## Homomorphisms between liftings -/
 
 /-- A monotone budget map carrying every relational lifting of `L₁` to one of `L₂` (Rocq
 `CouplingMorphism`). Used for conversions that apply only at the end of a proof, such as Rényi/zCDP
@@ -43,7 +46,7 @@ variable {B₁ : Type v} {B₂ : Type w} {B₃ : Type x} [Preorder B₁] [Zero B
   {L₂ : GradedLifting.{u} B₂} {L₃ : GradedLifting.{u} B₃}
 
 variable (L₁ : GradedLifting.{u} B₁) in
-/-- The identity relational homomorphism. -/
+/-- The identity map as a relational homomorphism. -/
 def id : LiftingRelHom L₁ L₁ where
   map := fun b ↦ b
   mono := monotone_id
@@ -55,7 +58,7 @@ theorem id_map (b : B₁) : (id L₁).map b = b :=
 
 variable {L₁ : GradedLifting.{u} B₁}
 
-/-- Composition of relational homomorphisms. -/
+/-- Composition of relational homomorphisms, composing the budget maps. -/
 def comp (G : LiftingRelHom L₂ L₃) (F : LiftingRelHom L₁ L₂) : LiftingRelHom L₁ L₃ where
   map := G.map ∘ F.map
   mono := G.mono.comp F.mono
@@ -74,7 +77,7 @@ variable {B₁ : Type v} {B₂ : Type w} {B₃ : Type x} [Preorder B₁] [Preord
   {L₂ : GradedLifting.{u} B₂} {L₃ : GradedLifting.{u} B₃}
 
 variable (L₁ : GradedLifting.{u} B₁) in
-/-- The identity homomorphism. -/
+/-- The identity map as a homomorphism. -/
 def id : LiftingHom L₁ L₁ where
   map := fun b ↦ b
   mono := monotone_id
@@ -86,7 +89,7 @@ theorem id_map (b : B₁) : (id L₁).map b = b :=
 
 variable {L₁ : GradedLifting.{u} B₁}
 
-/-- Composition of homomorphisms. -/
+/-- Composition of homomorphisms, composing the budget maps. -/
 def comp (G : LiftingHom L₂ L₃) (F : LiftingHom L₁ L₂) : LiftingHom L₁ L₃ where
   map := G.map ∘ F.map
   mono := G.mono.comp F.mono
@@ -101,7 +104,10 @@ end LiftingHom
 
 namespace GradedLifting
 
-/-! ## Regrading -/
+/-! ## Regrading along a budget map
+
+`L.comap φ` reads budget and leftovers through `φ`; the lemmas below say which lifting
+properties survive, under which conditions on `φ`. -/
 
 variable {B : Type v} {B' : Type w} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
   {φ : B' → B} {L : GradedLifting.{u} B} {b : B'} {S : X → Y → Prop} {μ : Measure X}
@@ -120,7 +126,7 @@ theorem comap_def {R : X → Y → B'} :
 theorem comap_comap {B'' : Type*} {ψ : B'' → B'} : (L.comap φ).comap ψ = L.comap (φ ∘ ψ) :=
   rfl
 
-/-- Regrading keeps relations when `φ` keeps `0` and `⊤`. -/
+/-- Regrading keeps `Rel` when `φ` keeps `0` and `⊤`. -/
 theorem comap_rel_iff [Zero B] [Top B] [Zero B'] [Top B'] (h0 : φ 0 = 0) (htop : φ ⊤ = ⊤) :
     (L.comap φ).Rel b S μ ν ↔ L.Rel (φ b) S μ ν := by
   have : (fun x y ↦ φ (relCost (B := B') S x y)) = relCost S := by
@@ -212,13 +218,13 @@ theorem isTopAbsorbing_comap [Top B] [Top B'] [L.IsTopAbsorbing] (htop : φ ⊤ 
     (L.comap φ).IsTopAbsorbing :=
   ⟨fun _ _ _ ↦ comap_def.2 (htop ▸ IsTopAbsorbing.top _ _ _)⟩
 
-/-- The regraded lifting maps back to the original along `φ`. -/
+/-- Regrading is a homomorphism: `φ` itself maps `L.comap φ` to `L`. -/
 def comapHom [Preorder B] [Preorder B'] (hφ : Monotone φ) : LiftingHom (L.comap φ) L where
   map := φ
   mono := hφ
   map_lift h := h
 
-/-! ## Regrading codensity liftings -/
+/-! ### Regrading codensity liftings -/
 
 open GradedDivergence
 
@@ -244,12 +250,14 @@ theorem isLawful_comap_codensity [AddCommMonoid B] [PartialOrder B] [OrderTop B]
 
 end GradedLifting
 
+/-! ## From `LiftingHom` to `LiftingRelHom` -/
+
 namespace LiftingHom
 
 variable {B₁ : Type v} {B₂ : Type w} [Preorder B₁] [Preorder B₂] {L₁ : GradedLifting.{u} B₁}
   {L₂ : GradedLifting.{u} B₂}
 
-/-- A homomorphism keeping `⊤` carries relational liftings. -/
+/-- A homomorphism keeping `⊤` is a relational homomorphism. -/
 def toLiftingRelHom [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
     [CanonicallyOrderedAdd B₂] [L₂.IsLawful] (F : LiftingHom L₁ L₂) (htop : F.map ⊤ = ⊤) :
     LiftingRelHom L₁ L₂ where

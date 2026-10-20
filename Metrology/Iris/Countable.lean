@@ -17,6 +17,8 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 
 namespace ProbLang
 
+/-! ## `Pos` arithmetic -/
+
 theorem Pos.toNat_succ (p : Pos) : p.succ.toNat = p.toNat + 1 := by
   induction p with
   | xH => rfl
@@ -28,13 +30,15 @@ theorem Pos.toNat_ofNat (n : Nat) : (Pos.ofNat n).toNat = n + 1 := by
   | zero => rfl
   | succ k ih => simp [Pos.ofNat, Pos.toNat_succ, ih]
 
+/-! ## Instances -/
+
 /-- Naturals encode as positive numbers by successor. -/
 instance posCountable_nat : Pos.Countable Nat where
   encode n := Pos.ofNat n
   decode p := some (p.toNat - 1)
   decode_encode n := by simp [Pos.toNat_ofNat]
 
-/-- Encode `Int` into `Nat` via the standard zigzag: `n ≥ 0 ↦ 2n`, `n < 0 ↦ -2n - 1`. -/
+/-- Integers encode through `Nat` by the zigzag: `n ≥ 0 ↦ 2n`, `n < 0 ↦ -2n - 1`. -/
 instance posCountable_int : Pos.Countable Int where
   encode z :=
     Pos.Countable.encode (A := Nat)

@@ -17,14 +17,10 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 /-! # Measurable space on expressions
 
-Derives the σ-algebra on `Exp`. -/
+The σ-algebra on `Exp`, derived with the `MeasurableSpace` handler (`CylinderGen.lean`); it makes
+every constructor a measurable embedding. -/
 
 namespace ProbLang.Exp
-
-/-! ### Generated definitions
-
-`Shape`, `Leaves`, the σ-algebra and its measurability lemmas, derived with
-`MeasurableSpace` (`CylinderGen.lean`). -/
 
 deriving instance MeasurableSpace for Exp
 

@@ -6,8 +6,9 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Zcdp
 
 /-! # Randomized response is tCDP
 
-The zCDP coupling of one round maps along `zcdpToTcdp`, so `k` rounds are `k ln 3`-tCDP below
-any order `ω`; mapping along `tcdpToDp` gives DP at every slack. -/
+Maps the zCDP coupling of one round along `zcdpToTcdp`: `k` rounds are `k ln 3`-tCDP below any
+order `ω` (`rrCount_tCDP`), and mapping along `tcdpToDp` gives DP at every slack `δ > 0`
+(`rrCount_DP_of_tCDP`). -/
 
 open GradedLifting GradedDivergence
 open scoped ENNReal
@@ -16,7 +17,7 @@ namespace ProbLang.RandomizedResponse
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (ω : ℝ)
 
-/-- One round couples at `ln 3`, the image of its zCDP coupling. -/
+/-- One round is a tCDP coupling at `ln 3`, the image of its zCDP coupling. -/
 theorem rrCoupling_tcdp : RRCoupling (tcdpLifting ω) (ENNReal.ofReal (Real.log 3)) := fun b b' ↦ by
   simpa using (LiftingRelHom.zcdpToTcdp ω).map_rel (rrCoupling_zcdp b b')
 

@@ -4,7 +4,10 @@ public import Mathlib.MeasureTheory.Measure.FiniteMeasure
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Prod
 
-/-! General facts about measures, and about the extended reals they take values in. -/
+/-! # Measure facts
+
+General lemmas about binding, pushing forward and suprema of measures, the measurable space on
+`Option X`, and small `ℝ≥0∞`, `EReal` and finite-sum bounds used throughout the development. -/
 
 @[expose] public section
 
@@ -18,6 +21,9 @@ namespace MeasureTheory.Measure
 variable {X X' X'' Y Z Φ Ψ : Type*} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace X'']
   [MeasurableSpace Y] [MeasurableSpace Z] [MeasurableSpace Φ] [MeasurableSpace Ψ]
 
+/-! ## Product, bind and map -/
+
+/-- The product of two measurable families of finite measures is measurable. -/
 @[fun_prop]
 theorem _root_.Measurable.measure_prod {f : Z → Measure X} {g : Z → Measure Y}
     (hf : Measurable f) (hg : Measurable g) [∀ z, IsFiniteMeasure (f z)]
@@ -38,6 +44,8 @@ theorem bind_map_eq {d : Φ → X} {h : X → Measure Y} (μ : Measure Φ)
     (hd : Measurable d := by fun_prop) (hh : Measurable h := by fun_prop) :
     (μ.map d).bind h = μ.bind (h ∘ d) := by
   rw [bind, bind, map_map hh hd]
+
+/-! ## Suprema of increasing sequences of measures -/
 
 /-- The supremum of an increasing sequence of measures is computed setwise. -/
 theorem iSup_apply_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {s : Set X}
@@ -88,7 +96,9 @@ theorem map_iSup_of_monotone {μ : ℕ → Measure X} (hμ : Monotone μ) {f : X
 
 end MeasureTheory.Measure
 
-/-- A set of `Option X` is measurable when its points under `some` are. -/
+/-! ## Measurable structure on `Option X` and `ULift` -/
+
+/-- The measurable space on `Option X`, pulled back along its equivalence with `X ⊕ PUnit`. -/
 instance Option.instMeasurableSpace {X : Type*} [MeasurableSpace X] : MeasurableSpace (Option X) :=
   .comap (Equiv.optionEquivSumPUnit.{0, _} X) inferInstance
 
@@ -97,7 +107,7 @@ theorem measurable_some {X : Type*} [MeasurableSpace X] : Measurable (some : X �
   refine measurable_comap_iff.2 ?_
   simpa [Function.comp_def, Equiv.optionEquivSumPUnit] using measurable_inl
 
-/-- Eliminating an option measurably. -/
+/-- `Option.elim` with a measurable branch for `some` is measurable. -/
 @[fun_prop]
 theorem measurable_option_elim {X Z : Type*} [MeasurableSpace X] [MeasurableSpace Z] {g : X → Z}
     (hg : Measurable g) (z : Z) : Measurable fun o : Option X ↦ o.elim z g := by
@@ -112,6 +122,8 @@ theorem measurable_option_elim {X Z : Type*} [MeasurableSpace X] [MeasurableSpac
 instance discreteMeasurableSpace_uLift {α : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α] :
     DiscreteMeasurableSpace (ULift α) :=
   ⟨fun _ ↦ measurable_down (t := ULift.up ⁻¹' _) .of_discrete⟩
+
+/-! ## Integrals over finite measures and finite spaces -/
 
 namespace MeasureTheory
 
@@ -156,6 +168,8 @@ theorem lintegral_ofReal_eq_sum {Z : Type*} [Fintype Z] [MeasurableSpace Z]
 
 end MeasureTheory
 
+/-! ## `ℝ≥0∞` bounds -/
+
 /-- Capping at `n` keeps a bound `a ≤ c b` with `1 ≤ c`. -/
 theorem ENNReal.min_le_mul_min {a b c n : ℝ≥0∞} (h : a ≤ c * b) (hc : 1 ≤ c) :
     min a n ≤ c * min b n := by
@@ -184,6 +198,9 @@ theorem ENNReal.inv_mul_le_inv_mul_add {a d : ℕ} (ha : a ≠ 0) {S : ℝ≥0�
     _ = ((a : ℝ≥0∞) + d)⁻¹ * S + d / ((a : ℝ≥0∞) + d) := by
         rw [mul_one, mul_add, ENNReal.div_eq_inv_mul]
 
+/-! ## `EReal` multiplication -/
+
+/-- Multiplying by a constant distributes over a sum of nonnegative terms. -/
 theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) {x : ι → EReal}
     (hx : ∀ i ∈ s, 0 ≤ x i) : c * ∑ i ∈ s, x i = ∑ i ∈ s, c * x i := by
   classical
@@ -194,12 +211,15 @@ theorem EReal.mul_finset_sum_of_nonneg {ι : Type*} (s : Finset ι) (c : EReal) 
     rw [Finset.sum_insert hj, Finset.sum_insert hj,
       EReal.left_distrib_of_nonneg hx.1 (Finset.sum_nonneg hx.2), ih hx.2]
 
+/-- Dividing a bound `x ≤ c * y` by a positive real `c` flips it to `c⁻¹ * x ≤ y`. -/
 theorem EReal.le_coe_mul_iff {c : ℝ} (hc : 0 < c) {x y : EReal} :
     x ≤ c * y ↔ ((c⁻¹ : ℝ) : EReal) * x ≤ y := by
   have hc' : 0 < c⁻¹ := inv_pos.2 hc
   induction x <;> induction y <;>
     simp [EReal.coe_mul_top_of_pos hc, EReal.coe_mul_bot_of_pos hc, EReal.coe_mul_top_of_pos hc',
       EReal.coe_mul_bot_of_pos hc', ← EReal.coe_mul, inv_mul_le_iff₀ hc]
+
+/-! ## Sums over integer intervals -/
 
 /-- A sum composed with a map injective on `Ico 0 zL` and landing in `Ico 0 zR` is
 bounded by the full codomain sum. -/

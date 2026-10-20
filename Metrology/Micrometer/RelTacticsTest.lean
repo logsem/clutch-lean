@@ -5,7 +5,10 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # Smoke tests for the `rel_*` tactics -/
+/-! # Smoke tests for the `rel_*` tactics
+
+Each `example` proves a small refinement `REL[L] e << e' : τ` with the tactics of `RelTactics`
+(find the redex, apply the rule), grouped by the kind of step they exercise. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS
 open scoped AppGS
@@ -18,6 +21,8 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {hlc :
   [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B}
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
+
+/-! ## Pure steps -/
 
 /-- Pure steps on both sides, inside a non-empty context on the right. -/
 example (n : Int) :
@@ -36,6 +41,8 @@ example (n : Int) :
   rel_pure_l
   rel_values
 
+/-! ## Heap -/
+
 /-- Allocation, load and store on both sides, under a context. -/
 example :
     ⊢@{IProp GF} REL[L] (pl(let r := alloc(#1); r ← #2; !r + #0) : Exp rT) <<
@@ -48,6 +55,8 @@ example :
   rel_load_r
   rel_pures
   rel_values
+
+/-! ## Sampling and couplings -/
 
 /-- Coupling two unlabelled draws inside contexts, along the identity. -/
 example :
@@ -96,6 +105,8 @@ example (α : Loc) :
   rel_pures
   rel_values
 
+/-! ## Contexts and binds -/
+
 /-- `rel_bind_l` refocuses on a subprogram; `rel_apply_l` applies a user rule in context. -/
 example (H : ∀ (K : Ectx rT) t, (REL[L] K.fill pl(#7) << t : lrel_int) ⊢@{IProp GF}
       REL[L] K.fill pl(#3 + #4) << t : lrel_int) :
@@ -137,7 +148,9 @@ example :
   rel_pures_l
   rel_values
 
-/-- Couplings with spec tapes: an unlabelled draw against a tape, and two tapes. -/
+/-! ## Tape couplings -/
+
+/-- An unlabelled draw coupled with a spec tape by `rel_couple_UT`. -/
 example :
     ⊢@{IProp GF} REL[L] (pl(rand(#4, #.unit)) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, α)) : lrel_int := by
@@ -148,6 +161,7 @@ example :
   iintro %n Hα %_
   rel_values
 
+/-- Two tapes, one on each side, coupled by `rel_couple_TT`. -/
 example :
     ⊢@{IProp GF} REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, α)) : lrel_int := by
@@ -158,6 +172,8 @@ example :
   iframe Hα Hα'
   iintro %n Hα Hα' %_
   rel_values
+
+/-! ## Atomic rules, user rules and values -/
 
 /-- The `_atomic` forms leave the rule's premise. -/
 example (l : Loc) :

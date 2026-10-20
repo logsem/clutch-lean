@@ -2,10 +2,11 @@ module
 
 public import Metrology.Couplings.ApproximateCouplings
 
-/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ`.
+/-! # `(ε, δ)`-DP couplings (Approxis style)
 
-The older Approxis notion; `Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with
-`codensity tv` and `codensity dp`. -/
+`ARCoupling.DP ε δ S` is an approximate coupling with error map `x ↦ e^ε x + δ`; the main result
+is sequential composition `ARCoupling.DP.bind`. `Bridges/AddCoupl.lean` identifies the DP instance
+with `(codensity dp).Rel`. -/
 
 @[expose] public section
 
@@ -13,17 +14,17 @@ noncomputable section DPCoupling
 
 open MeasureTheory Measure EReal
 
-/-- The DP error map `x ↦ e^ε x + δ`; `exp ε` here is `expBudget ε` from `Divergences/Dp.lean`. -/
+/-- The DP error map `x ↦ e^ε x + δ`, where `exp ε` is `expBudget ε` from `Divergences/Dp.lean`. -/
 abbrev DPF (ε δ x : ENNReal) := exp ε * x + δ
 
 variable {α β α' β' : Type _}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [MeasurableSpace β']
 variable (ε δ : ENNReal)
 
-/-- An `(ε, δ)`-DP coupling. -/
+/-- An `(ε, δ)`-DP coupling of two measures along the relation `S`. -/
 abbrev ARCoupling.DP (S : Set (α × β)) := ARCoupling (DPF ε δ) S
 
-/-- A measure of mass at most `δ` is DP-coupled to anything along any relation. -/
+/-- A left measure of mass at most `δ` is DP-coupled to anything along any relation. -/
 theorem ARCoupling.DP.trivial_δ {μₗ : Measure α} {μᵣ : Measure β} {S} (Hδ : μₗ .univ ≤ δ) :
     ARCoupling.DP ε δ S μₗ μᵣ := by
   refine fun ⟨f, _, Hf⟩ _ _ => ?_
@@ -37,7 +38,7 @@ theorem ARCoupling.DP.dirac {a : α} {b : β} (S : Set (α × β)) :
   refine le_mul_of_one_le_left' ?_
   exact EReal.one_le_exp_iff.mpr <| EReal.coe_ennreal_nonneg ε
 
-/-- Sequential composition of DP couplings, adding the ε's and δ's; `δ'` is finite so it can be
+/-- Sequential composition of DP couplings: the ε's and δ's add. `δ'` is finite so it can be
 subtracted inside the left test. -/
 theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β → Measure β'} {S T}
     {μₗ μᵣ} (Hfm : Measurable f) (Hgm : Measurable g) (Huniv : μₗ .univ ≤ 1) (Hε : ε ≠ ⊤)
@@ -50,8 +51,9 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
     refine tsub_le_iff_left.mpr (.trans ?_ le_add_self)
     refine (lintegral_le_iSup_mul (f := f')).trans ?_
     exact Left.mul_le_one (iSup_le (Hf'b ·)) Hfsprob
-  -- outer test pair: left (∫ f' d(f a) - δ')⁺, right min 1 (e^{ε'} ∫ g' d(g b)); ordered on S by
-  -- Hbind
+  -- Idea: feed the first coupling the outer tests `F a = (∫ f' d(f a) - δ')⁺` and
+  -- `G b = min 1 (e^{ε'} ∫ g' d(g b))`; `Hbind` orders them on `S`, and the `δ'` slack is paid
+  -- outside while `e^{ε'}` is paid inside `G`.
   let F : CouplingFunction α := .mk (max 0 <| ∫⁻ y, f' y ∂ f · - δ') ⟨?Fm, fun a => ?Fb⟩
   case Fm =>
     refine measurable_const.max ?_

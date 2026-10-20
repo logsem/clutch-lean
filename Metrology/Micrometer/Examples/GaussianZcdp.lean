@@ -15,8 +15,9 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # Repeated Gaussian release is zCDP (Rocq `gen_zcdp_gaussian.v`)
 
-Each of `k` draws spends `(0, (a - a')² / (2 v))` in the zCDP lifting; `zcdpToDp` then gives DP
-with `ε` of order `√k`. Every result is conditional on the sampler spec `GaussSpec`. -/
+`release gauss a k` draws `k` Gaussian samples centred at `a`. Each draw spends
+`(0, (a - a')² / (2 v))` in `zcdpLifting`, so `release_zcdp` gives zCDP and `release_dp_sqrt` gives
+DP with `ε` of order `√k`. Every result is conditional on the sampler spec `GaussSpec`. -/
 
 open scoped ENNReal NNReal
 
@@ -28,15 +29,15 @@ namespace GaussianRelease
 
 variable {gauss : Val ℝ} {v : ℝ≥0}
 
-/-! ## The sampler spec -/
+/-! ## The sampler spec and the per-draw cost -/
 
 section Spec
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF] [BudgetCreditGS B GF]
 
-/-- `gauss #a` couples with a spec copy of `gauss #a'` like a primitive sampler with law
-`N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`). -/
+/-- The assumed spec of `gauss`: `gauss #a` couples with a spec copy of `gauss #a'` like a primitive
+sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`). -/
 def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :=
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
     IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →
@@ -49,12 +50,12 @@ end Spec
 /-- The zCDP cost `(a - a')² / (2 v)` of one release. -/
 noncomputable abbrev cost (v : ℝ≥0) (a a' : ℝ) : ℝ≥0∞ := ENNReal.ofReal ((a - a') ^ 2 / (2 * v))
 
-/-- The budget of `k + 1` releases splits off one release. -/
+/-- The budget of `k + 1` releases is one release's budget plus that of `k`. -/
 theorem budget_succ (k : ℕ) (ρ : ℝ≥0∞) :
     ((0 : ℝ≥0∞), ((k + 1 : ℕ) : ℝ≥0∞) * ρ) = (0, ρ) + (0, k * ρ) := by
   rw [Prod.mk_add_mk, add_zero, Nat.cast_succ, add_one_mul, add_comm]
 
-/-! ## The program logic proof -/
+/-! ## The program logic proof: `k` releases spend `k` times the cost -/
 
 section Logic
 
@@ -87,7 +88,8 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     wp_pure 6
     tp_pure 6
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
-    -- pairs evaluate the right component first: the recursive releases, then this draw
+    -- the pair evaluates the recursive releases first (spending `Hb₂`), then this draw
+    -- (spending `Hb₁`, coupled via `hgauss`)
     wp_bind (release gauss a k)
     tp_bind (release gauss a' k)
     iapply ih
@@ -121,7 +123,7 @@ theorem wp_release (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLifting gau
 
 end Logic
 
-/-! ## Adequacy: exit the logic -/
+/-! ## Adequacy: from the logic to a zCDP statement about the output laws -/
 
 /-- `k` releases at inputs `a` and `a'` couple along equal outputs in the zCDP lifting at
 `(0, k (a - a')² / (2 v))`. Conditional on the sampler spec `hgauss`. -/
@@ -135,7 +137,7 @@ theorem release_coupling_of (GF : BundledGFunctors) [AppPreGS ℝ GF] [SpecPreGS
   (wp_adequacy (GF := GF) _ _ σ σ' _ (· = ·) fun _ _ ↦
     wp_release hv (hgauss _ _) a a' k).mono le_rfl adequacyRel_eq_subset
 
-/-- The ghost state of the closed proofs. -/
+/-- The ghost state functors used to close the proofs. -/
 noncomputable abbrev GF₀ : BundledGFunctors := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)
 
 /-- `k` releases are `(0, k (a - a')² / (2 v))`-zCDP for inputs `a` and `a'`. Conditional on the

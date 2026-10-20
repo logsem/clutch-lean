@@ -5,8 +5,11 @@ public import Metrology.Couplings.DPCouplings
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Couplings.LiftingHom
 
-/-! Additive, expectation and test-function DP couplings are codensity liftings of `tv` and
-`dp` (Approximate Span Liftings, §6). -/
+/-! # Additive and DP couplings as codensity liftings
+
+Additive couplings, couplings in expectation and test-function DP couplings are the codensity
+liftings of `tv` and `dp`: `addCoupl_iff_codensity_tv`, `arCoupling_dp_iff_codensity`
+(Approximate Span Liftings, §6). -/
 
 @[expose] public section
 
@@ -18,7 +21,7 @@ open scoped ENNReal
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {ε δ : ℝ≥0∞} {μ : Measure X}
   {ν : Measure Y}
 
-/-! ## Total variation -/
+/-! ## Total variation: couplings in expectation and additive couplings -/
 
 /-- A total variation codensity lifting is a coupling in expectation. -/
 theorem expCoupl_of_codensity_tv {E : X → Y → ℝ≥0∞} (h : tv.codensity δ E μ ν) :
@@ -54,6 +57,8 @@ theorem addCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {S : Set (X × Y)
     AddCoupl δ S μ ν ↔ (codensity tv).Rel δ (fun x y ↦ (x, y) ∈ S) μ ν :=
   ⟨AddCoupl.codensity, Rel.addCoupl⟩
 
+/-! ### Using an additive coupling at a different cost or support -/
+
 /-- An additive coupling gives a coupling in expectation for any cost bounded on the relation. -/
 theorem expCoupl_of_addCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     {R : X → Y → Prop} {c : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞} (Hε : ε₁ + ε₂ ≤ δ)
@@ -80,7 +85,7 @@ theorem GradedLifting.Rel.tv_restrict_right [IsSubProbabilityMeasure μ] {S : X 
     (codensity tv).Rel δ (fun x y ↦ S x y ∧ y ∈ T) μ ν :=
   (h.addCoupl.concentrated_R hT hν).codensity
 
-/-! ## Differential privacy -/
+/-! ## Differential privacy: test-function DP couplings and the `tv` to `dp` maps -/
 
 /-- A test-function DP coupling is a DP codensity lifting. -/
 theorem ARCoupling.DP.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)}

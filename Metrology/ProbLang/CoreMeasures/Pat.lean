@@ -17,14 +17,10 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 /-! # Measurable space on patterns
 
-Derives the σ-algebra on `Pat`. -/
+The σ-algebra on `Pat`, derived with the `MeasurableSpace` deriver (`CylinderGen.lean`), which
+also generates `Shape`, `Leaves` and their measurability lemmas. -/
 
 namespace ProbLang.Pat
-
-/-! ### Generated definitions
-
-`Shape`, `Leaves`, the σ-algebra and its measurability lemmas, derived with
-`MeasurableSpace` (`CylinderGen.lean`). -/
 
 deriving instance MeasurableSpace for Pat
 

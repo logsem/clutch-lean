@@ -4,7 +4,10 @@ public import Metrology.ProbLang.Erasure.ExecN
 
 @[expose] public section
 
-/-! Iterated presampling and erasability up to the expression projection. -/
+/-! # Erasability up to expressions
+
+`ErasableExpr μ σ`: running from `μ` instead of `σ` leaves every `execN` expression distribution
+unchanged. Main results: presampling a tape, once or `n` times, is erasable in this sense. -/
 
 namespace ProbLang
 
@@ -51,6 +54,7 @@ theorem mass {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ) 
   simp at hboth
   exact hboth
 
+/-- An expression-erasable distribution is a probability measure. -/
 theorem isProbabilityMeasure {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ) :
     IsProbabilityMeasure μ :=
   ⟨h.mass⟩
@@ -91,6 +95,8 @@ theorem dbind [Countable rT]
   unfold asExpr at this
   exact this
 
+/-! ### Passage to the limit -/
+
 /-- Erasability passes from every bounded run to the limit (monotone convergence). -/
 theorem lim_exec
     {μ : Measure (State rT)} {σ : State rT} (h : ErasableExpr μ σ)
@@ -125,7 +131,8 @@ theorem lim_exec
 
 end ErasableExpr
 
-/-- Clutch `limprim_coupl_step_limprim` / `lim_exec_eq_erasure`, projected to expressions. -/
+/-- Presampling a tape leaves the limit expression distribution unchanged (Clutch
+`lim_exec_eq_erasure`). -/
 theorem limExec_tape_presample_expr_eq
     {σ : State rT} {α : Loc} {t : Tape} {e : Exp rT}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
@@ -135,11 +142,12 @@ theorem limExec_tape_presample_expr_eq
 
 /-! ## Iterated presampling -/
 
-/-- `n`-fold presampling on tape `α`; the `Nat.rec` in Clutch's `erasure.v` tape batching. -/
+/-- `n`-fold presampling on tape `α` (the iteration in Clutch's `erasure.v` tape batching). -/
 noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure (State rT)
   | 0 => Measure.dirac σ
   | n + 1 => (tapePresampleIter α σ n).bind (fun σ' => tapePresample σ' α)
 
+/-- After `n` presamples, tape `α` still exists almost surely, with its original bound. -/
 theorem tapePresampleIter_tape_bound_ae [Countable rT]
     {σ : State rT} {α : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (n : Nat) :
@@ -163,6 +171,7 @@ theorem tapePresampleIter_tape_bound_ae [Countable rT]
     refine MeasureTheory.ae_iff.mp (tapePresample_ae ht'' MeasurableSet.of_discrete fun n' => ?_)
     exact ⟨⟨Nb, bs ++ [n']⟩, by simp [State.update_tapes], hbound⟩
 
+/-- `n`-fold presampling of a tape leaves every `execN` expression distribution unchanged. -/
 theorem execN_tapePresampleIter_expr_eq [Countable rT]
     {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape} (n : Nat)
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :

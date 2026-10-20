@@ -2,7 +2,7 @@ module
 
 public meta import Metrology.Meta.Discrete
 
--- step modalities and `wp`
+-- `specCoupl`, `progCoupl`, `wp` and the lifting lemmas
 public import Metrology.Micrometer.MicrometerWpGS
 public import Metrology.Micrometer.SpecCoupl
 public import Metrology.Micrometer.ProgCoupl
@@ -26,7 +26,7 @@ public import Metrology.Micrometer.CappedCredits
 public import Metrology.Micrometer.OpenInv
 public import Metrology.Micrometer.WpTactics
 
--- relational model
+-- relational model, compatibility lemmas and the fundamental theorem
 public import Metrology.Micrometer.LRel
 public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.Interp
@@ -54,7 +54,7 @@ public import Metrology.Micrometer.Examples
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 
-/-! Micrometer, the approximate relational program logic (a port of clutch's Approxis).
+/-! # Micrometer
 
-Read in the import order above: `wp` and its rules, primitive and coupling rules, the relational
-model and fundamental theorem, then adequacy and examples. -/
+Umbrella import for the approximate relational program logic (a port of clutch's Approxis): the
+`wp` modalities and their rules, the relational model and fundamental theorem, and adequacy. -/

@@ -145,11 +145,13 @@ theorem rr2_dp (b₁ b₂ b₁' b₂' : Bool) (σ σ' : State rT) {δ : ℝ} (h�
   simp only [LiftingRelHom.zcdpToDp_map] at h
   exact GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨iInf_conversion_le _, le_rfl⟩) h
 
+/-! ## The mechanism form -/
+
 /-- Randomized response on pairs of private bits, started from state `σ`. -/
 noncomputable abbrev rr2Mech (σ : State rT) : Mechanism (Bool × Bool) (Exp rT) :=
   progMech (fun b ↦ rr2 b.1 b.2) σ
 
-/-- `rr2_refines` packaged for the mechanism rule, on any two pairs of bits. -/
+/-- `rr2_refines` at the single budget `budget2`, for `progMech_isPrivate`. -/
 theorem rr2_refines_mech {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool × Bool) :
     ⊢@{IProp GF} ↯b budget2 -∗
@@ -157,15 +159,15 @@ theorem rr2_refines_mech {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
         lrel_prod lrel_bool lrel_bool :=
   budget_add_budget ▸ rr2_refines b.1 b.2 b'.1 b'.2
 
-/-- Randomized response on two bits is `(ln 9, 0)`-zCDP for any two pairs of bits (Def. 2.4). -/
+/-- Randomized response on two bits is `(ln 9, 0)`-zCDP as a mechanism (Def. 2.4). -/
 theorem rr2_zCDP (σ : State rT) : (rr2Mech σ).zCDP ⊤ (ENNReal.ofReal (Real.log 9)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (L := zcdpLifting) _ σ budget2
     (fun _ _ ↦ lrel_prod lrel_bool lrel_bool)
     (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
     fun b b' _ _ _ ↦ rr2_refines_mech b b'
 
-/-- Randomized response on two bits is `(ln 9, δ)`-DP for any two pairs of bits and every
-`δ > 0` (Def. 2.1). -/
+/-- Randomized response on two bits is `(ln 9, δ)`-DP as a mechanism, for every `δ > 0`
+(Def. 2.1). -/
 theorem rr2_DP (σ : State rT) {δ : ℝ} (hδ : 0 < δ) :
     (rr2Mech σ).DP ⊤ (ENNReal.ofReal (Real.log 9)) (ENNReal.ofReal δ) :=
   fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ

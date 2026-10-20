@@ -2,8 +2,12 @@ module
 
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! The Rényi codensity lifting is decided by tests into a point, and is the Hölder-dual Rényi
-coupling (Rocq `renyi_kanto_canonical.v`, `renyi_codensity.v`). -/
+/-! # The Rényi codensity lifting
+
+The codensity lifting of `renyiDivergence α` is decided by tests into a point
+(`codensity_renyi_iff_unitTests`) and is the Hölder-dual Rényi coupling (`rdpCoupl_iff_codensity`),
+which gives the zCDP and tCDP liftings as Rényi couplings (Rocq `renyi_kanto_canonical.v`,
+`renyi_codensity.v`). -/
 
 @[expose] public section
 
@@ -18,13 +22,14 @@ open Real
 
 variable {α : ℝ}
 
-/-! ## The perspective of `t ↦ t ^ α`
+/-! ## Support: the perspective of `t ↦ t ^ α`
 
 Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. A test into a point with masses
 `(h p, h ^ β q)` has divergence at most the cellwise one (`persp_rpow_sum_le`), with equality at
 `h ∝ (p / q) ^ (α - 1)` (`exists_persp_rpow_eq_sum`). This turns any partition test into a point
 test. -/
 
+/-- Scaling both arguments of the perspective of `t ↦ t ^ α` by `s` scales its value by `s`. -/
 theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
   rw [persp_rpow_mul hα hs hs ha hb, persp_self hs, one_rpow, mul_one]
@@ -148,20 +153,10 @@ open ENNReal hiding rpow_le_one
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α : ℝ} {ρ : ℝ≥0∞}
   {R : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
 
-/-! ## Tests into a point -/
+/-! ## Mass tests on a finite partition
 
-/-- A Rényi codensity lifting passes its tests into a point at slack `0`. -/
-theorem renyiDivergence_comp_of_codensity [hα : Fact (1 < α)]
-    (h : (renyiDivergence α).codensity ρ R μ ν) {k : Kernel X PUnit.{u + 1}}
-    {l : Kernel Y PUnit.{u + 1}} [IsSubMarkovKernel k] [IsSubMarkovKernel l]
-    (hkl : ∀ x y, R x y < ⊤ → renyiDivergence α (R x y) (k x) (l y)) :
-    renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) := by
-  rcases eq_or_ne ρ ⊤ with rfl | hρ
-  · exact renyiDivergence_top hα.out _ _
-  simpa using h (c := 0) (by simpa using hρ.lt_top) fun x y ↦ by
-    rcases (le_top : R x y ≤ ⊤).lt_or_eq with hR | hR
-    · simpa using hkl x y hR
-    · simpa [hR] using renyiDivergence_top hα.out (k x) (l y)
+A sub-Markov test into a point is a pair of masses; on a finite partition, masses `s w` and
+`s w ^ (α / (α - 1))` realise the perspective of the weighted cell masses. -/
 
 /-- A test into a point that is constant on the cells of a finite partition has the perspective
 of the cell masses as its divergence. -/
@@ -207,6 +202,21 @@ theorem exists_mass_fDiv_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : 
       (Finset.sum_nonneg fun j _ ↦ mul_nonneg (rpow_nonneg (hw j).1 _) toReal_nonneg)]
   simp only [Finset.mul_sum, mul_assoc]
 
+/-! ## Tests into a point decide the codensity lifting -/
+
+/-- A Rényi codensity lifting passes its tests into a point at slack `0`. -/
+theorem renyiDivergence_comp_of_codensity [hα : Fact (1 < α)]
+    (h : (renyiDivergence α).codensity ρ R μ ν) {k : Kernel X PUnit.{u + 1}}
+    {l : Kernel Y PUnit.{u + 1}} [IsSubMarkovKernel k] [IsSubMarkovKernel l]
+    (hkl : ∀ x y, R x y < ⊤ → renyiDivergence α (R x y) (k x) (l y)) :
+    renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) := by
+  rcases eq_or_ne ρ ⊤ with rfl | hρ
+  · exact renyiDivergence_top hα.out _ _
+  simpa using h (c := 0) (by simpa using hρ.lt_top) fun x y ↦ by
+    rcases (le_top : R x y ≤ ⊤).lt_or_eq with hR | hR
+    · simpa using hkl x y hR
+    · simpa [hR] using renyiDivergence_top hα.out (k x) (l y)
+
 /-- Tests into a point at slack `0` decide the Rényi codensity lifting: a test into a finite
 partition becomes one into a point by weighting its cells with the optimal Hölder weights, and the
 slack is absorbed by scaling both masses down. -/
@@ -228,7 +238,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
     exp_le_one_iff.2 (neg_nonpos.2 (mul_nonneg (by linarith) toReal_nonneg))
   rw [renyiDivergence_iff_of_ne_top hα1.le hρc.ne, fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun π ↦ iSup_le fun hπ ↦ ?_
-  -- step 1: pick Hölder weights `w` so the partition sum is a single point test
+  -- step 1: pick Hölder weights `w ∝ (p / q) ^ (α - 1)` so the partition sum is one point test
   obtain ⟨w, hw, hle⟩ := exists_sum_persp_rpow_le hα1
     (p := fun j ↦ ((k ∘ₘ μ) (π ⁻¹' {j})).toReal) (q := fun j ↦ ((l ∘ₘ ν) (π ⁻¹' {j})).toReal)
     (fun _ ↦ toReal_nonneg) fun _ ↦ toReal_nonneg
@@ -270,7 +280,9 @@ theorem codensity_renyi_iff_unitTests [Fact (1 < α)] [IsSubProbabilityMeasure �
         renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) :=
   ⟨fun h _ _ _ _ ↦ renyiDivergence_comp_of_codensity h, codensity_renyi_of_unitTests⟩
 
-/-! ## The slack-Hölder bound and Rényi couplings -/
+/-! ## The slack-Hölder bound and Rényi couplings
+
+The Hölder form `SlackHolder` of the codensity lifting, and `RdpCoupl` as its relational case. -/
 
 /-- The slack-Hölder bound: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
 satisfy `E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `SH`). -/
@@ -411,7 +423,7 @@ theorem rdpCoupl_iff_codensity [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     RdpCoupl α ρ S μ ν ↔ (codensity (renyiDivergence α)).Rel ρ S μ ν :=
   rdpCoupl_iff_slackHolder.trans (codensity_renyi_iff_slackHolder hρ).symm
 
-/-! ## Concentrated liftings as Rényi couplings -/
+/-! ## zCDP and tCDP liftings as Rényi couplings -/
 
 /-- A zCDP relational lifting is a Hölder-dual Rényi coupling along `ξ + α ρ` at every order (Rocq
 `gcf_zCDP_iff`). -/

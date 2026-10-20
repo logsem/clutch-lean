@@ -10,8 +10,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # The DP choice law: a public coin picks one of two mechanisms
 
-The choice law charges the larger branch cost, `ln 3`. The constant branch is free, so a single
-budget `(ln 3, 0)` with the canonical law would also do; the example shows the choice law. -/
+`choice_refines` proves `choice b ≲ choice b'` from the budget `(ln 3, 0)` via the DP choice law
+(which charges the larger branch cost); `choice_DP` turns it into `(ln 3, 0)`-DP of `choice`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity)
@@ -49,7 +49,7 @@ theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     · rel_pures
       rel_values
 
-/-- `choice` on private bits, started from state `σ`. -/
+/-- The mechanism running `choice` on a private bit from state `σ`. -/
 noncomputable abbrev choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech choice σ
 

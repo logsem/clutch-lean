@@ -9,8 +9,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # The absorbing exit: an exhausted budget proves anything
 
-A credit at an absorbing budget closes every refinement, even a false one; with capped credits
-the same budgets are invalid, so such a branch is unreachable. -/
+`refines_of_absorbing` proves even the false refinement `0 << 1` from `↯b` at an absorbing budget
+(`δ ≥ 1` for DP, `1` for tv); with capped credits `↯c` such a budget is contradictory. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -19,6 +19,8 @@ namespace ProbLang
 namespace AbsorbingExit
 
 variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+
+/-! ## Absorbing budgets prove any refinement -/
 
 /-- With `↯b (ε, δ)` for `δ ≥ 1`, `0` refines `1` at equal integers. -/
 theorem zero_refines_one_dp [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) :
@@ -29,6 +31,8 @@ theorem zero_refines_one_dp [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] {ε �
 theorem zero_refines_one_tv [BudgetCreditGS ℝ≥0∞ GF] :
     ↯b (1 : ℝ≥0∞) ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
   refines_of_absorbing absorbing_codensity_tv_one
+
+/-! ## Capped credits make the exit unreachable -/
 
 /-- In the capped view, a DP credit with `δ ≥ 1` is contradictory, so it proves anything. -/
 theorem capped_dp_exit {GF : BundledGFunctors}

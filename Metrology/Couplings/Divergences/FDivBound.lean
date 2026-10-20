@@ -3,12 +3,9 @@ module
 public import Metrology.Couplings.Divergences.Dp
 public import Metrology.Couplings.Divergences.FDivFinite
 
-/-! Graded divergences cut out by thresholds on `f`-divergences (Approximate Span Liftings,
-§4.2).
-Also: `(ε, δ)`-DP is the `fDivBound` with the hockey-stick weight `max 0 (t - e^ε)`
-(`dp_iff_fDivBound`).
-Built on: `fDiv` (FDiv.lean) → partition formula and data processing (FDivPartition.lean) →
-finite-to-general chain rule, Thm. 4.6 (FDivFinite.lean). Instances: Renyi, Bof (KL, Hellinger). -/
+/-! # The `fDivBound` constructor
+Graded divergences cut out by thresholds on `f`-divergences (Approximate Span Liftings, §4.2):
+graded, reflexive and composable (Thm. 4.9) criteria; `dp_iff_fDivBound` shows DP is one. -/
 
 @[expose] public section
 
@@ -21,6 +18,8 @@ namespace GradedDivergence
 
 variable {B : Type v} {K : Type w} {weight : B → K → ℝ → ℝ} {thresh : B → K → EReal}
 
+/-! ## The constructor -/
+
 /-- One constructor for the concrete divergences: a threshold on each indexed `f`-divergence. -/
 def fDivBound (K : Type w) (weight : B → K → ℝ → ℝ) (thresh : B → K → EReal) :
     GradedDivergence.{u} B :=
@@ -31,7 +30,7 @@ theorem fDivBound_def {b : B} {X : Type u} [MeasurableSpace X] {μ ν : Measure 
     fDivBound K weight thresh b μ ν ↔ ∀ k, fDiv (weight b k) μ ν ≤ thresh b k :=
   Iff.rfl
 
-/-! ## Structural properties -/
+/-! ## Structural properties: conditions on `weight` and `thresh` -/
 
 /-- Weights that shrink and thresholds that grow with the budget give a graded divergence. -/
 theorem isGraded_fDivBound [LE B] [Top B] (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b k))
@@ -77,7 +76,7 @@ theorem isBudgetClosed_fDivBound [LT B] (hw : ∀ b b' k, weight b k = weight b'
     (fDivBound.{u} K weight thresh).IsBudgetClosed where
   of_forall_gt h k := hthresh _ k _ fun b' hb ↦ hw _ b' k ▸ h b' hb k
 
-/-! ## Composability -/
+/-! ## Composability: from a chain rule on `fDiv` (Thm. 4.9), via finite spaces (Thm. 4.6) -/
 
 /-- Composability from a per-index chain rule on nonempty inputs (Thm. 4.9); `hpos` handles an
 empty input space, where both composites are zero. -/
@@ -234,6 +233,7 @@ theorem coe_gap_le_iSup_partition
 theorem fDiv_dpWeight_eq_iSup (ε : ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv (dpWeight ε) μ ν = ⨆ (S : Set X) (_ : MeasurableSet S),
       (((μ S).toReal - Real.exp ε * (ν S).toReal : ℝ) : EReal) := by
+  -- Partition formula; a partition sum is bounded by one event, and an event is a 2-cell partition.
   rw [fDiv_eq_iSup_partition (convexOn_dpWeight ε) (continuous_dpWeight ε).continuousWithinAt]
   exact le_antisymm
     (iSup_le fun _ ↦ iSup_le fun _ ↦ iSup_le fun hk ↦ sum_persp_dpWeight_le_iSup ε hk)

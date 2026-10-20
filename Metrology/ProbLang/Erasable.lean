@@ -7,8 +7,9 @@ public import Metrology.ProbLang.Exec
 /-!
 # Erasable and rewritable distributions
 
-Port of Clutch's `erasable.v`. Clutch compares final values; ours compares whole `Measure Cfg`s,
-so it is stronger: `tapePresample` is not erasable here; it satisfies the expression-projected
+A state distribution is `Erasable` if sampling the state from it leaves every `execN m` unchanged;
+it then also leaves `limExec` unchanged (`Erasable.lim_exec`). Port of Clutch's `erasable.v`, but
+comparing whole `Measure Cfg`s, so `tapePresample` is only erasable in the projected
 `ErasableExpr` (`Erasure/ErasableExpr.lean`).
 -/
 
@@ -46,6 +47,7 @@ theorem dbind
 theorem lim_exec
     {μ : Measure (State rT)} {σ : State rT} (h : Erasable μ σ) (e : Exp rT) :
     μ.bind (fun σ' => limExec ⟨e, σ'⟩) = limExec ⟨e, σ⟩ := by
+  -- `limExec` is the sup of `execN n`: swap the sup with the integral, then use `h` at each `n`
   ext S HS
   rw [bind_apply HS (by measurability)]
   simp_rw [limExec_apply _ HS]
@@ -113,12 +115,11 @@ theorem dbind_predicate {A : Type*} [MeasurableSpace A] [DiscreteMeasurableSpace
 
 end Erasable
 
-/-- Samples the state from `μ` and keeps the expression `e` (Clutch `rewritable_of_erasable`);
-`Rewritable.of_erasable` says `ρ` rewrites to `rewritableOfErasable μ ρ.expr`. -/
+/-! ## Rewritable -/
+
+/-- Samples the state from `μ` and keeps the expression `e` (Clutch `rewritable_of_erasable`). -/
 noncomputable def rewritableOfErasable (μ : Measure (State rT)) (e : Exp rT) : Measure (Cfg rT) :=
   μ.bind (fun σ => Measure.dirac ⟨e, σ⟩)
-
-/-! ## Rewritable -/
 
 /-- `μ` is a rewriting of `ρ`: running `ρ` equals sampling from `μ` then running. -/
 def Rewritable (ρ : Cfg rT) (μ : Measure (Cfg rT)) : Prop :=
@@ -126,12 +127,15 @@ def Rewritable (ρ : Cfg rT) (μ : Measure (Cfg rT)) : Prop :=
 
 namespace Rewritable
 
+/-- A configuration rewrites to its own Dirac. -/
 theorem dret (ρ : Cfg rT) : Rewritable ρ (Measure.dirac ρ) :=
   (Measure.dirac_bind limExec.measurable ρ).symm
 
+/-- Running `m` partial steps first is a rewriting. -/
 theorem ofPexecN (ρ : Cfg rT) (m : Nat) : Rewritable ρ (ProbLang.pexecN m ρ) :=
   limExec_pexecN m ρ
 
+/-- Resampling the state of `ρ` from an erasable `μ` is a rewriting (`rewritableOfErasable`). -/
 theorem of_erasable {ρ : Cfg rT} {μ : Measure (State rT)} (h : Erasable μ ρ.state) :
     Rewritable ρ (μ.bind (fun σ => Measure.dirac (⟨ρ.expr, σ⟩ : Cfg rT))) := by
   show limExec ρ
@@ -142,6 +146,7 @@ theorem of_erasable {ρ : Cfg rT} {μ : Measure (State rT)} (h : Erasable μ ρ.
   simp only [Measure.dirac_bind limExec.measurable]
   rw [h.lim_exec ρ.expr]
 
+/-- Resampling the state from an erasable `μ` after `m` partial steps is a rewriting. -/
 theorem of_erasable_pexecN {ρ : Cfg rT} {μ : Measure (State rT)} (m : Nat)
     (h : Erasable μ ρ.state) :
     Rewritable ρ (μ.bind (fun σ => pexecN m ⟨ρ.expr, σ⟩)) := by

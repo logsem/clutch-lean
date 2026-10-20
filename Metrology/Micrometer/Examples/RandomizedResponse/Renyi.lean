@@ -7,19 +7,19 @@ public import Metrology.Couplings.Divergences.RenyiFiber
 
 /-! # Randomized response is Rényi private at each order
 
-One round costs `ρ_α = log ((3^α + 3^{1-α}) / 4) / (α - 1)` at order `α`, so `k` rounds are
-`(α, k ρ_α)`-RDP. -/
+One round couples at the exact order-`α` cost `ρ_α = log ((3^α + 3^{1-α}) / 4) / (α - 1)`
+(`rrCoupling_renyi`), so `k` rounds are `(α, k ρ_α)`-RDP (`rrCount_RDP`). -/
 
 open GradedLifting GradedDivergence
 open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-/-- The Rényi divergence of order `α` between rounds on different bits. -/
+/-- The exact order-`α` Rényi cost `ρ_α` of one round, between the reports on different bits. -/
 noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
   ENNReal.ofReal (Real.log ((3 ^ α + 3 ^ (1 - α)) / 4) / (α - 1))
 
-/-- The `α`-th moment `(3^α + 3^{1-α}) / 4` is at least `1`: with `t = 3^α ≥ 3`, it is
+/-- The `α`-th moment `(3^α + 3^{1-α}) / 4` of one round is at least `1`: with `t = 3^α ≥ 3`, it is
 `1 + (t - 1)(t - 3) / (4 t)`. -/
 theorem one_le_rrMoment {α : ℝ} (hα : 1 ≤ α) : 1 ≤ ((3 : ℝ) ^ α + 3 ^ (1 - α)) / 4 := by
   have ht : (3 : ℝ) ≤ 3 ^ α := by

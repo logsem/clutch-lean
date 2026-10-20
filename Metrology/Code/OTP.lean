@@ -7,18 +7,19 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over `{0, …, N-1}`
 
-Refined in `Micrometer/Examples/OTP`. -/
+The program `otp_enc` (encrypt with a uniform key) and the ideal sampler `otp_ideal`; the proof that
+they refine each other is in `Micrometer/Examples/OTP`. -/
 
 namespace ProbLang
 namespace OTP
 
 variable {rT : Type _}
 
-/-- The LHS program: sample a key, then output `(m + k) mod N`. -/
+/-- One-time pad: draw a uniform key `k` below `N` and return `(m + k) mod N`. -/
 def otp_enc (m N : Int) : Exp rT :=
   pl% let k := rand(#(.int N), #(.unit)); (#(.int m) + k) % #(.int N)
 
-/-- The RHS program: just sample uniformly. -/
+/-- The ideal sampler: draw uniformly from `{0, …, N-1}`. -/
 def otp_ideal (N : Int) : Exp rT :=
   pl% rand(#(.int N), #(.unit))
 

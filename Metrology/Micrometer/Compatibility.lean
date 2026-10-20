@@ -7,7 +7,10 @@ public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.AppRelRules
 public import Metrology.ProbLang.Syntax.LocallyClosed
 
-/-! Compatibility lemmas for the pure fragment. -/
+/-! # Closed compatibility lemmas, pure fragment
+
+One `refines_*` rule per syntactic form of the pure fragment (pairs, sums, application, `if`, `∀`,
+`∃`), the closed layer that `bin_log_related_*` calls. -/
 
 @[expose] public section
 
@@ -25,6 +28,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
+/-- A related pair of functions sends related arguments to related applications. -/
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
     (lrel_arr L A B).car v v' ⊢
     □ (∀ w1 w2, A w1 w2 -∗ refines L ⊤ (Exp.app v.1 w1.1) (Exp.app v'.1 w2.1) B) :=
@@ -33,7 +37,7 @@ theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
-/-! ### Pure-step constructors -/
+/-! ### Pure steps -/
 
 /-- β-step on the left for a constant function: the body `b` is locally closed, so it
 ignores the argument. -/
@@ -58,6 +62,7 @@ theorem refines_beta_const_r {b t : Exp rT} {u : Val rT} {A : lrel rT GF} (hb : 
   rw [show Ectx.fill [] (Exp.open' b u.1) = b from (Exp.open_lc 0 u.1 b hb).symm]
   iexact H
 
+/-- One pure step on each side reduces the goal to the reducts, under a later. -/
 theorem refines_pure_step {e e' r r' : Exp rT} {φ φ' : Prop}
     [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
     {A : lrel rT GF} : iprop% ▷ refines L ⊤ r r' A ⊢ refines L ⊤ e e' A := by
@@ -69,6 +74,7 @@ theorem refines_pure_step {e e' r r' : Exp rT} {φ φ' : Prop}
   simp only [Ectx.fill_nil]
   iexact H
 
+/-- One pure step on each side to values related at `A` closes the goal. -/
 theorem refines_pure_ret {e e' r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
     [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
     (hr : r = v.1) (hr' : r' = v'.1) {A : lrel rT GF} :
@@ -80,51 +86,34 @@ theorem refines_pure_ret {e e' r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
   imodintro
   iexact HA
 
+/-- The same pure step on both sides, to a value related to itself at `A`. -/
 theorem refines_pure_both {e r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (hφ : φ)
     (hrv : IsVal r) {A : lrel rT GF} (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ e e A := by
   iapply refines_pure_ret (v := ⟨r, hrv, hrv.lc⟩) (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
   iapply HA
 
+/-- A binary operator applied to the same values on both sides, with a result related to itself. -/
 theorem refines_binop_pure (op : BinOp) (v1 v2 r : Exp rT) (hv1 : IsVal v1) (hv2 : IsVal v2)
     (hrv : IsVal r) (heval : op.eval v1 v2 = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ (.binop op v1 v2) (.binop op v1 v2) A :=
   refines_pure_both ⟨hv1.toIsValue, hv2.toIsValue, heval⟩ hrv HA
 
+/-- A unary operator applied to the same value on both sides, with a result related to itself. -/
 theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal r)
     (heval : op.eval v = some r) {A : lrel rT GF}
     (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both ⟨hv.toIsValue, heval⟩ hrv HA
 
-/-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
-instance. -/
-theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
-    (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
-    □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
-  iintro #H
-  iapply refines_ret (v1 := ⟨.lam e, IsVal.lam (by is_lc), by is_lc⟩)
-    (v2 := ⟨.lam e', IsVal.lam (by is_lc), by is_lc⟩) rfl rfl
-  imodintro
-  iunfold lrel_forall
-  iintro %A
-  iunfold lrel_arr
-  isplitr
-  · ipureintro
-    exact ⟨⟨by is_lc, by simpa [Exp.fv] using he_fv⟩, ⟨by is_lc, by simpa [Exp.fv] using he'_fv⟩⟩
-  iintro !> %u %u' -
-  iapply refines_beta_const_l he
-  inext
-  iapply refines_beta_const_r he'
-  iapply H
-
-/-! ### Constructors that bind their operands -/
+/-! ### Rules that bind their operands -/
 
 /-! Each proof restates the goal as `Ectx.fill [item] e` so `refines_bind` unifies, binds the right
 operand first (ProbLang evaluates right to left), then re-reads the same term with the hole in the
 left operand (a definitional `rw [show ... from rfl]`). -/
 
+/-- Pairs `(e1, e2)` are related at the product when the components are. -/
 theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e1 e1' A ⊢
     refines L ⊤ e2 e2' B -∗ refines L ⊤ (Exp.pair e1 e2) (Exp.pair e1' e2') (lrel_prod A B) := by
@@ -147,6 +136,7 @@ theorem refines_pair {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe
   itrivial
 
+/-- Left injections are related at the sum when the payloads are related at `A`. -/
 theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e e' A ⊢ refines L ⊤ (.inl e) (.inl e') (lrel_sum A B) := by
   show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.inl] e) (Ectx.fill [EctxItem.inl] e') (lrel_sum A B)
@@ -163,6 +153,7 @@ theorem refines_injl {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe HA
   itrivial
 
+/-- Right injections are related at the sum when the payloads are related at `B`. -/
 theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e e' B ⊢ refines L ⊤ (.inr e) (.inr e') (lrel_sum A B) := by
   show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.inr] e) (Ectx.fill [EctxItem.inr] e') (lrel_sum A B)
@@ -179,6 +170,8 @@ theorem refines_injr {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iframe HB
   itrivial
 
+/-- Application is related at `B` when the function is related at `A → B` and the argument at
+`A`. -/
 theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e1 e1' (lrel_arr L A B) ⊢
     refines L ⊤ e2 e2' A -∗ refines L ⊤ (Exp.app e1 e2) (Exp.app e1' e2') B := by
@@ -215,6 +208,7 @@ theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
   iapply refines_beta_const_r he2'
   iexact IH2
 
+/-- First projections of related pairs are related. -/
 theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e e' (lrel_prod A B) ⊢ refines L ⊤ (.fst e) (.fst e') A := by
   show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.fst] e) (Ectx.fill [EctxItem.fst] e') A
@@ -227,6 +221,7 @@ theorem refines_fst {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iapply refines_pure_ret ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩
     rfl rfl $$ HA
 
+/-- Second projections of related pairs are related. -/
 theorem refines_snd {e e' : Exp rT} {A B : lrel rT GF} : iprop%
     refines L ⊤ e e' (lrel_prod A B) ⊢ refines L ⊤ (.snd e) (.snd e') B := by
   show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.snd] e) (Ectx.fill [EctxItem.snd] e') B
@@ -239,6 +234,8 @@ theorem refines_snd {e e' : Exp rT} {A B : lrel rT GF} : iprop%
   iapply refines_pure_ret ⟨a1.2.toIsValue, b1.2.toIsValue⟩ ⟨a2.2.toIsValue, b2.2.toIsValue⟩
     rfl rfl $$ HB
 
+/-- `case` on related sums is related when the branches are related functions out of each
+summand. -/
 theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : iprop%
     refines L ⊤ e0 e0' (lrel_sum A B) ⊢
     refines L ⊤ e1 e1' (lrel_arr L A C) -∗ refines L ⊤ e2 e2' (lrel_arr L B C) -∗
@@ -268,6 +265,7 @@ theorem refines_case {e0 e1 e2 e0' e1' e2' : Exp rT} {A B C : lrel rT GF} : ipro
     imodintro
     iexact HB
 
+/-- `if` on related booleans is related when both branches are related. -/
 theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
     refines L ⊤ e0 e0' lrel_bool ⊢
     refines L ⊤ e1 e1' A -∗ refines L ⊤ e2 e2' A -∗
@@ -292,6 +290,9 @@ theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
     inext
     iexact IH2
 
+/-! ### Quantifiers -/
+
+/-- Packing a witness `A` relates `e` at `∃ C` as soon as it is related at `C A`. -/
 theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF} :
     refines L ⊤ e e' (C A) ⊢ refines L ⊤ e e' (lrel_exists C) := by
   iintro IH
@@ -302,6 +303,27 @@ theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel r
   isplitr; · ipureintro; exact hcl
   iexists A
   iexact HCA
+
+/-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
+instance. -/
+theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
+    (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
+    □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
+  iintro #H
+  iapply refines_ret (v1 := ⟨.lam e, IsVal.lam (by is_lc), by is_lc⟩)
+    (v2 := ⟨.lam e', IsVal.lam (by is_lc), by is_lc⟩) rfl rfl
+  imodintro
+  iunfold lrel_forall
+  iintro %A
+  iunfold lrel_arr
+  isplitr
+  · ipureintro
+    exact ⟨⟨by is_lc, by simpa [Exp.fv] using he_fv⟩, ⟨by is_lc, by simpa [Exp.fv] using he'_fv⟩⟩
+  iintro !> %u %u' -
+  iapply refines_beta_const_l he
+  inext
+  iapply refines_beta_const_r he'
+  iapply H
 
 end Steps
 

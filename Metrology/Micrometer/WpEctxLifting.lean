@@ -2,7 +2,11 @@ module
 
 public import Metrology.Micrometer.WpLifting
 
-/-! Head-step lifting rules of `wp` (Rocq `approxis/ectx_lifting.v`). -/
+/-! # Head-step lifting rules of `wp`
+
+The step-lifting rules of `WpLifting` restated for `headStep`: the atomic rule
+`wp_lift_atomic_head_step` (used by `wp_alloc`, `wp_load`, `wp_rand`) and its variants over a
+carrying set (Rocq `approxis/ectx_lifting.v`). -/
 
 @[expose] public section
 
@@ -19,8 +23,8 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 section Wp
 variable [BudgetGS B GF]
 
-/-- `wp_lift_step_prog_couple` with a head-step form of reducibility (Rocq
-`wp_lift_head_step_prog_couple`); the reducibility premise is not used, since `progCoupl` already
+/-- `wp_lift_step_prog_couple` stated with head-step reducibility (Rocq
+`wp_lift_head_step_prog_couple`); the reducibility premise goes unused, since `progCoupl` already
 carries it. -/
 theorem wp_lift_head_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
@@ -41,8 +45,8 @@ section HeadRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
-/-- Atomic head step, discrete form: reducibility and outcomes read off the head-step support (used
-by `wp_alloc`, `wp_load`, `wp_rand`). -/
+/-- Atomic head step, discrete form: reducibility and outcomes are read off the support of
+`headStep` (used by `wp_alloc`, `wp_load`, `wp_rand`). -/
 @[discrete]
 theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocallyClosed := by is_lc)
@@ -62,11 +66,12 @@ theorem wp_lift_atomic_head_step {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → I
     primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible Hlc Hhr) ▸ Hpstep
   iapply H $$ %e₂ %σ₂ %hpos
 
-/-! ### Countability-free head-step rules
+/-! ## Head-step rules over a carrying set (no countability)
 
 The head-step rules gate on `headStep`, and head-reducibility is only known inside the assertion.
 Off the head-reducible states the redex may sit under a context and `primStep` moves elsewhere,
-so the carrying set is padded to `Set.univ` there, where concentration is free. -/
+so the carrying set is padded to `Set.univ` there, where concentration is free
+(`measurableSet_headPad`, `concentrated_headPad`). -/
 
 open scoped Classical in
 /-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, is measurable. -/
@@ -87,7 +92,7 @@ theorem concentrated_headPad {e₁ : Exp rT} {S : State rT → Set (Cfg rT)} (Hl
   · exact Concentrated.univ
 
 open scoped Classical in
-/-- Head step on a measurable set carrying `headStep`, in any `rT`. -/
+/-- Head step, for any `rT`: outcomes range over a measurable set `S σ₁` carrying `headStep`. -/
 theorem wp_lift_head_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
@@ -106,7 +111,7 @@ theorem wp_lift_head_step_concentrated {E : CoPset} {e₁ : Exp rT} {Φ : Val rT
   iapply H $$ %e₂ %σ₂ %Hmem
 
 open scoped Classical in
-/-- Atomic head step over a mask change, on a set carrying `headStep`. -/
+/-- Atomic head step with a mask change `E1`/`E2`, over a measurable set carrying `headStep`. -/
 theorem wp_lift_atomic_head_step_fupd_concentrated {E1 E2 : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none)
     (Hlc : e₁.IsLocallyClosed := by is_lc)
@@ -127,7 +132,7 @@ theorem wp_lift_atomic_head_step_fupd_concentrated {E1 E2 : CoPset} {e₁ : Exp 
   iapply H $$ %e₂ %σ₂ %Hmem
 
 open scoped Classical in
-/-- Atomic head step on a set carrying `headStep`. -/
+/-- Atomic head step over a measurable set carrying `headStep`, from the mask-changing rule. -/
 theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF} {S : State rT → Set (Cfg rT)} (Hv : e₁.toVal? = none)
     (Hlc : e₁.IsLocallyClosed := by is_lc)

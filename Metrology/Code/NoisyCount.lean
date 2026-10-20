@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Noisy count
 
-Proved differentially private in `Micrometer/Examples/NoisyCount`. -/
+The program `noisyCount`: apply a sampler value to the number of `true` entries of a database.
+Its DP theorem, conditional on the sampler's spec, is in `Micrometer/Examples/NoisyCount`. -/
 
 namespace ProbLang
 namespace NoisyCount
@@ -16,7 +17,7 @@ namespace NoisyCount
 noncomputable def count {n : ℕ} (db : Fin n → Bool) : ℝ :=
   ∑ i, if db i then 1 else 0
 
-/-- Release the count of `db` perturbed by the sampler `lap`. -/
+/-- The program that applies the sampler value `lap` to the count of `db`. -/
 noncomputable def noisyCount (lap : Val ℝ) {n : ℕ} (db : Fin n → Bool) : Exp ℝ :=
   pl% {Exp.ofVal lap} #(.real (count db))
 

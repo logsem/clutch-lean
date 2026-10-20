@@ -15,10 +15,9 @@ public import Metrology.ProbLang.Syntax.Notation
 /-!
 # Program-side ghost state
 
-Program heap and tapes for the Micrometer WP; the spec side lives in `SpecProgram.lean` and reuses
-the same CMRAs (`SpecHeap`, `SpecTapes`). `app` means the left (implementation) program, as opposed
-to the spec; the naming follows Approxis. Program points-to `l ↦ v` and `l ↪N⟨z; ns⟩` need
-`open scoped AppGS` (`↦` clashes otherwise); `↪ₐ` is global.
+Ghost state for the program's heap and tapes (`appStateAuth`, points-to `l ↦ v`, `l ↪ₐ t`), with
+lookup, update and alloc rules. `app` is the implementation side (naming from Approxis); the spec
+side is `SpecProgram.lean`. `↦` and `↪N⟨z; ns⟩` need `open scoped AppGS`; `↪ₐ` is global.
 -/
 
 section AppProgramRA
@@ -84,6 +83,7 @@ open scoped AppGS
 
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
 
+/-- Owning `l ↦ v` against the authoritative state shows the heap holds `v` at `l`. -/
 theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↦ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold appStateAuth appHeapAuth appHeapFrag
@@ -94,6 +94,7 @@ theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
   obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
   exact LocHeap.get?_of_asAgree_get? hlookup hinc
 
+/-- Writing `w` at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↦ v ==∗
       appStateAuth (σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)) ∗
@@ -113,6 +114,7 @@ theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
   simp only [State.update_heap, LocHeap.asAgree_insert]
   iframe
 
+/-- Allocating `v` yields a fresh heap cell `σ.heap.fresh ↦ v`. -/
 theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
     ⊢@{IProp GF} appStateAuth σ ==∗
       appStateAuth (σ.update_heap
@@ -133,6 +135,7 @@ theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
   simp only [State.update_heap, LocHeap.asAgree_insert]
   iframe
 
+/-- Owning `l ↪ₐ t` against the authoritative state shows the tape at `l` is `t`. -/
 theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↪ₐ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold appStateAuth appTapesAuth appTapesFrag
@@ -143,6 +146,7 @@ theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
   obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
   exact LocHeap.get?_of_asAgree_get? hlookup hinc
 
+/-- Replacing the tape at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
     ⊢@{IProp GF} appStateAuth σ -∗ l ↪ₐ t ==∗
       appStateAuth (σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)) ∗
@@ -162,6 +166,7 @@ theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
   simp only [State.update_tapes, LocHeap.asAgree_insert]
   iframe
 
+/-- Allocating a tape `t` yields a fresh tape `σ.tapes.fresh ↪ₐ t`. -/
 theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
     ⊢@{IProp GF} appStateAuth σ ==∗
       appStateAuth (σ.update_tapes
@@ -207,6 +212,7 @@ open scoped AppGS
 
 variable {GF : BundledGFunctors} [AppGS rT GF]
 
+/-- An empty integer tape is an empty `↪ₐ` tape. -/
 theorem app_natTape_to_empty {l : Loc} {z : Int} :
     appNatTape (GF := GF) l z [] ⊢ l ↪ₐ ⟨z, []⟩ := by
   unfold appNatTape
@@ -214,6 +220,7 @@ theorem app_natTape_to_empty {l : Loc} {z : Int} :
   obtain rfl := List.map_eq_nil_iff.mp hmap
   iexact Hl
 
+/-- An empty `↪ₐ` tape is an empty integer tape. -/
 theorem app_empty_to_natTape {l : Loc} {z : Int} :
     (l ↪ₐ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢@{IProp GF}
       appNatTape l z [] := by
@@ -224,6 +231,7 @@ theorem app_empty_to_natTape {l : Loc} {z : Int} :
   · ipureintro; rfl
   iexact Hl
 
+/-- An integer tape with head `n` exposes its first entry, and can be rebuilt from the tail. -/
 theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
     appNatTape (GF := GF) l z (n :: ns) ⊢
       iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z })
@@ -241,6 +249,9 @@ theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
 
 end NatTapeInterface
 
+/-! ## Initialisation -/
+
+/-- Allocating the program ghost state from any initial state `σ`. -/
 theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF]
     (σ : State rT) :
     ⊢@{IProp GF} |==> ∃ IA : AppGS rT GF,
@@ -261,6 +272,7 @@ theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF]
 section ValidHelpers
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
 
+/-- Two full cells at one location are contradictory. -/
 theorem appHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
     ⊢@{IProp GF} appHeapFrag l v1 -∗ appHeapFrag l v2 -∗ False := by
   unfold appHeapFrag
@@ -270,6 +282,7 @@ theorem appHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
   exfalso
   exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
 
+/-- Two full tapes at one location are contradictory. -/
 theorem appTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
     ⊢@{IProp GF} appTapesFrag l t1 -∗ appTapesFrag l t2 -∗ False := by
   unfold appTapesFrag

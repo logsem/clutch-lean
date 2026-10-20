@@ -12,8 +12,8 @@ public import Qq
 /-!
 # `twp_*` tactics
 
-`twp_bind`/`twp_pure`/`twp_value` for `tglWp` goals, on the evaluation-context engine of
-`ProbLang/EctxTactic.lean`.
+`twp_bind`, `twp_pure`, `twp_pures`, `twp_pure_at` and `twp_value` for `tglWp` goals, on the
+evaluation-context engine of `ProbLang/EctxTactic.lean`.
 -/
 
 namespace ProbLang.TotalEris
@@ -27,6 +27,7 @@ open Meta Elab Tactic Qq Iris Iris.ProofMode
 section
 variable {rT : Type _} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
 
+/-- A pure step under an evaluation context `K`; the lemma behind `twp_pure`. -/
 public theorem ErisWpGS.twp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     tglWp E (K.fill e₂) Φ ⊢ tglWp E (K.fill e₁) Φ := by
@@ -35,7 +36,7 @@ public theorem ErisWpGS.twp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e
 
 end
 
-/-! ## WP-goal runner -/
+/-! ## Goal parsing: running a tactic on a `tglWp` goal -/
 
 /-- The pieces of a `tglWp E e Φ` proof-mode goal, with its typeclass instances. -/
 meta structure TglWpGoal where

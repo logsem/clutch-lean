@@ -10,13 +10,15 @@ public import Iris.Instances.IProp.Instance
 /-!
 # Capped credits
 
-Budget credits whose validity rules out an upward-closed set of bad budgets: authority `●↯c s`,
-fragments `↯c c` (Rocq `gcappedUR`). Optional layer, not used by wp.
+Budget credits valid only outside an upward-closed set `bad`: authority `●↯c s`, fragment `↯c c`
+(Rocq `gcappedUR`). Main results: `supply_decrease`, `supply_increase`, `valid`. Not used by wp.
 -/
 
 @[expose] public section
 
 open Iris
+
+/-! ## The camera -/
 
 /-- Budgets as a camera: the operation is `+`, with unit `0`, valid away from `bad`
 (Rocq `gcappedUR`). -/
@@ -82,6 +84,8 @@ theorem alloc_local_update (h : (s + c : B) ∉ bad) : (s, 0) ~l~> (s + c, c) :=
 
 end CappedCredit
 
+/-! ## Ghost state and the credit assertions -/
+
 /-- The ghost-state slot for an authoritative capped-credit camera. -/
 class CappedCreditPreGS (B : Type) [AddCommMonoid B] [LE B] [CanonicallyOrderedAdd B]
     (bad : outParam (Set B)) [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)]
@@ -113,11 +117,15 @@ notation "●↯c " s:50 => ccAuth s
 
 end Resources
 
+/-! ## Credit rules -/
+
 namespace CappedCredit
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] {bad : Set B}
   [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)] {GF : BundledGFunctors}
   [ICC : CappedCreditGS B bad GF]
+
+/-! ### Splitting and combining -/
 
 /-- Fragments add like the budgets they carry. -/
 theorem frag_add {a b : B} :
@@ -151,6 +159,8 @@ theorem weaken {a b : B} (hb : b ≤ a) : ↯c a ⊢@{IProp GF} ↯c b := by
 theorem zero : ⊢@{IProp GF} |==> ↯c (0 : B) :=
   iOwn_unit (ε := UCMRA.unit)
 
+/-! ### Validity -/
+
 /-- A credit is never bad (Rocq `gccredit_valid`). -/
 theorem valid {c : B} : ↯c c ⊢@{IProp GF} ⌜c ∉ bad⌝ := by
   unfold cc
@@ -165,6 +175,8 @@ theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢@{IProp GF} False := by
   iintro Hc
   ihave %hc := valid $$ Hc
   exact absurd h hc
+
+/-! ### Spending and allocating against the authority -/
 
 /-- A credit never exceeds the authoritative budget (Rocq `gcsupply_bound`). -/
 theorem supply_bound {s c : B} : ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
@@ -211,6 +223,8 @@ theorem difference [Sub B] [OrderedSub B] {a b : B} (h : b ≤ a) :
     ↯c a ⊢@{IProp GF} ↯c b ∗ ↯c (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
+/-! ### Timelessness -/
+
 /-- Credits are timeless. -/
 instance timeless_cc (c : B) : BI.Timeless (↯c c : IProp GF) := iOwn_timeless
 
@@ -218,6 +232,8 @@ instance timeless_cc (c : B) : BI.Timeless (↯c c : IProp GF) := iOwn_timeless
 instance timeless_ccAuth (s : B) : BI.Timeless (●↯c s : IProp GF) := iOwn_timeless
 
 end CappedCredit
+
+/-! ## Allocation -/
 
 /-- Allocating a fresh valid budget `b` yields both the authority and a credit `b`
 (Rocq `gccredit_alloc`). -/

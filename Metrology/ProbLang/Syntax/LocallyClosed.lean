@@ -6,10 +6,11 @@ public meta import Lean.Elab.Tactic.Basic
 @[expose] public section
 
 /-!
-# Locally-nameless theory for `Exp`
+# Locally-nameless facts for `Exp`
 
-Mirrors `cslib/Cslib/Languages/LambdaCalculus/LocallyNameless/Untyped/Properties.lean`;
-also holds the `is_lc` / `is_value` tactics and `toVal?` simp lemmas. -/
+How `open'`, `close`, `subst` and `fv` interact with `IsLocallyClosed` (after cslib's
+`LocallyNameless/Untyped/Properties.lean`), plus the `is_lc` / `is_value` tactics and
+`toVal?` lemmas. -/
 
 namespace ProbLang
 
@@ -20,20 +21,29 @@ namespace Exp
 variable {rT : Type _}
 variable {x y : Var} {e e' u t : Exp rT}
 
+/-! ## Opening at different indices
+
+Bound variables are de Bruijn indices (`bvar`); free variables are names (`fvar`). -/
+
 /-- If opening at `i` leaves `openRec j v e` unchanged for `i ≠ j`, it leaves `e` unchanged. -/
 theorem openRec_aux (e : Exp rT) (j v i u) (neq : i ≠ j)
     (heq : openRec j v e = openRec i u (openRec j v e)) : e = openRec i u e := by
   induction e generalizing i j <;> grind
 
+/-- Opening at two different indices with free variables commutes. -/
 theorem openRec_openRec_comm (k n : Nat) (x y : Var) (e : Exp rT) (neq : k ≠ n) :
     openRec k (fvar x) (openRec n (fvar y) e) = openRec n (fvar y) (openRec k (fvar x) e) := by
   induction e generalizing k n <;> grind
 
+/-! ## Closing, and `subst` away from fresh variables -/
+
+/-- Substituting for a variable not free in `e` does nothing. -/
 @[scoped grind =]
 theorem subst_fresh (x : Var) (e sub : Exp rT) (h : x ∉ e.fv) :
     subst e x sub = e := by
   induction e <;> grind
 
+/-- Closing a freshly opened variable gives back the term. -/
 theorem closeRec_openRec (x : Var) (e : Exp rT) (k : Nat) (h : x ∉ e.fv) :
     e = closeRec k x (openRec k (fvar x) e) := by
   induction e generalizing k <;> grind
@@ -42,6 +52,7 @@ theorem close_open (x : Var) (e : Exp rT) (h : x ∉ e.fv) :
     e = close (open' e (fvar x)) x :=
   closeRec_openRec x e 0 h
 
+/-- Opening with the same fresh variable is injective. -/
 theorem open_inj (x : Var) (e e' : Exp rT) (hx : x ∉ e.fv) (hx' : x ∉ e'.fv)
     (heq : open' e (fvar x) = open' e' (fvar x)) : e = e' := by
   grind [closeRec_openRec x e 0 hx, closeRec_openRec x e' 0 hx']
@@ -51,6 +62,8 @@ theorem swap_open_fvar_close (k n : Nat) (x y : Var) (e : Exp rT)
     closeRec k x (openRec n (fvar y) e)
       = openRec n (fvar y) (closeRec k x e) := by
   induction e generalizing k n <;> grind
+
+/-! ## Free variables under `close`, `open'`, `subst` -/
 
 theorem close_preserve_not_fvar {k x y} (e : Exp rT) (h : x ∉ e.fv) :
     x ∉ (closeRec k y e).fv := by
@@ -87,6 +100,12 @@ theorem close_var_not_fvar_rec (x) (k) (e : Exp rT) : x ∉ (closeRec k x e).fv 
 theorem close_var_not_fvar (x : Var) (e : Exp rT) : x ∉ (close e x).fv :=
   close_var_not_fvar_rec x 0 e
 
+/-! ## Local closedness
+
+Main results: `open_lc` (opening a locally closed term is a no-op), `subst_lc` and `beta_lc`
+(`subst` and β-opening preserve local closedness), and `open_close_subst_lc_gen`
+(opening `close e x` with `v` substitutes `v` for `x`). -/
+
 /-- Opening a locally closed term does nothing. Stated right-to-left so `rw [← open_lc]` erases a
 stuck `openRec` on an opaque leaf. -/
 @[scoped grind =_]
@@ -98,6 +117,7 @@ theorem open_lc (k : Nat) (t : Exp rT) (e : Exp rT) (he : e.IsLocallyClosed) :
       grind [openRec_aux e 0 (fvar x) (k+1) t]
   | _ => grind
 
+/-- `subst` distributes over `openRec` when the substituted term is locally closed. -/
 @[scoped grind =]
 theorem subst_openRec (x : Var) (t : Exp rT) (k : Nat) (u e : Exp rT) (hu : IsLocallyClosed t) :
     subst (openRec k u e) x t = openRec k (subst u x t) (subst e x t) := by
@@ -123,6 +143,7 @@ theorem subst_open (x : Var) (t : Exp rT) (u e : Exp rT) (hu : IsLocallyClosed t
 theorem subst_open_var (x y : Var) (u e : Exp rT) (hne : y ≠ x) (hu : IsLocallyClosed u) :
     subst (open' e (fvar x)) y u = open' (subst e y u) (fvar x) := by grind
 
+/-- Substituting a locally closed term into a locally closed term stays locally closed. -/
 @[scoped grind ←]
 theorem subst_lc {x : Var} {e u : Exp rT} (he : IsLocallyClosed e) (hu : IsLocallyClosed u)
     : IsLocallyClosed (subst e x u) := by
@@ -145,6 +166,8 @@ theorem subst_intro (x : Var) (t e : Exp rT) (mem : x ∉ e.fv) (t_lc : IsLocall
     open' e t = subst (open' e (fvar x)) x t := by
   grind
 
+/-- β-reduction preserves local closedness: a cofinitely closed body opens to a locally closed
+term. -/
 theorem beta_lc (L : Finset Var) (e u : Exp rT)
     (he : ∀ x ∉ L, IsLocallyClosed (open' e (fvar x))) (hu : IsLocallyClosed u) :
     IsLocallyClosed (open' e u) := by
@@ -174,6 +197,7 @@ private theorem openRec_closeRec_binder {L : Finset Var} {t : Exp rT} {x y : Var
     _ = open' (subst t x (fvar y)) (fvar z) :=
         subst_open_var z x (fvar y) t (Ne.symm hzx) (.fvar y)
 
+/-- Closing `x` then opening with `fvar y` renames `x` to `y` (`subst`) on locally closed terms. -/
 @[scoped grind =]
 theorem open_close_to_subst (e : Exp rT) (x y : Var) (k : Nat) (he : IsLocallyClosed e) :
     openRec k (fvar y) (closeRec k x e) = subst e x (fvar y) := by
@@ -235,13 +259,17 @@ theorem isClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.isClosedEmpty) :
     e.IsLocallyClosed ∧ e.fv ⊆ (∅ : Finset Var) :=
   ⟨h.1, h.2.subset⟩
 
+/-- Literals are closed. -/
 theorem lit_isClosedEmpty (b : BaseLit rT) : (Exp.lit b).isClosedEmpty :=
   ⟨IsLocallyClosed.lit b, by simp [fv]⟩
 
+/-- Opening a locally closed term with any term stays locally closed. -/
 theorem open_isLocallyClosed {e : Exp rT} (t : Exp rT) (he : e.IsLocallyClosed) :
     (open' e t).IsLocallyClosed := by
   rw [open', ← open_lc 0 t e he]
   exact he
+
+/-! ## Free variables of `open'` -/
 
 theorem fv_subset_openRec (k : Nat) (y : Var) (e : Exp rT) :
     e.fv ⊆ (openRec k (fvar y) e).fv := by

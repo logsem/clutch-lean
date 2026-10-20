@@ -16,7 +16,7 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 
-/-! ## The Barthe–Olmedo regrading -/
+/-! ## The threshold on reals -/
 
 /-- The Barthe–Olmedo threshold `θ_γ(t) = (exp (γ t) - 1) / γ` on reals, the identity at `γ = 0`;
 `bofThresh` lifts it to `ℝ≥0∞` budgets (Rocq `gamma_form_of_additive`). -/
@@ -54,6 +54,8 @@ theorem bofReal_le_of_neg {γ : ℝ} (hγ : γ < 0) (t : ℝ) : bofReal γ t ≤
   simp only [bofReal, hγ.ne, ↓reduceIte]
   rw [div_le_div_right_of_neg hγ]
   linarith [Real.exp_pos (γ * t)]
+
+/-! ## The threshold on budgets -/
 
 /-- The Barthe–Olmedo threshold `θ γ` on budgets, `⊤` at `⊤`. -/
 noncomputable def bofThresh (γ : ℝ) (r : ℝ≥0∞) : EReal :=
@@ -103,11 +105,13 @@ variable {f : ℝ → ℝ} {γ : ℝ} {X Y : Type u} [MeasurableSpace X] [Measur
 theorem bofDivergence_iff : bofDivergence f γ r μ ν ↔ fDiv f μ ν ≤ bofThresh γ r :=
   ⟨fun h ↦ h (), fun h _ ↦ h⟩
 
+/-- For convex `f`, `bofDivergence f γ` is a graded divergence (monotone in the budget). -/
 theorem isGraded_bofDivergence (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) : (bofDivergence.{u} f γ).IsGraded :=
   isGraded_fDivBound (fun _ _ ↦ hf) (fun _ _ ↦ hf_cont) (fun _ _ _ _ _ _ ↦ le_rfl)
     (fun _ _ h _ ↦ bofThresh_mono γ h) fun _ ↦ bofThresh_top γ
 
+/-- If `f 1 = 0`, `bofDivergence f γ` is reflexive: any measure is related to itself. -/
 theorem isReflexive_bofDivergence (hf1 : f 1 = 0) : (bofDivergence.{u} f γ).IsReflexive :=
   isReflexive_fDivBound fun _ ↦ by simp [hf1]
 

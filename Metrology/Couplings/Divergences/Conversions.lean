@@ -4,9 +4,11 @@ public import Metrology.Couplings.Divergences.Concentrated
 public import Metrology.Couplings.LiftingHom
 public import Metrology.Couplings.Divergences.RenyiStrassen
 
-/-! Conversions between DP and its Rényi relaxations (Approximate Span Liftings, Fig. 4).
-Tags `[X/Y]` name the arrow `X → Y` of Fig. 4 (`D` = pure DP, `R` = Rényi, `z` = zCDP,
-`t` = tCDP). -/
+/-! # Conversions between DP and Rényi, zCDP, tCDP
+
+Divergence-level conversions and the `LiftingRelHom`s into `codensity dp` built from them. Tags
+`[X/Y]` name the arrow `X → Y` of Fig. 4 of Approximate Span Liftings (`D` = pure DP, `R` = Rényi,
+`z` = zCDP, `t` = tCDP). -/
 
 @[expose] public section
 
@@ -87,7 +89,9 @@ theorem renyi_of_tcdp (hα : 1 < α) (hω : α < ω) {ρ : ℝ≥0∞} (h : tcdp
     renyiDivergence α (ENNReal.ofReal α * ρ) μ ν :=
   tcdpDivergence_iff.1 h α hα hω
 
-/-! ## Rényi bounds give DP bounds -/
+/-! ## Rényi, zCDP and tCDP bounds give DP bounds
+
+`bound_of_*` are the moment-bound-to-`Bound` steps; the `dp_of_*` theorems wrap them. -/
 
 /-- A moment bound of order `α` gives the DP inequality with slack `δ` and budget
 `r + log (1 / δ) / (α - 1)`: test the two-cell partition `{S, Sᶜ}` (cf. [R/D]). -/
@@ -275,7 +279,10 @@ theorem dp_of_tcdp [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} {
 
 end
 
-/-! ## Conversions of codensity liftings -/
+/-! ## Transporting a conversion to codensity liftings
+
+`codensity_dp_rel_of_imp` is the general step: a divergence-level conversion into `dp` carries
+codensity liftings of relations along. -/
 
 /-- Point masses with ordered masses are within budget zero for a reflexive, right-monotone
 divergence. -/
@@ -399,6 +406,8 @@ theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
   rfl
 
 end LiftingRelHom
+
+/-! ## Closed-form budgets -/
 
 /-- At `ρ = 0` the budget of `zcdpToDp_map` is at most `ξ`: send the order to infinity. So pure
 zCDP liftings are DP at `(ξ, δ)` for every `δ > 0`. -/

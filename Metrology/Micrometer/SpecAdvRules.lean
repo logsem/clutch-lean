@@ -8,7 +8,11 @@ import Metrology.ProbLang.Syntax.Notation
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-/-! Spec draws that split a credit by outcome (Eris `wp_couple_rand_adv_comp`, spec side). -/
+/-! # Spec-side advanced composition
+
+A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome credits `↯b (s (ε₂ n))`,
+as in Eris `wp_couple_rand_adv_comp` (spec side): `wp_rand_r_adv`, and `refines_randU_r_adv` for
+refinements. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open scoped ENNReal AppGS
@@ -34,6 +38,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     wp L E e Φ := by
   classical
   iintro ⟨Hj, Hc, Hcnt⟩
+  -- spec-only step: `wp_lift_step_spec_couple` asks for a coupling of the spec draw
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
@@ -77,6 +82,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
       · rw [relCost_of_not (S := fun x y ↦ x = σ₁ ∧ y ∈ Set.Ico 0 N)
           (fun h' ↦ h ⟨h'.1, h'.2.1, h'.2.2⟩)]
         exact le_top.trans (le_self_add.trans le_self_add)
+  -- the coupling `hcpl` fires the spec step; each outcome `n` returns its own credit
   iapply specCoupl_couple hcpl (ErasableExpr.dret σ₁) (ErasableExpr.dret σ₁')
   iintro %σ₂ %e₂' %σ₂' %hlt
   obtain ⟨hσ, n, h0, hN, hρ⟩ : σ₂ = σ₁ ∧ ∃ n, 0 ≤ n ∧ n < N ∧ (⟨e₂', σ₂'⟩ : Cfg rT) = rgt n := by

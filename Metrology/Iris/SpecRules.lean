@@ -8,7 +8,8 @@ public import Metrology.ProbLang.DetStep
 
 /-! # Spec-side stepping rules
 
-Rules `step_*` advance the spec program under `specUpdate`, e.g. `step_pure`, `step_rand`. -/
+Rules `step_pure`, `step_alloc`, `step_load`, `step_store`, `step_alloctape`, `step_rand` advance
+the spec program `⤇ K[e]` under `specUpdate`, using the ghost state of `SpecProgram.lean`. -/
 
 open Std Iris Iris.Std Iris.BI COFE ProbLang
 
@@ -16,9 +17,9 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-! ## Bridge: `DetStep` ⇒ `pexecN 1 ρ = MeasureTheory.Measure.dirac ρ'` -/
+/-! ## Deterministic steps give Dirac `pexecN` -/
 
-/-- One-step deterministic advance: `DetStep ρ ρ'` gives `pexecN 1 ρ = dirac ρ'`. -/
+/-- A deterministic step `DetStep ρ ρ'` makes one-step execution the Dirac measure at `ρ'`. -/
 theorem pexecN_1_of_DetStep {ρ ρ' : Cfg rT} (h : DetStep ρ ρ') :
     pexecN 1 ρ = MeasureTheory.Measure.dirac ρ' := by
   rw [pexecN_one]
@@ -29,7 +30,7 @@ theorem pexecN_1_of_DetStep {ρ ρ' : Cfg rT} (h : DetStep ρ ρ') :
   rw [stepOrFinal_not_isValue hnv]
   exact h2
 
-/-- `n`-step version: `DetExec n ρ ρ'` gives `pexecN n ρ = dirac ρ'`. -/
+/-- `n`-step version: `DetExec n ρ ρ'` makes `n`-step execution the Dirac measure at `ρ'`. -/
 theorem pexecN_of_DetExec {n : ℕ} {ρ ρ' : Cfg rT} (h : DetExec n ρ ρ') :
     pexecN n ρ = MeasureTheory.Measure.dirac ρ' := by
   induction n generalizing ρ with
@@ -40,7 +41,7 @@ theorem pexecN_of_DetExec {n : ℕ} {ρ ρ' : Cfg rT} (h : DetExec n ρ ρ') :
         pexecN_1_of_DetStep hstep,
         MeasureTheory.Measure.dirac_bind pexecN_measurable, ih ⟨hrest⟩]
 
-/-- `nsteps PureStep n e1 e2` at a fixed state gives `DetExec n ⟨e1,σ⟩ ⟨e2,σ⟩`. -/
+/-- Pure steps `nsteps PureStep n e1 e2` are deterministic executions at any fixed state `σ`. -/
 theorem DetExec.of_nsteps_PureStep {n : ℕ} {e1 e2 : Exp rT} (σ : State rT)
     (h : nsteps PureStep n e1 e2) :
     DetExec n ⟨e1, σ⟩ ⟨e2, σ⟩ := by
@@ -50,13 +51,13 @@ theorem DetExec.of_nsteps_PureStep {n : ℕ} {e1 e2 : Exp rT} (σ : State rT)
     obtain ⟨c, hstep, hrest⟩ := h
     exact (ih hrest).succ ⟨hstep.safe σ, hstep.det σ⟩
 
-/-- `PureExec φ n e1 e2 + φ` gives `pexecN n ⟨e1,σ⟩ = dirac ⟨e2,σ⟩`. -/
+/-- Under `PureExec φ n e1 e2` and `φ`, `n`-step execution is the Dirac measure at `⟨e2, σ⟩`. -/
 theorem pexecN_of_PureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
     [h : PureExec φ n e1 e2] (σ : State rT) (hφ : φ) :
     pexecN n (⟨e1, σ⟩ : Cfg rT) = MeasureTheory.Measure.dirac ⟨e2, σ⟩ :=
   pexecN_of_DetExec (DetExec.of_nsteps_PureStep σ (h.pure_exec hφ))
 
-/-! ## Tape head steps (heap ones are in `DetStep.lean`) -/
+/-! ## Tape head steps as deterministic (heap ones are in `DetStep.lean`) -/
 
 /-- Tape allocation: `tape #z` deterministically allocates a fresh empty tape of
 bound `z`. -/
@@ -82,16 +83,18 @@ theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
         simp [Exp.decompItem, hd1, hd2])
     (by simp [headStep, htape])
 
-/-! ## Stepping rules over `Cfg.specAuth` -/
+/-! ## Spec stepping rules (the `step_*` family) -/
 
 section Rules
 
-/-! These rules use `defaultSpecUpdateGS`, so `specInterp ρ` is `Cfg.specAuth ρ` (Micrometer's
-instance agrees by `rfl`: `micrometerWpGS_specInterp_eq`). -/
+/-! Each rule unfolds `specUpdate` at the current spec configuration `ρ`, checks `ρ` against the
+`⤇` fragment, updates the ghost state, and exhibits the deterministic step. These rules use
+`defaultSpecUpdateGS`, so `specInterp ρ` is `Cfg.specAuth ρ` (Micrometer's instance agrees by
+`rfl`: `micrometerWpGS_specInterp_eq`). -/
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
 
-/-- Pure reduction under an evaluation context. -/
+/-- Spec step: a pure reduction `e ⇝ⁿ e'` under an evaluation context `K`. -/
 theorem step_pure {E : CoPset} (K : Ectx rT) {e e' : Exp rT} {φ : Prop} {n : ℕ}
     (Hφ : φ) [Hex : PureExec φ n e e'] :
     ⤇ (K.fill e) ⊢@{IProp GF} specUpdate rT E (⤇ (K.fill e')) := by
@@ -108,7 +111,7 @@ theorem step_pure {E : CoPset} (K : Ectx rT) {e e' : Exp rT} {φ : Prop} {n : �
   · ipureintro; exact pexecN_of_PureExec σ Hφ
   isplitl [HρNew] <;> iassumption
 
-/-- Allocation under an evaluation context. -/
+/-- Spec step: heap allocation, returning a fresh location with its points-to. -/
 theorem step_alloc {E : CoPset} (K : Ectx rT) {v : Exp rT} (hv : IsVal v) :
     ⤇ (K.fill (.alloc v)) ⊢@{IProp GF}
       specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#(.loc l)))) ∗ (l ↦ₛ ⟨v, hv, hv.lc⟩)) := by
@@ -139,7 +142,7 @@ theorem step_alloc {E : CoPset} (K : Ectx rT) {v : Exp rT} (hv : IsVal v) :
   iexists σ.heap.fresh
   isplitl [HKNew] <;> iassumption
 
-/-- Heap load under an evaluation context. -/
+/-- Spec step: load from a location whose points-to we own. -/
 theorem step_load {E : CoPset} (K : Ectx rT) {l : Loc} {v : Val rT} :
     iprop((⤇ (K.fill pl(!#(.loc l)))) ∗ (l ↦ₛ v)) ⊢@{IProp GF}
       specUpdate rT E iprop((⤇ (K.fill (Exp.ofVal v))) ∗ (l ↦ₛ v)) := by
@@ -157,7 +160,7 @@ theorem step_load {E : CoPset} (K : Ectx rT) {l : Loc} {v : Val rT} :
     exact pexecN_1_of_DetStep (((DetHeadStep.load σ hlk).toDetStep).fill K)
   iframe
 
-/-- Heap store under an evaluation context. -/
+/-- Spec step: store to a location whose points-to we own, updating it. -/
 theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
     (hv : IsVal e) (hnew : e.toVal? = some v_new) :
     iprop((⤇ (K.fill (.store pl(#(.loc l)) e))) ∗ (l ↦ₛ v_old)) ⊢@{IProp GF}
@@ -185,7 +188,7 @@ theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_ne
     exact ((DetHeadStep.store σ hlk hnew).toDetStep).fill K
   iframe
 
-/-- Allocate a tape under an evaluation context. -/
+/-- Spec step: tape allocation, returning a fresh label with its empty tape. -/
 theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
     ⤇ (K.fill (pl(tape(#(.int z))))) ⊢@{IProp GF}
       specUpdate rT E iprop(∃ (l : Loc),
@@ -217,7 +220,7 @@ theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
   iexists σ.tapes.fresh
   isplitl [HKNew] <;> iassumption
 
-/-- Read from a non-empty tape under an evaluation context. -/
+/-- Spec step: `rand` reads and pops the head of a non-empty tape we own. -/
 theorem step_rand {E : CoPset} (K : Ectx rT) {z : Int} (l : Loc)
     (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z }) :
     iprop((⤇ (K.fill (pl(rand(#(.int z), #(.lbl l)))))) ∗ (l ↪ₛ ⟨z, n :: ns⟩))

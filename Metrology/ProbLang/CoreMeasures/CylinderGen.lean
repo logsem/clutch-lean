@@ -14,16 +14,13 @@ open Lean Elab Command Meta Metrology.Meta
 /-!
 # Measurable structure on inductive types
 
-`deriving instance MeasurableSpace for T` makes an inductive type `T` a measurable space, and
-proves measurable its constructors and the functions defined on it by cases or by structural
-recursion.
+`deriving instance MeasurableSpace for T` gives an inductive type `T` a σ-algebra that makes its
+constructors measurable embeddings, and proves measurable the functions on `T` by cases or by
+structural recursion (`T.measurable_cases`, `T.measurable_struct_rec`, `T.measurable_casesOn`).
+It views `T ≃ Σ s : T.Shape, T.Leaves s`: the shape is the constructor tree with its countable
+(*base*) fields, the leaves are the *data* fields. `#cylinder_classify T` shows the field classes.
 
-A value of `T` is its *shape* (its constructors and its countable, *base*, fields) together with its
-*leaves* (its other, *data*, fields). For a recursive type the shape is the whole constructor tree
-and the leaves are the data fields of every node. So `T ≃ Σ s : T.Shape, T.Leaves s`, and `T` gets
-the σ-algebra of that sum. Every term is built as an `Expr` (with the builders of
-`CylinderGen/Ctx.lean`), and every proof instantiates lemmas of `Shapes.lean`. In order, it
-declares:
+It declares, in order (one section each):
 
 1. `T.Shape`, with the constructions of an `inductive` and `Countable`, and `T.Leaves s`, with its
    σ-algebra;
@@ -43,7 +40,6 @@ declares:
 `T.measurable_struct_rec(_param)` exist when `T` has recursive fields, and `c.π.measurable` when
 `c` has fields. `c.measurable`, `c.π.measurable` and, when `T` has several constructors,
 `T.measurable_casesOn(_param)` are `fun_prop` lemmas.
-`#cylinder_classify T` shows how it classifies the fields.
 -/
 
 namespace Metrology.CylinderGen
@@ -105,7 +101,10 @@ def Ctx.addLeavesInstance (ctx : Ctx) (name : Name) (cls : Expr → MetaM Expr)
     return (← mkForallFVars #[s] (← cls (ctx.leaves s)), ← mkLambdaFVars #[s] value)
   ctx.declareInstance (ctx.T ++ `Leaves ++ name) type value (binders := binders)
 
-/-! ## 2. The equivalence with the sum over shapes -/
+/-! ## 2. The equivalence with the sum over shapes
+
+`T.toSigma` and `T.ofSigma` are inverse by induction on `T`, and `T` gets the σ-algebra pulled back
+along `toSigma`, from the sum σ-algebra of `Shapes.lean`. -/
 
 /-- A function of `p : Σ s, T.Leaves s`, by induction on the shape `p.1`, of type
 `motiveAt s v`, and given by `arm c slots vs` on the leaves `v` of shape `c slots`, whose components
@@ -227,7 +226,10 @@ def Ctx.addShapeFn (ctx : Ctx) : MetaM Unit := do
       ctx.declare name type (← mkLambdaFVars xs (← mkEqRefl lhs))
       addSimpTheorem simpExtension name (post := true) (inv := false) .global (eval_prio default)
 
-/-! ## 3. Constructors -/
+/-! ## 3. Constructors
+
+Each constructor `c` is a measurable embedding, since the splitting of its fields into shape index
+and leaves (`Ctx.splitFields`) is a measurable equivalence from `Shapes.lean`. -/
 
 /-- The type `A ≃ᵐ B`. -/
 def measurableEquivTy (A B : Expr) : MetaM Expr := mkAppOptM ``MeasurableEquiv #[A, B, none, none]

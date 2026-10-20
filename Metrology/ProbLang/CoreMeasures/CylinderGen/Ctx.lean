@@ -9,13 +9,12 @@ public import Metrology.ProbLang.CoreMeasures.Shapes
 open Lean Meta Metrology.Meta
 
 /-!
-# Reading an inductive type for the `MeasurableSpace` deriving handler
+# The shared context of the `MeasurableSpace` deriving handler
 
-`withCtx T` reads the inductive type `T` into a `Ctx`: its parameters, and its constructors with
-their fields classified as *recursive* (of type `T`), *base* (countable, part of the shape) or
-*data* (the leaves). The rest of this file builds the terms that the stages of `CylinderGen.lean`
-share: constants of `T`, local variables, recursors on `T` and `T.Shape`, the leaves of a shape, and
-declarations.
+`withCtx T` reads an inductive type `T` into a `Ctx`: its parameters and constructors, with each
+field classified as recursive (of type `T`), base (countable, part of the shape) or data (a leaf).
+`Ctx` also builds the terms the stages of `CylinderGen.lean` share: constants, recursors on `T`
+and `T.Shape`, the leaves of a shape, and declarations.
 -/
 
 namespace Metrology.CylinderGen

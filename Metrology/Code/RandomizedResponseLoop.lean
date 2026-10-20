@@ -7,8 +7,9 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response in a loop
 
-Proved private in any lifting in `Micrometer/Examples/RandomizedResponse/Basic`; DP, zCDP, tCDP,
-Rényi and χ² instances in its sibling files. -/
+Proved private in any lifting by `rrCount_isPrivate` in
+`Micrometer/Examples/RandomizedResponse/Basic`; DP, zCDP, tCDP, Rényi and χ² instances in its
+sibling files. -/
 
 namespace ProbLang
 namespace RandomizedResponse
@@ -20,7 +21,7 @@ variable {rT : Type _}
 def rrLoop (b : Bool) : Exp rT := pl%
   rec loop n := if n = #0 then #0 else (if &(rr b) then #1 else #0) + loop (n - #1)
 
-/-- Run `rrLoop b` for `k` iterations. -/
+/-- The loop `rrLoop b` run for `k` iterations: the count of `true` reports. -/
 def rrCount (b : Bool) (k : Int) : Exp rT := pl% &(rrLoop b) #(.int k)
 
 end RandomizedResponse

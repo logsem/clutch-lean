@@ -12,12 +12,15 @@ public import Metrology.Iris.Algebra
 
 /-! # Error credits
 
-The resource `↯ε` of error credits, with its split, update and amplification rules. -/
+The resource `↯ε` (total `●↯ε`) over `ℝ≥0∞` with validity `ε < 1`, as used by TotalEris.
+Provides split/combine/supply rules, `contradict` (`1 ≤ ε` is absurd), and error amplification. -/
 
 noncomputable section
 
 open Std Iris COFE
 open scoped ENNReal NNReal
+
+/-! ## The camera of error credits -/
 
 /-- Error credits: non-negative extended reals, valid when below `1`. -/
 abbrev ErrorCredit : Type _ := ℝ≥0∞
@@ -60,6 +63,7 @@ theorem ErrorCredit.included_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼ ε₂ �
   rintro ⟨ε₃, rfl⟩
   exact le_self_add
 
+/-- Step-indexed form of `ErrorCredit.included_iff`. -/
 theorem ErrorCredit.includedN_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼{n} ε₂ ↔ ε₁ ≤ ε₂ :=
   ErrorCredit.included_iff
 
@@ -86,6 +90,8 @@ theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : 
     refine Std.lt_of_le_of_lt ?_ H
     rw [add_comm]
     exact add_le_add_left h1 ε
+
+/-! ## Ghost state and notation -/
 
 instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
@@ -118,12 +124,16 @@ instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
 
 end Resources
 
+/-! ## Rules for `↯ε` and `●↯ε` -/
+
 namespace ErrorCredit
 
 variable {GF : BundledGFunctors} [IEC : ECGS GF]
 
+/-- Equal credit amounts are interchangeable. -/
 theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ := by simp [he]
 
+/-- Equal authoritative totals are interchangeable. -/
 theorem extAuth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢@{IProp GF} ●↯ ε₂ := by simp [he]
 
 /-- Credits split additively. -/
@@ -208,6 +218,13 @@ theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢@{IProp GF} False
   iintro Hε
   ihave %hle := valid $$ Hε
   exact absurd h (Std.not_le.mpr hle)
+
+instance ec_timeless (ε : ℝ≥0∞) : BI.Timeless (↯ε : IProp GF) := iOwn_timeless
+
+/-! ## Error amplification
+
+If `↯ε` can always be traded for `↯(k * ε)` on the way to `P`, then `↯ε` proves `P`: iterating
+the trade reaches `1` credit, which `contradict` refutes. -/
 
 namespace Induction
 
@@ -336,9 +353,9 @@ theorem amp_external {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF}
 
 end Induction
 
-instance ec_timeless (ε : ℝ≥0∞) : BI.Timeless (↯ε : IProp GF) := iOwn_timeless
-
 end ErrorCredit
+
+/-! ## Allocation -/
 
 /-- Allocate fresh error-credit ghost state holding `ε < 1` credits. -/
 theorem ec_alloc {GF : BundledGFunctors} [IEC : ECPreGS GF] (ε : ℝ≥0∞) (h : ε < 1) :

@@ -11,7 +11,12 @@ public import Metrology.Couplings.Bridges.AddCoupl
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-/-! Uniform integer draws, the steps of `rand`, their couplings, and timeless tape predicates. -/
+/-!
+# Uniform integer draws and their couplings
+
+`unifInt z` is the uniform measure on `[0, z)`; the file couples two such draws (along bijections,
+injections, under a context, with outcome-dependent cost) and proves the `primStep` of `rand`.
+-/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -22,7 +27,7 @@ namespace ProbLang
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 variable {B : Type} {L : GradedLifting.{0} B}
 
-/-! ## Uniform coupling under a bijection -/
+/-! ## The uniform measure `unifInt` and its exact bijection coupling -/
 
 section UniformInt
 
@@ -79,6 +84,7 @@ theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     L.Rel 0 (fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) (unifInt z hz) (unifInt z hz) := by
+  -- reflexivity pushed along `f` relates `unifInt z` to `f_* unifInt z`, which is `unifInt z`
   have h := (rel_graph (L := L) (unifInt z hz) (f := f) Measurable.of_discrete).restrict
     measurableSet_Ico (unifInt_compl_Ico hz)
   rw [unifInt_map_bijOn hz f hdom hbij] at h
@@ -89,8 +95,8 @@ theorem Cfg.uniform_eq_map {z : Int} (hz : 0 < z) (σ : State rT) :
     Cfg.uniform z σ = (unifInt z hz).map fun n => (⟨pl(#(.int n)), σ⟩ : Cfg rT) :=
   Cfg.uniform_eq_map_uniformOfFinset hz σ
 
-/-- Pushes a coupling of two uniform integer draws to the configurations they step to, under an
-evaluation context `K` on the right. -/
+/-- A lifting of two uniform integer draws pushes forward to the configurations they step to, under
+an evaluation context `K` on the right. -/
 theorem Cfg.uniform_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     {b : B} {zL zR : Int} (HzL : 0 < zL) (HzR : 0 < zR) (σ σ' : State rT) (K : Ectx rT)
     {S : Int → Int → Prop} {S' : Cfg rT → Cfg rT → Prop}
@@ -114,7 +120,7 @@ theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) 
     (HeadReducible.of_headStepSupport Hwitness))]
   rfl
 
-/-- `rand z` on the unit label is discretely reducible and steps to `Cfg.uniform z σ`. -/
+/-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
 theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     (σ : State rT) :
     Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
@@ -171,7 +177,7 @@ theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz
   ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
     primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
 
-/-! ## Couplings of draws along a bijection -/
+/-! ## Configuration couplings of `rand` draws along a bijection -/
 
 /-- The outcome of a coupled draw: the left draw is `n`, the right draw is `f n` under `K`. -/
 @[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
@@ -223,6 +229,8 @@ larger support (Rocq `ARcoupl_rand_rand_inj`, `ARcoupl_rand_rand_rev_inj`). -/
 
 /-- Uniform coupling along an injection, smaller bound on the left:
 `rand zL ~ rand zR` for `zL ≤ zR` along `f`, with error `(zR - zL)/zR`. -/
+-- Proof: the left mass `∑ φ` is at most `S = ∑ ψ ∘ f`, which is at most `∑ ψ` and at most `zL`;
+-- rescaling from `1/zL` to `1/zR` costs at most `(zR - zL)/zR`.
 theorem unifInt_addCoupl_inj {zL zR : Int} (HzL : 0 < zL) (Hle : zL ≤ zR) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
@@ -364,7 +372,7 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT] {zL zR :
   rintro _ m ⟨h0, h1, hm⟩
   exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
 
-/-! ## Coupling under an evaluation context -/
+/-! ## Couplings of steps under an evaluation context -/
 
 open MeasureTheory in
 /-- A coupling with a step of `e` gives one with a step of `K[e]`. -/
@@ -384,6 +392,8 @@ theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
     (Hcpl : AddCoupl ε {p : Cfg rT × Cfg rT | R p.1.expr p.2.expr} μ (primStep ⟨e, σ⟩)) :
     AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R p.1.expr e''} μ (primStep ⟨K.fill e, σ⟩) :=
   AddCoupl_steps_ctx_bind_r hv Hcpl
+
+/-! ## Outcome-dependent cost of a coupled draw -/
 
 /-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤`
 elsewhere. Unlike `Cfg.drawCost`, which is keyed by both draws, this is keyed by the left draw
@@ -420,7 +430,8 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
       (primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩)
       (primStep ⟨K.fill pl(rand(#(.int z), #(.unit))), σ'⟩) := by
   classical
-  -- Pay the right-sample cost `ε₂ (f⁻¹ m)` in expectation over the exact bijection coupling.
+  -- Idea: `c m = ε₂ (f⁻¹ m)` is paid in expectation over the exact bijection coupling
+  -- (`IsExpectationAdditive.add_right`); the average of `c` is the amortised bound `hamort`.
   set c : Int → ENNReal := fun m => ⨅ n, ⨅ (_ : (0 ≤ n ∧ n < z) ∧ f n = m), ε₂ n
   have hcf : ∀ n, 0 ≤ n → n < z → c (f n) = ε₂ n := fun n h0 h1 => by
     obtain ⟨_, -, huniq⟩ := hbij (f n) (hdom n h0 h1).1 (hdom n h0 h1).2
@@ -448,11 +459,13 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
   · simp only [relCost_of_not (S := fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) hnm]
     exact le_top.trans le_self_add
 
-/-! ## `id` helpers for the coupling rules -/
+/-! ## The identity bijection and one-point avoidance -/
 
+/-- `id` maps `[0, z)` into itself. -/
 theorem id_dom_range {z : Int} : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
   fun _ h0 hlt => ⟨h0, hlt⟩
 
+/-- Avoiding one value `bad` costs an average of at most `1/z`. -/
 theorem avoid_one_amort {z : Int} (bad : Int) :
     (∑ n ∈ Finset.Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
       (z.toNat : ENNReal)⁻¹ := by
@@ -461,10 +474,11 @@ theorem avoid_one_amort {z : Int} (bad : Int) :
   rw [Finset.sum_ite_eq']
   split <;> simp
 
+/-- `id` is a bijection of `[0, z)`. -/
 theorem id_bij_range {z : Int} : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ id n = m :=
   fun m h0 hlt => ⟨m, ⟨⟨h0, hlt⟩, rfl⟩, fun _ ⟨_, heq⟩ => heq⟩
 
-/-! ## Timeless instances for tape predicates -/
+/-! ## Timeless tape and heap points-to predicates -/
 
 section TimelessTapes
 

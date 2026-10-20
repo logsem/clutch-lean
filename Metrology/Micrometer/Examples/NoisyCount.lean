@@ -12,10 +12,10 @@ import Mathlib.Algebra.Regular.Prod
 
 @[expose] public section
 
-/-! # The noisy count is `1/b`-differentially private
+/-! # NoisyCount: a Laplace-noised count is `1/b`-DP
 
-Adjacent databases have counts at distance at most `1`, so one credit `↯b (1/b, 0)` pays for the
-Laplace noise. Every result is conditional on the sampler spec `LaplaceSpec`. -/
+Adjacent databases have counts at most `1` apart, so one credit `↯b (1/b, 0)` pays for the Laplace
+sampler call. Main result `noisyCount_DP`, conditional on the sampler spec `LaplaceSpec`. -/
 
 open scoped ENNReal NNReal
 
@@ -25,10 +25,12 @@ open GradedDivergence (dp codensity codensity_complete dp_laplace)
 namespace ProbLang
 namespace NoisyCount
 
+/-! ## The sampler spec (assumed, not implemented) -/
+
 variable {lap : Val ℝ} {b : ℝ≥0} {n : ℕ}
 
-/-- `lap #a` couples with a spec copy of `lap #a'` like a primitive sampler with law
-`laplace a b` in the lifting `L`. -/
+/-- Assumed rule for the sampler `lap`: `lap #a` against a spec copy of `lap #a'` is coupled like a
+primitive with law `laplace a b` in the lifting `L`, paying a cancellable credit `↯b c`. -/
 def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
     [OrderTop B] {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF]
     [BudgetCreditGS B GF] (L : GradedLifting.{0} B) (lap : Val ℝ) (b : ℝ≥0) : Prop :=
@@ -37,6 +39,8 @@ def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrdere
     (⤇ K.fill pl({Exp.ofVal lap} #(.real a')) ∗ ↯b c ∗
       (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#(.real y)) -∗ Φ (.real x)) ⊢
       wp L E pl({Exp.ofVal lap} #(.real a)) Φ)
+
+/-! ## Adjacency and sensitivity -/
 
 /-- Databases that differ in at most one entry. -/
 def Adjacent (db db' : Fin n → Bool) : Prop :=
@@ -49,6 +53,8 @@ theorem abs_count_sub_le {db db' : Fin n → Bool} (h : Adjacent db db') :
   rw [count, count, ← Finset.sum_sub_distrib,
     Finset.sum_eq_single i (fun j _ hj ↦ by simp [hi j hj]) (by simp)]
   cases db i <;> cases db' i <;> norm_num
+
+/-! ## The program logic proof -/
 
 /-- The privacy budget `(1/b, 0)`. -/
 noncomputable abbrev budget (b : ℝ≥0) : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (1 / b), 0)
@@ -63,13 +69,17 @@ theorem wp_noisyCount [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .
   rw [spec_eq_fill_nil]
   iintro Hj Hb
   simp only [noisyCount]
+  -- Spend the credit on the sampler spec: `dp_laplace` (sensitivity `1`) bounds the two laws,
+  -- and `codensity_complete` turns that bound into an equality coupling.
   iapply hlap _ _ (· = ·) _ [] _ _ (by simp)
     (codensity_complete (dp_laplace (abs_count_sub_le h) b))
   iframe Hj Hb
   iintro %x %_ %rfl Hj
   iapply spec_fill_nil_exists (.real x) $$ Hj
 
-/-- The noisy count on databases, started from state `σ`. -/
+/-! ## Adequacy: the DP statement -/
+
+/-- The noisy count as a mechanism on databases, started from state `σ`. -/
 noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
     Mechanism (Fin n → Bool) (Exp ℝ) :=
   progMech (noisyCount lap) σ

@@ -5,16 +5,20 @@ public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.MeasureTheory.Measure.Restrict
 public import Mathlib.MeasureTheory.Function.Floor
 
-/-! # The continuous `LawfulProbLangℝ ℝ` instance
+/-! # The real-number model `LawfulProbLangℝ ℝ`
 
-Takes `Uniform[0,1]` as Lebesgue measure on `[0,1]` and proves the rotation invariance a
-continuous one-time pad needs. -/
+`instProbLangℝReal` takes `unifUnit` to be Lebesgue measure on `[0,1]`; the file also proves
+that `x ↦ frac (m + x)` preserves it (`measurePreserving_fracAdd`), as a continuous
+one-time pad needs. -/
 
 namespace ProbLang
 
 open MeasureTheory
 
-/-- The real numbers as the continuous `LawfulProbLangℝ` model. -/
+/-! ## The instance -/
+
+/-- The reals as a `LawfulProbLangℝ` model: `unifUnit` is Lebesgue measure on `[0,1]`, with
+support `(0,1)`, and `realFrac` is `Int.fract`. -/
 public noncomputable instance instProbLangℝReal : LawfulProbLangℝ ℝ where
   beq a b := decide (a = b)
   eq_of_beq h := of_decide_eq_true h
@@ -62,7 +66,7 @@ public noncomputable instance instProbLangℝReal : LawfulProbLangℝ ℝ where
   measurable_realNeg := measurable_neg
   measurable_realFrac := measurable_fract
 
-/-! ### Arithmetic reduction lemmas
+/-! ## Reduction lemmas
 
 At `rT = ℝ` the `ProbLangℝ` operations are Lean's own; these let `twp_pures` normalise them. -/
 
@@ -79,13 +83,14 @@ At `rT = ℝ` the `ProbLangℝ` operations are Lean's own; these let `twp_pures`
 public theorem mem_unifUnitSupport_real {r : ℝ} :
     r ∈ LawfulProbLangℝ.unifUnitSupport ↔ 0 < r ∧ r < 1 := Set.mem_Ioo
 
-/-! ### Rotation invariance of `Uniform[0,1]`
+/-! ## Rotation invariance of `Uniform[0,1]`
 
 `x ↦ frac (m + x)` swaps the blocks `[0, 1-m)` and `[1-m, 1)` by translation, so it preserves
 `Uniform[0,1]`: the hypothesis of `refines_couple_urands_lr` for a continuous one-time pad. -/
 
 open Set in
-/-- Adding `m ∈ [0, 1)` modulo 1 preserves `Uniform[0,1]`. -/
+/-- Adding `m ∈ [0, 1)` modulo 1 preserves `Uniform[0,1]`; the main case of
+`measurePreserving_fracAdd`. -/
 theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
@@ -169,7 +174,8 @@ public theorem fract_add_fract_right (x y : ℝ) :
     have := Int.fract_add_floor y; linarith
   rw [h, Int.fract_sub_intCast]
 
-/-- Adding any real `m` modulo 1 preserves `Uniform[0,1]`. -/
+/-- Adding any real `m` modulo 1 preserves `Uniform[0,1]`, the hypothesis of
+`refines_couple_urands_lr` for a continuous one-time pad. -/
 public theorem measurePreserving_fracAdd (m : ℝ) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))

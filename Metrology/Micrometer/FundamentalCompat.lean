@@ -3,7 +3,12 @@ module
 public import Metrology.Micrometer.FundamentalBase
 import Metrology.ProbLang.Syntax.Notation
 
-/-! Compatibility of `bin_log_related` with the pure and type-level constructors. -/
+/-!
+# Compatibility lemmas for open terms
+
+One lemma per typing rule, stated for `bin_log_related_ty`: functions and recursion, products, sums,
+conditionals, and polymorphic and recursive types. The fundamental theorem inducts over them.
+-/
 
 @[expose] public section
 
@@ -22,6 +27,9 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
+/-! ## Functions and recursion -/
+
+/-- `λ e` is related to `λ e'` at `τ1 → τ2` when the bodies are related under a fresh variable. -/
 theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty}
     (S : Finset Var) (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
@@ -55,68 +63,7 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   inext
   iexact HBody
 
-/-- Type abstraction, encoded as the thunk `λ_. e` (`e` locally closed), is related at `∀`. -/
-theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty}
-    (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyClosed)
-    (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ A, ⊢@{IProp GF} □ (bin_log_related_ty L ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
-  unfold bin_log_related_ty bin_log_related at Hbody ⊢
-  iintro %vs #Hvs
-  rw [substMap_lam, substMap_lam]
-  ihave %hvs := env_ltyped2_allClosed_pair Γ vs $$ Hvs
-  obtain ⟨hvsfst_closed, hvssnd_closed⟩ := hvs
-  ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
-  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
-  rw [show interp L (.forall' τ) Δ = lrel_forall L fun A => interp L τ (TyEnv.cons A Δ) from rfl]
-  iapply refines_forall (substMap_lc hvsfst_closed he_lc) (substMap_lc hvssnd_closed he'_lc)
-    (substMap_fv_eq_empty hvsfst_closed he_dom_fst) (substMap_fv_eq_empty hvssnd_closed he_dom_snd)
-  iintro !> %A
-  iapply Hbody A $$ Hvs
-
-theorem bin_log_related_pair (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
-    {τ1 τ2 : Ty} : iprop%
-    bin_log_related_ty L ⊤ Δ Γ e1 e1' τ1 ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ2 -∗
-    bin_log_related_ty L ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
-  bin_log_related_lift2 substMap_pair fun _ _ _ _ => refines_pair
-
-theorem bin_log_related_fst (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
-  bin_log_related_lift1 substMap_fst fun _ _ => refines_fst
-
-theorem bin_log_related_snd (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
-  bin_log_related_lift1 substMap_snd fun _ _ => refines_snd
-
-theorem bin_log_related_injl (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty L ⊤ Δ Γ e e' τ1 ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
-  bin_log_related_lift1 substMap_inl fun _ _ => refines_injl
-
-theorem bin_log_related_injr (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
-    bin_log_related_ty L ⊤ Δ Γ e e' τ2 ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
-  bin_log_related_lift1 substMap_inr fun _ _ => refines_injr
-
-theorem bin_log_related_case (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
-    {e0 e1 e2 e0' e1' e2' : Exp rT} {τ1 τ2 τ3 : Ty} : iprop%
-    bin_log_related_ty L ⊤ Δ Γ e0 e0' (.sum τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
-    bin_log_related_ty L ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
-  bin_log_related_lift3 substMap_case fun _ _ _ _ _ _ => refines_case
-
-theorem bin_log_related_if (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
-    {e0 e1 e2 e0' e1' e2' : Exp rT} {τ : Ty} : iprop%
-    bin_log_related_ty L ⊤ Δ Γ e0 e0' .bool ⊢
-    bin_log_related_ty L ⊤ Δ Γ e1 e1' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
-  bin_log_related_lift3 substMap_cond fun _ _ _ _ _ _ => refines_if
-
+/-- Application of related functions to related arguments is related. -/
 theorem bin_log_related_app (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ1 τ2 : Ty} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ2) ⊢
@@ -124,6 +71,8 @@ theorem bin_log_related_app (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2
     bin_log_related_ty L ⊤ Δ Γ (.app e1 e2) (.app e1' e2') τ2 :=
   bin_log_related_lift2 substMap_app fun _ _ _ _ => refines_app
 
+/-- `fix e` is related at `τ1 → τ2` by Löb induction: the body may assume the recursive call is
+related. -/
 theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty}
     (S : Finset Var) (he_lc : ∀ f ∉ S, (open' e (.fvar f)).IsLocallyClosed)
     (he'_lc : ∀ f ∉ S, (open' e' (.fvar f)).IsLocallyClosed)
@@ -172,7 +121,78 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   simp only [Ectx.fill_nil]
   iapply refines_app $$ HBody HArgs
 
+/-! ## Products, sums and conditionals -/
+
+/-- Pairs are related componentwise. -/
+theorem bin_log_related_pair (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
+    {τ1 τ2 : Ty} : iprop%
+    bin_log_related_ty L ⊤ Δ Γ e1 e1' τ1 ⊢
+    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ2 -∗
+    bin_log_related_ty L ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
+  bin_log_related_lift2 substMap_pair fun _ _ _ _ => refines_pair
+
+/-- The first projection preserves relatedness. -/
+theorem bin_log_related_fst (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
+    bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
+    bin_log_related_ty L ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
+  bin_log_related_lift1 substMap_fst fun _ _ => refines_fst
+
+/-- The second projection preserves relatedness. -/
+theorem bin_log_related_snd (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
+    bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
+    bin_log_related_ty L ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
+  bin_log_related_lift1 substMap_snd fun _ _ => refines_snd
+
+/-- The left injection preserves relatedness. -/
+theorem bin_log_related_injl (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
+    bin_log_related_ty L ⊤ Δ Γ e e' τ1 ⊢
+    bin_log_related_ty L ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
+  bin_log_related_lift1 substMap_inl fun _ _ => refines_injl
+
+/-- The right injection preserves relatedness. -/
+theorem bin_log_related_injr (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ1 τ2 : Ty} :
+    bin_log_related_ty L ⊤ Δ Γ e e' τ2 ⊢
+    bin_log_related_ty L ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
+  bin_log_related_lift1 substMap_inr fun _ _ => refines_injr
+
+/-- `case` on related sums with related branches is related. -/
+theorem bin_log_related_case (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
+    {e0 e1 e2 e0' e1' e2' : Exp rT} {τ1 τ2 τ3 : Ty} : iprop%
+    bin_log_related_ty L ⊤ Δ Γ e0 e0' (.sum τ1 τ2) ⊢
+    bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
+    bin_log_related_ty L ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
+    bin_log_related_ty L ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
+  bin_log_related_lift3 substMap_case fun _ _ _ _ _ _ => refines_case
+
+/-- `if` on related booleans with related branches is related. -/
+theorem bin_log_related_if (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
+    {e0 e1 e2 e0' e1' e2' : Exp rT} {τ : Ty} : iprop%
+    bin_log_related_ty L ⊤ Δ Γ e0 e0' .bool ⊢
+    bin_log_related_ty L ⊤ Δ Γ e1 e1' τ -∗
+    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
+    bin_log_related_ty L ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
+  bin_log_related_lift3 substMap_cond fun _ _ _ _ _ _ => refines_if
+
 /-! ## Polymorphic and recursive types -/
+
+/-- Type abstraction, encoded as the thunk `λ_. e` (`e` locally closed), is related at `∀`. -/
+theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty}
+    (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyClosed)
+    (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
+    (Hbody : ∀ A, ⊢@{IProp GF} □ (bin_log_related_ty L ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
+    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
+  unfold bin_log_related_ty bin_log_related at Hbody ⊢
+  iintro %vs #Hvs
+  rw [substMap_lam, substMap_lam]
+  ihave %hvs := env_ltyped2_allClosed_pair Γ vs $$ Hvs
+  obtain ⟨hvsfst_closed, hvssnd_closed⟩ := hvs
+  ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hΓdomVs he_fv he'_fv
+  rw [show interp L (.forall' τ) Δ = lrel_forall L fun A => interp L τ (TyEnv.cons A Δ) from rfl]
+  iapply refines_forall (substMap_lc hvsfst_closed he_lc) (substMap_lc hvssnd_closed he'_lc)
+    (substMap_fv_eq_empty hvsfst_closed he_dom_fst) (substMap_fv_eq_empty hvssnd_closed he_dom_snd)
+  iintro !> %A
+  iapply Hbody A $$ Hvs
 
 /-- Type application `e #()` goes from `∀ τ` to `τ[τ'/0]`. -/
 theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :

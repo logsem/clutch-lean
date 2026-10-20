@@ -7,15 +7,16 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response that leaks its input with probability `1/N`
 
-Proved `(ln 3, 1/N)`-differentially private in `Micrometer/Examples/LeakyRR`. -/
+The program `leakyRR`; its `(ln 3, 1/N)`-DP proof `leakyRR_DP` is in
+`Micrometer/Examples/LeakyRR`. -/
 
 namespace ProbLang
 namespace LeakyRR
 
 variable {rT : Type _}
 
-/-- Draw uniformly from `{0, …, N-1}`: on `0` report `b` itself, otherwise run randomized
-response on `b`. -/
+/-- Randomized response on `b` that releases `b` outright when a uniform draw from
+`{0, …, N-1}` is `0`, i.e. with probability `1/N`. -/
 def leakyRR (N : Int) (b : Bool) : Exp rT :=
   pl% let x := rand(#(.int N), #.unit); if x = #0 then #(.bool b) else &(RandomizedResponse.rr b)
 

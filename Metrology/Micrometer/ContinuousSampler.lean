@@ -7,7 +7,8 @@ public import Metrology.Micrometer.AppRelRules
 
 /-! # Continuous sampler rules
 
-Program and relational rules for `urand`, coupling two samplers along a measure-preserving map. -/
+Program rules for `urand` (`wp_urand`) and its coupling along a measure-preserving map
+(`wp_couple_urand_urand`, `refines_couple_urands_lr`). -/
 
 @[expose] public section
 
@@ -26,37 +27,47 @@ variable {B : Type} {L : GradedLifting.{0} B}
 
 `urand` steps to `Cfg.uniformReal σ`, the pushforward of `unifUnit` along `r ↦ ⟨#(.real r), σ⟩`. -/
 
+/-- Pairing a real literal with the state `σ` is measurable. -/
 theorem Cfg.measurable_realLit (σ : State rT) :
     Measurable (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) :=
   Cfg.measurable_iff.mpr ⟨Exp.lit.measurable.comp BaseLit.real.measurable, measurable_const⟩
 
+/-- Pairing a real literal with the state `σ` is a measurable embedding. -/
 theorem Cfg.measurableEmbedding_realLit (σ : State rT) :
     MeasurableEmbedding (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) :=
   Cfg.measurableEquivProd.symm.measurableEmbedding.comp
     ((measurableEmbedding_prod_mk_right σ).comp
       (Exp.lit.measurableEmbedding.comp BaseLit.real.measurableEmbedding))
 
+/-- The configurations `⟨#r, σ⟩` with `r` in the support are the image of the support. -/
 theorem Cfg.realLit_image_eq (σ : State rT) :
     {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} =
     (fun r : rT => (⟨pl(#(.real r)), σ⟩ : Cfg rT)) '' unifUnitSupport := by
   ext
   simp [and_comm, eq_comm]
 
+/-- The configurations `⟨#r, σ⟩` with `r` in the support form a measurable set. -/
 theorem Cfg.measurableSet_realLit_image (σ : State rT) :
     MeasurableSet {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} := by
   rw [Cfg.realLit_image_eq]
   exact (Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr unifUnitSupportMeasurable
 
+/-! ## Stepping `urand` -/
+
+/-- `urand` head-reduces in every state. -/
 theorem headReducible_urand (σ : State rT) : HeadReducible pl(urand) σ :=
   show Cfg.uniformReal σ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
 
+/-- `urand` reduces in every state. -/
 theorem reducible_urand (σ : State rT) : Reducible pl(urand) σ :=
   reducible_of_headReducible (by is_lc) (headReducible_urand σ)
 
+/-- One primitive step of `urand` is `Cfg.uniformReal σ`. -/
 theorem primStep_urand (σ : State rT) : primStep ⟨pl(urand), σ⟩ = Cfg.uniformReal σ :=
   primStep_eq_headStep
     (Exp.decompItem_none_of_lc_headReducible (by is_lc) (headReducible_urand σ))
 
+/-- The step of `urand` is concentrated on real literals from the support of `unifUnit`. -/
 theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     Concentrated (primStep ⟨pl(urand), σ⟩)
       {ρ | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} := by
@@ -94,6 +105,10 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
         p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
   (Cfg.uniformReal_rel_bij σ σ' f hmp).addCoupl
+
+/-! ## Program rules
+
+The weakest-precondition rule for `urand` and its coupling with a second `urand`. -/
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -134,6 +149,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
   imodintro
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#(.real r)), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#(.real (f r))), σ₁'⟩
+  -- the two `urand`s are related by `R`, graph of `f` on the support, at cost `0`
   iexists R, 0, b
   isplitr; · ipureintro; rw [zero_add]
   isplitr; · ipureintro; exact reducible_urand σ₁
@@ -156,7 +172,9 @@ theorem wp_couple_urand_urand (f : rT → rT)
 
 end Unary
 
-/-! ## The relational rule -/
+/-! ## The relational rule
+
+The refinement form of the coupling rule, with evaluation contexts on both sides. -/
 
 section Relational
 variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]

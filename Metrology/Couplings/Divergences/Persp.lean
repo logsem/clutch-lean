@@ -6,60 +6,22 @@ public import Mathlib.Analysis.Convex.Slope
 public import Mathlib.MeasureTheory.Integral.Bochner.Set
 public import Mathlib.Topology.Instances.EReal.Lemmas
 
-/-! The perspective of a convex weight and Jensen's inequality for it (Approximate Span
-Liftings, Def. 2.6). `persp` is the per-cell term of the partition formula
-`fDiv_eq_iSup_partition`; the `EReal` sum lemmas support those finite sums. -/
+/-! # Perspective of a convex weight
+
+The perspective `persp f a b = b f (a / b)` (extended by the slope at infinity at `b = 0`),
+with subadditivity, finite and integral Jensen, and continuity. It is the per-cell term of
+`fDiv_eq_iSup_partition`; the closing `EReal` sum lemmas support those finite sums. -/
 
 @[expose] public section
 
 open MeasureTheory Set Filter Topology
 open scoped ENNReal
 
-/-! ## Sums in the extended reals -/
-
-namespace EReal
-
-theorem coe_finset_sum {ι : Type*} (s : Finset ι) (x : ι → ℝ) :
-    ((∑ i ∈ s, x i : ℝ) : EReal) = ∑ i ∈ s, (x i : EReal) :=
-  map_sum (⟨⟨(↑), coe_zero⟩, coe_add⟩ : ℝ →+ EReal) x s
-
-theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i ∈ s, a i ≠ ⊥) :
-    ∑ i ∈ s, a i ≠ ⊥ := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simp
-  | insert j s hj ih =>
-    rw [Finset.forall_mem_insert] at ha
-    rw [Finset.sum_insert hj]
-    exact add_ne_bot_iff.2 ⟨ha.1, ih ha.2⟩
-
-theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : ι → α → EReal}
-    {a : ι → EReal} (hg : ∀ i ∈ s, Tendsto (g i) l (𝓝 (a i))) (ha : ∀ i ∈ s, a i ≠ ⊥) :
-    Tendsto (fun n ↦ ∑ i ∈ s, g i n) l (𝓝 (∑ i ∈ s, a i)) := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simpa using tendsto_const_nhds
-  | insert j s hj ih =>
-    rw [Finset.forall_mem_insert] at hg ha
-    simp only [Finset.sum_insert hj]
-    exact (continuousAt_add (Or.inr (sum_ne_bot s ha.2)) (Or.inl ha.1)).tendsto.comp
-      (hg.1.prodMk_nhds (ih hg.2 ha.2))
-
-theorem toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ i ∈ s, 0 ≤ x i) :
-    (∑ i ∈ s, x i).toENNReal = ∑ i ∈ s, (x i).toENNReal := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simp
-  | insert j s hj ih =>
-    rw [Finset.forall_mem_insert] at hx
-    rw [Finset.sum_insert hj, Finset.sum_insert hj, toENNReal_add hx.1 (Finset.sum_nonneg hx.2),
-      ih hx.2]
-
-end EReal
-
 namespace ProbabilityTheory
 
-/-! ## The slope at infinity and the perspective -/
+/-! ## The slope at infinity and the perspective
+
+Both are defined for a real weight `f`; convexity on `[0, ∞)` is assumed lemma by lemma. -/
 
 variable {f g : ℝ → ℝ}
 
@@ -75,6 +37,7 @@ noncomputable def persp (f : ℝ → ℝ) (a b : ℝ) : EReal :=
 theorem persp_zero_right (f : ℝ → ℝ) (a : ℝ) : persp f a 0 = a * derivAtTop f := by
   simp [persp]
 
+/-- Away from `b = 0` the perspective is the usual `b f (a / b)`. -/
 theorem persp_of_ne_zero {a b : ℝ} (hb : b ≠ 0) :
     persp f a b = ((b * f (a / b) : ℝ) : EReal) := by
   simp [persp, hb]
@@ -84,6 +47,7 @@ theorem persp_self {a : ℝ} (ha : 0 ≤ a) : persp f a a = ((a * f 1 : ℝ) : E
   · simp
   · rw [persp_of_ne_zero ha.ne', div_self ha.ne']
 
+/-- An affine minorant `c t + c'` of `f` on `[0, ∞)` gives slope at most `derivAtTop f`. -/
 theorem le_derivAtTop_of_affine_le {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) :
     (c : EReal) ≤ derivAtTop f := by
   have hlim : Tendsto (fun t : ℝ ↦ ((c + c' / t : ℝ) : EReal)) atTop (𝓝 c) := by
@@ -143,7 +107,7 @@ theorem derivAtTop_mul_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {m : ℝ≥0∞} (hm
     · simp [EReal.top_mul_of_pos (EReal.coe_pos.2 h0)]
   | coe l => exact EReal.coe_mul l _ ▸ EReal.coe_ne_bot _
 
-/-- An affine minorant of `f` bounds its perspective. -/
+/-- An affine minorant `c t + c'` of `f` bounds its perspective below by `c a + c' b`. -/
 theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) {a b : ℝ} (ha : 0 ≤ a)
     (hb : 0 ≤ b) : ((c * a + c' * b : ℝ) : EReal) ≤ persp f a b := by
   rcases hb.eq_or_lt with rfl | hb
@@ -230,6 +194,8 @@ theorem persp_sum_le (hf : ConvexOn ℝ (Ici 0) f) {ι : Type*} (s : Finset ι) 
     exact (persp_add_le hf ha.1 (Finset.sum_nonneg ha.2) hb.1 (Finset.sum_nonneg hb.2)).trans
       (add_le_add le_rfl (ih ha.2 hb.2))
 
+/-! ## Continuity -/
+
 /-- The perspective of a convex weight is continuous along sequences that keep the zero pattern
 of the limit. -/
 theorem tendsto_persp (hf : ConvexOn ℝ (Ici 0) f) {p q : ℕ → ℝ} {p₀ q₀ : ℝ}
@@ -258,7 +224,7 @@ theorem tendsto_persp (hf : ConvexOn ℝ (Ici 0) f) {p q : ℕ → ℝ} {p₀ q�
   filter_upwards [hev] with n hn
   rw [persp_of_ne_zero hn.ne']
 
-/-! ## Jensen's inequality -/
+/-! ## Jensen's inequality for integrals -/
 
 /-- Jensen's inequality for the perspective, against a weight with values in `[0, 1]`. -/
 theorem persp_integral_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
@@ -266,6 +232,8 @@ theorem persp_integral_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
     (hG : ∀ x, 0 ≤ G x) (hGi : Integrable G ν) (hfG : Integrable (fun x ↦ f (G x)) ν)
     (hw : Measurable w) (hw0 : ∀ x, 0 ≤ w x) (hw1 : ∀ x, w x ≤ 1) :
     persp f (∫ x, w x * G x ∂ν) (∫ x, w x ∂ν) ≤ ((∫ x, w x * f (G x) ∂ν : ℝ) : EReal) := by
+  -- idea: for each `y` below `f` at the mean `∫ w G / ∫ w`, take an affine minorant of `f`
+  -- reaching `y` there, then integrate it against `w`
   have hwb : ∀ᵐ x ∂ν, ‖w x‖ ≤ 1 := .of_forall fun x ↦ (Real.norm_of_nonneg (hw0 x)).trans_le (hw1 x)
   have hwG : Integrable (fun x ↦ w x * G x) ν := hGi.bdd_mul hw.aestronglyMeasurable hwb
   have hwi : Integrable w ν := .of_bound hw.aestronglyMeasurable 1 hwb
@@ -294,3 +262,45 @@ theorem persp_integral_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
           fun x ↦ mul_le_mul_of_nonneg_left (hle _ (hG x)) (hw0 x)
 
 end ProbabilityTheory
+
+/-! ## Support: finite sums in `EReal` -/
+
+namespace EReal
+
+theorem coe_finset_sum {ι : Type*} (s : Finset ι) (x : ι → ℝ) :
+    ((∑ i ∈ s, x i : ℝ) : EReal) = ∑ i ∈ s, (x i : EReal) :=
+  map_sum (⟨⟨(↑), coe_zero⟩, coe_add⟩ : ℝ →+ EReal) x s
+
+theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i ∈ s, a i ≠ ⊥) :
+    ∑ i ∈ s, a i ≠ ⊥ := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at ha
+    rw [Finset.sum_insert hj]
+    exact add_ne_bot_iff.2 ⟨ha.1, ih ha.2⟩
+
+theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : ι → α → EReal}
+    {a : ι → EReal} (hg : ∀ i ∈ s, Tendsto (g i) l (𝓝 (a i))) (ha : ∀ i ∈ s, a i ≠ ⊥) :
+    Tendsto (fun n ↦ ∑ i ∈ s, g i n) l (𝓝 (∑ i ∈ s, a i)) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simpa using tendsto_const_nhds
+  | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at hg ha
+    simp only [Finset.sum_insert hj]
+    exact (continuousAt_add (Or.inr (sum_ne_bot s ha.2)) (Or.inl ha.1)).tendsto.comp
+      (hg.1.prodMk_nhds (ih hg.2 ha.2))
+
+theorem toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ i ∈ s, 0 ≤ x i) :
+    (∑ i ∈ s, x i).toENNReal = ∑ i ∈ s, (x i).toENNReal := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+    rw [Finset.forall_mem_insert] at hx
+    rw [Finset.sum_insert hj, Finset.sum_insert hj, toENNReal_add hx.1 (Finset.sum_nonneg hx.2),
+      ih hx.2]
+
+end EReal

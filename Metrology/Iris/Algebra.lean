@@ -12,7 +12,7 @@ public import Iris.Algebra.Numbers
 
 /-! # Measures as a camera
 
-Measures of total mass at most `1` form a unital camera under `+`. -/
+`Measure α` is a unital camera: composition is `+`, valid when the total mass is at most `1`. -/
 
 @[expose] public section
 
@@ -20,14 +20,14 @@ open Std Iris COFE ProbabilityTheory MeasureTheory
 
 noncomputable section
 
-/-- Measures as a discrete OFE. -/
+/-- Measures form a discrete OFE: distance is equality at every step. -/
 instance authMeasureOFE [MeasurableSpace α] : OFE (Measure α) where
   Dist _ x y := x = y
   dist_eqv := ⟨fun _ => rfl, (Eq.symm ·), (Eq.trans · ·)⟩
   eq_dist' := .symm <| forall_const _
   dist_lt H _ := H
 
-/-- Measures compose by `+`, valid when of mass at most `1`. -/
+/-- Measures compose by `+` and are valid when their total mass is at most `1`; the core is `0`. -/
 instance [MeasurableSpace α] : CMRA (Measure α) where
   pcore _ := .some 0
   op μ₁ μ₂ := μ₁ + μ₂

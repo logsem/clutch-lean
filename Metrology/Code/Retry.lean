@@ -5,7 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # Flip a coin until heads
+/-! # Retry: flip until heads
 
 Proved to return `0` almost surely in `Micrometer/Examples/Retry`. -/
 
@@ -19,7 +19,7 @@ variable {rT : Type _}
 def retryLoop : Exp rT :=
   pl% rec loop u := if rand(#2, #.unit) = #0 then #0 else loop u
 
-/-- Run `retryLoop`. -/
+/-- The loop applied to `unit`: returns `0` with probability 1. -/
 def retry : Exp rT :=
   pl% &retryLoop #.unit
 

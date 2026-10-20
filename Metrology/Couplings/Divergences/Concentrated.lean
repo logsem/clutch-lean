@@ -3,9 +3,11 @@ module
 public import Metrology.Couplings.Divergences.RenyiCurve
 public import Metrology.Couplings.LiftingHom
 
-/-! zCDP and tCDP (Approximate Span Liftings, §4): Rényi curves read along the lines `α ↦ ξ + α ρ`
-(`concentratedLine`). The liftings regrade the curve's codensity lifting, not the line divergence's,
-so each Rényi order is a homomorphic image (`LiftingHom.concentratedToRenyi`). -/
+/-! # zCDP and tCDP
+
+Rényi curves read along the lines `α ↦ ξ + α ρ` (`concentratedLine`), giving `zcdpDivergence` and
+`tcdpDivergence` (Approximate Span Liftings, §4). Their liftings regrade the curve's codensity
+lifting, so each Rényi order is a homomorphic image (`LiftingHom.concentratedToRenyi`). -/
 
 @[expose] public section
 
@@ -18,7 +20,7 @@ namespace GradedDivergence
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 
-/-! ## Concentrated divergences -/
+/-! ## Lines -/
 
 theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 :=
   (ENNReal.ofReal_pos.2 (zero_lt_one.trans α.2)).ne'
@@ -75,6 +77,8 @@ theorem concentratedLine_ioi_le_ioo {ω : ℝ} (b : ℝ≥0∞ × ℝ≥0∞) :
 
 end Line
 
+/-! ## Concentrated divergences -/
+
 /-- Rényi bounds `ξ + α ρ` at the orders `α ∈ A` (Eqs. 6 and 7). -/
 noncomputable def concentratedDivergence (A : Set ℝ) : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   renyiCurve.comap (concentratedLine A)
@@ -111,15 +115,17 @@ theorem concentratedDivergence_iff' (hA : A ⊆ Ioi 1) :
       ∀ α ∈ A, renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
   concentratedDivergence_iff.trans ⟨fun h α hα ↦ h ⟨α, hA hα⟩ hα, fun h α hα ↦ h α hα⟩
 
+/-- zCDP is a Rényi bound `ξ + α ρ` at every real order `α > 1`. -/
 theorem zcdpDivergence_iff :
     zcdpDivergence (ξ, ρ) μ ν ↔ ∀ α, 1 < α → renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
   concentratedDivergence_iff' subset_rfl
 
+/-- tCDP is a Rényi bound `α ρ` at every real order `1 < α < ω`. -/
 theorem tcdpDivergence_iff :
     tcdpDivergence ω ρ μ ν ↔ ∀ α, 1 < α → α < ω → renyiDivergence α (ENNReal.ofReal α * ρ) μ ν :=
   (concentratedDivergence_iff' Ioo_subset_Ioi_self).trans (by simp [and_imp])
 
-/-! ## Instances -/
+/-! ## Divergence laws -/
 
 variable (A ω)
 
@@ -188,8 +194,7 @@ instance isRightMonotone_tcdp : (tcdpDivergence.{u} ω).IsRightMonotone :=
 instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
   GradedDivergence.isLeftAntitone_comap
 
-/-- Below `α ρ'`, `ρ` can be raised to hit any larger value exactly; used for budget closedness
-of tCDP. -/
+/-- A value above `α ρ` is `α ρ'` for some `ρ' > ρ` (for budget closedness of tCDP). -/
 theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
     (h : ENNReal.ofReal α * ρ < t) : ∃ ρ', ρ < ρ' ∧ ENNReal.ofReal α * ρ' = t := by
   have h0 := ofReal_ioi_ne_zero α
@@ -273,8 +278,8 @@ theorem codensity_tcdp_of_tcdpLifting [IsSubProbabilityMeasure μ] [IsSubProbabi
 
 variable (A ω)
 
-/-- Concentrated liftings are lawful, although budgets below `⊤` such as `(⊤, 0)` have line `⊤`
-(so `isLawful_comap` does not apply; use top-absorption of codensity). -/
+/-- Concentrated liftings are lawful; `(⊤, 0) < ⊤` has line `⊤`, so `isLawful_comap` does not
+apply and top-absorption of codensity is used instead. -/
 instance isLawful_concentratedLifting : (concentratedLifting.{u} A).IsLawful :=
   isLawful_comap_codensity (concentratedLine_mono A) (concentratedLine_add A)
 
@@ -397,9 +402,9 @@ theorem tcdpLifting_complete {μ ν : Measure X} [IsSubProbabilityMeasure μ]
     (tcdpLifting ω).Rel ρ (· = ·) μ ν :=
   IsComplete.complete h
 
-/-! ## Concentrated codensity liftings -/
+/-! ## Codensity of the concentrated divergence -/
 
-/-- Rényi liftings at every order of `A` give a codensity lifting of the concentrated divergence
+/-- Rényi liftings along the line at every order of `A` give a codensity lifting of the divergence
 (Rocq `gcf_zCDP_iff`, `gcf_tCDP_iff`, one direction). -/
 theorem codensity_concentrated_of_forall [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : ∀ α ∈ A, (renyiDivergence α).codensity (b.1 + ENNReal.ofReal α * b.2)
@@ -418,7 +423,7 @@ theorem codensity_concentrated_rel_of_forall [IsSubProbabilityMeasure μ]
 
 end GradedDivergence
 
-/-! ## Homomorphisms of concentrated liftings -/
+/-! ## Homomorphisms out of concentrated liftings -/
 
 open GradedDivergence
 

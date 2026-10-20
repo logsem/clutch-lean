@@ -4,7 +4,9 @@ public import Metrology.Iris.CappedCredits
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! Which budgets are absorbing for dp, tv and Rényi, and that the other budgets cancel, so capped
+/-! # Absorbing budgets and DP capped credits
+
+Which budgets are absorbing for dp, tv and Rényi, and that the other budgets cancel, so capped
 credits can always be spent (Rocq `gccredit_top_False`). An optional layer: `wp` uses
 `BudgetCredit`, not `CappedCredit`. -/
 
@@ -17,6 +19,8 @@ open scoped ENNReal
 namespace GradedLifting
 
 open MeasureTheory
+
+/-! ## Absorbing budgets of any lifting -/
 
 variable {B : Type*} {L : GradedLifting.{u} B}
 
@@ -42,7 +46,7 @@ namespace GradedDivergence
 
 open MeasureTheory GradedLifting
 
-/-! ## Which budgets are absorbing
+/-! ## Which budgets are absorbing for dp, tv and Rényi
 
 For `codensity dp`, `codensity tv` and `codensity (renyiDivergence α)` every valid budget cancels,
 so any credit can be spent; a Rényi curve that is `⊤` at some orders only is valid but does not. -/
@@ -81,7 +85,9 @@ instance fact_not_absorbing_codensity_renyi_zero {α : ℝ} [hα : Fact (1 < α)
     Fact ((0 : ℝ≥0∞) ∉ {b | (codensity (renyiDivergence.{u} α)).Absorbing b}) :=
   ⟨fun h ↦ by simpa using (absorbing_codensity_renyi_iff hα.out).1 h⟩
 
-/-! ## Valid budgets cancel -/
+/-! ## Valid budgets cancel
+
+A budget that is not absorbing is left-cancellative, which is what spending a credit needs. -/
 
 /-- A DP budget that is not absorbing cancels: both coordinates are finite. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_dp {b : ℝ≥0∞ × ℝ≥0∞}
@@ -106,6 +112,8 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_renyi {α : ℝ} {ρ : ℝ�
 theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
     ∃ ρ : RenyiBudget, ¬(codensity renyiCurve.{u}).Absorbing ρ ∧ ¬IsAddLeftRegular ρ := by
   classical
+  -- Absorbing means `⊤` at every order, which fails at `three`; adding `1` at `two` is
+  -- invisible because the curve is `⊤` there.
   let two : Set.Ioi (1 : ℝ) := ⟨2, by norm_num⟩
   let three : Set.Ioi (1 : ℝ) := ⟨3, by norm_num⟩
   refine ⟨Function.update 0 two ⊤, fun h ↦ ?_, fun h ↦ ?_⟩
@@ -117,7 +125,9 @@ theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
 
 end GradedDivergence
 
-/-! ## DP capped credits -/
+/-! ## DP capped credits
+
+Specializes `CappedCredit` to the DP codensity, whose bad budgets are the absorbing ones. -/
 
 namespace CappedCredit
 

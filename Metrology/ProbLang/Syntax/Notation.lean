@@ -10,7 +10,8 @@ public meta import Metrology.ProbLang.Syntax.Syntax
 
 /-! # Surface syntax for ProbLang
 
-`pl(…)` elaborates to `Exp`; the unexpanders and delaborators print `Exp` back as `pl(…)`. -/
+Parses `pl% …` / `pl(…)` into `Exp` (binders closed to de Bruijn form by `Exp.close`), and prints
+`Exp` back as `pl(…)` with source binder names. -/
 
 namespace ProbLang
 
@@ -22,6 +23,10 @@ meta register_option pp.problang.annot : Nat := {
   defValue := 0
   descr := "ProbLang: display type annotations (0=none | 1=binders | 2=all)"
 }
+
+/-! ## Grammar
+
+Four syntax categories (expressions, types, binder arguments, patterns) and their entry points. -/
 
 declare_syntax_cat pl_exp
 declare_syntax_cat pl_ty
@@ -43,12 +48,15 @@ macro_rules
 
 /-! ## `plBinderHint! name τ? e`: `e` wrapped in mdata carrying the binder's display name
 
-The `τ?` slot is parsed but unused, reserved for type-annotation rendering. -/
+The elaborator wraps each binder in this so the printer can recover the source name that
+`Exp.close` erased. The `τ?` slot is parsed but unused, reserved for type-annotation rendering. -/
 
 syntax (name := plBinderHint) "plBinderHint!" str term:max term:max : term
 
+/-- The `mdata` key under which `plBinderHint!` stores a binder's source name. -/
 meta def plBinderNameKey : Name := `ProbLang.plBinderName
 
+/-- Elaborates `e` and wraps it in `mdata` carrying the binder name. -/
 @[term_elab plBinderHint]
 meta def elabPlBinderHint : Lean.Elab.Term.TermElab := fun stx expectedType? => do
   let `(plBinderHint! $nameStr:str $_τ $eTerm) := stx
@@ -152,10 +160,12 @@ meta def pl_ty.parenthesizer : CategoryParenthesizer := fun prec => do
   maybeParenthesize `pl_ty false (fun stx => Unhygienic.run `(pl_ty|($(⟨stx⟩)))) prec <|
     parenthesizeCategoryCore `pl_ty prec
 
+/-- Words that cannot name a ProbLang variable. -/
 meta def reservedKeywords : List String :=
   ["fst", "snd", "inl", "inr", "alloc", "tape", "rand", "fail", "urand", "scrut",
    "if", "then", "else", "let", "fun", "rec", "case"]
 
+/-- Rejects an identifier that is a `reservedKeywords` entry. -/
 meta def checkNotReserved (i : Lean.Ident) : TermElabM Unit := do
   let s := i.getId.toString
   if reservedKeywords.contains s then
@@ -187,7 +197,11 @@ macro_rules
   | `(pl_pat(inl($p)))            => `(Pat.inl pl_pat($p))
   | `(pl_pat(inr($p)))            => `(Pat.inr pl_pat($p))
 
-/-! ## Expression elaboration -/
+/-! ## Expression elaboration
+
+`elabPL` turns `pl_exp` syntax into an `Exp` term. A binder gets a fresh atom, its body is
+elaborated with the name mapped to that atom, and `Exp.close` then turns the atom into a bound
+index; `case` compiles to `scrut` plus a chain of `Exp.case`. -/
 
 /-- Source names in scope, mapped to their fresh atoms. -/
 abbrev NameEnv := Lean.NameMap Var
@@ -196,6 +210,7 @@ abbrev NameEnv := Lean.NameMap Var
 structure AtomState where
   next : Nat := 0
 
+/-- Returns a fresh `Var.internal` atom. -/
 meta def genAtom (st : IO.Ref AtomState) : TermElabM Var := do
   let s ← st.get
   st.set { next := s.next + 1 }
@@ -207,6 +222,7 @@ structure NamedBinder where
   atom  : Var
   ty    : Option (TSyntax `pl_ty)
 
+/-- Binds `i` to a fresh atom, extending `env`. -/
 meta def bindNamed (st : IO.Ref AtomState) (env : NameEnv) (i : Lean.Ident)
     (ty : Option (TSyntax `pl_ty)) :
     TermElabM (NamedBinder × NameEnv) := do
@@ -214,17 +230,20 @@ meta def bindNamed (st : IO.Ref AtomState) (env : NameEnv) (i : Lean.Ident)
   let atom ← genAtom st
   return ({ ident := i, atom, ty }, env.insert i.getId atom)
 
+/-- The `Var` as a syntax term. -/
 meta def quoteVar : Var → TermElabM Term
   | .named s    => `(Var.named $(Syntax.mkStrLit s))
   | .internal n => `(Var.internal $(Syntax.mkNatLit n))
 
 /-! ### Binder constructors, each wrapped in `plBinderHint!` -/
 
+/-- An optional type annotation as an `Option Ty` term. -/
 meta def tyOptTerm (τ : Option (TSyntax `pl_ty)) : TermElabM Term := do
   match τ with
   | some τ' => `((some pl_ty($τ')))
   | none    => `((none : Option Ty))
 
+/-- `head body` wrapped in `plBinderHint!` with the binder's display name. -/
 meta def wrapHint (head : Term) (name : Option String) (τ : Option (TSyntax `pl_ty))
     (body : Term) : TermElabM Term := do
   let nm := name.getD "_"
@@ -240,13 +259,16 @@ meta def closeAnonLam (body : Term) (atom : Var) : TermElabM Term := do
   let closed ← ``(Exp.close $body $(← quoteVar atom))
   wrapHint (← `(Exp.lam)) none none closed
 
+/-- `head (Exp.close body atom)` for a named binder, hinted with its name. -/
 meta def closeNamedHead (head : Term) (b : NamedBinder) (body : Term) : TermElabM Term := do
   let closed ← ``(Exp.close $body $(← quoteVar b.atom))
   wrapHint head (some b.ident.getId.toString) b.ty closed
 
+/-- `fun b, body`: `Exp.lam` over `body` closed at `b`. -/
 meta def mkNamedLam (b : NamedBinder) (body : Term) : TermElabM Term := do
   closeNamedHead (← `(Exp.lam)) b body
 
+/-- `Exp.fix` over `body` closed at `b`. -/
 meta def mkNamedFix (b : NamedBinder) (body : Term) : TermElabM Term := do
   closeNamedHead (← `(Exp.fix)) b body
 
@@ -420,6 +442,9 @@ meta partial def buildCaseChain (env : NameEnv) (st : IO.Ref AtomState)
 
 end
 
+/-! ### Entry point -/
+
+/-- `pl(e)`: elaborate `e` with a fresh atom counter and an empty name environment. -/
 elab_rules : term
   | `(pl($e)) => do
       let st ← IO.mkRef ({} : AtomState)
@@ -428,7 +453,10 @@ elab_rules : term
 
 end ProbLang
 
-/-! ## Unexpanders (pretty-printing) -/
+/-! ## Pretty-printing
+
+Unexpanders print the constructors; delaborators recover binder and variable names for
+`Exp.lam`, `Exp.fix`, `Exp.close`, `Exp.bvar` and `Exp.fvar`. -/
 
 namespace ProbLang
 
@@ -577,6 +605,7 @@ meta def unexpCond : Unexpander
 
 /-! ### Pairs / sums / projections -/
 
+/-- Flattens nested pairs `(a, (b, c))` into `(a, b, c)`. -/
 meta partial def unexpPair' : Term → UnexpandM Term
   | `(pl(($e1, ($e2, $e3,*)))) => do unexpPair' (← `(pl(($e1, $e2, $e3,*))))
   | x => return x
@@ -641,6 +670,7 @@ meta def unexpScrut : Unexpander
 
 /-! ### Binder naming machinery -/
 
+/-- The `pl_arg` for a binder name (`_` for an anonymous one). -/
 meta def buildArgFromName [Monad m] [MonadQuotation m]
     (name : String) : m (TSyntax `pl_arg) := do
   if name = "_" then
@@ -666,11 +696,13 @@ meta def plBinderStack : DelabM (List Name) := do
   return names.reverse
 
 open Lean Lean.Meta Lean.PrettyPrinter.Delaborator in
+/-- Runs `k` with a `PLBinderMarker` local named `nm` in scope. -/
 meta def withPLBinder {α} (nm : Name) (k : DelabM α) : DelabM α :=
   controlAt MetaM fun run =>
     Lean.Meta.withLocalDeclD nm (Lean.mkConst ``ProbLang.PLBinderMarker) fun _ => run k
 
 open Lean Lean.PrettyPrinter.Delaborator in
+/-- The next unused display name (`a`, `b`, …) at the current binder depth. -/
 meta def freshPLBinderName : DelabM Name := do
   let pool := #["a", "b", "c", "d", "e", "g", "h", "i", "j", "k"]
   let d := (← plBinderStack).length
@@ -685,12 +717,14 @@ The binder delaborator records `atom ↦ name` (from `plBinderName` mdata) as a
 def PLAtomMarker (_ : Var) : Type := Unit
 
 open Lean Lean.Meta Lean.PrettyPrinter.Delaborator in
+/-- Runs `k` with a `PLAtomMarker atom` local named `nm` in scope. -/
 meta def withAtomBinder {α} (nm : Name) (atom : Lean.Expr) (k : DelabM α) : DelabM α :=
   controlAt MetaM fun run =>
     Lean.Meta.withLocalDeclD nm (Lean.mkApp (Lean.mkConst ``ProbLang.PLAtomMarker) atom) fun _ =>
       run k
 
 open Lean Lean.Meta Lean.PrettyPrinter.Delaborator in
+/-- The name recorded for `atom` by an enclosing binder, if any. -/
 meta def atomName? (atom : Lean.Expr) : DelabM (Option Name) := do
   for d in (← Lean.getLCtx) do
     match d.type with
@@ -762,6 +796,7 @@ Stepping (`twp_pure`) substitutes a recursive definition's unfolded, opened body
 self-reference, which `rw [← C]` cannot refold. The `Exp.fix` delaborator prints any
 subterm defeq to a `@[pl_fold]` constant by name (`&GeometricTrial`). Display-only. -/
 
+/-- The constants marked `@[pl_fold]`. -/
 meta initialize plFoldExt : SimplePersistentEnvExtension Name NameSet ←
   registerSimplePersistentEnvExtension {
     addImportedFn := fun es => es.foldl (fun s arr => arr.foldl (·.insert ·) s) {}
@@ -783,7 +818,7 @@ meta initialize registerBuiltinAttribute {
 Records the constant's `plBinderName` hints once; the `Exp.fix` delaborator, on a defeq
 match, prints `rec geo n := …` instead of fresh `rec a b := …`. -/
 
-/-- Binder names, outermost first. -/
+/-- Binder names recorded by `@[pl_names]`, outermost first, per constant. -/
 meta initialize plBinderNamesExt :
     SimplePersistentEnvExtension (Name × Array Name) (Lean.NameMap (Array Name)) ←
   registerSimplePersistentEnvExtension {
@@ -793,6 +828,7 @@ meta initialize plBinderNamesExt :
     toArrayFn     := fun m => m.toArray
   }
 
+/-- The `plBinderName` hints in `e`, in binder order. -/
 meta partial def collectBinderNames : Lean.Expr → Array Name → Array Name
   | .mdata kv inner, acc =>
       match kv.getString plBinderNameKey "" with
@@ -817,6 +853,7 @@ meta initialize registerBuiltinAttribute {
 /-! ### `Exp.lam` / `Exp.fix` delaborators -/
 
 open Lean.PrettyPrinter.Delaborator Lean.Meta in
+/-- Prints `Exp.lam` as `fun x, body` with a fresh name. -/
 @[delab app.ProbLang.Exp.lam]
 meta def delabExpLam : Delab := do
   let e ← SubExpr.getExpr

@@ -5,9 +5,11 @@ public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.Kl
 public import Metrology.Couplings.Divergences.Fill
 
-/-! The Markov-tested codensity lifting `markovCodensity` and the equal-mass bind law `massEq`
-(instances `kl`, `hellinger`) for generalized KL and `α`-Hellinger, which are not composable on
-sub-probability measures (Rocq `GC_KL_full`, `GBL_KL_full`). -/
+/-! # Markov-tested liftings and equal-mass bind laws for KL and Hellinger
+
+Provides `markovCodensity`, complete for generalized KL and `α`-Hellinger
+(`markovCodensity_complete`), and the bind law `massEq` with instances `BindLaw.kl` and
+`BindLaw.hellinger` (Rocq `GC_KL_full`, `GBL_KL_full`). -/
 
 @[expose] public section
 
@@ -15,46 +17,6 @@ universe u v
 
 open MeasureTheory Measure ProbabilityTheory Set GradedLifting InformationTheory
 open scoped ENNReal
-
-/-! ## Filling costs nothing at equal mass -/
-
-section Fill
-
-variable {X : Type*} [MeasurableSpace X]
-
-/-- Adding the same finite mass at `none` to both sides does not raise an `f`-divergence with
-`f 1 = 0`. -/
-theorem fDiv_map_some_add_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
-    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {s : ℝ≥0∞} (hs : s ≠ ⊤) :
-    fDiv f (μ.map some + s • dirac none) (ν.map some + s • dirac none) ≤ fDiv f μ ν := by
-  have : IsFiniteMeasure (s • dirac (none : Option X)) := ⟨by simpa using hs.lt_top⟩
-  rw [fDiv_eq_iSup_partition hf hf_cont]
-  refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
-  have hev (ρ : Measure X) [IsFiniteMeasure ρ] (i : Fin n) :
-      ((ρ.map some + s • dirac (none : Option X) : Measure (Option X)) (k ⁻¹' {i})).toReal =
-        (ρ ((k ∘ some) ⁻¹' {i})).toReal + ((s • dirac none) (k ⁻¹' {i})).toReal := by
-    rw [Measure.add_apply, ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
-      Measure.map_apply measurable_some (hk (measurableSet_singleton i))]
-    rfl
-  -- per partition cell: split off the none-mass, subadditivity of persp, and the none part
-  -- costs s * f 1 = 0
-  simp_rw [hev]
-  refine (Finset.sum_le_sum fun i _ ↦ persp_add_le hf ENNReal.toReal_nonneg ENNReal.toReal_nonneg
-    ENNReal.toReal_nonneg ENNReal.toReal_nonneg).trans ?_
-  simp only [persp_self ENNReal.toReal_nonneg, hf1, mul_zero, EReal.coe_zero, add_zero]
-  exact sum_persp_le_fDiv hf hf_cont (hk.comp measurable_some)
-
-/-- Filling the lost mass of two measures of equal mass does not raise an `f`-divergence with
-`f 1 = 0`. -/
-theorem fDiv_withBot_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
-    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (h : μ univ = ν univ) :
-    fDiv f μ.withBot ν.withBot ≤ fDiv f μ ν := by
-  rw [Measure.withBot, Measure.withBot, h]
-  exact fDiv_map_some_add_le hf hf_cont hf1 (ENNReal.sub_ne_top ENNReal.one_ne_top)
-
-end Fill
 
 /-! ## The Markov-tested codensity lifting
 
@@ -74,6 +36,7 @@ def markovCodensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsMarkovKernel k] [IsMarkovKernel l],
     (∀ᵐ x ∂μ, ∀ y, D (R x y + c) (k x) (l y)) → D (b + c) (k ∘ₘ μ) (l ∘ₘ ν)
 
+/-- Markov-tested liftings weaken in the budget and in the leftovers. -/
 theorem markovCodensity_mono [Add B] [Preorder B] [AddRightMono B] [Top B] [D.IsGraded]
     {b' : B} {R' : X → Y → B} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : D.markovCodensity b R μ ν) (hb : b ≤ b') (hR : R' ≤ R) : D.markovCodensity b' R' μ ν :=
@@ -81,6 +44,7 @@ theorem markovCodensity_mono [Add B] [Preorder B] [AddRightMono B] [Top B] [D.Is
     h ((add_le_add_left hb c).trans_lt hbc) <| hkl.mono fun x hx y ↦
       IsGraded.mono (add_le_add_left (hR x y) c) (hx y)
 
+/-- Adding a slack `c` to the budget and to every leftover is preserved. -/
 theorem markovCodensity_frame [AddSemigroup B] [LT B] [Top B] {c : B}
     (h : D.markovCodensity b R μ ν) : D.markovCodensity (b + c) (fun x y ↦ R x y + c) μ ν := by
   intro I _ c' hbc k l _ _ hkl
@@ -107,6 +71,7 @@ theorem markovCodensity_dirac [Add B] [LT B] [Top B] (x : X) (y : Y) :
   have h₁ := dirac_apply_of_mem (s := {x' | ¬∀ y, D (R x' y + c) (k x') (l y)}) fun hx ↦ h (hx y)
   exact zero_ne_one ((ae_iff.1 hkl).symm.trans h₁)
 
+/-- The zero measures are related at any budget. -/
 theorem markovCodensity_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [Top B]
     [D.IsGraded] [D.IsReflexive] (b : B) (R : X → Y → B) :
     D.markovCodensity b R (0 : Measure X) (0 : Measure Y) := by
@@ -114,6 +79,7 @@ theorem markovCodensity_zero [AddZeroClass B] [Preorder B] [CanonicallyOrderedAd
   rw [bind_zero_left, bind_zero_left]
   exact IsGraded.mono zero_le (IsReflexive.refl _)
 
+/-- Pushing both measures forward along measurable maps preserves the lifting. -/
 theorem markovCodensity_map [Add B] [LT B] [Top B] {X' Y' : Type u} [MeasurableSpace X']
     [MeasurableSpace Y'] {R : X' → Y' → B} {f : X → X'} {g : Y → Y'} (hf : Measurable f)
     (hg : Measurable g) (h : D.markovCodensity b (fun x y ↦ R (f x) (g y)) μ ν) :
@@ -122,6 +88,8 @@ theorem markovCodensity_map [Add B] [LT B] [Top B] {X' Y' : Type u} [MeasurableS
   rw [bind_map_eq μ hf, bind_map_eq ν hg]
   exact h hbc (k := k.comap f hf) (l := l.comap g hg) <|
     (ae_of_ae_map hf.aemeasurable hkl).mono fun x hx y ↦ hx (g y)
+
+/-! ### Lawfulness and soundness -/
 
 /-- The Markov-tested lifting of a graded reflexive divergence is lawful. -/
 instance isLawful_markovCodensity [AddCommMonoid B] [Preorder B] [CanonicallyOrderedAdd B]
@@ -162,7 +130,9 @@ instance isSound_markovCodensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.I
       · simpa [Kernel.id_apply, hxy] using IsGraded.top (dirac x) (dirac y)
     simpa [id_comp] using h (c := 0) (by rwa [add_zero]) (ae_of_all _ fun x y ↦ hkl x y)
 
-/-! ## Completeness from equal-mass composition -/
+/-! ## Completeness from equal-mass composition
+
+The main results: `markovCodensity_complete`, then its KL and Hellinger instances. -/
 
 /-- Equal-mass composition makes the Markov-tested lifting complete: a test that fails on a null
 set is repaired there by the right kernel, and Markov tests lose no mass. -/
@@ -230,6 +200,49 @@ theorem not_absorbing_markovCodensity_kl (hb : b ≠ ⊤) :
   exact hb (top_le_iff.1 this)
 
 end GradedDivergence
+
+/-! ## Filling costs nothing at equal mass
+
+The analytic input to `massEq`: filling the lost mass of both sides at `none` (`Measure.withBot`)
+never raises an `f`-divergence (tutorial (M7)). -/
+
+section Fill
+
+variable {X : Type*} [MeasurableSpace X]
+
+/-- Adding the same finite mass at `none` to both sides does not raise an `f`-divergence with
+`f 1 = 0`. -/
+theorem fDiv_map_some_add_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
+    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {s : ℝ≥0∞} (hs : s ≠ ⊤) :
+    fDiv f (μ.map some + s • dirac none) (ν.map some + s • dirac none) ≤ fDiv f μ ν := by
+  have : IsFiniteMeasure (s • dirac (none : Option X)) := ⟨by simpa using hs.lt_top⟩
+  rw [fDiv_eq_iSup_partition hf hf_cont]
+  refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
+  have hev (ρ : Measure X) [IsFiniteMeasure ρ] (i : Fin n) :
+      ((ρ.map some + s • dirac (none : Option X) : Measure (Option X)) (k ⁻¹' {i})).toReal =
+        (ρ ((k ∘ some) ⁻¹' {i})).toReal + ((s • dirac none) (k ⁻¹' {i})).toReal := by
+    rw [Measure.add_apply, ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
+      Measure.map_apply measurable_some (hk (measurableSet_singleton i))]
+    rfl
+  -- per partition cell: split off the none-mass, subadditivity of persp, and the none part
+  -- costs s * f 1 = 0
+  simp_rw [hev]
+  refine (Finset.sum_le_sum fun i _ ↦ persp_add_le hf ENNReal.toReal_nonneg ENNReal.toReal_nonneg
+    ENNReal.toReal_nonneg ENNReal.toReal_nonneg).trans ?_
+  simp only [persp_self ENNReal.toReal_nonneg, hf1, mul_zero, EReal.coe_zero, add_zero]
+  exact sum_persp_le_fDiv hf hf_cont (hk.comp measurable_some)
+
+/-- Filling the lost mass of two measures of equal mass does not raise an `f`-divergence with
+`f 1 = 0`. -/
+theorem fDiv_withBot_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
+    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
+    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (h : μ univ = ν univ) :
+    fDiv f μ.withBot ν.withBot ≤ fDiv f μ ν := by
+  rw [Measure.withBot, Measure.withBot, h]
+  exact fDiv_map_some_add_le hf hf_cont hf1 (ENNReal.sub_ne_top ENNReal.one_ne_top)
+
+end Fill
 
 /-! ## The equal-mass bind law
 

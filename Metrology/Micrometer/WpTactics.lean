@@ -12,8 +12,10 @@ public import Iris.ProofMode.Tactics.Basic
 public import Lean
 public import Qq
 
-/-! # `wp_*` and `tp_*` tactics for the Micrometer `wp`, on the evaluation-context engine of
-`ProbLang/EctxTactic.lean`. -/
+/-! # `wp_*` and `tp_*` tactics for the Micrometer `wp`
+
+`wp_bind`, `wp_pure(s)`, `wp_value` act on goals `hyps ⊢ wp L E e Φ`; `tp_bind`, `tp_pure(s)` act
+on the `⤇` hypothesis. Both find the evaluation context with `ProbLang/EctxTactic.lean`. -/
 
 namespace ProbLang.MicrometerWpGS
 
@@ -21,7 +23,10 @@ open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode
 
-/-! ## Lemmas consumed by the tactics -/
+/-! ## Lemmas the tactics apply
+
+Pure-step and value lemmas first, then their variants with the expression anchored by an equality
+(so a tactic can match the goal syntactically), then the spec-side steps. -/
 
 section Wp
 
@@ -48,6 +53,34 @@ public theorem wp_pure_steps_at {E : CoPset} {e₁ e₁' e₂ : Exp rT} {Φ : Va
   heq ▸ wp_pure_steps h
 
 end Wp
+
+section WpEq
+
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+  [BudgetGS B GF] {E : CoPset}
+
+/-- Close a value `wp` whose expression is only equal to `Exp.ofVal v`. -/
+public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v)
+    {Φ : Val rT → IProp GF} : Φ v ⊢ wp L E e Φ :=
+  heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
+
+/-- Refold the expression of a `wp` along an equality. -/
+public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
+    wp L E e' Φ ⊢ wp L E e Φ :=
+  heq ▸ .rfl
+
+end WpEq
+
+/-- `wp_alloc` with the allocated value anchored by an equality. -/
+public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+    {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
+    [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
+    (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
+    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E ea Φ :=
+  heq ▸ wp_alloc
 
 section Spec
 
@@ -336,23 +369,7 @@ elab "wp_value" : tactic =>
       (g.prefix.append #[some E, some e, some v, some g.Φ, some hproof])
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
-section WpEq
-
-variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-  [BudgetGS B GF] {E : CoPset}
-
-/-- Close a value `wp` whose expression is only equal to `Exp.ofVal v`. -/
-public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v)
-    {Φ : Val rT → IProp GF} : Φ v ⊢ wp L E e Φ :=
-  heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
-
-/-- Refold the expression of a `wp` along an equality. -/
-public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
-    wp L E e' Φ ⊢ wp L E e Φ :=
-  heq ▸ .rfl
-
-end WpEq
+/-! ## Anchored variants: `wp_show`, `wp_value_at`, `wp_alloc_at`, `wp_steps` -/
 
 /-- `wp_show e'` refolds the goal `wp L E e Φ` to the definitionally equal `wp L E e' Φ`, e.g. a
 stepped β-residual back to its library form before applying an induction hypothesis. -/
@@ -364,16 +381,6 @@ elab "wp_show" colGt ppSpace e':term : tactic =>
 elab "wp_value_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_value_eq (e := $eS) $v (by kernel_rfl)))
 
-/-- `wp_alloc` with the allocated value anchored by an equality. -/
-public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-    {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
-    [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
-    (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
-    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E ea Φ :=
-  heq ▸ wp_alloc
-
 /-- `wp_alloc_at v` applies `wp_alloc` to `wp L E (alloc e) Φ` with `e` only definitionally
 `Exp.ofVal v`. -/
 elab "wp_alloc_at" colGt ppSpace v:term : tactic =>
@@ -384,7 +391,7 @@ expression. -/
 elab "wp_steps" colGt ppSpace h:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_pure_steps_at (e₁ := $eS) (by kernel_rfl) $h))
 
-/-! ## Spec-side stepping on the unique `⤇` hypothesis, rebound under its own name -/
+/-! ## `tp_*`: stepping the unique `⤇` hypothesis, rebound under its own name -/
 
 /-- The name and expression of the unique `⤇ _` hypothesis. -/
 meta def findSpecHyp {β : Q(Type)} (g : WpGoal) : ProofModeM (Option (Name × Q(Exp $β))) := do

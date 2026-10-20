@@ -11,12 +11,11 @@ meta import Metrology.ProbLang.CoreMeasures.ArmTactics
 /-!
 # Measurability of the syntax functions the semantics uses
 
-Main results: `toVal_question.measurable`, `decomp.measurable`, `UnOp_eval.measurable`,
-`BinOp_eval.measurable` and `tryMatch.measurable_joint`. Structural recursions go through
-`apply_arms Exp.measurable_struct_rec(_param)`; `toVal?`, `decomp` and `tryMatch` need hand proofs.
-Also: `Option` elimination lemmas, the `*_zero_*_apply` macros that `HeadStep.lean` uses,
-`MeasurableEq (BaseLit rT)` (for `BinOp.eq` at ℝ), and the literal-lifting combinators behind
-`BinOp.eval`.
+Proves that `size`, `subst`, `fv`, `toVal?`, `decomp`, `UnOp.eval`, `BinOp.eval` and `Pat.tryMatch`
+are measurable (main results: `decomp.measurable`, `BinOp_eval.measurable`,
+`tryMatch.measurable_joint`). Structural recursions go through
+`apply_arms Exp.measurable_struct_rec(_param)`; the rest need hand proofs.
+Also here: `Option` elimination lemmas and the `*_zero_*_apply` macros used by `HeadStep.lean`.
 -/
 
 noncomputable section ProbLangMeasures
@@ -27,16 +26,19 @@ namespace ProbLang.Exp
 
 /-! ### `Exp.size` -/
 
+/-- The syntax-tree size of an expression is measurable. -/
 theorem size.measurable [MeasurableSpace rT] :
     Measurable (Exp.size : Exp rT → Nat) := by
   apply_arms measurable_struct_rec (f := Exp.size)
 
 /-! ### `Exp.subst` -/
 
+/-- Substitution into an expression is measurable for a fixed variable and replacement. -/
 theorem subst.measurable_fixed [MeasurableSpace rT] (x : Var) (sub : Exp rT) :
     Measurable (fun e : Exp rT => Exp.subst e x sub) := by
   apply_arms measurable_struct_rec (f := fun e => Exp.subst e x sub)
 
+/-- Substitution is jointly measurable in the variable, the replacement and the expression. -/
 theorem subst.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Var × Exp rT) × Exp rT) => Exp.subst q.2 q.1.1 q.1.2) := by
   apply_arms measurable_struct_rec_param
@@ -61,10 +63,12 @@ theorem subst.measurable [MeasurableSpace rT] :
 
 /-! ### `Exp.isValueR`, `Exp.lcb`, `Exp.fv` -/
 
+/-- The syntactic value test `isValueR` is measurable. -/
 theorem isValueR.measurable [MeasurableSpace rT] :
     Measurable (Exp.isValueR : Exp rT → Prop) := by
   apply_arms measurable_struct_rec (f := Exp.isValueR)
 
+/-- The local-closedness check `lcb` is jointly measurable in the depth and the expression. -/
 theorem lcb.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Nat × Exp rT) => Exp.lcb q.1 q.2) := by
   apply_arms measurable_struct_rec_param
@@ -82,6 +86,7 @@ theorem lcb_zero.measurableSet [MeasurableSpace rT] :
 /-- The discrete measurable space on finite sets of variables. -/
 instance : MeasurableSpace (Finset Var) := ⊤
 
+/-- The free-variable set of an expression is measurable. -/
 theorem fv.measurable [MeasurableSpace rT] : Measurable (Exp.fv : Exp rT → Finset Var) := by
   apply_arms measurable_struct_rec (f := Exp.fv)
 
@@ -121,6 +126,7 @@ private theorem measurable_of_lit_only [MeasurableSpace rT] {α : Type _} [Measu
   · exact hf
   all_goals exact measurable_const
 
+/-- Each unary operator, applied to a value, is measurable. -/
 theorem UnOp.eval_op_measurable [LawfulProbLangℝ rT] (op : UnOp) :
     Measurable (fun v : Exp rT => UnOp.eval op v) := by
   -- each operator acts only on literals: `measurable_of_lit_only` reduces to a map on `BaseLit`
@@ -186,6 +192,7 @@ theorem UnOp.eval_op_measurable [LawfulProbLangℝ rT] (op : UnOp) :
       (Exp.lit.measurable.comp
         (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
 
+/-- `UnOp.eval` is jointly measurable in the operator and the operand. -/
 theorem UnOp_eval.measurable [LawfulProbLangℝ rT] :
     Measurable (Function.uncurry (UnOp.eval (α := rT))) := by
   apply measurable_from_prod_countable_right
@@ -193,6 +200,7 @@ theorem UnOp_eval.measurable [LawfulProbLangℝ rT] :
 
 /-! ### `EctxItem.fillItem`, `Ectx.fill` -/
 
+/-- Plugging an expression into an evaluation-context frame is jointly measurable. -/
 theorem fillItem.measurable [MeasurableSpace rT] :
     Measurable (fun (q : EctxItem rT × Exp rT) => q.1.fillItem q.2) := by
   have heq : (fun q : EctxItem rT × Exp rT => q.1.fillItem q.2) = fun p : EctxItem rT × Exp rT =>
@@ -273,6 +281,7 @@ theorem fillItem.measurable [MeasurableSpace rT] :
     exact Exp.rand.measurable.comp (measurable_fst.prodMk <| Val.fst.measurable.comp measurable_snd)
   iterate 2 fun_prop
 
+/-- Plugging an expression into an evaluation context is jointly measurable. -/
 @[fun_prop]
 theorem Ectx_fill.measurable [MeasurableSpace rT] :
     Measurable (fun (q : Ectx rT × Exp rT) => Ectx.fill q.1 q.2) := by
@@ -282,6 +291,7 @@ theorem Ectx_fill.measurable [MeasurableSpace rT] :
 
 /-! ### `Exp.openRec`, `Exp.closeRec` -/
 
+/-- `openRec` (opening bound variables) is jointly measurable in its three arguments. -/
 @[fun_prop]
 theorem openRec.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Nat × Exp rT) × Exp rT) => Exp.openRec q.1.1 q.1.2 q.2) := by
@@ -312,6 +322,7 @@ theorem open'.measurable [MeasurableSpace rT] :
   have hpack : Measurable (fun q : Exp rT × Exp rT => ((0, q.2), q.1)) := by fun_prop
   exact Exp.openRec.measurable (rT := rT) |>.comp hpack
 
+/-- `closeRec` (closing a free variable) is jointly measurable in its three arguments. -/
 theorem closeRec.measurable [MeasurableSpace rT] :
     Measurable (fun (q : (Nat × Var) × Exp rT) => Exp.closeRec q.1.1 q.1.2 q.2) := by
   apply_arms measurable_struct_rec_param
@@ -607,6 +618,7 @@ macro "baseLit_zero_bool_apply " ct:term ", " ht:term : tactic =>
 
 /-! ### `Exp.decompItem`, `Exp.decomp` -/
 
+/-- `Exp.decompItem`, which peels one evaluation-context frame off an expression, is measurable. -/
 theorem decompItem.measurable [MeasurableSpace rT] :
     Measurable (Exp.decompItem : Exp rT → Option (EctxItem rT × Exp rT)) := by
   have htv : Measurable (Exp.toVal? : Exp rT → Option (Val rT)) :=
@@ -752,6 +764,7 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
       exact (List.measurable_append_singleton.comp
         (h_decompN.fst.prodMk (measurable_fst.comp measurable_snd))).prodMk h_decompN.snd
 
+/-- `Exp.decomp`, the split of an expression into evaluation context and redex, is measurable. -/
 @[fun_prop]
 theorem decomp.measurable [MeasurableSpace rT] :
     Measurable (Exp.decomp : Exp rT → Ectx rT × Exp rT) := by
@@ -838,6 +851,7 @@ def liftBin {β : Type _} (extr : BaseLit rT → Option β)
     ((Exp.litExtract p.2).bind extr).bind fun x2 =>
       some (Exp.lit (mkResult x1 x2))
 
+/-- `liftBin` is measurable when the extractor and the result builder are. -/
 theorem liftBin.measurable [MeasurableSpace rT]
     {β : Type _} [MeasurableSpace β]
     (extr : BaseLit rT → Option β) (mkResult : β → β → BaseLit rT)
@@ -1360,6 +1374,7 @@ private theorem BinOp.eval_eq_eq_liftEq [LawfulProbLangℝ rT] (v1 v2 : Exp rT) 
   cases v1 <;> cases v2 <;> (try simp [BinOp.eval, liftEq, h]) <;>
     (rename_i ein1 ein2; cases ein1 <;> cases ein2 <;> simp)
 
+/-- `BinOp.eval` is the lift combinator for its operator, applied to the two operands. -/
 theorem BinOp.eval_eq_lift [LawfulProbLangℝ rT] (op : BinOp) (v1 v2 : Exp rT) :
     BinOp.eval op v1 v2 =
       (match op with
@@ -1387,6 +1402,7 @@ theorem BinOp.eval_eq_lift [LawfulProbLangℝ rT] (op : BinOp) (v1 v2 : Exp rT) 
       | exact BinOp.eval_le_eq_liftLtLe v1 v2
       | exact BinOp.eval_eq_eq_liftEq v1 v2
 
+/-- `BinOp.eval` is jointly measurable in the operator and the operands. -/
 theorem BinOp_eval.measurable [LawfulProbLangℝ rT] :
     Measurable (fun (q : BinOp × Exp rT × Exp rT) => BinOp.eval q.1 q.2.1 q.2.2) := by
   rw [show (fun (q : BinOp × Exp rT × Exp rT) => BinOp.eval q.1 q.2.1 q.2.2) = _ from
@@ -1411,6 +1427,7 @@ theorem BinOp_eval.measurable [LawfulProbLangℝ rT] :
 
 /-! ### `Pat.tryMatch` -/
 
+/-- `Pat.tryMatch` is measurable in the expression for a fixed pattern. -/
 theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
     Measurable (fun e : Exp rT => Pat.tryMatch p e) := by
   induction p with

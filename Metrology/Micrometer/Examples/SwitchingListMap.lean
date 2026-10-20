@@ -10,8 +10,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Lists and association-list maps: specifications
 
-The `PureSteps` facts for the pure list recursions of `Metrology/Code/Switching.lean`,
-and `wp`-level specifications (program side and spec side) for the map operations. -/
+`PureSteps` facts for the list recursions of `Metrology/Code/Switching.lean`, and `wp` rules
+(program side `wp_X`, spec side `wp_X_r`) for `initMap`, `getMap`, `setMap`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -108,14 +108,14 @@ end Recursions
 
 /-! ## Map operations: `wp` specifications
 
-Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions. -/
+Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions.
+`wp_X` runs `X` in the program; `wp_X_r` runs it in the spec `⤇` under context `K`. -/
 
 section MapOps
 
-/-! `wp_X` runs `X` in the program; `wp_X_r` runs it in the spec `⤇` under context `K`. -/
-
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
+/-- `initMap ()` allocates a location holding the empty map. -/
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢
     WP[codensity tv] (pl% &initMap #.unit) @ E {{ Φ }} := by
@@ -127,6 +127,7 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   iapply wp_alloc
   iexact HΦ
 
+/-- Spec-side `initMap ()`: allocates a spec location holding the empty map. -/
 theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &initMap #.unit) ∗
     (∀ ℓ : Loc, ⤇ K.fill pl(#(.loc ℓ)) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗
@@ -140,6 +141,7 @@ theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IP
   imod step_alloc_at K (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%ℓ, Hj, Hl⟩
   iapply Hcnt $$ %ℓ Hj Hl
 
+/-- `getMap ℓ k` returns the lookup of `k` and leaves the map unchanged. -/
 theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
@@ -155,6 +157,7 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
   wp_value
   iapply HΦ $$ Hl
 
+/-- Spec-side `getMap ℓ k`: returns the lookup of `k` and leaves the map unchanged. -/
 theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &getMap #(.loc ℓ) #(.int k)) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
@@ -169,6 +172,7 @@ theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int
   imod (step_pure_steps_at _ rfl rfl (findList_steps m k)) $$ Hj with Hj
   iapply Hcnt $$ Hj Hl
 
+/-- `setMap ℓ k y` conses the binding `(k, y)` onto the stored map. -/
 theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
@@ -188,6 +192,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
   iframe Hl
   iexact HΦ
 
+/-- Spec-side `setMap ℓ k y`: conses the binding `(k, y)` onto the stored map. -/
 theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) ∗

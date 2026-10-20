@@ -2,7 +2,10 @@ module
 
 public import Metrology.Couplings.Divergences.Renyi
 
-/-! Rényi curves: a Rényi bound at every order (Approximate Span Liftings, §4). -/
+/-! # Rényi curves
+
+A Rényi bound at every order `α > 1` at once (Approximate Span Liftings, §4); its codensity
+lifting is the order-wise one (`codensity_renyiCurve_iff`). -/
 
 @[expose] public section
 
@@ -17,6 +20,8 @@ instance fact_one_lt_coe_ioi (α : Ioi (1 : ℝ)) : Fact (1 < (α : ℝ)) :=
 
 namespace GradedDivergence
 
+/-! ## The curve -/
+
 /-- A budget `ρ α` for every order `α > 1`, with the pointwise order and addition of `ℝ≥0∞`. -/
 abbrev RenyiBudget :=
   Ioi (1 : ℝ) → ℝ≥0∞
@@ -30,6 +35,8 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 theorem renyiCurve_iff {ρ : RenyiBudget} {μ ν : Measure X} :
     renyiCurve ρ μ ν ↔ ∀ α : Ioi (1 : ℝ), renyiDivergence α (ρ α) μ ν :=
   Iff.rfl
+
+/-! ## Class instances, inherited from `pi` -/
 
 /-- Rényi curves are graded order by order. -/
 instance isGraded_renyiCurve : renyiCurve.{u}.IsGraded :=
@@ -62,6 +69,8 @@ instance isLeftAntitone_renyiCurve : renyiCurve.{u}.IsLeftAntitone :=
 /-- A bound at every larger curve is a bound at the curve: raise one order at a time. -/
 instance isBudgetClosed_renyiCurve : renyiCurve.{u}.IsBudgetClosed :=
   isBudgetClosed_pi
+
+/-! ## The codensity lifting of a curve -/
 
 /-- A codensity lifting of a Rényi curve is one at every order: tests at a single order are curve
 tests with slack `⊤` at the other orders. -/

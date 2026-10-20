@@ -6,10 +6,11 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # Programs for the PRF/PRP switching lemma
+/-! # Switching lemma programs
 
-Ports clutch's `prp_prf_weak.v`. Each map is one pure assoc-list value in a single cell rather than
-clutch's linked cells: same interface, far less heap reasoning. -/
+The lazy random function, the lazy random permutation, and the weak PRF/PRP games (`wPRF`, `wPRP`)
+that compare them. Port of clutch's `prp_prf_weak.v`, with each map one assoc-list value in one
+cell rather than linked cells: same interface, far less heap reasoning. -/
 
 namespace ProbLang
 

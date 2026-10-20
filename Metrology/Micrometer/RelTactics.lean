@@ -14,9 +14,9 @@ public import Qq
 
 /-! # Relational tactics
 
-`rel_*` tactics for goals `REL[L] e << e' @ E : A`, after Approxis's `rel_tactics.v`, for any
-lifting `L`. Each finds its redex in the evaluation context of its side and applies the matching
-rule of `AppRelRulesPure.lean` and `AppRelRules.lean` there. -/
+`rel_*` tactics for goals `REL[L] e << e' @ E : A` (after Approxis's `rel_tactics.v`), for any
+lifting `L`. Each finds the focus `K[e₀]` on its side, innermost first, and applies the matching
+rule of `AppRelRulesPure.lean` or `AppRelRules.lean` there. -/
 
 namespace ProbLang.RelTactics
 
@@ -24,7 +24,7 @@ open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.MicrometerWpGS
 
-/-! ## Goal decomposition -/
+/-! ## Reading the goal: sides of a refinement -/
 
 /-- The side of a refinement a tactic works on. -/
 inductive Side where
@@ -123,7 +123,7 @@ meta def cleanFills (P : LeanExpr) : MetaM LeanExpr :=
     if let some e' := unVal? e then return .visit e'
     return .continue)
 
-/-! ## Applying a rule at a discovered context -/
+/-! ## Core: find the redex and apply a rule there -/
 
 /-- The premise and conclusion of an entailment `P ⊢ Q`. -/
 meta def entailsParts? (ty : LeanExpr) : Option (LeanExpr × LeanExpr) :=
@@ -157,7 +157,8 @@ meta def fillHole? (e : LeanExpr) : MetaM (Option (LeanExpr × LeanExpr)) := do
   return some (e.getArg! 1, e.getArg! 2)
 
 /-- Try `pred K e₀` at each focus `K.fill e₀` of `side`, innermost first, restoring the state
-after each failure; the context includes any abstract tail the side is written with. -/
+after each failure; this is the redex search every tactic uses. The context `K` includes any
+abstract tail the side is written with. -/
 meta partial def searchSide {β : Type} (g : RelGoal) (side : Side)
     (pred : Q(Ectx $(g.α)) → Q(Exp $(g.α)) → ProofModeM β) : ProofModeM (Option β) := do
   let (Kabs?, inner) ← splitAbstractCtx (β := g.α) (g.side side)
@@ -212,8 +213,9 @@ meta def applyRule (tac : Name) (mvar : MVarId) (g : RelGoal) (stx : Term)
   Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
   finishRule mvar g val pre
 
-/-- Apply the rule `stx` at a redex found on `sides`: each side of its conclusion of the form
-`Ectx.fill ?K pat` is matched against the foci of that side, innermost first. -/
+/-- The engine of `rel_apply`: apply the rule `stx` at a redex found on `sides`. Each side of its
+conclusion of the form `Ectx.fill ?K pat` is matched against the foci of that side, innermost
+first. -/
 meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : TacticM Unit :=
   runTacticRel tac fun mvar g => do
     let val ← elabRule stx
@@ -241,7 +243,7 @@ meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : Ta
     Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
     finishRule mvar g val
 
-/-! ## `rel_apply` -/
+/-! ## `rel_apply`: any rule with a context hole -/
 
 /-- `rel_apply_l lem` applies `lem : P ⊢ REL K.fill e << t : A` at a redex of the left program
 (Rocq `rel_apply_l`). -/
@@ -255,7 +257,7 @@ elab "rel_apply_r " colGt lem:term : tactic => relApplyCore `rel_apply_r [.r] le
 (Rocq `rel_apply`). -/
 elab "rel_apply " colGt lem:term : tactic => relApplyCore `rel_apply [.l, .r] lem
 
-/-! ## Pure steps -/
+/-! ## Pure steps (`refines_pure_l/_r`) -/
 
 /-- The reduct of a boolean negation of an opaque bool, kept folded as `decide ¬b = true` (which
 `pl_step_simp` shows as `!b`) rather than `pureStepResult`'s reduced `Decidable.rec` term. -/
@@ -334,7 +336,7 @@ macro "rel_pures_r" : tactic => `(tactic| repeat rel_pure_r)
 /-- `rel_pures` takes pure steps on both sides until none applies. -/
 macro "rel_pures" : tactic => `(tactic| (rel_pures_l; rel_pures_r))
 
-/-! ## Values -/
+/-! ## Values (`refines_ret`) -/
 
 /-- `e` as a value `v` with `e` definitionally `v.1`. -/
 meta def asVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := do
@@ -369,7 +371,7 @@ macro_rules
 literals and their pairs, else leaving `|={⊤}=> A v v'` (Rocq `rel_values`). -/
 macro "rel_values" : tactic => `(tactic| (rel_values_core; try (imodintro; rel_lit)))
 
-/-! ## Binding -/
+/-! ## Binding (`refines_bind`) and folding -/
 
 /-- `g`'s goal with `side` rewritten as `Ectx.fill K focus` for the discovered `K`. -/
 meta def reshapeSide (tac : Name) (g : RelGoal) (side : Side) (focus : Term) :
@@ -529,7 +531,7 @@ macro "rel_alloctape_l_atomic" : tactic => `(tactic| rel_apply_l refines_allocta
 /-- `rel_rand_l_atomic` applies `refines_randT_l` at its redex, leaving its premise. -/
 macro "rel_rand_l_atomic" : tactic => `(tactic| rel_apply_l refines_randT_l)
 
-/-! ## Couplings -/
+/-! ## Couplings (the `refines_couple_*` rules) -/
 
 /-- The bijection arguments `f hdom hbij` of a coupling rule: `id` when none is given, and
 side goals for the missing proofs. -/
@@ -586,7 +588,7 @@ macro "rel_couple_UU_spend " S:term:max ppSpace c:term:max ppSpace hc:term:max p
 macro "rel_couple_urands " f:term:max ppSpace hmp:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_urands_lr $f $hmp))
 
-/-! ## Closures -/
+/-! ## Closures (`refines_arrow_val`) -/
 
 /-- `rel_arrow_val_core` applies `refines_arrow_val` to a refinement between closures. -/
 elab "rel_arrow_val_core" : tactic => runTacticRel `rel_arrow_val fun mvar g => do

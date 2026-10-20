@@ -15,14 +15,13 @@ open Classical MeasureTheory ProbabilityTheory Measure
 
 /-! # Measure-theory support for ProbLang
 
-First half: the support predicates the program logics use (`Possible`, `IsAtomicSupport`,
-`Concentrated`). Second half: generic measurability infrastructure (Option, List, Σ, kernels) used
-by `CoreMeasures` and the step measurability proofs. -/
+Support predicates for measures (`Possible`, `Concentrated`, `IsAtomicSupport`) used by the program
+logics, and measurability of `Option`, `List`, Σ-types and kernels used by `CoreMeasures`. -/
 
 /-! ## `Possible`: a positive-mass point of a measure -/
 
-/-- `ρ` carries positive mass under `μ`; stated without `{ρ}` so it needs no
-`MeasurableSingletonClass` (equivalent to `0 < μ {ρ}` under it, `possible_iff_pos`). -/
+/-- `ρ` has positive mass under `μ`, stated without `{ρ}` so it needs no `MeasurableSingletonClass`
+(equivalent to `0 < μ {ρ}` under it, `possible_iff_pos`). -/
 def Possible {α : Type _} [MeasurableSpace α] (ρ : α) (μ : Measure α) : Prop :=
   ∃ p : ENNReal, 0 < p ∧ p • dirac ρ ≤ μ
 
@@ -79,7 +78,61 @@ theorem possible_iff_pos {α : Type _} [MeasurableSpace α] [MeasurableSingleton
       exact measure_mono (Set.singleton_subset_iff.mpr hρs)
     · rw [Set.indicator_of_notMem hρs]; simp
 
+/-- A positive-mass point of an injective pushforward comes from a positive-mass point.
+Injectivity is essential: a constant `f` collapses non-atomic mass onto one point. -/
+theorem map_singleton_pos {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
+    {f : α → β} {μ : Measure α} {b : β} (hf : Measurable f) (hinj : Function.Injective f)
+    (h : 0 < (μ.map f) {b}) :
+    ∃ a, f a = b ∧ 0 < μ {a} := by
+  rw [Measure.map_apply hf (measurableSet_singleton b)] at h
+  by_cases hb : ∃ a, f a = b
+  · obtain ⟨a, ha⟩ := hb
+    refine ⟨a, ha, ?_⟩
+    have hpre : f ⁻¹' {b} = {a} := by
+      ext x
+      simp only [Set.mem_preimage, Set.mem_singleton_iff]
+      exact ⟨fun hx => hinj (hx.trans ha.symm), fun hx => hx ▸ ha⟩
+    rwa [hpre] at h
+  · exfalso
+    rw [Set.preimage_singleton_eq_empty.mpr hb] at h
+    simp at h
+
 namespace ProbLang
+
+/-! ### `Concentrated`: the unary support-lifting
+
+Unlike `Possible`, concentration also describes diffuse measures: a pushforward is
+concentrated on the image of its source support (`Concentrated.map`). -/
+
+/-- `μ` gives zero mass to the complement of `S`. -/
+def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set α) : Prop :=
+  μ Sᶜ = 0
+
+theorem Concentrated.univ {α : Type _} [MeasurableSpace α] {μ : Measure α} :
+    Concentrated μ Set.univ := by simp [Concentrated]
+
+theorem Concentrated.zero {α : Type _} [MeasurableSpace α] {S : Set α} :
+    Concentrated (0 : Measure α) S := by simp [Concentrated]
+
+theorem Concentrated.mono {α : Type _} [MeasurableSpace α] {μ : Measure α} {S T : Set α}
+    (hST : S ⊆ T) (h : Concentrated μ S) : Concentrated μ T :=
+  MeasureTheory.measure_mono_null (Set.compl_subset_compl.mpr hST) h
+
+theorem Concentrated.dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
+    (hS : MeasurableSet S) (h : a ∈ S) : Concentrated (Measure.dirac a) S := by
+  unfold Concentrated
+  rw [Measure.dirac_apply' a hS.compl, Set.indicator_of_notMem (by simpa using h)]
+
+theorem Concentrated.map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+    {f : α → β} (hf : Measurable f) {ν : Measure α} {T : Set α}
+    (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
+    Concentrated (ν.map f) (f '' T) := by
+  unfold Concentrated at h ⊢
+  rw [Measure.map_apply hf hfT.compl]
+  refine MeasureTheory.measure_mono_null (fun x hx => ?_) h
+  simp only [Set.mem_preimage, Set.mem_compl_iff] at hx ⊢
+  exact fun hxT => hx ⟨x, hxT, rfl⟩
 
 /-! ### Pure atomicity -/
 
@@ -113,40 +166,6 @@ theorem isAtomicSupport_dirac {α : Type _} [MeasurableSpace α] [MeasurableSing
     exact one_ne_zero hx
   · rw [Measure.dirac_apply' _ (measurableSet_singleton a).compl, Set.indicator_of_notMem (by simp)]
 
-/-! ### `Concentrated`: the unary support-lifting
-
-Unlike atomicity, concentration survives diffuse measures: a pushforward is
-concentrated on the image of its source support (`Concentrated.map`). -/
-
-/-- The measure `μ` gives zero mass to the complement of `S`. -/
-def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set α) : Prop :=
-  μ Sᶜ = 0
-
-theorem Concentrated.univ {α : Type _} [MeasurableSpace α] {μ : Measure α} :
-    Concentrated μ Set.univ := by simp [Concentrated]
-
-theorem Concentrated.zero {α : Type _} [MeasurableSpace α] {S : Set α} :
-    Concentrated (0 : Measure α) S := by simp [Concentrated]
-
-theorem Concentrated.mono {α : Type _} [MeasurableSpace α] {μ : Measure α} {S T : Set α}
-    (hST : S ⊆ T) (h : Concentrated μ S) : Concentrated μ T :=
-  MeasureTheory.measure_mono_null (Set.compl_subset_compl.mpr hST) h
-
-theorem Concentrated.dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
-    (hS : MeasurableSet S) (h : a ∈ S) : Concentrated (Measure.dirac a) S := by
-  unfold Concentrated
-  rw [Measure.dirac_apply' a hS.compl, Set.indicator_of_notMem (by simpa using h)]
-
-theorem Concentrated.map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    {f : α → β} (hf : Measurable f) {ν : Measure α} {T : Set α}
-    (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
-    Concentrated (ν.map f) (f '' T) := by
-  unfold Concentrated at h ⊢
-  rw [Measure.map_apply hf hfT.compl]
-  refine MeasureTheory.measure_mono_null (fun x hx => ?_) h
-  simp only [Set.mem_preimage, Set.mem_compl_iff] at hx ⊢
-  exact fun hxT => hx ⟨x, hxT, rfl⟩
-
 theorem IsAtomicSupport.concentrated_atoms {α : Type _} [MeasurableSpace α]
     {μ : Measure α} (h : IsAtomicSupport μ) : Concentrated μ {x | 0 < μ {x}} := by
   have hset : {x | 0 < μ {x}}ᶜ = {x | μ {x} = 0} := by
@@ -155,7 +174,10 @@ theorem IsAtomicSupport.concentrated_atoms {α : Type _} [MeasurableSpace α]
 
 end ProbLang
 
-/-! ### Option-cylinders -/
+/-! ## Measurability on `Option`
+
+Cylinders `none` / `some S` generate the σ-algebra on `Option α`; a map into `Option α` is
+measurable once its cylinder preimages are. -/
 
 theorem MeasurableEmbedding.some_mk {α : Type _} [MeasurableSpace α] :
     MeasurableEmbedding (some : α → Option α) := by
@@ -217,6 +239,8 @@ theorem OptionCyl.flatten_measurable {α : Type _} [MeasurableSpace α]
   | none => exact MeasurableSet.singleton_none
   | @some S hS => exact MeasurableEmbedding.some_mk.measurableSet_image.mpr hS
 
+/-- A map into `Option α` is measurable if every cylinder with measurable leaves has a measurable
+preimage. -/
 theorem Measurable.option_of_cyl_preimages
     {X α : Type _} [MeasurableSpace X] [MeasurableSpace α]
     (f : X → Option α)
@@ -234,6 +258,8 @@ theorem Measurable.option_of_cyl_preimages
     · simpa using hsome_mset
   ext x; cases hfx : f x <;> split_ifs <;> simp_all
 
+/-- A map into `Option α` is measurable if the preimage of `none` is the complement of a measurable
+`cov` and every `some`-image has measurable preimage. -/
 theorem Measurable.option_of_cov
     {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {π : β → Option α}
@@ -263,46 +289,6 @@ theorem Measurable.option_map {α β : Type _} [MeasurableSpace α] [MeasurableS
     (fun S hS => by
       simp only [Option.map_preimage_some]
       exact MeasurableEmbedding.some_mk.measurableSet_image.mpr (hf hS))
-
-/-- A positive-mass point of an injective pushforward comes from a positive-mass point.
-Injectivity is essential: a constant `f` collapses non-atomic mass onto one point. -/
-theorem map_singleton_pos {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
-    {f : α → β} {μ : Measure α} {b : β} (hf : Measurable f) (hinj : Function.Injective f)
-    (h : 0 < (μ.map f) {b}) :
-    ∃ a, f a = b ∧ 0 < μ {a} := by
-  rw [Measure.map_apply hf (measurableSet_singleton b)] at h
-  by_cases hb : ∃ a, f a = b
-  · obtain ⟨a, ha⟩ := hb
-    refine ⟨a, ha, ?_⟩
-    have hpre : f ⁻¹' {b} = {a} := by
-      ext x
-      simp only [Set.mem_preimage, Set.mem_singleton_iff]
-      exact ⟨fun hx => hinj (hx.trans ha.symm), fun hx => hx ▸ ha⟩
-    rwa [hpre] at h
-  · exfalso
-    rw [Set.preimage_singleton_eq_empty.mpr hb] at h
-    simp at h
-
-/-- Binding after a pushforward binds the composite kernel. -/
-theorem Measure.bind_map {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    {μ : Measure α} {f : α → β} {g : β → Measure γ}
-    (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
-  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
-
-/-- Pushing a bind forward pushes each kernel measure forward. -/
-theorem Measure.bind_map_comm {α β γ : Type*}
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    (μ : Measure α) (k : α → Measure β) (f : β → γ) (hf : Measurable f) (hk : AEMeasurable k μ) :
-    (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
-  refine Measure.ext fun S hS => ?_
-  have hkmap : AEMeasurable (fun a ↦ map f (k a)) μ :=
-    (measurable_map f hf).comp_aemeasurable' hk
-  rw [Measure.map_apply hf hS, Measure.bind_apply (hf hS) hk, Measure.bind_apply hS hkmap]
-  simp_rw [Measure.map_apply hf hS]
-
-/-- Counting measure reweighted by the density `f`. -/
-abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
 
 /-! ## Shape-stratified measurability
 
@@ -343,6 +329,7 @@ theorem cell_dataLeaf_param {γ : Type _} [MeasurableSpace γ]
   rw [heq]
   exact (MeasurableEmbedding.id.prodMap h_emb).measurableSet_image' (h_c hU)
 
+/-- A map is measurable if each shape cell of every measurable preimage is. -/
 theorem measurable_of_cells_param [Countable Sh]
     (h_cell : ∀ (s : Sh) {U : Set α}, MeasurableSet U →
       MeasurableSet {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ U}) :
@@ -527,6 +514,30 @@ theorem List.measurable_append_singleton {β : Type _} [MeasurableSpace β] :
   exact measurable_sigma_snoc.comp
     ((List.measurable_toSigma).comp measurable_fst |>.prodMk measurable_snd)
 
+/-! ## Measures and kernels
+
+Pushforward and bind lemmas, and measurability of kernel-valued maps. -/
+
+/-- Binding after a pushforward binds the composite kernel. -/
+theorem Measure.bind_map {α β γ : Type*} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    {μ : Measure α} {f : α → β} {g : β → Measure γ}
+    (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
+  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
+
+/-- Pushing a bind forward pushes each kernel measure forward. -/
+theorem Measure.bind_map_comm {α β γ : Type*}
+    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+    (μ : Measure α) (k : α → Measure β) (f : β → γ) (hf : Measurable f) (hk : AEMeasurable k μ) :
+    (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
+  refine Measure.ext fun S hS => ?_
+  have hkmap : AEMeasurable (fun a ↦ map f (k a)) μ :=
+    (measurable_map f hf).comp_aemeasurable' hk
+  rw [Measure.map_apply hf hS, Measure.bind_apply (hf hS) hk, Measure.bind_apply hS hkmap]
+  simp_rw [Measure.map_apply hf hS]
+
+/-- Counting measure reweighted by the density `f`. -/
+abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
+
 /-- For an s-finite measurable kernel `k` and a jointly measurable `h`,
 `a ↦ (k a).map (h (a, ·))` is measurable. -/
 theorem Measure.measurable_map_uncurry {α β γ : Type _}
@@ -549,6 +560,7 @@ theorem Measure.measurable_map_uncurry {α β γ : Type _}
   simp_rw [hker_eq]
   exact ProbabilityTheory.Kernel.measurable_kernel_prodMk_left hT
 
+/-- A monotone sequence of measurable measure-valued maps has a measurable supremum. -/
 theorem Measure.measurable_iSup_countable {α β : Type _}
     [MeasurableSpace α] [MeasurableSpace β]
     {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))

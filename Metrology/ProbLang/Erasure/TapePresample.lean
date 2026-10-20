@@ -6,15 +6,18 @@ public import Metrology.ProbLang.Erasure.Presample
 
 /-! # Properties of `tapePresample`
 
-Commutation of `tapePresample` with heap and other-tape updates, and the change of variables
-`tapeIndexUniform_lintegral_eq_cfg_uniform` that closes the key erasure case. The definition and
-its mass and measurability are in `Presample.lean`. -/
+Presampling commutes with heap updates, other-tape updates and uniform draws, and
+`tapeIndexUniform_lintegral_eq_cfg_uniform` converts a presampled index into `Cfg.uniform`,
+which closes the key erasure case. The definition, mass and measurability are in
+`Presample.lean`. -/
 
 namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+
+/-! ## Almost-sure facts about a presampled state -/
 
 /-- An event holds a.s. after presampling if it holds after appending each possible value. -/
 theorem tapePresample_ae
@@ -35,6 +38,7 @@ theorem tapePresample_ae
   simp only [Set.mem_ofPred_eq, not_not]
   exact hP n
 
+/-- Presampling leaves the heap unchanged a.s. -/
 theorem tapePresample_heap_eq
     {σ : State rT} {α : Loc} :
     ∀ᵐ σ' ∂(tapePresample σ α), σ'.heap = σ.heap := by
@@ -46,6 +50,7 @@ theorem tapePresample_heap_eq
     obtain ⟨N, bs⟩ := t
     exact tapePresample_ae hsome (by measurability) fun _ => by simp [State.update_tapes]
 
+/-- Presampling `α` leaves every other tape `α_lbl` unchanged a.s. -/
 theorem tapePresample_tape_ne_ae
     {σ : State rT} {α α_lbl : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (hne : α_lbl ≠ α) :
@@ -53,6 +58,7 @@ theorem tapePresample_tape_ne_ae
   obtain ⟨N, bs⟩ := t
   exact tapePresample_ae h (by measurability) fun _ => State.upd_diff_tape_tot hne
 
+/-- Presampling never changes the bound of the tape `α`. -/
 theorem tapePresample_bound_ae {σ : State rT} {α : Loc} {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }} (h : σ.tapes[α]? = some ⟨N, bs⟩) :
     ∀ᵐ σ' ∂tapePresample σ α, (σ'.tapes[α]?).map Tape.bound = some N := by
@@ -61,6 +67,9 @@ theorem tapePresample_bound_ae {σ : State rT} {α : Loc} {N : Int}
       ((LocHeap.measurable_getElem? α).comp State.measurable_tapes)
   exact tapePresample_ae h (hmb (measurableSet_singleton _)) fun _ => by simp [State.update_tapes]
 
+/-! ## Commutation with state updates -/
+
+/-- Under a presample, a continuation may read the original heap instead of the presampled one. -/
 theorem tapePresample_bind_pull_heap [Countable rT]
     {σ : State rT} {α : Loc}
     (k : Std.ExtTreeMap Loc (Val rT) compare → State rT → Measure (Cfg rT)) :
@@ -148,6 +157,8 @@ theorem tapePresample_update_tapes_ne_comm
             (·.update_tapes (·.insert β v)) from by
       rw [Measure.map_dirac]; congr 1; exact State.upd_diff_tape_comm (Ne.symm hne)]
 
+/-! ## Integrals against a presample -/
+
 /-- Integrating against a presample is integrating over the appended index. -/
 theorem tapePresample_lintegral
     {σ : State rT} {α : Loc} {N : Int}
@@ -164,6 +175,7 @@ theorem tapePresample_lintegral
   rw [lintegral_bind hker hf.aemeasurable]
   simp_rw [lintegral_dirac]
 
+/-- Updating the heap after presampling is presampling after updating the heap, as integrals. -/
 theorem tapePresample_lintegral_update_heap
     {σ : State rT} {α : Loc}
     (g : Std.ExtTreeMap Loc (Val rT) compare → Std.ExtTreeMap Loc (Val rT) compare)
@@ -176,6 +188,8 @@ theorem tapePresample_lintegral_update_heap
   rw [tapePresample_update_heap_comm g hg,
       lintegral_map hf hmap]
 
+/-- Writing a different tape `β` after presampling `α` is presampling after writing `β`, as
+integrals. -/
 theorem tapePresample_lintegral_update_tapes_ne
     {σ : State rT} {α β : Loc} {v : Tape} (hne : β ≠ α)
     (f : State rT → ENNReal) (hf : Measurable f) :
@@ -188,6 +202,10 @@ theorem tapePresample_lintegral_update_tapes_ne
   rw [tapePresample_update_tapes_ne_comm hne,
       lintegral_map hf hmap]
 
+/-! ## Commutation with a uniform draw -/
+
+/-- For `0 < z`, `Cfg.uniform z σ` draws a uniform integer in `[0, z)` and returns it as a
+literal. -/
 theorem Cfg.uniform_eq_bind {z : Int} {σ : State rT} (hz : 0 < z) :
     Cfg.uniform z σ =
       ((PMF.uniformOfFinset (Finset.Ico 0 z)
@@ -196,6 +214,7 @@ theorem Cfg.uniform_eq_bind {z : Int} {σ : State rT} (hz : 0 < z) :
   unfold Cfg.uniform Int.isPos
   rw [dite_eq_left hz, Measure.bind_dirac_eq_map _ Measurable.of_discrete]
 
+/-- Presampling and a uniform draw `Cfg.uniform z` commute, since the draw ignores tapes. -/
 theorem tapePresample_bind_cfgUniform_comm
     {σ : State rT} {α : Loc} (z : Int) :
     (tapePresample σ α).bind (fun σ' => Cfg.uniform z σ') =
@@ -237,6 +256,7 @@ theorem tapePresample_bind_cfgUniform_comm
               (f := fun ρ' : Cfg rT => (tapePresample ρ'.state α).bind
                 (fun σ'' => Measure.dirac (⟨ρ'.expr, σ''⟩ : Cfg rT)))
               hk2]
+    -- Evaluate on a measurable `S`; both sides are a double integral, equal by Fubini.
     refine Measure.ext fun S hS => ?_
     rw [Measure.bind_apply hS hk_pmf.aemeasurable,
         Measure.bind_apply hS Measurable.of_discrete.aemeasurable]

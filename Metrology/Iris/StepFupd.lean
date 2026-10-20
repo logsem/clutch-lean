@@ -7,13 +7,15 @@ public import Iris.ProofMode
 
 /-! # Step-update lemmas
 
-Pure facts and plain universals under `|={E}[E]▷=>^[n]`.
-Used by adequacy (`Micrometer/Adequacy`: `step_fupdN_pure_imp_forall₃`/`₄`) to extract a pure
-conclusion from `|={∅}=> |={∅}[∅]▷=>^[n]`. -/
+Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s, with the main results
+`step_fupdN_pure_imp_forall₃`/`₄`, which adequacy (`Micrometer/Adequacy`) uses to extract a pure
+conclusion from `|={∅}=> |={∅}[∅]▷=>^[n] ⌜_⌝`. -/
 
 open Std Iris.Std Iris.BI Iris.ProofMode
 
 namespace Iris
+
+/-! ## Basic step-update facts -/
 
 section StepFUpd
 
@@ -69,6 +71,8 @@ theorem step_fupdN_pure_wand_intro (E : CoPset) (n : Nat) {p q : Prop} : iprop%
 
 end StepFUpd
 
+/-! ## Plain universals and pure implications -/
+
 section StepFUpdPlain
 
 variable {PROP : Type _} [Sbi PROP] [BIFUpdate PROP] [BIFUpdateSbi PROP] [BIAffine PROP]
@@ -90,20 +94,21 @@ theorem fupd_step_fupdN_plain_forall (Φ : A → PROP) [∀ x, Plain (Φ x)] (n 
       _ ⊢ |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := step_fupdN_except0 ∅ ∅ n
       _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := fupd_intro
 
-/-! Iterations of `fupd_step_fupdN_plain_forall` for two to four binders. -/
-
+/-- Two-binder version of `fupd_step_fupdN_plain_forall`. -/
 theorem fupd_step_fupdN_plain_forall₂ {A B : Type _} (Ψ : A → B → PROP)
     [∀ a b, Plain (Ψ a b)] (n : Nat) : iprop%
     (∀ a b, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b, Ψ a b :=
   (forall_mono fun a => fupd_step_fupdN_plain_forall (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall _ n)
 
+/-- Three-binder version of `fupd_step_fupdN_plain_forall`. -/
 theorem fupd_step_fupdN_plain_forall₃ {A B C : Type _} (Ψ : A → B → C → PROP)
     [∀ a b c, Plain (Ψ a b c)] (n : Nat) : iprop%
     (∀ a b c, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b c) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c, Ψ a b c :=
   (forall_mono fun a => fupd_step_fupdN_plain_forall₂ (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall _ n)
 
+/-- Four-binder version of `fupd_step_fupdN_plain_forall`. -/
 theorem fupd_step_fupdN_plain_forall₄ {A B C D : Type _} (Ψ : A → B → C → D → PROP)
     [∀ a b c d, Plain (Ψ a b c d)] (n : Nat) : iprop%
     (∀ a b c d, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b c d) ⊢
@@ -116,6 +121,7 @@ theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → 
     (∀ a b c, ⌜G a b c⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c⌝) ⊢@{PROP}
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c, G a b c → q a b c⌝ := by
   classical
+  -- Commute the `∀` past the step-updates, then fold it into one pure fact (`hpure`).
   have hpure : (∀ a b c, ⌜G a b c → q a b c⌝) ⊢@{PROP} ⌜∀ a b c, G a b c → q a b c⌝ :=
     (forall_mono fun a => (forall_mono fun b => pure_forall.2).trans pure_forall.2).trans
       pure_forall.2

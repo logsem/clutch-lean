@@ -4,9 +4,9 @@ public import Metrology.Couplings.ApproximateCouplings
 
 /-! # Additive couplings
 
-Approxis-style additive couplings `AddCoupl ε S`: an `ARCoupling` up to `x ↦ x + ε`, with bind,
-map and limit rules used by Micrometer. `Bridges/AddCoupl.lean` proves they are
-`(codensity tv).Rel`. -/
+`AddCoupl ε S μₗ μᵣ` is the Approxis-style additive coupling: `[0,1]`-tests ordered on `S` have
+integrals ordered up to `ε`. Main results: the bind rules (`bind`, `bind_adv`, `bind_adv_kanto`)
+and `limit`; `Bridges/AddCoupl.lean` shows it is `(codensity tv).Rel ε S`. -/
 
 @[expose] public section
 
@@ -16,6 +16,8 @@ open MeasureTheory Measure
 
 variable {α β α' β' : Type _}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace α'] [MeasurableSpace β']
+
+/-! ## Definitions -/
 
 /-- Approximate relational coupling with additive error slack `ε`. -/
 def AddCoupl (ε : ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : Measure β) : Prop :=
@@ -32,6 +34,8 @@ has `∫ h₁ dμ₁ ≤ ∫ h₂ dμ₂ + ε`; for sub-probability `μ₁` this
     ∫⁻ a, h₁ a ∂μ₁ ≤ ∫⁻ b, h₂ b ∂μ₂ + ε
 
 namespace AddCoupl
+
+/-! ## Basic rules -/
 
 /-- Every measure is coupled with itself along equality. -/
 theorem refl {ε : ENNReal} (μ : Measure α) : AddCoupl ε (fun v => v.1 = v.2) μ μ :=
@@ -61,7 +65,58 @@ theorem zero_right {ε : ENNReal} (S : Set (α × β)) {μₗ : Measure α} (Hε
     AddCoupl ε S μₗ 0 :=
   ARCoupling.zero_right S (by simpa using Hε)
 
-/-- Couplings of the heads and of the continuations at related points couple the binds. -/
+/-- An `ARCoupling` up to the identity is an additive coupling at any slack. -/
+theorem of_RelCoupl {ε : ENNReal} {S : Set (α × β)}
+    {μₗ : Measure α} {μᵣ : Measure β}
+    (H : ARCoupling (fun x => x) S μₗ μᵣ) :
+    AddCoupl ε S μₗ μᵣ :=
+  ARCoupling.mono_F (fun _ => le_self_add) H
+
+/-- A coupling at every `ε + δ`, `δ > 0`, is one at `ε`. -/
+theorem limit {ε : ENNReal} {S : Set (α × β)}
+    {μₗ : Measure α} {μᵣ : Measure β}
+    (H : ∀ δ : ENNReal, 0 < δ → AddCoupl (ε + δ) S μₗ μᵣ) :
+    AddCoupl ε S μₗ μᵣ := by
+  intro f g Hfg
+  refine ENNReal.le_of_forall_pos_le_add fun δ Hδ _ => ?_
+  rw [add_assoc]
+  exact H δ (by exact_mod_cast Hδ) f g Hfg
+
+/-- The left mass is at most the right mass plus `ε`. -/
+theorem mass_leq {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
+    (H : AddCoupl ε S μₗ μᵣ) : μₗ .univ ≤ μᵣ .univ + ε := by
+  let oneA : CouplingFunction α := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
+  let oneB : CouplingFunction β := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
+  simpa [oneA, oneB] using H oneA oneB (fun _ => le_refl _)
+
+/-- A coupling with the zero measure on the right bounds the left mass by `ε`. -/
+theorem dzero_r_inv {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
+    (H : AddCoupl ε S μₗ (0 : Measure β)) : μₗ .univ ≤ ε := by
+  simpa using AddCoupl.mass_leq H
+
+/-- Slack at least one makes any coupling trivial (Rocq `ARcoupl_1`). -/
+theorem trivial_of_one_le {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
+    {μᵣ : Measure β} (Hε : 1 ≤ ε) (Hmass : μₗ Set.univ ≤ 1) :
+    AddCoupl ε S μₗ μᵣ := by
+  rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ _
+  calc ∫⁻ x, f x ∂μₗ
+      _ ≤ μₗ Set.univ := lintegral_le_meas Hfb (by simp)
+      _ ≤ 1 := Hmass
+      _ ≤ ε := Hε
+      _ ≤ ∫⁻ y, g y ∂μᵣ + ε := le_add_self
+
+omit [MeasurableSpace α] [MeasurableSpace β] in
+/-- Point masses at images of related points are coupled. -/
+theorem dret {ε : ENNReal} {R : α' → β' → Prop} {a : α} {b : β}
+    (f : α → α') (g : β → β') (H : R (f a) (g b)) :
+    AddCoupl ε (fun v => R v.1 v.2) (Measure.dirac (f a)) (Measure.dirac (g b)) :=
+  AddCoupl.dirac _ H
+
+/-! ## Bind rules -/
+
+/-- Couplings of the heads and of the continuations at related points couple the binds.
+Proof idea: test the head coupling with the inner integrals, shifted by `ε'` to pay for the
+continuation slack. -/
 theorem bind {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β} {f : α → Measure α'} {g : β → Measure β'}
     (Hfm : Measurable f) (Hgm : Measurable g)
@@ -202,27 +257,7 @@ theorem bind_adv_kanto {ε : ENNReal} {S : Set (α' × β')}
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
   exact Hexp X Y HXm HYm HXb HYb HXY
 
-/-- The left mass is at most the right mass plus `ε`. -/
-theorem mass_leq {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
-    (H : AddCoupl ε S μₗ μᵣ) : μₗ .univ ≤ μᵣ .univ + ε := by
-  let oneA : CouplingFunction α := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
-  let oneB : CouplingFunction β := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
-  simpa [oneA, oneB] using H oneA oneB (fun _ => le_refl _)
-
-/-- An exact coupling bounds `μₗ T` by `μᵣ T'` when related points send `T` into `T'`. -/
-theorem set_leq_zero {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} {T : Set α}
-    {T' : Set β} (hT : MeasurableSet T) (hT' : MeasurableSet T') (Hcpl : AddCoupl 0 S μₗ μᵣ)
-    (Himp : ∀ a b, S (a, b) → a ∈ T → b ∈ T') : μₗ T ≤ μᵣ T' := by
-  classical
-  let fInd : CouplingFunction α :=
-    .mk (T.indicator 1) ⟨measurable_const.indicator hT, fun x => Set.indicator_le_self _ _ x⟩
-  let gInd : CouplingFunction β :=
-    .mk (T'.indicator 1) ⟨measurable_const.indicator hT', fun x => Set.indicator_le_self _ _ x⟩
-  have hMain := Hcpl fInd gInd fun {a b} hS => by
-    by_cases ha : a ∈ T
-    · simp [fInd, gInd, Set.indicator_of_mem ha, Set.indicator_of_mem (Himp a b hS ha)]
-    · simp [fInd, Set.indicator_of_notMem ha]
-  simpa [fInd, gInd, lintegral_indicator_one hT, lintegral_indicator_one hT'] using hMain
+/-! ## Chaining with equality couplings -/
 
 /-- Chaining an equality coupling with a coupling adds the slacks. -/
 theorem eq_trans_l {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ μ₂ : Measure α} {μ₃ : Measure β}
@@ -245,12 +280,7 @@ theorem eq_trans_r {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ : Measure
             gcongr; exact Heq g g (fun {a b} (h : a = b) => h ▸ le_refl _)
       _ = ∫⁻ x, g.1 x ∂μ₃ + (ε₁ + ε₂) := by rw [add_assoc, add_comm ε₂ ε₁]
 
-omit [MeasurableSpace α] [MeasurableSpace β] in
-/-- Point masses at images of related points are coupled. -/
-theorem dret {ε : ENNReal} {R : α' → β' → Prop} {a : α} {b : β}
-    (f : α → α') (g : β → β') (H : R (f a) (g b)) :
-    AddCoupl ε (fun v => R v.1 v.2) (Measure.dirac (f a)) (Measure.dirac (g b)) :=
-  AddCoupl.dirac _ H
+/-! ## Pushforward and limits of measures -/
 
 /-- Pushing both sides forward along maps that preserve the relation keeps the coupling. -/
 theorem map {ε : ENNReal} {S : Set (α × β)} {R : Set (α' × β')}
@@ -310,6 +340,8 @@ theorem map_inv [DiscreteMeasurableSpace α'] [DiscreteMeasurableSpace β']
     _ ≤ ∫⁻ b', gT b' ∂(μᵣ.map g) + ε := H FT GT HFG
     _ = ∫⁻ b, gT (g b) ∂μᵣ + ε := by rw [lintegral_map HgTm Hgm]
     _ ≤ ∫⁻ b, g' b ∂μᵣ + ε := by gcongr; exact HgT_le _
+
+/-! ## Restricting the relation to where the measures live -/
 
 -- countability-free: for `μᵣ = dirac b`, `T = {b}` pins the right sample with no atom enumeration
 /-- Strengthen the relation with `v.2 ∈ T` for a set `T` carrying all of `μᵣ`. -/
@@ -384,6 +416,8 @@ theorem pos_R [Countable α] [Countable β]
     concentrated_L (Set.to_countable _).measurableSet
       (MeasureTheory.measure_compl_atoms_null μₗ) H
 
+/-! ## Equality couplings and sets -/
+
 /-- An equality coupling bounds the measure of every measurable set (Rocq `ARcoupl_eq_elim`). -/
 theorem eq_elim {ε : ENNReal} {μ ν : Measure α}
     (h : AddCoupl ε {p : α × α | p.1 = p.2} μ ν) {S : Set α} (hS : MeasurableSet S) :
@@ -403,27 +437,22 @@ theorem eq_of_eq_zero {μ ν : Measure α}
   · simpa using eq_elim h₁ hS
   · simpa using eq_elim h₂ hS
 
-/-- An `ARCoupling` up to the identity is an additive coupling at any slack. -/
-theorem of_RelCoupl {ε : ENNReal} {S : Set (α × β)}
-    {μₗ : Measure α} {μᵣ : Measure β}
-    (H : ARCoupling (fun x => x) S μₗ μᵣ) :
-    AddCoupl ε S μₗ μᵣ :=
-  ARCoupling.mono_F (fun _ => le_self_add) H
+/-- An exact coupling bounds `μₗ T` by `μᵣ T'` when related points send `T` into `T'`. -/
+theorem set_leq_zero {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} {T : Set α}
+    {T' : Set β} (hT : MeasurableSet T) (hT' : MeasurableSet T') (Hcpl : AddCoupl 0 S μₗ μᵣ)
+    (Himp : ∀ a b, S (a, b) → a ∈ T → b ∈ T') : μₗ T ≤ μᵣ T' := by
+  classical
+  let fInd : CouplingFunction α :=
+    .mk (T.indicator 1) ⟨measurable_const.indicator hT, fun x => Set.indicator_le_self _ _ x⟩
+  let gInd : CouplingFunction β :=
+    .mk (T'.indicator 1) ⟨measurable_const.indicator hT', fun x => Set.indicator_le_self _ _ x⟩
+  have hMain := Hcpl fInd gInd fun {a b} hS => by
+    by_cases ha : a ∈ T
+    · simp [fInd, gInd, Set.indicator_of_mem ha, Set.indicator_of_mem (Himp a b hS ha)]
+    · simp [fInd, Set.indicator_of_notMem ha]
+  simpa [fInd, gInd, lintegral_indicator_one hT, lintegral_indicator_one hT'] using hMain
 
-/-- A coupling at every `ε + δ`, `δ > 0`, is one at `ε`. -/
-theorem limit {ε : ENNReal} {S : Set (α × β)}
-    {μₗ : Measure α} {μᵣ : Measure β}
-    (H : ∀ δ : ENNReal, 0 < δ → AddCoupl (ε + δ) S μₗ μᵣ) :
-    AddCoupl ε S μₗ μᵣ := by
-  intro f g Hfg
-  refine ENNReal.le_of_forall_pos_le_add fun δ Hδ _ => ?_
-  rw [add_assoc]
-  exact H δ (by exact_mod_cast Hδ) f g Hfg
-
-/-- A coupling with the zero measure on the right bounds the left mass by `ε`. -/
-theorem dzero_r_inv {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
-    (H : AddCoupl ε S μₗ (0 : Measure β)) : μₗ .univ ≤ ε := by
-  simpa using AddCoupl.mass_leq H
+/-! ## Swapping sides -/
 
 /-- Additive couplings of measures of equal mass at most one swap sides. -/
 theorem swap {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
@@ -460,16 +489,5 @@ theorem swap {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : M
   calc M + IF ≤ (M - IF) + ε + IG + IF := by gcongr
     _ = (M - IF + IF) + (IG + ε) := by ac_rfl
     _ = M + (IG + ε) := by rw [tsub_add_cancel_of_le Hfint_le]
-
-/-- Slack at least one makes any coupling trivial (Rocq `ARcoupl_1`). -/
-theorem trivial_of_one_le {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
-    {μᵣ : Measure β} (Hε : 1 ≤ ε) (Hmass : μₗ Set.univ ≤ 1) :
-    AddCoupl ε S μₗ μᵣ := by
-  rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ _
-  calc ∫⁻ x, f x ∂μₗ
-      _ ≤ μₗ Set.univ := lintegral_le_meas Hfb (by simp)
-      _ ≤ 1 := Hmass
-      _ ≤ ε := Hε
-      _ ≤ ∫⁻ y, g y ∂μᵣ + ε := le_add_self
 
 end AddCoupl

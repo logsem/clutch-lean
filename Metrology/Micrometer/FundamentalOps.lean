@@ -3,7 +3,10 @@ module
 public import Metrology.Micrometer.FundamentalCompat
 import Metrology.ProbLang.Syntax.Notation
 
-/-! Compatibility of `bin_log_related` with operators, matching and the stateful fragment. -/
+/-! # Fundamental theorem: operators, pattern matching, sampling and heap
+
+Compatibility lemmas for `bin_log_related` on unary and binary operators, equality, `scrut`, `urand`
+and the heap and tape primitives. -/
 
 @[expose] public section
 
@@ -18,6 +21,8 @@ section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+
+/-! ## Pattern matching -/
 
 /-- The literal-pattern case of `pat_match_related`. -/
 theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
@@ -141,19 +146,24 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 /-! ## Operators
 
 `lrel_int`, `lrel_bool` and `lrel_real` relate exactly equal literals, so each operator
-lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step. -/
+lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step
+(`refines_{un,bin}op_val`). -/
 
+/-- A binary operator on two values that evaluates to a literal is related to itself. -/
 theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) {l : BaseLit rT}
     {A : lrel rT GF} (heval : op.eval w1.1 w2.1 = some (.lit l))
     (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢@{IProp GF} refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
   refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
 
+/-- A unary operator on a value that evaluates to a literal is related to itself. -/
 theorem refines_unop_val (op : UnOp) (w : Val rT) {l : BaseLit rT} {A : lrel rT GF}
     (heval : op.eval w.1 = some (.lit l)) (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢@{IProp GF} refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
+/-- Binds both operands of a binary operator, whose values lie in a family `V`, then continues
+for every pair of indices. -/
 theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT) {A C : lrel rT GF}
     {e1 e2 e1' e2' : Exp rT} (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e1 e1' A ⊢
@@ -174,6 +184,8 @@ theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT) {A C :
   rw [Ectx.fill_binopL, Ectx.fill_binopL, Exp.ofVal, hv1, hv1']
   iapply Hcont $$ %i1 %i2
 
+/-- Binds the operand of a unary operator, whose values lie in a family `V`, then continues
+for every index. -/
 theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) {A C : lrel rT GF}
     {e e' : Exp rT} (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e e' A ⊢
@@ -187,6 +199,9 @@ theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT) {A C : l
   rw [Ectx.fill_unop, Ectx.fill_unop, hv, hv']
   iapply Hcont $$ %i
 
+/-! ## Integer and boolean operators -/
+
+/-- Binary operators on two integers are compatible. -/
 theorem bin_log_related_int_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.intResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢
@@ -202,6 +217,7 @@ theorem bin_log_related_int_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : B
       | (rw [interp_int]; iapply refines_binop_val _ _ _ rfl (lrel_int_lit _))
       | (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
+/-- Binary operators on two booleans are compatible. -/
 theorem bin_log_related_bool_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.boolResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .bool ⊢
@@ -215,6 +231,7 @@ theorem bin_log_related_bool_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : 
     cases op <;> simp [BinOp.boolResTy] at Hres <;> subst Hres
     all_goals (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
+/-- Unary operators on an integer are compatible. -/
 theorem bin_log_related_int_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.intResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .int ⊢
@@ -229,6 +246,7 @@ theorem bin_log_related_int_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : Un
       | (rw [interp_int]; iapply refines_unop_val _ _ rfl (lrel_int_lit _))
       | (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
 
+/-- Unary operators on a boolean are compatible. -/
 theorem bin_log_related_bool_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.boolResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .bool ⊢
@@ -243,8 +261,9 @@ theorem bin_log_related_bool_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : U
     rw [interp_bool]
     iapply refines_unop_val _ _ rfl (lrel_bool_lit _)
 
-/-! ## The real fragment -/
+/-! ## Real operators -/
 
+/-- Unary operators on a real are compatible. -/
 theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .real ⊢
@@ -257,6 +276,7 @@ theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : U
     cases op <;> simp [UnOp.realResTy] at Hres <;> subst Hres
     all_goals (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
 
+/-- Binary operators on two reals are compatible. -/
 theorem bin_log_related_real_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : BinOp)
     {e1 e2 e1' e2' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .real ⊢
@@ -272,8 +292,9 @@ theorem bin_log_related_real_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : 
       | (rw [interp_real]; iapply refines_binop_val _ _ _ rfl (lrel_real_lit _))
       | (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
-/-! ## Equality and pattern matching -/
+/-! ## Equality and scrutinee -/
 
+/-- Equality on unboxed types (literals) is compatible. -/
 theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ : Ty} (HUnboxed : UnboxedType τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' τ ⊢
@@ -318,6 +339,7 @@ theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2
   rw [interp_bool, hdec]
   iapply lrel_bool_lit _
 
+/-- Matching a scrutinee against a typed pattern is compatible; the result is `τb + unit`. -/
 theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT}
     {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p τb) :
     bin_log_related_ty L ⊤ Δ Γ e e' τs ⊢
@@ -360,6 +382,9 @@ theorem bin_log_related_scrut (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp
 section Prim
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
+/-! ## Sampling -/
+
+/-- `urand` is compatible, coupling the two samples by the identity. -/
 theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
     ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
   unfold bin_log_related_ty bin_log_related
@@ -373,17 +398,20 @@ theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
   imodintro
   iapply lrel_real_lit r
 
-/-! ## Heap and tape cases -/
+/-! ## Heap and tape -/
 
+/-- Allocation is compatible. -/
 theorem bin_log_related_alloc (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' τ ⊢
     bin_log_related_ty L ⊤ Δ Γ (.alloc e) (.alloc e') (.ref τ) :=
   bin_log_related_lift1 substMap_alloc fun _ _ => refines_alloc
 
+/-- Loading is compatible. -/
 theorem bin_log_related_load (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (.ref τ) ⊢ bin_log_related_ty L ⊤ Δ Γ (.load e) (.load e') τ :=
   bin_log_related_lift1 substMap_load fun _ _ => refines_load
 
+/-- Storing is compatible. -/
 theorem bin_log_related_store (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ : Ty} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' (.ref τ) ⊢
@@ -391,10 +419,12 @@ theorem bin_log_related_store (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' 
     bin_log_related_ty L ⊤ Δ Γ (.store e1 e2) (.store e1' e2') .unit :=
   bin_log_related_lift2 substMap_store fun _ _ _ _ => refines_store
 
+/-- Tape allocation is compatible. -/
 theorem bin_log_related_alloctape (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} :
     bin_log_related_ty L ⊤ Δ Γ e e' .int ⊢ bin_log_related_ty L ⊤ Δ Γ (.tape e) (.tape e') .tape :=
   bin_log_related_lift1 substMap_tape fun _ _ => refines_alloctape
 
+/-- Sampling from a tape is compatible. -/
 theorem bin_log_related_rand_tape (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e1 e1' e2 e2' : Exp rT} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢
@@ -402,6 +432,7 @@ theorem bin_log_related_rand_tape (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     bin_log_related_ty L ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
   bin_log_related_lift2 substMap_rand fun _ _ _ _ => refines_rand_tape_int
 
+/-- Sampling without a tape (unit label) is compatible. -/
 theorem bin_log_related_rand_unit (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     {e1 e1' e2 e2' : Exp rT} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢

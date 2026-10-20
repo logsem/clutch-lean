@@ -10,8 +10,9 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # The weak PRF/PRP switching lemma (clutch `approxis/examples/prp_prf_weak.v`)
 
-`Q` uniform queries to a random function and to a random permutation over `[0, N)` are
-indistinguishable up to `Q (Q - 1) / (2 N)`. -/
+`Q` uniform queries to a lazy random function and to a lazy random permutation over `[0, N)` are
+indistinguishable up to the birthday bound `Q (Q - 1) / (2 N)`: `weak_switching_lemma`, proved by
+a coupled-loop `wp` in each direction (`wp_wPRF_wPRP`, `wp_wPRP_wPRF`) plus `tv` adequacy. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -20,6 +21,8 @@ namespace ProbLang
 namespace Switching
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+
+/-! ## The error budget -/
 
 /-- With `c` entries memoised and `q` rounds to go, round `i` costs `(c + i) / N`. -/
 noncomputable def loopErr (N : Int) (c q : Nat) : ENNReal :=
@@ -51,9 +54,13 @@ theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
         rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
           ENNReal.mul_inv (Or.inl (by norm_num)) (Or.inl (by norm_num)), mul_assoc]
 
+/-! ## The coupled games -/
+
 section Games
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+
+/-! ### One round: recording the answer -/
 
 /-- The tail of a round: record `(n, y)` in both result lists, then run the next round. `loop` is
 the stepped goal's unfolded `wLoop N`. -/
@@ -91,6 +98,8 @@ theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL
   tp_bind (pl% {wLoop N} {Exp.ofVal fS} #(.loc resS) #(.int q))
   wp_show (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q))
   iapply Hcnt $$ Hj HresL HresS
+
+/-! ### The loop, random function against random permutation -/
 
 /-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`.
 
@@ -218,7 +227,9 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   iintro HresL
   iapply Hcnt $$ %(assocVal acc) Hj
 
-/-- `wp_wLoop` with the random permutation on the program side. -/
+/-! ### The loop, random permutation against random function -/
+
+/-- `wp_wLoop` with the roles swapped: the random permutation on the program side. -/
 theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
@@ -340,6 +351,8 @@ theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   iapply Hcnt $$ %(assocVal acc) Hj
 
 end Games
+
+/-! ## Adequacy and the switching lemma -/
 
 section AdequacyCor
 

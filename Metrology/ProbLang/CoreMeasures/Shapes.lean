@@ -7,11 +7,10 @@ public import Metrology.ProbLang.Measure
 /-!
 # Types as sums over shapes
 
-A value of an inductive type `T` is a *shape* (constructors and countable fields) with *leaves*
-(other fields), so `T ≃ Σ s, V s`. For a recursive type the shape is the whole constructor tree
-(`T.Shape` has a recursive field wherever `T` does) and the leaves are the data fields of every
-node. Deriving `MeasurableSpace` uses this file to show constructors are measurable embeddings,
-maps out of `T` are measurable shape by shape, and singletons measurable.
+Writes an inductive type `T` as a sum `Σ s, V s` over *shapes* (constructors and countable fields)
+with *leaves* (other fields) on each. Gives the lemmas the derived `MeasurableSpace T` uses:
+constructors are measurable embeddings, maps out of `T` are measurable shape by shape, and
+singletons are measurable.
 -/
 
 open MeasureTheory Set
@@ -25,7 +24,7 @@ variable {α β A B : Type*} [MeasurableSpace α] [MeasurableSpace β] [Measurab
 variable {I J : Type*} {X : I → Type*} {Y : J → Type*} [∀ i, MeasurableSpace (X i)]
   [∀ j, MeasurableSpace (Y j)]
 
-/-! ## Maps into and out of sigma types -/
+/-! ## Measurability of maps into and out of sigma types -/
 
 theorem measurable_mk (i : I) : Measurable (Sigma.mk i : X i → Σ i, X i) :=
   (MeasurableEmbedding.sigmaMk i).measurable
@@ -149,7 +148,10 @@ def pairLeaf [Countable I] {B' : Type*} [MeasurableSpace B'] (e : A ≃ᵐ Σ i,
     A × B ≃ᵐ Σ i, X i × B' :=
   (e.prodCongr e').trans sigmaProdLeaf
 
-/-! ## The type as a sum over its shapes -/
+/-! ## The type as a sum over its shapes
+
+For a recursive type the shape is the whole constructor tree (`T.Shape` has a recursive field
+wherever `T` does) and the leaves are the data fields of every node. -/
 
 section Sum
 
@@ -166,6 +168,8 @@ def measurableEquiv [m : MeasurableSpace T] (e : T ≃ Σ s, V s)
     rwa [show e.symm ⁻¹' (e ⁻¹' U) = U by ext; simp]
 
 variable [MeasurableSpace T] (e : T ≃ᵐ Σ s, V s)
+
+/-! ### Constructors are measurable embeddings -/
 
 /-- A constructor `ι` is a measurable embedding if its fields split (`g`) into an index `k : K`
 and leaves, with `e (ι a)` the leaves at shape `f k`. For the generator, `f` is the uncurried shape
@@ -185,6 +189,8 @@ theorem measurableEmbedding_leaves (s : S) (g : A ≃ᵐ V s) {ι : A → T}
   have : ι = e.symm ∘ Sigma.mk s ∘ g := by funext a; simp [← h a]
   rw [this]
   exact e.symm.measurableEmbedding.comp ((MeasurableEmbedding.sigmaMk s).comp g.measurableEmbedding)
+
+/-! ### Maps out of `T`, shape by shape -/
 
 /-- A map out of `T` is measurable if it is on the values of every shape. -/
 theorem measurable_of_fibers (f : T → α) (h : ∀ s, Measurable fun v => f (e.symm ⟨s, v⟩)) :
@@ -206,6 +212,8 @@ theorem measurable_uncurry_of_fibers [Countable S] (g : β → T → α)
 theorem measurable_symm_mk (s : S) : Measurable fun v : V s => e.symm ⟨s, v⟩ :=
   e.symm.measurable.comp (measurable_mk s)
 
+/-! ### Singletons -/
+
 omit e in
 /-- `T` has measurable singletons if the leaves of every shape do. -/
 theorem measurableSingletonClass (e : T ≃ᵐ Σ s, V s) [∀ s, MeasurableSingletonClass (V s)] :
@@ -217,6 +225,8 @@ theorem measurableSingletonClass (e : T ≃ᵐ Σ s, V s) [∀ s, MeasurableSing
       (measurableSet_singleton _))
 
 end Sum
+
+/-! ## Small helpers -/
 
 omit [MeasurableSpace A] [MeasurableSpace B] in
 /-- A constructor `ι` is injective: `π` inverts it. -/

@@ -5,21 +5,21 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # A uniform draw that never reports `0`
+/-! # Uniform draw with `0` reported as `1`
 
-Proved at most `1/N` less likely than a uniform draw on every event, in
-`Micrometer/Examples/SkipZero`. -/
+The programs `unif` and `skipZero`; `Micrometer/Examples/SkipZero` shows they are
+within `1/N` in tv. -/
 
 namespace ProbLang
 namespace SkipZero
 
 variable {rT : Type _}
 
-/-- Draw uniformly from `{0, …, N-1}`. -/
+/-- A uniform draw from `{0, …, N-1}`. -/
 def unif (N : Int) : Exp rT :=
   pl% rand(#(.int N), #.unit)
 
-/-- Draw uniformly from `{0, …, N-1}`, but report `1` instead of `0`. -/
+/-- A uniform draw from `{0, …, N-1}` that reports `1` whenever it draws `0`. -/
 def skipZero (N : Int) : Exp rT :=
   pl% let x := rand(#(.int N), #.unit); if x = #0 then #1 else x
 

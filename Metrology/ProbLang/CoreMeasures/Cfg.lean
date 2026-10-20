@@ -6,14 +6,17 @@ public import Metrology.ProbLang.CoreMeasures.State
 
 @[expose] public section
 
-/-! # Measurable structure on tapes, states and configurations
+/-! # σ-algebras on tapes, states and configurations
 
-Tapes are discrete; states and configurations carry the product σ-algebra of their fields. -/
+Tapes are discrete; `State` and `Cfg` are pullbacks of the product σ-algebra of their fields,
+with measurability criteria and constructors (`measurable_iff`, `measurable_mk`) for each. -/
 
 noncomputable section
 open Classical MeasureTheory
 
 namespace ProbLang
+
+/-! ## Tapes -/
 
 /-- Tapes are countable (a bound and a list of integers), so they carry the discrete σ-algebra. -/
 instance instMeasurableSpaceTape : MeasurableSpace Tape := ⊤
@@ -22,6 +25,8 @@ instance instMeasurableSingletonClassTape : MeasurableSingletonClass Tape :=
   ⟨fun _ => trivial⟩
 
 variable {α : Type _} [MeasurableSpace α]
+
+/-! ## States: heap and tapes -/
 
 /-- The σ-algebra of a state: that of its heap and tapes. -/
 instance instMeasurableSpaceState : MeasurableSpace (State α) :=
@@ -52,6 +57,8 @@ theorem State.measurable_mk_param {γ : Type _} [MeasurableSpace γ]
     {ft : γ → LocHeap Tape} (ht : Measurable ft) :
     Measurable (fun q : γ => State.mk (fh q) (ft q)) :=
   State.measurable_iff.mpr ⟨hh, ht⟩
+
+/-! ## Configurations: expression and state -/
 
 /-- The σ-algebra of a configuration: that of its expression and state. -/
 instance instMeasurableSpaceCfg : MeasurableSpace (Cfg α) :=

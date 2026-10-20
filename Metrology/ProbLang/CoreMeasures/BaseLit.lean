@@ -13,13 +13,12 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 noncomputable section ProbLangMeasures
 
-/-! # Measurable space on base lits -/
+/-! # Measurable space on base literals
+
+The cylinder σ-algebra on `BaseLit rT`, derived by `CylinderGen.lean` together with measurable
+constructors and projections and the `measurable_casesOn(_param)` lemmas. -/
 
 namespace ProbLang.BaseLit
-
-/-! Deriving `MeasurableSpace` (`CylinderGen.lean`) generates the cylinder σ-algebra, the
-constructor embeddings and projections, their measurability lemmas, and the lemmas
-`measurable_casesOn(_param)` (functions by `casesOn`). -/
 
 deriving instance MeasurableSpace for BaseLit
 

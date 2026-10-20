@@ -4,7 +4,10 @@ public import Metrology.ProbLang.Erasure.CaseClosers
 
 @[expose] public section
 
-/-! Presampling on a tape is invisible to `execN` at the expression level. -/
+/-! # Presampling invariance of `execN`
+
+Main result `execN_tape_presample_expr_eq`: presampling a tape does not change the distribution of
+the final expression of `execN m`; the core of erasure (`ErasableExpr`). -/
 
 namespace ProbLang
 
@@ -12,8 +15,10 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-- `rand` on the non-empty tape `α` pops its head `nn`; after presampling the pop is the same
-step, and the IH applies at the popped state. -/
+/-! ## The two `rand` cases that read the presampled tape itself -/
+
+/-- Case `rand` on the non-empty tape `α`: presampling appends to the tape's end, so the popped
+head `nn` is unchanged, and the induction hypothesis applies at the popped state. -/
 theorem erasure_rand_tape_pop_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {z_r : Int}
     {nn : { z : Int // 0 ≤ z ∧ z < z_r }} {ns : List { z : Int // 0 ≤ z ∧ z < z_r }}
@@ -58,8 +63,8 @@ theorem erasure_rand_tape_pop_close
           (Cfg.measurable_mk.comp (measurable_const.prodMk measurable_id)))]
   simp_rw [State.update_tapes_twice]
 
-/-- `rand` on the presampled empty tape `α` pops the presampled index; by
-`tapeIndexUniform_lintegral_eq_cfg_uniform` this is the same integral as `Cfg.uniform N σ`. -/
+/-- Key case: `rand` on the empty tape `α` pops the presampled index, which is uniform, so by
+`tapeIndexUniform_lintegral_eq_cfg_uniform` it matches the unpresampled `Cfg.uniform z_r σ`. -/
 theorem erasure_rand_presampled_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {z_r : Int}
     (hS : MeasurableSet S) (hz : 0 < z_r) (h : σ.tapes[α]? = some ⟨z_r, []⟩) :
@@ -92,6 +97,8 @@ theorem erasure_rand_presampled_close
     (fun ρ => ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S))
     (erasure_integrand_measurable hS)
 
+/-! ## Main theorem -/
+
 /-- Presampling tape `α` before running `m` steps leaves the distribution of the final expression
 unchanged (Clutch `prim_coupl_upd_tapes_dom`, projected). `0 < t.bound` is needed: otherwise
 `tapePresample σ α = 0`. -/
@@ -101,6 +108,7 @@ theorem execN_tape_presample_expr_eq
     asExpr ((tapePresample σ α).bind (fun σ' => execN m ⟨e, σ'⟩)) =
       asExpr (execN m ⟨e, σ⟩) := by
   unfold asExpr
+  -- induction on fuel; the step case splits on value / head-step kind (`det_or_prob_or_zero`)
   induction m generalizing e σ t with
   | zero =>
     show ((tapePresample σ α).bind (fun _ => (0 : Measure (Cfg rT)))).map (·.expr) =
@@ -112,7 +120,8 @@ theorem execN_tape_presample_expr_eq
     simp only [Measure.coe_zero, Pi.zero_apply, lintegral_zero]
   | succ m ih =>
     by_cases hv : e.isValue
-    · have hstep : ∀ σ' : State rT,
+    · -- a value stops immediately, so only the total mass of `tapePresample` (one) matters
+      have hstep : ∀ σ' : State rT,
           execN (m + 1) ⟨e, σ'⟩ = Measure.dirac ⟨e, σ'⟩ := fun σ' =>
         execN_succ_isValue (ρ := ⟨e, σ'⟩) hv m
       simp_rw [hstep]
@@ -128,7 +137,8 @@ theorem execN_tape_presample_expr_eq
       refine Measure.ext fun S hS => ?_
       rw [Measure.bind_apply hS measurable_const.aemeasurable,
           lintegral_const, tapePresample_univ_eq_one h hN, mul_one]
-    · have hstep : ∀ σ' : State rT,
+    · -- not a value: unfold one step `K[e_red]`, then show each head step commutes with presampling
+      have hstep : ∀ σ' : State rT,
           execN (m + 1) ⟨e, σ'⟩ = (primStep ⟨e, σ'⟩).bind (execN m) :=
         fun σ' => execN_succ_not_isValue (ρ := ⟨e, σ'⟩) hv m
       simp_rw [hstep]

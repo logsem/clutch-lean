@@ -2,7 +2,13 @@ module
 
 public import Metrology.Couplings.Divergences.FDiv
 
-/-! Partition sums of `f`-divergences and data processing (Approximate Span Liftings, Thm. 4.7). -/
+/-!
+# Partition formula and data processing for `f`-divergences
+
+`fDiv_eq_iSup_partition`: the `f`-divergence is the supremum of its finite-partition sums
+(Approximate Span Liftings, Thm. 4.7). Consequences: data processing along kernels and maps, and
+lower semicontinuity along increasing sequences.
+-/
 
 @[expose] public section
 
@@ -13,7 +19,12 @@ namespace ProbabilityTheory
 
 variable {f g : ℝ → ℝ} {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
 
-/-! ## The partition characterisation -/
+/-! ## The partition characterisation
+
+Plan: split `fDiv` above an affine minorant, approximate `f` by finite maxima of affine
+minorants, turn each maximum into a partition sum, and pass to the limit. -/
+
+/-! ### Splitting off a minorant -/
 
 /-- Above an integrable minorant `L`, the integral of `F` is the lower integral of `F - L` plus
 the integral of `L`. -/
@@ -56,6 +67,9 @@ theorem fDiv_eq_lintegral_sub (hf : ConvexOn ℝ (Ici 0) f)
   rw [fDiv_of_not_integrable hint, htop, EReal.coe_ennreal_top, EReal.top_add_coe,
     EReal.top_add_of_ne_bot (derivAtTop_mul_ne_bot hf (measure_ne_top _ _))]
 
+/-! ### Finite maxima of affine minorants give partition sums -/
+
+/-- A finite maximum of affine functions of a measurable function is measurable. -/
 theorem measurable_partialSups_affine {a c : ℕ → ℝ} {G : X → ℝ} (hG : Measurable G) (N : ℕ) :
     Measurable fun x ↦ partialSups (fun i ↦ a i * G x + c i) N := by
   simp_rw [partialSups_eq_sup'_range]
@@ -73,9 +87,9 @@ theorem integrable_partialSups_affine [IsFiniteMeasure ν] {a c : ℕ → ℝ} {
   rw [Real.norm_eq_abs, partialSups_eq_sup'_range, he]
   exact Finset.single_le_sum (f := fun i ↦ |a i * G x + c i|) (fun _ _ ↦ abs_nonneg _) hi
 
-/-- Finitely many affine minorants: the integral of their maximum at the density, plus the
-singular part, is at most a partition sum. On the `ν`-carrying set, cell `i ≤ N` collects the points
-where minorant `i` is the first to attain the maximum; the last cell `N + 1` is the singular set. -/
+/-- The integral of a finite maximum of affine minorants at the density, plus the singular part,
+is at most a partition sum. Cell `i ≤ N` collects the points of the `ν`-carrying set where
+minorant `i` is the first to attain the maximum; the last cell `N + 1` is the singular set. -/
 theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
     (h : ∀ i t, 0 ≤ t → a i * t + c i ≤ f t) [IsFiniteMeasure μ] [IsFiniteMeasure ν] (N : ℕ) :
     ∃ k : X → Fin (N + 2), Measurable k ∧
@@ -155,8 +169,10 @@ theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
           EReal.coe_ennreal_toReal (measure_ne_top _ _)]
     _ ≤ _ := add_le_add (Finset.sum_le_sum fun i _ ↦ hterm i) le_rfl
 
-/-- The `f`-divergence is at most the supremum of its partition sums: partition by the dominating
-piece of a growing family of affine minorants, plus the singular set. -/
+/-! ### The partition formula -/
+
+/-- The `f`-divergence is at most the supremum of its partition sums: the maxima of the first `N`
+affine minorants increase to `f`, and each gives a partition sum below the supremum. -/
 theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv f μ ν ≤ ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
@@ -209,7 +225,8 @@ theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
   rw [← add_assoc, ← hE N]
 
 /-- The `f`-divergence is the supremum of its sums over finite measurable partitions
-(Def. 2.7, Thm. 4.7). -/
+(Def. 2.7, Thm. 4.7). The `≥` direction is `sum_persp_le_fDiv` (Jensen); the `≤` direction is
+`fDiv_le_iSup_partition`. -/
 theorem fDiv_eq_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv f μ ν = ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
@@ -217,7 +234,10 @@ theorem fDiv_eq_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
   le_antisymm (fDiv_le_iSup_partition hf hf_cont)
     (iSup_le fun _ ↦ iSup_le fun _ ↦ iSup_le fun hk ↦ sum_persp_le_fDiv hf hf_cont hk)
 
-/-! ## Data processing and semicontinuity -/
+/-! ## Data processing and semicontinuity
+
+Data processing: push a partition of the target back along the kernel, then apply the partition
+sup. Semicontinuity: partition sums are continuous in `μ`, and each is below `fDiv`. -/
 
 variable {Y : Type*} [MeasurableSpace Y]
 

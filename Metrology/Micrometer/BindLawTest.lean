@@ -5,7 +5,10 @@ public import Metrology.Couplings.BindLaws
 
 @[expose] public section
 
-/-! # Smoke tests for non-canonical bind laws in Micrometer steps -/
+/-! # Smoke tests: program steps under non-canonical DP bind laws
+
+Instantiates the generic `progCoupl_steps_law` / `progCoupl_steps_spend_law` with
+`BindLaw.dpRhs` and `BindLaw.dpChoice`. -/
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence ProbLang.MicrometerWpGS
 open scoped ENNReal
@@ -30,6 +33,7 @@ theorem progCoupl_dpRhs {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
       (ε₁ + ε₂, δ₁ + expBudget ε₁ * ∫⁻ ρ, D ρ ∂primStep ⟨e₁', σ₁'⟩) Z := by
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
+  -- Per-pair continuation budget: `(ε₂, D ρ')` on `S`-related pairs, `⊤` (unusable) elsewhere.
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' => if S ρ ρ' then (ε₂, D ρ') else ⊤
   iintro H
   iapply progCoupl_steps_law (R := R) BindLaw.dpRhs Hred Hred'
@@ -39,7 +43,7 @@ theorem progCoupl_dpRhs {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ�
   by_cases hS' : S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩
   · simp only [R, hS', ↓reduceIte]
     iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hS'
-  · simp [R, hS'] at hR
+  · simp [R, hS'] at hR  -- unrelated pairs carry budget `⊤`, which `hR` rules out
 
 open Classical in
 /-- A program step coupled by the DP choice rule while `c` of the budget rides through it on every
@@ -60,6 +64,7 @@ theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp
     progCoupl (codensity dp) e₁ σ₁ e₁' σ₁' b Z := by
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
+  -- Per-pair budget: the `P`-split choice on pairs related by `S₁` or `S₂`, `⊤` elsewhere.
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' =>
     if S₁ ρ ρ' ∨ S₂ ρ ρ' then (if ρ ∈ P then (ε₂, δ₂) else (ε₂', δ₂))
     else (⊤ : ℝ≥0∞ × ℝ≥0∞)
@@ -73,6 +78,7 @@ theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp
   · simp only [R, hS, ↓reduceIte]
     iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hS
   · simp only [R, hS, ↓reduceIte] at hR
+    -- unrelated pairs carry budget `⊤ + c = ⊤`, which `hR` rules out
     have htop : (⊤ : ℝ≥0∞ × ℝ≥0∞) + c = (⊤ : ℝ≥0∞ × ℝ≥0∞) :=
       Prod.ext (top_add c.1) (top_add c.2)
     exact absurd htop hR.ne

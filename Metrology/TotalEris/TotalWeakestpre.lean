@@ -8,8 +8,9 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Total weakest precondition
 
-`tglWp` (Eris `tgl_wp`): total weakest precondition over the error-graded modality `glm'`, with
-value, bind, monotonicity and frame rules. Micrometer does not use it.
+`tglWp` (Eris `tgl_wp`): total weakest precondition over the error-graded modality `glm'`.
+Main results: `tglWp_unfold`, `tglWp_ind`, `tglWp_strong_mono`, `tglWp_bind`.
+Micrometer does not use it.
 -/
 
 @[expose] public section
@@ -93,10 +94,12 @@ instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   bi_least_fixpoint (tglWpPreFixed Φ) ⟨E, e⟩
 
+/-- `tglWp` is a fixpoint of `tglWpPre`. -/
 theorem tglWp_unfold {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     tglWp E e Φ = tglWpPre tglWp E e Φ :=
   least_fixpoint_unfold (tglWpPreFixed Φ)
 
+/-- `tglWpPre` at a value: the state and error budget are returned with `Φ v`. -/
 theorem tglWpPre_eq_value {wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF}
     {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     tglWpPre wp E (Exp.ofVal v) Φ =
@@ -105,6 +108,7 @@ theorem tglWpPre_eq_value {wp : CoPset → Exp rT → (Val rT → IProp GF) → 
           |={E}=> stateInterp σ ∗ errInterp (rT := rT) ε ∗ Φ v) := by
   unfold tglWpPre; rw [Exp.toVal?_ofVal]
 
+/-- `tglWpPre` at a non-value: one `glm'` step, continuing with `wp`. -/
 theorem tglWpPre_eq_step {wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF}
     {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hv : e.toVal? = none) :
     tglWpPre wp E e Φ =
@@ -115,6 +119,7 @@ theorem tglWpPre_eq_step {wp : CoPset → Exp rT → (Val rT → IProp GF) → I
               stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ wp E ρ.expr Φ))) := by
   unfold tglWpPre; rw [Hv]
 
+/-- Unfolding `tglWp` at a value. -/
 theorem tglWp_unfold_value {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     tglWp E (Exp.ofVal v) Φ =
       iprop(∀ (σ : State rT) (ε : ENNReal),
@@ -122,6 +127,7 @@ theorem tglWp_unfold_value {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} 
           |={E}=> stateInterp σ ∗ errInterp (rT := rT) ε ∗ Φ v) :=
   tglWp_unfold.trans tglWpPre_eq_value
 
+/-- Unfolding `tglWp` at a non-value: one `glm'` step. -/
 theorem tglWp_unfold_step {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e.toVal? = none) :
     tglWp E e Φ =
@@ -134,6 +140,7 @@ theorem tglWp_unfold_step {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
 
 /-! ## Value rules -/
 
+/-- A value satisfies `tglWp` once its postcondition holds under a mask update. -/
 theorem tglWp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iprop(|={E}=> Φ v) ⊢ tglWp E (Exp.ofVal v) Φ := by
   iintro HΦ
@@ -144,6 +151,7 @@ theorem tglWp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
   imodintro
   iframe
 
+/-- A value satisfies `tglWp` if it satisfies the postcondition. -/
 theorem tglWp_value {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     Φ v ⊢ tglWp E (Exp.ofVal v) Φ :=
   fupd_intro.trans tglWp_value_fupd
@@ -160,6 +168,7 @@ theorem tglWp_value_fupd_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT}
   rw [← Exp.ofVal_of_toVal_some h]
   exact tglWp_value_fupd
 
+/-- Inversion at a value: with the state and error budget, `Φ v` holds under a mask update. -/
 theorem tglWp_value_inv_with_state {E : CoPset} {v : Val rT} {σ : State rT}
     {ε : ENNReal} {Φ : Val rT → IProp GF} :
     iprop(tglWp E (Exp.ofVal v) Φ ∗ stateInterp σ ∗ errInterp (rT := rT) ε) ⊢
@@ -168,6 +177,7 @@ theorem tglWp_value_inv_with_state {E : CoPset} {v : Val rT} {σ : State rT}
   isimp only [tglWp_unfold_value] at HW
   iapply HW $$ %σ %ε [$Hσ $Hε]
 
+/-- To prove `tglWp`, one may first open the state and error interpretations. -/
 theorem tglWp_of_frame_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     iprop(∀ (σ : State rT) (ε : ENNReal),
         stateInterp σ ∗ errInterp (rT := rT) ε -∗
@@ -191,11 +201,13 @@ theorem tglWp_of_frame_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
 
 /-! ## Induction principle -/
 
+/-- Induction on `tglWp`: the least-fixpoint principle, for non-expansive `Q`. -/
 theorem tglWp_ind {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     (Q : Exp rT → IProp GF) [NonExpansive Q] :
     iprop(□ (∀ e',
       tglWpPre (fun _ e'' _ => Q e'') E e' Φ -∗ Q e')) ⊢
         (tglWp E e Φ -∗ Q e) := by
+  -- Induct on the fixpoint with `Q'` remembering that the mask is `E`.
   iintro #HInd HW
   let Q' : TglWpState rT → IProp GF := fun s => iprop(⌜s.1 = E⌝ -∗ Q s.2)
   let : NonExpansive Q' := nonExpansive_of_discrete_leibniz Q'
@@ -214,6 +226,7 @@ theorem tglWp_ind {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
 
 /-! ## Derived structural rules -/
 
+/-- Strong monotonicity: the postcondition may be weakened by a mask-updating wand. -/
 theorem tglWp_strong_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
     iprop(tglWp E e Φ ∗ (∀ v, Φ v ={E}=∗ Ψ v)) ⊢ tglWp E e Ψ := by
   iintro ⟨HW, Hwand⟩
@@ -245,6 +258,7 @@ theorem tglWp_strong_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF
     · iexact HW
   iapply HQe $$ %Ψ Hwand
 
+/-- Postcondition weakening by a wand. -/
 theorem tglWp_wand {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
     iprop(tglWp E e Φ ∗ (∀ v, Φ v -∗ Ψ v)) ⊢ tglWp E e Ψ := by
   iintro ⟨HW, HΦΨ⟩
@@ -276,6 +290,7 @@ theorem tglWp_fupd {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
   iintro %v HΦ
   iexact HΦ
 
+/-- Frame rule: an extra resource is carried into the postcondition. -/
 theorem tglWp_frame_left {E : CoPset} {e : Exp rT} {R : IProp GF}
     {Φ : Val rT → IProp GF} :
     iprop(R ∗ tglWp E e Φ) ⊢ tglWp E e (fun v => iprop(R ∗ Φ v)) := by
@@ -305,6 +320,7 @@ theorem tglWp_frame_wand {E : CoPset} {e : Exp rT} {R : IProp GF}
   · iintro %v ⟨HRv, HW'⟩
     iapply HW' $$ HRv
 
+/-- Postcondition weakening by entailment. -/
 theorem tglWp_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF}
     (HΦ : ∀ v, Φ v ⊢ Ψ v) :
     tglWp E e Φ ⊢ tglWp E e Ψ := by
@@ -316,6 +332,7 @@ theorem tglWp_mono {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF}
 
 /-! ## Bind -/
 
+/-- Bind: run `e` in an evaluation context `K`, then continue with `K` filled by its value. -/
 theorem tglWp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     tglWp E e (fun v => tglWp E (K.fill (Exp.ofVal v)) Φ) ⊢
       tglWp E (K.fill e) Φ := by

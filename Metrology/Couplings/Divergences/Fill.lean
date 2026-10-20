@@ -2,9 +2,10 @@ module
 
 public import Metrology.Couplings.Divergence
 
-/-! Filling lost mass at a fresh point `none`. `withBot`/`dropBot` are what `BindLaw.massEq`
-(KLLaws.lean) uses to turn a sub-Markov test into a Markov one and back. `onWithBot`, `leftUp` and
-`fill` port Rocq's `FillDiv`; the liftings here do not use them. -/
+/-! # Filling lost mass
+`Measure.withBot` and `Kernel.withBot` put the lost mass on a fresh point `none`; `Kernel.dropBot`
+forgets it again (used by `BindLaw.massEq`). The `FillDiv` divergences (`fill`) are ported from
+Rocq but unused by the liftings. -/
 
 @[expose] public section
 
@@ -14,6 +15,8 @@ open MeasureTheory Measure ProbabilityTheory
 open scoped ENNReal
 
 variable {X : Type*} [MeasurableSpace X]
+
+/-! ## Filling measures -/
 
 namespace MeasureTheory.Measure
 
@@ -29,6 +32,8 @@ instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure 
       add_tsub_cancel_of_le (IsSubProbabilityMeasure.measure_le_one .univ)⟩
 
 end MeasureTheory.Measure
+
+/-! ## Filling kernels -/
 
 section Kernel
 
@@ -60,7 +65,9 @@ noncomputable def dropBot : Kernel (Option X) X where
 instance isSubMarkovKernel_dropBot : IsSubMarkovKernel (dropBot : Kernel (Option X) X) :=
   ⟨fun o ↦ by cases o <;> simp [dropBot] <;> infer_instance⟩
 
+/-- Forgetting `none` undoes filling. -/
 theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ := by
+  -- both sides agree on `s`: `some` contributes `κ x s`, `none` contributes `0`
   ext x s hs
   have hm := (dropBot : Kernel (Option Y) Y).measurable_coe hs
   rw [Kernel.comp_apply' _ _ _ hs, withBot_apply, Measure.withBot, lintegral_add_measure,
@@ -76,7 +83,7 @@ end Kernel
 
 namespace GradedDivergence
 
-/-! ## Rocq FillDiv -/
+/-! ## The fill of a divergence (Rocq `FillDiv`) -/
 
 variable {B : Type v} (D : GradedDivergence.{u} B)
 
@@ -95,7 +102,7 @@ abbrev fill : GradedDivergence.{u} B :=
 
 variable {D}
 
-/-! ## Laws -/
+/-! ## Laws for `onWithBot` and `leftUp` -/
 
 /-- Filling lost mass preserves gradedness. -/
 instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded where

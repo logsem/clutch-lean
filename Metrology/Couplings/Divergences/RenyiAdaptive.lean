@@ -3,8 +3,11 @@ module
 public import Mathlib.Probability.Kernel.Composition.WithDensity
 public import Metrology.Couplings.Divergences.RenyiStrassen
 
-/-! Adaptive Rényi composition at outcome-dependent budgets, averaged under the escort; paying the
-average budget instead is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
+/-! # Adaptive Rényi composition
+
+`codensity_renyi_bind_escort` composes Rényi liftings when the second budget `ρ₂ x` depends on the
+first outcome; `exists_not_codensity_renyi_bind_lintegral` shows that paying the plain average
+budget is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
 
 @[expose] public section
 
@@ -18,7 +21,7 @@ namespace GradedDivergence
 variable {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
   [MeasurableSpace Y'] {α : ℝ} {ρ : ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
 
-/-! ## Reweighting by `e^{-ε}` -/
+/-! ## Reweighting by `e^{-ε}` (support for the escort rule) -/
 
 /-- Reweighting by `e^{-ε}` keeps a measure sub-probability. -/
 instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
@@ -78,9 +81,9 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
 
 /-! ## The escort rule -/
 
-/-- Adaptive Rényi composition at budgets `ρ₂ x` that depend on the left outcome: weight the
-reduct of an `S`-supported kernel `r` by `e^{-ρ₂}`; if `μ` is within budget `ρ` of the weighted
-reduct, the composite lifts at `ρ` (Rocq `escort_adaptive`).
+/-- Adaptive Rényi composition at budgets `ρ₂ x` that depend on the left outcome: if `μ` is within
+budget `ρ` of the reduct of an `S`-supported kernel `r`, weighted by `e^{-ρ₂}`, the composite lifts
+at `ρ` (Rocq `escort_adaptive`).
 
 With `ν₀ = r ∘ₘ ν` the hypothesis is the moment bound
 `∫ (dμ/dν₀)^α e^{(α - 1) ρ₂} dν₀ ≤ e^{(α - 1) ρ}`. If `D_α(μ ‖ ν₀) = ρ₁`, it holds at

@@ -2,8 +2,11 @@ module
 
 public import Metrology.Couplings.Divergences.Gaussian
 
-/-! The Rényi divergence between Gaussians of equal variance, and the Gaussian mechanism is zCDP
-(Mironov 2017, Prop. 7; Bun–Steinke 2016, Prop. 1.6). -/
+/-! # Rényi divergence of Gaussians, and the Gaussian mechanism is zCDP
+
+The exact Rényi divergence `α (a - a')² / (2 v)` between `N(a, v)` and `N(a', v)`
+(Mironov 2017, Prop. 7), and from it zCDP closeness, the zCDP lifting, and `zCDP_gaussianMech`
+(Bun–Steinke 2016, Prop. 1.6). -/
 
 @[expose] public section
 
@@ -11,6 +14,8 @@ open MeasureTheory Measure ProbabilityTheory Real
 open scoped ENNReal NNReal
 
 namespace ProbabilityTheory
+
+/-! ## The density ratio and its moments -/
 
 variable {a a' : ℝ} {v : ℝ≥0}
 
@@ -65,6 +70,8 @@ end ProbabilityTheory
 
 namespace GradedDivergence
 
+/-! ## Rényi and zCDP closeness of Gaussians -/
+
 variable {a a' α : ℝ} {v : ℝ≥0}
 
 /-- Two Gaussians of equal variance `v` are within Rényi budget `α (a - a')² / (2 v)` at order
@@ -105,6 +112,8 @@ theorem zcdpLifting_rel_gaussianReal (hv : v ≠ 0) :
 end GradedDivergence
 
 namespace Mechanism
+
+/-! ## The Gaussian mechanism -/
 
 /-- The Gaussian mechanism with standard deviation `σ` is `(0, r² / (2 σ²))`-zCDP for inputs at
 distance at most `r` (Bun–Steinke 2016, Prop. 1.6). -/

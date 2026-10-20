@@ -26,14 +26,16 @@ namespace OTP
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-/-! ### The bijection -/
+/-! ## The bijection: adding the key modulo `N` -/
 
 /-- Adds the key `m` modulo `N`. -/
 def addMod (m N n : Int) : Int := (n + m) % N
 
+/-- Reduction modulo `N > 0` lands in `[0, N)`. -/
 theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
   ⟨Int.emod_nonneg _ hN.ne', Int.emod_lt_of_pos _ hN⟩
 
+/-- Adding `m` modulo `N` maps `[0, N)` into itself. -/
 theorem addMod_dom (m N : Int) (hN : 0 < N) :
     ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
   fun _ _ _ => emod_bounds _ hN
@@ -49,7 +51,14 @@ theorem addMod_bij (m N : Int) (hN : 0 < N) :
     unfold addMod at hadd
     rw [← hadd, Int.emod_sub_emod, Int.add_sub_cancel, Int.emod_eq_of_lt hn0 hnN]
 
-/-! ### The OTP refinement -/
+/-- Adding `-m` undoes adding `m`, used for the reverse refinement. -/
+theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
+    (m + (n + (-m)) % N) % N = n := by
+  rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
+
+/-! ## The refinement in the logic
+
+`rel_couple_UU` couples the two draws along `addMod`, at no cost. -/
 
 section Refinement
 
@@ -69,12 +78,6 @@ theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
   rel_pures
   rw [show (m + n) % N = addMod m N n by rw [addMod, Int.add_comm]]
   rel_values
-
-/-! ### Reverse direction -/
-
-theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
-    (m + (n + (-m)) % N) % N = n := by
-  rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
 /-- The ideal sampler refines the encryption in any lawful lifting. -/
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
@@ -100,7 +103,7 @@ theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) 
 
 end Refinement
 
-/-! ## Adequacy: exit the logic
+/-! ## Adequacy: exiting the logic
 
 The limit distributions of `otp_enc m N` and `otp_ideal N` are coupled by integer
 equality with zero error. -/
@@ -109,6 +112,7 @@ equality with zero error. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
+/-- Related integers satisfy `otpφ`. -/
 theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_int
@@ -117,6 +121,7 @@ theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS r
   exact ⟨n, hv, hv'⟩
 
 omit [LawfulProbLangℝ rT] in
+/-- Programs related by `adequacyRel otpφ` are equal. -/
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
   rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
@@ -174,7 +179,7 @@ theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev_gen GF m N hN σ σ'
 
-/-! ## Closed statements at the concrete model `MicrometerFunctor rT` -/
+/-! ### Closed statements at the concrete model `MicrometerFunctor rT` -/
 
 /-- `otp_adequate` at `MicrometerFunctor`. -/
 theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :

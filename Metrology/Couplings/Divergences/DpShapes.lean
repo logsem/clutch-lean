@@ -3,7 +3,10 @@ module
 public import Metrology.Couplings.Divergences.Dp
 public import Metrology.Couplings.Divergences.Tv
 
-/-! Adaptive DP composition shapes (budget keyed on the right or left outcome, choice), the
+/-! # DP bind shapes beyond uniform composition
+
+Adaptive DP composition where the second budget depends on the right outcome, the left outcome,
+or a left choice: `codensity_dp_rhs`, `codensity_dp_lhs`, `codensity_dp_choice`. They are the
 keystones of `BindLaw.dpRhs`/`dpLhs`/`dpChoice` in `BindLaws.lean` (Rocq `instances_dp.v`). -/
 
 @[expose] public section
@@ -17,6 +20,8 @@ namespace GradedDivergence
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ : Measure X} {ν : Measure Y}
   {ε ε₁ ε₂ δ δ₁ δ₂ : ℝ≥0∞} {S : X → Y → Prop}
+
+/-! ## Budget keyed on the right or left outcome -/
 
 open Classical in
 /-- Adaptive composition keyed on the right outcome: after a DP lifting of `S`, the budgets
@@ -89,8 +94,10 @@ theorem codensity_dp_of_kanto [IsSubProbabilityMeasure μ] {E : X → Y → ℝ�
   codensity_dp_of_lintegral_le fun f g hf hg hf1 hg1 hfg ↦
     h f g hf hg hf1 hg1 fun x y hS ↦ by simpa [hS] using hfg x y
 
-/-- One branch of the choice rule: on `P`, a DP lifting of `S` that sends `P` into `T` moves the
-continuation's slack `δ₂` out of the test. -/
+/-! ## Choice on a left predicate -/
+
+/-- One branch of `codensity_dp_choice`: on `P`, a DP lifting of `S` that sends `P` into `T`
+bounds the test integral with the continuation's slack `δ₂` taken out. -/
 theorem setLIntegral_le_of_codensity_dp [IsSubProbabilityMeasure μ] (hε₁ : ε₁ ≠ ⊤)
     (h : (codensity dp).Rel (ε₁, δ₁) S μ ν) {P : Set X} {T : Set Y} (hP : MeasurableSet P)
     (hT : MeasurableSet T) (hPT : ∀ x y, x ∈ P → S x y → y ∈ T) {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞}

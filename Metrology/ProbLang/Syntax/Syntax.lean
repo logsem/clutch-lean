@@ -81,6 +81,8 @@ instance instCountableString : Countable String where
 
 namespace ProbLang
 
+/-! ## Variables and locations -/
+
 /-- Free variables: user-named, or generated internally. -/
 @[uncurriedProjections, constructors]
 inductive Var : Type where
@@ -162,6 +164,8 @@ theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [LawfulProbLang�
     rw [← this]; exact LawfulProbLangℝ.unifUnitIsConcentrated
   rw [MeasureTheory.measure_univ] at h1
   exact one_ne_zero h1
+
+/-! ## Syntax: literals, operators, types, patterns, expressions -/
 
 /-- Literals: integers, booleans, unit, locations, labels and reals. -/
 @[uncurriedProjections, constructors]
@@ -268,6 +272,8 @@ variable {rT : Type _} [ProbLangℝ rT]
 @[reducible] def Exp.annotated (_τ : Ty) (e : Exp rT) : Exp rT := e
 
 namespace Exp
+
+/-! ### Open, close, substitute, free variables -/
 
 /-- Replaces bound variable `i` by `sub`. -/
 @[simp, scoped grind =] def openRec (i : Nat) (sub : Exp rT) : Exp rT → Exp rT
@@ -382,6 +388,8 @@ instance : HasSubstitution (Exp rT) Var (Exp rT) where
   | fail => {}
   | urand => {}
   | scrut e _ => fv e
+
+/-! ### Local closedness -/
 
 /-- No dangling bound variables, using cofinite quantification at binders. -/
 inductive IsLocallyClosed : Exp rT → Prop
@@ -634,6 +642,8 @@ theorem lc_imp_lcb {e : Exp α} (h : IsLocallyClosed e) : lcb 0 e = true := by
   | _ => simp_all [lcb]
 
 end Exp
+
+/-! ### Literals and pattern matching -/
 
 -- Hand-written: `BaseLit` derives only `BEq`, and this instance needs just `[DecidableEq α]`.
 instance [DecidableEq α] : DecidableEq (BaseLit α)

@@ -5,7 +5,10 @@ public import Mathlib.MeasureTheory.Measure.Decomposition.RadonNikodym
 public import Metrology.Couplings.Divergences.Persp
 public import Metrology.Couplings.SubProbability
 
-/-! Integral `f`-divergences (Approximate Span Liftings, Def. 2.7). -/
+/-! # Integral `f`-divergences
+
+`fDiv f μ ν` is `∫ f (dμ/dν) dν + f′(∞) μ⊥(X)` (Approximate Span Liftings, Def. 2.7), with its
+basic values and monotonicity. Main result: partition sums are below it (`sum_persp_le_fDiv`). -/
 
 @[expose] public section
 
@@ -39,6 +42,89 @@ theorem fDiv_of_integrable (h : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal
 theorem fDiv_of_not_integrable (h : ¬Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
     fDiv f μ ν = ⊤ := by
   simp [fDiv, h]
+
+/-! ## Values, sign and absolute continuity -/
+
+/-- On the diagonal the `f`-divergence is the mass times `f 1`. -/
+theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
+    fDiv f μ μ = (((μ univ).toReal * f 1 : ℝ) : EReal) := by
+  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ f 1 :=
+    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx]
+  rw [fDiv_of_integrable ((integrable_const (f 1)).congr h.symm), integral_congr_ae h,
+    singularPart_self]
+  simp [measureReal_def]
+
+/-- The `f`-divergence of a measure from itself vanishes when `f 1 = 0`. -/
+theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [SigmaFinite μ] : fDiv f μ μ = 0 := by
+  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ 0 :=
+    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx, hf1]
+  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
+    singularPart_self]
+  simp
+
+/-- From the zero measure the `f`-divergence is the mass times `f 0`. -/
+theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
+    fDiv f 0 ν = (((ν univ).toReal * f 0 : ℝ) : EReal) := by
+  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ f 0 :=
+    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx]
+  rw [fDiv_of_integrable ((integrable_const (f 0)).congr h.symm), integral_congr_ae h,
+    singularPart_zero]
+  simp [measureReal_def]
+
+/-- The `f`-divergence from the zero measure vanishes when `f 0 = 0`. -/
+theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
+  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ 0 :=
+    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx, hf0]
+  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
+    singularPart_zero]
+  simp
+
+/-- For a sub-probability measure `μ`, `μ(univ) * c ≤ max 0 c`. -/
+theorem toReal_univ_mul_le_max (μ : Measure X) [IsSubProbabilityMeasure μ] (c : ℝ) :
+    (μ univ).toReal * c ≤ max 0 c := by
+  obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ) univ
+  exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
+    (mul_le_of_le_one_left (le_max_left _ _) h1)
+
+/-- The `f`-divergence of a sub-probability measure with itself is at most `max 0 (f 1)`. -/
+theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
+    fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
+  rw [fDiv_self_eq, EReal.coe_le_coe_iff]
+  exact toReal_univ_mul_le_max μ _
+
+/-- The `f`-divergence of the zero measure from a sub-probability measure `ν` is at most
+`max 0 (f 0)`. -/
+theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
+    fDiv f 0 ν ≤ ((max 0 (f 0) : ℝ) : EReal) := by
+  rw [fDiv_zero_left_eq, EReal.coe_le_coe_iff]
+  exact toReal_univ_mul_le_max ν _
+
+/-- Against the zero measure the `f`-divergence is the mass times the slope at infinity. -/
+theorem fDiv_zero_right_eq (μ : Measure X) : fDiv f μ 0 = derivAtTop f * μ univ := by
+  simp [fDiv_of_integrable integrable_zero_measure]
+
+/-- A divergence with infinite slope at infinity that is finite forces absolute continuity. -/
+theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
+    (hf : derivAtTop f = ⊤) (h : fDiv f μ ν ≠ ⊤) : μ ≪ ν := by
+  by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
+  · rw [← singularPart_eq_zero, ← measure_univ_eq_zero]
+    by_contra h0
+    rw [fDiv_of_integrable hint, hf,
+      EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 h0)), EReal.coe_add_top] at h
+    exact h rfl
+  · exact absurd (fDiv_of_not_integrable hint) h
+
+/-- A nonnegative function has nonnegative `f`-divergence. -/
+theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f μ ν := by
+  by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
+  · rw [fDiv_of_integrable hint]
+    exact add_nonneg (EReal.coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ toReal_nonneg))
+      (mul_nonneg (derivAtTop_nonneg hf) (EReal.coe_ennreal_nonneg _))
+  · simp [fDiv_of_not_integrable hint]
+
+/-! ## Partition sums are below the `f`-divergence
+
+Jensen on each cell gives the lower bound; `fDiv_nonneg` and `fDiv_mono` follow. -/
 
 /-- A function continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
 theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
@@ -146,6 +232,12 @@ theorem sum_persp_le_fDiv (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWit
       (fun i ↦ measurable_const.indicator (hA i))
       (fun i x ↦ indicator_nonneg (fun _ _ ↦ zero_le_one) x) (fun x ↦ (hsum x).le) (.inl hsum)
 
+/-- Between probability measures a normalised `f`-divergence is nonnegative. -/
+theorem fDiv_nonneg (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
+    (hf1 : f 1 = 0) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] : 0 ≤ fDiv f μ ν := by
+  simpa [persp_of_ne_zero, hf1] using
+    sum_persp_le_fDiv hf hf_cont (μ := μ) (ν := ν) (k := fun _ : X ↦ (0 : Fin 1)) measurable_const
+
 /-- A larger weight gives a larger `f`-divergence; only the smaller weight needs to be convex, so
 that its integral is bounded below. -/
 theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
@@ -168,90 +260,5 @@ theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f 
   rw [fDiv_of_integrable hfG, fDiv_of_integrable hg]
   exact add_le_add (EReal.coe_le_coe_iff.2 (integral_mono hfG hg fun _ ↦ h _ toReal_nonneg))
     (mul_le_mul_of_nonneg_right (derivAtTop_mono h) (EReal.coe_ennreal_nonneg _))
-
-/-! ## Values and data processing -/
-
-/-- On the diagonal the `f`-divergence is the mass times `f 1`. -/
-theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
-    fDiv f μ μ = (((μ univ).toReal * f 1 : ℝ) : EReal) := by
-  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ f 1 :=
-    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx]
-  rw [fDiv_of_integrable ((integrable_const (f 1)).congr h.symm), integral_congr_ae h,
-    singularPart_self]
-  simp [measureReal_def]
-
-/-- The `f`-divergence of a measure from itself vanishes when `f 1 = 0`. -/
-theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [SigmaFinite μ] : fDiv f μ μ = 0 := by
-  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ 0 :=
-    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx, hf1]
-  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
-    singularPart_self]
-  simp
-
-/-- From the zero measure the `f`-divergence is the mass times `f 0`. -/
-theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
-    fDiv f 0 ν = (((ν univ).toReal * f 0 : ℝ) : EReal) := by
-  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ f 0 :=
-    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx]
-  rw [fDiv_of_integrable ((integrable_const (f 0)).congr h.symm), integral_congr_ae h,
-    singularPart_zero]
-  simp [measureReal_def]
-
-/-- The `f`-divergence from the zero measure vanishes when `f 0 = 0`. -/
-theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
-  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ 0 :=
-    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx, hf0]
-  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
-    singularPart_zero]
-  simp
-
-/-- For a sub-probability measure `μ`, `μ(univ) * c ≤ max 0 c`. -/
-theorem toReal_univ_mul_le_max (μ : Measure X) [IsSubProbabilityMeasure μ] (c : ℝ) :
-    (μ univ).toReal * c ≤ max 0 c := by
-  obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ) univ
-  exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
-    (mul_le_of_le_one_left (le_max_left _ _) h1)
-
-/-- The `f`-divergence of a sub-probability measure with itself is at most `max 0 (f 1)`. -/
-theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
-    fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
-  rw [fDiv_self_eq, EReal.coe_le_coe_iff]
-  exact toReal_univ_mul_le_max μ _
-
-/-- The `f`-divergence of the zero measure from a sub-probability measure `ν` is at most
-`max 0 (f 0)`. -/
-theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
-    fDiv f 0 ν ≤ ((max 0 (f 0) : ℝ) : EReal) := by
-  rw [fDiv_zero_left_eq, EReal.coe_le_coe_iff]
-  exact toReal_univ_mul_le_max ν _
-
-/-- Against the zero measure the `f`-divergence is the mass times the slope at infinity. -/
-theorem fDiv_zero_right_eq (μ : Measure X) : fDiv f μ 0 = derivAtTop f * μ univ := by
-  simp [fDiv_of_integrable integrable_zero_measure]
-
-/-- A divergence with infinite slope at infinity that is finite forces absolute continuity. -/
-theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
-    (hf : derivAtTop f = ⊤) (h : fDiv f μ ν ≠ ⊤) : μ ≪ ν := by
-  by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
-  · rw [← singularPart_eq_zero, ← measure_univ_eq_zero]
-    by_contra h0
-    rw [fDiv_of_integrable hint, hf,
-      EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 h0)), EReal.coe_add_top] at h
-    exact h rfl
-  · exact absurd (fDiv_of_not_integrable hint) h
-
-/-- A nonnegative function has nonnegative `f`-divergence. -/
-theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f μ ν := by
-  by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
-  · rw [fDiv_of_integrable hint]
-    exact add_nonneg (EReal.coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ toReal_nonneg))
-      (mul_nonneg (derivAtTop_nonneg hf) (EReal.coe_ennreal_nonneg _))
-  · simp [fDiv_of_not_integrable hint]
-
-/-- Between probability measures a normalised `f`-divergence is nonnegative. -/
-theorem fDiv_nonneg (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    (hf1 : f 1 = 0) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] : 0 ≤ fDiv f μ ν := by
-  simpa [persp_of_ne_zero, hf1] using
-    sum_persp_le_fDiv hf hf_cont (μ := μ) (ν := ν) (k := fun _ : X ↦ (0 : Fin 1)) measurable_const
 
 end ProbabilityTheory

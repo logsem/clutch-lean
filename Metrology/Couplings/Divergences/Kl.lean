@@ -3,10 +3,11 @@ module
 public import Mathlib.InformationTheory.KullbackLeibler.Basic
 public import Metrology.Couplings.Divergences.Bof
 
-/-! Generalized KL on sub-probability measures, the Barthe–Olmedo divergence at `γ = 0`
-(Barthe–Olmedo, ICALP 2013).
-Main results: composition for kernels of equal mass (`klDivergence_comp_of_mass_eq`), and a
-counterexample to general composability (`not_isComposable_kl`). -/
+/-! # KL divergence on sub-probability measures
+
+`klDivergence` is the Barthe–Olmedo divergence at `γ = 0` (ICALP 2013). Main results: composition
+for kernels of equal mass (`klDivergence_comp_of_mass_eq`) and its failure in general
+(`not_isComposable_kl`). -/
 
 @[expose] public section
 
@@ -16,6 +17,8 @@ open MeasureTheory Measure ProbabilityTheory Set Filter Topology InformationTheo
 open scoped ENNReal
 
 namespace ProbabilityTheory
+
+/-! ## `klFun` and Mathlib's `klDiv` -/
 
 /-- KL has infinite slope at `∞`, so mass singular to `ν` costs `⊤`. -/
 theorem derivAtTop_klFun : derivAtTop klFun = ⊤ := by
@@ -48,6 +51,8 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
   · rw [klDiv_of_not_ac hac]
     by_contra h
     exact hac (absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun (by simpa using h))
+
+/-! ## The pointwise term `klTerm` and its algebra -/
 
 /-- The pointwise generalized KL term `p log (p / q) + q - p`, the real-valued perspective of
 `klFun` used to prove the finite chain rule. -/
@@ -95,6 +100,8 @@ theorem klTerm_sum_le {ι : Type*} (s : Finset ι) {a b : ι → ℝ} (ha : ∀ 
     ← EReal.coe_finset_sum, EReal.coe_le_coe_iff] at h
   exact h
 
+/-! ## Chain rule on finite spaces -/
+
 /-- On a finite space with absolute continuity, the `klFun`-divergence is a real sum of terms. -/
 theorem fDiv_klFun_eq_sum {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsFiniteMeasure ρ₁] [IsFiniteMeasure ρ₂]
@@ -106,7 +113,10 @@ theorem fDiv_klFun_eq_sum {I : Type*} [Fintype I] [MeasurableSpace I]
   exact .inl (h i (hq.resolve_right (measure_ne_top _ _)))
 
 /-- Chain rule for generalized KL between finite spaces when the two kernels lose the same mass
-at every point (Rocq proves it only at mass `1`, `KL_top_composable_gen` under `FillKL`). -/
+at every point (Rocq proves it only at mass `1`, `KL_top_composable_gen` under `FillKL`).
+
+Proof idea: log-sum (`klTerm_sum_le`), split each product term (`klTerm_mul`), and the cross term
+dies by equal mass. -/
 theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Measure (ULift.{u} (Fin M)))
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
     (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
@@ -197,6 +207,8 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
         gcongr
         exact mul_le_of_le_one_left (EReal.toReal_nonneg hd₀) hp1
 
+/-! ## Point masses (used for the counterexample) -/
+
 /-- Between scaled point masses the `klFun`-divergence is the generalized KL term. -/
 theorem fDiv_klFun_smul_dirac {a b : ℝ≥0∞} (ha : a ≠ ⊤) (hb : b ≠ ⊤) (hab : b = 0 → a = 0) :
     fDiv klFun (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) =
@@ -209,6 +221,8 @@ theorem fDiv_klFun_smul_dirac {a b : ℝ≥0∞} (ha : a ≠ ⊤) (hb : b ≠ �
 end ProbabilityTheory
 
 namespace GradedDivergence
+
+/-! ## The graded divergence `klDivergence` -/
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ ν : Measure X} {r : ℝ≥0∞}
 
@@ -237,6 +251,8 @@ theorem klDivergence_comp_self [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : K
     [IsSubMarkovKernel κ] (h : klDivergence r μ ν) : klDivergence r (κ ∘ₘ μ) (κ ∘ₘ ν) :=
   bofDivergence_comp_self convexOn_klFun continuous_klFun.continuousWithinAt
     (fun _ ht ↦ klFun_nonneg ht) κ h
+
+/-! ## Composition: equal mass works, general case fails -/
 
 /-- Composition for kernels that lose the same mass at every point, with no filling (Rocq
 `pdiv_chain_KL` needs mass `1`). -/

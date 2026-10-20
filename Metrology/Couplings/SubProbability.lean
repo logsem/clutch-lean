@@ -3,8 +3,11 @@ module
 public import Mathlib.Probability.Kernel.Composition.MeasureComp
 public import Metrology.Couplings.Measure
 
-/-! Subprobability measures, the carrier of the sub-Giry monad (Approximate Span Liftings,
-Def. 3.1). -/
+/-! # Sub-probability measures and sub-Markov kernels
+
+`IsSubProbabilityMeasure` (mass at most `1`) and `IsSubMarkovKernel` (every output has mass at
+most `1`), with instances showing both are closed under `map`, `prod`, `bind`, `∘ₖ`, `⊗ₖ`, etc.
+(Approximate Span Liftings, Def. 3.1). -/
 
 @[expose] public section
 
@@ -16,12 +19,15 @@ namespace MeasureTheory
 
 variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 
+/-! ## Sub-probability measures -/
+
 /-- A measure of total mass at most `1`. -/
 class IsSubProbabilityMeasure (μ : Measure X) : Prop where
   measure_univ_le_one : μ univ ≤ 1
 
 open IsSubProbabilityMeasure
 
+/-- Every set has mass at most `1` under a subprobability measure. -/
 theorem IsSubProbabilityMeasure.measure_le_one {μ : Measure X} [IsSubProbabilityMeasure μ]
     (s : Set X) : μ s ≤ 1 :=
   (measure_mono (subset_univ s)).trans measure_univ_le_one
@@ -106,6 +112,8 @@ namespace ProbabilityTheory
 open IsSubProbabilityMeasure
 
 variable {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
+
+/-! ## Sub-Markov kernels -/
 
 /-- A kernel whose measures all have total mass at most `1`. -/
 class IsSubMarkovKernel (κ : Kernel X Y) : Prop where
@@ -202,6 +210,7 @@ theorem Kernel.mass_apply (hf : Measurable f) (x : X) :
     Kernel.mass.{v} hf x = f x • dirac PUnit.unit :=
   rfl
 
+/-- A mass kernel with values at most `1` is sub-Markov. -/
 theorem Kernel.isSubMarkovKernel_mass (hf : Measurable f) (hf1 : ∀ x, f x ≤ 1) :
     IsSubMarkovKernel (Kernel.mass.{v} hf) where
   isSubProbabilityMeasure x := ⟨by simpa [Kernel.mass_apply] using hf1 x⟩
@@ -214,6 +223,8 @@ theorem Kernel.mass_comp (hf : Measurable f) (μ : Measure X) :
   simp [Kernel.mass_apply, lintegral_mul_const _ hf]
 
 end ProbabilityTheory
+
+/-! ## Restricting a composite -/
 
 open ProbabilityTheory in
 /-- A kernel cut off outside `s` composes with the restriction of the measure to `s`. -/

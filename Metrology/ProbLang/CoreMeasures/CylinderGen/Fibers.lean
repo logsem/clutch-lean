@@ -45,7 +45,7 @@ def measurableDown (t ht : Expr) : MetaM (Expr × Expr) := do
   let hdown ← instantiateFor ``measurable_down (← mkAppM ``Measurable #[down])
   return (← mkAppM ``ULift.down #[t], ← mkAppM ``Measurable.comp #[hdown, ht])
 
-/-! ## The proof on the fibers -/
+/-! ## The function and its arms -/
 
 /-- The equation of a function `f` on a constructor `c`: `eq : ∀ b xs, f b (T.c xs) = arm b args`.
 The `args` are the fields, or for a structural recursion, `f (t_c b)` at the recursive fields, with
@@ -81,6 +81,8 @@ structure Recursion where
   β? : Option Expr
   /-- One per constructor, indexed by `Ctor.idx`. -/
   arms : Array Arm
+
+/-! ## Measurability on the leaves of one shape -/
 
 /-- The domain of the function on the leaves `leaves` of a shape: `β × leaves` with a parameter. -/
 def Recursion.domain (r : Recursion) (leaves : Expr) : MetaM Expr :=
@@ -174,9 +176,13 @@ def Ctx.fiberArm (ctx : Ctx) (r : Recursion) (c : Ctor) (slots : Array ShapeSlot
   let eq ← mkLambdaFVars #[v] (mkAppN arm.eq (args.map (·.field)))
   mkAppM ``Shapes.measurable_of_eq #[F, G, eq, hG]
 
+/-! ## The proof over all shapes -/
+
 /-- `Measurable f` (or `Measurable (uncurry f)`), from its measurability on the leaves of every
 shape, by induction on shapes. -/
 def Ctx.fiberProof (ctx : Ctx) (r : Recursion) : MetaM Expr := do
+  -- `motive s`: `f` is measurable on the leaves of `s`; `fibers` proves it by recursion on `s`,
+  -- using the induction hypothesis `ih` at recursive fields (see `Ctx.recursiveArg`).
   let motive ← withLocalDeclD `s ctx.shape fun s => do
     mkLambdaFVars #[s] (← mkAppM ``Measurable #[← ctx.onLeaves r s])
   let fibers ← withLocalDeclD `s ctx.shape fun s => do

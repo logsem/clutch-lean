@@ -7,8 +7,8 @@ public import Metrology.Couplings.Divergences.Power
 
 /-! # Randomized response has χ² divergence at most `(7/3)^k - 1`
 
-χ² is Rényi-2 read through `c ↦ log (1 + c)`. One round has second moment
-`(3² + 3⁻¹) / 4 = 7/3`, so χ² `4/3`, and χ² budgets compose as `(1 + c₁)(1 + c₂) - 1`. -/
+χ² is Rényi-2 read through `c ↦ log (1 + c)`, so the generic loop theorem applies with the
+budget type `PowerBudget`, where `k` rounds cost `(1 + c)^k - 1`; one round has χ² `4/3`. -/
 
 open GradedLifting GradedDivergence PowerBudget
 
@@ -31,6 +31,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- `k` rounds have χ² divergence at most `(7/3)^k - 1`. -/
 theorem rrCount_chi2 (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).IsPrivate chi2Divergence ⊤ (.ofReal ((7 / 3) ^ k - 1)) := by
+  -- generic loop bound costs `k • (4/3)` in `PowerBudget`, which is `(7/3)^k - 1`
   convert rrCount_isPrivate (D := chi2Divergence) _ (isAddLeftRegular_ofReal _)
     rrCoupling_chi2 k σ using 1
   norm_num [nsmul_ofReal]

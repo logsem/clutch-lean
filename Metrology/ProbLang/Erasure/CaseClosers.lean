@@ -4,11 +4,11 @@ public import Metrology.ProbLang.Erasure.TapePresample
 
 @[expose] public section
 
-/-! # Head-step cases of erasure
+/-! # Head-step closers for erasure
 
-Each lemma closes one head-step case of `execN_tape_presample_expr_eq`: presampling, then taking
-the head step of `e_h` and running `m` more steps under `K`, equals taking the step without
-presampling, measured on `S`. `ErasureIHFill` is the induction hypothesis in that form. -/
+One lemma per kind of head step closes that case of `execN_tape_presample_expr_eq`: presampling a
+tape, then stepping and running `m` more steps under `K`, gives the same measure on `S` as not
+presampling. `ErasureIHFill` is the induction hypothesis they consume. -/
 
 namespace ProbLang
 
@@ -16,7 +16,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-! ## Closers by step shape (Dirac, uniform int, uniform real) -/
+/-! ## Induction hypothesis and closers for Dirac and sampling steps -/
 
 /-- The induction hypothesis of `execN_tape_presample_expr_eq`, under the evaluation context `K`. -/
 abbrev ErasureIHFill (m : Nat) (K : Ectx rT) (S : Set (Exp rT)) (α : Loc) : Prop :=
@@ -26,6 +26,7 @@ abbrev ErasureIHFill (m : Nat) (K : Ectx rT) (S : Set (Exp rT)) (α : Loc) : Pro
         ∂tapePresample σ' α
       = ((execN m ∘ K.fillCfg) ⟨e', σ'⟩) ((fun x => x.expr) ⁻¹' S)
 
+/-- The map `ρ ↦ (execN m ∘ K.fillCfg) ρ (expr ⁻¹' S)` is measurable, so it can be integrated. -/
 theorem erasure_integrand_measurable {m : Nat} {K : Ectx rT} {S : Set (Exp rT)}
     (hS : MeasurableSet S) :
     Measurable (fun ρ : Cfg rT =>
@@ -153,7 +154,10 @@ theorem erasure_uniformReal_close
     _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by rw [hstep_σ]
 
-/-! ## Closers for heap and tape redexes (load, alloc, store, tape, stuck) -/
+/-! ## Closers for heap and tape redexes (load, alloc, store, tape, stuck)
+
+Presampling `α` keeps the heap (`tapePresample_heap_eq`), so heap steps agree a.s.; steps that
+write the heap or tapes use the matching `tapePresample_lintegral_update_*` lemma and the IH. -/
 
 /-- A heap `load` commutes with presampling. -/
 theorem erasure_load_close
@@ -184,9 +188,7 @@ theorem erasure_load_close
           ∂headStep ⟨.load (.lit (.loc ℓ)), σ⟩ := by
         rw [hload σ rfl, lintegral_dirac]
 
-/-- A heap `alloc` commutes with presampling. Presampling keeps the heap, so the fresh location
-is the same a.s.; the heap write commutes with presampling, and the IH applies at the written
-state. -/
+/-- A heap `alloc` commutes with presampling (the fresh location is the same a.s.). -/
 theorem erasure_alloc_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {ed : Exp rT}
     (hS : MeasurableSet S)
@@ -240,9 +242,7 @@ theorem erasure_alloc_close
               halloc σ rfl]
           simp [Exp.asValM, hcheck, lintegral_dirac, f_heap]
 
-/-- A heap `store` commutes with presampling. Presampling keeps the heap, so the checked location
-is the same a.s.; the heap write commutes with presampling, and the IH applies at the written
-state. -/
+/-- A heap `store` commutes with presampling (the checked location is the same a.s.). -/
 theorem erasure_store_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α ℓ : Loc} {t : Tape} {ev : Exp rT}
     (hS : MeasurableSet S)
@@ -313,8 +313,8 @@ theorem erasure_store_close
                 hstore σ rfl]
             simp [Exp.asValM, hcheck, hlook, lintegral_dirac, f_heap]
 
-/-- Allocating a fresh tape commutes with presampling another tape. Presampling an existing tape
-keeps `tapes.fresh` (`fresh_loc_upd_some`), and the new tape is `≠ α`. -/
+/-- Allocating a fresh tape commutes with presampling another tape `α`: `tapes.fresh` is unchanged
+(`fresh_loc_upd_some`) and differs from `α`. -/
 theorem erasure_tape_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {z : Int}
     (hS : MeasurableSet S)

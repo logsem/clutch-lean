@@ -18,6 +18,8 @@ abbrev ValSubstMap (rT : Type _) := List (Var × (Val rT × Val rT))
 namespace ValSubstMap
 variable {rT : Type _}
 
+/-! ## Lookup -/
+
 /-- The pair assigned to `x`, preferring the entry nearest the end of the list, matching
 `SubstMap.lookup` so that `fst_lookup`/`snd_lookup` hold. -/
 def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
@@ -27,6 +29,7 @@ def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
     | some q => some q
     | none => if x = y then some p else none
 
+/-- A variable outside the domain has no binding. -/
 theorem lookup_eq_none_of_not_mem {y : Var} : ∀ (vs : ValSubstMap rT),
     y ∉ (vs.map (·.1)).toFinset → vs.lookup y = none
   | [], _ => rfl
@@ -76,6 +79,8 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
       · rw [hr] at ih
         exact absurd (ih hm) (by simp)
 
+/-! ## Deleting a variable -/
+
 /-- Remove every entry for `x`. -/
 def delete (vs : ValSubstMap rT) (x : Var) : ValSubstMap rT :=
   vs.filter fun p => !decide (p.1 = x)
@@ -113,13 +118,16 @@ theorem mem_delete (vs : ValSubstMap rT) (x : Var) (p : Var × (Val rT × Val rT
     p ∈ vs.delete x ↔ p ∈ vs ∧ p.1 ≠ x := by
   simp [delete, List.mem_filter]
 
-/-! Lemmas for any projection `f` of the value pair (`proj_dom`, `proj_delete`, and
-`proj_lookup`, `proj_allClosed` below); `fst_*`/`snd_*` instantiate `f`. -/
+/-! ## Projections to `SubstMap`
 
+`proj_*` hold for any projection `f` of the value pair; `fst_*`/`snd_*` instantiate `f`. -/
+
+/-- Projecting the values does not change the domain. -/
 theorem proj_dom (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) :
     ((vs.map fun p => (p.1, (f p.2).1)).map (·.1)).toFinset = (vs.map (·.1)).toFinset := by
   simp only [List.map_map]; rfl
 
+/-- Projecting commutes with `delete`. -/
 theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).map (fun p => (p.1, (f p.2).1)) =
       (vs.map fun p => (p.1, (f p.2).1)).filter fun p => !decide (p.1 = x) := by
@@ -141,6 +149,7 @@ def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
 section proj
 variable (f : Val rT × Val rT → Val rT)
 
+/-- Projecting commutes with lookup. -/
 theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
     SubstMap.lookup (vs.map fun p => (p.1, (f p.2).1)) x = (vs.lookup x).map fun q => (f q).1
   | [], _ => rfl
@@ -148,6 +157,7 @@ theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
     simp only [List.map_cons, SubstMap.lookup, ValSubstMap.lookup, proj_lookup rest x]
     cases ValSubstMap.lookup rest x <;> simp
 
+/-- Projected values are closed when all the paired values are. -/
 theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
     SubstMap.AllClosed (vs.map fun p => (p.1, (f p.2).1)) := by
   intro p hp

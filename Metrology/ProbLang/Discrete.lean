@@ -5,16 +5,19 @@ public import Metrology.ProbLang.CoreMeasures
 
 @[expose] public section
 
-/-! # Measurable singletons for ProbLang types
+/-! # Discrete ProbLang: measurable singletons and the `Int` instance
 
-Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`, so point-mass
-lemmas apply at any `rT`; also the computable `LawfulProbLangℝ Int` instance. -/
+Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`, so `{ρ}` is
+measurable for every configuration `ρ`; also provides `instProbLangℝInt`, the instance where the
+reals are the integers. -/
 
 noncomputable section ProbLangDiscrete
 
 open Classical MeasureTheory ProbabilityTheory ProbLang
 
 namespace ProbLang
+
+/-! ## Measurable singletons of `Option`, `LocHeap`, `State` and `Cfg` -/
 
 /-- `Option α` has measurable singletons if `α` does. -/
 instance _root_.Option.instMeasurableSingletonClass
@@ -31,6 +34,7 @@ instance LocHeap.instMeasurableSingletonClass
     {V : Type _} [MeasurableSpace V] [MeasurableSingletonClass V] :
     MeasurableSingletonClass (LocHeap V) where
   measurableSet_singleton m := by
+    -- a heap is determined by its lookup function
     have hsing : ({m} : Set (LocHeap V))
                   = (fun (n : LocHeap V) (ℓ : Loc) => n[ℓ]?) ⁻¹' {fun ℓ => m[ℓ]?} := by
       ext n
@@ -44,6 +48,7 @@ instance State.instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (State α) where
   measurableSet_singleton σ := by
+    -- a state is determined by its heap and tapes
     have hsing : ({σ} : Set (State α))
                   = (fun τ : State α => (τ.heap, τ.tapes)) ⁻¹' {(σ.heap, σ.tapes)} := by
       ext τ
@@ -58,6 +63,7 @@ instance Cfg.instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Cfg α) where
   measurableSet_singleton c := by
+    -- a configuration is determined by its expression and state
     have hsing : ({c} : Set (Cfg α))
                   = (fun c' : Cfg α => (c'.expr, c'.state)) ⁻¹' {(c.expr, c.state)} := by
       ext c'
@@ -69,7 +75,7 @@ instance Cfg.instMeasurableSingletonClass
 
 end ProbLang
 
-/-! ## Sanity check: `DiscreteMeasurableSpace` synthesizes -/
+/-! ## Check: `DiscreteMeasurableSpace` holds for all ProbLang types over countable `rT` -/
 
 section SynthCheck
 variable {rT : Type _} [MeasurableSpace rT] [MeasurableSingletonClass rT] [Countable rT]
@@ -84,7 +90,7 @@ example : DiscreteMeasurableSpace (ProbLang.State rT) := inferInstance
 example : DiscreteMeasurableSpace (ProbLang.Cfg rT)   := inferInstance
 end SynthCheck
 
-/-! ## Default `LawfulProbLangℝ` instance on `Int` -/
+/-! ## The `LawfulProbLangℝ` instance on `Int` -/
 
 /-- On `Int`, the "reals" are the integers themselves; rationals round down (so `1/2` becomes `0`)
 and `unifUnit` is a fair coin on `{0, 1}` (so `urand` flips a fair coin). -/

@@ -4,7 +4,10 @@ public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.ProbLang.Atomic
 import Metrology.ProbLang.Syntax.Notation
 
-/-! # `OpenInv e`: `wp` of `e` may open invariants around it. -/
+/-! # `OpenInv`: opening invariants around `wp`
+
+`OpenInv L e` says `wp` of `e` may open invariants around it; atomic `e` satisfy it
+(`OpenInv.of_atomic`), and `IsOpenInv` instances make `imod`/`iinv` use it on `wp` goals. -/
 
 @[expose] public section
 
@@ -24,6 +27,8 @@ def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
     (|={E1, E2}=> wp L E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp L E1 e Φ
 
 namespace OpenInv
+
+/-! ## Atomic expressions are `OpenInv` -/
 
 /-- At a value, the closing update `|={E2, E1}=>` moves out to the `specCoupl` postcondition. -/
 theorem specCoupl_close_val {hlc : HasLC} {GF : BundledGFunctors}
@@ -99,22 +104,23 @@ theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.
   imod HF
   imod wp_unfold_mp $$ HF %σ₁ %e₁' %σ₁' %b₁ Hres with HSC
   imodintro
+  -- Value case: no step happens. Otherwise atomicity makes the step's result a value.
   cases htv : e.toVal? with
   | some v => iapply specCoupl_close_val $$ HSC
   | none => iapply specCoupl_close_step_of_atomic h $$ HSC
 
 end OpenInv
 
-/-- `wp` of an `OpenInv` expression absorbs an update that opens a mask. -/
+/-- `OpenInv L e` unfolded: `wp` of `e` absorbs a preceding mask-opening update. -/
 theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {e : Exp rT} (h : OpenInv L e) {E1 E2 : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (|={E1, E2}=> wp L E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp L E1 e Φ :=
   h
 
-/-! ## Proof-mode support
+/-! ## `IsOpenInv` instances
 
-These instances make `imod`/`iinv` find `wp_atomic`. `OpenInv` is a plain `Prop`, so the
-concrete redexes register into the class `IsOpenInv` instead. -/
+`OpenInv` is a plain `Prop`, so the concrete atomic expressions register in the class `IsOpenInv`
+for instance search. -/
 
 /-- Registers `OpenInv L e` for instance search. -/
 class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
@@ -145,8 +151,10 @@ instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
 
 end Instances
 
-/-- The postcondition step of the `iinv` instances: run the user's `β x ∗ (γ x -∗? Φ v)`, then the
-accessor's closing update, giving `Φ v`. -/
+/-! ## `imod` and `iinv` on `wp` -/
+
+/-- Shared postcondition step of the `iinv` instances: the accessor's closing update turns
+`β x ∗ (γ x -∗? Φ v)` into `Φ v`. -/
 theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
     {E₁ E₂ : CoPset} {Φ : Val rT → IProp GF} {β : X → IProp GF} {γ : X → Option (IProp GF)}
     {x : X} {v : Val rT} : iprop%
@@ -161,7 +169,7 @@ theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [MicrometerWpGS (rT := 
     iexact HΦ
   | some P => iapply HΦ $$ Hcl
 
-/-- `imod` opens a `|={E1, E2}=>` around `wp` of an `OpenInv` expression. -/
+/-- `imod` opens a `|={E1, E2}=>` around `wp` of an `IsOpenInv` expression. -/
 instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 E2 : CoPset}
     {e : Exp rT} [h : IsOpenInv L e] {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
     [BudgetGS B GF] {P : IProp GF} {Φ : Val rT → IProp GF} :
@@ -170,7 +178,7 @@ instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans (wp_atomic h.out)
 
-/-- Accessors (`iinv`) open invariants around `wp` of an `OpenInv` expression. -/
+/-- `iinv` opens an invariant around `wp` of an `IsOpenInv` expression. -/
 instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpenInv L e]
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {Φ : Val rT → IProp GF}
     (E₁ E₂ : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
@@ -187,7 +195,7 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
     iframe Hclose
     iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
-/-- Accessors that keep the mask `E` work around any `wp`. -/
+/-- `iinv` with an accessor that keeps the mask `E` works around any `wp`. -/
 instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {Φ : Val rT → IProp GF}
     (E : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :

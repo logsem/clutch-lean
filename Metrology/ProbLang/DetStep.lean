@@ -8,9 +8,9 @@ public import Mathlib.Order.Defs.PartialOrder
 
 /-! # Deterministic steps
 
-`PureStep`, `PureExec` and `DetStep`: steps with a single outcome, closed under contexts.
-Pure = state-independent Dirac step; Det = Dirac step of one fixed configuration (used by
-`SpecRules` through `pexecN_of_DetExec`). -/
+`PureStep` (a state-independent Dirac step) with `PureExec`, its counted closure that Micrometer's
+pure-step tactics search for, and `DetStep` (a Dirac step of one fixed configuration, used by
+`SpecRules`). Both are closed under evaluation contexts (`PureStep.fill`, `DetStep.fill`). -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure
@@ -18,6 +18,8 @@ open Classical MeasureTheory ProbabilityTheory Measure
 namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
+
+/-! ## Pure steps -/
 
 /-- `n`-fold composition of the relation `r`. -/
 def nsteps (r : α → α → Prop) : ℕ → α → α → Prop
@@ -42,17 +44,21 @@ structure PureHeadStep (e1 e2 : Exp rT) : Prop where
   /-- `e1` is its own redex (no context frame), so `primStep = headStep`. -/
   dec  : e1.decompItem = none
 
+/-- A pure head step is a pure step. -/
 theorem PureHeadStep.toPureStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) :
     PureStep e1 e2 :=
   ⟨fun σ => by rw [Reducible, primStep_eq_headStep h.dec]; exact h.safe σ,
    fun σ => primStep_eq_headStep h.dec ▸ h.det σ⟩
 
+/-- Pure steps are closed under evaluation contexts. -/
 theorem PureStep.fill (K : Ectx rT) {e1 e2 : Exp rT} (h : PureStep e1 e2) :
     PureStep (K.fill e1) (K.fill e2) := by
+  -- a reducible, non-value `e1` makes `K.fill e1` step exactly as `e1` does, inside `K`
   refine ⟨fun σ => (h.safe σ).fill K, fun σ => ?_⟩
   rw [primStep_fill (val_stuck (h.safe σ)), h.det σ]
   exact map_dirac' (Ectx.fillCfg.measurable K) _
 
+/-- `PureStep.fill` along `n` steps. -/
 theorem PureStep.fill_nsteps (K : Ectx rT) {n : ℕ} {e1 e2 : Exp rT}
     (h : nsteps PureStep n e1 e2) :
     nsteps PureStep n (K.fill e1) (K.fill e2) := by
@@ -62,22 +68,26 @@ theorem PureStep.fill_nsteps (K : Ectx rT) {n : ℕ} {e1 e2 : Exp rT}
     obtain ⟨c, hstep, hrest⟩ := h
     exact ⟨K.fill c, hstep.fill K, ih hrest⟩
 
+/-- `PureExec` is closed under evaluation contexts. -/
 theorem PureExec.fill (K : Ectx rT) {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
     [h : PureExec φ n e1 e2] : PureExec φ n (K.fill e1) (K.fill e2) where
   pure_exec hφ := PureStep.fill_nsteps K (h.pure_exec hφ)
 
+/-- A `PureExec` with at least one step is reducible in every state. -/
 theorem PureExec.reducible {σ : State rT} {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
     (hφ : φ) [h : PureExec φ (n + 1) e1 e2] :
     Reducible e1 σ := by
   obtain ⟨_, hstep, _⟩ := h.pure_exec hφ
   exact hstep.safe σ
 
+/-- A `PureExec` with at least one step starts from a non-value. -/
 theorem PureExec.not_val {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
     (hφ : φ) [h : PureExec φ (n + 1) e1 e2] :
     ¬e1.isValue := by
   obtain ⟨_, hstep, _⟩ := h.pure_exec hφ
   exact val_stuck (hstep.safe default)
 
+/-- Pure steps from a value reach only that value. -/
 theorem rtc_pure_step_val {n : ℕ} {v : Val rT} {e : Exp rT}
     (h : nsteps PureStep n v.1 e) :
     e.toVal? = some v := by
@@ -89,57 +99,57 @@ theorem rtc_pure_step_val {n : ℕ} {v : Val rT} {e : Exp rT}
     obtain ⟨_, hstep, -⟩ := h
     exact absurd v.2.toIsValue (val_stuck (hstep.safe default))
 
+/-! ## `PureSteps`: the reflexive-transitive closure of `PureStep`
+
+Pure computations (e.g. the list recursions of `Metrology/Code/Switching.lean`) are proved once as
+`PureSteps` by induction, then used by `wp_pure_steps` and `step_pure_steps`. -/
+
+/-- `e1` reaches `e2` in some number of pure steps. -/
+def PureSteps (e1 e2 : Exp rT) : Prop := ∃ n, nsteps PureStep n e1 e2
+
+namespace PureSteps
+
+theorem refl (e : Exp rT) : PureSteps e e := ⟨0, rfl⟩
+
+theorem single {e1 e2 : Exp rT} (h : PureStep e1 e2) : PureSteps e1 e2 := ⟨1, e2, h, rfl⟩
+
+/-- `PureSteps` is transitive. -/
+theorem trans {e1 e2 e3 : Exp rT} (h1 : PureSteps e1 e2) (h2 : PureSteps e2 e3) :
+    PureSteps e1 e3 := by
+  obtain ⟨n, h1⟩ := h1
+  obtain ⟨m, h2⟩ := h2
+  induction n generalizing e1 with
+  | zero => exact ⟨m, (show e1 = e2 from h1) ▸ h2⟩
+  | succ n ih =>
+    obtain ⟨c, hc, hrest⟩ := h1
+    obtain ⟨k, hk⟩ := ih hrest
+    exact ⟨k + 1, c, hc, hk⟩
+
+/-- `PureSteps` is closed under evaluation contexts. -/
+theorem fill (K : Ectx rT) {e1 e2 : Exp rT} :
+    PureSteps e1 e2 → PureSteps (K.fill e1) (K.fill e2)
+  | ⟨n, h⟩ => ⟨n, PureStep.fill_nsteps K h⟩
+
+theorem of_pureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT} [h : PureExec φ n e1 e2]
+    (hφ : φ) : PureSteps e1 e2 := ⟨n, h.pure_exec hφ⟩
+
+/-- A `PureSteps` fact as an unconditional `PureExec`, for the `PureExec`-shaped rules. -/
+theorem pureExec {e1 e2 : Exp rT} (h : PureSteps e1 e2) :
+    PureExec True h.choose e1 e2 := ⟨fun _ => h.choose_spec⟩
+
+end PureSteps
+
+/-! ## Pure steps of each construct
+
+Each head-step rule `PureHeadStep.foo` is followed by its `PureExec` instance `pureExec_foo`. -/
+
+/-- Build a `PureHeadStep` from the head-step equation and `decompItem = none`. -/
 theorem PureHeadStep.of_det (e1 e2 : Exp rT)
     (hdec : e1.decompItem = none)
     (hdet : ∀ σ, headStep ⟨e1, σ⟩ = dirac ⟨e2, σ⟩) :
     PureHeadStep e1 e2 := by
   refine ⟨fun σ => ?_, hdet, hdec⟩
   unfold HeadReducible; rw [hdet σ]; simp
-
-/-! ## Deterministic steps of one configuration -/
-
-/-- A head step from `cfg1` that deterministically gives `cfg2`. -/
-structure DetHeadStep (cfg1 cfg2 : Cfg rT) : Prop where
-  safe : HeadReducible cfg1.expr cfg1.state
-  det  : headStep cfg1 = dirac cfg2
-  /-- `cfg1.expr` is its own redex (no context frame), so `primStep = headStep`. -/
-  dec  : cfg1.expr.decompItem = none
-
-theorem DetHeadStep.pos {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
-    0 < headStep cfg1 {cfg2} := by rw [h.det]; simp
-
-theorem DetHeadStep.of_det (cfg1 cfg2 : Cfg rT)
-    (hdec : cfg1.expr.decompItem = none)
-    (hdet : headStep cfg1 = dirac cfg2) : DetHeadStep cfg1 cfg2 where
-  safe := by obtain ⟨e1, σ1⟩ := cfg1; unfold HeadReducible; rw [hdet]; simp
-  det  := hdet
-  dec  := hdec
-
-theorem PureHeadStep.toDetHeadStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) (σ : State rT) :
-    DetHeadStep ⟨e1, σ⟩ ⟨e2, σ⟩ :=
-  ⟨h.safe σ, h.det σ, h.dec⟩
-
-/-- A step from `cfg1` that deterministically gives `cfg2`. -/
-structure DetStep (cfg1 cfg2 : Cfg rT) : Prop where
-  safe : Reducible cfg1.expr cfg1.state
-  det  : primStep cfg1 = dirac cfg2
-
-theorem DetStep.pos {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) :
-    0 < primStep cfg1 {cfg2} := by rw [h.det]; simp
-
-theorem DetHeadStep.toDetStep {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
-    DetStep cfg1 cfg2 where
-  safe := by obtain ⟨e1, σ1⟩ := cfg1; rw [Reducible, primStep_eq_headStep h.dec]; exact h.safe
-  det := by obtain ⟨e1, σ1⟩ := cfg1; rw [primStep_eq_headStep h.dec]; exact h.det
-
-/-- `cfg1` reaches `cfg2` in `n` deterministic steps. -/
-class DetExec (n : ℕ) (cfg1 cfg2 : Cfg rT) : Prop where
-  det_exec : nsteps DetStep n cfg1 cfg2
-
-theorem DetExec.succ {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
-    (hstep : DetStep cfg1 cfg2) [hrest : DetExec n cfg2 cfg3] :
-    DetExec (n + 1) cfg1 cfg3 where
-  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
 
 theorem PureHeadStep.app_lam {body v : Exp rT}
     (hlam : (Exp.lam body).IsLocallyClosed) (hv : IsVal v) :
@@ -284,6 +294,75 @@ instance pureExec_scrut_none {v : Exp rT} {p : Pat rT} :
     PureExec (v.isValue ∧ Pat.tryMatch p v = none) 1 (.scrut v p) (.inr pl(#(.unit))) where
   pure_exec h := ⟨_, (PureHeadStep.scrut_none h.1.some h.2).toPureStep, rfl⟩
 
+/-! ## Deterministic steps of one configuration -/
+
+/-- A head step from `cfg1` that deterministically gives `cfg2`. -/
+structure DetHeadStep (cfg1 cfg2 : Cfg rT) : Prop where
+  safe : HeadReducible cfg1.expr cfg1.state
+  det  : headStep cfg1 = dirac cfg2
+  /-- `cfg1.expr` is its own redex (no context frame), so `primStep = headStep`. -/
+  dec  : cfg1.expr.decompItem = none
+
+theorem DetHeadStep.pos {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
+    0 < headStep cfg1 {cfg2} := by rw [h.det]; simp
+
+/-- Build a `DetHeadStep` from the head-step equation and `decompItem = none`. -/
+theorem DetHeadStep.of_det (cfg1 cfg2 : Cfg rT)
+    (hdec : cfg1.expr.decompItem = none)
+    (hdet : headStep cfg1 = dirac cfg2) : DetHeadStep cfg1 cfg2 where
+  safe := by obtain ⟨e1, σ1⟩ := cfg1; unfold HeadReducible; rw [hdet]; simp
+  det  := hdet
+  dec  := hdec
+
+/-- A pure head step is a deterministic head step in every state. -/
+theorem PureHeadStep.toDetHeadStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) (σ : State rT) :
+    DetHeadStep ⟨e1, σ⟩ ⟨e2, σ⟩ :=
+  ⟨h.safe σ, h.det σ, h.dec⟩
+
+/-- A step from `cfg1` that deterministically gives `cfg2`. -/
+structure DetStep (cfg1 cfg2 : Cfg rT) : Prop where
+  safe : Reducible cfg1.expr cfg1.state
+  det  : primStep cfg1 = dirac cfg2
+
+theorem DetStep.pos {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) :
+    0 < primStep cfg1 {cfg2} := by rw [h.det]; simp
+
+/-- A deterministic head step is a deterministic step. -/
+theorem DetHeadStep.toDetStep {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
+    DetStep cfg1 cfg2 where
+  safe := by obtain ⟨e1, σ1⟩ := cfg1; rw [Reducible, primStep_eq_headStep h.dec]; exact h.safe
+  det := by obtain ⟨e1, σ1⟩ := cfg1; rw [primStep_eq_headStep h.dec]; exact h.det
+
+/-- `cfg1` reaches `cfg2` in `n` deterministic steps. -/
+class DetExec (n : ℕ) (cfg1 cfg2 : Cfg rT) : Prop where
+  det_exec : nsteps DetStep n cfg1 cfg2
+
+theorem DetExec.succ {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
+    (hstep : DetStep cfg1 cfg2) [hrest : DetExec n cfg2 cfg3] :
+    DetExec (n + 1) cfg1 cfg3 where
+  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
+
+/-- Deterministic steps are closed under evaluation contexts. -/
+theorem DetStep.fill (K : Ectx rT) {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) :
+    DetStep ⟨K.fill cfg1.expr, cfg1.state⟩ ⟨K.fill cfg2.expr, cfg2.state⟩ where
+  safe := h.safe.fill K
+  det := by
+    obtain ⟨e1, σ1⟩ := cfg1
+    rw [primStep_fill (val_stuck h.safe), h.det]
+    exact map_dirac' (Ectx.fillCfg.measurable K) _
+
+theorem DetExec.refl (cfg : Cfg rT) : DetExec 0 cfg cfg where
+  det_exec := rfl
+
+theorem DetExec.cons {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
+    (hstep : DetStep cfg1 cfg2) (hrest : DetExec n cfg2 cfg3) :
+    DetExec (n + 1) cfg1 cfg3 where
+  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
+
+/-! ## Deterministic head steps of each construct
+
+The pure rules, and the stateful ones (`alloc`, `load`, `store`), as `DetHeadStep`. -/
+
 theorem DetHeadStep.fst_pair {e1 e2 : Exp rT} (h1 : IsVal e1) (h2 : IsVal e2) (σ : State rT) :
     DetHeadStep ⟨.fst (.pair e1 e2), σ⟩ ⟨e1, σ⟩ :=
   (PureHeadStep.fst_pair h1 h2).toDetHeadStep σ
@@ -355,60 +434,5 @@ theorem DetHeadStep.store {ℓ : Loc} {e : Exp rT} {v_old v_new : Val rT}
         simp [Exp.decompItem, hnew, hd])
     (by simp [headStep, Exp.asValM, hnew, hlookup])
 
-theorem DetStep.fill (K : Ectx rT) {cfg1 cfg2 : Cfg rT} (h : DetStep cfg1 cfg2) :
-    DetStep ⟨K.fill cfg1.expr, cfg1.state⟩ ⟨K.fill cfg2.expr, cfg2.state⟩ where
-  safe := h.safe.fill K
-  det := by
-    obtain ⟨e1, σ1⟩ := cfg1
-    rw [primStep_fill (val_stuck h.safe), h.det]
-    exact map_dirac' (Ectx.fillCfg.measurable K) _
-
-theorem DetExec.refl (cfg : Cfg rT) : DetExec 0 cfg cfg where
-  det_exec := rfl
-
-theorem DetExec.cons {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
-    (hstep : DetStep cfg1 cfg2) (hrest : DetExec n cfg2 cfg3) :
-    DetExec (n + 1) cfg1 cfg3 where
-  det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
-
-/-! ## `PureSteps`: the reflexive-transitive closure of `PureStep`
-
-Pure computations (e.g. the list recursions of `Metrology/Code/Switching.lean`) are proved once as
-`PureSteps` by induction, then used by `wp_pure_steps` and `step_pure_steps`. -/
-
-/-- `e1` reaches `e2` in some number of pure steps. -/
-def PureSteps (e1 e2 : Exp rT) : Prop := ∃ n, nsteps PureStep n e1 e2
-
-namespace PureSteps
-
-theorem refl (e : Exp rT) : PureSteps e e := ⟨0, rfl⟩
-
-theorem single {e1 e2 : Exp rT} (h : PureStep e1 e2) : PureSteps e1 e2 := ⟨1, e2, h, rfl⟩
-
-theorem trans {e1 e2 e3 : Exp rT} (h1 : PureSteps e1 e2) (h2 : PureSteps e2 e3) :
-    PureSteps e1 e3 := by
-  obtain ⟨n, h1⟩ := h1
-  obtain ⟨m, h2⟩ := h2
-  induction n generalizing e1 with
-  | zero => exact ⟨m, (show e1 = e2 from h1) ▸ h2⟩
-  | succ n ih =>
-    obtain ⟨c, hc, hrest⟩ := h1
-    obtain ⟨k, hk⟩ := ih hrest
-    exact ⟨k + 1, c, hc, hk⟩
-
-theorem fill (K : Ectx rT) {e1 e2 : Exp rT} :
-    PureSteps e1 e2 → PureSteps (K.fill e1) (K.fill e2)
-  | ⟨n, h⟩ => ⟨n, PureStep.fill_nsteps K h⟩
-
-theorem of_pureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT} [h : PureExec φ n e1 e2]
-    (hφ : φ) : PureSteps e1 e2 := ⟨n, h.pure_exec hφ⟩
-
-/-- A `PureSteps` fact as an unconditional `PureExec`, for the `PureExec`-shaped rules. -/
-theorem pureExec {e1 e2 : Exp rT} (h : PureSteps e1 e2) :
-    PureExec True h.choose e1 e2 := ⟨fun _ => h.choose_spec⟩
-
-end PureSteps
-
 end ProbLang
 end
-

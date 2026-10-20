@@ -2,8 +2,10 @@ module
 
 public import Metrology.Couplings.Divergences.Conversions
 
-/-! Rényi and zCDP liftings of the relation `f x = g y`, witnessed (`codensity_renyi_of_kernel`)
-by conditioning `μ` on the fibers of `f`. Used by the randomized-response examples. Main results:
+/-! # Rényi and zCDP liftings of equal images
+
+Lifts the relation `f x = g y`, witnessed (`codensity_renyi_of_kernel`) by conditioning `μ` on the
+fibers of `f`. Used by the randomized-response examples. Main results:
 `codensity_renyi_rel_of_map`, `zcdpLifting_rel_of_fiber`. -/
 
 @[expose] public section
@@ -140,6 +142,7 @@ theorem dp_fiberKernel (hf : Measurable f) (hg : Measurable g) [IsFiniteMeasure 
   refine dp_of_forall_le fun A hA ↦ ?_
   have hF (z : Z) : MeasurableSet (f ⁻¹' {z}) := hf (measurableSet_singleton z)
   set φ : Z → ℝ≥0∞ := fun z ↦ μ[|f ⁻¹' {z}] A
+  -- Split `μ A` over the fibers, bound each fiber by the DP hypothesis, then recombine along `ν`.
   calc μ A = ∑' z, μ (f ⁻¹' {z} ∩ A) := by
         rw [← measure_iUnion (fun z z' hz ↦ ((disjoint_singleton.2 hz).preimage f).mono
           inter_subset_left inter_subset_left) fun z ↦ (hF z).inter hA, ← iUnion_inter,

@@ -22,6 +22,8 @@ Couplings up to a function `F`, tested by measurable functions into `[0, 1]`.
 The older Approxis notion; `Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with
 `codensity tv` and `codensity dp`. -/
 
+/-! ## Test functions -/
+
 @[expose] public section
 
 /-- A function into `[0, 1]`. -/
@@ -42,6 +44,8 @@ theorem CouplingFunction.bounded {α : Type _} [MeasurableSpace α] (f : Couplin
 instance CouplingFunction.instCoeFun {α : Type _} [MeasurableSpace α] :
     CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
   coe := (·.1)
+
+/-! ## Approximate coupling and its basic rules -/
 
 section ApproximateCoupling
 
@@ -74,14 +78,17 @@ theorem dirac {a : α} {b : β} (HF : ∀ {x}, x ≤ F x) (Φ : Set (α × β)) 
   rw [lintegral_dirac' _ Hf, lintegral_dirac' _ Hg]
   exact Hle H
 
+/-- Weakening `F` weakens the coupling. -/
 theorem mono_F {Φ : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (HF : ∀ x, F x ≤ F' x) (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F' Φ μₗ μᵣ :=
   fun f g Hle => (H f g Hle).trans (HF _)
 
+/-- A coupling along `Φ` is a coupling along any larger relation. -/
 theorem mono_rel {Φ Φ' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} (HS : Φ ⊆ Φ')
     (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F Φ' μₗ μᵣ :=
   fun f g Hle => H f g fun hab => Hle (HS hab)
 
+/-- The zero measure on the left couples with any measure. -/
 theorem zero_left (S : Set (α × β)) (μᵣ : Measure β) :
     ARCoupling F S 0 μᵣ := by intro _ _ _; simp
 

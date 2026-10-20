@@ -6,16 +6,18 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 @[expose] public section
 
 /-!
-# Syntactic typing for ProbLang (System F_μ_ref with tapes)
+# Typing for ProbLang (System F_μ_ref with tapes)
 
-Port of Clutch `theories/prob_lang/typing/types.v` to the locally-nameless encoding: binder rules
-quantify cofinitely over fresh atoms. Types keep Clutch's de-Bruijn encoding.
+The judgment `Typed Γ e τ` (locally nameless, cofinite binder rules) over de Bruijn types `Ty`, with
+typing contexts `Tctx`. Results: typed terms are locally closed; `Typed.rename` renames an atom.
 -/
 
 namespace ProbLang
 open Cslib Exp
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
+
+/-! ## Type variables: renaming and substitution -/
 
 /-- A renaming of de Bruijn type variables. -/
 abbrev Renaming := Nat → Nat
@@ -72,140 +74,7 @@ def Ty.renameSubst (ξ : Renaming) (σ : Substitution) : Substitution := (σ · 
 /-- Compose substitutions: first `σ₁`, then `σ₂`. -/
 def Ty.substComp (σ₂ σ₁ : Substitution) : Substitution := fun n => (σ₁ n).subst σ₂
 
-/-- Apply `up` `k` times. -/
-@[simp] def upN : Nat → Substitution → Substitution
-  | 0,     σ => σ
-  | k + 1, σ => up (upN k σ)
-
-theorem under_id : ∀ n, Renaming.under id n = n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem under_comp (ξ₁ ξ₂ : Renaming)
-    : ∀ n, Renaming.under ξ₁ (Renaming.under ξ₂ n) = Renaming.under (ξ₁ ∘ ξ₂) n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.rename_id (τ : Ty) : τ.rename id = τ := by
-  induction τ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [rename, show Renaming.under id = id from funext under_id, ih]
-  | _ => simp only [rename, *]
-
-theorem Ty.rename_rename (ξ₁ ξ₂ : Nat → Nat) (τ : Ty) :
-    (τ.rename ξ₂).rename ξ₁ = τ.rename (ξ₁ ∘ ξ₂) := by
-  induction τ generalizing ξ₁ ξ₂ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, ih]
-    rw [show Renaming.under ξ₁ ∘ Renaming.under ξ₂ = Renaming.under (ξ₁ ∘ ξ₂) from
-      funext (under_comp _ _)]
-  | _ => simp only [Ty.rename, *]
-
-theorem up_upren (ξ : Nat → Nat) : ∀ n,
-    up (fun k => .var (ξ k)) n = .var (Renaming.under ξ n)
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.rename_eq_subst (ξ : Nat → Nat) (τ : Ty) :
-    τ.rename ξ = τ.subst (fun n => .var (ξ n)) := by
-  induction τ generalizing ξ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, Ty.subst, ih,
-      show (fun n => Ty.var (Renaming.under ξ n)) = up (fun k => .var (ξ k))
-        from funext fun n => (up_upren ξ n).symm]
-  | _ => simp only [Ty.rename, Ty.subst, *]
-
-theorem up_var : ∀ n, up .var n = .var n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.subst_id (τ : Ty) : τ.subst .var = τ := by
-  induction τ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst]
-    rw [show up .var = .var from funext up_var, ih]
-  | _ => simp only [Ty.subst, *]
-
-theorem up_subst_upren (σ : Nat → Ty) (ξ : Nat → Nat) : ∀ n,
-    up (σ ∘ ξ) n = up σ (Renaming.under ξ n)
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.subst_rename (σ : Nat → Ty) (ξ : Nat → Nat) (τ : Ty) :
-    (τ.rename ξ).subst σ = τ.subst (σ ∘ ξ) := by
-  induction τ generalizing σ ξ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, Ty.subst, ih,
-      show up σ ∘ Renaming.under ξ = up (σ ∘ ξ) from funext fun n => (up_subst_upren σ ξ n).symm]
-  | _ => simp only [Ty.rename, Ty.subst, *]
-
-theorem up_renameSubst (ξ : Nat → Nat) (σ : Nat → Ty) : ∀ n,
-    up (Ty.renameSubst ξ σ) n = Ty.renameSubst (Renaming.under ξ) (up σ) n
-  | 0     => rfl
-  | n + 1 => by
-    simp only [up, Ty.renameSubst, Ty.rename_rename]; rfl
-
-theorem Ty.rename_subst (ξ : Nat → Nat) (σ : Nat → Ty) (τ : Ty) :
-    (τ.subst σ).rename ξ = τ.subst (Ty.renameSubst ξ σ) := by
-  induction τ generalizing ξ σ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst, Ty.rename, ih,
-      show Ty.renameSubst (Renaming.under ξ) (up σ) = up (Ty.renameSubst ξ σ)
-        from funext fun n => (up_renameSubst ξ σ n).symm]
-  | _ => simp only [Ty.subst, Ty.rename, *]
-
-theorem up_substComp (σ₁ σ₂ : Nat → Ty) : ∀ n,
-    up (Ty.substComp σ₂ σ₁) n = Ty.substComp (up σ₂) (up σ₁) n
-  | 0     => rfl
-  | n + 1 => by
-    simp only [up, Ty.substComp, Ty.rename_subst, Ty.subst_rename]; rfl
-
-theorem Ty.subst_subst (σ₁ σ₂ : Nat → Ty) (τ : Ty) :
-    (τ.subst σ₁).subst σ₂ = τ.subst (Ty.substComp σ₂ σ₁) := by
-  induction τ generalizing σ₁ σ₂ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst, ih,
-      show Ty.substComp (up σ₂) (up σ₁) = up (Ty.substComp σ₂ σ₁)
-        from funext fun n => (up_substComp σ₁ σ₂ n).symm]
-  | _ => simp only [Ty.subst, *]
-
-theorem Ty.single_shift (τ τ' : Ty) :
-    Ty.single τ.shift τ' = τ := by
-  simp only [Ty.single, Ty.shift, Ty.subst_rename]
-  exact τ.subst_id
-
-theorem upN_var : ∀ (k n : Nat), upN k .var n = .var n
-  | 0,     _ => rfl
-  | k + 1, n => by
-    show up (upN k .var) n = _
-    rw [funext (upN_var k), up_var]
-
-theorem upN_lt : ∀ {k n : Nat} (σ : Nat → Ty), n < k → upN k σ n = .var n
-  | _ + 1, 0,     _, _ => rfl
-  | k + 1, n + 1, σ, h => by
-    show up (upN k σ) (n + 1) = .var (n + 1)
-    simp only [up, upN_lt σ (Nat.lt_of_succ_lt_succ h), Ty.rename]
-
-theorem upN_ge : ∀ {k n : Nat} (σ : Nat → Ty), k ≤ n →
-    upN k σ n = (σ (n - k)).rename (· + k)
-  | 0,     n,     σ, _ => by
-    show σ n = _
-    rw [← Ty.rename_id (σ n)]; rfl
-  | k + 1, n + 1, σ, h => by
-    show up (upN k σ) (n + 1) = _
-    simp only [up, upN_ge σ (Nat.le_of_succ_le_succ h), Ty.rename_rename,
-               Nat.add_sub_add_right]
-    rfl
-  | _ + 1, 0,     _, h => absurd h (by omega)
-
-/-! ## Value classes -/
+/-! ## Operand classes and operator result types -/
 
 /-- The operand types the `unboxed_eq` typing rule allows for `=` (no `tape`, unlike Clutch). -/
 inductive UnboxedType : Ty → Prop
@@ -298,6 +167,8 @@ def insert (Γ : Tctx) (x : Var) (τ : Ty) : Tctx :=
 def shift (Γ : Tctx) : Tctx := fun x => (Γ x).map Ty.shift
 
 end Tctx
+
+/-! ## Recursive-type unfolding and pattern typing -/
 
 /-- `λ x. x`; wrapping `unfold` in it makes unfolding a recursive type take a real step. -/
 def recUnfold : Exp rT := .lam (.bvar 0)
@@ -526,6 +397,7 @@ theorem Typed.fvSubset {Γ : Tctx} {e : Exp rT} {τ : Ty}
     unfold Tctx.shift at hres
     rwa [Option.isSome_map] at hres
 
+/-- Inserting two distinct atoms commutes. -/
 theorem Tctx.insert_swap (Γ : Tctx) {x z : Var} (hxz : x ≠ z) (τ τ' : Ty) :
     (Γ.insert x τ).insert z τ' = (Γ.insert z τ').insert x τ := by
   funext w
@@ -539,6 +411,7 @@ theorem Tctx.insert_swap (Γ : Tctx) {x z : Var} (hxz : x ≠ z) (τ τ' : Ty) :
     · rw [ite_eq_left hwx, ite_eq_left hwx]
     · rw [ite_eq_right hwx, ite_eq_right hwx, ite_eq_right hwz]
 
+/-- A later insertion of the same atom overwrites the earlier one. -/
 theorem Tctx.insert_overwrite (Γ : Tctx) (x : Var) (τ τ' : Ty) :
     (Γ.insert x τ).insert x τ' = Γ.insert x τ' := by
   funext y
@@ -547,6 +420,7 @@ theorem Tctx.insert_overwrite (Γ : Tctx) (x : Var) (τ τ' : Ty) :
   · subst h; rw [ite_eq_left rfl, ite_eq_left rfl]
   · rw [ite_eq_right h, ite_eq_right h, ite_eq_right h]
 
+/-- Shifting the context commutes with insertion (the inserted type is shifted too). -/
 theorem Tctx.shift_insert (Γ : Tctx) (x : Var) (τ : Ty) :
     (Γ.insert x τ).shift = Γ.shift.insert x τ.shift := by
   funext y
@@ -558,6 +432,8 @@ theorem Tctx.shift_insert (Γ : Tctx) (x : Var) (τ : Ty) :
 /-! ## Renaming a context atom preserves typing -/
 
 omit [LawfulProbLangℝ rT] in
+/-- `Typed.rename` for a context presented as `Γ.insert x τ_x`, so induction goes through; binder
+cases swap the fresh atom past `x` and `y` (`Tctx.insert_swap`). -/
 theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
     {Γ' : Tctx} (h : Typed Γ' e τ) :
     ∀ (x y : Var) (τ_x : Ty) (Γ : Tctx),
@@ -648,6 +524,7 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       exact .rand_unit (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | scrut _ hp ih => exact .scrut (ih x y τ_x Γ rfl (by simp [hy])) hp
 
+/-- Renaming the context atom `x` to a fresh `y` preserves typing. -/
 theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
     (x y : Var) (h : Typed (Γ.insert x τ_x) e τ) (hy : y ∉ e.fv ∪ {x}) :
     Typed (Γ.insert y τ_x) (Exp.subst e x (Exp.fvar y)) τ :=
@@ -665,6 +542,7 @@ theorem Typed.rename_lam {Γ : Tctx} {x : Var} {e : Exp α} {τ τ' : Ty}
   rw [Exp.open_close_subst_lc x y e he.isLocallyClosed]
   exact he.rename x y (by rwa [Finset.union_comm, ← Finset.insert_eq])
 
+/-- `Typed.rename_lam` for `fix` premises. -/
 theorem Typed.rename_fix {Γ : Tctx} {f : Var} {e : Exp α} {τ τ' : Ty}
     (he : Typed (Γ.insert f (.arrow τ τ')) e (.arrow τ τ')) :
     ∀ g ∉ insert f e.fv,
@@ -672,11 +550,152 @@ theorem Typed.rename_fix {Γ : Tctx} {f : Var} {e : Exp α} {τ τ' : Ty}
         (Exp.open' (Exp.close e f) (Exp.fvar g)) (.arrow τ τ') :=
   rename_lam he
 
+/-- `Typed.rename_lam` for `tunpack` premises. -/
 theorem Typed.rename_unpack {Γ : Tctx} {x : Var} {e2 : Exp α} {τ τ2 : Ty}
     (he2 : Typed (Γ.shift.insert x τ) e2 τ2.shift) :
     ∀ y ∉ insert x e2.fv,
       Typed (Γ.shift.insert y τ)
         (Exp.open' (Exp.close e2 x) (Exp.fvar y)) τ2.shift :=
   rename_lam he2
+
+/-! ## De Bruijn calculus for types
+
+Standard renaming/substitution lemmas (Autosubst style); not used by the typing proofs above. -/
+
+/-- Apply `up` `k` times. -/
+@[simp] def upN : Nat → Substitution → Substitution
+  | 0,     σ => σ
+  | k + 1, σ => up (upN k σ)
+
+theorem under_id : ∀ n, Renaming.under id n = n
+  | 0     => rfl
+  | _ + 1 => rfl
+
+theorem under_comp (ξ₁ ξ₂ : Renaming)
+    : ∀ n, Renaming.under ξ₁ (Renaming.under ξ₂ n) = Renaming.under (ξ₁ ∘ ξ₂) n
+  | 0     => rfl
+  | _ + 1 => rfl
+
+theorem Ty.rename_id (τ : Ty) : τ.rename id = τ := by
+  induction τ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [rename, show Renaming.under id = id from funext under_id, ih]
+  | _ => simp only [rename, *]
+
+theorem Ty.rename_rename (ξ₁ ξ₂ : Nat → Nat) (τ : Ty) :
+    (τ.rename ξ₂).rename ξ₁ = τ.rename (ξ₁ ∘ ξ₂) := by
+  induction τ generalizing ξ₁ ξ₂ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.rename, ih]
+    rw [show Renaming.under ξ₁ ∘ Renaming.under ξ₂ = Renaming.under (ξ₁ ∘ ξ₂) from
+      funext (under_comp _ _)]
+  | _ => simp only [Ty.rename, *]
+
+theorem up_upren (ξ : Nat → Nat) : ∀ n,
+    up (fun k => .var (ξ k)) n = .var (Renaming.under ξ n)
+  | 0     => rfl
+  | _ + 1 => rfl
+
+theorem Ty.rename_eq_subst (ξ : Nat → Nat) (τ : Ty) :
+    τ.rename ξ = τ.subst (fun n => .var (ξ n)) := by
+  induction τ generalizing ξ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.rename, Ty.subst, ih,
+      show (fun n => Ty.var (Renaming.under ξ n)) = up (fun k => .var (ξ k))
+        from funext fun n => (up_upren ξ n).symm]
+  | _ => simp only [Ty.rename, Ty.subst, *]
+
+theorem up_var : ∀ n, up .var n = .var n
+  | 0     => rfl
+  | _ + 1 => rfl
+
+theorem Ty.subst_id (τ : Ty) : τ.subst .var = τ := by
+  induction τ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.subst]
+    rw [show up .var = .var from funext up_var, ih]
+  | _ => simp only [Ty.subst, *]
+
+theorem up_subst_upren (σ : Nat → Ty) (ξ : Nat → Nat) : ∀ n,
+    up (σ ∘ ξ) n = up σ (Renaming.under ξ n)
+  | 0     => rfl
+  | _ + 1 => rfl
+
+/-- Substituting after renaming equals substituting along the composite. -/
+theorem Ty.subst_rename (σ : Nat → Ty) (ξ : Nat → Nat) (τ : Ty) :
+    (τ.rename ξ).subst σ = τ.subst (σ ∘ ξ) := by
+  induction τ generalizing σ ξ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.rename, Ty.subst, ih,
+      show up σ ∘ Renaming.under ξ = up (σ ∘ ξ) from funext fun n => (up_subst_upren σ ξ n).symm]
+  | _ => simp only [Ty.rename, Ty.subst, *]
+
+theorem up_renameSubst (ξ : Nat → Nat) (σ : Nat → Ty) : ∀ n,
+    up (Ty.renameSubst ξ σ) n = Ty.renameSubst (Renaming.under ξ) (up σ) n
+  | 0     => rfl
+  | n + 1 => by
+    simp only [up, Ty.renameSubst, Ty.rename_rename]; rfl
+
+/-- Renaming after substituting equals substituting renamed types. -/
+theorem Ty.rename_subst (ξ : Nat → Nat) (σ : Nat → Ty) (τ : Ty) :
+    (τ.subst σ).rename ξ = τ.subst (Ty.renameSubst ξ σ) := by
+  induction τ generalizing ξ σ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.subst, Ty.rename, ih,
+      show Ty.renameSubst (Renaming.under ξ) (up σ) = up (Ty.renameSubst ξ σ)
+        from funext fun n => (up_renameSubst ξ σ n).symm]
+  | _ => simp only [Ty.subst, Ty.rename, *]
+
+theorem up_substComp (σ₁ σ₂ : Nat → Ty) : ∀ n,
+    up (Ty.substComp σ₂ σ₁) n = Ty.substComp (up σ₂) (up σ₁) n
+  | 0     => rfl
+  | n + 1 => by
+    simp only [up, Ty.substComp, Ty.rename_subst, Ty.subst_rename]; rfl
+
+theorem Ty.subst_subst (σ₁ σ₂ : Nat → Ty) (τ : Ty) :
+    (τ.subst σ₁).subst σ₂ = τ.subst (Ty.substComp σ₂ σ₁) := by
+  induction τ generalizing σ₁ σ₂ with
+  | var n => rfl
+  | rec' τ ih | forall' τ ih | exists' τ ih =>
+    simp only [Ty.subst, ih,
+      show Ty.substComp (up σ₂) (up σ₁) = up (Ty.substComp σ₂ σ₁)
+        from funext fun n => (up_substComp σ₁ σ₂ n).symm]
+  | _ => simp only [Ty.subst, *]
+
+/-- Substituting into a shifted type is a no-op. -/
+theorem Ty.single_shift (τ τ' : Ty) :
+    Ty.single τ.shift τ' = τ := by
+  simp only [Ty.single, Ty.shift, Ty.subst_rename]
+  exact τ.subst_id
+
+theorem upN_var : ∀ (k n : Nat), upN k .var n = .var n
+  | 0,     _ => rfl
+  | k + 1, n => by
+    show up (upN k .var) n = _
+    rw [funext (upN_var k), up_var]
+
+theorem upN_lt : ∀ {k n : Nat} (σ : Nat → Ty), n < k → upN k σ n = .var n
+  | _ + 1, 0,     _, _ => rfl
+  | k + 1, n + 1, σ, h => by
+    show up (upN k σ) (n + 1) = .var (n + 1)
+    simp only [up, upN_lt σ (Nat.lt_of_succ_lt_succ h), Ty.rename]
+
+theorem upN_ge : ∀ {k n : Nat} (σ : Nat → Ty), k ≤ n →
+    upN k σ n = (σ (n - k)).rename (· + k)
+  | 0,     n,     σ, _ => by
+    show σ n = _
+    rw [← Ty.rename_id (σ n)]; rfl
+  | k + 1, n + 1, σ, h => by
+    show up (upN k σ) (n + 1) = _
+    simp only [up, upN_ge σ (Nat.le_of_succ_le_succ h), Ty.rename_rename,
+               Nat.add_sub_add_right]
+    rfl
+  | _ + 1, 0,     _, h => absurd h (by omega)
 
 end ProbLang

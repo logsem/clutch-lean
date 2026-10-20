@@ -7,7 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Repeated Gaussian release
 
-Proved zero-concentrated differentially private in `Micrometer/Examples/GaussianZcdp`. -/
+The program `release g a k` draws `k` times from a sampler `g` at input `a` and returns all draws.
+Its zero-concentrated DP proof is in `Micrometer/Examples/GaussianZcdp`. -/
 
 namespace ProbLang
 namespace GaussianRelease

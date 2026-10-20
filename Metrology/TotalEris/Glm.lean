@@ -14,9 +14,9 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Graded lifting modality
 
-The error-graded `glm'` (zero or more erasable steps and credit bumps, then exactly one prim step
-into `Z`), and its monotonicity, bind and introduction rules. Primed names are the
-total-correctness versions; `LiveEris/Glm.lean` has the unrelated vector-credit `glm`.
+The error-graded lifting modality `glm'`: zero or more erasable steps and credit bumps, then exactly
+one prim step into `Z`. Provides its unfolding, monotonicity, bind and introduction rules. Primed
+names are the total-correctness versions; `LiveEris/Glm.lean` has the unrelated vector-credit `glm`.
 -/
 
 @[expose] public section
@@ -29,6 +29,8 @@ namespace ProbLang
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
 namespace TotalEris
+
+/-! ## Probability of good lifting -/
 
 /-- The predicate `φ` fails with `μ`-probability at most `ε` (Eris `pgl`, probability of good
 lifting). -/
@@ -69,6 +71,8 @@ theorem of_concentrated {μ : MeasureTheory.Measure α} {φ : α → Prop}
 
 end Pgl
 
+/-! ## Ghost state and the stutter -/
+
 /-- Ghost state for the total Eris weakest precondition: state and error-credit interpretations. -/
 class ErisWpGS (GF : BundledGFunctors) where
   hlc : HasLC
@@ -85,14 +89,17 @@ variable {GF : BundledGFunctors}
 abbrev execStutter (P : ENNReal → IProp GF) (ε : ENNReal) : IProp GF :=
   iprop(⌜1 ≤ ε⌝ ∨ P ε)
 
+/-- Keeping `P ε` is always allowed. -/
 theorem execStutter_free {P : ENNReal → IProp GF} {ε : ENNReal} :
     P ε ⊢ execStutter P ε :=
   or_intro_r
 
+/-- A budget of at least `1` makes the stutter hold outright. -/
 theorem execStutter_spend {P : ENNReal → IProp GF} {ε : ENNReal} (hε : 1 ≤ ε) :
     ⊢ execStutter P ε :=
   (pure_intro hε).trans or_intro_l
 
+/-- `execStutter` is monotone in the predicate and the budget. -/
 theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : ε ≤ ε') :
     ((P ε -∗ Q ε') ∗ execStutter P ε) ⊢ execStutter Q ε' := by
   iintro ⟨HM, HS⟩
@@ -100,11 +107,14 @@ theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : 
   · ileft; ipureintro; exact HVac.trans hε
   · iright; iapply HM $$ HP
 
+/-- `execStutter` is monotone in the predicate at a fixed budget. -/
 theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
     ((P ε -∗ Q ε) ∗ execStutter P ε) ⊢ execStutter Q ε :=
   execStutter_mono le_rfl
 
 variable [ErisWpGS (rT := rT) GF]
+
+/-! ## The three step kinds -/
 
 /-- A configuration together with its remaining error budget. -/
 abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNReal
@@ -140,6 +150,7 @@ abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     ⌜Pgl ε₁ R μ⌝ ∗
     (∀ σ', ⌜R σ'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (⟨e₁, σ'⟩, ε'')) (X₂ σ')))
 
+/-- `glmPrimStep'` is monotone in the continuation `Z`. -/
 theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNReal}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁)
@@ -156,6 +167,7 @@ theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNRea
   iintro HZ₁
   iapply HZ $$ HZ₁
 
+/-- `glmErasable'` is monotone in the continuation `Φ`. -/
 theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNReal}
     {Φ Ψ : GlmState rT → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmErasable' e₁ σ₁ ε Φ)
@@ -177,6 +189,7 @@ abbrev glmCreditBump' (ρ : Cfg rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∀ ε', ⌜ε < ε'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (ρ, ε'')) ε')
 
+/-- `glmCreditBump'` is monotone in the continuation `Φ`. -/
 theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
     {Φ Ψ : GlmState rT → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump' ρ ε Φ)
@@ -189,6 +202,8 @@ theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
   iframe HS
   iintro HΦ
   iapply HΦΨ $$ HΦ
+
+/-! ## The modality `glm'` as a least fixpoint -/
 
 /-- One unfolding of `glm'`: a credit bump or an erasable step, which recurse into `Φ`, or one
 prim step, which ends in the continuation `Z`. -/
@@ -225,6 +240,7 @@ instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
   mono_pred_ne.ne {_ s s'} hd := by
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
+/-- `glm'` equals one unfolding of `glmPre'` over `glm'` itself. -/
 theorem glm'_unfold {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
     glm' e σ ε Z =
@@ -233,6 +249,7 @@ theorem glm'_unfold {e : Exp rT} {σ : State rT} {ε : ENNReal}
         ((⟨e, σ⟩, ε) : GlmState rT) :=
   least_fixpoint_unfold _
 
+/-- Strong induction principle: `glm'` implies any `Ψ` closed under `glmPre'`. -/
 theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT → IProp GF}
     [NonExpansive Ψ] :
     iprop(□ (∀ s, glmPre' Z
@@ -242,6 +259,9 @@ theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT 
   iintro #HM
   iapply least_fixpoint_ind $$ HM
 
+/-! ## Monotonicity -/
+
+/-- `glm'` is monotone in the continuation `Z`. -/
 theorem glm'_strong_mono
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glm' e σ ε Z₁) ⊢
@@ -274,6 +294,7 @@ theorem glm'_strong_mono
     · iexact HG
   iapply HΨ $$ HZ
 
+/-- `glm'` is monotone in the error budget. -/
 theorem glm'_mono_grading
     {e : Exp rT} {σ : State rT} {ε ε' : ENNReal} {Z : Cfg rT → ENNReal → IProp GF}
     (hε : ε ≤ ε') :
@@ -298,6 +319,7 @@ theorem glm'_mono_grading
     iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
     iexact HCont
 
+/-- `glm'` is monotone in both the budget and the continuation. -/
 theorem glm'_strong_mono_grading {e : Exp rT} {σ : State rT} {ε ε' : ENNReal}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} (hε : ε ≤ ε') :
     iprop((∀ ρ ε'', Z₁ ρ ε'' -∗ Z₂ ρ ε'') ∗ glm' e σ ε Z₁) ⊢
@@ -307,6 +329,7 @@ theorem glm'_strong_mono_grading {e : Exp rT} {σ : State rT} {ε ε' : ENNReal}
   iapply glm'_strong_mono
   iframe
 
+/-- `glm'` is monotone in the continuation under a persistent entailment. -/
 theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((□ (∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε')) ∗ glm' e σ ε Z₁) ⊢
@@ -324,6 +347,9 @@ theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
     iapply HZ $$ HC
   · iright; iright; iexact HEras
 
+/-! ## Bind -/
+
+/-- Bind rule: run `e` under `glm'` with the continuation `Z` composed with the context `K`. -/
 theorem glm'_bind
     {K : Ectx rT} {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
@@ -331,6 +357,8 @@ theorem glm'_bind
       glm' (K.fill e) σ ε Z := by
   iintro HG
   classical
+  -- Induct on `glm' e` (least fixpoint); a prim step of `e` lifts to one of `K.fill e` via
+  -- `primStep_fill`, pushing `R` and `X₂` forward along `K.fillCfg` (`X₂'` is `0` off its image).
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e', Kinv (K.fill e') = some e' :=
     Function.partialInv_left (Ectx.fill_injective K)
@@ -399,6 +427,7 @@ theorem glm'_bind
 
 /-! ## Introduction rules for `glm'` -/
 
+/-- A prim step is a `glm'`. -/
 theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
     glmPrimStep' e σ ε Z ⊢ glm' e σ ε Z := by
@@ -407,6 +436,7 @@ theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
   iright; ileft
   iexact HPrim
 
+/-- An erasable step into `glm'` is a `glm'`. -/
 theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
     glmErasable' e σ ε (fun s => glm' s.1.expr s.1.state s.2 Z) ⊢

@@ -7,9 +7,9 @@ public import Mathlib.Analysis.Real.Pi.Bounds
 public import Mathlib.Analysis.Complex.ExponentialBounds
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! The Gaussian mechanism is differentially private (Approximate Span Liftings, Fig. 2).
-The tag `[DP-G]` is that figure's arrow label; the proof follows Dwork–Roth Thm. A.1 and
-Sato 2016, Lemma A.11. -/
+/-! # Gaussian mechanism is `(ε, δ)`-DP
+Main result: `Mechanism.DP_gaussianMech`, following Dwork–Roth Thm. A.1 and Sato 2016, Lemma A.11
+(`[DP-G]` is the arrow label in Approximate Span Liftings, Fig. 2). -/
 
 @[expose] public section
 
@@ -17,6 +17,8 @@ open MeasureTheory ProbabilityTheory Set Filter Topology Real
 open scoped ENNReal NNReal
 
 namespace ProbabilityTheory
+
+/-! ## Density and tail estimates for `gaussianReal` -/
 
 /-- The Gaussian mass beyond `H > a` is at most `v · pdf(H) / (H - a)`. -/
 theorem gaussianReal_Ioi_le {a H : ℝ} (hH : a < H) {v : ℝ≥0} (hv : v ≠ 0) :
@@ -83,6 +85,8 @@ end ProbabilityTheory
 
 namespace Real
 
+/-! ## Numeric facts behind the tail bound -/
+
 /-- The constant `0.66` exceeds `√(e / (2π))`, the slack in the Gaussian tail bound. -/
 theorem sqrt_exp_one_div_two_pi_le : √(exp 1 / (2 * π)) ≤ 0.66 := by
   rw [sqrt_le_left (by norm_num), div_le_iff₀ (by positivity)]
@@ -126,6 +130,8 @@ theorem gaussian_tail_le {h c δ : ℝ} (hh : c - 1 / (2 * c) ≤ h) (hc : (1 + 
 end Real
 
 namespace GradedDivergence
+
+/-! ## `(ε, δ)`-DP between two Gaussians -/
 
 /-- The Gaussian mechanism with nearby means is `(ε, δ)`-DP, case `a' ≤ a` ([DP-G];
 Sato 2016, Lemma A.11). -/
@@ -199,6 +205,7 @@ theorem dp_gaussian {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε) (hε₁
     (hr : 0 < r) (hδ : 0 < δ) (hc : (1 + √3) / 2 < c) (hcδ : 2 * log (0.66 / δ) ≤ c ^ 2)
     (hcσ : c * r / ε ≤ σ) (h : |a - a'| ≤ r) :
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
+  -- the case `a < a'` follows from `a' ≤ a` by reflecting both Gaussians through `x ↦ -x`
   rcases le_total a' a with haa | haa
   · exact dp_gaussian_of_le hε hε₁ hr hδ hc hcδ hcσ haa (le_of_abs_le h)
   · simpa only [gaussianReal_map_neg, neg_neg] using
@@ -208,6 +215,8 @@ theorem dp_gaussian {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε) (hε₁
 end GradedDivergence
 
 namespace Mechanism
+
+/-! ## The Gaussian mechanism -/
 
 /-- The Gaussian mechanism with standard deviation `σ`. -/
 noncomputable def gaussianMech (σ : ℝ≥0) : Mechanism ℝ ℝ :=
