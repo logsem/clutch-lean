@@ -97,7 +97,8 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_tv {δ : ℝ≥0∞}
 /-- A Rényi budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_renyi {α : ℝ} {ρ : ℝ≥0∞}
     (h : ¬(codensity (renyiDivergence.{u} α)).Absorbing ρ) : IsAddLeftRegular ρ :=
-  (IsAddRegular.of_ne_top fun hρ ↦ h (by rw [hρ]; exact IsTopAbsorbing.absorbing_top (L := codensity _))).1
+  (IsAddRegular.of_ne_top fun hρ ↦
+    h (by rw [hρ]; exact IsTopAbsorbing.absorbing_top (L := codensity _))).1
 
 /-- Some Rényi curve is valid but does not cancel: `⊤` at order `2` and `0` elsewhere. -/
 theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
