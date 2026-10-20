@@ -188,7 +188,7 @@ theorem lim_exec
         = ∫⁻ x, (((·.expr) ⁻¹' S) : Set (Cfg rT)).indicator 1 x ∂(limExec ρ) := by
     intro ρ
     rw [lintegral_indicator_one (hexpr hS)]
-  simp_rw [hind, lintegral_limExec']
+  simp_rw [hind, lintegral_limExec]
   rw [lintegral_iSup
         (fun n => by
           have hrw : (fun σ' => ∫⁻ x,

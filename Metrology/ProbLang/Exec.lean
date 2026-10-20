@@ -119,7 +119,7 @@ theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [Measurabl
   rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
   exact lintegral_mono (fun a => h a S)
 
-theorem execN_succ_le' (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
+theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
   induction n generalizing ρ with
   | zero => exact bot_le
   | succ k ih =>
@@ -169,7 +169,7 @@ theorem stepOrFinal.measurable :
 theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ execN m ρ := by
   induction h with
   | refl => exact le_rfl
-  | step _ ih => exact ih.trans (execN_succ_le' _ ρ)
+  | step _ ih => exact ih.trans (execN_le_succ _ ρ)
 
 theorem execN_monotone : Monotone fun i ↦ execN (rT := rT) i ρ := fun _ _ h => execN_mono h _
 
@@ -240,18 +240,14 @@ theorem limExec_not_final
     _ = ∫⁻ a, limExec a S ∂primStep ⟨e, σ⟩ :=
         lintegral_congr fun a => (iSup_measure_apply (fun _ _ h => execN_mono h a) HS).symm
 
-theorem limExec_step
-    (ρ : Cfg rT) :
-    limExec ρ = (if ρ.expr.isValue then dirac ρ else primStep ρ).bind limExec := by
+theorem limExec_step (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec := by
+  show limExec ρ = (if ρ.expr.isValue then dirac ρ else primStep ρ).bind limExec
   obtain ⟨e, σ⟩ := ρ
   by_cases hv : e.isValue
   · simp only [hv, ↑reduceIte]
     rw [Measure.dirac_bind (by measurability)]
   · simp only [hv, ↑reduceIte]
     exact limExec_not_final hv
-
-theorem limExec_step' (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec := by
-  rw [limExec_step]; rfl
 
 /-! ### `pexecN` — iterated `stepOrFinal`
 
@@ -326,7 +322,7 @@ theorem limExec_pexecN (n : Nat) (ρ : Cfg rT) : limExec ρ = (pexecN n ρ).bind
     measurability
   | succ k ih =>
     rw [pexecN_succ]
-    conv_lhs => rw [limExec_step']
+    conv_lhs => rw [limExec_step]
     rw [Measure.bind_bind]
     · exact congrArg _ (funext ih)
     all_goals exact Measurable.aemeasurable (by measurability)
@@ -337,7 +333,7 @@ theorem limExec_apply (ρ : Cfg rT) (HS : MeasurableSet S) :
     limExec ρ S = ⨆ n, (execN n ρ) S :=
   iSup_measure_apply execN_monotone HS
 
-theorem limExec_univ' (ρ : Cfg rT) : (limExec ρ) .univ = ⨆ n, (execN n ρ) .univ :=
+theorem limExec_univ (ρ : Cfg rT) : (limExec ρ) .univ = ⨆ n, (execN n ρ) .univ :=
   limExec_apply _ .univ
 
 /-! ### Pointwise and mass bounds -/
@@ -349,7 +345,7 @@ theorem limExec_leq_setwise {ρ : Cfg rT} {S : Set (Cfg rT)} {r : ENNReal} (HS :
 -- Rocq: lim_exec_leq
 theorem limExec_leq_mass {ρ : Cfg rT} {r : ENNReal}
     (H : ∀ n, (execN n ρ) Set.univ ≤ r) : (limExec ρ) Set.univ ≤ r :=
-  (limExec_univ' ρ).trans_le (iSup_le H)
+  (limExec_univ ρ).trans_le (iSup_le H)
 
 /-- The limiting execution has mass at most one. -/
 instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExec ρ) :=
@@ -381,7 +377,7 @@ theorem limExec_det_final {ρ ρ' : Cfg rT} {n : Nat} (H : (execN n ρ) = dirac 
 
 /-! ### lintegral against limExec -/
 
-theorem lintegral_limExec'
+theorem lintegral_limExec
     (ρ : Cfg rT) (f : Cfg rT → ENNReal) :
     ∫⁻ x, f x ∂(limExec ρ) = ⨆ n, ∫⁻ x, f x ∂(execN n ρ) := by
   unfold limExec
@@ -433,7 +429,7 @@ theorem limExec_AddCoupl
     (H : ∀ n, AddCoupl ε Φ (execN n ρ) μ₂) :
     AddCoupl ε Φ (limExec ρ) μ₂ := by
   intro ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
-  rw [lintegral_limExec' ρ f]
+  rw [lintegral_limExec ρ f]
   exact iSup_le fun n => H n ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
 
 /-- `limExec_AddCoupl` through a measurable map, without a discrete σ-algebra on its codomain. -/
@@ -445,7 +441,7 @@ theorem limExec_map_AddCoupl
     AddCoupl ε Φ ((limExec ρ).map F) μ₂ := by
   refine AddCoupl.iSup_left (fun f hf => ?_) H
   simp_rw [lintegral_map hf hF]
-  exact le_of_eq (lintegral_limExec' ρ (fun a => f (F a)))
+  exact le_of_eq (lintegral_limExec ρ (fun a => f (F a)))
 
 /-- `limExec_map_AddCoupl` at `F := Cfg.expr`: the form `adequacy` needs. -/
 theorem limExecV_AddCoupl
