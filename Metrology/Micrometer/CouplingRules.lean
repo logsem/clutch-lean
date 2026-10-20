@@ -113,7 +113,7 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   have hcpl : L.Rel 0 (CoupledDraw z f σ₁ σ₁' K)
       (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
     rw [hL.2, primStep_fill HvR, hR.2]
-    exact Cfg.uniform_codensity_bij_fill Hz σ₁ σ₁' f K hdom hbij
+    exact Cfg.uniform_rel_bij_fill Hz σ₁ σ₁' f K hdom hbij
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
   iexists CoupledDraw z f σ₁ σ₁' K, 0, b
@@ -389,7 +389,7 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
   have hcpl : L.Rel c S' (primStep ⟨pl(rand(#(.int zL), #(.unit))), σ₁⟩)
       (primStep ⟨K.fill pl(rand(#(.int zR), #(.unit))), σ₁'⟩) := by
     rw [primStep_rand_unit HzL, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HzR]
-    exact Cfg.uniform_codensity_fill HzL HzR σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
+    exact Cfg.uniform_rel_fill HzL HzR σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
   iframe %hsum %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, m, hS, heq1, heq2⟩
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1

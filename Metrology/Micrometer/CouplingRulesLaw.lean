@@ -21,7 +21,8 @@ variable {rT : Type} {B : Type}
 
 open Classical in
 /-- The leftover of the draws `rand N ~ K[rand N]` from `σ` and `σ'`: `R n m` at the
-configurations drawn as `n` and `m`, and `⊤` elsewhere. -/
+configurations drawn as `n` and `m`, and `⊤` elsewhere. Unlike `Cfg.advLeftover`, which is keyed
+by the left draw along a bijection, this is keyed by both draws. -/
 noncomputable def Cfg.drawCost [_root_.Top B] (σ σ' : State rT) (K : Ectx rT)
     (R : Int → Int → B) (ρ ρ' : Cfg rT) : B :=
   if h : ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ then

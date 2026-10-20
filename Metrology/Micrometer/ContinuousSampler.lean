@@ -67,12 +67,12 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
 
 /-! ## Relational coupling of two continuous samplers
 
-Unlike the discrete `unifInt_codensity_bij`, a bijection is not enough here:
+Unlike the discrete `unifInt_rel_bij`, a bijection is not enough here:
 `f` must be measure-preserving for `unifUnit`. -/
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f`, for any lawful
 reflexive `L`. -/
-theorem Cfg.uniformReal_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
+theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
     L.Rel 0
@@ -86,14 +86,14 @@ theorem Cfg.uniformReal_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     (Cfg.measurable_realLit σ')
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
-of `Cfg.uniformReal_codensity_bij`). -/
+of `Cfg.uniformReal_rel_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
     AddCoupl 0
       {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#(.real r)), σ⟩ ∧ p.2 = ⟨pl(#(.real (f r))), σ'⟩}
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
-  (Cfg.uniformReal_codensity_bij σ σ' f hmp).addCoupl
+  (Cfg.uniformReal_rel_bij σ σ' f hmp).addCoupl
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -141,7 +141,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
   isplitr
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill Exp.urand_not_isValue, primStep_urand σ₁']
-    exact (Cfg.uniformReal_codensity_bij σ₁ σ₁' f hmp).map_right
+    exact (Cfg.uniformReal_rel_bij σ₁ σ₁' f hmp).map_right
       (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (Ectx.fillCfg.measurable K)
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
