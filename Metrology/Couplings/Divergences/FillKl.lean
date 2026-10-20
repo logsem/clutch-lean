@@ -110,4 +110,266 @@ theorem klDualBound_of_le {m P Q : Measure Ω} [IsProbabilityMeasure P] [IsProba
         refine ENNReal.ofReal_add_le.trans ?_
         rw [ENNReal.ofReal_toReal hkl]
 
+/-! ## Test bounds give KL bounds: the optimal filling -/
+
+section Optimal
+
+variable {r : ℝ≥0∞} {m Q : Measure Ω}
+
+/-- A finite test bound puts no mass where `Q` has none: test with large multiples of the
+indicator of a `Q`-null set. -/
+theorem absolutelyContinuous_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeasure m]
+    (hr : r ≠ ⊤) (h : KlDualBound r m Q) : m ≪ Q := by
+  refine AbsolutelyContinuous.mk fun s hs hQs ↦ ?_
+  by_contra hne
+  have key (n : ℕ) : (n : ℝ≥0∞) * m s ≤ r := by
+    have hmeas : Measurable (s.indicator fun _ ↦ (n : ℝ)) := measurable_const.indicator hs
+    have h1 := h hmeas (fun ω ↦ Set.indicator_nonneg (fun _ _ ↦ Nat.cast_nonneg n) ω)
+      ⟨n, by rintro _ ⟨ω, rfl⟩; by_cases hω : ω ∈ s <;> simp [hω]⟩
+    have hl : (fun ω ↦ ENNReal.ofReal (s.indicator (fun _ ↦ (n : ℝ)) ω)) =
+        s.indicator fun _ ↦ (n : ℝ≥0∞) := by
+      funext ω
+      by_cases hω : ω ∈ s <;> simp [hω]
+    have he : ∫⁻ ω, ENNReal.ofReal (Real.exp (s.indicator (fun _ ↦ (n : ℝ)) ω)) ∂Q = 1 := by
+      rw [lintegral_congr_ae (g := fun _ ↦ 1), lintegral_one, measure_univ]
+      filter_upwards [measure_eq_zero_iff_ae_notMem.1 hQs] with ω hω
+      simp [hω]
+    rwa [hl, lintegral_indicator_const hs, he, ENNReal.toReal_one, Real.log_one,
+      ENNReal.ofReal_zero, add_zero] at h1
+  obtain ⟨n, hn⟩ := ENNReal.exists_nat_gt (ENNReal.div_ne_top hr hne)
+  rw [ENNReal.div_lt_iff (.inl hne) (.inl (measure_ne_top m s))] at hn
+  exact (key n).not_gt hn
+
+variable {p : Ω → ℝ}
+
+/-- The test `log (max p t / t)`, truncated and passed to the limit, bounds `∫ p log (max p t / t)`
+for a density `p` of `m`. -/
+theorem lintegral_mul_log_le [IsProbabilityMeasure Q] (h : KlDualBound r m Q) (hpm : Measurable p)
+    (hp0 : ∀ ω, 0 ≤ p ω) (hpint : Integrable p Q)
+    (hmQ : m = Q.withDensity fun ω ↦ ENNReal.ofReal (p ω)) {t : ℝ} (ht : 0 < t) :
+    ∫⁻ ω, ENNReal.ofReal (p ω * Real.log (max (p ω) t / t)) ∂Q ≤
+      r + ENNReal.ofReal (Real.log ((∫ ω, max (p ω) t ∂Q) / t)) := by
+  set φ : Ω → ℝ := fun ω ↦ Real.log (max (p ω) t / t)
+  have hct (ω : Ω) : 0 < max (p ω) t / t := div_pos (ht.trans_le (le_max_right _ _)) ht
+  have hφ0 (ω : Ω) : 0 ≤ φ ω :=
+    Real.log_nonneg ((one_le_div ht).2 (le_max_right _ _))
+  have hφm : Measurable φ := ((hpm.max measurable_const).div_const t).log
+  have hcint : Integrable (fun ω ↦ max (p ω) t / t) Q :=
+    (hpint.sup (integrable_const t)).div_const t
+  -- the right side of the bound is the exponential moment of the untruncated test
+  have hB : (∫⁻ ω, ENNReal.ofReal (max (p ω) t / t) ∂Q).toReal = (∫ ω, max (p ω) t ∂Q) / t := by
+    rw [← integral_eq_lintegral_of_nonneg_ae (ae_of_all _ fun ω ↦ (hct ω).le)
+      hcint.aestronglyMeasurable, integral_div]
+  rw [← hB]
+  calc ∫⁻ ω, ENNReal.ofReal (p ω * φ ω) ∂Q
+      = ∫⁻ ω, ENNReal.ofReal (φ ω) ∂m := by
+        rw [hmQ, lintegral_withDensity_eq_lintegral_mul _ hpm.ennreal_ofReal hφm.ennreal_ofReal]
+        simp_rw [Pi.mul_apply, ← ENNReal.ofReal_mul (hp0 _)]
+    _ = ⨆ n : ℕ, ∫⁻ ω, ENNReal.ofReal (min (φ ω) n) ∂m := by
+        rw [← lintegral_iSup (fun n ↦ (hφm.min measurable_const).ennreal_ofReal)
+          fun a b hab ω ↦ ENNReal.ofReal_le_ofReal (min_le_min_left _ (Nat.cast_le.2 hab))]
+        refine lintegral_congr fun ω ↦ le_antisymm ?_ (iSup_le fun n ↦
+          ENNReal.ofReal_le_ofReal (min_le_left _ _))
+        exact le_iSup_of_le ⌈φ ω⌉₊ (by rw [min_eq_left (Nat.le_ceil _)])
+    _ ≤ _ := iSup_le fun n ↦ by
+        refine (h (hφm.min measurable_const) (fun ω ↦ le_min (hφ0 ω) (Nat.cast_nonneg n))
+          ⟨n, by rintro _ ⟨ω, rfl⟩; exact min_le_right _ _⟩).trans ?_
+        have hA1 := one_le_lintegral_exp (Q := Q) fun ω ↦ le_min (hφ0 ω) (Nat.cast_nonneg n)
+        have hAt := lintegral_exp_ne_top (Q := Q) (h := fun ω ↦ min (φ ω) n) (C := n)
+          fun ω ↦ min_le_right _ _
+        refine add_le_add le_rfl (ENNReal.ofReal_le_ofReal (Real.log_le_log
+          (ENNReal.toReal_pos (zero_lt_one.trans_le hA1).ne' hAt)
+          (ENNReal.toReal_mono hcint.lintegral_lt_top.ne (lintegral_mono fun ω ↦
+            ENNReal.ofReal_le_ofReal ?_))))
+        calc Real.exp (min (φ ω) n) ≤ Real.exp (φ ω) := Real.exp_le_exp.2 (min_le_left _ _)
+          _ = max (p ω) t / t := Real.exp_log (hct ω)
+
+/-- The mass of `max p t` under `Q` is `1`-Lipschitz in `t`. -/
+theorem lipschitzWith_integral_max [IsProbabilityMeasure Q] (hpint : Integrable p Q) :
+    LipschitzWith 1 fun t : ℝ ↦ ∫ ω, max (p ω) t ∂Q := by
+  refine LipschitzWith.of_dist_le_mul fun s t ↦ ?_
+  have hs : Integrable (fun ω ↦ max (p ω) s) Q := hpint.sup (integrable_const s)
+  have ht : Integrable (fun ω ↦ max (p ω) t) Q := hpint.sup (integrable_const t)
+  rw [Real.dist_eq, Real.dist_eq, NNReal.coe_one, one_mul, ← integral_sub hs ht]
+  refine (abs_integral_le_integral_abs).trans ?_
+  calc ∫ ω, |max (p ω) s - max (p ω) t| ∂Q ≤ ∫ _, |s - t| ∂Q :=
+        integral_mono_of_nonneg (ae_of_all _ fun _ ↦ abs_nonneg _) (integrable_const _)
+          (ae_of_all _ fun ω ↦ by
+            simpa only [max_comm (p ω)] using abs_max_sub_max_le_abs s t (p ω))
+    _ = |s - t| := by simp
+
+/-- A test bound for `m` is met by a probability measure above `m` within that KL budget: when
+`m` loses mass, the optimal filling `max (dm/dQ) λ • Q` with total mass `1`; otherwise `m`
+itself. -/
+theorem exists_le_klDiv_le_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeasure m]
+    (hm1 : m univ ≤ 1) (h : KlDualBound r m Q) :
+    ∃ P, IsProbabilityMeasure P ∧ m ≤ P ∧ klDiv P Q ≤ r := by
+  rcases eq_or_ne r ⊤ with rfl | hr
+  · refine ⟨m + (1 - m univ) • Q, ⟨?_⟩, Measure.le_add_right le_rfl, le_top⟩
+    simp [add_tsub_cancel_of_le hm1]
+  have hac := absolutelyContinuous_of_klDualBound hr h
+  set p : Ω → ℝ := fun ω ↦ (m.rnDeriv Q ω).toReal with hp
+  have hpm : Measurable p := (measurable_rnDeriv m Q).ennreal_toReal
+  have hp0 (ω : Ω) : 0 ≤ p ω := ENNReal.toReal_nonneg
+  have hpint : Integrable p Q := Measure.integrable_toReal_rnDeriv
+  have hmQ : m = Q.withDensity fun ω ↦ ENNReal.ofReal (p ω) := by
+    conv_lhs => rw [← withDensity_rnDeriv_eq m Q hac]
+    refine withDensity_congr_ae ?_
+    filter_upwards [rnDeriv_lt_top m Q] with ω hω
+    exact (ENNReal.ofReal_toReal hω.ne).symm
+  have hpm1 : ∫ ω, p ω ∂Q = m.real univ := integral_toReal_rnDeriv hac
+  set F : ℝ → ℝ := fun t ↦ ∫ ω, max (p ω) t ∂Q
+  have hF0 : F 0 = m.real univ := by simp only [F, max_eq_left (hp0 _), hpm1]
+  have hF1 : 1 ≤ F 1 := by
+    calc (1 : ℝ) = ∫ _, (1 : ℝ) ∂Q := by simp
+      _ ≤ F 1 := integral_mono (integrable_const _) (hpint.sup (integrable_const 1))
+          fun ω ↦ le_max_right _ _
+  have hreal1 : m.real univ ≤ 1 := by
+    rw [measureReal_def]
+    exact ENNReal.toReal_le_of_le_ofReal zero_le_one (by simpa using hm1)
+  obtain ⟨t, ⟨ht0, ht1⟩, hFt⟩ : ∃ t ∈ Icc (0 : ℝ) 1, F t = 1 :=
+    intermediate_value_Icc zero_le_one (lipschitzWith_integral_max hpint).continuous.continuousOn
+      ⟨hF0.trans_le hreal1, hF1⟩
+  have hcint (s : ℝ) : Integrable (fun ω ↦ max (p ω) s) Q := hpint.sup (integrable_const s)
+  have hklm : Measurable klFun := continuous_klFun.measurable
+  rcases ht0.eq_or_lt with rfl | htpos
+  · -- no lost mass: `m` itself, with the bound at every `s > 0` up to `log (1 + s)`
+    have hmu : m univ = 1 := by
+      rw [← ENNReal.ofReal_toReal (measure_ne_top m univ), ← measureReal_def, ← hF0, hFt,
+        ENNReal.ofReal_one]
+    have : IsProbabilityMeasure m := ⟨hmu⟩
+    refine ⟨m, this, le_rfl, ?_⟩
+    rw [klDiv_eq_lintegral_klFun_of_ac hac]
+    refine ENNReal.le_of_forall_pos_le_add fun ε hε _ ↦ ?_
+    set s : ℝ := min 1 ε
+    have hs : 0 < s := lt_min one_pos hε
+    have hs1 : s ≤ 1 := min_le_left _ _
+    set φ : Ω → ℝ := fun ω ↦ Real.log (max (p ω) s / s)
+    have hφ0 (ω : Ω) : 0 ≤ φ ω := Real.log_nonneg ((one_le_div hs).2 (le_max_right _ _))
+    have hφm : Measurable φ := ((hpm.max measurable_const).div_const s).log
+    have hL := lintegral_mul_log_le h hpm hp0 hpint hmQ hs
+    have hpm1' : ∫ ω, p ω ∂Q = 1 := by rw [hpm1, measureReal_def, hmu, ENNReal.toReal_one]
+    have hFs : F s ≤ 1 + s := by
+      calc F s ≤ ∫ ω, (p ω + s) ∂Q := integral_mono (hcint s) (hpint.add (integrable_const s))
+            fun ω ↦ max_le (le_add_of_nonneg_right hs.le) (le_add_of_nonneg_left (hp0 ω))
+        _ = 1 + s := by rw [integral_add hpint (integrable_const s), hpm1']; simp
+    have hFs' : s ≤ F s := by
+      calc s = ∫ _, s ∂Q := by simp
+        _ ≤ F s := integral_mono (integrable_const _) (hcint s) fun ω ↦ le_max_right _ _
+    have hlog0 : 0 ≤ Real.log (F s / s) := Real.log_nonneg ((one_le_div hs).2 hFs')
+    have hpφ : Integrable (fun ω ↦ p ω * φ ω) Q :=
+      (lintegral_ofReal_ne_top_iff_integrable (hpm.mul hφm).aestronglyMeasurable
+        (ae_of_all _ fun ω ↦ mul_nonneg (hp0 ω) (hφ0 ω))).1
+        (ne_top_of_le_ne_top (ENNReal.add_ne_top.2 ⟨hr, ENNReal.ofReal_ne_top⟩) hL)
+    have hpφle : ∫ ω, p ω * φ ω ∂Q ≤ r.toReal + Real.log (F s / s) := by
+      rw [integral_eq_lintegral_of_nonneg_ae (ae_of_all _ fun ω ↦ mul_nonneg (hp0 ω) (hφ0 ω))
+        hpφ.aestronglyMeasurable, ← ENNReal.toReal_ofReal hlog0,
+        ← ENNReal.toReal_add hr ENNReal.ofReal_ne_top]
+      exact ENNReal.toReal_mono (ENNReal.add_ne_top.2 ⟨hr, ENNReal.ofReal_ne_top⟩) hL
+    set g : Ω → ℝ := fun ω ↦ p ω * φ ω + (Real.log s * p ω + (1 - p ω))
+    have hA : Integrable (fun ω ↦ Real.log s * p ω) Q := hpint.const_mul _
+    have hB : Integrable (fun ω ↦ 1 - p ω) Q := (integrable_const 1).sub hpint
+    have hAB : Integrable (fun ω ↦ Real.log s * p ω + (1 - p ω)) Q := hA.add hB
+    have hg : Integrable g Q := hpφ.add hAB
+    have hkl (ω : Ω) : klFun (p ω) ≤ g ω := by
+      have hc : 0 < max (p ω) s := hs.trans_le (le_max_right _ _)
+      have hlog : p ω * Real.log (p ω) ≤ p ω * Real.log (max (p ω) s) := by
+        rcases (hp0 ω).eq_or_lt with h0 | h0
+        · simp [← h0]
+        · exact mul_le_mul_of_nonneg_left (Real.log_le_log h0 (le_max_left _ _)) (hp0 ω)
+      simp only [g, φ, klFun, Real.log_div hc.ne' hs.ne']
+      nlinarith
+    have hklint : Integrable (fun ω ↦ klFun (p ω)) Q :=
+      hg.mono' (hklm.comp hpm).aestronglyMeasurable (ae_of_all _ fun ω ↦ by
+        rw [Real.norm_eq_abs, abs_of_nonneg (klFun_nonneg (hp0 ω))]
+        exact hkl ω)
+    have hint : ∫ ω, klFun (p ω) ∂Q ≤ r.toReal + Real.log (1 + s) := by
+      calc ∫ ω, klFun (p ω) ∂Q ≤ ∫ ω, g ω ∂Q := integral_mono hklint hg hkl
+        _ = ∫ ω, p ω * φ ω ∂Q + Real.log s := by
+          simp only [g]
+          rw [integral_add hpφ hAB, integral_add hA hB, integral_const_mul,
+            integral_sub (integrable_const 1) hpint, hpm1']
+          simp
+        _ ≤ r.toReal + Real.log (F s / s) + Real.log s := by linarith
+        _ = r.toReal + Real.log (F s) := by
+          rw [Real.log_div (hs.trans_le hFs').ne' hs.ne']
+          ring
+        _ ≤ r.toReal + Real.log (1 + s) := by
+          gcongr
+          exact hs.trans_le hFs'
+    calc ∫⁻ ω, ENNReal.ofReal (klFun (m.rnDeriv Q ω).toReal) ∂Q
+        = ENNReal.ofReal (∫ ω, klFun (p ω) ∂Q) :=
+          (ofReal_integral_eq_lintegral_ofReal hklint
+            (ae_of_all _ fun ω ↦ klFun_nonneg (hp0 ω))).symm
+      _ ≤ ENNReal.ofReal (r.toReal + Real.log (1 + s)) := ENNReal.ofReal_le_ofReal hint
+      _ ≤ r + ε := by
+          refine ENNReal.ofReal_add_le.trans ?_
+          rw [ENNReal.ofReal_toReal hr]
+          refine add_le_add le_rfl ?_
+          rw [← ENNReal.ofReal_coe_nnreal]
+          refine ENNReal.ofReal_le_ofReal ?_
+          calc Real.log (1 + s) ≤ 1 + s - 1 := Real.log_le_sub_one_of_pos (by linarith)
+            _ ≤ ε := by simp [s]
+  · -- lost mass: fill with `max p t • Q`, which has mass `1`
+    set c : Ω → ℝ := fun ω ↦ max (p ω) t
+    have hc0 (ω : Ω) : 0 ≤ c ω := (hp0 ω).trans (le_max_left _ _)
+    have hcm : Measurable c := hpm.max measurable_const
+    set P := Q.withDensity fun ω ↦ ENNReal.ofReal (c ω)
+    have hP : IsProbabilityMeasure P := ⟨by
+      rw [withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ,
+        ← ofReal_integral_eq_lintegral_ofReal (hcint t) (ae_of_all _ hc0)]
+      rw [show (∫ ω, max (p ω) t ∂Q) = F t from rfl, hFt, ENNReal.ofReal_one]⟩
+    refine ⟨P, hP, ?_, ?_⟩
+    · rw [hmQ]
+      exact withDensity_mono (ae_of_all _ fun ω ↦ ENNReal.ofReal_le_ofReal (le_max_left _ _))
+    rw [klDiv_eq_lintegral_klFun_of_ac (withDensity_absolutelyContinuous _ _)]
+    have hrn := rnDeriv_withDensity Q hcm.ennreal_ofReal
+    rw [lintegral_congr_ae (hrn.mono fun ω hω ↦ by
+      rw [hω, ENNReal.toReal_ofReal (hc0 ω)])]
+    set φ : Ω → ℝ := fun ω ↦ Real.log (c ω / t)
+    have hφ0 (ω : Ω) : 0 ≤ φ ω := Real.log_nonneg ((one_le_div htpos).2 (le_max_right _ _))
+    have hφm : Measurable φ := (hcm.div_const t).log
+    have hL := lintegral_mul_log_le h hpm hp0 hpint hmQ htpos
+    rw [show (∫ ω, max (p ω) t ∂Q) = F t from rfl, hFt, one_div, Real.log_inv] at hL
+    have hlt : 0 ≤ -Real.log t := neg_nonneg.2 (Real.log_nonpos htpos.le ht1)
+    have hpφ : Integrable (fun ω ↦ p ω * φ ω) Q :=
+      (lintegral_ofReal_ne_top_iff_integrable (hpm.mul hφm).aestronglyMeasurable
+        (ae_of_all _ fun ω ↦ mul_nonneg (hp0 ω) (hφ0 ω))).1
+        (ne_top_of_le_ne_top (ENNReal.add_ne_top.2 ⟨hr, ENNReal.ofReal_ne_top⟩) hL)
+    have hpφle : ∫ ω, p ω * φ ω ∂Q ≤ r.toReal + -Real.log t := by
+      rw [integral_eq_lintegral_of_nonneg_ae (ae_of_all _ fun ω ↦ mul_nonneg (hp0 ω) (hφ0 ω))
+        hpφ.aestronglyMeasurable, ← ENNReal.toReal_ofReal hlt,
+        ← ENNReal.toReal_add hr ENNReal.ofReal_ne_top]
+      exact ENNReal.toReal_mono (ENNReal.add_ne_top.2 ⟨hr, ENNReal.ofReal_ne_top⟩) hL
+    -- `c log (c / t) = p log (c / t)`: where they differ, `c = t`
+    have hkl (ω : Ω) :
+        klFun (c ω) = p ω * φ ω + (Real.log t * c ω + (1 - c ω)) := by
+      have hc : 0 < c ω := htpos.trans_le (le_max_right _ _)
+      have hcp : c ω * φ ω = p ω * φ ω := by
+        rcases le_total (p ω) t with hpt | hpt
+        · simp [φ, c, max_eq_right hpt, div_self htpos.ne']
+        · simp [c, max_eq_left hpt]
+      simp only [φ, klFun_apply, Real.log_div hc.ne' htpos.ne'] at hcp ⊢
+      linear_combination hcp
+    have hA : Integrable (fun ω ↦ Real.log t * c ω) Q := (hcint t).const_mul _
+    have hB : Integrable (fun ω ↦ 1 - c ω) Q := (integrable_const 1).sub (hcint t)
+    have hrest : Integrable (fun ω ↦ Real.log t * c ω + (1 - c ω)) Q := hA.add hB
+    have hklint : Integrable (fun ω ↦ klFun (c ω)) Q := by
+      simp_rw [hkl]
+      exact hpφ.add hrest
+    have hint : ∫ ω, klFun (c ω) ∂Q ≤ r.toReal := by
+      simp_rw [hkl]
+      rw [integral_add hpφ hrest, integral_add hA hB, integral_const_mul,
+        integral_sub (integrable_const 1) (hcint t)]
+      rw [show (∫ ω, max (p ω) t ∂Q) = F t from rfl, hFt]
+      simp only [integral_const, probReal_univ, smul_eq_mul, mul_one, sub_self, add_zero]
+      linarith
+    calc ∫⁻ ω, ENNReal.ofReal (klFun (c ω)) ∂Q = ENNReal.ofReal (∫ ω, klFun (c ω) ∂Q) :=
+          (ofReal_integral_eq_lintegral_ofReal hklint
+            (ae_of_all _ fun ω ↦ klFun_nonneg (hc0 ω))).symm
+      _ ≤ ENNReal.ofReal r.toReal := ENNReal.ofReal_le_ofReal hint
+      _ = r := ENNReal.ofReal_toReal hr
+
+end Optimal
+
 end ProbabilityTheory
