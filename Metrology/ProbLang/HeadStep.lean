@@ -10,8 +10,9 @@ public import Mathlib.Probability.Distributions.Uniform
 
 /-! # Head reduction
 
-The sub-probability measure `headStep` for one head redex of ProbLang, with its measurability,
-support characterisation and atomicity. -/
+`headStep`, one head-reduction step of ProbLang as a measure on configurations, and the `head_case`
+tactic. Main results: `head_step_mass`, `headStep.measurable` (hence `headStepKernel`), and the
+support characterisation `HeadStepSupport.possible` / `Possible.headStepSupport`. -/
 
 @[expose] public section
 
@@ -22,6 +23,8 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
+
+/-! ## Measure combinators and samplers used by `headStep` -/
 
 /-- Apply `f` to the value of an `Option`, giving the zero measure on `none`. -/
 def Option.unwrapM {α : Type _} [MeasurableSpace β] (f : α → Measure β) : Option α → Measure β
@@ -61,6 +64,8 @@ def Cfg.uniform (z : Int) (σ : State rT) : Measure (Cfg rT) :=
 /-- Uniform sampler of `⟨.lit (.real r), σ⟩` with `r` drawn from `LawfulProbLangℝ.unifUnit`. -/
 def Cfg.uniformReal (σ : State rT) : Measure (Cfg rT) :=
   (LawfulProbLangℝ.unifUnit (T := rT)).map (⟨.lit <| .real ·, σ⟩)
+
+/-! ## The head step -/
 
 -- The isValM/asValM guards make a head redex's evaluation-position subterms values
 -- (`head_ctx_step_val`); this is what makes the redex in `K[e]` unique (`head_redex_unique`).
@@ -120,6 +125,8 @@ def headStep : Cfg rT → Measure (Cfg rT)
   | none => dirac ⟨.inr (.lit .unit), σ⟩
 | ⟨.urand, σ⟩ => Cfg.uniformReal σ
 | _ => 0
+
+/-! ## The `head_case` tactic: one named goal per branch of `headStep` -/
 
 /-- Rename the main goal to `name`. -/
 elab "rename_goal" name:ident : tactic => do
@@ -251,7 +258,92 @@ macro "head_case" : tactic =>
 abbrev HeadReducible (e : Exp rT) (σ : State rT) : Prop :=
   headStep ⟨e, σ⟩ ≠ 0
 
-/-! ### Measurability for arbitrary measurable `rT` -/
+/-! ## Mass, and values do not step -/
+
+/-- `isValM` of a probability measure on a value is a probability measure. -/
+theorem isValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {m : Measure T}
+    (he : e.isValue) [IsProbabilityMeasure m] : IsProbabilityMeasure (e.isValM m) := by
+  rw [Exp.isValM, ite_eq_left he]; infer_instance
+
+/-- `asValM f` on a value `v` is a probability measure when `f v` is. -/
+theorem asValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {f : Val α → Measure T}
+    {v : Val α} (hv : e.toVal? = some v) [IsProbabilityMeasure (f v)] :
+    IsProbabilityMeasure (e.asValM f) := by
+  simp [Exp.asValM, hv]; infer_instance
+
+/-- `Cfg.uniform` is a probability measure. -/
+instance Cfg.uniform_isProbabilityMeasure {z : Int} {σ : State rT} :
+    IsProbabilityMeasure (Cfg.uniform z σ) := by
+  unfold Cfg.uniform Int.isPos
+  by_cases hpos : 0 < z
+  · simp only [hpos, dite_true]; infer_instance
+  · simp only [hpos, dite_false]; infer_instance
+
+/-- `Cfg.uniformReal` is a probability measure. -/
+instance Cfg.uniformReal_isProbabilityMeasure {σ : State rT} :
+    IsProbabilityMeasure (Cfg.uniformReal σ) := by
+  unfold Cfg.uniformReal
+  infer_instance
+
+/-- A reducible head step loses no mass: it is a probability measure. -/
+theorem head_step_mass {e : Exp rT} {σ : State rT} :
+    (headStep ⟨e, σ⟩ ≠ 0) → IsProbabilityMeasure (headStep ⟨e, σ⟩) := by
+  -- Each branch is `0` (hypothesis false), a Dirac, or a uniform sampler.
+  head_case
+  all_goals try (· simp)
+  case beta.lam.redex | beta.fix.redex | cond.true | cond.false
+     | fst.redex | snd.redex | case.left.redex | case.right.redex
+     | alloc.redex | load.redex | store.redex | tape
+     | rand.tape.deterministic
+     | scrut_success | scrut_failure => intro _; infer_instance
+  case unop.redex _ op e _ =>
+    cases op.eval e
+    · simp [Option.unwrapM]
+    · simpa [Option.unwrapM] using dirac.isProbabilityMeasure
+  case binop.redex _ op e1 e2 _ _ =>
+    cases op.eval e1 e2
+    · simp [Option.unwrapM]
+    · simpa [Option.unwrapM] using dirac.isProbabilityMeasure
+  case rand.plain | rand.tape | rand.tape.mismatch =>
+    intro _; exact Cfg.uniform_isProbabilityMeasure
+  case urand => intro _; exact Cfg.uniformReal_isProbabilityMeasure
+
+/-- Every head step has total mass at most one. -/
+theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
+  obtain ⟨e, σ⟩ := ρ
+  by_cases h : headStep ⟨e, σ⟩ = 0
+  · simp [h]
+  · exact (head_step_mass h).measure_univ.le
+
+/-- Values do not head-step. -/
+theorem val_head_stuck {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValue := by
+  head_case <;> simp_all [Exp.isValue_iff_isValueR, Exp.isValueR]
+
+/-- Values do not head-step, `isValueR` form. -/
+theorem val_head_stuck_R {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValueR := by
+  head_case <;> simp_all [Exp.isValueR]
+
+/-- Singleton-mass form of `val_head_stuck_R`. -/
+theorem Discrete.val_head_stuck_R {e : Exp rT} {σ : State rT} {ρ : Cfg rT}
+    (h : 0 < headStep ⟨e, σ⟩ {ρ}) : ¬e.isValueR :=
+  _root_.ProbLang.val_head_stuck_R fun h0 => h.ne' (by rw [h0]; rfl)
+
+theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
+  intro h; by_contra hne; rw [Exp.toVal?_eq_none.mpr hne] at h; exact absurd h (by simp)
+
+theorem Exp.toVal?_isValueR {e : Exp α} (h : e.toVal? = some v) : e.isValueR :=
+  (Exp.isValue_iff_isValueR.mp (Exp.toVal?_isValue h)).1
+
+/-- If `Ki[e]` can head-step, then `e` is value-shaped: `headStep` only fires once every
+evaluation-position subterm is a value. -/
+theorem head_ctx_step_val {e : Exp rT} {σ : State rT} {Ki : EctxItem rT} :
+    headStep ⟨Ki.fillItem e, σ⟩ ≠ 0 → e.isValueR := by
+  head_case
+  all_goals try · simp
+  all_goals cases Ki <;> intro h <;>
+    simp_all [EctxItem.fillItem, Exp.isValue_iff_isValueR, Exp.isValueR, Exp.toVal?_isValueR]
+
+/-! ## Measurability of the measure combinators (for any measurable `rT`) -/
 
 theorem Option.unwrapM.measurable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {f : α → Measure β} (hf : Measurable f) :
@@ -411,7 +503,7 @@ theorem Cfg.uniformReal.measurable :
     (Cfg.measurable_iff.mpr
       ⟨Exp.lit.measurable.comp (BaseLit.real.measurable.comp measurable_snd), measurable_fst⟩)
 
-/-! ### `headStep` per-branch continuations
+/-! ## Measurability of `headStep`, branch by branch
 
 Each non-trivial branch of `headStep` is a named `def` with its own measurability
 theorem (for elaboration speed); `headStep.measurable` assembles them. Each branch is rewritten as
@@ -1223,6 +1315,7 @@ theorem headStep.c_binop.measurable : Measurable (headStep.c_binop (rT := rT)) :
     (measurable_fst.comp measurable_snd).comp measurable_snd
   exact Exp.isValM.measurable_param he1 hinner
 
+/-- `headStep` is measurable as a map into measures. -/
 @[fun_prop]
 theorem headStep.measurable :
     Measurable (headStep : Cfg rT → Measure (Cfg rT)) := by
@@ -1234,6 +1327,8 @@ theorem headStep.measurable :
       funext cfg; rfl
     rw [hrw]
     exact hjoint.comp (Cfg.measurable_expr.prodMk Cfg.measurable_state)
+  -- Write `headStep` as `Exp.casesOn` with one continuation per constructor (`0` where no
+  -- redex exists), then use `Exp.measurable_casesOn_param` with each branch's measurability.
   let c_bvar  : State rT × Nat → Measure (Cfg rT) := fun _ => 0
   let c_fvar  : State rT × Var → Measure (Cfg rT) := fun _ => 0
   let c_lit   : State rT × BaseLit rT → Measure (Cfg rT) := fun _ => 0
@@ -1333,31 +1428,7 @@ def headStepKernel : Kernel (Cfg rT) (Cfg rT) where
   measurable' := headStep.measurable
   toFun := headStep
 
-theorem val_head_stuck {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValue := by
-  head_case <;> simp_all [Exp.isValue_iff_isValueR, Exp.isValueR]
-
-theorem val_head_stuck_R {e : Exp rT} {σ : State rT} : headStep ⟨e, σ⟩ ≠ 0 → ¬e.isValueR := by
-  head_case <;> simp_all [Exp.isValueR]
-
-/-- Singleton-mass form of `val_head_stuck_R`. -/
-theorem Discrete.val_head_stuck_R {e : Exp rT} {σ : State rT} {ρ : Cfg rT}
-    (h : 0 < headStep ⟨e, σ⟩ {ρ}) : ¬e.isValueR :=
-  _root_.ProbLang.val_head_stuck_R fun h0 => h.ne' (by rw [h0]; rfl)
-
-theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
-  intro h; by_contra hne; rw [Exp.toVal?_eq_none.mpr hne] at h; exact absurd h (by simp)
-
-theorem Exp.toVal?_isValueR {e : Exp α} (h : e.toVal? = some v) : e.isValueR :=
-  (Exp.isValue_iff_isValueR.mp (Exp.toVal?_isValue h)).1
-
-/-- If `Ki[e]` can head-step, then `e` is value-shaped: `headStep` only fires once every
-evaluation-position subterm is a value. -/
-theorem head_ctx_step_val {e : Exp rT} {σ : State rT} {Ki : EctxItem rT} :
-    headStep ⟨Ki.fillItem e, σ⟩ ≠ 0 → e.isValueR := by
-  head_case
-  all_goals try · simp
-  all_goals cases Ki <;> intro h <;>
-    simp_all [EctxItem.fillItem, Exp.isValue_iff_isValueR, Exp.isValueR, Exp.toVal?_isValueR]
+/-! ## Support: which configurations a head step can reach -/
 
 /-- The configurations reachable by one head step. For `urand` it lists the points of
 `unifUnitSupport`, possible only when `unifUnit` has atoms; see `HeadStepSupport.possible`
@@ -1547,7 +1618,8 @@ theorem Cfg.uniform_possible {z v : Int} {σ : State rT}
   rw [ne_eq, Nat.cast_eq_zero]
   exact Finset.card_ne_zero.mpr ⟨v, by simp [Finset.mem_filter, Finset.mem_Ico, Hv0, Hvz]⟩
 
-/-- Unlike `HeadStepSupport.possible`, this also holds for the diffuse `urand` step. -/
+/-- A configuration with a `HeadStepSupport` successor is head-reducible; unlike
+`HeadStepSupport.possible`, this also holds for the diffuse `urand` step. -/
 theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     (h : HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩) :
     headStep ⟨e1, σ1⟩ ≠ 0 := by
@@ -1601,7 +1673,8 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | RandTapeNonposOtherS hpos htape hzN =>
     simp [headStep, htape, ite_eq_right (Ne.symm hzN), Cfg.uniform, Int.isPos, hpos]
 
-/-- False for the diffuse `urand` sampler, hence `e1 ≠ .urand` and `@[discrete]`. -/
+/-- Every `HeadStepSupport` successor is a possible outcome of `headStep`; false for the diffuse
+`urand` sampler, hence `e1 ≠ .urand` and `@[discrete]`. -/
 @[discrete]
 theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     (h : HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩) (hne : e1 ≠ .urand := by nofun) :
@@ -1654,6 +1727,7 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
     simp [Cfg.uniform, Int.isPos, hpos]
 
+/-- Singleton-mass form of `HeadStepSupport.possible`. -/
 @[discrete]
 theorem HeadStepSupport.pos
     {e1 e2 : Exp rT} {σ1 σ2 : State rT}
@@ -1661,6 +1735,7 @@ theorem HeadStepSupport.pos
     0 < headStep (⟨e1, σ1⟩ : Cfg rT) {(⟨e2, σ2⟩ : Cfg rT)} :=
   possible_iff_pos.mp (h.possible hne)
 
+/-- An outcome of positive singleton mass is a `HeadStepSupport` successor. -/
 theorem headStep_support_of_pos
     (e1 e2 : Exp rT) (σ1 σ2 : State rT) :
     0 < headStep ⟨e1, σ1⟩ {⟨e2, σ2⟩} → HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩ := by
@@ -1724,12 +1799,14 @@ theorem headStep_support_of_pos
     exact ne_of_gt hpos
       (le_zero_iff.mp ((measure_mono hsub).trans_eq LawfulProbLangℝ.unifUnitIsConcentrated))
 
+/-- Every possible outcome of `headStep` is a `HeadStepSupport` successor. -/
 theorem Possible.headStepSupport
     {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     (h : Possible (⟨e2, σ2⟩ : Cfg rT) (headStep ⟨e1, σ1⟩)) :
     HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩ :=
   headStep_support_of_pos e1 e2 σ1 σ2 (possible_iff_pos.mp h)
 
+/-- A head-reducible configuration has some `HeadStepSupport` successor. -/
 theorem headStep_exists_support_of_ne_zero
     {e : Exp rT} {σ : State rT} (h : headStep ⟨e, σ⟩ ≠ 0) :
     ∃ ρ', HeadStepSupport ⟨e, σ⟩ ρ' := by
@@ -1786,57 +1863,7 @@ theorem headStep_exists_support_of_ne_zero
     obtain ⟨r, hr⟩ := LawfulProbLangℝ.unifUnitSupport_nonempty rT
     exact ⟨_, .UrandS hr⟩
 
-theorem isValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {m : Measure T}
-    (he : e.isValue) [IsProbabilityMeasure m] : IsProbabilityMeasure (e.isValM m) := by
-  rw [Exp.isValM, ite_eq_left he]; infer_instance
-
-theorem asValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {f : Val α → Measure T}
-    {v : Val α} (hv : e.toVal? = some v) [IsProbabilityMeasure (f v)] :
-    IsProbabilityMeasure (e.asValM f) := by
-  simp [Exp.asValM, hv]; infer_instance
-
-/-- `Cfg.uniform` is a probability measure. -/
-instance Cfg.uniform_isProbabilityMeasure {z : Int} {σ : State rT} :
-    IsProbabilityMeasure (Cfg.uniform z σ) := by
-  unfold Cfg.uniform Int.isPos
-  by_cases hpos : 0 < z
-  · simp only [hpos, dite_true]; infer_instance
-  · simp only [hpos, dite_false]; infer_instance
-
-/-- `Cfg.uniformReal` is a probability measure. -/
-instance Cfg.uniformReal_isProbabilityMeasure {σ : State rT} :
-    IsProbabilityMeasure (Cfg.uniformReal σ) := by
-  unfold Cfg.uniformReal
-  infer_instance
-
-theorem head_step_mass {e : Exp rT} {σ : State rT} :
-    (headStep ⟨e, σ⟩ ≠ 0) → IsProbabilityMeasure (headStep ⟨e, σ⟩) := by
-  head_case
-  all_goals try (· simp)
-  case beta.lam.redex | beta.fix.redex | cond.true | cond.false
-     | fst.redex | snd.redex | case.left.redex | case.right.redex
-     | alloc.redex | load.redex | store.redex | tape
-     | rand.tape.deterministic
-     | scrut_success | scrut_failure => intro _; infer_instance
-  case unop.redex _ op e _ =>
-    cases op.eval e
-    · simp [Option.unwrapM]
-    · simpa [Option.unwrapM] using dirac.isProbabilityMeasure
-  case binop.redex _ op e1 e2 _ _ =>
-    cases op.eval e1 e2
-    · simp [Option.unwrapM]
-    · simpa [Option.unwrapM] using dirac.isProbabilityMeasure
-  case rand.plain | rand.tape | rand.tape.mismatch =>
-    intro _; exact Cfg.uniform_isProbabilityMeasure
-  case urand => intro _; exact Cfg.uniformReal_isProbabilityMeasure
-
-theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
-  obtain ⟨e, σ⟩ := ρ
-  by_cases h : headStep ⟨e, σ⟩ = 0
-  · simp [h]
-  · exact (head_step_mass h).measure_univ.le
-
-/-! ### Pure atomicity of `headStep`
+/-! ## Pure atomicity of `headStep`
 
 Every head step except `urand` is purely atomic (`headStep_atomic`), with no countability
 assumption on `rT`. -/
@@ -1877,7 +1904,7 @@ theorem isAtomicSupport_uniform (z : Int) (σ : State rT) :
       unfold Cfg.uniform; simp only [Int.isPos, dite_eq_right hz]
     rw [hrw]; exact isAtomicSupport_dirac _
 
-/-- False for the diffuse `urand` sampler, hence `e ≠ .urand`. -/
+/-- Every head step except the diffuse `urand` sampler has purely atomic support. -/
 theorem headStep_atomic (e : Exp rT) (σ : State rT) (hne : e ≠ .urand) :
     IsAtomicSupport (headStep ⟨e, σ⟩) := by
   head_case_names

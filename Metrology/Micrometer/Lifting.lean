@@ -2,11 +2,11 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 
-/-! # Budget-splitting lifting rules
+/-! # Further lifting rules
 
-Canonical-law versions of the WpLifting coupled-step rules that keep a per-pair leftover `R`
-(WpLifting's `wp_lift_prim_steps_coupl` reduces `R` to a relation); plus an absorbing exit and
-erasable presampling (Rocq `approxis/lifting.v`). -/
+Coupled-step rules for `wp` that keep the per-pair leftover `R` (with budget splitting, or with an
+absorbing exit), and `wp_couple_erasables` for presampling both sides at cost `0` (Rocq
+`approxis/lifting.v`). -/
 
 @[expose] public section
 
@@ -20,9 +20,10 @@ namespace ProbLang.MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover: the
-`wp_lift_prim_steps_coupl_law` budget split with `BindLaw.canonical` (Rocq
-`wp_lift_step_couple_adv`). -/
+/-! ## Coupled steps with a leftover `R` -/
+
+/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
+(Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF}
@@ -47,7 +48,7 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
-/-- The same without splitting the budget: the leftover `R` is the new budget at each pair. -/
+/-- Lift a coupled program and spec step whose leftover `R` is the new budget at each pair. -/
 theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
@@ -70,8 +71,11 @@ theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
-/-- The continuation may exit with an absorbing budget instead of proving the `wp` (Rocq
-`wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is `L.Absorbing b`). -/
+/-! ## Absorbing exit and presampling -/
+
+/-- Budget-splitting coupled step whose continuation may exit with an absorbing budget instead of
+proving `wp` (Rocq `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is
+`L.Absorbing b`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
     [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF}
@@ -97,7 +101,7 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
   simp only [hv]
   iapply progCoupl_steps_adv hb hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !> !>
-  -- decide absorption first: it picks specCoupl_absorbing vs specCoupl_ret
+  -- decide absorption before opening `H`: it picks the `specCoupl` disjunct
   by_cases habs : L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)
   · iapply specCoupl_absorbing habs
   · iapply specCoupl_ret
@@ -107,8 +111,8 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
       imodintro
       iframe
 
-/-- Run the erasable distributions of the program and the spec within a lifting of cost `0`
-(Rocq `wp_couple_erasables`). -/
+/-- Presample both sides: couple erasable distributions of the program and spec states at cost
+`0` (Rocq `wp_couple_erasables`). -/
 theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} : iprop%

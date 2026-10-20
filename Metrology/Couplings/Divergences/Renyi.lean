@@ -3,8 +3,11 @@ module
 public import Metrology.Couplings.Divergences.FDivBound
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 
-/-! The Rényi divergence as a graded divergence: the moment bound `fDiv (·^α) ≤ e^{(α-1)ρ}`, its
-value `renyiDiv`, and its classes, chiefly composability (`isComposable_renyi`, Thm. 4.11). -/
+/-! # Rényi divergence
+
+`renyiDivergence α` bounds the moment `fDiv (·^α)` by `e^{(α-1)ρ}`, i.e. `renyiDiv α ≤ ρ`
+(`renyiDivergence_iff_renyiDiv_le`);
+main result: Rényi budgets add (`isComposable_renyi`, Thm. 4.11). -/
 
 @[expose] public section
 
@@ -16,14 +19,114 @@ open scoped ENNReal
 namespace ProbabilityTheory
 open Real ENNReal
 
-variable {X : Type*} [MeasurableSpace X]
+variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 
-/-! ## The weight `t ↦ t ^ α`
+/-! ## The Rényi value -/
 
-Multiplicativity (`persp_rpow_mul`) gives composability via `fDiv_rpow_comp_le`; monotonicity in
-each argument gives `IsRightMonotone` and `IsLeftAntitone`. -/
+/-- The Rényi divergence `D_α(μ ‖ ν) = (α - 1)⁻¹ log ∫ (dμ/dν)^α dν` (Def. 2.2). -/
+noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
+  ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (· ^ α) μ ν).toENNReal
 
-variable {α : ℝ}
+theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
+  fDiv_nonneg_of_nonneg fun _ ht ↦ rpow_nonneg ht α
+
+end ProbabilityTheory
+
+namespace GradedDivergence
+open Real ENNReal
+
+/-! ## The moment threshold `e^{(α-1)ρ}` -/
+
+section renyiThresh
+
+variable {α : ℝ} {ρ : ℝ≥0∞}
+
+/-- The moment threshold `exp ((α - 1) ρ)`, `⊤` at `ρ = ⊤`. -/
+noncomputable def renyiThresh (α : ℝ) (ρ : ℝ≥0∞) : EReal :=
+  expBudget (ENNReal.ofReal (α - 1) * ρ)
+
+/-- For finite `ρ` and `1 ≤ α`, the Rényi threshold is `exp ((α - 1) * ρ)`. -/
+theorem renyiThresh_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
+    renyiThresh α ρ = ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
+  rw [renyiThresh, expBudget_of_ne_top (by finiteness), toReal_mul,
+    toReal_ofReal (sub_nonneg.2 hα), EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le]
+
+theorem renyiThresh_top (hα : 1 < α) : renyiThresh α ⊤ = ⊤ := by
+  simp [renyiThresh, mul_top (ofReal_pos.2 (sub_pos.2 hα)).ne']
+
+@[simp]
+theorem renyiThresh_zero : renyiThresh α 0 = 1 := by
+  simp [renyiThresh]
+
+theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
+  EReal.coe_ennreal_le_coe_ennreal_iff.2 (expBudget_mono (by gcongr))
+
+theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
+  EReal.coe_ennreal_nonneg _
+
+/-- The Rényi threshold is multiplicative:
+`renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ'`. -/
+theorem renyiThresh_add (ρ ρ' : ℝ≥0∞) :
+    renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ' := by
+  rw [renyiThresh, mul_add, expBudget_add, EReal.coe_ennreal_mul, renyiThresh, renyiThresh]
+
+/-- The threshold is right continuous in the budget. -/
+theorem le_renyiThresh_of_forall_lt (hα : 1 < α) {x : EReal}
+    (h : ∀ ρ', ρ < ρ' → x ≤ renyiThresh α ρ') : x ≤ renyiThresh α ρ := by
+  rcases eq_or_ne ρ ⊤ with rfl | hρ
+  · simp [renyiThresh_top hα]
+  have hlim : Tendsto (fun s : ℝ ↦ ((exp ((α - 1) * (ρ.toReal + s)) : ℝ) : EReal))
+      (𝓝[>] 0) (𝓝 ((exp ((α - 1) * (ρ.toReal + 0)) : ℝ) : EReal)) :=
+    ((continuous_coe_real_ereal.comp (by fun_prop)).tendsto 0).mono_left nhdsWithin_le_nhds
+  rw [renyiThresh_of_ne_top hα.le hρ, ← add_zero ρ.toReal]
+  refine ge_of_tendsto hlim (eventually_nhdsWithin_of_forall fun s (hs : 0 < s) ↦ ?_)
+  refine (h (ρ + .ofReal s) (lt_add_right hρ (by simpa using hs))).trans_eq ?_
+  rw [renyiThresh_of_ne_top hα.le (by finiteness), toReal_add hρ ofReal_ne_top,
+    toReal_ofReal hs.le]
+
+end renyiThresh
+
+/-! ## The Rényi divergence -/
+
+/-- The Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ`, as the moment bound
+`∫ (dμ/dν)^α dν ≤ e^{(α - 1) ρ}` (Def. 2.2). -/
+noncomputable def renyiDivergence (α : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
+  fDivBound Unit (fun _ _ t ↦ t ^ α) fun ρ _ ↦ renyiThresh α ρ
+
+variable {X : Type u} [MeasurableSpace X] {α : ℝ} {ρ : ℝ≥0∞} {μ ν : Measure X}
+
+/-- Unfolds the Rényi divergence to its moment bound. -/
+theorem renyiDivergence_iff : renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ renyiThresh α ρ :=
+  ⟨fun h ↦ h (), fun h _ ↦ h⟩
+
+/-- At a finite budget, the Rényi divergence bound is the `α`-th moment bound. -/
+theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
+    renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
+  rw [renyiDivergence_iff, renyiThresh_of_ne_top hα hρ]
+
+theorem renyiDivergence_top (hα : 1 < α) (μ ν : Measure X) : renyiDivergence α ⊤ μ ν :=
+  renyiDivergence_iff.2 (renyiThresh_top hα ▸ le_top)
+
+/-- The moment bound is the Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ` (Def. 2.2). -/
+theorem renyiDivergence_iff_renyiDiv_le (hα : 1 < α) :
+    renyiDivergence α ρ μ ν ↔ renyiDiv α μ ν ≤ ρ := by
+  have hα1 : 0 < α - 1 := sub_pos.2 hα
+  rw [renyiDivergence_iff, renyiThresh, expBudget, renyiDiv,
+    ← EReal.coe_toENNReal fDiv_rpow_nonneg, EReal.coe_ennreal_le_coe_ennreal_iff,
+    ← ENNReal.log_le_log_iff, EReal.log_exp, EReal.coe_ennreal_mul, EReal.coe_ennreal_ofReal,
+    max_eq_left hα1.le, EReal.le_coe_mul_iff hα1, EReal.toENNReal_coe]
+
+end GradedDivergence
+
+namespace ProbabilityTheory
+open Real ENNReal
+
+/-! ## Support: the weight `t ↦ t ^ α`
+
+Multiplicativity (`persp_rpow_mul`) gives the product chain rule `fDiv_rpow_comp_le` behind
+composability; monotonicity in each argument gives `IsRightMonotone` and `IsLeftAntitone`. -/
+
+variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 
 theorem continuousWithinAt_rpow_zero (hα : 0 < α) :
     ContinuousWithinAt (· ^ α : ℝ → ℝ) (Ici 0) 0 :=
@@ -134,9 +237,6 @@ theorem persp_rpow_le_exp_iff (hα : 1 < α) {a b r : ℝ} (ha : 0 ≤ a) (hb : 
     ← le_rpow_inv_iff_of_pos (div_nonneg ha hb.le) (div_nonneg (exp_pos _).le hb.le) hα0,
     div_le_iff₀ hb, rpow_inv_exp_div_mul_eq hα hb r]
 
-theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
-  fDiv_nonneg_of_nonneg fun _ ht ↦ rpow_nonneg ht α
-
 /-- The `α`-moment decreases as the right measure grows. -/
 theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMeasure μ]
     [IsFiniteMeasure ν'] (h : ν ≤ ν') : fDiv (· ^ α) μ ν' ≤ fDiv (· ^ α) μ ν := by
@@ -200,94 +300,14 @@ theorem fDiv_rpow_comp_le (hα : 1 < α) {M N : ℕ} (μ₁ μ₂ : Measure (ULi
         rw [mul_comm, EReal.mul_finset_sum_of_nonneg _ _ fun _ _ ↦ hP]
         simp_rw [mul_comm]
 
-/-- The Rényi divergence `D_α(μ ‖ ν) = (α - 1)⁻¹ log ∫ (dμ/dν)^α dν` (Def. 2.2). -/
-noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
-  ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (· ^ α) μ ν).toENNReal
-
 end ProbabilityTheory
 
 namespace GradedDivergence
 open Real ENNReal
 
-/-! ## The Rényi divergence -/
-
-section renyiThresh
-
-variable {α : ℝ} {ρ : ℝ≥0∞}
-
-/-- The moment threshold `exp ((α - 1) ρ)`, `⊤` at `ρ = ⊤`. -/
-noncomputable def renyiThresh (α : ℝ) (ρ : ℝ≥0∞) : EReal :=
-  expBudget (ENNReal.ofReal (α - 1) * ρ)
-
-/-- For finite `ρ` and `1 ≤ α`, the Rényi threshold is `exp ((α - 1) * ρ)`. -/
-theorem renyiThresh_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
-    renyiThresh α ρ = ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
-  rw [renyiThresh, expBudget_of_ne_top (by finiteness), toReal_mul,
-    toReal_ofReal (sub_nonneg.2 hα), EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le]
-
-theorem renyiThresh_top (hα : 1 < α) : renyiThresh α ⊤ = ⊤ := by
-  simp [renyiThresh, mul_top (ofReal_pos.2 (sub_pos.2 hα)).ne']
-
-@[simp]
-theorem renyiThresh_zero : renyiThresh α 0 = 1 := by
-  simp [renyiThresh]
-
-theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
-  EReal.coe_ennreal_le_coe_ennreal_iff.2 (expBudget_mono (by gcongr))
-
-theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
-  EReal.coe_ennreal_nonneg _
-
-/-- The Rényi threshold is multiplicative:
-`renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ'`. -/
-theorem renyiThresh_add (ρ ρ' : ℝ≥0∞) :
-    renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ' := by
-  rw [renyiThresh, mul_add, expBudget_add, EReal.coe_ennreal_mul, renyiThresh, renyiThresh]
-
-/-- The threshold is right continuous in the budget. -/
-theorem le_renyiThresh_of_forall_lt (hα : 1 < α) {x : EReal}
-    (h : ∀ ρ', ρ < ρ' → x ≤ renyiThresh α ρ') : x ≤ renyiThresh α ρ := by
-  rcases eq_or_ne ρ ⊤ with rfl | hρ
-  · simp [renyiThresh_top hα]
-  have hlim : Tendsto (fun s : ℝ ↦ ((exp ((α - 1) * (ρ.toReal + s)) : ℝ) : EReal))
-      (𝓝[>] 0) (𝓝 ((exp ((α - 1) * (ρ.toReal + 0)) : ℝ) : EReal)) :=
-    ((continuous_coe_real_ereal.comp (by fun_prop)).tendsto 0).mono_left nhdsWithin_le_nhds
-  rw [renyiThresh_of_ne_top hα.le hρ, ← add_zero ρ.toReal]
-  refine ge_of_tendsto hlim (eventually_nhdsWithin_of_forall fun s (hs : 0 < s) ↦ ?_)
-  refine (h (ρ + .ofReal s) (lt_add_right hρ (by simpa using hs))).trans_eq ?_
-  rw [renyiThresh_of_ne_top hα.le (by finiteness), toReal_add hρ ofReal_ne_top,
-    toReal_ofReal hs.le]
-
-end renyiThresh
-
-/-- The Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ`, as the moment bound
-`∫ (dμ/dν)^α dν ≤ e^{(α - 1) ρ}` (Def. 2.2). -/
-noncomputable def renyiDivergence (α : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
-  fDivBound Unit (fun _ _ t ↦ t ^ α) fun ρ _ ↦ renyiThresh α ρ
-
 variable {X : Type u} [MeasurableSpace X] {α : ℝ} {ρ : ℝ≥0∞} {μ ν : Measure X}
 
-/-- The Rényi divergence relation holds iff the `f`-divergence for `t ↦ t ^ α` is at most the
-Rényi threshold. -/
-theorem renyiDivergence_iff : renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ renyiThresh α ρ :=
-  ⟨fun h ↦ h (), fun h _ ↦ h⟩
-
-/-- At a finite budget, the Rényi divergence bound is the `α`-th moment bound. -/
-theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
-    renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
-  rw [renyiDivergence_iff, renyiThresh_of_ne_top hα hρ]
-
-theorem renyiDivergence_top (hα : 1 < α) (μ ν : Measure X) : renyiDivergence α ⊤ μ ν :=
-  renyiDivergence_iff.2 (renyiThresh_top hα ▸ le_top)
-
-/-- The moment bound is the Rényi divergence bound `D_α(μ ‖ ν) ≤ ρ` (Def. 2.2). -/
-theorem renyiDivergence_iff_renyiDiv_le (hα : 1 < α) :
-    renyiDivergence α ρ μ ν ↔ renyiDiv α μ ν ≤ ρ := by
-  have hα1 : 0 < α - 1 := sub_pos.2 hα
-  rw [renyiDivergence_iff, renyiThresh, expBudget, renyiDiv,
-    ← EReal.coe_toENNReal fDiv_rpow_nonneg, EReal.coe_ennreal_le_coe_ennreal_iff,
-    ← ENNReal.log_le_log_iff, EReal.log_exp, EReal.coe_ennreal_mul, EReal.coe_ennreal_ofReal,
-    max_eq_left hα1.le, EReal.le_coe_mul_iff hα1, EReal.toENNReal_coe]
+/-! ## Between point masses -/
 
 /-- Comparing in `ℝ≥0∞` with `e^c b^γ` is comparing real parts, for finite `a`, `b` and `γ ≥ 0`. -/
 theorem le_ofReal_exp_mul_rpow_iff {a b : ℝ≥0∞} {γ c : ℝ} (hγ : 0 ≤ γ) (ha : a ≠ ⊤)
@@ -297,9 +317,8 @@ theorem le_ofReal_exp_mul_rpow_iff {a b : ℝ≥0∞} {γ c : ℝ} (hγ : 0 ≤ 
     rw [← ofReal_rpow_of_nonneg toReal_nonneg hγ, ofReal_toReal hb]
   rw [hb', ← ofReal_mul (exp_pos _).le, le_ofReal_iff_toReal_le ha (by positivity)]
 
-/-- Between point masses, a finite Rényi budget is the Hölder bound
-`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}`. This is the scalar Hölder form behind the point-test and
-slack-Hölder characterizations in `RenyiCodensity.lean`. -/
+/-- Between scaled point masses, a finite Rényi budget is the Hölder bound
+`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}` (used by `RenyiCodensity.lean`). -/
 theorem renyiDivergence_smul_dirac_iff (hα : 1 < α) (hρ : ρ ≠ ⊤) {a b : ℝ≥0∞} (ha : a ≠ ⊤)
     (hb : b ≠ ⊤) :
     renyiDivergence α ρ (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) ↔
@@ -311,7 +330,7 @@ theorem renyiDivergence_smul_dirac_iff (hα : 1 < α) (hρ : ρ ≠ ⊤) {a b : 
     expBudget_of_ne_top (mul_ne_top ofReal_ne_top hρ), toReal_mul, toReal_ofReal hγ,
     le_ofReal_exp_mul_rpow_iff hγ ha hb]
 
-/-! ## Instances -/
+/-! ## Classes of the Rényi divergence -/
 
 section Instances
 
@@ -385,6 +404,8 @@ theorem absolutelyContinuous_of_codensity_renyi_rel_eq (hα : 1 < α) (hρ : ρ 
     [IsFiniteMeasure μ] (h : (codensity (renyiDivergence.{u} α)).Rel ρ (· = ·) μ ν) : μ ≪ ν := by
   have : Fact (1 < α) := ⟨hα⟩
   classical
+  -- test the lifting with the indicator of a `ν`-null set `t`: the point-mass Hölder bound then
+  -- forces `μ t ≤ e^… · 0 ^ ((α - 1) / α) = 0`
   intro s hs
   set t := toMeasurable ν s
   have ht : MeasurableSet t := measurableSet_toMeasurable ν s

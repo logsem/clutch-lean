@@ -12,8 +12,9 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Adaptive randomized response, with the escort law
 
-The program form of `Couplings/Examples/AdaptiveRenyi`: the escort law pays the second round's
-cost on average, giving Rényi budget `log (19/12)` at order `2` rather than `log (9/4)`. -/
+`rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, not the
+worst-case `log (9/4)`, since the escort law pays the second round's cost on average. The program
+form of `Couplings/Examples/AdaptiveRenyi`. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi
 open scoped ENNReal
@@ -21,7 +22,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace RandomizedResponse
 
-/-! ## The two draws -/
+/-! ## The second round: one `rr3` draw at `log (3/2)` -/
 
 /-- The report of `rr3 b` as a function of its draw. -/
 def rr3Out (b : Bool) (r : Int) : Bool := if r < 2 then b else !b
@@ -45,6 +46,8 @@ theorem rr3_coupling :
     rw [map_unifInt_three (d := false) rfl rfl rfl, map_unifInt_three (d := true) rfl rfl rfl]
     exact renyiDivergence_randResp
 
+/-! ## The first round: the escort head at `log (19/12)` -/
+
 /-- The budget handed to the continuation after first draws `n`, `m`: the second round's cost
 `stageTwoCost` of their common report, or `⊤` if the reports differ. -/
 noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
@@ -52,8 +55,8 @@ noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-/-- The first draws, as configurations, form an escort head at `log (19/12)`: condition on the
-reports and use `renyiDivergence_randResp_escort`. -/
+/-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
+cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/
 theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
     (BindLaw.escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))

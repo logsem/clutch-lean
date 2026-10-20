@@ -2,7 +2,10 @@ module
 
 public import Metrology.Micrometer.Interp
 
-/-! Relational contexts and the semantic typing judgement `bin_log_related`. -/
+/-! # The semantic typing judgement
+
+Relational contexts `RelCtx`, related closing substitutions `env_ltyped2`, and the open-term
+judgement `bin_log_related` (`E; Δ; Γ ⊨[L] e ≤log≤ e' : τ`), with its variable-renaming lemma. -/
 
 @[expose] public section
 
@@ -13,7 +16,7 @@ namespace ProbLang
 
 variable {rT : Type}
 
-/-! ## Relational environment typing -/
+/-! ## Relational contexts -/
 
 /-- A relational typing context assigns a logical relation to each variable. -/
 abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
@@ -64,6 +67,8 @@ theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
   | some _ => exact absurd (mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
 
 end RelCtx
+
+/-! ## Related closing substitutions -/
 
 section env_typed
 variable {GF : BundledGFunctors}
@@ -142,6 +147,7 @@ theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
       cases ValSubstMap.lookup rest p.1 <;> simp
     simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
 
+/-- Extend a related substitution by a variable bound to closed related values. -/
 theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
     (v1 v2 : Val rT) (hv1c : v1.1.isClosed .empty) (hv2c : v2.1.isClosed .empty) : iprop%
     A v1 v2 ∗ env_ltyped2 Γ vs ⊢ env_ltyped2 ((x, A) :: Γ) ((x, (v1, v2)) :: vs) := by
@@ -181,6 +187,7 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
       obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa [hvy] using hvs'
       iexact HA
 
+/-- Drop a fresh head variable from both the context and the substitution. -/
 theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var) (A : lrel rT GF)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
     env_ltyped2 ((y, A) :: Γ) vs ⊢ env_ltyped2 Γ (vs.delete y) := by
@@ -229,6 +236,16 @@ noncomputable abbrev bin_log_related_ty (E : CoPset) (Δ : TyEnv rT GF)
     (Γ : RelCtx rT GF) (e e' : Exp rT) (τ : Ty) : IProp GF :=
   bin_log_related L E Γ e e' (interp L τ Δ)
 
+/-- `E; Δ; Γ ⊨[L] e ≤log≤ e' : τ` is `bin_log_related_ty L E Δ Γ e e' τ`. -/
+scoped notation:100 E "; " Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
+  bin_log_related_ty L E Δ Γ e e' τ
+
+/-- `Δ; Γ ⊨[L] e ≤log≤ e' : τ` is the judgement at the full mask `⊤`. -/
+scoped notation:100 Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
+  bin_log_related_ty L (⊤ : CoPset) Δ Γ e e' τ
+
+/-! ## The empty context and renaming -/
+
 /-- At the empty context, the semantic typing judgement is a closed refinement. -/
 theorem bin_log_related_nil_elim {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} :
     bin_log_related L E [] e e' A ⊢ refines L E e e' A := by
@@ -257,6 +274,8 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
     bin_log_related L E ((x, A) :: Γ) τE τE' B ⊢
     bin_log_related L E ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) B := by
+  -- From `vs` related at `(y, A) :: Γ`, build `vs' := (x ↦ vs y) :: vs.delete y`, related at
+  -- `(x, A) :: Γ`; substituting `vs'` into `τE` equals substituting `vs` into `τE[y/x]`.
   unfold bin_log_related
   iintro Hold %vs #Hvs
   have hyHeadLookup : RelCtx.lookup ((y, A) :: Γ) y = some A := by
@@ -280,7 +299,6 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     simp only [List.mem_toFinset, List.mem_map] at h
     obtain ⟨p, hpmem, rfl⟩ := h
     simpa [hvsLookupX] using ValSubstMap.lookup_isSome_of_mem ⟨p.2, hpmem⟩
-  -- substituting vs after renaming x↦y equals substituting (x ↦ vs(y)) :: vs.delete y
   have hswapFst :=
     Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [ValSubstMap.fst_dom])
       (ValSubstMap.proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
@@ -305,13 +323,5 @@ theorem bin_log_related_ty_rename {E : CoPset} {Δ : TyEnv rT GF} {Γ : RelCtx r
   bin_log_related_rename hxy hxNotDom hyNotDom hyFvE hyFvE'
 
 end bin_log_related
-
-/-! ## Notation for the semantic typing judgement -/
-
-scoped notation:100 E "; " Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
-  bin_log_related_ty L E Δ Γ e e' τ
-
-scoped notation:100 Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
-  bin_log_related_ty L (⊤ : CoPset) Δ Γ e e' τ
 
 end ProbLang

@@ -5,7 +5,11 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! The fundamental theorem: every well-typed expression is related to itself. -/
+/-! # The fundamental theorem
+
+Every well-typed expression is related to itself (`fundamental`), by induction
+on typing with one `bin_log_related_*` lemma per rule; `refines_typed` is the closed form.
+-/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -19,28 +23,34 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
+/-! ## Typing contexts as relational contexts -/
+
 variable (L) in
 /-- The typing context `Γtc` is interpreted pointwise as the relational context `Γrc`. -/
 def TctxRelated (Δ : TyEnv rT GF) (Γtc : Tctx) (Γrc : RelCtx rT GF) : Prop :=
   ∀ x, (Γtc x).map (fun τ => interp L τ Δ) = Γrc.lookup x
 
+/-- A variable typed in `Γtc` is bound in `Γrc`. -/
 theorem TctxRelated.lookup_isSome {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {x : Var} (hx : (Γtc x).isSome) : (Γrc.lookup x).isSome := by
   rw [← HCtx x]
   simpa using hx
 
+/-- A variable of type `τ` in `Γtc` maps to `interp L τ Δ` in `Γrc`. -/
 theorem TctxRelated.lookup_some {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {x : Var} {τ : Ty} (hx : Γtc x = some τ) :
     Γrc.lookup x = some (interp L τ Δ) := by
   rw [← HCtx x, hx]
   rfl
 
+/-- Relatedness survives entering a type binder: shift `Γtc` and extend `Δ` by `A`. -/
 theorem TctxRelated.shift {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) (A : lrel rT GF) :
     TctxRelated L (TyEnv.cons A Δ) Γtc.shift Γrc := by
   intro x
   simpa [Tctx.shift, Option.map_map, Function.comp_def, interp_ren] using HCtx x
 
+/-- Relatedness survives binding a fresh term variable `x : τ` on both sides. -/
 theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
     TctxRelated L Δ (Γtc.insert x τ) ((x, interp L τ Δ) :: Γrc) := by
@@ -51,11 +61,13 @@ theorem TctxRelated.insert {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF
   · rw [Tctx.insert, ite_eq_right hyx, RelCtx.lookup_cons, ← HCtx y]
     cases Γtc y <;> simp [hyx]
 
+/-- The free variables of a term typed in `Γtc` lie in the domain of `Γrc`. -/
 theorem fv_subset_relCtxDom {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset :=
   fun x hx => RelCtx.mem_of_lookup_isSome (HCtx.lookup_isSome (Hty.fvSubset x hx))
 
+/-- The same for the body of a binder typed cofinitely: pick one fresh `y` and drop it again. -/
 theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF}
     (HCtx : TctxRelated L Δ Γtc Γrc) {S : Finset Var} {e : Exp rT} {τ1 τ2 : Ty}
     (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
@@ -67,6 +79,8 @@ theorem fv_subset_of_cofinite {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT
     (Hbody y hy.1.1) (fv_subset_open e y hz)
   simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert] at hzdom
   exact hzdom.resolve_left fun h => hy.2 h.symm
+
+/-! ## The fundamental theorem -/
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
@@ -121,6 +135,8 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
   | tunfold _ ih => iapply bin_log_related_unfold $$ %(ih Δ Γrc HCtx)
   | tapp _ ih => iapply bin_log_related_tapp $$ %(ih Δ Γrc HCtx)
   | tpack _ ih => iapply bin_log_related_pack $$ %(ih Δ Γrc HCtx)
+  -- Binder cases: enlarge the cofinite set to `S ∪ dom Γrc`, so the fresh variable is also
+  -- fresh for `Γrc` and `HCtx.insert` applies.
   | @lam S _ e τ1 τ2 Hbody ih =>
     let S' : Finset Var := S ∪ (Γrc.map (·.1)).toFinset
     have he_fv := fv_subset_of_cofinite HCtx Hbody

@@ -4,10 +4,10 @@ public import Metrology.Couplings.Divergences.DpShapes
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 public import Metrology.Couplings.Divergences.RenyiFiber
 
-/-! # More bind laws
+/-! # Adaptive bind laws
 
-Adaptive and choice DP composition, and escort-adaptive Rényi composition
-(Rocq `instances_dp.v`). -/
+Bind laws beyond `BindLaw.canonical`: adaptive DP (`dpRhs`, `dpLhs`), DP choice (`dpChoice`) and
+escort-adaptive Rényi (`escort α`), each sound by a codensity lemma (Rocq `instances_dp.v`). -/
 
 @[expose] public section
 
@@ -87,9 +87,8 @@ noncomputable def dpLhs : BindLaw (codensity dp.{u}) where
     simpa [Set.piecewise_eq_of_mem _ _ _ hx] using hR x y hxy
   side_supp _ := trivial
 
-/-- The left-keyed head shifts: the extra slack `c₂` is folded into `D`, costing at most `c₂`
-because `μ` has mass at most one. Instance of Rocq `gbl_head_shift`, which Rocq does not prove for
-this law. -/
+/-- The left-keyed head shifts: the extra slack `c₂` folds into `D` and costs at most `c₂`, since
+`μ` has mass at most one (Rocq `gbl_head_shift`, not proved there for this law). -/
 instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
   shift := by
     rintro _ _ _ _ _ ⟨c₁, c₂⟩ _ μ _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩
@@ -231,6 +230,8 @@ instance headShift_escort (α : ℝ) [hα : Fact (1 < α)] : (escort.{u} α).Hea
 
 end GradedLifting.BindLaw
 
+/-! ## Escort heads from finite-output mechanisms -/
+
 namespace GradedDivergence
 
 variable {X Y Z : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace Z]
@@ -238,10 +239,9 @@ variable {X Y Z : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpa
   {ν : Measure Y} {α : ℝ} {ρ : ℝ≥0∞} [Fact (1 < α)] [IsSubProbabilityMeasure μ]
   [IsSubProbabilityMeasure ν]
 
-/-- A Rényi bound between the image of `μ` and the image of `ν` reweighted by `e^{-ρ₂}` gives an
-escort head on equal images inside supports `A` and `T`, continuing at `ρ₂` of the image. How
-finite-output mechanisms build an `EscortHead`; used by Micrometer's adaptive randomized
-response. -/
+/-- A Rényi bound between the images of `μ` and of `ν` reweighted by `e^{-ρ₂}` gives an escort
+head relating equal images inside supports `A` and `T`, continuing at `ρ₂` of the image (used by
+adaptive randomized response). -/
 theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T : Set Y}
     (hA : MeasurableSet A) (hT : MeasurableSet T) (hμA : μ Aᶜ = 0) (hνT : ν Tᶜ = 0)
     (ρ₂ : Z → ℝ≥0∞) {R : X → Y → ℝ≥0∞}
@@ -249,6 +249,7 @@ theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T
     (h : renyiDivergence α ρ (μ.map f) ((ν.map g).withDensity fun z ↦ (expBudget (ρ₂ z))⁻¹)) :
     BindLaw.EscortHead α μ ν R ρ := by
   classical
+  -- the witness kernel sends `y ∈ T` to `μ` conditioned on the fibre `f x = g y`
   refine ⟨fun x y ↦ y ∈ T ∧ f x = g y, fun x ↦ ρ₂ (f x),
     Kernel.piecewise hT ((fiberCond μ f).comap g hg) 0, A, inferInstance, by fun_prop, hA, hμA,
     inferInstance, inferInstance, fun y ↦ ?_, fun x y hx ⟨hy, hxy⟩ ↦ hR x y hx hy hxy, ?_⟩
@@ -256,6 +257,8 @@ theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T
     · simpa [Kernel.piecewise_apply, hy, fiberCond_apply] using
         ae_cond_mem (μ := μ) (hf (measurableSet_singleton (g y)))
     · simp [Kernel.piecewise_apply, hy]
+  -- the witness applied to `ν` is the fibre conditional applied to the reweighted image of `ν`,
+  -- so composing the image bound `h` with the fibre conditional gives the bound on `X`
   · rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hνT),
       Kernel.comap_comp_eq_comp_map _ hg,
       fiberCond_comp_withDensity hf (w := fun z ↦ (expBudget (ρ₂ z))⁻¹)]

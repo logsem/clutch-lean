@@ -5,10 +5,10 @@ public import Mathlib.MeasureTheory.Integral.Layercake
 public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
 public import Metrology.Couplings.Codensity
 
-/-! `(ε, δ)`-differential privacy as a graded divergence (Approximate Span Liftings, §4.3).
-Main results: DP composes along kernels (`Bound.bind`, `isComposable_dp`), and the DP codensity
-lifting is decided by `[0, 1]`-valued test functions (`codensity_dp_iff`,
-`codensity_dp_rel_iff`). -/
+/-! # The DP divergence
+`dp (ε, δ)` is the DP inequality `μ S ≤ e^ε ν S + δ` on every event (paper §4.3). Main results:
+DP composition `isComposable_dp` and the test-function forms `codensity_dp_iff` and
+`codensity_dp_rel_iff`. -/
 
 @[expose] public section
 
@@ -46,7 +46,7 @@ theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (�
     (tendsto_ofReal ((continuous_exp.tendsto e₀).comp he))
     (.inl (ofReal_pos.2 (exp_pos _)).ne')).add_const δ) fun n ↦ h n S hS
 
-/-- Increasing the parameters `c` and `δ` preserves the `(c, δ)` DP bound between `μ` and `ν`. -/
+/-- A DP bound is monotone in the multiplier and the slack. -/
 theorem Bound.mono (h : Bound c δ μ ν) (hc : c ≤ c') (hδ : δ ≤ δ') : Bound c' δ' μ ν :=
   fun S hS ↦ (h S hS).trans (by gcongr)
 
@@ -57,6 +57,8 @@ theorem Bound.zero_left (c δ : ℝ≥0∞) (ν : Measure X) : Bound c δ 0 ν :
 theorem Bound.map (h : Bound c δ μ ν) {f : X → Y} (hf : Measurable f := by fun_prop) :
     Bound c δ (μ.map f) (ν.map f) := fun S hS ↦ by
   simpa only [map_apply hf hS] using h _ (hf hS)
+
+/-! ## From events to `[0, 1]`-valued test functions -/
 
 /-- A function bounded by `1` has an empty strict superlevel set above height `1`. -/
 theorem setOf_lt_toReal_eq_empty {f : X → ℝ≥0∞} (hf1 : ∀ x, f x ≤ 1) {t : ℝ} (ht : 1 < t) :
@@ -78,6 +80,8 @@ theorem Bound.lintegral_le (h : Bound c δ μ ν) {f : X → ℝ≥0∞} (hf : M
   have hanti : Measurable fun t : ℝ ↦ ν {x | t < (f x).toReal} :=
     Antitone.measurable fun s t hst ↦ measure_mono fun x (hx : t < _) ↦ hst.trans_lt hx
   rw [hcake μ, hcake ν, ← lintegral_const_mul _ hanti]
+  -- apply the DP inequality to each superlevel set; above level `1` they are empty, so `δ` is
+  -- paid only on `(0, 1]`
   calc ∫⁻ t in Ioi 0, μ {x | t < (f x).toReal}
       ≤ ∫⁻ t in Ioi 0, (c * ν {x | t < (f x).toReal} + (Iic 1).indicator (fun _ ↦ δ) t) := by
         refine lintegral_mono fun t ↦ ?_
@@ -97,6 +101,8 @@ theorem Bound.apply_le_min_add [IsSubProbabilityMeasure μ] (h : Bound c δ μ �
   · rw [min_eq_right h']; exact h S hS
   · rw [min_eq_left h']; exact (IsSubProbabilityMeasure.measure_le_one S).trans le_self_add
 
+/-! ## Composition and group privacy -/
+
 /-- DP inequalities compose along kernels (DP composition). -/
 theorem Bound.bind {c₁ c₂ δ₁ δ₂ : ℝ≥0∞} {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
     (h₁ : Bound c₁ δ₁ μ₁ μ₂) {f g : X → Measure Y} (hf : Measurable f) (hg : Measurable g)
@@ -105,6 +111,7 @@ theorem Bound.bind {c₁ c₂ δ₁ δ₂ : ℝ≥0∞} {μ₁ μ₂ : Measure X
   intro S hS
   have hgS : Measurable fun x ↦ g x S := (measurable_coe hS).comp hg
   rw [bind_apply hS hf.aemeasurable, bind_apply hS hg.aemeasurable]
+  -- truncate the inner bound at `1` so that the outer bound applies to it as a test function
   calc ∫⁻ x, f x S ∂μ₁
       ≤ ∫⁻ x, min 1 (c₂ * g x S) + δ₂ ∂μ₁ :=
         lintegral_mono fun x ↦ Bound.apply_le_min_add (h₂ x) hS
@@ -173,7 +180,7 @@ theorem measurable_expBudget : Measurable expBudget :=
 theorem expBudget_le_expBudget (h : ε ≤ ε') : expBudget ε ≤ expBudget ε' :=
   expBudget_mono h
 
-/-- The exponential budget is multiplicative: `expBudget (ε + ε') = expBudget ε * expBudget ε'`. -/
+/-- `e^ε` turns budget addition into multiplication. -/
 theorem expBudget_add (ε ε' : ℝ≥0∞) : expBudget (ε + ε') = expBudget ε * expBudget ε' := by
   simp [expBudget, EReal.coe_ennreal_add, EReal.exp_add]
 
@@ -188,7 +195,7 @@ theorem expBudget_rpow {p : ℝ} (hp : 0 < p) (ε : ℝ≥0∞) :
 
 end expBudget
 
-/-! ## The DP divergence -/
+/-! ## The DP divergence `dp` -/
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {ε ε' δ : ℝ≥0∞}
 
@@ -200,8 +207,8 @@ variable {b : ℝ≥0∞ × ℝ≥0∞} {μ ν : Measure X}
 noncomputable def dp : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   fun b _ _ μ ν ↦ b.1 < ⊤ → Bound (expBudget b.1) b.2 μ ν
 
-/-- `(ε, δ)`-differential privacy for finite `ε` is the inequality `μ S ≤ exp ε * ν S + δ` on
-every measurable set `S`. -/
+/-- For finite `ε`, `dp (ε, δ)` is the inequality `μ S ≤ exp ε * ν S + δ` on every measurable
+set `S`. -/
 theorem dp_iff (hε : ε ≠ ⊤) :
     dp (ε, δ) μ ν ↔ ∀ S, MeasurableSet S → μ S ≤ expBudget ε * ν S + δ :=
   ⟨fun h ↦ h hε.lt_top, fun h _ ↦ h⟩
@@ -233,6 +240,7 @@ theorem dp_smul_dirac_iff {a a' : ℝ≥0∞} :
 /-- DP at every larger multiplier is DP at the multiplier. -/
 theorem dp_of_forall_gt_left (h : ∀ ε', ε < ε' → dp (ε', δ) μ ν) : dp (ε, δ) μ ν := by
   intro (hε : ε < ⊤)
+  -- approach `ε` from above by `ε + 1/(n+1)` and pass to the limit with `Bound.of_tendsto`
   have key (n : ℕ) : Bound (ENNReal.ofReal (exp (ε.toReal + 1 / (n + 1)))) δ μ ν := by
     have hfin := add_lt_top.2 ⟨hε, ofReal_lt_top (r := 1 / (n + 1))⟩
     have : Bound (expBudget (ε + ENNReal.ofReal (1 / (n + 1)))) δ μ ν :=
@@ -261,7 +269,7 @@ theorem dp_trans {μ₁ μ₂ μ₃ : Measure X} {ε₁ ε₂ δ₁ δ₂ : ℝ�
   obtain ⟨h₁', h₂'⟩ := add_lt_top.1 h
   simpa only [expBudget_add] using (h₁ h₁').trans (h₂ h₂')
 
-/-! ## Instances -/
+/-! ## Class instances for `dp` -/
 
 /-- DP is a graded divergence: monotone in the budget, trivial at `⊤`. -/
 instance isGraded_dp : dp.{u}.IsGraded where
@@ -320,19 +328,15 @@ instance isMassDetecting_dp : dp.{u}.IsMassDetecting dpSlack where
 
 end dp
 
-/-! ## The DP codensity lifting -/
+/-! ## The DP codensity lifting: test-function form -/
 
 variable {μ : Measure X} {ν : Measure Y} {R : X → Y → ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop}
 
-/-- With infinite multiplicative budget, the `(ε, δ)`-DP codensity holds for any `δ`. -/
+/-- The DP codensity lifting holds vacuously at `ε = ⊤`. -/
 theorem codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν := by
   intro I _ c _ k l _ _ _ hε
   -- the guard `(⊤ + c).1 < ⊤` is false
   simp at hε
-
-/-- The codensity of the DP divergence absorbs any grade with first component `⊤`. -/
-theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ) :=
-  fun _ _ _ _ _ ↦ codensity_dp_top_left
 
 /-- A DP codensity lifting bounds `∫⁻ f ∂μ` by `expBudget ε * ∫⁻ g ∂ν + δ` for `[0, 1]`-valued
 test functions. Proof: test with the mass kernels `x ↦ f x • δ_*`, `y ↦ g y • δ_*` into a point, at
@@ -409,6 +413,8 @@ theorem codensity_dp_rel_iff [IsSubProbabilityMeasure μ] (hε : ε ≠ ⊤) :
     forall₂_congr fun x y ↦ ?_
   by_cases hS : S x y <;> simp [hS]
 
+/-! ## Event bounds from a DP lifting -/
+
 /-- On pairs of finite cost related by `S`, the indicator of `T` is bounded by the cost-weighted
 indicator of `T'`, plus the additive cost. -/
 theorem indicator_le_relCost {S : X → Y → Prop} {T : Set X} {T' : Set Y}
@@ -451,6 +457,12 @@ theorem codensity_dp_of_fiber {Z : Type*} [MeasurableSpace Z] [Countable Z]
           map_apply hg (measurableSet_singleton _), ← ENNReal.tsum_mul_left, mul_left_comm]
     _ ≤ expBudget ε * ∫⁻ y, h₂ y ∂ν + 0 := by
         rw [add_zero]; gcongr with y; exact biInf_le h₂ rfl
+
+/-! ## Absorbing budgets -/
+
+/-- The DP codensity lifting absorbs every budget with `ε = ⊤`. -/
+theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ) :=
+  fun _ _ _ _ _ ↦ codensity_dp_top_left
 
 /-- Slack `1` relates every pair of sub-probability measures. -/
 theorem absorbing_codensity_dp : (codensity dp.{u}).Absorbing (0, 1) :=

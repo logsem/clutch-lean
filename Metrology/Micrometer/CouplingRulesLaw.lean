@@ -4,13 +4,15 @@ public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.BindLaws
 import Metrology.ProbLang.Syntax.Notation
 
+/-! # Law-driven `rand` couplings
+
+`wp_couple_rand_rand_law` couples `rand N ~ K[rand N]` by any bind law with `HeadShift`, leaving
+`R n m` at the draws (`refines` form: tactic `rel_couple_UU_law`); DP choice is an instance. -/
+
 @[expose] public section
 
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
-
-/-! Coupling `rand N ~ rand N` by any bind law whose heads shift, in `wp` and in `refines` (with
-tactic `rel_couple_UU_law`); DP choice is an instance. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -19,10 +21,12 @@ namespace ProbLang
 
 variable {rT : Type} {B : Type}
 
+/-! ## The leftover of two draws -/
+
 open Classical in
 /-- The leftover of the draws `rand N ~ K[rand N]` from `σ` and `σ'`: `R n m` at the
-configurations drawn as `n` and `m`, and `⊤` elsewhere. Unlike `Cfg.advLeftover`, which is keyed
-by the left draw along a bijection, this is keyed by both draws. -/
+configurations drawn as `n` and `m`, and `⊤` elsewhere (keyed by both draws, unlike
+`Cfg.advLeftover`). -/
 noncomputable def Cfg.drawCost [_root_.Top B] (σ σ' : State rT) (K : Ectx rT)
     (R : Int → Int → B) (ρ ρ' : Cfg rT) : B :=
   if h : ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ then
@@ -51,6 +55,8 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
     ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ := by
   by_contra hne
   simp only [Cfg.drawCost, hne, dite_false, lt_self_iff_false] at h
+
+/-! ## The law-driven rule -/
 
 section Law
 
@@ -103,6 +109,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
       MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
         (Ectx.fillCfg.measurable K) Measurable.of_discrete]
     exact hhead σ₁ σ₁'
+  -- couple the two prim steps by `law`, with the head at `c` shifted by the remainder `r`
   iapply progCoupl_steps_spend_law law hr.ge hrTop (randUnit_uniform_step HN σ₁).1.toReducible
     ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hheadStep
     (.of_forall fun k₁ k₂ ↦ hside _ _ _ k₁ k₂)
@@ -112,6 +119,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h2
   rw [Cfg.drawCost_apply] at hR ⊢
+  -- hand the leftover `R n m` back as a fresh credit and continue with the drawn values
   iintro !> !>
   iapply specCoupl_ret
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
@@ -216,12 +224,15 @@ theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State
     inferInstance, inferInstance,
     h₁.map (fun n m h ↦ ⟨n, m, h, rfl, rfl⟩) .of_discrete .of_discrete,
     h₂.map (fun n m h ↦ ⟨n, m, h, rfl, rfl⟩) .of_discrete .of_discrete, ?_, ?_, ?_, ?_, le_rfl⟩
+  -- `S₁` keeps `P` inside `T`
   · rintro _ _ ⟨n, hn, rfl⟩ ⟨n', m, hS, hn', rfl⟩
     obtain rfl := hlft hn'
     exact ⟨m, hPT₁ _ _ hn hS, rfl⟩
+  -- `S₂` keeps the complement of `P` outside `T`
   · rintro _ _ hn ⟨n, m, hS, rfl, rfl⟩ ⟨m', hm', hmm⟩
     obtain rfl := hrgt hmm
     exact hPT₂ _ _ (fun h ↦ hn ⟨n, h, rfl⟩) hS hm'
+  -- the leftover is `(ε₂, δ₂)` on `P` and `(ε₂', δ₂)` off it
   · rintro _ _ ⟨n, hn, rfl⟩ ⟨n', m, hS, hn', rfl⟩
     obtain rfl := hlft hn'
     rw [hcost (.inl hS), choiceBudget, ite_eq_left hn]

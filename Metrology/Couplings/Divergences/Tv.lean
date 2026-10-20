@@ -2,7 +2,10 @@ module
 
 public import Metrology.Couplings.Divergences.Dp
 
-/-! One-sided total variation as a graded divergence: DP at multiplier `1`. -/
+/-! # One-sided total variation
+
+`tv δ` is DP at multiplier `1` (`μ S ≤ ν S + δ` on events), with all its divergence classes. Its
+codensity lifting is decided by `[0, 1]`-valued test functions (`codensity_tv_iff`). -/
 
 @[expose] public section
 
@@ -14,6 +17,8 @@ open scoped ENNReal
 namespace GradedDivergence
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
+
+/-! ## The divergence -/
 
 /-- One-sided total variation within `δ`: every event gains at most `δ` from `ν` to `μ`. -/
 noncomputable def tv : GradedDivergence.{u} ℝ≥0∞ :=
@@ -28,13 +33,7 @@ theorem tv_smul_dirac_iff {a a' : ℝ≥0∞} :
     tv δ (a • dirac PUnit.unit.{u + 1}) (a' • dirac PUnit.unit) ↔ a ≤ a' + δ := by
   simp [tv, dp_smul_dirac_iff]
 
-omit [MeasurableSpace X] [MeasurableSpace Y] in
-/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
-theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
-    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
-  by_cases hS : S x y <;> simp [hS]
-
-/-! ## Instances -/
+/-! ## Divergence classes -/
 
 instance isGraded_tv : tv.{u}.IsGraded where
   mono _ _ hb := IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, hb⟩)
@@ -74,14 +73,16 @@ section Codensity
 
 variable {μ : Measure X} {ν : Measure Y} {E : X → Y → ℝ≥0∞} {S : X → Y → Prop}
 
+/-! ### Test-function form -/
+
 /-- A total variation lifting with leftover `E` bounds `∫ f dμ ≤ ∫ g dν + δ` for `[0, 1]`-valued
-`f`, `g` with `f x ≤ g y + E x y`. Proof: test into a point with the mass kernels of `f` and `g`
-at slack `0`. -/
+`f`, `g` with `f x ≤ g y + E x y`. -/
 theorem lintegral_le_of_codensity_tv (h : tv.codensity δ E μ ν) {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞}
     (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1) (hg1 : ∀ y, g y ≤ 1)
     (hfg : ∀ x y, f x ≤ g y + E x y) : ∫⁻ x, f x ∂μ ≤ ∫⁻ y, g y ∂ν + δ := by
   rcases eq_or_ne δ ⊤ with rfl | hδ
   · simp
+  -- test into a point with the mass kernels of `f` and `g`, at slack `0`
   have := Kernel.isSubMarkovKernel_mass.{u} hf hf1
   have := Kernel.isSubMarkovKernel_mass.{u} hg hg1
   have hc := h (c := 0) (k := Kernel.mass.{u} hf) (l := Kernel.mass.{u} hg)
@@ -90,7 +91,7 @@ theorem lintegral_le_of_codensity_tv (h : tv.codensity δ E μ ν) {f : X → �
   simpa [Kernel.mass_comp, tv_smul_dirac_iff] using hc
 
 /-- `[0, 1]`-valued test functions that the leftover relates give a total variation codensity
-lifting: a test passed with slack `c` becomes a test function once `c` is cut off. -/
+lifting. -/
 theorem codensity_tv_of_lintegral_le [IsSubProbabilityMeasure μ]
     (h : ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) → (∀ y, g y ≤ 1) →
       (∀ x y, f x ≤ g y + E x y) → ∫⁻ x, f x ∂μ ≤ ∫⁻ y, g y ∂ν + δ) :
@@ -98,6 +99,7 @@ theorem codensity_tv_of_lintegral_le [IsSubProbabilityMeasure μ]
   intro I _ c _ k l _ _ hkl
   refine tv_iff.2 fun S hS ↦ ?_
   have hkS := k.measurable_coe hS
+  -- the test's event masses, with the slack `c` cut off on the left, form a pair of test functions
   have hfg := h (fun x ↦ k x S - c) (fun y ↦ l y S) (hkS.sub measurable_const)
     (l.measurable_coe hS) (fun _ ↦ tsub_le_self.trans (IsSubProbabilityMeasure.measure_le_one S))
     (fun _ ↦ IsSubProbabilityMeasure.measure_le_one S)
@@ -135,6 +137,29 @@ instance isExpectationAdditive_codensity_tv :
           rw [lintegral_add_right _ hc]
           ring
 
+/-! ### Comparison with DP -/
+
+omit [MeasurableSpace X] [MeasurableSpace Y] in
+/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
+theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
+    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
+  by_cases hS : S x y <;> simp [hS]
+
+/-- Total variation liftings are DP liftings at multiplier `1`, with each leftover `e` read as the
+DP leftover `dpSlack e = (0, e)`. -/
+theorem codensity_tv_iff_dp [IsSubProbabilityMeasure μ] :
+    tv.codensity δ E μ ν ↔ dp.codensity (0, δ) (fun x y ↦ dpSlack (E x y)) μ ν := by
+  rw [codensity_dp_iff ENNReal.zero_ne_top, codensity_tv_iff]
+  simp
+
+/-- Total variation liftings of a relation are DP liftings at multiplier `1` (Rocq `CM_AR_DP`). -/
+theorem codensity_tv_rel_iff_dp [IsSubProbabilityMeasure μ] :
+    (codensity tv).Rel δ S μ ν ↔ (codensity dp).Rel (0, δ) S μ ν := by
+  rw [codensity_dp_rel_iff ENNReal.zero_ne_top, GradedLifting.Rel, codensity_tv_iff]
+  simp only [expBudget_zero, one_mul, le_add_relCost_iff]
+
+/-! ### Slack `1` is absorbing -/
+
 /-- At slack at least `1`, every sub-probability measure is related to any measure (Rocq
 `ARcoupl_1`). -/
 theorem codensity_tv_of_one_le [IsSubProbabilityMeasure μ] (hδ : 1 ≤ δ) :
@@ -147,6 +172,8 @@ theorem codensity_tv_of_one_le [IsSubProbabilityMeasure μ] (hδ : 1 ≤ δ) :
 /-- Slack `1` relates every pair of sub-probability measures (Rocq `GCFTop_AR`). -/
 theorem absorbing_codensity_tv_one : (codensity tv.{u}).Absorbing 1 :=
   fun _ _ _ _ _ ↦ codensity_tv_of_one_le le_rfl
+
+/-! ### Event bounds -/
 
 /-- A total variation lifting at slack `δ` bounds an event by its image, up to `δ`. -/
 theorem tv_measure_le_add (h : (codensity tv).Rel δ S μ ν) {T : Set X} {T' : Set Y}
@@ -167,19 +194,6 @@ theorem codensity_tv_rel_false_iff :
       (dirac PUnit.unit.{u + 1}) ↔ 1 ≤ δ :=
   ⟨fun h ↦ by simpa using tv_measure_le_add h .univ .empty fun _ _ ↦ False.elim,
     fun h ↦ absorbing_codensity_tv_one.mono h _ _ _⟩
-
-/-- Total variation liftings are DP liftings at multiplier `1`, with each leftover `e` read as the
-DP leftover `dpSlack e = (0, e)`. -/
-theorem codensity_tv_iff_dp [IsSubProbabilityMeasure μ] :
-    tv.codensity δ E μ ν ↔ dp.codensity (0, δ) (fun x y ↦ dpSlack (E x y)) μ ν := by
-  rw [codensity_dp_iff ENNReal.zero_ne_top, codensity_tv_iff]
-  simp
-
-/-- Total variation liftings of a relation are DP liftings at multiplier `1` (Rocq `CM_AR_DP`). -/
-theorem codensity_tv_rel_iff_dp [IsSubProbabilityMeasure μ] :
-    (codensity tv).Rel δ S μ ν ↔ (codensity dp).Rel (0, δ) S μ ν := by
-  rw [codensity_dp_rel_iff ENNReal.zero_ne_top, GradedLifting.Rel, codensity_tv_iff]
-  simp only [expBudget_zero, one_mul, le_add_relCost_iff]
 
 end Codensity
 

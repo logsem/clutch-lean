@@ -2,7 +2,10 @@ module
 
 public import Metrology.Micrometer.Wp
 
-/-! Structural rules of `wp`: bind, spec updates, framing, credits and proof-mode instances. -/
+/-! # Structural rules of `wp`
+
+The usual Iris rules for Micrometer's `wp`: `wp_bind`, absorbing spec updates, framing (also
+across a step), the proof-mode instances, and `wp_of_absorbing` for an absorbing credit. -/
 
 @[expose] public section
 
@@ -19,7 +22,7 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 section Wp
 variable [BudgetGS B GF]
 
-/-! ## WP — structural lemmas -/
+/-! ## Bind and spec updates -/
 
 variable (L) in
 /-- The statement of `wp_bind` at the context `K`, proved by Löb induction. -/
@@ -90,6 +93,7 @@ variable (L) in
 noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
 
+/-- A spec update in the postcondition can be absorbed into the `wp`. -/
 theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     wp L E e (fun v => specUpdate rT E (Φ v)) ⊢ wp L E e Φ := by
@@ -131,7 +135,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
 
-/-! ## WP — framing lemmas -/
+/-! ## Framing -/
 
 variable (L) in
 /-- The statement of `wp_frame_l`, proved by Löb induction. -/
@@ -171,14 +175,18 @@ theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IPr
   iintro ⟨HR, HW⟩
   iapply Hloeb $$ %E %e %R %Φ HR HW
 
+/-- Frame a resource into the postcondition, on the right. -/
 theorem wp_frame_r {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
     iprop% wp L E e Φ ∗ R ⊢ wp L E e fun v => iprop(Φ v ∗ R) :=
   (sep_comm.1.trans wp_frame_l).trans (wp_mono fun _ => sep_comm.1)
 
+/-- A framed resource pays for a wand in the postcondition. -/
 theorem wp_frame_wand {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
     iprop% R ∗ wp L E e (fun v => iprop(R -∗ Φ v)) ⊢ wp L E e Φ :=
   wp_frame_l.trans (wp_mono fun _ => wand_elim_right)
 
+/-- A non-value `e` takes a step, so an update that crosses a later can run around it and hand
+its result to the postcondition. -/
 theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF}
     (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> P) ∗ wp L E2 e (fun v => iprop(P -∗ Φ v)) ⊢ wp L E1 e Φ := by
@@ -209,6 +217,7 @@ theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT �
   iintro !> %v ⟨HP, HWand⟩
   iapply HWand $$ HP
 
+/-- Frame a resource available only after one step into the postcondition. -/
 theorem wp_frame_step_l {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF}
     (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> R) ∗ wp L E2 e Φ ⊢ wp L E1 e fun v => iprop(R ∗ Φ v) := by
@@ -220,6 +229,7 @@ theorem wp_frame_step_l {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val r
   iintro !> %v HΦ HR'
   iframe
 
+/-- Frame a resource available only after one step into the postcondition, on the right. -/
 theorem wp_frame_step_r {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF}
     (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) := by
@@ -230,6 +240,8 @@ theorem wp_frame_step_r {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val r
   iframe HW
   iintro !> %v HΦ HR'
   iframe
+
+/-! ## Proof-mode instances -/
 
 /-- `wp` is closed under `◇`. -/
 instance isExcept0_wp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :

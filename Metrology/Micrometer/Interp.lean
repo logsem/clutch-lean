@@ -6,8 +6,10 @@ public import Metrology.ProbLang.Metatheory
 public import Metrology.ProbLang.ValSubstMap
 public import Metrology.ProbLang.Syntax.Types
 
-/-! Semantic interpretation of types (`interp`), the facts the equality operator needs
-(`eq_type_sound`, `unboxed_type_eq`), and substitution lemmas. -/
+/-! # Interpretation of types
+
+`interp L τ Δ`: each type as a value relation (`lrel`) under a type environment `Δ`, with the
+substitution lemma `interp_subst` and the facts the equality operator needs (`unboxed_type_eq`). -/
 
 @[expose] public section
 
@@ -17,6 +19,8 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 namespace ProbLang
 
 variable {rT : Type}
+
+/-! ## Type environments -/
 
 section TyEnvSetup
 variable {GF : BundledGFunctors}
@@ -49,22 +53,12 @@ theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) 
 
 end TyEnvSetup
 
-/-! ## Unboxed-value predicate -/
-
-/-- Unboxed expressions are literals, possibly under a sum injection. -/
-@[simp] def Exp.isUnboxedV : Exp rT → Prop
-  | .lit _ => True
-  | .inl (.lit _) => True
-  | .inr (.lit _) => True
-  | _ => False
-
-/-- A value is unboxed when its underlying expression is. -/
-@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
-
 section interp
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
+
+/-! ## Interpreting types -/
 
 /-- A non-expansive map from type environments to logical relations. -/
 structure NEFun (rT : Type) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
@@ -135,6 +129,7 @@ variable (L) in
 noncomputable def interp (τ : Ty) (Δ : TyEnv rT GF) : lrel rT GF :=
   (interpNE L τ).fn Δ
 
+/-- `interp` is non-expansive in the type environment. -/
 theorem interp_ne_env (τ : Ty) {n : Nat} {Δ Δ' : TyEnv rT GF} (h : Δ ≡{n}≡ Δ') :
     interp L τ Δ ≡{n}≡ interp L τ Δ' := (interpNE L τ).ne h
 
@@ -172,13 +167,107 @@ theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
       ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
   rfl
 
-/-! ## Closedness of related values -/
-
+/-- Related values are closed. -/
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
     (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
   (interp L τ Δ).closed v v'
 
-/-! ## Soundness of the semantic type interpretation -/
+/-! ## Substitution lemmas -/
+
+/-- The renaming hypothesis for a type body extends under a new relation binder. -/
+theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
+    (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
+      interp L (τ'.rename ξ) Δ = interp L τ' (TyEnv.comp Δ ξ))
+    (X : lrel rT GF) :
+    interp L (τ'.rename (Renaming.under ξ)) (TyEnv.cons X Δ) =
+      interp L τ' (TyEnv.cons X (TyEnv.comp Δ ξ)) :=
+  (ih _ _).trans (congrArg (interp L τ') (TyEnv.comp_upren X Δ ξ).symm)
+
+/-- Renaming a type's variables equals precomposing its environment with the renaming. -/
+theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
+    interp L (τ.rename ξ) Δ = interp L τ (TyEnv.comp Δ ξ) := by
+  induction τ generalizing ξ Δ with
+  | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 ξ Δ) (ih2 ξ Δ)
+  | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 ξ Δ) (ih2 ξ Δ)
+  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 ξ Δ) (ih2 ξ Δ)
+  | ref τ ih => exact congrArg lrel_ref (ih ξ Δ)
+  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
+  -- (OFE.eq_dist) via the constructor's _ne lemma.
+  | rec' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
+  | forall' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_rename_under ih X).dist
+  | exists' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
+  | _ => rfl
+
+/-- Shifting `τ` past a new type variable does not change its interpretation. -/
+theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
+    interp L (Ty.shift τ) (TyEnv.cons X Δ) = interp L τ Δ :=
+  interp_rename τ (· + 1) (TyEnv.cons X Δ)
+
+variable (L) in
+/-- The type environment sending variable `n` to `⟦σ n⟧Δ`. -/
+@[reducible] noncomputable def semSubst (σ : Nat → Ty) (Δ : TyEnv rT GF) : TyEnv rT GF :=
+  fun n => interp L (σ n) Δ
+
+theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
+    ∀ n, semSubst L (up σ) (TyEnv.cons X Δ) n = TyEnv.cons X (semSubst L σ Δ) n
+  | 0 => rfl
+  | k + 1 => interp_ren (σ k) X Δ
+
+/-- The substitution hypothesis for a type body extends under a new relation binder. -/
+theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
+    (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
+      interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
+    (X : lrel rT GF) :
+    interp L (τ'.subst (up σ)) (TyEnv.cons X Δ) = interp L τ' (TyEnv.cons X (semSubst L σ Δ)) :=
+  (ih _ _).trans <| OFE.eq_dist.mpr fun _ => interp_ne_env τ' fun k => (semSubst_up σ X Δ k).dist
+
+/-- Substituting into a type equals interpreting the substitution into the environment. -/
+theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
+    interp L (τ.subst σ) Δ = interp L τ (semSubst L σ Δ) := by
+  induction τ generalizing σ Δ with
+  | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 σ Δ) (ih2 σ Δ)
+  | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 σ Δ) (ih2 σ Δ)
+  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 σ Δ) (ih2 σ Δ)
+  | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
+  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
+  -- (OFE.eq_dist) via the constructor's _ne lemma.
+  | rec' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
+  | forall' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_substG_under ih X).dist
+  | exists' τ' ih =>
+    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
+  | _ => rfl
+
+/-- Substituting `τ'` for the innermost variable interprets it as `⟦τ'⟧Δ`:
+`⟦τ[τ'/0]⟧Δ = ⟦τ⟧(⟦τ'⟧Δ :: Δ)`. -/
+theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
+    interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
+  unfold Ty.single
+  refine (interp_substG τ _ Δ).trans (congrArg (interp L τ) ?_)
+  funext n; cases n <;> rfl
+
+end interp
+
+/-! ## Equality on `EqType` and `UnboxedType` -/
+
+/-- Unboxed expressions are literals, possibly under a sum injection. -/
+@[simp] def Exp.isUnboxedV : Exp rT → Prop
+  | .lit _ => True
+  | .inl (.lit _) => True
+  | .inr (.lit _) => True
+  | _ => False
+
+/-- A value is unboxed when its underlying expression is. -/
+@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
+
+section equality
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+  [BudgetCreditGS B GF]
 
 /-- Related values at an unboxed type are both literals. -/
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
@@ -275,6 +364,7 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
     obtain ⟨l1, l2, rfl, rfl⟩ := hs1
     obtain ⟨r1, r2, rfl, rfl⟩ := hs2
     simp only [Val.ext_iff, Exp.lit.injEq, BaseLit.loc.injEq]
+    -- Locations: `lrel_ref` is functional (same left ⇒ same right) and injective.
     by_cases hl : l1 = r1
     · subst hl
       imod lrel_ref_funct (interp L τ' Δ) l1 l2 r2 CoPset.subseteq_top $$ H1 H2 with %h
@@ -289,81 +379,6 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
         ipureintro
         exact iff_of_false hl hr
 
-/-! ## Substitution lemmas on `interp` -/
-
-/-- The renaming hypothesis for a type body extends under a new relation binder. -/
-theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
-    (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
-      interp L (τ'.rename ξ) Δ = interp L τ' (TyEnv.comp Δ ξ))
-    (X : lrel rT GF) :
-    interp L (τ'.rename (Renaming.under ξ)) (TyEnv.cons X Δ) =
-      interp L τ' (TyEnv.cons X (TyEnv.comp Δ ξ)) :=
-  (ih _ _).trans (congrArg (interp L τ') (TyEnv.comp_upren X Δ ξ).symm)
-
-theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
-    interp L (τ.rename ξ) Δ = interp L τ (TyEnv.comp Δ ξ) := by
-  induction τ generalizing ξ Δ with
-  | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 ξ Δ) (ih2 ξ Δ)
-  | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 ξ Δ) (ih2 ξ Δ)
-  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 ξ Δ) (ih2 ξ Δ)
-  | ref τ ih => exact congrArg lrel_ref (ih ξ Δ)
-  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
-  -- (OFE.eq_dist) via the constructor's _ne lemma.
-  | rec' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
-  | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_rename_under ih X).dist
-  | exists' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
-  | _ => rfl
-
-/-- Shifting `τ` past a new type variable does not change its interpretation. -/
-theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    interp L (Ty.shift τ) (TyEnv.cons X Δ) = interp L τ Δ :=
-  interp_rename τ (· + 1) (TyEnv.cons X Δ)
-
-variable (L) in
-/-- Interpret each type of a substitution in the type environment `Δ`. -/
-@[reducible] noncomputable def semSubst (σ : Nat → Ty) (Δ : TyEnv rT GF) : TyEnv rT GF :=
-  fun n => interp L (σ n) Δ
-
-theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    ∀ n, semSubst L (up σ) (TyEnv.cons X Δ) n = TyEnv.cons X (semSubst L σ Δ) n
-  | 0 => rfl
-  | k + 1 => interp_ren (σ k) X Δ
-
-/-- The substitution hypothesis for a type body extends under a new relation binder. -/
-theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
-    (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
-      interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
-    (X : lrel rT GF) :
-    interp L (τ'.subst (up σ)) (TyEnv.cons X Δ) = interp L τ' (TyEnv.cons X (semSubst L σ Δ)) :=
-  (ih _ _).trans <| OFE.eq_dist.mpr fun _ => interp_ne_env τ' fun k => (semSubst_up σ X Δ k).dist
-
-theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
-    interp L (τ.subst σ) Δ = interp L τ (semSubst L σ Δ) := by
-  induction τ generalizing σ Δ with
-  | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 σ Δ) (ih2 σ Δ)
-  | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 σ Δ) (ih2 σ Δ)
-  | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 σ Δ) (ih2 σ Δ)
-  | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
-  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
-  -- (OFE.eq_dist) via the constructor's _ne lemma.
-  | rec' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
-  | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_substG_under ih X).dist
-  | exists' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
-  | _ => rfl
-
-/-- `⟦τ[τ'/0]⟧Δ = ⟦τ⟧(⟦τ'⟧Δ :: Δ)`. -/
-theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
-    interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
-  unfold Ty.single
-  refine (interp_substG τ _ Δ).trans (congrArg (interp L τ) ?_)
-  funext n; cases n <;> rfl
-
-end interp
+end equality
 
 end ProbLang

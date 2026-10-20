@@ -8,10 +8,10 @@ import Mathlib.Algebra.Regular.Prod
 
 @[expose] public section
 
-/-! # Approximate DP: randomized response that leaks its input with probability `1/N`
+/-! # LeakyRR: spending `δ`
 
-Avoiding the leak costs `↯b (0, 1/N)`, paid in `δ` because no factor bounds an outright release;
-randomized response then spends `↯b (ln 3, 0)`. -/
+Randomized response that leaks its input with probability `1/N` is `(ln 3, 1/N)`-DP (`leakyRR_DP`).
+No factor bounds the leak, so avoiding it costs `↯b (0, 1/N)`; `rr` costs `↯b (ln 3, 0)`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity codensity_dp_avoid)
@@ -29,11 +29,12 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N) (b b' : Bool) :
     ⊢@{IProp GF} ↯b (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[codensity dp] (leakyRR (rT := rT) N b) << leakyRR N b' : lrel_bool := by
-  -- `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
+  -- split the budget: `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
   rw [show (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) =
     (0, (N.toNat : ℝ≥0∞)⁻¹) + RandomizedResponse.budget by simp]
   iintro Hb
   ihave ⟨Hδ, Hε⟩ := BudgetCredit.split $$ Hb
+  -- couple the two draws along "equal and not `0`" at `(0, μ{0}) = (0, 1/N)`
   rel_couple_UU_spend (fun r r' ↦ r = r' ∧ r ∉ ({0} : Set Int)) (0, (N.toNat : ℝ≥0∞)⁻¹)
     (by simp [hN]) (unifInt_singleton_zero hN ▸ codensity_dp_avoid _ (.singleton 0))
   iframe Hδ

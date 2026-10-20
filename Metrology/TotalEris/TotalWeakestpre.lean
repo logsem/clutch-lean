@@ -9,8 +9,7 @@ public import Iris.ProofMode.InstancesUpdates
 # Total weakest precondition
 
 `tglWp` (Eris `tgl_wp`): total weakest precondition over the error-graded modality `glm'`, with
-value, bind, monotonicity and frame rules. Micrometer does not use it; it reaches Micrometer's
-imports only through `WpTactics`.
+value, bind, monotonicity and frame rules. Micrometer does not use it.
 -/
 
 @[expose] public section

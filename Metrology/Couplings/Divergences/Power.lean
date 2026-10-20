@@ -2,8 +2,11 @@ module
 
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! Power divergences and their order-2 case χ², as regradings of the Rényi divergence (Rocq
-`regrade.v`). -/
+/-! # Power and χ² divergences
+
+Power budgets (`ℝ≥0∞` with `a + b + a b`), and power/χ² divergences and liftings as Rényi
+regradings along `toRenyi`; main results `powerLifting_bind`, `chi2Lifting_bind` (Rocq `regrade.v`).
+-/
 
 @[expose] public section
 
@@ -84,6 +87,29 @@ noncomputable instance instAddCommMonoid : AddCommMonoid PowerBudget where
   add_comm a b := toENNReal.injective <| by simp only [toENNReal_add]; ring
   nsmul := nsmulRec
 
+/-- Composing power budgets is monotone. -/
+instance instIsOrderedAddMonoid : IsOrderedAddMonoid PowerBudget where
+  add_le_add_left a b h c := toENNReal.le_iff_le.1 <| by
+    have h := toENNReal.monotone h
+    simp only [toENNReal_add]
+    gcongr
+
+/-- Every larger power budget is reached by adding `(b - a) / (1 + a)`. -/
+instance instCanonicallyOrderedAdd : CanonicallyOrderedAdd PowerBudget where
+  exists_add_of_le {a b} h := by
+    refine ⟨ofENNReal ((toENNReal b - toENNReal a) / (1 + toENNReal a)), toENNReal.injective ?_⟩
+    have h := toENNReal.monotone h
+    rcases eq_or_ne (toENNReal a) ⊤ with ha | ha
+    · simp_all
+    rw [toENNReal_add, toENNReal_ofENNReal, add_assoc, ← one_add_mul,
+      ENNReal.mul_div_cancel (by simp) (by simpa using ha), add_tsub_cancel_of_le h]
+  le_add_self a b := toENNReal.le_iff_le.1 <| by
+    simpa only [toENNReal_add, add_assoc, add_comm (toENNReal b)] using le_self_add
+  le_self_add a b := toENNReal.le_iff_le.1 <| by
+    simpa only [toENNReal_add, add_assoc] using le_self_add
+
+/-! ## Composing a budget `k` times, and cancellation -/
+
 /-- `k` composed budgets `c` multiply `1 + c` out `k` times. -/
 theorem one_add_toENNReal_nsmul (k : ℕ) (c : PowerBudget) :
     1 + toENNReal (k • c) = (1 + toENNReal c) ^ k := by
@@ -112,6 +138,7 @@ noncomputable def ofReal (c : ℝ) : PowerBudget :=
 theorem toENNReal_ofReal (c : ℝ) : toENNReal (ofReal c) = ENNReal.ofReal c :=
   rfl
 
+/-- Real power budgets cancel on the left. -/
 theorem isAddLeftRegular_ofReal (c : ℝ) : IsAddLeftRegular (ofReal c) :=
   isAddLeftRegular_of_ne_top (by simp)
 
@@ -121,27 +148,6 @@ theorem nsmul_ofReal {c : ℝ} (hc : 0 ≤ c) (k : ℕ) : k • ofReal c = ofRea
   rw [toENNReal_ofReal, ENNReal.ofReal_sub _ zero_le_one, ENNReal.ofReal_pow (by positivity),
     ENNReal.ofReal_add zero_le_one hc, ENNReal.ofReal_one, ← toENNReal_ofReal c,
     ← one_add_toENNReal_nsmul, ENNReal.add_sub_cancel_left ENNReal.one_ne_top]
-
-/-- Composing power budgets is monotone. -/
-instance instIsOrderedAddMonoid : IsOrderedAddMonoid PowerBudget where
-  add_le_add_left a b h c := toENNReal.le_iff_le.1 <| by
-    have h := toENNReal.monotone h
-    simp only [toENNReal_add]
-    gcongr
-
-/-- Every larger power budget is reached by adding `(b - a) / (1 + a)`. -/
-instance instCanonicallyOrderedAdd : CanonicallyOrderedAdd PowerBudget where
-  exists_add_of_le {a b} h := by
-    refine ⟨ofENNReal ((toENNReal b - toENNReal a) / (1 + toENNReal a)), toENNReal.injective ?_⟩
-    have h := toENNReal.monotone h
-    rcases eq_or_ne (toENNReal a) ⊤ with ha | ha
-    · simp_all
-    rw [toENNReal_add, toENNReal_ofENNReal, add_assoc, ← one_add_mul,
-      ENNReal.mul_div_cancel (by simp) (by simpa using ha), add_tsub_cancel_of_le h]
-  le_add_self a b := toENNReal.le_iff_le.1 <| by
-    simpa only [toENNReal_add, add_assoc, add_comm (toENNReal b)] using le_self_add
-  le_self_add a b := toENNReal.le_iff_le.1 <| by
-    simpa only [toENNReal_add, add_assoc] using le_self_add
 
 /-! ## Log coordinates -/
 
@@ -210,6 +216,7 @@ theorem toRenyi_lt_top (hα : 1 < α) (hc : c < ⊤) : toRenyi α c < ⊤ :=
   ENNReal.mul_lt_top (ENNReal.inv_lt_top.2 (by simpa using hα))
     (map_top log ▸ log.strictMono hc)
 
+/-- At order `2` the Rényi budget is `log (1 + c)` itself. -/
 theorem toRenyi_two (c : PowerBudget) : toRenyi 2 c = log c := by
   norm_num [toRenyi]
 
@@ -262,6 +269,7 @@ theorem chi2Divergence_iff_renyi : chi2Divergence c μ ν ↔ renyiDivergence 2 
   rw [← toRenyi_two]
   rfl
 
+/-- A χ² bound is the second-moment bound `∫ (dμ/dν)² dν ≤ 1 + c`. -/
 theorem chi2Divergence_iff :
     chi2Divergence c μ ν ↔ fDiv (· ^ (2 : ℝ)) μ ν ≤ ((1 + toENNReal c : ℝ≥0∞) : EReal) :=
   powerDivergence_iff one_lt_two
@@ -272,7 +280,7 @@ theorem powerDivergence_ofReal_iff (hα : 1 < α) {c : ℝ} (hc : 0 ≤ c) :
   rw [powerDivergence_iff hα, toENNReal_ofReal, ← ENNReal.ofReal_one,
     ← ENNReal.ofReal_add zero_le_one hc, EReal.coe_ennreal_ofReal, max_eq_left (by linarith)]
 
-/-! ## Instances -/
+/-! ## Divergence instances -/
 
 section Instances
 
@@ -344,12 +352,13 @@ theorem powerLifting_iff_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasur
     [IsSubProbabilityMeasure ν] :
     powerLifting α c R μ ν ↔ (powerDivergence α).codensity c R μ ν := by
   refine ⟨comap_codensity_le toRenyi_add, fun h I _ ρ hρ k l _ _ hkl ↦ ?_⟩
-  -- every Rényi slack `ρ` is `toRenyi c'`; then the Rényi test is a power test at `c'`, finite
-  -- since `ρ` is
+  -- each Rényi slack `ρ` is `toRenyi α c'`, so the Rényi test is a power test at a finite `c'`
   obtain ⟨c', rfl⟩ := toRenyi_surjective hα.out ρ
   simp only [← toRenyi_add] at hρ hkl ⊢
   refine h (lt_of_not_ge fun hc ↦ ?_) hkl
   simp [top_le_iff.1 hc] at hρ
+
+/-! ## Lifting instances -/
 
 section LiftingInstances
 
