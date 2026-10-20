@@ -10,10 +10,9 @@ open Lean Elab Meta
 /-!
 # Reading the arms of a recursion lemma off a definition
 
-`T.measurable_struct_rec` and `T.measurable_cases` (from deriving `MeasurableSpace`) ask for one arm `c_k` per
-constructor, with an equation `f (T.k xs) = c_k …`. The arms are the branches of `f`'s own
-definition: `read_arm` reads one off it, and `apply_arms` applies such a lemma with all its
-arms read off and their measurability proved by `fun_prop`.
+`T.measurable_cases` and `T.measurable_struct_rec` ask for one arm `c_k` per constructor, with
+`f (T.k xs) = c_k …`. `read_arm` reads an arm off the matching branch of `f`'s definition, and
+`apply_arms` applies such a lemma with every arm read off and proved measurable by `fun_prop`.
 -/
 
 namespace Metrology.CylinderGen

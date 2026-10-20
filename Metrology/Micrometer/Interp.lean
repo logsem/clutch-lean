@@ -6,9 +6,9 @@ public import Metrology.ProbLang.Metatheory
 public import Metrology.ProbLang.ValSubstMap
 public import Metrology.ProbLang.Syntax.Types
 
-@[expose] public section
-
 /-! Semantic interpretation of types: `interp`, closedness, soundness and substitution. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -284,6 +284,7 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
         exact iff_of_false hl hr
 
 end interp_sound
+
 /-! ## Substitution lemmas on `interp` -/
 
 section interp_subst

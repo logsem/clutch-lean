@@ -23,6 +23,7 @@ theorem isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
     IsUpperSet {b | L.Absorbing b} :=
   fun _ _ hb h ↦ Absorbing.mono h hb
 
+/-- Absorbing budgets form an upper set, as a `Fact`. -/
 instance fact_isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
     Fact (IsUpperSet {b | L.Absorbing b}) :=
   ⟨isUpperSet_absorbing⟩
@@ -63,14 +64,17 @@ theorem absorbing_codensity_renyi_iff {α : ℝ} (hα : 1 < α) {ρ : ℝ≥0∞
   ⟨fun h ↦ by_contra fun hρ ↦ not_absorbing_codensity_renyi hα (lt_top_iff_ne_top.2 hρ) h,
     fun h ↦ h ▸ absorbing_codensity_top⟩
 
+/-- The zero DP budget is not absorbing. -/
 instance fact_not_absorbing_codensity_dp_zero :
     Fact ((0 : ℝ≥0∞ × ℝ≥0∞) ∉ {b | (codensity dp.{u}).Absorbing b}) :=
   ⟨fun h ↦ by simpa using absorbing_codensity_dp_iff.1 h⟩
 
+/-- The zero total variation budget is not absorbing. -/
 instance fact_not_absorbing_codensity_tv_zero :
     Fact ((0 : ℝ≥0∞) ∉ {b | (codensity tv.{u}).Absorbing b}) :=
   ⟨fun h ↦ by simpa using absorbing_codensity_tv_iff.1 h⟩
 
+/-- The zero Rényi budget is not absorbing. -/
 instance fact_not_absorbing_codensity_renyi_zero {α : ℝ} [hα : Fact (1 < α)] :
     Fact ((0 : ℝ≥0∞) ∉ {b | (codensity (renyiDivergence.{u} α)).Absorbing b}) :=
   ⟨fun h ↦ by simpa using (absorbing_codensity_renyi_iff hα.out).1 h⟩

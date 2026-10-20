@@ -16,17 +16,16 @@ namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 
-/-! ## `spec_coupl` modality
-
-Optionally prepends spec-side steps and erasable distributions on both sides before `Z`. Each
-state carries the budget. -/
+/-! ## `spec_coupl` modality -/
 
 -- TODO remove when fixpoint is added
 /-- The argument of the `specCoupl` fixpoint: program state, spec configuration and budget. -/
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
+/-- The discrete `COFE` on `SpecCouplState`. -/
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
+/-- `SpecCouplState` is a discrete `OFE`. -/
 instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
 variable (L) in
@@ -237,7 +236,7 @@ theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLa
   rw [relCost_of hS, zero_add]
   iapply H $$ %σ₂ %e₂' %σ₂' %hS
 
-/-! ### `specCoupl` — derived lemmas -/
+/-! ## Derived lemmas -/
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget, by a step of the unit
 law (Rocq `spec_coupl_steps_det`, `spec_coupl_mono_grade`). -/

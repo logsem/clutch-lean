@@ -24,6 +24,7 @@ section NatTapeBridges
 
 variable {GF : BundledGFunctors}
 
+/-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
 theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
     l ↪ₐ ⟨z, fs⟩ ⊢@{IProp GF} appNatTape l z ns := by
@@ -32,6 +33,7 @@ theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
   iexists fs
   iframe %hfs Hb
 
+/-- A raw spec tape holding `fs` gives the user-level spec tape predicate on its values. -/
 theorem specNatTape_fold [SpecGS rT GF] {l : Loc} {z : Int} {ns : List Int}
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
     l ↪ₛ ⟨z, fs⟩ ⊢@{IProp GF} specNatTape l z ns := by
@@ -48,6 +50,7 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
   [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
+/-- A `rand` on the unit label steps to the uniform distribution. -/
 theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
     ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
       primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ⌝ := by
@@ -55,6 +58,7 @@ theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp G
   ipureintro
   exact randUnit_uniform_step Hz σ
 
+/-- A `rand` on an empty program tape steps to the uniform distribution. -/
 theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State rT) :
     ⊢@{IProp GF} appStateAuth σ -∗ appNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#(.int z), #(.lbl α))) σ ∧
@@ -66,6 +70,7 @@ theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State
   ipureintro
   exact randLbl_empty_uniform_step Hz hlk
 
+/-- A `rand` on an empty spec tape steps to the uniform distribution. -/
 theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp rT)
     (σ : State rT) :
     ⊢@{IProp GF} Cfg.specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
@@ -78,6 +83,7 @@ theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp r
   ipureintro
   exact randLbl_empty_uniform_step Hz hlk
 
+/-- Core coupling rule: both sides take uniform steps, related by a bijection `f`. -/
 theorem wp_couple_rand_core (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -95,14 +101,14 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   imod HA
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  ihave %HL := HstepL σ₁ $$ Hσ HA
-  ihave %HR := HstepR (K.fill eR) σ₁' $$ Hs HA
+  ihave %hL := HstepL σ₁ $$ Hσ HA
+  ihave %hR := HstepR (K.fill eR) σ₁' $$ Hs HA
   have hb : 0 + b ≤ b := (zero_add b).le
-  have hredL := HL.1.toReducible
-  have hredR := HR.1.toReducible.fill K
+  have hredL := hL.1.toReducible
+  have hredR := hR.1.toReducible.fill K
   have hcpl : L.Rel 0 (CoupledDraw z f σ₁ σ₁' K)
       (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
-    rw [HL.2, primStep_fill HvR, HR.2]
+    rw [hL.2, primStep_fill HvR, hR.2]
     exact Cfg.uniform_codensity_bij_fill Hz σ₁ σ₁' f K hdom hbij
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
@@ -121,6 +127,7 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   iframe HA Hj'
   ipureintro; exact ⟨hn0, hnz⟩
 
+/-- Couple `rand z ~ K[rand z]` along a bijection `f`. -/
 theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -138,6 +145,7 @@ theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
   iintro %n ⟨-, Hj', %hn⟩
   iapply Hcnt $$ %n %hn Hj'
 
+/-- Presample two tapes along a bijection `f`. -/
 theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     {z : Int} {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -155,7 +163,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iapply wp_couple_erasables
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %hlk := app_state_lookup_tape $$ Hσ Hα
-  ihave %hlk' := spec_auth_lookup_tape $$ Hs Hαₛ
+  ihave %hlkₛ := spec_auth_lookup_tape $$ Hs Hαₛ
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
   iexists (fun σ₂ σ₂' => ∃ n, 0 ≤ n ∧ n < z ∧
@@ -163,9 +171,9 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
       σ₂' = σ₁'.update_tapes (·.insert αₛ ⟨z, fsₛ ++ [tapeIdxOf Hz (f n)]⟩)),
     tapePresample σ₁ α, tapePresample σ₁' αₛ
   have her := ErasableExpr.tapePresample hlk Hz
-  have her' := ErasableExpr.tapePresample hlk' Hz
-  have hcpl := tapePresample_codensity_bij (L := L) hlk hlk' Hz f hdom hbij
-  iframe %her %her' %hcpl
+  have herₛ := ErasableExpr.tapePresample hlkₛ Hz
+  have hcpl := tapePresample_codensity_bij (L := L) hlk hlkₛ Hz f hdom hbij
+  iframe %her %herₛ %hcpl
   iintro %σ₂ %σ₂' %⟨n, hn0, hnz, rfl, rfl⟩
   imod app_state_update_tape $$ Hσ Hα with ⟨Hσ', Hα'⟩
   imod spec_auth_update_tape $$ Hs Hαₛ with ⟨Hs', Hαₛ'⟩
@@ -181,6 +189,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     (by simp [← Hfsₛ, tapeIdxOf_val Hz hd.1 hd.2]) $$ Hαₛ'
   iapply Hcnt $$ %n %⟨hn0, hnz⟩ HnatA HnatS
 
+/-- Couple two `rand`s whose tapes have a size `M ≠ z`, so both draw fresh, along `f`. -/
 theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -213,6 +222,7 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
   iapply Hcnt
   iframe HA HS Hj' %hn
 
+/-- Couple `rand` on an empty tape with a spec `rand` on an empty tape, along `f`. -/
 theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -237,6 +247,7 @@ theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
 
 /-! ## Mixed tape-rand couplings -/
 
+/-- Couple `rand` on an empty tape with a spec `rand`, along `f`. -/
 theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -248,6 +259,7 @@ theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
     Exp.rand_toVal?_eq_none Exp.rand_not_isValue
     (appNatTape_empty_rand_step Hz α) (fun _ σ' => randUnit_step_pure Hz σ') Φ
 
+/-- Couple `rand` with a spec `rand` on an empty tape, along `f`. -/
 theorem wp_couple_rand_tape (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)

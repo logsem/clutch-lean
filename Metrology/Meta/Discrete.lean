@@ -22,6 +22,7 @@ meta initialize discreteExt : SimplePersistentEnvExtension Name NameSet ←
     toArrayFn     := fun es => es.toArray
   }
 
+/-- Whether `declName` is marked `@[discrete]`. -/
 meta def isDiscrete (env : Environment) (declName : Name) : Bool :=
   (discreteExt.getState env).contains declName
 
@@ -29,14 +30,16 @@ syntax (name := discrete) "discrete" : attr
 
 meta initialize registerBuiltinAttribute {
   name  := `discrete
-  descr := "Mark a definition as belonging to the discrete fragment. It may only be referenced by other discrete definitions; non-discrete clients get a `linter.discrete` warning."
+  descr := "Mark a definition as belonging to the discrete fragment. It may only be referenced \
+    by other discrete definitions; non-discrete clients get a `linter.discrete` warning."
   add   := fun decl _stx _kind => do
     modifyEnv fun env => discreteExt.addEntry env decl
 }
 
 meta register_option linter.discrete : Bool := {
   defValue := true
-  descr    := "if true, warn when a `@[discrete]` declaration is referenced from a non-discrete declaration"
+  descr    := "if true, warn when a `@[discrete]` declaration is referenced from a \
+    non-discrete declaration"
 }
 
 /-- The fully-qualified names defined by this command: its binder `.const` occurrences.
@@ -51,6 +54,7 @@ meta def definedNames (trees : Array Elab.InfoTree) : IO NameSet := do
       acc.modify (·.insert declName))
   acc.get
 
+/-- Warns where a `@[discrete]` declaration is used by a non-discrete one. -/
 meta def discreteUse : Linter where
   run := fun _cmdStx => do
     unless Linter.getLinterValue linter.discrete (← Linter.getLinterOptions) do return
@@ -71,7 +75,8 @@ meta def discreteUse : Linter where
         warned.modify (·.insert declName)
         logWarningAt info.stx
           (.tagged linter.discrete.name
-            m!"`{.ofConstName declName true}` is discrete and may only be referenced by discrete declarations."))
+            m!"`{.ofConstName declName true}` is discrete and may only be referenced by \
+              discrete declarations."))
 
 meta initialize addLinter discreteUse
 

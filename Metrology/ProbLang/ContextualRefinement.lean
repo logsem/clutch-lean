@@ -60,6 +60,7 @@ inductive CtxItem (rT : Type _) [LawfulProbLangℝ rT]
 
 namespace CtxItem
 
+/-- Plugs `e` into the hole of a single-frame context. -/
 def fill : CtxItem rT → Exp rT → Exp rT
   | .lam x,          e => .lam (Exp.close e x)
   | .fix f,          e => .fix (Exp.close e f)
@@ -103,6 +104,7 @@ abbrev Ctx (rT : Type _) [LawfulProbLangℝ rT] := List (CtxItem rT)
 
 namespace Ctx
 
+/-- Plugs `e` into the hole of a multi-frame context. -/
 def fill (K : Ctx rT) (e : Exp rT) : Exp rT := K.foldr CtxItem.fill e
 
 @[simp] theorem fill_nil (e : Exp rT) : fill ([] : Ctx rT) e = e := rfl
@@ -234,6 +236,7 @@ inductive TypedCtxItem : CtxItem rT → Tctx → Ty → Tctx → Ty → Prop
 
 /-! ## Well-typed multi-frame contexts -/
 
+/-- `TypedCtx K Γ τ Γ' τ'`: filling `K` with a `Γ ⊢ τ` term gives a `Γ' ⊢ τ'` term. -/
 inductive TypedCtx : Ctx rT → Tctx → Ty → Tctx → Ty → Prop
   | nil {Γ τ} : TypedCtx [] Γ τ Γ τ
   | cons {K k Γ1 τ1 Γ2 τ2 Γ3 τ3} :
@@ -243,6 +246,7 @@ inductive TypedCtx : Ctx rT → Tctx → Ty → Tctx → Ty → Prop
 
 /-! ## Basic metatheory -/
 
+/-- The atoms a frame binds. -/
 def CtxItem.binderAtoms : CtxItem rT → Finset Var
   | .lam x => {x}
   | .fix f => {f}
@@ -250,6 +254,7 @@ def CtxItem.binderAtoms : CtxItem rT → Finset Var
   | .unpackR x _ => {x}
   | _ => ∅
 
+/-- The free variables of the expressions stored in a frame. -/
 def CtxItem.payloadFv : CtxItem rT → Finset Var
   | .appL e2 => e2.fv
   | .appR e1 => e1.fv
@@ -311,8 +316,8 @@ theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     | (rename_i x _; exact hy.imp_left fun h => Exp.close_fv_subset _ x h)
     | (rename_i x _; exact hy.symm.imp_right fun h => Exp.close_fv_subset _ x h)
 
-/-- Clutch `typed_ctx_item_typed`. Elaborator-built frames meet `hfresh` because binder atoms
-come from the `freshAtom` counter. -/
+/-- Filling a well-typed frame with a well-typed term is well typed (Clutch
+`typed_ctx_item_typed`); `hfresh` holds for elaborated frames since atoms come from `freshAtom`. -/
 theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
     (he : Typed Γ e τ) (hk : TypedCtxItem k Γ τ Γ' τ')
     (hfresh : ∀ x ∈ k.binderAtoms, x ∉ e.fv) :
@@ -368,9 +373,11 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
   | randR_unit h1 => exact .rand_unit h1 he
   | randR_tape h1 => exact .rand h1 he
 
+/-- The atoms bound by the frames of a context. -/
 def Ctx.binderAtoms (K : Ctx rT) : Finset Var :=
   K.foldr (fun k acc => k.binderAtoms ∪ acc) ∅
 
+/-- The free variables of the expressions stored in the frames of a context. -/
 def Ctx.payloadFv (K : Ctx rT) : Finset Var :=
   K.foldr (fun k acc => k.payloadFv ∪ acc) ∅
 
@@ -384,7 +391,7 @@ theorem Ctx.fv_fill_subset (K : Ctx rT) (e : Exp rT) :
       simp only [Ctx.payloadFv, List.foldr_cons, Finset.union_assoc]
       exact Finset.union_subset_union subset_rfl ih
 
-/-- Clutch `typed_ctx_typed`. -/
+/-- Filling a well-typed context with a well-typed term is well typed (Clutch `typed_ctx_typed`). -/
 theorem TypedCtx.fill_typed {K : Ctx rT} {Γ τ Γ' τ'} {e : Exp rT}
     (he : Typed Γ e τ) (hK : TypedCtx K Γ τ Γ' τ')
     (hfresh : ∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ Ctx.payloadFv K) :
@@ -403,7 +410,7 @@ theorem TypedCtx.fill_typed {K : Ctx rT} {Γ τ Γ' τ'} {e : Exp rT}
       · exact hxpay (Finset.mem_union_right _ h)
       · exact hxe h
 
-/-- Composing well-typed contexts. (Clutch `typed_ctx_compose`.) -/
+/-- Well-typed contexts compose (Clutch `typed_ctx_compose`). -/
 theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
     (hK : TypedCtx K Γ1 τ1 Γ2 τ2) (hK' : TypedCtx K' Γ2 τ2 Γ3 τ3) :
     TypedCtx (K' ++ K) Γ1 τ1 Γ3 τ3 := by
@@ -413,6 +420,7 @@ theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
 
 /-! ## Contextual refinement -/
 
+/-- The configurations that have returned the boolean `b`. -/
 def finalBool (b : Bool) : Set (Cfg rT) :=
   { ρ | ρ.expr = .lit (.bool b) }
 
@@ -437,7 +445,7 @@ theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
     CtxRefines Γ e1 e3 τ :=
   fun K σ₀ b hK => (h12 K σ₀ b hK).trans (h23 K σ₀ b hK)
 
-/-- Clutch `ctx_refines_congruence`. -/
+/-- Contextual refinement is a congruence (Clutch `ctx_refines_congruence`). -/
 theorem congr {Γ Γ' τ τ'} {e1 e2 : Exp rT} {K : Ctx rT}
     (hK : TypedCtx K Γ τ Γ' τ')
     (href : CtxRefines Γ e1 e2 τ) :
@@ -450,6 +458,7 @@ end CtxRefines
 
 /-! ## Contextual equivalence -/
 
+/-- Contextual equivalence: refinement in both directions. -/
 def CtxEquiv (Γ : Tctx) (e1 e2 : Exp rT) (τ : Ty) : Prop :=
   CtxRefines Γ e1 e2 τ ∧ CtxRefines Γ e2 e1 τ
 

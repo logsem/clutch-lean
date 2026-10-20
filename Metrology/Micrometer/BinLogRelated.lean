@@ -72,6 +72,7 @@ noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp 
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
   (∀ x A v1 v2, ⌜Γ.lookup x = some A⌝ -∗ ⌜vs.lookup x = some (v1, v2)⌝ -∗ A v1 v2)
 
+/-- `env_ltyped2` is persistent. -/
 instance env_ltyped2_persistent (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     Persistent (env_ltyped2 Γ vs) := by
   unfold env_ltyped2

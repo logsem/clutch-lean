@@ -53,8 +53,7 @@ theorem wpPre_ne_aux {n : Nat} {wp wp' : WpType (rT := rT) (GF := GF)} {E : CoPs
       sep_ne.ne (.of_eq rfl) (HΦ v)
   | none =>
     refine progCoupl_ne fun e₃ _ _ _ _ => ?_
-    apply Contractive.distLater_dist
-    intro m Hm
+    refine Contractive.distLater_dist fun m Hm => ?_
     refine specCoupl_ne fun _ _ _ => ?_
     exact BIFUpdate.ne.ne <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
       sep_ne.ne (.of_eq rfl) (Hwp m Hm e₃)

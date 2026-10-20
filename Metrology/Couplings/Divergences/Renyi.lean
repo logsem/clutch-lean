@@ -22,12 +22,10 @@ variable {X : Type*} [MeasurableSpace X]
 
 variable {α : ℝ}
 
-/-- The weight `t ↦ t ^ α` with `α > 0` is continuous at `0` on the nonnegative reals. -/
 theorem continuousWithinAt_rpow_zero (hα : 0 < α) :
     ContinuousWithinAt (· ^ α : ℝ → ℝ) (Ici 0) 0 :=
   (continuousAt_rpow_const 0 α (.inr hα.le)).continuousWithinAt
 
-/-- For `1 < α`, the weight `t ↦ t ^ α` has infinite slope at infinity. -/
 theorem derivAtTop_rpow (hα : 1 < α) : derivAtTop (· ^ α) = ⊤ := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
   refine (tendsto_rpow_atTop (sub_pos.2 hα)).congr' ?_
@@ -42,17 +40,14 @@ theorem persp_rpow_of_pos (α : ℝ) {p q : ℝ} (hq : 0 < q) :
 theorem persp_rpow_zero_right (hα : 1 < α) {p : ℝ} (hp : 0 < p) : persp (· ^ α) p 0 = ⊤ := by
   rw [persp_zero_right, derivAtTop_rpow hα, EReal.coe_mul_top_of_pos hp]
 
-/-- The perspective of `t ↦ t ^ α` with zero first argument is zero. -/
 theorem persp_rpow_zero_left (hα : 0 < α) {q : ℝ} (hq : 0 ≤ q) : persp (· ^ α) 0 q = 0 := by
   rcases hq.eq_or_lt with rfl | hq
   · simp
   · simp [persp_rpow_of_pos α hq, zero_rpow hα.ne']
 
-/-- A nonnegative weight and nonnegative arguments give a nonnegative perspective of `t ↦ t ^ α`. -/
 theorem persp_rpow_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) : 0 ≤ persp (· ^ α) p q :=
   persp_nonneg (fun _ ht ↦ rpow_nonneg ht α) hp hq
 
-/-- The perspective of `t ↦ t ^ α` is positive at a positive first argument. -/
 theorem persp_rpow_pos (hα : 1 < α) {x y : ℝ} (hx : 0 < x) (hy : 0 ≤ y) :
     0 < persp (· ^ α) x y := by
   rcases hy.eq_or_lt with rfl | hy
@@ -60,7 +55,6 @@ theorem persp_rpow_pos (hα : 1 < α) {x y : ℝ} (hx : 0 < x) (hy : 0 ≤ y) :
   · rw [persp_rpow_of_pos α hy]
     exact EReal.coe_pos.2 (mul_pos hy (rpow_pos_of_pos (div_pos hx hy) _))
 
-/-- The perspective of `t ↦ t ^ α` is multiplicative. -/
 theorem persp_rpow_mul (hα : 1 < α) {a b c d : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) (hc : 0 ≤ c)
     (hd : 0 ≤ d) : persp (· ^ α) (a * c) (b * d) = persp (· ^ α) a b * persp (· ^ α) c d := by
   have hα0 : 0 < α := by linarith
@@ -85,7 +79,6 @@ theorem mul_div_rpow_eq_rpow_mul_rpow_sub {p r : ℝ} (hp : 0 ≤ p) (hr : 0 < r
   rw [Real.div_rpow hp hr.le, Real.rpow_sub hr, Real.rpow_one]
   field_simp
 
-/-- The perspective of `t ↦ t ^ α` is antitone in its second argument. -/
 theorem persp_rpow_anti_right (hα : 1 < α) {p q q' : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) (h : q ≤ q') :
     persp (· ^ α) p q' ≤ persp (· ^ α) p q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -99,7 +92,6 @@ theorem persp_rpow_anti_right (hα : 1 < α) {p q q' : ℝ} (hp : 0 ≤ p) (hq :
   exact mul_le_mul_of_nonneg_left
     (rpow_le_rpow_of_nonpos hq h (by linarith)) (rpow_nonneg hp α)
 
-/-- The perspective of `t ↦ t ^ α` is monotone in its first argument on nonnegative inputs. -/
 theorem persp_rpow_mono_left (hα : 1 < α) {p p' q : ℝ} (hp : 0 ≤ p) (h : p ≤ p') (hq : 0 ≤ q) :
     persp (· ^ α) p q ≤ persp (· ^ α) p' q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -136,11 +128,9 @@ theorem persp_rpow_le_exp_iff (hα : 1 < α) {a b r : ℝ} (ha : 0 ≤ a) (hb : 
     ← le_rpow_inv_iff_of_pos (div_nonneg ha hb.le) (div_nonneg (exp_pos _).le hb.le) hα0,
     div_le_iff₀ hb, rpow_inv_exp_div_mul_eq hα hb r]
 
-/-- The Rényi weight `t ↦ t ^ α` has nonnegative `f`-divergence. -/
 theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
   fDiv_nonneg_of_nonneg fun _ ht ↦ rpow_nonneg ht α
 
-/-- Growing the right measure does not increase the `t ↦ t ^ α` divergence. -/
 theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMeasure μ]
     [IsFiniteMeasure ν'] (h : ν ≤ ν') : fDiv (· ^ α) μ ν' ≤ fDiv (· ^ α) μ ν := by
   have := isFiniteMeasure_of_le ν' h
@@ -150,7 +140,6 @@ theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMea
     persp_rpow_anti_right hα toReal_nonneg toReal_nonneg
       (toReal_mono (measure_ne_top ν' _) (le_iff'.1 h _))
 
-/-- Growing the left measure does not decrease the `t ↦ t ^ α` divergence. -/
 theorem fDiv_rpow_mono_left (hα : 1 < α) {μ μ' ν : Measure X} [IsFiniteMeasure μ']
     [IsFiniteMeasure ν] (h : μ ≤ μ') : fDiv (· ^ α) μ ν ≤ fDiv (· ^ α) μ' ν := by
   have := isFiniteMeasure_of_le μ' h
@@ -228,20 +217,16 @@ theorem renyiThresh_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
   rw [renyiThresh, expBudget_of_ne_top (by finiteness), toReal_mul,
     toReal_ofReal (sub_nonneg.2 hα), EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le]
 
-/-- The Rényi threshold at `⊤` is `⊤` for `α > 1`. -/
 theorem renyiThresh_top (hα : 1 < α) : renyiThresh α ⊤ = ⊤ := by
   simp [renyiThresh, mul_top (ofReal_pos.2 (sub_pos.2 hα)).ne']
 
-/-- The Rényi threshold at zero equals `1`. -/
 @[simp]
 theorem renyiThresh_zero : renyiThresh α 0 = 1 := by
   simp [renyiThresh]
 
-/-- The Rényi threshold of order `α` is monotone. -/
 theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
   EReal.coe_ennreal_le_coe_ennreal_iff.2 (expBudget_mono (by gcongr))
 
-/-- The Rényi threshold is nonnegative. -/
 theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
   EReal.coe_ennreal_nonneg _
 
@@ -284,7 +269,6 @@ theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
     renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
   rw [renyiDivergence_iff, renyiThresh_of_ne_top hα hρ]
 
-/-- For `1 < α`, the Rényi divergence of order `α` is unconstrained at grade `⊤`. -/
 theorem renyiDivergence_top (hα : 1 < α) (μ ν : Measure X) : renyiDivergence α ⊤ μ ν :=
   renyiDivergence_iff.2 (renyiThresh_top hα ▸ le_top)
 

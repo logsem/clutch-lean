@@ -84,21 +84,21 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
-  by_cases hr' : r < (⊤ : B)
+  by_cases hrTop : r < (⊤ : B)
   swap
   · iapply specCoupl_absorbing
-    exact IsTopAbsorbing.absorbing_top.mono (hr ▸ not_lt_top_iff.1 hr' ▸ le_add_self)
+    exact IsTopAbsorbing.absorbing_top.mono (hr ▸ not_lt_top_iff.1 hrTop ▸ le_add_self)
   iapply specCoupl_ret
   simp only [Exp.rand_toVal?_eq_none]
-  have hhead' : law.head (primStep ⟨pl(rand(#(.int N), #(.unit))), σ₁⟩)
+  have hheadStep : law.head (primStep ⟨pl(rand(#(.int N), #(.unit))), σ₁⟩)
       (primStep ⟨K.fill pl(rand(#(.int N), #(.unit))), σ₁'⟩) (Cfg.drawCost σ₁ σ₁' K R) c := by
     rw [primStep_rand_unit HN, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
       Cfg.uniform_eq_map HN, Cfg.uniform_eq_map HN,
       MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
         (Ectx.fillCfg.measurable K) Measurable.of_discrete]
     exact hhead σ₁ σ₁'
-  iapply progCoupl_steps_spend_law law hr.ge hr' (randUnit_uniform_step HN σ₁).1.toReducible
-    ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hhead'
+  iapply progCoupl_steps_spend_law law hr.ge hrTop (randUnit_uniform_step HN σ₁).1.toReducible
+    ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hheadStep
     (.of_forall fun k₁ k₂ ↦ hside _ _ _ k₁ k₂)
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
   obtain ⟨n, m, h1, h2⟩ := Cfg.exists_of_drawCost_lt_top (lt_of_le_of_lt le_self_add hR)

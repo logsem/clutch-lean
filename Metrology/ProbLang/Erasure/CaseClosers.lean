@@ -29,6 +29,7 @@ theorem erasure_integrand_measurable {m : Nat} {K : Ectx rT} {S : Set (Exp rT)}
   ((Measure.measurable_coe (Cfg.measurable_expr hS)).comp
     (execN_measurable m)).comp (Ectx.fillCfg.measurable K)
 
+/-- A deterministic head step that keeps the state commutes with presampling. -/
 theorem erasure_det_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
@@ -42,6 +43,7 @@ theorem erasure_det_close
   simp_rw [hs, lintegral_dirac]
   exact ih_fill _ σ t h hN
 
+/-- Like `erasure_det_close`, with the head step deterministic only almost surely. -/
 theorem erasure_det_close_ae
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
@@ -67,6 +69,7 @@ theorem erasure_det_close_ae
     _ = ((execN m ∘ K.fillCfg) ⟨e', σ⟩) ((fun x => x.expr) ⁻¹' S) :=
           ih_fill _ σ t h hN
 
+/-- A head step that samples `Cfg.uniform z_r` commutes with presampling. -/
 theorem erasure_uniform_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape}
     (hS : MeasurableSet S)
@@ -108,6 +111,7 @@ theorem erasure_uniform_close
     _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by rw [hstep_σ]
 
+/-- A head step that samples `Cfg.uniformReal` commutes with presampling. -/
 theorem erasure_uniformReal_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape}
     (hS : MeasurableSet S)
@@ -152,6 +156,7 @@ theorem erasure_uniformReal_close
 
 /-! ### Per-head-step case closers -/
 
+/-- A heap `load` commutes with presampling. -/
 theorem erasure_load_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α ℓ : Loc} {t : Tape} {v : Val rT}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
@@ -180,6 +185,7 @@ theorem erasure_load_close
           ∂headStep ⟨.load (.lit (.loc ℓ)), σ⟩ := by
         rw [hload σ rfl, lintegral_dirac]
 
+/-- A heap `alloc` commutes with presampling. -/
 theorem erasure_alloc_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {ed : Exp rT}
     (hS : MeasurableSet S)
@@ -233,6 +239,7 @@ theorem erasure_alloc_close
               halloc σ rfl]
           simp [Exp.asValM, hcheck, lintegral_dirac, f_heap]
 
+/-- A heap `store` commutes with presampling. -/
 theorem erasure_store_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α ℓ : Loc} {t : Tape} {ev : Exp rT}
     (hS : MeasurableSet S)
@@ -303,6 +310,7 @@ theorem erasure_store_close
                 hstore σ rfl]
             simp [Exp.asValM, hcheck, hlook, lintegral_dirac, f_heap]
 
+/-- Allocating a fresh tape commutes with presampling another tape. -/
 theorem erasure_tape_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {z : Int}
     (hS : MeasurableSet S)
@@ -348,6 +356,7 @@ theorem erasure_tape_close
               t htape_upd hN,
             htape_rw σ rfl, lintegral_dirac]
 
+/-- A stuck head step (the zero measure) commutes with presampling. -/
 theorem erasure_zero_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {e_red : Exp rT}
     (h : σ.tapes[α]? = some t) (_hN : 0 < t.bound)

@@ -135,7 +135,7 @@ theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
-/-! ### Operator compatibility
+/-! ## Operators
 
 `lrel_int`, `lrel_bool` and `lrel_real` relate exactly equal literals, so each operator
 lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step. -/
@@ -245,7 +245,7 @@ theorem bin_log_related_bool_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : U
     rw [interp_bool]
     iapply refines_unop_val _ _ rfl (lrel_bool_lit _)
 
-/-! ### The real fragment -/
+/-! ## The real fragment -/
 
 theorem bin_log_related_real_unop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : UnOp)
     {e e' : Exp rT} {τ : Ty} (Hres : op.realResTy = some τ) :
@@ -274,7 +274,7 @@ theorem bin_log_related_real_binop (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (op : 
       | (rw [interp_real]; iapply refines_binop_val _ _ _ rfl (lrel_real_lit _))
       | (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
-/-! ### Equality and pattern matching -/
+/-! ## Equality and pattern matching -/
 
 theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2 e1' e2' : Exp rT}
     {τ : Ty} (HUnboxed : UnboxedType τ) : iprop%
@@ -377,7 +377,7 @@ theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
   imodintro
   iapply lrel_real_lit r
 
-/-! ### Heap and tape cases -/
+/-! ## Heap and tape cases -/
 
 theorem bin_log_related_alloc (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' τ ⊢

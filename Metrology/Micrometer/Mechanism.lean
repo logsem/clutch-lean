@@ -24,6 +24,7 @@ theorem progMech_apply (p : X → Exp rT) (σ : State rT) {hp} (x : X) :
     progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
   rfl
 
+/-- A program mechanism has total mass at most one. -/
 instance isSubMarkovKernel_progMech (p : X → Exp rT) (σ : State rT) {hp} :
     IsSubMarkovKernel (progMech p σ hp) where
   isSubProbabilityMeasure _ := limExecV.isSubProbabilityMeasure _

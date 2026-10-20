@@ -21,11 +21,10 @@ namespace ProbLang
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
-/-! ## Micrometer ghost state class
+/-! ## Ghost state classes
 
-The ghost state does not depend on the lifting: `L` is an explicit argument of `wp` and the
-coupling modalities (`wp L E e Φ`, notation `WP[L] e @ E {{ Φ }}`), never a class parameter, so
-the modality instances (`ElimModal`, `Frame`, ...) unify without an `L` metavariable. -/
+`L` is an explicit argument of `wp` (never a class parameter), so modality instances unify
+without an `L` metavariable. -/
 
 /-- The ghost state of `wp`: spec updates, invariants and the program-state interpretation. -/
 class MicrometerWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]

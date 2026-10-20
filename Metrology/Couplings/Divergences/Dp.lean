@@ -47,7 +47,6 @@ theorem Bound.of_tendsto {e : ℕ → ℝ} {e₀ : ℝ} (he : Tendsto e atTop (�
 theorem Bound.mono (h : Bound c δ μ ν) (hc : c ≤ c') (hδ : δ ≤ δ') : Bound c' δ' μ ν :=
   fun S hS ↦ (h S hS).trans (by gcongr)
 
-/-- The zero measure is bounded by any measure at every level `(c, δ)`. -/
 theorem bound_zero_left (c δ : ℝ≥0∞) (ν : Measure X) : Bound c δ 0 ν :=
   fun _ _ ↦ by simp
 
@@ -135,7 +134,6 @@ variable {ε ε' : ℝ≥0∞}
 noncomputable def expBudget (ε : ℝ≥0∞) : ℝ≥0∞ :=
   (ε : EReal).exp
 
-/-- The exponential budget of `⊤` is `⊤`. -/
 @[simp]
 theorem expBudget_top : expBudget ⊤ = ⊤ := by
   simp [expBudget]
@@ -149,7 +147,6 @@ theorem expBudget_ofReal {x : ℝ} (hx : 0 ≤ x) :
     expBudget (ENNReal.ofReal x) = ENNReal.ofReal (exp x) := by
   rw [expBudget_of_ne_top ofReal_ne_top, toReal_ofReal hx]
 
-/-- A zero budget gives exponential budget `1`. -/
 @[simp]
 theorem expBudget_zero : expBudget 0 = 1 := by
   simp [expBudget]
@@ -162,16 +159,13 @@ theorem one_le_expBudget (ε : ℝ≥0∞) : 1 ≤ expBudget ε :=
 theorem expBudget_lt_top_iff : expBudget ε < ⊤ ↔ ε < ⊤ := by
   simp [expBudget, lt_top_iff_ne_top, EReal.coe_ennreal_eq_top_iff]
 
-/-- The exponential budget `expBudget` is monotone. -/
 theorem expBudget_mono : Monotone expBudget :=
   fun _ _ h ↦ EReal.exp_monotone (EReal.coe_ennreal_le_coe_ennreal_iff.2 h)
 
-/-- The exponential budget map `expBudget` is measurable. -/
 @[fun_prop]
 theorem measurable_expBudget : Measurable expBudget :=
   expBudget_mono.measurable
 
-/-- The exponential budget is monotone in `ε`. -/
 @[gcongr]
 theorem expBudget_le_expBudget (h : ε ≤ ε') : expBudget ε ≤ expBudget ε' :=
   expBudget_mono h
@@ -213,7 +207,7 @@ theorem dp_iff (hε : ε ≠ ⊤) :
 theorem dp_of_forall_le (h : ∀ S, MeasurableSet S → μ S ≤ expBudget ε * ν S) : dp (ε, 0) μ ν :=
   fun _ S hS ↦ (h S hS).trans le_self_add
 
-/-- Differential privacy with infinite `ε` holds vacuously for any `δ`. -/
+/-- Differential privacy with infinite `ε` holds vacuously. -/
 theorem dp_top_left : dp (⊤, δ) μ ν :=
   fun h ↦ (lt_irrefl _ h).elim
 
@@ -221,7 +215,6 @@ theorem dp_top_left : dp (⊤, δ) μ ν :=
 theorem dp_mono {b' : ℝ≥0∞ × ℝ≥0∞} (hb : b ≤ b') (h : dp b μ ν) : dp b' μ ν :=
   fun hb' ↦ (h (hb.1.trans_lt hb')).mono (expBudget_mono hb.1) hb.2
 
-/-- `(ε, δ)`-differential privacy is monotone in `ε`. -/
 theorem dp_mono_left (h : ε ≤ ε') (hd : dp (ε, δ) μ ν) : dp (ε', δ) μ ν :=
   dp_mono (Prod.mk_le_mk.2 ⟨h, le_rfl⟩) hd
 
@@ -267,10 +260,12 @@ theorem dp_trans {μ₁ μ₂ μ₃ : Measure X} {ε₁ ε₂ δ₁ δ₂ : ℝ�
 
 /-! ## Instances -/
 
+/-- DP is a graded divergence: monotone in the budget, trivial at `⊤`. -/
 instance isGraded_dp : dp.{u}.IsGraded where
   mono _ _ hb := dp_mono hb
   top _ _ := dp_top_left
 
+/-- DP is reflexive at every budget. -/
 instance isReflexive_dp : dp.{u}.IsReflexive where
   refl _ := fun _ _ _ ↦ by simp
 
@@ -281,20 +276,25 @@ instance isComposable_dp : dp.{u}.IsComposable where
     simpa only [Prod.fst_add, Prod.snd_add, expBudget_add] using
       (h hb).bind (Kernel.measurable _) (Kernel.measurable _) fun x ↦ hκη x hc
 
+/-- The zero measure is DP-bounded by any measure. -/
 instance isZeroLeft_dp : dp.{u}.IsZeroLeft where
   zero_left _ _ _ ν _ _ := bound_zero_left _ _ ν
 
+/-- DP is continuous in the left measure along monotone suprema. -/
 instance isLeftContinuous_dp : dp.{u}.IsLeftContinuous where
   iSup_left _ := fun hμ _ _ h hb S hS ↦ by
     rw [iSup_apply_of_monotone hμ hS]
     exact iSup_le fun n ↦ h n hb S hS
 
+/-- DP is monotone in the right measure. -/
 instance isRightMonotone_dp : dp.{u}.IsRightMonotone where
   right_mono _ := fun hν h hb S hS ↦ (h hb S hS).trans (by grw [le_iff'.1 hν S])
 
+/-- DP is antitone in the left measure. -/
 instance isLeftAntitone_dp : dp.{u}.IsLeftAntitone where
   left_anti _ := fun hμ h hb S hS ↦ (le_iff'.1 hμ S).trans (h hb S hS)
 
+/-- DP budgets are closed from above. -/
 instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
   of_forall_gt {b} := fun h hb ↦
     .of_forall_lt fun δ' hδ' ↦ h (b.1, δ') (Prod.lt_iff.2 (.inr ⟨le_rfl, hδ'⟩)) hb
@@ -303,14 +303,15 @@ instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
 noncomputable def dpSlack : ℝ≥0∞ →+o ℝ≥0∞ × ℝ≥0∞ :=
   OrderAddMonoidHom.inr ℝ≥0∞ ℝ≥0∞
 
-/-- The DP slack of `δ` is the pair `(0, δ)`. -/
 @[simp]
 theorem dpSlack_apply (δ : ℝ≥0∞) : dpSlack δ = (0, δ) :=
   rfl
 
+/-- An event gap `δ` gives DP at budget `(0, δ)`. -/
 instance hasSlack_dp : dp.{u}.HasSlack dpSlack where
   of_forall_le h _ S hS := by simpa using h S hS
 
+/-- Point masses that are DP-close at `(0, δ)` differ in mass by at most `δ`. -/
 instance isMassDetecting_dp : dp.{u}.IsMassDetecting dpSlack where
   le_add_of _ _ h := by simpa [dp_smul_dirac_iff] using h
 

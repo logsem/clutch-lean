@@ -183,15 +183,19 @@ theorem isComposable_comap [Add B] [LE B] [Top B] [Add B'] [D.IsGraded] [D.IsCom
     (hadd : ∀ b c, φ b + φ c ≤ φ (b + c)) : (D.comap φ).IsComposable where
   comp b c := fun h hκ ↦ IsGraded.mono (hadd b c) (IsComposable.comp h hκ)
 
+/-- Regrading keeps the zero-measure law. -/
 instance isZeroLeft_comap [D.IsZeroLeft] : (D.comap φ).IsZeroLeft where
   zero_left b := IsZeroLeft.zero_left (φ b)
 
+/-- Regrading keeps left continuity. -/
 instance isLeftContinuous_comap [D.IsLeftContinuous] : (D.comap φ).IsLeftContinuous where
   iSup_left b := IsLeftContinuous.iSup_left (b := φ b)
 
+/-- Regrading keeps right monotonicity. -/
 instance isRightMonotone_comap [D.IsRightMonotone] : (D.comap φ).IsRightMonotone where
   right_mono b := IsRightMonotone.right_mono (b := φ b)
 
+/-- Regrading keeps left antitonicity. -/
 instance isLeftAntitone_comap [D.IsLeftAntitone] : (D.comap φ).IsLeftAntitone where
   left_anti b := IsLeftAntitone.left_anti (b := φ b)
 
@@ -213,27 +217,34 @@ theorem pi_def {b : ∀ i, B i} {X : Type u} [MeasurableSpace X] {μ ν : Measur
     pi D b μ ν ↔ ∀ i, D i (b i) μ ν :=
   Iff.rfl
 
+/-- A family is graded when every coordinate is. -/
 instance isGraded_pi [∀ i, LE (B i)] [∀ i, Top (B i)] [∀ i, (D i).IsGraded] :
     (pi D).IsGraded where
   mono _ _ hb := fun h i ↦ IsGraded.mono (hb i) (h i)
   top μ ν _ _ _ := IsGraded.top μ ν
 
+/-- A family is reflexive when every coordinate is. -/
 instance isReflexive_pi [∀ i, Zero (B i)] [∀ i, (D i).IsReflexive] : (pi D).IsReflexive where
   refl μ _ _ := IsReflexive.refl μ
 
+/-- A family is composable when every coordinate is. -/
 instance isComposable_pi [∀ i, Add (B i)] [∀ i, (D i).IsComposable] :
     (pi D).IsComposable where
   comp _ _ := fun h hκ i ↦ IsComposable.comp (h i) fun x ↦ hκ x i
 
+/-- A family has the zero-measure law when every coordinate does. -/
 instance isZeroLeft_pi [∀ i, (D i).IsZeroLeft] : (pi D).IsZeroLeft where
   zero_left b _ _ ν _ i := IsZeroLeft.zero_left (b i) ν
 
+/-- A family is left continuous when every coordinate is. -/
 instance isLeftContinuous_pi [∀ i, (D i).IsLeftContinuous] : (pi D).IsLeftContinuous where
   iSup_left _ := fun hμ _ _ h i ↦ IsLeftContinuous.iSup_left hμ fun n ↦ h n i
 
+/-- A family is right monotone when every coordinate is. -/
 instance isRightMonotone_pi [∀ i, (D i).IsRightMonotone] : (pi D).IsRightMonotone where
   right_mono _ := fun hν h i ↦ IsRightMonotone.right_mono hν (h i)
 
+/-- A family is left antitone when every coordinate is. -/
 instance isLeftAntitone_pi [∀ i, (D i).IsLeftAntitone] : (pi D).IsLeftAntitone where
   left_anti _ := fun hμ h i ↦ IsLeftAntitone.left_anti hμ (h i)
 

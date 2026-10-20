@@ -12,10 +12,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-! ## Lifting wrappers
-
-Micrometer-facing: transfer a lifting of `ErasableExpr` state distributions to the expression
-projections of `execN`/`limExec`, as Clutch's val-projected `ARcoupl`. -/
+/-! ## Lifting wrappers -/
 
 section Lifting
 
@@ -145,8 +142,8 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
 on the RHS sample (the `tv` instance of `lift_erasure_erasable_exp_rhs`). -/
 theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
-    {μ₁ μ₁' : Measure (State rT)} {R : Set ((State rT) × (Cfg rT))}
-    {Φexp : Set ((Exp rT) × (Exp rT))}
+    {μ₁ μ₁' : Measure (State rT)} {R : Set (State rT × Cfg rT)}
+    {Φexp : Set (Exp rT × Exp rT)}
     {ε ε₁ ε₂ : ENNReal} {E₂ : Cfg rT → ENNReal} {n m : Nat}
     (hE₂meas : Measurable E₂)
     (hCoupl : AddCoupl ε₁ R μ₁
@@ -170,8 +167,8 @@ theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
 /-- Clutch `ARcoupl_erasure_erasable`, projected to expressions. -/
 theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
-    {μ₁ μ₂ : Measure (State rT)} {R : Set ((State rT) × (State rT))}
-    {Φexp : Set ((Exp rT) × (Exp rT))}
+    {μ₁ μ₂ : Measure (State rT)} {R : Set (State rT × State rT)}
+    {Φexp : Set (Exp rT × Exp rT)}
     {ε ε₁ ε₂ : ENNReal} {n : Nat}
     (hSum : ε₁ + ε₂ ≤ ε)
     (hCoupl : AddCoupl ε₁ R μ₁ μ₂)
@@ -195,8 +192,8 @@ theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
 on the LHS sample. -/
 theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
-    {μ₁' : Measure (State rT)} {R : Set ((Cfg rT) × (State rT))}
-    {Φexp : Set ((Exp rT) × (Exp rT))}
+    {μ₁' : Measure (State rT)} {R : Set (Cfg rT × State rT)}
+    {Φexp : Set (Exp rT × Exp rT)}
     {ε ε₁ ε₂ : ENNReal} {E₂ : Cfg rT → ENNReal} {n : Nat}
     (hE₂meas : Measurable E₂)
     (hCoupl : AddCoupl ε₁ R (primStep ⟨e₁, σ₁⟩) μ₁')
@@ -222,7 +219,7 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
 theorem _root_.MeasureTheory.Measure.bind_map_of_measurable {α β γ : Type*} [MeasurableSpace α]
     [MeasurableSpace β] [MeasurableSpace γ] {μ : Measure α} {f : α → β} {g : β → Measure γ}
     (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
-  rw [MeasureTheory.Measure.bind, MeasureTheory.Measure.bind, MeasureTheory.Measure.map_map hg hf]
+  rw [Measure.bind, Measure.bind, Measure.map_map hg hf]
 
 /-- The value distributions of the `m`-step runs, as a kernel: the program's remaining run that a
 bind law's side condition sees. -/
@@ -357,7 +354,7 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSin
 samples (the `tv` instance of `lift_erasure_erasable_exp_lhs_kanto`). -/
 theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
-    {μ₁' : Measure (State rT)} {Φexp : Set ((Exp rT) × (Exp rT))}
+    {μ₁' : Measure (State rT)} {Φexp : Set (Exp rT × Exp rT)}
     {ε : ENNReal} {E₂ : Cfg rT → Cfg rT → ENNReal}
     {n m : Nat}
     (hErase₁' : ErasableExpr μ₁' σ₁')

@@ -56,6 +56,7 @@ theorem lrel.ext {GF : BundledGFunctors} {A B : lrel rT GF}
   obtain rfl : carA = carB := funext fun v1 => funext (h v1)
   rfl
 
+/-- Value relations are an OFE under pointwise distance. -/
 instance ofe_lrel {GF : BundledGFunctors} : OFE (lrel rT GF) where
   Dist n A B := ∀ v1 v2, A.car v1 v2 ≡{n}≡ B.car v1 v2
   dist_eqv := {
@@ -80,6 +81,7 @@ abbrev lrel.appAt {GF : BundledGFunctors} (v1 v2 : Val rT) :
 instance lrel.appAt_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
     OFE.NonExpansive (lrel.appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
+/-- Value relations are complete: limits are taken pointwise. -/
 noncomputable instance isCOFE_lrel {GF : BundledGFunctors} : IsCOFE (lrel rT GF) where
   compl c :=
     { car := IsCOFE.compl (lrel.toFunChain c)
@@ -92,6 +94,7 @@ noncomputable instance isCOFE_lrel {GF : BundledGFunctors} : IsCOFE (lrel rT GF)
           (lrel.toFunChain c) fun k => (c.chain k).closed v1 v2 }
   conv_compl {_ c} v1 v2 := IsCOFE.conv_compl (c := lrel.toFunChain c) v1 v2
 
+/-- The empty relation. -/
 instance inhabited_lrel {GF : BundledGFunctors} : Inhabited (lrel rT GF) where
   default :=
     { car := fun _ _ => iprop(False)
@@ -295,30 +298,26 @@ noncomputable def lrel_true : lrel rT GF where
 
 /-! ### Recursive lrel via `fixpoint` -/
 
--- TODO: Tweak when fixpoints land
+-- TODO: Tweak the declarations below when fixpoints land
 /-- One unfolding of a recursive relation, with the recursive occurrence guarded by `▷`. -/
 noncomputable def lrelRec1 (C : lrel rT GF -n> lrel rT GF) (r : lrel rT GF) : lrel rT GF where
   car w1 w2 := iprop% ⌜w1.1.isClosedEmpty ∧ w2.1.isClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
--- TODO: Tweak when fixpoints land
 instance lrelRec1_contractive (C : lrel rT GF -n> lrel rT GF) : OFE.Contractive (lrelRec1 C) where
   distLater_dist {n P Q} hPQ w1 w2 := by
     show iprop(_ ∗ ▷ _) ≡{n}≡ iprop(_ ∗ ▷ _)
     exact sep_ne.ne .rfl <| Contractive.distLater_dist
       fun k hk => C.ne.ne (show P ≡{k}≡ Q from hPQ k hk) w1 w2
 
--- TODO: Tweak when fixpoints land
 /-- `lrelRec1` bundled as a contractive function. -/
 noncomputable def lrelRec1Hom (C : lrel rT GF -n> lrel rT GF) : lrel rT GF -c> lrel rT GF where
   f := lrelRec1 C
 
--- TODO: Tweak when fixpoints land
 /-- Recursive relations, as the fixpoint of `lrelRec1`. -/
 noncomputable def lrel_rec (C : lrel rT GF -n> lrel rT GF) : lrel rT GF :=
   fixpoint (lrelRec1 C)
 
--- TODO: Tweak when fixpoints land
 theorem lrel_rec_unfold (C : lrel rT GF -n> lrel rT GF) :
     lrel_rec C = lrelRec1 C (lrel_rec C) :=
   fixpoint_unfold (lrelRec1Hom C)
@@ -334,15 +333,15 @@ theorem lrel_rec_ne {n : Nat} {C1 C2 : lrel rT GF -n> lrel rT GF}
 
 /-! ### Nonexpansive instances on simple lrel constructors -/
 
+-- TODO: Remove these hand-written proofs when nonexp lands
+
 instance lrel_prod_ne_2 : OFE.NonExpansive₂ (lrel_prod (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
-    -- TODO: Remove when nonexp lands
     refine exists_ne fun a1 => exists_ne fun a2 => exists_ne fun b1 => exists_ne fun b2 => ?_
     exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne (hA a1 a2) (hB b1 b2)
 
 instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
-    -- TODO: Remove when nonexp lands
     refine exists_ne fun w1 => exists_ne fun w2 => or_ne.ne ?_ ?_
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hA w1 w2)
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hB w1 w2)
@@ -350,7 +349,6 @@ instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) wh
 theorem lrel_exists_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     (lrel_exists C1 : lrel rT GF) ≡{n}≡ lrel_exists C2 := by
-  -- TODO: Tweak when nonexp lands
   intro v1 v2
   show iprop(_ ∗ ∃ _, _) ≡{n}≡ iprop(_ ∗ ∃ _, _)
   exact sep_ne.ne .rfl <| exists_ne fun A => h A v1 v2
@@ -358,6 +356,8 @@ theorem lrel_exists_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
 end SimpleLRels
 
 /-! ## Relations that refer to the logic -/
+
+-- TODO: Remove the hand-written nonexpansiveness proofs below when nonexp lands
 
 section LogicLRels
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
@@ -404,7 +404,6 @@ noncomputable def lrel_tape : lrel rT GF where
 
 theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
     (h : A ≡{n}≡ B) : refines L E e e' A ≡{n}≡ refines L E e e' B := by
-  -- TODO: Remove when nonexp lands
   unfold refines
   refine forall_ne fun K => forall_ne fun b => ?_
   refine wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl <| wand_ne.ne .rfl ?_
@@ -413,7 +412,6 @@ theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
 
 instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
-    -- TODO: Remove when nonexp lands
     exact sep_ne.ne .rfl <| intuitionistically_ne.ne <| forall_ne fun w1 => forall_ne fun w2 =>
       wand_ne.ne (hA w1 w2) (refines_ne hB)
 
@@ -424,7 +422,6 @@ theorem refines_proper {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
 
 instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
   ne {n A B} hAB v1 v2 := by
-    -- TODO: Tweak when nonexp lands
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     refine exists_ne fun l1 => exists_ne fun l2 => ?_
     refine sep_ne.ne .rfl <| sep_ne.ne .rfl <| (Iris.inv_ne _).ne ?_
@@ -435,7 +432,6 @@ variable (L) in
 theorem lrel_forall_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     (lrel_forall L C1 : lrel rT GF) ≡{n}≡ lrel_forall L C2 := by
-  -- TODO: Tweak when nonexp lands
   intro v1 v2
   show iprop(∀ _, _) ≡{n}≡ iprop(∀ _, _)
   exact forall_ne fun A => lrel_arr_ne_2.ne .rfl (h A) v1 v2

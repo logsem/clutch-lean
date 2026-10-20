@@ -113,7 +113,7 @@ theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
       ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
   rfl
 
-/-! ### Lifting `refines` compatibility to `bin_log_related`
+/-! ## Lifting `refines` rules to `bin_log_related`
 
 `bin_log_related_lift{1,2,3}` push `substMap` through a constructor `f` and apply a
 `refines` rule for `f`. -/

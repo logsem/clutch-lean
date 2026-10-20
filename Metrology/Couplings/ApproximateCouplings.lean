@@ -15,7 +15,9 @@ public import Mathlib.Probability.ProbabilityMassFunction.Basic
 public import Mathlib.Probability.ProbabilityMassFunction.Constructions
 public import Mathlib.Analysis.Real.OfDigits
 
-/-! Approximate relational couplings, tested by bounded measurable functions (the old core). -/
+/-! # Approximate couplings
+
+Couplings up to a function `F`, tested by measurable functions into `[0, 1]`. -/
 
 @[expose] public section
 
@@ -28,11 +30,12 @@ def CouplingFunction (α : Type _) [MeasurableSpace α] :=
   { f : α → ENNReal // Measurable f ∧ BoundedFunction f}
 
 theorem CouplingFunction.measurable {α : Type _} [MeasurableSpace α] (f : CouplingFunction α) :
-  Measurable f.1 := f.property.1
+    Measurable f.1 := f.property.1
 
 theorem CouplingFunction.bounded {α : Type _} [MeasurableSpace α] (f : CouplingFunction α) :
     ∀ a, f.1 a ≤ 1 := f.property.2
 
+/-- Coerce a test function to its underlying function. -/
 instance CouplingFunction.instCoeFun {α : Type _} [MeasurableSpace α] :
     CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
   coe := (·.1)

@@ -12,6 +12,10 @@ public import Metrology.ProbLang.Discrete
 
 @[expose] public section
 
+/-! # Spec-side resource algebra
+
+Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules. -/
+
 section SpecRA
 open Std Iris Iris.Std COFE ProbLang
 
@@ -29,15 +33,21 @@ instance cofe_val : COFE (Val rT) := COFE.ofDiscrete _
 instance discrete_val : OFE.Discrete (Val rT) := ⟨id⟩
 instance discreteE_val (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
+/-- Ghost state for the spec-side program: an exclusive expression. -/
 abbrev SpecProg (α : Type _) [ProbLang.LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))
+/-- Ghost state for the spec-side heap. -/
 abbrev SpecHeap (rT : Type _) [ProbLang.LawfulProbLangℝ rT] :=
   HeapView Loc (Agree (Val rT)) LocHeap
+/-- Ghost state for the spec-side tapes. -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
 
+/-- Authoritative element of `SpecProg`. -/
 def SpecProg.auth (e : Exp rT) : SpecProg rT := ● (some <| .excl e)
+/-- Fragment of `SpecProg`. -/
 def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
 
+/-- Wraps every heap value in `Agree`. -/
 def LocHeap.asAgree [OFE V] (h : LocHeap V) : LocHeap (Agree V) :=
   PartialMap.map LocHeap toAgree h
 
@@ -71,6 +81,7 @@ theorem LocHeap.get?_of_asAgree_get? [OFE V] {h : LocHeap V} {l : Loc} {v : V} {
   obtain ⟨w, hw, rfl⟩ := Option.map_eq_some_iff.mp hget
   rw [hw, Agree.toAgree_included.mp hinc]
 
+/-- Ghost-state resources needed for the spec side. -/
 class SpecPreGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors) where
   prog : ElemG GF (constOF (SpecProg rT))
   heap : ElemG GF (constOF (SpecHeap rT))
@@ -78,6 +89,7 @@ class SpecPreGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : B
 
 attribute [reducible, instance] SpecPreGS.prog SpecPreGS.heap SpecPreGS.tapes
 
+/-- `SpecPreGS` together with the ghost names. -/
 class SpecGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors)
    extends SpecPreGS rT GF where
   γprog : GName
@@ -88,19 +100,26 @@ section Resources
 
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 
+/-- Authoritative ownership of the spec program. -/
 def specProgAuth (e : Exp rT) : IProp GF := iOwn (E := ISpec.prog) ISpec.γprog (.auth e)
+/-- Ownership of the spec program `e`, written `⤇ e`. -/
 def specProgFrag (e : Exp rT) : IProp GF := iOwn (E := ISpec.prog) ISpec.γprog (.frag e)
 
+/-- Authoritative ownership of the spec heap. -/
 def specHeapAuth (σ : LocHeap (Val rT)) : IProp GF :=
   iOwn (E := ISpec.heap) ISpec.γheap (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
+/-- Spec-heap points-to, written `ℓ ↦ₛ v`. -/
 def specHeapFrag (ℓ : Loc) (v : Val rT) : IProp GF :=
   iOwn (E := ISpec.heap) ISpec.γheap (HeapView.Frag ℓ (.own 1) (toAgree v))
 
+/-- Authoritative ownership of the spec tapes. -/
 def specTapesAuth (σ : LocHeap Tape) : IProp GF :=
   iOwn (E := ISpec.tapes) ISpec.γtapes (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
+/-- Spec-tape points-to, written `ℓ ↪ₛ t`. -/
 def specTapesFrag (ℓ : Loc) (t : Tape) : IProp GF :=
   iOwn (E := ISpec.tapes) ISpec.γtapes (HeapView.Frag ℓ (.own 1) (toAgree t))
 
+/-- Authoritative ownership of a whole spec configuration. -/
 def ProbLang.Cfg.specAuth (c : Cfg rT) : IProp GF :=
   let ⟨e, ⟨σ, τ⟩⟩ := c
   iprop(specProgAuth e ∗ specHeapAuth σ ∗ specTapesAuth τ)
@@ -139,13 +158,12 @@ theorem specAuth_specFrag_agree {e1 e2 : Exp rT} {σ : State rT} :
 theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
     ⊢@{IProp GF} specAuth ⟨e1, σ⟩ -∗ ⤇ e2 ==∗ specAuth ⟨e3, σ⟩ ∗ ⤇ e3 := by
   iintro Ha Hf
-  ihave %he := specAuth_specFrag_agree $$ Ha Hf
-  subst he
+  ihave %rfl := specAuth_specFrag_agree $$ Ha Hf
   unfold specAuth specProgAuth specProgFrag; simp only []
   ihave ⟨He, Hh, Ht⟩ := Ha
-  have Hupd : SpecProg.frag e1 • SpecProg.auth e1 ~~> SpecProg.frag e3 • SpecProg.auth e3 :=
+  have hupd : SpecProg.frag e1 • SpecProg.auth e1 ~~> SpecProg.frag e3 • SpecProg.auth e3 :=
     Auth.auth_update (.option (.exclusive trivial))
-  ihave Hu := iOwn_update_op (E := ISpec.prog) Hupd $$ [$Hf $He]
+  ihave Hu := iOwn_update_op (E := ISpec.prog) hupd $$ [$Hf $He]
   imod Hu
   imodintro
   ihave ⟨Hf, Ha⟩ := iOwn_op $$ Hu
@@ -258,12 +276,13 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
 
 end Algebra
 
-/-! ## `natSpecTape`: spec-side tape over plain integers (analogue of `appNatTape`) -/
+/-! ## Spec-side tapes over plain integers (analogue of `appNatTape`) -/
 
 section NatSpecTape
 
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 
+/-- Spec-side tape holding the integers `ns`, each below `z`. -/
 noncomputable def specNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
   iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
     ⌜fs.map (fun x => x.val) = ns⌝ ∗ specTapesFrag l ⟨z, fs⟩)
@@ -273,8 +292,8 @@ notation:51 l:51 " ↪ₛN⟨" z:51 "; " ns:51 "⟩" => specNatTape l z ns
 theorem spec_natTape_to_empty {l : Loc} {z : Int} :
     specNatTape (GF := GF) l z [] ⊢ l ↪ₛ ⟨z, []⟩ := by
   unfold specNatTape
-  iintro ⟨%fs, %Hmap, Hl⟩
-  obtain rfl := List.map_eq_nil_iff.mp Hmap
+  iintro ⟨%fs, %hmap, Hl⟩
+  obtain rfl := List.map_eq_nil_iff.mp hmap
   iexact Hl
 
 theorem spec_empty_to_natTape {l : Loc} {z : Int} :
@@ -293,8 +312,8 @@ theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
         l ↪ₛ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₛ ⟨z, xs⟩ -∗ specNatTape l z ns)) := by
   unfold specNatTape
-  iintro ⟨%fs, %Hmap, Hl⟩
-  obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp Hmap
+  iintro ⟨%fs, %hmap, Hl⟩
+  obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp hmap
   iexists x, xs
   isplitl [Hl]; · iexact Hl
   isplitr; · ipureintro; exact hx

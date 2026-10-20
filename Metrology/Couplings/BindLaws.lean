@@ -4,8 +4,10 @@ public import Metrology.Couplings.Divergences.DpShapes
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 public import Metrology.Couplings.Divergences.RenyiFiber
 
-/-! Bind laws beyond the canonical one: adaptive and choice DP composition, and escort-adaptive
-Rényi composition (Rocq `instances_dp.v`). -/
+/-! # More bind laws
+
+Adaptive and choice DP composition, and escort-adaptive Rényi composition
+(Rocq `instances_dp.v`). -/
 
 @[expose] public section
 

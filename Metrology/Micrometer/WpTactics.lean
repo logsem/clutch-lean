@@ -453,8 +453,8 @@ elab "tp_pure_core" : tactic => do
         $$ $hypIdent:ident with $hypIdent:ident)
   Tactic.evalTactic tacSeq
 
-/-- The trailing `simp only [pl_step_simp]` erases stuck `openRec`/`closeRec` wrappers on
-opaque leaves; without it they accumulate and every later step re-`whnf`s them. -/
+/-- `tp_pure` takes one pure step on the `⤇` hypothesis, then erases stuck `openRec`/`closeRec`
+wrappers (otherwise they accumulate and every later step re-`whnf`s them). -/
 macro "tp_pure" : tactic =>
   `(tactic| (tp_pure_core; pl_step_finish))
 

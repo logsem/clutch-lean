@@ -21,6 +21,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
+/-- Values are inhabited by `()`. -/
 instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
 
 /-- Two `logN` invariants with incompatible bodies have equal names, so `l1 = l2` holds whenever
@@ -34,7 +35,7 @@ theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
   have hN_disj : logN.@ p1 ## logN.@ p2 := ndot_ne_disjoint _ (mt hp h)
   have h1 : (↑(logN.@ p1) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
   have h2 : (↑(logN.@ p2) : CoPset) ⊆ E := LawfulSet.subset_trans (nclose_subseteq _ _) HE
-  have h2' : (↑(logN.@ p2) : CoPset) ⊆ E \ (↑(logN.@ p1) : CoPset) :=
+  have h2diff : (↑(logN.@ p2) : CoPset) ⊆ E \ (↑(logN.@ p1) : CoPset) :=
     fun p hp => CoPset.in_diff.mpr ⟨h2 p hp, fun hp1 => hN_disj p ⟨hp1, hp⟩⟩
   iintro Hinv1 Hinv2
   iinv Hinv1 with HP1
@@ -52,7 +53,7 @@ theorem interp_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
         (lrel_ref A).car (.loc l) (.loc l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
-  iintro ⟨%l', %l1', %Heq1, %Heq1', Hinv1⟩ ⟨%l'', %l2', %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l', %l1', %h1, %h2, Hinv1⟩ ⟨%l'', %l2', %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
   iapply fupd_eq_of_inv_excl HE (by simp) (by
@@ -66,7 +67,7 @@ theorem interp_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
         (lrel_ref A).car (.loc l2) (.loc l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
-  iintro ⟨%l1', %l', %Heq1, %Heq1', Hinv1⟩ ⟨%l2', %l'', %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l1', %l', %h1, %h2, Hinv1⟩ ⟨%l2', %l'', %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
   iapply fupd_eq_of_inv_excl HE (by simp) (by
@@ -80,7 +81,7 @@ theorem interp_tape_funct {E : CoPset} (l l1 l2 : Loc)
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l2) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
-  iintro ⟨%l', %l1', %z1, %Heq1, %Heq1', Hinv1⟩ ⟨%l'', %l2', %z2, %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l', %l1', %z1, %h1, %h2, Hinv1⟩ ⟨%l'', %l2', %z2, %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
   iapply fupd_eq_of_inv_excl HE (by simp) (by
@@ -94,7 +95,7 @@ theorem interp_tape_inj {E : CoPset} (l l1 l2 : Loc)
         (lrel_tape (rT := rT) (GF := GF)).car (.lbl l2) (.lbl l) -∗
         |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
-  iintro ⟨%l1', %l', %z1, %Heq1, %Heq1', Hinv1⟩ ⟨%l2', %l'', %z2, %Heq2, %Heq2', Hinv2⟩
+  iintro ⟨%l1', %l', %z1, %h1, %h2, Hinv1⟩ ⟨%l2', %l'', %z2, %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
     simp_all [Val.ext_iff]
   iapply fupd_eq_of_inv_excl HE (by simp) (by
@@ -110,6 +111,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
+/-- A `⊤` update before `refines` can be absorbed. -/
 theorem fupd_refines {E : CoPset} {e t : Exp rT} {A : lrel rT GF} :
     iprop(|={⊤}=> refines L E e t A) ⊢ refines L E e t A := by
   unfold refines
@@ -183,6 +185,7 @@ theorem refines_ret {e1 e2 : Exp rT} {v1 v2 : Val rT} {A : lrel rT GF}
   imodintro
   iframe Hna HA
 
+/-- `refines` eliminates `|={⊤}=>`. -/
 instance elim_fupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     (P : IProp GF) (A : lrel rT GF) :
     ElimModal True false io false (iprop(|={⊤}=> P)) P
@@ -193,6 +196,7 @@ instance elim_fupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     _ ⊢ |={⊤}=> refines L E e t A              := BIFUpdate.mono wand_elim_right
     _ ⊢ refines L E e t A                      := fupd_refines
 
+/-- `refines` eliminates `|==>`. -/
 instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     (P : IProp GF) (A : lrel rT GF) :
     ElimModal True false io false (iprop(|==> P)) P
@@ -201,6 +205,7 @@ instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT)
     (sep_mono_left (intuitionisticallyIf_mono BIUpdateFUpdate.fupd_of_bupd)).trans
       ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
 
+/-- `refines` is closed under `◇`. -/
 instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
     IsExcept0 (refines L E e t A) where
   is_except0 := calc

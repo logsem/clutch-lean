@@ -10,18 +10,24 @@ public import Iris.Instances.IProp.Instance
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
 
+/-! # Measures as a camera
+
+Measures of total mass at most `1` form a unital camera under `+`. -/
+
 @[expose] public section
 
 open Std Iris COFE ProbabilityTheory MeasureTheory
 
 noncomputable section
 
+/-- Measures as a discrete OFE. -/
 instance authMeasureOFE [MeasurableSpace α] : OFE (Measure α) where
   Dist _ x y := x = y
   dist_eqv := ⟨fun _ => rfl, (Eq.symm ·), (Eq.trans · ·)⟩
   eq_dist' := .symm <| forall_const _
   dist_lt H _ := H
 
+/-- Measures compose by `+`, valid when of mass at most `1`. -/
 instance [MeasurableSpace α] : CMRA (Measure α) where
   pcore _ := .some 0
   op μ₁ μ₂ := μ₁ + μ₂
@@ -42,6 +48,7 @@ instance [MeasurableSpace α] : CMRA (Measure α) where
     exact ⟨0, Option.some_inj.mpr (zero_add 0).symm⟩
   extend {_ _ y1 y2} _ := (⟨y1, y2, ·, rfl, rfl⟩)
 
+/-- The zero measure is the unit. -/
 instance [MeasurableSpace α] : UCMRA (Measure α) where
   unit := 0
   unit_valid := by simp [CMRA.Valid]

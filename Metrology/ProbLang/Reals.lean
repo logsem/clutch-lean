@@ -5,11 +5,16 @@ public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.MeasureTheory.Measure.Restrict
 public import Mathlib.MeasureTheory.Function.Floor
 
-/-! # The continuous `LawfulProbLangℝ ℝ` instance -/
+/-! # The continuous `LawfulProbLangℝ ℝ` instance
+
+Takes `Uniform[0,1]` as Lebesgue measure on `[0,1]` and proves the rotation invariance a
+continuous one-time pad needs. -/
+
 namespace ProbLang
 
 open MeasureTheory
 
+/-- The real numbers as the continuous `LawfulProbLangℝ` model. -/
 public noncomputable instance instProbLangℝReal : LawfulProbLangℝ ℝ where
   beq a b := decide (a = b)
   eq_of_beq h := of_decide_eq_true h
@@ -80,6 +85,7 @@ public theorem mem_unifUnitSupport_real {r : ℝ} :
 `Uniform[0,1]`: the hypothesis of `refines_couple_urands_lr` for a continuous one-time pad. -/
 
 open Set in
+/-- Adding `m ∈ [0, 1)` modulo 1 preserves `Uniform[0,1]`. -/
 theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
@@ -109,32 +115,27 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
       = (fun r : ℝ => m + r) ⁻¹' (S ∩ Ico m 1) := by
     ext r
     simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_Ico]
+    have hfr : 0 ≤ r → r < 1 - m → Int.fract (m + r) = m + r :=
+      fun h0 h1 => Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
     constructor
     · rintro ⟨hSr, hr0, hr1⟩
-      have hfr : Int.fract (m + r) = m + r :=
-        Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
-      rw [hfr] at hSr
-      exact ⟨hSr, by linarith, by linarith⟩
+      exact ⟨by rwa [hfr hr0 hr1] at hSr, by linarith, by linarith⟩
     · rintro ⟨hSr, hge, hlt⟩
-      have hfr : Int.fract (m + r) = m + r :=
-        Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
-      exact ⟨by rw [hfr]; exact hSr, by linarith, by linarith⟩
+      exact ⟨by rwa [hfr (by linarith) (by linarith)], by linarith, by linarith⟩
   have hB : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)
       = (fun r : ℝ => (m - 1) + r) ⁻¹' (S ∩ Ico (0:ℝ) m) := by
     ext r
     simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_Ico]
     have hshift : Int.fract (m + r) = Int.fract (m + r - 1) := (Int.fract_sub_one (m + r)).symm
+    have hfr : 1 - m ≤ r → r < 1 → Int.fract (m + r - 1) = m + r - 1 :=
+      fun h0 h1 => Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
     constructor
     · rintro ⟨hSr, hr0, hr1⟩
-      have hfr : Int.fract (m + r - 1) = m + r - 1 :=
-        Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
-      rw [hshift, hfr] at hSr
-      refine ⟨by convert hSr using 1; ring, by linarith, by linarith⟩
+      rw [hshift, hfr hr0 hr1] at hSr
+      exact ⟨by convert hSr using 1; ring, by linarith, by linarith⟩
     · rintro ⟨hSr, hge, hlt⟩
-      have hfr : Int.fract (m + r - 1) = m + r - 1 :=
-        Int.fract_eq_self.mpr ⟨by linarith, by linarith⟩
       refine ⟨?_, by linarith, by linarith⟩
-      rw [hshift, hfr]
+      rw [hshift, hfr (by linarith) (by linarith)]
       convert hSr using 1; ring
   have hunion1 : Ico (0:ℝ) (1 - m) ∪ Ico (1 - m) (1:ℝ) = Ico (0:ℝ) 1 :=
     Set.Ico_union_Ico_eq_Ico hlo hhi
@@ -158,6 +159,7 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   rw [hL, hR, hA, hB, measure_preimage_add, measure_preimage_add]
   exact add_comm _ _
 
+/-- Adding any real `m` modulo 1 preserves `Uniform[0,1]`. -/
 public theorem measurePreserving_fracAdd (m : ℝ) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))

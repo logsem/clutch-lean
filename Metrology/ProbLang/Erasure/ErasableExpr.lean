@@ -96,10 +96,10 @@ theorem execN_iterM_tape_presample_expr_eq [Countable rT] [MeasurableSingletonCl
   rw [hiter_eq]
   exact execN_tapePresampleIter_expr_eq n h hN
 
-/-! ## `ErasableExpr`: erasability up to the expression projection
+/-! ## `ErasableExpr` -/
 
-Clutch's `erasable` compares val-projected `exec`. `Erasable` compares full configurations,
-which `tapePresample σ α` fails; `ErasableExpr` is the projected analogue it satisfies. -/
+/-- Erasability up to the expression projection, the analogue of `Erasable` (which compares full
+configurations) that `tapePresample σ α` satisfies. -/
 def ErasableExpr (μ : Measure (State rT)) (σ : State rT) : Prop :=
   ∀ (e : Exp rT) (m : Nat),
     asExpr (μ.bind (fun σ' => execN m ⟨e, σ'⟩)) =

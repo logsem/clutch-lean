@@ -15,7 +15,9 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on expressions -/
+/-! # Measure space on expressions
+
+Derives the σ-algebra on `Exp` and smoke-tests the generated recursion lemmas. -/
 
 namespace ProbLang.Exp
 

@@ -211,7 +211,6 @@ theorem refines_bind_sep (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e'
   iintro ⟨H, Hk⟩
   iapply refines_bind K K' $$ H Hk
 
-
 end Steps
 
 /-! ## Value rules -/

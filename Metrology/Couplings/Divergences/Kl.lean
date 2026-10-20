@@ -212,9 +212,11 @@ theorem klDivergence_iff [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     klDivergence r μ ν ↔ klDiv μ ν ≤ r := by
   rw [klDivergence_iff_fDiv, fDiv_klFun_eq_klDiv, EReal.coe_ennreal_le_coe_ennreal_iff]
 
+/-- Generalized KL is graded. -/
 instance isGraded_kl : klDivergence.{u}.IsGraded :=
   isGraded_bofDivergence convexOn_klFun continuous_klFun.continuousWithinAt
 
+/-- Generalized KL is reflexive. -/
 instance isReflexive_kl : klDivergence.{u}.IsReflexive :=
   isReflexive_bofDivergence klFun_one
 

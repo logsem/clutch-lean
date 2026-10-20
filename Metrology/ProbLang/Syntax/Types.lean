@@ -17,12 +17,15 @@ open Cslib Exp
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
+/-- A renaming of de Bruijn type variables. -/
 abbrev Renaming := Nat → Nat
+/-- A substitution of types for de Bruijn type variables. -/
 abbrev Substitution := Nat → Ty
 
-/-- Transform a renaming `ξ` into one that applies under a binder -/
+/-- Transform a renaming `ξ` into one that applies under a binder. -/
 @[simp] def Renaming.under (ξ : Renaming) : Renaming | 0 => 0 | n + 1 => ξ n + 1
 
+/-- Apply a renaming to the type variables of a type. -/
 def Ty.rename (ξ : Renaming) : Ty → Ty
   | .int          => .int
   | .bool         => .bool
@@ -38,9 +41,10 @@ def Ty.rename (ξ : Renaming) : Ty → Ty
   | .forall' τ    => .forall' (τ.rename ξ.under)
   | .exists' τ    => .exists' (τ.rename ξ.under)
 
-/-- Transform a substitution `σ` into one that applies under a binder -/
+/-- Transform a substitution `σ` into one that applies under a binder. -/
 def up (σ : Substitution) : Substitution | 0  => .var 0 | n + 1 => (σ n).rename (· + 1)
 
+/-- Apply a substitution to the type variables of a type. -/
 def Ty.subst (σ : Substitution) : Ty → Ty
   | .int          => .int
   | .bool         => .bool
@@ -56,15 +60,19 @@ def Ty.subst (σ : Substitution) : Ty → Ty
   | .forall' τ    => .forall' (τ.subst (up σ))
   | .exists' τ    => .exists' (τ.subst (up σ))
 
-/-- `τ.single τ'` substitutes `τ'` for var 0 in `τ`, i.e. `τ[τ'/0]`.-/
+/-- `τ.single τ'` substitutes `τ'` for var 0 in `τ`, i.e. `τ[τ'/0]`. -/
 def Ty.single (τ τ' : Ty) : Ty := τ.subst (fun n => match n with | 0 => τ' | k + 1 => .var k)
 
+/-- Shift every type variable up by one. -/
 def Ty.shift (τ : Ty) : Ty := τ.rename (· + 1)
 
+/-- Rename the output types of a substitution. -/
 def Ty.renameSubst (ξ : Renaming) (σ : Substitution) : Substitution := (σ · |>.rename ξ)
 
+/-- Compose substitutions: first `σ₁`, then `σ₂`. -/
 def Ty.substComp (σ₂ σ₁ : Substitution) : Substitution := fun n => (σ₁ n).subst σ₂
 
+/-- Apply `up` `k` times. -/
 @[simp] def upN : Nat → Substitution → Substitution
   | 0,     σ => σ
   | k + 1, σ => up (upN k σ)
@@ -91,7 +99,8 @@ theorem Ty.rename_rename (ξ₁ ξ₂ : Nat → Nat) (τ : Ty) :
   | var n => rfl
   | rec' τ ih | forall' τ ih | exists' τ ih =>
     simp only [Ty.rename, ih]
-    rw [show Renaming.under ξ₁ ∘ Renaming.under ξ₂ = Renaming.under (ξ₁ ∘ ξ₂) from funext (under_comp _ _)]
+    rw [show Renaming.under ξ₁ ∘ Renaming.under ξ₂ = Renaming.under (ξ₁ ∘ ξ₂) from
+      funext (under_comp _ _)]
   | _ => simp only [Ty.rename, *]
 
 theorem up_upren (ξ : Nat → Nat) : ∀ n,
@@ -198,12 +207,14 @@ theorem upN_ge : ∀ {k n : Nat} (σ : Nat → Ty), k ≤ n →
 
 /-! ## Value classes -/
 
+/-- Unboxed types, whose values `=` compares directly. -/
 inductive UnboxedType : Ty → Prop
   | unit                           : UnboxedType .unit
   | int                            : UnboxedType .int
   | bool                           : UnboxedType .bool
   | ref (τ : Ty)                   : UnboxedType (.ref τ)
 
+/-- Types whose values can be compared with `=`. -/
 inductive EqType : Ty → Prop
   | unit                           : EqType .unit
   | int                            : EqType .int
@@ -219,12 +230,14 @@ theorem unboxed_type_ref_or_eqtype {τ : Ty} (h : UnboxedType τ) :
   | .bool  => .inl .bool
   | .ref τ => .inr (.inl ⟨τ, rfl⟩)
 
+/-- Result type of a binary operation on integer operands. -/
 def BinOp.intResTy : BinOp → Option Ty
   | .plus | .minus | .mult | .div | .mod  => some .int
   | .shl  | .shr                          => some .int
   | .and  | .or    | .xor                 => none
   | .eq   | .lt    | .le                  => some .bool
 
+/-- Result type of a binary operation on boolean operands. -/
 def BinOp.boolResTy : BinOp → Option Ty
   | .plus | .minus | .mult | .div | .mod  => none
   | .shl  | .shr                          => none
@@ -232,32 +245,29 @@ def BinOp.boolResTy : BinOp → Option Ty
   | .eq                                   => some .bool
   | .lt   | .le                           => none
 
+/-- Result type of a unary operation on an integer operand. -/
 def UnOp.intResTy : UnOp → Option Ty
   | .neg   => none
   | .minus => some .int
   | .toReal => some .real
   | .frac  => none
 
+/-- Result type of a unary operation on a boolean operand. -/
 def UnOp.boolResTy : UnOp → Option Ty
   | .neg   => some .bool
   | .minus => none
   | .toReal => none
   | .frac  => none
 
-/-- Result types of the unary operations defined on real operands: negation,
-the idempotent `toReal`, and the fractional part. `UnOp.eval` implements exactly
-these three at `.lit (.real _)`. -/
+/-- Result type of a unary operation on a real operand (the ones `UnOp.eval` implements). -/
 def UnOp.realResTy : UnOp → Option Ty
   | .neg    => none
   | .minus  => some .real
   | .toReal => some .real
   | .frac   => some .real
 
-/-- Result types of the binary operations defined on real operands. `BinOp.eval`
-implements addition (`realAdd`), the two comparisons (`realLt`/`realLe`), and
-literal equality. Mixed int/real operands stay stuck — a program coerces
-explicitly with `UnOp.toReal` — so this table is only consulted when *both*
-operands are reals. -/
+/-- Result type of a binary operation when both operands are real; mixed int/real operands stay
+stuck, so programs coerce with `UnOp.toReal`. -/
 def BinOp.realResTy : BinOp → Option Ty
   | .plus                                => some .real
   | .minus | .mult | .div | .mod         => none
@@ -269,17 +279,19 @@ def BinOp.realResTy : BinOp → Option Ty
 
 A typing context `Tctx` maps atoms (`Var = Nat`) to types. -/
 
+/-- A typing context. -/
 abbrev Tctx := Var → Option Ty
 
 namespace Tctx
 
+/-- The empty typing context. -/
 def empty : Tctx := fun _ => none
 
-/-- Insert at an atom. -/
+/-- Assign type `τ` to the atom `x`. -/
 def insert (Γ : Tctx) (x : Var) (τ : Ty) : Tctx :=
   fun y => if y = x then some τ else Γ y
 
-/-- Pointwise shift on type-level de-Bruijn. -/
+/-- Shift the type variables of every type in the context. -/
 def shift (Γ : Tctx) : Tctx := fun x => (Γ x).map Ty.shift
 
 end Tctx
@@ -304,7 +316,7 @@ inductive PatTyped : Ty → Pat rT → Ty → Prop
 
 Clutch's `letrec f x body` is `fix (lam body)`; derive it from `Typed.fix` and `Typed.lam`. -/
 
-/-- `Typed Γ e τ` — expression `e` has type `τ` under typing context `Γ`. -/
+/-- Expression `e` has type `τ` under context `Γ`. -/
 inductive Typed : Tctx → Exp rT → Ty → Prop
   | fvar {Γ x τ} : Γ x = some τ → Typed Γ (.fvar x) τ
   | lit_int  {Γ z} : Typed Γ (.lit (.int z)) .int
@@ -385,7 +397,7 @@ inductive Typed : Tctx → Exp rT → Ty → Prop
       Typed Γ e (.exists' τ)
   | tunpack (L : Finset Var) {Γ e1 e2 τ τ2} :
       Typed Γ e1 (.exists' τ) →
-      (∀ x ∉ L, Typed ((Γ.shift).insert x τ) (Exp.open' e2 (.fvar x)) τ2.shift) →
+      (∀ x ∉ L, Typed (Γ.shift.insert x τ) (Exp.open' e2 (.fvar x)) τ2.shift) →
       Typed Γ (.app (.lam e2) e1) τ2
   | alloc {Γ e τ} :
       Typed Γ e τ → Typed Γ (.alloc e) (.ref τ)
@@ -652,9 +664,9 @@ theorem Typed.rename_fix {Γ : Tctx} {f : Var} {e : Exp α} {τ τ' : Ty}
 
 theorem Typed.rename_unpack {Γ : Tctx} {x : Var} {e2 : Exp α} {τ τ2 : Ty}
     (_hx : x ∉ e2.fv)
-    (he2 : Typed ((Γ.shift).insert x τ) e2 τ2.shift) :
+    (he2 : Typed (Γ.shift.insert x τ) e2 τ2.shift) :
     ∀ y ∉ insert x e2.fv,
-      Typed ((Γ.shift).insert y τ)
+      Typed (Γ.shift.insert y τ)
         (Exp.open' (Exp.close e2 x) (Exp.fvar y)) τ2.shift :=
   rename_lam _hx he2
 

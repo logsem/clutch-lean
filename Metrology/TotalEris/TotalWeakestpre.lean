@@ -5,6 +5,13 @@ public import Iris.BI.Lib.Fixpoint
 public import Iris.ProofMode.Classes
 public import Iris.ProofMode.InstancesUpdates
 
+/-!
+# Total weakest precondition
+
+`tglWp`, the least fixpoint of the total-correctness weakest precondition, with value, bind,
+monotonicity and frame rules.
+-/
+
 @[expose] public section
 
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
@@ -22,11 +29,13 @@ variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
 instance : COFE (Exp rT) := COFE.ofDiscrete _
 instance : OFE.Discrete (Exp rT) := ⟨id⟩
 
+/-- The index of the weakest-precondition fixpoint: a mask and an expression. -/
 abbrev TglWpState (rT : Type _) : Type _ := CoPset × Exp rT
 
 instance : COFE (TglWpState rT) := COFE.ofDiscrete _
 instance : OFE.Discrete (TglWpState rT) := ⟨id⟩
 
+/-- One unfolding of `tglWp`: a value satisfies `Φ`; a non-value takes a `glm'` step. -/
 abbrev tglWpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   iprop(∀ (σ₁ : State rT) (ε₁ : ENNReal),
@@ -59,10 +68,12 @@ private theorem tglWpPre_mono {wp₁ wp₂ : CoPset → Exp rT → (Val rT → I
     iframe Hσ' Hε'
     iapply Hwand $$ HW
 
+/-- `tglWpPre` with the postcondition fixed, as a functional on `TglWpState`. -/
 abbrev tglWpPreFixed (Φ : Val rT → IProp GF)
     (wp : TglWpState rT → IProp GF) : TglWpState rT → IProp GF :=
   fun ⟨E, e⟩ => tglWpPre (fun E' e' _ => wp ⟨E', e'⟩) E e Φ
 
+/-- `tglWpPreFixed` is monotone, so its least fixpoint exists. -/
 instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
     BIMonoPred (tglWpPreFixed Φ) where
   mono_pred {wp1 wp2 _ _} := by
@@ -76,6 +87,7 @@ instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
   mono_pred_ne.ne {_ s s'} hd := by
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
+/-- The total weakest precondition: `e` terminates under mask `E` and satisfies `Φ`. -/
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
   bi_least_fixpoint (tglWpPreFixed Φ) ⟨E, e⟩
 

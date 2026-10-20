@@ -10,6 +10,11 @@ public import Metrology.Couplings.AdditiveCouplings
 
 @[expose] public section
 
+/-! # Program execution
+
+Bounded-step and limiting execution of configurations, with measurability, mass bounds and
+liftings of the limit. -/
+
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
@@ -17,6 +22,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
+/-- Execution for at most `n` steps (zero if `n` steps do not suffice to reach a value). -/
 def execN (n : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
   match n with
   | 0 => 0
@@ -28,7 +34,7 @@ theorem execN_measurable (n : Nat) : Measurable (execN (rT := rT) n) := by
   · simp [execN]
   · exact Measurable.ite (by measurability) (by measurability) (by measurability)
 
-/-- execN conditioned on terminating in exactly N steps -/
+/-- Execution that reaches a value in exactly `N` steps. -/
 def execExactN (N : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
   match N with
   | 0 => if ρ.expr.isValue then dirac ρ else 0
@@ -53,8 +59,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSe
     · simp only [↓reduceIte, hv]
       rw [tsum_eq_zero_add' ENNReal.summable]
       have hzero : (if 0 < n + 1 then (execExactN 0 ρ) S else 0) = 0 := by simp [execExactN, hv]
-      rw [hzero, zero_add]
-      rw [bind_apply HS (by measurability)]
+      rw [hzero, zero_add, bind_apply HS (by measurability)]
       simp_rw [ih]
       rw [lintegral_tsum (fun k => ?G3)]
       case G3 =>
@@ -63,7 +68,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSe
         exact (measurable_coe HS).comp (execExactN_measurable _)
       congr 1; ext k
       by_cases hk : k < n
-      · have hk' : ∀ k, k + 1 < n + 1 ↔ k < n  := by omega
+      · have hk' : ∀ k, k + 1 < n + 1 ↔ k < n := by omega
         simp only [hk, hk', ↑reduceIte]
         rw [← bind_apply HS (Measurable.aemeasurable (by measurability))]
         simp only [execExactN, hv, ↑reduceIte]
@@ -75,10 +80,10 @@ theorem execExactN_mono_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableS
   rw [execExactN_sum_continuous HS, hunfold]
   exact ENNReal.le_tsum (f := fun N => if N < n + 1 then execExactN N ρ S else 0) n
 
-/-- Limiting distribution of an execution, over configurations -/
+/-- Limiting distribution of an execution, over configurations. -/
 def limExec (ρ : Cfg rT) : Measure (Cfg rT) := ⨆ (i : ℕ), execN i ρ
 
-/-- Extract an expression measure from a Cfg measure -/
+/-- The expression marginal of a measure on configurations. -/
 def asExpr (μ : Measure (Cfg rT)) : Measure (Exp rT) := μ.map (·.expr)
 
 /-- `asExpr` preserves sub-probability measures. -/
@@ -86,12 +91,11 @@ instance asExpr.isSubProbabilityMeasure (μ : Measure (Cfg rT)) [IsSubProbabilit
     IsSubProbabilityMeasure (asExpr μ) :=
   isSubProbabilityMeasure_map _ _
 
-/-- Limiting distribution of an execution, over return values -/
+/-- Limiting distribution of an execution, over return values. -/
 def limExecV (ρ : Cfg rT) : Measure (Exp rT) := asExpr <| limExec ρ
 
 /-! ### Measurability for arbitrary measurable `rT`. -/
 
--- TODO: Move me
 theorem asExpr.measurable :
     Measurable (asExpr : Measure (Cfg rT) → Measure (Exp rT)) :=
   Measure.measurable_map _ Cfg.measurable_expr
@@ -136,6 +140,7 @@ theorem execN_succ_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) (n : Nat)
     execN (n + 1) ρ = (primStep ρ).bind (execN n) := by
   simp [execN, hv]
 
+/-- One step, except that a value stays put. -/
 def stepOrFinal (ρ : Cfg rT) : Measure (Cfg rT) :=
   if ρ.expr.isValue then dirac ρ else primStep ρ
 
@@ -151,7 +156,7 @@ theorem stepOrFinal_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) :
 theorem stepOrFinal.measurable :
     Measurable (stepOrFinal : Cfg rT → Measure (Cfg rT)) := by
   have hpred : MeasurableSet {ρ : Cfg rT | ρ.expr.isValue} := by
-    -- `isValue` now also requires local closedness; `{isValue} = {isValueR} ∩ {lcb 0 = true}`.
+    -- `isValue` also requires local closedness: `{isValue} = {isValueR} ∩ {lcb 0 = true}`
     have : {ρ : Cfg rT | ρ.expr.isValue}
         = (fun ρ : Cfg rT => ρ.expr) ⁻¹' ({e | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) := by
       ext ρ; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
@@ -203,11 +208,6 @@ theorem execN_univ_le_one
 instance execN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (execN n ρ) := ⟨execN_univ_le_one n ρ⟩
 
-/-! ### Algebraic laws
-
-Rocq's `exec (n + m) = pexec n ≫= exec m` has no analogue here: `execN 0 = 0` merges
-Rocq's `pexec` and `exec`. Factor through `pexecN` (iterated `stepOrFinal`) instead. -/
-
 /-! ### `limExec` basics (ported from `SampCert/SLang.lean`) -/
 
 -- Rocq: lim_exec_final (value case)
@@ -253,7 +253,12 @@ theorem limExec_step
 theorem limExec_step' (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec := by
   rw [limExec_step]; rfl
 
-/-! ### `pexecN` — iterated `stepOrFinal` -/
+/-! ### `pexecN` — iterated `stepOrFinal`
+
+`execN 0 = 0` merges Rocq's `pexec` and `exec`, so Rocq's `exec (n + m) = pexec n ≫= exec m`
+has no analogue for `execN`; `pexecN_plus` and `limExec_pexecN` play that role. -/
+
+/-- `n` iterations of `stepOrFinal`. -/
 def pexecN (n : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
   match n with
   | 0 => dirac ρ
@@ -285,8 +290,8 @@ theorem pexecN_univ_le_one (n : Nat) (ρ : Cfg rT) : pexecN n ρ Set.univ ≤ 1 
 instance pexecN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (pexecN n ρ) := ⟨pexecN_univ_le_one n ρ⟩
 
-/-- Running an expression for `n` steps from a sub-probability measure of states gives a
-sub-probability measure. -/
+/-- Running an expression for `n` steps from a sub-probability measure of states keeps mass at
+most one. -/
 instance isSubProbabilityMeasure_bind_pexecN (μ : Measure (State rT)) [IsSubProbabilityMeasure μ]
     (e : Exp rT) (n : Nat) : IsSubProbabilityMeasure (μ.bind fun σ ↦ pexecN n ⟨e, σ⟩) :=
   have hk : Measurable fun σ : State rT ↦ pexecN n ⟨e, σ⟩ :=
@@ -354,8 +359,7 @@ instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure
 instance limExecV.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExecV ρ) :=
   isSubProbabilityMeasure_map _ _
 
-/-- The limit execution over return values, as a kernel: the spec's remaining run that a bind
-law's side condition sees. -/
+/-- The limit execution over return values, as a kernel. -/
 def limExecVKernel : Kernel (Cfg rT) (Exp rT) := ⟨limExecV, limExecV.measurable⟩
 
 instance limExecVKernel.isSubMarkovKernel : IsSubMarkovKernel (limExecVKernel (rT := rT)) :=
@@ -432,8 +436,7 @@ theorem limExec_AddCoupl
   rw [lintegral_limExec' ρ f]
   exact iSup_le fun n => H n ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
 
-/-- Countability-free replacement for `AddCoupl.map_inv` → `limExec_AddCoupl` → `AddCoupl.map`:
-`map_inv` needs a discrete σ-algebra on `F`'s codomain. -/
+/-- `limExec_AddCoupl` through a measurable map, without a discrete σ-algebra on its codomain. -/
 theorem limExec_map_AddCoupl
     {γ β : Type*} [MeasurableSpace γ] [MeasurableSpace β] {ε : ENNReal}
     {Φ : Set (γ × β)} {ρ : Cfg rT} {μ₂ : Measure β}

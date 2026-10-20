@@ -17,7 +17,7 @@ public import Mathlib.Analysis.Real.OfDigits
 
 public import Metrology.Couplings.ApproximateCouplings
 
-/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ` (the old core). -/
+/-! `(ε, δ)`-DP couplings as approximate couplings up to `x ↦ e^ε x + δ`. -/
 
 @[expose] public section
 

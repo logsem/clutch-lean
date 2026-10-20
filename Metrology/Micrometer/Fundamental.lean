@@ -78,6 +78,7 @@ section Prim
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal]
 
 variable (L) in
+/-- Every well-typed expression is related to itself under any related contexts. -/
 theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
     (Γrc : RelCtx rT GF) (HCtx : TctxRelated L Δ Γtc Γrc) :
     ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γrc e e τ := by
@@ -148,6 +149,7 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
       ih2 x (not_mem_union_dom hx).1 (TyEnv.cons A Δ) _
         ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
 
+/-- A closed well-typed expression refines itself at its type. -/
 theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
     ⊢@{IProp GF} refines L ⊤ e e (interp L τ Δ) := by
   have Hfund := fundamental L Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])

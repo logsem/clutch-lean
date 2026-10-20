@@ -29,8 +29,7 @@ noncomputable def fDiv (f : ℝ → ℝ) (μ ν : Measure X) : EReal :=
     ((∫ x, f (μ.rnDeriv ν x).toReal ∂ν : ℝ) : EReal) + derivAtTop f * μ.singularPart ν univ
   else ⊤
 
-/-- When `f ∘ dμ/dν` is integrable, the `f`-divergence is its integral plus the singular part
-contribution `f'(∞) · μₛ(univ)`. -/
+/-- The `f`-divergence when `f ∘ dμ/dν` is integrable. -/
 theorem fDiv_of_integrable (h : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν) :
     fDiv f μ ν =
       ((∫ x, f (μ.rnDeriv ν x).toReal ∂ν : ℝ) : EReal) + derivAtTop f * μ.singularPart ν univ := by

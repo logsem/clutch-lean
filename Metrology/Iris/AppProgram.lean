@@ -26,12 +26,14 @@ variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
 
 /-! ## Ghost-state classes -/
 
+/-- The ghost-state slots for the program heap and tapes. -/
 class AppPreGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors) where
   heap : ElemG GF (constOF (SpecHeap rT))
   tapes : ElemG GF (constOF SpecTapes)
 
 attribute [reducible, instance] AppPreGS.heap AppPreGS.tapes
 
+/-- The program ghost state with its ghost names. -/
 class AppGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors) extends
     AppPreGS rT GF where
   γheap : GName
@@ -43,18 +45,23 @@ section Resources
 
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
 
+/-- The authoritative program heap. -/
 def appHeapAuth (σ : LocHeap (Val rT)) : IProp GF :=
   iOwn (E := IApp.heap) IApp.γheap (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 
+/-- Ownership of one heap cell. -/
 def appHeapFrag (ℓ : Loc) (v : Val rT) : IProp GF :=
   iOwn (E := IApp.heap) IApp.γheap (HeapView.Frag ℓ (.own 1) (toAgree v))
 
+/-- The authoritative program tapes. -/
 def appTapesAuth (σ : LocHeap Tape) : IProp GF :=
   iOwn (E := IApp.tapes) IApp.γtapes (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 
+/-- Ownership of one tape. -/
 def appTapesFrag (ℓ : Loc) (t : Tape) : IProp GF :=
   iOwn (E := IApp.tapes) IApp.γtapes (HeapView.Frag ℓ (.own 1) (toAgree t))
 
+/-- The authoritative program state: heap and tapes. -/
 def appStateAuth (σ : State rT) : IProp GF :=
   iprop(appHeapAuth σ.heap ∗ appTapesAuth σ.tapes)
 
@@ -94,14 +101,14 @@ theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
         l ↦ w := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩ Hf
-  have Hupd :
+  have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap) •
         HeapView.Frag l (.own 1) (toAgree v) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.heap) l (toAgree w)) •
         HeapView.Frag l (.own 1) (toAgree w) :=
     HeapView.update_replace fun _ => by simp
-  imod (iOwn_update_op (E := IApp.heap) Hupd) $$ [$Hh $Hf] with Hu
+  imod (iOwn_update_op (E := IApp.heap) hupd) $$ [$Hh $Hf] with Hu
   imodintro
   ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
   simp only [State.update_heap, LocHeap.asAgree_insert]
@@ -114,17 +121,17 @@ theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
         σ.heap.fresh ↦ v := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩
-  have Hfresh : PartialMap.get? (LocHeap.asAgree σ.heap) σ.heap.fresh = none := by
+  have hfresh : PartialMap.get? (LocHeap.asAgree σ.heap) σ.heap.fresh = none := by
     rw [LocHeap.asAgree_get?]
     show (σ.heap[σ.heap.fresh]?).map toAgree = none
     rw [ExtTreeMap.fresh_get?]; rfl
-  have Hupd :
+  have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.heap) σ.heap.fresh (toAgree v)) •
         HeapView.Frag σ.heap.fresh (.own 1) (toAgree v) :=
-    HeapView.update_one_alloc Hfresh DFrac.valid_own_one fun _ => by simp
-  imod (iOwn_update Hupd) $$ Hh with Hu
+    HeapView.update_one_alloc hfresh DFrac.valid_own_one fun _ => by simp
+  imod (iOwn_update hupd) $$ Hh with Hu
   imodintro
   ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
   simp only [State.update_heap, LocHeap.asAgree_insert]
@@ -149,14 +156,14 @@ theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
         l ↪ₐ s := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩ Hf
-  have Hupd :
+  have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes) •
         HeapView.Frag l (.own 1) (toAgree t) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.tapes) l (toAgree s)) •
         HeapView.Frag l (.own 1) (toAgree s) :=
     HeapView.update_replace fun _ => by simp
-  imod (iOwn_update_op (E := IApp.tapes) Hupd) $$ [$Ht $Hf] with Hu
+  imod (iOwn_update_op (E := IApp.tapes) hupd) $$ [$Ht $Hf] with Hu
   imodintro
   ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
   simp only [State.update_tapes, LocHeap.asAgree_insert]
@@ -169,17 +176,17 @@ theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
         σ.tapes.fresh ↪ₐ t := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩
-  have Hfresh : PartialMap.get? (LocHeap.asAgree σ.tapes) σ.tapes.fresh = none := by
+  have hfresh : PartialMap.get? (LocHeap.asAgree σ.tapes) σ.tapes.fresh = none := by
     rw [LocHeap.asAgree_get?]
     show (σ.tapes[σ.tapes.fresh]?).map toAgree = none
     rw [ExtTreeMap.fresh_get?]; rfl
-  have Hupd :
+  have hupd :
       HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes) ~~>
       HeapView.Auth (.own 1)
           (PartialMap.insert (LocHeap.asAgree σ.tapes) σ.tapes.fresh (toAgree t)) •
         HeapView.Frag σ.tapes.fresh (.own 1) (toAgree t) :=
-    HeapView.update_one_alloc Hfresh DFrac.valid_own_one fun _ => by simp
-  imod (iOwn_update Hupd) $$ Ht with Hu
+    HeapView.update_one_alloc hfresh DFrac.valid_own_one fun _ => by simp
+  imod (iOwn_update hupd) $$ Ht with Hu
   imodintro
   ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
   simp only [State.update_tapes, LocHeap.asAgree_insert]
@@ -187,18 +194,18 @@ theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
 
 end Algebra
 
-/-! ## `natTape`: tapes as plain integer lists
-
-Rocq's `nat_tape l N ns` (notation `↪N`) becomes `appNatTape l z ns` (notation `↪N⟨z; ns⟩`). -/
+/-! ## `natTape`: tapes as plain integer lists -/
 
 section NatTape
 open scoped AppGS
 
 variable {GF : BundledGFunctors} [AppGS rT GF]
 
+/-- Every entry lies in `[0, z)`. -/
 def Tape.inBounds (z : Int) (ns : List Int) : Prop :=
   ∀ n ∈ ns, 0 ≤ n ∧ n < z
 
+/-- The tape at `l` of bound `z` holds exactly the integers `ns` (Rocq `nat_tape`). -/
 noncomputable def appNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
   iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
     ⌜fs.map (fun x => x.val) = ns⌝ ∗ l ↪ₐ ⟨z, fs⟩)

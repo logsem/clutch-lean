@@ -56,6 +56,7 @@ theorem laplacePDF_eq (a : ℝ) {b : ℝ≥0} (hb : 0 < b) {x : ℝ} (hx : x ≠
     congr 1
     field_simp
 
+/-- The Laplace distribution is a probability measure. -/
 instance isProbabilityMeasure_laplace (a : ℝ) {b : ℝ≥0} [hb : Fact (0 < b)] :
     IsProbabilityMeasure (laplace a b) where
   measure_univ := by
@@ -150,6 +151,7 @@ namespace Mechanism
 noncomputable def laplaceMech (b : ℝ≥0) : Mechanism ℝ ℝ :=
   ⟨fun a ↦ laplace a b, measurable_laplace b⟩
 
+/-- The Laplace mechanism is a Markov kernel. -/
 instance isMarkovKernel_laplaceMech (b : ℝ≥0) [Fact (0 < b)] : IsMarkovKernel (laplaceMech b) :=
   ⟨fun a ↦ isProbabilityMeasure_laplace a⟩
 

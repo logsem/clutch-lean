@@ -4,9 +4,10 @@ public import Mathlib.Analysis.Convex.SpecificFunctions.Pow
 public import Mathlib.Topology.Sion
 public import Metrology.Couplings.Divergences.RenyiCodensity
 
-/-! The Rényi–Strassen theorem: a Rényi codensity lifting is witnessed by a kernel that moves mass
-along the cost and lands within the Rényi budget (Rocq `renyi_kernel_algebra_final.v`,
-`renyi_strassen.v`, `renyi_witness_adaptive.v`). -/
+/-! # The Rényi–Strassen theorem
+
+A Rényi codensity lifting is witnessed by a kernel that moves mass along the cost and lands within
+budget. Rocq: `renyi_kernel_algebra_final.v`, `renyi_strassen.v`, `renyi_witness_adaptive.v`. -/
 
 @[expose] public section
 

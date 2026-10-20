@@ -8,7 +8,9 @@ public meta import Metrology.ProbLang.Syntax.Syntax
 
 @[expose] public section
 
-/-! # Surface syntax for ProbLang  -/
+/-! # Surface syntax for ProbLang
+
+`pl(…)` elaborates to `Exp`; the unexpanders and delaborators print `Exp` back as `pl(…)`. -/
 
 namespace ProbLang
 
@@ -186,6 +188,7 @@ macro_rules
 
 /-! ## Expression elaboration -/
 
+/-- Source names in scope, mapped to their fresh atoms. -/
 abbrev NameEnv := Lean.NameMap Var
 
 /-- Fresh-atom counter for one `pl(…)` elaboration. -/
@@ -197,12 +200,14 @@ meta def genAtom (st : IO.Ref AtomState) : TermElabM Var := do
   st.set { next := s.next + 1 }
   return .internal s.next
 
+/-- A user-named binder: its identifier, fresh atom and optional type annotation. -/
 structure NamedBinder where
   ident : Lean.Ident
   atom  : Var
   ty    : Option (TSyntax `pl_ty)
 
-meta def bindNamed (st : IO.Ref AtomState) (env : NameEnv) (i : Lean.Ident) (ty : Option (TSyntax `pl_ty)) :
+meta def bindNamed (st : IO.Ref AtomState) (env : NameEnv) (i : Lean.Ident)
+    (ty : Option (TSyntax `pl_ty)) :
     TermElabM (NamedBinder × NameEnv) := do
   checkNotReserved i
   let atom ← genAtom st
@@ -665,12 +670,14 @@ meta def freshPLBinderName : DelabM Name := do
 The binder delaborator records `atom ↦ name` (from `plBinderName` mdata) as a
 `PLAtomMarker atom` local; the `Exp.fvar` delaborator looks it up. -/
 
+/-- Sentinel type tagging a delaborator-introduced local that names a closed atom. -/
 def PLAtomMarker (_ : Var) : Type := Unit
 
 open Lean Lean.Meta Lean.PrettyPrinter.Delaborator in
 meta def withAtomBinder {α} (nm : Name) (atom : Lean.Expr) (k : DelabM α) : DelabM α :=
   controlAt MetaM fun run =>
-    Lean.Meta.withLocalDeclD nm (Lean.mkApp (Lean.mkConst ``ProbLang.PLAtomMarker) atom) fun _ => run k
+    Lean.Meta.withLocalDeclD nm (Lean.mkApp (Lean.mkConst ``ProbLang.PLAtomMarker) atom) fun _ =>
+      run k
 
 open Lean Lean.Meta Lean.PrettyPrinter.Delaborator in
 meta def atomName? (atom : Lean.Expr) : DelabM (Option Name) := do
@@ -755,7 +762,7 @@ syntax (name := pl_fold) "pl_fold" : attr
 
 meta initialize registerBuiltinAttribute {
   name  := `pl_fold
-  descr := "Display this recursive `Exp` constant folded (by name) wherever it appears unfolded as an `Exp.fix …` body — e.g. recursive self-references exposed by `twp_pure` stepping."
+  descr := "Display this recursive `Exp` constant by name where it appears unfolded."
   add   := fun decl _stx _kind => do
     modifyEnv fun env => plFoldExt.addEntry env decl
 }
@@ -769,7 +776,8 @@ match, prints `rec geo n := …` instead of fresh `rec a b := …`. -/
 meta initialize plBinderNamesExt :
     SimplePersistentEnvExtension (Name × Array Name) (Lean.NameMap (Array Name)) ←
   registerSimplePersistentEnvExtension {
-    addImportedFn := fun es => es.foldl (fun m arr => arr.foldl (fun m p => m.insert p.1 p.2) m) {}
+    addImportedFn := fun es =>
+      es.foldl (fun m arr => arr.foldl (fun m p => m.insert p.1 p.2) m) {}
     addEntryFn    := fun m p => m.insert p.1 p.2
     toArrayFn     := fun m => m.toArray
   }
@@ -788,7 +796,7 @@ syntax (name := pl_names) "pl_names" : attr
 
 meta initialize registerBuiltinAttribute {
   name  := `pl_names
-  descr := "Display this recursive `Exp` constant's *unfolded* body using its source binder names (`rec geo n := …`) rather than fresh `a`/`b`."
+  descr := "Display this recursive `Exp` constant's unfolded body with its source binder names."
   add   := fun decl _stx _kind => do
     let ci ← getConstInfo decl
     let names := collectBinderNames ci.value! #[]
@@ -861,7 +869,8 @@ meta def delabExpFix : Delab := do
     if e.appArg!.isAppOf ``ProbLang.Exp.lam then
       let xName ← freshPLBinderName
       let xArg ← buildArgFromName xName.toString
-      let innerPL ← unpackPLExp (← withPLBinder xName (SubExpr.withAppArg (SubExpr.withAppArg delab)))
+      let innerPL ← unpackPLExp
+        (← withPLBinder xName (SubExpr.withAppArg (SubExpr.withAppArg delab)))
       `(pl(rec $fArg $xArg := $innerPL))
     else
       let bodyPL ← unpackPLExp (← SubExpr.withAppArg delab)

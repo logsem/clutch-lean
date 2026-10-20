@@ -12,8 +12,7 @@ open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure Measurable
 
 namespace ProbLang
 
-
-/-- Spec Update. Gives an interpretation of a spec into an resource. -/
+/-- Interpretation of a spec-side configuration as an Iris resource. -/
 class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
   specInterp : Cfg rT → IProp GF
@@ -25,14 +24,14 @@ section SpecUpdate
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [iSpec : SpecUpdateGS rT GF]
 
-/-- Spec update for `n` deterministic steps. -/
+/-- Update of the spec side by `n` deterministic steps. -/
 def specUpdateN (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecUpdateGS rT GF]
     (n : Nat) (E : CoPset) (P : IProp GF) :
     IProp GF := iprop%
   ∀ (ρ : Cfg rT), specInterp ρ -∗ |={E}=> ∃ ρ', ⌜pexecN n ρ = dirac ρ'⌝ ∗ specInterp ρ' ∗ P
 
-/-- Spec update quantified over an unknown number of deterministic steps -/
+/-- Update of the spec side by some number of deterministic steps. -/
 abbrev specUpdate (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecUpdateGS rT GF]
     (E : CoPset) (P : IProp GF) :
@@ -43,7 +42,7 @@ theorem specUpdateN_specUpdate {n : Nat} {E : CoPset} {P : IProp GF} :
     specUpdateN rT n E P ⊢ specUpdate rT E P := by
   unfold specUpdateN specUpdate
   iintro H %ρ Hρ
-  imod H $$ %ρ Hρ with ⟨%ρ', %Hstep, Hρ', HP⟩
+  imod H $$ %ρ Hρ with ⟨%ρ', %hstep, Hρ', HP⟩
   imodintro
   iexists ρ', n
   iframe
@@ -68,34 +67,34 @@ theorem specUpdateN_bind {n m : Nat} {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 
   unfold specUpdateN
   iintro ⟨Hn, Hm⟩ %ρ Hρ
   imod BIFUpdate.subset HE with Hclose
-  imod Hn $$ %ρ Hρ with ⟨%ρ', %Hexec₁, Hs, HP⟩
+  imod Hn $$ %ρ Hρ with ⟨%ρ', %hexec₁, Hs, HP⟩
   imod Hclose with -
-  imod Hm $$ HP %ρ' Hs with ⟨%ρ'', %Hexec₂, Hs, HQ⟩
+  imod Hm $$ HP %ρ' Hs with ⟨%ρ'', %hexec₂, Hs, HQ⟩
   imodintro
   iexists ρ''
   iframe
   ipureintro
-  exact pexecN_det_trans Hexec₁ Hexec₂
+  exact pexecN_det_trans hexec₁ hexec₂
 
 theorem specUpdate_bind {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : iprop%
     specUpdate rT E1 P ∗ (P -∗ specUpdate rT E2 Q) ⊢ specUpdate rT E2 Q := by
   unfold specUpdate
   iintro ⟨H₁, H₂⟩ %ρ Hρ
   imod BIFUpdate.subset HE with Hclose
-  imod H₁ $$ %ρ Hρ with ⟨%ρ', %n₁, %Hexec₁, Hs, HP⟩
+  imod H₁ $$ %ρ Hρ with ⟨%ρ', %n₁, %hexec₁, Hs, HP⟩
   imod Hclose with -
-  imod H₂ $$ HP %ρ' Hs with ⟨%ρ'', %n₂, %Hexec₂, Hs, HQ⟩
+  imod H₂ $$ HP %ρ' Hs with ⟨%ρ'', %n₂, %hexec₂, Hs, HQ⟩
   imodintro
   iexists ρ'', n₁ + n₂
   iframe
   ipureintro
-  exact pexecN_det_trans Hexec₁ Hexec₂
+  exact pexecN_det_trans hexec₁ hexec₂
 
 theorem specUpdateN_mono_fupd {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdateN rT n E P ∗ (P ={E}=∗ Q) ⊢ specUpdateN rT n E Q := by
   unfold specUpdateN
   iintro ⟨HP, HPQ⟩ %ρ Hρ
-  imod HP $$ %ρ Hρ with ⟨%ρ', %Hstep, Hρ', HPres⟩
+  imod HP $$ %ρ Hρ with ⟨%ρ', %hstep, Hρ', HPres⟩
   imod HPQ $$ HPres with HQres
   imodintro
   iexists ρ'
@@ -107,7 +106,7 @@ theorem specUpdate_mono_fupd {E : CoPset} {P Q : IProp GF} : iprop%
     specUpdate rT E P ∗ (P ={E}=∗ Q) ⊢ specUpdate rT E Q := by
   unfold specUpdate
   iintro ⟨HP, HPQ⟩ %ρ Hρ
-  imod HP $$ %ρ Hρ with ⟨%ρ', %n, %Hstep, Hρ', HPres⟩
+  imod HP $$ %ρ Hρ with ⟨%ρ', %n, %hstep, Hρ', HPres⟩
   imod HPQ $$ HPres with HQres
   imodintro
   iexists ρ', n
@@ -145,7 +144,6 @@ theorem fupd_specUpdate {E : CoPset} {P : IProp GF} : iprop%
   imod H
   iapply H $$ [$]
 
-/-- Left frame. -/
 theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
     R ∗ specUpdateN rT n E P ⊢ specUpdateN rT n E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩
@@ -164,7 +162,7 @@ theorem specUpdate_frame_l {E : CoPset} {R P : IProp GF} :
 
 end SpecUpdate
 
-/-- Concrete Micrometer SpecUpdateGS -/
+/-- The default `SpecUpdateGS`, interpreting a configuration by `Cfg.specAuth`. -/
 instance defaultSpecUpdateGS {rT : Type _} [LawfulProbLangℝ rT]
     [MeasurableSingletonClass rT] {GF} [SpecGS rT GF] : SpecUpdateGS rT GF where
   specInterp := Cfg.specAuth

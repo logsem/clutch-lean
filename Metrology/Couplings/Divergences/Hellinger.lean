@@ -278,10 +278,12 @@ section Instances
 
 variable (α) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)]
 
+/-- The `α`-Hellinger divergence is graded. -/
 instance isGraded_hellinger : (hellingerDivergence.{u} α).IsGraded :=
   isGraded_bofDivergence (convexOn_hellFun hα.out.1 hα.out.2)
     (continuous_hellFun hα.out.1.le).continuousWithinAt
 
+/-- The `α`-Hellinger divergence is reflexive. -/
 instance isReflexive_hellinger : (hellingerDivergence.{u} α).IsReflexive :=
   isReflexive_bofDivergence (hellFun_one α)
 

@@ -8,7 +8,9 @@ public import Metrology.Iris.SpecUpdate
 public import Metrology.Iris.SpecRules
 public import Metrology.Iris.BudgetCredits
 
-/-! # Primitive Laws -/
+/-! # Primitive Laws
+
+Weakest-precondition rules for heap, tape and `rand` operations, on the program and spec sides. -/
 
 @[expose] public section
 
@@ -40,6 +42,7 @@ section MicrometerInstance
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
+/-- The weakest-precondition ghost state assembled from `MicrometerGS`. -/
 @[reducible]
 noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) GF where
   hlc := hlc
@@ -84,9 +87,9 @@ theorem wp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
   iapply wp_lift_atomic_head_step Exp.alloc_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.AllocS (Exp.toVal?_ofVal v) rfl rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | AllocS hvd hl hσ =>
     rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hl hσ
     imod app_state_heap_alloc v $$ Hσ with ⟨Hσ', Hl⟩
@@ -104,9 +107,9 @@ theorem wp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
   imodintro
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.LoadS hlook rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | LoadS hlook' hofv =>
     rw [hlook] at hlook'; cases hlook'; subst hofv
     imodintro
@@ -126,9 +129,9 @@ theorem wp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp G
   · ipureintro
     exact ⟨_, (HeadStepSupport.StoreS (Exp.toVal?_ofVal v)
         (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | StoreS hvd _ hσ =>
     rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hσ
     imod app_state_update_heap $$ Hσ Hl with ⟨Hσ', Hl'⟩
@@ -144,9 +147,9 @@ theorem wp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
   iapply wp_lift_atomic_head_step Exp.tape_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.TapeS rfl rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | TapeS hl hσ =>
     subst hl hσ
     imod app_state_tape_alloc (Tape.empty z) $$ Hσ with ⟨Hσ', Hl⟩
@@ -162,14 +165,14 @@ theorem wp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.RandNoTapeS Hz le_rfl Hz).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
-  | RandNoTapeS _ Hv0 Hvz =>
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
+  | RandNoTapeS _ hv0 hvz =>
     imodintro
     simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
-    iapply HΦ $$ %_ %⟨Hv0, Hvz⟩
+    iapply HΦ $$ %_ %⟨hv0, hvz⟩
   | RandNonposS hnz => exact absurd Hz hnz
 
 theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) :
@@ -178,9 +181,9 @@ theorem wp_rand_nonpos {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : �
   iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.RandNonposS Hz).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | RandNoTapeS hpos _ _ => exact absurd hpos Hz
   | RandNonposS _ =>
     imodintro
@@ -200,9 +203,9 @@ theorem wp_rand_tape {E : CoPset} {l : Loc} {z n : Int} {ns : List Int}
   have hz : 0 < z := by have := x.2; omega
   imodintro
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.RandTapeS hlook rfl rfl rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | RandTapeS hlook' _ hv hσ =>
     rw [hlook] at hlook'; cases hlook'
     subst hσ hv hxv
@@ -232,18 +235,18 @@ theorem wp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int} {Φ : Val rT → IPr
   isplitr
   · ipureintro
     exact ⟨_, (HeadStepSupport.RandTapeEmptyS Hz hlook rfl le_rfl Hz rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | RandTapeS hlook' _ _ _ =>
     rw [hlook] at hlook'; cases hlook'
-  | RandTapeEmptyS _ _ _ Hv0 Hvz hσ =>
+  | RandTapeEmptyS _ _ _ hv0 hvz hσ =>
     subst hσ
     imodintro
     simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     ihave HlNat := app_empty_to_natTape $$ HlBack
-    iapply HΦ $$ HlNat %⟨Hv0, Hvz⟩
+    iapply HΦ $$ HlNat %⟨hv0, hvz⟩
   | RandTapeOtherS _ hlook' hne _ _ _ =>
     rw [hlook] at hlook'; cases hlook'; exact absurd rfl hne
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
@@ -262,22 +265,22 @@ theorem wp_rand_tape_wrong_bound {E : CoPset} {l : Loc} {z M : Int} {ns : List I
   isplitr
   · ipureintro
     exact ⟨_, (HeadStepSupport.RandTapeOtherS Hz hlook HneM le_rfl Hz rfl).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | RandTapeS hlook' heq _ _ =>
     rw [hlook] at hlook'; cases hlook'; exact absurd heq HneM
   | RandTapeEmptyS _ hlook' heq _ _ _ =>
     rw [hlook] at hlook'; cases hlook'; exact absurd heq HneM
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
-  | RandTapeOtherS _ _ _ Hv0 Hvz hσ =>
+  | RandTapeOtherS _ _ _ hv0 hvz hσ =>
     subst hσ
     imodintro
     simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
     iframe Hσ
     ihave HlNat : appNatTape l M ns $$ [HlBack]
     · iunfold appNatTape; iexists fs; iframe %hmap HlBack
-    iapply HΦ $$ HlNat %⟨Hv0, Hvz⟩
+    iapply HΦ $$ HlNat %⟨hv0, hvz⟩
 
 /-! ### Spec-side `_r` WPs -/
 
@@ -322,7 +325,7 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
     (fun _ _ => by iintro - - !%; trivial) (fun _ _ => ⟨_, .RandNoTapeS Hz le_rfl Hz⟩)
     fun _ _ _ _ h => by
       cases h with
-      | RandNoTapeS _ Hv0 Hvz => exact ⟨rfl, _, rfl, Hv0, Hvz⟩
+      | RandNoTapeS _ hv0 hvz => exact ⟨rfl, _, rfl, hv0, hvz⟩
       | RandNonposS hnz => exact absurd Hz hnz
   iframe Hj
   isplitr; · iempintro
@@ -339,9 +342,9 @@ theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → I
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
   imodintro
   isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.rand_lbl_nonpos Hz hlook).pos⟩
-  iintro !> %e₂ %σ₂ %Hstep
-  replace Hstep := Possible.headStepSupport (possible_iff_pos.mpr Hstep)
-  cases Hstep with
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
   | RandTapeS hlook' _ _ _ =>
     rw [hlook] at hlook'; cases hlook'
   | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
@@ -379,7 +382,7 @@ theorem wp_rand_tape_empty_r {E : CoPset} (K : Ectx rT) {l : Loc} {z : Int} {e :
       cases h with
       | RandTapeS hlook' _ _ _ =>
         rw [hlook] at hlook'; cases hlook'
-      | RandTapeEmptyS _ _ _ Hv0 Hvz hσ => exact ⟨hσ, _, rfl, Hv0, Hvz⟩
+      | RandTapeEmptyS _ _ _ hv0 hvz hσ => exact ⟨hσ, _, rfl, hv0, hvz⟩
       | RandTapeOtherS _ hlook' hne _ _ _ =>
         rw [hlook] at hlook'; cases hlook'; exact absurd rfl hne
       | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
@@ -458,7 +461,7 @@ theorem wp_rand_wrong_tape_r {E : CoPset} (K : Ectx rT) {z M : Int} {l : Loc} {n
       | RandTapeEmptyS _ hlook' heq _ _ _ =>
         rw [hlook] at hlook'; cases hlook'; exact absurd heq HneM
       | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
-      | RandTapeOtherS _ _ _ Hv0 Hvz hσ => exact ⟨hσ, _, rfl, Hv0, Hvz⟩
+      | RandTapeOtherS _ _ _ hv0 hvz hσ => exact ⟨hσ, _, rfl, hv0, hvz⟩
   iframe Hj Hαb
   iintro %n %hn Hαb Hj'
   ihave HαNat : specNatTape l M ns $$ [Hαb]

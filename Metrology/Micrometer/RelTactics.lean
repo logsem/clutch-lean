@@ -15,9 +15,8 @@ public import Qq
 /-! # Relational tactics
 
 `rel_*` tactics for goals `REL[L] e << e' @ E : A`, after Approxis's `rel_tactics.v`, for any
-lifting `L`. Each tactic finds its redex inside the evaluation context of its side (left, right,
-or both), applies the matching rule of `AppRelRules.lean` at that context, and shows the premise
-with the context filled back in. -/
+lifting `L`. Each finds its redex in the evaluation context of its side and applies the matching
+rule of `AppRelRules.lean` there. -/
 
 namespace ProbLang.RelTactics
 

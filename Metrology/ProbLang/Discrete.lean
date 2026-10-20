@@ -13,6 +13,7 @@ open Classical MeasureTheory ProbabilityTheory ProbLang
 
 namespace ProbLang
 
+/-- `Option α` has measurable singletons if `α` does. -/
 instance _root_.Option.instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Option α) where
@@ -22,6 +23,7 @@ instance _root_.Option.instMeasurableSingletonClass
         rw [show ({some x} : Set (Option α)) = (some : α → Option α) '' {x} by simp]
         exact MeasurableSet.image_some (MeasurableSet.singleton x)
 
+/-- `LocHeap V` has measurable singletons if `V` does. -/
 instance LocHeap.instMeasurableSingletonClass
     {V : Type _} [MeasurableSpace V] [MeasurableSingletonClass V] :
     MeasurableSingletonClass (LocHeap V) where
@@ -34,6 +36,7 @@ instance LocHeap.instMeasurableSingletonClass
     rw [hsing]
     exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
 
+/-- `State α` has measurable singletons if `α` does. -/
 instance State.instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (State α) where
@@ -47,6 +50,7 @@ instance State.instMeasurableSingletonClass
     rw [hsing]
     exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
 
+/-- `Cfg α` has measurable singletons if `α` does. -/
 instance Cfg.instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Cfg α) where
@@ -78,6 +82,8 @@ example : DiscreteMeasurableSpace (ProbLang.Cfg rT)   := inferInstance
 end SynthCheck
 
 /-! ## Default `LawfulProbLangℝ` instance on `Int` -/
+
+/-- On `Int`, the "reals" are the integers themselves. -/
 instance instProbLangℝInt : ProbLang.LawfulProbLangℝ Int where
   instDecidableEq := inferInstance
   unifUnit := (PMF.uniformOfFinset ({0, 1} : Finset Int) (by decide)).toMeasure
@@ -91,12 +97,10 @@ instance instProbLangℝInt : ProbLang.LawfulProbLangℝ Int where
   realLe a b := decide (a ≤ b)
   measurable_realLt := .of_discrete
   measurable_realLe := .of_discrete
-  -- On the discrete `Int` instantiation the "reals" are the integers themselves.
   realAdd a b := a + b
   realNeg a := -a
   realOfInt z := z
   realOfRat q := q.floor
-  -- On the discrete `Int` instantiation an "integer real" has no fractional part.
   realFrac _ := 0
   measurable_realAdd := .of_discrete
   measurable_realNeg := .of_discrete

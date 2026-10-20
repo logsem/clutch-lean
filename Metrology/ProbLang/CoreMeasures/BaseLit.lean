@@ -25,6 +25,7 @@ deriving instance MeasurableSpace for BaseLit
 
 /-! ## Smoke tests: each one exercises every constructor slot of a keystone. -/
 
+/-- The index of the constructor. -/
 @[simp] def tagDepth : BaseLit rT → Nat
   | .int _  => 0
   | .bool _ => 1

@@ -66,10 +66,10 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
 
--- TODO: `wp_atomic` — for atomic `e`, an inner `|={E2, E1}=>` can be absorbed.
--- In ProbLang every head step is atomic (reduces to a value or single `primStep`),
--- so state it with an explicit "atomic" predicate over `e` instead of an `Atomic` typeclass.
+-- TODO: `wp_atomic` (for atomic `e`, an inner `|={E2, E1}=>` can be absorbed), stated with the
+-- `Atomic'` predicate rather than a typeclass.
 
+/-- A spec update before a `wp` can be absorbed into it. -/
 theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     specUpdate rT E (wp L E e Φ) ⊢ wp L E e Φ := by
@@ -229,19 +229,23 @@ theorem wp_frame_step_r {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val r
   iintro !> %v HΦ HR'
   iframe
 
+/-- `wp` is closed under `◇`. -/
 instance isExcept0_wp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     IsExcept0 (wp L E e Φ) where
   is_except0 := (except0_mono fupd_intro).trans (BIFUpdate.except0.trans fupd_wp)
 
+/-- Framing through `wp` frames the postcondition. -/
 instance frame_wp {p : Bool} {E : CoPset} {e : Exp rT} {R : IProp GF}
     {Φ Ψ : Val rT → IProp GF} [inst : ∀ v, Frame p R (Φ v) (Ψ v)] :
     Frame p R (wp L E e Φ) (wp L E e Ψ) where
   frame := wp_frame_l.trans (wp_mono fun v => (inst v).frame)
 
+/-- A `wp` absorbs a leading `|={E}=>`. -/
 instance addModal_fupd_wp {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     AddModal iprop(|={E}=> P) P (wp L E e Φ) where
   add_modal := fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
 
+/-- A `wp` eliminates a leading `|==>`. -/
 instance elimModal_bupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF}
     {Φ : Val rT → IProp GF} :
     ElimModal True p io false iprop(|==> P) P (wp L E e Φ) (wp L E e Φ) where
@@ -249,12 +253,14 @@ instance elimModal_bupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P 
     (sep_mono_left BIUpdateFUpdate.fupd_of_bupd).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
 
+/-- A `wp` eliminates a leading `|={E}=>`. -/
 instance elimModal_fupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF}
     {Φ : Val rT → IProp GF} :
     ElimModal True p io false iprop(|={E}=> P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
 
+/-- A `wp` eliminates a leading `specUpdate`. -/
 instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : InOut}
     {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
@@ -269,6 +275,7 @@ instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : I
     iframe %Hstep Hρ'
     iapply Hcnt $$ HPv
 
+/-- A `wp` eliminates a leading `specUpdateN`. -/
 instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {n : Nat}
     {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
     ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where

@@ -7,14 +7,9 @@ public import Metrology.ProbLang.Measure
 /-!
 # Types as sums over shapes
 
-A value of an inductive type `T` is a *shape* (its constructors and its countable fields) together
-with *leaves* (its other fields), so `T ≃ Σ s, V s` for a countable type of shapes. Deriving
-`MeasurableSpace` gives `T` the σ-algebra of this sigma type, and proves everything about it from the lemmas here:
-
-* tuples of fields split into a shape index and leaves (`point`, `leaf`, `pair`, …);
-* constructors are measurable embeddings (`measurableEmbedding`);
-* maps out of `T` are measurable if they are on every shape (`measurable_of_fibers`);
-* singletons are measurable (`measurableSingletonClass`).
+A value of an inductive type `T` is a *shape* (constructors and countable fields) with *leaves*
+(other fields), so `T ≃ Σ s, V s`. Deriving `MeasurableSpace` uses this file to show constructors
+are measurable embeddings, maps out of `T` are measurable shape by shape, and singletons measurable.
 -/
 
 open MeasureTheory Set
@@ -209,6 +204,7 @@ theorem measurable_symm_mk (s : S) : Measurable fun v : V s => e.symm ⟨s, v⟩
   e.symm.measurable.comp (measurable_mk s)
 
 omit e in
+/-- `T` has measurable singletons if the leaves of every shape do. -/
 theorem measurableSingletonClass (e : T ≃ᵐ Σ s, V s) [∀ s, MeasurableSingletonClass (V s)] :
     MeasurableSingletonClass T where
   measurableSet_singleton x := by
@@ -229,6 +225,7 @@ theorem injective_of_proj (ι : A → B) (π : B → Option A) (h : ∀ a, π (�
 theorem measurable_of_eq (f g : α → β) (h : ∀ a, f a = g a) (hg : Measurable g) : Measurable f :=
   funext h ▸ hg
 
+/-- `ULift` preserves measurable singletons. -/
 instance {A : Type u} [MeasurableSpace A] [MeasurableSingletonClass A] :
     MeasurableSingletonClass (ULift.{w} A) where
   measurableSet_singleton x := by

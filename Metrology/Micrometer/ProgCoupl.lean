@@ -112,8 +112,8 @@ theorem progCoupl_intro_law (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT}
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
 theorem progCoupl_intro [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT}
-    {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
+    {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
+    {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
     {μ₁' : MeasureTheory.Measure (State rT)} {R : Cfg rT → Cfg rT → B}
     (Hred : Reducible e₁ σ₁)
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
@@ -131,8 +131,8 @@ theorem dirac_bind_pexecN_one {e₁' : Exp rT} {σ₁' : State rT} (Hred' : Redu
 /-- Continuations need only cover a set carrying the program step, by the law's `head_supp`
 (Rocq `prog_coupl_strengthen`). -/
 theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Set
-    (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
+    {σ₁' : State rT} {b : B} {Z₁ Z₂ : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     iprop% (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   iintro ⟨Hm, HCpl⟩
@@ -158,8 +158,8 @@ theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
   · simp [Set.piecewise_eq_of_notMem _ _ _ hmem] at hR
 
 theorem progCoupl_strengthen {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Set
-    (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
+    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    {S : Set (Cfg rT)} (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b fun e₂ σ₂ e₂' σ₂' b' =>
       iprop(⌜⟨e₂, σ₂⟩ ∈ S⌝ ∧ Z e₂ σ₂ e₂' σ₂' b') := by
@@ -221,8 +221,8 @@ theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift] {e�
   progCoupl_steps_law law Hred Hred' (law.mono_out (BindLaw.HeadShift.shift hb₂ hhead) hb) hside
 
 theorem progCoupl_steps_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT}
-    {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
+    {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
+    {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
     {R : Cfg rT → Cfg rT → B} (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
@@ -313,8 +313,8 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
   iapply H $$ %ρ.expr %ρ.state
 
 theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
-    {e₁ : Exp rT} {σ₁ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT} {μ₁' : MeasureTheory.Measure (State rT)} {b : B}
+    {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+    {μ₁' : MeasureTheory.Measure (State rT)} {b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {R : Cfg rT → State rT → B}
     (Hred : Reducible e₁ σ₁) (Heras : ErasableExpr μ₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
@@ -338,8 +338,7 @@ theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
 
 theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
-      {σ₁' : State rT}
-    {μ₁' : MeasureTheory.Measure (State rT)} {b₁ b₂ b : B}
+    {σ₁' : State rT} {μ₁' : MeasureTheory.Measure (State rT)} {b₁ b₂ b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {S : Cfg rT → State rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁)
     (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) μ₁')

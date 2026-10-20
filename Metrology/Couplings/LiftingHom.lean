@@ -189,9 +189,11 @@ theorem isReflexive_comap_of_lt_top [AddZeroClass B] [Preorder B] [OrderTop B]
       (R := fun x y ↦ φ (relCost (· = ·) x y)) (fun _ _ h ↦ by simp [h]) h0
     rwa [zero_add] at this
 
+/-- Regrading keeps a lifting zero on the left. -/
 instance isZeroLeft_comap [L.IsZeroLeft] : (L.comap φ).IsZeroLeft where
   zero_left b _ ν _ := IsZeroLeft.zero_left (φ b) _ ν
 
+/-- Regrading keeps a lifting left-continuous. -/
 instance isLeftContinuous_comap [L.IsLeftContinuous] : (L.comap φ).IsLeftContinuous where
   iSup_left hμ _ _ h := IsLeftContinuous.iSup_left (L := L) hμ h
 

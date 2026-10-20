@@ -5,6 +5,10 @@ public import Iris.ProofMode
 
 @[expose] public section
 
+/-! # Step-update lemmas
+
+Pure facts and plain universals under `|={E}[E]▷=>^[n]`. -/
+
 open Std Iris.Std Iris.BI Iris.ProofMode
 
 namespace Iris

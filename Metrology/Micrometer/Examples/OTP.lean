@@ -34,6 +34,7 @@ theorem addMod_dom (m N : Int) (hN : 0 < N) :
     ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
   fun _ _ _ => emod_bounds _ hN
 
+/-- Adding `m` modulo `N` is a bijection on `[0, N)`. -/
 theorem addMod_bij (m N : Int) (hN : 0 < N) :
     ∀ m' : Int, 0 ≤ m' → m' < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ addMod m N n = m' := by
   intro m' hm'0 hm'N
@@ -55,6 +56,7 @@ section Generic
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
 
+/-- The encryption refines the ideal sampler in any lawful lifting. -/
 theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
@@ -70,6 +72,7 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
     (m + (n + (-m)) % N) % N = n := by
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
+/-- The ideal sampler refines the encryption in any lawful lifting. -/
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
@@ -130,6 +133,7 @@ theorem otp_adequate_rev_gen (GF : BundledGFunctors) [RefinesPreGS rT B GF] (m N
   refines_coupling (GF := GF) (fun _ _ => lrel_int) otpφ _ _ σ σ' (fun _ _ => lrel_int_to_otpφ)
     fun _ _ => otp_refines_rev_gen m N hN
 
+/-- The distributions of the encryption and the ideal sampler are coupled at budget `0`. -/
 theorem otp_adequate_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_gen (MicrometerFunctor rT B) m N hN σ σ'

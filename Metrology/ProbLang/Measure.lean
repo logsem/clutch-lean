@@ -13,10 +13,10 @@ public import Metrology.Couplings.Measure
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure
 
-/-! ## `Possible`: a positive-mass point of a measure
+/-! ## `Possible`: a positive-mass point of a measure -/
 
-Stated as `∃ p > 0, p • dirac ρ ≤ μ` rather than `0 < μ {ρ}` so that it never names `{ρ}`
-and needs no `MeasurableSingletonClass`; the two agree under it (`possible_iff_pos`). -/
+/-- `ρ` carries positive mass under `μ`; stated without `{ρ}` so it needs no
+`MeasurableSingletonClass` (equivalent to `0 < μ {ρ}` under it, `possible_iff_pos`). -/
 def Possible {α : Type _} [MeasurableSpace α] (ρ : α) (μ : Measure α) : Prop :=
   ∃ p : ENNReal, 0 < p ∧ p • dirac ρ ≤ μ
 
@@ -89,10 +89,12 @@ theorem MeasurableSet.image_some {α : Type _} [MeasurableSpace α] {S : Set α}
 /-- A cylinder for `Option α`: either `none` or `some` of a `Set α`. -/
 abbrev OptionCyl (α : Type _) := Option (Set α)
 
+/-- The set of `Option α` that a cylinder denotes. -/
 @[simp] def OptionCyl.flatten {α : Type _} : OptionCyl α → Set (Option α)
   | none => {none}
   | some S => some '' S
 
+/-- A cylinder whose `some` leaf is a measurable set. -/
 inductive OptionCyl.HasMeasurableLeaves {α : Type _} [MeasurableSpace α] : OptionCyl α → Prop
   | none : HasMeasurableLeaves none
   | some {S : Set α} : MeasurableSet S → HasMeasurableLeaves (some S)
@@ -186,6 +188,7 @@ theorem Measurable.option_map {α β : Type _} [MeasurableSpace α] [MeasurableS
       simp only [Option.map_preimage_some]
       exact MeasurableEmbedding.some_mk.measurableSet_image.mpr (hf hS))
 
+/-- Pair two options, `none` if either is `none`. -/
 def Option.pair {α β : Type _} : Option α × Option β → Option (α × β)
   | (some a, some b) => some (a, b)
   | _ => none
@@ -286,6 +289,7 @@ theorem Measure.bind_map_comm {α β γ : Type*}
       Measure.bind_apply hS H2]
   simp_rw [Measure.map_apply Hf hS]
 
+/-- Counting measure reweighted by the density `f`. -/
 abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
 
 /-! ## Shape-stratified measurability
@@ -348,8 +352,10 @@ end StructRec
 Induced by `List X ≃ Σ n, Fin n → X`: a set of lists is measurable iff each length-`n`
 slice is measurable in the product σ-algebra. -/
 
+/-- A list as its length and entries. -/
 def List.toSigma {X : Type _} (l : List X) : Σ n, Fin n → X := ⟨l.length, l.get⟩
 
+/-- The σ-algebra on lists pulled back along `List.toSigma`. -/
 instance List.instMeasurableSpace {X : Type _} [MeasurableSpace X] :
     MeasurableSpace (List X) :=
   MeasurableSpace.comap List.toSigma inferInstance
@@ -412,7 +418,7 @@ theorem MeasurableEmbedding.sigmaMk {ι : Type _} {β : ι → Type _}
     rintro ⟨y, _, h⟩
     exact (hj (Sigma.mk.inj h).1.symm).elim
 
-/-- A map out of `(Σ k, Fin k → β) × γ` is measurable if it is measurable on each length-`k` slice. -/
+/-- A map out of `(Σ k, Fin k → β) × γ` is measurable if it is on each length-`k` slice. -/
 private theorem measurable_sigmaFin_prod {β γ δ : Type _}
     [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
     {F : (Σ k : ℕ, Fin k → β) × γ → δ}
@@ -438,7 +444,8 @@ private theorem measurable_sigmaFin_prod {β γ δ : Type _}
 theorem List.measurable_foldl {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {f : α → β → α} (hf : Measurable (Function.uncurry f)) :
     Measurable (fun (p : List β × α) => p.1.foldl f p.2) := by
-  have hfoldlOfFn : Measurable fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2 :=
+  have hfoldlOfFn :
+      Measurable fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2 :=
     measurable_sigmaFin_prod fun n => List.measurable_foldlOfFn hf n
   have hrw : (fun p : List β × α => p.1.foldl f p.2)
       = (fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2)
@@ -453,7 +460,8 @@ theorem List.measurable_foldl {α β : Type _} [MeasurableSpace α] [MeasurableS
 
 @[fun_prop]
 theorem Fin.measurable_snoc {n : ℕ} {β : Type _} [MeasurableSpace β] :
-    Measurable (fun (p : (Fin n → β) × β) => (@Fin.snoc n (fun _ => β) p.1 p.2) : (Fin n → β) × β → (Fin (n+1) → β)) := by
+    Measurable (fun (p : (Fin n → β) × β) => (@Fin.snoc n (fun _ => β) p.1 p.2) :
+      (Fin n → β) × β → (Fin (n+1) → β)) := by
   refine Measurable.of_eval fun i => ?_
   by_cases h : i.val < n
   · have heq : ∀ p : (Fin n → β) × β,

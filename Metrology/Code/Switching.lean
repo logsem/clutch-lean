@@ -8,8 +8,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Programs for the PRF/PRP switching lemma
 
-Ports `clutch/theories/approxis/examples/prp_prf_weak.v`. Maps store a pure assoc-list value
-in one heap cell instead of clutch's linked cells: same interface, far less heap reasoning. -/
+Ports clutch's `prp_prf_weak.v`. Each map is one pure assoc-list value in a single cell rather than
+clutch's linked cells: same interface, far less heap reasoning. -/
 
 namespace ProbLang
 
@@ -21,17 +21,19 @@ namespace Switching
 
 A list value is `inl ()` (nil) or `inr (x, rest)` (cons). -/
 
+/-- The value encoding a list of integers. -/
 def intListVal : List Int → Val rT
   | [] => .inl .unit
   | n :: l => .inr (.pair (.int n) (intListVal l))
 
-/-- Leftmost binding wins. -/
+/-- The value encoding an association list; the leftmost binding wins. -/
 def assocVal : List (Int × Int) → Val rT
   | [] => .inl .unit
   | (k, y) :: m => .inr (.pair (.pair (.int k) (.int y)) (assocVal m))
 
 /-! ## List programs -/
 
+/-- The length of a list value. -/
 @[pl_fold] def listLength : Exp rT := pl%
   rec len l :=
     case! l
@@ -52,17 +54,20 @@ def assocVal : List (Int × Int) → Val rT
 
 /-! ## Association-list maps in a single cell -/
 
+/-- `SOME v` if the list value binds `k` to `v`, else `NONE`. -/
 @[pl_fold] def findList : Exp rT := pl%
   rec find l k :=
     case! l
     | inl(_u) => inl(#.unit)
     | inr(p) => if fst(fst(p)) = k then inr(snd(fst(p))) else find (snd(p)) k
 
+/-- Allocate an empty map. -/
 def initMap : Exp rT := pl% fun _u, alloc(inl(#.unit))
 
 /-- `SOME v` if `k ↦ v` is in the map, else `NONE`. -/
 @[pl_fold] def getMap : Exp rT := pl% fun m k, &findList (!m) k
 
+/-- Bind `k` to `v` in the map. -/
 @[pl_fold] def setMap : Exp rT := pl% fun m k v, m ← inr(((k, v), !m))
 
 /-! ## The idealised random function -/
@@ -74,6 +79,7 @@ def rfQuery (N : Int) (ℓ : Loc) : Exp rT := pl%
     | inl(_u) => (let y := rand(#(.int N), #.unit); &setMap #(.loc ℓ) x y; y)
     | inr(y) => y
 
+/-- A lazily sampled random function into `{0, …, N-1}`. -/
 def randomFunction (N : Int) : Exp rT := pl%
   let m := &initMap #.unit;
   fun x,
@@ -96,6 +102,7 @@ def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
        | inr(p) => (&setMap #(.loc ℓm) x (fst(p)); #(.loc ℓfv) ← snd(p); fst(p)))
     | inr(y) => y
 
+/-- A lazily sampled random permutation of `{0, …, N-1}`. -/
 def randomPermutation (N : Int) : Exp rT := pl%
   let fv := alloc({(intListVal ((List.range N.toNat).map Int.ofNat)).1});
   let m := &initMap #.unit;
@@ -109,10 +116,9 @@ def randomPermutation (N : Int) : Exp rT := pl%
        | inr(p) => (&setMap m x (fst(p)); fv ← snd(p); fst(p)))
     | inr(y) => y
 
-/-! ## The weak PRF/PRP games
+/-! ## The weak PRF/PRP games -/
 
-Query the oracle at `Q` uniform inputs, collecting the (input, output) pairs. -/
-
+/-- Query `f` at `i` uniform inputs, recording the (input, output) pairs in `res`. -/
 @[pl_fold] def wLoop (N : Int) : Exp rT := pl%
   rec loop f res i :=
     if i = #0 then #.unit
@@ -122,12 +128,14 @@ Query the oracle at `Q` uniform inputs, collecting the (input, output) pairs. -/
        res ← inr(((x, y), !res));
        loop f res (i - #1))
 
+/-- The weak PRF game against the random function. -/
 def wPRF (N Q : Int) : Exp rT := pl%
   let f := {randomFunction N};
   let res := alloc(inl(#.unit));
   {wLoop N} f res #(.int Q);
   !res
 
+/-- The weak PRF game against the random permutation. -/
 def wPRP (N Q : Int) : Exp rT := pl%
   let f := {randomPermutation N};
   let res := alloc(inl(#.unit));

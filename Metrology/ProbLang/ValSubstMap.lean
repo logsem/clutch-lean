@@ -2,15 +2,21 @@ module
 
 public import Metrology.ProbLang.Metatheory
 
+/-! # Paired value substitutions
+
+Association lists of value pairs, with projections to `SubstMap` for the left and right sides. -/
+
 @[expose] public section
 
 namespace ProbLang
 
+/-- A substitution assigning a pair of values (left, right) to each variable. -/
 abbrev ValSubstMap (rT : Type _) := List (Var × (Val rT × Val rT))
 
 namespace ValSubstMap
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
+/-- The pair assigned to `x`, preferring the entry nearest the end of the list. -/
 def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
   | [], _ => none
   | (y, p) :: rest, x =>
@@ -18,8 +24,10 @@ def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
     | some q => some q
     | none => if x = y then some p else none
 
+/-- The substitution of left values. -/
 def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
 
+/-- The substitution of right values. -/
 def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
 
 section proj
@@ -122,6 +130,7 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
       · rw [hr] at ih
         exact absurd (ih hm) (by simp)
 
+/-- Remove every entry for `x`. -/
 def delete (vs : ValSubstMap rT) (x : Var) : ValSubstMap rT :=
   vs.filter fun p => !decide (p.1 = x)
 

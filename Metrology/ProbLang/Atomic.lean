@@ -12,10 +12,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-- Every atom of the step measure is a value.
-
-Vacuous for `urand`: a diffuse measure has no atoms. Use `Atomic'`; `Atomic` survives only
-as a convenient way to prove `Atomic'` for discrete redexes (`Atomic.toAtomic'`). -/
+/-- Every atom of the step measure is a value (vacuous for `urand`; the logic uses `Atomic'`). -/
 def Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
@@ -33,9 +30,8 @@ theorem primStep_eq_headStep_of_decomp_nil
     rw [Exp.decomp_unfold, hd]
   simp only [primStep, hde, Ectx.fillCfg_empty, MeasureTheory.Measure.map_id]
 
-/-- The only place the discrete `e.decomp.2 ≠ .urand` side condition is needed; it is
-discharged at concrete redexes, where `decomp` reduces, rather than threaded through the
-program logic. -/
+/-- `Atomic` implies `Atomic'` for redexes that are not `urand`; the side condition is discharged
+at concrete redexes, where `decomp` reduces, not threaded through the program logic. -/
 theorem toAtomic' {e : Exp rT} (h : Atomic e) (hne : e.decomp.2 ≠ .urand) :
     Atomic' e := by
   intro σ
@@ -115,14 +111,14 @@ theorem rand_lbl' (z : Int) (l : Loc) :
     Atomic' (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
   toAtomic' (rand_lbl z l) (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
-/-- `urand` has no atoms, but its step measure is a pushforward whose whole image consists
-of value configurations, so the bad set pulls back to `∅`. -/
+/-- `urand` steps to a value configuration almost surely. -/
 theorem urand' : Atomic' (rT := rT) .urand := by
   intro σ
   have hd : (pl(urand) : Exp rT).decompItem = none := rfl
   rw [primStep_eq_headStep_of_decomp_nil hd]
   show (Cfg.uniformReal σ) {ρ : Cfg rT | ρ.1.isValue}ᶜ = 0
-  rw [Cfg.uniformReal, MeasureTheory.Measure.map_apply (by fun_prop) Cfg.isValue_measurableSet.compl]
+  rw [Cfg.uniformReal,
+    MeasureTheory.Measure.map_apply (by fun_prop) Cfg.isValue_measurableSet.compl]
   convert MeasureTheory.measure_empty (μ := LawfulProbLangℝ.unifUnit)
   ext r
   simp only [Set.mem_preimage, Set.mem_compl_iff, Set.mem_ofPred_eq, Set.mem_empty_iff_false,

@@ -79,7 +79,7 @@ instance specNatTape_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
 
 end TimelessTapes
 
-/-! ## Core probability fact: uniform coupling under bijection -/
+/-! ## Uniform coupling under a bijection -/
 
 section UniformInt
 
@@ -158,7 +158,7 @@ end UniformInt
 @[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
     Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
   ∃ n : Int, 0 ≤ n ∧ n < z ∧
-    c₁ = ⟨pl(#(.int n)), σ⟩ ∧ c₂ = ⟨K.fill (pl(#(.int (f n)))), σ'⟩
+    c₁ = ⟨pl(#(.int n)), σ⟩ ∧ c₂ = ⟨K.fill pl(#(.int (f n))), σ'⟩
 
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)`. -/
 theorem Cfg.uniform_codensity_bij_fill [MeasurableSingletonClass rT] [Zero B] [Add B]
@@ -195,14 +195,12 @@ theorem Cfg.uniform_addCoupl_bij_fill [MeasurableSingletonClass rT] {z : Int} (H
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     AddCoupl 0 {p | CoupledDraw z f σ σ' K p.1 p.2}
       (Cfg.uniform z σ) ((Cfg.uniform z σ').map K.fillCfg) :=
-  (Cfg.uniform_codensity_bij_fill Hz σ σ' f K hdom
-    hbij).addCoupl
+  (Cfg.uniform_codensity_bij_fill Hz σ σ' f K hdom hbij).addCoupl
 
-/-! ## Core probability fact: uniform couplings along an injection (unequal bounds)
+/-! ## Uniform couplings along an injection (unequal bounds)
 
-Ports `ARcoupl_rand_rand_inj` / `ARcoupl_rand_rand_rev_inj` from
-`clutch/theories/approxis/coupling_rules.v`: coupling `rand zL ~ rand zR` along an
-injection costs the mass of the uncovered fraction of the *larger* support. -/
+Coupling `rand zL ~ rand zR` along an injection costs the mass of the uncovered fraction of the
+larger support (Rocq `ARcoupl_rand_rand_inj`, `ARcoupl_rand_rand_rev_inj`). -/
 
 /-- Uniform coupling along an injection, smaller bound on the left:
 `rand zL ~ rand zR` for `zL ≤ zR` along `f`, with error `(zR - zL)/zR`. -/
@@ -317,7 +315,7 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
 @[reducible] def CoupledDrawRev (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
     Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
   ∃ m : Int, 0 ≤ m ∧ m < z ∧
-    c₁ = ⟨pl(#(.int (f m))), σ⟩ ∧ c₂ = ⟨K.fill (pl(#(.int m))), σ'⟩
+    c₁ = ⟨pl(#(.int (f m))), σ⟩ ∧ c₂ = ⟨K.fill pl(#(.int m)), σ'⟩
 
 /-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the left (the `tv`
 instance of `Cfg.uniform_codensity_fill`). -/
@@ -406,7 +404,7 @@ theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz
   ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
     primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
 
-/-! ## Coupling-context helpers -/
+/-! ## Coupling under an evaluation context -/
 
 open MeasureTheory in
 /-- A coupling with a step of `e` gives one with a step of `K[e]`. -/

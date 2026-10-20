@@ -15,7 +15,9 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on patterns -/
+/-! # Measure space on patterns
+
+Derives the σ-algebra on `Pat` and smoke-tests the generated recursion lemmas. -/
 
 namespace ProbLang.Pat
 

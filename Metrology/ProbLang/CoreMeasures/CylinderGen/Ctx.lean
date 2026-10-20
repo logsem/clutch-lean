@@ -24,11 +24,14 @@ meta section
 
 /-! ## Reading the inductive type -/
 
+/-- How a field of a constructor enters the shape and the leaves. -/
 inductive Kind | recursive | base | data
   deriving BEq, Inhabited
 
+/-- Prints a `Kind` as its name. -/
 instance : ToString Kind := ⟨fun | .recursive => "recursive" | .base => "base" | .data => "data"⟩
 
+/-- A field of a constructor, with its classification. -/
 structure Field where
   name : Name
   kind : Kind
@@ -36,6 +39,7 @@ structure Field where
   type : Expr
   deriving Inhabited
 
+/-- A constructor of `T`, with its fields. -/
 structure Ctor where
   name : Name
   /-- The position among the constructors of `T`. -/
@@ -150,7 +154,9 @@ def Ctx.up (ctx : Ctx) (x : Expr) : MetaM Expr := do
   let A ← inferType x
   return mkApp2 (mkConst ``ULift.up [ctx.w, ← getDecLevel A]) A x
 
+/-- The type `Σ s, T.Leaves s` of shapes with their leaves. -/
 def Ctx.sigma (ctx : Ctx) : MetaM Expr := mkAppM ``Sigma #[ctx.member `Leaves]
+/-- The pair `⟨s, v⟩ : Σ s, T.Leaves s` of a shape and its leaves. -/
 def Ctx.sigmaMk (ctx : Ctx) (s v : Expr) : MetaM Expr :=
   mkAppOptM ``Sigma.mk #[ctx.shape, ctx.member `Leaves, s, v]
 

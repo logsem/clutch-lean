@@ -6,11 +6,14 @@ public import Metrology.ProbLang.CoreMeasures.State
 
 @[expose] public section
 
+/-! # Measurable structure on states and configurations -/
+
 noncomputable section
 open Classical MeasureTheory
 
 namespace ProbLang
 
+/-- Every set of tapes is measurable. -/
 instance instMeasurableSpaceTape : MeasurableSpace Tape := ⊤
 
 instance instMeasurableSingletonClassTape : MeasurableSingletonClass Tape :=
@@ -18,6 +21,7 @@ instance instMeasurableSingletonClassTape : MeasurableSingletonClass Tape :=
 
 variable {α : Type _} [MeasurableSpace α]
 
+/-- The σ-algebra of a state: that of its heap and tapes. -/
 instance instMeasurableSpaceState : MeasurableSpace (State α) :=
   MeasurableSpace.comap (fun σ : State α => (σ.heap, σ.tapes)) inferInstance
 
@@ -47,6 +51,7 @@ theorem State.measurable_mk_param {γ : Type _} [MeasurableSpace γ]
     Measurable (fun q : γ => State.mk (fh q) (ft q)) :=
   State.measurable_iff.mpr ⟨hh, ht⟩
 
+/-- The σ-algebra of a configuration: that of its expression and state. -/
 instance instMeasurableSpaceCfg : MeasurableSpace (Cfg α) :=
   MeasurableSpace.comap (fun c : Cfg α => (c.expr, c.state)) inferInstance
 

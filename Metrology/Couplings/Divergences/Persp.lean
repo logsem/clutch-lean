@@ -32,7 +32,6 @@ theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i �
     rw [Finset.sum_insert hj]
     exact add_ne_bot_iff.2 ⟨ha.1, ih ha.2⟩
 
-/-- Finite sums of converging extended reals converge, away from `⊥`. -/
 theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : ι → α → EReal}
     {a : ι → EReal} (hg : ∀ i ∈ s, Tendsto (g i) l (𝓝 (a i))) (ha : ∀ i ∈ s, a i ≠ ⊥) :
     Tendsto (fun n ↦ ∑ i ∈ s, g i n) l (𝓝 (∑ i ∈ s, a i)) := by
@@ -84,7 +83,6 @@ theorem persp_self {a : ℝ} (ha : 0 ≤ a) : persp f a a = ((a * f 1 : ℝ) : E
   · simp
   · rw [persp_of_ne_zero ha.ne', div_self ha.ne']
 
-/-- The slope at infinity is above the slope of every affine minorant. -/
 theorem le_derivAtTop_of_affine_le {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) :
     (c : EReal) ≤ derivAtTop f := by
   have hlim : Tendsto (fun t : ℝ ↦ ((c + c' / t : ℝ) : EReal)) atTop (𝓝 c) := by
@@ -104,7 +102,6 @@ theorem derivAtTop_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) : derivAtTop f ≤ 
   filter_upwards [eventually_gt_atTop 0] with t ht
   exact EReal.coe_le_coe_iff.2 (div_le_div_of_nonneg_right (h t ht.le) ht.le)
 
-/-- A secant slope of a convex weight is at most its slope at infinity. -/
 theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (hh : 0 < h) :
     (((f (x + h) - f x) / h : ℝ) : EReal) ≤ derivAtTop f := by
   set s := (f (x + h) - f x) / h
@@ -144,7 +141,6 @@ theorem derivAtTop_mul_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {m : ℝ≥0∞} (hm
     · simp [EReal.top_mul_of_pos (EReal.coe_pos.2 h0)]
   | coe l => exact EReal.coe_mul l _ ▸ EReal.coe_ne_bot _
 
-/-- An affine minorant of the weight bounds its perspective. -/
 theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) {a b : ℝ} (ha : 0 ≤ a)
     (hb : 0 ≤ b) : ((c * a + c' * b : ℝ) : EReal) ≤ persp f a b := by
   rcases hb.eq_or_lt with rfl | hb
@@ -218,7 +214,6 @@ theorem persp_add_le (hf : ConvexOn ℝ (Ici 0) f) {a a' b b' : ℝ} (ha : 0 ≤
         mul_le_mul_of_nonneg_left this (add_pos hb hb').le
     _ = b * f (a / b) + b' * f (a' / b') := by field_simp
 
-/-- The perspective of a convex weight is subadditive over finite sums. -/
 theorem persp_sum_le (hf : ConvexOn ℝ (Ici 0) f) {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
     (ha : ∀ i ∈ s, 0 ≤ a i) (hb : ∀ i ∈ s, 0 ≤ b i) :
     persp f (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, persp f (a i) (b i) := by

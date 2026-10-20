@@ -19,6 +19,7 @@ namespace MeasureTheory.Measure
 noncomputable def withBot (μ : Measure X) : Measure (Option X) :=
   μ.map some + (1 - μ Set.univ) • dirac none
 
+/-- Filling the lost mass makes a sub-probability measure a probability measure. -/
 instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure μ] :
     IsProbabilityMeasure μ.withBot :=
   ⟨by
@@ -53,6 +54,7 @@ noncomputable def dropBot : Kernel (Option X) X where
   toFun o := o.elim 0 dirac
   measurable' := measurable_option_elim measurable_dirac 0
 
+/-- Forgetting `none` loses no more than the whole mass. -/
 instance isSubMarkovKernel_dropBot : IsSubMarkovKernel (dropBot : Kernel (Option X) X) :=
   ⟨fun o ↦ by cases o <;> simp [dropBot] <;> infer_instance⟩
 
@@ -91,17 +93,21 @@ variable {D}
 
 /-! ## Laws -/
 
+/-- Filling lost mass preserves gradedness. -/
 instance isGraded_onWithBot [LE B] [Top B] [D.IsGraded] : D.onWithBot.IsGraded where
   mono _ _ hb := IsGraded.mono (D := D) hb
   top μ ν := IsGraded.top μ.withBot ν.withBot
 
+/-- Filling lost mass preserves reflexivity. -/
 instance isReflexive_onWithBot [Zero B] [D.IsReflexive] : D.onWithBot.IsReflexive where
   refl μ _ := IsReflexive.refl μ.withBot
 
+/-- Growing the left measure preserves gradedness. -/
 instance isGraded_leftUp [LE B] [Top B] [D.IsGraded] : D.leftUp.IsGraded where
   mono _ _ hb := fun ⟨μ', hμ, _, h⟩ ↦ ⟨μ', hμ, ‹_›, IsGraded.mono hb h⟩
   top μ _ := ⟨μ, le_rfl, ‹_›, IsGraded.top _ _⟩
 
+/-- Growing the left measure preserves reflexivity. -/
 instance isReflexive_leftUp [Zero B] [D.IsReflexive] : D.leftUp.IsReflexive where
   refl μ _ := ⟨μ, le_rfl, ‹_›, IsReflexive.refl μ⟩
 
@@ -110,6 +116,7 @@ instance isZeroLeft_leftUp [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd 
     [D.IsGraded] [D.IsReflexive] : D.leftUp.IsZeroLeft where
   zero_left b {_} _ ν _ := ⟨ν, Measure.zero_le ν, ‹_›, IsGraded.mono zero_le (IsReflexive.refl ν)⟩
 
+/-- Growing the left measure is antitone in the left argument. -/
 instance isLeftAntitone_leftUp : D.leftUp.IsLeftAntitone where
   left_anti _ := fun hμ ⟨μ', hμ', h⟩ ↦ ⟨μ', hμ.trans hμ', h⟩
 

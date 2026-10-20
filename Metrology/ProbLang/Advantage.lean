@@ -17,7 +17,7 @@ open MeasureTheory
 
 variable {α : Type _} [MeasurableSpace α]
 
-/-- Truncated `ENNReal` subtraction makes each summand a one-sided excess. -/
+/-- Total variation distance: the largest mass difference of a measurable set. -/
 noncomputable def tvDist (μ ν : Measure α) : ENNReal :=
   ⨆ S, ⨆ (_ : MeasurableSet S), (μ S - ν S) ⊔ (ν S - μ S)
 
@@ -66,6 +66,7 @@ theorem tvDist_le_of_addCoupl_eq {ε : ENNReal} {μ ν : Measure α}
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
+/-- The largest total variation distance between the outputs of `X` and `Y` over initial states. -/
 noncomputable def advantage (X Y : Exp rT) : ENNReal :=
   ⨆ σ : State rT, tvDist (limExecV ⟨X, σ⟩) (limExecV ⟨Y, σ⟩)
 

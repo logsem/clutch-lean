@@ -31,6 +31,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [Budget
 /-- Encrypts by adding the key `m` modulo one. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
+/-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
 theorem otp_refines (m : rT)
     (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
@@ -45,6 +46,7 @@ theorem otp_refines (m : rT)
 The ideal sample is coupled with the key through the inverse rotation `g`, so that the
 combiner sends `g r` back to `r`. -/
 
+/-- The ideal sample refines the encrypted sample, given the inverse rotation `g`. -/
 theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
@@ -123,6 +125,7 @@ theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e�
   rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
 
+/-- The encrypted and ideal samples have the same distribution. -/
 theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
     limExecV ⟨otp_enc m, σ⟩ = limExecV ⟨otp_ideal, σ'⟩ :=
   tv_eq_of_rel
@@ -199,6 +202,7 @@ theorem otp_ctx_refines_rev_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ�
     (OrderAddMonoidHom.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ _ => otp_refines_rev_real m
 
+/-- Every well-typed boolean context sees the same distribution on both programs. -/
 theorem otp_ctx_equiv_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ)
     (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool) (hK : TypedCtx K Tctx.empty .real Tctx.empty .bool)
     (hbf : Ctx.BindersFresh K ∅) (hfresh : ∀ x ∈ Ctx.binderAtoms K, x ∉ (otp_enc m).fv ∧
@@ -210,6 +214,7 @@ theorem otp_ctx_equiv_real (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ 
       have ⟨henc, hideal, hpayload⟩ := hfresh x hx
       ⟨hideal, henc, hpayload⟩
 
+/-- No distinguisher has positive advantage. -/
 theorem otp_advantage_zero (m : ℝ) : advantage (otp_enc m) otp_ideal = 0 :=
   advantage_eq_zero_of_limExecV_eq fun σ => otp_distribution_eq m σ σ
 

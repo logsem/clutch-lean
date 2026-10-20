@@ -5,7 +5,9 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.AppRelRules
 
-/-! # Continuous sampler rules -/
+/-! # Continuous sampler rules
+
+Program and relational rules for `urand`, coupling two samplers along a measure-preserving map. -/
 
 @[expose] public section
 

@@ -10,17 +10,23 @@ public import Metrology.Iris.Algebra
 
 @[expose] public section
 
+/-! # Error credits
+
+The resource `↯ε` of error credits, with its split, update and amplification rules. -/
+
 noncomputable section
 
 open Std Iris COFE
 open scoped ENNReal NNReal
 
+/-- Error credits: non-negative extended reals, valid when below `1`. -/
 abbrev ErrorCredit : Type _ := ℝ≥0∞
 
 instance : COFE ErrorCredit := COFE.ofDiscrete _
 instance : OFE.Discrete ErrorCredit := ⟨id⟩
 instance (x : ErrorCredit) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
+/-- Error credits compose by addition. -/
 instance : CMRA ErrorCredit where
   pcore _ := some 0
   op := (· + ·)
@@ -31,7 +37,7 @@ instance : CMRA ErrorCredit where
   validN_ne {_ _ _} := by rintro ⟨rfl⟩; exact id
   valid_iff_validN := .symm <| forall_const Nat
   validN_succ := (·)
-  validN_op_left {n x y} H := lt_of_add_lt_of_nonneg_left H (zero_le)
+  validN_op_left {n x y} H := lt_of_add_lt_of_nonneg_left H zero_le
   assoc {_ _ _} := (add_assoc ..).symm
   comm {_ _} := (add_comm ..).symm
   pcore_op_left {_ _} := by rintro ⟨rfl⟩; simp
@@ -59,9 +65,9 @@ theorem ErrorCredit.includedN_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼{n} ε�
 instance {ε : ErrorCredit} : CMRA.Cancelable ε where
   cancelableN {n ε₁ ε₂} := by
     simp [CMRA.ValidN, CMRA.op, OFE.Dist]
-    intro H1 H2
-    refine (ENNReal.add_right_inj ?_).mp H2
-    rintro rfl; simp at H1
+    intro h1 h2
+    refine (ENNReal.add_right_inj ?_).mp h2
+    rintro rfl; simp at h1
 
 theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
@@ -71,24 +77,26 @@ theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : 
     obtain rfl : ε₁' = ε₂' := ENNReal.add_left_inj H.ne_top |>.mp (by grind)
     exact ⟨Std.lt_of_le_of_lt h1 H, rfl⟩
   · rintro H rfl
-    have Hnt : ε₂ ≠ ∞ := by rintro rfl; simp at H
+    have hnt : ε₂ ≠ ∞ := by rintro rfl; simp at H
     obtain rfl : (ε + ε₂') = ε₁' :=
-      ENNReal.add_left_inj Hnt |>.mp (.trans (add_rotate ..).symm h2)
+      ENNReal.add_left_inj hnt |>.mp (.trans (add_rotate ..).symm h2)
     refine ⟨?_, by grind⟩
     refine Std.lt_of_le_of_lt ?_ H
     rw [add_comm]
-    exact (add_le_add_left h1 ε)
+    exact add_le_add_left h1 ε
 
 instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
 
+/-- Ghost-state resource for error credits. -/
 class ECPreGS (GF : BundledGFunctors) where
   ec : ElemG GF (constOF (Auth ErrorCredit))
 
 attribute [reducible, instance] ECPreGS.ec
 
+/-- `ECPreGS` together with its ghost name. -/
 class ECGS (GF : BundledGFunctors) extends ECPreGS GF where
   γec : GName
 
@@ -96,7 +104,9 @@ section Resources
 
 variable {GF : BundledGFunctors} [IEC : ECGS GF]
 
+/-- Authoritative total of error credits, written `●↯ ε`. -/
 def ecAuth (ε : ℝ≥0∞) : IProp GF := iOwn (E := IEC.ec) IEC.γec (● ε)
+/-- Ownership of `ε` error credits, written `↯ε`. -/
 def ec (ε : ℝ≥0∞) : IProp GF := iOwn (E := IEC.ec) IEC.γec (◯ ε)
 notation "↯ " r:50 => ec r
 notation "●↯ " r:50 => ecAuth r
@@ -147,23 +157,23 @@ theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ �
 
 theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ |==> ●↯ (εₛ - ε) := by
   iintro Hs Hε
-  ihave %Hle := supply_bound $$ Hs Hε
+  ihave %hle := supply_bound $$ Hs Hε
   unfold ec ecAuth
   ihave Hc := iOwn_op |>.mpr $$ [$Hs $Hε]
   refine iOwn_update <| Auth.auth_update_dealloc ?_
   simp only [UCMRA.unit]
-  refine localUpdate (zero_le) ?_
-  simpa [add_zero] using (tsub_add_cancel_of_le Hle).symm
+  refine localUpdate zero_le ?_
+  simpa [add_zero] using (tsub_add_cancel_of_le hle).symm
 
 theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
     ●↯ ε₁ ⊢@{IProp GF} |==> (●↯ (ε₁ + ε₂) ∗ ↯ε₂) := by
   unfold ec ecAuth
-  have Hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
+  have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
     simp only [CMRA.Valid, CMRA.op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
     exact fun _ => ⟨h, add_comm _ _⟩
   iintro Hε
-  imod (iOwn_update Hupd) $$ Hε with H
+  imod (iOwn_update hupd) $$ Hε with H
   imodintro
   iapply iOwn_op
   iexact H
@@ -191,7 +201,7 @@ namespace Induction
 
 theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ ε * (k : ℝ≥0∞) ^ n := by
-  rcases eq_or_ne ε ∞ with (rfl | hε')
+  obtain rfl | hε' := eq_or_ne ε ∞
   · exact ⟨0, by simp⟩
   · lift ε to ℝ≥0 using hε' with ε
     obtain ⟨n, hn⟩ := pow_unbounded_of_one_lt ε⁻¹ (by exact_mod_cast hk)
@@ -203,7 +213,7 @@ theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k
 
 theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : ε ≤ ε') (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε' := by
-  rcases eq_or_ne ε ∞ with rfl | hεne
+  obtain rfl | hεne := eq_or_ne ε ∞
   · exact ⟨0, by simp [top_le_iff.mp hle]⟩
   · lift ε to ℝ≥0 using hεne with ε
     obtain ⟨n, hn⟩ := exists_nat_ge ((k - 1) * ε)⁻¹
@@ -216,6 +226,7 @@ theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : �
     rw [hcoe]
     exact_mod_cast h1
 
+/-- Error amplification: a spending proof that works at `k * ε` credits works at `ε`. -/
 theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
   suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε' -∗ P by
@@ -255,6 +266,7 @@ theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 
   iintro !> H
   iapply hamp $$ H
 
+/-- Amplification by an arbitrary larger credit amount `ε'`. -/
 theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hε' : ε < ε') :
     □ ((↯ε' -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
   iintro #Hamp Hε
@@ -275,6 +287,7 @@ theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < �
   iapply Hc
   iapply ext hkeq $$ Hε
 
+/-- Amplification, with the amplification step quantified over every positive `ε'`. -/
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P)
     ⊢@{IProp GF} ↯ε -∗ P := by

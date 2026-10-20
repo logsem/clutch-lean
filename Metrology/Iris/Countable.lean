@@ -7,13 +7,15 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Iris.Instances.Lib.NaInvariants
 public import Iris.Instances.Lib.Invariants
 
+/-! # Countable namespace indices
+
+`Pos.Countable` instances for `Nat`, `Int` and products, used to index invariant namespaces. -/
+
 @[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
 
 namespace ProbLang
-
-/-! ## `Pos.Countable` instances for namespace indexing -/
 
 theorem Pos.toNat_succ (p : Pos) : p.succ.toNat = p.toNat + 1 := by
   induction p with
@@ -26,6 +28,7 @@ theorem Pos.toNat_ofNat (n : Nat) : (Pos.ofNat n).toNat = n + 1 := by
   | zero => rfl
   | succ k ih => simp [Pos.ofNat, Pos.toNat_succ, ih]
 
+/-- Naturals encode as positive numbers by successor. -/
 instance posCountable_nat : Pos.Countable Nat where
   encode n := Pos.ofNat n
   decode p := some (p.toNat - 1)
@@ -50,6 +53,7 @@ instance posCountable_int : Pos.Countable Int where
       congr 1
       omega
 
+/-- Pairs encode by flattening the encodings of their components. -/
 instance posCountable_prod {A B : Type} [Pos.Countable A] [Pos.Countable B] :
     Pos.Countable (A × B) where
   encode p := Pos.flatten [Pos.Countable.encode p.1, Pos.Countable.encode p.2]

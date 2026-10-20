@@ -8,8 +8,8 @@ public meta import Lean.Elab.Tactic.Basic
 /-!
 # Locally-nameless theory for `Exp`
 
-Mirrors `cslib/Cslib/Languages/LambdaCalculus/LocallyNameless/Untyped/Properties.lean`.
--/
+Mirrors `cslib/Cslib/Languages/LambdaCalculus/LocallyNameless/Untyped/Properties.lean`;
+also holds the `is_lc` / `is_value` tactics and `toVal?` simp lemmas. -/
 
 namespace ProbLang
 
@@ -168,7 +168,8 @@ private theorem openRec_closeRec_binder {L : Finset Var} {t : Exp rT} {x y : Var
         rw [openRec_openRec_comm 0 (k+1) z y _ (by omega),
           swap_open_fvar_close (k+1) 0 x z t (by omega) (Ne.symm hzx)]
     _ = subst (open' t (fvar z)) x (fvar y) := ih z hzL (k+1)
-    _ = open' (subst t x (fvar y)) (fvar z) := subst_open_var z x (fvar y) t (Ne.symm hzx) (.fvar y)
+    _ = open' (subst t x (fvar y)) (fvar z) :=
+        subst_open_var z x (fvar y) t (Ne.symm hzx) (.fvar y)
 
 @[scoped grind =]
 theorem open_close_to_subst (e : Exp rT) (x y : Var) (k : Nat) (he : IsLocallyClosed e) :
@@ -184,9 +185,9 @@ theorem open_close_subst_lc (x y : Var) (e : Exp rT) (he : IsLocallyClosed e) :
     open' (close e x) (fvar y) = subst e x (fvar y) :=
   open_close_to_subst e x y 0 he
 
-/-- The shape `unpack` contexts produce: `CtxItem.fill (.unpackR x e₁) e = app (lam (close e x)) e₁`. -/
+/-- The body of an `unpack` context (`app (lam (close e x)) e₁`) opens to a locally closed term. -/
 theorem open_close_isLocallyClosed {e : Exp rT} (x y : Var) (he : IsLocallyClosed e) :
-    (Exp.open' (Exp.close e x) (Exp.fvar y)).IsLocallyClosed := by
+    (open' (close e x) (fvar y)).IsLocallyClosed := by
   rw [open_close_subst_lc x y e he]
   exact subst_lc he (IsLocallyClosed.fvar y)
 
@@ -221,7 +222,8 @@ theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
         rw [ih0 hze.1.1, ih1 hze.1.2, ih2 hze.2]
   exact subst_rename e hze
 
-/-- Locally closed with no free variables; usable before `ClosedCtx` exists in `Metatheory.lean`. -/
+/-- Locally closed with no free variables; usable before `ClosedCtx` exists in
+`Metatheory.lean`. -/
 def isClosedEmpty (e : Exp rT) : Prop := IsLocallyClosed e ∧ e.fv = ∅
 
 theorem isClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.isClosedEmpty) :
@@ -229,10 +231,10 @@ theorem isClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.isClosedEmpty) :
   ⟨h.1, h.2.subset⟩
 
 theorem lit_isClosedEmpty (b : BaseLit rT) : (Exp.lit b).isClosedEmpty :=
-  ⟨IsLocallyClosed.lit b, by simp [Exp.fv]⟩
+  ⟨IsLocallyClosed.lit b, by simp [fv]⟩
 
 theorem open_isLocallyClosed {e : Exp rT} (t : Exp rT) (he : e.IsLocallyClosed) :
-    (Exp.open' e t).IsLocallyClosed := by
+    (open' e t).IsLocallyClosed := by
   rw [open', ← open_lc 0 t e he]
   exact he
 
@@ -256,21 +258,15 @@ end Exp
 
 /-! ## The `pl_step_simp` cleanup set
 
-β/fix steps substitute through binders with `openRec`, and `pl%`-elaborated binders
-carry `closeRec` wrappers; on an *opaque* leaf (an abstract `Val` projection or a
-closed library constant) the recursion is stuck, so wrappers pile up in stepped
-expressions and every later `whnf`-based defeq re-evaluates them over the whole leaf.
-`@[pl_step_simp]` collects the propositional erasure lemmas — `openRec_val_fst` for
-values, plus a per-library-constant `openRec`/`closeRec` identity pair (closed terms
-are invariant) — and the step tactics run `simp only [pl_step_simp]` after each step. -/
+On an opaque leaf (an abstract `Val` projection or a closed library constant), `openRec`/`closeRec`
+wrappers from β/fix steps get stuck and pile up, and every later `whnf` re-evaluates them.
+`@[pl_step_simp]` collects the lemmas that erase them, and the step
+tactics run `simp only [pl_step_simp]` after each step. -/
 
 register_simp_attr pl_step_simp
 
-/-- Decide `Exp.lcb k e = true` (or any closed-form `a = b`) by *kernel* reduction and
-close it with `Eq.refl`. On an inlined library closure the elaborator's `rfl`/`whnf`
-re-evaluates `lcb` through every unfolded constant body (seconds per call, and it
-recurs on every pure step); the kernel's cached reduction does the same check in
-milliseconds. -/
+/-- Close `Exp.lcb k e = true` (or any closed `a = b`) by kernel reduction, which is far faster
+than the elaborator's `rfl` on an inlined library closure. -/
 public meta def Exp.kernelDecideEq (g : Lean.MVarId) : Lean.MetaM Unit := g.withContext do
   let ty ← Lean.instantiateMVars (← g.getType)
   let some (_, lhs, rhs) := ty.eq? | throwError "lcb_kernel: goal is not an equation"
@@ -281,11 +277,9 @@ public meta def Exp.kernelDecideEq (g : Lean.MVarId) : Lean.MetaM Unit := g.with
   g.assign (← Lean.Meta.mkExpectedTypeHint (← Lean.Meta.mkEqRefl lhs) ty)
 
 open Lean in
-/-- Value check for a concrete `lam`/`fix` closure `e : Exp α` (possibly behind a library
-constant), deciding its local closedness by kernel reduction instead of `whnf` of
-`Exp.toVal?`. Returns `some (some v)` with `v.fst = e` for a closed closure,
-`some none` for an open one, and `none` when `e` is not a `lam`/`fix` or the kernel
-cannot decide (e.g. metavariables), so the caller falls back to `toVal?`. -/
+/-- Decide by kernel reduction whether a concrete `lam`/`fix` closure `e : Exp α` is a value.
+Returns `some (some v)` for a closed closure, `some none` for an open one, and `none` when
+`e` is not a `lam`/`fix` or the kernel cannot decide, so the caller falls back to `toVal?`. -/
 public meta def Exp.closedFunVal? (α e : Expr) : MetaM (Option (Option Expr)) := do
   let eW ← Meta.whnf e
   let ctor ← if eW.isAppOfArity ``Exp.lam 2 then pure ``IsVal.lam
@@ -304,26 +298,20 @@ public meta def Exp.closedFunVal? (α e : Expr) : MetaM (Option (Option Expr)) :
   let snd := mkApp3 (mkConst ctor) α eW.appArg! (← lcOf eW)
   return some (some (mkApp4 (mkConst ``Val.mk) α e snd (← lcOf e)))
 
-/-- `lcb_kernel` closes `Exp.lcb k e = true` by kernel reduction (see
-`Exp.kernelDecideEq`). -/
+/-- Close `Exp.lcb k e = true` by kernel reduction (see `Exp.kernelDecideEq`). -/
 syntax "lcb_kernel" : tactic
 elab_rules : tactic
   | `(tactic| lcb_kernel) => Lean.Elab.Tactic.liftMetaFinishingTactic Exp.kernelDecideEq
 
-/-- `kernel_rfl` closes a definitional equation `a = b` by kernel reduction when it is
-metavariable-free (the step tactics' anchors `e_full = K.fill e`, `e.toVal? = some v`),
-and falls back to the elaborator's `rfl` (which can unify metavariables) otherwise. -/
+/-- Close a definitional equation by kernel reduction if it has no metavariables, else by `rfl`. -/
 syntax "kernel_rfl" : tactic
 elab_rules : tactic
   | `(tactic| kernel_rfl) => Lean.Elab.Tactic.liftMetaFinishingTactic fun g => do
     if (← Lean.instantiateMVars (← g.getType)).hasMVar then g.refl
     else Exp.kernelDecideEq g
 
-/-- `is_lc` discharges `Exp.IsLocallyClosed e` goals. Runtime values and program
-fragments are locally closed; the proof is either a kernel computation of the decidable
-checker (`Exp.lcb_imp_lc (by lcb_kernel)`, for fully concrete closed subterms such as source
-`lam`/`fix` bodies), or a structural decomposition bottoming out at an abstract value's
-`Val.lc` field (`exact Val.lc _`) or a closedness hypothesis already in context. -/
+/-- Discharge `Exp.IsLocallyClosed e`, by kernel computation for concrete terms or by structural
+decomposition down to `Val.lc` fields and hypotheses. -/
 syntax "is_lc" : tactic
 macro_rules
   | `(tactic| is_lc) =>
@@ -354,6 +342,7 @@ macro_rules
             | apply Exp.IsLocallyClosed.store | apply Exp.IsLocallyClosed.tape
             | apply Exp.IsLocallyClosed.rand | apply Exp.IsLocallyClosed.scrut))
 
+/-- Discharge `IsVal e` and `IsLocallyClosed e` goals, like `is_lc`. -/
 syntax "is_value" : tactic
 macro_rules
   | `(tactic| is_value) =>

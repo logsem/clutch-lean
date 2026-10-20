@@ -209,6 +209,7 @@ noncomputable def gaussianMech (σ : ℝ≥0) : Mechanism ℝ ℝ :=
   ⟨fun a ↦ gaussianReal a (σ ^ 2), measurable_gaussianReal.comp (measurable_id.prodMk
     measurable_const)⟩
 
+/-- The Gaussian mechanism is a Markov kernel. -/
 instance isMarkovKernel_gaussianMech (σ : ℝ≥0) : IsMarkovKernel (gaussianMech σ) :=
   ⟨fun _ ↦ inferInstanceAs (IsProbabilityMeasure (gaussianReal _ _))⟩
 

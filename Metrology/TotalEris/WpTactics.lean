@@ -182,6 +182,7 @@ where
 
 /-! ## WP-goal runner -/
 
+/-- The pieces of a `tglWp E e Φ` proof-mode goal, with its typeclass instances. -/
 meta structure TglWpGoal where
   {u : Level}
   {α : Q(Type)}
@@ -199,6 +200,7 @@ meta structure TglWpGoal where
   hprop : $prop =Q IProp $GF
   hbi : $bi =Q UPred.instBIUPred
 
+/-- Run `k` on the main goal, parsed as a `tglWp` goal. -/
 meta def runTacticTglWp {β : Type} (k : MVarId → TglWpGoal → ProofModeM β) : TacticM β := do
   ProofModeM.runTactic `tglWp fun mvar {u, prop, bi, hyps, goal, ..} => do
     let .defEq _ ← isLevelDefEqQ u 0
@@ -396,6 +398,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
 
 /-! ## `twp_pure` — take a pure step at a redex, auto-discovering its context -/
 
+/-- A `PureExec` step `e₁ ⇝ e₂syn` with its instance, side condition `φ` and step count `n`. -/
 public meta structure PureStepAt (α : Q(Type)) (instPL : Q(ProbLang.LawfulProbLangℝ $α)) where
   e₁ : Q(Exp $α)
   e₂syn : Q(Exp $α)
@@ -417,6 +420,7 @@ meta def findPureStep {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLangℝ $α)
       | failure
     return { e₁ := e₁', e₂syn, names, φ, n, inst }
 
+/-- The reduct as shown to the user: normalized, with source binder names restored. -/
 meta def displayReduct {α : Q(Type)} (e₂syn : Q(Exp $α)) (names : Array Name) :
     MetaM Q(Exp $α) := do
   let reduced ← reduceExp e₂syn
@@ -498,12 +502,14 @@ macro "twp_pure_at " e1:term:max " ↦ " e2:term:max " by " h:term : tactic =>
   `(tactic| iapply (ErisWpGS.twp_pure_step_fupd
       (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
 
+/-- `twp_pures` takes pure steps until none applies. -/
 macro "twp_pures" : tactic =>
   `(tactic| ((repeat (twp_pure_core; try simp only [pl_step_simp]));
              try simp only [pl_step_simp]))
 
 /-! ## `pure_step` / `pure_steps` — drive a plain `PureSteps` goal (outside proof mode) -/
 
+/-- Run `k` on the main goal outside proof mode, for `PureSteps` goals. -/
 meta def runPureStepsGoal {β : Type} (k : MVarId → ProofModeM β) : TacticM β := do
   let mvar ← getMainGoal
   mvar.withContext do
@@ -511,6 +517,7 @@ meta def runPureStepsGoal {β : Type} (k : MVarId → ProofModeM β) : TacticM �
     Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
     return res
 
+/-- `pure_step_core` takes one `PureExec` step on a `PureSteps` goal, without cleanup. -/
 elab "pure_step_core" : tactic => do
   let tac ← runPureStepsGoal fun mvar => do
     let goalE := (← instantiateMVars (← mvar.getType)).consumeMData
@@ -540,6 +547,7 @@ elab "pure_step_core" : tactic => do
       show ProbLang.PureSteps $e₂fullS _)
   Tactic.evalTactic tac
 
+/-- `pure_step` takes one pure step on a `PureSteps` goal. -/
 macro "pure_step" : tactic =>
   `(tactic| (pure_step_core; try simp only [pl_step_simp]))
 

@@ -50,14 +50,17 @@ theorem IsSubProbabilityMeasure.lintegral_le_one {μ : Measure X} [IsSubProbabil
     {f : X → ℝ≥0∞} (hf : ∀ x, f x ≤ 1) : ∫⁻ x, f x ∂μ ≤ 1 :=
   (lintegral_mono hf).trans (by simpa using measure_univ_le_one)
 
+/-- Subprobability measures are finite. -/
 instance (priority := 100) IsSubProbabilityMeasure.toIsFiniteMeasure (μ : Measure X)
     [IsSubProbabilityMeasure μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := measure_univ_le_one.trans_lt one_lt_top
 
+/-- Zero or probability measures are subprobability measures. -/
 instance (priority := 100) IsZeroOrProbabilityMeasure.toIsSubProbabilityMeasure
     (μ : Measure X) [IsZeroOrProbabilityMeasure μ] : IsSubProbabilityMeasure μ where
   measure_univ_le_one := prob_le_one
 
+/-- Pushing forward keeps a measure sub-probability. -/
 instance isSubProbabilityMeasure_map (μ : Measure X) [IsSubProbabilityMeasure μ] (f : X → Y) :
     IsSubProbabilityMeasure (μ.map f) where
   measure_univ_le_one := by
@@ -68,6 +71,7 @@ instance isSubProbabilityMeasure_map (μ : Measure X) [IsSubProbabilityMeasure �
     · simp [hμ]
     · simp [Measure.map_of_not_aemeasurable_of_ne_zero hf hμ]
 
+/-- The product of subprobability measures is sub-probability. -/
 instance isSubProbabilityMeasure_prod (μ : Measure X) (ν : Measure Y) [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] : IsSubProbabilityMeasure (μ.prod ν) where
   measure_univ_le_one := by
@@ -101,6 +105,7 @@ noncomputable def Measure.finiteOrZero (μ : Measure X) : Measure X :=
 
 namespace Measure
 
+/-- `finiteOrZero` is finite. -/
 instance isFiniteMeasure_finiteOrZero (μ : Measure X) : IsFiniteMeasure μ.finiteOrZero := by
   unfold finiteOrZero
   split <;> infer_instance
@@ -128,22 +133,27 @@ class IsSubMarkovKernel (κ : Kernel X Y) : Prop where
 
 attribute [instance] IsSubMarkovKernel.isSubProbabilityMeasure
 
+/-- Zero or Markov kernels are sub-Markov. -/
 instance (priority := 100) IsZeroOrMarkovKernel.toIsSubMarkovKernel (κ : Kernel X Y)
     [IsZeroOrMarkovKernel κ] : IsSubMarkovKernel κ where
   isSubProbabilityMeasure _ := inferInstance
 
+/-- Sub-Markov kernels are finite. -/
 instance (priority := 100) IsSubMarkovKernel.toIsFiniteKernel (κ : Kernel X Y)
     [IsSubMarkovKernel κ] : IsFiniteKernel κ where
   exists_univ_le := ⟨1, ENNReal.one_lt_top, fun _ ↦ measure_univ_le_one⟩
 
+/-- A sub-Markov kernel applied to a subprobability measure gives a subprobability measure. -/
 instance isSubProbabilityMeasure_comp (μ : Measure X) [IsSubProbabilityMeasure μ]
     (κ : Kernel X Y) [IsSubMarkovKernel κ] : IsSubProbabilityMeasure (κ ∘ₘ μ) :=
   isSubProbabilityMeasure_bind μ κ κ.measurable.aemeasurable
 
+/-- Composites of sub-Markov kernels are sub-Markov. -/
 instance isSubMarkovKernel_comp (η : Kernel Y Z) [IsSubMarkovKernel η] (κ : Kernel X Y)
     [IsSubMarkovKernel κ] : IsSubMarkovKernel (η ∘ₖ κ) where
   isSubProbabilityMeasure x := by rw [Kernel.comp_apply]; infer_instance
 
+/-- Pushing a sub-Markov kernel forward gives a sub-Markov kernel. -/
 instance isSubMarkovKernel_map (κ : Kernel X Y) [IsSubMarkovKernel κ] (f : Y → Z) :
     IsSubMarkovKernel (κ.map f) where
   isSubProbabilityMeasure x := by
@@ -153,18 +163,22 @@ instance isSubMarkovKernel_map (κ : Kernel X Y) [IsSubMarkovKernel κ] (f : Y �
     · rw [Kernel.map_of_not_measurable _ hf]
       exact ⟨by simp⟩
 
+/-- Left sections of a sub-Markov kernel are sub-Markov. -/
 instance isSubMarkovKernel_sectL (k : Kernel (X × Y) Z) [IsSubMarkovKernel k] (y : Y) :
     IsSubMarkovKernel (k.sectL y) where
   isSubProbabilityMeasure x := by rw [Kernel.sectL_apply]; infer_instance
 
+/-- Right sections of a sub-Markov kernel are sub-Markov. -/
 instance isSubMarkovKernel_sectR (k : Kernel (X × Y) Z) [IsSubMarkovKernel k] (x : X) :
     IsSubMarkovKernel (k.sectR x) where
   isSubProbabilityMeasure y := by rw [Kernel.sectR_apply]; infer_instance
 
+/-- Products of sub-Markov kernels are sub-Markov. -/
 instance isSubMarkovKernel_prod (κ : Kernel X Y) [IsSubMarkovKernel κ] (η : Kernel X Z)
     [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ×ₖ η) where
   isSubProbabilityMeasure x := by rw [Kernel.prod_apply]; infer_instance
 
+/-- Composition-products of sub-Markov kernels are sub-Markov. -/
 instance isSubMarkovKernel_compProd (κ : Kernel X Y) [IsSubMarkovKernel κ]
     (η : Kernel (X × Y) Z) [IsSubMarkovKernel η] : IsSubMarkovKernel (κ ⊗ₖ η) where
   isSubProbabilityMeasure x := ⟨by
@@ -177,6 +191,7 @@ instance isSubMarkovKernel_piecewise {s : Set X} [DecidablePred (· ∈ s)] (hs 
     IsSubMarkovKernel (Kernel.piecewise hs κ η) where
   isSubProbabilityMeasure x := by rw [Kernel.piecewise_apply]; split_ifs <;> infer_instance
 
+/-- Precomposing a sub-Markov kernel with a measurable map keeps it sub-Markov. -/
 instance isSubMarkovKernel_comap (κ : Kernel Y Z) [IsSubMarkovKernel κ] {g : X → Y}
     (hg : Measurable g) : IsSubMarkovKernel (κ.comap g hg) where
   isSubProbabilityMeasure x := by rw [Kernel.comap_apply]; infer_instance
@@ -186,10 +201,12 @@ instance isSubMarkovKernel_mk (f : X → Measure Y) (hf : Measurable f)
     [∀ x, IsSubProbabilityMeasure (f x)] : IsSubMarkovKernel ⟨f, hf⟩ where
   isSubProbabilityMeasure x := inferInstanceAs (IsSubProbabilityMeasure (f x))
 
+/-- Constant kernels at a subprobability measure are sub-Markov. -/
 instance isSubMarkovKernel_const (μ : Measure Y) [IsSubProbabilityMeasure μ] :
     IsSubMarkovKernel (Kernel.const X μ) where
   isSubProbabilityMeasure x := by rw [Kernel.const_apply]; infer_instance
 
+/-- The zero kernel is sub-Markov. -/
 instance isSubMarkovKernel_zero : IsSubMarkovKernel (0 : Kernel X Y) where
   isSubProbabilityMeasure x := by rw [zero_apply]; infer_instance
 

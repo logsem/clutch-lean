@@ -20,7 +20,7 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 (Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
-      {Φ : Val rT → IProp GF}
+    {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
@@ -69,7 +69,7 @@ theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
 `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is `L.Absorbing b`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
     [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
-      {Φ : Val rT → IProp GF}
+    {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
@@ -105,7 +105,7 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
 (Rocq `wp_couple_erasables`). -/
 theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e : Exp rT}
-      {Φ : Val rT → IProp GF} : iprop%
+    {Φ : Val rT → IProp GF} : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),

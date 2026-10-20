@@ -17,22 +17,30 @@ public import Mathlib.Probability.Distributions.Uniform
 
 meta import Metrology.Meta
 
+/-! # ProbLang syntax
+
+Expressions, values, states and evaluation contexts of ProbLang, with local closedness and
+evaluation-context decomposition. -/
+
 @[expose] public section
 
 open Std
 open Cslib
 
+/-- A key larger than every key in the map. -/
 def Std.ExtTreeMap.fresh (t : ExtTreeMap Int V) : Int :=
   match t.maxKey? with | none => 1 | some v => v + 1
 
+/-- The fresh key is absent. -/
 theorem Std.ExtTreeMap.fresh_get? (t : ExtTreeMap Int V) :
     t[t.fresh]? = none := by
   unfold ExtTreeMap.fresh
-  rcases HM : t.maxKey? with _ | v
-  · simp [maxKey?_eq_none_iff.mp HM]
+  rcases hM : t.maxKey? with _ | v
+  · simp [maxKey?_eq_none_iff.mp hM]
   · apply getElem?_eq_none
     intro hmem
-    have hle := ExtTreeMap.le_maxKey?_of_mem hmem (Option.get_of_eq_some (isSome_maxKey?_of_mem hmem) HM)
+    have hle := ExtTreeMap.le_maxKey?_of_mem hmem
+      (Option.get_of_eq_some (isSome_maxKey?_of_mem hmem) hM)
     simp [compare, compareOfLessAndEq] at hle
 
 /-- `maxKey?` in `getElem?` and `<` terms, the form measurability arguments need. -/
@@ -64,9 +72,9 @@ instance instCountableChar : Countable Char where
 -- TODO: PR back to mathlib
 instance instCountableString : Countable String where
   exists_injective_nat' := by
-    have ⟨f, Hf⟩ : Countable (List Char) := by infer_instance
+    have ⟨f, hf⟩ : Countable (List Char) := by infer_instance
     exists (fun s => f s.toList)
-    exact fun _ _ H => String.toList_inj.mp (Hf H)
+    exact fun _ _ h => String.toList_inj.mp (hf h)
 
 namespace ProbLang
 
@@ -81,21 +89,24 @@ instance : Coe String Var := ⟨.named⟩
 
 instance : Coe Nat Var := ⟨.internal⟩
 
+/-- The index of an internal variable (0 for named ones). -/
 def Var.genId : Var → Nat | .named _ => 0 | .internal n => n
 
 instance : Cslib.HasFresh Var where
   fresh s := .internal <| s.sup (·.genId) + 1
   fresh_notMem L := by
     rw [← Finset.forall_mem_not_eq]
-    intro b Hb
+    intro b hb
     rcases b with (_|n); (· simp)
     simp only [Var.internal.injEq]
     refine Nat.ne_of_gt (Order.lt_add_one_iff.mpr ?_)
-    apply Finset.le_sup_of_le Hb
+    apply Finset.le_sup_of_le hb
     simp [Var.genId]
 
+/-- Heap locations. -/
 abbrev Loc : Type := Int
 
+/-- Tape labels. -/
 abbrev Lbl : Type := Int
 
 /-- The operations ProbLang needs on its type of reals. This class is pure data, so a
@@ -145,6 +156,7 @@ theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [LawfulProbLang�
   rw [MeasureTheory.measure_univ] at h1
   exact one_ne_zero h1
 
+/-- Literals: integers, booleans, unit, locations, labels and reals. -/
 @[uncurriedProjections, constructors]
 inductive BaseLit (rT : Type _)
   | int (z : Int)
@@ -155,14 +167,17 @@ inductive BaseLit (rT : Type _)
   | real (r : rT)
   deriving Countable, BEq, Repr
 
+/-- Unary operators. -/
 @[uncurriedProjections, constructors]
 inductive UnOp | neg | minus | toReal | frac
   deriving Inhabited, Countable, Repr, BEq
 
+/-- Binary operators. -/
 @[uncurriedProjections, constructors]
 inductive BinOp | plus | minus | mult | div | mod | and | or | xor | eq | lt | le | shl | shr
   deriving Inhabited, Countable, Repr, BEq
 
+/-- Types of ProbLang. -/
 @[uncurriedProjections, constructors]
 inductive Ty
   | int | bool | unit
@@ -178,6 +193,7 @@ inductive Ty
   | exists' (τ : Ty)
   deriving Inhabited, DecidableEq, Countable, Repr, BEq
 
+/-- Patterns for `scrut`. -/
 @[uncurriedProjections, constructors]
 inductive Pat (rT : Type _)
   | wildcard
@@ -187,6 +203,7 @@ inductive Pat (rT : Type _)
   | inr (p : Pat rT)
   deriving Inhabited, Countable, BEq, Repr
 
+/-- ProbLang expressions, with de Bruijn bound variables and named free variables. -/
 @[uncurriedProjections, constructors]
 inductive Exp (rT : Type _)
   | bvar (n : Nat)
@@ -223,10 +240,12 @@ section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
 
+/-- A type annotation that is erased. -/
 @[reducible] def Exp.annotated (_τ : Ty) (e : Exp rT) : Exp rT := e
 
 namespace Exp
 
+/-- Replaces bound variable `i` by `sub`. -/
 @[simp, scoped grind =] def openRec (i : Nat) (sub : Exp rT) : Exp rT → Exp rT
   | bvar j => if i = j then sub else bvar j
   | fvar x => fvar x
@@ -252,8 +271,10 @@ namespace Exp
   | urand => urand
   | scrut e p => scrut (openRec i sub e) p
 
+/-- Instantiates the outermost bound variable with `sub`. -/
 @[simp, scoped grind =] def open' (e sub : Exp rT) : Exp rT := openRec 0 sub e
 
+/-- Replaces the free variable `x` by bound variable `i`. -/
 @[simp, scoped grind =] def closeRec (i : Nat) (x : Var) : Exp rT → Exp rT
   | bvar j => bvar j
   | fvar y => if x = y then bvar i else fvar y
@@ -279,8 +300,10 @@ namespace Exp
   | urand => urand
   | scrut e p => scrut (closeRec i x e) p
 
+/-- Abstracts the free variable `x` as the outermost bound variable. -/
 @[simp, scoped grind =] def close (e : Exp rT) (x : Var) : Exp rT := closeRec 0 x e
 
+/-- Substitutes `sub` for the free variable `x`. -/
 @[simp, scoped grind =] def subst (e : Exp rT) (x : Var) (sub : Exp rT) : Exp rT :=
   match e with
   | bvar j => bvar j
@@ -310,6 +333,7 @@ namespace Exp
 instance : HasSubstitution (Exp rT) Var (Exp rT) where
   subst := Exp.subst
 
+/-- The free variables of an expression. -/
 @[simp, scoped grind =] def fv : Exp rT → Finset Var
   | bvar _ => {}
   | fvar x => {x}
@@ -335,6 +359,7 @@ instance : HasSubstitution (Exp rT) Var (Exp rT) where
   | urand => {}
   | scrut e _ => fv e
 
+/-- No dangling bound variables, using cofinite quantification at binders. -/
 inductive IsLocallyClosed : Exp rT → Prop
   | fvar (x : Var) :
     IsLocallyClosed (fvar x)
@@ -477,7 +502,7 @@ theorem lcb_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
       split
       · rfl
       · simp only [lcb, decide_eq_true_eq]; omega
-  | _ => intro h ; simp_all [lcb, openRec]
+  | _ => intro h; simp_all [lcb, openRec]
 
 theorem height_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
     (openRec k (fvar x) e).height = e.height := by
@@ -569,9 +594,9 @@ theorem lcb_openRec_fvar_rev (x : Var) : ∀ (k : Nat) (e : Exp α),
       intro h
       simp only [openRec] at h
       split at h
-      · next heq => simp only [lcb, decide_eq_true_eq]; omega
-      · next hne => simp only [lcb, decide_eq_true_eq] at h ⊢; omega
-  | _ => intro h ; simp_all [lcb, openRec]
+      · simp only [lcb, decide_eq_true_eq]; omega
+      · simp only [lcb, decide_eq_true_eq] at h ⊢; omega
+  | _ => intro h; simp_all [lcb, openRec]
 
 theorem lc_imp_lcb {e : Exp α} (h : IsLocallyClosed e) : lcb 0 e = true := by
   induction h with
@@ -599,6 +624,7 @@ instance [DecidableEq α] : DecidableEq (BaseLit α)
   | .real _, .int _ | .real _, .bool _ | .real _, .unit | .real _, .loc _ | .real _, .lbl _ =>
       isFalse (by intro h; cases h)
 
+/-- Matches a pattern against an expression, returning the bound result if it matches. -/
 def Pat.tryMatch : Pat rT → Exp rT → Option (Exp rT)
   | .wildcard, e => some e
   | .lit b, .lit b' => if b == b' then some (.lit .unit) else none
@@ -644,27 +670,35 @@ theorem Pat.tryMatch_lit_ne {l1 l2 : BaseLit rT} (h : ¬ (l1 == l2) = true) :
   show (if (l1 == l2) = true then some (Exp.lit BaseLit.unit) else none) = _
   rw [ite_eq_right h]
 
-/- ## Sublanguages -/
+/-! ## Sublanguages -/
 
+/-- A sublanguage, given as a type of witnesses for each expression. -/
 abbrev Fragment (rT : Type _) := Exp rT → Type
 
+/-- Expressions together with a witness that they lie in the fragment. -/
 abbrev FragExp (F : Fragment rT) := (e : Exp rT) × F e
 
+/-- Expressions in both fragments. -/
 def Both (F G : Fragment rT) : Fragment rT :=
   fun e => F e × G e
 
+/-- Expressions in either fragment. -/
 def Either (F G : Fragment rT) : Fragment rT :=
   fun e => F e ⊕ G e
 
+/-- The fragment of all expressions. -/
 def Any : Fragment rT :=
   fun _ => Unit
 
+/-- The empty fragment. -/
 def None : Fragment rT :=
   fun _ => Empty
 
+/-- Pairs each witness of `F` with extra data `M`. -/
 def Overlay (F : Fragment rT) (M : Exp rT → Type) : Fragment rT :=
   fun e => F e × M e
 
+/-- Inclusion of fragments: a map from `F`-witnesses to `G`-witnesses. -/
 def SubFrag (F G : Fragment rT) :=
   ∀ e, F e → G e
 scoped infixr:25 " ⊆f " => SubFrag
@@ -674,19 +708,23 @@ def SubFrag.comp (f : F ⊆f G) (g : G ⊆f H) : F ⊆f H := fun e x => g e (f e
 def SubFrag.map (f : F ⊆f G) : FragExp F → FragExp G
   | ⟨e, w⟩ => ⟨e, f e w⟩
 
+/-- The underlying expression. -/
 def FragExp.erase {F : Fragment rT} : FragExp F → Exp rT := Sigma.fst
 
+/-- Fragments whose membership can be decided by a function. -/
 class Checkable (F : Fragment rT) where
   check? : (e : Exp rT) → Option (F e)
 
+/-- Checks `e` against the fragment. -/
 def FragExp.mk? {F : Fragment rT} [Checkable F] (e : Exp rT) : Option (FragExp F) :=
   (Checkable.check? e).map (⟨e, ·⟩)
 
 instance [Checkable F] [Checkable G] : Checkable (Both F G) where
   check? e := do return (← Checkable.check? e, ← Checkable.check? e)
 
-/- ## Values -/
+/-! ## Values -/
 
+/-- Witness that an expression is a value. -/
 inductive IsVal : Exp rT → Type
   | lit  : IsVal (.lit b)
   -- A runtime function is closed, so `IsVal e → IsLocallyClosed e` (`IsVal.lc`).
@@ -750,6 +788,7 @@ omit [ProbLangℝ rT] in
 
 namespace IsVal
 
+/-- Decides whether an expression is a value. -/
 def check? : (e : Exp rT) → Option (IsVal e)
   | .lit _ => some .lit
   | .lam e => if h : Exp.lcb 0 (.lam e) = true then some (.lam (Exp.lcb_imp_lc h)) else none
@@ -773,6 +812,7 @@ end IsVal
 
 instance : Checkable (@IsVal rT) where check? := IsVal.check?
 
+/-- Propositional form of `IsVal`. -/
 def Exp.isValue (e : Exp rT) : Prop := Nonempty (IsVal e)
 
 theorem IsVal.toIsValue (w : IsVal e) : e.isValue := ⟨w⟩
@@ -853,6 +893,7 @@ instance instCountableExtTreeMapLoc {V : Type _} [Countable V] :
     Countable (ExtTreeMap Loc V compare) :=
   Function.Injective.countable (f := ExtTreeMap.toList) fun _ _ => ExtTreeMap.toList_inj.mp
 
+/-- The value an expression denotes, if it is one. -/
 def Exp.toVal? (e : Exp α) : Option (Val α) :=
   match IsVal.check? e with
   | some w => some ⟨e, w, w.lc⟩
@@ -898,13 +939,16 @@ theorem Exp.rand_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.rand e₁ e₂).toVa
 theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.urand_not_isValue
 
+/-- The underlying expression of a value. -/
 def Exp.ofVal (v : Val α) : Exp α := v.1
 
+/-- A random tape: a bound and the presampled values in `[0, bound)`. -/
 structure Tape where
   bound : Int
   presamples : List { z : Int // 0 ≤ z ∧ z < bound}
   deriving Inhabited, Countable
 
+/-- An empty tape with the given bound. -/
 def Tape.empty (z : Int) : Tape := ⟨z, []⟩
 
 /-- Hides the representation from typeclass inference. -/
@@ -918,6 +962,7 @@ instance [Countable V] : Countable (LocHeap V) :=
 instance : GetElem? (LocHeap V) Loc V (fun (m : ExtTreeMap Loc V compare) k => k ∈ m) :=
   inferInstanceAs (GetElem? (ExtTreeMap Loc V compare) _ _ _)
 
+/-- Machine state: the heap and the random tapes. -/
 structure State (α : Type _) where
   heap  : LocHeap (Val α)
   tapes : LocHeap Tape
@@ -946,8 +991,9 @@ theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v
 theorem Exp.ofVal_injective : Function.Injective (@Exp.ofVal α) :=
   fun _ _ h => Val.ext h
 
-/- ## Evaluation contexts -/
+/-! ## Evaluation contexts -/
 
+/-- One-hole evaluation-context frames. -/
 @[uncurriedProjections, constructors]
 inductive EctxItem (α : Type _)
   | appL (v2 : Val α)
@@ -973,6 +1019,7 @@ inductive EctxItem (α : Type _)
   | scrut (p : Pat α)
   deriving Countable
 
+/-- Plugs `e` into the hole of a frame. -/
 @[simp] def EctxItem.fillItem (Ki : EctxItem α) (e : Exp α) : Exp α :=
   match Ki with
   | appL v2 => .app e (.ofVal v2)
@@ -1001,6 +1048,7 @@ theorem EctxItem.fillItem_isLocallyClosed {Ki : EctxItem α} {e : Exp α}
     (h : (Ki.fillItem e).IsLocallyClosed) : e.IsLocallyClosed := by
   cases Ki <;> (simp only [fillItem] at h; cases h; assumption)
 
+/-- Splits off the outermost frame whose hole is the next subterm to evaluate. -/
 def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   match e with
   | app e1 e2 =>
@@ -1042,8 +1090,9 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
     e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none
   | _ => none
 
-/- ## Deterministic evaluation helpers -/
+/-! ## Deterministic evaluation helpers -/
 
+/-- Evaluates a unary operator on a value. -/
 def UnOp.eval [ProbLangℝ α] (op : UnOp) (v : Exp α) : Option (Exp α) :=
   match op, v with
   | neg, .lit (.bool b) => some <| .lit <| .bool <| ¬ b
@@ -1055,6 +1104,7 @@ def UnOp.eval [ProbLangℝ α] (op : UnOp) (v : Exp α) : Option (Exp α) :=
   | frac, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realFrac r
   | _, _ => none
 
+/-- Evaluates a binary operator on two values. -/
 def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
   match op, v1, v2 with
   | plus,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 + z2)
@@ -1082,10 +1132,12 @@ def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
   | shr,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / 2 ^ z2.toNat)
   |_,      _,        _        => none
 
+/-- Applies `f` to the heap. -/
 def State.update_heap (σ : State α) (f : ExtTreeMap Loc (Val α) → ExtTreeMap Loc (Val α))
     : State α :=
   ⟨f σ.heap, σ.tapes⟩
 
+/-- Applies `f` to the tapes. -/
 def State.update_tapes (σ : State α) (f : ExtTreeMap Loc Tape → ExtTreeMap Loc Tape) : State α :=
   ⟨σ.heap, f σ.tapes⟩
 
@@ -1114,6 +1166,7 @@ theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 �
     σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
   (hne <| State.update_tapes_same' ·)
 
+/-- A configuration: an expression and a state. -/
 structure Cfg α where
   expr : Exp α
   state : State α
@@ -1156,6 +1209,7 @@ theorem Exp.decompItem_fill {e e' : Exp α} {Ki : EctxItem α}
 theorem EctxItem.fillItem_noVal {Ki : EctxItem α} {e : Exp α} (hv : ¬e.isValue) :
     ¬(Ki.fillItem e).isValue := (hv <| EctxItem.fillItem_isValue ·)
 
+/-- Evaluation contexts: a list of frames, innermost first. -/
 abbrev Ectx α := List (EctxItem α)
 
 theorem List.eq_nil_or_snoc (l : List α) : l = [] ∨ ∃ l' x, l = l' ++ [x] := by
@@ -1163,10 +1217,13 @@ theorem List.eq_nil_or_snoc (l : List α) : l = [] ∨ ∃ l' x, l = l' ++ [x] :
   · exact .inl h
   · exact .inr ⟨l', x, List.concat_eq_append .. ▸ h⟩
 
+/-- The empty context. -/
 def Ectx.empty : Ectx α := []
 
+/-- Composition: `(comp K1 K2).fill e = K1.fill (K2.fill e)`. -/
 def Ectx.comp (e1 e2 : Ectx α) : Ectx α := e2 ++ e1
 
+/-- Plugs `e` into the context. -/
 def Ectx.fill (K : Ectx α) (e : Exp α) : Exp α := K.foldl (flip EctxItem.fillItem) e
 
 theorem fill_app (K1 K2 : Ectx α) e : (K1 ++ K2).fill e = K2.fill (K1.fill e) :=
@@ -1284,6 +1341,7 @@ theorem Exp.decompItem_height {e : Exp α} (h : e.decompItem = some (Ki, e')) :
     (split at h <;> simp_all <;> try omega) <;>
     (split at h <;> simp_all <;> try omega)
 
+/-- Splits an expression into a maximal evaluation context and the redex in its hole. -/
 def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
   match _h : e.decompItem with
   | some (Ki, e') =>
@@ -1360,6 +1418,7 @@ theorem Exp.decomp_snd_fill {K : Ectx α} {e : Exp α} (hv : ¬e.isValue)
   have he : e.decomp = ([], e) := by rw [Exp.decomp_unfold, hd]
   rw [Exp.decomp_fill_comp hv he]
 
+/-- `x` does not occur free in `e`. -/
 def Exp.Fresh (x : Var) (e : Exp α) : Prop := x ∉ e.fv
 
 end WithRealParam

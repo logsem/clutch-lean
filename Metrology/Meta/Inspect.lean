@@ -6,6 +6,11 @@ public import Lean
 
 open Lean Elab Command Term Meta
 
+/-! # `#inspect`
+
+Prints the raw `Expr` tree of a term. -/
+
+/-- The raw `Expr` tree of a term, with binder annotations. -/
 meta def inspectFormat : Lean.Expr → Format
 | .bvar i => .text s!"(bvar {i})"
 | .fvar i => .text s!"(fvar {i.name})"
@@ -13,14 +18,17 @@ meta def inspectFormat : Lean.Expr → Format
 | .sort i => .text s!"(sort {i})"
 | .const n us => .text s!"(const{us} {n})"
 | .app fn arg => .group <|
-   "(app " ++ .nest 2 (.align false ++ inspectFormat fn ++ " " ++ .align false ++ inspectFormat arg) ++ ")"
+    "(app " ++ .nest 2 (.align false ++ inspectFormat fn ++ " " ++ .align false ++
+      inspectFormat arg) ++ ")"
 | .lam x ty b info => .group <|
-    "(lam " ++ binder x (inspectFormat ty) info  ++ " => " ++ .nest 2 (.align false ++ .nest 2 (inspectFormat b)) ++ ")"
+    "(lam " ++ binder x (inspectFormat ty) info ++ " => " ++
+      .nest 2 (.align false ++ .nest 2 (inspectFormat b)) ++ ")"
 | .forallE x ty b info => .group <|
-    "(all " ++ binder x (inspectFormat ty) info  ++ " => " ++ .nest 2 (.align false ++ .nest 2 (inspectFormat b)) ++ ")"
+    "(all " ++ binder x (inspectFormat ty) info ++ " => " ++
+      .nest 2 (.align false ++ .nest 2 (inspectFormat b)) ++ ")"
 | .letE x ty v b dep => .group <|
-    "(" ++ letDepFormat dep ++  s!" ({x} : " ++ inspectFormat ty ++ ") := " ++ .line ++ inspectFormat v ++
-      " in " ++ .line ++ inspectFormat b ++ ")"
+    "(" ++ letDepFormat dep ++ s!" ({x} : " ++ inspectFormat ty ++ ") := " ++ .line ++
+      inspectFormat v ++ " in " ++ .line ++ inspectFormat b ++ ")"
 | .lit v => .text s!"(lit {formatLit v})"
 | .mdata _ e => .text s!"(mdata [...] {inspectFormat e})"
 | .proj tn ix e => .text s!"(proj[{tn}.{ix}] {inspectFormat e})"
@@ -41,6 +49,7 @@ where
 
 syntax (name := inspect) "#inspect " term : command
 
+/-- Elaborates `#inspect`. -/
 @[command_elab inspect]
 meta def inspectCore : CommandElab
   | `(#inspect $term) =>

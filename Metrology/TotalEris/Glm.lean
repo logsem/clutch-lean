@@ -22,12 +22,14 @@ variable {rT : Type _} [LawfulProbLangℝ rT]
 
 namespace TotalEris
 
-/-! # Graded lifting modality -/
+/-!
+# Graded lifting modality
 
-/-- A graded lift of a predicate.
+The error-graded `glm'` (a least fixpoint over prim steps, erasable steps and credit bumps), and
+its monotonicity, bind and introduction rules.
+-/
 
-Given a predicate `φ` on a type `α`, `Pgl ε φ μ` says that `φ` is invalidated with
-probability at most `ε` with respect to `μ`. -/
+/-- The predicate `φ` fails with `μ`-probability at most `ε`. -/
 def Pgl {α : Type _} [MeasurableSpace α] (ε : ENNReal) (φ : α → Prop)
   (μ : MeasureTheory.Measure α) : Prop := μ {x | ¬ φ x} ≤ ε
 
@@ -60,6 +62,7 @@ theorem of_concentrated {μ : MeasureTheory.Measure α} {φ : α → Prop}
 
 end Pgl
 
+/-- Ghost state for the total Eris weakest precondition: state and error-credit interpretations. -/
 class ErisWpGS (GF : BundledGFunctors) where
   hlc : HasLC
   invGS : InvGS_gen hlc GF
@@ -71,6 +74,7 @@ attribute [reducible, instance] ErisWpGS.invGS
 namespace ErisWpGS
 variable {GF : BundledGFunctors}
 
+/-- Either the budget `ε` already reaches `1` (vacuous), or `P ε` holds. -/
 abbrev execStutter (P : ENNReal → IProp GF) (ε : ENNReal) : IProp GF :=
   iprop(⌜1 ≤ ε⌝ ∨ P ε)
 
@@ -95,11 +99,13 @@ theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
 
 variable [ErisWpGS (rT := rT) GF]
 
+/-- A configuration together with its remaining error budget. -/
 abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNReal
 
 instance : COFE (GlmState rT) := COFE.ofDiscrete _
 instance : OFE.Discrete (GlmState rT) := ⟨id⟩
 
+/-- Take a real program step, splitting the budget `ε` over the outcomes. -/
 abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
   iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal) (r : ENNReal),
@@ -110,13 +116,8 @@ abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     ⌜Pgl ε₁ R (primStep ⟨e₁, σ₁⟩)⌝ ∗
     (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
 
-/-- **Erasability step**: advance the *state* by any expression-erasable measure `μ`
-(`ErasableExpr μ σ₁`), spending error per outcome. Tape presampling is a consumer that
-instantiates `μ := tapePresample σ₁ α` and discharges `ErasableExpr` via
-`ErasableExpr.tapePresample`. The measurability witness `⌜MeasurableSet {σ' | R σ'}⌝`
-for the support predicate `R` is needed by total adequacy, to split the `μ`-mass on
-`{R}` against its complement. The expression `e₁` is unchanged: an erasable step only
-moves the state. -/
+/-- Advance only the state by an expression-erasable measure `μ`, spending error per outcome.
+Total adequacy needs the witness `MeasurableSet {σ' | R σ'}` to split the `μ`-mass on `R`. -/
 abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∃ (μ : MeasureTheory.Measure (State rT)) (R : State rT → Prop) (ε₁ : ENNReal)
@@ -160,6 +161,7 @@ theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNRea
   iintro HΦ
   iapply HΦΨ $$ HΦ
 
+/-- Assume any strictly larger error budget. -/
 abbrev glmCreditBump' (ρ : Cfg rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∀ ε', ⌜ε < ε'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (ρ, ε'')) ε')
@@ -177,6 +179,7 @@ theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
   iintro HΦ
   iapply HΦΨ $$ HΦ
 
+/-- One unfolding of `glm'`: a credit bump, a prim step, or an erasable step. -/
 abbrev glmPre' (Z : Cfg rT → ENNReal → IProp GF)
     (Φ : GlmState rT → IProp GF) : GlmState rT → IProp GF :=
   fun ⟨ρ, ε⟩ => iprop(
@@ -184,10 +187,12 @@ abbrev glmPre' (Z : Cfg rT → ENNReal → IProp GF)
     glmPrimStep' ρ.expr ρ.state ε Z ∨
     glmErasable' ρ.expr ρ.state ε Φ)
 
+/-- The graded lifting modality: least fixpoint of `glmPre'`. -/
 abbrev glm' (e : Exp rT) (σ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
   bi_least_fixpoint (glmPre' Z) ((⟨e, σ⟩, ε) : GlmState rT)
 
+/-- `glmPre'` is monotone, so its least fixpoint exists. -/
 instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
     BIMonoPred (glmPre' Z) where
   mono_pred {Φ Ψ _ _} := by
@@ -270,15 +275,15 @@ theorem glm'_mono_grading
     iapply HOT $$ %ε'' %(hε.trans_lt Hlt)
   · iright; ileft
     icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
-    have Hexp' := Hexp.trans hε
+    replace Hexp := Hexp.trans hε
     iexists R, ε₁, X₂, r
-    iframe %Hred %HRmeas %Hbnd %Hexp' %Hpgl
+    iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
     iexact HCont
   · iright; iright
     icases HSS with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
-    have Hexp' := Hexp.trans hε
+    replace Hexp := Hexp.trans hε
     iexists μ, R, ε₁, X₂, r
-    iframe %Heras %HRmeas %Hbnd %Hexp' %Hpgl
+    iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
     iexact HCont
 
 theorem glm'_strong_mono_grading {e : Exp rT} {σ : State rT} {ε ε' : ENNReal}

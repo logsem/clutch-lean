@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.Lifting
 
-/-! Bind laws: ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`). -/
+/-! # Bind laws
+
+Ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`). -/
 
 @[expose] public section
 
@@ -122,10 +124,12 @@ class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
   side_diag {X X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace X'] [MeasurableSpace Y']
     (μ : Measure X) (R : X → X → B) (f : Kernel X X') (g : Kernel X Y') : law.side μ μ R f g
 
+/-- The canonical law shifts heads by `IsLawful.frame`. -/
 instance headShift_canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] :
     (canonical L).HeadShift :=
   ⟨fun hc h ↦ IsLawful.frame hc h⟩
 
+/-- The canonical law has diagonal heads by reflexivity of the lifting. -/
 instance headDiag_canonical [AddZeroClass B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     [L.IsReflexive] : (canonical L).HeadDiag where
   diag μ _ _ hb := by simpa using IsLawful.frame hb (IsReflexive.refl (L := L) μ)

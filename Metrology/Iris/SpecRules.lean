@@ -6,28 +6,23 @@ public import Metrology.ProbLang.DetStep
 
 @[expose] public section
 
-/-! # Spec-side stepping rules -/
+/-! # Spec-side stepping rules
+
+Rules `step_*` advance the spec program under `specUpdate`, e.g. `step_pure`, `step_rand`. -/
 
 open Std Iris Iris.Std Iris.BI COFE ProbLang
 
-
-
 namespace ProbLang
-
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
 /-! ## Bridge: `DetStep` ⇒ `pexecN 1 ρ = MeasureTheory.Measure.dirac ρ'` -/
 
--- DISCRETE: `Measure.eq_dirac_of_singleton_mass_one {α} [MeasurableSpace α]`
---   `[MeasurableSingletonClass α] [Countable α] {μ : Measure α} {a : α}`
---   `(hmass : μ {a} = 1) (htot : μ .univ ≤ 1) : μ = Measure.dirac a`
-
 /-- One-step deterministic advance: `DetStep ρ ρ'` gives `pexecN 1 ρ = dirac ρ'`. -/
 theorem pexecN_1_of_DetStep {ρ ρ' : Cfg rT} (h : DetStep ρ ρ') :
     pexecN 1 ρ = MeasureTheory.Measure.dirac ρ' := by
   rw [pexecN_one]
-  rcases h with ⟨h1, h2⟩
+  obtain ⟨-, h2⟩ := h
   have hnv : ¬ ρ.expr.isValue := by
     refine val_stuck (σ := ρ.2) ?_
     simp [h2]
@@ -98,7 +93,7 @@ theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
         simp [Exp.decompItem, hd1, hd2])
     (by simp [headStep, htape])
 
-/-! ## Stepping rules over the `Cfg.specAuth` interpretation. -/
+/-! ## Stepping rules over `Cfg.specAuth` -/
 
 section Rules
 
@@ -113,8 +108,7 @@ theorem step_pure {E : CoPset} (K : Ectx rT) {e e' : Exp rT} {φ : Prop} {n : �
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
   imodintro
   iexists ⟨K.fill e', σ⟩, n
@@ -130,8 +124,7 @@ theorem step_alloc {E : CoPset} (K : Ectx rT) {v : Exp rT} (hv : IsVal v) :
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
   set l := σ.heap.fresh with hl
   set σ' := σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l ⟨v, hv, hv.lc⟩)
     with hσ'
@@ -162,15 +155,14 @@ theorem step_load {E : CoPset} (K : Ectx rT) {l : Loc} {v : Val rT} :
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
-  ihave %Hlk := spec_auth_lookup_heap $$ Hρ Hl
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
+  ihave %hlk := spec_auth_lookup_heap $$ Hρ Hl
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
   imodintro
   iexists ⟨K.fill (Exp.ofVal v), σ⟩, 1
   isplitr
   · ipureintro
-    exact pexecN_1_of_DetStep (((DetHeadStep.load σ Hlk).toDetStep).fill K)
+    exact pexecN_1_of_DetStep (((DetHeadStep.load σ hlk).toDetStep).fill K)
   iframe
 
 /-- Heap store under an evaluation context. -/
@@ -182,15 +174,14 @@ theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_ne
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
-  ihave %Hlk := spec_auth_lookup_heap $$ Hρ Hl
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
+  ihave %hlk := spec_auth_lookup_heap $$ Hρ Hl
   set σ' := σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l v_new)
     with hσ'
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
   ihave HUpd := spec_auth_update_heap
     (l := l) $$ HρNew Hl
-  imod HUpd with ⟨HρFinal, _Hl⟩
+  imod HUpd with ⟨HρFinal, Hl⟩
   imodintro
   iexists ⟨K.fill pl(#(.unit)), σ'⟩, 1
   isplitr
@@ -199,7 +190,7 @@ theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_ne
     have hstate_eq : σ.update_heap (·.insert l v_new) = σ' := by
       simp [hσ', State.update_heap, ExtTreeMap.insert_eq_PartialMap_insert]
     rw [← hstate_eq]
-    exact ((DetHeadStep.store hv σ Hlk hnew).toDetStep).fill K
+    exact ((DetHeadStep.store hv σ hlk hnew).toDetStep).fill K
   iframe
 
 /-- Allocate a tape under an evaluation context. -/
@@ -211,8 +202,7 @@ theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
   set l := σ.tapes.fresh with hl
   set σ' := σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l (Tape.empty z))
     with hσ'
@@ -245,15 +235,14 @@ theorem step_rand {E : CoPset} (K : Ectx rT) {z : Int} (l : Loc)
   unfold specUpdate
   iintro %ρ Hρ
   obtain ⟨_, σ⟩ := ρ
-  ihave %Heq := specAuth_specFrag_agree $$ Hρ HK
-  subst Heq
-  ihave %Hlk := spec_auth_lookup_tape $$ Hρ Hl
+  ihave %rfl := specAuth_specFrag_agree $$ Hρ HK
+  ihave %hlk := spec_auth_lookup_tape $$ Hρ Hl
   set σ' := σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l ⟨z, ns⟩)
     with hσ'
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
   ihave HUpd := spec_auth_update_tape
     (l := l) $$ HρNew Hl
-  imod HUpd with ⟨HρFinal, _Hl⟩
+  imod HUpd with ⟨HρFinal, Hl⟩
   imodintro
   iexists ⟨K.fill pl(#(.int n)), σ'⟩, 1
   isplitr
@@ -262,7 +251,7 @@ theorem step_rand {E : CoPset} (K : Ectx rT) {z : Int} (l : Loc)
     have hstate_eq : σ.update_tapes (·.insert l ⟨z, ns⟩) = σ' := by
       simp [hσ', State.update_tapes, ExtTreeMap.insert_eq_PartialMap_insert]
     rw [← hstate_eq]
-    exact ((DetHeadStep.rand_tape l n ns Hlk).toDetStep).fill K
+    exact ((DetHeadStep.rand_tape l n ns hlk).toDetStep).fill K
   iframe
 
 end Rules

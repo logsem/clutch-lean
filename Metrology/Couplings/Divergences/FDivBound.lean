@@ -154,17 +154,16 @@ open Real ENNReal
 /-- The weight `t ↦ max 0 (t - e^ε)` of `(ε, δ)`-differential privacy (Def. 2.6). -/
 noncomputable def dpWeight (ε t : ℝ) : ℝ := max 0 (t - Real.exp ε)
 
-/-- The weight `t ↦ max 0 (t - exp ε)` defining the `ε`-hockey-stick divergence is convex on
-`[0, ∞)`. -/
+/-- The DP weight is convex on `[0, ∞)`. -/
 theorem convexOn_dpWeight (ε : ℝ) : ConvexOn ℝ (Ici 0) (dpWeight ε) :=
   (convexOn_const 0 (convex_Ici 0)).sup
     ((convexOn_id (convex_Ici 0)).sub (concaveOn_const (exp ε) (convex_Ici 0)))
 
-/-- The hockey-stick weight `t ↦ max 0 (t - ε)` is continuous. -/
+/-- The DP weight is continuous. -/
 theorem continuous_dpWeight (ε : ℝ) : Continuous (dpWeight ε) :=
   continuous_const.max (continuous_id.sub continuous_const)
 
-/-- The slope at infinity of the `Dp` weight is `1`. -/
+/-- The slope at infinity of the DP weight is `1`. -/
 theorem derivAtTop_dpWeight (ε : ℝ) : derivAtTop (dpWeight ε) = 1 := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
   have h : Tendsto (fun t : ℝ ↦ 1 - exp ε / t) atTop (𝓝 1) := by

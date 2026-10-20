@@ -14,8 +14,13 @@ namespace ErisWpGS
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
 
-/-! # Total-WP lifting lemmas -/
+/-!
+# Total-WP lifting lemmas
 
+Rules proving `tglWp` of a non-value from its prim step, down to pure and `PureExec` steps.
+-/
+
+/-- Prove `tglWp` of a non-value from `glm'` on its state and error interpretations. -/
 theorem twp_lift_step_fupd_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none) : iprop(
     ∀ σ₁ ε₁, stateInterp σ₁ ∗ errInterp (rT := rT) ε₁ -∗
@@ -29,6 +34,7 @@ theorem twp_lift_step_fupd_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : E
   iintro %σ %ε ⟨Hσ, Hε⟩
   iapply HG $$ %σ %ε [$Hσ $Hε]
 
+/-- Lift a prim step whose outcomes are concentrated on a measurable relation `R`. -/
 theorem twp_lift_step_fupd_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (R : State rT → Cfg rT → Prop)
     (hRmeas : ∀ σ₁, MeasurableSet {ρ | R σ₁ ρ})
@@ -61,6 +67,7 @@ theorem twp_lift_step_fupd_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : E
   imod HC with ⟨Hσ', HW⟩
   iframe
 
+/-- Lift a prim step with atomic support. -/
 theorem twp_lift_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none)
     (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩)) : iprop(
@@ -77,6 +84,7 @@ theorem twp_lift_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp r
           = {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
       rw [hset]; exact (hatom σ₁).concentrated_atoms)
 
+/-- Lift an atomic prim step whose results are values. -/
 theorem twp_lift_atomic_step_fupd {E₁ : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none)
     (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩)) : iprop(
@@ -102,6 +110,7 @@ theorem twp_lift_atomic_step_fupd {E₁ : CoPset} {Φ : Val rT → IProp GF} {e�
   | some v => iapply tglWp_value_of_toVal htv $$ [$]
   | none => iexfalso; iexact HΦv
 
+/-- Lift a pure prim step, which leaves the state unchanged. -/
 theorem twp_lift_pure_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none)
     (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩))
@@ -126,6 +135,7 @@ theorem twp_lift_pure_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp r
   iframe Hσ
   iapply H $$ %_ %_ %hstep'
 
+/-- Lift a deterministic pure prim step to `e₂`. -/
 theorem twp_lift_pure_det_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
     (hv : e₁.toVal? = none)
     (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩))
@@ -142,6 +152,7 @@ theorem twp_lift_pure_det_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e�
   obtain ⟨_, rfl⟩ := hpuredet σ e₂' σ hstep
   iexact H
 
+/-- Lift an atomic head step. -/
 theorem twp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (hlc : e₁.IsLocallyClosed)
     (hd : e₁.decompItem = none := by simp [Exp.decompItem, Exp.toVal?_lit, Exp.toVal?_ofVal])
@@ -164,6 +175,7 @@ theorem twp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ 
   iapply HCont $$ %e₂ %σ₂ %_
   exact Hpstep
 
+/-- Lift a deterministic pure head step to `e₂`. -/
 theorem twp_lift_pure_det_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
     (hlc : e₁.IsLocallyClosed) (hv : e₁.toVal? = none)
     (hsafe : ∀ σ₁, ∃ ρ : Cfg rT, Possible ρ (headStep ⟨e₁, σ₁⟩))
@@ -181,6 +193,7 @@ theorem twp_lift_pure_det_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e�
 
 /-! ## `PureStep` / `PureExec` integration -/
 
+/-- Lift a `PureStep`. -/
 theorem twp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp GF}
     {e₁ e₂ : Exp rT}
     (h : PureStep e₁ e₂) : iprop(|={E}=> tglWp E e₂ Φ) ⊢ tglWp E e₁ Φ := by
@@ -192,6 +205,7 @@ theorem twp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp G
   cases hp
   exact ⟨rfl, rfl⟩
 
+/-- Lift `n` pure steps given by `PureExec`. -/
 theorem twp_pure_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e₁ e₂ : Exp rT}
     (φ : Prop) [HEx : PureExec φ n e₁ e₂] (Hφ : φ := by is_value) :
     tglWp E e₂ Φ ⊢ tglWp E e₁ Φ := by

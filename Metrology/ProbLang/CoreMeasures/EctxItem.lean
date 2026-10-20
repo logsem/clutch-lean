@@ -17,7 +17,9 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-/-! # Measure space on evaluation-context items -/
+/-! # Measure space on evaluation-context items
+
+Derives the σ-algebra on `EctxItem` and smoke-tests the generated `casesOn` lemmas. -/
 
 namespace ProbLang.EctxItem
 
@@ -28,8 +30,8 @@ deriving instance MeasurableSpace for EctxItem
 
 /-! ### Smoke tests
 
-`EctxItem` is not recursive, so each test goes through `measurable_casesOn` or `measurable_casesOn_param`
-and exercises all 21 constructor slots. -/
+`EctxItem` is not recursive, so each test goes through `measurable_casesOn` or
+`measurable_casesOn_param` and exercises all 21 constructor slots. -/
 
 /-- Discrete codomain. -/
 @[simp] def tagDepth : EctxItem α → Nat

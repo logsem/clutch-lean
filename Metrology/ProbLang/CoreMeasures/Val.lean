@@ -11,8 +11,7 @@ meta import Metrology.Meta
 
 /-! # Measurable space on values -/
 
--- TODO move this to the semantics file once we have that (leave here until then though,
--- during drop-in step, so we can prove discreteness assuming discrete R type)
+-- TODO move this to the semantics file once we have that.
 
 noncomputable section ProbLangMeasures
 
@@ -20,6 +19,7 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 namespace ProbLang
 
+/-- Proofs that `e` is a value carry the discrete σ-algebra. -/
 instance instMeasurableSpaceIsVal {α : Type _} {e : Exp α} : MeasurableSpace (IsVal e) := ⊤
 
 /-- The comap of `Val.fst`. `Sigma.instMeasurableSpace` would be `⊤` here (since `IsVal e`
@@ -48,6 +48,7 @@ theorem mk.measurable {α : Type _} [MeasurableSpace α] :
   obtain ⟨U, -, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hT
   exact MeasurableSpace.measurableSet_iInf.mpr fun _ => MeasurableSpace.measurableSet_top
 
+/-- `Val α` has measurable singletons if `α` does. -/
 instance instMeasurableSingletonClass
     {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Val α) where

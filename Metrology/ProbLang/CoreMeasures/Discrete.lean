@@ -12,6 +12,10 @@ noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
+/-! # Measurable spaces on syntax atoms
+
+The discrete (⊤) σ-algebra on variables, locations, labels, operators and types. -/
+
 instance instMeasurableSpaceVar : MeasurableSpace Var := ⊤
 
 instance instMeasurableSpaceLoc : MeasurableSpace Loc := ⊤

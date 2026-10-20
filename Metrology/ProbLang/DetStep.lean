@@ -6,6 +6,10 @@ public import Mathlib.Order.Defs.PartialOrder
 
 @[expose] public section
 
+/-! # Deterministic steps
+
+`PureStep`, `PureExec` and `DetStep`: steps with a single outcome, closed under contexts. -/
+
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure
 
@@ -13,6 +17,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
+/-- `n`-fold composition of the relation `r`. -/
 def nsteps (r : α → α → Prop) : ℕ → α → α → Prop
   | 0,   a, b => a = b
   | n+1, a, b => ∃ c, r a c ∧ nsteps r n c b
@@ -24,20 +29,23 @@ theorem map_dirac' {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
   rw [Measure.map_apply hf hs, Measure.dirac_apply' _ (hf hs), Measure.dirac_apply' _ hs]
   rfl
 
+/-- `e1` steps to `e2` deterministically in every state. -/
 structure PureStep (e1 e2 : Exp rT) : Prop where
   safe : ∀ σ, Reducible e1 σ
   det  : ∀ σ, primStep ⟨e1, σ⟩ = dirac ⟨e2, σ⟩
 
+/-- Under `φ`, `e1` reaches `e2` in `n` pure steps. -/
 class PureExec (φ : outParam Prop) (n : outParam ℕ) (e1 e2 : Exp rT) : Prop where
   pure_exec : φ → nsteps PureStep n e1 e2
 
+/-- `PureStep` for a head redex. -/
 structure PureHeadStep (e1 e2 : Exp rT) : Prop where
   safe : ∀ σ : State rT, HeadReducible e1 σ
   det  : ∀ σ : State rT, headStep ⟨e1, σ⟩ = dirac ⟨e2, σ⟩
   dec  : e1.decompItem = none
 
 theorem PureHeadStep.toPureStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) :
-   PureStep e1 e2 :=
+    PureStep e1 e2 :=
   ⟨fun σ => by rw [Reducible, primStep_eq_headStep h.dec]; exact h.safe σ,
    fun σ => primStep_eq_headStep h.dec ▸ h.det σ⟩
 
@@ -91,6 +99,7 @@ theorem PureHeadStep.of_det (e1 e2 : Exp rT)
   refine ⟨fun σ => ?_, hdet, hdec⟩
   unfold HeadReducible; rw [hdet σ]; simp
 
+/-- A head step from `cfg1` that deterministically gives `cfg2`. -/
 structure DetHeadStep (cfg1 cfg2 : Cfg rT) : Prop where
   safe : HeadReducible cfg1.expr cfg1.state
   det  : headStep cfg1 = dirac cfg2
@@ -110,6 +119,7 @@ theorem PureHeadStep.toDetHeadStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) (σ
     DetHeadStep ⟨e1, σ⟩ ⟨e2, σ⟩ :=
   ⟨h.safe σ, h.det σ, h.dec⟩
 
+/-- A step from `cfg1` that deterministically gives `cfg2`. -/
 structure DetStep (cfg1 cfg2 : Cfg rT) : Prop where
   safe : Reducible cfg1.expr cfg1.state
   det  : primStep cfg1 = dirac cfg2
@@ -122,6 +132,7 @@ theorem DetHeadStep.toDetStep {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :
   safe := by obtain ⟨e1, σ1⟩ := cfg1; rw [Reducible, primStep_eq_headStep h.dec]; exact h.safe
   det := by obtain ⟨e1, σ1⟩ := cfg1; rw [primStep_eq_headStep h.dec]; exact h.det
 
+/-- `cfg1` reaches `cfg2` in `n` deterministic steps. -/
 class DetExec (n : ℕ) (cfg1 cfg2 : Cfg rT) : Prop where
   det_exec : nsteps DetStep n cfg1 cfg2
 
@@ -162,13 +173,17 @@ instance pureExec_cond_false {et ef : Exp rT} :
 theorem PureHeadStep.fst_pair {e1 e2 : Exp rT} (h1 : IsVal e1) (h2 : IsVal e2) :
     PureHeadStep (.fst (.pair e1 e2)) e1 :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.pair h1 h2⟩ : (Exp.pair e1 e2).isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.pair h1 h2⟩ : (Exp.pair e1 e2).isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' h1, Exp.isValM_some' h2]
 
 theorem PureHeadStep.snd_pair {e1 e2 : Exp rT} (h1 : IsVal e1) (h2 : IsVal e2) :
     PureHeadStep (.snd (.pair e1 e2)) e2 :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.pair h1 h2⟩ : (Exp.pair e1 e2).isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.pair h1 h2⟩ : (Exp.pair e1 e2).isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' h1, Exp.isValM_some' h2]
 
 instance pureExec_fst_pair {e1 e2 : Exp rT} :
@@ -182,13 +197,17 @@ instance pureExec_snd_pair {e1 e2 : Exp rT} :
 theorem PureHeadStep.case_inl {v el er : Exp rT} (hv : IsVal v) :
     PureHeadStep (.case (.inl v) el er) (el.app v) :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.inl hv⟩ : (Exp.inl v).isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.inl hv⟩ : (Exp.inl v).isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' hv]
 
 theorem PureHeadStep.case_inr {v el er : Exp rT} (hv : IsVal v) :
     PureHeadStep (.case (.inr v) el er) (er.app v) :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.inr hv⟩ : (Exp.inr v).isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨.inr hv⟩ : (Exp.inr v).isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' hv]
 
 instance pureExec_case_inl {v el er : Exp rT} :
@@ -217,7 +236,9 @@ theorem PureHeadStep.unop {op : UnOp} {e r : Exp rT}
     (hv : IsVal e) (heval : op.eval e = some r) :
     PureHeadStep (.unop op e) r :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : e.isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : e.isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Option.unwrapM, Exp.isValM_some' hv, heval]
 
 instance pureExec_unop {op : UnOp} {e r : Exp rT} :
@@ -241,14 +262,18 @@ theorem PureHeadStep.scrut_some {v : Exp rT} {p : Pat rT} {b : Exp rT}
     (hv : IsVal v) (hmatch : Pat.tryMatch p v = some b) :
     PureHeadStep (.scrut v p) (.inl b) :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' hv, hmatch]
 
 theorem PureHeadStep.scrut_none {v : Exp rT} {p : Pat rT}
     (hv : IsVal v) (hmatch : Pat.tryMatch p v = none) :
     PureHeadStep (.scrut v p) (.inr pl(#(.unit))) :=
   .of_det _ _
-    (by obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue); simp [Exp.decompItem, h])
+    (by
+      obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue)
+      simp [Exp.decompItem, h])
     fun _ => by simp [headStep, Exp.isValM_some' hv, hmatch]
 
 instance pureExec_scrut_some {v : Exp rT} {p : Pat rT} {b : Exp rT} :
@@ -307,10 +332,13 @@ theorem DetHeadStep.case_inr {v el er : Exp rT} (hv : IsVal v) (σ : State rT) :
   (PureHeadStep.case_inr hv).toDetHeadStep σ
 
 theorem DetHeadStep.alloc {v : Exp rT} (hv : IsVal v) (σ : State rT) :
-    DetHeadStep ⟨.alloc v, σ⟩ ⟨pl(#(.loc σ.heap.fresh)), σ.update_heap (·.insert σ.heap.fresh ⟨v, hv, hv.lc⟩)⟩ := by
+    DetHeadStep ⟨.alloc v, σ⟩
+      ⟨pl(#(.loc σ.heap.fresh)), σ.update_heap (·.insert σ.heap.fresh ⟨v, hv, hv.lc⟩)⟩ := by
   obtain ⟨w, hw⟩ := hv.check?_some
   exact .of_det _ _
-    (by obtain ⟨_, hd⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue); simp [Exp.decompItem, hd])
+    (by
+      obtain ⟨_, hd⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue)
+      simp [Exp.decompItem, hd])
     (by simp [headStep, Exp.asValM, Exp.toVal?, hw, IsVal.subsingleton hv w])
 
 theorem DetHeadStep.load {ℓ : Loc} {v : Val rT} (σ : State rT) (hlookup : σ.heap[ℓ]? = some v) :
@@ -344,14 +372,12 @@ theorem DetExec.cons {cfg1 cfg2 cfg3 : Cfg rT} {n : ℕ}
     DetExec (n + 1) cfg1 cfg3 where
   det_exec := ⟨cfg2, hstep, hrest.det_exec⟩
 
-
 /-! ## `PureSteps`: the reflexive-transitive closure of `PureStep`
 
-Deterministic pure computations (the list/map recursions of
-`Metrology/Code/Switching.lean` and the like) are proved once as `PureSteps` facts by
-plain Lean induction, then consumed uniformly on the program side (`wp_pure_steps`) and
-the spec side (`step_pure_steps`). -/
+Pure computations (e.g. the list recursions of `Metrology/Code/Switching.lean`) are proved once as
+`PureSteps` by induction, then used by `wp_pure_steps` and `step_pure_steps`. -/
 
+/-- `e1` reaches `e2` in some number of pure steps. -/
 def PureSteps (e1 e2 : Exp rT) : Prop := ∃ n, nsteps PureStep n e1 e2
 
 namespace PureSteps
@@ -378,8 +404,7 @@ theorem fill (K : Ectx rT) {e1 e2 : Exp rT} :
 theorem of_pureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT} [h : PureExec φ n e1 e2]
     (hφ : φ) : PureSteps e1 e2 := ⟨n, h.pure_exec hφ⟩
 
-/-- Recover a (trivially-conditioned) `PureExec` from `PureSteps`, to reuse the
-`PureExec`-shaped consumers (`wp_pure_step_later'`, `step_pure`, …). -/
+/-- A `PureSteps` fact as an unconditional `PureExec`, for the `PureExec`-shaped rules. -/
 theorem pureExec {e1 e2 : Exp rT} (h : PureSteps e1 e2) :
     PureExec True h.choose e1 e2 := ⟨fun _ => h.choose_spec⟩
 

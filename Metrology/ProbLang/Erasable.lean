@@ -7,11 +7,8 @@ public import Metrology.ProbLang.Exec
 /-!
 # Erasable and rewritable distributions
 
-Port of `theories/common/erasable.v` from Clutch.
-
-Clutch's `erasable` is phrased over `distr val`, so it ignores tape differences at final values.
-Our `Erasable` is phrased over `Measure Cfg`, so it is strictly stronger: `tapePresample`-style
-distributions are not erasable, and `Erasure.lean` states those results as couplings instead.
+Port of Clutch's `erasable.v`. Clutch compares final values; ours compares whole `Measure Cfg`s,
+so it is stronger: `tapePresample` is not erasable here, and `Erasure.lean` states it as a coupling.
 -/
 
 namespace ProbLang
@@ -82,16 +79,11 @@ theorem pexecN_lim_exec
 theorem mass
     {μ : Measure (State rT)} {σ : State rT} (h : Erasable μ σ) :
     μ Set.univ = 1 := by
-  have hv : IsVal (Exp.lit (rT := rT) .unit) := .lit
-  have hstep : ∀ σ' : State rT,
-      execN 1 ((⟨.lit .unit, σ'⟩ : Cfg rT)) = Measure.dirac (⟨.lit .unit, σ'⟩ : Cfg rT) :=
-    fun σ' => execN_succ_isValue hv.toIsValue 0
-  have huniv := congrArg (fun ν => ν (Set.univ : Set (Cfg rT))) (h (.lit .unit) 1)
-  rw [hstep σ, Measure.dirac_apply' _ .univ] at huniv
-  simp at huniv
+  have huniv := congrArg (fun ν => ν (Set.univ : Set (Cfg rT)))
+    (h.dret_final (e := Exp.lit .unit) .lit)
+  simp only [Measure.dirac_apply' _ MeasurableSet.univ] at huniv
   rw [bind_apply .univ (Measurable.aemeasurable (by measurability))] at huniv
-  simp_rw [hstep, Measure.dirac_apply' _ .univ] at huniv
-  simpa using huniv
+  simpa [Measure.dirac_apply' _ MeasurableSet.univ] using huniv
 
 /-- Branching on a Boolean through a probability distribution preserves erasability. -/
 theorem dbind_predicate {A : Type*} [MeasurableSpace A] [DiscreteMeasurableSpace A]
@@ -115,6 +107,7 @@ end Erasable
 
 /-! ## Rewritable -/
 
+/-- `μ` is a rewriting of `ρ`: running `ρ` equals sampling from `μ` then running. -/
 def Rewritable (ρ : Cfg rT) (μ : Measure (Cfg rT)) : Prop :=
   limExec ρ = μ.bind limExec
 
@@ -148,7 +141,7 @@ theorem of_erasable_pexecN {ρ : Cfg rT} {μ : Measure (State rT)} (m : Nat)
 
 end Rewritable
 
-/-- Mirrors Clutch's `rewritable_of_erasable`. -/
+/-- Samples the state from `μ` and keeps the expression `e` (Clutch `rewritable_of_erasable`). -/
 noncomputable def rewritableOfErasable (μ : Measure (State rT)) (e : Exp rT) : Measure (Cfg rT) :=
   μ.bind (fun σ => Measure.dirac ⟨e, σ⟩)
 

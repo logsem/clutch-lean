@@ -4,15 +4,15 @@ public import Metrology.ProbLang.Erasure.Presample
 
 @[expose] public section
 
-/-! Structural properties of `tapePresample`. -/
+/-! # Properties of `tapePresample`
+
+Presampling is invisible to the heap and to other tapes, and commutes with state updates. -/
 
 namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
-
-/-! ## Structural properties of `tapePresample` -/
 
 theorem tapePresample_ae
     {σ : State rT} {α : Loc} {N : Int}
@@ -188,8 +188,7 @@ theorem Cfg.uniform_eq_bind {z : Int} {σ : State rT} (hz : 0 < z) :
             (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
         (fun n => Measure.dirac (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold Cfg.uniform Int.isPos
-  rw [dite_eq_left hz]
-  rw [Measure.bind_dirac_eq_map _ Measurable.of_discrete]
+  rw [dite_eq_left hz, Measure.bind_dirac_eq_map _ Measurable.of_discrete]
 
 theorem tapePresample_bind_cfgUniform_comm
     {σ : State rT} {α : Loc} (z : Int) :
@@ -225,8 +224,7 @@ theorem tapePresample_bind_cfgUniform_comm
                 (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
               (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) := by
       congr 1; funext σ'; exact Cfg.uniform_eq_bind (σ := σ') hz
-    rw [hLHS, huniform_σ]
-    rw [Measure.bind_bind
+    rw [hLHS, huniform_σ, Measure.bind_bind
           Measurable.of_discrete.aemeasurable
           hk2.aemeasurable]
     simp_rw [Measure.dirac_bind
@@ -281,10 +279,9 @@ theorem tapePresample_bind_cfgUniform_comm
             (fun σ'' => Measure.dirac (⟨ρ'.expr, σ''⟩ : Cfg rT)))
           hk2]
 
-/-! ## Core: presampling is invisible to `execN` at the expression level
+/-! ## Uniform sampling against presampling
 
-Only the expression projection is invariant: presampling changes the final tape content.
-Clutch's `prim_coupl_upd_tapes_dom` states the same thing on the `dmap (λ x, x.1)` projection. -/
+Presampling changes the final tape content, so only the expression projection is invariant. -/
 
 omit [LawfulProbLangℝ rT] in
 theorem State.update_tapes_insert_id {σ : State rT} {α : Loc} {t : Tape}
@@ -314,8 +311,7 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
   rw [Filter.eventuallyEq_iff_exists_mem]
   use (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).support
   constructor
-  · rw [mem_ae_iff]
-    rw [(PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).toMeasure_apply_eq_zero_iff
+  · rw [mem_ae_iff, (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).toMeasure_apply_eq_zero_iff
       MeasurableSet.of_discrete]
     exact disjoint_compl_right
   · intro a ha

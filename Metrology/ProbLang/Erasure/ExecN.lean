@@ -66,8 +66,8 @@ theorem execN_tape_presample_expr_eq
       simp_rw [hprim, Measure.bind_map' (Ectx.fillCfg.measurable K) (execN_measurable m)]
       refine Measure.ext fun S hS => ?_
       rw [Measure.map_apply Cfg.measurable_expr hS,
-          Measure.map_apply Cfg.measurable_expr hS]
-      rw [Measure.bind_apply (Cfg.measurable_expr hS) hbind_ker.aemeasurable]
+          Measure.map_apply Cfg.measurable_expr hS,
+          Measure.bind_apply (Cfg.measurable_expr hS) hbind_ker.aemeasurable]
       simp_rw [Measure.bind_apply (Cfg.measurable_expr hS) hg_exec.aemeasurable]
       have ih_pointwise : ∀ (e' : Exp rT) (σ' : State rT) (t' : Tape),
           σ'.tapes[α]? = some t' → 0 < t'.bound →

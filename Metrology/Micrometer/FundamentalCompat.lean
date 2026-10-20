@@ -166,7 +166,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   simp only [Ectx.fill_nil]
   iapply refines_app $$ HBody HArgs
 
-/-! ### Polymorphic / recursive type compatibility -/
+/-! ## Polymorphic and recursive types -/
 
 theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (.forall' τ) ⊢
@@ -280,6 +280,7 @@ theorem bin_log_related_unpack_wand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : 
   isimp only [hbridge_fst, hbridge_snd, interp_ren τ2 A Δ] at HBody
   iexact HBody
 
+/-- `unpack` compatibility for `bin_log_related`. -/
 theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
     (HIH1 : ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))

@@ -86,6 +86,7 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
     iframe
     iapply wp_value_of_toVal htv $$ HΦv
 
+/-- Atomic expressions are `OpenInv`. -/
 theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.HasBind]
     {e : Exp rT} (h : Atomic' e) : OpenInv L e := by
   intro GF _ _ E1 E2 Φ
@@ -101,6 +102,7 @@ theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.
 
 end OpenInv
 
+/-- `wp` of an `OpenInv` expression absorbs an update that opens a mask. -/
 theorem wp_atomic {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
     {e : Exp rT} (h : OpenInv L e) {E1 E2 : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (|={E1, E2}=> wp L E2 e (fun v => iprop% |={E2, E1}=> Φ v)) ⊢ wp L E1 e Φ :=
@@ -154,6 +156,7 @@ theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [MicrometerWpGS (rT := 
     iexact HΦ
   | some P => iapply HΦ $$ Hcl
 
+/-- `imod` opens a `|={E1, E2}=>` around `wp` of an `OpenInv` expression. -/
 instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 E2 : CoPset}
     {e : Exp rT} [h : IsOpenInv L e] {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
     [BudgetGS B GF] {P : IProp GF} {Φ : Val rT → IProp GF} :
@@ -162,6 +165,7 @@ instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} {E1 
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans (wp_atomic h.out)
 
+/-- Accessors (`iinv`) open invariants around `wp` of an `OpenInv` expression. -/
 instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpenInv L e]
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {Φ : Val rT → IProp GF}
     (E₁ E₂ : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
@@ -178,6 +182,7 @@ instance (priority := low) elimAcc_wp_atomic {X : Type} {e : Exp rT} [h : IsOpen
     iframe Hclose
     iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
+/-- Accessors that keep the mask `E` work around any `wp`. -/
 instance elimAcc_wp_nonatomic {X : Type} {e : Exp rT}
     {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {Φ : Val rT → IProp GF}
     (E : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :

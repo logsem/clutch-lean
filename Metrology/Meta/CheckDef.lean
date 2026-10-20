@@ -6,8 +6,13 @@ public import Lean
 
 open Lean Elab Command Term Meta
 
+/-! # `#checkdef`
+
+Prints the type, value and reducibility hint of a definition. -/
+
 syntax (name := checkdef) "#checkdef " ident : command
 
+/-- Elaborates `#checkdef`. -/
 @[command_elab checkdef]
 meta def checkDefCore : CommandElab
   | `(#checkdef $decl) => do

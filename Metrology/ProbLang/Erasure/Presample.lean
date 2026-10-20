@@ -15,6 +15,8 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
 /-! ## Local uniform-presample distribution -/
+
+/-- The uniform distribution on `[0, N)` as a subtype; `0` when `N ≤ 0`. -/
 noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ z < N } :=
   if h : (Finset.Ico 0 N).Nonempty then
     (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure.map
@@ -47,8 +49,7 @@ noncomputable def tapePresample (σ : State rT) (α : Loc) : Measure (State rT) 
 theorem tapeIndexUniform_univ_eq_one {N : Int} (hN : 0 < N) :
     (tapeIndexUniform N) Set.univ = 1 := by
   unfold tapeIndexUniform
-  have hNonempty : (Finset.Ico 0 N).Nonempty := by
-    refine ⟨0, Finset.mem_Ico.mpr ⟨le_refl _, hN⟩⟩
+  have hNonempty : (Finset.Ico 0 N).Nonempty := ⟨0, Finset.mem_Ico.mpr ⟨le_refl _, hN⟩⟩
   rw [dite_eq_left hNonempty]
   have : IsProbabilityMeasure
       (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).toMeasure :=
@@ -149,7 +150,7 @@ theorem tapePresample.measurable {α : Loc} :
           rw [this]; infer_instance
         exact @Measure.measurable_map_uncurry (State rT) {z : Int // 0 ≤ z ∧ z < N}
           (State rT) _ _ _ _ hh (fun _ => tapeIndexUniform N) hk hSF
-    exact hflat.comp ((measurable_snd).prodMk measurable_fst)
+    exact hflat.comp (measurable_snd.prodMk measurable_fst)
   have hproj : Measurable (fun σ : State rT => (σ, σ.tapes[α]?)) :=
     measurable_id.prodMk ((LocHeap.measurable_getElem? α).comp State.measurable_tapes)
   show Measurable (fun σ : State rT => leaf (σ, σ.tapes[α]?))
@@ -159,13 +160,13 @@ theorem tapeIndexUniform_univ_le_one {N : Int} :
     (tapeIndexUniform N) Set.univ ≤ 1 := by
   unfold tapeIndexUniform
   split
-  · rename_i h
+  next h =>
     have : IsProbabilityMeasure
         (PMF.uniformOfFinset (Finset.Ico 0 N) h).toMeasure :=
       PMF.toMeasure.isProbabilityMeasure _
     rw [Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
     simp
-  · simp
+  next => simp
 
 theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
     (tapePresample σ α) Set.univ ≤ 1 := by
@@ -258,7 +259,7 @@ theorem primStep_tape_persists_support
     subst hσ' hℓ
     have hne : σ.tapes.fresh ≠ αloc := Std.ExtTreeMap.elem_fresh_ne h
     refine ⟨t, ?_, rfl⟩
-    exact State.upd_diff_tape_tot (hne.symm) |>.trans h
+    exact State.upd_diff_tape_tot hne.symm |>.trans h
   | @RandTapeS β _ _ _ _ _ _ _ hα' _hN _hv hσ' =>
     subst hσ'
     by_cases hαβ : αloc = β
@@ -284,7 +285,7 @@ theorem primStep_tape_persists [Countable rT] [MeasurableSingletonClass rT]
     (h : σ.tapes[α]? = some t) :
     ∀ᵐ ρ ∂(primStep ⟨e, σ⟩),
       ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound := by
-  refine (MeasureTheory.ae_iff).mpr ?_
+  refine MeasureTheory.ae_iff.mpr ?_
   rw [show {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound}
         = ⋃ ρ ∈ {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound},
             ({ρ} : Set (Cfg rT)) from by ext; simp]
