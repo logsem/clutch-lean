@@ -212,7 +212,7 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
     imod Hwp $$ %_ %(ε_now - ε₁ + ε₂ n) [$Hσ' $Hε_new] with HGlm
     imodintro
     iapply execStutter_free
-    simp only [presampleUpdate, ExtTreeMap.insert_eq_PartialMap_insert]
+    simp only [presampleUpdate, Std.ExtTreeMap.insert_eq_PartialMap_insert]
     iexact HGlm
   · push Not at hlt
     imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with -

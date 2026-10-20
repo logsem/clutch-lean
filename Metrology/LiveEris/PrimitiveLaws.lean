@@ -36,7 +36,7 @@ theorem lwp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     ileft
     imod app_state_heap_alloc v $$ Hσ with ⟨Hσ', Hl⟩
     imodintro
-    isimp only [liveWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert]
+    isimp only [liveWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert]
     iframe Hσ' Hc
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
@@ -78,7 +78,7 @@ theorem lwp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp 
     ileft
     imod app_state_update_heap $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
-    isimp only [liveWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert]
+    isimp only [liveWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert]
     iframe Hσ' Hc
     iapply HΦ $$ Hl'
 
@@ -106,7 +106,7 @@ theorem lwp_store_progress {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT �
     inext
     imod app_state_update_heap $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
-    isimp only [liveWpGS_stateInterp_eq, ExtTreeMap.insert_eq_PartialMap_insert]
+    isimp only [liveWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert]
     iframe Hσ' Hc
     iapply HΦ $$ Hl'
 
