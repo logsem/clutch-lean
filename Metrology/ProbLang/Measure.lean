@@ -116,7 +116,7 @@ theorem isAtomicSupport_dirac {α : Type _} [MeasurableSpace α] [MeasurableSing
 /-! ### `Concentrated`: the unary support-lifting
 
 Unlike atomicity, concentration survives diffuse measures: a pushforward is
-concentrated on the image of its source support (`concentratedOn_map`). -/
+concentrated on the image of its source support (`Concentrated.map`). -/
 
 /-- The measure `μ` gives zero mass to the complement of `S`. -/
 def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set α) : Prop :=
@@ -125,19 +125,19 @@ def Concentrated {α : Type _} [MeasurableSpace α] (μ : Measure α) (S : Set �
 theorem Concentrated.univ {α : Type _} [MeasurableSpace α] {μ : Measure α} :
     Concentrated μ Set.univ := by simp [Concentrated]
 
-theorem concentratedOn_zero {α : Type _} [MeasurableSpace α] {S : Set α} :
+theorem Concentrated.zero {α : Type _} [MeasurableSpace α] {S : Set α} :
     Concentrated (0 : Measure α) S := by simp [Concentrated]
 
 theorem Concentrated.mono {α : Type _} [MeasurableSpace α] {μ : Measure α} {S T : Set α}
     (hST : S ⊆ T) (h : Concentrated μ S) : Concentrated μ T :=
   MeasureTheory.measure_mono_null (Set.compl_subset_compl.mpr hST) h
 
-theorem concentratedOn_dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
+theorem Concentrated.dirac {α : Type _} [MeasurableSpace α] {a : α} {S : Set α}
     (hS : MeasurableSet S) (h : a ∈ S) : Concentrated (Measure.dirac a) S := by
   unfold Concentrated
   rw [Measure.dirac_apply' a hS.compl, Set.indicator_of_notMem (by simpa using h)]
 
-theorem concentratedOn_map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+theorem Concentrated.map {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {f : α → β} (hf : Measurable f) {ν : Measure α} {T : Set α}
     (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
     Concentrated (ν.map f) (f '' T) := by

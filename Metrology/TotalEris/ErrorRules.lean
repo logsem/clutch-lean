@@ -323,7 +323,7 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   have hpgl : ∀ σ₁ : State rT, Pgl 0 (R σ₁) (primStep ⟨Exp.urand, σ₁⟩) := fun σ₁ => by
     apply Pgl.of_concentrated
     rw [hps σ₁, hrange σ₁]
-    exact concentratedOn_map (hg σ₁)
+    exact Concentrated.map (hg σ₁)
       ((hgemb σ₁).measurableSet_image.mpr LawfulProbLangℝ.unifUnitSupportMeasurable)
       LawfulProbLangℝ.unifUnitIsConcentrated
   have hint : ∀ σ₁ : State rT,

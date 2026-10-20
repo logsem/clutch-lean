@@ -1005,10 +1005,11 @@ theorem State.upd_diff_tape_tot {σ : State rT} {α β : Loc} {bs : Tape}
     (σ.update_tapes (·.insert β bs)).tapes[α]? = σ.tapes[α]? := by
   simp [State.update_tapes, Std.ExtTreeMap.getElem?_insert, Ne.symm hne]
 
-theorem Std.ExtTreeMap.fresh_insert_of_mem
+theorem _root_.Std.ExtTreeMap.fresh_insert_of_mem
     {V : Type*} (t : Std.ExtTreeMap Int V compare) {α : Int} {v w : V}
     (h : t[α]? = some v) :
     (t.insert α w).fresh = t.fresh := by
+  -- inserting at an existing key does not change `maxKey?`
   unfold Std.ExtTreeMap.fresh
   have hkeys : (t.insert α w).maxKey? = t.maxKey? := by
     rw [Std.ExtTreeMap.maxKey?_insert]
@@ -1048,7 +1049,7 @@ theorem State.fresh_loc_upd_some {σ : State rT} {α : Loc} {bs bs' : Tape}
     (σ.tapes.insert α bs').fresh = σ.tapes.fresh :=
   Std.ExtTreeMap.fresh_insert_of_mem σ.tapes h
 
-theorem Std.ExtTreeMap.elem_fresh_ne
+theorem _root_.Std.ExtTreeMap.elem_fresh_ne
     {V : Type*} {t : Std.ExtTreeMap Int V compare} {k : Int} {v : V}
     (h : t[k]? = some v) : t.fresh ≠ k := by
   intro heq

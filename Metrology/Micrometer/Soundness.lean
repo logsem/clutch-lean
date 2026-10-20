@@ -14,7 +14,7 @@ the contextual-refinement inequality (`refines_sound_open_fresh`). -/
 
 namespace ProbLang
 
-open GradedLifting ProbLang.Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE
+open GradedLifting Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE
 open ProbLang.MicrometerWpGS
 
 section RefinesSound

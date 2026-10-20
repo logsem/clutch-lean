@@ -61,7 +61,7 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
     Concentrated (primStep ⟨pl(urand), σ⟩)
       {ρ | ∃ r, ρ = ⟨pl(#(.real r)), σ⟩ ∧ r ∈ unifUnitSupport} := by
   rw [primStep_urand σ, Cfg.uniformReal, Cfg.realLit_image_eq]
-  exact concentratedOn_map (Cfg.measurable_realLit σ)
+  exact Concentrated.map (Cfg.measurable_realLit σ)
     ((Cfg.measurableEmbedding_realLit σ).measurableSet_image.mpr unifUnitSupportMeasurable)
     unifUnitIsConcentrated
 

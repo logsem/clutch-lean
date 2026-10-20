@@ -13,7 +13,7 @@ public import Metrology.ProbLang.ContextualRefinement
 
 namespace ProbLang
 
-open GradedLifting ProbLang.Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
+open GradedLifting Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
 open ProbLang.MicrometerWpGS
 
 section Syntax
