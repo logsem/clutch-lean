@@ -59,7 +59,7 @@ theorem tapePresample_bound_ae {σ : State rT} {α : Loc} {N : Int}
       ((LocHeap.measurable_getElem? α).comp State.measurable_tapes)
   exact tapePresample_ae h (hmb (measurableSet_singleton _)) fun _ => by simp [State.update_tapes]
 
-theorem tapePresample_bind_pull_heap [Countable rT] [MeasurableSingletonClass rT]
+theorem tapePresample_bind_pull_heap [Countable rT]
     {σ : State rT} {α : Loc}
     (k : Std.ExtTreeMap Loc (Val rT) compare → State rT → Measure (Cfg rT)) :
     (tapePresample σ α).bind (fun σ' => k σ'.heap σ') =

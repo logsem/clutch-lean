@@ -1468,7 +1468,7 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   HeadStepSupport ⟨.urand, σ⟩ ⟨.lit (.real r), σ⟩
 
 @[simp]
-theorem dirac_singleton_pos [MeasurableSingletonClass rT]
+theorem dirac_singleton_pos
     {a b : Cfg rT} :
     0 < (dirac a) {b} ↔ a = b := by
   constructor
@@ -1496,7 +1496,7 @@ theorem asValM_singleton_pos [MeasurableSpace T] {e : Exp α} {f : Val α → Me
     0 < (e.asValM f) s ↔ ∃ v, e.toVal? = some v ∧ 0 < (f v) s := by
   unfold Exp.asValM; cases e.toVal? <;> simp
 
-theorem Cfg.uniform_singleton_pos_inv [MeasurableSingletonClass rT]
+theorem Cfg.uniform_singleton_pos_inv
     {z : Int} {σ : State rT} {ρ : Cfg rT}
     (h : 0 < Cfg.uniform z σ {ρ}) :
     ρ.state = σ ∧
@@ -1647,13 +1647,13 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     simp [Cfg.uniform, Int.isPos, hpos]
 
 @[discrete]
-theorem HeadStepSupport.pos [MeasurableSingletonClass rT]
+theorem HeadStepSupport.pos
     {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     (h : HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩) (hne : e1 ≠ .urand := by nofun) :
     0 < headStep (⟨e1, σ1⟩ : Cfg rT) {(⟨e2, σ2⟩ : Cfg rT)} :=
   possible_iff_pos.mp (h.possible hne)
 
-theorem headStep_support_of_pos [MeasurableSingletonClass rT]
+theorem headStep_support_of_pos
     (e1 e2 : Exp rT) (σ1 σ2 : State rT) :
     0 < headStep ⟨e1, σ1⟩ {⟨e2, σ2⟩} → HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩ := by
   head_case
@@ -1716,7 +1716,7 @@ theorem headStep_support_of_pos [MeasurableSingletonClass rT]
     exact ne_of_gt hpos
       (le_zero_iff.mp ((measure_mono hsub).trans_eq LawfulProbLangℝ.unifUnitIsConcentrated))
 
-theorem Possible.headStepSupport [MeasurableSingletonClass rT]
+theorem Possible.headStepSupport
     {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     (h : Possible (⟨e2, σ2⟩ : Cfg rT) (headStep ⟨e1, σ1⟩)) :
     HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩ :=

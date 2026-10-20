@@ -1443,7 +1443,7 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
   | inr p ih =>
     apply_arms Exp.measurable_cases
 
-theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] :
+theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] :
     Measurable (fun (q : Pat rT × Exp rT) => Pat.tryMatch q.1 q.2) := by
   apply measurable_from_prod_countable_right
   exact tryMatch_fixed.measurable

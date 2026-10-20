@@ -19,7 +19,7 @@ noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure
   | 0 => Measure.dirac σ
   | n + 1 => (tapePresampleIter α σ n).bind (fun σ' => tapePresample σ' α)
 
-theorem tapePresampleIter_tape_bound_ae [Countable rT] [MeasurableSingletonClass rT]
+theorem tapePresampleIter_tape_bound_ae [Countable rT]
     {σ : State rT} {α : Loc} {t : Tape}
     (h : σ.tapes[α]? = some t) (n : Nat) :
     ∀ᵐ σ' ∂(tapePresampleIter α σ n),
@@ -42,7 +42,7 @@ theorem tapePresampleIter_tape_bound_ae [Countable rT] [MeasurableSingletonClass
     refine MeasureTheory.ae_iff.mp (tapePresample_ae ht'' MeasurableSet.of_discrete fun n' => ?_)
     exact ⟨⟨Nb, bs ++ [n']⟩, by simp [State.update_tapes], hbound⟩
 
-theorem execN_tapePresampleIter_expr_eq [Countable rT] [MeasurableSingletonClass rT]
+theorem execN_tapePresampleIter_expr_eq [Countable rT]
     {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape} (n : Nat)
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
     asExpr ((tapePresampleIter α σ n).bind (fun σ' => execN m ⟨e, σ'⟩)) =
@@ -133,7 +133,7 @@ theorem tapePresample
   fun _ _ => execN_tape_presample_expr_eq h hN
 
 /-- Sequencing preserves erasability; discreteness gives the measurability for free. -/
-theorem dbind [Countable rT] [MeasurableSingletonClass rT]
+theorem dbind [Countable rT]
     {μ₁ : Measure (State rT)} {μ₂ : State rT → Measure (State rT)} {σ : State rT}
     (h₁ : ErasableExpr μ₁ σ) (h₂ : ∀ σ', ErasableExpr (μ₂ σ') σ') :
     ErasableExpr (μ₁.bind μ₂) σ := by

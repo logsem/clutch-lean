@@ -258,7 +258,7 @@ theorem primStep_tape_persists_support
     exact ⟨t, h, rfl⟩
   | _ => exact ⟨t, h, rfl⟩
 
-theorem primStep_tape_persists [Countable rT] [MeasurableSingletonClass rT]
+theorem primStep_tape_persists [Countable rT]
     {σ : State rT} {α : Loc} {e : Exp rT} {t : Tape}
     (h : σ.tapes[α]? = some t) :
     ∀ᵐ ρ ∂(primStep ⟨e, σ⟩),

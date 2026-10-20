@@ -7,7 +7,7 @@ public import Metrology.ProbLang.Exec
 
 /-! # The big-step semantics agrees with the reduction semantics
 
-`bigStep_eq_limExec`. Discrete-only: `[Countable rT] [MeasurableSingletonClass rT]` make every
+`bigStep_eq_limExec`. Discrete-only: `[Countable rT]` makes every
 map out of `Cfg rT` measurable and `Measure.bind` monotone.
 -/
 
@@ -65,7 +65,7 @@ theorem Pat.tryMatch_isValue {p : Pat rT} {v b : Exp rT} (hv : v.isValue)
 
 section Discrete
 
-variable [Countable rT] [MeasurableSingletonClass rT]
+variable [Countable rT]
 
 /-! ## `Measure.bind` on a discrete space -/
 
@@ -143,7 +143,7 @@ theorem RetVal.bind_eq {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Ex
     (R ⟨e, σ⟩).bind f = f ⟨e, σ⟩ := by
   rw [hR e σ he, dirac_bind_discrete]
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem OnlyVal.bind_congr {R : Cfg rT → Measure (Cfg rT)} (hR : OnlyVal R) (ρ : Cfg rT)
     {f g : Cfg rT → Measure (Cfg rT)} (h : ∀ c : Cfg rT, c.expr.isValue → f c = g c) :
     (R ρ).bind f = (R ρ).bind g :=
@@ -189,13 +189,13 @@ private theorem Option.casesOn_some_eq_none {α β : Type _} {o : Option α} {b 
     {f : α → Option β} (h : o.casesOn (some b) f = none) : ∃ a, o = some a ∧ f a = none := by
   cases o <;> simp_all
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 private theorem Exp.isValue_of_decompItem₁ {β : Type _} {e1 : Exp rT} {b : β}
     (h : e1.toVal?.casesOn (some b) (fun _ => none) = none) : e1.isValue :=
   let ⟨_, hv1, _⟩ := Option.casesOn_some_eq_none h
   Exp.toVal?_isValue hv1
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 private theorem Exp.isValue_of_decompItem₂ {β : Type _} {e1 e2 : Exp rT} {b : β}
     {f : Val rT → β}
     (h : e2.toVal?.casesOn (some b) (fun v2 => e1.toVal?.casesOn (some (f v2)) fun _ => none) =
@@ -438,7 +438,7 @@ theorem bigStep_retVal : RetVal (bigStep (rT := rT)) := by
 
 /-! ## `limExec` returns values, takes head steps, and composes through contexts -/
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem limExec_retVal : RetVal (limExec (rT := rT)) :=
   fun _ _ ⟨w⟩ => limExec_of_isVal w
 
@@ -456,7 +456,7 @@ theorem limExec_onlyVal : OnlyVal (limExec (rT := rT)) := fun ρ => by
   rw [ae_iff, limExec, iSup_measure_apply execN_monotone MeasurableSet.of_discrete]
   simp [execN_nonvalue]
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem limExec_head {e : Exp rT} {σ : State rT} (hdec : e.decompItem = none)
     (hnv : ¬e.isValue) : limExec ⟨e, σ⟩ = (headStep ⟨e, σ⟩).bind limExec := by
   rw [limExec_not_final hnv, primStep_eq_headStep hdec]
@@ -493,7 +493,7 @@ def Exp.pendingArgs : Exp rT → Nat
   | _ => 0
 where pending (e : Exp rT) : Nat := if e.isValue then 0 else 1
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 theorem Exp.pendingArgs_fillItem_lt (Ki : EctxItem rT) {e v : Exp rT} (he : ¬e.isValue)
     (hv : v.isValue) : (Ki.fillItem v).pendingArgs < (Ki.fillItem e).pendingArgs := by
   cases Ki <;>

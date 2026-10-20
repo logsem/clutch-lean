@@ -167,7 +167,7 @@ theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ exec
 
 theorem execN_monotone : Monotone fun i ↦ execN (rT := rT) i ρ := fun _ _ h => execN_mono h _
 
-theorem execN_mono_singleton [MeasurableSingletonClass rT]
+theorem execN_mono_singleton
     {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) (c : Cfg rT) :
     execN n ρ {c} ≤ execN m ρ {c} :=
   execN_mono h ρ {c}

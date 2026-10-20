@@ -357,7 +357,7 @@ theorem envBig_apply (c : EnvCfg rT) : envBig c = (envStep c).interp envBig :=
 
 section Discrete
 
-variable [Countable rT] [MeasurableSingletonClass rT]
+variable [Countable rT]
 
 /-! ## Well-formedness is preserved -/
 
@@ -369,7 +369,7 @@ def Step.Good : Step rT → Prop
   | .apply f v _ => f.WF ∧ v.WF
   | _ => True
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem envStep_good {c : EnvCfg rT} (hc : c.WF) : (envStep c).Good := by
   cases c with
   | eval env e σ =>
@@ -436,7 +436,7 @@ theorem envBig_pres : Pres (envBig (rT := rT)) := by
 
 /-! ## Bounding one step by read-back evaluations -/
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem RCfg.measurable_rb : Measurable (RCfg.rb (rT := rT)) := .of_discrete
 
 /-- What one step becomes after readback, when calls are evaluated by `Z`. -/
@@ -454,7 +454,7 @@ theorem bind_map_disc {μ : Measure (RCfg rT)} {g : RCfg rT → Cfg rT}
     {k : Cfg rT → Measure (Cfg rT)} : (μ.map g).bind k = μ.bind (k ∘ g) := by
   rw [Measure.bind, Measure.bind, Measure.map_map Measurable.of_discrete Measurable.of_discrete]
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem intUniform_map (z : Int) (σ : State rT) :
     (intUniform z).map (fun n => (⟨.lit (.int n), σ⟩ : Cfg rT)) = Cfg.uniform z σ := by
   unfold intUniform Cfg.uniform
@@ -462,7 +462,7 @@ theorem intUniform_map (z : Int) (σ : State rT) :
   | some z' => rfl
   | none => exact map_dirac' Measurable.of_discrete _
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem Step.map_interp_uniform (z : Int) (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
     ((Step.uniform z σ).interp X).map RCfg.rb = Cfg.uniform z σ := by
   simp only [Step.interp]
@@ -544,7 +544,7 @@ theorem RetVal.bind_rb {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {v : RV
     (Z ⟨v.rb, σ⟩).bind f = f ⟨v.rb, σ⟩ :=
   hZ.bind_eq hv.isValue f
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 theorem RVal.rb_clo_open {env : Env rT} {body : Exp rT} {v : RVal rT} (henv : RVal.WFEnv env) :
     (body.substEnv 1 (RVal.rbEnv env)).open' v.rb = body.substEnv 0 (RVal.rbEnv (v :: env)) := by
   simp only [Exp.open', RVal.rbEnv]
@@ -657,7 +657,7 @@ theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : E
 
 /-! ## `envBig ≤ bigStep` after readback -/
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 /-- A well-formed frame reads back to an evaluation-context item. -/
 theorem Frame.exists_item {f : Frame rT} (hf : f.WF) :
     ∃ Ki : EctxItem rT, ∀ x, f.fill x = Ki.fillItem x := by
@@ -743,7 +743,7 @@ theorem envStep_bnd_bigStep {c : EnvCfg rT} (hc : c.WF) :
       rw [bnd_evalThen_bigStep (by simpa [Frame.WF] using hv)]
       rfl
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem map_iSup_le_of {μ : ℕ → Measure (RCfg rT)} (hμ : Monotone μ) {ν : Measure (Cfg rT)}
     (h : ∀ n, (μ n).map RCfg.rb ≤ ν) : (⨆ n, μ n).map RCfg.rb ≤ ν := by
   refine Measure.le_iff.mpr fun s hs => ?_
@@ -771,12 +771,12 @@ theorem envBig_le {c : EnvCfg rT} (hc : c.WF) : (envBig c).map RCfg.rb ≤ bigSt
 
 /-! ## The machine on configurations that read back to values -/
 
-omit [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT] in
+omit [LawfulProbLangℝ rT] [Countable rT] in
 theorem dirac_bind_rcfg (r : RCfg rT) (f : RCfg rT → Measure (RCfg rT)) :
     (dirac r).bind f = f r :=
   dirac_bind Measurable.of_discrete r
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem envBig_eval_bvar {env : Env rT} {j : Nat} {σ : State rT} {u : Exp rT}
     (hc : (EnvCfg.eval env (.bvar j) σ).WF) (hu : (Exp.bvar j).substEnv 0 (RVal.rbEnv env) = u) :
     ∃ v : RVal rT, v.WF ∧ v.rb = u ∧ envBig (.eval env (.bvar j) σ) = dirac ⟨v, σ⟩ := by
@@ -787,7 +787,7 @@ theorem envBig_eval_bvar {env : Env rT} {j : Nat} {σ : State rT} {u : Exp rT}
   · simpa [Exp.substEnv, RVal.rbEnv_getElem?, hj] using hu
   · rw [envBig_apply]; simp [envStep, evalK, stepOps, hj, Step.interp]
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 /-- Evaluating an expression that reads back to a value returns that value at once. -/
 theorem envBig_eval_val : ∀ {u : Exp rT} (_ : IsVal u) {env : Env rT} {e : Exp rT}
     {σ : State rT}, (EnvCfg.eval env e σ).WF → e.substEnv 0 (RVal.rbEnv env) = u →
@@ -862,7 +862,7 @@ theorem envBig_eval_val : ∀ {u : Exp rT} (_ : IsVal u) {env : Env rT} {e : Exp
       rfl
     | _ => simp [Exp.substEnv] at hu
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 /-- Every configuration that reads back to a value returns that value at once. -/
 theorem envBig_val {c : EnvCfg rT} (hc : c.WF) (hv : c.rb.expr.isValue) :
     (envBig c).map RCfg.rb = dirac c.rb := by
@@ -901,16 +901,16 @@ to `ρ`. -/
 def Yb (ρ : Cfg rT) : Measure (Cfg rT) :=
   ⨅ (c : EnvCfg rT) (_ : c.WF ∧ c.rb = ρ), (envBig c).map RCfg.rb
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem Yb_le' {c : EnvCfg rT} {ρ : Cfg rT} (hc : c.WF) (hρ : c.rb = ρ) :
     Yb ρ ≤ (envBig c).map RCfg.rb :=
   iInf₂_le c ⟨hc, hρ⟩
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem Yb_le {c : EnvCfg rT} (hc : c.WF) : Yb c.rb ≤ (envBig c).map RCfg.rb :=
   Yb_le' hc rfl
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem Yb_retVal : RetVal (Yb (rT := rT)) := by
   intro e σ he
   have hspec := RVal.ofExp_spec he
@@ -939,12 +939,12 @@ theorem bigStepF_fillItem_loc {R : Cfg rT → Measure (Cfg rT)} (hV : RetVal R) 
     refine bind_congr_right (hC.mono fun ⟨v, σ'⟩ hv => ?_) <;> dsimp only <;>
     (try rw [hV.bind_eq (Val.isValue _)]) <;> rw [hV.bind_eq hv]
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 theorem envBig_appL_eq (v w : RVal rT) (σ : State rT) :
     envBig (.resume (.appL v) w σ) = envBig (.resume (.applyTo v) w σ) := by
   rw [envBig_apply, envBig_apply (.resume (.applyTo v) w σ)]; rfl
 
-omit [Countable rT] [MeasurableSingletonClass rT] in
+omit [Countable rT] in
 /-- Two ways of evaluating `e` and applying the result to `v` agree. -/
 theorem envBig_appR_eq (env : Env rT) (e : Exp rT) (v : RVal rT) (σ : State rT) :
     envBig (.resume (.appR env e) v σ) = (Step.evalThen env e σ (.applyTo v)).interp envBig := by

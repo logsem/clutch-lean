@@ -156,7 +156,7 @@ program run from `σ₁` to the spec limit from `σ₁'`; the continuation's gra
 sample (Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected). -/
 theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrderedAddMonoid B]
     [CanonicallyOrderedAdd B] [OrderTop B] {s : ENNReal →+o B} [L.IsLawful] [L.HasBind]
-    [L.IsExpectationAdditive s] [MeasurableSingletonClass rT]
+    [L.IsExpectationAdditive s]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁ μ₁' : Measure (State rT)} {R : State rT → Cfg rT → Prop}
     {Φexp : Exp rT → Exp rT → Prop}
@@ -189,7 +189,7 @@ run to the spec limit, for a law whose program and spec distributions are images
 measures; the continuation grade depends on both samples (Clutch
 `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected; Rocq `gcoupl_erasure_prog_bind_law`). -/
 theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
-    [MeasurableSingletonClass rT] (law : L.BindLaw)
+    (law : L.BindLaw)
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁' : Measure (State rT)} {Φexp : Exp rT → Exp rT → Prop}
     {b : B} {X Y : Type} [MeasurableSpace X] [MeasurableSpace Y] {μ₀ : Measure X} {ν₀ : Measure Y}
     {f : X → Cfg rT} {f' : Y → Cfg rT} {R : X → Y → B} {n m : Nat}
@@ -216,7 +216,6 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
 spec limit; the continuation grade depends on both samples (Clutch
 `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected). -/
 theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
-    [MeasurableSingletonClass rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁' : Measure (State rT)} {Φexp : Exp rT → Exp rT → Prop}
     {b : B} {R : Cfg rT → Cfg rT → B} {n m : Nat}
@@ -239,7 +238,7 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
 the program run from `σ₁` to the spec limit from `σ₁'`, for a law whose spec distribution is an
 image of its spec-side head measure (Clutch-dp `spec_coupl` erasure, projected; Rocq
 `gcoupl_erasure_bind_law`). -/
-theorem lift_erasure_erasable_law [Preorder B] [Top B] [Zero B] [MeasurableSingletonClass rT]
+theorem lift_erasure_erasable_law [Preorder B] [Top B] [Zero B]
     (law : L.BindLaw) {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
     {Φexp : Exp rT → Exp rT → Prop} {b : B} {Y : Type} [MeasurableSpace Y] {ν₀ : Measure Y}
     {f' : Y → Cfg rT} {R : State rT → Y → B} {n m : Nat}
@@ -265,7 +264,7 @@ theorem lift_erasure_erasable_law [Preorder B] [Top B] [Zero B] [MeasurableSingl
 /-- A lifting of erasable state distributions on both sides relates the program run from `σ₁` to
 the spec limit from `σ₁'`, with the per-pair leftover as the continuation's grade (Clutch-dp
 `spec_coupl` erasure, projected). -/
-theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSingletonClass rT]
+theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁ μ₁' : Measure (State rT)}
     {Φexp : Exp rT → Exp rT → Prop} {b : B} {R : State rT → Cfg rT → B} {n m : Nat}
     (hCoupl : L b R μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
@@ -286,7 +285,7 @@ theorem lift_erasure_erasable [LT B] [Top B] [Zero B] [L.HasBind] [MeasurableSin
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_rhs`, projected: the continuation's slack depends
 on the RHS sample (the `tv` instance of `lift_erasure_erasable_exp_rhs`). -/
-theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
+theorem AddCoupl_erasure_erasable_exp_rhs
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁ μ₁' : Measure (State rT)} {R : Set (State rT × Cfg rT)}
     {Φexp : Set (Exp rT × Exp rT)}
@@ -311,7 +310,7 @@ theorem AddCoupl_erasure_erasable_exp_rhs [MeasurableSingletonClass rT]
     fun σ₂ ρ' hR => (hCont σ₂ ρ' hR).codensity).addCoupl
 
 /-- Clutch `ARcoupl_erasure_erasable`, projected to expressions. -/
-theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
+theorem AddCoupl_erasure_erasable [Countable rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁ μ₂ : Measure (State rT)} {R : Set (State rT × State rT)}
     {Φexp : Set (Exp rT × Exp rT)}
@@ -336,7 +335,7 @@ theorem AddCoupl_erasure_erasable [Countable rT] [MeasurableSingletonClass rT]
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs`, projected: the continuation's slack depends
 on the LHS sample. -/
-theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonClass rT]
+theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT]
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁' : Measure (State rT)} {R : Set (Cfg rT × State rT)}
     {Φexp : Set (Exp rT × Exp rT)}
@@ -363,7 +362,7 @@ theorem AddCoupl_erasure_erasable_exp_lhs [Countable rT] [MeasurableSingletonCla
 
 /-- Clutch `ARcoupl_erasure_erasable_exp_lhs_kanto`, projected: the slack depends on both
 samples (the `tv` instance of `lift_erasure_erasable_exp_lhs_kanto`). -/
-theorem AddCoupl_erasure_erasable_exp_lhs_kanto [MeasurableSingletonClass rT]
+theorem AddCoupl_erasure_erasable_exp_lhs_kanto
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     {μ₁' : Measure (State rT)} {Φexp : Set (Exp rT × Exp rT)}
     {ε : ENNReal} {E₂ : Cfg rT → Cfg rT → ENNReal}

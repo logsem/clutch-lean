@@ -481,7 +481,7 @@ macro "no_urand" : tactic =>
     | (intro h; cases h))
 
 @[discrete]
-theorem Reducible.toDiscrete [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+theorem Reducible.toDiscrete [LawfulProbLangℝ rT]
     {e : Exp rT} {σ : State rT} (hne : e.decomp.2 ≠ .urand)
     (h : _root_.ProbLang.Reducible e σ) : Discrete.Reducible e σ := by
   by_contra hcon
@@ -497,13 +497,13 @@ theorem Reducible.toDiscrete [LawfulProbLangℝ rT] [MeasurableSingletonClass rT
   exact MeasureTheory.Measure.measure_univ_eq_zero.mp this
 
 @[discrete]
-theorem HeadReducible.of_headStepSupport [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+theorem HeadReducible.of_headStepSupport [LawfulProbLangℝ rT]
     {e e' : Exp rT} {σ σ' : State rT} (h : HeadStepSupport (⟨e, σ⟩ : Cfg rT) ⟨e', σ'⟩)
     (hu : e ≠ .urand := by nofun) : HeadReducible e σ := fun hz => by
   simpa [hz] using h.pos hu
 
 @[discrete]
-theorem Discrete.Reducible.of_headStepSupport [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+theorem Discrete.Reducible.of_headStepSupport [LawfulProbLangℝ rT]
     {e e' : Exp rT} {σ σ' : State rT} (h : HeadStepSupport (⟨e, σ⟩ : Cfg rT) ⟨e', σ'⟩)
     (hlc : e.IsLocallyClosed) (hne : e.decomp.2 ≠ .urand := by no_urand)
     (hu : e ≠ .urand := by nofun) :
@@ -511,7 +511,7 @@ theorem Discrete.Reducible.of_headStepSupport [LawfulProbLangℝ rT] [Measurable
   Reducible.toDiscrete hne (reducible_of_headReducible hlc (HeadReducible.of_headStepSupport h hu))
 
 @[discrete]
-theorem HeadStepSupport.of_primStep_fill [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+theorem HeadStepSupport.of_primStep_fill [LawfulProbLangℝ rT]
     {K : Ectx rT} {e e₀ e₂' : Exp rT} {σ σ₀ σ₂' : State rT}
     (hwit : HeadStepSupport (⟨e, σ⟩ : Cfg rT) ⟨e₀, σ₀⟩) (hlc : e.IsLocallyClosed)
     (hstep : 0 < primStep (⟨K.fill e, σ⟩ : Cfg rT) {⟨e₂', σ₂'⟩})
@@ -525,7 +525,7 @@ theorem HeadStepSupport.of_primStep_fill [LawfulProbLangℝ rT] [MeasurableSingl
 
 @[discrete]
 theorem Discrete.Reducible.of_headStepSupport_fill [LawfulProbLangℝ rT]
-    [MeasurableSingletonClass rT] {e e' : Exp rT} {σ σ' : State rT} (K : Ectx rT)
+    {e e' : Exp rT} {σ σ' : State rT} (K : Ectx rT)
     (h : HeadStepSupport (⟨e, σ⟩ : Cfg rT) ⟨e', σ'⟩) (hlc : e.IsLocallyClosed)
     (hne : e.decomp.2 ≠ .urand := by no_urand) (hu : e ≠ .urand := by nofun)
     (hneK : (K.fill e).decomp.2 ≠ .urand := by no_urand) :

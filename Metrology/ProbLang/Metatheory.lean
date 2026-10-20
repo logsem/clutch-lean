@@ -942,7 +942,7 @@ theorem HeadStepPred_iff_exists_support (e : Exp rT) (σ : State rT) :
     | RandTapeNonposOtherS hz htape hzN => exact .inr (.randTapeNonposOther hz htape hzN)
     | UrandS _ => exact .inr .urand
 
-theorem not_HeadStepPred_iff_zero [MeasurableSingletonClass rT]
+theorem not_HeadStepPred_iff_zero
     (e : Exp rT) (σ : State rT) :
     ¬ HeadStepPred e σ ↔ headStep ⟨e, σ⟩ = 0 := by
   rw [HeadStepPred_iff_exists_support]
@@ -953,7 +953,7 @@ theorem not_HeadStepPred_iff_zero [MeasurableSingletonClass rT]
   · rintro h0 ⟨ρ', hsupp⟩
     exact HeadStepSupport.ne_zero hsupp h0
 
-theorem det_or_prob_or_zero [MeasurableSingletonClass rT]
+theorem det_or_prob_or_zero
     (e : Exp rT) (σ : State rT) :
     DetHeadStepPred e σ ∨ ProbHeadStepPred e σ ∨ headStep ⟨e, σ⟩ = 0 := by
   by_cases hpred : HeadStepPred e σ
@@ -1104,7 +1104,7 @@ theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT
   unfold Cfg.uniform Int.isPos; simp only [dite_eq_left hz]
 
 /-- Countability-free: measurability of `φ` is assumed rather than derived from discreteness. -/
-theorem Cfg.lintegral_uniform' [MeasurableSingletonClass rT]
+theorem Cfg.lintegral_uniform'
     {z : Int} (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
     ∫⁻ c, φ c ∂(Cfg.uniform z σ)
@@ -1122,7 +1122,7 @@ theorem Cfg.lintegral_uniform' [MeasurableSingletonClass rT]
   rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
       PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
 
-theorem Cfg.lintegral_uniform [Countable rT] [MeasurableSingletonClass rT]
+theorem Cfg.lintegral_uniform [Countable rT]
     {z : Int} (Hz : 0 < z) (σ : State rT) (φ : Cfg rT → ENNReal) :
     ∫⁻ c, φ c ∂(Cfg.uniform z σ) =
       ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Finset.Ico (0 : Int) z,
@@ -1135,7 +1135,7 @@ theorem Cfg.lintegral_uniform [Countable rT] [MeasurableSingletonClass rT]
 -- goal-side `simp` is idle, but other branches need it.
 set_option linter.unnecessarySimpa false in
 /-- Overwriting an existing tape cannot unstick a stuck head redex. -/
-theorem State.head_step_dzero_upd_tapes [MeasurableSingletonClass rT]
+theorem State.head_step_dzero_upd_tapes
     {e : Exp rT} {σ : State rT} {α : Loc} {bs bs' : Tape}
     (hmem : σ.tapes[α]? = some bs)
     (h0 : ProbLang.headStep ⟨e, σ⟩ = 0) :
@@ -1210,7 +1210,7 @@ theorem State.det_head_step_upd_tapes
   | scrutSuccess hv hm => exact .scrutSuccess hv hm
   | scrutFailure hv hm => exact .scrutFailure hv hm
 
-theorem State.prim_step_empty_tape [Countable rT] [MeasurableSingletonClass rT]
+theorem State.prim_step_empty_tape [Countable rT]
     {K : ProbLang.Ectx rT} {σ : State rT} {α : Loc} {z : Int} {N : Int}
     (hmem : σ.tapes[α]? = some ⟨N, []⟩) :
     ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit (.lbl α))), σ⟩
