@@ -114,6 +114,14 @@ theorem concentratedDivergence_iff' (hA : A ⊆ Ioi 1) :
       ∀ α ∈ A, renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
   concentratedDivergence_iff.trans ⟨fun h α hα ↦ h ⟨α, hA hα⟩ hα, fun h α hα ↦ h α hα⟩
 
+/-- A Rényi curve below the line of `b` at every order of `A` gives the concentrated bound at
+`b`. -/
+theorem concentratedDivergence_of_renyiCurve_le [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {c : RenyiBudget} (h : renyiCurve c μ ν)
+    (hc : ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → c α ≤ b.1 + ENNReal.ofReal α * b.2) :
+    concentratedDivergence A b μ ν :=
+  concentratedDivergence_of_forall fun α hα ↦ IsGraded.mono (hc α hα) (h α)
+
 /-- zCDP is a Rényi bound `ξ + α ρ` at every real order `α > 1`. -/
 theorem zcdpDivergence_iff :
     zcdpDivergence (ξ, ρ) μ ν ↔ ∀ α, 1 < α → renyiDivergence α (ξ + ENNReal.ofReal α * ρ) μ ν :=
@@ -498,3 +506,20 @@ theorem zcdpToTcdp_map (ω : ℝ) (b : ℝ≥0∞ × ℝ≥0∞) : (zcdpToTcdp.{
   rfl
 
 end LiftingRelHom
+
+namespace GradedDivergence
+
+variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {A : Set ℝ}
+  {b : ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
+
+/-- A Rényi-curve lifting below the line of `b` at every order of `A` is a concentrated lifting at
+`b` (below the zCDP line, a zCDP lifting). -/
+theorem concentratedLifting_rel_of_renyiCurve_le [IsSubProbabilityMeasure μ]
+    [IsSubProbabilityMeasure ν] {c : RenyiBudget} (h : (codensity renyiCurve).Rel c S μ ν)
+    (hc : ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → c α ≤ b.1 + ENNReal.ofReal α * b.2) :
+    (concentratedLifting A).Rel b S μ ν :=
+  concentratedLifting_rel_iff.2 fun α hα ↦
+    (((LiftingHom.renyiCurveToRenyi α).toLiftingRelHom rfl).map_rel h).mono (hc α hα)
+      fun _ _ h ↦ h
+
+end GradedDivergence

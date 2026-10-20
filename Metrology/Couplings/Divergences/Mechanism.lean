@@ -144,6 +144,12 @@ variable {δ : ℝ}
 theorem zCDP_of_DP [IsSubMarkovKernel m] (h : m.DP adj ε 0) : m.zCDP adj ε 0 :=
   fun _ _ hx ↦ zcdp_of_dp (h hx)
 
+/-- A mechanism private for a Rényi curve below the zCDP line of `(ξ, ρ)` is `(ξ, ρ)`-zCDP. -/
+theorem zCDP_of_renyiCurve_le [IsSubMarkovKernel m] {c : RenyiBudget}
+    (h : m.IsPrivate renyiCurve adj c)
+    (hc : ∀ α : Set.Ioi (1 : ℝ), c α ≤ ξ + ENNReal.ofReal α * ρ) : m.zCDP adj ξ ρ :=
+  fun _ _ hx ↦ concentratedDivergence_of_renyiCurve_le (h hx) fun α _ ↦ hc α
+
 /-- zCDP gives Rényi differential privacy at every order (Def. 2.4). -/
 theorem RDP_of_zCDP (hα : 1 < α) (h : m.zCDP adj ξ ρ) :
     m.RDP adj α (ξ + ENNReal.ofReal α * ρ) :=

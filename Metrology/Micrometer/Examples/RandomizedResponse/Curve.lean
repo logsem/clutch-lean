@@ -66,14 +66,17 @@ theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) :
     nlinarith
   linarith
 
+/-- One round couples at `(ln 3, 0)` in the zCDP lifting, since the curve lies below the line
+`ln 3`. -/
+theorem rrCoupling_zcdp_of_curve : RRCoupling zcdpLifting budget := fun b b' ↦
+  concentratedLifting_rel_of_renyiCurve_le (rrCoupling_curve b b') fun α _ ↦ by
+    simpa [rrCurve] using rrRenyi_le_log_three α.2
+
 /-- `k` rounds are `(k ln 3, 0)`-zCDP, since the curve `k ρ_α` lies below the line `k ln 3`
 (Def. 2.4). -/
 theorem rrCount_zCDP_of_curve (k : ℕ) (σ : State rT) :
-    (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := fun b b' h ↦ by
-  have hle : (fun α ↦ k * rrRenyi α : RenyiBudget) ≤
-      concentratedLine (Set.Ioi 1) (k * ENNReal.ofReal (Real.log 3), 0) := fun α ↦ by
-    simpa [concentratedLine, α.2] using mul_le_mul' le_rfl (rrRenyi_le_log_three α.2)
-  exact IsGraded.mono (D := renyiCurve) (μ := limExecV ⟨rrCount b k, σ⟩)
-    (ν := limExecV ⟨rrCount b' k, σ⟩) hle (rrCount_curve k σ h)
+    (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
+  ProbabilityTheory.Kernel.zCDP_of_renyiCurve_le (rrCount_curve k σ) fun α ↦ by
+    simpa using mul_le_mul' le_rfl (rrRenyi_le_log_three α.2)
 
 end ProbLang.RandomizedResponse
