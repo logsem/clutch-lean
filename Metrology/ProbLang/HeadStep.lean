@@ -719,7 +719,7 @@ theorem headStep.c_load.measurable :
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)) := by
       baseLit_zero_loc_apply c_leaf, hc_leaf
-    exact BaseLit.measurable_param_swap hbase
+    exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
   exp_zero_lit_apply c_lit_inner, hc_lit
 
 /-- The `headStep` branch for a `store`, uncurried over the state and arguments. -/
@@ -811,7 +811,7 @@ theorem headStep.c_store.measurable :
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)) := by
       baseLit_zero_loc_apply c_leaf, h_leaf
-    exact BaseLit.measurable_param_swap hbase
+    exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
   exp_zero_lit_apply c_lit_inner, hc_lit
 
 /-- The `headStep` branch for a `tape`, uncurried over the state and arguments. -/
@@ -872,7 +872,7 @@ theorem headStep.c_tape.measurable :
             (fun z => c_int_inner (p.2, z)) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0)
             (fun _ => 0)) := by
       baseLit_zero_int_apply c_int_inner, hc_int
-    exact BaseLit.measurable_param_swap hbase
+    exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
   exp_zero_lit_apply c_lit_inner, hc_lit
 
 /-- The `headStep` branch for a `rand`, uncurried over the state and arguments. -/
