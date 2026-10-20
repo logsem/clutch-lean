@@ -315,6 +315,19 @@ instance headShift_escortPower : (escortPower.{u} α).HeadShift :=
 instance sideFree_escortPower : (escortPower.{u} α).SideFree :=
   sideFree_comap (law := escort α)
 
+/-- Escort power heads are diagonal on spaces with measurable singletons, as escort heads are
+(`escort_head_diag`). -/
+theorem escortPower_head_diag [MeasurableSingletonClass X] (μ : Measure X)
+    [IsSubProbabilityMeasure μ] {b : PowerBudget} (hb : b < ⊤) :
+    (escortPower α).head μ μ (fun x y ↦ relCost (· = ·) x y + b) b := by
+  have hrel (x y : X) : toRenyi α (relCost (B := PowerBudget) (· = ·) x y + b) =
+      relCost (· = ·) x y + toRenyi α b := by
+    rw [toRenyi_add]
+    by_cases h : x = y <;> simp [h]
+  rw [head_escortPower]
+  simp only [hrel]
+  exact escort_head_diag α μ (toRenyi_lt_top hα.out hb)
+
 end Power
 
 /-! ## Filled KL, adaptive on the left outcome -/
