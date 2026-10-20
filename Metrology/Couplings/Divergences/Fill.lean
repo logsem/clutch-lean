@@ -32,14 +32,6 @@ instance isProbabilityMeasure_withBot (μ : Measure X) [IsSubProbabilityMeasure 
     simpa [withBot, map_apply measurable_some .univ] using
       add_tsub_cancel_of_le (IsSubProbabilityMeasure.measure_le_one .univ)⟩
 
-/-- `none` is a measurable point of `Option X`. -/
-theorem _root_.measurableSet_none : MeasurableSet ({none} : Set (Option X)) := by
-  have : ({none} : Set (Option X)) = (fun o : Option X ↦ o.elim true fun _ ↦ false) ⁻¹' {true} := by
-    ext o
-    cases o <;> simp
-  rw [this]
-  exact measurable_option_elim measurable_const true (measurableSet_singleton true)
-
 /-- Off `none`, filling changes nothing. -/
 theorem withBot_apply_of_none_notMem (μ : Measure X) {s : Set (Option X)} (hs : MeasurableSet s)
     (hn : none ∉ s) : μ.withBot s = μ (some ⁻¹' s) := by
