@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.Examples.OTP
 public import Metrology.Micrometer.Examples.ContinuousOTP
+public import Metrology.Micrometer.Examples.ContinuousRules
 public import Metrology.Micrometer.Examples.Presample
 public import Metrology.Micrometer.Examples.SkipZero
 public import Metrology.Micrometer.Examples.AbsorbingExit
@@ -34,6 +35,7 @@ By divergence (`RR` is `RandomizedResponse`):
 
 By rule:
 * coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
+* continuous draws by credits, laws, and against `rand N` (`⌊N u⌋`): `ContinuousRules`
 * presampling with tapes: `Presample`
 * spending a credit on one draw: `SkipZero`, `RR.Basic`, `LeakyRR` (δ)
 * absorbing exit, capped credits: `AbsorbingExit`
