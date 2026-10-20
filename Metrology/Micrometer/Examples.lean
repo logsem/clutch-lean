@@ -9,6 +9,7 @@ public import Metrology.Micrometer.Examples.AbsorbingExit
 public import Metrology.Micrometer.Examples.Retry
 public import Metrology.Micrometer.Examples.RandomizedResponse
 public import Metrology.Micrometer.Examples.PublicChoice
+public import Metrology.Micrometer.Examples.PublicChoiceZcdp
 public import Metrology.Micrometer.Examples.LeakyRR
 public import Metrology.Micrometer.Examples.NoisyCount
 public import Metrology.Micrometer.Examples.ContextualDp
@@ -28,10 +29,11 @@ By divergence (`RR` is `RandomizedResponse`):
 * approximate DP: `LeakyRR`
 * Rényi at one order: `RR.Renyi`, `RR.Adaptive`, `Couplings.Examples.AdaptiveRenyi`
 * Rényi curve: `RR.Curve`
-* zCDP: `RR.Zcdp`, `RR.Twice`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition`
+* zCDP: `RR.Zcdp`, `RR.Twice`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition`,
+  `PublicChoiceZcdp` (from two-way pure DP)
 * tCDP: `RR.Tcdp`
 * χ²: `RR.Chi2`
-* KL: `RR.FillKl` (filled KL, in the logic), `Couplings.Examples.KLCoinFlips` (lifting level)
+* KL: `RR.FillKl` (filled KL, in the logic; also read off Rényi and zCDP), `Couplings.Examples.KLCoinFlips` (lifting level)
 
 By rule:
 * coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
