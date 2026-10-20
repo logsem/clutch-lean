@@ -52,6 +52,7 @@ theorem codensity_rel_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B
     fun h I _ c hbc k l _ _ hkl ↦ h hbc fun x y hS ↦ by simpa [hS] using hkl x y⟩
   by_cases hS : S x y
   · simpa [hS] using hkl x y hS
+  -- off `S` the leftover is `⊤`, so the test premise holds by grading
   · exact IsGraded.of_top_le (by simp [hS]) _ _
 
 /-! ## Lawfulness and bind -/

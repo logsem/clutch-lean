@@ -4,8 +4,9 @@ public import Metrology.Micrometer.ProgCoupl
 
 /-! # Micrometer weakest precondition
 
-`wpPre` (a spec phase, then a value or one coupled program step, a later and another spec phase),
-its guarded fixpoint `wp` with `wp_unfold`, the `WP[L] e @ E {{ Φ }}` notation, `wp_strong_mono`. -/
+`wp L E e Φ`, the guarded fixpoint of `wpPre` (a spec phase, then a value or one coupled program
+step, a later and another spec phase), with `wp_unfold`, `WP[L] e @ E {{ Φ }}` and
+`wp_strong_mono`. -/
 
 @[expose] public section
 
@@ -82,37 +83,6 @@ theorem wp_unfold_mp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
   (BI.equiv_iff.mp wp_unfold).1
 
-/-! ## The continuation after a program step -/
-
-variable (L) in
-/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
-verbatim. -/
-noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
-    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
-  iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
-    stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
-
-/-- At an absorbing budget the continuation holds trivially. -/
-theorem wpProgBody_absorbing {E : CoPset} {Φ : Val rT → IProp GF} {b : B} (hb : L.Absorbing b) :
-    ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by
-  iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
-  iapply specCoupl_absorbing hb
-
-/-- The continuation can be mapped under its later by an update from the old `wp` to a new one,
-which may change the mask, the expression and the postcondition. -/
-theorem wpProgBody_wand {E E' : CoPset} {Φ Ψ : Val rT → IProp GF} {e₃ e₄ : Exp rT}
-    {σ₃ : State rT} {e₃' : Exp rT} {σ₃' : State rT} {b : B} : iprop%
-    wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b ∗ ▷ (wp L E e₃ Φ ={E, E'}=∗ wp L E' e₄ Ψ) ⊢
-      wpProgBody L E' Ψ e₄ σ₃ e₃' σ₃' b := by
-  iintro ⟨HBody, HWand⟩ !>
-  iapply specCoupl_mono_spatial
-  iframe HBody
-  iintro %σ₄ %ρ₄ %b₄ HF
-  imod HF with ⟨Hσ, Hs, Hb, Hwp⟩
-  imod HWand $$ Hwp with Hwp
-  imodintro
-  iframe
-
 /-! ## `WP[L] e @ E {{ Φ }}` notation
 
 The postcondition is either a function `{{ Φ }}` or a binder form `{{ v, P }}`; the mask
@@ -134,6 +104,7 @@ macro_rules
     let E ← E.getDM `(⊤)
     `(wp $L $E $e iprop($Φ))
 
+/-- Prints `wp L E e Φ` back as `WP[L] e @ E {{ Φ }}`, dropping `@ ⊤`. -/
 @[app_unexpander ProbLang.MicrometerWpGS.wp]
 meta def unexpandWp : Lean.PrettyPrinter.Unexpander
   | `($_ $L $E $e $Φ) => do
@@ -191,6 +162,37 @@ theorem wp_value_specCoupl_unfold {e : Exp rT} {v : Val rT} {Φ : Val rT → IPr
   simp only [wpPre, He]
   exact .rfl
 
+/-! ## The continuation after a program step -/
+
+variable (L) in
+/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
+verbatim. -/
+noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
+    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
+  iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
+    stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
+
+/-- At an absorbing budget the continuation holds trivially. -/
+theorem wpProgBody_absorbing {E : CoPset} {Φ : Val rT → IProp GF} {b : B} (hb : L.Absorbing b) :
+    ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by
+  iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
+  iapply specCoupl_absorbing hb
+
+/-- The continuation can be mapped under its later by an update from the old `wp` to a new one,
+which may change the mask, the expression and the postcondition. -/
+theorem wpProgBody_wand {E E' : CoPset} {Φ Ψ : Val rT → IProp GF} {e₃ e₄ : Exp rT}
+    {σ₃ : State rT} {e₃' : Exp rT} {σ₃' : State rT} {b : B} : iprop%
+    wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b ∗ ▷ (wp L E e₃ Φ ={E, E'}=∗ wp L E' e₄ Ψ) ⊢
+      wpProgBody L E' Ψ e₄ σ₃ e₃' σ₃' b := by
+  iintro ⟨HBody, HWand⟩ !>
+  iapply specCoupl_mono_spatial
+  iframe HBody
+  iintro %σ₄ %ρ₄ %b₄ HF
+  imod HF with ⟨Hσ, Hs, Hb, Hwp⟩
+  imod HWand $$ Hwp with Hwp
+  imodintro
+  iframe
+
 /-! ## Monotonicity and updates -/
 
 /-- The postcondition update `wp_strong_mono` asks for, framing the interpretations. -/
@@ -201,7 +203,7 @@ abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF :
     stateInterp σ ∗ SpecUpdateGS.specInterp ρ ∗ budgetInterp b ∗ Ψ v
 
 variable (L) in
-/-- The statement of `wp_strong_mono`, proved by Löb induction. -/
+/-- `wp_strong_mono` generalized over masks, expression and postconditions: the Löb statement. -/
 noncomputable abbrev wpStrongMonoStmt : IProp GF := iprop%
   ∀ E1 E2 (e : Exp rT) Φ Ψ, ⌜E1 ⊆ E2⌝ -∗ wp L E1 e Φ -∗ wpStrongMonoCont (B := B) E2 Φ Ψ -∗
     wp L E2 e Ψ
@@ -226,6 +228,7 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
     iintro %σ₂ %ρ₂ %b₂ HZ₁
     cases htv : e'.toVal? with
     | some v =>
+      -- At a value: close the mask and apply the postcondition update.
       iapply specCoupl_ret
       imod HZ₁ with ⟨Hσ', Hs', Hb', HΦv⟩
       imod Hclose
@@ -234,6 +237,7 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
       imodintro
       iframe
     | none =>
+      -- At a step: keep the program coupling and use `IH` under its later.
       iapply specCoupl_ret
       iapply progCoupl_mono
       iframe HZ₁
@@ -311,6 +315,7 @@ theorem wp_ne_aux {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} {n : N
         wpPre_ne_aux HΦ fun m Hm _ => IH m Hm fun v => OFE.Dist.lt (HΦ v) Hm
       _ ≡{n}≡ wp L E e Ψ := (OFE.eq_dist_1 wp_unfold n).symm
 
+/-- `wp` is non-expansive in the postcondition. -/
 instance wp_ne {E : CoPset} {e : Exp rT} : NonExpansive (wp L (GF := GF) E e) where
   ne _ _ _ H := wp_ne_aux H
 

@@ -4,8 +4,9 @@ public import Metrology.Couplings.Divergence
 
 /-! # Graded liftings
 
-`GradedLifting B` relates two measures within a budget along a per-pair leftover (Approximate Span
-Liftings, §5); this file gives its law classes and derived laws such as `Rel.prod`. -/
+`GradedLifting B` relates two measures within a budget, leaving a per-pair leftover (Approximate
+Span Liftings, §5); this file gives `Rel`, the law classes (`IsLawful`, `HasBind`, `IsSound`) and
+derived laws such as `HasBind.bind_rel` and `Rel.prod`. -/
 
 @[expose] public section
 
@@ -63,18 +64,19 @@ theorem relCost_anti [Zero B] [Preorder B] [OrderTop B] (h : ∀ x y, S x y → 
   · rw [relCost_of hS, relCost_of (h x y hS)]
   · exact (relCost_of_not (B := B) hS).symm ▸ le_top
 
-end relCost
-
-section Classes
-
-variable {B : Type v} (L : GradedLifting.{u} B)
-
+variable (L : GradedLifting.{u} B) in
 /-- The lifting of a relation `S`: leftover `0` on `S` and `⊤` off it. -/
 def Rel [Zero B] [Top B] {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B)
     (S : X → Y → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
   L b (relCost S) μ ν
 
+end relCost
+
+section Classes
+
 /-! ## Laws of a lifting -/
+
+variable {B : Type v} (L : GradedLifting.{u} B)
 
 /-- The structural laws of a lifting: Dirac pairs, zero measures, weakening, framing and
 pushforward. The `< ⊤` guards on `pure` and `frame` are needed by span liftings
@@ -171,6 +173,8 @@ class IsBudgetClosed [LT B] : Prop where
   of_forall_gt {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ b', b < b' → L b' R μ ν) → L b R μ ν
+
+/-! ## Absorbing budgets -/
 
 /-- A budget at which every pair of sub-probability measures is related (Rocq `GCFTop`). -/
 def Absorbing (b : B) : Prop :=
@@ -310,6 +314,8 @@ theorem HasBind.bind_of_ae [Preorder B] [Top B] [L.IsSupportLocal] [L.HasBind] {
     [IsSubMarkovKernel g] (h : L b R μ ν)
     (hk : ∀ᵐ x ∂μ, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y)) : L b R' (f ∘ₘ μ) (g ∘ₘ ν) := by
   classical
+  -- the continuations exist on the complement of a measurable null set `T`; set the leftover to
+  -- `⊤` on `T`, so `bind` never asks for them there
   obtain ⟨T, hkT, hT, hμT⟩ := exists_measurable_superset_of_null (ae_iff.1 hk)
   have hTk : ∀ x ∈ Tᶜ, ∀ y, R x y < ⊤ → L (R x y) R' (f x) (g y) :=
     fun x hx ↦ not_not.1 fun hn ↦ hx (hkT hn)

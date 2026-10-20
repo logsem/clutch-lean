@@ -16,9 +16,8 @@ import Mathlib.Algebra.Regular.Prod
 
 /-! # Randomized response in any lifting
 
-One round and the `k`-round loop refine themselves in any graded lifting given `RRCoupling L c`, so
-the loop is `k • c`-private in every divergence the lifting is sound for (`rrCount_isPrivate`).
-Also the one-round arithmetic and the budget `(ln 3, 0)` that the per-divergence files share. -/
+Given `RRCoupling L c`, one round and the `k`-round loop refine themselves in any graded lifting,
+so the loop is `k • c`-private in every divergence `L` is sound for (`rrCount_isPrivate`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (expBudget expBudget_of_ne_top)
@@ -26,7 +25,10 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-/-! ## The reported bit and its arithmetic -/
+/-! ## The reported bit and its arithmetic
+
+The facts the divergence files feed into `RRCoupling`: the fiber bound `rrOut_fiber_le_three`
+and the moment `fDiv_rrOut`. -/
 
 section Distribution
 
@@ -103,20 +105,6 @@ theorem fDiv_rrOut {α : ℝ} (hα : 1 < α) (b : Bool) :
   ring
 
 end Distribution
-
-/-! ## The budget `(ln 3, 0)` -/
-
-/-- The DP factor of budget `ln 3` is `3`. -/
-theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
-  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
-    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
-  norm_num
-
-/-- The privacy budget `(ln 3, 0)`, shared by the dp and zCDP liftings. -/
-noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.log 3), 0)
-
-/-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
-theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 /-! ## One round, in any lifting -/
 
@@ -263,6 +251,7 @@ include hc hcpl
 /-- `k` rounds couple equal outputs at `k • c`, given a coupling of one round's draws at `c`. -/
 theorem rrCount_rel (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
     L.Rel (k • c) (· = ·) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
+  -- relational adequacy at `lrel_int`, whose carrier forces equal outputs
   (approximates_coupling (GF := MicrometerFunctor rT B) (fun _ _ ↦ lrel_int) _ _ _ σ σ' _
     (fun _ _ ↦ lrel_int_car_eq) fun _ _ ↦
       rrCount_refines_of c (rr_refines_of c hc hcpl) b b' k).mono le_rfl adequacyRel_eq_subset
@@ -279,5 +268,19 @@ theorem rrCount_isPrivate {D : GradedDivergence.{0} B} [L.IsSound D] (k : ℕ) (
   fun b b' _ ↦ rrCount_div c hc hcpl b b' k σ σ
 
 end Adequacy
+
+/-! ## The budget `(ln 3, 0)` of the DP and zCDP files -/
+
+/-- The DP factor of budget `ln 3` is `3`. -/
+theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
+  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
+    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
+  norm_num
+
+/-- The privacy budget `(ln 3, 0)`, shared by the dp and zCDP liftings. -/
+noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.log 3), 0)
+
+/-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
+theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 end ProbLang.RandomizedResponse

@@ -10,8 +10,9 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Value relations and the refinement judgement
 
-Defines value relations `lrel` with a relation constructor per type former, and the refinement
-judgement `refines` (`REL[L] e << e' : A`); `lrel_arr` and `lrel_forall` refer back to `refines`. -/
+Value relations `lrel` (a COFE, so `lrel_rec` is a fixpoint) with one constructor per type
+former, and the refinement judgement `refines` (`REL[L] e << e' @ E : A`); `lrel_arr` and
+`lrel_forall` refer back to `refines`. -/
 
 @[expose] public section
 
@@ -32,8 +33,10 @@ structure lrel (rT : Type) (GF : BundledGFunctors) where
 
 attribute [instance] lrel.persistent
 
+/-- Apply a value relation to two values directly. -/
 instance coeFun_lrel {GF} : CoeFun (lrel rT GF) (fun _ => Val rT → Val rT → IProp GF) := ⟨lrel.car⟩
 
+/-- Value relations are equal when their underlying relations are. -/
 theorem lrel.ext {GF : BundledGFunctors} {A B : lrel rT GF}
     (h : ∀ v1 v2, A.car v1 v2 = B.car v1 v2) : A = B := by
   obtain ⟨carA, _⟩ := A
@@ -182,6 +185,7 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     · rw [h2]; exact Exp.IsLocallyClosed.pair hAcl.2.1 hBcl.2.1
     · rw [h2]; simp [Exp.fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
+/-- Related components give related pairs. -/
 theorem lrel_prod_pair {A B : lrel rT GF} {a a' b b' : Val rT} :
     iprop% A a a' ∗ B b b' ⊢ (lrel_prod A B).car (.pair a b) (.pair a' b') := by
   iintro ⟨HA, HB⟩
@@ -224,7 +228,7 @@ noncomputable def lrel_true : lrel rT GF where
   car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
   closed _ _ := .rfl
 
-/-! ### Recursive lrel via `fixpoint` -/
+/-! ### Recursive relations, as a fixpoint on the COFE -/
 
 -- TODO: Tweak the declarations below when fixpoints land
 /-- One unfolding of a recursive relation, with the recursive occurrence guarded by `▷`. -/
@@ -232,6 +236,7 @@ noncomputable def lrelRec1 (C : lrel rT GF -n> lrel rT GF) (r : lrel rT GF) : lr
   car w1 w2 := iprop% ⌜w1.1.isClosedEmpty ∧ w2.1.isClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
+/-- `lrelRec1 C` is contractive, since the recursive occurrence sits under `▷`. -/
 instance lrelRec1_contractive (C : lrel rT GF -n> lrel rT GF) : OFE.Contractive (lrelRec1 C) where
   distLater_dist {n P Q} hPQ w1 w2 := by
     show iprop(_ ∗ ▷ _) ≡{n}≡ iprop(_ ∗ ▷ _)
@@ -246,6 +251,7 @@ noncomputable def lrelRec1Hom (C : lrel rT GF -n> lrel rT GF) : lrel rT GF -c> l
 noncomputable def lrel_rec (C : lrel rT GF -n> lrel rT GF) : lrel rT GF :=
   fixpoint (lrelRec1 C)
 
+/-- A recursive relation equals its one-step unfolding. -/
 theorem lrel_rec_unfold (C : lrel rT GF -n> lrel rT GF) :
     lrel_rec C = lrelRec1 C (lrel_rec C) :=
   fixpoint_unfold (lrelRec1Hom C)
@@ -259,7 +265,7 @@ theorem lrel_rec_ne {n : Nat} {C1 C2 : lrel rT GF -n> lrel rT GF}
     sep_ne.ne .rfl
       (OFE.NonExpansive.ne (hC r w1 w2))
 
-/-! ### Nonexpansive instances on simple lrel constructors -/
+/-! ### Nonexpansiveness of the simple constructors -/
 
 -- TODO: Remove these hand-written proofs when nonexp lands
 
@@ -408,6 +414,7 @@ noncomputable def lrel_tape : lrel rT GF where
     iintro ⟨%α1, %α2, %z, %h1, %h2, _⟩ !%
     exact ⟨h1 ▸ Exp.lit_isClosedEmpty _, h2 ▸ Exp.lit_isClosedEmpty _⟩
 
+/-- `refines` is nonexpansive in the relation. -/
 theorem refines_ne {E : CoPset} {e e' : Exp rT} {n : Nat} {A B : lrel rT GF}
     (h : A ≡{n}≡ B) : refines L E e e' A ≡{n}≡ refines L E e e' B := by
   unfold refines

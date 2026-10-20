@@ -6,7 +6,7 @@ public import Metrology.Couplings.SubProbability
 /-! # Graded divergences
 
 `GradedDivergence`: yes/no predicates `D b μ ν` indexed by a budget, their property classes, the
-data processing laws that composability gives, and the constructions `comap` and `pi` (ASL §4). -/
+laws the chain rule `IsComposable` gives (data processing, products), and `comap`, `pi` (ASL §4). -/
 
 @[expose] public section
 
@@ -74,22 +74,22 @@ class IsBudgetClosed [LT B] : Prop where
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ b', b < b' → D b' μ ν) → D b μ ν
 
-/-- An event gap `δ` is met at the budget `s δ`, where `s` embeds an additive slack `δ` into the
-budget (`δ ↦ (0, δ)` for dp). -/
+/-- An additive event gap `δ` is met at budget `s δ`, where `s` places `δ` inside the budget
+(`δ ↦ (0, δ)` for dp). -/
 class HasSlack [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   of_forall_le {δ : ℝ≥0∞} {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ S, MeasurableSet S → μ S ≤ ν S + δ) → D (s δ) μ ν
 
-/-- Point masses within budget `s δ` differ in mass by at most `δ`, where `s` embeds an additive
-slack `δ` into the budget (`δ ↦ (0, δ)` for dp). -/
+/-- Scaled point masses within budget `s δ` differ in mass by at most `δ`, so `s δ` bounds a gap in
+termination probability. -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   le_add_of {p q δ : ℝ≥0∞} (hp : p ≤ 1) (hq : q ≤ 1) :
     D (s δ) (p • dirac PUnit.unit.{u + 1}) (q • dirac PUnit.unit) → p ≤ q + δ
 
 end Classes
 
-/-! ## Derived laws: data processing, products, relabelling -/
+/-! ## Derived laws: data processing, post-processing, products, relabelling -/
 
 section Laws
 
@@ -101,7 +101,7 @@ theorem IsGraded.of_top_le [LE B] [Top B] [D.IsGraded] {b : B} (hb : ⊤ ≤ b)
     (μ ν : Measure X) [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] : D b μ ν :=
   IsGraded.mono hb (IsGraded.top μ ν)
 
-/-- A budget holds once it holds whenever it is finite. -/
+/-- To prove `D b μ ν` it suffices to assume `b < ⊤`. -/
 theorem IsGraded.of_lt_top [Preorder B] [OrderTop B] [D.IsGraded] {b : B} {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (h : b < ⊤ → D b μ ν) : D b μ ν := by
   by_cases hb : ⊤ ≤ b
@@ -114,13 +114,13 @@ theorem IsComposable.subst [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {c 
     [IsSubMarkovKernel η] (h : ∀ x, D c (κ x) (η x)) : D c (κ ∘ₘ μ) (η ∘ₘ μ) :=
   zero_add c ▸ IsComposable.comp (IsReflexive.refl μ) h
 
-/-- Data processing along a sub-Markov kernel. -/
+/-- Data processing along a sub-Markov kernel: the chain rule with `κ = η` and `c = 0`. -/
 theorem IsComposable.comp_self [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {b : B}
     {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (κ : Kernel X Y)
     [IsSubMarkovKernel κ] (h : D b μ ν) : D b (κ ∘ₘ μ) (κ ∘ₘ ν) :=
   add_zero b ▸ IsComposable.comp h fun x ↦ IsReflexive.refl (κ x)
 
-/-- Data processing along a measurable map. -/
+/-- Post-processing: data processing along a measurable map. -/
 theorem IsComposable.map [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {b : B}
     {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] {f : X → Y}
     (h : D b μ ν) (hf : Measurable f := by fun_prop) : D b (μ.map f) (ν.map f) := by
@@ -159,7 +159,7 @@ section Comap
 variable {B : Type v} {B' : Type w} {φ : B' → B} {D : GradedDivergence.{u} B}
 
 variable (D φ) in
-/-- Regrading a divergence along a budget map (Rocq `GCF_regrade`). -/
+/-- Regrading: the divergence read through a budget map `φ : B' → B` (Rocq `GCF_regrade`). -/
 def comap : GradedDivergence.{u} B' :=
   fun b ↦ D (φ b)
 

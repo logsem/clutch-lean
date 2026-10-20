@@ -38,7 +38,7 @@ class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
 attribute [reducible, instance] RefinesPreGS.app RefinesPreGS.spec RefinesPreGS.bc
   RefinesPreGS.inv RefinesPreGS.nainv
 
-/-! ## Support: spec ownership in the empty context, values -/
+/-! ## Spec ownership in the empty context -/
 
 section Spec
 
@@ -54,23 +54,7 @@ theorem spec_fill_nil_eq_ofVal {GF : BundledGFunctors} [SpecGS rT GF] (v : Val r
     (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
   rfl
 
-/-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
-theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT) :
-    ⤇ Ectx.fill ([] : Ectx rT) v.1 ⊢@{IProp GF} ∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝ := by
-  rw [spec_fill_nil_eq_ofVal]
-  iintro Hj
-  iexists v
-  iframe Hj
-  ipureintro
-  rfl
-
 end Spec
-
-/-- A value runs to itself. -/
-theorem limExecV_of_isVal {rT : Type} [LawfulProbLangℝ rT] {e : Exp rT} (σ : State rT)
-    (hv : IsVal e) : limExecV ⟨e, σ⟩ = MeasureTheory.Measure.dirac e := by
-  rw [limExecV, limExec_of_isVal hv, asExpr,
-    MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
 
 /-! ## Adequacy for closed refinements -/
 
@@ -81,8 +65,8 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed]
 
-/-- A refinement from `↯b b` gives a lifting at budget `b` of the two limit outputs (clutch-dp's
-`adequacy_rel.v`). -/
+/-- A refinement from `↯b b`, proved for every ghost-state instance, gives a lifting at budget `b`
+of the two limit outputs (clutch-dp's `adequacy_rel.v`). -/
 theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
     (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
     (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT) (b : B)
@@ -97,10 +81,12 @@ theorem approximates_coupling {GF : BundledGFunctors} [RefinesPreGS rT B GF]
   obtain ⟨r, rfl⟩ := le_iff_exists_add.1 hb'.le
   have hr : (0 : B) < r := pos_iff_ne_zero.2 fun h => by simp [h] at hb'
   iintro He' Herr
+  -- Allocate a non-atomic invariant pool and build the ghost instance `Hlog` is applied at.
   imod Iris.NonAtomicInvariant.alloc with ⟨%γ, Htok⟩
   set IR : MicrometerRGS rT .hasNoLC GF := { micrometerGS := IGS, naInvG := _, nais := γ }
   icases BudgetCredit.split $$ Herr with ⟨Hb, Hr⟩
   ihave HlogR := Hlog IR IBC $$ Hb
+  -- Run the refinement with the spec thread in the empty context `[]` and threaded credit `r`.
   iunfold refines at HlogR
   rw [spec_eq_fill_nil e']
   ispecialize HlogR $$ %([] : Ectx rT) %r He' Htok Hr %hr
@@ -173,6 +159,30 @@ theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT
   exact Val.ext (h.trans h'.symm)
 
 end EqRelations
+
+/-! ## Support for the examples -/
+
+section Support
+
+variable {rT : Type} [LawfulProbLangℝ rT]
+
+/-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
+theorem spec_fill_nil_exists {GF : BundledGFunctors} [SpecGS rT GF] (v : Val rT) :
+    ⤇ Ectx.fill ([] : Ectx rT) v.1 ⊢@{IProp GF} ∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝ := by
+  rw [spec_fill_nil_eq_ofVal]
+  iintro Hj
+  iexists v
+  iframe Hj
+  ipureintro
+  rfl
+
+/-- A value runs to itself. -/
+theorem limExecV_of_isVal {e : Exp rT} (σ : State rT)
+    (hv : IsVal e) : limExecV ⟨e, σ⟩ = MeasureTheory.Measure.dirac e := by
+  rw [limExecV, limExec_of_isVal hv, asExpr,
+    MeasureTheory.Measure.map_dirac' Cfg.measurable_expr]
+
+end Support
 
 /-! ## A concrete functor list -/
 

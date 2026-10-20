@@ -4,8 +4,9 @@ public import Metrology.Micrometer.SpecCoupl
 
 /-! # The program-step modality `progCoupl`
 
-`progCoupl` couples one program step with spec steps by a bind law, in the shape adequacy consumes.
-The file gives its structural rules and intro rules for the common step shapes. -/
+`progCoupl` couples one program step with spec steps through a bind law, in exactly the shape the
+one-step lemma `lift_erasure_erasable_exp_lhs_kanto_law` consumes in adequacy. The file gives its
+structural rules and intro rules for the common step shapes. -/
 
 @[expose] public section
 
@@ -21,14 +22,13 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
 /-! ## The `progCoupl` modality
 
-Couples exactly one program step against any number of spec steps and an erasable distribution,
-by a lifting with per-pair leftovers and a bind law chosen for this step (clutch-dp `prog_coupl`).
--/
+Its conjuncts are the hypotheses of `lift_erasure_erasable_exp_lhs_kanto_law`, with the
+lifted-continuation premise replaced by an Iris continuation `Z` at pairs with finite leftover. -/
 
 variable (L) in
-/-- One program step against an erasable spec distribution by a step of a bind law: both are
-images of the law's head measures under `f` and `f'`, and `Z` continues at each pair whose leftover
-is finite (Rocq `prog_coupl`). -/
+/-- One program step coupled with `n` spec steps from an erasable spec-state distribution by a
+bind law: both runs are images of the law's head measures under `f` and `f'`, and `Z` continues at
+each pair whose leftover is finite (Rocq `prog_coupl`). -/
 abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁' : MeasureTheory.Measure (State rT))
@@ -42,6 +42,8 @@ abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : S
       ⌜ErasableExpr μ₁' σ₁'⌝ ∗
       (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
         Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')))
+
+/-! ### Basic properties -/
 
 /-- `progCoupl` is non-expansive in its continuation. -/
 theorem progCoupl_ne {n : Nat} {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
@@ -100,7 +102,8 @@ theorem progCoupl_intro_map (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT}
   iframe %
   iexact H
 
-/-- Introduce a program coupling by a step of any bind law (Rocq `prog_coupl_intro`). -/
+/-- `progCoupl_intro_map` with `f = f' = id`: the law's head is stated directly on the program
+step and the spec run (Rocq `prog_coupl_intro`). -/
 theorem progCoupl_intro_law (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     {σ₁' : State rT} {b : B} {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
     {μ₁' : MeasureTheory.Measure (State rT)} {R : Cfg rT → Cfg rT → B}
@@ -303,6 +306,7 @@ theorem progCoupl_det_step [Add B] [L.IsLawful] {e₁ : Exp rT} {σ₁ : State r
     iprop(|={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical
   iintro HZ
+  -- unit law at the Dirac pair `(⟨e₂, σ₂⟩, ⟨e₁', σ₁'⟩)` with leftover `b` there and `⊤` elsewhere
   let R : Cfg rT → Cfg rT → B := fun ρ ρ' =>
     if ρ = ⟨e₂, σ₂⟩ ∧ ρ' = ⟨e₁', σ₁'⟩ then b else (⊤ : B)
   have hR : R ⟨e₂, σ₂⟩ ⟨e₁', σ₁'⟩ = b := ite_eq_left ⟨rfl, rfl⟩
@@ -355,6 +359,7 @@ theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical
   iintro Hcnt
+  -- read `μ₁'` as a 0-step spec run from `e₁'`; leftover `⊤` off that expression
   have Hcpl' : L b (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then R ρ₁ ρ₂.state else (⊤ : B))
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN 0 ⟨e₁', σ⟩) := by
     simp only [pexecN_zero]

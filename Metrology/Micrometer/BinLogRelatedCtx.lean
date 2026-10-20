@@ -10,8 +10,8 @@ public import Metrology.ProbLang.ContextualRefinement
 /-! # Plugging into a context
 
 From `e ≤log e'` to `K[e] ≤log K[e']` for a typed context `K`: `bin_log_related_under_typed_ctx`
-for a valid hypothesis, `bin_log_related_under_linear_ctx` for one under a resource `P`
-(e.g. budget credits). -/
+for a valid hypothesis, and `bin_log_related_under_linear_ctx` for one under a resource `P`
+(e.g. budget credits) when `K.IsLinear`. -/
 
 @[expose] public section
 
@@ -165,8 +165,8 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 /-! ## Typed contexts -/
 
 /-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
-`Hrel` is valid (⊢) because binder frames run the hole under □; `Hbinders` keeps the context's
-binders fresh for the plugged terms, `Ctx.BindersFresh` for the relational context. -/
+`Hrel` is valid (⊢) because binder frames use it under □; `Hbinders` and `Ctx.BindersFresh` keep
+the frames' binders fresh for the plugged terms, the frame code and the relational context. -/
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
     (Hty_e' : Typed Γtc e' τ)
@@ -191,7 +191,8 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     have HtyK := TypedCtx.fill_typed Hty_e HKtail
     have HtyK' := TypedCtx.fill_typed Hty_e' HKtail
     simp only [Ctx.fill_cons, CtxItem.fill]
-    -- each frame is one compatibility lemma: the hole premise from `IHinner`, the rest from `Fund`
+    -- each frame is one typing rule, closed by its compatibility lemma: the hole premise
+    -- comes from the induction hypothesis `IHinner`, every other premise from `Fund`
     cases HKitem with
     | appL Hty2 => iapply bin_log_related_app $$ %(IHinner Γrc' HCtx Hfr) %(Fund Hty2)
     | appR Hty1 => iapply bin_log_related_app $$ %(Fund Hty1) %(IHinner Γrc' HCtx Hfr)
@@ -294,12 +295,12 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
 
 /-! ## Linear contexts: carrying a resource `P` -/
 
-/-- The item runs its hole at most once: it does not put the hole under a binder. -/
+/-- The frame does not put its hole inside a function body, so it runs the hole at most once. -/
 def CtxItem.IsLinear : CtxItem rT → Prop
   | .lam _ | .fix _ | .tlam | .unpackR _ _ => False
   | _ => True
 
-/-- Every item of `K` runs its hole at most once, so `K` may consume a non-duplicable resource. -/
+/-- Every frame of `K` is linear, so `K` may use a non-duplicable resource for its hole. -/
 def Ctx.IsLinear : Ctx rT → Prop
   | [] => True
   | k :: K' => k.IsLinear ∧ Ctx.IsLinear K'
@@ -309,8 +310,9 @@ set_option hygiene false in
 spending it once. -/
 local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc' HCtx $$ HP)
 
-/-- `bin_log_related_under_typed_ctx` under a resource `P` such as budget credits, for
-linear contexts (the context's own steps are budget-free). -/
+/-- `bin_log_related_under_typed_ctx` for a hypothesis under a resource `P` such as budget
+credits, restricted to linear contexts; no freshness hypotheses are needed since no linear frame
+closes a variable over the hole. -/
 theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Exp rT} {τ : Ty}
     {Γtc' : Tctx} {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
@@ -331,6 +333,7 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
     -- `ih_frame` spends the resource `HP` on the hole once; the other premises come from `Fund`
     -- at no cost
     cases HKitem with
+    -- the four frames that put the hole inside a function body are excluded by `Hlin`
     | lam | fix | tlam | unpackR => exact (Hlin.1 : False).elim
     | appL Hty2 => ih_frame; iapply bin_log_related_app $$ H %(Fund Hty2)
     | appR Hty1 => ih_frame; iapply bin_log_related_app $$ %(Fund Hty1) H

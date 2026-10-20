@@ -116,6 +116,7 @@ def fill (K : Ctx rT) (e : Exp rT) : Exp rT := K.foldr CtxItem.fill e
 @[simp] theorem fill_cons (k : CtxItem rT) (K : Ctx rT) (e : Exp rT) :
     fill (k :: K) e = k.fill (K.fill e) := rfl
 
+/-- Filling with a concatenation fills with the inner context first. -/
 theorem fill_append (K K' : Ctx rT) (e : Exp rT) :
     fill (K' ++ K) e = fill K' (fill K e) := by
   simp [fill, List.foldr_append]
@@ -329,8 +330,8 @@ theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
 def finalBool (b : Bool) : Set (Cfg rT) :=
   { ρ | ρ.expr = .lit (.bool b) }
 
-/-- `Γ ⊨ e ≤ctx≤ e' : τ`: every Bool-typed closing context and initial state gives `K[e]` at most
-the mass of `K[e']` on each Bool result; unlike Clutch's `ctx_refines`, mass is in `ENNReal`. -/
+/-- `Γ ⊨ e ≤ctx≤ e' : τ`: for every closing Bool context `K`, initial state and Boolean `b`, `K[e]`
+returns `b` with at most the probability that `K[e']` does (Clutch `ctx_refines`, in `ENNReal`). -/
 def CtxRefines (Γ : Tctx) (e e' : Exp rT) (τ : Ty) : Prop :=
   ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool),
     TypedCtx K Γ τ Tctx.empty .bool →

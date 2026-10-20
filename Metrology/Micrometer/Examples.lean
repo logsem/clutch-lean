@@ -15,7 +15,7 @@ public import Metrology.Micrometer.Examples.GaussianZcdp
 public import Metrology.Micrometer.Examples.Switching
 public import Metrology.Couplings.Examples
 
-/-! # Examples, by divergence and by program-logic rule
+/-! # Examples, by divergence, by program-logic rule, and by exit
 
 Each file proves a short Micrometer refinement and reads a standard statement off it by adequacy.
 Start with `RR.Basic`, one proof in any lifting. Lifting-only examples: `Couplings.Examples`.

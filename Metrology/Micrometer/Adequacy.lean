@@ -8,7 +8,8 @@ public import Metrology.Iris.StepFupd
 /-! # Adequacy of the Micrometer logic
 
 A `wp` proof from `↯b b` gives `L.Rel b (adequacyRel φ)` of the two limit outputs (`wp_adequacy`),
-and `D b` for every divergence `D` that `L` is sound for (`wp_adequacy_div`). -/
+and `D b` for every divergence `D` that `L` is sound for (`wp_adequacy_div`). The proof shows
+`execCoupl` at every fuel `n`, spending one later per program step, then takes the left limit. -/
 
 @[expose] public section
 
@@ -23,7 +24,7 @@ variable {B : Type}
 
 /-! ## Execution couplings -/
 
-/-- `φ` on expressions that are values. -/
+/-- Both expressions are values, and `φ` relates them. -/
 def adequacyRel (φ : Val rT → Val rT → Prop) (e e' : Exp rT) : Prop :=
   ∃ v v', e.toVal? = some v ∧ e'.toVal? = some v' ∧ φ v v'
 
@@ -34,8 +35,8 @@ theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e
 
 variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-/-- The lifting at budget `b` of the finite executions of `ρ` against the limit execution of
-`ρ'`. -/
+/-- The lifting at budget `b` of the `n`-fuel run of `ρ` against the limit run of `ρ'`, relating
+values by `φ`. -/
 @[reducible] def execCoupl [Zero B] [_root_.Top B] (L : GradedLifting.{0} B)
     (φ : Val rT → Val rT → Prop) (b : B) (n : Nat) (ρ ρ' : Cfg rT) : Prop :=
   L.Rel b (adequacyRel φ) (asExpr (execN n ρ)) (limExecV ρ')
@@ -50,10 +51,9 @@ section Adequacy
 variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
 
-/-- A spec coupling whose continuations give `m`-fuel execution couplings at the states
-satisfying `P` gives one itself, given `herase`, the one-round lifting lemma
-(`lift_erasure_erasable_law`) restricted to `P`-states; `P := True` gives `wp_adequacy_spec_coupl`,
-`P := mass 1` gives the `_term` form. -/
+/-- A spec coupling whose continuations give `m`-fuel execution couplings at `P`-states gives one
+itself, given the one-round lemma `herase` at `P`-states; `P := True` gives
+`wp_adequacy_spec_coupl`, `P := mass 1` gives `wp_adequacy_spec_coupl_term`. -/
 theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ : Exp rT)
     (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (Z : State rT → Cfg rT → B → IProp GF)
     (φ : Val rT → Val rT → Prop) (b : B) (hP : P σ₁)
@@ -74,15 +74,19 @@ theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ :
     (∀ σ₂ e₂' σ₂' b', ⌜P σ₂⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
     |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b₀ m ⟨e₁, σ₀⟩ ρ₀⌝)
+  -- induction on the least fixpoint `specCoupl`, with `Ψ` the claim at each node
   iintro Hspec HZ
   iapply specCoupl_ind (Ψ := Ψ) $$ [] %σ₁ %e₁' %σ₁' %b Hspec %hP HZ
   iintro !> %σ₀ %⟨e₀', σ₀'⟩ %b₀ H
   simp only [Ψ]
   iintro %hP₀ HZ
   icases H with ⟨%hVac | HZApp | HCpl⟩
+  -- absorbing budget: every pair is related
   · iapply fupd_step_fupdN_pure n ?_
     exact hVac _ _ _
+  -- `Z` holds now: the caller's continuation
   · iapply HZ $$ %σ₀ %e₀' %σ₀' %b₀ %hP₀ HZApp
+  -- one coupled round: `herase` reduces it to the continuations, which hold by induction
   · icases HCpl with ⟨%law, %k, %μ₁, %μ₁', %ν₀, %f', %R, %hmap, %hhead, %hside, %hErase,
       %hErase', HCont⟩
     iapply BIFUpdate.mono
@@ -96,9 +100,9 @@ theorem wp_adequacy_spec_coupl_guard (P : State rT → Prop) (n m : Nat) (e₁ :
     imod HCont $$ %σ₂ %⟨e₂', σ₂'⟩ %hR with ⟨HΨ, -⟩
     iapply HΨ $$ %hP₂ HZ
 
-/-- A program coupling whose continuations give `m`-fuel execution couplings at the pairs
-satisfying `P` gives an `m + 1`-fuel one, given `herase`, the one-round lifting lemma
-(`lift_erasure_erasable_exp_lhs_kanto_law`) restricted to `P`-pairs. -/
+/-- A program coupling whose continuations give `m`-fuel execution couplings at `P`-pairs gives an
+`m + 1`-fuel one, given the one-step lemma `herase` at `P`-pairs; `P := True` gives
+`wp_adequacy_prog_coupl`. -/
 theorem wp_adequacy_prog_coupl_guard (P : Exp rT → State rT → Prop) (n m : Nat) (e₁ : Exp rT)
     (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) (φ : Val rT → Val rT → Prop)
@@ -227,6 +231,7 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : 
       imod wp_adequacy_val_fupd e e' σ σ' n φ v b Hv $$ [$] with %hpure
       iapply fupd_step_fupdN_pure (n + 1) hpure
     · have hnone : e.toVal? = none := Exp.toVal?_eq_none.mpr He
+      -- `wpPre` at a non-value: specCoupl, then progCoupl, then ▷, then specCoupl, then `wp`
       imod wp_unfold_mp $$ Hwp %σ %e' %σ' %b [$] with Hwp
       iapply wp_adequacy_spec_coupl $$ Hwp
       rw [hnone]
@@ -285,7 +290,8 @@ section Lawful
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
-/-- `wp_adequacy` for the execution with `n` fuel. -/
+/-- A `wp` proof from `↯b b` couples the `n`-fuel left run with the right limit run at budget
+`b`. -/
 theorem wp_adequacy_exec_n [L.IsZeroLeft] (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
@@ -293,7 +299,7 @@ theorem wp_adequacy_exec_n [L.IsZeroLeft] (e e' : Exp rT) (σ σ' : State rT) (n
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
 
-/-! ### Taking the limit on the left -/
+/-! ### Taking the limit on the left, and reading off a divergence -/
 
 section Limit
 
@@ -333,7 +339,7 @@ theorem wp_adequacy_div_error_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L.
   IsSound.sound
     ((wp_adequacy_error_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
-/-- Adequacy bounds the mass of the left program by that of the right plus the slack `ε`. -/
+/-- A `wp` proof from `↯b (s ε)` bounds the left output mass by the right output mass plus `ε`. -/
 theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s] (e e' : Exp rT)
     (σ σ' : State rT) (φ : Val rT → Val rT → Prop) (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),

@@ -10,10 +10,10 @@ public import Metrology.Couplings.AdditiveCouplings
 
 @[expose] public section
 
-/-! # Program execution
+/-! # Program execution and the output distribution
 
-Bounded execution `execN` and its supremum, the output distribution `limExec` / `limExecV`.
-Main results: the unfolding `limExec_not_final` and the limit rule for liftings `limExecV_lift`. -/
+Bounded execution `execN`, its supremum `limExec`, and the output distribution `limExecV`.
+Main results: the one-step unfolding `limExec_not_final` and the limit rule `limExecV_lift`. -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
@@ -49,6 +49,7 @@ theorem execN_succ_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) (n : Nat)
 
 /-! ## Mass and monotonicity of `execN` -/
 
+/-- Bounded execution has mass at most one. -/
 theorem execN_univ_le_one
     (n : Nat) (ρ : Cfg rT) : (execN n ρ) Set.univ ≤ 1 := by
   induction n generalizing ρ with
@@ -64,7 +65,7 @@ theorem execN_univ_le_one
         _ = (primStep ρ) Set.univ := by simp
         _ ≤ 1 := primStep_univ_le_one ρ
 
-/-- Bounded-step execution has mass at most one. -/
+/-- Bounded execution is a sub-probability measure. -/
 instance execN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (execN n ρ) := ⟨execN_univ_le_one n ρ⟩
 
@@ -77,6 +78,7 @@ theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [Measurabl
   rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
   exact lintegral_mono (fun a => h a S)
 
+/-- One more step of fuel only adds terminated runs. -/
 theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
   induction n generalizing ρ with
   | zero => exact bot_le
@@ -86,7 +88,7 @@ theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ 
     · exact le_rfl
     · exact Measure.bind_mono_right' _ _ _ (execN_measurable _) (execN_measurable _) ih
 
-/-- Running longer only adds terminated runs. -/
+/-- Bounded execution is monotone in the fuel. -/
 theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ execN m ρ := by
   induction h with
   | refl => exact le_rfl
@@ -101,7 +103,7 @@ theorem execN_mono_singleton
 
 /-! ## The output distribution `limExec` / `limExecV` -/
 
-/-- Limiting distribution of an execution, over configurations. -/
+/-- The output distribution over final configurations: the supremum of `execN` over fuel. -/
 def limExec (ρ : Cfg rT) : Measure (Cfg rT) := ⨆ (i : ℕ), execN i ρ
 
 /-- The expression marginal of a measure on configurations. -/
@@ -112,7 +114,7 @@ instance asExpr.isSubProbabilityMeasure (μ : Measure (Cfg rT)) [IsSubProbabilit
     IsSubProbabilityMeasure (asExpr μ) :=
   isSubProbabilityMeasure_map _ _
 
-/-- Limiting distribution of an execution, over return values. -/
+/-- The output distribution over values: `limExec` with the final state forgotten. -/
 def limExecV (ρ : Cfg rT) : Measure (Exp rT) := asExpr <| limExec ρ
 
 /-- A monotone supremum of measures is computed setwise. -/
@@ -142,24 +144,25 @@ theorem limExec.measurable : Measurable (limExec : Cfg rT → Measure (Cfg rT)) 
 theorem limExecV.measurable : Measurable (limExecV : Cfg rT → Measure (Exp rT)) :=
   asExpr.measurable.comp limExec.measurable
 
+/-- A bound on an event under every bounded run bounds it under `limExec`. -/
 theorem limExec_leq_setwise {ρ : Cfg rT} {S : Set (Cfg rT)} {r : ENNReal} (HS : MeasurableSet S)
     (H : ∀ n, (execN n ρ) S ≤ r) : (limExec ρ) S ≤ r :=
   (limExec_apply _ HS).trans_le (iSup_le H)
 
--- Rocq: lim_exec_leq
+/-- A bound on the mass of every bounded run bounds the mass of `limExec` (Rocq `lim_exec_leq`). -/
 theorem limExec_leq_mass {ρ : Cfg rT} {r : ENNReal}
     (H : ∀ n, (execN n ρ) Set.univ ≤ r) : (limExec ρ) Set.univ ≤ r :=
   (limExec_univ ρ).trans_le (iSup_le H)
 
-/-- The limiting execution has mass at most one. -/
+/-- `limExec` is a sub-probability measure: its missing mass is the probability of not returning. -/
 instance limExec.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExec ρ) :=
   ⟨limExec_leq_mass fun n ↦ execN_univ_le_one n ρ⟩
 
-/-- The limiting distribution over return values has mass at most one. -/
+/-- `limExecV` is a sub-probability measure. -/
 instance limExecV.isSubProbabilityMeasure (ρ : Cfg rT) : IsSubProbabilityMeasure (limExecV ρ) :=
   isSubProbabilityMeasure_map _ _
 
-/-- The limit execution over return values, as a kernel. -/
+/-- `limExecV` as a kernel from configurations to expressions. -/
 def limExecVKernel : Kernel (Cfg rT) (Exp rT) := ⟨limExecV, limExecV.measurable⟩
 
 instance limExecVKernel.isSubMarkovKernel : IsSubMarkovKernel (limExecVKernel (rT := rT)) :=
@@ -167,8 +170,7 @@ instance limExecVKernel.isSubMarkovKernel : IsSubMarkovKernel (limExecVKernel (r
 
 /-! ## Terminating runs -/
 
-/-- A value's execution is its Dirac measure. -/
--- Rocq: lim_exec_final (value case)
+/-- A value's execution is its Dirac measure (Rocq `lim_exec_final`, value case). -/
 theorem limExec_of_isVal {e : Exp rT} {σ : State rT} (Hv : IsVal e) :
     limExec ⟨e, σ⟩ = dirac ⟨e, σ⟩ := by
   unfold limExec
@@ -186,6 +188,7 @@ theorem limExec_term {ρ : Cfg rT} {n : Nat} (Hv : (execN n ρ) Set.univ = 1) :
   (Measure.eq_of_le_of_measure_univ_eq hle
     (le_antisymm (hle _) (Hv ▸ IsSubProbabilityMeasure.measure_le_one _))).symm
 
+/-- A bounded run that deterministically ends at `ρ'` is the whole execution. -/
 theorem limExec_det_final {ρ ρ' : Cfg rT} {n : Nat} (H : (execN n ρ) = dirac ρ') :
     limExec ρ = dirac ρ' := by
   have htot : (execN n ρ) Set.univ = 1 := H ▸ dirac_apply_of_mem trivial
@@ -241,7 +244,7 @@ theorem limExec_step (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec 
   · simp only [hv, ↑reduceIte]
     exact limExec_not_final hv
 
-/-! ## `pexecN`: iterated `stepOrFinal`
+/-! ## `pexecN`: iterated `stepOrFinal`, the `n`-step unfolding
 
 Unlike `execN` (where `execN 0 = 0`), `pexecN` keeps unfinished runs, so it is additive
 (`pexecN_plus`); `limExec_pexecN` is the `n`-step unfolding of `limExec`. -/
@@ -304,11 +307,12 @@ theorem pexecN_plus (n m : Nat) (ρ : Cfg rT) : pexecN (n + m) ρ = (pexecN n ρ
       grind
     all_goals exact Measurable.aemeasurable (by measurability)
 
+/-- Deterministic multi-step runs compose. -/
 theorem pexecN_det_trans {n m : Nat} {ρ ρ' ρ'' : Cfg rT} (Hn : pexecN n ρ = dirac ρ')
     (Hm : pexecN m ρ' = dirac ρ'') : pexecN (n + m) ρ = dirac ρ'' := by
   rw [pexecN_plus, Hn, dirac_bind pexecN_measurable, Hm]
 
-/-- `limExec` is a fixed point of `pexecN n`. -/
+/-- `limExec` is `n` steps of `pexecN` followed by `limExec`. -/
 theorem limExec_pexecN (n : Nat) (ρ : Cfg rT) : limExec ρ = (pexecN n ρ).bind limExec := by
   induction n generalizing ρ with
   | zero =>
@@ -347,7 +351,65 @@ theorem lintegral_limExec
     exact le_iSup_of_le g (le_iSup_of_le hg le_rfl)
   · exact iSup_le fun n => lintegral_mono' (le_iSup (fun i => execN i ρ) n) le_rfl
 
-/-! ## Splitting `execN` by termination time -/
+/-! ## Liftings of the limit (Micrometer glue) -/
+
+section Lifting
+
+open GradedLifting
+
+variable {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous]
+
+/-- The limit of the finite executions inherits a lifting from every stage. -/
+theorem limExec_map_lift {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y] {b : B}
+    {R : X → Y → B} {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν] {F : Cfg rT → X}
+    (hF : Measurable F) (H : ∀ n, L b R ((execN n ρ).map F) ν) :
+    L b R ((limExec ρ).map F) ν := by
+  -- Pushforward commutes with the monotone sup; left-continuity of `L` does the rest.
+  rw [limExec, Measure.map_iSup_of_monotone execN_monotone hF]
+  exact IsLeftContinuous.iSup_left (fun _ _ h ↦ Measure.map_mono (execN_mono h ρ) hF) H
+
+/-- `limExec_map_lift` at `F := Cfg.expr`: the form `adequacy` needs. -/
+theorem limExecV_lift {Y : Type _} [MeasurableSpace Y] {b : B} {R : Exp rT → Y → B}
+    {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν]
+    (H : ∀ n, L b R (asExpr (execN n ρ)) ν) : L b R (limExecV ρ) ν :=
+  limExec_map_lift Cfg.measurable_expr H
+
+end Lifting
+
+/-! ## Additive (total-variation) couplings of the limit -/
+
+/-- The limit inherits an additive coupling from every stage (Rocq `lim_exec_ARcoupl`). -/
+theorem limExec_AddCoupl
+    {β : Type*} [MeasurableSpace β] {ε : ENNReal}
+    {Φ : Set (Cfg rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
+    (H : ∀ n, AddCoupl ε Φ (execN n ρ) μ₂) :
+    AddCoupl ε Φ (limExec ρ) μ₂ := by
+  intro ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
+  rw [lintegral_limExec ρ f]
+  exact iSup_le fun n => H n ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
+
+/-- `limExec_AddCoupl` through a measurable map, without a discrete σ-algebra on its codomain. -/
+theorem limExec_map_AddCoupl
+    {γ β : Type*} [MeasurableSpace γ] [MeasurableSpace β] {ε : ENNReal}
+    {Φ : Set (γ × β)} {ρ : Cfg rT} {μ₂ : Measure β}
+    {F : Cfg rT → γ} (hF : Measurable F)
+    (H : ∀ n, AddCoupl ε Φ ((execN n ρ).map F) μ₂) :
+    AddCoupl ε Φ ((limExec ρ).map F) μ₂ := by
+  refine AddCoupl.iSup_left (fun f hf => ?_) H
+  simp_rw [lintegral_map hf hF]
+  exact le_of_eq (lintegral_limExec ρ (fun a => f (F a)))
+
+/-- `limExec_map_AddCoupl` at `F := Cfg.expr`: the additive-coupling form of `limExecV_lift`. -/
+theorem limExecV_AddCoupl
+    {β : Type*} [MeasurableSpace β] {ε : ENNReal}
+    {Φ : Set (Exp rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
+    (H : ∀ n, AddCoupl ε Φ (asExpr (execN n ρ)) μ₂) :
+    AddCoupl ε Φ (limExecV ρ) μ₂ :=
+  limExec_map_AddCoupl Cfg.measurable_expr H
+
+/-! ## Splitting `execN` by termination time
+
+Technical support ported from SampCert; not used by the rest of the execution theory above. -/
 
 /-- Execution that reaches a value in exactly `N` steps. -/
 def execExactN (N : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
@@ -396,61 +458,6 @@ theorem execExactN_mono_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableS
   have hunfold : execExactN n ρ S = (if n < n + 1 then execExactN n ρ S else 0) := by simp
   rw [execExactN_sum_continuous HS, hunfold]
   exact ENNReal.le_tsum (f := fun N => if N < n + 1 then execExactN N ρ S else 0) n
-
-/-! ## Liftings of the limit (Micrometer glue) -/
-
-section Lifting
-
-open GradedLifting
-
-variable {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous]
-
-/-- The limit of the finite executions inherits a lifting from every stage. -/
-theorem limExec_map_lift {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y] {b : B}
-    {R : X → Y → B} {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν] {F : Cfg rT → X}
-    (hF : Measurable F) (H : ∀ n, L b R ((execN n ρ).map F) ν) :
-    L b R ((limExec ρ).map F) ν := by
-  -- Pushforward commutes with the monotone sup; left-continuity of `L` does the rest.
-  rw [limExec, Measure.map_iSup_of_monotone execN_monotone hF]
-  exact IsLeftContinuous.iSup_left (fun _ _ h ↦ Measure.map_mono (execN_mono h ρ) hF) H
-
-/-- `limExec_map_lift` at `F := Cfg.expr`: the form `adequacy` needs. -/
-theorem limExecV_lift {Y : Type _} [MeasurableSpace Y] {b : B} {R : Exp rT → Y → B}
-    {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν]
-    (H : ∀ n, L b R (asExpr (execN n ρ)) ν) : L b R (limExecV ρ) ν :=
-  limExec_map_lift Cfg.measurable_expr H
-
-end Lifting
-
-/-- The limit inherits an additive (total-variation) coupling from every stage. -/
--- Rocq: lim_exec_ARcoupl, specialized to additive form.
-theorem limExec_AddCoupl
-    {β : Type*} [MeasurableSpace β] {ε : ENNReal}
-    {Φ : Set (Cfg rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
-    (H : ∀ n, AddCoupl ε Φ (execN n ρ) μ₂) :
-    AddCoupl ε Φ (limExec ρ) μ₂ := by
-  intro ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
-  rw [lintegral_limExec ρ f]
-  exact iSup_le fun n => H n ⟨f, hf, hfb⟩ ⟨g, hg, hgb⟩ hfg
-
-/-- `limExec_AddCoupl` through a measurable map, without a discrete σ-algebra on its codomain. -/
-theorem limExec_map_AddCoupl
-    {γ β : Type*} [MeasurableSpace γ] [MeasurableSpace β] {ε : ENNReal}
-    {Φ : Set (γ × β)} {ρ : Cfg rT} {μ₂ : Measure β}
-    {F : Cfg rT → γ} (hF : Measurable F)
-    (H : ∀ n, AddCoupl ε Φ ((execN n ρ).map F) μ₂) :
-    AddCoupl ε Φ ((limExec ρ).map F) μ₂ := by
-  refine AddCoupl.iSup_left (fun f hf => ?_) H
-  simp_rw [lintegral_map hf hF]
-  exact le_of_eq (lintegral_limExec ρ (fun a => f (F a)))
-
-/-- `limExec_map_AddCoupl` at `F := Cfg.expr`: the additive-coupling form of `limExecV_lift`. -/
-theorem limExecV_AddCoupl
-    {β : Type*} [MeasurableSpace β] {ε : ENNReal}
-    {Φ : Set (Exp rT × β)} {ρ : Cfg rT} {μ₂ : Measure β}
-    (H : ∀ n, AddCoupl ε Φ (asExpr (execN n ρ)) μ₂) :
-    AddCoupl ε Φ (limExecV ρ) μ₂ :=
-  limExec_map_AddCoupl Cfg.measurable_expr H
 
 end ProbLang
 end

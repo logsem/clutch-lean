@@ -8,10 +8,8 @@ public import Metrology.Couplings.Divergences.Dp
 
 /-! # Contextual soundness
 
-A refinement from `↯b β` bounds by `β` the divergence, event masses or DP of every linear boolean
-context (`refines_ctx_div`, `_mass`, `_dp`, all from `refines_ctx_coupling`); without credits, every
-typed boolean context whose binders are fresh satisfies the inequality inside `CtxRefines`
-(`refines_sound_open_fresh`; `CtxRefines` itself is not concluded). -/
+`↯b β -∗ REL[L] e << e' : interp L τ Δ` bounds every linear boolean context by `β` (divergence,
+mass, DP: `refines_ctx_div`/`_mass`/`_dp`); without credits, `refines_sound_open_fresh`. -/
 
 @[expose] public section
 
@@ -24,7 +22,7 @@ section RefinesSound
 open MeasureTheory
 variable {rT : Type} {GF : BundledGFunctors}
 
-/-! ## Equal booleans: the pure content of `lrel_bool` -/
+/-! ## Pure facts: equal booleans and boolean results -/
 
 /-- Two values are the same boolean. -/
 def boolEqVal (v v' : Val rT) : Prop :=
@@ -77,51 +75,7 @@ theorem refines_bool_coupling (β : B) (e e' : Exp rT) (σ σ' : State rT)
 section Bind
 variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
-/-! ## Contextual refinement without credits -/
-
-variable (L) in
-/-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
-left no more often than on the right, from the same state (the inequality inside `CtxRefines`). -/
-theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
-    (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
-    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
-        ⊢@{IProp GF} bin_log_related_ty L (hlc := .hasNoLC) ⊤ Δ Γrc e e' τ) :
-    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ Tctx.empty .bool →
-      Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
-      limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
-  intro K σ₀ b Htyped HfreshK Hbinders
-  rw [limExec_finalBool, limExec_finalBool]
-  have hCpl : L.Rel 0 (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ₀⟩)
-      (limExecV ⟨K.fill e', σ₀⟩) := by
-    apply refines_coupling (GF := GF)
-    · exact fun _ _ v v' => lrel_bool_to_boolEqVal v v'
-    · intro IR IBC
-      have HrelClosed : ⊢@{IProp GF}
-          bin_log_related_ty L ⊤ (default : TyEnv rT GF) [] (K.fill e) (K.fill e') .bool :=
-        bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' Hbinders (Hlog IR IBC) _ _
-          TctxRelated.empty_nil HfreshK
-      exact HrelClosed.trans bin_log_related_nil_elim
-  exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
-    adequacyRel_boolEqVal_mem
-
-/-- A closed budget-free refinement makes each typed boolean context with fresh binders return `b`
-on the left no more often than on the right, from the same state (the inequality inside
-`CtxRefines`). -/
-theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
-    (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
-    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF), ⊢@{IProp GF} refines L (hlc := .hasNoLC) ⊤ e e' (interp L τ Δ)) :
-    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Tctx.empty τ Tctx.empty .bool →
-      Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
-      limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
-  apply refines_sound_open_fresh L s (GF := GF) Tctx.empty e e' τ Hty_e Hty_e'
-  intro IR IBC Δ Γrc HCtx
-  obtain rfl := HCtx.eq_nil_of_empty
-  iapply bin_log_related_nil_intro
-  iapply Hlog IR IBC Δ
-
-/-! ## Contextual soundness under budget credits -/
+/-! ## Linear contexts under budget credits -/
 
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
@@ -182,6 +136,8 @@ end Budget
 
 end RefinesSound
 
+/-! ## Differential privacy -/
+
 section RefinesSoundDp
 open MeasureTheory GradedDivergence
 open scoped _root_.ENNReal
@@ -203,5 +159,60 @@ theorem refines_ctx_dp {ε δ : ℝ≥0∞} (hε : ε ≠ ∞) (e e' : Exp rT) (
     (.singleton _) (.singleton _) adequacyRel_boolEqVal_mem
 
 end RefinesSoundDp
+
+section RefinesSoundFree
+open MeasureTheory
+variable {rT : Type} {GF : BundledGFunctors}
+  [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
+  [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed] [RefinesPreGS rT B GF]
+variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+
+/-! ## Without credits: the inequality inside `CtxRefines` -/
+
+variable (L) in
+/-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
+left no more often than on the right, from the same state (the inequality inside `CtxRefines`). -/
+theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
+    (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
+      (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
+        ⊢@{IProp GF} bin_log_related_ty L (hlc := .hasNoLC) ⊤ Δ Γrc e e' τ) :
+    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ Tctx.empty .bool →
+      Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
+      limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
+  intro K σ₀ b Htyped HfreshK Hbinders
+  -- A budget-0 coupling through the unrestricted context lemma, then mass detection at `δ = 0`.
+  rw [limExec_finalBool, limExec_finalBool]
+  have hCpl : L.Rel 0 (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ₀⟩)
+      (limExecV ⟨K.fill e', σ₀⟩) := by
+    apply refines_coupling (GF := GF)
+    · exact fun _ _ v v' => lrel_bool_to_boolEqVal v v'
+    · intro IR IBC
+      have HrelClosed : ⊢@{IProp GF}
+          bin_log_related_ty L ⊤ (default : TyEnv rT GF) [] (K.fill e) (K.fill e') .bool :=
+        bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' Hbinders (Hlog IR IBC) _ _
+          TctxRelated.empty_nil HfreshK
+      exact HrelClosed.trans bin_log_related_nil_elim
+  exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
+    adequacyRel_boolEqVal_mem
+
+/-- A closed budget-free refinement makes each typed boolean context with fresh binders return `b`
+on the left no more often than on the right, from the same state (the inequality inside
+`CtxRefines`). -/
+theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
+    (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
+      (Δ : TyEnv rT GF), ⊢@{IProp GF} refines L (hlc := .hasNoLC) ⊤ e e' (interp L τ Δ)) :
+    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Tctx.empty τ Tctx.empty .bool →
+      Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
+      limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
+  apply refines_sound_open_fresh L s (GF := GF) Tctx.empty e e' τ Hty_e Hty_e'
+  intro IR IBC Δ Γrc HCtx
+  obtain rfl := HCtx.eq_nil_of_empty
+  iapply bin_log_related_nil_intro
+  iapply Hlog IR IBC Δ
+
+end RefinesSoundFree
 
 end ProbLang

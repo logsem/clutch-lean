@@ -4,8 +4,8 @@ public import Metrology.Micrometer.MicrometerWpGS
 
 /-! # The `specCoupl` modality
 
-`specCoupl L E σ e' σ' b Z`: spec-only steps and erasable state changes, coupled by bind-law
-rounds within budget `b`, before the continuation `Z`; its introduction and structural rules. -/
+`specCoupl L E σ e' σ' b Z`, the least fixpoint of spec-only coupled rounds that exits at an
+absorbing budget or at the continuation `Z`; its introduction, bind, fancy-update and step rules. -/
 
 @[expose] public section
 
@@ -31,9 +31,9 @@ instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
 instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
 variable (L) in
-/-- One coupled round: a bind-law step within `b` between erasable state distributions, the
-spec's `n`-step run being `ν₀.map f'`, then `Φ` at each pair with finite leftover
-(Rocq `spec_coupl_pre`). -/
+/-- One spec-side coupled round: a bind-law step within `b` from an erasable program-state
+distribution `μ₁` against the spec's `n`-step run `ν₀.map f'`, then `Φ` at each pair with finite
+leftover (Rocq `spec_coupl_pre`). -/
 abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : MeasureTheory.Measure (State rT))
@@ -53,7 +53,8 @@ abbrev specCouplPre (E : CoPset) (Z : State rT → Cfg rT → B → IProp GF)
     ⌜L.Absorbing b⌝ ∨ Z σ₁ ⟨e₁', σ₁'⟩ b ∨ specCouplCouple L E σ₁ e₁' σ₁' b Φ
 
 variable (L) in
-/-- Spec steps and erasable distributions coupled by bind laws before `Z` (Rocq `spec_coupl`). -/
+/-- Least fixpoint of spec-only coupled rounds, exiting at an absorbing budget or at `Z`
+(Rocq `spec_coupl`). -/
 abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
     (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)
@@ -133,6 +134,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : Sta
     (∀ σ₂ ρ₂ b', Z₁ σ₂ ρ₂ b' -∗ specCoupl L E2 σ₂ ρ₂.expr ρ₂.state b' Z₂) ∗
     specCoupl L E1 σ e' σ' b Z₁ ⊢ specCoupl L E2 σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩
+  -- iterate on the fixpoint with the claim "the bind hypothesis gives `specCoupl … Z₂` here"
   let Φ : SpecCouplState rT B → IProp GF := fun s => iprop%
     (∀ σ₂ ρ₂ b', Z₁ σ₂ ρ₂ b' -∗ specCoupl L E2 σ₂ ρ₂.expr ρ₂.state b' Z₂) -∗
       specCoupl L E2 s.1 s.2.1.expr s.2.1.state s.2.2 Z₂
@@ -188,7 +190,7 @@ theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp G
   obtain ⟨σ'', c, b'⟩ := s
   iapply IH $$ %σ'' %c %b' HF
 
-/-! ## Coupling rules -/
+/-! ## Coupling rules: wrappers around `specCoupl_rec` -/
 
 /-- Introduce a spec coupling by a step of any bind law, whose spec distribution is the image of
 the law's spec-side head measure under `f'` (Rocq `spec_coupl_rec_map`). -/
@@ -202,6 +204,7 @@ theorem specCoupl_couple_map (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {
     (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=>
       specCoupl L E σ₂ (f' ρ).expr (f' ρ).state (R σ₂ ρ) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
+  -- `iframe %` closes the pure conjunct `⌜Measurable f' ∧ …⌝` from this hypothesis
   have hmap := And.intro hf' hspec
   iintro H
   iapply specCoupl_rec
@@ -318,6 +321,7 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
   -- the unit law only carries a finite budget; at b₁ = ⊤ exit through absorption
   rcases lt_or_eq_of_le (le_top : b₁ ≤ (⊤ : B)) with hb₁ | rfl
   · iintro HF
+    -- one unit-law round between point masses: leftover `b₁` at the target pair, `⊤` elsewhere
     let R : State rT → Cfg rT → B := fun s c => if s = σ ∧ c = ⟨e₂', σ₂'⟩ then b₁ else (⊤ : B)
     have hR : R σ ⟨e₂', σ₂'⟩ = b₁ := ite_eq_left ⟨rfl, rfl⟩
     have hhead : (BindLaw.unit L).head (MeasureTheory.Measure.dirac σ)
@@ -407,6 +411,7 @@ theorem specCoupl_step [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] 
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_step_concentrated Hred.toReducible (measurableSet_primStep_support e₁' σ₁')
     (concentrated_primStep_support e₁' σ₁' hne)
+
 end MicrometerWpGS
 
 end ProbLang
