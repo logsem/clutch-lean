@@ -91,13 +91,7 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
           bin_log_related_ty L ⊤ (default : TyEnv rT GF) [] (K.fill e) (K.fill e') .bool :=
         bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' Hbinders (Hlog IR IBC) _ _
           TctxRelated.empty_nil HfreshK
-      unfold bin_log_related_ty bin_log_related at HrelClosed
-      show ⊢@{IProp GF} refines L ⊤
-        (Exp.substMap (ValSubstMap.fst ([] : ValSubstMap rT)) (K.fill e))
-        (Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) (K.fill e'))
-        (interp L Ty.bool (default : TyEnv rT GF))
-      iapply HrelClosed $$ %([] : ValSubstMap rT)
-      iapply env_ltyped2_empty
+      exact HrelClosed.trans bin_log_related_nil_elim
   exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
     adequacyRel_boolEqVal_mem
 
@@ -112,13 +106,8 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   apply refines_sound_open_fresh L s (GF := GF) Tctx.empty e e' τ Hty_e Hty_e'
   intro IR IBC Δ Γrc HCtx
   obtain rfl := HCtx.eq_nil_of_empty
-  unfold bin_log_related_ty bin_log_related
-  iintro %vs Hvs
-  ihave ⟨%hvs_nil⟩ := env_ltyped2_empty_inv vs $$ Hvs
-  rw [hvs_nil]
-  iclear Hvs
-  show ⊢@{IProp GF} refines L ⊤ e e' (interp L τ Δ)
-  exact Hlog IR IBC Δ
+  iapply bin_log_related_nil_intro
+  iapply Hlog IR IBC Δ
 
 variable (L) in
 /-- A refinement from `↯b β` couples the runs of every linear boolean context at `β` along equal
@@ -134,22 +123,15 @@ theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
       ⊢@{IProp GF} ↯b β -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ := by
     intro Δ Γrc HCtx
     obtain rfl := HCtx.eq_nil_of_empty
-    unfold bin_log_related_ty bin_log_related
-    iintro Hb %vs Hvs
-    ihave ⟨%hvs_nil⟩ := env_ltyped2_empty_inv vs $$ Hvs
-    subst hvs_nil
-    iapply (show ⊢@{IProp GF} ↯b β -∗ refines L ⊤ (Exp.substMap (ValSubstMap.fst []) e)
-      (Exp.substMap (ValSubstMap.snd []) e') (interp L τ Δ) from Hlog IR IBC Δ) $$ Hb
+    iintro Hb
+    iapply bin_log_related_nil_intro
+    iapply Hlog IR IBC Δ $$ Hb
   have H := bin_log_related_under_linear_ctx HK Hlin Hrel (default : TyEnv rT GF) []
     TctxRelated.empty_nil
-  unfold bin_log_related_ty bin_log_related at H
-  show ⊢@{IProp GF} ↯b β -∗ refines L ⊤
-    (Exp.substMap (ValSubstMap.fst ([] : ValSubstMap rT)) (K.fill e))
-    (Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) (K.fill e'))
-    (interp L Ty.bool (default : TyEnv rT GF))
+  show ⊢@{IProp GF} ↯b β -∗ refines L ⊤ (K.fill e) (K.fill e') (interp L .bool default)
   iintro Hb
-  iapply H $$ Hb %([] : ValSubstMap rT)
-  iapply env_ltyped2_empty
+  iapply bin_log_related_nil_elim
+  iapply H $$ Hb
 
 /-- A refinement from `↯b β` bounds the divergence of every linear boolean context's outputs by
 `β`, for a divergence `D` the lifting is sound for. -/

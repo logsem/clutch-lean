@@ -153,11 +153,8 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
 theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
     ⊢@{IProp GF} refines L ⊤ e e (interp L τ Δ) := by
   have Hfund := fundamental L Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])
-  unfold bin_log_related_ty bin_log_related at Hfund
-  show ⊢@{IProp GF} refines L ⊤ (substMap (ValSubstMap.fst ([] : ValSubstMap rT)) e)
-    (substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e) (interp L τ Δ)
-  iapply Hfund $$ %([] : ValSubstMap rT)
-  iapply env_ltyped2_empty
+  iapply bin_log_related_nil_elim
+  iapply Hfund
 
 end Prim
 

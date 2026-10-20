@@ -225,6 +225,27 @@ noncomputable abbrev bin_log_related_ty (E : CoPset) (Δ : TyEnv rT GF)
     (Γ : RelCtx rT GF) (e e' : Exp rT) (τ : Ty) : IProp GF :=
   bin_log_related L E Γ e e' (interp L τ Δ)
 
+/-- At the empty context, the semantic typing judgement is a closed refinement. -/
+theorem bin_log_related_nil_elim {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} :
+    bin_log_related L E [] e e' A ⊢ refines L E e e' A := by
+  show bin_log_related L E [] e e' A ⊢ refines L E (Exp.substMap (ValSubstMap.fst []) e)
+    (Exp.substMap (ValSubstMap.snd []) e') A
+  unfold bin_log_related
+  iintro H
+  iapply H $$ %([] : ValSubstMap rT)
+  iapply env_ltyped2_empty
+
+/-- A closed refinement is the semantic typing judgement at the empty context. -/
+theorem bin_log_related_nil_intro {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} :
+    refines L E e e' A ⊢ bin_log_related L E [] e e' A := by
+  unfold bin_log_related
+  iintro H %vs Hvs
+  ihave ⟨%hvs_nil⟩ := env_ltyped2_empty_inv vs $$ Hvs
+  subst hvs_nil
+  rw [show Exp.substMap (ValSubstMap.fst ([] : ValSubstMap rT)) e = e from rfl,
+    show Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e' = e' from rfl]
+  iexact H
+
 theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A : lrel rT GF}
     {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y) (hxNotDom : x ∉ (Γ.map (·.1)).toFinset)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
