@@ -59,6 +59,7 @@ theorem mono_grading {ε ε' : ENNReal} {S : Set (α × β)} {μₗ : Measure α
     (Hε : ε ≤ ε') (H : AddCoupl ε S μₗ μᵣ) : AddCoupl ε' S μₗ μᵣ :=
   ARCoupling.mono_F (fun x => by gcongr) H
 
+/-- The zero measure on the left is coupled with anything (Rocq `ARcoupl_dzero`). -/
 theorem zero_left {ε : ENNReal} (S : Set (α × β)) (μᵣ : Measure β) : AddCoupl ε S 0 μᵣ :=
   ARCoupling.zero_left S μᵣ
 
@@ -357,7 +358,7 @@ theorem concentrated_L {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} 
   exact H F ⟨g, Hgm, Hgb⟩ HFG
 
 /-- A measure on a countable space lives on its atoms. -/
-theorem MeasureTheory.measure_compl_atoms_null [Countable α] (μ : Measure α) :
+theorem _root_.MeasureTheory.measure_compl_atoms_null [Countable α] (μ : Measure α) :
     μ {a | μ {a} ≠ 0}ᶜ = 0 := by
   rw [show {a | μ {a} ≠ 0}ᶜ = ⋃ a ∈ {a | μ {a} = 0}, ({a} : Set α) by ext; simp,
     measure_biUnion_null_iff (Set.to_countable _)]
@@ -386,6 +387,7 @@ theorem eq_elim {ε : ENNReal} {μ ν : Measure α}
   have key := h ⟨_, hind, hb⟩ ⟨_, hind, hb⟩ fun {a b} (hab : a = b) => hab ▸ le_rfl
   rwa [lintegral_indicator_one hS, lintegral_indicator_one hS] at key
 
+/-- Equality couplings of error zero both ways force equal measures (Rocq `ARcoupl_antisym`). -/
 theorem eq_of_eq_zero {μ ν : Measure α}
     (h₁ : AddCoupl 0 {p : α × α | p.1 = p.2} μ ν)
     (h₂ : AddCoupl 0 {p : α × α | p.1 = p.2} ν μ) :
@@ -409,22 +411,9 @@ theorem limit {ε : ENNReal} {S : Set (α × β)}
   rw [add_assoc]
   exact H δ (by exact_mod_cast Hδ) f g Hfg
 
-theorem dzero {ε : ENNReal} (S : Set (α × β)) (μᵣ : Measure β) :
-    AddCoupl ε S (0 : Measure α) μᵣ :=
-  AddCoupl.zero_left S μᵣ
-
-theorem dzero_dzero {ε : ENNReal} (S : Set (α × β)) :
-    AddCoupl ε S (0 : Measure α) (0 : Measure β) :=
-  AddCoupl.zero_left S 0
-
 theorem dzero_r_inv {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
     (H : AddCoupl ε S μₗ (0 : Measure β)) : μₗ .univ ≤ ε := by
   simpa using AddCoupl.mass_leq H
-
-theorem antisym {μ₁ μ₂ : Measure α}
-    (H₁ : AddCoupl 0 (fun v => v.1 = v.2) μ₁ μ₂)
-    (H₂ : AddCoupl 0 (fun v => v.1 = v.2) μ₂ μ₁) : μ₁ = μ₂ :=
-  eq_of_eq_zero H₁ H₂
 
 /-- Additive couplings of measures of equal mass at most one swap sides. -/
 theorem swap {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
