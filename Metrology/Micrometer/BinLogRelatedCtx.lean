@@ -166,9 +166,7 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     have Hfr := HfreshTail.mono Finset.subset_union_left
     have Fund := fun {e₀ : Exp rT} {τ₀ : Ty} (h : Typed Γtc' e₀ τ₀) => fundamental L h Δ Γrc' HCtx
     have HtyK := TypedCtx.fill_typed Hty_e HKtail
-      fun y hy => ⟨(HbindersK' y hy).1, (HbindersK' y hy).2.2⟩
     have HtyK' := TypedCtx.fill_typed Hty_e' HKtail
-      fun y hy => ⟨(HbindersK' y hy).2.1, (HbindersK' y hy).2.2⟩
     simp only [Ctx.fill_cons, CtxItem.fill]
     cases HKitem with
     | appL Hty2 => iapply bin_log_related_app $$ %(IHinner Γrc' HCtx Hfr) %(Fund Hty2)

@@ -216,7 +216,6 @@ inductive TypedCtxItem : CtxItem rT → Tctx → Ty → Tctx → Ty → Prop
       TypedCtxItem .tlam Γ.shift τ Γ (.forall' τ)
   | tapp {Γ τ τ'} :
       TypedCtxItem .tapp Γ (.forall' τ) Γ (τ.single τ')
-  -- `x ∉ e2.fv` discharges the cofinite premise of `Typed.tunpack` in `fill_typed`.
   | unpackL {x : Var} {e2 Γ τ τ2} :
       x ∉ e2.fv →
       Typed ((Γ.shift).insert x τ) e2 τ2.shift →
@@ -321,10 +320,9 @@ theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     | (rename_i x _; exact hy.symm.imp_right fun h => Exp.close_fv_subset _ x h)
 
 /-- Filling a well-typed frame with a well-typed term is well typed (Clutch
-`typed_ctx_item_typed`); `hfresh` holds for elaborated frames since atoms come from `freshAtom`. -/
+`typed_ctx_item_typed`). -/
 theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
-    (he : Typed Γ e τ) (hk : TypedCtxItem k Γ τ Γ' τ')
-    (hfresh : ∀ x ∈ k.binderAtoms, x ∉ e.fv) :
+    (he : Typed Γ e τ) (hk : TypedCtxItem k Γ τ Γ' τ') :
     Typed Γ' (k.fill e) τ' := by
   induction hk with
   | @lam _ x =>
@@ -397,22 +395,13 @@ theorem Ctx.fv_fill_subset (K : Ctx rT) (e : Exp rT) :
 
 /-- Filling a well-typed context with a well-typed term is well typed (Clutch `typed_ctx_typed`). -/
 theorem TypedCtx.fill_typed {K : Ctx rT} {Γ τ Γ' τ'} {e : Exp rT}
-    (he : Typed Γ e τ) (hK : TypedCtx K Γ τ Γ' τ')
-    (hfresh : ∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ Ctx.payloadFv K) :
+    (he : Typed Γ e τ) (hK : TypedCtx K Γ τ Γ' τ') :
     Typed Γ' (K.fill e) τ' := by
   induction hK with
   | nil => exact he
   | @cons K k _ _ _ _ _ _ hk _ ih =>
-      have hfresh_K x (hx : x ∈ Ctx.binderAtoms K) := hfresh x (Finset.mem_union_right _ hx)
-      have hfresh_k x (hx : x ∈ k.binderAtoms) := hfresh x (Finset.mem_union_left _ hx)
-      have hK : Typed _ (Ctx.fill K e) _ := ih he fun x hx =>
-        ⟨(hfresh_K x hx).1, fun h => (hfresh_K x hx).2 (Finset.mem_union_right _ h)⟩
       rw [Ctx.fill_cons]
-      refine hk.fill_typed hK fun x hx hfv => ?_
-      obtain ⟨hxe, hxpay⟩ := hfresh_k x hx
-      rcases Finset.mem_union.mp (Ctx.fv_fill_subset K e hfv) with h | h
-      · exact hxpay (Finset.mem_union_right _ h)
-      · exact hxe h
+      exact hk.fill_typed (ih he)
 
 /-- Well-typed contexts compose (Clutch `typed_ctx_compose`). -/
 theorem TypedCtx.compose {K K' : Ctx rT} {Γ1 Γ2 Γ3 τ1 τ2 τ3}
