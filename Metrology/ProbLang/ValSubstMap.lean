@@ -14,7 +14,7 @@ namespace ProbLang
 abbrev ValSubstMap (rT : Type _) := List (Var × (Val rT × Val rT))
 
 namespace ValSubstMap
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
 
 /-- The pair assigned to `x`, preferring the entry nearest the end of the list. -/
 def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
@@ -24,40 +24,6 @@ def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
     | some q => some q
     | none => if x = y then some p else none
 
-/-- The substitution of left values. -/
-def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
-
-/-- The substitution of right values. -/
-def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
-
-section proj
-variable (f : Val rT × Val rT → Val rT)
-
-theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
-    SubstMap.lookup (vs.map fun p => (p.1, (f p.2).1)) x = (vs.lookup x).map fun q => (f q).1
-  | [], _ => rfl
-  | (y, w) :: rest, x => by
-    simp only [List.map_cons, SubstMap.lookup, ValSubstMap.lookup, proj_lookup rest x]
-    cases ValSubstMap.lookup rest x <;> simp
-
-omit [LawfulProbLangℝ rT] in
-theorem proj_dom (vs : ValSubstMap rT) :
-    ((vs.map fun p => (p.1, (f p.2).1)).map (·.1)).toFinset = (vs.map (·.1)).toFinset := by
-  simp only [List.map_map]; rfl
-
-theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
-    SubstMap.AllClosed (vs.map fun p => (p.1, (f p.2).1)) := by
-  intro p hp
-  obtain ⟨q, hmem, rfl⟩ := List.mem_map.mp hp
-  exact h q hmem
-
-end proj
-
-theorem fst_lookup (vs : ValSubstMap rT) (x : Var) :
-    SubstMap.lookup vs.fst x = (vs.lookup x).map fun p => p.1.1 :=
-  proj_lookup Prod.fst vs x
-
-omit [LawfulProbLangℝ rT] in
 theorem lookup_eq_none_of_not_mem {y : Var} : ∀ (vs : ValSubstMap rT),
     y ∉ (vs.map (·.1)).toFinset → vs.lookup y = none
   | [], _ => rfl
@@ -66,27 +32,6 @@ theorem lookup_eq_none_of_not_mem {y : Var} : ∀ (vs : ValSubstMap rT),
     simp only [ValSubstMap.lookup, lookup_eq_none_of_not_mem rest hyNot.2]
     simp [hyNot.1]
 
-theorem fst_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
-    (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.fst y = none := by
-  rw [fst_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
-
-theorem snd_lookup (vs : ValSubstMap rT) (x : Var) :
-    SubstMap.lookup vs.snd x = (vs.lookup x).map fun p => p.2.1 :=
-  proj_lookup Prod.snd vs x
-
-theorem snd_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
-    (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.snd y = none := by
-  rw [snd_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
-
-theorem fst_dom (vs : ValSubstMap rT) :
-    (vs.fst.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
-  proj_dom Prod.fst vs
-
-theorem snd_dom (vs : ValSubstMap rT) :
-    (vs.snd.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
-  proj_dom Prod.snd vs
-
-omit [LawfulProbLangℝ rT] in
 theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
     (h : vs.lookup y = some (w1, w2)) : (y, (w1, w2)) ∈ vs := by
   induction vs with
@@ -106,13 +51,11 @@ theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
         obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa using h
         exact List.mem_cons.mpr (.inl rfl)
 
-omit [LawfulProbLangℝ rT] in
 theorem mem_of_lookup_isSome {vs : ValSubstMap rT} {x : Var}
     (h : (vs.lookup x).isSome) : ∃ p ∈ vs, p.1 = x := by
   obtain ⟨⟨w1, w2⟩, hw⟩ := Option.isSome_iff_exists.mp h
   exact ⟨(x, (w1, w2)), mem_of_lookup_eq_some hw, rfl⟩
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
     (hmem : ∃ w, (x, w) ∈ vs) : (vs.lookup x).isSome := by
   obtain ⟨w, hmem⟩ := hmem
@@ -134,13 +77,11 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
 def delete (vs : ValSubstMap rT) (x : Var) : ValSubstMap rT :=
   vs.filter fun p => !decide (p.1 = x)
 
-omit [LawfulProbLangℝ rT] in
 theorem delete_cons (z : Var) (w : Val rT × Val rT) (rest : ValSubstMap rT) (x : Var) :
     ValSubstMap.delete ((z, w) :: rest) x =
       if z = x then rest.delete x else (z, w) :: rest.delete x := by
   by_cases hzx : z = x <;> simp [ValSubstMap.delete, hzx]
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_delete_self (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).lookup x = none := by
   induction vs with
@@ -152,7 +93,6 @@ theorem lookup_delete_self (vs : ValSubstMap rT) (x : Var) :
     · exact ih
     · simp [ValSubstMap.lookup, ih, Ne.symm hzx]
 
-omit [LawfulProbLangℝ rT] in
 theorem lookup_delete_other (vs : ValSubstMap rT) (x z : Var) (hxz : z ≠ x) :
     (vs.delete x).lookup z = vs.lookup z := by
   induction vs with
@@ -166,12 +106,14 @@ theorem lookup_delete_other (vs : ValSubstMap rT) (x z : Var) (hxz : z ≠ x) :
       cases ValSubstMap.lookup rest z <;> simp [hxz]
     · simp [ValSubstMap.lookup, ih]
 
-omit [LawfulProbLangℝ rT] in
 theorem mem_delete (vs : ValSubstMap rT) (x : Var) (p : Var × (Val rT × Val rT)) :
     p ∈ vs.delete x ↔ p ∈ vs ∧ p.1 ≠ x := by
   simp [delete, List.mem_filter]
 
-omit [LawfulProbLangℝ rT] in
+theorem proj_dom (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) :
+    ((vs.map fun p => (p.1, (f p.2).1)).map (·.1)).toFinset = (vs.map (·.1)).toFinset := by
+  simp only [List.map_map]; rfl
+
 theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).map (fun p => (p.1, (f p.2).1)) =
       (vs.map fun p => (p.1, (f p.2).1)).filter fun p => !decide (p.1 = x) := by
@@ -182,6 +124,56 @@ theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x :
     rw [delete_cons, List.map_cons, List.filter_cons]
     by_cases hzx : z = x <;> simp [hzx, ih]
 
+variable [LawfulProbLangℝ rT]
+
+/-- The substitution of left values. -/
+def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
+
+/-- The substitution of right values. -/
+def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
+
+section proj
+variable (f : Val rT × Val rT → Val rT)
+
+theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
+    SubstMap.lookup (vs.map fun p => (p.1, (f p.2).1)) x = (vs.lookup x).map fun q => (f q).1
+  | [], _ => rfl
+  | (y, w) :: rest, x => by
+    simp only [List.map_cons, SubstMap.lookup, ValSubstMap.lookup, proj_lookup rest x]
+    cases ValSubstMap.lookup rest x <;> simp
+
+theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
+    SubstMap.AllClosed (vs.map fun p => (p.1, (f p.2).1)) := by
+  intro p hp
+  obtain ⟨q, hmem, rfl⟩ := List.mem_map.mp hp
+  exact h q hmem
+
+end proj
+
+theorem fst_lookup (vs : ValSubstMap rT) (x : Var) :
+    SubstMap.lookup vs.fst x = (vs.lookup x).map fun p => p.1.1 :=
+  proj_lookup Prod.fst vs x
+
+theorem fst_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
+    (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.fst y = none := by
+  rw [fst_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
+
+theorem snd_lookup (vs : ValSubstMap rT) (x : Var) :
+    SubstMap.lookup vs.snd x = (vs.lookup x).map fun p => p.2.1 :=
+  proj_lookup Prod.snd vs x
+
+theorem snd_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
+    (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.snd y = none := by
+  rw [snd_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
+
+theorem fst_dom (vs : ValSubstMap rT) :
+    (vs.fst.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
+  proj_dom Prod.fst vs
+
+theorem snd_dom (vs : ValSubstMap rT) :
+    (vs.snd.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
+  proj_dom Prod.snd vs
+
 theorem fst_delete (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).fst = vs.fst.filter fun p => !decide (p.1 = x) :=
   proj_delete Prod.fst vs x
@@ -189,6 +181,7 @@ theorem fst_delete (vs : ValSubstMap rT) (x : Var) :
 theorem snd_delete (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).snd = vs.snd.filter fun p => !decide (p.1 = x) :=
   proj_delete Prod.snd vs x
+
 
 end ValSubstMap
 
