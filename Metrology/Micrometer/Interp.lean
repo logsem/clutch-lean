@@ -67,9 +67,6 @@ section interp
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
 
 /-- A non-expansive map from type environments to logical relations. -/
 structure NEFun (rT : Type) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
@@ -163,17 +160,13 @@ theorem interp_arrow (Δ : TyEnv rT GF) (τ1 τ2 : Ty) :
 theorem interp_ref (Δ : TyEnv rT GF) (τ : Ty) :
     interp L (Ty.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
-
 /-! ## Closedness of related values -/
-
 
 theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
     (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
   (interp L τ Δ).closed v v'
 
-
 /-! ## Soundness of the semantic type interpretation -/
-
 
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
@@ -269,9 +262,7 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
         ipureintro
         exact iff_of_false hl hr
 
-
 /-! ## Substitution lemmas on `interp` -/
-
 
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
 theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}

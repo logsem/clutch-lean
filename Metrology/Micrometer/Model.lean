@@ -53,7 +53,7 @@ theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
   iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
   exact ⟨l1, l2, h1, h2⟩
 
-/-- Reference type is functional in the program-side location. (Rocq `interp_ref_funct`). -/
+/-- Reference type is functional in the program-side location (Rocq `interp_ref_funct`). -/
 theorem lrel_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_ref A).car (.loc l) (.loc l1) -∗
@@ -67,7 +67,7 @@ theorem lrel_ref_funct {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     iintro ⟨%wa1, %ws1, Hl1L, -⟩ ⟨%wa2, %ws2, Hl2L, -⟩
     iapply appHeapFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Reference type is injective on the program-side location. (Rocq `interp_ref_inj`). -/
+/-- Reference type is injective on the program-side location (Rocq `interp_ref_inj`). -/
 theorem lrel_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_ref A).car (.loc l1) (.loc l) -∗
@@ -81,7 +81,7 @@ theorem lrel_ref_inj {E : CoPset} (A : lrel rT GF) (l l1 l2 : Loc)
     iintro ⟨%wa1, %ws1, -, Hs1L, -⟩ ⟨%wa2, %ws2, -, Hs2L, -⟩
     iapply specHeapFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
 
-/-- Tape type is functional in the program-side location. (Rocq `interp_tape_funct`). -/
+/-- Tape type is functional in the program-side location (Rocq `interp_tape_funct`). -/
 theorem lrel_tape_funct {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l) (.lbl l1) -∗
@@ -95,7 +95,7 @@ theorem lrel_tape_funct {E : CoPset} (l l1 l2 : Loc)
     iintro ⟨Hl1L, -⟩ ⟨Hl2L, -⟩
     iapply appTapesFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Tape type is injective on the program-side location. (Rocq `interp_tape_inj`). -/
+/-- Tape type is injective on the program-side location (Rocq `interp_tape_inj`). -/
 theorem lrel_tape_inj {E : CoPset} (l l1 l2 : Loc)
     (HE : (↑logN : CoPset) ⊆ E) :
     ⊢ (lrel_tape (rT := rT) (GF := GF)).car (.lbl l1) (.lbl l) -∗
