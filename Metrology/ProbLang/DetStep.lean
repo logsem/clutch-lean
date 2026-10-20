@@ -8,7 +8,9 @@ public import Mathlib.Order.Defs.PartialOrder
 
 /-! # Deterministic steps
 
-`PureStep`, `PureExec` and `DetStep`: steps with a single outcome, closed under contexts. -/
+`PureStep`, `PureExec` and `DetStep`: steps with a single outcome, closed under contexts.
+Pure = state-independent Dirac step; Det = Dirac step of one fixed configuration (used by
+`SpecRules` through `pexecN_of_DetExec`). -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure
@@ -27,7 +29,9 @@ structure PureStep (e1 e2 : Exp rT) : Prop where
   safe : ∀ σ, Reducible e1 σ
   det  : ∀ σ, primStep ⟨e1, σ⟩ = dirac ⟨e2, σ⟩
 
-/-- Under `φ`, `e1` reaches `e2` in `n` pure steps. -/
+/-- Under `φ`, `e1` reaches `e2` in `n` pure steps. Instances are found by Micrometer's pure-step
+tactics: given `e1` (and `e2`), search outputs the side condition `φ` the tactic must discharge
+and the step count `n`. -/
 class PureExec (φ : outParam Prop) (n : outParam ℕ) (e1 e2 : Exp rT) : Prop where
   pure_exec : φ → nsteps PureStep n e1 e2
 
@@ -35,6 +39,7 @@ class PureExec (φ : outParam Prop) (n : outParam ℕ) (e1 e2 : Exp rT) : Prop w
 structure PureHeadStep (e1 e2 : Exp rT) : Prop where
   safe : ∀ σ : State rT, HeadReducible e1 σ
   det  : ∀ σ : State rT, headStep ⟨e1, σ⟩ = dirac ⟨e2, σ⟩
+  /-- `e1` is its own redex (no context frame), so `primStep = headStep`. -/
   dec  : e1.decompItem = none
 
 theorem PureHeadStep.toPureStep {e1 e2 : Exp rT} (h : PureHeadStep e1 e2) :
@@ -91,10 +96,13 @@ theorem PureHeadStep.of_det (e1 e2 : Exp rT)
   refine ⟨fun σ => ?_, hdet, hdec⟩
   unfold HeadReducible; rw [hdet σ]; simp
 
+/-! ## Deterministic steps of one configuration -/
+
 /-- A head step from `cfg1` that deterministically gives `cfg2`. -/
 structure DetHeadStep (cfg1 cfg2 : Cfg rT) : Prop where
   safe : HeadReducible cfg1.expr cfg1.state
   det  : headStep cfg1 = dirac cfg2
+  /-- `cfg1.expr` is its own redex (no context frame), so `primStep = headStep`. -/
   dec  : cfg1.expr.decompItem = none
 
 theorem DetHeadStep.pos {cfg1 cfg2 : Cfg rT} (h : DetHeadStep cfg1 cfg2) :

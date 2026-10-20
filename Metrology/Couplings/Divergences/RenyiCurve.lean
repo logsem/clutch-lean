@@ -70,7 +70,8 @@ theorem codensity_renyiCurve_iff {ρ : RenyiBudget} {R : X → Y → RenyiBudget
       ∀ α : Ioi (1 : ℝ), (renyiDivergence α).codensity (ρ α) (fun x y ↦ R x y α) μ ν := by
   classical
   refine ⟨fun h α I _ c hc k l _ _ hkl ↦ ?_, fun h I _ c _ k l _ _ hkl α ↦ ?_⟩
-  · have hlt : ρ + Function.update ⊤ α c < ⊤ := lt_top_iff_ne_top.2 fun htop ↦
+  · -- slack `c` at order `α`, `⊤` elsewhere: other orders pass by `renyiDivergence_top`
+    have hlt : ρ + Function.update ⊤ α c < ⊤ := lt_top_iff_ne_top.2 fun htop ↦
       hc.ne (by simpa using congrFun htop α)
     have hkl' (x : X) (y : Y) (β : Ioi (1 : ℝ)) :
         renyiDivergence β ((R x y + Function.update (⊤ : RenyiBudget) α c) β) (k x) (l y) := by
@@ -78,6 +79,7 @@ theorem codensity_renyiCurve_iff {ρ : RenyiBudget} {R : X → Y → RenyiBudget
       · simpa using hkl x y
       · simpa [hβ] using renyiDivergence_top β.2 (k x) (l y)
     simpa using h hlt hkl' α
+  -- order by order; infinite orders are free
   rcases eq_or_ne (ρ α + c α) ⊤ with htop | hlt
   · simpa [htop] using renyiDivergence_top α.2 _ _
   · exact h α (lt_top_iff_ne_top.2 hlt) fun x y ↦ hkl x y α

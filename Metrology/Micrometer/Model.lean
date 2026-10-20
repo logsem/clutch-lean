@@ -24,8 +24,8 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 
-/-- If two `logN` invariants have bodies that cannot hold together, their names must be equal
-(otherwise both open at once); so `l1 = l2` follows when equal names imply it. -/
+/-- If two `logN` invariants have bodies that cannot hold together, they cannot both be opened, so
+their names are equal; `hp` turns that into `l1 = l2`. -/
 theorem fupd_eq_of_inv_excl {E : CoPset} {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
     {l1 l2 : Loc} (HE : (↑logN : CoPset) ⊆ E) (hp : p1 = p2 → l1 = l2)
     (hfalse : ⊢ P1 -∗ P2 -∗ False) :

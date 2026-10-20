@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.Divergences.Conversions
 
-/-! Rényi and zCDP liftings of equal images of a map, witnessed by conditioning on its fibers. -/
+/-! Rényi and zCDP liftings of the relation `f x = g y`, witnessed (`codensity_renyi_of_kernel`)
+by conditioning `μ` on the fibers of `f`. Used by the randomized-response examples. Main results:
+`codensity_renyi_rel_of_map`, `zcdpLifting_rel_of_fiber`. -/
 
 @[expose] public section
 
@@ -117,7 +119,10 @@ theorem codensity_renyi_rel_of_map (hf : Measurable f) (hg : Measurable g)
 
 end Renyi
 
-/-! ## zCDP liftings from fiber bounds -/
+/-! ## zCDP liftings from fiber bounds
+
+Same witness as `codensity_renyi_rel_of_map`, but under countable `Y`/`Z` instead of finite
+discrete `Z`. -/
 
 section Zcdp
 

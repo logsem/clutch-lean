@@ -11,6 +11,8 @@ open Lean Elab Command Term Meta
 
 A `@[discrete]` declaration may only be referenced by other `@[discrete]` declarations;
 other references trigger the `linter.discrete` warning at the use site.
+Discrete declarations assume steps with atomic support (no `urand`), e.g. `wp_lift_step_later`;
+the linter flags continuous developments that rely on them.
 -/
 
 namespace Metrology.Discrete

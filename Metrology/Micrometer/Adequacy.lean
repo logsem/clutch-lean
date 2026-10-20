@@ -5,7 +5,9 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
 
-/-! Adequacy of the graded weakest precondition against the limit execution. -/
+/-! Adequacy: a `wp` proof from `↯b b` gives `L.Rel b` of the limit executions (`wp_adequacy`) and
+`D b` for a sound `L` (`wp_adequacy_div`). Layers: `wp_adequacy_step_fupdN` (inside Iris), `exec_n`
+(ghost allocation), limit; the `_term` section repeats them for runs of mass 1. -/
 
 @[expose] public section
 
@@ -22,6 +24,7 @@ variable {B : Type}
 def adequacyRel (φ : Val rT → Val rT → Prop) (e e' : Exp rT) : Prop :=
   ∃ v v', e.toVal? = some v ∧ e'.toVal? = some v' ∧ φ v v'
 
+/-- Values related by equality are equal expressions. -/
 theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e = e' := by
   rintro ⟨v, v', hv, hv', rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
@@ -171,8 +174,8 @@ section Lawful
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
-/-- At a value, the program and spec values are related at any leftover budget; fuel `0` never
-reaches a value, so the run has at least one step. -/
+/-- At a value the two runs are Dirac masses related by `φ` at any leftover; stated at fuel `n + 1`
+because `execN 0` is the zero measure. -/
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (b : B) (He : e.toVal? = some v) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
@@ -220,6 +223,8 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : 
       iintro %σ₂ %e₂' %σ₂' %b₂ Hprog
       iapply wp_adequacy_prog_coupl (hnone := hnone) $$ Hprog
       iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ Hspec
+      -- the ▷ after the program step is spent as one step of |={∅}[∅]▷=>^[n+1]; fuel m+1 here is
+      -- fuel m at the continuation (wp_adequacy_prog_coupl)
       simp only [Nat.repeat]
       iintro !> !> !>
       iapply wp_adequacy_spec_coupl $$ Hspec
@@ -366,6 +371,8 @@ theorem execCoupl_erasable_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State r
       Set.preimage_univ] at h
     rw [h, hterm]
   have hAc := MeasureTheory.ae_iff.1 (MeasureTheory.ae_measure_univ_eq_one_of_bind hek hmass)
+  -- head_supp: setting the leftover to ⊤ off the mass-1 set keeps the head, so continuations are
+  -- only needed there
   refine lift_erasure_erasable_law law hf' hspec (law.head_supp hA hAc hhead) hside.supp hErase₁
     hErase₁' fun σ₂ ρ hR => ?_
   by_cases hσ : σ₂ ∈ {σ : State rT | execN m ⟨e₁, σ⟩ Set.univ = 1}
@@ -402,6 +409,8 @@ theorem execCoupl_prog_of_term {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
     execN.isSubProbabilityMeasure m (f ρ)
   have hAc := MeasureTheory.ae_iff.1
     (MeasureTheory.ae_measure_univ_eq_one_of_bind ((execN_measurable m).comp hf) hterm)
+  -- head_supp: setting the leftover to ⊤ off the mass-1 set keeps the head, so continuations are
+  -- only needed there
   refine lift_erasure_erasable_exp_lhs_kanto_law law hErase₁' hf hprog hf' hspec
     (law.head_supp hA hAc hhead) hside.supp fun ρ ρ' hR => ?_
   by_cases hρ : ρ ∈ {ρ : Cfg rT | execN m (f ρ) Set.univ = 1}

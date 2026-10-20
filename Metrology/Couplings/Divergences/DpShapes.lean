@@ -79,8 +79,8 @@ theorem codensity_dp_lhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
         ring
 
 open Classical in
-/-- Per-pair budgets `E` on `S` with no head lifting: a transfer of `[0, 1]`-valued tests gives the
-DP codensity lifting (Rocq `dp_kanto_head`). -/
+/-- Kantorovich-style head (Rocq `dp_kanto_head`): the `if S then E else ⊤` version of
+`codensity_dp_of_lintegral_le`, whose test premise only constrains pairs in `S`. -/
 theorem codensity_dp_of_kanto [IsSubProbabilityMeasure μ] {E : X → Y → ℝ≥0∞ × ℝ≥0∞}
     (h : ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) → (∀ y, g y ≤ 1) →
       (∀ x y, S x y → (E x y).1 < ⊤ → f x ≤ expBudget (E x y).1 * g y + (E x y).2) →

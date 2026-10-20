@@ -62,9 +62,11 @@ variable {F : ENNReal → ENNReal}
 
 open Measure
 
+/-- Every measure couples with itself along equality when `F` is inflationary (`HF`). -/
 theorem refl (μ : Measure α) (HF : ∀ {x}, x ≤ F x) : ARCoupling F (fun v => v.1 = v.2) μ μ :=
   fun _ _ Hle => (lintegral_mono fun _ => Hle rfl).trans HF
 
+/-- Dirac measures at related points couple when `F` is inflationary (`HF`). -/
 theorem dirac {a : α} {b : β} (HF : ∀ {x}, x ≤ F x) (Φ : Set (α × β)) (H : Φ (a, b)) :
     ARCoupling F Φ (.dirac a) (.dirac b) := by
   refine fun ⟨f, Hf, _⟩ ⟨g, Hg, _⟩ Hle => ?_
@@ -83,6 +85,7 @@ theorem mono_rel {Φ Φ' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure
 theorem zero_left (S : Set (α × β)) (μᵣ : Measure β) :
     ARCoupling F S 0 μᵣ := by intro _ _ _; simp
 
+/-- Any measure couples with the zero measure on the right when its mass is at most `F 0`. -/
 theorem zero_right (S : Set (α × β)) {μₗ : Measure α}
     (HF : μₗ .univ ≤ F 0) : ARCoupling F S μₗ (0 : Measure β) := by
   refine fun ⟨f, _, Hfb⟩ g Hle => ?_
@@ -90,8 +93,6 @@ theorem zero_right (S : Set (α × β)) {μₗ : Measure α}
     _ ≤ μₗ .univ := lintegral_le_meas Hfb (by simp)
     _ ≤ F 0 := HF
     _ ≤ F (∫⁻ (x : β), g x ∂0) := by simp
-
--- TODO: couplings transport along measure equalities (follow `lintegral_map`)
 
 end ARCoupling
 end ApproximateCoupling

@@ -2,4 +2,5 @@ module
 
 public import Metrology.Micrometer.WpEctxLifting
 
-/-! The Micrometer weakest precondition: coupling modalities, `wp` and its lifting rules. -/
+/-! Umbrella import for the whole `wp` layer (modalities, `wp`, structural and lifting rules), named
+after Rocq `app_weakestpre.v`; defines nothing. -/

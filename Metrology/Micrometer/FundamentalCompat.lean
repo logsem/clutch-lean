@@ -3,9 +3,9 @@ module
 public import Metrology.Micrometer.FundamentalBase
 import Metrology.ProbLang.Syntax.Notation
 
-@[expose] public section
-
 /-! Compatibility of `bin_log_related` with the pure and type-level constructors. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -32,6 +32,7 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam, interp_arrow]
+  -- (1) the two closures are related at the arrow relation
   ihave %hvs := env_ltyped2_allClosed_pair Γ vs $$ Hvs
   ihave %hΓdomVs := env_ltyped2_domSubset Γ vs $$ Hvs
   have hlam_closed := substMap_lam_closed hvs hΓdomVs he_lc he'_lc he_fv he'_fv
@@ -39,6 +40,7 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   obtain ⟨hvsfst_closed, hvssnd_closed⟩ := hvs
   iapply refines_arrow_val (v := ⟨.lam (substMap vs.fst e), IsVal.lam (by is_lc), by is_lc⟩)
     (v' := ⟨.lam (substMap vs.snd e'), IsVal.lam (by is_lc), by is_lc⟩) hlam_closed
+  -- (2) extend the substitution with a fresh x; Hbody is valid, so usable under □
   iintro !> %v1 %v2 #HA
   ihave %hv1v2_closed := interp_closed τ1 v1 v2 $$ HA
   obtain ⟨x, hxL, hxFvE, hxFvE', hxNotDom⟩ := exists_fresh_var S e e' vs
@@ -48,10 +50,12 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
   obtain ⟨hbridge_fst, hbridge_snd⟩ := substMap_open_fresh_pair
     hvsfst_closed hvssnd_closed hxFvE hxFvE' hxNotDom hv1v2_closed.1 hv1v2_closed.2
   isimp only [hbridge_fst, hbridge_snd] at HBody
+  -- (3) one β-step on each side
   iapply refines_beta hlam_lc hlam'_lc
   inext
   iexact HBody
 
+/-- Type abstraction, encoded as the thunk `λ_. e` (`e` locally closed), is related at `∀`. -/
 theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty}
     (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
@@ -170,6 +174,7 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
 
 /-! ## Polymorphic and recursive types -/
 
+/-- Type application `e #()` goes from `∀ τ` to `τ[τ'/0]`. -/
 theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (.forall' τ) ⊢
     bin_log_related_ty L ⊤ Δ Γ (.app e pl(#(.unit))) (.app e' pl(#(.unit))) (τ.single τ') := by
@@ -193,6 +198,7 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iapply HvArr $$ %(.unit : Val rT) %(.unit : Val rT)
   iapply lrel_unit_lit
 
+/-- `fold`, the identity on terms, goes from `τ[μ τ/0]` to `μ τ`. -/
 theorem bin_log_related_fold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (τ.single (.rec' τ)) ⊢
     bin_log_related_ty L ⊤ Δ Γ e e' (.rec' τ) := by
@@ -208,6 +214,7 @@ theorem bin_log_related_fold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   imodintro
   iexact Hv
 
+/-- `unfold`, encoded as `recUnfold e`, goes from `μ τ` to `τ[μ τ/0]`. -/
 theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (.rec' τ) ⊢
     bin_log_related_ty L ⊤ Δ Γ (.app recUnfold e) (.app recUnfold e') (τ.single (.rec' τ)) := by
@@ -232,6 +239,7 @@ theorem bin_log_related_unfold (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Ex
   rw [interp_subst (.rec' τ) τ Δ]
   iexact HvL
 
+/-- `pack`, the identity on terms, goes from `τ[τ'/0]` to `∃ τ`. -/
 theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (τ.single τ') ⊢
     bin_log_related_ty L ⊤ Δ Γ e e' (.exists' τ) := by
@@ -247,7 +255,8 @@ theorem bin_log_related_pack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   iexists interp L τ' Δ
   iexact Hv
 
-/-- `unpack` compatibility, as an entailment from the relation of the unpacked term. -/
+/-- `unpack e1 as x in e2`, encoded as `(λx. e2) e1`, as an entailment from the relation of `e1`;
+the result type `τ2.shift` cannot mention the unpacked variable. -/
 theorem bin_log_related_unpack_wand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)

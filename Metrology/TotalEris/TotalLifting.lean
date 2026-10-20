@@ -2,6 +2,12 @@ module
 
 public import Metrology.TotalEris.TotalWeakestpre
 
+/-!
+# Total-WP lifting lemmas
+
+Rules proving `tglWp` of a non-value from its prim step, down to pure and `PureExec` steps.
+-/
+
 @[expose] public section
 
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
@@ -13,12 +19,6 @@ namespace ErisWpGS
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
-
-/-!
-# Total-WP lifting lemmas
-
-Rules proving `tglWp` of a non-value from its prim step, down to pure and `PureExec` steps.
--/
 
 /-- Prove `tglWp` of a non-value from `glm'` on its state and error interpretations. -/
 theorem twp_lift_step_fupd_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}

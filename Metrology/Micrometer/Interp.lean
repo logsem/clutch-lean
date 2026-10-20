@@ -6,7 +6,8 @@ public import Metrology.ProbLang.Metatheory
 public import Metrology.ProbLang.ValSubstMap
 public import Metrology.ProbLang.Syntax.Types
 
-/-! Semantic interpretation of types: `interp`, closedness, soundness and substitution. -/
+/-! Semantic interpretation of types (`interp`), the facts the equality operator needs
+(`eq_type_sound`, `unboxed_type_eq`), and substitution lemmas. -/
 
 @[expose] public section
 
@@ -165,6 +166,7 @@ theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
 
 /-! ## Soundness of the semantic type interpretation -/
 
+/-- Related values at an unboxed type are both literals. -/
 theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
   cases H
@@ -185,12 +187,14 @@ theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H :
     iintro ⟨%l1, %l2, %h1, %h2, -⟩ !%
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
 
+/-- Related values at an unboxed type are both unboxed. -/
 theorem unboxed_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜Val.isUnboxed v ∧ Val.isUnboxed v'⌝ := by
   refine (unboxed_type_lit_shape H).trans (pure_mono ?_)
   rintro ⟨_, _, h1, h2⟩
   exact ⟨by simp [Val.isUnboxed, h1], by simp [Val.isUnboxed, h2]⟩
 
+/-- Related values at an `EqType` are equal. -/
 theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜v = v'⌝ := by
   induction H generalizing v v'
@@ -230,6 +234,7 @@ theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType �
       apply Val.ext
       rw [h1, h2, heq]
 
+/-- On an `EqType`, two related pairs agree on equality, `v1 = w1 ↔ v2 = w2`. -/
 theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : EqType τ) :
     (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   iintro H1 H2
@@ -240,6 +245,8 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
   subst heq1 heq2
   exact .rfl
 
+/-- On an unboxed type, two related pairs agree on equality, `v1 = w1 ↔ v2 = w2`; this makes `=`
+compatible (`bin_log_related_unboxed_eq`). -/
 theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : UnboxedType τ) :
     (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   cases H
@@ -286,6 +293,8 @@ theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 ξ Δ) (ih2 ξ Δ)
   | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 ξ Δ) (ih2 ξ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih ξ Δ)
+  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
+  -- (OFE.eq_dist) via the constructor's _ne lemma.
   | rec' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
   | forall' τ' ih =>
@@ -294,6 +303,7 @@ theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
     exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
   | _ => rfl
 
+/-- Shifting `τ` past a new type variable does not change its interpretation. -/
 theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
     interp L (Ty.shift τ) (TyEnv.cons X Δ) = interp L τ Δ :=
   interp_rename τ (· + 1) (TyEnv.cons X Δ)
@@ -323,6 +333,8 @@ theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 σ Δ) (ih2 σ Δ)
   | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 σ Δ) (ih2 σ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
+  -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
+  -- (OFE.eq_dist) via the constructor's _ne lemma.
   | rec' τ' ih =>
     exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
   | forall' τ' ih =>
@@ -331,6 +343,7 @@ theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
     exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
   | _ => rfl
 
+/-- `⟦τ[τ'/0]⟧Δ = ⟦τ⟧(⟦τ'⟧Δ :: Δ)`. -/
 theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
     interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
   unfold Ty.single

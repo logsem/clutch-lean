@@ -14,6 +14,9 @@ meta import Metrology.ProbLang.CoreMeasures.ArmTactics
 Main results: `toVal_question.measurable`, `decomp.measurable`, `UnOp_eval.measurable`,
 `BinOp_eval.measurable` and `tryMatch.measurable_joint`. Structural recursions go through
 `apply_arms Exp.measurable_struct_rec(_param)`; `toVal?`, `decomp` and `tryMatch` need hand proofs.
+Also: `Option` elimination lemmas, the `*_zero_*_apply` macros that `HeadStep.lean` uses,
+`MeasurableEq (BaseLit rT)` (for `BinOp.eq` at ℝ), and the literal-lifting combinators behind
+`BinOp.eval`.
 -/
 
 noncomputable section ProbLangMeasures
@@ -69,6 +72,7 @@ theorem lcb.measurable [MeasurableSpace rT] :
     (t_lam   := fun b => b + 1)
     (t_fix   := fun b => b + 1)
 
+/-- The set of locally closed expressions (`lcb 0 e`) is measurable. -/
 theorem lcb_zero.measurableSet [MeasurableSpace rT] :
     MeasurableSet {e : Exp rT | Exp.lcb 0 e = true} := by
   have hm : Measurable (fun e : Exp rT => Exp.lcb 0 e) :=
@@ -91,6 +95,8 @@ instance instMeasurableSingletonClassUnOp : MeasurableSingletonClass UnOp where
 instance instMeasurableSingletonClassBinOp : MeasurableSingletonClass BinOp where
   measurableSet_singleton _ := trivial
 
+/-- A function on `Exp` that is `z` except on literals, where it is a measurable `f`, is
+measurable. -/
 private theorem measurable_of_lit_only [MeasurableSpace rT] {α : Type _} [MeasurableSpace α]
     {g : Exp rT → α} (z : α) {f : BaseLit rT → α} (hf : Measurable f)
     (hg : ∀ v, g v = match v with | .lit l => f l | _ => z) : Measurable g := by
@@ -191,6 +197,7 @@ theorem fillItem.measurable [MeasurableSpace rT] :
     Measurable (fun (q : EctxItem rT × Exp rT) => q.1.fillItem q.2) := by
   have heq : (fun q : EctxItem rT × Exp rT => q.1.fillItem q.2) = fun p : EctxItem rT × Exp rT =>
       EctxItem.casesOn (motive := fun _ => Exp rT) p.1
+        -- each arm as a function of (hole, fields), the tuple `measurable_casesOn_param` takes
         (fun v => (fun pp : Exp rT × Val rT => Exp.app pp.1 (Exp.ofVal pp.2)) (p.2, v))
         (fun e => (fun pp : Exp rT × Exp rT => Exp.app pp.2 pp.1) (p.2, e))
         (fun u => (fun pp : Exp rT × UnOp => Exp.unop pp.2 pp.1) (p.2, u))
@@ -351,6 +358,7 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
     rw [heq]; exact (isValueR.measurable.setOf).inter lcb_zero.measurableSet
   set noneIn : Prop := ((⟨⟩ : PUnit) ∈ (Sum.inr ⁻¹' Ssum : Set PUnit)) with hNoneIn
   classical
+  -- preimage of S = (values ∩ U) ∪ (non-values, if none ∈ S)
   have hpreimage_eq :
       (fun e : Exp rT => if h : e.isValue then
         some (Val.mk e (Classical.choice h) (Classical.choice h).lc) else none) ⁻¹' S =
@@ -405,6 +413,8 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
 
 /-! ### Eliminating `Option` measurably -/
 
+/-- Matching on a measurable `f a : Option β` is measurable when the `none` branch is measurable in
+`a` and the `some b` branch is measurable in `(a, b)` jointly. -/
 theorem _root_.Option.measurable_elim_param
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     {f : α → Option β} (hf : Measurable f)
@@ -436,6 +446,7 @@ theorem _root_.Option.measurable_elim_param
     exact (MeasurableEmbedding.id.prodMap MeasurableEmbedding.some_mk).measurableSet_image'
       (hsome hS)
 
+/-- `Option.measurable_elim_param` with `0` as the `none` branch. -/
 theorem _root_.Option.measurable_elim_param_zero
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
     [Zero γ] [MeasurableSpace γ]
@@ -445,6 +456,7 @@ theorem _root_.Option.measurable_elim_param_zero
       (fun b => some_branch (a, b))) :=
   Option.measurable_elim_param hf measurable_const hsome
 
+/-- `Option.measurable_elim_param` for `Option.bind`. -/
 theorem _root_.Option.measurable_bind_param
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
     [_mγ : MeasurableSpace (Option γ)]
@@ -746,6 +758,7 @@ theorem decomp.measurable [MeasurableSpace rT] :
   have hrw : (Exp.decomp : Exp rT → Ectx rT × Exp rT) = fun e => decompN e.size e := by
     funext e; exact (decompN_eq_decomp e.size e (Nat.le_refl _)).symm
   rw [hrw]
+  -- measurable in (n, e) jointly since ℕ is countable; then take n := e.size
   have hjoint : Measurable (fun p : ℕ × Exp rT => decompN p.1 p.2) :=
     measurable_from_prod_countable_right decompN_measurable
   exact hjoint.comp (size.measurable.prodMk measurable_id)
@@ -811,6 +824,12 @@ theorem _root_.ProbLang.BaseLit.realExtract.measurable
     [MeasurableSpace rT] :
     Measurable (BaseLit.realExtract : BaseLit rT → Option rT) := by
   apply_arms BaseLit.measurable_cases
+
+/-! ### `BinOp.eval`
+
+Each operator is rewritten (`BinOp.eval_eq_lift`) as a combinator that extracts literals, applies a
+function and re-wraps the result (`liftII`, `liftBB`, `liftIIorRR`, `liftLtLe`, `liftEq`). Each
+combinator is measurable, and the operator ranges over a countable type. -/
 
 /-- Applies `mkResult` to the `extr`-extracted literals of two operands, if both succeed. -/
 def liftBin {β : Type _} (extr : BaseLit rT → Option β)
@@ -960,16 +979,16 @@ def liftEq_litK [DecidableEq (BaseLit rT)] (p : Exp rT × BaseLit rT) : Option (
   | .lit l2 => some (Exp.lit (.bool (decide (p.2 = l2))))
   | _ => none
 
-/-- `liftEq (.inl e1', v2)` as a function of `(e1', v2)`, in the order of
-`Exp.measurable_casesOn_param`. -/
+/-- `liftEq (.inl e1', v2)` as a function of `(e1', v2)`; `liftEq.measurable` swaps it into the
+`(v2, e1')` order of `measurable_casesOn_param`. -/
 def liftEq_inlK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inl (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
   | .lit _, .inr (.lit _) => some (Exp.lit (.bool false))
   | _, _ => none
 
-/-- `liftEq (.inr e1', v2)` as a function of `(e1', v2)`, in the order of
-`Exp.measurable_casesOn_param`. -/
+/-- `liftEq (.inr e1', v2)` as a function of `(e1', v2)`; `liftEq.measurable` swaps it into the
+`(v2, e1')` order of `measurable_casesOn_param`. -/
 def liftEq_inrK [DecidableEq (BaseLit rT)] (p : Exp rT × Exp rT) : Option (Exp rT) :=
   match p.1, p.2 with
   | .lit l1, .inr (.lit l2) => some (Exp.lit (.bool (decide (l1 = l2))))
@@ -1443,6 +1462,7 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
   | inr p ih =>
     apply_arms Exp.measurable_cases
 
+/-- The joint measurability of `tryMatch`; needs `Countable rT` so that `Pat rT` is countable. -/
 theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] :
     Measurable (fun (q : Pat rT × Exp rT) => Pat.tryMatch q.1 q.2) := by
   apply measurable_from_prod_countable_right
@@ -1452,7 +1472,8 @@ theorem tryMatch.measurable [LawfulProbLangℝ rT] [Countable rT] :
 
 A cell of shape `s` is `{(e, p) | Pat.shape p = s ∧ tryMatch p e ∈ U}`;
 `StructRec.measurable_of_cells_param` reduces measurability to every cell being measurable, proved
-by induction on `s`. -/
+by induction on `s`. `Pat.measurable_struct_rec_param` does not fit: in the recursive call the `Exp`
+argument is the matching subterm of `e`, not a shift `t_c e`. -/
 
 /-- The set where `Pat.shape` of a measurable `Exp × Pat`-valued map is `s` is measurable,
 given the cell hypothesis at `s`. -/

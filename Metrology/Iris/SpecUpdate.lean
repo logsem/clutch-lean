@@ -18,7 +18,8 @@ open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure Measurable
 
 namespace ProbLang
 
-/-- Interpretation of a spec-side configuration as an Iris resource. -/
+/-- The interpretation of a spec configuration used by `specUpdate` and by `wp`'s state
+interpretation; kept abstract so `MicrometerWpGS` can extend it. -/
 class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) where
   specInterp : Cfg rT → IProp GF
@@ -30,7 +31,8 @@ section SpecUpdate
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [iSpec : SpecUpdateGS rT GF]
 
-/-- Update of the spec side by `n` deterministic steps. -/
+/-- Update of the spec side by `n` deterministic steps; rules that know their step count state it
+here, and `specUpdateN_specUpdate` forgets `n`, which is all `wp` needs. -/
 def specUpdateN (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecUpdateGS rT GF]
     (n : Nat) (E : CoPset) (P : IProp GF) :

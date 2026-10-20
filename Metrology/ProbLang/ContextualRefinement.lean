@@ -8,8 +8,7 @@ public import Metrology.ProbLang.Exec
 /-!
 # Contextual refinement
 
-Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`. As in Clutch, `fold` fills
-to the term itself while `unfold` applies `recUnfold`, so `CtxItem.fill` mirrors that asymmetry.
+Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`.
 Main results: `CtxRefines.refl`, `CtxRefines.trans`, `CtxRefines.congr`.
 -/
 
@@ -66,6 +65,8 @@ namespace CtxItem
 def fill : CtxItem rT → Exp rT → Exp rT
   | .lam x,          e => .lam (Exp.close e x)
   | .fix f,          e => .fix (Exp.close e f)
+  -- types are erased: `Λ` is a thunk `lam`, type application applies it to `()`; `fold` is the
+  -- identity, `unfold` applies `recUnfold`
   | .tlam,           e => .lam e
   | .appL e2,        e => .app e e2
   | .appR e1,        e => .app e1 e
@@ -245,7 +246,10 @@ inductive TypedCtx : Ctx rT → Tctx → Ty → Tctx → Ty → Prop
       TypedCtx K Γ1 τ1 Γ2 τ2 →
       TypedCtx (k :: K) Γ1 τ1 Γ3 τ3
 
-/-! ## Basic metatheory -/
+/-! ## Basic metatheory
+
+`binderAtoms` and `payloadFv` bound the atoms a context can capture or contribute; Soundness's
+precongruence picks atoms fresh for them. -/
 
 /-- The atoms a frame binds. -/
 def CtxItem.binderAtoms : CtxItem rT → Finset Var

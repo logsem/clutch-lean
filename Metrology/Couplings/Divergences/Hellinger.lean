@@ -4,7 +4,9 @@ public import Mathlib.Analysis.Convex.SpecificFunctions.Pow
 public import Metrology.Couplings.Divergences.Bof
 
 /-! `α`-Hellinger on sub-probability measures, a Barthe–Olmedo divergence (Barthe–Olmedo,
-ICALP 2013). -/
+ICALP 2013). Main results: composition when the kernels lose equal mass
+(`hellingerDivergence_comp_of_mass_eq`, used by `BindLaw.hellinger`), and its failure otherwise
+(`not_isComposable_hellinger_half`). -/
 
 @[expose] public section
 
@@ -148,8 +150,9 @@ sub-probability measures. -/
 noncomputable def hellClamp (α : ℝ) (a : EReal) : ℝ :=
   (min (max a 0) (((1 - α)⁻¹ : ℝ) : EReal)).toReal
 
-/-- The Barthe–Olmedo chain `a + d - (1 - α) a d` for `α`-Hellinger, on clamped arguments so that
-it is monotone. -/
+/-- The Barthe–Olmedo chain `a + d - (1 - α) a d` for `α`-Hellinger, i.e. `bofReal_add` at
+`γ = α - 1`, so `hellChain (θ s) (θ t) = θ (s + t)`. Arguments are clamped into `[0, 1/(1-α)]`, the
+range of Hellinger values and thresholds, so the chain is monotone without changing those values. -/
 noncomputable def hellChain (α : ℝ) (a d : EReal) : EReal :=
   ((hellClamp α a + hellClamp α d - (1 - α) * hellClamp α a * hellClamp α d : ℝ) : EReal)
 
@@ -322,6 +325,8 @@ theorem hellingerDivergence_comp_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {b c
   rw [bofThresh_of_ne_top _ hb] at hμ
   simp only [bofThresh_of_ne_top _ hc] at hκ
   rw [bofThresh_of_ne_top _ (ENNReal.add_ne_top.2 ⟨hb, hc⟩), ENNReal.toReal_add hb hc, bofReal_add]
+  -- thresholds lie in `[0, 1/(1-α)]`, where the clamp is the identity, so the chain is
+  -- `bofReal_add`
   have hθ (t : ℝ≥0∞) : 0 ≤ bofReal (α - 1) t.toReal ∧ bofReal (α - 1) t.toReal ≤ (1 - α)⁻¹ :=
     ⟨bofReal_nonneg _ ENNReal.toReal_nonneg, (bofReal_le_of_neg (by linarith) _).trans_eq
       (by rw [div_eq_mul_inv, ← neg_sub, inv_neg]; ring)⟩

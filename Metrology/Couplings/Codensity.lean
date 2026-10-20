@@ -146,8 +146,10 @@ composable (Sato–Katsumata, Thm. 8.2). -/
 theorem codensity_isComplete_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [OrderTop B] [D.IsGraded] : (codensity D).IsComplete D ↔ D.IsComposable := by
   refine ⟨fun _ ↦ ⟨fun _ _ ↦ fun h hκη ↦ ?_⟩,
+    -- complete from composable: a test on equality is exactly `IsComposable.comp`
     fun _ ↦ ⟨fun {X} _ b μ ν _ _ h ↦ codensity_rel_iff.2 fun I _ c _ k l _ _ hkl ↦
       IsComposable.comp h fun x ↦ hkl x x rfl⟩⟩
+  -- composable from complete: lift μ₁ μ₂ along equality, then test it with κ, η at slack c
   exact IsGraded.of_lt_top fun hbc ↦
     codensity_rel_iff.1 (IsComplete.complete h) hbc fun x y hxy ↦ hxy ▸ hκη x
 
@@ -216,7 +218,8 @@ instance isBudgetClosed_codensity [AddCommSemigroup B] [Preorder B] [Canonically
     obtain ⟨b', hb, rfl⟩ := exists_lt_and_add_eq_of_add_lt hd
     exact IsGraded.of_lt_top fun hbc ↦ h b' hb hbc hkl
 
-/-- The test kernels keep the mass on `T` and on `T'`, sent to a point. -/
+/-- The codensity lifting detects mass when `D` does: test with the kernels that send `T` (resp.
+`T'`) to a point and the rest to `0`. -/
 instance isMassDetecting_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded]
     [D.IsReflexive] [D.IsZeroLeft] {s : ℝ≥0∞ →+o B} [D.IsMassDetecting s] :
     (codensity D).IsMassDetecting s where

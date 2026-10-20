@@ -179,6 +179,7 @@ macro_rules
 
 macro_rules
   | `(pl_pat(_))                  => `(Pat.wildcard)
+  -- A variable matches anything; `projectPattern` binds it from the bindings `scrut` returns.
   | `(pl_pat($_:ident))           => `(Pat.wildcard)
   | `(pl_pat(# $e))               => `(Pat.lit $e)
   | `(pl_pat(($p)))               => `(pl_pat($p))
@@ -229,6 +230,8 @@ meta def wrapHint (head : Term) (name : Option String) (τ : Option (TSyntax `pl
   let nm := name.getD "_"
   `(plBinderHint! $(Syntax.mkStrLit nm) $(← tyOptTerm τ) ($head $body))
 
+/-- A binder that binds nothing: the body has no dangling indices (inner binders are closed as they
+are built), so no `close`/shift is needed. -/
 meta def mkAnonLam (body : Term) : TermElabM Term := do
   wrapHint (← `(Exp.lam)) none none body
 

@@ -16,6 +16,9 @@ For each constructor `c` of an inductive type:
 * `@[uncurriedProjections]`: `c.π`, its inverse, `some` of the tuple of the fields on `c` and `none`
   elsewhere, with a `simp` equation `c.π.eq_d` per constructor `d`; nothing for a constructor
   without fields.
+
+Used by `deriving instance MeasurableSpace` (`ProbLang/CoreMeasures/CylinderGen.lean`), which makes
+every `c.ι` a measurable embedding with inverse `c.π`.
 -/
 
 namespace Metrology.Meta

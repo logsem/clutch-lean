@@ -69,13 +69,15 @@ class IsBudgetClosed [LT B] : Prop where
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ b', b < b' → D b' μ ν) → D b μ ν
 
-/-- An event gap `δ` is met at the budget `s δ`. -/
+/-- An event gap `δ` is met at the budget `s δ`, where `s` embeds an additive slack `δ` into the
+budget (`δ ↦ (0, δ)` for dp). -/
 class HasSlack [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   of_forall_le {δ : ℝ≥0∞} {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ S, MeasurableSet S → μ S ≤ ν S + δ) → D (s δ) μ ν
 
-/-- Point masses within budget `s δ` differ in mass by at most `δ`. -/
+/-- Point masses within budget `s δ` differ in mass by at most `δ`, where `s` embeds an additive
+slack `δ` into the budget (`δ ↦ (0, δ)` for dp). -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   le_add_of {p q δ : ℝ≥0∞} (hp : p ≤ 1) (hq : q ≤ 1) :
     D (s δ) (p • dirac PUnit.unit.{u + 1}) (q • dirac PUnit.unit) → p ≤ q + δ
@@ -125,6 +127,7 @@ theorem IsComposable.prod [AddZeroClass B] [D.IsReflexive] [D.IsComposable] {b c
     {μ₁ μ₂ : Measure X} {ν₁ ν₂ : Measure Y} [IsSubProbabilityMeasure μ₁]
     [IsSubProbabilityMeasure μ₂] [IsSubProbabilityMeasure ν₁] [IsSubProbabilityMeasure ν₂]
     (hμ : D b μ₁ μ₂) (hν : D c ν₁ ν₂) : D (b + c) (μ₁.prod ν₁) (μ₂.prod ν₂) := by
+  -- write μ₁.prod ν₁ as μ₁ followed by the kernel x ↦ (ν₁.map (x, ·)), then bind
   rw [← compProd_const, ← compProd_const, compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine IsComposable.comp hμ fun x ↦ ?_
   simpa [Kernel.prod_apply, Kernel.id_apply, dirac_prod] using IsComposable.map (f := Prod.mk x) hν

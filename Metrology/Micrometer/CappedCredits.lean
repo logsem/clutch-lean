@@ -4,7 +4,9 @@ public import Metrology.Iris.CappedCredits
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Couplings.Divergences.Concentrated
 
-/-! Credits capped at the absorbing budgets of a graded lifting (Rocq `gccredit_top_False`). -/
+/-! Which budgets are absorbing for dp, tv and Rényi, and that the other budgets cancel, so capped
+credits can always be spent (Rocq `gccredit_top_False`). An optional layer: `wp` uses
+`BudgetCredit`, not `CappedCredit`. -/
 
 @[expose] public section
 

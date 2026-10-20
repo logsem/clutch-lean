@@ -54,6 +54,7 @@ instance : UCMRA ErrorCredit where
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore]
 
+/-- Inclusion of error credits is `≤`. -/
 theorem ErrorCredit.included_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼ ε₂ ↔ ε₁ ≤ ε₂ := by
   refine ⟨?_, (⟨ε₂ - ε₁, add_tsub_cancel_of_le · |>.symm⟩)⟩
   rintro ⟨ε₃, rfl⟩
@@ -69,6 +70,7 @@ instance {ε : ErrorCredit} : CMRA.Cancelable ε where
     refine (ENNReal.add_right_inj ?_).mp h2
     rintro rfl; simp at h1
 
+/-- A local update of error credits that moves credits between the two sides. -/
 theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
   rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, CMRA.op]
@@ -124,6 +126,7 @@ theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢@{IProp GF} ↯ε�
 
 theorem extAuth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢@{IProp GF} ●↯ ε₂ := by simp [he]
 
+/-- Credits split additively. -/
 theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯ε₂ := by
   unfold ec
   iintro Hε
@@ -131,11 +134,13 @@ theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯
   simp [CMRA.op]
   iexact Hε
 
+/-- Take `ε₁` credits out of `ε₂`, keeping the difference. -/
 theorem difference {ε₁ ε₂} (Hwf : ε₁ ≤ ε₂) : ↯ε₂ ⊢@{IProp GF} ↯ε₁ ∗ ↯(ε₂ - ε₁) := by
   iintro H
   iapply split
   iapply ext (add_tsub_cancel_of_le Hwf).symm $$ H
 
+/-- Credits combine additively. -/
 theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ + ε₂) := by
   unfold ec
   iintro ⟨H1, H2⟩
@@ -145,8 +150,10 @@ theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ +
 instance {ε₁ ε₂} : Iris.ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯ε₂) (↯(ε₁ + ε₂)) where
   combine_sep_as := combine
 
+/-- Zero credits can always be allocated. -/
 theorem zero : ⊢@{IProp GF} |==> ↯0 := iOwn_unit
 
+/-- Owned credits never exceed the authoritative total. -/
 theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ ⌜ε ≤ εₛ⌝ := by
   unfold ec ecAuth
   iintro Hs Hε
@@ -155,6 +162,7 @@ theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ �
   ipureintro
   exact includedN_iff.mp ((Auth.auth_both_valid.mp hv).1 0)
 
+/-- Spending `ε` credits decreases the authoritative total by `ε`. -/
 theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ |==> ●↯ (εₛ - ε) := by
   iintro Hs Hε
   ihave %hle := supply_bound $$ Hs Hε
@@ -165,6 +173,7 @@ theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗
   refine localUpdate zero_le ?_
   simpa [add_zero] using (tsub_add_cancel_of_le hle).symm
 
+/-- Allocating `ε₂` credits increases the authoritative total, while it stays below `1`. -/
 theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
     ●↯ ε₁ ⊢@{IProp GF} |==> (●↯ (ε₁ + ε₂) ∗ ↯ε₂) := by
   unfold ec ecAuth
@@ -178,12 +187,14 @@ theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
   iapply iOwn_op
   iexact H
 
+/-- Fewer credits can be obtained from more. -/
 theorem weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ := by
   iintro Hε
   rw [← tsub_add_cancel_of_le h]
   ihave ⟨-, H⟩ := split $$ Hε
   iexact H
 
+/-- Owned credits are below `1`. -/
 theorem valid {ε : ℝ≥0∞} : ↯ε ⊢@{IProp GF} ⌜ε < 1⌝ := by
   unfold ec
   iintro Hε
@@ -192,6 +203,7 @@ theorem valid {ε : ℝ≥0∞} : ↯ε ⊢@{IProp GF} ⌜ε < 1⌝ := by
   ipureintro
   exact Auth.frag_valid.mp hv
 
+/-- Owning at least `1` credit is contradictory. -/
 theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢@{IProp GF} False := by
   iintro Hε
   ihave %hle := valid $$ Hε
@@ -199,6 +211,8 @@ theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢@{IProp GF} False
 
 namespace Induction
 
+/-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1` (pure arithmetic; also used
+by `BudgetCredit.amplifying`). -/
 theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ ε * (k : ℝ≥0∞) ^ n := by
   obtain rfl | hε' := eq_or_ne ε ∞
@@ -211,6 +225,7 @@ theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k
       exact_mod_cast hε
     exact ⟨n, by exact_mod_cast hlift⟩
 
+/-- For `ε > 0` and `k > 1`, some `n` makes `n(k-1)ε + ε' ≥ 1` (pure arithmetic). -/
 theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : ε ≤ ε') (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε' := by
   obtain rfl | hεne := eq_or_ne ε ∞
@@ -232,6 +247,9 @@ theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk
   suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε' -∗ P by
     iapply haux _ le_rfl
   iintro %ε' %hle #Hamp Hε
+  -- Each use of the amplifier turns `ε` into `kε`, a net gain of `(k-1)ε`. `err_amp_mult` picks
+  -- `n` with `n(k-1)ε + ε' ≥ 1`, so after `n` rounds the credit reaches `1`, and `contradict`
+  -- closes.
   obtain ⟨n, hn⟩ := err_amp_mult hε hle hk
   iinduction n generalizing %ε' %hle %hn Hε with
   | zero =>
@@ -260,6 +278,7 @@ theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk
     iapply IH $$ %ε'' %(hle.trans le_self_add) %hn'
     iapply ext hε'' $$ Hε₃
 
+/-- External-entailment form of `simple`. -/
 theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k)
     (hamp : (↯(k * ε) -∗ P) ∗ ↯ε ⊢ P) : ↯ε ⊢ P := by
   iapply simple hε hk
@@ -305,6 +324,7 @@ theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε)
       %(ENNReal.mul_pos_iff.mpr ⟨ENNReal.coe_pos.mpr (pos_of_gt hk), pos_of_gt hε⟩)
       %(hn.trans (_root_.le_of_eq (by ring))) Hε
 
+/-- External-entailment form of `amplifying`. -/
 theorem amp_external {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF}
     (hε : 0 < ε) (hk : 1 < k)
     (hamp : ∀ {ε'}, 0 < ε' → □ (↯((k : ℝ≥0∞) * ε') -∗ P) ∗ ↯ε' ⊢ P) :
@@ -320,6 +340,7 @@ instance ec_timeless (ε : ℝ≥0∞) : BI.Timeless (↯ε : IProp GF) := iOwn_
 
 end ErrorCredit
 
+/-- Allocate fresh error-credit ghost state holding `ε < 1` credits. -/
 theorem ec_alloc {GF : BundledGFunctors} [IEC : ECPreGS GF] (ε : ℝ≥0∞) (h : ε < 1) :
     ⊢@{IProp GF} |==> ∃ γ : GName,
       ecAuth (IEC := { toECPreGS := IEC, γec := γ }) ε ∗

@@ -4,7 +4,9 @@ public import Metrology.ProbLang.Metatheory
 
 /-! # Paired value substitutions
 
-Association lists of value pairs, with projections to `SubstMap` for the left and right sides. -/
+Association lists of value pairs, with projections to `SubstMap` for the left and right sides.
+Used by the binary logical relation to close both sides of an open term at once: `vs.fst` and
+`vs.snd` feed `Exp.substMap`. -/
 
 @[expose] public section
 
@@ -16,7 +18,8 @@ abbrev ValSubstMap (rT : Type _) := List (Var × (Val rT × Val rT))
 namespace ValSubstMap
 variable {rT : Type _}
 
-/-- The pair assigned to `x`, preferring the entry nearest the end of the list. -/
+/-- The pair assigned to `x`, preferring the entry nearest the end of the list, matching
+`SubstMap.lookup` so that `fst_lookup`/`snd_lookup` hold. -/
 def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
   | [], _ => none
   | (y, p) :: rest, x =>
@@ -110,6 +113,9 @@ theorem mem_delete (vs : ValSubstMap rT) (x : Var) (p : Var × (Val rT × Val rT
     p ∈ vs.delete x ↔ p ∈ vs ∧ p.1 ≠ x := by
   simp [delete, List.mem_filter]
 
+/-! Lemmas for any projection `f` of the value pair (`proj_dom`, `proj_delete`, and
+`proj_lookup`, `proj_allClosed` below); `fst_*`/`snd_*` instantiate `f`. -/
+
 theorem proj_dom (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) :
     ((vs.map fun p => (p.1, (f p.2).1)).map (·.1)).toFinset = (vs.map (·.1)).toFinset := by
   simp only [List.map_map]; rfl
@@ -131,8 +137,6 @@ def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
 
 /-- The substitution of right values. -/
 def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
-
-/-! Lemmas for any projection `f` of the value pair; `fst_*`/`snd_*` below instantiate `f`. -/
 
 section proj
 variable (f : Val rT × Val rT → Val rT)

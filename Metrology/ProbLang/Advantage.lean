@@ -10,6 +10,9 @@ public import Metrology.Couplings.AdditiveCouplings
 
 Clutch's point-mass advantage `|Pr[X = v] − Pr[Y = v]|` vanishes on diffuse outputs, so we
 use total variation distance, which agrees with it on discrete languages.
+`advantage X Y` is the worst-case TV distance between the output distributions `limExecV` of `X`
+and `Y`; `tvDist_le_of_addCoupl_eq` turns two-sided equality couplings into advantage bounds (used
+in `Micrometer/Examples/ContinuousOTP`).
 -/
 
 namespace ProbLang

@@ -14,7 +14,8 @@ open MeasureTheory Measure ProbabilityTheory GradedLifting
 /-! ## Homomorphisms -/
 
 /-- A monotone budget map carrying every relational lifting of `L₁` to one of `L₂` (Rocq
-`CouplingMorphism`). -/
+`CouplingMorphism`). Used for conversions that apply only at the end of a proof, such as Rényi/zCDP
+to DP, whose budget map adds a one-off `log (1/δ)` term and so cannot act on leftovers. -/
 structure LiftingRelHom {B₁ : Type v} {B₂ : Type w} [Preorder B₁] [Zero B₁] [Top B₁]
     [Preorder B₂] [Zero B₂] [Top B₂] (L₁ : GradedLifting.{u} B₁) (L₂ : GradedLifting.{u} B₂) where
   /-- The budget map. -/
@@ -254,6 +255,8 @@ def toLiftingRelHom [Zero B₁] [Top B₁] [AddZeroClass B₂] [OrderTop B₂]
     LiftingRelHom L₁ L₂ where
   map := F.map
   mono := F.mono
+  -- `F.map_lift h` is `(L₂.comap F.map).Rel b S` by unfolding `comap`; `Rel.of_comap` turns
+  -- `map ∘ relCost S` back into `relCost S`
   map_rel h := Rel.of_comap htop (F.map_lift h)
 
 @[simp]

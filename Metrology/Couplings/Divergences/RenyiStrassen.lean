@@ -23,7 +23,10 @@ variable {α : ℝ}
 /-- Finite Hölder duality, by Sion's minimax theorem: if every weighting `w ≥ 0` has
 `∑ m w ^ γ ≤ A (∑ n M) ^ γ` whenever `q x y w x ≤ M y`, with `γ = (α - 1) / α`, then some plan
 `s ≥ 0` with rows of mass at most `1` has a reduct `ν' x = ∑ n y q x y s y x` with
-`∑ persp (m x) (ν' x) ≤ A ^ α` (Rocq `minimizer_exists`, `renyi_moment_le_of_minimizer`). -/
+`∑ persp (m x) (ν' x) ≤ A ^ α` (Rocq `minimizer_exists`, `renyi_moment_le_of_minimizer`).
+Used by `exists_kernel_of_codensity_renyi` with `m x = μ {x}`, `n y = ν {y}`,
+`q x y = e^{-E x y}`, `A = e^{γ ρ}`: `h` is `SlackHolder` on finite spaces and `s y x` is the
+fraction of the mass at `y` that the witness kernel sends to `x`. -/
 theorem exists_plan_sum_persp_rpow_le {X Y : Type*} [Fintype X] [Fintype Y] [Nonempty X]
     (hα : 1 < α) {m : X → ℝ} {n : Y → ℝ} {q : X → Y → ℝ} {A : ℝ} (hm : ∀ x, 0 ≤ m x)
     (hn : ∀ y, 0 ≤ n y) (hq : ∀ x y, 0 ≤ q x y) (hA : 0 ≤ A)
@@ -39,7 +42,9 @@ theorem exists_plan_sum_persp_rpow_le {X Y : Type*} [Fintype X] [Fintype Y] [Non
   set P : Set (Y → X → ℝ) := {s | 0 ≤ s ∧ ∀ y, ∑ x, s y x ≤ 1}
   set W : Set (X → ℝ) := Set.Ici 0
   set ν' : (Y → X → ℝ) → X → ℝ := fun s x ↦ ∑ y, n y * q x y * s y x
-  -- the Lagrangian: affine in the plan, concave in the weighting
+  -- the Lagrangian: affine in the plan, concave in the weighting. By Young,
+  -- `sup_{w ≥ 0} (α m w ^ γ - (α - 1) ν' w) = m ^ α ν' ^ (1 - α) = persp m ν'`, so the minimax
+  -- value bounds `∑ persp`, and the inner inf over plans is computed by the greedy plan (`hsup`).
   set F : (Y → X → ℝ) → (X → ℝ) → ℝ :=
     fun s w ↦ ∑ x, (α * m x * w x ^ γ - (α - 1) * ν' s x * w x)
   have hν' (a b : ℝ) (s t : Y → X → ℝ) (x : X) :
@@ -204,7 +209,7 @@ theorem isSubMarkovKernel_of_lintegral_expBudget_le {r : Kernel Y X}
 
 /-- A witness kernel gives the Rényi codensity lifting: if the rows of `r` pay for the leftover,
 `∫ e^{R x y} d(r y) ≤ 1`, and the reduct `r ∘ₘ ν` is within budget `ρ` of `μ`, then `μ` and `ν`
-lift `R` at `ρ`. Along each row `f ^ β ≤ e^R g(y) ^ β`, then Hölder against the reduct (Rocq
+lift `R` at `ρ`. Hölder against the reduct, then along each row `f ^ β ≤ e^R g(y) ^ β` (Rocq
 `witness_adaptive` at `Cr = 1`, `witness_soundness`). -/
 theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {R : X → Y → ℝ≥0∞} (r : Kernel Y X) [IsSubMarkovKernel r]
@@ -218,6 +223,7 @@ theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasur
   have hα0 : 0 < α := zero_lt_one.trans hα.out
   have hα1 : 0 < α - 1 := sub_pos.2 hα.out
   have hβ : 0 < α / (α - 1) := div_pos hα0 hα1
+  -- each row of `r` turns `f ^ β` into at most `g y ^ β`, paying `e^R` from `hr`
   have hrow (y : Y) : ∫⁻ x, f x ^ (α / (α - 1)) ∂r y ≤ g y ^ (α / (α - 1)) := by
     rcases eq_or_ne (g y) ⊤ with hgy | hgy
     · simp [hgy, ENNReal.top_rpow_of_pos hβ]
@@ -239,9 +245,9 @@ theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasur
         gcongr with y
         exact hrow y
 
-/-- A kernel `r` with `∫ e^{E x y} d(r y) ≤ 1` and `D_α(μ ‖ r ∘ ν) ≤ ρ` witnesses the Rényi
-codensity lifting of `μ` and `ν` at a measurable cost `E` (Rocq `witness_soundness`,
-`Kant_exact_uncond`). -/
+/-- `codensity_renyi_of_witness` for a measurable cost `E`: the a.e. finiteness of `E` and the
+sub-Markov property of `r` follow from `∫ e^E d(r y) ≤ 1`. This is the form `RenyiFiber` and the
+Strassen converse use (Rocq `witness_soundness`, `Kant_exact_uncond`). -/
 theorem codensity_renyi_of_kernel [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (hE : ∀ y, Measurable fun x ↦ E x y) {r : Kernel Y X}
     (hr : ∀ y, ∫⁻ x, expBudget (E x y) ∂(r y) ≤ 1) (hD : renyiDivergence α ρ μ (r ∘ₘ ν)) :

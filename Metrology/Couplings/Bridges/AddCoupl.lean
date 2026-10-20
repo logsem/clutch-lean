@@ -72,7 +72,9 @@ theorem expCoupl_add_const [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure
     (expCoupl_iff_codensity_tv.2 (IsTopAbsorbing.frame (expCoupl_iff_codensity_tv.1 H))
       f g hf hg hf1 hg1 hfg).trans (by gcongr)
 
-/-- A total variation lifting may assume the right sample lies in a set carrying `ν`. -/
+/-- A total variation lifting may assume the right sample lies in a set carrying `ν`.
+`IsSupportLocal` restricts only the left side; the right restriction goes through
+`AddCoupl.concentrated_R`. -/
 theorem GradedLifting.Rel.tv_restrict_right [IsSubProbabilityMeasure μ] {S : X → Y → Prop}
     {T : Set Y} (h : (codensity tv).Rel δ S μ ν) (hT : MeasurableSet T) (hν : ν Tᶜ = 0) :
     (codensity tv).Rel δ (fun x y ↦ S x y ∧ y ∈ T) μ ν :=

@@ -254,6 +254,7 @@ noncomputable def massEq (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
     side _ _ R f g := ∀ x y, R x y < ⊤ → f x univ = g y univ
     sound := by
       rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨hμ, hν, h⟩ hside hk I _ c hbc k l _ _ hkl
+      -- the test premise holds a.e. under f ∘ μ, hence a.e. under f x for μ-a.e. x
       have hae := Measure.ae_ae_of_ae_comp hkl
       -- test the head with the filled (Markov) kernels; equal mass makes filling free
       have hout := h hbc (k := (k ∘ₖ f).withBot) (l := (l ∘ₖ g).withBot) <|

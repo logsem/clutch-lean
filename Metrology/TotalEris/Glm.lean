@@ -11,6 +11,14 @@ public import Iris.BI.Lib.Fixpoint
 public import Iris.ProofMode.Classes
 public import Iris.ProofMode.InstancesUpdates
 
+/-!
+# Graded lifting modality
+
+The error-graded `glm'` (zero or more erasable steps and credit bumps, then exactly one prim step
+into `Z`), and its monotonicity, bind and introduction rules. Primed names are the
+total-correctness versions; `LiveEris/Glm.lean` has the unrelated vector-credit `glm`.
+-/
+
 @[expose] public section
 
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
@@ -22,14 +30,6 @@ variable {rT : Type _} [LawfulProbLangℝ rT]
 
 namespace TotalEris
 
-/-!
-# Graded lifting modality
-
-The error-graded `glm'` (zero or more erasable steps and credit bumps, then exactly one prim step
-into `Z`), and its monotonicity, bind and introduction rules. Primed names are the
-total-correctness versions; `LiveEris/Glm.lean` has the unrelated vector-credit `glm`.
--/
-
 /-- The predicate `φ` fails with `μ`-probability at most `ε` (Eris `pgl`, probability of good
 lifting). -/
 def Pgl {α : Type _} [MeasurableSpace α] (ε : ENNReal) (φ : α → Prop)
@@ -39,18 +39,22 @@ namespace Pgl
 
 variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
 
+/-- `Pgl` is monotone in the error bound. -/
 theorem mono_grading {ε ε' : ENNReal} {φ : α → Prop} {μ : MeasureTheory.Measure α}
     (hε : ε ≤ ε') (h : Pgl ε φ μ) : Pgl ε' φ μ := h.trans hε
 
+/-- `Pgl` is monotone in the predicate. -/
 theorem mono_pred {ε : ENNReal} {φ ψ : α → Prop} {μ : MeasureTheory.Measure α}
     (hφψ : ∀ a, φ a → ψ a) (h : Pgl ε φ μ) : Pgl ε ψ μ := by
   refine .trans (MeasureTheory.measure_mono ?_) h
   intro x hx hxφ; exact hx (hφψ x hxφ)
 
+/-- A predicate that fails on a null set holds with error `0`. -/
 theorem zero_of_null {φ : α → Prop} (μ : MeasureTheory.Measure α)
     (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ :=
   Hnull.le
 
+/-- An atomic-support measure almost surely lands on possible outcomes. -/
 theorem zero_possible [MeasurableSingletonClass α] {μ : MeasureTheory.Measure α}
     (h : IsAtomicSupport μ) : Pgl 0 (fun a => Possible a μ) μ := by
   show μ {x | ¬ Possible x μ} ≤ 0
@@ -58,6 +62,7 @@ theorem zero_possible [MeasurableSingletonClass α] {μ : MeasureTheory.Measure 
     ext x; simp [possible_iff_pos, pos_iff_ne_zero]
   rw [hset]; exact h.le
 
+/-- A measure concentrated on a predicate satisfies it with error `0`. -/
 theorem of_concentrated {μ : MeasureTheory.Measure α} {φ : α → Prop}
     (h : Concentrated μ {x | φ x}) : Pgl 0 φ μ :=
   h.le
@@ -109,7 +114,8 @@ instance : OFE.Discrete (GlmState rT) := ⟨id⟩
 
 /-- Take a real program step, splitting the budget `ε` over the outcomes.
 `R`: the outcomes kept, failing with probability `≤ ε₁` (`Pgl`); `X₂ ρ`: the budget passed to
-outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`; `r`: a uniform bound on `X₂` (adequacy does not use it). -/
+outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`; `r`: a uniform bound on `X₂`, mirroring Eris's `glm` (where it
+makes the expectation finite); here expectations are `lintegral`s, so it is unused. -/
 abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
   iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal) (r : ENNReal),
@@ -138,8 +144,8 @@ theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNRea
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁)
       ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
-  iintro ⟨HZ, HPS⟩
-  icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+  iintro ⟨HZ, HPrim⟩
+  icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists R, ε₁, X₂, r
   iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
   iintro %ρ HR
@@ -154,8 +160,8 @@ theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNRea
     {Φ Ψ : GlmState rT → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmErasable' e₁ σ₁ ε Φ)
       ⊢ glmErasable' e₁ σ₁ ε Ψ := by
-  iintro ⟨HΦΨ, HSS⟩
-  icases HSS with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+  iintro ⟨HΦΨ, HEras⟩
+  icases HEras with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists μ, R, ε₁, X₂, r
   iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
   iintro %σ' %HR
@@ -175,9 +181,9 @@ theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
     {Φ Ψ : GlmState rT → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump' ρ ε Φ)
       ⊢ glmCreditBump' ρ ε Ψ := by
-  iintro ⟨HΦΨ, HOT⟩
+  iintro ⟨HΦΨ, HBump⟩
   iintro %ε' %Hlt
-  imod HOT $$ %ε' %Hlt with HS
+  imod HBump $$ %ε' %Hlt with HS
   imodintro
   iapply execStutter_mono_pred
   iframe HS
@@ -204,16 +210,16 @@ instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
   mono_pred {Φ Ψ _ _} := by
     iintro #Hwand %s Hs
     obtain ⟨ρ, ε⟩ := s
-    icases Hs with ⟨HOT | HPS | HSS⟩
+    icases Hs with ⟨HBump | HPrim | HEras⟩
     · ileft
       iapply glmCreditBump'_strong_mono
-      iframe HOT
+      iframe HBump
       iintro %s HΦ
       iapply Hwand $$ HΦ
-    · iright; ileft; iexact HPS
+    · iright; ileft; iexact HPrim
     · iright; iright
       iapply glmErasable'_strong_mono
-      iframe HSS
+      iframe HEras
       iintro %s HΦ
       iapply Hwand $$ HΦ
   mono_pred_ne.ne {_ s s'} hd := by
@@ -249,20 +255,20 @@ theorem glm'_strong_mono
     · iintro !> %s HF Hwand
       iapply least_fixpoint_unfold_mpr (glmPre' Z₂)
       obtain ⟨ρ, ε⟩ := s
-      icases HF with ⟨HOT | HPS | HSS⟩
+      icases HF with ⟨HBump | HPrim | HEras⟩
       · ileft
         iapply glmCreditBump'_strong_mono
-        iframe HOT
+        iframe HBump
         iintro %s HP
         iapply HP $$ Hwand
       · iright; ileft
         iapply glmPrimStep'_strong_mono
-        iframe HPS
+        iframe HPrim
         iintro %ρ' %ε' HC
         iapply Hwand $$ HC
       · iright; iright
         iapply glmErasable'_strong_mono
-        iframe HSS
+        iframe HEras
         iintro %s HP
         iapply HP $$ Hwand
     · iexact HG
@@ -275,18 +281,18 @@ theorem glm'_mono_grading
   iintro HG
   ihave HG' := least_fixpoint_unfold_mp (glmPre' Z) $$ HG
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
-  icases HG' with ⟨HOT | HPS | HSS⟩
+  icases HG' with ⟨HBump | HPrim | HEras⟩
   · ileft
     iintro %ε'' %Hlt
-    iapply HOT $$ %ε'' %(hε.trans_lt Hlt)
+    iapply HBump $$ %ε'' %(hε.trans_lt Hlt)
   · iright; ileft
-    icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+    icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
     replace Hexp := Hexp.trans hε
     iexists R, ε₁, X₂, r
     iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
     iexact HCont
   · iright; iright
-    icases HSS with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+    icases HEras with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
     replace Hexp := Hexp.trans hε
     iexists μ, R, ε₁, X₂, r
     iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
@@ -309,14 +315,14 @@ theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
   iapply (least_fixpoint_strong_mono (glmPre' Z₁) (glmPre' Z₂)) $$ [] HG
   iintro !> %Φ %s HF
   obtain ⟨ρ, ε⟩ := s
-  icases HF with ⟨HOT | HPS | HSS⟩
-  · ileft; iexact HOT
+  icases HF with ⟨HBump | HPrim | HEras⟩
+  · ileft; iexact HBump
   · iright; ileft
     iapply glmPrimStep'_strong_mono
-    iframe HPS
+    iframe HPrim
     iintro %ρ' %ε' HC
     iapply HZ $$ HC
-  · iright; iright; iexact HSS
+  · iright; iright; iexact HEras
 
 theorem glm'_bind
     {K : Ectx rT} {e : Exp rT} {σ : State rT} {ε : ENNReal}
@@ -338,10 +344,10 @@ theorem glm'_bind
     · iintro !> %s HF
       obtain ⟨ρ, ε'⟩ := s
       iapply least_fixpoint_unfold_mpr (glmPre' Z)
-      icases HF with ⟨HOT | HPS | HSS⟩
-      · ileft; iexact HOT
+      icases HF with ⟨HBump | HPrim | HEras⟩
+      · ileft; iexact HBump
       · iright; ileft
-        icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+        icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
         have Hsv : ¬ ρ.expr.isValue := val_stuck Hred
         set R' : Cfg rT → Prop := fun ρ' => ∃ ρ'', ρ' = K.fillCfg ρ'' ∧ R ρ'' with hR'def
         set X₂' : Cfg rT → ENNReal :=
@@ -387,7 +393,7 @@ theorem glm'_bind
         imodintro
         simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
         iexact HS
-      · iright; iright; iexact HSS
+      · iright; iright; iexact HEras
     · iexact HG
   iexact HΦ
 
@@ -396,10 +402,10 @@ theorem glm'_bind
 theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
     glmPrimStep' e σ ε Z ⊢ glm' e σ ε Z := by
-  iintro HPS
+  iintro HPrim
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
   iright; ileft
-  iexact HPS
+  iexact HPrim
 
 theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
@@ -415,10 +421,10 @@ theorem glm'_credit_bump {e : Exp rT} {σ : State rT} {ε : ENNReal}
     {Z : Cfg rT → ENNReal → IProp GF} :
     glmCreditBump' ⟨e, σ⟩ ε (fun s => glm' s.1.expr s.1.state s.2 Z) ⊢
       glm' e σ ε Z := by
-  iintro HOT
+  iintro HBump
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
   ileft
-  iexact HOT
+  iexact HBump
 
 end ErisWpGS
 

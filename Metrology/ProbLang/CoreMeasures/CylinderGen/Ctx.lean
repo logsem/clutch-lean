@@ -67,8 +67,11 @@ def Ctor.named (c : Ctor) (pre : String) : Name := .mkSimple s!"{pre}_{c.short}"
 structure Ctx where
   T : Name
   levelParams : List Name
+  /-- The parameters of `T`, as free variables. -/
   params : Array Expr
+  /-- A `MeasurableSpace` instance variable per parameter. -/
   insts : Array Expr
+  /-- The constructors, in declaration order (`Ctor.idx`). -/
   ctors : Array Ctor
   /-- The universe of `T`. -/
   w : Level
@@ -133,16 +136,22 @@ def Ctx.const (ctx : Ctx) (n : Name) (insts := false) : Expr :=
 def Ctx.member (ctx : Ctx) (suffix : Name) (insts := false) : Expr :=
   ctx.const (ctx.T ++ suffix) insts
 
--- `T params`, `T.Shape`, `T.Shape.c`, `T.Shape.c args`, `T.Leaves s`, `T.measurableEquiv`, and
--- `PUnit` and `PUnit.unit` in the universe of the leaves
+/-- The type `T params`. -/
 def Ctx.ty (ctx : Ctx) : Expr := ctx.const ctx.T
+/-- The type `T.Shape` (not the function `T.shape`). -/
 def Ctx.shape (ctx : Ctx) : Expr := mkConst (ctx.T ++ `Shape)
+/-- The name of the shape constructor `T.Shape.c`. -/
 def Ctx.shapeCtor (ctx : Ctx) (c : Ctor) : Name := (ctx.T ++ `Shape).str c.short
+/-- The shape `T.Shape.c args`. -/
 def Ctx.shapeOf (ctx : Ctx) (c : Ctor) (args : Array Expr) : Expr :=
   mkAppN (mkConst (ctx.shapeCtor c)) args
+/-- The type `T.Leaves s` of the leaves of the shape `s`. -/
 def Ctx.leaves (ctx : Ctx) (s : Expr) : Expr := mkApp (ctx.member `Leaves) s
+/-- The constant `T.measurableEquiv`, applied to the parameters and their instances. -/
 def Ctx.equiv (ctx : Ctx) : Expr := ctx.member `measurableEquiv (insts := true)
+/-- `PUnit`, in the universe of the leaves. -/
 def Ctx.punit (ctx : Ctx) : Expr := mkConst ``PUnit [ctx.w.succ]
+/-- `PUnit.unit`, in the universe of the leaves. -/
 def Ctx.unit (ctx : Ctx) : Expr := mkConst ``PUnit.unit [ctx.w.succ]
 
 /-- `ULift A`, in the universe of `T`. -/

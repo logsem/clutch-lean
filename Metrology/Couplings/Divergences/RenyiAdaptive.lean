@@ -27,7 +27,8 @@ instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
   isSubProbabilityMeasure_withDensity_of_le_one μ fun _ ↦ ENNReal.inv_le_one.2 (one_le_expBudget _)
 
 open Real in
-/-- Scaling the right measure by `e^{-c}` raises the Rényi divergence by at most `c`. -/
+/-- Scaling the right measure by `e^{-c}` raises the Rényi divergence by at most `c`. This is what
+makes the escort head shift-invariant (`HeadShift` for `BindLaw.escort`, `BindLaws.lean`). -/
 theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc : c ≠ ⊤)
     {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure ν] (h : renyiDivergence α ρ μ ν) :
     renyiDivergence α (ρ + c) μ ((expBudget c)⁻¹ • ν) := by
@@ -102,6 +103,8 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
   have : IsSubMarkovKernel r' := ⟨fun y ↦ hr' y ▸ inferInstance⟩
   -- the leftover of the witness: `ρ₂ x` on `S`, `⊤` off it
   set E : X → Y → ℝ≥0∞ := fun x y ↦ if S x y then ρ₂ x else ⊤
+  -- step 1: the head as a witness lifting with leftover `ρ₂` on `S`
+  -- (`codensity_renyi_of_witness`, witness `r' = r · e^{-ρ₂}`)
   have hE : (renyiDivergence α).codensity ρ E μ ν := by
     refine codensity_renyi_of_witness r' (fun y ↦ ?_) (fun y ↦ ?_) ?_
     · rw [hr', ae_withDensity_iff hw]
@@ -109,12 +112,14 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
       simp only [E, hS, ↓reduceIte]
       exact expBudget_lt_top_iff.1 (lt_top_iff_ne_top.2 (by simpa [w] using hx))
     · rw [hr']
+      -- the weight `e^{-ρ₂}` cancels `e^E = e^{ρ₂}` on `S`
       calc ∫⁻ x, expBudget (E x y) ∂(r y).withDensity w
           ≤ ∫⁻ x, w x * expBudget (E x y) ∂r y := lintegral_withDensity_le_lintegral_mul _ hw _
         _ ≤ ∫⁻ _, 1 ∂r y := lintegral_mono_ae <| (hr y).mono fun x hS ↦ by
             simp [E, hS, w]
         _ ≤ 1 := IsSubProbabilityMeasure.lintegral_le_one fun _ ↦ le_rfl
     · rwa [← withDensity_comp hw]
+  -- step 2: ordinary bind
   refine HasBind.bind (L := codensity _) hE fun x y hxy ↦ ?_
   by_cases hS : S x y
   · simpa [E, hS] using hκη x y hS
@@ -131,6 +136,7 @@ theorem exists_not_codensity_renyi_bind_lintegral :
       IsProbabilityMeasure μ ∧ IsMarkovKernel κ ∧ IsMarkovKernel η ∧
       (∀ x, (codensity (renyiDivergence 2)).Rel (ρ₂ x) (· = ·) (κ x) (η x)) ∧
       ¬(codensity (renyiDivergence 2)).Rel (∫⁻ x, ρ₂ x ∂μ) (· = ·) (κ ∘ₘ μ) (η ∘ₘ μ) := by
+  -- local: `Power.lean`'s instance is not imported here
   have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
   have hhalf {Z : Type} [MeasurableSpace Z] (a b : Z) :
       IsProbabilityMeasure ((2⁻¹ : ℝ≥0∞) • (dirac a + dirac b)) :=

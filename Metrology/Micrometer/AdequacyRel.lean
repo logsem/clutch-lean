@@ -185,6 +185,8 @@ instance MicrometerFunctor_InvGpreS : InvGpreS (MicrometerFunctor rT B) where
   toWsatGpreS := MicrometerFunctor_WsatGpreS rT B
   toLcGpreS := MicrometerFunctor_LcGpreS rT B
 
+-- The program and spec heaps (and tapes) use the same camera, so they share slots 4 and 5;
+-- separate ghost names keep them apart.
 instance MicrometerFunctor_AppPreGS : AppPreGS rT (MicrometerFunctor rT B) where
   heap := ⟨4, rfl⟩
   tapes := ⟨5, rfl⟩

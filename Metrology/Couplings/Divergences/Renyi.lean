@@ -18,7 +18,10 @@ open Real ENNReal
 
 variable {X : Type*} [MeasurableSpace X]
 
-/-! ## The weight `t ↦ t ^ α` -/
+/-! ## The weight `t ↦ t ^ α`
+
+Multiplicativity (`persp_rpow_mul`) gives composability via `fDiv_rpow_comp_le`; monotonicity in
+each argument gives `IsRightMonotone` and `IsLeftAntitone`. -/
 
 variable {α : ℝ}
 
@@ -134,6 +137,7 @@ theorem persp_rpow_le_exp_iff (hα : 1 < α) {a b r : ℝ} (ha : 0 ≤ a) (hb : 
 theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
   fDiv_nonneg_of_nonneg fun _ ht ↦ rpow_nonneg ht α
 
+/-- The `α`-moment decreases as the right measure grows. -/
 theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMeasure μ]
     [IsFiniteMeasure ν'] (h : ν ≤ ν') : fDiv (· ^ α) μ ν' ≤ fDiv (· ^ α) μ ν := by
   have := isFiniteMeasure_of_le ν' h
@@ -143,6 +147,7 @@ theorem fDiv_rpow_anti_right (hα : 1 < α) {μ ν ν' : Measure X} [IsFiniteMea
     persp_rpow_anti_right hα toReal_nonneg toReal_nonneg
       (toReal_mono (measure_ne_top ν' _) (le_iff'.1 h _))
 
+/-- The `α`-moment increases as the left measure grows. -/
 theorem fDiv_rpow_mono_left (hα : 1 < α) {μ μ' ν : Measure X} [IsFiniteMeasure μ']
     [IsFiniteMeasure ν] (h : μ ≤ μ') : fDiv (· ^ α) μ ν ≤ fDiv (· ^ α) μ' ν := by
   have := isFiniteMeasure_of_le μ' h
@@ -293,7 +298,8 @@ theorem le_ofReal_exp_mul_rpow_iff {a b : ℝ≥0∞} {γ c : ℝ} (hγ : 0 ≤ 
   rw [hb', ← ofReal_mul (exp_pos _).le, le_ofReal_iff_toReal_le ha (by positivity)]
 
 /-- Between point masses, a finite Rényi budget is the Hölder bound
-`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}`. -/
+`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}`. This is the scalar Hölder form behind the point-test and
+slack-Hölder characterizations in `RenyiCodensity.lean`. -/
 theorem renyiDivergence_smul_dirac_iff (hα : 1 < α) (hρ : ρ ≠ ⊤) {a b : ℝ≥0∞} (ha : a ≠ ⊤)
     (hb : b ≠ ⊤) :
     renyiDivergence α ρ (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) ↔

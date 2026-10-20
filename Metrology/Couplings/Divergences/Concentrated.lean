@@ -3,7 +3,9 @@ module
 public import Metrology.Couplings.Divergences.RenyiCurve
 public import Metrology.Couplings.LiftingHom
 
-/-! Concentrated DP (zCDP, tCDP) as graded divergences (Approximate Span Liftings, §4). -/
+/-! zCDP and tCDP (Approximate Span Liftings, §4): Rényi curves read along the lines `α ↦ ξ + α ρ`
+(`concentratedLine`). The liftings regrade the curve's codensity lifting, not the line divergence's,
+so each Rényi order is a homomorphic image (`LiftingHom.concentratedToRenyi`). -/
 
 @[expose] public section
 
@@ -82,7 +84,8 @@ noncomputable abbrev zcdpDivergence : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥
   concentratedDivergence (Ioi 1)
 
 /-- `(ρ, ω)`-tCDP: Rényi bounds `α ρ` at the orders `1 < α < ω` (Eq. 7). -/
--- a `def`, not an `abbrev`: its instances are proved by unfolding (`isGraded_tcdp`, ...)
+-- a `def`: `Prod.mk 0` sends `⊤` to `(0, ⊤) ≠ ⊤`, so the generic `comap` instances do not fire; the
+-- tCDP instances below use that the line at `(0, ⊤)` is still `⊤`.
 noncomputable def tcdpDivergence (ω : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   (concentratedDivergence (Ioo 1 ω)).comap (Prod.mk 0)
 
@@ -185,6 +188,8 @@ instance isRightMonotone_tcdp : (tcdpDivergence.{u} ω).IsRightMonotone :=
 instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
   GradedDivergence.isLeftAntitone_comap
 
+/-- Below `α ρ'`, `ρ` can be raised to hit any larger value exactly; used for budget closedness
+of tCDP. -/
 theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
     (h : ENNReal.ofReal α * ρ < t) : ∃ ρ', ρ < ρ' ∧ ENNReal.ofReal α * ρ' = t := by
   have h0 := ofReal_ioi_ne_zero α

@@ -73,7 +73,8 @@ section Bind
 variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
 
 variable (L) in
-/-- Contextual refinement from an open logical refinement, for contexts with fresh binders. -/
+/-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
+left no more often than on the right, from the same state (the inequality inside `CtxRefines`). -/
 theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
     (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
@@ -97,7 +98,9 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
   exact IsMassDetecting.measure_le (s := s) (.singleton _) (.singleton _) hCpl
     adequacyRel_boolEqVal_mem
 
-/-- Contextual refinement from a closed logical refinement, for contexts with fresh binders. -/
+/-- A closed budget-free refinement makes each typed boolean context with fresh binders return `b`
+on the left no more often than on the right, from the same state (the inequality inside
+`CtxRefines`). -/
 theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
     (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)

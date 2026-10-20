@@ -18,7 +18,12 @@ open Real
 
 variable {α : ℝ}
 
-/-! ## The perspective of `t ↦ t ^ α` -/
+/-! ## The perspective of `t ↦ t ^ α`
+
+Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. A test into a point with masses
+`(h p, h ^ β q)` has divergence at most the cellwise one (`persp_rpow_sum_le`), with equality at
+`h ∝ (p / q) ^ (α - 1)` (`exists_persp_rpow_eq_sum`). This turns any partition test into a point
+test. -/
 
 theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
@@ -223,6 +228,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
     exp_le_one_iff.2 (neg_nonpos.2 (mul_nonneg (by linarith) toReal_nonneg))
   rw [renyiDivergence_iff_of_ne_top hα1.le hρc.ne, fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun π ↦ iSup_le fun hπ ↦ ?_
+  -- step 1: pick Hölder weights `w` so the partition sum is a single point test
   obtain ⟨w, hw, hle⟩ := exists_sum_persp_rpow_le hα1
     (p := fun j ↦ ((k ∘ₘ μ) (π ⁻¹' {j})).toReal) (q := fun j ↦ ((l ∘ₘ ν) (π ⁻¹' {j})).toReal)
     (fun _ ↦ toReal_nonneg) fun _ ↦ toReal_nonneg
@@ -245,7 +251,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   rw [← comp_assoc, ← comp_assoc, renyiDivergence_iff_of_ne_top hα1.le hρ.ne, hmass] at key
   set A := persp (· ^ α) (∑ j, w j * ((k ∘ₘ μ) (π ⁻¹' {j})).toReal)
     (∑ j, w j ^ (α / (α - 1)) * ((l ∘ₘ ν) (π ⁻¹' {j})).toReal)
-  -- undo the scaling by `s`
+  -- step 2: `s * A ≤ e^{(α-1)ρ}`, so `A ≤ e^{(α-1)(ρ+c)}` since `s = e^{-(α-1)c}`
   calc A = ((s⁻¹ : ℝ) : EReal) * (s * A) := by
         rw [← mul_assoc, ← EReal.coe_mul, inv_mul_cancel₀ hs.ne', EReal.coe_one, one_mul]
     _ ≤ ((s⁻¹ : ℝ) : EReal) * ((exp ((α - 1) * ρ.toReal) : ℝ) : EReal) :=
@@ -264,9 +270,9 @@ theorem codensity_renyi_iff_unitTests [Fact (1 < α)] [IsSubProbabilityMeasure �
         renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) :=
   ⟨fun h _ _ _ _ ↦ renyiDivergence_comp_of_codensity h, codensity_renyi_of_unitTests⟩
 
-/-! ## The slack-Hölder head and Rényi couplings -/
+/-! ## The slack-Hölder bound and Rényi couplings -/
 
-/-- The slack-Hölder head: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
+/-- The slack-Hölder bound: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
 satisfy `E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `SH`). -/
 def SlackHolder (α : ℝ) (ρ : ℝ≥0∞) (R : X → Y → ℝ≥0∞) (μ : Measure X) (ν : Measure Y) : Prop :=
   ∀ ⦃f : X → ℝ≥0∞⦄ ⦃g : Y → ℝ≥0∞⦄, Measurable f → Measurable g →
@@ -281,7 +287,7 @@ def RdpCoupl (α : ℝ) (ρ : ℝ≥0∞) (S : X → Y → Prop) (μ : Measure X
     ∫⁻ x, f x ∂μ ≤
       expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α)
 
-/-- The Rényi coupling of `S` is the slack-Hölder head at the leftover of `S` (Rocq
+/-- The Rényi coupling of `S` is the slack-Hölder bound at the leftover of `S` (Rocq
 `SH_boolean`). -/
 theorem rdpCoupl_iff_slackHolder {S : X → Y → Prop} :
     RdpCoupl α ρ S μ ν ↔ SlackHolder α ρ (relCost S) μ ν := by
@@ -291,7 +297,7 @@ theorem rdpCoupl_iff_slackHolder {S : X → Y → Prop} :
     by_cases hS : S x y <;> simp [hS]
   simp only [RdpCoupl, SlackHolder, this]
 
-/-- A slack-Hölder head gives the Rényi codensity lifting: tests into a point are Hölder bounds
+/-- A slack-Hölder bound gives the Rényi codensity lifting: tests into a point are Hölder bounds
 (Rocq `SH_to_bind_unit`, `kanto_bind`). -/
 theorem codensity_renyi_of_slackHolder [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (h : SlackHolder α ρ R μ ν) :
@@ -375,7 +381,7 @@ theorem slackHolder_truncated_of_codensity [hα : Fact (1 < α)] [IsSubProbabili
         gcongr with y
         exact min_le_left _ _
 
-/-- A Rényi codensity lifting at a finite budget is a slack-Hölder head: truncate the tests at
+/-- A Rényi codensity lifting at a finite budget is a slack-Hölder bound: truncate the tests at
 `N + 1`, scale them into `[0, 1]`, test into a point, and let `N → ∞` (Rocq
 `bind_unit_to_SH`). -/
 theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
@@ -391,7 +397,7 @@ theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure 
         lintegral_iSup (fun _ ↦ by fun_prop) fun _ _ _ _ ↦ by gcongr
     _ ≤ _ := iSup_le htrunc
 
-/-- The Rényi codensity lifting at a finite budget is the slack-Hölder head (Rocq
+/-- The Rényi codensity lifting at a finite budget is the slack-Hölder bound (Rocq
 `SH_iff_bind_unit`). -/
 theorem codensity_renyi_iff_slackHolder [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (hρ : ρ ≠ ⊤) :

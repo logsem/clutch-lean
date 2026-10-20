@@ -91,12 +91,13 @@ theorem IsPrivate.map [AddZeroClass B] [D.IsReflexive] [D.IsComposable] [IsSubMa
     (m.map f).IsPrivate D adj b :=
   fun _ _ hx ↦ by simpa only [Kernel.map_apply _ hf] using IsComposable.map (h hx) hf
 
-/-- Adaptive composition adds budgets: a second mechanism that sees the first output is private
-for each fixed first output. -/
+/-- Adaptive composition adds budgets: if `m` is `b`-private and, for each first output `y`, the
+second mechanism `k (·, y)` is `c`-private, then `m ⊗ₖ k` is `(b + c)`-private. -/
 theorem IsPrivate.compProd [AddZeroClass B] [D.IsReflexive] [D.IsComposable]
     [IsSubMarkovKernel m] (h : m.IsPrivate D adj b) {k : Kernel (X × Y) Z} [IsSubMarkovKernel k]
     (hk : ∀ y, (k.sectL y).IsPrivate D adj c) : (m ⊗ₖ k).IsPrivate D adj (b + c) := by
   intro x x' hx
+  -- `m ⊗ₖ k = (id × k) ∘ m`: compose, keeping `y` via `map (Prod.mk y)`
   rw [Kernel.compProd_apply_eq_compProd_sectR, Kernel.compProd_apply_eq_compProd_sectR,
     compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine IsComposable.comp (h hx) fun y ↦ ?_

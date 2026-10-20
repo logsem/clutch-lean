@@ -7,7 +7,8 @@ public import Mathlib.MeasureTheory.Integral.Bochner.Set
 public import Mathlib.Topology.Instances.EReal.Lemmas
 
 /-! The perspective of a convex weight and Jensen's inequality for it (Approximate Span
-Liftings, Def. 2.6). -/
+Liftings, Def. 2.6). `persp` is the per-cell term of the partition formula
+`fDiv_eq_iSup_partition`; the `EReal` sum lemmas support those finite sums. -/
 
 @[expose] public section
 

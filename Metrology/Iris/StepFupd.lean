@@ -7,7 +7,9 @@ public import Iris.ProofMode
 
 /-! # Step-update lemmas
 
-Pure facts and plain universals under `|={E}[E]▷=>^[n]`. -/
+Pure facts and plain universals under `|={E}[E]▷=>^[n]`.
+Used by adequacy (`Micrometer/Adequacy`: `step_fupdN_pure_imp_forall₃`/`₄`) to extract a pure
+conclusion from `|={∅}=> |={∅}[∅]▷=>^[n]`. -/
 
 open Std Iris.Std Iris.BI Iris.ProofMode
 
@@ -19,14 +21,17 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 
 open Iris.BI.BIBase
 
+/-- An update to `n+1` laters is an `n+1`-fold step-update. -/
 theorem fupd_laterN_to_step_fupdN (E : CoPset) (n : Nat) {Q : PROP} : iprop%
     (|={E}=> ▷^[n+1] Q) ⊢ |={E}[E]▷=>^[n+1] Q :=
   (BIFUpdate.mono (step_fupdN_intro Std.LawfulSet.subset_refl)).trans BIFUpdate.trans
 
+/-- An except-0 under a step-update can be dropped. -/
 theorem step_fupd_except0 (E1 E2 : CoPset) {P : PROP} : iprop%
     (|={E1}[E2]▷=> ◇ P) ⊢ |={E1}[E2]▷=> P :=
   BIFUpdate.mono (later_mono fupd_except0)
 
+/-- An except-0 under the last step-update can be dropped. -/
 theorem step_fupdN_except0 (E1 E2 : CoPset) {P : PROP} (n : Nat) : iprop%
     (|={E1}[E2]▷=>^[n+1] ◇ P) ⊢ |={E1}[E2]▷=>^[n+1] P :=
   calc _ ⊢ |={E1}[E2]▷=>^[n] |={E1}[E2]▷=> ◇ P := (step_fupdN_add (n := n) (m := 1)).mp
@@ -40,6 +45,7 @@ theorem fupd_step_fupdN_pure {p : Prop} (n : Nat) (h : p) : ⊢@{PROP} |={∅}=>
     _ ⊢ |={∅}[∅]▷=>^[n] ⌜p⌝ := step_fupdN_intro Std.LawfulSet.subset_refl
     _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ := fupd_intro
 
+/-- A pure-guarded wand under `|={∅}=>` moves the update inside the wand (used by `LiveEris`). -/
 theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
     (⌜p⌝ -∗ |={∅}=> P) ⊢ |={∅}=> (⌜p⌝ -∗ P) := by
   iintro HwP
@@ -50,6 +56,7 @@ theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
   · iintro !> %hp'
     exact absurd hp' hp
 
+/-- Step-update version of `fupd_pure_wand_intro` (used by `LiveEris`). -/
 theorem step_fupdN_pure_wand_intro (E : CoPset) (n : Nat) {p q : Prop} : iprop%
     (⌜p⌝ -∗ |={E}[E]▷=>^[n] ⌜q⌝) ⊢@{PROP} |={E}[E]▷=>^[n] (⌜p⌝ -∗ ⌜q⌝) := by
   iintro H

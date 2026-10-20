@@ -46,6 +46,7 @@ theorem execExactN_measurable (n : Nat) : Measurable (execExactN (rT := rT) n) :
   induction n <;> simp only [execExactN] <;>
     exact Measurable.ite (by measurability) (by measurability) (by measurability)
 
+/-- `execN n` splits by exact termination time (setwise form of SampCert's `execExactN_sum`). -/
 theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSet S) :
     execN n ρ S = ∑'(N : Nat), if N < n then execExactN N ρ S else 0 := by
   induction n generalizing ρ with
@@ -75,6 +76,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSe
         simp only [execExactN, hv, ↑reduceIte]
       · simp [hk]
 
+/-- Terminating in exactly `n` steps is part of terminating within `n + 1`. -/
 theorem execExactN_mono_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSet S) :
     execExactN n ρ S ≤ execN (n + 1) ρ S := by
   have hunfold : execExactN n ρ S = (if n < n + 1 then execExactN n ρ S else 0) := by simp
@@ -101,6 +103,7 @@ theorem asExpr.measurable :
     Measurable (asExpr : Measure (Cfg rT) → Measure (Exp rT)) :=
   Measure.measurable_map _ Cfg.measurable_expr
 
+/-- Monotone convergence for a countable sum over configurations (via counting measure). -/
 theorem ENNReal.tsum_iSup_of_monotone_cts {f : ℕ → Cfg rT → ENNReal}
     (hf : ∀ a, Monotone (f · a)) (hm : ∀ x, Measurable (f x)) :
     ∑' a, ⨆ n, f n a = ⨆ n, ∑' a, f n a := by

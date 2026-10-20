@@ -4,8 +4,9 @@ public import Metrology.Micrometer.AppWeakestpre
 
 /-! # Budget-splitting lifting rules
 
-Per-pair leftovers (`_adv`), an absorbing exit, and erasable presampling (Rocq `approxis/lifting.v`,
-`wp_lift_step_couple_adv*`, `wp_couple_erasables`). -/
+Canonical-law versions of the WpLifting coupled-step rules that keep a per-pair leftover `R`
+(WpLifting's `wp_lift_prim_steps_coupl` reduces `R` to a relation); plus an absorbing exit and
+erasable presampling (Rocq `approxis/lifting.v`). -/
 
 @[expose] public section
 
@@ -19,8 +20,9 @@ namespace ProbLang.MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
 
-/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
-(Rocq `wp_lift_step_couple_adv`). -/
+/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover: the
+`wp_lift_prim_steps_coupl_law` budget split with `BindLaw.canonical` (Rocq
+`wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
     {Φ : Val rT → IProp GF}

@@ -270,6 +270,10 @@ tactics run `simp only [pl_step_simp]` after each step. -/
 
 register_simp_attr pl_step_simp
 
+/-! ## Closedness and value tactics
+
+The kernel helpers below serve these tactics and `Micrometer/WpTactics.lean`. -/
+
 /-- Close `Exp.lcb k e = true` (or any closed `a = b`) by kernel reduction, which is far faster
 than the elaborator's `rfl` on an inlined library closure. -/
 public meta def Exp.kernelDecideEq (g : Lean.MVarId) : Lean.MetaM Unit := g.withContext do
@@ -284,7 +288,8 @@ public meta def Exp.kernelDecideEq (g : Lean.MVarId) : Lean.MetaM Unit := g.with
 open Lean in
 /-- Decide by kernel reduction whether a concrete `lam`/`fix` closure `e : Exp α` is a value.
 Returns `some (some v)` for a closed closure, `some none` for an open one, and `none` when
-`e` is not a `lam`/`fix` or the kernel cannot decide, so the caller falls back to `toVal?`. -/
+`e` is not a `lam`/`fix` or the kernel cannot decide, so the caller falls back to `toVal?`.
+Used by the `wp` value step in `Micrometer/WpTactics.lean`. -/
 public meta def Exp.closedFunVal? (α e : Expr) : MetaM (Option (Option Expr)) := do
   let eW ← Meta.whnf e
   let ctor ← if eW.isAppOfArity ``Exp.lam 2 then pure ``IsVal.lam

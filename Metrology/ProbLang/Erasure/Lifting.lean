@@ -103,14 +103,6 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
       (tapePresample σ α) (tapePresample σ' α') :=
   (tapePresample_rel_bij hσ hσ' hN f hdom hbij).addCoupl
 
-/-- Running to the limit from a measure of states first runs `m` steps. -/
-theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
-    μ.bind (fun σ => limExec ⟨e, σ⟩) = (μ.bind fun σ => pexecN m ⟨e, σ⟩).bind limExec := by
-  have hpk : Measurable fun σ : State rT => pexecN m (⟨e, σ⟩ : Cfg rT) :=
-    pexecN_measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
-  rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
-  exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e, σ⟩)
-
 /-! ## Side condition for execution kernels -/
 
 /-- The value distributions of the `m`-step runs, as a kernel: the program's remaining run that a
@@ -123,9 +115,9 @@ instance execVKernel.isSubMarkovKernel (m : Nat) :
     ProbabilityTheory.IsSubMarkovKernel (execVKernel (rT := rT) m) :=
   ⟨fun ρ => asExpr.isSubProbabilityMeasure (execN m ρ)⟩
 
-/-- The side condition of a step for the kernels adequacy binds with: the `m`-step run of `h x` on
-the program side, for every `m` and measurable `h`, and the limit run of `f' y` on the spec side
-(Rocq `side_for_exec`). -/
+/-- `law.side` at the two kernels the erasure rules bind with: program side
+`x ↦ asExpr (execN m (h x))` for every budget `m` and measurable `h`, spec side
+`y ↦ limExecV (f' y)` (Rocq `side_for_exec`). -/
 def _root_.GradedLifting.BindLaw.SideForExec [Preorder B] [Top B] (law : L.BindLaw) {X Y : Type}
     [MeasurableSpace X] [MeasurableSpace Y] (μ : Measure X) (ν : Measure Y) (R : X → Y → B)
     (f' : Y → Cfg rT) : Prop :=
@@ -150,6 +142,15 @@ theorem _root_.GradedLifting.BindLaw.SideForExec.supp [Preorder B] [Top B] {law 
   fun m h' hh hf' => law.side_supp (h m h' hh hf')
 
 /-! ## Erasure rules for a graded lifting -/
+
+/-- Running to the limit from a measure of states first runs `m` steps; every erasure rule uses it
+to let the spec side run `m` steps first. -/
+theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
+    μ.bind (fun σ => limExec ⟨e, σ⟩) = (μ.bind fun σ => pexecN m ⟨e, σ⟩).bind limExec := by
+  have hpk : Measurable fun σ : State rT => pexecN m (⟨e, σ⟩ : Cfg rT) :=
+    pexecN_measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
+  rw [Measure.bind_bind hpk.aemeasurable limExec.measurable.aemeasurable]
+  exact congrArg _ (funext fun σ => limExec_pexecN m ⟨e, σ⟩)
 
 /-- A lifting of an erasable state distribution `μ₁` and the `m`-step spec run relates the
 program run from `σ₁` to the spec limit from `σ₁'`; the continuation's grade depends on the spec
@@ -187,7 +188,10 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
 /-- A bind-law step between the program's prim step and the `m`-step spec run relates the program
 run to the spec limit, for a law whose program and spec distributions are images of its head
 measures; the continuation grade depends on both samples (Clutch
-`ARcoupl_erasure_erasable_exp_lhs_kanto`, projected; Rocq `gcoupl_erasure_prog_bind_law`). -/
+`ARcoupl_erasure_erasable_exp_lhs_kanto`, projected; Rocq `gcoupl_erasure_prog_bind_law`).
+`hprog` and `hspec` present
+the prim step and the `m`-step spec run as pushforwards `μ₀.map f`, `ν₀.map f'` of the measures
+the law couples. -/
 theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
     (law : L.BindLaw)
     {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {μ₁' : Measure (State rT)} {Φexp : Exp rT → Exp rT → Prop}

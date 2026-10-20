@@ -49,7 +49,8 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     by_contra h
     exact hac (absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun (by simpa using h))
 
-/-- The pointwise generalized KL term `p log (p / q) + q - p`. -/
+/-- The pointwise generalized KL term `p log (p / q) + q - p`, the real-valued perspective of
+`klFun` used to prove the finite chain rule. -/
 noncomputable def klTerm (p q : ℝ) : ℝ := p * Real.log (p / q) + q - p
 
 /-- Away from `q = 0 < p`, the perspective of `klFun` is the pointwise KL term. -/
@@ -122,6 +123,7 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   rcases eq_or_ne d ⊤ with hdt | hdt
   · rw [hdt, EReal.add_top_of_ne_bot (ne_bot_of_le_ne_bot EReal.zero_ne_bot he₀)]
     exact le_top
+  -- finiteness and absolute continuity
   have hμ : μ₁ ≪ μ₂ := absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun he
   have hκ (j) : κ j ≪ η j :=
     absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun (ne_top_of_le_ne_top hdt (hd j))
@@ -140,12 +142,14 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   have hD (j) : ∑ i, klTerm (κ j {i}).toReal (η j {i}).toReal ≤ d.toReal := by
     have := hd j
     rwa [fDiv_klFun_eq_sum _ _ fun i h ↦ hκ j h, hdR, EReal.coe_le_coe_iff] at this
+  -- zero patterns for `klTerm`
   have hp0 (j) : (μ₂ {j}).toReal = 0 → (μ₁ {j}).toReal = 0 := by
     simp only [ENNReal.toReal_eq_zero_iff, measure_ne_top, or_false]
     exact fun h ↦ hμ h
   have hk0 (j i) : (η j {i}).toReal = 0 → (κ j {i}).toReal = 0 := by
     simp only [ENNReal.toReal_eq_zero_iff, measure_ne_top, or_false]
     exact fun h ↦ hκ j h
+  -- masses: equal per kernel row, at most `1`
   have hmassR (j) : ∑ i, (κ j {i}).toReal = ∑ i, (η j {i}).toReal := by
     rw [sum_toReal_singleton, sum_toReal_singleton, hmass]
   have hm1 (j) : ∑ i, (κ j {i}).toReal ≤ 1 := by
@@ -240,6 +244,7 @@ theorem klDivergence_comp_of_mass_eq {b c : ℝ≥0∞} {μ₁ μ₂ : Measure X
     [IsSubProbabilityMeasure μ₂] {κ η : Kernel X Y} [IsSubMarkovKernel κ] [IsSubMarkovKernel η]
     (hmass : ∀ x, κ x univ = η x univ) (hμ : klDivergence b μ₁ μ₂)
     (hκ : ∀ x, klDivergence c (κ x) (η x)) : klDivergence (b + c) (κ ∘ₘ μ₁) (η ∘ₘ μ₂) := by
+  -- the finite-space reduction needs a nonempty source
   cases isEmpty_or_nonempty X
   · rw [μ₁.eq_zero_of_isEmpty, μ₂.eq_zero_of_isEmpty, bind_zero_left, bind_zero_left]
     exact IsGraded.mono zero_le (IsReflexive.refl _)

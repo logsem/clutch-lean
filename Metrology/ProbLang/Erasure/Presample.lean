@@ -6,7 +6,8 @@ public import Metrology.Couplings.Bridges.AddCoupl
 
 @[expose] public section
 
-/-! The uniform tape presample and how a prim step keeps tapes (Clutch `erasure.v`). -/
+/-! The uniform tape presample and how a prim step keeps tapes (Clutch `erasure.v`);
+commutation lemmas: `TapePresample.lean`. -/
 
 namespace ProbLang
 
@@ -218,6 +219,7 @@ theorem Measure.bind_map_comm_of_discrete {α β γ : Type*}
 
 /-! ## Tape persistence through a prim step -/
 
+/-- Every possible successor of a prim step keeps tape `α`, with the same bound. -/
 theorem primStep_tape_persists_support
     {σ : State rT} {αloc : Loc} {e : Exp rT} {t : Tape} {ρ : Cfg rT}
     (h : σ.tapes[αloc]? = some t)
@@ -258,6 +260,7 @@ theorem primStep_tape_persists_support
     exact ⟨t, h, rfl⟩
   | _ => exact ⟨t, h, rfl⟩
 
+/-- Almost surely, a prim step keeps tape `α` with the same bound (discrete case). -/
 theorem primStep_tape_persists [Countable rT]
     {σ : State rT} {α : Loc} {e : Exp rT} {t : Tape}
     (h : σ.tapes[α]? = some t) :

@@ -122,7 +122,8 @@ theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 /-! ## The program logic, in any lifting -/
 
-/-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`. -/
+/-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`.
+This is the one fact each divergence file proves; `rr_refines_of` consumes it as `hcpl`. -/
 def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
   ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
 
@@ -159,6 +160,7 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
     ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#(.bool d)) -∗ Φ (.bool d)) ⊢
       wp L ⊤ (rr b) Φ := by
   iintro ⟨Hj, Hb, H⟩
+  -- unfold rr's let binder so wp_bind/tp_bind can focus the draw
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
@@ -188,10 +190,12 @@ theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (
     (hcpl : RRCoupling L c) (b b' : Bool) :
     ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
+  -- couple the draws along equal reports; afterwards both sides are deterministic
   rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
   iframe Hb
   iintro %r %r' %hR
   rel_pures
+  -- four branch combinations; in each, hR equates the two returned bits
   by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
     simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
     rel_pures <;> rw [hR] <;> rel_values

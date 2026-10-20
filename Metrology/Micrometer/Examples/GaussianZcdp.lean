@@ -87,6 +87,7 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     wp_pure 6
     tp_pure 6
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = k by omega]
+    -- pairs evaluate the right component first: the recursive releases, then this draw
     wp_bind (release gauss a k)
     tp_bind (release gauss a' k)
     iapply ih
@@ -114,6 +115,7 @@ theorem wp_release (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLifting gau
   iapply wp_release_fill hv hgauss a a' k []
   iframe Hj Hb
   iintro %w Hj
+  -- the spec holds the value as an expression; restate it as Exp.ofVal
   rw [Exp.ofVal]
   iapply spec_fill_nil_exists w $$ Hj
 
@@ -144,7 +146,7 @@ theorem release_zcdp (hv : v ≠ 0)
     (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) :
     zcdpDivergence (0, k * cost v a a') (limExecV ⟨release gauss a k, σ⟩)
       (limExecV ⟨release gauss a' k, σ'⟩) :=
-  GradedDivergence.concentratedLifting_sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
+  GradedLifting.IsSound.sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
 
 /-! ## From zCDP to DP -/
 
@@ -178,6 +180,8 @@ theorem release_dp_sqrt (hv : v ≠ 0)
   have hcost : cost v a a' ≤ ENNReal.ofReal (r ^ 2 / (2 * v)) := by
     refine ENNReal.ofReal_le_ofReal (div_le_div_of_nonneg_right ?_ (by positivity))
     exact sq_le_sq' (abs_le.1 h).1 (abs_le.1 h).2
+  -- bound the cost by r²/2v, read the zCDP coupling as a codensity one, then apply the closed-form
+  -- zCDP→DP conversion
   have hz := ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl).map_rel
     ((release_coupling_of GF₀ hv hgauss a a' k σ σ').mono
       (b' := (0, k * ENNReal.ofReal (r ^ 2 / (2 * v)))) (Prod.mk_le_mk.2 ⟨le_rfl, by gcongr⟩)

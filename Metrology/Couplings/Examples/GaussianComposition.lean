@@ -56,8 +56,8 @@ theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
 variable {σ : ℝ≥0} {r δ : ℝ}
 
 /-- `k` Gaussian queries of inputs at distance at most `r` lift equality in the zCDP lifting at
-`k` times the budget `r² / (2 σ²)` of one query: each query by completeness, the next by
-binding. -/
+`k` times the budget `r² / (2 σ²)` of one query: one query by completeness, joined to the other `k`
+by `Rel.prod_of_isTopAbsorbing` (no finiteness side condition), then reassembled by `map`. -/
 theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - a'| ≤ r) (k : ℕ) :
     zcdpLifting.Rel (0, k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) (· = ·)
       (gaussianMechPow σ k a) (gaussianMechPow σ k a') := by
@@ -85,7 +85,9 @@ theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
     ((LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow hσ h k))
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for
-inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. -/
+inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. The
+closed form comes from `codensity_dp_rel_of_zcdp`, stated for the codensity lifting of
+`zcdpDivergence`, so the lifting is first moved there by `concentratedToCodensity`. -/
 theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ₁ : δ < 1) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
       (ENNReal.ofReal (k * (r ^ 2 / (2 * σ ^ 2)) +

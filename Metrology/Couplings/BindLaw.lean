@@ -117,7 +117,8 @@ class HeadShift [Add B] (law : BindLaw L) : Prop where
     c < ⊤ → law.head μ ν R b → law.head μ ν (fun x y ↦ R x y + c) (b + c)
 
 /-- A probability measure is a head against itself along the diagonal at any finite budget, and
-the side holds for a measure against itself; program steps that leave the spec in place ask this
+the side condition holds for a measure against itself for every leftover and every pair of
+kernels (so `massEq` has no `HeadDiag`); program steps that leave the spec in place ask this
 of a law (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
 class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
   diag {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsProbabilityMeasure μ] {b : B} :

@@ -7,11 +7,12 @@ public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.AppRelRules
 public import Metrology.ProbLang.Syntax.LocallyClosed
 
+/-! Compatibility lemmas for the pure fragment. -/
+
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
-
-/-! Compatibility lemmas for the pure fragment. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -93,6 +94,8 @@ theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal
     ⊢ refines L ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both ⟨hv.toIsValue, heval⟩ hrv HA
 
+/-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
+instance. -/
 theorem refines_forall {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
     (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
     □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
@@ -190,6 +193,8 @@ theorem refines_app {e1 e2 e1' e2' : Exp rT} {A B : lrel rT GF} : iprop%
     show Ectx.fill [EctxItem.appL v2'] v1'.1 = Exp.app v1'.1 v2'.1 from rfl]
   iapply Hff $$ %v2 %v2' HA
 
+/-- Sequencing `e1; e2`, encoded as `(λ_. e2) e1` with `e2` locally closed; the result of `e1`,
+related at `A`, is discarded. -/
 theorem refines_seq (A : lrel rT GF) {e1 e2 e1' e2' : Exp rT} {B : lrel rT GF}
     (he2 : e2.IsLocallyClosed) (he2' : e2'.IsLocallyClosed) : iprop%
     refines L ⊤ e1 e1' A ⊢

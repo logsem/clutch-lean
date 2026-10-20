@@ -3,9 +3,9 @@ module
 public import Metrology.Micrometer.FundamentalCompat
 import Metrology.ProbLang.Syntax.Notation
 
-@[expose] public section
-
 /-! Compatibility of `bin_log_related` with operators, matching and the stateful fragment. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -19,6 +19,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
+/-- The literal-pattern case of `pat_match_related`. -/
 theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
     (hv : v = .ofBaseLit l') (hv' : v' = .ofBaseLit l') (hll : l = l' ∨ ¬ (l == l') = true) :
     ⊢@{IProp GF} (∃ (b b' : Val rT), ⌜Pat.tryMatch (.lit l) v.1 = some b.1 ∧
@@ -36,6 +37,8 @@ theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
     ipureintro
     exact ⟨Pat.tryMatch_lit_ne hne, Pat.tryMatch_lit_ne hne⟩
 
+/-- Related values at a pattern's type either both match `p`, binding values related at the bound
+type, or both fail. -/
 theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
     (Hpat : PatTyped τs p τb) (v v' : Val rT) :
     (interp L τs Δ).car v v' ⊢@{IProp GF}

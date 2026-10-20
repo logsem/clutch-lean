@@ -4,7 +4,8 @@ public import Mathlib.Probability.Distributions.Bernoulli
 public import Mathlib.Probability.Distributions.Exponential
 public import Metrology.Couplings.Divergences.Mechanism
 
-/-! The Bernoulli and Laplace mechanisms (Approximate Span Liftings, Fig. 2). -/
+/-! DP bounds for Bernoulli and Laplace distributions, and the Laplace mechanism (Approximate Span
+Liftings, Fig. 2). -/
 
 @[expose] public section
 
@@ -94,7 +95,8 @@ theorem dp_bernoulli_self (x y : X) (p : I) :
     dp 0 (bernoulliMeasure x y p) (bernoulliMeasure x y p) :=
   IsReflexive.refl _
 
-/-- Scaling `b ≥ m` by the ratio `M / m` dominates any `a ≤ M`, in `ℝ≥0∞`. -/
+/-- Helper for `dp_bernoulli_symm`: scaling `b ≥ m` by the ratio `M / m` dominates any `a ≤ M`,
+in `ℝ≥0∞`. -/
 theorem ofReal_le_ofReal_div_mul {a b m M : ℝ} (hm : 0 < m) (hmM : m ≤ M) (ha : a ≤ M)
     (hb : m ≤ b) : ENNReal.ofReal a ≤ ENNReal.ofReal (M / m) * ENNReal.ofReal b := by
   rw [← ofReal_mul (div_pos (hm.trans_le hmM) hm).le]

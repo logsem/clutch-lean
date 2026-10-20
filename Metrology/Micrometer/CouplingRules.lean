@@ -51,7 +51,8 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
   [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
-/-- A `rand` on the unit label steps to the uniform distribution. -/
+/-- `randUnit_uniform_step` in the shape of `wp_couple_rand_core`'s `HstepL`/`HstepR` premise: the
+unit-label draw needs no resource, so both are ignored. -/
 theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
     ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
       primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ⌝ := by
@@ -84,7 +85,9 @@ theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp r
   ipureintro
   exact randLbl_empty_uniform_step Hz hlk
 
-/-- Core coupling rule: both sides take uniform steps, related by a bijection `f`. -/
+/-- Core coupling rule: if the resource `A` shows that `eL` (against the program state) and `eR`
+(against the spec state) each step to `Cfg.uniform z`, couple the two draws along the bijection
+`f` and return `A`. The tape and unit-label rules below instantiate `A`. -/
 theorem wp_couple_rand_core (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -283,7 +286,8 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal]
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, paying `s (ε₂ n)` to the continuation at
-the left draw `n` out of `↯b (s ε₁)`, where `ε₁` bounds the average of `ε₂`. -/
+the left draw `n` out of `↯b (s ε₁)`, where `ε₁` bounds the average of `ε₂`; the continuation also
+learns that its new credit is not absorbing. -/
 theorem wp_couple_rand_rand_adv [L.IsReflexive]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z : Int) (f : Int → Int) (ε₁ : ENNReal)
     (ε₂ : Int → ENNReal)
@@ -310,6 +314,8 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
   iexists Cfg.advLeftover s z f σ₁ σ₁' K ε₂, s ε₁, r
   iframe %hb %hredL %hredR %hlift
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
+  -- leftover absorbing: exit left; on a coupled draw it is s (ε₂ n) + r: re-mint the credit; off
+  -- the graph it is ⊤, hence absorbing (contradiction)
   by_cases habs : L.Absorbing (Cfg.advLeftover s z f σ₁ σ₁' K ε₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + r)
   · imod Hclose
     imodintro
@@ -433,7 +439,8 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
   iapply Hcnt $$ %m %⟨hm0, hmz⟩ Hj'
 
 /-- Couple `rand N ~ K[rand N]` along `S`, given a lifting of the two uniform draws within the
-cancelable budget `c`; spends `↯b c` (clutch-dp's `hoare_couple_laplace`, for any `L`). -/
+cancelable budget `c`; spends `↯b c`. This is `wp_couple_rand_rand_lift` with equal bounds `N` (the
+shape of clutch-dp's `hoare_couple_laplace`, here for uniform draws). -/
 theorem wp_couple_rand_rand_spend (N : Int) (HN : 0 < N) (S : Int → Int → Prop) (c : B)
     (hc : IsAddLeftRegular c) (Hcpl : L.Rel c S (unifInt N HN) (unifInt N HN))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%

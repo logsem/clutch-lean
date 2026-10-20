@@ -42,6 +42,7 @@ def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrdere
 def Adjacent (db db' : Fin n → Bool) : Prop :=
   ∃ i, ∀ j, j ≠ i → db j = db' j
 
+/-- Adjacent databases have counts at distance at most `1` (sensitivity 1). -/
 theorem abs_count_sub_le {db db' : Fin n → Bool} (h : Adjacent db db') :
     |count db - count db'| ≤ 1 := by
   obtain ⟨i, hi⟩ := h

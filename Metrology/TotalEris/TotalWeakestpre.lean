@@ -8,8 +8,9 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Total weakest precondition
 
-`tglWp`, the least fixpoint of the total-correctness weakest precondition, with value, bind,
-monotonicity and frame rules.
+`tglWp` (Eris `tgl_wp`): total weakest precondition over the error-graded modality `glm'`, with
+value, bind, monotonicity and frame rules. Micrometer does not use it; it reaches Micrometer's
+imports only through `WpTactics`.
 -/
 
 @[expose] public section
@@ -347,6 +348,7 @@ theorem tglWp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IPro
       iexact HF
   · iexact HW
 
+/-- `tglWp_bind` with a value in the hole. -/
 theorem tglWp_bind_value {K : Ectx rT} {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     tglWp E (Exp.ofVal v) (fun v' => tglWp E (K.fill (Exp.ofVal v')) Φ) ⊢
       tglWp E (K.fill (Exp.ofVal v)) Φ := by

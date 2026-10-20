@@ -43,13 +43,27 @@ By rule:
 * one proof in any lifting (`rr_refines_of`, `rrCount_refines_of`, `rrCount_isPrivate`):
   `RR.Basic`, instantiated by `RR.Dp`, `RR.Zcdp`, `RR.Tcdp`, `RR.Renyi`, `RR.Curve`, `RR.Chi2`
 * non-canonical bind laws: `PublicChoice` (`dpChoice`), `RR.Adaptive` (escort)
-* programs as mechanisms (`progMech_isPrivate`): `RR.Basic`, `RR.Dp`, `RR.Twice`,
-  `PublicChoice`, `LeakyRR`
+* programs as mechanisms (`progMech_isPrivate`): `RR.Dp`, `RR.Twice`, `PublicChoice`, `LeakyRR`
+  (`RR.Basic` states `IsPrivate` directly from `rrCount_div`)
 * conversions between divergences: `RR.Twice`, `RR.Tcdp`, `RR.Curve`
 * samplers given by a spec: `GaussianZcdp`, `NoisyCount`
 * contextual refinement: `ContextualDp`, `ContinuousOTP`
 * weakest preconditions against a spec (`wp_*`, `tp_*`): `RR.Basic`, `RR.Dp`, `RR.Twice`,
   `NoisyCount`, `GaussianZcdp`, `Switching`
+
+By exit (the adequacy theorem that leaves the logic):
+* `approximates_coupling`, `approximates_div`: a relational refinement from `↯ b` gives a coupling
+  or a divergence bound (`RR.Basic`; `SkipZero`)
+* `refines_coupling`: a relational refinement at budget 0 (`OTP`)
+* `wp_adequacy`, `wp_adequacy_div`: a weakest precondition against a spec `⤇ e'` (`RR.Twice`,
+  `RR.Dp`); `wp_adequacy_error_lim` takes a limit of credits (`Switching`)
+* `progMech_isPrivate`: a refinement for every pair of inputs gives `Mechanism.IsPrivate`
+  (`RR.Dp`)
+* `refines_ctx_dp`, `refines_sound_fresh`: contextual refinement (`ContextualDp`,
+  `ContinuousOTP`)
+
+Naming: lowercase `_dp`, `_zcdp` states a divergence between two runs; uppercase `_DP`, `_zCDP`
+is the mechanism definition (Def. 2.x).
 -/
 
 @[expose] public section

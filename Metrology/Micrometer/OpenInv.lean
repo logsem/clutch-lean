@@ -68,6 +68,8 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
   swap
   · iapply progCoupl_strengthen Cfg.isValue_measurableSet (h σ₂)
     iexact HBody
+  -- Atomicity: every e₃ reached in one step is a value (he₃val), so the inner wp is at a value
+  -- and its closing update moves out to the postcondition.
   iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ ⟨%he₃val, HInner⟩ !>
   iapply specCoupl_bind Std.LawfulSet.subset_refl
   iframe HInner
@@ -80,7 +82,7 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
   iframe
   iintro %σ₅ %ρ''' %b₅ HInnerBody
   cases htv : e₃.toVal? with
-  | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim
+  | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim -- impossible: e₃ is a value
   | some _ =>
     imod HInnerBody with ⟨Hσ5, Hs5, Hb5, >HΦv⟩
     imodintro
@@ -143,6 +145,8 @@ instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
 
 end Instances
 
+/-- The postcondition step of the `iinv` instances: run the user's `β x ∗ (γ x -∗? Φ v)`, then the
+accessor's closing update, giving `Φ v`. -/
 theorem elimAcc_close {X : Type} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
     {E₁ E₂ : CoPset} {Φ : Val rT → IProp GF} {β : X → IProp GF} {γ : X → Option (IProp GF)}
     {x : X} {v : Val rT} : iprop%

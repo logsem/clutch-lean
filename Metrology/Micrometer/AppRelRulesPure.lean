@@ -30,6 +30,7 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 
 /-! ## Forward reductions -/
 
+/-- A pure step on the left, which earns a `▷`. -/
 theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     iprop% ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
@@ -40,6 +41,7 @@ theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   inext
   iapply H $$ HK Hna Herr Hpos
 
+/-- A pure step on the right; spec steps earn no `▷`. -/
 theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
     {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
@@ -87,6 +89,7 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
   isimp only [← Ectx.fill_comp K'' K' e2'] at HKres
   iapply Hlog $$ %K'' %b HKres Hna Herr Hpos
 
+/-- Run the left focus by any `wp`, continuing with a refinement of the context. -/
 theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF} :
     wp L ⊤ e1 (fun v => refines L E (K.fill v.1) t A) ⊢ refines L E (K.fill e1) t A := by
   iunfold refines
@@ -100,6 +103,9 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
   iintro HRefv ⟨HK, Hna, Herr, Hpos⟩
   iapply HRefv $$ %K' %b HK Hna Herr Hpos
 
+/-- Open invariants around the atomic left step `e1`: given the spec thread, open masks to `E'`, run
+`e1`, close them, and return the (possibly stepped) right program `t'` with a refinement of the
+continuation. -/
 theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
     (Hopen : OpenInv L e1) : iprop%
     (∀ (K' : Ectx rT), ⤇ K'.fill t -∗
@@ -124,6 +130,7 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
 
 /-! ## Stateful reductions on the RHS -/
 
+/-- Right-side `alloc`: continue with the fresh spec location. -/
 theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#(.loc l))) A) ⊢
     refines L E t (K.fill (.alloc v.1)) A := by
@@ -138,6 +145,7 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iframe HKRes
   iapply Hlog $$ %l Hl
 
+/-- Right-side load from a spec location. -/
 theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v -∗ refines L E t (K.fill v.1) A) ⊢
@@ -154,6 +162,7 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iframe HKRes
   iapply Hlog $$ HlRes
 
+/-- Right-side store to a spec location. -/
 theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#(.unit))) A) ⊢
@@ -169,6 +178,7 @@ theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e 
   iframe HKRes
   iapply Hlog $$ Hl'
 
+/-- Right-side draw from a spec tape, consuming its first entry. -/
 theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {e : Exp rT} {A : lrel rT GF} : iprop%
     specNatTape l z (n :: ns) ∗
@@ -183,6 +193,7 @@ theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : L
   isimp only [← Ectx.fill_comp K' K] at HKRes
   iapply Hlog $$ HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
 
+/-- Right-side tape allocation: continue with a fresh empty spec tape. -/
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
     iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
     refines L E e (K.fill pl(tape(#(.int z)))) A := by
@@ -197,6 +208,7 @@ theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A
 
 /-! ## Structural rules -/
 
+/-- Weaken the result relation of a refinement. -/
 theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
     refines L E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines L E e1 e2 A' := by
   iintro He HAA
@@ -257,7 +269,8 @@ section Credits
 variable [CanonicallyOrderedAdd B]
 
 /-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b` (needs
-every positive budget to split, `hsplit`). -/
+every positive budget to split, `hsplit`). This is the only way to reach the positive credit
+threaded through `refines`. (`ec` is Rocq's "error credit"; here it is a budget credit.) -/
 theorem refines_get_ec (hsplit : ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by

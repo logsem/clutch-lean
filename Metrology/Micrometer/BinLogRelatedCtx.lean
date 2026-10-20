@@ -96,6 +96,9 @@ theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {Γrc : RelCtx rT GF} {x : Va
     Ctx.BindersFresh K' (((x, A) :: Γrc).map (·.1)).toFinset :=
   RelCtx.dom_cons x A Γrc ▸ hSingleton ▸ h
 
+/-- A body related at the named binder `x` is related at every fresh `y` after `close x` / `open y`,
+as the cofinite premise of `bin_log_related_lam` needs (renaming by
+`bin_log_related_ty_rename`). -/
 theorem bin_log_related_close_cofinite {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {A : lrel rT GF} {τ : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -114,6 +117,7 @@ end Bookkeeping
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
+/-- `bin_log_related_lam` for a context frame `.lam (close x Ke)`. -/
 theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : Var}
     {τ_arg τ_body : Ty} {Ke Ke' : Exp rT} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -127,6 +131,7 @@ theorem bin_log_related_lam_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {x : 
     (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
     (bin_log_related_close_cofinite hxRc hKe_lc hKe'_lc Hbody)
 
+/-- `bin_log_related_fix` for a context frame `.fix (close f Ke)`. -/
 theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : Var}
     {τ1 τ2 : Ty} {Ke Ke' : Exp rT} (hfRc : f ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
@@ -144,6 +149,10 @@ theorem bin_log_related_fix_step {Δ : TyEnv rT GF} {Γrc' : RelCtx rT GF} {f : 
 section Prim
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
+/-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`: the hole
+comes from the induction hypothesis, every other premise from `fundamental`. `Hrel` must be
+valid (⊢) because binder frames run the hole under □; `Hbinders` keeps the context's binders
+fresh for the plugged terms, `Ctx.BindersFresh` for the relational context. -/
 theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
     {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
     (Hty_e' : Typed Γtc e' τ)
@@ -223,6 +232,8 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     | fold => iapply bin_log_related_fold $$ %(IHinner Γrc' HCtx Hfr)
     | unfold => iapply bin_log_related_unfold $$ %(IHinner Γrc' HCtx Hfr)
     | tapp => iapply bin_log_related_tapp $$ %(IHinner Γrc' HCtx Hfr)
+    -- binder frames: `bin_log_related_close_cofinite` and the `*_step` lemmas turn the named
+    -- binder into the cofinite premise of `bin_log_related_lam`
     | @lam _ x τ _ =>
       have hxRc := HfreshHead x (Finset.mem_singleton_self _)
       have HCtxInner := HCtx.insert x τ (RelCtx.lookup_eq_none_of_not_mem hxRc)

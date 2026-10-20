@@ -4,11 +4,12 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.Compatibility
 public import Metrology.ProbLang.Syntax.LocallyClosed
 
+/-! Compatibility lemmas for the heap, tapes and sampling. -/
+
 @[expose] public section
 
+-- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
-
-/-! Compatibility lemmas for the heap, tapes and sampling. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -208,6 +209,7 @@ theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
   imodintro
   iapply HA m hm0 hmz
 
+/-- `nat`-typed variant (positive bound); the fundamental theorem uses `refines_rand_tape_int`. -/
 theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
     refines L ⊤ e1 e1' lrel_pos_nat ⊢@{IProp GF}
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
@@ -228,6 +230,7 @@ theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
     show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   iapply refines_rand_lbl_of_pos (by exact_mod_cast hM) (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
+/-- `nat`-typed variant (positive bound); the fundamental theorem uses `refines_rand_unit_int`. -/
 theorem refines_rand_unit {e e' : Exp rT} : iprop%
     refines L ⊤ e e' lrel_pos_nat ⊢@{IProp GF}
     refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
@@ -283,7 +286,8 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
     imodintro
     iapply lrel_int_lit (-1)
 
-/-- Compatibility of `rand` at `int`; a non-positive bound returns `-1` on both sides. -/
+/-- Compatibility of the unlabelled `rand e #()` at `int`; a non-positive bound returns `-1` on both
+sides. Stated with the hole form that `bin_log_related_rand_unit` produces. -/
 theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
     refines L ⊤ e e' lrel_int ⊢@{IProp GF}
     refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')

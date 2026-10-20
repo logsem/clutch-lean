@@ -17,7 +17,8 @@ public import Metrology.ProbLang.Syntax.Notation
 
 Program heap and tapes for the Micrometer WP; the spec side lives in `SpecProgram.lean` and reuses
 the same CMRAs (`SpecHeap`, `SpecTapes`). `app` means the left (implementation) program, as opposed
-to the spec; the naming follows Approxis.
+to the spec; the naming follows Approxis. Program points-to `l ↦ v` and `l ↪N⟨z; ns⟩` need
+`open scoped AppGS` (`↦` clashes otherwise); `↪ₐ` is global.
 -/
 
 section AppProgramRA

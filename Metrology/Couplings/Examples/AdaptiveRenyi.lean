@@ -80,7 +80,8 @@ theorem renyiDivergence_randResp_escort :
   norm_num [Real.exp_log]
 
 /-- The adaptive mechanism on adjacent inputs is within Rényi budget `log (19 / 12)` at order
-`2` (Rocq `escort_adaptive`). -/
+`2` (Rocq `escort_adaptive`). Uses `codensity_renyi_bind_escort`, the lemma behind
+`BindLaw.escort`. -/
 theorem renyiDivergence_adaptive :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (adaptive false) (adaptive true) := by
   have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
@@ -89,9 +90,11 @@ theorem renyiDivergence_adaptive :
       renyiDivergence_randResp_escort)
   subst hxy
   cases x
+  -- first report false: nothing new released, budget 0
   · change (codensity (renyiDivergence 2)).Rel 0 (· = ·) (dirac (false, false))
       (dirac (false, false))
     exact codensity_complete (IsReflexive.refl _)
+  -- first report true: a second randomized response at log (3/2)
   · change (codensity (renyiDivergence 2)).Rel (ENNReal.ofReal (Real.log (3 / 2))) (· = ·)
       ((randResp false).map (Prod.mk true)) ((randResp true).map (Prod.mk true))
     exact (codensity_complete renyiDivergence_randResp).map fun _ _ h ↦ h ▸ rfl

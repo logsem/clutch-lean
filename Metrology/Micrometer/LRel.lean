@@ -68,7 +68,8 @@ instance ofe_lrel {GF : BundledGFunctors} : OFE (lrel rT GF) where
     ⟨fun h _ _ _ => h ▸ .rfl, fun h => lrel.ext fun _ _ => OFE.eq_dist.mpr fun _ => h _ _ _⟩
   dist_lt hd hmn v1 v2 := OFE.dist_lt (hd v1 v2) hmn
 
-/-- Project an `lrel`-valued chain into the underlying function-space chain. -/
+/-- Project an `lrel`-valued chain into the underlying function-space chain. Used by `isCOFE_lrel`
+to take limits pointwise and show that the limit is still persistent and closed. -/
 noncomputable def lrel.toFunChain {GF : BundledGFunctors}
     (c : Chain (lrel rT GF)) : Chain (Val rT → Val rT → IProp GF) where
   chain k := (c.chain k).car

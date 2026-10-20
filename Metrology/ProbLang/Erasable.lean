@@ -71,6 +71,8 @@ theorem dret_final {μ : Measure (State rT)} {σ : State rT} {e : Exp rT} (hv : 
     _ = execN 1 ⟨e, σ⟩ := h e 1
     _ = Measure.dirac ⟨e, σ⟩ := hstep σ
 
+/-- For an erasable `μ`, running `n` partial steps from `μ` and then to the limit gives
+`limExec ⟨e, σ⟩`. -/
 theorem pexecN_lim_exec
     {μ : Measure (State rT)} {σ : State rT}
     (h : Erasable μ σ) (n : Nat) (e : Exp rT) :
@@ -111,6 +113,11 @@ theorem dbind_predicate {A : Type*} [MeasurableSpace A] [DiscreteMeasurableSpace
 
 end Erasable
 
+/-- Samples the state from `μ` and keeps the expression `e` (Clutch `rewritable_of_erasable`);
+`Rewritable.of_erasable` says `ρ` rewrites to `rewritableOfErasable μ ρ.expr`. -/
+noncomputable def rewritableOfErasable (μ : Measure (State rT)) (e : Exp rT) : Measure (Cfg rT) :=
+  μ.bind (fun σ => Measure.dirac ⟨e, σ⟩)
+
 /-! ## Rewritable -/
 
 /-- `μ` is a rewriting of `ρ`: running `ρ` equals sampling from `μ` then running. -/
@@ -146,9 +153,5 @@ theorem of_erasable_pexecN {ρ : Cfg rT} {μ : Measure (State rT)} (m : Nat)
   rw [h.lim_exec ρ.expr]
 
 end Rewritable
-
-/-- Samples the state from `μ` and keeps the expression `e` (Clutch `rewritable_of_erasable`). -/
-noncomputable def rewritableOfErasable (μ : Measure (State rT)) (e : Exp rT) : Measure (Cfg rT) :=
-  μ.bind (fun σ => Measure.dirac ⟨e, σ⟩)
 
 end ProbLang

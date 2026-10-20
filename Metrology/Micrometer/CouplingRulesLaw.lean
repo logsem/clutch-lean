@@ -86,6 +86,8 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
+  -- not via `wp_lift_prim_steps_coupl_law`: that needs the remainder `r < ⊤`; at `r = ⊤` we exit
+  -- by absorption instead
   by_cases hrTop : r < (⊤ : B)
   swap
   -- r = ⊤: the budget c + ⊤ = ⊤ is absorbing

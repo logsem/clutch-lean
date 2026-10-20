@@ -164,14 +164,6 @@ theorem specCoupl_ne {n : Nat} {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' :
   refine least_fixpoint_ne_outer (fun _ s => ?_) (.of_eq rfl)
   exact or_ne.ne (.of_eq rfl) (or_ne.ne (HZ s.1 s.2.1 s.2.2) (.of_eq rfl))
 
-theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
-    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
-  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
-    ext ρ; simp [pos_iff_ne_zero]
-  show primStep ⟨e, σ⟩ _ = 0
-  rw [heq]
-  exact primStep_atomic e σ hne
-
 /-- Introduce a spec coupling by a step of any bind law, whose spec distribution is the image of
 the law's spec-side head measure under `f'` (Rocq `spec_coupl_rec_map`). -/
 theorem specCoupl_couple_map (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
@@ -273,17 +265,21 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     iapply specCoupl_absorbing
     exact (top_le_iff.1 hb) ▸ IsTopAbsorbing.absorbing_top
 
+/-- A spec coupling absorbs a leading fancy update and may weaken its budget. -/
 theorem fupd_specCoupl_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
     (hb : b₁ ≤ b₂) :
     iprop(|={E}=> specCoupl L E σ e' σ' b₁ Z) ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_specCoupl_steps_det_of_le (pexecN_zero _) hb
 
+/-- A spec coupling at a smaller budget proves one at a larger budget. -/
 theorem specCoupl_mono_err [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
     (hb : b₁ ≤ b₂) : specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
+/-- A spec coupling absorbs a leading fancy update, by a unit-law round with the spec in place (at
+budget `⊤` by absorption, hence `IsTopAbsorbing`). -/
 theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} :
     iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
@@ -355,6 +351,15 @@ theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) :
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)
+
+/-- Away from `urand`, a step is carried by its support of positive-mass points. -/
+theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
+    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
+  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
+    ext ρ; simp [pos_iff_ne_zero]
+  show primStep ⟨e, σ⟩ _ = 0
+  rw [heq]
+  exact primStep_atomic e σ hne
 
 /-- Couple a Dirac program state against one spec step, on a measurable set carrying the step. -/
 theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]

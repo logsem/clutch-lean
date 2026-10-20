@@ -176,15 +176,25 @@ inductive BaseLit (rT : Type _)
 
 /-- Unary operators. -/
 @[uncurriedProjections, constructors]
-inductive UnOp | neg | minus | toReal | frac
+inductive UnOp
+  /-- Boolean not (`~e`). -/
+  | neg
+  /-- Arithmetic negation on ints and reals (`-e`). -/
+  | minus
+  /-- Int to real coercion. -/
+  | toReal
+  /-- Fractional part of a real. -/
+  | frac
   deriving Inhabited, Countable, Repr, BEq
 
-/-- Binary operators. -/
+/-- Binary operators; `and`, `or`, `xor` are boolean only, and `eq` works on literals and on
+`inl`/`inr` of literals. -/
 @[uncurriedProjections, constructors]
 inductive BinOp | plus | minus | mult | div | mod | and | or | xor | eq | lt | le | shl | shr
   deriving Inhabited, Countable, Repr, BEq
 
-/-- Types of ProbLang. -/
+/-- System F_μ_ref types with tapes, used only by `Typed` (Types.lean) and contextual refinement;
+`pl_ty(…)` covers only the monomorphic part. -/
 @[uncurriedProjections, constructors]
 inductive Ty
   | int | bool | unit
@@ -194,9 +204,13 @@ inductive Ty
   | arrow (τ1 τ2 : Ty)
   | ref (τ : Ty)
   | tape
+  /-- De Bruijn type variable. -/
   | var (n : Nat)
+  /-- Iso-recursive type; binds `var 0` in `τ`. -/
   | rec' (τ : Ty)
+  /-- Universal type; binds `var 0` in `τ`. -/
   | forall' (τ : Ty)
+  /-- Existential type; binds `var 0` in `τ`. -/
   | exists' (τ : Ty)
   deriving Inhabited, DecidableEq, Countable, Repr, BEq
 
@@ -229,17 +243,20 @@ inductive Exp (rT : Type _)
   | snd (e : Exp rT)
   | inl (e : Exp rT)
   | inr (e : Exp rT)
+  /-- Branches `el`/`er` are functions, applied to the `inl`/`inr` payload; no binder. -/
   | case (ec el er : Exp rT)
   | alloc (e : Exp rT)
   | load (e : Exp rT)
   | store (el ev : Exp rT)
   /-- Allocate a random tape with bound `e`. -/
   | tape (e : Exp rT)
-  /-- Uniform sample from `[0, en)`, read from tape `et`. -/
+  /-- Uniform sample from `[0, en)`; `et` is a tape label, or `()` for an untaped draw. -/
   | rand (en et : Exp rT)
+  /-- Has no step: a stuck term. -/
   | fail
   /-- Continuous uniform sample from the unit interval. -/
   | urand
+  /-- Matches `e` against `pat`: `inl bindings` (see `Pat.tryMatch`) or `inr ()`. -/
   | scrut (e : Exp rT) (pat : Pat rT)
   deriving Inhabited, Countable, BEq, Repr
 
@@ -735,7 +752,8 @@ instance [Checkable F] [Checkable G] : Checkable (Both F G) where
 
 /-! ## Values -/
 
-/-- Witness that an expression is a value. -/
+/-- Witness that an expression is a value; `Type`-valued so that `check?` can return the witness
+and `IsVal` is a `Fragment`. It is a subsingleton, and `Exp.isValue` is its `Prop` form. -/
 inductive IsVal : Exp rT → Type
   | lit  : IsVal (.lit b)
   -- A runtime function is closed, so `IsVal e → IsLocallyClosed e` (`IsVal.lc`).
@@ -842,7 +860,8 @@ theorem IsVal.check?_some : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
   | .inl h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inl w, by simp [check?, hw]⟩
   | .inr h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inr w, by simp [check?, hw]⟩
 
-/-- Value shape, ignoring local closedness. -/
+/-- Value shape, ignoring local closedness (`R` for raw). With `lcb 0 e` it characterizes
+`isValue` (`isValue_iff_isValueR`), which lets proofs decide value-ness by shape. -/
 @[simp] def Exp.isValueR : Exp rT → Prop
   | .lit _ | .lam _ | .fix _ => True
   | .pair e1 e2 => e1.isValueR ∧ e2.isValueR
@@ -901,10 +920,6 @@ theorem Val.ext_iff {v1 v2 : Val α} : v1 = v2 ↔ v1.fst = v2.fst :=
 
 instance [Countable α] : Countable (Val α) :=
   Function.Injective.countable (f := Val.fst) fun _ _ => Val.ext
-
-instance instCountableExtTreeMapLoc {V : Type _} [Countable V] :
-    Countable (ExtTreeMap Loc V compare) :=
-  Function.Injective.countable (f := ExtTreeMap.toList) fun _ _ => ExtTreeMap.toList_inj.mp
 
 /-- The value an expression denotes, if it is one. -/
 def Exp.toVal? (e : Exp α) : Option (Val α) :=
@@ -1033,6 +1048,10 @@ structure Tape where
 /-- An empty tape with the given bound. -/
 def Tape.empty (z : Int) : Tape := ⟨z, []⟩
 
+instance instCountableExtTreeMapLoc {V : Type _} [Countable V] :
+    Countable (ExtTreeMap Loc V compare) :=
+  Function.Injective.countable (f := ExtTreeMap.toList) fun _ _ => ExtTreeMap.toList_inj.mp
+
 /-- Finite maps keyed by `Int` (heap locations and tape labels). Hides the representation from
 typeclass inference. -/
 @[reducible] def LocHeap (V : Type _) : Type _ := ExtTreeMap Loc V compare
@@ -1074,12 +1093,14 @@ theorem State.update_tapes_no_change {σ : State α} (h : σ.tapes[l]? = some ys
     σ.update_tapes (·.insert l ys) = σ := by
   unfold State.update_tapes; congr 2; grind
 
+/-- Injectivity form of `update_tapes_same`: the presampled values appended to tape `l` agree. -/
 theorem State.update_tapes_same' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }}
     (h : σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) = σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩)) :
     x = y := by
   simpa [Tape.mk.injEq] using State.update_tapes_same h
 
+/-- Presampling different values onto tape `l` gives different states. -/
 theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }} (hne : x ≠ y) :
     σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
@@ -1150,7 +1171,9 @@ theorem EctxItem.fillItem_isLocallyClosed {Ki : EctxItem α} {e : Exp α}
   cases Ki <;> (simp only [fillItem] at h; cases h; assumption)
 
 /-- Splits off the outermost frame whose hole is the next subterm to evaluate, trying the
-right operand first. -/
+right operand first. It is `none` when every operand that is evaluated is already a value (so `e`
+is a head redex, a value, or has no subterm to evaluate). Operands are tested with `toVal?`, so an
+open `lam`/`fix` counts as unevaluated. -/
 def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   match e with
   | app e1 e2 =>
@@ -1248,7 +1271,7 @@ theorem Ectx.fill_append (K1 K2 : Ectx α) e : (K1 ++ K2).fill e = K2.fill (K1.f
     Ectx.fill (K ++ [Ki]) e = Ki.fillItem (K.fill e) :=
   List.foldl_append
 
-/-! ### Decomposing an expression into a one-item evaluation context
+/-! ### Single-frame contexts: `Ectx.fill [Ki] e` equations
 
 The `refines_bind` / `refines_pure_*` rules match `K.fill _` syntactically, so a goal
 about a bare redex has to be re-bracketed first. Each lemma below states the relevant
@@ -1321,7 +1344,7 @@ theorem Ectx.fill_randR (e1 : Exp α) (e : Exp α) :
 theorem Ectx.fill_scrut (p : Pat α) (e : Exp α) :
     Ectx.fill [.scrut p] e = .scrut e p := rfl
 
-/-! ### Multi-frame decomposition: `Exp.decomp` -/
+/-! ### Properties of `Ectx.fill` -/
 
 theorem Ectx.fill_comp (K1 K2 : Ectx α) (e : Exp α) :
     K1.fill (K2.fill e) = (K1.comp K2).fill e := by
@@ -1351,6 +1374,8 @@ theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
   | nil => exact h
   | cons Ki K ih => exact EctxItem.fillItem_isLocallyClosed (ih h)
 
+/-! ### Multi-frame decomposition: `Exp.decomp` -/
+
 theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
     e'.size < e.size := by
   simp only [decompItem, toVal?] at h
@@ -1358,7 +1383,9 @@ theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
     (split at h <;> simp_all <;> try omega) <;>
     (split at h <;> simp_all <;> try omega)
 
-/-- Splits an expression into a maximal evaluation context and the redex in its hole. -/
+/-- Splits an expression into a maximal evaluation context and the redex in its hole. The context
+is innermost frame first (the frame split off first ends up last); `decomp_fill` gives
+`K.fill e' = e`; for a value `K = []` (`decomp_val_empty`). -/
 def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
   match _h : e.decompItem with
   | some (Ki, e') =>

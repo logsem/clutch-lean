@@ -15,7 +15,7 @@ open Classical MeasureTheory
 
 namespace ProbLang
 
-/-- Every set of tapes is measurable. -/
+/-- Tapes are countable (a bound and a list of integers), so they carry the discrete σ-algebra. -/
 instance instMeasurableSpaceTape : MeasurableSpace Tape := ⊤
 
 instance instMeasurableSingletonClassTape : MeasurableSingletonClass Tape :=

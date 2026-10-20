@@ -37,7 +37,8 @@ theorem flipCredit_avg (ε : ℝ≥0∞) :
 theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS ℝ≥0∞ GF] :
     ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
-  -- any positive budget splits in two; the step map is the identity
+  -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
+  -- tails doubles the credit (`flipCredit`); the step map is the identity
   iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
     (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by
       rw [ENNReal.add_halves]⟩)

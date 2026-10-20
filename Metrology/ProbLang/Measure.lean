@@ -15,8 +15,9 @@ open Classical MeasureTheory ProbabilityTheory Measure
 
 /-! # Measure-theory support for ProbLang
 
-The `Possible`, `IsAtomicSupport` and `Concentrated` predicates, measurability of `Option`/`List`/Σ
-constructions, and shape-stratified measurability used by `CoreMeasures`. -/
+First half: the support predicates the program logics use (`Possible`, `IsAtomicSupport`,
+`Concentrated`). Second half: generic measurability infrastructure (Option, List, Σ, kernels) used
+by `CoreMeasures` and the step measurability proofs. -/
 
 /-! ## `Possible`: a positive-mass point of a measure -/
 
@@ -82,7 +83,9 @@ namespace ProbLang
 
 /-! ### Pure atomicity -/
 
-/-- A measure that gives zero mass to the set of its own null singletons. -/
+/-- `μ` is purely atomic: the points of zero mass carry no mass together, so `μ` is concentrated
+on its atoms (`concentrated_atoms`). Every head step but `urand` has this property
+(`headStep_atomic`). -/
 def IsAtomicSupport {α : Type _} [MeasurableSpace α] (μ : Measure α) : Prop :=
   μ {x | μ {x} = 0} = 0
 
@@ -303,15 +306,13 @@ abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDens
 
 /-! ## Shape-stratified measurability
 
-Measurability is assembled from cells `{p | shape p = s ∧ f p ∈ U}`, one per shape. -/
+Measurability is assembled from cells `{p | shape p = s ∧ f p ∈ U}`, one per shape. Cells are over
+`β × T`, where `β` is a measurable parameter. -/
 
 namespace StructRec
 
 variable {T α : Type _} [MeasurableSpace T] [MeasurableSpace α]
 variable {Sh : Type _} (shape : T → Sh)
-variable {f : T → α}
-
-/-! With an extra measurable parameter `β`, the cell is over `β × T`. -/
 
 variable {β : Type _} [MeasurableSpace β]
 variable {g : β → T → α}
@@ -526,8 +527,8 @@ theorem List.measurable_append_singleton {β : Type _} [MeasurableSpace β] :
   exact measurable_sigma_snoc.comp
     ((List.measurable_toSigma).comp measurable_fst |>.prodMk measurable_snd)
 
-/-- Each evaluation is `a ↦ k a (Prod.mk a ⁻¹' (h ⁻¹' S))`, a section measure of the s-finite
-kernel `Kernel.mk k hk`. -/
+/-- For an s-finite measurable kernel `k` and a jointly measurable `h`,
+`a ↦ (k a).map (h (a, ·))` is measurable. -/
 theorem Measure.measurable_map_uncurry {α β γ : Type _}
     [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     {h : α × β → γ} (hh : Measurable h)

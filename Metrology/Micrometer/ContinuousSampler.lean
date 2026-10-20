@@ -70,6 +70,8 @@ theorem Cfg.concentrated_primStep_urand (σ : State rT) :
 Unlike the discrete `unifInt_codensity_bij`, a bijection is not enough here:
 `f` must be measure-preserving for `unifUnit`. -/
 
+/-- Exact coupling of two continuous samplers along a measure-preserving `f`, for any lawful
+reflexive `L`. -/
 theorem Cfg.uniformReal_codensity_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
@@ -101,6 +103,7 @@ section Unary
 variable [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
   [L.IsTopAbsorbing] [L.HasBind]
 
+/-- A program `urand` returns some `r` in the support of `unifUnit`, after a `▷`. -/
 theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (▷ ∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
   iintro HΦ
@@ -116,6 +119,7 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   iframe Hσ
   iapply HΦ $$ %r %hr
 
+/-- Couple `urand ~ K[urand]` along a measure-preserving `f`, at no cost. -/
 theorem wp_couple_urand_urand (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit)
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
@@ -158,6 +162,8 @@ section Relational
 variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
+/-- Relational form of `wp_couple_urand_urand`: couple the two `urand`s along a measure-preserving
+`f`. -/
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) : iprop%
     (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗

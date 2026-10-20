@@ -20,7 +20,8 @@ namespace GradedDivergence
 
 /-! ## Power budgets -/
 
-/-- Budgets of power divergences: `ℝ≥0∞` with the composition `a + b + a b` as addition. -/
+/-- Budgets of power divergences: `ℝ≥0∞` with `a ⊕ b = a + b + a b`. Along `c ↦ log (1 + c)` this
+is ordinary addition (`PowerBudget.log`), which is why power divergences are regraded Rényi. -/
 def PowerBudget : Type :=
   ℝ≥0∞
 
@@ -90,7 +91,8 @@ theorem one_add_toENNReal_nsmul (k : ℕ) (c : PowerBudget) :
   | zero => simp
   | succ k ih => rw [succ_nsmul, toENNReal_add, pow_succ, ← ih]; ring
 
-/-- A finite power budget cancels. -/
+/-- Finite power budgets cancel on the left, as the Micrometer coupling rules require
+(`IsAddLeftRegular c`). -/
 theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) :
     IsAddLeftRegular c := fun a b h ↦ by
   have key (x : PowerBudget) :
@@ -113,7 +115,7 @@ theorem toENNReal_ofReal (c : ℝ) : toENNReal (ofReal c) = ENNReal.ofReal c :=
 theorem isAddLeftRegular_ofReal (c : ℝ) : IsAddLeftRegular (ofReal c) :=
   isAddLeftRegular_of_ne_top (by simp)
 
-/-- `k` composed budgets `c` are `(1 + c)^k - 1`. -/
+/-- `k` composed budgets `c` are `(1 + c)^k - 1`; used to state `k`-fold `χ²` composition. -/
 theorem nsmul_ofReal {c : ℝ} (hc : 0 ≤ c) (k : ℕ) : k • ofReal c = ofReal ((1 + c) ^ k - 1) := by
   apply toENNReal.injective
   rw [toENNReal_ofReal, ENNReal.ofReal_sub _ zero_le_one, ENNReal.ofReal_pow (by positivity),
@@ -342,6 +344,8 @@ theorem powerLifting_iff_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasur
     [IsSubProbabilityMeasure ν] :
     powerLifting α c R μ ν ↔ (powerDivergence α).codensity c R μ ν := by
   refine ⟨comap_codensity_le toRenyi_add, fun h I _ ρ hρ k l _ _ hkl ↦ ?_⟩
+  -- every Rényi slack `ρ` is `toRenyi c'`; then the Rényi test is a power test at `c'`, finite
+  -- since `ρ` is
   obtain ⟨c', rfl⟩ := toRenyi_surjective hα.out ρ
   simp only [← toRenyi_add] at hρ hkl ⊢
   refine h (lt_of_not_ge fun hc ↦ ?_) hkl

@@ -74,8 +74,9 @@ section Codensity
 
 variable {μ : Measure X} {ν : Measure Y} {E : X → Y → ℝ≥0∞} {S : X → Y → Prop}
 
-/-- Reading a total variation codensity lifting on `[0, 1]`-valued test functions through mass
-kernels. -/
+/-- A total variation lifting with leftover `E` bounds `∫ f dμ ≤ ∫ g dν + δ` for `[0, 1]`-valued
+`f`, `g` with `f x ≤ g y + E x y`. Proof: test into a point with the mass kernels of `f` and `g`
+at slack `0`. -/
 theorem lintegral_le_of_codensity_tv (h : tv.codensity δ E μ ν) {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞}
     (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1) (hg1 : ∀ y, g y ≤ 1)
     (hfg : ∀ x y, f x ≤ g y + E x y) : ∫⁻ x, f x ∂μ ≤ ∫⁻ y, g y ∂ν + δ := by
@@ -167,7 +168,8 @@ theorem codensity_tv_rel_false_iff :
   ⟨fun h ↦ by simpa using tv_measure_le_add h .univ .empty fun _ _ ↦ False.elim,
     fun h ↦ absorbing_codensity_tv_one.mono h _ _ _⟩
 
-/-- Total variation liftings are DP liftings at multiplier `1`, leftovers included. -/
+/-- Total variation liftings are DP liftings at multiplier `1`, with each leftover `e` read as the
+DP leftover `dpSlack e = (0, e)`. -/
 theorem codensity_tv_iff_dp [IsSubProbabilityMeasure μ] :
     tv.codensity δ E μ ν ↔ dp.codensity (0, δ) (fun x y ↦ dpSlack (E x y)) μ ν := by
   rw [codensity_dp_iff ENNReal.zero_ne_top, codensity_tv_iff]

@@ -11,8 +11,6 @@ meta import Metrology.Meta
 
 /-! # Measurable space on values -/
 
--- TODO move this to the semantics file once we have that.
-
 noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang

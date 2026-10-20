@@ -19,6 +19,9 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 section Wp
 variable [BudgetGS B GF]
 
+/-- `wp_lift_step_prog_couple` with a head-step form of reducibility (Rocq
+`wp_lift_head_step_prog_couple`); the reducibility premise is not used, since `progCoupl` already
+carries it. -/
 theorem wp_lift_head_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
@@ -34,7 +37,7 @@ theorem wp_lift_head_step_prog_couple {E : CoPset} {e₁ : Exp rT} {Φ : Val rT 
   imodintro
   iexact H
 
-section ConcentratedRules
+section HeadRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 
@@ -142,7 +145,7 @@ theorem wp_lift_atomic_head_step_concentrated {E : CoPset} {e₁ : Exp rT}
   iintro %e₂ %σ₂ %Hmem !> !>
   iapply H $$ %e₂ %σ₂ %Hmem
 
-end ConcentratedRules
+end HeadRules
 
 end Wp
 

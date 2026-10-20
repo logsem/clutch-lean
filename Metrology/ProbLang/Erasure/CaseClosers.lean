@@ -89,11 +89,6 @@ theorem erasure_uniform_close
           ∂headStep ⟨e_h, σ⟩ := by
   have : IsProbabilityMeasure (tapePresample σ α) :=
     ⟨tapePresample_univ_eq_one h hN⟩
-  have hNonempty : (Finset.Ico (0 : Int) z_r).Nonempty := Finset.nonempty_Ico.mpr hz
-  set pmf := PMF.uniformOfFinset (Finset.Ico (0 : Int) z_r) hNonempty
-  have hunif : ∀ σ₀ : State rT, Cfg.uniform z_r σ₀ =
-      pmf.toMeasure.map (fun n : Int => (⟨.lit (.int n), σ₀⟩ : Cfg rT)) := fun σ₀ => by
-    unfold Cfg.uniform Int.isPos; rw [dite_eq_left hz]
   calc ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
                 ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α
       = ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
@@ -106,7 +101,7 @@ theorem erasure_uniform_close
             (⟨.lit (.int p.2), p.1⟩ : Cfg rT)) := by
           refine Cfg.measurable_mk.comp (Measurable.prodMk ?_ measurable_fst)
           exact Exp.lit.measurable.comp (BaseLit.int.measurable.comp measurable_snd)
-        simp_rw [hunif,
+        simp_rw [Cfg.uniform_eq_map_uniformOfFinset hz,
           lintegral_map (erasure_integrand_measurable hS) Measurable.of_discrete]
         rw [lintegral_lintegral_swap (f := fun σ' n =>
               ((execN m ∘ K.fillCfg) ⟨.lit (.int n), σ'⟩) ((fun x => x.expr) ⁻¹' S))
@@ -189,7 +184,9 @@ theorem erasure_load_close
           ∂headStep ⟨.load (.lit (.loc ℓ)), σ⟩ := by
         rw [hload σ rfl, lintegral_dirac]
 
-/-- A heap `alloc` commutes with presampling. -/
+/-- A heap `alloc` commutes with presampling. Presampling keeps the heap, so the fresh location
+is the same a.s.; the heap write commutes with presampling, and the IH applies at the written
+state. -/
 theorem erasure_alloc_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {ed : Exp rT}
     (hS : MeasurableSet S)
@@ -243,7 +240,9 @@ theorem erasure_alloc_close
               halloc σ rfl]
           simp [Exp.asValM, hcheck, lintegral_dirac, f_heap]
 
-/-- A heap `store` commutes with presampling. -/
+/-- A heap `store` commutes with presampling. Presampling keeps the heap, so the checked location
+is the same a.s.; the heap write commutes with presampling, and the IH applies at the written
+state. -/
 theorem erasure_store_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α ℓ : Loc} {t : Tape} {ev : Exp rT}
     (hS : MeasurableSet S)
@@ -314,7 +313,8 @@ theorem erasure_store_close
                 hstore σ rfl]
             simp [Exp.asValM, hcheck, hlook, lintegral_dirac, f_heap]
 
-/-- Allocating a fresh tape commutes with presampling another tape. -/
+/-- Allocating a fresh tape commutes with presampling another tape. Presampling an existing tape
+keeps `tapes.fresh` (`fresh_loc_upd_some`), and the new tape is `≠ α`. -/
 theorem erasure_tape_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {z : Int}
     (hS : MeasurableSet S)

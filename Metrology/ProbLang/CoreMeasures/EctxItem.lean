@@ -11,8 +11,6 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 @[expose] public section
 
--- TODO move this to the semantics file once we have that.
-
 noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang

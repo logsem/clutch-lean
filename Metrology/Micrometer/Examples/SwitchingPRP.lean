@@ -36,7 +36,10 @@ section PRP
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
-/-! ## Representation predicates -/
+/-! ## Representation predicates
+
+The postconditions of creation; the query lemmas and the loop work with the unfolded points-to
+facts. -/
 
 /-- `f` is an idealised random function with output space `[0, N)` and memo table `m`
 (program side). -/
@@ -288,7 +291,9 @@ theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int
 /-! ## The coupled fresh query
 
 At a fresh input, the random function's `rand N` draw is coupled with the permutation's
-`rand r.length` draw along `i ↦ r[i]`, for `m.length / N` credits. Port of the fresh-query case
+`rand r.length` draw along `i ↦ r[i]`, for `m.length / N` credits. The injection `i ↦ r[i]` hits
+every unused value; the `m.length` used values have no partner, and their mass
+`(N - r.length) / N = m.length / N` is the cost. Port of the fresh-query case
 of clutch's `wp_prf_prp_couple_eq_err`. -/
 
 /-- A fresh query to the random function against the random permutation costs `m.length / N`. -/

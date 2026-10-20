@@ -5,9 +5,9 @@ public import Metrology.Micrometer.ContinuousSampler
 public import Metrology.Micrometer.BinLogRelated
 import Metrology.ProbLang.Syntax.Notation
 
-@[expose] public section
-
 /-! Shared helpers of the compatibility lemmas for `bin_log_related`. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting

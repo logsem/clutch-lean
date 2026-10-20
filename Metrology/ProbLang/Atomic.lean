@@ -15,12 +15,14 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-/-- Every atom of the step measure is a value (vacuous for `urand`; the logic uses `Atomic'`). -/
+/-- Pointwise form: every positive-mass successor is a value. Easy to prove via
+`HeadStepSupport`, and converted to `Atomic'` by `toAtomic'` when the redex is not `urand`. -/
 def Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
 /-- The step measure is concentrated on value configurations. This is the form the program
-logic consumes (`Micrometer.OpenInv.of_atomic`). -/
+logic consumes (`Micrometer.OpenInv.of_atomic`); unlike `Atomic` it also covers `urand`
+(`urand'`). -/
 def Atomic' (e : Exp rT) : Prop :=
   ∀ σ, Concentrated (primStep ⟨e, σ⟩) { ρ | ρ.1.isValue }
 

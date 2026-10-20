@@ -11,7 +11,8 @@ import Metrology.ProbLang.Syntax.Notation
 /-! # Presampling with tapes: the order of two labelled draws does not matter
 
 Both tapes are presampled before either program draws, coupling each left tape with its right
-twin; the draws then only read the tapes. A draw from a fresh tape is a plain draw. -/
+twin; the draws then only read the tapes. A draw from a fresh tape is a plain draw. Only
+`drawAB ≤ drawBA` is stated; the reverse is the same proof with the tapes swapped. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal

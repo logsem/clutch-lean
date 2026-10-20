@@ -25,6 +25,7 @@ theorem isAddLeftRegular_rrCurve : IsAddLeftRegular rrCurve := fun _ _ h ↦
 /-- One round couples at the curve, order by order. -/
 theorem rrCoupling_curve : RRCoupling (codensity renyiCurve) rrCurve := fun b b' ↦
   codensity_renyiCurve_iff.2 fun α ↦ by
+    -- relCost into RenyiBudget, evaluated at α, is the scalar relCost (0 on the relation, ⊤ off it)
     have hcost : (fun r r' ↦ (relCost (fun r r' ↦ rrOut b r = rrOut b' r') r r' : RenyiBudget) α) =
         relCost fun r r' ↦ rrOut b r = rrOut b' r' := by
       ext r r'

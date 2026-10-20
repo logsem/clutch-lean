@@ -94,6 +94,11 @@ end Finite
 
 section Discretize
 
+/-! `disc` sends `x` to the dyadic cells of all point masses of `κ x` and `η x`, and `rep` picks a
+point with the same cells. So `K ∘ rep ∘ disc` (for `K = κ, η`) factors through a finite space, and
+each point mass moves by less than `2⁻ⁿ` (`cell_fst`, `cell_snd`). Both kernels share one `disc`, so
+the finite chain rule sees a single input space. -/
+
 variable {X : Type u} [MeasurableSpace X] {N : ℕ} (κ η : X → Measure (ULift.{u} (Fin N)))
 
 /-- Cell vectors of level `n` over `N` points. -/
@@ -148,11 +153,13 @@ theorem singleton_le_one {ρ : Measure (ULift.{u} (Fin N))} [IsSubProbabilityMea
   IsSubProbabilityMeasure.measure_le_one _
 
 omit [MeasurableSpace X] in
+/-- The representative has the same `κ`-cells as the point. -/
 theorem cell_fst [Nonempty X] (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :
     cell n (κ (rep κ η n (disc κ η n x)) {i}) = cell n (κ x {i}) :=
   congrArg Prod.fst (congrFun (cellVec_rep_disc κ η n x) i.down)
 
 omit [MeasurableSpace X] in
+/-- The representative has the same `η`-cells as the point. -/
 theorem cell_snd [Nonempty X] (n : ℕ) (x : X) (i : ULift.{u} (Fin N)) :
     cell n (η (rep κ η n (disc κ η n x)) {i}) = cell n (η x {i}) :=
   congrArg Prod.snd (congrFun (cellVec_rep_disc κ η n x) i.down)
@@ -305,6 +312,8 @@ theorem tendsto_fDiv_bind_disc (hf : ConvexOn ℝ (Ici 0) f)
   have (n : ℕ) := isSubProbabilityMeasure_bind μ₂ _ (hη.comp (hrd n)).aemeasurable
   have hsum (n : ℕ) := fDiv_eq_sum hf hf_cont (μ₁.bind (κ ∘ rep κ η n ∘ disc κ η n))
     (μ₂.bind (η ∘ rep κ η n ∘ disc κ η n))
+  -- on a finite output `fDiv` is a sum of `persp` of point masses; each mass converges and keeps
+  -- its zero/nonzero status, which is what continuity of `persp` needs
   rw [funext hsum, fDiv_eq_sum hf hf_cont]
   refine EReal.tendsto_finset_sum _ (fun i _ ↦ ?_) fun i _ ↦ persp_ne_bot hf ENNReal.toReal_nonneg
   have hlim {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubProbabilityMeasure (K x)]
@@ -326,8 +335,9 @@ theorem tendsto_fDiv_bind_disc (hf : ConvexOn ℝ (Ici 0) f)
     (hzero hη μ₂ cell_snd)
 
 /-- A chain rule between finite spaces for kernel pairs whose pointwise masses satisfy `Q` holds
-between all spaces for such pairs: approximate the input by finite pushforwards, discretise it,
-and use data processing; both steps keep the pointwise masses (Thm. 4.6). -/
+between all spaces for such pairs: push the output to `Fin N` (`fDiv_eq_iSup_map`), replace the
+input by its finite cell index `disc` (`tendsto_fDiv_bind_disc`), apply the finite rule, and undo
+both steps by data processing. Both steps keep the pointwise masses, so `Q` survives (Thm. 4.6). -/
 theorem fDiv_comp_le_of_finite_of_mass (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hg : ConvexOn ℝ (Ici 0) g)
     (hg_cont : ContinuousWithinAt g (Ici 0) 0) (hh : ConvexOn ℝ (Ici 0) h)
@@ -423,6 +433,8 @@ theorem fDiv_comp_le_of_perspSplit (hf : ConvexOn ℝ (Ici 0) f)
       0 ≤ persp g a.toReal b.toReal :=
     persp_nonneg hg ENNReal.toReal_nonneg ENNReal.toReal_nonneg
   set S := ⨆ j, (fDiv f₂ (κ j) (η j)).toENNReal
+  -- per output cell, split over inputs by joint convexity, apply (A′) to each pair, swap sums; the
+  -- convex weights `β κ + (1-β) η` and `β′ μ₁ + (1-β′) μ₂` have total mass ≤ 1 (`hc`)
   have key : (fDiv f (κ ∘ₘ μ₁) (η ∘ₘ μ₂)).toENNReal ≤ (fDiv f₁ μ₁ μ₂).toENNReal + S := by
     rw [fDiv_eq_sum hf hf_cont, fDiv_eq_sum hf₁ hf₁_cont]
     simp_rw [toReal_comp_singleton_eq_sum]

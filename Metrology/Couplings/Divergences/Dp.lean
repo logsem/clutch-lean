@@ -5,7 +5,10 @@ public import Mathlib.MeasureTheory.Integral.Layercake
 public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
 public import Metrology.Couplings.Codensity
 
-/-! `(ε, δ)`-differential privacy as a graded divergence (Approximate Span Liftings, §4.3). -/
+/-! `(ε, δ)`-differential privacy as a graded divergence (Approximate Span Liftings, §4.3).
+Main results: DP composes along kernels (`Bound.bind`, `isComposable_dp`), and the DP codensity
+lifting is decided by `[0, 1]`-valued test functions (`codensity_dp_iff`,
+`codensity_dp_rel_iff`). -/
 
 @[expose] public section
 
@@ -332,7 +335,8 @@ theorem absorbing_codensity_dp_top_left : (codensity dp.{u}).Absorbing (⊤, δ)
   fun _ _ _ _ _ ↦ codensity_dp_top_left
 
 /-- A DP codensity lifting bounds `∫⁻ f ∂μ` by `expBudget ε * ∫⁻ g ∂ν + δ` for `[0, 1]`-valued
-test functions. -/
+test functions. Proof: test with the mass kernels `x ↦ f x • δ_*`, `y ↦ g y • δ_*` into a point, at
+slack `0`. -/
 theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, δ) R μ ν)
     {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞} (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1)
     (hg1 : ∀ y, g y ≤ 1)

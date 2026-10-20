@@ -5,9 +5,10 @@ public import Metrology.ProbLang.CoreMeasures
 
 @[expose] public section
 
-/-! # Discreteness lifting for ProbLang measure spaces
+/-! # Measurable singletons for ProbLang types
 
-Measurable singletons for the ProbLang types, and the default `LawfulProbLangℝ Int` instance. -/
+Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`, so point-mass
+lemmas apply at any `rT`; also the computable `LawfulProbLangℝ Int` instance. -/
 
 noncomputable section ProbLangDiscrete
 

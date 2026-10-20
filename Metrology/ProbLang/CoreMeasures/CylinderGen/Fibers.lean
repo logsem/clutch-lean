@@ -73,9 +73,13 @@ def Ctx.mkArms (ctx : Ctx) (arms eqs : Array Expr) (measured : Array Ctor) (hs :
 /-- A function `f` on `T` (with `β?`, `f : β → T → α`) given by its equations, one `Arm` per
 constructor. -/
 structure Recursion where
+  /-- Structural recursion: the arms take `f` at recursive fields (else: by cases, the arms take
+  the fields). -/
   recursive : Bool
   f : Expr
+  /-- The type of the parameter, if `f : β → T → α`. -/
   β? : Option Expr
+  /-- One per constructor, indexed by `Ctor.idx`. -/
   arms : Array Arm
 
 /-- The domain of the function on the leaves `leaves` of a shape: `β × leaves` with a parameter. -/

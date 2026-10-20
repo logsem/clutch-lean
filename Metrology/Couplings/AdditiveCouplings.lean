@@ -1,20 +1,5 @@
 module
 
-public import Mathlib.Basic.Real.Basic
-public import Mathlib.Data.EReal.Basic
-public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Basic
-public import Mathlib.MeasureTheory.Measure.Dirac.Basic
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
-public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
-public import Mathlib.MeasureTheory.Measure.GiryMonad
-public import Mathlib.MeasureTheory.Integral.Lebesgue.Add
-public import Mathlib.Topology.UnitInterval
-public import Mathlib.MeasureTheory.Constructions.UnitInterval
-public import Mathlib.Probability.ProbabilityMassFunction.Basic
-public import Mathlib.Probability.ProbabilityMassFunction.Constructions
-public import Mathlib.Analysis.Real.OfDigits
-
 public import Metrology.Couplings.ApproximateCouplings
 
 /-! # Additive couplings
@@ -280,8 +265,9 @@ theorem map {ε : ENNReal} {S : Set (α × β)} {R : Set (α' × β')}
   rw [lintegral_map Hf'm Hfm, lintegral_map Hg'm Hgm]
   exact H F G fun HS => Hle (HR HS)
 
--- unlike `map_inv`, survives a pushforward: limits under `map` need no discreteness
-/-- A left measure dominated on measurable tests by a family of coupled `ν i` is coupled too. -/
+/-- A left measure dominated on measurable tests by a family of coupled `ν i` is coupled too.
+Stated on test integrals rather than as `μₗ = ⨆ i, ν i`, so it also covers limits of pushforwards
+without the discreteness `map_inv` needs. -/
 theorem iSup_left {ι : Sort _} {ε : ENNReal} {S : Set (α × β)}
     {μₗ : Measure α} {ν : ι → Measure α} {μᵣ : Measure β}
     (hle : ∀ f : α → ENNReal, Measurable f → ∫⁻ a, f a ∂μₗ ≤ ⨆ i, ∫⁻ a, f a ∂(ν i))
@@ -445,6 +431,8 @@ theorem swap {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : M
     (H : AddCoupl ε S μₗ μᵣ) :
     AddCoupl ε (fun v => S (v.2, v.1)) μᵣ μₗ := by
   rintro ⟨f, Hfm, Hfb⟩ ⟨g, Hgm, Hgb⟩ Hle
+  -- test with the complements 1 - g, 1 - f; with equal finite masses, ∫(1-g)dμₗ ≤ ∫(1-f)dμᵣ + ε
+  -- rearranges to ∫f dμᵣ ≤ ∫g dμₗ + ε
   let F : CouplingFunction α :=
     ⟨fun a => 1 - g a, measurable_const.sub Hgm, fun _ => tsub_le_self⟩
   let G : CouplingFunction β :=

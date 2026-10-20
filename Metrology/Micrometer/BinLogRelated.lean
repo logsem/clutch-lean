@@ -2,9 +2,9 @@ module
 
 public import Metrology.Micrometer.Interp
 
-@[expose] public section
-
 /-! Relational contexts and the semantic typing judgement `bin_log_related`. -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -68,7 +68,9 @@ end RelCtx
 section env_typed
 variable {GF : BundledGFunctors}
 
-/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations. -/
+/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations. The
+closedness conjunct covers every entry of `vs`, including shadowed ones that `lookup` cannot
+reach; `substMap` lemmas need it (`SubstMap.AllClosed`). -/
 noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
@@ -248,6 +250,8 @@ theorem bin_log_related_nil_intro {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} 
     show Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e' = e' from rfl]
   iexact H
 
+/-- Rename the innermost relational variable `x` to a fresh `y` (used for named context binders,
+`bin_log_related_close_cofinite`). -/
 theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A : lrel rT GF}
     {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y) (hxNotDom : x ∉ (Γ.map (·.1)).toFinset)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
@@ -276,6 +280,7 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     simp only [List.mem_toFinset, List.mem_map] at h
     obtain ⟨p, hpmem, rfl⟩ := h
     simpa [hvsLookupX] using ValSubstMap.lookup_isSome_of_mem ⟨p.2, hpmem⟩
+  -- substituting vs after renaming x↦y equals substituting (x ↦ vs(y)) :: vs.delete y
   have hswapFst :=
     Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [ValSubstMap.fst_dom])
       (ValSubstMap.proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
@@ -290,6 +295,7 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     show Exp.substMap vs.snd (τE'.subst x (.fvar y)) = Exp.substMap vs'.snd τE' from hswapSnd]
   iexact Hrefines
 
+/-- `bin_log_related_rename` for the type-level judgement. -/
 theorem bin_log_related_ty_rename {E : CoPset} {Δ : TyEnv rT GF} {Γ : RelCtx rT GF} {x y : Var}
     {A : lrel rT GF} {τE τE' : Exp rT} {τ : Ty} (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)

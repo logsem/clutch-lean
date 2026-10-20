@@ -11,7 +11,11 @@ import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
 
-/-! # One-time pad over `ℤ/N`, refining the ideal sampler in any graded lifting -/
+/-! # One-time pad over `ℤ/N`, refining the ideal sampler in any graded lifting
+
+Main result `otp_div_gen`: divergence 0 in every sound lifting; `otp_dp` is its tv instance.
+Suffixes: `_gen` any lifting, none = codensity tv, `_closed` at `MicrometerFunctor`, `_rev` the
+ideal sampler on the left. -/
 
 open scoped ENNReal
 
@@ -84,10 +88,12 @@ theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
 
 end Generic
 
+/-- The encryption refines the ideal sampler in codensity tv. -/
 theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[codensity tv] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int :=
   otp_refines_gen m N hN
 
+/-- The ideal sampler refines the encryption in codensity tv. -/
 theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
     ⊢@{IProp GF} REL[codensity tv] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int :=
   otp_refines_rev_gen m N hN
@@ -121,12 +127,14 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
 
+/-- The encryption and the ideal sampler are coupled at budget `0` in any lifting. -/
 theorem otp_adequate_gen (GF : BundledGFunctors) [RefinesPreGS rT B GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_int) otpφ _ _ σ σ' (fun _ _ => lrel_int_to_otpφ)
     fun _ _ => otp_refines_gen m N hN
 
+/-- The ideal sampler and the encryption are coupled at budget `0` in any lifting. -/
 theorem otp_adequate_rev_gen (GF : BundledGFunctors) [RefinesPreGS rT B GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
@@ -138,6 +146,7 @@ theorem otp_adequate_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_gen (MicrometerFunctor rT B) m N hN σ σ'
 
+/-- `otp_adequate_rev_gen` at `MicrometerFunctor`. -/
 theorem otp_adequate_rev_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev_gen (MicrometerFunctor rT B) m N hN σ σ'
@@ -151,12 +160,14 @@ theorem otp_div_gen {D : GradedDivergence.{0} B} [L.IsSound D] (m N : Int) (hN :
 
 end Generic
 
+/-- `otp_adequate_gen` in codensity tv. -/
 theorem otp_adequate (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     (codensity tv).Rel 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_gen GF m N hN σ σ'
 
+/-- `otp_adequate_rev_gen` in codensity tv. -/
 theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (m N : Int)
     (hN : 0 < N) (σ σ' : State rT) :
     (codensity tv).Rel 0 (adequacyRel otpφ)
@@ -165,11 +176,13 @@ theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
 
 /-! ## Closed statements at the concrete model `MicrometerFunctor rT` -/
 
+/-- `otp_adequate` at `MicrometerFunctor`. -/
 theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     (codensity tv).Rel 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_closed_gen m N hN σ σ'
 
+/-- `otp_adequate_rev` at `MicrometerFunctor`. -/
 theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     (codensity tv).Rel 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
@@ -177,7 +190,8 @@ theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
 
 /-! ## Differential privacy instance -/
 
-/-- The encryption is `0`-differentially private with respect to the ideal program. -/
+/-- The encryption is `0`-differentially private with respect to the ideal program.
+`tv δ` is `dp (0, δ)`, so this is `otp_div_gen` at `L := codensity tv`, `D := tv`. -/
 theorem otp_dp (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     dp.{0} (0, 0) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_div_gen (L := codensity tv) (D := tv) m N hN σ σ'

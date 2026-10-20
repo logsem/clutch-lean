@@ -10,7 +10,9 @@ public import Metrology.ProbLang.Discrete
 
 /-! # Primitive step
 
-The step of `Cfg` that decomposes into an evaluation context and a head step, and its basic laws. -/
+The step of `Cfg`: decompose into an evaluation context and a head step. Main results:
+`primStep_fill` (stepping `K[e]` = stepping `e`, then wrapping), `head_redex_unique`,
+`prim_step_iff`, `primStep_atomic`. -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
@@ -99,7 +101,8 @@ theorem Ectx.fillCfg.measurableEmbedding [LawfulProbLangℝ rT] (K : Ectx rT) :
     ((Ectx.fill.measurableEmbedding K).prodMap MeasurableEmbedding.id)).comp
     Cfg.measurableEquivProd.measurableEmbedding
 
-/-- Needed by `glm'_bind`, whose transported support predicate is `K.fillCfg '' {R}`. -/
+/-- The image of a measurable set under `K.fillCfg` is measurable (`fillCfg` is a measurable
+embedding). -/
 theorem Ectx.measurableSet_fillCfg_image [LawfulProbLangℝ rT] (K : Ectx rT)
     {S : Set (Cfg rT)} (hS : MeasurableSet S) : MeasurableSet (K.fillCfg '' S) :=
   (Ectx.fillCfg.measurableEmbedding K).measurableSet_image' hS
@@ -138,14 +141,16 @@ def primStepKernel [LawfulProbLangℝ rT] : Kernel (Cfg rT) (Cfg rT) where
   measurable' := primStep.measurable
   toFun := primStep
 
+/-- The expression can take a step. -/
+abbrev Reducible [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
+  primStep ⟨e, σ⟩ ≠ 0
+
+-- `@[discrete]` marks the point-mass (singleton) formulations. They hold for any `rT` but say
+-- nothing about diffuse steps such as `urand`, so the linter keeps them out of continuous proofs.
 /-- Some configuration is reached with positive probability (discrete form of `Reducible`). -/
 @[discrete]
 abbrev Discrete.Reducible [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
   ∃ ρ : Cfg rT, 0 < primStep ⟨e, σ⟩ {ρ}
-
-/-- The expression can take a step. -/
-abbrev Reducible [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT) : Prop :=
-  primStep ⟨e, σ⟩ ≠ 0
 
 /-- The converse is `Reducible.toDiscrete`. -/
 @[discrete]
@@ -187,8 +192,9 @@ theorem prim_step_mass [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
 
 /-! ## Bridge: headStep ↔ primStep -/
 
-/-- Without local closedness a value-shaped but non-closed subterm (e.g. a non-closed
-`lam`) could still be focused. -/
+/-- A locally closed head redex is its own decomposition: `decompItem` finds no frame to peel,
+so `primStep = headStep` (`primStep_eq_headStep`). Without local closedness a value-shaped but
+non-closed subterm (e.g. a non-closed `lam`) could still be focused. -/
 theorem Exp.decompItem_none_of_lc_headReducible [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
     (he : e.IsLocallyClosed) (hred : headStep ⟨e, σ⟩ ≠ 0) : e.decompItem = none := by
   cases H : e.decompItem with
@@ -236,9 +242,6 @@ theorem primStep_fillItem [LawfulProbLangℝ rT]
   have : Ki.fillItem e = Ectx.fill [Ki] e := by simp [Ectx.fill, List.foldl, flip]
   rw [this, primStep_fill hv]; congr 1
 
--- TODO: This generalized to continuous, though really I imagine it can't be used in any
--- continuous way. I won't mark it as discrete, but I'd guess this should really be changed to be
--- primStep_fill
 /-- Filling a context preserves the mass of each successor configuration (by injectivity of
 `K.fill`). -/
 theorem primStep_fill_singleton [LawfulProbLangℝ rT] {K : Ectx rT} {e1 e2 : Exp rT}
@@ -299,6 +302,7 @@ theorem irreducible_fill_inv [LawfulProbLangℝ rT]
 
 /-! ## Context decomposition -/
 
+/-- If `K[e]` is a head redex, then either `K` is empty or `e` is value-shaped. -/
 theorem head_ctx_step_val_ectx [LawfulProbLangℝ rT] (K : Ectx rT) (e : Exp rT) (σ : State rT)
     (hstep : HeadReducible (K.fill e) σ) : e.isValueR ∨ K = [] := by
   rcases List.eq_nil_or_concat' K with rfl | ⟨K'', Ki, rfl⟩
@@ -306,6 +310,8 @@ theorem head_ctx_step_val_ectx [LawfulProbLangℝ rT] (K : Ectx rT) (e : Exp rT)
   · simp only [Ectx.fill_snoc] at hstep
     exact .inl (Ectx.fill_isValueR (head_ctx_step_val hstep))
 
+/-- If `K'[e1'] = K_redex[e1_redex]` with `e1'` not a value and `e1_redex` a head redex, then
+`K_redex` extends `K'`. -/
 theorem step_by_val [LawfulProbLangℝ rT] (K' K_redex : Ectx rT) (e1' e1_redex : Exp rT)
     (σ : State rT)
     (hfill : K'.fill e1' = K_redex.fill e1_redex)
@@ -380,7 +386,8 @@ theorem prim_step_iff [LawfulProbLangℝ rT]
 
 /-! ## subRedexesAreValues -/
 
-/-- Every non-value subterm of `e` is under the empty context. -/
+/-- Every decomposition `e = K[e']` with `e'` not a value has `K = []`: all evaluation-position
+subterms of `e` are values. -/
 def subRedexesAreValues [LawfulProbLangℝ rT] (e : Exp rT) : Prop :=
   ∀ (K : Ectx rT) (e' : Exp rT), e = K.fill e' → ¬e'.isValue → K = []
 
@@ -439,7 +446,8 @@ theorem measurableSet_possible_support [LawfulProbLangℝ rT] {e₁ : Exp rT} {�
   rw [hset]
   exact measurableSet_primStep_support e₁ σ₁
 
-/-- `urand` is the only diffuse head step. -/
+/-- The step measure is purely atomic unless the redex is `urand`. This lets the program logics
+reason about `Possible` successors point by point. -/
 theorem primStep_atomic [LawfulProbLangℝ rT] (e : Exp rT) (σ : State rT)
     (hne : e.decomp.2 ≠ .urand) :
     IsAtomicSupport (primStep ⟨e, σ⟩) := by

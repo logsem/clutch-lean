@@ -6,7 +6,9 @@ public import Metrology.Couplings.Divergences.FDivFinite
 /-! Graded divergences cut out by thresholds on `f`-divergences (Approximate Span Liftings,
 §4.2).
 Also: `(ε, δ)`-DP is the `fDivBound` with the hockey-stick weight `max 0 (t - e^ε)`
-(`dp_iff_fDivBound`). -/
+(`dp_iff_fDivBound`).
+Built on: `fDiv` (FDiv.lean) → partition formula and data processing (FDivPartition.lean) →
+finite-to-general chain rule, Thm. 4.6 (FDivFinite.lean). Instances: Renyi, Bof (KL, Hellinger). -/
 
 @[expose] public section
 
@@ -77,7 +79,8 @@ theorem isBudgetClosed_fDivBound [LT B] (hw : ∀ b b' k, weight b k = weight b'
 
 /-! ## Composability -/
 
-/-- Composability from a per-index chain rule on nonempty inputs (Thm. 4.9). -/
+/-- Composability from a per-index chain rule on nonempty inputs (Thm. 4.9); `hpos` handles an
+empty input space, where both composites are zero. -/
 theorem isComposable_fDivBound [Add B] {chain : EReal → EReal → EReal}
     (hchain : ∀ ⦃a a' c c'⦄, a ≤ a' → c ≤ c' → chain a c ≤ chain a' c')
     (hweight : ∀ b c k {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] [Nonempty X]

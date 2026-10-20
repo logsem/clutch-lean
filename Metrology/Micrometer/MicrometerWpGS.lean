@@ -29,8 +29,11 @@ without an `L` metavariable. -/
 /-- The ghost state of `wp`: spec updates, invariants and the program-state interpretation. -/
 class MicrometerWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
+  /-- Whether later credits are available (adequacy uses `.hasNoLC`). -/
   hlc : HasLC
+  /-- The invariant ghost state. -/
   invGS : InvGS_gen hlc GF
+  /-- The authoritative program state, `appStateAuth` in `micrometerWpGS_of_components`. -/
   stateInterp : State rT → IProp GF
 
 attribute [reducible, instance] MicrometerWpGS.invGS

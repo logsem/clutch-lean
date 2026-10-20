@@ -29,6 +29,7 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N) (b b' : Bool) :
     ⊢@{IProp GF} ↯b (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[codensity dp] (leakyRR (rT := rT) N b) << leakyRR N b' : lrel_bool := by
+  -- `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
   rw [show (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) =
     (0, (N.toNat : ℝ≥0∞)⁻¹) + RandomizedResponse.budget by simp]
   iintro Hb
@@ -37,6 +38,7 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     (by simp [hN]) (unifInt_singleton_zero hN ▸ codensity_dp_avoid _ (.singleton 0))
   iframe Hδ
   iintro %r %_ %⟨rfl, hr⟩
+  -- `hr` rules out the leaking branch on both sides
   rel_pures
   iapply rr_refines b b' $$ Hε
 

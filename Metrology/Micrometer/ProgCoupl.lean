@@ -111,6 +111,8 @@ theorem progCoupl_intro_law (law : L.BindLaw) {e₁ : Exp rT} {σ₁ : State rT}
   simp only [id]
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
+/-- Couple a program step with `n` spec steps from an erasable distribution, by the canonical law
+with per-pair leftover `R`. -/
 theorem progCoupl_intro [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT}
     {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF} {n : Nat}
@@ -144,6 +146,8 @@ theorem progCoupl_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
   have hμ : μ₀ (f ⁻¹' S)ᶜ = 0 := by
     rw [← Set.preimage_compl, ← MeasureTheory.Measure.map_apply hf hSmeas.compl, ← hprog]
     exact hSconc
+  -- head_supp: setting the leftover to ⊤ off f⁻¹ S keeps the head, so continuations are only
+  -- needed on S
   iapply progCoupl_intro_map law Hred hf hprog hf' hspec (law.head_supp hA hμ Hhead) Hside.supp
     Heras
   iintro %ρ %ρ' %hR
@@ -189,7 +193,16 @@ theorem progCoupl_ctx_bind {K : Ectx rT} {e₁ : Exp rT} {σ₁ : State rT}
   simp only [Function.comp_apply]
   iexact HCont
 
-/-! ### `progCoupl` — coupling-intro lemmas -/
+/-! ### `progCoupl` — coupling-intro lemmas
+
+One program step against one spec step, in five forms:
+* `_law`: any law, per-pair leftover `R`;
+* `_spend_law`: a `HeadShift` law, head at `b₁`, `b₂` added to every leftover;
+* `_adv'` (`adv` is Rocq's "advanced", a per-pair leftover): canonical law, leftover `R` at `b`;
+* `_adv`: canonical law at `b₁`, `b₂` added to every leftover;
+* plain `progCoupl_steps`: relational lifting `L.Rel b₁ S`, continuation at `b₂`.
+
+The `step_l` variants leave the spec in place or take it to an erasable state distribution. -/
 
 /-- Couple one program step against one spec step by a step of any bind law (Rocq
 `prog_coupl_one_step_top`). -/
@@ -220,6 +233,8 @@ theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift] {e�
   have := prim_step_mass Hred'
   progCoupl_steps_law law Hred Hred' (law.mono_out (BindLaw.HeadShift.shift hb₂ hhead) hb) hside
 
+/-- `progCoupl_steps_law` for the canonical law: a lifting with per-pair leftover `R` at the whole
+budget `b`. -/
 theorem progCoupl_steps_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT}
     {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {b : B}
     {Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF}
@@ -312,6 +327,8 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
   simp only [id]
   iapply H $$ %ρ.expr %ρ.state
 
+/-- A program step against an erasable spec-state distribution, spec expression fixed, with
+per-pair leftover `R`. -/
 theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {μ₁' : MeasureTheory.Measure (State rT)} {b : B}
@@ -336,6 +353,8 @@ theorem progCoupl_step_l_erasable_adv [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
     iapply Hcnt $$ %e₂ %σ₂ %σ₂' %hR
   · simp [he] at hR
 
+/-- `progCoupl_step_l_erasable_adv` with a relational lifting within `b₁`, leaving `b₂` to the
+continuation. -/
 theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT}
     {σ₁' : State rT} {μ₁' : MeasureTheory.Measure (State rT)} {b₁ b₂ b : B}
@@ -355,6 +374,7 @@ theorem progCoupl_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L
   rw [relCost_of hS, zero_add]
   iapply Hcnt $$ %e₂ %σ₂ %σ₂' %hS
 
+/-- A program step that leaves the spec in place, continuing on any set carrying the step. -/
 theorem progCoupl_step_l_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
     [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {e₁ : Exp rT} {σ₁ : State rT}
     {e₁' : Exp rT} {σ₁' : State rT} {b : B}

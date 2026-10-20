@@ -12,72 +12,6 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure ProbLang.Measure
 
-/-! ## Iterated presampling -/
-
-/-- `n`-fold presampling on tape `α`; the `Nat.rec` in Clutch's `erasure.v` tape batching. -/
-noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure (State rT)
-  | 0 => Measure.dirac σ
-  | n + 1 => (tapePresampleIter α σ n).bind (fun σ' => tapePresample σ' α)
-
-theorem tapePresampleIter_tape_bound_ae [Countable rT]
-    {σ : State rT} {α : Loc} {t : Tape}
-    (h : σ.tapes[α]? = some t) (n : Nat) :
-    ∀ᵐ σ' ∂(tapePresampleIter α σ n),
-      ∃ t' : Tape, σ'.tapes[α]? = some t' ∧ t'.bound = t.bound := by
-  induction n with
-  | zero =>
-    show ∀ᵐ σ' ∂(Measure.dirac σ), _
-    rw [MeasureTheory.ae_iff, Measure.dirac_apply' _ MeasurableSet.of_discrete,
-        Set.indicator_of_notMem]
-    simp only [Set.mem_ofPred_eq, not_not]
-    exact ⟨t, h, rfl⟩
-  | succ k ihk =>
-    rw [tapePresampleIter, MeasureTheory.ae_iff,
-        Measure.bind_apply MeasurableSet.of_discrete
-          Measurable.of_discrete.aemeasurable]
-    refine (lintegral_eq_zero_iff Measurable.of_discrete).mpr ?_
-    filter_upwards [ihk] with σ'' ⟨t'', ht'', hbound⟩
-    show tapePresample σ'' α _ = 0
-    obtain ⟨Nb, bs⟩ := t''
-    refine MeasureTheory.ae_iff.mp (tapePresample_ae ht'' MeasurableSet.of_discrete fun n' => ?_)
-    exact ⟨⟨Nb, bs ++ [n']⟩, by simp [State.update_tapes], hbound⟩
-
-theorem execN_tapePresampleIter_expr_eq [Countable rT]
-    {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape} (n : Nat)
-    (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
-    asExpr ((tapePresampleIter α σ n).bind (fun σ' => execN m ⟨e, σ'⟩)) =
-      asExpr (execN m ⟨e, σ⟩) := by
-  unfold asExpr
-  induction n generalizing σ with
-  | zero =>
-    show ((Measure.dirac σ).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) = _
-    rw [Measure.dirac_bind (f := _) Measurable.of_discrete]
-  | succ k ih =>
-    show ((((tapePresampleIter α σ k).bind (fun σ' => tapePresample σ' α)).bind
-            (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr)) = _
-    rw [Measure.bind_bind
-          Measurable.of_discrete.aemeasurable
-          Measurable.of_discrete.aemeasurable,
-        Measure.bind_map_comm_of_discrete]
-    refine Measure.ext fun S hS => ?_
-    rw [Measure.bind_apply hS Measurable.of_discrete.aemeasurable]
-    calc ∫⁻ σ₁, ((tapePresample σ₁ α).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S
-            ∂(tapePresampleIter α σ k)
-        = ∫⁻ σ₁, (execN m ⟨e, σ₁⟩).map (·.expr) S ∂(tapePresampleIter α σ k) := by
-          refine lintegral_congr_ae ?_
-          filter_upwards [tapePresampleIter_tape_bound_ae h k]
-            with σ₁ ⟨t', ht', hbound⟩
-          have h_eq := execN_tape_presample_expr_eq (e := e) (m := m) ht' (hbound ▸ hN)
-          unfold asExpr at h_eq
-          rw [h_eq]
-      _ = ((tapePresampleIter α σ k).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S := by
-          rw [Measure.map_apply Measurable.of_discrete hS,
-              Measure.bind_apply (Measurable.of_discrete hS)
-                Measurable.of_discrete.aemeasurable]
-          simp_rw [Measure.map_apply Measurable.of_discrete hS]
-      _ = (execN m ⟨e, σ⟩).map (·.expr) S := by
-          rw [ih h, Measure.map_apply Measurable.of_discrete hS]
-
 /-! ## `ErasableExpr` -/
 
 /-- Erasability up to the expression projection, the analogue of `Erasable` (which compares full
@@ -198,5 +132,73 @@ theorem limExec_tape_presample_expr_eq
     asExpr ((tapePresample σ α).bind (fun σ' => limExec ⟨e, σ'⟩)) =
       limExecV ⟨e, σ⟩ :=
   (ErasableExpr.tapePresample h hN).lim_exec e
+
+/-! ## Iterated presampling -/
+
+/-- `n`-fold presampling on tape `α`; the `Nat.rec` in Clutch's `erasure.v` tape batching. -/
+noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure (State rT)
+  | 0 => Measure.dirac σ
+  | n + 1 => (tapePresampleIter α σ n).bind (fun σ' => tapePresample σ' α)
+
+theorem tapePresampleIter_tape_bound_ae [Countable rT]
+    {σ : State rT} {α : Loc} {t : Tape}
+    (h : σ.tapes[α]? = some t) (n : Nat) :
+    ∀ᵐ σ' ∂(tapePresampleIter α σ n),
+      ∃ t' : Tape, σ'.tapes[α]? = some t' ∧ t'.bound = t.bound := by
+  induction n with
+  | zero =>
+    show ∀ᵐ σ' ∂(Measure.dirac σ), _
+    rw [MeasureTheory.ae_iff, Measure.dirac_apply' _ MeasurableSet.of_discrete,
+        Set.indicator_of_notMem]
+    simp only [Set.mem_ofPred_eq, not_not]
+    exact ⟨t, h, rfl⟩
+  | succ k ihk =>
+    rw [tapePresampleIter, MeasureTheory.ae_iff,
+        Measure.bind_apply MeasurableSet.of_discrete
+          Measurable.of_discrete.aemeasurable]
+    refine (lintegral_eq_zero_iff Measurable.of_discrete).mpr ?_
+    filter_upwards [ihk] with σ'' ⟨t'', ht'', hbound⟩
+    show tapePresample σ'' α _ = 0
+    obtain ⟨Nb, bs⟩ := t''
+    refine MeasureTheory.ae_iff.mp (tapePresample_ae ht'' MeasurableSet.of_discrete fun n' => ?_)
+    exact ⟨⟨Nb, bs ++ [n']⟩, by simp [State.update_tapes], hbound⟩
+
+theorem execN_tapePresampleIter_expr_eq [Countable rT]
+    {σ : State rT} {α : Loc} {e : Exp rT} {m : Nat} {t : Tape} (n : Nat)
+    (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
+    asExpr ((tapePresampleIter α σ n).bind (fun σ' => execN m ⟨e, σ'⟩)) =
+      asExpr (execN m ⟨e, σ⟩) := by
+  unfold asExpr
+  induction n generalizing σ with
+  | zero =>
+    show ((Measure.dirac σ).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) = _
+    rw [Measure.dirac_bind (f := _) Measurable.of_discrete]
+  | succ k ih =>
+    -- not `ErasableExpr.dbind`: tape α is present only a.e. after k presamples, so the IH is
+    -- applied under `lintegral_congr_ae`
+    show ((((tapePresampleIter α σ k).bind (fun σ' => tapePresample σ' α)).bind
+            (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr)) = _
+    rw [Measure.bind_bind
+          Measurable.of_discrete.aemeasurable
+          Measurable.of_discrete.aemeasurable,
+        Measure.bind_map_comm_of_discrete]
+    refine Measure.ext fun S hS => ?_
+    rw [Measure.bind_apply hS Measurable.of_discrete.aemeasurable]
+    calc ∫⁻ σ₁, ((tapePresample σ₁ α).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S
+            ∂(tapePresampleIter α σ k)
+        = ∫⁻ σ₁, (execN m ⟨e, σ₁⟩).map (·.expr) S ∂(tapePresampleIter α σ k) := by
+          refine lintegral_congr_ae ?_
+          filter_upwards [tapePresampleIter_tape_bound_ae h k]
+            with σ₁ ⟨t', ht', hbound⟩
+          have h_eq := execN_tape_presample_expr_eq (e := e) (m := m) ht' (hbound ▸ hN)
+          unfold asExpr at h_eq
+          rw [h_eq]
+      _ = ((tapePresampleIter α σ k).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S := by
+          rw [Measure.map_apply Measurable.of_discrete hS,
+              Measure.bind_apply (Measurable.of_discrete hS)
+                Measurable.of_discrete.aemeasurable]
+          simp_rw [Measure.map_apply Measurable.of_discrete hS]
+      _ = (execN m ⟨e, σ⟩).map (·.expr) S := by
+          rw [ih h, Measure.map_apply Measurable.of_discrete hS]
 
 end ProbLang

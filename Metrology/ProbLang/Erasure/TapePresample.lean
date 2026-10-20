@@ -6,7 +6,9 @@ public import Metrology.ProbLang.Erasure.Presample
 
 /-! # Properties of `tapePresample`
 
-Presampling is invisible to the heap and to other tapes, and commutes with state updates. -/
+Commutation of `tapePresample` with heap and other-tape updates, and the change of variables
+`tapeIndexUniform_lintegral_eq_cfg_uniform` that closes the key erasure case. The definition and
+its mass and measurability are in `Presample.lean`. -/
 
 namespace ProbLang
 

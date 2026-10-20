@@ -26,6 +26,7 @@ variable (L) in
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
+/-- Bind: a `wp` for `e` whose postcondition is a `wp` for `K[v]` proves the `wp` for `K[e]`. -/
 theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset}
     {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
@@ -137,6 +138,7 @@ variable (L) in
 noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) R Φ, R -∗ wp L E e Φ -∗ wp L E e fun v => iprop(R ∗ Φ v)
 
+/-- Frame a resource into the postcondition. -/
 theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
     iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ Φ v) := by
   have Hloeb : ⊢@{IProp GF} wpFrameLStmt L (rT := rT) := by

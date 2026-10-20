@@ -2,7 +2,9 @@ module
 
 public import Metrology.Couplings.Divergence
 
-/-! Filling the lost mass of sub-probability measures before comparing them (Rocq `FillDiv`). -/
+/-! Filling lost mass at a fresh point `none`. `withBot`/`dropBot` are what `BindLaw.massEq`
+(KLLaws.lean) uses to turn a sub-Markov test into a Markov one and back. `onWithBot`, `leftUp` and
+`fill` port Rocq's `FillDiv`; the liftings here do not use them. -/
 
 @[expose] public section
 
@@ -73,6 +75,8 @@ end ProbabilityTheory.Kernel
 end Kernel
 
 namespace GradedDivergence
+
+/-! ## Rocq FillDiv -/
 
 variable {B : Type v} (D : GradedDivergence.{u} B)
 

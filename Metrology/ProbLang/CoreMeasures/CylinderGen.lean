@@ -30,9 +30,11 @@ declares:
 2. `T.toSigma`, `T.ofSigma`, their inverse laws `T.ofSigma_toSigma` and `T.toSigma_ofSigma`,
    `T.equivSigma`, the σ-algebra on `T` (the comap of `toSigma`), `T.measurableEquiv`, and
    `T.shape`, with a `simp` lemma `T.shape_c` per constructor `c`;
-3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`,
-   where `c.ι` and `c.π` (constructor and projection of the tuple of fields) are as declared by
-   `@[constructors, uncurriedProjections]`, and declared here unless `T` has them;
+3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`
+   (`c.measurable` restates `c.ι.measurable` for `fun p => T.c p.1 p.2.1 …`, so that `fun_prop`
+   matches applications of `T.c`), where `c.ι` and `c.π` (constructor and projection of the tuple of
+   fields) are as declared by `@[constructors, uncurriedProjections]`, and declared here unless `T`
+   has them;
 4. `T.measurable_cases` and `T.measurable_struct_rec` (for functions by cases, and by structural
    recursion), their `_param` variants, which thread a parameter, `T.measurable_casesOn(_param)`
    (for functions by `T.casesOn`), and `c.π.measurable`;
@@ -261,7 +263,9 @@ def reflOn (ι : Expr) (lhs : Expr → MetaM Expr) : MetaM Expr := do
     mkLambdaFVars #[a] (← mkEqRefl (← lhs a))
 
 /-- `c.measurableEmbedding`, from the splitting of its fields, and `c.ι.measurable`,
-`c.measurable` and `c.ι.inj`. -/
+`c.measurable` and `c.ι.inj`. `c.ι.measurable` is about the `@[constructors]` function `c.ι`;
+`c.measurable` states the same for `fun p => T.c p.1 p.2.1 …`, so that `fun_prop` matches
+applications of `T.c`. -/
 def Ctx.addConstructor (ctx : Ctx) (c : Ctor) : MetaM Unit := do
   let ι := ctx.const (c.name ++ `ι)
   let some_ (a : Expr) := mkAppM ``Option.some #[a]

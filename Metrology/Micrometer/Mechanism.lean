@@ -48,7 +48,8 @@ theorem progMech_rel (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → E
     adequacyRel_eq_subset
 
 /-- A program family that refines itself at equal results from `↯b b` on adjacent inputs is a
-`b`-private mechanism, for every divergence the lifting is sound for (Def. 2.1–2.5). -/
+`b`-private mechanism, for every divergence the lifting is sound for (Approximate Span Liftings,
+Def. 2.1–2.5). -/
 theorem progMech_isPrivate (GF : BundledGFunctors) [RefinesPreGS rT B GF]
     {D : GradedDivergence.{0} B} [L.IsSound D] (p : X → Exp rT) (σ : State rT) {hp}
     {adj : Adjacency X} (b : B)

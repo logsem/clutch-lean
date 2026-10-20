@@ -25,7 +25,7 @@ variable {μ ν : Measure X}
 
 /-! ## Pure DP bounds every Rényi divergence -/
 
-/-- A DP bound without slack bounds the Rényi divergences by its budget ([D/z]). -/
+/-- A DP bound without slack bounds the Rényi divergences by its budget ([D/R]). -/
 theorem renyi_of_dp (hα : 1 < α) {ε : ℝ≥0∞} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (h : dp (ε, 0) μ ν) : renyiDivergence α ε μ ν := by
   rcases eq_or_ne ε ⊤ with rfl | hε
@@ -311,7 +311,12 @@ theorem codensity_dp_rel_of_imp {B : Type v} [AddZeroClass B] [PartialOrder B]
 
 end GradedDivergence
 
-/-! ## Homomorphisms into DP -/
+/-! ## Homomorphisms into DP
+
+A `LiftingRelHom` needs a monotone budget map, so the homs use the best-order infimum
+(`dp_of_forall_renyi`). The closed-form `√` bounds are separate theorems
+(`codensity_dp_rel_of_zcdp`). `zcdpToDp`/`tcdpToDp` start from the concentrated liftings that the
+logic uses. -/
 
 open GradedDivergence
 
@@ -395,8 +400,8 @@ theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
 
 end LiftingRelHom
 
-/-- Without the quadratic term, the best Rényi conversion of `(ξ, 0)` costs nothing over `ξ`:
-send the order to infinity. -/
+/-- At `ρ = 0` the budget of `zcdpToDp_map` is at most `ξ`: send the order to infinity. So pure
+zCDP liftings are DP at `(ξ, δ)` for every `δ > 0`. -/
 theorem iInf_conversion_le (ξ : ℝ≥0∞) {δ : ℝ} :
     ⨅ α ∈ Set.Ioi (1 : ℝ), ξ + ENNReal.ofReal α * 0 +
       ENNReal.ofReal (Real.log (1 / δ) / (α - 1)) ≤ ξ := by

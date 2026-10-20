@@ -170,6 +170,7 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
     simp only [gaussianPDFReal, NNReal.coe_pow]
     rw [sqrt_mul' _ (by positivity), sqrt_sq hσ'.le]
     field_simp
+  -- split `S` at `H`: below `H` the density ratio is at most `e^ε`; the tail above `H` costs `δ`
   intro _ S hS
   rw [expBudget_ofReal hε.le]
   calc gaussianReal a (σ ^ 2) S

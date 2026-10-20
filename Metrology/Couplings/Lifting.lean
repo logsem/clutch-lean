@@ -78,6 +78,8 @@ class IsLawful [Add B] [Preorder B] [Top B] : Prop where
     R x y < ⊤ → L (R x y) R (dirac x) (dirac y)
   zero {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] (b : B) (R : X → Y → B) :
     L b R (0 : Measure X) (0 : Measure Y)
+  /-- Sub-probability is needed because divergences are graded only on sub-probability
+  measures. -/
   mono {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b b' : B} {R R' : X → Y → B}
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     L b R μ ν → b ≤ b' → R' ≤ R → L b' R' μ ν
@@ -88,7 +90,9 @@ class IsLawful [Add B] [Preorder B] [Top B] : Prop where
     {g : Y → Y'} (hf : Measurable f) (hg : Measurable g) :
     L b (fun x y ↦ R (f x) (g y)) μ ν → L b R (μ.map f) (ν.map g)
 
-/-- Binding with sub-Markov kernels whose outputs are lifted wherever the leftover is finite. -/
+/-- Binding with sub-Markov kernels whose outputs are lifted wherever the leftover is finite.
+Separate from `IsLawful`: `markovCodensity` (KL, Hellinger) is lawful but binds only under a side
+condition, through `BindLaw.massEq`. -/
 class HasBind [LT B] [Top B] : Prop where
   bind {X Y X' Y' : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpace X']
     [MeasurableSpace Y'] {b : B} {R : X → Y → B} {R' : X' → Y' → B} {μ : Measure X}
@@ -131,14 +135,16 @@ class IsReflexive [Zero B] [Top B] : Prop where
   refl {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsSubProbabilityMeasure μ] :
     L.Rel 0 (· = ·) μ μ
 
-/-- A leftover keyed on the right sample is paid in expectation. -/
+/-- A leftover keyed on the right sample is paid in expectation. The map `s` embeds an additive
+slack `δ` into the budget (`δ ↦ (0, δ)` for dp); only tv has this, and it gives `bind_adv`. -/
 class IsExpectationAdditive [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   add_right {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {b : B} {R : X → Y → B}
     {μ : Measure X} {ν : Measure Y} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     {c : Y → ℝ≥0∞} (hc : Measurable c) :
     L b R μ ν → L (b + s (∫⁻ y, c y ∂ν)) (fun x y ↦ R x y + s (c y)) μ ν
 
-/-- Events related at slack `s δ` differ in mass by at most `δ`; lifting analogue of
+/-- Events related at slack `s δ` differ in mass by at most `δ`, where `s` embeds an additive slack
+`δ` into the budget (`δ ↦ (0, δ)` for dp); lifting analogue of
 `GradedDivergence.IsMassDetecting`. -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] [Top B] (s : ℝ≥0∞ →+o B) : Prop where
   measure_le_add {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
@@ -322,6 +328,7 @@ theorem Rel.prod [AddZeroClass B] [Preorder B] [OrderTop B] [CanonicallyOrderedA
     {ν' : Measure Y'} [IsSubProbabilityMeasure μ'] [IsSubProbabilityMeasure ν']
     (h : L.Rel b S μ ν) (hc : c < ⊤) (h' : L.Rel c T μ' ν') :
     L.Rel (b + c) (fun p q ↦ S p.1 q.1 ∧ T p.2 q.2) (μ.prod μ') (ν.prod ν') := by
+  -- write μ.prod μ' as μ followed by the kernel x ↦ (μ'.map (x, ·)), then bind
   rw [← compProd_const, ← compProd_const, compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine HasBind.bind_rel hc h fun x y hS ↦ ?_
   simpa [Rel, Kernel.prod_apply, Kernel.id_apply, dirac_prod] using

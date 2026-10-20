@@ -77,6 +77,20 @@ theorem wp_unfold_mp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
   (BI.equiv_iff.mp wp_unfold).1
 
+variable (L) in
+/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
+verbatim. -/
+noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
+    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
+  iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
+    stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
+
+/-- At an absorbing budget the continuation holds trivially. -/
+theorem wpProgBody_absorbing {E : CoPset} {Φ : Val rT → IProp GF} {b : B} (hb : L.Absorbing b) :
+    ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by
+  iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
+  iapply specCoupl_absorbing hb
+
 /-! ## `WP[L] e @ E {{ Φ }}` notation
 
 The postcondition is either a function `{{ Φ }}` or a binder form `{{ v, P }}`; the mask
@@ -110,19 +124,6 @@ meta def unexpandWp : Lean.PrettyPrinter.Unexpander
     if E.raw.getNumArgs == 1 && E.raw[0].isToken "⊤" then `(WP[$L] $e {{ $post }})
     else `(WP[$L] $e @ $E {{ $post }})
   | _ => throw ()
-
-variable (L) in
-/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
-verbatim. -/
-noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
-    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
-  iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
-    stateInterp σ₄ ∗ SpecUpdateGS.specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
-
-theorem wpProgBody_absorbing {E : CoPset} {Φ : Val rT → IProp GF} {b : B} (hb : L.Absorbing b) :
-    ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by
-  iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
-  iapply specCoupl_absorbing hb
 
 /-! ## WP structural lemmas -/
 
@@ -284,9 +285,7 @@ theorem wp_ne_aux {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} {n : N
 instance wp_ne {E : CoPset} {e : Exp rT} : NonExpansive (wp L (GF := GF) E e) where
   ne _ _ _ H := wp_ne_aux H
 
--- TODO: `wp_contractive` — `wp` is `Contractive` in its post when the head
--- is *not* a value. Needs structural `wp_unfold` walk under the
--- `e.toVal? = none` branch; dual to `wpPre_contractive` restricted to `none`.
+-- TODO: `wp_contractive`, as in Iris
 
 end Wp
 

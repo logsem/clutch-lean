@@ -524,7 +524,7 @@ theorem Exp.substMap_lc {vs : SubstMap rT} {e : Exp rT}
     obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
     exact subst_lc (ih hRestClosed) hwClosed.1
 
-/-- Needed by `bin_log_related_lam` for `Val`'s local-closedness field. -/
+/-- Substituting closed values into the body of a locally closed `lam` keeps it locally closed. -/
 theorem Exp.lam_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : Finset Var}
     (hσ : SubstMap.AllClosed σ) (hdom : ∀ y ∉ D, SubstMap.lookup σ y = none)
     (he : ∀ x ∉ L, (Exp.open' e (.fvar x)).IsLocallyClosed) :
@@ -539,7 +539,7 @@ theorem Exp.lam_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : 
   rw [← hbridge]
   exact Exp.substMap_lc hσ (he y hyL)
 
-/-- The `fix` twin of `Exp.lam_substMap_isLocallyClosed`, for `bin_log_related_fix`. -/
+/-- Substituting closed values into the body of a locally closed `fix` keeps it locally closed. -/
 theorem Exp.fix_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : Finset Var}
     (hσ : SubstMap.AllClosed σ) (hdom : ∀ y ∉ D, SubstMap.lookup σ y = none)
     (he : ∀ x ∉ L, (Exp.open' e (.fvar x)).IsLocallyClosed) :
@@ -635,6 +635,8 @@ theorem Exp.substMap_subst_fvar_lookup
     · simp only [hzy, SubstMap.lookup] at hyLookup
       cases hr : SubstMap.lookup rest y with
       | some w' =>
+        -- z = y and rest also binds y: the head binding is shadowed (rightmost wins); the filter
+        -- drops it and y is not free
         rw [hr] at hyLookup
         have hw'eq : w' = w := by injection hyLookup
         rw [hw'eq] at hr
@@ -657,6 +659,8 @@ theorem Exp.substMap_subst_fvar_lookup
           · exact Exp.notMem_fv_of_isClosed_empty hw_closed y h2
         rw [Exp.subst_fresh y _ v hyNotFsubst]
       | none =>
+        -- z = y is the binding of y: rename x ↦ y ↦ v with `substMap_subst_fvar_comm` and
+        -- `subst_subst_fvar_id`
         rw [hr] at hyLookup
         simp at hyLookup
         subst hyLookup
@@ -675,7 +679,8 @@ theorem Exp.substMap_subst_fvar_lookup
           Exp.notFv_substMap hvs_rest hyFvE
         rw [SubstMap.filter_notMem_dom rest hyNotRest, hzy]
         exact Exp.subst_subst_fvar_id (Exp.substMap rest E) v x y hyNotInner
-    · simp only [SubstMap.lookup] at hyLookup
+    · -- z ≠ y: commute the head substitution past `subst _ x w`
+      simp only [SubstMap.lookup] at hyLookup
       cases hr : SubstMap.lookup rest y with
       | some w' =>
         rw [hr] at hyLookup
@@ -722,7 +727,7 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
 
 /-! ## Deterministic and probabilistic head steps
 
-Clutch's `metatheory.v` ~1448–1713, minus Laplace/Tick. -/
+Clutch's `metatheory.v` ~1448–1713, minus Laplace/Tick. The export is `det_or_prob_or_zero`. -/
 
 /-- Non-sampling head redexes; the step is a Dirac but may read the heap or tapes. -/
 inductive DetHeadStepPred : Exp rT → State rT → Prop
@@ -758,18 +763,25 @@ inductive DetHeadStepPred : Exp rT → State rT → Prop
 /-- `rand` redexes, split by tape situation (including non-positive bounds, which step to `-1`),
 and `urand`. -/
 inductive ProbHeadStepPred : Exp rT → State rT → Prop
+/-- Tapeless `rand` with `z > 0`: uniform. -/
   | randNoTape {z σ} : 0 < z →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit .unit)) σ
+/-- A tape of bound `z` with a head `n`: pop `n`. -/
   | randTape {z α σ N nn ns} : σ.tapes[α]? = some ⟨N, nn :: ns⟩ → z = N →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
+/-- An empty tape of bound `z`: uniform. -/
   | randTapeEmpty {z α σ N} : 0 < z → σ.tapes[α]? = some ⟨N, []⟩ → z = N →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
+/-- A tape whose bound is not `z`: ignore the tape, uniform. -/
   | randTapeOther {z α σ N L} : 0 < z → σ.tapes[α]? = some ⟨N, L⟩ → z ≠ N →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
+/-- Tapeless `rand` with `z ≤ 0`: Dirac at `-1`. -/
   | randNonpos {z σ} : ¬ 0 < z →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit .unit)) σ
+/-- `z ≤ 0` on an empty tape of bound `z`: Dirac at `-1`. -/
   | randTapeNonposEmpty {z α σ N} : ¬ 0 < z → σ.tapes[α]? = some ⟨N, []⟩ → z = N →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
+/-- `z ≤ 0` on a tape whose bound is not `z`: Dirac at `-1`. -/
   | randTapeNonposOther {z α σ N L} : ¬ 0 < z → σ.tapes[α]? = some ⟨N, L⟩ → z ≠ N →
       ProbHeadStepPred (.rand (.lit (.int z)) (.lit (.lbl α))) σ
   | urand {σ} : ProbHeadStepPred Exp.urand σ
@@ -953,6 +965,8 @@ theorem not_HeadStepPred_iff_zero
   · rintro h0 ⟨ρ', hsupp⟩
     exact HeadStepSupport.ne_zero hsupp h0
 
+/-- Every head redex is deterministic (Dirac), sampling, or stuck; the case split of the erasure
+proof. -/
 theorem det_or_prob_or_zero
     (e : Exp rT) (σ : State rT) :
     DetHeadStepPred e σ ∨ ProbHeadStepPred e σ ∨ headStep ⟨e, σ⟩ = 0 := by
@@ -962,10 +976,12 @@ theorem det_or_prob_or_zero
 
 /-! ## Tape and fresh-location updates -/
 
+/-- Reading the tape just written returns it. -/
 theorem State.upd_tape_some (σ : State rT) (α : Loc) (t : Tape) :
     (σ.update_tapes (·.insert α t)).tapes[α]? = some t := by
   simp [State.update_tapes]
 
+/-- Writes to distinct tapes commute. -/
 theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
     (hne : α ≠ β) :
     ((σ.update_tapes (·.insert β bs)).update_tapes (·.insert α bs'))
@@ -983,6 +999,7 @@ theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
       simp [hαk]
     · simp [hαk, hβk]
 
+/-- Writing tape `β` leaves the lookup at `α ≠ β` unchanged. -/
 theorem State.upd_diff_tape_tot {σ : State rT} {α β : Loc} {bs : Tape}
     (hne : α ≠ β) :
     (σ.update_tapes (·.insert β bs)).tapes[α]? = σ.tapes[α]? := by
@@ -1025,6 +1042,7 @@ theorem Std.ExtTreeMap.fresh_insert_of_mem
       simp [hcmp, Ordering.isLE]
   rw [hkeys]
 
+/-- Overwriting an existing tape keeps `tapes.fresh`. -/
 theorem State.fresh_loc_upd_some {σ : State rT} {α : Loc} {bs bs' : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert α bs').fresh = σ.tapes.fresh :=
@@ -1055,6 +1073,7 @@ theorem State.fresh_loc_upd_swap {σ : State rT} {α : Loc} {bs bs' : Tape} {t :
       simp [hαk]
     · simp [hαk, hfk]
 
+/-- Allocating a fresh tape keeps existing lookups. -/
 theorem State.fresh_loc_lookup {σ : State rT} {α : Loc} {bs : Tape} {t : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert σ.tapes.fresh t)[α]? = some bs := by
@@ -1210,6 +1229,8 @@ theorem State.det_head_step_upd_tapes
   | scrutSuccess hv hm => exact .scrutSuccess hv hm
   | scrutFailure hv hm => exact .scrutFailure hv hm
 
+/-- In any context, `rand z α` on an empty tape steps exactly like the tapeless `rand z ()`,
+whatever the tape bound. -/
 theorem State.prim_step_empty_tape [Countable rT]
     {K : ProbLang.Ectx rT} {σ : State rT} {α : Loc} {z : Int} {N : Int}
     (hmem : σ.tapes[α]? = some ⟨N, []⟩) :

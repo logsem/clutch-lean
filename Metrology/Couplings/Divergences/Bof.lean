@@ -4,7 +4,8 @@ public import Metrology.Couplings.Divergences.FDivBound
 
 /-! Barthe–Olmedo divergences (Barthe–Olmedo, ICALP 2013): the threshold `θ_γ(r) = (e^{γr} - 1)/γ`
 (`bofReal_add`: `θ(s+t) = θs + θt + γ θs θt`) and `bofDivergence`, an `f`-divergence below `θ_γ` of
-the budget. KL (`γ = 0`) and Hellinger (`γ = α - 1`) are instances; lost mass is not filled in. -/
+the budget. KL (`γ = 0`) and Hellinger (`γ = α - 1`) are instances; lost mass is not filled in, so
+they compose only along kernels of equal mass (`*_comp_of_mass_eq`, used via `BindLaw.massEq`). -/
 
 @[expose] public section
 
@@ -17,8 +18,8 @@ namespace ProbabilityTheory
 
 /-! ## The Barthe–Olmedo regrading -/
 
-/-- The regrading `t ↦ (exp (γ t) - 1) / γ`, the identity at `γ = 0` (Rocq
-`gamma_form_of_additive`). -/
+/-- The Barthe–Olmedo threshold `θ_γ(t) = (exp (γ t) - 1) / γ` on reals, the identity at `γ = 0`;
+`bofThresh` lifts it to `ℝ≥0∞` budgets (Rocq `gamma_form_of_additive`). -/
 noncomputable def bofReal (γ t : ℝ) : ℝ :=
   if γ = 0 then t else (Real.exp (γ * t) - 1) / γ
 

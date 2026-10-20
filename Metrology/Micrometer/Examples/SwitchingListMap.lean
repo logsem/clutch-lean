@@ -112,6 +112,8 @@ Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versio
 
 section MapOps
 
+/-! `wp_X` runs `X` in the program; `wp_X_r` runs it in the spec `⤇` under context `K`. -/
+
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%

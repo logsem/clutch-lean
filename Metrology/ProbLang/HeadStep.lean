@@ -62,8 +62,8 @@ def Cfg.uniform (z : Int) (σ : State rT) : Measure (Cfg rT) :=
 def Cfg.uniformReal (σ : State rT) : Measure (Cfg rT) :=
   (LawfulProbLangℝ.unifUnit (T := rT)).map (⟨.lit <| .real ·, σ⟩)
 
--- TODO: Do we need these value checks? Finding the redex, and enforcing evaluation
--- order, should be governed by the reduction context.
+-- The isValM/asValM guards make a head redex's evaluation-position subterms values
+-- (`head_ctx_step_val`); this is what makes the redex in `K[e]` unique (`head_redex_unique`).
 /-- One head-reduction step of a configuration, as a sub-probability measure; the zero measure means
 there is no head redex (stuck). -/
 def headStep : Cfg rT → Measure (Cfg rT)
@@ -178,7 +178,10 @@ macro "head_split2" goal1:ident goal2:ident : tactic =>
              on_goal 1 => rename_goal $goal1
              on_goal 2 => rename_goal $goal2))
 
-/-- Split `headStep` into its cases, with named goals for every `isValM`/`asValM`/match branch. -/
+/-- Split `headStep` into its cases, with named goals for every `isValM`/`asValM`/match branch.
+Goals are `<ctor>.redex`, `<ctor>.no_redex[_i]` (guard failed), `load|store.segfault` (dangling
+location) and `rand.tape.{unalloc,empty,deterministic,mismatch}`; the `scrut` goals are
+`scrut_success`, `scrut_failure`, `scrut_no_redex`. -/
 macro "head_case" : tactic =>
   `(tactic| (
     head_case_names
@@ -1346,6 +1349,8 @@ theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
 theorem Exp.toVal?_isValueR {e : Exp α} (h : e.toVal? = some v) : e.isValueR :=
   (Exp.isValue_iff_isValueR.mp (Exp.toVal?_isValue h)).1
 
+/-- If `Ki[e]` can head-step, then `e` is value-shaped: `headStep` only fires once every
+evaluation-position subterm is a value. -/
 theorem head_ctx_step_val {e : Exp rT} {σ : State rT} {Ki : EctxItem rT} :
     headStep ⟨Ki.fillItem e, σ⟩ ≠ 0 → e.isValueR := by
   head_case
@@ -1353,7 +1358,9 @@ theorem head_ctx_step_val {e : Exp rT} {σ : State rT} {Ki : EctxItem rT} :
   all_goals cases Ki <;> intro h <;>
     simp_all [EctxItem.fillItem, Exp.isValue_iff_isValueR, Exp.isValueR, Exp.toVal?_isValueR]
 
-/-- The configurations reachable with positive probability by one head step. -/
+/-- The configurations reachable by one head step. For `urand` it lists the points of
+`unifUnitSupport`, possible only when `unifUnit` has atoms; see `HeadStepSupport.possible`
+(needs `e1 ≠ urand`) versus `HeadStepSupport.ne_zero`. -/
 inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
 | BetaLamS :
   e2.isValue →

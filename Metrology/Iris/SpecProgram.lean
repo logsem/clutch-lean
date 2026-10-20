@@ -14,7 +14,8 @@ public import Metrology.ProbLang.Discrete
 
 /-! # Spec-side resource algebra
 
-Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules. -/
+Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules.
+`AppProgram` reuses the heap and tape cameras for the program side. -/
 
 section SpecRA
 open Std Iris Iris.Std COFE ProbLang
@@ -36,10 +37,12 @@ instance discreteE_val (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discret
 /-- Ghost state for the spec-side program: an exclusive expression. -/
 abbrev SpecProg (α : Type _) [ProbLang.LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))
-/-- Ghost state for the spec-side heap. -/
+/-- Heap camera with values in `Agree`; used for both the spec heap and the program heap
+(`AppProgram`). -/
 abbrev SpecHeap (rT : Type _) [ProbLang.LawfulProbLangℝ rT] :=
   HeapView Loc (Agree (Val rT)) LocHeap
-/-- Ghost state for the spec-side tapes. -/
+/-- Tape camera with tapes in `Agree`; used for both the spec tapes and the program tapes
+(`AppProgram`). -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
 
 /-- Authoritative element of `SpecProg`. -/
@@ -47,7 +50,7 @@ def SpecProg.auth (e : Exp rT) : SpecProg rT := ● (some <| .excl e)
 /-- Fragment of `SpecProg`. -/
 def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
 
-/-- Wraps every heap value in `Agree`. -/
+/-- Wraps every heap value in `Agree` (also used by `AppProgram`). -/
 def LocHeap.asAgree [OFE V] (h : LocHeap V) : LocHeap (Agree V) :=
   PartialMap.map LocHeap toAgree h
 

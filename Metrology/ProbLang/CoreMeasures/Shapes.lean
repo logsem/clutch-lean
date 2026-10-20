@@ -167,8 +167,9 @@ def measurableEquiv [m : MeasurableSpace T] (e : T ≃ Σ s, V s)
 
 variable [MeasurableSpace T] (e : T ≃ᵐ Σ s, V s)
 
-/-- A constructor `ι` is a measurable embedding if it splits its fields `a` into an index `g a`
-whose shape is `f (g a).1`, with an injective `f`. -/
+/-- A constructor `ι` is a measurable embedding if its fields split (`g`) into an index `k : K`
+and leaves, with `e (ι a)` the leaves at shape `f k`. For the generator, `f` is the uncurried shape
+constructor `T.Shape.c`, which is injective. -/
 theorem measurableEmbedding {K : Type*} [Countable K] {f : K → S} (hf : f.Injective)
     (g : A ≃ᵐ Σ k, V (f k)) {ι : A → T} (h : ∀ a, e (ι a) = ⟨f (g a).1, (g a).2⟩) :
     MeasurableEmbedding ι := by

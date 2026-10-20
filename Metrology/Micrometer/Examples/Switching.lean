@@ -92,7 +92,12 @@ theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL
   wp_show (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q))
   iapply Hcnt $$ Hj HresL HresS
 
-/-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`. -/
+/-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`.
+
+Loop invariant: both maps hold the same memo table `m`, `r` lists the values the permutation has
+not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
+nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`), so `q` rounds cost
+`loopErr N |m| q`. -/
 theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)

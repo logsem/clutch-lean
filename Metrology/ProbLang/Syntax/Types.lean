@@ -207,14 +207,15 @@ theorem upN_ge : ∀ {k n : Nat} (σ : Nat → Ty), k ≤ n →
 
 /-! ## Value classes -/
 
-/-- Unboxed types, whose values `=` compares directly. -/
+/-- The operand types the `unboxed_eq` typing rule allows for `=` (no `tape`, unlike Clutch). -/
 inductive UnboxedType : Ty → Prop
   | unit                           : UnboxedType .unit
   | int                            : UnboxedType .int
   | bool                           : UnboxedType .bool
   | ref (τ : Ty)                   : UnboxedType (.ref τ)
 
-/-- Types whose values can be compared with `=`. -/
+/-- Types on which value equality is decidable by structure (literals, products, sums); used by the
+logical relation (`eq_type_sound`), not by `Typed`. -/
 inductive EqType : Ty → Prop
   | unit                           : EqType .unit
   | int                            : EqType .int
@@ -222,6 +223,8 @@ inductive EqType : Ty → Prop
   | prod {τ τ'}                    : EqType τ → EqType τ' → EqType (.prod τ τ')
   | sum  {τ τ'}                    : EqType τ → EqType τ' → EqType (.sum τ τ')
 
+/-- Unboxed types are equality types or references; the `tape` disjunct is kept from Clutch's
+statement and is unreachable here. -/
 theorem unboxed_type_ref_or_eqtype {τ : Ty} (h : UnboxedType τ) :
     EqType τ ∨ (∃ τ', τ = .ref τ') ∨ τ = .tape :=
   match h with
@@ -380,7 +383,8 @@ inductive Typed : Tctx → Exp rT → Ty → Prop
       Typed Γ e1 (.arrow τ1 τ2) →
       Typed Γ e2 τ1 →
       Typed Γ (.app e1 e2) τ2
-  /-- Type abstraction is a thunk `λ_. e`; `e` is typed under the shifted context. -/
+  /-- Type abstraction is a thunk `λ_. e`; `e` is typed under the shifted context, not opened:
+the thunk's argument is unused, and typing forces `e` to be locally closed. -/
   | tlam {Γ e τ} :
       Typed Γ.shift e τ →
       Typed Γ (.lam e) (.forall' τ)

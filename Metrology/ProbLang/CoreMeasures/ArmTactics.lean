@@ -35,7 +35,8 @@ elab "read_arm" : tactic => Tactic.liftMetaTactic fun g => do
     let .mvar arm := rhs.getAppFn | throwError "read_arm: the arm is already given"
     let branch ← unfoldBranch lhs
     let args := rhs.getAppArgs
-    -- abstract the recursive calls before the fields they mention
+    -- abstract the recursive calls `f x` (non-fvar args) before the fields `x`; abstracting `x`
+    -- first would destroy the `f x` subterms
     let idxs := Array.range args.size
     let order := idxs.filter (!args[·]!.isFVar) ++ idxs.filter (args[·]!.isFVar)
     let body ← withLocalDeclsD (← args.mapM fun a => return (`y, fun _ => inferType a)) fun ys => do

@@ -10,7 +10,8 @@ public import Metrology.Iris.BudgetCredits
 
 /-! # Primitive Laws
 
-Weakest-precondition rules for heap, tape and `rand` operations, on the program and spec sides. -/
+The concrete ghost state `MicrometerGS` and its `MicrometerWpGS` instance, then the primitive `wp`
+rules for heap, tape and `rand`, program side and spec side (`_r`). -/
 
 @[expose] public section
 
@@ -285,7 +286,32 @@ theorem wp_rand_tape_wrong_bound {E : CoPset} {l : Loc} {z M : Int} {ns : List I
     · iunfold appNatTape; iexists fs; iframe %hmap HlBack
     iapply HΦ $$ HlNat %⟨hv0, hvz⟩
 
-/-! ### Spec-side `_r` WPs -/
+theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → IProp GF}
+    (Hz : ¬ 0 < z) : iprop%
+    appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢
+    wp L E pl(rand(#(.int z), #(.lbl l))) Φ := by
+  iintro ⟨Hl, HΦ⟩
+  iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
+  iintro %σ₁ Hσ
+  ihave %hlook := app_state_lookup_tape $$ Hσ Hl
+  imodintro
+  isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.rand_lbl_nonpos Hz hlook).pos⟩
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
+  | RandTapeS hlook' _ _ _ =>
+    rw [hlook] at hlook'; cases hlook'
+  | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
+  | RandTapeNonposEmptyS _ _ _ | RandTapeNonposOtherS _ _ _ =>
+    imodintro
+    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
+    iframe Hσ
+    iapply HΦ $$ Hl
+
+/-! ### Spec-side `_r` WPs
+
+Random spec steps go through `wp_rand_step_r` (a spec coupling round); deterministic ones
+(`wp_alloc_tape_r`, `wp_rand_tape_r`) are spec updates and need no coupling instances. -/
 
 /-- A spec-side `rand` steps to some `#n` with `Q n` and keeps the state, in every spec state
 where the resource `R` gives `C`. -/
@@ -334,28 +360,6 @@ theorem wp_rand_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT} {Φ : Val rT
   isplitr; · iempintro
   iintro %n %hn - Hj'
   iapply Hwp $$ %n %hn Hj'
-
-theorem wp_rand_lbl_nonpos {E : CoPset} {l : Loc} {z N : Int} {Φ : Val rT → IProp GF}
-    (Hz : ¬ 0 < z) : iprop%
-    appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢
-    wp L E pl(rand(#(.int z), #(.lbl l))) Φ := by
-  iintro ⟨Hl, HΦ⟩
-  iapply wp_lift_atomic_head_step Exp.rand_toVal?_eq_none (by is_lc)
-  iintro %σ₁ Hσ
-  ihave %hlook := app_state_lookup_tape $$ Hσ Hl
-  imodintro
-  isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.rand_lbl_nonpos Hz hlook).pos⟩
-  iintro !> %e₂ %σ₂ %hstep
-  replace hstep := Possible.headStepSupport (possible_iff_pos.mpr hstep)
-  cases hstep with
-  | RandTapeS hlook' _ _ _ =>
-    rw [hlook] at hlook'; cases hlook'
-  | RandTapeEmptyS hpos _ _ _ _ _ | RandTapeOtherS hpos _ _ _ _ _ => exact absurd hpos Hz
-  | RandTapeNonposEmptyS _ _ _ | RandTapeNonposOtherS _ _ _ =>
-    imodintro
-    simp only [micrometerWpGS_stateInterp_eq, Exp.toVal?_lit]
-    iframe Hσ
-    iapply HΦ $$ Hl
 
 theorem wp_rand_nonpos_r {E : CoPset} (K : Ectx rT) {z : Int} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : ¬ 0 < z) : iprop%
@@ -436,6 +440,7 @@ theorem wp_rand_tape_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {n : Int} 
   ihave HlNew := HHandback $$ Hback'
   iapply Hwp $$ Hj' HlNew %(x.2)
 
+/-- `wp_rand_tape_empty_r` with the tape and spec resources handed back as one `∗` (Rocq form). -/
 theorem wp_rand_empty_r {E : CoPset} (K : Ectx rT) {z : Int} {l : Loc} {e : Exp rT}
     {Φ : Val rT → IProp GF} (Hz : 0 < z) : iprop%
     ⤇ K.fill pl(rand(#(.int z), #(.lbl l))) ∗ specNatTape l z [] ∗

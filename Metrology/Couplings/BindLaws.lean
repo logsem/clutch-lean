@@ -30,7 +30,8 @@ def DpRhsHead (μ : Measure X) (ν : Measure Y) (R : X → Y → ℝ≥0∞ × �
     IsSubProbabilityMeasure μ ∧ IsSubProbabilityMeasure ν ∧ (codensity dp).Rel (ε₁, δ₁) S μ ν ∧
     (∀ x y, S x y → R x y = (ε₂, D y)) ∧ (ε₁ + ε₂, δ₁ + expBudget ε₁ * ∫⁻ y, D y ∂ν) ≤ b
 
-/-- Right-keyed adaptive DP composition as a bind law (Rocq `GBL_DP_rhs`). -/
+/-- Right-keyed adaptive DP composition as a bind law (Rocq `GBL_DP_rhs`). No `HeadShift`: adding
+`c₂` to `D` would cost `e^{ε₁} c₂`, not `c₂`. -/
 noncomputable def dpRhs : BindLaw (codensity dp.{u}) where
   head := DpRhsHead
   side _ _ _ _ _ := True
@@ -105,7 +106,8 @@ instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
 
 /-- The head of the DP choice rule: two DP liftings of the same pair, chosen by a measurable left
 predicate `P` whose sides they send to the sides of a measurable `T`, continuing at `(ε₂, δ₂)` on
-`P` and `(ε₂', δ₂)` off it (Rocq `dp_choice_head`). -/
+`P` and `(ε₂', δ₂)` off it, paid as `(max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂)`: each branch pays
+only its own ε, and the right side's `T` reveals which branch was taken (Rocq `dp_choice_head`). -/
 def DpChoiceHead (μ : Measure X) (ν : Measure Y) (R : X → Y → ℝ≥0∞ × ℝ≥0∞)
     (b : ℝ≥0∞ × ℝ≥0∞) : Prop :=
   ∃ (ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞) (S₁ S₂ : X → Y → Prop) (P : Set X) (T : Set Y),
@@ -186,6 +188,8 @@ noncomputable def escort (α : ℝ) [Fact (1 < α)] : BindLaw (codensity (renyiD
     classical
     rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨S, ρ₂, r, A, hr, hρ₂, hA, hμA, hμ, hν, hrS, hR, h⟩
       _ hk
+    -- hR describes R only on A: zero the left kernel off A (μ Aᶜ = 0, so the bind is unchanged)
+    -- and use IsZeroLeft there
     have hf : Kernel.piecewise hA f 0 ∘ₘ μ = f ∘ₘ μ := by
       rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hμA)]
     rw [← hf]
@@ -235,7 +239,9 @@ variable {X Y Z : Type u} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpa
   [IsSubProbabilityMeasure ν]
 
 /-- A Rényi bound between the image of `μ` and the image of `ν` reweighted by `e^{-ρ₂}` gives an
-escort head on equal images inside supports `A` and `T`, continuing at `ρ₂` of the image. -/
+escort head on equal images inside supports `A` and `T`, continuing at `ρ₂` of the image. How
+finite-output mechanisms build an `EscortHead`; used by Micrometer's adaptive randomized
+response. -/
 theorem escortHead_of_map (hf : Measurable f) (hg : Measurable g) {A : Set X} {T : Set Y}
     (hA : MeasurableSet A) (hT : MeasurableSet T) (hμA : μ Aᶜ = 0) (hνT : ν Tᶜ = 0)
     (ρ₂ : Z → ℝ≥0∞) {R : X → Y → ℝ≥0∞}

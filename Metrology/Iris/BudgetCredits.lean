@@ -171,7 +171,9 @@ instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
 /-- The authoritative budget is timeless. -/
 instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_timeless
 
-/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1` (Approxis `ec_ind_amp`). -/
+/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1`, where `s` embeds additive error
+into budgets. Unlike error credits, `↯b (s 1)` is not contradictory, so the caller supplies the exit
+`□ (↯b (s 1) -∗ P)` (Approxis `ec_ind_amp`). -/
 theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} {ε : ENNReal}
     {k : NNReal} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) : iprop%
     □ (↯b (s 1) -∗ P) ⊢
