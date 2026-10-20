@@ -6,10 +6,8 @@ public import Metrology.ProbLang.Erasure.ErasableExpr
 
 /-! # Erasure as a lifting rule
 
-Proof rules that run a program from an erasable state distribution (`ErasableExpr`) in place of its
-start state inside a lifting of executions; Micrometer adequacy calls the bind-law forms
-`lift_erasure_erasable_law` and `lift_erasure_erasable_exp_lhs_kanto_law`. Also the presample
-couplings `tapePresample_rel_bij` and the `tv` (`AddCoupl`) corollaries. -/
+Lifting rules that run from an erasable state distribution (`ErasableExpr`) instead of a state;
+Micrometer uses `lift_erasure_erasable_law` and `lift_erasure_erasable_exp_lhs_kanto_law`. -/
 
 namespace ProbLang
 
@@ -329,8 +327,7 @@ theorem tapeIndexUniform_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.I
   exact h.mono le_rfl fun p q hp =>
     ⟨p.val, p.2.1, p.2.2, Subtype.ext (tapeIdxOf_val hN p.2.1 p.2.2).symm, hp.symm⟩
 
-/-- Uniform presample coupling on the index type, along a bijection of `[0, N)`
-(the `tv` instance of `tapeIndexUniform_rel_bij`). -/
+/-- The `tv` instance of `tapeIndexUniform_rel_bij`. -/
 theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
     (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
     (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
@@ -367,8 +364,7 @@ theorem tapePresample_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLa
   rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
 
-/-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`
-(the `tv` instance of `tapePresample_rel_bij`). -/
+/-- The `tv` instance of `tapePresample_rel_bij`. -/
 theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
     {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
     (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)

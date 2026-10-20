@@ -11,11 +11,8 @@ meta import Metrology.ProbLang.CoreMeasures.ArmTactics
 /-!
 # Measurability of the syntax functions the semantics uses
 
-Proves that `size`, `subst`, `fv`, `toVal?`, `decomp`, `UnOp.eval`, `BinOp.eval` and `Pat.tryMatch`
-are measurable (main results: `decomp.measurable`, `BinOp_eval.measurable`,
-`tryMatch.measurable_joint`). Structural recursions go through
-`apply_arms Exp.measurable_struct_rec(_param)`; the rest need hand proofs.
-Also here: `Option` elimination lemmas and the `*_zero_*_apply` macros used by `HeadStep.lean`.
+Proves `size`, `subst`, `fv`, `toVal?`, `decomp`, `UnOp.eval`, `BinOp.eval` and `Pat.tryMatch`
+measurable; main results `decomp.measurable`, `BinOp_eval.measurable`, `tryMatch.measurable_joint`.
 -/
 
 noncomputable section ProbLangMeasures
@@ -1585,10 +1582,7 @@ theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
       rw [hB_eq2]
       exact MeasurableSet.empty
 
-/-- Unlike `tryMatch.measurable`, needs no `Countable rT`. `tryMatch` recurses on both
-arguments, so each `Pat.shape` cell is computed by hand: the pattern constructor's
-embedding factors out, and the `Exp` argument splits into the matching constructor's
-range (handled by the cell IH) and its complement (`none`). -/
+/-- The joint measurability of `tryMatch`; unlike `tryMatch.measurable`, needs no `Countable rT`. -/
 theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
     Measurable (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e)) := by
   have hjoint : Measurable

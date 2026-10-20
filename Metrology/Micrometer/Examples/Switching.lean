@@ -11,8 +11,7 @@ import Metrology.ProbLang.Syntax.Notation
 /-! # The weak PRF/PRP switching lemma (clutch `approxis/examples/prp_prf_weak.v`)
 
 `Q` uniform queries to a lazy random function and to a lazy random permutation over `[0, N)` are
-indistinguishable up to the birthday bound `Q (Q - 1) / (2 N)`: `weak_switching_lemma`, proved by
-a coupled-loop `wp` in each direction (`wp_wPRF_wPRP`, `wp_wPRP_wPRF`) plus `tv` adequacy. -/
+indistinguishable up to the birthday bound `Q (Q - 1) / (2 N)` (`weak_switching_lemma`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -64,8 +63,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetC
 /-! ### One round: recording the answer -/
 
 /-- The tail of a round: record `(n, y)` in both result lists, then run the next round.
-`loop` matches whatever form of `wLoop N` the goal holds after `wp_pures` (not syntactically
-`wLoop N`); `hloop` checks it by `rfl`, so callers just `iapply` the lemma. -/
+`hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`. -/
 theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
     {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)} {Φ : Val rT → IProp GF}
     (hloop : loop = wLoop N := by rfl) : iprop%
@@ -138,7 +136,6 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     tp_pures
     wp_bind (pl% rand(#(.int N), #.unit))
     tp_bind (pl% rand(#(.int N), #.unit))
-    -- couple the two input draws by the identity
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj
@@ -262,7 +259,6 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     tp_pures
     wp_bind (pl% rand(#(.int N), #.unit))
     tp_bind (pl% rand(#(.int N), #.unit))
-    -- couple the two input draws by the identity
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj
@@ -273,7 +269,6 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     wp_bind (pl% {prpQuery ℓm ℓfv} #(.int n))
     cases hlk : alookup n m with
     | some y =>
-      -- cached input: both sides return the memoised `y`, nothing spent
       ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
       iapply wp_rfQuery_prev_r _ N ℓ m n y hlk
       iframe Hj Hl
@@ -289,7 +284,6 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iapply ih m r ((n, y) :: acc) hperm hkeys hnodup
       iframe
     | none =>
-      -- fresh input: pay `m.length / N` to couple the draw with the PRP's fresh value
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := BudgetCredit.split $$ Herr
       iapply wp_prpQuery_rfQuery_fresh _ N ℓ ℓm ℓfv m r n

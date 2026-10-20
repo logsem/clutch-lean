@@ -4,13 +4,8 @@ public import Metrology.Couplings.Divergences.FDivPartition
 
 /-! # Finite chain rules lift to general spaces
 
-Main result `fDiv_comp_le_of_finite` (tutorial (M5), Thm. 4.6 of Approximate Span Liftings): an
-`f`-divergence chain rule proved on finite spaces holds on all spaces, by pushing the output to
-`Fin N` (`fDiv_eq_iSup_map`) and bucketing inputs by dyadic cells (`disc`/`rep`,
-`tendsto_fDiv_bind_disc`).
-Also the additive chain rule from split perspectives (`fDiv_comp_le_of_perspSplit`).
-`fDiv_comp_le_of_finite_of_mass` keeps a side condition `Q` on the kernels' total masses through
-both steps; the KL/Hellinger equal-mass chain rules use it. -/
+`fDiv_comp_le_of_finite` (Thm. 4.6): a chain rule on finite spaces holds on all spaces, by pushing
+the output to `Fin N` and bucketing inputs by dyadic cells. Also `fDiv_comp_le_of_perspSplit`. -/
 
 @[expose] public section
 
@@ -299,7 +294,7 @@ theorem fDiv_eq_iSup_map (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWith
   simp only [Measure.map_apply hk' (measurable_down (measurableSet_singleton _))]
   exact le_rfl
 
-/-! ## From finite chain rules to general ones (M5) -/
+/-! ## From finite chain rules to general ones -/
 
 /-- Binding through the discretised input approximates the `f`-divergence of the binds
 (Thm. 4.8, App. C.3). -/
@@ -343,9 +338,7 @@ theorem tendsto_fDiv_bind_disc (hf : ConvexOn ℝ (Ici 0) f)
     (hzero hη μ₂ cell_snd)
 
 /-- A chain rule between finite spaces for kernel pairs whose pointwise masses satisfy `Q` holds
-between all spaces for such pairs: push the output to `Fin N` (`fDiv_eq_iSup_map`), replace the
-input by its finite cell index `disc` (`tendsto_fDiv_bind_disc`), apply the finite rule, and undo
-both steps by data processing. Both steps keep the pointwise masses, so `Q` survives (Thm. 4.6). -/
+between all spaces for such pairs: both reduction steps keep the pointwise masses (Thm. 4.6). -/
 theorem fDiv_comp_le_of_finite_of_mass (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hg : ConvexOn ℝ (Ici 0) g)
     (hg_cont : ContinuousWithinAt g (Ici 0) 0) (hh : ConvexOn ℝ (Ici 0) h)

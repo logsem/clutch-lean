@@ -24,7 +24,6 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞
 noncomputable def tv : GradedDivergence.{u} ℝ≥0∞ :=
   fun δ ↦ dp (0, δ)
 
-/-- Unfolded: every measurable event gains at most `δ` from `ν` to `μ`. -/
 theorem tv_iff {μ ν : Measure X} : tv δ μ ν ↔ ∀ S, MeasurableSet S → μ S ≤ ν S + δ := by
   simp [tv, dp_iff]
 

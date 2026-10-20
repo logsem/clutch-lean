@@ -4,9 +4,8 @@ public import Metrology.Couplings.ApproximateCouplings
 
 /-! # Additive couplings
 
-`AddCoupl ε S μₗ μᵣ` is the Approxis-style additive coupling: `[0,1]`-tests ordered on `S` have
-integrals ordered up to `ε`. Main results: the bind rules (`bind`, `bind_adv`, `bind_adv_kanto`)
-and `limit`; `Bridges/AddCoupl.lean` shows it is `(codensity tv).Rel ε S`. -/
+Approxis-style couplings: `[0,1]`-tests ordered on `S` have integrals ordered up to `ε`. Main
+results: the bind rules and `limit`; `Bridges/AddCoupl.lean` identifies it with `codensity tv`. -/
 
 @[expose] public section
 
@@ -24,9 +23,8 @@ def AddCoupl (ε : ENNReal) (Φ : Set (α × β)) (μₗ : Measure α) (μᵣ : 
   ARCoupling (· + ε) Φ μₗ μᵣ
 
 -- reducible so an `ExpCoupl` hypothesis still applies directly to its test functions and hypotheses
-/-- Coupling in expectation at cost `E₂`: every pair of `[0,1]` tests with `h₁ a ≤ h₂ b + E₂ a b`
-has `∫ h₁ dμ₁ ≤ ∫ h₂ dμ₂ + ε`; for sub-probability `μ₁` this is `tv.codensity ε E₂`
-(`expCoupl_iff_codensity_tv`). -/
+/-- Coupling in expectation at cost `E₂`: the test form of `tv.codensity ε E₂` for sub-probability
+`μ₁` (`expCoupl_iff_codensity_tv`). -/
 @[reducible] def ExpCoupl (ε : ENNReal) (E₂ : α → β → ENNReal)
     (μ₁ : Measure α) (μ₂ : Measure β) : Prop :=
   ∀ (h₁ : α → ENNReal) (h₂ : β → ENNReal), Measurable h₁ → Measurable h₂ →
@@ -37,21 +35,17 @@ namespace AddCoupl
 
 /-! ## Basic rules -/
 
-/-- Every measure is coupled with itself along equality. -/
 theorem refl {ε : ENNReal} (μ : Measure α) : AddCoupl ε (fun v => v.1 = v.2) μ μ :=
   ARCoupling.refl μ le_self_add
 
-/-- Point masses at related points are coupled. -/
 theorem dirac {ε : ENNReal} {a : α} {b : β} (S : Set (α × β)) (H : S (a, b)) :
     AddCoupl ε S (.dirac a) (.dirac b) :=
   ARCoupling.dirac le_self_add S H
 
-/-- Weakening the relation preserves the coupling. -/
 theorem mono_rel {ε : ENNReal} {S S' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (HS : S ⊆ S') (H : AddCoupl ε S μₗ μᵣ) : AddCoupl ε S' μₗ μᵣ :=
   ARCoupling.mono_rel HS H
 
-/-- Raising the slack preserves the coupling. -/
 theorem mono_grading {ε ε' : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (Hε : ε ≤ ε') (H : AddCoupl ε S μₗ μᵣ) : AddCoupl ε' S μₗ μᵣ :=
   ARCoupling.mono_F (fun x => by gcongr) H
@@ -60,7 +54,6 @@ theorem mono_grading {ε ε' : ENNReal} {S : Set (α × β)} {μₗ : Measure α
 theorem zero_left {ε : ENNReal} (S : Set (α × β)) (μᵣ : Measure β) : AddCoupl ε S 0 μᵣ :=
   ARCoupling.zero_left S μᵣ
 
-/-- The zero measure on the right is coupled with any left measure of mass at most `ε`. -/
 theorem zero_right {ε : ENNReal} (S : Set (α × β)) {μₗ : Measure α} (Hε : μₗ .univ ≤ ε) :
     AddCoupl ε S μₗ 0 :=
   ARCoupling.zero_right S (by simpa using Hε)
@@ -89,7 +82,6 @@ theorem mass_leq {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ
   let oneB : CouplingFunction β := .mk (fun _ => 1) ⟨measurable_const, fun _ => le_refl _⟩
   simpa [oneA, oneB] using H oneA oneB (fun _ => le_refl _)
 
-/-- A coupling with the zero measure on the right bounds the left mass by `ε`. -/
 theorem dzero_r_inv {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α}
     (H : AddCoupl ε S μₗ (0 : Measure β)) : μₗ .univ ≤ ε := by
   simpa using AddCoupl.mass_leq H
@@ -106,7 +98,6 @@ theorem trivial_of_one_le {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure �
       _ ≤ ∫⁻ y, g y ∂μᵣ + ε := le_add_self
 
 omit [MeasurableSpace α] [MeasurableSpace β] in
-/-- Point masses at images of related points are coupled. -/
 theorem dret {ε : ENNReal} {R : α' → β' → Prop} {a : α} {b : β}
     (f : α → α') (g : β → β') (H : R (f a) (g b)) :
     AddCoupl ε (fun v => R v.1 v.2) (Measure.dirac (f a)) (Measure.dirac (g b)) :=
@@ -114,9 +105,7 @@ theorem dret {ε : ENNReal} {R : α' → β' → Prop} {a : α} {b : β}
 
 /-! ## Bind rules -/
 
-/-- Couplings of the heads and of the continuations at related points couple the binds.
-Proof idea: test the head coupling with the inner integrals, shifted by `ε'` to pay for the
-continuation slack. -/
+/-- Couplings of the heads and of the continuations at related points couple the binds. -/
 theorem bind {ε ε' : ENNReal} {S : Set (α × β)} {T : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β} {f : α → Measure α'} {g : β → Measure β'}
     (Hfm : Measurable f) (Hgm : Measurable g)
@@ -269,7 +258,6 @@ theorem eq_trans_l {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ μ₂ : M
       _ ≤ (∫⁻ x, g.1 x ∂μ₃ + ε₂) + ε₁ := by gcongr; exact HR f g Hfg
       _ = ∫⁻ x, g.1 x ∂μ₃ + (ε₁ + ε₂) := by rw [add_assoc, add_comm ε₂ ε₁]
 
-/-- Chaining a coupling with an equality coupling adds the slacks. -/
 theorem eq_trans_r {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ : Measure α} {μ₂ μ₃ : Measure β}
     (HR : AddCoupl ε₁ R μ₁ μ₂) (Heq : AddCoupl ε₂ (fun v => v.1 = v.2) μ₂ μ₃) :
     AddCoupl (ε₁ + ε₂) R μ₁ μ₃ := by
@@ -282,7 +270,6 @@ theorem eq_trans_r {ε₁ ε₂ : ENNReal} {R : Set (α × β)} {μ₁ : Measure
 
 /-! ## Pushforward and limits of measures -/
 
-/-- Pushing both sides forward along maps that preserve the relation keeps the coupling. -/
 theorem map {ε : ENNReal} {S : Set (α × β)} {R : Set (α' × β')}
     {μₗ : Measure α} {μᵣ : Measure β} (f : α → α') (g : β → β')
     (Hfm : Measurable f) (Hgm : Measurable g)
@@ -370,7 +357,6 @@ theorem concentrated_R {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} 
   rw [lintegral_congr_ae hae]
   exact H ⟨f, Hfm, Hfb⟩ G HFG
 
-/-- Strengthen the relation with `v.1 ∈ T` for a set `T` carrying all of `μₗ`. -/
 theorem concentrated_L {ε : ENNReal} {S : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     {T : Set α} (hT : MeasurableSet T) (hconc : μₗ Tᶜ = 0)
     (H : AddCoupl ε S μₗ μᵣ) :

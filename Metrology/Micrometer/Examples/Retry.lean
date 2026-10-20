@@ -12,8 +12,7 @@ import Metrology.ProbLang.Syntax.Notation
 /-! # Amplification: flipping a coin until heads returns `0` almost surely
 
 Each flip moves `↯b ε` onto tails as `↯b (2ε)`; amplification (`refines_ind_amp`) turns any
-positive credit into the absorbing `↯b 1`, so `0 ≼ retry` needs no budget (`zero_refines_retry`)
-and `retry_eq_zero` follows: `retry` returns `0` with probability `1`. -/
+positive credit into the absorbing `↯b 1`, so `retry` returns `0` with probability `1`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal

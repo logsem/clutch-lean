@@ -31,10 +31,8 @@ theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   -- put `budget` in the choice law's shape `(max (ε₁+ε₂) (ε₁'+ε₂'), δ₁+δ₁'+δ₂)`
   rw [show budget = (max (0 + ENNReal.ofReal (Real.log 3)) (0 + 0), 0 + 0 + 0) by simp]
   iintro Hb
-  -- both draws coupled by identity; draw `0` (run `rr`) gets `(ln 3, 0)`, draw `1` gets `(0, 0)`.
-  -- `P = T = {0}`: the draws that run `rr`; the law hands them the continuation budget
-  -- `ε₂ = ln 3` (`choiceBudget P …`), and every other draw gets `ε₂' = 0`. The identity coupling
-  -- keeps `{0}` in `{0}` and its complement out (the two `e ▸ h` proofs).
+  -- identity coupling; `P = T = {0}` are the draws that run `rr` and get `ε₂ = ln 3`, the rest
+  -- get `ε₂' = 0` (the two `e ▸ h` proofs keep `{0}` in `{0}` and its complement out)
   rel_apply (refines_couple_rands_dpChoice (ε₁ := 0) (δ₁ := 0) (ε₁' := 0) (δ₁' := 0)
     (ε₂ := ENNReal.ofReal (Real.log 3)) (ε₂' := 0) (δ₂ := 0) (P := {0}) (T := {0}) 2 (by norm_num)
     (IsReflexive.refl _) (IsReflexive.refl _) (fun _ _ h e ↦ e ▸ h) (fun _ _ h e ↦ e ▸ h)

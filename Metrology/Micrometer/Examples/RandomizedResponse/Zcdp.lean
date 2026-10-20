@@ -23,7 +23,6 @@ theorem rrCoupling_zcdp : RRCoupling zcdpLifting budget := fun b b' ↦
 /-- `k` rounds are `(k ln 3, 0)`-zCDP (Def. 2.4). -/
 theorem rrCount_zCDP {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (k : ℕ)
     (σ : State rT) : (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
-  -- the generic count theorem gives `k • (ln 3, 0)`; `nsmul_eq_mul` rewrites it to `(k ln 3, 0)`
   simpa [nsmul_eq_mul] using
     rrCount_isPrivate (L := zcdpLifting) budget isAddLeftRegular_budget rrCoupling_zcdp k σ
 

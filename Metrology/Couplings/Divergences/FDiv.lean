@@ -122,10 +122,7 @@ theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f
       (mul_nonneg (derivAtTop_nonneg hf) (EReal.coe_ennreal_nonneg _))
   · simp [fDiv_of_not_integrable hint]
 
-/-! ## Partition sums are below the `f`-divergence
-
-Jensen on each cell gives the lower bound; `fDiv_nonneg` follows. `fDiv_mono` compares two
-weights directly. -/
+/-! ## Partition sums are below the `f`-divergence -/
 
 /-- A function continuous on `[0, ∞)` is measurable on nonnegative arguments. -/
 theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 0)) {G : X → ℝ}
@@ -136,8 +133,7 @@ theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 
     fun t ↦ le_max_right t 0).measurable.comp hG
 
 /-- A real multiple of `D` below `m` is a real multiple of some `d`, with `d ≥ 0` when `D ≥ 0`.
-It replaces the slope `derivAtTop f` by a real number on the singular part
-(`sum_persp_integral_le_fDiv`), which is legitimate when the slope is `⊤` only on zero mass. -/
+It lets `sum_persp_integral_le_fDiv` replace the slope `derivAtTop f` by a real number. -/
 theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0) (hbot : D ≠ ⊥) :
     ∃ d : ℝ, (∀ r : ℝ, 0 ≤ r → r ≤ m → (r : EReal) * D = (r * d : ℝ)) ∧ (0 ≤ D → 0 ≤ d) := by
   by_cases hDtop : D = ⊤
@@ -195,7 +191,6 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
       _ ≤ _ := add_le_add (persp_integral_le hf hf_cont (fun _ ↦ toReal_nonneg)
             integrable_toReal_rnDeriv hint (hw i) (hw0 i) (hwi i hi))
             (by rw [persp_zero_right, hd _ hs0 (hsing (hint_w i hi _) (hwi i hi))])
-  -- sum the cells; total weight ≤ 1 (or f ≥ 0) drops the uncovered part
   calc ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν)
       ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) :=
         Finset.sum_le_sum hterm

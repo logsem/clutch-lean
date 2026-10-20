@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Noisy count
 
-The program `noisyCount`: apply a sampler value to the number of `true` entries of a database.
-Its DP theorem, conditional on the sampler's spec, is in `Micrometer/Examples/NoisyCount`. -/
+Proved differentially private, given the sampler's spec, in `Micrometer/Examples/NoisyCount`. -/
 
 namespace ProbLang
 namespace NoisyCount

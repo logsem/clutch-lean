@@ -8,9 +8,8 @@ public import Mathlib.Order.Defs.PartialOrder
 
 /-! # Deterministic steps
 
-`PureStep` (a state-independent Dirac step) with `PureExec`, its counted closure that Micrometer's
-pure-step tactics search for, and `DetStep` (a Dirac step of one fixed configuration, used by
-`SpecRules`). Both are closed under evaluation contexts (`PureStep.fill`, `DetStep.fill`). -/
+`PureStep` (a state-independent Dirac step) with its counted closure `PureExec`, searched by
+Micrometer's pure-step tactics, and `DetStep` (a Dirac step of one configuration). -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure

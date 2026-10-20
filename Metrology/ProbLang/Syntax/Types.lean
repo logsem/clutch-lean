@@ -147,11 +147,9 @@ def BinOp.realResTy : BinOp → Option Ty
   | .and   | .or   | .xor                => none
   | .eq    | .lt   | .le                 => some .bool
 
-/-! ## Typing contexts
+/-! ## Typing contexts -/
 
-A typing context `Tctx` maps free variables (`Var`) to types. -/
-
-/-- A typing context. -/
+/-- A typing context: a partial map from free variables to types. -/
 abbrev Tctx := Var → Option Ty
 
 namespace Tctx

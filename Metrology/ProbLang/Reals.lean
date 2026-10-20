@@ -17,8 +17,7 @@ open MeasureTheory
 
 /-! ## The instance -/
 
-/-- The reals as a `LawfulProbLangℝ` model: `unifUnit` is Lebesgue measure on `[0,1]`, with
-support `(0,1)`, and `realFrac` is `Int.fract`. -/
+/-- The reals as a `LawfulProbLangℝ` model, with `unifUnit` Lebesgue measure on `[0,1]`. -/
 public noncomputable instance instProbLangℝReal : LawfulProbLangℝ ℝ where
   beq a b := decide (a = b)
   eq_of_beq h := of_decide_eq_true h
@@ -86,7 +85,7 @@ public theorem mem_unifUnitSupport_real {r : ℝ} :
 /-! ## Rotation invariance of `Uniform[0,1]`
 
 `x ↦ frac (m + x)` swaps the blocks `[0, 1-m)` and `[1-m, 1)` by translation, so it preserves
-`Uniform[0,1]`: the hypothesis of `refines_couple_urands_lr` for a continuous one-time pad. -/
+`Uniform[0,1]`. -/
 
 open Set in
 /-- Adding `m ∈ [0, 1)` modulo 1 preserves `Uniform[0,1]`; the main case of

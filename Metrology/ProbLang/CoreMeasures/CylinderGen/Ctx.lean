@@ -27,7 +27,6 @@ meta section
 inductive Kind | recursive | base | data
   deriving BEq, Inhabited
 
-/-- Prints a `Kind` as its name. -/
 instance : ToString Kind := ⟨fun | .recursive => "recursive" | .base => "base" | .data => "data"⟩
 
 /-- A field of a constructor, with its classification. -/

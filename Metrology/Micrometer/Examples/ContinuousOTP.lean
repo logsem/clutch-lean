@@ -32,8 +32,7 @@ section Abstract
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
-/-- The body of `otp_enc m` as a lambda: `otp_enc m` is `otpLam m` applied to `urand`, which is how
-`otp_enc_typed` types it. -/
+/-- The body of `otp_enc m` as a lambda, which `otp_enc m` applies to `urand`. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 
 /-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
@@ -98,7 +97,6 @@ execution distributions, with no Iris in sight. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ r : rT, v = .real r ∧ v' = .real r
 
-/-- Related reals under `lrel_real` satisfy `otpφ`. -/
 theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_real
@@ -107,7 +105,6 @@ theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS 
   exact ⟨r, hv, hv'⟩
 
 omit [LawfulProbLangℝ rT] in
-/-- Programs related by `otpφ` as values are equal. -/
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
   rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
@@ -151,7 +148,6 @@ theorem otp_distribution_eq (m : ℝ) (σ σ' : State ℝ) :
 An equality of measures says nothing if both sides are zero, so we pin down the mass.
 `urand` reaches a value in one step (`Atomic.urand'`), hence `execN 2` carries all of it. -/
 
-/-- The ideal sample has total mass one. -/
 theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ = 1 := by
   have hnv : ¬ (pl(urand) : Exp ℝ).isValue := fun ⟨w⟩ => nomatch w
   have hprim : primStep ⟨pl(urand), σ⟩ = Cfg.uniformReal σ :=
@@ -172,7 +168,6 @@ theorem otp_ideal_mass (σ : State ℝ) : limExecV ⟨otp_ideal, σ⟩ Set.univ 
   rw [asExpr, Measure.map_apply Cfg.measurable_expr MeasurableSet.univ, limExec_term hstep]
   simpa using hstep
 
-/-- The encrypted sample has total mass one. -/
 theorem otp_enc_mass (m : ℝ) (σ : State ℝ) : limExecV ⟨otp_enc m, σ⟩ Set.univ = 1 := by
   rw [otp_distribution_eq m σ σ, otp_ideal_mass]
 
@@ -185,14 +180,11 @@ section Typing
 
 omit [LawfulProbLangℝ rT]
 
-/-- The ideal sample `urand` has type `real`. -/
 theorem otp_ideal_typed : Typed (rT := rT) Tctx.empty otp_ideal .real := .urand
 
-/-- The encryption's body `otpLam m` is a real-to-real function. -/
 theorem otpLam_typed (m : rT) : Typed Tctx.empty (otpLam m) (.arrow .real .real) :=
   Typed.lam ∅ fun _ _ => .unop_real (.binop_real .lit_real (.fvar (by simp [Tctx.insert])) rfl) rfl
 
-/-- The encryption has type `real`. -/
 theorem otp_enc_typed (m : rT) : Typed Tctx.empty (otp_enc m) .real := .app (otpLam_typed m) .urand
 
 end Typing

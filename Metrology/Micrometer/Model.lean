@@ -20,8 +20,6 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 /-- Values are inhabited by `()`. -/
 instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
 
-/-! ## Monadic rules for `refines` -/
-
 section Monadic
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]

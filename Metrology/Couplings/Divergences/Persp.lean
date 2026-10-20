@@ -8,9 +8,8 @@ public import Mathlib.Topology.Instances.EReal.Lemmas
 
 /-! # Perspective of a convex weight
 
-The perspective `persp f a b = b f (a / b)` (extended by the slope at infinity at `b = 0`),
-with subadditivity, finite and integral Jensen, and continuity. It is the per-cell term of
-`fDiv_eq_iSup_partition`; the closing `EReal` sum lemmas support those finite sums. -/
+The perspective `persp f a b = b f (a / b)` (Def. 2.6), with subadditivity, finite and integral
+Jensen, and continuity; it is the per-cell term of `fDiv_eq_iSup_partition`. -/
 
 @[expose] public section
 
@@ -19,9 +18,7 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 
-/-! ## The slope at infinity and the perspective
-
-Both are defined for a real weight `f`; convexity on `[0, ∞)` is assumed lemma by lemma. -/
+/-! ## The slope at infinity and the perspective -/
 
 variable {f g : ℝ → ℝ}
 

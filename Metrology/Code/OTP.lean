@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over `{0, …, N-1}`
 
-The program `otp_enc` (encrypt with a uniform key) and the ideal sampler `otp_ideal`; the proof that
-they refine each other is in `Micrometer/Examples/OTP`. -/
+The proof that `otp_enc` and `otp_ideal` refine each other is in `Micrometer/Examples/OTP`. -/
 
 namespace ProbLang
 namespace OTP

@@ -5,9 +5,8 @@ public import Metrology.Couplings.Divergences.Bof
 
 /-! # `α`-Hellinger divergence on sub-probability measures
 
-The Barthe–Olmedo graded divergence `hellingerDivergence α` (ICALP 2013). Main results: composition
-when the kernels lose equal mass (`hellingerDivergence_comp_of_mass_eq`, used by
-`BindLaw.hellinger`) and its failure otherwise (`not_isComposable_hellinger_half`). -/
+Barthe–Olmedo's `hellingerDivergence α` (ICALP 2013) composes along kernels of equal mass
+(`hellingerDivergence_comp_of_mass_eq`), but not in general (`not_isComposable_hellinger_half`). -/
 
 @[expose] public section
 
@@ -61,7 +60,6 @@ theorem continuous_hellFun (hα0 : 0 ≤ α) : Continuous (hellFun α) := by
   exact (((continuous_const.mul continuous_id).add continuous_const).sub
     (Real.continuous_rpow_const hα0)).div_const _
 
-/-- The slope of the generator at infinity is `α / (1 - α)`. -/
 theorem derivAtTop_hellFun (hα1 : α < 1) :
     derivAtTop (hellFun α) = ((α / (1 - α) : ℝ) : EReal) := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
@@ -76,7 +74,6 @@ theorem derivAtTop_hellFun (hα1 : α < 1) :
   rw [hellFun, Real.rpow_sub ht, Real.rpow_one]
   field_simp
 
-/-- The perspective of the generator is the pointwise term. -/
 theorem persp_hellFun (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     persp (hellFun α) p q = hellTerm α p q := by
   have hs : 0 < 1 - α := sub_pos.2 hα1
@@ -123,8 +120,8 @@ theorem fDiv_hellFun_eq_sum (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype
   exact Finset.sum_congr rfl fun i _ ↦
     persp_hellFun hα1 ENNReal.toReal_nonneg ENNReal.toReal_nonneg
 
-/-- On a finite space, the Bhattacharyya sum `Σ pᵢ ^ α * qᵢ ^ (1 - α)` is at most
-`1 - (1 - α) * Σ hellTerm α pᵢ qᵢ`, for sub-probability `p`, `q`. -/
+/-- The Bhattacharyya mass of two sub-probability measures on a finite space is at most one minus
+`1 - α` times their Hellinger divergence. -/
 theorem sum_rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsSubProbabilityMeasure ρ₁]
     [IsSubProbabilityMeasure ρ₂] :
@@ -166,7 +163,6 @@ noncomputable def hellClamp (α : ℝ) (a : EReal) : ℝ :=
 noncomputable def hellChain (α : ℝ) (a d : EReal) : EReal :=
   ((hellClamp α a + hellClamp α d - (1 - α) * hellClamp α a * hellClamp α d : ℝ) : EReal)
 
-/-- Clamping fixes values already in `[0, 1 / (1 - α)]`. -/
 theorem hellClamp_coe {x : ℝ} (h0 : 0 ≤ x) (h1 : x ≤ (1 - α)⁻¹) : hellClamp α x = x := by
   simp [hellClamp, max_eq_left (EReal.coe_nonneg.2 h0), min_eq_left (EReal.coe_le_coe_iff.2 h1)]
 
@@ -175,7 +171,6 @@ section Clamp
 variable (hα1 : α < 1)
 include hα1
 
-/-- The clamp lands in `[0, 1 / (1 - α)]`. -/
 theorem hellClamp_bounds (a : EReal) :
     0 ≤ min (max a 0) (((1 - α)⁻¹ : ℝ) : EReal) ∧
       min (max a 0) (((1 - α)⁻¹ : ℝ) : EReal) ≤ (((1 - α)⁻¹ : ℝ) : EReal) :=
@@ -295,7 +290,6 @@ variable {α : ℝ} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ �
 noncomputable def hellingerDivergence (α : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   bofDivergence (hellFun α) (α - 1)
 
-/-- Unfolding `hellingerDivergence`: the `f`-divergence is below the threshold. -/
 theorem hellingerDivergence_iff :
     hellingerDivergence α r μ ν ↔ fDiv (hellFun α) μ ν ≤ bofThresh (α - 1) r :=
   bofDivergence_iff

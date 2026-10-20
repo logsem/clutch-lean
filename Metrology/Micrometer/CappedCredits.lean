@@ -6,9 +6,8 @@ public import Metrology.Couplings.Divergences.Concentrated
 
 /-! # Absorbing budgets and DP capped credits
 
-Which budgets are absorbing for dp, tv and Rényi, and that the other budgets cancel, so capped
-credits can always be spent (Rocq `gccredit_top_False`). An optional layer: `wp` uses
-`BudgetCredit`, not `CappedCredit`. -/
+Which budgets are absorbing for dp, tv and Rényi, and that the others cancel, so capped credits
+can always be spent (Rocq `gccredit_top_False`). `wp` uses `BudgetCredit`, not this layer. -/
 
 @[expose] public section
 
@@ -46,10 +45,7 @@ namespace GradedDivergence
 
 open MeasureTheory GradedLifting
 
-/-! ## Which budgets are absorbing for dp, tv and Rényi
-
-For `codensity dp`, `codensity tv` and `codensity (renyiDivergence α)` every valid budget cancels,
-so any credit can be spent; a Rényi curve that is `⊤` at some orders only is valid but does not. -/
+/-! ## Which budgets are absorbing for dp, tv and Rényi -/
 
 /-- A DP budget is absorbing exactly when its multiplier is `⊤` or its slack is at least `1`. -/
 theorem absorbing_codensity_dp_iff {ε δ : ℝ≥0∞} :

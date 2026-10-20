@@ -4,9 +4,8 @@ public import Metrology.Micrometer.WpRules
 
 /-! # Lifting lemmas for `wp`
 
-Rules that peel the unfolded `wpPre` down to "couple one program step against the spec, then
-continue at each related pair"; main result `wp_lift_prim_steps_coupl` (Rocq `approxis/lifting.v`).
-`WpEctxLifting.lean` restates the step rules for head steps. -/
+Rules that reduce `wp` to "couple one program step against the spec, then continue at each
+related pair"; main result `wp_lift_prim_steps_coupl` (Rocq `approxis/lifting.v`). -/
 
 @[expose] public section
 
@@ -208,13 +207,10 @@ theorem wp_lift_prim_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B]
 
 /-! ## Program steps that leave the spec in place
 
-These couple the program step against a Dirac at the spec configuration
-(`progCoupl_step_l_concentrated`, by `rel_dirac_right`) at budget `0`.
-
-`_concentrated` rules take any measurable set carrying the step, so they work for a diffuse `rT`
-(e.g. `urand`). The `@[discrete]` rules take that set to be the support `{ρ | 0 < primStep ρ}`,
-which carries the step only for non-`urand` redexes (hence `hne`); `@[discrete]` marks them as the
-discrete fragment (see `Meta/Discrete.lean`). -/
+These couple the program step against a Dirac at the spec configuration, at budget `0`.
+`_concentrated` rules take any measurable set carrying the step, so they work for a diffuse `rT`;
+the `@[discrete]` rules use the support `{ρ | 0 < primStep ρ}`, which carries the step only for
+non-`urand` redexes (hence `hne`). -/
 
 section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]

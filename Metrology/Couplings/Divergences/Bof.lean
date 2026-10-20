@@ -2,10 +2,10 @@ module
 
 public import Metrology.Couplings.Divergences.FDivBound
 
-/-! `bof` = Barthe–Olmedo f-divergence (ICALP 2013): the threshold `θ_γ(r) = (e^{γr} - 1)/γ`
-(`bofReal_add`: `θ(s+t) = θs + θt + γ θs θt`) and `bofDivergence`, an `f`-divergence below `θ_γ` of
-the budget. KL (`γ = 0`) and Hellinger (`γ = α - 1`) are instances; lost mass is not filled in, so
-they compose only along kernels of equal mass (`*_comp_of_mass_eq`, used via `BindLaw.massEq`). -/
+/-! # Barthe–Olmedo divergences
+
+`bofDivergence`: an `f`-divergence below the threshold `θ_γ(r) = (e^{γr} - 1)/γ` of the budget
+(ICALP 2013). Lost mass is not filled in, so it composes only along kernels of equal mass. -/
 
 @[expose] public section
 
@@ -111,7 +111,7 @@ theorem isGraded_bofDivergence (hf : ConvexOn ℝ (Ici 0) f)
   isGraded_fDivBound (fun _ _ ↦ hf) (fun _ _ ↦ hf_cont) (fun _ _ _ _ _ _ ↦ le_rfl)
     (fun _ _ h _ ↦ bofThresh_mono γ h) fun _ ↦ bofThresh_top γ
 
-/-- If `f 1 = 0`, `bofDivergence f γ` is reflexive: any measure is related to itself. -/
+/-- If `f 1 = 0`, `bofDivergence f γ` is reflexive. -/
 theorem isReflexive_bofDivergence (hf1 : f 1 = 0) : (bofDivergence.{u} f γ).IsReflexive :=
   isReflexive_fDivBound fun _ ↦ by simp [hf1]
 

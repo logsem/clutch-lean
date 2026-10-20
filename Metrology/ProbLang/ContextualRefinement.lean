@@ -8,9 +8,8 @@ public import Metrology.ProbLang.Exec
 /-!
 # Contextual refinement
 
-Program contexts `Ctx` (the hole may sit under a binder), their typing `TypedCtx`, and contextual
-refinement `Γ ⊨ e ≤ctx≤ e' : τ`, a preorder and a congruence (`CtxRefines.congr`). Port of Clutch's
-`theories/prob_lang/typing/contextual_refinement.v`.
+Program contexts `Ctx`, their typing `TypedCtx`, and contextual refinement `Γ ⊨ e ≤ctx≤ e' : τ`,
+a congruence. Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`.
 -/
 
 namespace ProbLang

@@ -70,7 +70,6 @@ theorem rr_DP (σ : State rT) : (rrMech σ).DP ⊤ (ENNReal.ofReal (Real.log 3))
 /-- `k` rounds are `(k ln 3, 0)`-DP (Def. 2.1). -/
 theorem rrCount_DP (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).DP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
-  -- the loop theorem gives `k • (ln 3, 0)`; `simpa` turns it into `(k ln 3, 0)`
   simpa [nsmul_eq_mul] using
     rrCount_isPrivate (L := codensity dp) budget isAddLeftRegular_budget rrCoupling_dp k σ
 

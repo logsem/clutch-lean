@@ -7,9 +7,8 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 
 /-! # Randomized response stays private inside a boolean context
 
-Main result `rr_negCtx_le`: `rr_refines` lifts through the linear context
-`if [·] then false else true` by `refines_ctx_dp`. Linear, because the credit `↯b` is spent once
-and a hole run twice would spend it twice. -/
+`rr_negCtx_le`: `rr_refines` lifts through the linear context `if [·] then false else true` by
+`refines_ctx_dp`; linear because the credit `↯b` is spent once. -/
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence
 open scoped ENNReal
@@ -22,9 +21,8 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- The context `if [·] then false else true`. -/
 def negCtx : Ctx rT := [.ifL (.lit (.bool false)) (.lit (.bool true))]
 
-/-- The negated randomized-response report is `(ln 3, 0)`-DP: every result is at most three times as
-likely under one private bit as under the other. Stated as `refines_ctx_dp` states it: on
-configurations (`limExec`), with `finalBool c` the configurations that returned the boolean `c`. -/
+/-- Every result of the negated report is at most three times as likely under one private bit as
+under the other. -/
 theorem rr_negCtx_le (b b' c : Bool) (σ σ' : State rT) :
     limExec ⟨negCtx.fill (rr b), σ⟩ (finalBool c) ≤
       3 * limExec ⟨negCtx.fill (rr b'), σ'⟩ (finalBool c) := by

@@ -5,10 +5,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Relational rules: left state steps and coupled draws
 
-Rules needing `[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`: left heap and tape steps,
-unlabelled and empty-tape draws on either side, and coupled draws (`U` = unlabelled draw, `T` = tape
-draw, left program first). The main rule is `refines_couple_rands_spend`. Right heap/tape steps and
-`refines_randT_r` need no extra instances and are in `AppRelRulesPure`. -/
+Left heap/tape steps, one-sided and coupled draws (`U` unlabelled, `T` tape, left first), under
+`[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`; main rule `refines_couple_rands_spend`. -/
 
 @[expose] public section
 
@@ -280,10 +278,7 @@ theorem refines_couple_tapes_bij {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
   iintro %n %hn HA HS
   iapply Hcnt $$ %n %hn HA HS %K %b Hj Hna Herr Hpos
 
-/-! ## Advanced couplings (tv-style)
-
-Pay `↯b (s ε₁)` and receive `↯b (s (ε₂ n))` at outcome `n`, where the average of `ε₂` is at most
-`ε₁`. -/
+/-! ## Advanced couplings (tv-style) -/
 
 /-- Couple two unlabelled draws along `f`, redistributing the credit `s ε₁` as `s (ε₂ n)`. -/
 theorem refines_couple_rands_lr_adv {s : ENNReal →+o B}

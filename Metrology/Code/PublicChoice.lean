@@ -7,8 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # A public coin choosing between two mechanisms
 
-The program `choice b`: a public coin picks randomized response or the constant `true`.
-Its DP choice law (the proof pays the larger cost) is in `Micrometer/Examples/PublicChoice`. -/
+Proved differentially private by the DP choice law, paying only the larger branch cost, in
+`Micrometer/Examples/PublicChoice`. -/
 
 namespace ProbLang
 namespace PublicChoice

@@ -176,8 +176,7 @@ end ProbLang
 
 /-! ## Measurability on `Option`
 
-Cylinders `none` / `some S` generate the σ-algebra on `Option α`; a map into `Option α` is
-measurable once its cylinder preimages are. -/
+Cylinders `none` / `some S` generate the σ-algebra on `Option α`. -/
 
 theorem MeasurableEmbedding.some_mk {α : Type _} [MeasurableSpace α] :
     MeasurableEmbedding (some : α → Option α) := by
@@ -292,10 +291,8 @@ theorem Measurable.option_map {α β : Type _} [MeasurableSpace α] [MeasurableS
 
 /-! ## Shape-stratified measurability
 
-Measurability is assembled from cells `{p | shape p = s ∧ f p ∈ U}`, one per shape. Cells are over
-`β × T`, where `β` is a measurable parameter. Used by `CoreMeasures/Recurrences.lean` to prove
-structural recursions on `Exp` measurable: split the preimage by top constructor (`shape`) and
-prove each cell measurable. -/
+Measurability is assembled from cells `{q : β × T | shape q.2 = s ∧ g q ∈ U}`, one per shape;
+`CoreMeasures/Recurrences.lean` uses this for structural recursions on `Exp`. -/
 
 namespace StructRec
 
@@ -541,8 +538,6 @@ theorem Measure.bind_map_comm {α β γ : Type*}
 /-- Counting measure reweighted by the density `f`. -/
 abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
 
-/-- For an s-finite measurable kernel `k` and a jointly measurable `h`,
-`a ↦ (k a).map (h (a, ·))` is measurable. -/
 theorem Measure.measurable_map_uncurry {α β γ : Type _}
     [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     {h : α × β → γ} (hh : Measurable h)
@@ -563,7 +558,6 @@ theorem Measure.measurable_map_uncurry {α β γ : Type _}
   simp_rw [hker_eq]
   exact ProbabilityTheory.Kernel.measurable_kernel_prodMk_left hT
 
-/-- A monotone sequence of measurable measure-valued maps has a measurable supremum. -/
 theorem Measure.measurable_iSup_of_monotone {α β : Type _}
     [MeasurableSpace α] [MeasurableSpace β]
     {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))

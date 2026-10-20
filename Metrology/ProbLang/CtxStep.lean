@@ -10,9 +10,8 @@ public import Metrology.ProbLang.Discrete
 
 /-! # Primitive step
 
-The full step `primStep` of a configuration: decompose into an evaluation context and a head redex,
-take a head step, plug back. Main results: `primStep_fill` (stepping `K[e]` is stepping `e`, then
-wrapping in `K`), `head_redex_unique`, `prim_step_iff`, `primStep_atomic`. -/
+The full step `primStep`: decompose into a context and a head redex, head-step, plug back.
+Main results: `primStep_fill`, `head_redex_unique`, `prim_step_iff`, `primStep_atomic`. -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
@@ -200,9 +199,8 @@ theorem prim_step_mass [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
 
 /-! ## Bridge: `headStep` ↔ `primStep` -/
 
-/-- A locally closed head redex is its own decomposition: `decompItem` finds no frame to peel,
-so `primStep = headStep` (`primStep_eq_headStep`). Without local closedness a value-shaped but
-non-closed subterm (e.g. a non-closed `lam`) could still be focused. -/
+/-- A locally closed head redex is its own decomposition: `decompItem` finds no frame to peel
+(without local closedness, a value-shaped but non-closed `lam` could still be focused). -/
 theorem Exp.decompItem_none_of_lc_headReducible [LawfulProbLangℝ rT] {e : Exp rT} {σ : State rT}
     (he : e.IsLocallyClosed) (hred : headStep ⟨e, σ⟩ ≠ 0) : e.decompItem = none := by
   cases H : e.decompItem with

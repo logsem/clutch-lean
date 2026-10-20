@@ -24,9 +24,7 @@ meta register_option pp.problang.annot : Nat := {
   descr := "ProbLang: display type annotations (0=none | 1=binders | 2=all)"
 }
 
-/-! ## Grammar
-
-Four syntax categories (expressions, types, binder arguments, patterns) and their entry points. -/
+/-! ## Grammar -/
 
 declare_syntax_cat pl_exp
 declare_syntax_cat pl_ty
@@ -199,9 +197,7 @@ macro_rules
 
 /-! ## Expression elaboration
 
-`elabPL` turns `pl_exp` syntax into an `Exp` term. A binder gets a fresh atom, its body is
-elaborated with the name mapped to that atom, and `Exp.close` then turns the atom into a bound
-index; `case` compiles to `scrut` plus a chain of `Exp.case`. -/
+`case` compiles to `scrut` plus a chain of `Exp.case`. -/
 
 /-- Source names in scope, mapped to their fresh atoms. -/
 abbrev NameEnv := Lean.NameMap Var

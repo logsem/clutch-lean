@@ -4,10 +4,8 @@ public import Metrology.Couplings.Divergences.Concentrated
 
 /-! # The Rényi codensity lifting
 
-The codensity lifting of `renyiDivergence α` is decided by tests into a point
-(`codensity_renyi_iff_unitTests`) and is the Hölder-dual Rényi coupling (`rdpCoupl_iff_codensity`),
-which gives the zCDP and tCDP liftings as Rényi couplings (Rocq `renyi_kanto_canonical.v`,
-`renyi_codensity.v`). -/
+It is decided by tests into a point (`codensity_renyi_iff_unitTests`) and is the Hölder-dual Rényi
+coupling (`rdpCoupl_iff_codensity`) (Rocq `renyi_kanto_canonical.v`, `renyi_codensity.v`). -/
 
 @[expose] public section
 
@@ -24,12 +22,8 @@ variable {α : ℝ}
 
 /-! ## Support: the perspective of `t ↦ t ^ α`
 
-Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. A test into a point with masses
-`(h p, h ^ β q)` has divergence at most the cellwise one (`persp_rpow_sum_le`), with equality at
-`h ∝ (p / q) ^ (α - 1)` (`exists_persp_rpow_eq_sum`). This turns any partition test into a point
-test. -/
+Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. -/
 
-/-- Scaling both arguments of the perspective of `t ↦ t ^ α` by `s` scales its value by `s`. -/
 theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
   rw [persp_rpow_mul hα hs hs ha hb, persp_self hs, one_rpow, mul_one]
@@ -153,10 +147,7 @@ open ENNReal hiding rpow_le_one
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α : ℝ} {ρ : ℝ≥0∞}
   {R : X → Y → ℝ≥0∞} {μ : Measure X} {ν : Measure Y}
 
-/-! ## Mass tests on a finite partition
-
-A sub-Markov test into a point is a pair of masses; on a finite partition, masses `s w` and
-`s w ^ (α / (α - 1))` realise the perspective of the weighted cell masses. -/
+/-! ## Mass tests on a finite partition -/
 
 /-- A test into a point that is constant on the cells of a finite partition has the perspective
 of the cell masses as its divergence. -/
@@ -280,9 +271,7 @@ theorem codensity_renyi_iff_unitTests [Fact (1 < α)] [IsSubProbabilityMeasure �
         renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) :=
   ⟨fun h _ _ _ _ ↦ renyiDivergence_comp_of_codensity h, codensity_renyi_of_unitTests⟩
 
-/-! ## The slack-Hölder bound and Rényi couplings
-
-The Hölder form `SlackHolder` of the codensity lifting, and `RdpCoupl` as its relational case. -/
+/-! ## The slack-Hölder bound and Rényi couplings -/
 
 /-- The slack-Hölder bound: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
 satisfy `E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `SH`). -/

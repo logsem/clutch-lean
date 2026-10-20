@@ -18,8 +18,7 @@ variable {rT : Type _} [LawfulProbLangℝ rT]
 
 /-! ## Closed contexts and `isClosed`
 
-Port of Clutch's `is_closed` to locally-nameless syntax: a closed context is a finite set of
-atoms, and `e` is closed in `X` when it is locally closed with free variables in `X`. -/
+Port of Clutch's `is_closed` to locally-nameless syntax. -/
 
 /-- A finite set of atoms the free variables may range over. -/
 abbrev ClosedCtx := Finset Var
@@ -248,7 +247,6 @@ theorem SubstMap.mem_of_lookup_eq_some {vs : SubstMap rT} {y : Var} {w : Exp rT}
       obtain rfl := Option.some.inj h
       exact hyz ▸ List.mem_cons_self
 
-/-- If `y ∈ vs.dom`, then `vs.lookup y` is some. -/
 theorem SubstMap.lookup_isSome_of_mem_dom {vs : SubstMap rT} {y : Var}
     (h : y ∈ (vs.map (·.1)).toFinset) : (vs.lookup y).isSome := by
   simp only [List.mem_toFinset, List.mem_map] at h
@@ -609,8 +607,6 @@ theorem Exp.substMap_fv_eq_empty {vs : SubstMap rT} {e : Exp rT}
   obtain ⟨hyE, hyDom⟩ := Finset.mem_sdiff.mp (Exp.fv_substMap_sdiff_dom hClosed hy)
   exact hyDom (hsub hyE)
 
-/-- When `vs` maps `y` to `w` and `x` is fresh,
-`substMap vs (subst E x (.fvar y)) = subst (substMap (vs without y) E) x w`. -/
 theorem Exp.substMap_subst_fvar_lookup
     (vs : SubstMap rT) (E : Exp rT) (x y : Var) (w : Exp rT)
     (hxNotDom : x ∉ (vs.map (·.1)).toFinset)

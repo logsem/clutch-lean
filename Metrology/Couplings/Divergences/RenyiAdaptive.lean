@@ -5,9 +5,8 @@ public import Metrology.Couplings.Divergences.RenyiStrassen
 
 /-! # Adaptive Rényi composition
 
-`codensity_renyi_bind_escort` composes Rényi liftings when the second budget `ρ₂ x` depends on the
-first outcome; `exists_not_codensity_renyi_bind_lintegral` shows that paying the plain average
-budget is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
+Rényi liftings compose when the second budget `ρ₂ x` depends on the first outcome; paying the
+plain average budget is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
 
 @[expose] public section
 
@@ -30,8 +29,7 @@ instance isSubProbabilityMeasure_withDensity_inv_expBudget (μ : Measure X)
   isSubProbabilityMeasure_withDensity_of_le_one μ fun _ ↦ ENNReal.inv_le_one.2 (one_le_expBudget _)
 
 open Real in
-/-- Scaling the right measure by `e^{-c}` raises the Rényi divergence by at most `c`. This is what
-makes the escort head shift-invariant (`HeadShift` for `BindLaw.escort`, `BindLaws.lean`). -/
+/-- Scaling the right measure by `e^{-c}` raises the Rényi divergence by at most `c`. -/
 theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc : c ≠ ⊤)
     {μ ν : Measure X} [IsFiniteMeasure μ] [IsFiniteMeasure ν] (h : renyiDivergence α ρ μ ν) :
     renyiDivergence α (ρ + c) μ ((expBudget c)⁻¹ • ν) := by
@@ -48,7 +46,6 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
   set p : Fin n → ℝ := fun i ↦ (μ (k ⁻¹' {i})).toReal
   set q : Fin n → ℝ := fun i ↦ (ν (k ⁻¹' {i})).toReal
-  -- partition form: each cell costs `e^{(α - 1) c}` times more, so the sum does
   have hsum : ∑ i, persp (· ^ α) (p i) (q i) ≤ _ :=
     (le_iSup₂_of_le (f := fun n (k : X → Fin n) ↦ ⨆ (_ : Measurable k),
       ∑ i, persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal) n k
@@ -64,6 +61,7 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
     EReal.coe_toReal (ne_top_of_le_ne_top (EReal.coe_ne_top _)
       ((Finset.single_le_sum (fun j _ ↦ hnn j) (Finset.mem_univ i)).trans hsum))
       (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hnn i))
+  -- each cell costs `e^{(α - 1) c}` times more
   have hcell (i : Fin n) : persp (· ^ α) (p i) (((expBudget c)⁻¹ • ν) (k ⁻¹' {i})).toReal =
       ((exp ((α - 1) * c.toReal) * (persp (· ^ α) (p i) (q i)).toReal : ℝ) : EReal) := by
     rw [Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul, hs, ← one_mul (p i),
@@ -106,8 +104,6 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
   have : IsSubMarkovKernel r' := ⟨fun y ↦ hr' y ▸ inferInstance⟩
   -- the leftover of the witness: `ρ₂ x` on `S`, `⊤` off it
   set E : X → Y → ℝ≥0∞ := fun x y ↦ if S x y then ρ₂ x else ⊤
-  -- step 1: the head as a witness lifting with leftover `ρ₂` on `S`
-  -- (`codensity_renyi_of_witness`, witness `r' = r · e^{-ρ₂}`)
   have hE : (renyiDivergence α).codensity ρ E μ ν := by
     refine codensity_renyi_of_witness r' (fun y ↦ ?_) (fun y ↦ ?_) ?_
     · rw [hr', ae_withDensity_iff hw]
@@ -122,7 +118,6 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
             simp [E, hS, w]
         _ ≤ 1 := IsSubProbabilityMeasure.lintegral_le_one fun _ ↦ le_rfl
     · rwa [← withDensity_comp hw]
-  -- step 2: ordinary bind
   refine HasBind.bind (L := codensity _) hE fun x y hxy ↦ ?_
   by_cases hS : S x y
   · simpa [E, hS] using hκη x y hS

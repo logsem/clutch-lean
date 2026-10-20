@@ -26,7 +26,7 @@ instance instMeasurableSingletonClassTape : MeasurableSingletonClass Tape :=
 
 variable {α : Type _} [MeasurableSpace α]
 
-/-! ## States: heap and tapes -/
+/-! ## States -/
 
 /-- The σ-algebra of a state: that of its heap and tapes. -/
 instance instMeasurableSpaceState : MeasurableSpace (State α) :=
@@ -58,7 +58,7 @@ theorem State.measurable_mk_param {γ : Type _} [MeasurableSpace γ]
     Measurable (fun q : γ => State.mk (fh q) (ft q)) :=
   State.measurable_iff.mpr ⟨hh, ht⟩
 
-/-! ## Configurations: expression and state -/
+/-! ## Configurations -/
 
 /-- The σ-algebra of a configuration: that of its expression and state. -/
 instance instMeasurableSpaceCfg : MeasurableSpace (Cfg α) :=

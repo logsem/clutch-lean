@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Adaptive randomized response
 
-The programs `rr3` (a 2/3-biased round) and `rrAdaptive` (second round only after a `true` report).
-Their Rényi-2 bound `log (19/12)`, below the naive `log (9/4)`, is proved in
+Proved Rényi-2 private at `log (19/12)`, below the naive `log (9/4)`, with the escort law in
 `Micrometer/Examples/RandomizedResponse/Adaptive`. -/
 
 namespace ProbLang

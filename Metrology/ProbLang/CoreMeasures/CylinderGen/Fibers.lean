@@ -181,8 +181,7 @@ def Ctx.fiberArm (ctx : Ctx) (r : Recursion) (c : Ctor) (slots : Array ShapeSlot
 /-- `Measurable f` (or `Measurable (uncurry f)`), from its measurability on the leaves of every
 shape, by induction on shapes. -/
 def Ctx.fiberProof (ctx : Ctx) (r : Recursion) : MetaM Expr := do
-  -- `motive s`: `f` is measurable on the leaves of `s`; `fibers` proves it by recursion on `s`,
-  -- using the induction hypothesis `ih` at recursive fields (see `Ctx.recursiveArg`).
+  -- its induction hypothesis at recursive fields is the `ih` of `Ctx.recursiveArg`
   let motive ← withLocalDeclD `s ctx.shape fun s => do
     mkLambdaFVars #[s] (← mkAppM ``Measurable #[← ctx.onLeaves r s])
   let fibers ← withLocalDeclD `s ctx.shape fun s => do

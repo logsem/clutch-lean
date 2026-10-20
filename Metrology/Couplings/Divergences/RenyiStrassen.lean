@@ -76,8 +76,8 @@ theorem codensity_renyi_of_witness [hα : Fact (1 < α)] [IsSubProbabilityMeasur
         exact hrow y
 
 /-- `codensity_renyi_of_witness` for a measurable cost `E`: the a.e. finiteness of `E` and the
-sub-Markov property of `r` follow from `∫ e^E d(r y) ≤ 1`. This is the form `RenyiFiber` and the
-Strassen converse use (Rocq `witness_soundness`, `Kant_exact_uncond`). -/
+sub-Markov property of `r` follow from `∫ e^E d(r y) ≤ 1` (Rocq `witness_soundness`,
+`Kant_exact_uncond`). -/
 theorem codensity_renyi_of_kernel [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (hE : ∀ y, Measurable fun x ↦ E x y) {r : Kernel Y X}
     (hr : ∀ y, ∫⁻ x, expBudget (E x y) ∂(r y) ≤ 1) (hD : renyiDivergence α ρ μ (r ∘ₘ ν)) :

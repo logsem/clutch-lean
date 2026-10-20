@@ -5,9 +5,8 @@ public import Metrology.Couplings.LiftingHom
 
 /-! # zCDP and tCDP
 
-Rényi curves read along the lines `α ↦ ξ + α ρ` (`concentratedLine`), giving `zcdpDivergence` and
-`tcdpDivergence` (Approximate Span Liftings, §4). Their liftings regrade the curve's codensity
-lifting, so each Rényi order is a homomorphic image (`LiftingHom.concentratedToRenyi`). -/
+Rényi curves read along the lines `α ↦ ξ + α ρ`, giving `zcdpDivergence` and `tcdpDivergence`
+(Approximate Span Liftings, §4), their liftings, and the homomorphisms to each Rényi order. -/
 
 @[expose] public section
 

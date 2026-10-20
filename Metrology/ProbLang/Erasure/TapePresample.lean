@@ -6,10 +6,8 @@ public import Metrology.ProbLang.Erasure.Presample
 
 /-! # Properties of `tapePresample`
 
-Presampling commutes with heap updates, other-tape updates and uniform draws, and
-`tapeIndexUniform_lintegral_eq_cfg_uniform` converts a presampled index into `Cfg.uniform`,
-which closes the key erasure case. The definition, mass and measurability are in
-`Presample.lean`. -/
+Presampling commutes with heap updates, other-tape updates and uniform draws;
+`tapeIndexUniform_lintegral_eq_cfg_uniform` converts a presampled index into `Cfg.uniform`. -/
 
 namespace ProbLang
 

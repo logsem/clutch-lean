@@ -21,8 +21,6 @@ namespace ProbLang
 
 variable {rT : Type} {B : Type}
 
-/-! ## The leftover of two draws -/
-
 open Classical in
 /-- The leftover of the draws `rand N ~ K[rand N]` from `σ` and `σ'`: `R n m` at the
 configurations drawn as `n` and `m`, and `⊤` elsewhere (keyed by both draws, unlike
@@ -100,7 +98,6 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   -- by absorption instead
   by_cases hrTop : r < (⊤ : B)
   swap
-  -- r = ⊤: the budget c + ⊤ = ⊤ is absorbing
   · iapply specCoupl_absorbing
     exact IsTopAbsorbing.absorbing_top.mono (hr ▸ not_lt_top_iff.1 hrTop ▸ le_add_self)
   iapply specCoupl_ret
@@ -112,7 +109,6 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
       MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
         (Ectx.fillCfg.measurable K) Measurable.of_discrete]
     exact hhead σ₁ σ₁'
-  -- couple the two prim steps by `law`, with the head at `c` shifted by the remainder `r`
   iapply progCoupl_steps_spend_law law hr.ge hrTop (randUnit_uniform_step HN σ₁).1.toReducible
     ((randUnit_uniform_step HN σ₁').1.toReducible.fill K) hheadStep
     (.of_forall fun k₁ k₂ ↦ hside _ _ _ k₁ k₂)
@@ -122,7 +118,6 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] (N : Int) (HN 
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h1
   obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h2
   rw [Cfg.drawCost_apply] at hR ⊢
-  -- hand the leftover `R n m` back as a fresh credit and continue with the drawn values
   iintro !> !>
   iapply specCoupl_ret
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩

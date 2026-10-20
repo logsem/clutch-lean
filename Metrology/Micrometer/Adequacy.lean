@@ -7,9 +7,8 @@ public import Metrology.Iris.StepFupd
 
 /-! # Adequacy of the Micrometer logic
 
-A `wp` proof from `↯b b` gives `L.Rel b (adequacyRel φ)` of the two limit outputs (`wp_adequacy`),
-and `D b` for every divergence `D` that `L` is sound for (`wp_adequacy_div`). The proof shows
-`execCoupl` at every fuel `n`, spending one later per program step, then takes the left limit. -/
+A `wp` proof from `↯b b` relates the two limit outputs at budget `b` (`wp_adequacy`) and bounds
+their divergence (`wp_adequacy_div`), via `execCoupl` at every fuel `n`, one later per step. -/
 
 @[expose] public section
 
@@ -253,10 +252,7 @@ end Wp
 
 end Adequacy
 
-/-! ## Leaving the logic, then taking the limit
-
-Ghost state is allocated from `↯b b`, so the runs are related at budget `b`; the budget left at the
-end is dropped. -/
+/-! ## Leaving the logic, then taking the limit -/
 
 section Budget
 
@@ -357,8 +353,7 @@ end Budget
 
 /-! ## Runs of mass `1`
 
-Continuations are needed only where the run still has mass `1`, so neither `IsZeroLeft` nor a
-limit is needed (Rocq `wp_adequacy_step_fupdN_term`). -/
+Neither `IsZeroLeft` nor a limit is needed here (Rocq `wp_adequacy_step_fupdN_term`). -/
 
 section Termination
 

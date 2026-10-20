@@ -106,9 +106,7 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
       (Cfg.uniformReal σ) (Cfg.uniformReal σ') :=
   (Cfg.uniformReal_rel_bij σ σ' f hmp).addCoupl
 
-/-! ## Program rules
-
-The weakest-precondition rule for `urand` and its coupling with a second `urand`. -/
+/-! ## Program rules -/
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -149,7 +147,6 @@ theorem wp_couple_urand_urand (f : rT → rT)
   imodintro
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#(.real r)), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#(.real (f r))), σ₁'⟩
-  -- the two `urand`s are related by `R`, graph of `f` on the support, at cost `0`
   iexists R, 0, b
   isplitr; · ipureintro; rw [zero_add]
   isplitr; · ipureintro; exact reducible_urand σ₁
@@ -172,9 +169,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
 
 end Unary
 
-/-! ## The relational rule
-
-The refinement form of the coupling rule, with evaluation contexts on both sides. -/
+/-! ## The relational rule -/
 
 section Relational
 variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]

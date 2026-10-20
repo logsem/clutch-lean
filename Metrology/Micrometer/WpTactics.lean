@@ -350,8 +350,6 @@ elab "wp_value" : tactic =>
         (← Tactic.evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
         return (v, hproof)
     have goal : Q(IProp $GF) := LeanExpr.headBeta (mkApp g.Φ v)
-    -- If the postcondition can absorb a `|={E}=>`, leave the clean goal `Φ v`;
-    -- otherwise hand back `|={E}=> Φ v`.
     let c : Q(Prop) ← mkFreshExprMVarQ q(Prop)
     let p' : Q(Bool) ← mkFreshExprMVarQ q(Bool)
     let A' : Q(IProp $GF) ← mkFreshExprMVarQ q(IProp $GF)

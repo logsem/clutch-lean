@@ -12,9 +12,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Adaptive randomized response, with the escort law
 
-`rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, not the
-worst-case `log (9/4)`, since the escort law pays the second round's cost on average. The program
-form of `Couplings/Examples/AdaptiveRenyi`. -/
+`rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, not
+`log (9/4)`, as the escort law pays the second round's cost on average (`AdaptiveRenyi`). -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi
 open scoped ENNReal
@@ -56,9 +55,7 @@ noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
-cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`.
-`rel_couple_UU_law` states heads on the configuration laws of the two draws; `Cfg.drawCost` reads
-`adaptiveCost n m` off the configurations `⟨#n, σ⟩`, `⟨K[#m], σ'⟩`. -/
+cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/
 theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
     (BindLaw.escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))

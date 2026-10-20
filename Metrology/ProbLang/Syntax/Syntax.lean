@@ -19,9 +19,8 @@ meta import Metrology.Meta
 
 /-! # ProbLang syntax
 
-The reals interface (`ProbLangℝ`, `LawfulProbLangℝ`), the syntax (`Exp`, `Ty`, `Pat`), values
-(`IsVal`, `Val`), operator evaluation, states and configurations, and evaluation contexts with
-their decomposition (`Exp.decomp`). -/
+The reals interface (`ProbLangℝ`, `LawfulProbLangℝ`), expressions (`Exp`, `Ty`, `Pat`), values,
+operator evaluation, states, and evaluation contexts with their decomposition (`Exp.decomp`). -/
 
 @[expose] public section
 
@@ -34,7 +33,6 @@ open Cslib
 def Std.ExtTreeMap.fresh (t : ExtTreeMap Int V) : Int :=
   match t.maxKey? with | none => 1 | some v => v + 1
 
-/-- The fresh key is absent. -/
 theorem Std.ExtTreeMap.fresh_get? (t : ExtTreeMap Int V) :
     t[t.fresh]? = none := by
   unfold ExtTreeMap.fresh

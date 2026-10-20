@@ -6,8 +6,7 @@ public import Metrology.Couplings.Divergences.FDiv
 # Partition formula and data processing for `f`-divergences
 
 `fDiv_eq_iSup_partition`: the `f`-divergence is the supremum of its finite-partition sums
-(Approximate Span Liftings, Thm. 4.7). Consequences: data processing along kernels and maps, and
-lower semicontinuity along increasing sequences.
+(Approximate Span Liftings, Thm. 4.7); data processing and semicontinuity follow.
 -/
 
 @[expose] public section
@@ -19,10 +18,7 @@ namespace ProbabilityTheory
 
 variable {f g : ℝ → ℝ} {X : Type*} [MeasurableSpace X] {μ ν : Measure X}
 
-/-! ## The partition characterisation
-
-Plan: split `fDiv` above an affine minorant, approximate `f` by finite maxima of affine
-minorants, turn each maximum into a partition sum, and pass to the limit. -/
+/-! ## The partition characterisation -/
 
 /-! ### Splitting off a minorant -/
 
@@ -69,7 +65,6 @@ theorem fDiv_eq_lintegral_sub (hf : ConvexOn ℝ (Ici 0) f)
 
 /-! ### Finite maxima of affine minorants give partition sums -/
 
-/-- A finite maximum of affine functions of a measurable function is measurable. -/
 theorem measurable_partialSups_affine {a c : ℕ → ℝ} {G : X → ℝ} (hG : Measurable G) (N : ℕ) :
     Measurable fun x ↦ partialSups (fun i ↦ a i * G x + c i) N := by
   simp_rw [partialSups_eq_sup'_range]
@@ -225,8 +220,7 @@ theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
   rw [← add_assoc, ← hE N]
 
 /-- The `f`-divergence is the supremum of its sums over finite measurable partitions
-(Def. 2.7, Thm. 4.7). The `≥` direction is `sum_persp_le_fDiv` (Jensen); the `≤` direction is
-`fDiv_le_iSup_partition`. -/
+(Def. 2.7, Thm. 4.7). -/
 theorem fDiv_eq_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
     fDiv f μ ν = ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
@@ -234,10 +228,7 @@ theorem fDiv_eq_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
   le_antisymm (fDiv_le_iSup_partition hf hf_cont)
     (iSup_le fun _ ↦ iSup_le fun _ ↦ iSup_le fun hk ↦ sum_persp_le_fDiv hf hf_cont hk)
 
-/-! ## Data processing and semicontinuity
-
-Data processing: push a partition of the target back along the kernel, then apply the partition
-sup. Semicontinuity: partition sums are continuous in `μ`, and each is below `fDiv`. -/
+/-! ## Data processing and semicontinuity -/
 
 variable {Y : Type*} [MeasurableSpace Y]
 

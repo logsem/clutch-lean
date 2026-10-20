@@ -3,9 +3,8 @@ module
 public import Metrology.Couplings.Divergence
 
 /-! # Filling lost mass
-`Measure.withBot` and `Kernel.withBot` put the lost mass on a fresh point `none`; `Kernel.dropBot`
-forgets it again (used by `BindLaw.massEq`). The `FillDiv` divergences (`fill`) are ported from
-Rocq but unused by the liftings. -/
+`withBot` puts the lost mass on a fresh point `none` and `Kernel.dropBot` forgets it (used by
+`BindLaw.massEq`); the Rocq `FillDiv` divergences (`fill`) are ported but unused by the liftings. -/
 
 @[expose] public section
 
@@ -83,7 +82,7 @@ end Kernel
 
 namespace GradedDivergence
 
-/-! ## The fill of a divergence (Rocq `FillDiv`) -/
+/-! ## The fill of a divergence -/
 
 variable {B : Type v} (D : GradedDivergence.{u} B)
 

@@ -7,10 +7,8 @@ public import Metrology.ProbLang.Exec
 /-!
 # Erasable and rewritable distributions
 
-A state distribution is `Erasable` if sampling the state from it leaves every `execN m` unchanged;
-it then also leaves `limExec` unchanged (`Erasable.lim_exec`). Port of Clutch's `erasable.v`, but
-comparing whole `Measure Cfg`s, so `tapePresample` is only erasable in the projected
-`ErasableExpr` (`Erasure/ErasableExpr.lean`).
+A state distribution is `Erasable` if sampling the state from it leaves every `execN m` unchanged
+(Clutch `erasable.v`, but on whole configurations; see `ErasableExpr` for the projected form).
 -/
 
 namespace ProbLang

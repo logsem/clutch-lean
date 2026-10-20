@@ -4,8 +4,8 @@ public import Metrology.Couplings.Lifting
 
 /-! # Bind laws
 
-`BindLaw L` is one way to compose a lifted step with lifted continuations: a head, a side
-condition and soundness (Rocq `bind_law.v`). Laws `canonical`, `unit`; `HeadShift`, `HeadDiag`. -/
+Ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`), and the `canonical`
+and `unit` laws. -/
 
 @[expose] public section
 
@@ -70,9 +70,9 @@ class HeadShift [Add B] (law : BindLaw L) : Prop where
     {μ : Measure X} {ν : Measure Y} :
     c < ⊤ → law.head μ ν R b → law.head μ ν (fun x y ↦ R x y + c) (b + c)
 
-/-- A law has diagonal heads: a probability measure against itself is a head at any finite budget
-`b` with leftover `relCost (· = ·) + b`, and the side condition holds for `μ` against itself; steps
-that move only the left program ask this (Rocq `gbl_head_diag`, `GCFamLeftStep`). -/
+/-- A law has diagonal heads: each probability measure against itself, along equality at any
+finite budget; steps that move only the left program ask this (Rocq `gbl_head_diag`,
+`GCFamLeftStep`). -/
 class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
   diag {X : Type u} [MeasurableSpace X] (μ : Measure X) [IsProbabilityMeasure μ] {b : B} :
     b < ⊤ → law.head μ μ (fun x y ↦ relCost (· = ·) x y + b) b
@@ -82,8 +82,7 @@ class HeadDiag [Zero B] [Add B] (law : BindLaw L) : Prop where
 /-! ## The canonical law -/
 
 variable (L) in
-/-- The law whose head is a lifting of the step and whose side is `True`, sound by `HasBind.bind`
-(Rocq `GBL_uniform`). -/
+/-- The law whose head is a lifting of the step, with no side condition (Rocq `GBL_uniform`). -/
 def canonical [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] : BindLaw L where
   head μ ν R b := L b R μ ν
   side _ _ _ _ _ := True
@@ -124,7 +123,6 @@ def unit [Add B] [L.IsLawful] : BindLaw L where
   side _ _ _ _ _ := True
   sound := by
     rintro _ _ _ _ _ _ _ _ _ _ _ _ _ f g _ _ ⟨x, y, rfl, rfl, hlt, hle⟩ _ hk
-    -- binding a point mass applies the kernel: `f ∘ₘ dirac x = f x`
     rw [Measure.dirac_bind f.measurable, Measure.dirac_bind g.measurable]
     exact IsLawful.mono (hk x y hlt) hle le_rfl
   mono_out := fun ⟨x, y, hμ, hν, hlt, hle⟩ hb ↦ ⟨x, y, hμ, hν, hlt, hle.trans hb⟩
@@ -135,7 +133,6 @@ def unit [Add B] [L.IsLawful] : BindLaw L where
     exact ⟨x, y, rfl, rfl, by simpa [hx] using hlt, by simpa [hx] using hle⟩
   side_supp _ := trivial
 
-/-- Two point masses at a finite leftover below `b` form a head of the unit law. -/
 theorem unit_head_dirac [Add B] [L.IsLawful] {b : B} {R : X → Y → B} {x : X} {y : Y}
     (hlt : R x y < ⊤) (hle : R x y ≤ b) : (unit L).head (dirac x) (dirac y) R b :=
   ⟨x, y, rfl, rfl, hlt, hle⟩

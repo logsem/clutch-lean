@@ -27,11 +27,9 @@ It declares, in order (one section each):
 2. `T.toSigma`, `T.ofSigma`, their inverse laws `T.ofSigma_toSigma` and `T.toSigma_ofSigma`,
    `T.equivSigma`, the σ-algebra on `T` (the comap of `toSigma`), `T.measurableEquiv`, and
    `T.shape`, with a `simp` lemma `T.shape_c` per constructor `c`;
-3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`
-   (`c.measurable` restates `c.ι.measurable` for `fun p => T.c p.1 p.2.1 …`, so that `fun_prop`
-   matches applications of `T.c`), where `c.ι` and `c.π` (constructor and projection of the tuple of
-   fields) are as declared by `@[constructors, uncurriedProjections]`, and declared here unless `T`
-   has them;
+3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`,
+   where `c.ι` and `c.π` (constructor and projection of the tuple of fields) are as declared by
+   `@[constructors, uncurriedProjections]`, and declared here unless `T` has them;
 4. `T.measurable_cases` and `T.measurable_struct_rec` (for functions by cases, and by structural
    recursion), their `_param` variants, which thread a parameter, `T.measurable_casesOn(_param)`
    (for functions by `T.casesOn`), and `c.π.measurable`;
@@ -101,10 +99,7 @@ def Ctx.addLeavesInstance (ctx : Ctx) (name : Name) (cls : Expr → MetaM Expr)
     return (← mkForallFVars #[s] (← cls (ctx.leaves s)), ← mkLambdaFVars #[s] value)
   ctx.declareInstance (ctx.T ++ `Leaves ++ name) type value (binders := binders)
 
-/-! ## 2. The equivalence with the sum over shapes
-
-`T.toSigma` and `T.ofSigma` are inverse by induction on `T`, and `T` gets the σ-algebra pulled back
-along `toSigma`, from the sum σ-algebra of `Shapes.lean`. -/
+/-! ## 2. The equivalence with the sum over shapes -/
 
 /-- A function of `p : Σ s, T.Leaves s`, by induction on the shape `p.1`, of type
 `motiveAt s v`, and given by `arm c slots vs` on the leaves `v` of shape `c slots`, whose components
@@ -226,10 +221,7 @@ def Ctx.addShapeFn (ctx : Ctx) : MetaM Unit := do
       ctx.declare name type (← mkLambdaFVars xs (← mkEqRefl lhs))
       addSimpTheorem simpExtension name (post := true) (inv := false) .global (eval_prio default)
 
-/-! ## 3. Constructors
-
-Each constructor `c` is a measurable embedding, since the splitting of its fields into shape index
-and leaves (`Ctx.splitFields`) is a measurable equivalence from `Shapes.lean`. -/
+/-! ## 3. Constructors -/
 
 /-- The type `A ≃ᵐ B`. -/
 def measurableEquivTy (A B : Expr) : MetaM Expr := mkAppOptM ``MeasurableEquiv #[A, B, none, none]

@@ -25,12 +25,11 @@ def fDivBound (K : Type w) (weight : B → K → ℝ → ℝ) (thresh : B → K 
     GradedDivergence.{u} B :=
   fun b _ _ μ ν ↦ ∀ k, fDiv (weight b k) μ ν ≤ thresh b k
 
-/-- A graded `f`-divergence bound holds iff `fDiv (weight b k) μ ν ≤ thresh b k` for every `k`. -/
 theorem fDivBound_def {b : B} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
     fDivBound K weight thresh b μ ν ↔ ∀ k, fDiv (weight b k) μ ν ≤ thresh b k :=
   Iff.rfl
 
-/-! ## Structural properties: conditions on `weight` and `thresh` -/
+/-! ## Structural properties -/
 
 /-- Weights that shrink and thresholds that grow with the budget give a graded divergence. -/
 theorem isGraded_fDivBound [LE B] [Top B] (hw : ∀ b k, ConvexOn ℝ (Ici 0) (weight b k))
@@ -76,7 +75,7 @@ theorem isBudgetClosed_fDivBound [LT B] (hw : ∀ b b' k, weight b k = weight b'
     (fDivBound.{u} K weight thresh).IsBudgetClosed where
   of_forall_gt h k := hthresh _ k _ fun b' hb ↦ hw _ b' k ▸ h b' hb k
 
-/-! ## Composability: from a chain rule on `fDiv` (Thm. 4.9), via finite spaces (Thm. 4.6) -/
+/-! ## Composability -/
 
 /-- Composability from a per-index chain rule on nonempty inputs (Thm. 4.9); `hpos` handles an
 empty input space, where both composites are zero. -/

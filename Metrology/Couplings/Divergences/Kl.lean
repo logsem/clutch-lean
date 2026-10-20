@@ -5,9 +5,8 @@ public import Metrology.Couplings.Divergences.Bof
 
 /-! # KL divergence on sub-probability measures
 
-`klDivergence` is the Barthe–Olmedo divergence at `γ = 0` (ICALP 2013). Main results: composition
-for kernels of equal mass (`klDivergence_comp_of_mass_eq`) and its failure in general
-(`not_isComposable_kl`). -/
+`klDivergence` is the Barthe–Olmedo divergence at `γ = 0` (ICALP 2013): it composes along kernels
+of equal mass (`klDivergence_comp_of_mass_eq`) but not in general (`not_isComposable_kl`). -/
 
 @[expose] public section
 
@@ -58,7 +57,6 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
 `klFun` used to prove the finite chain rule. -/
 noncomputable def klTerm (p q : ℝ) : ℝ := p * Real.log (p / q) + q - p
 
-/-- Away from `q = 0 < p`, the perspective of `klFun` is the pointwise KL term. -/
 theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
     persp klFun p q = klTerm p q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -113,10 +111,7 @@ theorem fDiv_klFun_eq_sum {I : Type*} [Fintype I] [MeasurableSpace I]
   exact .inl (h i (hq.resolve_right (measure_ne_top _ _)))
 
 /-- Chain rule for generalized KL between finite spaces when the two kernels lose the same mass
-at every point (Rocq proves it only at mass `1`, `KL_top_composable_gen` under `FillKL`).
-
-Proof idea: log-sum (`klTerm_sum_le`), split each product term (`klTerm_mul`), and the cross term
-dies by equal mass. -/
+at every point (Rocq proves it only at mass `1`, `KL_top_composable_gen` under `FillKL`). -/
 theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Measure (ULift.{u} (Fin M)))
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
     (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
@@ -133,7 +128,6 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   rcases eq_or_ne d ⊤ with hdt | hdt
   · rw [hdt, EReal.add_top_of_ne_bot (ne_bot_of_le_ne_bot EReal.zero_ne_bot he₀)]
     exact le_top
-  -- finiteness and absolute continuity
   have hμ : μ₁ ≪ μ₂ := absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun he
   have hκ (j) : κ j ≪ η j :=
     absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun (ne_top_of_le_ne_top hdt (hd j))
@@ -152,14 +146,12 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   have hD (j) : ∑ i, klTerm (κ j {i}).toReal (η j {i}).toReal ≤ d.toReal := by
     have := hd j
     rwa [fDiv_klFun_eq_sum _ _ fun i h ↦ hκ j h, hdR, EReal.coe_le_coe_iff] at this
-  -- zero patterns for `klTerm`
   have hp0 (j) : (μ₂ {j}).toReal = 0 → (μ₁ {j}).toReal = 0 := by
     simp only [ENNReal.toReal_eq_zero_iff, measure_ne_top, or_false]
     exact fun h ↦ hμ h
   have hk0 (j i) : (η j {i}).toReal = 0 → (κ j {i}).toReal = 0 := by
     simp only [ENNReal.toReal_eq_zero_iff, measure_ne_top, or_false]
     exact fun h ↦ hκ j h
-  -- masses: equal per kernel row, at most `1`
   have hmassR (j) : ∑ i, (κ j {i}).toReal = ∑ i, (η j {i}).toReal := by
     rw [sum_toReal_singleton, sum_toReal_singleton, hmass]
   have hm1 (j) : ∑ i, (κ j {i}).toReal ≤ 1 := by
@@ -173,7 +165,6 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
   rw [fDiv_klFun_eq_sum _ _ hbind, fDiv_klFun_eq_sum _ _ fun j h ↦ hμ h, hdR, ← EReal.coe_add,
     EReal.coe_le_coe_iff]
   simp_rw [toReal_comp_singleton_eq_sum]
-  -- log-sum (klTerm_sum_le)
   calc ∑ i, klTerm (∑ j, (μ₁ {j}).toReal * (κ j {i}).toReal)
         (∑ j, (μ₂ {j}).toReal * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, klTerm ((μ₁ {j}).toReal * (κ j {i}).toReal)
@@ -201,7 +192,6 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
         gcongr
         · exact mul_le_of_le_one_left (hg0 j) ((hmassR j).symm ▸ hm1 j)
         · exact hD j
-    -- bound the μ₁-mass by 1
     _ ≤ ∑ j, klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal + d.toReal := by
         rw [Finset.sum_add_distrib, ← Finset.sum_mul]
         gcongr

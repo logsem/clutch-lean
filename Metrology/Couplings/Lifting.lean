@@ -5,8 +5,7 @@ public import Metrology.Couplings.Divergence
 /-! # Graded liftings
 
 `GradedLifting B` relates two measures within a budget, leaving a per-pair leftover (Approximate
-Span Liftings, §5); this file gives `Rel`, the law classes (`IsLawful`, `HasBind`, `IsSound`) and
-derived laws such as `HasBind.bind_rel` and `Rel.prod`. -/
+Span Liftings, §5): relational liftings `Rel`, the law classes, and their derived laws. -/
 
 @[expose] public section
 
@@ -24,9 +23,7 @@ def GradedLifting (B : Type v) : Type (max v (u + 1)) :=
 
 namespace GradedLifting
 
-/-! ## Relations as leftovers
-
-A relation `S` is the leftover `relCost S` (`0` on `S`, `⊤` off it); `Rel` lifts it. -/
+/-! ## Relations as leftovers -/
 
 section relCost
 

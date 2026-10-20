@@ -4,9 +4,8 @@ public import Metrology.ProbLang.Metatheory
 
 /-! # Paired value substitutions
 
-Association lists of value pairs, with projections to `SubstMap` for the left and right sides.
-Used by the binary logical relation to close both sides of an open term at once: `vs.fst` and
-`vs.snd` feed `Exp.substMap`. -/
+Association lists of value pairs; the binary logical relation closes both sides of an open term at
+once by feeding the projections `vs.fst` and `vs.snd` to `Exp.substMap`. -/
 
 @[expose] public section
 

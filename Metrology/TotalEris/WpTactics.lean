@@ -22,7 +22,7 @@ open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode
 
-/-! ## Context-lifted pure step (lemma consumed by `twp_pure`) -/
+/-! ## Context-lifted pure step -/
 
 section
 variable {rT : Type _} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
@@ -36,7 +36,7 @@ public theorem ErisWpGS.twp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e
 
 end
 
-/-! ## Goal parsing: running a tactic on a `tglWp` goal -/
+/-! ## Goal parsing -/
 
 /-- The pieces of a `tglWp E e Φ` proof-mode goal, with its typeclass instances. -/
 meta structure TglWpGoal where
@@ -81,7 +81,7 @@ meta def runTacticTglWp {β : Type} (k : MVarId → TglWpGoal → ProofModeM β)
     have Φ : Q(Val $α → IProp $GF) := args[6]!
     k mvar { instPL, instWp, hyps, E, e, Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
-/-! ## `twp_bind` — focus on a subexpression by auto-discovering its context -/
+/-! ## `twp_bind` -/
 
 /-- `twp_bind e` rebases `tglWp E (K.fill e) Φ` to `tglWp E e (…)`, finding `K`. -/
 elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
@@ -108,7 +108,7 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
-/-! ## `twp_pure` — take a pure step at a redex, auto-discovering its context -/
+/-! ## `twp_pure` -/
 
 /-- `twp_pure_core [e]` takes one `PureExec` step, at `e` if given. The side condition is
 tried with `is_value`, else left as a goal. -/
@@ -135,7 +135,7 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
-/-! ## `twp_value` — discharge a value WP (semantic value head) -/
+/-! ## `twp_value` -/
 
 /-- `twp_value` reduces `tglWp E e Φ` to `Φ v` when `e.toVal? = some v`. -/
 elab "twp_value" : tactic =>
@@ -167,10 +167,10 @@ elab "twp_value" : tactic =>
     let valPf ← mkAppOptM valLemma (#[α, instPL, GF, instWp, E, e, v, Φ, hproof].map some)
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
-/-! ## Cleanup + composite tactics -/
+/-! ## Composite tactics -/
 
-/-- `twp_pure [e]` takes one pure step. `pl_step_simp` is propositional, so it cannot
-live in the defeq-only `reduceExp`. -/
+-- `pl_step_simp` is propositional, so it cannot live in the defeq-only `reduceExp`.
+/-- `twp_pure [e]` takes one pure step. -/
 macro "twp_pure" focus:(ppSpace colGt term:max)? : tactic =>
   `(tactic| (twp_pure_core $[$focus]?; try simp only [pl_step_simp]))
 

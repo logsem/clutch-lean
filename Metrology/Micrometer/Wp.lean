@@ -4,9 +4,8 @@ public import Metrology.Micrometer.ProgCoupl
 
 /-! # Micrometer weakest precondition
 
-`wp L E e Φ`, the guarded fixpoint of `wpPre` (a spec phase, then a value or one coupled program
-step, a later and another spec phase), with `wp_unfold`, `WP[L] e @ E {{ Φ }}` and
-`wp_strong_mono`. -/
+`wp L E e Φ` is the guarded fixpoint of `wpPre`: a spec phase, then a value or one coupled
+program step, a later and another spec phase. Main result: `wp_strong_mono`. -/
 
 @[expose] public section
 
@@ -228,7 +227,6 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
     iintro %σ₂ %ρ₂ %b₂ HZ₁
     cases htv : e'.toVal? with
     | some v =>
-      -- At a value: close the mask and apply the postcondition update.
       iapply specCoupl_ret
       imod HZ₁ with ⟨Hσ', Hs', Hb', HΦv⟩
       imod Hclose
@@ -237,7 +235,6 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
       imodintro
       iframe
     | none =>
-      -- At a step: keep the program coupling and use `IH` under its later.
       iapply specCoupl_ret
       iapply progCoupl_mono
       iframe HZ₁
@@ -304,7 +301,6 @@ theorem wp_wand_r {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} :
 
 /-! ## Non-expansiveness -/
 
-/-- `wp` is non-expansive in the postcondition, by strong induction on the step index. -/
 theorem wp_ne_aux {E : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp GF} {n : Nat}
     (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp L E e Ψ := by
   induction n using Nat.strong_induction_on generalizing e Φ Ψ with

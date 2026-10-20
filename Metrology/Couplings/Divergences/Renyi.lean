@@ -6,8 +6,7 @@ public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 /-! # Rényi divergence
 
 `renyiDivergence α` bounds the moment `fDiv (·^α)` by `e^{(α-1)ρ}`, i.e. `renyiDiv α ≤ ρ`
-(`renyiDivergence_iff_renyiDiv_le`);
-main result: Rényi budgets add (`isComposable_renyi`, Thm. 4.11). -/
+(Def. 2.2); main result: Rényi budgets add (`isComposable_renyi`, Thm. 4.11). -/
 
 @[expose] public section
 
@@ -64,8 +63,7 @@ theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
 theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
   EReal.coe_ennreal_nonneg _
 
-/-- The Rényi threshold is multiplicative:
-`renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ'`. -/
+/-- The Rényi threshold turns sums of budgets into products. -/
 theorem renyiThresh_add (ρ ρ' : ℝ≥0∞) :
     renyiThresh α (ρ + ρ') = renyiThresh α ρ * renyiThresh α ρ' := by
   rw [renyiThresh, mul_add, expBudget_add, EReal.coe_ennreal_mul, renyiThresh, renyiThresh]
@@ -121,10 +119,7 @@ end GradedDivergence
 namespace ProbabilityTheory
 open Real ENNReal
 
-/-! ## Support: the weight `t ↦ t ^ α`
-
-Multiplicativity (`persp_rpow_mul`) gives the product chain rule `fDiv_rpow_comp_le` behind
-composability; monotonicity in each argument gives `IsRightMonotone` and `IsLeftAntitone`. -/
+/-! ## Support: the weight `t ↦ t ^ α` -/
 
 variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 
@@ -318,7 +313,7 @@ theorem le_ofReal_exp_mul_rpow_iff {a b : ℝ≥0∞} {γ c : ℝ} (hγ : 0 ≤ 
   rw [hb', ← ofReal_mul (exp_pos _).le, le_ofReal_iff_toReal_le ha (by positivity)]
 
 /-- Between scaled point masses, a finite Rényi budget is the Hölder bound
-`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}` (used by `RenyiCodensity.lean`). -/
+`a ≤ e^{(α - 1) ρ / α} b^{(α - 1) / α}`. -/
 theorem renyiDivergence_smul_dirac_iff (hα : 1 < α) (hρ : ρ ≠ ⊤) {a b : ℝ≥0∞} (ha : a ≠ ⊤)
     (hb : b ≠ ⊤) :
     renyiDivergence α ρ (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) ↔

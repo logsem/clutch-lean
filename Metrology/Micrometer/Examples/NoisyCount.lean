@@ -25,8 +25,6 @@ open GradedDivergence (dp codensity codensity_complete dp_laplace)
 namespace ProbLang
 namespace NoisyCount
 
-/-! ## The sampler spec (assumed, not implemented) -/
-
 variable {lap : Val ℝ} {b : ℝ≥0} {n : ℕ}
 
 /-- Assumed rule for the sampler `lap`: `lap #a` against a spec copy of `lap #a'` is coupled like a
@@ -39,8 +37,6 @@ def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrdere
     (⤇ K.fill pl({Exp.ofVal lap} #(.real a')) ∗ ↯b c ∗
       (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#(.real y)) -∗ Φ (.real x)) ⊢
       wp L E pl({Exp.ofVal lap} #(.real a)) Φ)
-
-/-! ## Adjacency and sensitivity -/
 
 /-- Databases that differ in at most one entry. -/
 def Adjacent (db db' : Fin n → Bool) : Prop :=

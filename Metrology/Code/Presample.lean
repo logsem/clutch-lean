@@ -7,7 +7,6 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Presample programs: two tape draws in either order
 
-Programs for the tape example: `drawAB` and `drawBA` draw from two tapes in opposite orders.
 `Micrometer/Examples/Presample` proves `drawAB` refines `drawBA` (`drawAB_refines_drawBA`), hence
 is at most as likely on every event (`drawAB_le_drawBA`). -/
 

@@ -9,9 +9,8 @@ public import Metrology.Micrometer.OpenInv
 
 /-! # Refinement rules without coupled draws
 
-Pure and spec steps, embedding a left `wp`, structural, value and credit rules for `refines`
-(`refines_pure_l`, `refines_wp_l`, `refines_wand`, `refines_of_absorbing`, `refines_get_ec`).
-Coupled draws are in `AppRelRules`. -/
+Pure and spec steps, embedding a left `wp`, and structural, value and budget-credit rules for
+`refines`; coupled draws are in `AppRelRules`. -/
 
 @[expose] public section
 
@@ -97,10 +96,7 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
   imodintro
   iapply HRef $$ %K' %b HKt' Hna Herr Hpos
 
-/-! ## Steps on the right (spec program)
-
-`refines_step_r` and `refines_steps_r` run the right program by spec updates; the heap and tape
-rules below are instances of `refines_step_r`. -/
+/-! ## Steps on the right (spec program) -/
 
 /-- Run the right program by a spec update that ends in a value. -/
 theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
@@ -265,10 +261,8 @@ theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
 
 /-! ## Budget-credit rules
 
-An absorbing credit discharges any refinement; amplification climbs from `↯b (s ε)` to the
-absorbing `↯b (s 1)` along any slack map `s`. The `_of_bc` forms take the seed credit as an
-argument and work for every budget (dp included, at `s = dpSlack`); the unseeded forms draw the
-seed from the threaded budget, which needs every positive budget to carry slack (tv). -/
+The `_of_bc` forms take the seed credit as an argument and work for every budget (dp included,
+at `s = dpSlack`); the unseeded forms draw it from the threaded budget, which needs slack (tv). -/
 
 section Credits
 variable [CanonicallyOrderedAdd B]
@@ -283,9 +277,8 @@ omit [OrderTop B] [CanonicallyOrderedAdd B] in
 the divergence class `GradedDivergence.HasSlack`. -/
 abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
 
-/-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b` (needs
-every positive budget to split, `hsplit`). This is the only way to reach the positive credit
-threaded through `refines`. (`ec` is Rocq's "error credit"; here it is a budget credit.) -/
+/-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b`; the
+only way to reach the credit threaded through `refines` (`ec` is Rocq's "error credit"). -/
 theorem refines_get_ec (hsplit : PosSplits B)
     {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by

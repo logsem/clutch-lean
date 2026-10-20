@@ -117,8 +117,7 @@ theorem one_add_toENNReal_nsmul (k : ℕ) (c : PowerBudget) :
   | zero => simp
   | succ k ih => rw [succ_nsmul, toENNReal_add, pow_succ, ← ih]; ring
 
-/-- Finite power budgets cancel on the left, as the Micrometer coupling rules require
-(`IsAddLeftRegular c`). -/
+/-- Finite power budgets cancel on the left. -/
 theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) :
     IsAddLeftRegular c := fun a b h ↦ by
   have key (x : PowerBudget) :
@@ -142,7 +141,7 @@ theorem toENNReal_ofReal (c : ℝ) : toENNReal (ofReal c) = ENNReal.ofReal c :=
 theorem isAddLeftRegular_ofReal (c : ℝ) : IsAddLeftRegular (ofReal c) :=
   isAddLeftRegular_of_ne_top (by simp)
 
-/-- `k` composed budgets `c` are `(1 + c)^k - 1`; used to state `k`-fold `χ²` composition. -/
+/-- `k` composed budgets `c` are `(1 + c)^k - 1`. -/
 theorem nsmul_ofReal {c : ℝ} (hc : 0 ≤ c) (k : ℕ) : k • ofReal c = ofReal ((1 + c) ^ k - 1) := by
   apply toENNReal.injective
   rw [toENNReal_ofReal, ENNReal.ofReal_sub _ zero_le_one, ENNReal.ofReal_pow (by positivity),

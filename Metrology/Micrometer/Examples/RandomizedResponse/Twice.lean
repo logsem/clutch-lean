@@ -9,9 +9,7 @@ import Metrology.ProbLang.Syntax.Notation
 /-! # Randomized response on two bits is zCDP
 
 Each draw spends `(ln 3, 0)` in the zCDP lifting, so the pair is `(ln 9, 0)`-zCDP, and `zcdpToDp`
-gives `(ln 9, δ)`-DP for every `δ > 0`. The refinement is proved in both styles: `wp_rr2`
-(spec) feeds `rr2_coupling`/`rr2_dp`, and `rr2_refines` (relational) feeds the mechanism form
-`rr2_zCDP`. -/
+gives `(ln 9, δ)`-DP for every `δ > 0`. -/
 
 open scoped ENNReal
 
@@ -76,7 +74,6 @@ theorem wp_rr2 (b₁ b₂ b₁' b₂' : Bool) :
   iapply wp_rr2_fill []
   iframe Hj Hb
   iintro %c₁ %c₂ Hj
-  -- the spec holds the pair expression; restate it as Exp.ofVal of the pair value
   rw [Exp.ofVal]
   iapply spec_fill_nil_exists _ $$ Hj
 

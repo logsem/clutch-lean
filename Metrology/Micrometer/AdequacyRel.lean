@@ -11,9 +11,8 @@ public import Iris.Instances.Lib.FUpd
 
 /-! # Relational adequacy
 
-A closed refinement proved for every ghost-state instance gives a lifting `L.Rel b (adequacyRel φ)`
-of the two limit outputs (`approximates_coupling`), and a divergence bound at equal results
-(`approximates_div`). -/
+A closed refinement proved for every ghost-state instance relates the two limit outputs at budget
+`b` (`approximates_coupling`) and bounds their divergence at equal results (`approximates_div`). -/
 
 @[expose] public section
 

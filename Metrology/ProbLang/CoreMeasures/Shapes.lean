@@ -8,9 +8,7 @@ public import Metrology.ProbLang.Measure
 # Types as sums over shapes
 
 Writes an inductive type `T` as a sum `Σ s, V s` over *shapes* (constructors and countable fields)
-with *leaves* (other fields) on each. Gives the lemmas the derived `MeasurableSpace T` uses:
-constructors are measurable embeddings, maps out of `T` are measurable shape by shape, and
-singletons are measurable.
+with *leaves* (other fields) on each, for the lemmas the derived `MeasurableSpace T` uses.
 -/
 
 open MeasureTheory Set

@@ -72,8 +72,7 @@ noncomputable def dpLhs : BindLaw (codensity dp.{u}) where
     classical
     rintro _ _ _ _ _ _ _ _ _ R _ μ ν f g _ _ ⟨ε₁, ε₂, δ₁, D, S, hD, hμ, hν, hS, hR, hb⟩ _ hk
     refine IsLawful.mono (L := codensity dp) ?_ hb le_rfl
-    -- `codensity_dp_lhs` leaves `if S x y then (ε₂, D x) else ⊤`: on S this is `R x y`, off S
-    -- nothing is owed
+    -- as in `dpRhs`, with `D x` for `D y`
     · exact HasBind.bind (codensity_dp_lhs hS hD) fun x y hxy ↦ by
         by_cases hxy' : S x y
         · simpa [hxy', hR x y hxy'] using hk x y (by simpa [hR x y hxy', hxy'] using hxy)
@@ -104,9 +103,8 @@ instance headShift_dpLhs : (dpLhs.{u}).HeadShift where
 /-! ## DP choice -/
 
 /-- The head of the DP choice rule: two DP liftings of the same pair, chosen by a measurable left
-predicate `P` whose sides they send to the sides of a measurable `T`, continuing at `(ε₂, δ₂)` on
-`P` and `(ε₂', δ₂)` off it, paid as `(max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂)`: each branch pays
-only its own ε, and the right side's `T` reveals which branch was taken (Rocq `dp_choice_head`). -/
+predicate `P` that a measurable right set `T` reveals, so each branch pays only its own ε (Rocq
+`dp_choice_head`). -/
 def DpChoiceHead (μ : Measure X) (ν : Measure Y) (R : X → Y → ℝ≥0∞ × ℝ≥0∞)
     (b : ℝ≥0∞ × ℝ≥0∞) : Prop :=
   ∃ (ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞) (S₁ S₂ : X → Y → Prop) (P : Set X) (T : Set Y),
@@ -126,8 +124,7 @@ noncomputable def dpChoice : BindLaw (codensity dp.{u}) where
       ⟨ε₁, δ₁, ε₁', δ₁', ε₂, ε₂', δ₂, S₁, S₂, P, T, hP, hT, hμ, hν, h₁, h₂, hPT₁, hPT₂, hR₁, hR₂,
         hb⟩ _ hk
     refine IsLawful.mono (L := codensity dp) ?_ hb le_rfl
-    -- `codensity_dp_choice` leaves `(ε₂, δ₂)` on `S₁` if `x ∈ P`, `(ε₂', δ₂)` on `S₂` otherwise,
-    -- and `⊤` off the relation: on it this is `R x y`, off it nothing is owed
+    -- as in `dpRhs`, branch by branch
     · refine HasBind.bind (codensity_dp_choice h₁ h₂ hP hT hPT₁ hPT₂) fun x y hxy ↦ ?_
       by_cases hx : x ∈ P
       · by_cases hxy' : S₁ x y

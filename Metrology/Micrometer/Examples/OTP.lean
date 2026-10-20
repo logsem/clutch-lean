@@ -13,9 +13,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over `ℤ/N`, refining the ideal sampler in any graded lifting
 
-Main result `otp_div_gen`: divergence 0 in every sound lifting; `otp_dp` is its tv instance.
-Suffixes: `_gen` any lifting, none = codensity tv, `_closed` at `MicrometerFunctor`, `_rev` the
-ideal sampler on the left. -/
+Main result `otp_div_gen` (divergence 0 in every sound lifting). Suffixes: `_gen` any lifting,
+none = codensity tv, `_closed` at `MicrometerFunctor`, `_rev` the ideal sampler on the left. -/
 
 open scoped ENNReal
 
@@ -31,11 +30,9 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- Adds the key `m` modulo `N`. -/
 def addMod (m N n : Int) : Int := (n + m) % N
 
-/-- Reduction modulo `N > 0` lands in `[0, N)`. -/
 theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
   ⟨Int.emod_nonneg _ hN.ne', Int.emod_lt_of_pos _ hN⟩
 
-/-- Adding `m` modulo `N` maps `[0, N)` into itself. -/
 theorem addMod_dom (m N : Int) (hN : 0 < N) :
     ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
   fun _ _ _ => emod_bounds _ hN
@@ -112,7 +109,6 @@ equality with zero error. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ n : Int, v = .int n ∧ v' = .int n
 
-/-- Related integers satisfy `otpφ`. -/
 theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
     (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_int
@@ -121,7 +117,6 @@ theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS r
   exact ⟨n, hv, hv'⟩
 
 omit [LawfulProbLangℝ rT] in
-/-- Programs related by `adequacyRel otpφ` are equal. -/
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
   rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
   exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
@@ -146,7 +141,7 @@ theorem otp_adequate_rev_gen (GF : BundledGFunctors) [RefinesPreGS rT B GF] (m N
   refines_coupling (GF := GF) (fun _ _ => lrel_int) otpφ _ _ σ σ' (fun _ _ => lrel_int_to_otpφ)
     fun _ _ => otp_refines_rev_gen m N hN
 
-/-- The distributions of the encryption and the ideal sampler are coupled at budget `0`. -/
+/-- `otp_adequate_gen` at `MicrometerFunctor`. -/
 theorem otp_adequate_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_gen (MicrometerFunctor rT B) m N hN σ σ'

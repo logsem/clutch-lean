@@ -109,7 +109,7 @@ end Distribution
 /-! ## One round, in any lifting -/
 
 /-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`.
-This is the one fact each divergence file proves; `rr_refines_of` consumes it as `hcpl`. -/
+This is the one fact each divergence file proves. -/
 def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
   ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
 
@@ -128,7 +128,6 @@ theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (
     (hcpl : RRCoupling L c) (b b' : Bool) :
     ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
-  -- couple the draws along equal reports; afterwards both sides are deterministic
   rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
   iframe Hb
   iintro %r %r' %hR
@@ -175,7 +174,6 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #.unit))
   tp_bind (pl% rand(#4, #.unit))
-  -- couple the draws along equal reports, then run both `if`s to their reported bits
   iapply wp_couple_rand_rand_spend 4 (by norm_num) _ c hc (hcpl b b')
   iframe Hj Hb
   iintro %r %r' %hR Hj

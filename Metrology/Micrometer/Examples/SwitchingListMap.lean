@@ -108,8 +108,7 @@ end Recursions
 
 /-! ## Map operations: `wp` specifications
 
-Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions.
-`wp_X` runs `X` in the program; `wp_X_r` runs it in the spec `⤇` under context `K`. -/
+Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions. -/
 
 section MapOps
 
@@ -127,7 +126,7 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   iapply wp_alloc
   iexact HΦ
 
-/-- Spec-side `initMap ()`: allocates a spec location holding the empty map. -/
+/-- Spec-side `wp_initMap`. -/
 theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &initMap #.unit) ∗
     (∀ ℓ : Loc, ⤇ K.fill pl(#(.loc ℓ)) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗
@@ -157,7 +156,7 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
   wp_value
   iapply HΦ $$ Hl
 
-/-- Spec-side `getMap ℓ k`: returns the lookup of `k` and leaves the map unchanged. -/
+/-- Spec-side `wp_getMap`. -/
 theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &getMap #(.loc ℓ) #(.int k)) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
@@ -192,7 +191,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
   iframe Hl
   iexact HΦ
 
-/-- Spec-side `setMap ℓ k y`: conses the binding `(k, y)` onto the stored map. -/
+/-- Spec-side `wp_setMap`. -/
 theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
     ⤇ K.fill (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) ∗

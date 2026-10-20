@@ -7,8 +7,7 @@ public import Metrology.Couplings.Codensity
 
 /-! # The DP divergence
 `dp (ε, δ)` is the DP inequality `μ S ≤ e^ε ν S + δ` on every event (paper §4.3). Main results:
-DP composition `isComposable_dp` and the test-function forms `codensity_dp_iff` and
-`codensity_dp_rel_iff`. -/
+DP composition `isComposable_dp` and the test-function form `codensity_dp_iff`. -/
 
 @[expose] public section
 
@@ -339,8 +338,7 @@ theorem codensity_dp_top_left : dp.codensity (⊤, δ) R μ ν := by
   simp at hε
 
 /-- A DP codensity lifting bounds `∫⁻ f ∂μ` by `expBudget ε * ∫⁻ g ∂ν + δ` for `[0, 1]`-valued
-test functions. Proof: test with the mass kernels `x ↦ f x • δ_*`, `y ↦ g y • δ_*` into a point, at
-slack `0`. -/
+test functions. -/
 theorem lintegral_le_of_codensity_dp (hε : ε ≠ ⊤) (h : dp.codensity (ε, δ) R μ ν)
     {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞} (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1)
     (hg1 : ∀ y, g y ≤ 1)
@@ -362,8 +360,7 @@ theorem le_add_of_min_expBudget_mul_le {k l r₁ r₂ c₁ c₂ : ℝ≥0∞} (h
   · rw [min_eq_left h1, mul_one]
     exact le_add_right (le_add_right (hk.trans (one_le_expBudget _)))
 
-/-- `[0, 1]`-valued test functions that the leftover relates give a DP codensity lifting: a
-test passed with slack `c` becomes a test function once `c.2` is cut off. -/
+/-- `[0, 1]`-valued test functions that the leftover relates give a DP codensity lifting. -/
 theorem codensity_dp_of_lintegral_le [IsSubProbabilityMeasure μ]
     (h : ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) → (∀ y, g y ≤ 1) →
       (∀ x y, (R x y).1 < ⊤ → f x ≤ expBudget (R x y).1 * g y + (R x y).2) →

@@ -5,9 +5,8 @@ public import Metrology.Couplings.Divergences.Tv
 
 /-! # DP bind shapes beyond uniform composition
 
-Adaptive DP composition where the second budget depends on the right outcome, the left outcome,
-or a left choice: `codensity_dp_rhs`, `codensity_dp_lhs`, `codensity_dp_choice`. They are the
-keystones of `BindLaw.dpRhs`/`dpLhs`/`dpChoice` in `BindLaws.lean` (Rocq `instances_dp.v`). -/
+Adaptive DP composition whose second budget depends on the right outcome, the left outcome, or a
+left choice; these back `BindLaw.dpRhs`/`dpLhs`/`dpChoice` (Rocq `instances_dp.v`). -/
 
 @[expose] public section
 

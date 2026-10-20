@@ -244,7 +244,7 @@ theorem limExec_step (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec 
   · simp only [hv, ↑reduceIte]
     exact limExec_not_final hv
 
-/-! ## `pexecN`: iterated `stepOrFinal`, the `n`-step unfolding
+/-! ## `pexecN`: the `n`-step unfolding
 
 Unlike `execN` (where `execN 0 = 0`), `pexecN` keeps unfinished runs, so it is additive
 (`pexecN_plus`); `limExec_pexecN` is the `n`-step unfolding of `limExec`. -/

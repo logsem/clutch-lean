@@ -7,8 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over the unit interval
 
-The continuous analogue of `Code/OTP`: the encryption program `otp_enc` and the ideal sampler
-`otp_ideal`. The proof that they refine each other is in `Micrometer/Examples/ContinuousOTP`. -/
+The continuous analogue of `Code/OTP`; the proof that `otp_enc` and `otp_ideal` refine each other
+is in `Micrometer/Examples/ContinuousOTP`. -/
 
 namespace ProbLang
 namespace ContinuousOTP

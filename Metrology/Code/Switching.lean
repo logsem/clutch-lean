@@ -8,9 +8,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Switching lemma programs
 
-The lazy random function, the lazy random permutation, and the weak PRF/PRP games (`wPRF`, `wPRP`)
-that compare them. Port of clutch's `prp_prf_weak.v`, with each map one assoc-list value in one
-cell rather than linked cells: same interface, far less heap reasoning. -/
+Lazy random functions and permutations and the weak PRF/PRP games. Port of clutch's
+`prp_prf_weak.v`, each map one assoc-list value in one cell: same interface, less heap reasoning. -/
 
 namespace ProbLang
 

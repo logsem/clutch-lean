@@ -10,9 +10,8 @@ public import Mathlib.Probability.Distributions.Uniform
 
 /-! # Head reduction
 
-`headStep`, one head-reduction step of ProbLang as a measure on configurations, and the `head_case`
-tactic. Main results: `head_step_mass`, `headStep.measurable` (hence `headStepKernel`), and the
-support characterisation `HeadStepSupport.possible` / `Possible.headStepSupport`. -/
+`headStep`, one head-reduction step as a measure on configurations, and the `head_case` tactic.
+Main results: `head_step_mass`, `headStep.measurable`, and `HeadStepSupport.possible`. -/
 
 @[expose] public section
 
@@ -506,11 +505,8 @@ theorem Cfg.uniformReal.measurable :
 
 /-! ## Measurability of `headStep`, branch by branch
 
-Each non-trivial branch of `headStep` is a named `def` with its own measurability
-theorem (for elaboration speed); `headStep.measurable` assembles them. Each branch is rewritten as
-`Exp.casesOn` with all arms `0` except the relevant one; the `exp_zero_<ctor>_apply c, h` /
-`baseLit_zero_<ctor>_apply` macros (`CoreMeasures/Recurrences.lean`) close such goals from the
-measurability `h` of that one arm. -/
+Each non-trivial branch is a named `def` with its own measurability theorem (for elaboration
+speed), proved with the `exp_zero_<ctor>_apply` macros of `CoreMeasures/Recurrences.lean`. -/
 
 /-- The `headStep` branch for a unary operation, uncurried over the state and arguments. -/
 @[simp] def headStep.c_unop (p : State rT × UnOp × Exp rT) : Measure (Cfg rT) :=
@@ -1864,10 +1860,7 @@ theorem headStep_exists_support_of_ne_zero
     obtain ⟨r, hr⟩ := LawfulProbLangℝ.unifUnitSupport_nonempty rT
     exact ⟨_, .UrandS hr⟩
 
-/-! ## Pure atomicity of `headStep`
-
-Every head step except `urand` is purely atomic (`headStep_atomic`), with no countability
-assumption on `rT`. -/
+/-! ## Pure atomicity of `headStep` -/
 
 omit [LawfulProbLangℝ rT] in
 theorem isAtomicSupport_isValM {T : Type _} [MeasurableSpace T] (e : Exp rT) {m : Measure T}
@@ -1905,7 +1898,7 @@ theorem isAtomicSupport_uniform (z : Int) (σ : State rT) :
       unfold Cfg.uniform; simp only [Int.isPos, dite_eq_right hz]
     rw [hrw]; exact isAtomicSupport_dirac _
 
-/-- Every head step except the diffuse `urand` sampler has purely atomic support. -/
+/-- Every head step except the diffuse `urand` sampler has purely atomic support, for any `rT`. -/
 theorem headStep_atomic (e : Exp rT) (σ : State rT) (hne : e ≠ .urand) :
     IsAtomicSupport (headStep ⟨e, σ⟩) := by
   head_case_names

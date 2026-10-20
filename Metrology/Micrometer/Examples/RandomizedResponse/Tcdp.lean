@@ -7,8 +7,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Zcdp
 /-! # Randomized response is tCDP
 
 Maps the zCDP coupling of one round along `zcdpToTcdp`: `k` rounds are `k ln 3`-tCDP below any
-order `ω` (`rrCount_tCDP`), and mapping along `tcdpToDp` gives DP at every slack `δ > 0`
-(`rrCount_DP_of_tCDP`). -/
+order `ω` (`rrCount_tCDP`), and along `tcdpToDp`, DP at every slack (`rrCount_DP_of_tCDP`). -/
 
 open GradedLifting GradedDivergence
 open scoped ENNReal

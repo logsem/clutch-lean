@@ -4,9 +4,8 @@ public import Metrology.Couplings.Divergences.Gaussian
 
 /-! # Rényi divergence of Gaussians, and the Gaussian mechanism is zCDP
 
-The exact Rényi divergence `α (a - a')² / (2 v)` between `N(a, v)` and `N(a', v)`
-(Mironov 2017, Prop. 7), and from it zCDP closeness, the zCDP lifting, and `zCDP_gaussianMech`
-(Bun–Steinke 2016, Prop. 1.6). -/
+The Rényi divergence `α (a - a')² / (2 v)` between `N(a, v)` and `N(a', v)` (Mironov 2017,
+Prop. 7), and from it `zCDP_gaussianMech` (Bun–Steinke 2016, Prop. 1.6). -/
 
 @[expose] public section
 

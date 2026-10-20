@@ -7,9 +7,8 @@ public import Metrology.Couplings.Divergences.Fill
 
 /-! # Markov-tested liftings and equal-mass bind laws for KL and Hellinger
 
-Provides `markovCodensity`, complete for generalized KL and `α`-Hellinger
-(`markovCodensity_complete`), and the bind law `massEq` with instances `BindLaw.kl` and
-`BindLaw.hellinger` (Rocq `GC_KL_full`, `GBL_KL_full`). -/
+`markovCodensity`, complete for generalized KL and `α`-Hellinger, and the bind law `massEq` with
+instances `BindLaw.kl` and `BindLaw.hellinger` (Rocq `GC_KL_full`, `GBL_KL_full`). -/
 
 @[expose] public section
 
@@ -131,9 +130,7 @@ instance isSound_markovCodensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.I
       · simpa [Kernel.id_apply, hxy] using IsGraded.top (dirac x) (dirac y)
     simpa [id_comp] using h (c := 0) (by rwa [add_zero]) (ae_of_all _ fun x y ↦ hkl x y)
 
-/-! ## Completeness from equal-mass composition
-
-The main results: `markovCodensity_complete`, then its KL and Hellinger instances. -/
+/-! ## Completeness from equal-mass composition -/
 
 /-- Equal-mass composition makes the Markov-tested lifting complete: a test that fails on a null
 set is repaired there by the right kernel, and Markov tests lose no mass. -/
@@ -204,8 +201,7 @@ end GradedDivergence
 
 /-! ## Filling costs nothing at equal mass
 
-The analytic input to `massEq`: filling the lost mass of both sides at `none` (`Measure.withBot`)
-never raises an `f`-divergence (tutorial (M7)). -/
+The analytic input to `massEq`. -/
 
 section Fill
 
