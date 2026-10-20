@@ -655,25 +655,24 @@ theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
 
 /-- A typing at one atom lifts to every fresh atom. -/
 theorem Typed.rename_lam {Γ : Tctx} {x : Var} {e : Exp α} {τ τ' : Ty}
-    (_hx : x ∉ e.fv) (he : Typed (Γ.insert x τ) e τ') :
+    (he : Typed (Γ.insert x τ) e τ') :
     ∀ y ∉ insert x e.fv,
       Typed (Γ.insert y τ) (Exp.open' (Exp.close e x) (Exp.fvar y)) τ' := fun y hy => by
   rw [Exp.open_close_subst_lc x y e he.isLocallyClosed]
   exact he.rename x y (by rwa [Finset.union_comm, ← Finset.insert_eq])
 
 theorem Typed.rename_fix {Γ : Tctx} {f : Var} {e : Exp α} {τ τ' : Ty}
-    (_hf : f ∉ e.fv) (he : Typed (Γ.insert f (.arrow τ τ')) e (.arrow τ τ')) :
+    (he : Typed (Γ.insert f (.arrow τ τ')) e (.arrow τ τ')) :
     ∀ g ∉ insert f e.fv,
       Typed (Γ.insert g (.arrow τ τ'))
         (Exp.open' (Exp.close e f) (Exp.fvar g)) (.arrow τ τ') :=
-  rename_lam _hf he
+  rename_lam he
 
 theorem Typed.rename_unpack {Γ : Tctx} {x : Var} {e2 : Exp α} {τ τ2 : Ty}
-    (_hx : x ∉ e2.fv)
     (he2 : Typed (Γ.shift.insert x τ) e2 τ2.shift) :
     ∀ y ∉ insert x e2.fv,
       Typed (Γ.shift.insert y τ)
         (Exp.open' (Exp.close e2 x) (Exp.fvar y)) τ2.shift :=
-  rename_lam _hx he2
+  rename_lam he2
 
 end ProbLang

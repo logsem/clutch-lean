@@ -345,7 +345,7 @@ theorem DetHeadStep.load {ℓ : Loc} {v : Val rT} (σ : State rT) (hlookup : σ.
   .of_det _ _ rfl (by simp [headStep, hlookup])
 
 theorem DetHeadStep.store {ℓ : Loc} {e : Exp rT} {v_old v_new : Val rT}
-    (_hv : IsVal e) (σ : State rT)
+    (σ : State rT)
     (hlookup : σ.heap[ℓ]? = some v_old)
     (hnew : e.toVal? = some v_new) :
     DetHeadStep ⟨.store pl(#(.loc ℓ)) e, σ⟩ ⟨pl(#(.unit)), σ.update_heap (·.insert ℓ v_new)⟩ :=

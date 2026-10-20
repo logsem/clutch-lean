@@ -190,7 +190,7 @@ theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_ne
     have hstate_eq : σ.update_heap (·.insert l v_new) = σ' := by
       simp [hσ', State.update_heap, ExtTreeMap.insert_eq_PartialMap_insert]
     rw [← hstate_eq]
-    exact ((DetHeadStep.store hv σ hlk hnew).toDetStep).fill K
+    exact ((DetHeadStep.store σ hlk hnew).toDetStep).fill K
   iframe
 
 /-- Allocate a tape under an evaluation context. -/

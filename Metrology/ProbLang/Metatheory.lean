@@ -133,7 +133,7 @@ theorem Exp.subst_isClosed {X : ClosedCtx} {e v : Exp α} {x : Var}
 
 /-- Substitutions at different variables commute when `v'` has no `x` free. -/
 theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
-    (hne : x ≠ y) (hv' : x ∉ v'.fv) (_hv'_lc : v'.IsLocallyClosed) :
+    (hne : x ≠ y) (hv' : x ∉ v'.fv) :
     Exp.subst (Exp.subst e x v) y v'
       = Exp.subst (Exp.subst e y v') x (Exp.subst v y v') := by
   induction e with
@@ -157,10 +157,9 @@ theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
 
 /-- Independence of substitutions at distinct, mutually-fresh variables. -/
 theorem Exp.subst_subst_ne {e v v' : Exp α} {x y : Var}
-    (hne : x ≠ y) (hxv' : x ∉ v'.fv) (hyv : y ∉ v.fv)
-    (_hv_lc : v.IsLocallyClosed) (hv'_lc : v'.IsLocallyClosed) :
+    (hne : x ≠ y) (hxv' : x ∉ v'.fv) (hyv : y ∉ v.fv) :
     Exp.subst (Exp.subst e x v) y v' = Exp.subst (Exp.subst e y v') x v := by
-  rw [Exp.subst_subst hne hxv' hv'_lc, Exp.subst_fresh y v v' hyv]
+  rw [Exp.subst_subst hne hxv', Exp.subst_fresh y v v' hyv]
 
 /-! ### α-renaming
 
@@ -286,8 +285,7 @@ theorem Exp.substMap_subst_fvar_comm
     obtain ⟨hw_closed, hvs_rest⟩ := SubstMap.AllClosed_cons.mp hvs
     have hzNotFvY : z ∉ (Exp.fvar (rT := rT) y).fv := by simpa [Exp.fv] using hzy
     rw [Exp.substMap_cons, Exp.substMap_cons, ih hxNotRest hyNotRest hvs_rest,
-      ← Exp.subst_subst_ne hzx hzNotFvY (Exp.notMem_fv_of_isClosed_empty hw_closed x)
-        hw_closed.1 (Exp.IsLocallyClosed.fvar y)]
+      ← Exp.subst_subst_ne hzx hzNotFvY (Exp.notMem_fv_of_isClosed_empty hw_closed x)]
 
 theorem Exp.substMap_isClosed_empty {e : Exp rT} (vs : SubstMap rT)
     (he : e.isClosed .empty) : e.substMap vs = e := by
@@ -615,7 +613,6 @@ theorem Exp.substMap_fv_eq_empty {vs : SubstMap rT} {e : Exp rT}
 `substMap vs (subst E x (.fvar y)) = subst (substMap (vs without y) E) x w`. -/
 theorem Exp.substMap_subst_fvar_lookup
     (vs : SubstMap rT) (E : Exp rT) (x y : Var) (w : Exp rT)
-    (_hxy : x ≠ y)
     (hxNotDom : x ∉ (vs.map (·.1)).toFinset)
     (hvs : SubstMap.AllClosed vs)
     (hyLookup : vs.lookup y = some w)
@@ -690,7 +687,7 @@ theorem Exp.substMap_subst_fvar_lookup
               = (z, v) :: rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
         rw [hfilter_cons]
         rw [Exp.subst_subst_ne (Ne.symm hzx) (Exp.notMem_fv_of_isClosed_empty hv_closed x)
-          (Exp.notMem_fv_of_isClosed_empty hw_closed z) hw_closed.1 hv_closed.1]
+          (Exp.notMem_fv_of_isClosed_empty hw_closed z)]
         rfl
       | none =>
         rw [hr] at hyLookup
@@ -965,11 +962,11 @@ theorem det_or_prob_or_zero [MeasurableSingletonClass rT]
 
 /-! ## Tape and fresh-location updates -/
 
-theorem State.upd_tape_some (σ : State α) (α : Loc) (t : Tape) :
+theorem State.upd_tape_some (σ : State rT) (α : Loc) (t : Tape) :
     (σ.update_tapes (·.insert α t)).tapes[α]? = some t := by
   simp [State.update_tapes]
 
-theorem State.upd_diff_tape_comm {σ : State α} {α β : Loc} {bs bs' : Tape}
+theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
     (hne : α ≠ β) :
     ((σ.update_tapes (·.insert β bs)).update_tapes (·.insert α bs'))
       = ((σ.update_tapes (·.insert α bs')).update_tapes (·.insert β bs)) := by
@@ -986,7 +983,7 @@ theorem State.upd_diff_tape_comm {σ : State α} {α β : Loc} {bs bs' : Tape}
       simp [hαk]
     · simp [hαk, hβk]
 
-theorem State.upd_diff_tape_tot {σ : State α} {α β : Loc} {bs : Tape}
+theorem State.upd_diff_tape_tot {σ : State rT} {α β : Loc} {bs : Tape}
     (hne : α ≠ β) :
     (σ.update_tapes (·.insert β bs)).tapes[α]? = σ.tapes[α]? := by
   simp [State.update_tapes, Std.ExtTreeMap.getElem?_insert, Ne.symm hne]
@@ -1028,7 +1025,7 @@ theorem Std.ExtTreeMap.fresh_insert_of_mem
       simp [hcmp, Ordering.isLE]
   rw [hkeys]
 
-theorem State.fresh_loc_upd_some {σ : State α} {α : Loc} {bs bs' : Tape}
+theorem State.fresh_loc_upd_some {σ : State rT} {α : Loc} {bs bs' : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert α bs').fresh = σ.tapes.fresh :=
   Std.ExtTreeMap.fresh_insert_of_mem σ.tapes h
@@ -1041,7 +1038,7 @@ theorem Std.ExtTreeMap.elem_fresh_ne
   rw [heq, h] at hfresh
   simp at hfresh
 
-theorem State.fresh_loc_upd_swap {σ : State β} {α : Loc} {bs bs' : Tape} {t : Tape}
+theorem State.fresh_loc_upd_swap {σ : State rT} {α : Loc} {bs bs' : Tape} {t : Tape}
     (h : σ.tapes[α]? = some bs) :
     ((σ.tapes.insert α bs').insert (σ.tapes.insert α bs').fresh t)
       = ((σ.tapes.insert σ.tapes.fresh t).insert α bs') := by
@@ -1058,7 +1055,7 @@ theorem State.fresh_loc_upd_swap {σ : State β} {α : Loc} {bs bs' : Tape} {t :
       simp [hαk]
     · simp [hαk, hfk]
 
-theorem State.fresh_loc_lookup {σ : State α} {α : Loc} {bs : Tape} {t : Tape}
+theorem State.fresh_loc_lookup {σ : State rT} {α : Loc} {bs : Tape} {t : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert σ.tapes.fresh t)[α]? = some bs := by
   have hne : σ.tapes.fresh ≠ α := Std.ExtTreeMap.elem_fresh_ne h
@@ -1215,7 +1212,7 @@ theorem State.det_head_step_upd_tapes
 
 theorem State.prim_step_empty_tape [Countable rT] [MeasurableSingletonClass rT]
     {K : ProbLang.Ectx rT} {σ : State rT} {α : Loc} {z : Int} {N : Int}
-    (_hmem : σ.tapes[α]? = some ⟨N, []⟩) :
+    (hmem : σ.tapes[α]? = some ⟨N, []⟩) :
     ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit (.lbl α))), σ⟩
       = ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit .unit)), σ⟩ := by
   have hv_lbl : ¬ (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).isValue := by
@@ -1238,7 +1235,7 @@ theorem State.prim_step_empty_tape [Countable rT] [MeasurableSingletonClass rT]
     rw [show (Exp.lit (rT := rT) .unit).toVal? = some .unit from rfl,
       show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
   simp only [primStep, hdecomp_lbl, hdecomp_unit, Ectx.fillCfg_empty, MeasureTheory.Measure.map_id]
-  simp only [headStep, _hmem]
+  simp only [headStep, hmem]
   rw [ite_self]
 
 end ProbLang

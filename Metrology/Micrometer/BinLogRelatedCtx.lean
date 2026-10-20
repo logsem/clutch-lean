@@ -246,9 +246,9 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
       refine bin_log_related_tlam Δ Γrc' hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv fun A => ?_
       imodintro
       iapply ih HKtail HbindersK' (TyEnv.cons A Δ) Γrc' (HCtx.shift A) Hfr
-    | @unpackL x e2 _ τ_pkg _ hxFvE2 Hty_e2 =>
+    | @unpackL x e2 _ τ_pkg _ _ Hty_e2 =>
       have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
-        Typed.rename_unpack hxFvE2 Hty_e2 y (hy ∘ Finset.mem_union_left _)
+        Typed.rename_unpack Hty_e2 y (hy ∘ Finset.mem_union_left _)
       refine bin_log_related_unpack Δ Γrc' _ (IHinner Γrc' HCtx Hfr)
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         fun A y hy => ?_
@@ -355,10 +355,10 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Ex
     | fold => ih_frame; iapply bin_log_related_fold $$ H
     | unfold => ih_frame; iapply bin_log_related_unfold $$ H
     | tapp => ih_frame; iapply bin_log_related_tapp $$ H
-    | @unpackL x e2 _ τ_pkg _ hxFvE2 Hty_e2 =>
+    | @unpackL x e2 _ τ_pkg _ _ Hty_e2 =>
       ih_frame
       have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
-        Typed.rename_unpack hxFvE2 Hty_e2 y (hy ∘ Finset.mem_union_left _)
+        Typed.rename_unpack Hty_e2 y (hy ∘ Finset.mem_union_left _)
       iapply bin_log_related_unpack_wand Δ Γrc' _
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         (fun A y hy => fundamental L (hRen y hy) (TyEnv.cons A Δ) _

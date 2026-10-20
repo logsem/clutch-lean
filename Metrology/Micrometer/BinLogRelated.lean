@@ -277,11 +277,11 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     obtain ⟨p, hpmem, rfl⟩ := h
     simpa [hvsLookupX] using ValSubstMap.lookup_isSome_of_mem ⟨p.2, hpmem⟩
   have hswapFst :=
-    Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 hxy (by rwa [ValSubstMap.fst_dom])
+    Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [ValSubstMap.fst_dom])
       (ValSubstMap.proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
       (by rw [ValSubstMap.fst_lookup, hvsLookupY]; rfl) hyFvE
   have hswapSnd :=
-    Exp.substMap_subst_fvar_lookup vs.snd τE' x y w2.1 hxy (by rwa [ValSubstMap.snd_dom])
+    Exp.substMap_subst_fvar_lookup vs.snd τE' x y w2.1 (by rwa [ValSubstMap.snd_dom])
       (ValSubstMap.proj_allClosed Prod.snd fun p hp => (hvsClosed p hp).2)
       (by rw [ValSubstMap.snd_lookup, hvsLookupY]; rfl) hyFvE'
   rw [← ValSubstMap.fst_delete] at hswapFst

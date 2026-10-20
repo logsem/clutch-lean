@@ -329,10 +329,10 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
   induction hk with
   | @lam _ x =>
       exact Typed.lam (insert x e.fv)
-        (Typed.rename_lam (hfresh x (by simp [CtxItem.binderAtoms])) he)
+        (Typed.rename_lam he)
   | @fix _ f =>
       exact Typed.fix (insert f e.fv)
-        (Typed.rename_fix (hfresh f (by simp [CtxItem.binderAtoms])) he)
+        (Typed.rename_fix he)
   | appL h2     => exact .app he h2
   | appR h1     => exact .app h1 he
   | unop_int hop       => exact .unop_int he hop
@@ -366,11 +366,11 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
   | unfold      => exact (.tunfold he : Typed _ (.app _root_.ProbLang.recUnfold _) _)
   | tlam        => exact .tlam he
   | tapp        => exact .tapp he
-  | @unpackL x e2 _ _ _ hxfv h2 =>
-      exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack hxfv h2)
+  | @unpackL x e2 _ _ _ _ h2 =>
+      exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack h2)
   | @unpackR x _ _ _ _ h1 =>
       exact Typed.tunpack (insert x e.fv) h1
-        (Typed.rename_unpack (hfresh x (by simp [CtxItem.binderAtoms])) he)
+        (Typed.rename_unpack he)
   | allocTape   => exact .alloc_tape he
   | randL_unit h2 => exact .rand_unit he h2
   | randL_tape h2 => exact .rand he h2

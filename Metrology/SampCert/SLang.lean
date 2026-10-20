@@ -2194,7 +2194,7 @@ theorem probLangApp2_isEmbedding [SLangType T] [ProbLangEmbeddable T]
     -- Bridge to h via subst_subst_ne.
     have hcomm : Exp.subst (Exp.subst body x (as_expr a)) y (as_expr b)
         = Exp.subst (Exp.subst body y (as_expr b)) x (as_expr a) :=
-      Exp.subst_subst_ne hxy (hxas b) (hyas a) (as_expr_lc a) (as_expr_lc b)
+      Exp.subst_subst_ne hxy (hxas b) (hyas a)
     rw [hcomm]
     exact h
 

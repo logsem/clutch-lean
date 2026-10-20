@@ -283,14 +283,12 @@ theorem refines_if {e0 e1 e2 e0' e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
     inext
     iexact IH2
 
-theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF}
-    (_hC : OFE.NonExpansive C)
-    (hCclosed : ∀ v v', (C A).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝) :
+theorem refines_pack (A : lrel rT GF) {e e' : Exp rT} {C : lrel rT GF → lrel rT GF} :
     refines L ⊤ e e' (C A) ⊢ refines L ⊤ e e' (lrel_exists C) := by
   iintro IH
   iapply refines_wand $$ IH
   iintro %v %v' HCA !>
-  ihave %hcl := hCclosed v v' $$ HCA
+  ihave %hcl := (C A).closed v v' $$ HCA
   iunfold lrel_exists
   isplitr; · ipureintro; exact hcl
   iexists A

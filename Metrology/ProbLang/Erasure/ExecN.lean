@@ -359,6 +359,6 @@ theorem execN_tape_presample_expr_eq
             exact hstep (htape_eq.trans htapes)
         | urand =>
           exact uniformReal_close Exp.urand (MeasureTheory.ae_of_all _ fun _ => rfl) rfl
-      · exact erasure_zero_close (e_red := e_red) h hN hzero
+      · exact erasure_zero_close (e_red := e_red) h hzero
 
 end ProbLang

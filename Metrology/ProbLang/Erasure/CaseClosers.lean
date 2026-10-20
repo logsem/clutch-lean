@@ -363,7 +363,7 @@ theorem erasure_tape_close
 /-- A stuck head step (the zero measure) commutes with presampling. -/
 theorem erasure_zero_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {t : Tape} {e_red : Exp rT}
-    (h : σ.tapes[α]? = some t) (_hN : 0 < t.bound)
+    (h : σ.tapes[α]? = some t)
     (hzero : headStep ⟨e_red, σ⟩ = 0) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
               ∂headStep ⟨e_red, σ'⟩ ∂tapePresample σ α
