@@ -30,7 +30,7 @@ By divergence (`RR` is `RandomizedResponse`):
 * zCDP: `RR.Zcdp`, `RR.Twice`, `GaussianZcdp`, `Couplings.Examples.GaussianComposition`
 * tCDP: `RR.Tcdp`
 * χ²: `RR.Chi2`
-* KL: `Couplings.Examples.KLCoinFlips` (lifting level only)
+* KL: `RR.FillKl` (filled KL, in the logic), `Couplings.Examples.KLCoinFlips` (lifting level)
 
 By rule:
 * coupling draws by a bijection: `OTP`, `ContinuousOTP` (continuous samples)
