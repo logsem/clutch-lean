@@ -374,11 +374,13 @@ end Optimal
 
 /-! ## Test bounds compose -/
 
-/-- Test bounds compose along a Markov right kernel: test the head with the log exponential moment
-of the test under the right kernel. -/
-theorem KlDualBound.comp {b c : ℝ≥0∞} {m₁ Q₁ : Measure Ω} [IsSubProbabilityMeasure m₁]
-    {K L : Kernel Ω Ω'} [IsMarkovKernel L] (h₁ : KlDualBound b m₁ Q₁)
-    (h₂ : ∀ ω, KlDualBound c (K ω) (L ω)) : KlDualBound (b + c) (K ∘ₘ m₁) (L ∘ₘ Q₁) := by
+/-- Test bounds compose along a Markov right kernel with a measurable cost, paid on average under
+the left measure (the KL chain rule): test the head with the log exponential moment of the test
+under the right kernel. -/
+theorem KlDualBound.comp_lintegral {b : ℝ≥0∞} {c : Ω → ℝ≥0∞} {m₁ Q₁ : Measure Ω}
+    {K L : Kernel Ω Ω'} [IsMarkovKernel L] (hc : Measurable c) (h₁ : KlDualBound b m₁ Q₁)
+    (h₂ : ∀ ω, KlDualBound (c ω) (K ω) (L ω)) :
+    KlDualBound (b + ∫⁻ ω, c ω ∂m₁) (K ∘ₘ m₁) (L ∘ₘ Q₁) := by
   intro h hm h0 hb
   obtain ⟨C, hC⟩ := hb
   have hC' (ω : Ω') : h ω ≤ C := hC ⟨ω, rfl⟩
@@ -405,18 +407,27 @@ theorem KlDualBound.comp {b c : ℝ≥0∞} {m₁ Q₁ : Measure Ω} [IsSubProba
   calc ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ∘ₘ m₁)
       = ∫⁻ ω, ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ω) ∂m₁ :=
         Measure.lintegral_bind K.aemeasurable hm.ennreal_ofReal.aemeasurable
-    _ ≤ ∫⁻ ω, (c + ENNReal.ofReal (g ω)) ∂m₁ :=
+    _ ≤ ∫⁻ ω, (c ω + ENNReal.ofReal (g ω)) ∂m₁ :=
         lintegral_mono fun ω ↦ h₂ ω hm h0 ⟨C, hC⟩
-    _ = c * m₁ univ + ∫⁻ ω, ENNReal.ofReal (g ω) ∂m₁ := by
-        rw [lintegral_add_left measurable_const, lintegral_const]
-    _ ≤ c + (b + ENNReal.ofReal (Real.log (∫⁻ ω, ENNReal.ofReal (Real.exp (g ω)) ∂Q₁).toReal)) :=
-        add_le_add (mul_le_of_le_one_right' (IsSubProbabilityMeasure.measure_le_one _))
-          (h₁ hgm hg0 ⟨C, by rintro _ ⟨ω, rfl⟩; exact hgC ω⟩)
-    _ = (b + c) + ENNReal.ofReal
+    _ = ∫⁻ ω, c ω ∂m₁ + ∫⁻ ω, ENNReal.ofReal (g ω) ∂m₁ := lintegral_add_left hc _
+    _ ≤ ∫⁻ ω, c ω ∂m₁ +
+          (b + ENNReal.ofReal (Real.log (∫⁻ ω, ENNReal.ofReal (Real.exp (g ω)) ∂Q₁).toReal)) :=
+        add_le_add le_rfl (h₁ hgm hg0 ⟨C, by rintro _ ⟨ω, rfl⟩; exact hgC ω⟩)
+    _ = (b + ∫⁻ ω, c ω ∂m₁) + ENNReal.ofReal
           (Real.log (∫⁻ ω', ENNReal.ofReal (Real.exp (h ω')) ∂(L ∘ₘ Q₁)).toReal) := by
         rw [Measure.lintegral_bind L.aemeasurable hm.exp.ennreal_ofReal.aemeasurable]
         simp_rw [hexpg]
         ring
+
+/-- Test bounds compose along a Markov right kernel: a constant cost `c` is paid at most once,
+since the left measure has mass at most one. -/
+theorem KlDualBound.comp {b c : ℝ≥0∞} {m₁ Q₁ : Measure Ω} [IsSubProbabilityMeasure m₁]
+    {K L : Kernel Ω Ω'} [IsMarkovKernel L] (h₁ : KlDualBound b m₁ Q₁)
+    (h₂ : ∀ ω, KlDualBound c (K ω) (L ω)) : KlDualBound (b + c) (K ∘ₘ m₁) (L ∘ₘ Q₁) :=
+  (h₁.comp_lintegral measurable_const h₂).mono <| by
+    rw [lintegral_const]
+    gcongr
+    exact mul_le_of_le_one_right' (IsSubProbabilityMeasure.measure_le_one _)
 
 end ProbabilityTheory
 
@@ -510,6 +521,33 @@ instance isComposable_fill_kl : (fill klDivergence.{u}).IsComposable where
       have h := fill_kl_iff.1 (hκ x)
       simpa [Kernel.comp_apply, Kernel.dropBot, Kernel.map_apply _ measurable_some,
         Measure.dirac_bind (Kernel.measurable _)] using h
+
+/-- Filled KL composes with a measurable cost on the head's outcome, paid on average under the
+left measure: the KL chain rule `KL(K ∘ π₁ ‖ L ∘ π₂) ≤ KL(π₁ ‖ π₂) + E_{π₁}[c]`. -/
+theorem fill_kl_comp_lintegral {Z I : Type u} [MeasurableSpace Z] [MeasurableSpace I]
+    {π₁ π₂ : Measure Z} [IsSubProbabilityMeasure π₁] [IsSubProbabilityMeasure π₂]
+    {K L : Kernel Z I} [IsSubMarkovKernel K] [IsSubMarkovKernel L] {b : ℝ≥0∞} {c : Z → ℝ≥0∞}
+    (hc : Measurable c) (h : fill klDivergence b π₁ π₂)
+    (hK : ∀ z, fill klDivergence (c z) (K z) (L z)) :
+    fill klDivergence (b + ∫⁻ z, c z ∂π₁) (K ∘ₘ π₁) (L ∘ₘ π₂) := by
+  have : IsSubProbabilityMeasure (π₁.map some) := isSubProbabilityMeasure_map_some π₁
+  rw [fill_kl_iff] at h ⊢
+  have hK' : (K ∘ₘ π₁).map some = ((K.map some) ∘ₖ Kernel.dropBot) ∘ₘ π₁.map some := by
+    rw [← Measure.comp_assoc, Kernel.dropBot_comp_map_some, Measure.map_comp _ _ measurable_some]
+  -- the cost on `Option Z` is `c` on `some` and nothing on `none`, which carries no left mass
+  have hc' : Measurable fun o : Option Z ↦ o.elim 0 c := measurable_option_elim hc 0
+  have hint : ∫⁻ z, c z ∂π₁ = ∫⁻ o, o.elim 0 c ∂(π₁.map some) := by
+    rw [lintegral_map hc' measurable_some]
+    rfl
+  rw [hK', Kernel.withBot_comp, hint]
+  refine KlDualBound.comp_lintegral hc' h fun o ↦ ?_
+  cases o with
+  | none =>
+    simpa [Kernel.comp_apply, Kernel.dropBot] using klDualBound_zero_left _ _
+  | some z =>
+    have h := fill_kl_iff.1 (hK z)
+    simpa [Kernel.comp_apply, Kernel.dropBot, Kernel.map_apply _ measurable_some,
+      Measure.dirac_bind (Kernel.measurable _)] using h
 
 /-- Filled KL passes to the supremum of an increasing sequence on the left: tests pass to it by
 monotone convergence (Rocq `FillDiv_lim`, which extracts a convergent subsequence of fillings). -/

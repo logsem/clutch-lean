@@ -4,12 +4,14 @@ public import Metrology.Couplings.Divergences.DpShapes
 public import Metrology.Couplings.Divergences.RenyiAdaptive
 public import Metrology.Couplings.Divergences.RenyiFiber
 public import Metrology.Couplings.Divergences.Power
+public import Metrology.Couplings.Divergences.FillKl
 
 /-! # Adaptive bind laws
 
 Bind laws beyond `BindLaw.canonical`: adaptive DP (`dpRhs`, `dpLhs`), DP choice (`dpChoice`) and
 escort-adaptive Rényi (`escort α`), each sound by a codensity lemma (Rocq `instances_dp.v`); the
-escort law regraded to power and χ² liftings (`escortPower α`). -/
+escort law regraded to power and χ² liftings (`escortPower α`); and the KL chain rule for filled
+KL (`fillKl`). -/
 
 @[expose] public section
 
@@ -314,6 +316,97 @@ instance sideFree_escortPower : (escortPower.{u} α).SideFree :=
   sideFree_comap (law := escort α)
 
 end Power
+
+/-! ## Filled KL, adaptive on the left outcome -/
+
+/-- The head of adaptive filled-KL composition: witnesses `π₁ π₂` on some `Z` with images `μ` and
+`ν` along `u` and `v`, within filled KL `ε₁`, whose pairs continue at `D` of the left outcome on a
+set `A` carrying `π₁`, paid as `ε₁ + E_μ[D]` (the KL chain rule). -/
+def FillKlHead (μ : Measure X) (ν : Measure Y) (R : X → Y → ℝ≥0∞) (b : ℝ≥0∞) : Prop :=
+  ∃ (Z : Type u) (_ : MeasurableSpace Z) (π₁ π₂ : Measure Z) (u : Z → X) (v : Z → Y)
+    (A : Set Z) (ε₁ : ℝ≥0∞) (D : X → ℝ≥0∞), Measurable u ∧ Measurable v ∧ Measurable D ∧
+    MeasurableSet A ∧ π₁ Aᶜ = 0 ∧ IsSubProbabilityMeasure π₁ ∧ IsSubProbabilityMeasure π₂ ∧
+    π₁.map u = μ ∧ π₂.map v = ν ∧ fill klDivergence ε₁ π₁ π₂ ∧
+    (∀ z ∈ A, R (u z) (v z) = D (u z)) ∧ ε₁ + ∫⁻ x, D x ∂μ ≤ b
+
+/-- Adaptive filled-KL composition as a bind law: the continuation's cost depends on the left
+outcome and is paid on average under the left measure, by the KL chain rule
+`fill_kl_comp_lintegral`. -/
+noncomputable def fillKl : BindLaw (codensity (fill klDivergence.{u})) where
+  head := FillKlHead
+  side _ _ _ _ _ := True
+  sound := by
+    classical
+    rintro _ _ _ _ _ _ _ _ b R R' _ _ f g _ _ ⟨Z, _, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA,
+      hπ₁, hπ₂, rfl, rfl, hkl, hR, hb⟩ _ hk
+    intro I _ c _ k l _ _ hkl'
+    -- read the test kernels through the witnesses, zeroing the left one off `A`
+    have hK : Kernel.piecewise hA ((k ∘ₖ f).comap u hu) 0 ∘ₘ π₁ = k ∘ₘ (f ∘ₘ π₁.map u) := by
+      rw [Measure.piecewise_zero_comp, restrict_eq_self_of_ae_mem (mem_ae_iff.2 hπA),
+        Kernel.comap_comp_eq_comp_map, Measure.comp_assoc]
+    have hL : (l ∘ₖ g).comap v hv ∘ₘ π₂ = l ∘ₘ (g ∘ₘ π₂.map v) := by
+      rw [Kernel.comap_comp_eq_comp_map, Measure.comp_assoc]
+    rw [← hK, ← hL]
+    refine IsGraded.mono ?_ (fill_kl_comp_lintegral (c := fun z ↦ D (u z) + c) (by fun_prop) hkl
+      fun z ↦ ?_)
+    · calc ε₁ + ∫⁻ z, D (u z) + c ∂π₁ = ε₁ + (∫⁻ x, D x ∂(π₁.map u) + c * π₁ Set.univ) := by
+            rw [lintegral_add_right _ measurable_const, lintegral_const, lintegral_map hD hu]
+        _ ≤ ε₁ + (∫⁻ x, D x ∂(π₁.map u) + c) := by
+            gcongr
+            exact mul_le_of_le_one_right' hπ₁.measure_univ_le_one
+        _ ≤ b + c := by
+            rw [← add_assoc]
+            gcongr
+    · by_cases hz : z ∈ A
+      · simp only [Kernel.piecewise_apply, hz, ↓reduceIte, Kernel.comap_apply, Kernel.comp_apply]
+        refine IsGraded.of_lt_top fun hDc ↦ ?_
+        have hRz := hR z hz
+        have := hk (u z) (v z) (by rw [hRz]; exact lt_of_le_of_lt le_self_add hDc)
+          (by rwa [hRz]) hkl'
+        rwa [hRz] at this
+      · simp only [Kernel.piecewise_apply, hz, ↓reduceIte, zero_apply]
+        exact GradedDivergence.IsZeroLeft.zero_left _ _
+  mono_out := fun ⟨Z, mZ, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA, hπ₁, hπ₂, hμ, hν, hkl, hR,
+      hb⟩ hb' ↦
+    ⟨Z, mZ, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA, hπ₁, hπ₂, hμ, hν, hkl, hR, hb.trans hb'⟩
+  head_supp := by
+    rintro _ _ _ _ _ _ _ _ A' _ hA' hμA' ⟨Z, _, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA,
+      hπ₁, hπ₂, hμ, hν, hkl, hR, hb⟩
+    refine ⟨Z, _, π₁, π₂, u, v, A ∩ u ⁻¹' A', ε₁, D, hu, hv, hD, hA.inter (hu hA'), ?_, hπ₁, hπ₂,
+      hμ, hν, hkl, fun z hz ↦ ?_, hb⟩
+    · rw [Set.compl_inter]
+      refine measure_union_null hπA ?_
+      rw [← Set.preimage_compl, ← Measure.map_apply hu hA'.compl, hμ]
+      exact hμA'
+    · simpa [Set.piecewise_eq_of_mem _ _ _ (show u z ∈ A' from hz.2)] using hR z hz.1
+  side_supp _ := trivial
+
+/-- Filled-KL heads shift: the extra slack folds into `D` and costs at most itself, since `μ` has
+mass at most one. -/
+instance headShift_fillKl : (fillKl.{u}).HeadShift where
+  shift := by
+    rintro _ _ _ _ _ c' _ μ _ _ ⟨Z, _, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA, hπ₁, hπ₂, hμ,
+      hν, hkl, hR, hb⟩
+    refine ⟨Z, _, π₁, π₂, u, v, A, ε₁, fun x ↦ D x + c', hu, hv, hD.add_const _, hA, hπA, hπ₁,
+      hπ₂, hμ, hν, hkl, fun z hz ↦ by simp [hR z hz], ?_⟩
+    have hμ1 : μ Set.univ ≤ 1 := by
+      rw [← hμ, Measure.map_apply hu .univ, Set.preimage_univ]
+      exact hπ₁.measure_univ_le_one
+    rw [lintegral_add_right _ measurable_const, lintegral_const, ← add_assoc]
+    calc ε₁ + ∫⁻ x, D x ∂μ + c' * μ Set.univ ≤ ε₁ + ∫⁻ x, D x ∂μ + c' * 1 := by gcongr
+      _ ≤ _ := by rw [mul_one]; gcongr
+
+/-- Filled-KL heads are diagonal: the step against itself at `0`, continuing at the whole
+budget. -/
+instance headDiag_fillKl : (fillKl.{u}).HeadDiag where
+  diag {X} _ μ _ b _ := ⟨X, inferInstance, μ, μ, id, id, Set.univ, 0, fun _ ↦ b, measurable_id,
+    measurable_id, measurable_const, .univ, by simp, inferInstance, inferInstance, Measure.map_id,
+    Measure.map_id, GradedDivergence.IsReflexive.refl _, fun z _ ↦ by simp, by simp⟩
+  side_diag _ _ _ _ := trivial
+
+/-- The filled-KL law has no side condition. -/
+instance sideFree_fillKl : (fillKl.{u}).SideFree :=
+  ⟨fun _ _ _ _ _ ↦ trivial⟩
 
 end GradedLifting.BindLaw
 
