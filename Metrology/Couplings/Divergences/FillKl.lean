@@ -372,4 +372,50 @@ theorem exists_le_klDiv_le_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeas
 
 end Optimal
 
+/-! ## Test bounds compose -/
+
+/-- Test bounds compose along a Markov right kernel: test the head with the log exponential moment
+of the test under the right kernel. -/
+theorem KlDualBound.comp {b c : ℝ≥0∞} {m₁ Q₁ : Measure Ω} [IsSubProbabilityMeasure m₁]
+    {K L : Kernel Ω Ω'} [IsMarkovKernel L] (h₁ : KlDualBound b m₁ Q₁)
+    (h₂ : ∀ ω, KlDualBound c (K ω) (L ω)) : KlDualBound (b + c) (K ∘ₘ m₁) (L ∘ₘ Q₁) := by
+  intro h hm h0 hb
+  obtain ⟨C, hC⟩ := hb
+  have hC' (ω : Ω') : h ω ≤ C := hC ⟨ω, rfl⟩
+  set G : Ω → ℝ≥0∞ := fun ω ↦ ∫⁻ ω', ENNReal.ofReal (Real.exp (h ω')) ∂(L ω)
+  have hGm : Measurable G := (hm.exp.ennreal_ofReal).lintegral_kernel
+  have hG1 (ω : Ω) : 1 ≤ G ω := one_le_lintegral_exp h0
+  have hGt (ω : Ω) : G ω ≠ ⊤ := lintegral_exp_ne_top hC'
+  have hGpos (ω : Ω) : 0 < (G ω).toReal :=
+    ENNReal.toReal_pos (zero_lt_one.trans_le (hG1 ω)).ne' (hGt ω)
+  set g : Ω → ℝ := fun ω ↦ Real.log (G ω).toReal
+  have hg0 (ω : Ω) : 0 ≤ g ω :=
+    Real.log_nonneg (ENNReal.toReal_one ▸ ENNReal.toReal_mono (hGt ω) (hG1 ω))
+  have hgC (ω : Ω) : g ω ≤ C := by
+    have hle : G ω ≤ ENNReal.ofReal (Real.exp C) :=
+      (lintegral_mono fun ω' ↦ ENNReal.ofReal_le_ofReal (Real.exp_le_exp.2 (hC' ω'))).trans
+        (by simp)
+    calc g ω ≤ Real.log (Real.exp C) := Real.log_le_log (hGpos ω)
+          ((ENNReal.toReal_mono ENNReal.ofReal_ne_top hle).trans_eq
+            (ENNReal.toReal_ofReal (Real.exp_pos C).le))
+      _ = C := Real.log_exp C
+  have hgm : Measurable g := hGm.ennreal_toReal.log
+  have hexpg (ω : Ω) : ENNReal.ofReal (Real.exp (g ω)) = G ω := by
+    rw [Real.exp_log (hGpos ω), ENNReal.ofReal_toReal (hGt ω)]
+  calc ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ∘ₘ m₁)
+      = ∫⁻ ω, ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ω) ∂m₁ :=
+        Measure.lintegral_bind K.aemeasurable hm.ennreal_ofReal.aemeasurable
+    _ ≤ ∫⁻ ω, (c + ENNReal.ofReal (g ω)) ∂m₁ :=
+        lintegral_mono fun ω ↦ h₂ ω hm h0 ⟨C, hC⟩
+    _ = c * m₁ univ + ∫⁻ ω, ENNReal.ofReal (g ω) ∂m₁ := by
+        rw [lintegral_add_left measurable_const, lintegral_const]
+    _ ≤ c + (b + ENNReal.ofReal (Real.log (∫⁻ ω, ENNReal.ofReal (Real.exp (g ω)) ∂Q₁).toReal)) :=
+        add_le_add (mul_le_of_le_one_right' (IsSubProbabilityMeasure.measure_le_one _))
+          (h₁ hgm hg0 ⟨C, by rintro _ ⟨ω, rfl⟩; exact hgC ω⟩)
+    _ = (b + c) + ENNReal.ofReal
+          (Real.log (∫⁻ ω', ENNReal.ofReal (Real.exp (h ω')) ∂(L ∘ₘ Q₁)).toReal) := by
+        rw [Measure.lintegral_bind L.aemeasurable hm.exp.ennreal_ofReal.aemeasurable]
+        simp_rw [hexpg]
+        ring
+
 end ProbabilityTheory
