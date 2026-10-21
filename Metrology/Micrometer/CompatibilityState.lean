@@ -1,5 +1,6 @@
 module
 
+import Metrology.Iris.LocalBI
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Micrometer.Compatibility
 public import Metrology.ProbLang.Syntax.LocallyClosed
@@ -26,6 +27,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
   [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
+local bi IProp GF
 
 /-! ### Allocation -/
 
@@ -58,8 +60,8 @@ theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
 
 /-- Compatibility of tape allocation: both sides allocate an empty tape, tied by an invariant. -/
 theorem refines_alloctape {e e' : Exp rT} : iprop%
-    refines L ⊤ e e' lrel_int ⊢@{IProp GF} refines L ⊤ (.tape e) (.tape e') lrel_tape := by
-  show _ ⊢@{IProp GF}
+    refines L ⊤ e e' lrel_int ⊢ refines L ⊤ (.tape e) (.tape e') lrel_tape := by
+  show _ ⊢
     refines L ⊤ (Ectx.fill [EctxItem.tape] e) (Ectx.fill [EctxItem.tape] e') lrel_tape
   iintro IH
   iapply refines_bind [EctxItem.tape] [EctxItem.tape] $$ IH
@@ -174,7 +176,7 @@ theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
 
 /-- Closes the tape invariant again once both tapes are handed back empty. -/
 theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
-    appNatTape α z [] ∗ specNatTape α' z [] ⊢@{IProp GF}
+    appNatTape α z [] ∗ specNatTape α' z [] ⊢
     ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
   (sep_mono app_natTape_to_empty spec_natTape_to_empty).trans later_intro
 
@@ -226,9 +228,9 @@ theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
 /-- Compatibility of `rand` with a tape at `nat`; the fundamental theorem uses
 `refines_rand_tape_int`. -/
 theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
-    refines L ⊤ e1 e1' lrel_pos_nat ⊢@{IProp GF}
+    refines L ⊤ e1 e1' lrel_pos_nat ⊢
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
-  show _ ⊢@{IProp GF} refines L ⊤ e2 e2' lrel_tape -∗
+  show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
     refines L ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_nat
   iintro IH1 IH2
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
@@ -248,7 +250,7 @@ theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
 /-- Compatibility of `rand` without a tape at `nat`; the fundamental theorem uses
 `refines_rand_unit_int`. -/
 theorem refines_rand_unit {e e' : Exp rT} : iprop%
-    refines L ⊤ e e' lrel_pos_nat ⊢@{IProp GF}
+    refines L ⊤ e e' lrel_pos_nat ⊢
     refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
       lrel_nat := by
   iintro IH
@@ -265,9 +267,9 @@ theorem refines_rand_unit {e e' : Exp rT} : iprop%
 /-- Compatibility of `rand` with a tape at `int`; a non-positive bound returns `-1` on both
 sides. -/
 theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
-    refines L ⊤ e1 e1' lrel_int ⊢@{IProp GF}
+    refines L ⊤ e1 e1' lrel_int ⊢
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
-  show _ ⊢@{IProp GF} refines L ⊤ e2 e2' lrel_tape -∗
+  show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
     refines L ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_int
   iintro IH1 IH2
   iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
@@ -308,7 +310,7 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
 /-- Compatibility of the unlabelled `rand e #()` at `int`, stated in the hole form that
 `bin_log_related_rand_unit` produces. -/
 theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
-    refines L ⊤ e e' lrel_int ⊢@{IProp GF}
+    refines L ⊤ e e' lrel_int ⊢
     refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
       lrel_int := by
   iintro IH

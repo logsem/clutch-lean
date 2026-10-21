@@ -7,6 +7,7 @@ public import Iris.Instances.IProp.Instance
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
 public import Metrology.Iris.Algebra
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -129,15 +130,16 @@ end Resources
 namespace ErrorCredit
 
 variable {GF : BundledGFunctors} [IEC : ECGS GF]
+local bi IProp GF
 
 /-- Equal credit amounts are interchangeable. -/
-theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ := by simp [he]
+theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢ ↯ε₂ := by simp [he]
 
 /-- Equal authoritative totals are interchangeable. -/
-theorem extAuth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢@{IProp GF} ●↯ ε₂ := by simp [he]
+theorem extAuth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢ ●↯ ε₂ := by simp [he]
 
 /-- Credits split additively. -/
-theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯ε₂ := by
+theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
   unfold ec
   iintro Hε
   iapply iOwn_op
@@ -145,13 +147,13 @@ theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯
   iexact Hε
 
 /-- Take `ε₁` credits out of `ε₂`, keeping the difference. -/
-theorem difference {ε₁ ε₂} (Hwf : ε₁ ≤ ε₂) : ↯ε₂ ⊢@{IProp GF} ↯ε₁ ∗ ↯(ε₂ - ε₁) := by
+theorem difference {ε₁ ε₂} (Hwf : ε₁ ≤ ε₂) : ↯ε₂ ⊢ ↯ε₁ ∗ ↯(ε₂ - ε₁) := by
   iintro H
   iapply split
   iapply ext (add_tsub_cancel_of_le Hwf).symm $$ H
 
 /-- Credits combine additively. -/
-theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ + ε₂) := by
+theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢ ↯(ε₁ + ε₂) := by
   unfold ec
   iintro ⟨H1, H2⟩
   icombine H1 H2 as Hε
@@ -161,10 +163,10 @@ instance {ε₁ ε₂} : Iris.ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯�
   combine_sep_as := combine
 
 /-- Zero credits can always be allocated. -/
-theorem zero : ⊢@{IProp GF} |==> ↯0 := iOwn_unit
+theorem zero : ⊢ |==> ↯0 := iOwn_unit
 
 /-- Owned credits never exceed the authoritative total. -/
-theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ ⌜ε ≤ εₛ⌝ := by
+theorem supply_bound {εₛ ε} : ⊢ ●↯ εₛ -∗ ↯ε -∗ ⌜ε ≤ εₛ⌝ := by
   unfold ec ecAuth
   iintro Hs Hε
   icombine Hs Hε gives Hv
@@ -173,7 +175,7 @@ theorem supply_bound {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ �
   exact includedN_iff.mp ((Auth.auth_both_valid.mp hv).1 0)
 
 /-- Spending `ε` credits decreases the authoritative total by `ε`. -/
-theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗ |==> ●↯ (εₛ - ε) := by
+theorem supply_decrease {εₛ ε} : ⊢ ●↯ εₛ -∗ ↯ε -∗ |==> ●↯ (εₛ - ε) := by
   iintro Hs Hε
   ihave %hle := supply_bound $$ Hs Hε
   unfold ec ecAuth
@@ -185,7 +187,7 @@ theorem supply_decrease {εₛ ε} : ⊢@{IProp GF} ●↯ εₛ -∗ ↯ε -∗
 
 /-- Allocating `ε₂` credits increases the authoritative total, while it stays below `1`. -/
 theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
-    ●↯ ε₁ ⊢@{IProp GF} |==> (●↯ (ε₁ + ε₂) ∗ ↯ε₂) := by
+    ●↯ ε₁ ⊢ |==> (●↯ (ε₁ + ε₂) ∗ ↯ε₂) := by
   unfold ec ecAuth
   have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
@@ -198,14 +200,14 @@ theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
   iexact H
 
 /-- Fewer credits can be obtained from more. -/
-theorem weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ := by
+theorem weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢ ↯ε₂ := by
   iintro Hε
   rw [← tsub_add_cancel_of_le h]
   ihave ⟨-, H⟩ := split $$ Hε
   iexact H
 
 /-- Owned credits are below `1`. -/
-theorem valid {ε : ℝ≥0∞} : ↯ε ⊢@{IProp GF} ⌜ε < 1⌝ := by
+theorem valid {ε : ℝ≥0∞} : ↯ε ⊢ ⌜ε < 1⌝ := by
   unfold ec
   iintro Hε
   ihave Hv := iOwn_cmraValid $$ Hε
@@ -214,7 +216,7 @@ theorem valid {ε : ℝ≥0∞} : ↯ε ⊢@{IProp GF} ⌜ε < 1⌝ := by
   exact Auth.frag_valid.mp hv
 
 /-- Owning at least `1` credit is contradictory. -/
-theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢@{IProp GF} False := by
+theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢ False := by
   iintro Hε
   ihave %hle := valid $$ Hε
   exact absurd h (Std.not_le.mpr hle)
@@ -259,8 +261,8 @@ theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : �
 
 /-- Error amplification: a spending proof that works at `k * ε` credits works at `ε`. -/
 theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
-    □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
-  suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε' -∗ P by
+    □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε -∗ P := by
+  suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε' -∗ P by
     iapply haux _ le_rfl
   iintro %ε' %hle #Hamp Hε
   -- Each round gains `(k-1)ε`; `err_amp_mult` picks `n` rounds that reach `1` credit.
@@ -301,7 +303,7 @@ theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 
 
 /-- Amplification by an arbitrary larger credit amount `ε'`. -/
 theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hε' : ε < ε') :
-    □ ((↯ε' -∗ P) ∗ ↯ε -∗ P) ⊢@{IProp GF} ↯ε -∗ P := by
+    □ ((↯ε' -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
   let k' : ℝ≥0∞ := ε' / ε
   have hk1 : 1 < k' := ENNReal.lt_div_iff_mul_lt (by simp) (by simp) |>.mpr (by simp [hε'])
@@ -323,7 +325,7 @@ theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < �
 /-- Amplification, with the amplification step quantified over every positive `ε'`. -/
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P)
-    ⊢@{IProp GF} ↯ε -∗ P := by
+    ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
   obtain ⟨n, hn⟩ := err_amp_power hε hk
   iinduction n generalizing %ε %hε %hn Hε with

@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.FundamentalOps
+import Metrology.Iris.LocalBI
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -22,6 +23,7 @@ section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-! ## Typing contexts as relational contexts -/
 
@@ -89,7 +91,7 @@ variable (L) in
 /-- Every well-typed expression is related to itself under any related contexts. -/
 theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
     (Γrc : RelCtx rT GF) (HCtx : TctxRelated L Δ Γtc Γrc) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γrc e e τ := by
+    ⊢ bin_log_related_ty L ⊤ Δ Γrc e e τ := by
   induction Hty generalizing Δ Γrc with
   | @fvar _ x τ hx => exact bin_log_related_var Δ Γrc x τ (HCtx.lookup_some hx)
   | @lit_int _ n => exact bin_log_related_lit Γrc _ (lrel_int_lit n)
@@ -161,7 +163,7 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
 
 /-- A closed well-typed expression refines itself at its type. -/
 theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
-    ⊢@{IProp GF} refines L ⊤ e e (interp L τ Δ) := by
+    ⊢ refines L ⊤ e e (interp L τ Δ) := by
   have Hfund := fundamental L Hty Δ [] (by intro x; simp [Tctx.empty, RelCtx.lookup])
   iapply bin_log_related_nil_elim
   iapply Hfund

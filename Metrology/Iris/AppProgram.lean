@@ -9,6 +9,7 @@ public import Metrology.Iris.Algebra
 public import Metrology.Iris.SpecProgram
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -81,10 +82,11 @@ section Algebra
 open scoped AppGS
 
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
+local bi IProp GF
 
 /-- Owning `l ↦ v` against the authoritative state shows the heap holds `v` at `l`. -/
 theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
-    ⊢@{IProp GF} appStateAuth σ -∗ l ↦ v -∗ ⌜σ.heap[l]? = some v⌝ := by
+    ⊢ appStateAuth σ -∗ l ↦ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, -⟩ Hf
   icombine Hh Hf gives Hv
@@ -95,7 +97,7 @@ theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
 
 /-- Writing `w` at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
-    ⊢@{IProp GF} appStateAuth σ -∗ l ↦ v ==∗
+    ⊢ appStateAuth σ -∗ l ↦ v ==∗
       appStateAuth (σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)) ∗
         l ↦ w := by
   unfold appStateAuth appHeapAuth appHeapFrag
@@ -115,7 +117,7 @@ theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
 
 /-- Allocating `v` yields a fresh heap cell `σ.heap.fresh ↦ v`. -/
 theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
-    ⊢@{IProp GF} appStateAuth σ ==∗
+    ⊢ appStateAuth σ ==∗
       appStateAuth (σ.update_heap
           (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)) ∗
         σ.heap.fresh ↦ v := by
@@ -136,7 +138,7 @@ theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
 
 /-- Owning `l ↪ₐ t` against the authoritative state shows the tape at `l` is `t`. -/
 theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
-    ⊢@{IProp GF} appStateAuth σ -∗ l ↪ₐ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
+    ⊢ appStateAuth σ -∗ l ↪ₐ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨-, Ht⟩ Hf
   icombine Ht Hf gives Hv
@@ -147,7 +149,7 @@ theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
 
 /-- Replacing the tape at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
-    ⊢@{IProp GF} appStateAuth σ -∗ l ↪ₐ t ==∗
+    ⊢ appStateAuth σ -∗ l ↪ₐ t ==∗
       appStateAuth (σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)) ∗
         l ↪ₐ s := by
   unfold appStateAuth appTapesAuth appTapesFrag
@@ -167,7 +169,7 @@ theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
 
 /-- Allocating a tape `t` yields a fresh tape `σ.tapes.fresh ↪ₐ t`. -/
 theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
-    ⊢@{IProp GF} appStateAuth σ ==∗
+    ⊢ appStateAuth σ ==∗
       appStateAuth (σ.update_tapes
           (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)) ∗
         σ.tapes.fresh ↪ₐ t := by
@@ -210,6 +212,7 @@ section NatTapeInterface
 open scoped AppGS
 
 variable {GF : BundledGFunctors} [AppGS rT GF]
+local bi IProp GF
 
 /-- An empty integer tape is an empty `↪ₐ` tape. -/
 theorem app_natTape_to_empty {l : Loc} {z : Int} :
@@ -221,7 +224,7 @@ theorem app_natTape_to_empty {l : Loc} {z : Int} :
 
 /-- An empty `↪ₐ` tape is an empty integer tape. -/
 theorem app_empty_to_natTape {l : Loc} {z : Int} :
-    (l ↪ₐ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢@{IProp GF}
+    (l ↪ₐ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢
       appNatTape l z [] := by
   unfold appNatTape
   iintro Hl
@@ -268,10 +271,11 @@ theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF]
 
 section ValidHelpers
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
+local bi IProp GF
 
 /-- Two full cells at one location are contradictory. -/
 theorem appHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
-    ⊢@{IProp GF} appHeapFrag l v1 -∗ appHeapFrag l v2 -∗ False := by
+    ⊢ appHeapFrag l v1 -∗ appHeapFrag l v2 -∗ False := by
   unfold appHeapFrag
   iintro H1 H2
   icombine H1 H2 gives Hv
@@ -281,7 +285,7 @@ theorem appHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
 
 /-- Two full tapes at one location are contradictory. -/
 theorem appTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
-    ⊢@{IProp GF} appTapesFrag l t1 -∗ appTapesFrag l t2 -∗ False := by
+    ⊢ appTapesFrag l t1 -∗ appTapesFrag l t2 -∗ False := by
   unfold appTapesFrag
   iintro H1 H2
   icombine H1 H2 gives Hv

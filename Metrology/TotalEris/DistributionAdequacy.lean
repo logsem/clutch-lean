@@ -5,6 +5,7 @@ public import Metrology.TotalEris.ErrorRules
 public import Iris.Instances.Lib.WSat
 public import Iris.Instances.Lib.LaterCredits
 public import Iris.Instances.Lib.Invariants
+import Metrology.Iris.LocalBI
 
 /-!
 # Distribution adequacy for TotalEris
@@ -23,6 +24,7 @@ namespace ProbLang
 namespace TotalEris
 
 variable {GF : BundledGFunctors}
+local bi IProp GF
 
 /-! ## General distribution adequacy, parameterised by a real extraction `gExp` -/
 
@@ -37,7 +39,7 @@ def RSet' (S : Set ℝ) : Set (Cfg ℝ) :=
 open MeasureTheory in
 def IsDistSpec' (e : Exp ℝ) (μ : Measure ℝ) : Prop :=
   ∀ (F : ℝ → ℝ≥0∞), Measurable F → (∀ x, F x ≤ 1) →
-    ∀ [ErisGS ℝ .hasNoLC GF], iprop(↯ (∫⁻ y, F y ∂μ)) ⊢@{IProp GF}
+    ∀ [ErisGS ℝ .hasNoLC GF], iprop(↯ (∫⁻ y, F y ∂μ)) ⊢
       tglWp ⊤ e (fun (v : Val ℝ) => iprop(↯ (F (gExp v.fst))))
 
 variable {gExp}
@@ -69,7 +71,7 @@ open MeasureTheory in
 /-- `IsDistSpec'` at `F = 𝟙_{Sᶜ}`: the residual credit is `↯1` off `S`, so the postcondition is pure. -/
 theorem ray_pure_wp' (e : Exp ℝ) (μ : Measure ℝ)
     (hspec : IsDistSpec' (GF := GF) gExp e μ) {S : Set ℝ} (hS : MeasurableSet S) :
-    ∀ [ErisGS ℝ .hasNoLC GF], iprop(↯ (μ Sᶜ)) ⊢@{IProp GF}
+    ∀ [ErisGS ℝ .hasNoLC GF], iprop(↯ (μ Sᶜ)) ⊢
       tglWp ⊤ e (fun (v : Val ℝ) => iprop(⌜gExp v.fst ∈ S⌝)) := by
   intro _
   iintro Hε

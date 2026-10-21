@@ -11,6 +11,7 @@ public import Iris.ProofMode.ProofModeM
 public import Iris.ProofMode.Tactics.Basic
 public import Lean
 public import Qq
+import Metrology.Iris.LocalBI
 
 /-! # `wp_*` and `tp_*` tactics for the Micrometer `wp`
 
@@ -86,19 +87,20 @@ section Spec
 
 variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} {hlc : HasLC}
   [InvGS_gen hlc GF] [SpecGS rT GF] {E : CoPset}
+local bi IProp GF
 
 /-- `step_pure` with both endpoints anchored by equalities, so `tp_pure` can match the `⤇`
 hypothesis syntactically rather than as an unreduced `Ectx.fill`. -/
 public theorem step_pure_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT) {φ : Prop} {n : ℕ}
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (Hφ : φ) [PureExec φ n e e'] :
-    ⤇ e₁full ⊢@{IProp GF} specUpdate rT E (⤇ e₂full) := by
+    ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
   exact step_pure K Hφ
 
 /-- `step_pure_at` for a run of pure steps. -/
 public theorem step_pure_steps_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT)
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (h : PureSteps e e') :
-    ⤇ e₁full ⊢@{IProp GF} specUpdate rT E (⤇ e₂full) := by
+    ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
   have := h.pureExec
   exact step_pure K trivial
@@ -107,14 +109,14 @@ public theorem step_pure_steps_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT
 the caller's form (e.g. `assocVal []` rather than a raw `Val.mk`). -/
 public theorem step_alloc_at (K : Ectx rT) {v : Exp rT} (hv : IsVal v) {vv : Val rT}
     (hvv : vv = ⟨v, hv, hv.lc⟩) :
-    ⤇ (K.fill (.alloc v)) ⊢@{IProp GF}
+    ⤇ (K.fill (.alloc v)) ⊢
       specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#(.loc l)))) ∗ (l ↦ₛ vv)) := by
   subst hvv
   exact step_alloc K hv
 
 /-- Rewrite the expression of a `⤇` hypothesis along an equality. -/
 public theorem specProgFrag_reshape {e₁ e₂ : Exp rT} (h : e₁ = e₂) :
-    (⤇ e₁) ⊢@{IProp GF} (⤇ e₂) := h ▸ .rfl
+    (⤇ e₁) ⊢ (⤇ e₂) := h ▸ .rfl
 
 end Spec
 

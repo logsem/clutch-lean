@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.RelTactics
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -18,12 +19,13 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {hlc :
   [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B}
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
+local bi IProp GF
 
 /-! ## Pure steps -/
 
 /-- Pure steps on both sides, inside a non-empty context on the right. -/
 example (n : Int) :
-    ⊢@{IProp GF} REL[L] (pl((fun x, x + #1) #(.int n)) : Exp rT) <<
+    ⊢ REL[L] (pl((fun x, x + #1) #(.int n)) : Exp rT) <<
       pl(fst((#(.int (n + 1)), #(.int 0)))) : lrel_int := by
   rel_pure_l
   rel_pures_l
@@ -32,7 +34,7 @@ example (n : Int) :
 
 /-- `rel_pure_l e` steps at the focus `e`, leaving the outer redex. -/
 example (n : Int) :
-    ⊢@{IProp GF} REL[L] (pl(#(.int n) + (#1 + #2)) : Exp rT) << pl(#(.int (n + 3))) :
+    ⊢ REL[L] (pl(#(.int n) + (#1 + #2)) : Exp rT) << pl(#(.int (n + 3))) :
       lrel_int := by
   rel_pure_l pl(#1 + #2)
   rel_pure_l
@@ -42,7 +44,7 @@ example (n : Int) :
 
 /-- Allocation, load and store on both sides, under a context. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(let r := alloc(#1); r ← #2; !r + #0) : Exp rT) <<
+    ⊢ REL[L] (pl(let r := alloc(#1); r ← #2; !r + #0) : Exp rT) <<
       pl(let r := alloc(#5); r ← #2; !r) : lrel_int := by
   rel_alloc_l l as Hl
   rel_store_l
@@ -57,7 +59,7 @@ example :
 
 /-- Coupling two unlabelled draws inside contexts, along the identity. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(rand(#4, #.unit) + #0) : Exp rT) << pl(fst((rand(#4, #.unit), #0))) :
+    ⊢ REL[L] (pl(rand(#4, #.unit) + #0) : Exp rT) << pl(fst((rand(#4, #.unit), #0))) :
       lrel_int := by
   rel_couple_UU
   iintro %n %_
@@ -71,7 +73,7 @@ example :
 
 /-- One-sided draws. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(rand(#4, #.unit); #.unit) : Exp rT) << pl(rand(#3, #.unit); #.unit) :
+    ⊢ REL[L] (pl(rand(#4, #.unit); #.unit) : Exp rT) << pl(rand(#3, #.unit); #.unit) :
       lrel_unit := by
   rel_rand_r
   iintro %m %_
@@ -82,7 +84,7 @@ example :
 
 /-- Tapes: allocate, couple a labelled draw with an unlabelled one, then draw from a tape. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
+    ⊢ REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, #.unit)) : lrel_int := by
   rel_alloctape_l α as Hα
   rel_alloctape_r α' as Hα'
@@ -94,7 +96,7 @@ example :
 
 /-- `rel_rand_l` draws from a presampled tape in the context. -/
 example (α : Loc) :
-    ⊢@{IProp GF} appNatTape α 4 [2] -∗
+    ⊢ appNatTape α 4 [2] -∗
       REL[L] (pl(rand(#4, #(.lbl α)) + #0) : Exp rT) << pl(#2) : lrel_int := by
   iintro Hα
   rel_rand_l
@@ -105,9 +107,9 @@ example (α : Loc) :
 /-! ## Contexts and binds -/
 
 /-- `rel_bind_l` refocuses on a subprogram; `rel_apply_l` applies a user rule in context. -/
-example (H : ∀ (K : Ectx rT) t, (REL[L] K.fill pl(#7) << t : lrel_int) ⊢@{IProp GF}
+example (H : ∀ (K : Ectx rT) t, (REL[L] K.fill pl(#7) << t : lrel_int) ⊢
       REL[L] K.fill pl(#3 + #4) << t : lrel_int) :
-    ⊢@{IProp GF} REL[L] (pl(fst((#3 + #4, #0))) : Exp rT) << pl(#7) : lrel_int := by
+    ⊢ REL[L] (pl(fst((#3 + #4, #0))) : Exp rT) << pl(#7) : lrel_int := by
   rel_bind_l pl(#3 + #4)
   rel_bind_r pl(#7)
   rel_apply_l H
@@ -115,8 +117,8 @@ example (H : ∀ (K : Ectx rT) t, (REL[L] K.fill pl(#7) << t : lrel_int) ⊢@{IP
   rel_values
 
 /-- `rel_bind` splits off a sub-refinement. -/
-example (Hsub : ⊢@{IProp GF} REL[L] (pl(#1 + #1) : Exp rT) << pl(#0 + #2) : lrel_int) :
-    ⊢@{IProp GF} REL[L] (pl(fst((#1 + #1, #0))) : Exp rT) << pl(fst((#0 + #2, #5))) :
+example (Hsub : ⊢ REL[L] (pl(#1 + #1) : Exp rT) << pl(#0 + #2) : lrel_int) :
+    ⊢ REL[L] (pl(fst((#1 + #1, #0))) : Exp rT) << pl(fst((#0 + #2, #5))) :
       lrel_int := by
   rel_bind pl(#1 + #1) pl(#0 + #2)
   isplitr
@@ -128,8 +130,8 @@ example (Hsub : ⊢@{IProp GF} REL[L] (pl(#1 + #1) : Exp rT) << pl(#0 + #2) : lr
   iexact Hv
 
 /-- Context search under an abstract context tail. -/
-example (K K' : Ectx rT) (H : ∀ e e', ⊢@{IProp GF} REL[L] K.fill e << K'.fill e' : lrel_int) :
-    ⊢@{IProp GF} REL[L] K.fill pl(#1 + #1) << K'.fill pl(fst((#2, #0))) : lrel_int := by
+example (K K' : Ectx rT) (H : ∀ e e', ⊢ REL[L] K.fill e << K'.fill e' : lrel_int) :
+    ⊢ REL[L] K.fill pl(#1 + #1) << K'.fill pl(fst((#2, #0))) : lrel_int := by
   rel_pures
   iapply H
 
@@ -138,7 +140,7 @@ def two : Exp rT := pl(#1 + #1)
 
 /-- Stepping past `let x := &two` leaves no `openRec`/`closeRec` around the second `two`. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(let x := &two; let y := &two; x + y) : Exp rT) << pl(#4) :
+    ⊢ REL[L] (pl(let x := &two; let y := &two; x + y) : Exp rT) << pl(#4) :
       lrel_int := by
   rel_pure_l pl(&two)
   rel_pure_l
@@ -149,7 +151,7 @@ example :
 
 /-- An unlabelled draw coupled with a spec tape by `rel_couple_UT`. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(rand(#4, #.unit)) : Exp rT) <<
+    ⊢ REL[L] (pl(rand(#4, #.unit)) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, α)) : lrel_int := by
   rel_alloctape_r α as Hα
   rel_pures_r
@@ -160,7 +162,7 @@ example :
 
 /-- Two tapes, one on each side, coupled by `rel_couple_TT`. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
+    ⊢ REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, α)) : lrel_int := by
   rel_alloctape_l α as Hα
   rel_alloctape_r α' as Hα'
@@ -174,7 +176,7 @@ example :
 
 /-- The `_atomic` forms leave the rule's premise. -/
 example (l : Loc) :
-    ⊢@{IProp GF} (l ↦ (.int 3 : Val rT)) -∗
+    ⊢ (l ↦ (.int 3 : Val rT)) -∗
       REL[L] (pl(!#(.loc l) + #0) : Exp rT) << pl(#3) : lrel_int := by
   iintro Hl
   rel_load_l_atomic
@@ -185,16 +187,16 @@ example (l : Loc) :
   rel_values
 
 /-- `rel_apply_r` applies a user rule at a redex of the right program. -/
-example (H : ∀ (K : Ectx rT) e, (REL[L] e << K.fill pl(#7) : lrel_int) ⊢@{IProp GF}
+example (H : ∀ (K : Ectx rT) e, (REL[L] e << K.fill pl(#7) : lrel_int) ⊢
       REL[L] e << K.fill pl(#3 + #4) : lrel_int) :
-    ⊢@{IProp GF} REL[L] (pl(#7) : Exp rT) << pl(fst((#3 + #4, #0))) : lrel_int := by
+    ⊢ REL[L] (pl(#7) : Exp rT) << pl(fst((#3 + #4, #0))) : lrel_int := by
   rel_apply_r H
   rel_pures
   rel_values
 
 /-- `rel_arrow_val` reduces a refinement of closures to their applications. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl(fun x, x) : Exp rT) << pl(fun y, (fun z, z) y) :
+    ⊢ REL[L] (pl(fun x, x) : Exp rT) << pl(fun y, (fun z, z) y) :
       lrel_arr L lrel_int lrel_int := by
   rel_arrow_val
   iintro %v %v' Hv
@@ -205,14 +207,14 @@ example :
 
 /-- Integer comparisons step from literals and from hypotheses in the context. -/
 example (n : Int) (h : n ≠ 0) :
-    ⊢@{IProp GF} REL[L] (pl(if #(.int n) = #0 then #1 else #2) : Exp rT) <<
+    ⊢ REL[L] (pl(if #(.int n) = #0 then #1 else #2) : Exp rT) <<
       pl(if #0 = #0 then #2 else #1) : lrel_int := by
   rel_pures
   rel_values
 
 /-- Pairs of literals close by `rel_values`. -/
 example :
-    ⊢@{IProp GF} REL[L] (pl((#1, #(.bool true))) : Exp rT) << pl((#1, #(.bool true))) :
+    ⊢ REL[L] (pl((#1, #(.bool true))) : Exp rT) << pl((#1, #(.bool true))) :
       lrel_prod lrel_int lrel_bool := by
   rel_values
 

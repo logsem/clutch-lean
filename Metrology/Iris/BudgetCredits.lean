@@ -9,6 +9,7 @@ public import Iris.Instances.IProp.Instance
 public import Mathlib.Algebra.Order.Hom.Monoid
 public import Mathlib.Basic.ENNReal.Basic
 import Metrology.Iris.ErrorCredits
+import Metrology.Iris.LocalBI
 
 /-!
 # Budget credits
@@ -97,6 +98,7 @@ end Resources
 namespace BudgetCredit
 
 variable {B : Type} [AddCommMonoid B] {GF : BundledGFunctors} [IBC : BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- Credits are timeless. -/
 instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
@@ -113,13 +115,13 @@ theorem frag_add {a b : B} :
   Auth.frag_op
 
 /-- A credit splits into two credits. -/
-theorem split {a b : B} : ↯b (a + b) ⊢@{IProp GF} ↯b a ∗ ↯b b := by
+theorem split {a b : B} : ↯b (a + b) ⊢ ↯b a ∗ ↯b b := by
   unfold bc
   rw [frag_add]
   exact iOwn_op.1
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯b a ∗ ↯b b ⊢@{IProp GF} ↯b (a + b) := by
+theorem combine {a b : B} : ↯b a ∗ ↯b b ⊢ ↯b (a + b) := by
   unfold bc
   rw [frag_add]
   exact iOwn_op.2
@@ -131,19 +133,19 @@ instance combineSepAs_bc {a b : B} :
 
 /-- A credit can be weakened to a smaller one. -/
 theorem weaken [LE B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
-    ↯b a ⊢@{IProp GF} ↯b b := by
+    ↯b a ⊢ ↯b b := by
   obtain ⟨c, rfl⟩ := exists_add_of_le hb
   exact split.trans BI.sep_elim_left
 
 /-- The zero credit is free. -/
-theorem zero : ⊢@{IProp GF} |==> ↯b (0 : B) :=
+theorem zero : ⊢ |==> ↯b (0 : B) :=
   iOwn_unit (ε := UCMRA.unit)
 
 /-! ### Authority and credits -/
 
 /-- A credit never exceeds the authoritative budget. -/
 theorem supply_bound [LE B] [CanonicallyOrderedAdd B] {s c : B} :
-    ⊢@{IProp GF} ●↯b s -∗ ↯b c -∗ ⌜c ≤ s⌝ := by
+    ⊢ ●↯b s -∗ ↯b c -∗ ⌜c ≤ s⌝ := by
   unfold bc bcAuth
   iintro Hs Hc
   icombine Hs Hc gives Hv
@@ -154,7 +156,7 @@ theorem supply_bound [LE B] [CanonicallyOrderedAdd B] {s c : B} :
 /-- Spending a cancelable credit `c` takes it out of the budget. -/
 theorem supply_decrease [LE B] [CanonicallyOrderedAdd B] {s c : B}
     (hc : IsAddLeftRegular c) :
-    ⊢@{IProp GF} ●↯b s -∗ ↯b c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯b r := by
+    ⊢ ●↯b s -∗ ↯b c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯b r := by
   iintro Hs Hc
   ihave %hcs := supply_bound $$ Hs Hc
   obtain ⟨r, hr⟩ := exists_add_of_le hcs
@@ -165,7 +167,7 @@ theorem supply_decrease [LE B] [CanonicallyOrderedAdd B] {s c : B}
   iframe %hr H
 
 /-- Growing the budget by `c` hands out a credit `c`. -/
-theorem supply_increase {s c : B} : ⊢@{IProp GF} ●↯b s -∗ |==> (●↯b (s + c) ∗ ↯b c) := by
+theorem supply_increase {s c : B} : ⊢ ●↯b s -∗ |==> (●↯b (s + c) ∗ ↯b c) := by
   have hup : (● s : Auth (BudgetCredit B)) ~~> (● (s + c) : Auth (BudgetCredit B)) • ◯ c :=
     Auth.auth_update_alloc alloc_local_update
   unfold bc bcAuth
@@ -177,7 +179,7 @@ theorem supply_increase {s c : B} : ⊢@{IProp GF} ●↯b s -∗ |==> (●↯b 
 /-- A credit splits off any smaller credit. -/
 theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSub B]
     {a b : B} (h : b ≤ a) :
-    ↯b a ⊢@{IProp GF} ↯b b ∗ ↯b (a - b) := by
+    ↯b a ⊢ ↯b b ∗ ↯b (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
 /-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1`, where `s` embeds additive error

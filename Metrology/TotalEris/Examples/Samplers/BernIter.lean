@@ -3,6 +3,7 @@ module
 public import Metrology.ProbLang.Reals
 public import Metrology.TotalEris
 public import Metrology.TotalEris.Examples.Samplers.BernoulliGeometric
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -19,11 +20,12 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section abstractBernoulli
 
 structure AbstractBernoulliI (v : Val ℝ) (γ : ↑unitInterval) (I : IProp GF) : Prop where
-  spec {E} : ⊢@{IProp GF} iprop(
+  spec {E} : ⊢ iprop(
     ∀ (F : Bool → ℝ≥0∞),
       ↯ (.ofReal γ * F true + (1 - .ofReal γ) * F false) ∗ I -∗
       tglWp E pl(&v.1 #.unit)

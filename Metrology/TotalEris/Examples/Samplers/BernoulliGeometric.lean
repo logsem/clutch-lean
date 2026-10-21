@@ -4,6 +4,7 @@ public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
 public import Mathlib.Probability.Distributions.Geometric
 public import Metrology.Code.Samplers
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -21,12 +22,13 @@ noncomputable section
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 /-! ## Abstract Bernoulli trial -/
 section abstractBernoulli
 
 structure AbstractBernoulli (v : Val rT) (γ : ↑unitInterval) : Prop where
-  spec {E} : ⊢@{IProp GF} iprop(
+  spec {E} : ⊢ iprop(
     ∀ (F : Bool → ℝ≥0∞),
       ↯ (.ofReal γ * F true + (1 - .ofReal γ) * F false) -∗
       tglWp E pl(&v.1 #.unit) (fun w : Val rT => iprop(
@@ -120,7 +122,7 @@ section specification
 theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v : Val rT)
     (hγ0 : 0 < (γ : ℝ)) (hγ1 : (γ : ℝ) < 1)
     (Hspec : AbstractBernoulli (GF := GF) v γ) :
-    ⊢@{IProp GF}
+    ⊢
       ∀ (F : Int → ℝ≥0∞),
       ↯ (shiftGeometricPMFCreditV γ shift F) -∗
       tglWp E pl(&GeometricTrial &v.1 #(.int shift)) (fun w : Val rT => iprop(

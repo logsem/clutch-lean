@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.UnifInt
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -29,6 +30,7 @@ section CouplingRules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
   [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
+local bi IProp GF
 
 /-- Core rule: if the resource `A` shows that `eL` (program side) and `eR` (spec side) each step to
 `Cfg.uniform z`, couple the two draws along the bijection `f` at budget `0` and return `A`. -/
@@ -37,9 +39,9 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
     (Hz : 0 < z) {eL eR : Exp rT} (K : Ectx rT) (E : CoPset) (A : IProp GF) [BI.Timeless A]
     (HvL : eL.toVal? = none) (HvR : ¬ eR.isValue)
-    (HstepL : ∀ σ, ⊢@{IProp GF} appStateAuth σ -∗ A -∗
+    (HstepL : ∀ σ, ⊢ appStateAuth σ -∗ A -∗
       ⌜Discrete.Reducible eL σ ∧ primStep ⟨eL, σ⟩ = Cfg.uniform z σ⌝)
-    (HstepR : ∀ e' σ', ⊢@{IProp GF} Cfg.specAuth ⟨e', σ'⟩ -∗ A -∗
+    (HstepR : ∀ e' σ', ⊢ Cfg.specAuth ⟨e', σ'⟩ -∗ A -∗
       ⌜Discrete.Reducible eR σ' ∧ primStep ⟨eR, σ'⟩ = Cfg.uniform z σ'⌝)
     (Φ : Val rT → IProp GF) : iprop%
     ▷ A ∗ ⤇ K.fill eR ∗ (∀ n, A ∗ ⤇ K.fill pl(#(.int (f n))) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
@@ -88,7 +90,7 @@ theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp G
 
 /-- A `rand` on an empty program tape steps to the uniform distribution. -/
 theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State rT) :
-    ⊢@{IProp GF} appStateAuth σ -∗ appNatTape α z [] -∗
+    ⊢ appStateAuth σ -∗ appNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#(.int z), #(.lbl α))) σ ∧
         primStep ⟨pl(rand(#(.int z), #(.lbl α))), σ⟩ = Cfg.uniform z σ⌝ := by
   unfold appNatTape
@@ -101,7 +103,7 @@ theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State
 /-- A `rand` on an empty spec tape steps to the uniform distribution. -/
 theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp rT)
     (σ : State rT) :
-    ⊢@{IProp GF} Cfg.specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
+    ⊢ Cfg.specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#(.int z), #(.lbl α))) σ ∧
         primStep ⟨pl(rand(#(.int z), #(.lbl α))), σ⟩ = Cfg.uniform z σ⌝ := by
   unfold specNatTape
@@ -218,11 +220,12 @@ end CouplingRules
 section NatTapeBridges
 
 variable {GF : BundledGFunctors}
+local bi IProp GF
 
 /-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
 theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
-    l ↪ₐ ⟨z, fs⟩ ⊢@{IProp GF} appNatTape l z ns := by
+    l ↪ₐ ⟨z, fs⟩ ⊢ appNatTape l z ns := by
   iintro Hb
   iunfold appNatTape
   iexists fs
@@ -231,7 +234,7 @@ theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
 /-- A raw spec tape holding `fs` gives the user-level spec tape predicate on its values. -/
 theorem specNatTape_fold [SpecGS rT GF] {l : Loc} {z : Int} {ns : List Int}
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
-    l ↪ₛ ⟨z, fs⟩ ⊢@{IProp GF} specNatTape l z ns := by
+    l ↪ₛ ⟨z, fs⟩ ⊢ specNatTape l z ns := by
   iintro Hb
   iunfold specNatTape
   iexists fs

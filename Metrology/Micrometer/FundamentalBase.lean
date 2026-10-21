@@ -4,6 +4,7 @@ public import Metrology.Micrometer.CompatibilityState
 public import Metrology.Micrometer.ContinuousSampler
 public import Metrology.Micrometer.BinLogRelated
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 /-! # Open compatibility helpers
 
@@ -23,6 +24,7 @@ section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-! ## Lifting `refines` rules to `bin_log_related` -/
 
@@ -67,8 +69,8 @@ theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' : Exp rT
 
 /-- Literals are related to themselves at any type containing them. -/
 theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lrel rT GF}
-    (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} bin_log_related L ⊤ Γ (.lit l) (.lit l) A := by
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ bin_log_related L ⊤ Γ (.lit l) (.lit l) A := by
   unfold bin_log_related
   iintro %vs -
   rw [substMap_lit, substMap_lit, show lit l = (Val.ofBaseLit l).1 from rfl]
@@ -79,7 +81,7 @@ theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lrel rT GF
 /-- A variable is related to itself at the type the context assigns it. -/
 theorem bin_log_related_var (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (x : Var) (τ : Ty)
     (hΓ : Γ.lookup x = some (interp L τ Δ)) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.fvar x) (.fvar x) τ := by
+    ⊢ bin_log_related_ty L ⊤ Δ Γ (.fvar x) (.fvar x) τ := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs #Hvs
   icases env_ltyped2_lookup Γ vs x (interp L τ Δ) hΓ $$ Hvs with ⟨%v1, %v2, %hvs_eq, HA⟩

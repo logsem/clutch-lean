@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris
 public import Metrology.TotalEris.Examples.GeometricTotal
 public import Metrology.TotalEris.Examples.Samplers.BernoulliGeometric
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -31,6 +32,7 @@ set_option pp.unicode.fun true
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 variable (E : CoPset) (Φ : Val rT → IProp GF)
 
 -- Closes the (generally unprovable) residual goals without `sorry`.
@@ -209,7 +211,7 @@ example : ⊢ tglWp E pl(let x := #1; let y := #2; x + y) Φ := by
 
 /-! ## End-to-end -/
 
-example : ⊢@{IProp GF} tglWp E pl(fst(((fun x, x) #1, #2)))
+example : ⊢ tglWp E pl(fst(((fun x, x) #1, #2)))
     (fun w : Val rT => iprop(⌜w = .int 1⌝)) := by
   twp_pures; twp_value; ipureintro; rfl
 
@@ -229,7 +231,7 @@ example : ⊢ tglWp E pl(#1 + fst((#2, #3))) Φ := by
 
 /-- info: ⊢ |={E}=> True -/
 #guard_msgs (info) in
-example : ⊢@{IProp GF} tglWp E pl((#1, #2))
+example : ⊢ tglWp E pl((#1, #2))
     (fun _ : Val rT => iprop(⌜True⌝)) := by
   twp_value; show_goal_render; exact hstop _
 

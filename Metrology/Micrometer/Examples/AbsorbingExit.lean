@@ -3,6 +3,7 @@ module
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Micrometer.CappedCredits
+import Metrology.Iris.LocalBI
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -19,15 +20,16 @@ namespace ProbLang
 namespace AbsorbingExit
 
 variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+local bi IProp GF
 
 /-- With `↯b (ε, δ)` for `δ ≥ 1`, `0` refines `1` at equal integers. -/
 theorem zero_refines_one_dp [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) :
-    ↯b (ε, δ) ⊢@{IProp GF} REL[codensity dp] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
+    ↯b (ε, δ) ⊢ REL[codensity dp] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
   refines_of_absorbing (absorbing_codensity_dp_iff.2 (.inr hδ))
 
 /-- With `↯b 1`, `0` refines `1` at equal integers in the total variation lifting. -/
 theorem zero_refines_one_tv [BudgetCreditGS ℝ≥0∞ GF] :
-    ↯b (1 : ℝ≥0∞) ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
+    ↯b (1 : ℝ≥0∞) ⊢ REL[codensity tv] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
   refines_of_absorbing absorbing_codensity_tv_one
 
 /-- In the capped view, a DP credit with `δ ≥ 1` is contradictory, so it proves anything. -/
@@ -39,7 +41,7 @@ theorem capped_dp_exit {GF : BundledGFunctors}
 /-- A capped credit is valid exactly when its budget is not absorbing. -/
 theorem capped_valid {GF : BundledGFunctors}
     [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
-    (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢@{IProp GF} ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
+    (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢ ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
   CappedCredit.valid (bad := {b | (codensity dp.{0}).Absorbing b})
 
 end AbsorbingExit

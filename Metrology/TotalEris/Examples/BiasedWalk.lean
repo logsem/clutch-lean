@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris
 public import Metrology.Code.RandomWalk
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -17,6 +18,7 @@ noncomputable section
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 def walkCost (u m : ℕ) (a x : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((u : ℝ) / (m - u)) ^ (a - x).toNat)
@@ -53,7 +55,7 @@ theorem walkCost_avg {u m : ℕ} (hum : u < m) {a x : ℤ} (hxa : x < a) :
 
 theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ) (x : ℤ)
     (hx : x ≤ a) :
-    iprop(↯(walkCost u m a x)) ⊢@{IProp GF}
+    iprop(↯(walkCost u m a x)) ⊢
       tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (n : ℤ)))) pl(#(.int x)))
         (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
   induction n generalizing x with
@@ -112,7 +114,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
       iapply ErrorCredit.ext (by simp [F, show ¬r.toNat < u by omega]) $$ Hcr
 
 theorem twp_biasedWalk_zero (E : CoPset) {u m : ℕ} (hum : u < m) (a n : ℕ) :
-    iprop(↯(ENNReal.ofReal (((u : ℝ) / (m - u)) ^ a))) ⊢@{IProp GF}
+    iprop(↯(ENNReal.ofReal (((u : ℝ) / (m - u)) ^ a))) ⊢
       tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (n : ℤ))))
         pl(#(.int 0))) (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
   iintro Herr

@@ -3,6 +3,7 @@ module
 public import Metrology.Iris.SpecUpdate
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.DetStep
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -91,11 +92,12 @@ section Rules
 deterministic step, at `defaultSpecUpdateGS` (where `specInterp` is `Cfg.specAuth`). -/
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
+local bi IProp GF
 
 /-- Spec step: a pure reduction `e ⇝ⁿ e'` under an evaluation context `K`. -/
 theorem step_pure {E : CoPset} (K : Ectx rT) {e e' : Exp rT} {φ : Prop} {n : ℕ}
     (Hφ : φ) [Hex : PureExec φ n e e'] :
-    ⤇ (K.fill e) ⊢@{IProp GF} specUpdate rT E (⤇ (K.fill e')) := by
+    ⤇ (K.fill e) ⊢ specUpdate rT E (⤇ (K.fill e')) := by
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iintro HK
   unfold specUpdate
@@ -111,7 +113,7 @@ theorem step_pure {E : CoPset} (K : Ectx rT) {e e' : Exp rT} {φ : Prop} {n : �
 
 /-- Spec step: heap allocation, returning a fresh location with its points-to. -/
 theorem step_alloc {E : CoPset} (K : Ectx rT) {v : Exp rT} (hv : IsVal v) :
-    ⤇ (K.fill (.alloc v)) ⊢@{IProp GF}
+    ⤇ (K.fill (.alloc v)) ⊢
       specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#(.loc l)))) ∗ (l ↦ₛ ⟨v, hv, hv.lc⟩)) := by
   iintro HK
   unfold specUpdate
@@ -142,7 +144,7 @@ theorem step_alloc {E : CoPset} (K : Ectx rT) {v : Exp rT} (hv : IsVal v) :
 
 /-- Spec step: load from a location whose points-to we own. -/
 theorem step_load {E : CoPset} (K : Ectx rT) {l : Loc} {v : Val rT} :
-    iprop((⤇ (K.fill pl(!#(.loc l)))) ∗ (l ↦ₛ v)) ⊢@{IProp GF}
+    iprop((⤇ (K.fill pl(!#(.loc l)))) ∗ (l ↦ₛ v)) ⊢
       specUpdate rT E iprop((⤇ (K.fill (Exp.ofVal v))) ∗ (l ↦ₛ v)) := by
   iintro ⟨HK, Hl⟩
   unfold specUpdate
@@ -161,7 +163,7 @@ theorem step_load {E : CoPset} (K : Ectx rT) {l : Loc} {v : Val rT} :
 /-- Spec step: store to a location whose points-to we own, updating it. -/
 theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
     (hv : IsVal e) (hnew : e.toVal? = some v_new) :
-    iprop((⤇ (K.fill (.store pl(#(.loc l)) e))) ∗ (l ↦ₛ v_old)) ⊢@{IProp GF}
+    iprop((⤇ (K.fill (.store pl(#(.loc l)) e))) ∗ (l ↦ₛ v_old)) ⊢
       specUpdate rT E iprop((⤇ (K.fill pl(#(.unit)))) ∗ (l ↦ₛ v_new)) := by
   iintro ⟨HK, Hl⟩
   unfold specUpdate
@@ -188,7 +190,7 @@ theorem step_store {E : CoPset} (K : Ectx rT) {l : Loc} {e : Exp rT} {v_old v_ne
 
 /-- Spec step: tape allocation, returning a fresh label with its empty tape. -/
 theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
-    ⤇ (K.fill (pl(tape(#(.int z))))) ⊢@{IProp GF}
+    ⤇ (K.fill (pl(tape(#(.int z))))) ⊢
       specUpdate rT E iprop(∃ (l : Loc),
         (⤇ (K.fill pl(#(.lbl l)))) ∗ (l ↪ₛ Tape.empty z)) := by
   iintro HK
@@ -222,7 +224,7 @@ theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
 theorem step_rand {E : CoPset} (K : Ectx rT) {z : Int} (l : Loc)
     (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z }) :
     iprop((⤇ (K.fill (pl(rand(#(.int z), #(.lbl l)))))) ∗ (l ↪ₛ ⟨z, n :: ns⟩))
-        ⊢@{IProp GF}
+        ⊢
       specUpdate rT E iprop((⤇ (K.fill pl(#(.int n)))) ∗ (l ↪ₛ ⟨z, ns⟩)) := by
   iintro ⟨HK, Hl⟩
   unfold specUpdate

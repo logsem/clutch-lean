@@ -11,6 +11,7 @@ public import Metrology.Couplings.Divergences.FDivFinite
 public import Metrology.Couplings.Divergences.Renyi
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -120,13 +121,14 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 section Rel
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
 at `c`. -/
 theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
     (hc : IsAddLeftRegular c)
     (hcpl : RRCoupling L c) (b b' : Bool) :
-    ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+    ⊢ ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
   rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
   iframe Hb
@@ -194,13 +196,14 @@ end Wp
 section Loop
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- The loop refines itself at equal counts, spending `↯b c` per round, given a refinement of one
 round at `c`. -/
 theorem rrCount_refines_of (c : B)
-    (hrr : ∀ b b', ⊢@{IProp GF} ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool)
+    (hrr : ∀ b b', ⊢ ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool)
     (b b' : Bool) (k : ℕ) :
-    ⊢@{IProp GF} ↯b (k • c) -∗ REL[L] (rrCount (rT := rT) b k) << (rrCount b' k) : lrel_int := by
+    ⊢ ↯b (k • c) -∗ REL[L] (rrCount (rT := rT) b k) << (rrCount b' k) : lrel_int := by
   induction k with
   | zero =>
     iintro -

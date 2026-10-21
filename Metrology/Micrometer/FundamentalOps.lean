@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.FundamentalCompat
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 /-! # Compatibility lemmas for open terms: operators, pattern matching, sampling and heap
 
@@ -21,13 +22,14 @@ section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-! ## Pattern matching -/
 
 /-- The literal-pattern case of `pat_match_related`. -/
 theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
     (hv : v = .ofBaseLit l') (hv' : v' = .ofBaseLit l') (hll : l = l' ∨ ¬ (l == l') = true) :
-    ⊢@{IProp GF} (∃ (b b' : Val rT), ⌜Pat.tryMatch (.lit l) v.1 = some b.1 ∧
+    ⊢ (∃ (b b' : Val rT), ⌜Pat.tryMatch (.lit l) v.1 = some b.1 ∧
       Pat.tryMatch (.lit l) v'.1 = some b'.1⌝ ∗ (interp L Ty.unit Δ).car b b') ∨
       ⌜Pat.tryMatch (.lit l) v.1 = none ∧ Pat.tryMatch (.lit l) v'.1 = none⌝ := by
   subst hv hv'
@@ -46,7 +48,7 @@ theorem pat_match_lit {Δ : TyEnv rT GF} {l l' : BaseLit rT} {v v' : Val rT}
 type, or both fail. -/
 theorem pat_match_related {Δ : TyEnv rT GF} {τs τb : Ty} {p : Pat rT}
     (Hpat : PatTyped τs p τb) (v v' : Val rT) :
-    (interp L τs Δ).car v v' ⊢@{IProp GF}
+    (interp L τs Δ).car v v' ⊢
       (∃ (b b' : Val rT), ⌜Pat.tryMatch p v.1 = some b.1 ∧ Pat.tryMatch p v'.1 = some b'.1⌝ ∗
         (interp L τb Δ).car b b') ∨
       ⌜Pat.tryMatch p v.1 = none ∧ Pat.tryMatch p v'.1 = none⌝ := by
@@ -152,14 +154,14 @@ lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step
 /-- A binary operator on two values that evaluates to a literal is related to itself. -/
 theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) {l : BaseLit rT}
     {A : lrel rT GF} (heval : op.eval w1.1 w2.1 = some (.lit l))
-    (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
   refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
 
 /-- A unary operator on a value that evaluates to a literal is related to itself. -/
 theorem refines_unop_val (op : UnOp) (w : Val rT) {l : BaseLit rT} {A : lrel rT GF}
-    (heval : op.eval w.1 = some (.lit l)) (HA : ⊢@{IProp GF} A.car (.ofBaseLit l) (.ofBaseLit l)) :
-    ⊢@{IProp GF} refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
+    (heval : op.eval w.1 = some (.lit l)) (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
 /-- Binds both operands of a binary operator, whose values lie in a family `V`, then continues
@@ -386,7 +388,7 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 
 /-- `urand` is compatible, coupling the two samples by the identity. -/
 theorem bin_log_related_urand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
+    ⊢ bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs -
   rw [substMap_urand, substMap_urand, interp_real,

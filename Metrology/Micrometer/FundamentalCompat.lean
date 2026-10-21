@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.FundamentalBase
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 /-!
 # Compatibility lemmas for open terms
@@ -23,6 +24,7 @@ section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
@@ -34,9 +36,9 @@ theorem bin_log_related_lam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     (S : Finset Var) (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ x ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ ((x, interp L τ1 Δ) :: Γ)
+    (Hbody : ∀ x ∉ S, ⊢ bin_log_related_ty L ⊤ Δ ((x, interp L τ1 Δ) :: Γ)
       (open' e (.fvar x)) (open' e' (.fvar x)) τ2) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.arrow τ1 τ2) := by
+    ⊢ bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.arrow τ1 τ2) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam, interp_arrow]
@@ -75,9 +77,9 @@ theorem bin_log_related_fix (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp r
     (S : Finset Var) (he_lc : ∀ f ∉ S, (open' e (.fvar f)).IsLocallyClosed)
     (he'_lc : ∀ f ∉ S, (open' e' (.fvar f)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ f ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ ((f, interp L (.arrow τ1 τ2) Δ) :: Γ)
+    (Hbody : ∀ f ∉ S, ⊢ bin_log_related_ty L ⊤ Δ ((f, interp L (.arrow τ1 τ2) Δ) :: Γ)
       (open' e (.fvar f)) (open' e' (.fvar f)) (.arrow τ1 τ2)) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.fix e) (.fix e') (.arrow τ1 τ2) := by
+    ⊢ bin_log_related_ty L ⊤ Δ Γ (.fix e) (.fix e') (.arrow τ1 τ2) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_fix, substMap_fix, interp_arrow]
@@ -177,8 +179,8 @@ theorem bin_log_related_if (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
 theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ : Ty}
     (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-    (Hbody : ∀ A, ⊢@{IProp GF} □ (bin_log_related_ty L ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
+    (Hbody : ∀ A, ⊢ □ (bin_log_related_ty L ⊤ (TyEnv.cons A Δ) Γ e e' τ)) :
+    ⊢ bin_log_related_ty L ⊤ Δ Γ (.lam e) (.lam e') (.forall' τ) := by
   unfold bin_log_related_ty bin_log_related at Hbody ⊢
   iintro %vs #Hvs
   rw [substMap_lam, substMap_lam]
@@ -279,7 +281,7 @@ theorem bin_log_related_unpack_wand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : 
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)
-    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
+    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢ bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
       ((x, interp L τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
     bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ) ⊢
       bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 := by
@@ -311,12 +313,12 @@ theorem bin_log_related_unpack_wand (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : 
 /-- `unpack` compatibility for `bin_log_related`. -/
 theorem bin_log_related_unpack (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var)
     {e1 e1' e2 e2' : Exp rT} {τ τ2 : Ty}
-    (HIH1 : ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))
+    (HIH1 : ⊢ bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)
-    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢@{IProp GF} bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
+    (HIH2 : ∀ A : lrel rT GF, ∀ x ∉ S, ⊢ bin_log_related_ty L ⊤ (TyEnv.cons A Δ)
       ((x, interp L τ (TyEnv.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
-    ⊢@{IProp GF} bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 :=
+    ⊢ bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 :=
   HIH1.trans (bin_log_related_unpack_wand Δ Γ S he2_lc he2'_lc HIH2)
 
 end Steps

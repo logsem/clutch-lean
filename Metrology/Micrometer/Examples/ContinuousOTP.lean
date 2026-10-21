@@ -9,6 +9,7 @@ public import Metrology.Micrometer.Soundness
 public import Metrology.ProbLang.Advantage
 public import Metrology.ProbLang.Reals
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -31,6 +32,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 section Abstract
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
 
 /-- The body of `otp_enc m` as a lambda, which `otp_enc m` applies to `urand`. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
@@ -39,7 +41,7 @@ abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
 theorem otp_refines (m : rT)
     (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
-    ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
+    ⊢ REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %_
   rel_pures
@@ -55,7 +57,7 @@ theorem otp_refines_rev (m : rT) (g : rT → rT)
     (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
     (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
       ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
-    ⊢@{IProp GF} REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
+    ⊢ REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %hr
   rel_pures

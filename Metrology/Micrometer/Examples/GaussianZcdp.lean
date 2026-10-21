@@ -10,6 +10,7 @@ public import Metrology.Couplings.Divergences.Conversions
 public import Metrology.ProbLang.Reals
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -61,6 +62,7 @@ section Logic
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
 
 /-- `k` releases against the spec in context `K`, spending `(0, (a - a')² / (2 v))` per release:
 both sides release the same tuple. Conditional on the sampler spec `hgauss`. -/
@@ -110,7 +112,7 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
 release the same tuple. Conditional on the sampler spec `hgauss`. -/
 theorem wp_release (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLifting gauss v)
     (a a' : ℝ) (k : ℕ) :
-    ⊢@{IProp GF} ⤇ release gauss a' k -∗ ↯b ((0 : ℝ≥0∞), (k : ℝ≥0∞) * cost v a a') -∗
+    ⊢ ⤇ release gauss a' k -∗ ↯b ((0 : ℝ≥0∞), (k : ℝ≥0∞) * cost v a a') -∗
       wp zcdpLifting ⊤ (release gauss a k) (fun w => iprop(∃ w', ⤇ Exp.ofVal w' ∗ ⌜w = w'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb

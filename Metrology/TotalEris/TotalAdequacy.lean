@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris.ErrorRules
 public import Metrology.TotalEris.FupdPlainlyForall
 public import Metrology.ProbLang.Erasure
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -22,6 +23,7 @@ namespace TotalEris
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors}
+local bi IProp GF
 
 theorem measurableEmbedding_ofVal :
     MeasurableEmbedding (Exp.ofVal : Val rT → Exp rT) := by
@@ -265,7 +267,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
     (hφ : MeasurableSet {v : Val rT | φ v}) :
     glm' (GF := GF) e σ ε
         (fun ρ ε₂ => iprop(|={∅}=> ⌜Tgl (limExec ρ) φ ε₂⌝))
-      ⊢@{IProp GF} iprop(|={∅}=> ⌜Tgl (limExec ⟨e, σ⟩) φ ε⌝) := by
+      ⊢ iprop(|={∅}=> ⌜Tgl (limExec ⟨e, σ⟩) φ ε⌝) := by
   let Z : Cfg rT → ENNReal → IProp GF :=
     fun ρ ε₂ => iprop(|={∅}=> ⌜Tgl (limExec ρ) φ ε₂⌝)
   let Ψ : GlmState rT → IProp GF :=
@@ -311,7 +313,7 @@ theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v}) :
     iprop(stateInterp σ ∗ errInterp (rT := rT) ε ∗ tglWp ⊤ e (fun v => iprop(⌜φ v⌝)))
-      ⊢@{IProp GF} iprop(|={⊤,∅}=> ⌜Tgl (limExec ⟨e, σ⟩) φ ε⌝) := by
+      ⊢ iprop(|={⊤,∅}=> ⌜Tgl (limExec ⟨e, σ⟩) φ ε⌝) := by
   iintro ⟨Hσ, Hε, HW⟩
   let Q : Exp rT → IProp GF := fun e' => iprop(
     ∀ σ' ε', stateInterp σ' ∗ errInterp (rT := rT) ε' -∗
@@ -347,13 +349,13 @@ theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF]
 theorem twp_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF}
+    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Tgl (limExec ⟨e, σ⟩) φ ε := by
   by_cases hε : 1 ≤ ε
   · exact Tgl.of_ge_one hε
   push Not at hε
-  refine pure_soundness (PROP := IProp GF) ?_
+  refine pure_soundness (PROP := bi%) ?_
   refine fupd_soundness .hasNoLC (GF := GF) (E1 := ⊤) (E2 := ∅) (n := 0)
     (fun Hinv => ?_)
   iintro _
@@ -370,11 +372,11 @@ theorem twp_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {v : Val rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hε : ε < 1)
-    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF}
+    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ (Exp.ofVal v) (fun v => iprop(⌜φ v⌝))) :
     Tgl (limExec ⟨Exp.ofVal v, σ⟩) φ 0 := by
   refine Tgl.of_limExec_val ?_
-  refine pure_soundness (PROP := IProp GF) ?_
+  refine pure_soundness (PROP := bi%) ?_
   refine step_fupdN_soundness (hlc := .hasNoLC) (GF := GF) 0 0 (fun Hinv => ?_)
   iintro _
   imod (app_ra_init (GF := GF) σ) with ⟨%IA, HappAuth⟩
@@ -394,7 +396,7 @@ theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_mass_lim_exec [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF}
+    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     1 - ε ≤ (limExec ⟨e, σ⟩) Set.univ :=
   Tgl.termination_ineq (twp_tgl hφ Hwp)
@@ -402,7 +404,7 @@ theorem twp_mass_lim_exec [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_pgl_lim [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF}
+    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) (limExec ⟨e, σ⟩) :=
   Tgl.pgl_limExec hφ (twp_tgl hφ Hwp)
@@ -410,7 +412,7 @@ theorem twp_pgl_lim [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_tgl_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢@{IProp GF}
+    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Tgl (limExec ⟨e, σ⟩) φ ε :=
   Tgl.epsilon_limit (fun ε' hε' => twp_tgl hφ (Hwp ε' hε'))
@@ -418,7 +420,7 @@ theorem twp_tgl_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_mass_lim_exec_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢@{IProp GF}
+    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     1 - ε ≤ (limExec ⟨e, σ⟩) Set.univ :=
   Tgl.termination_ineq (twp_tgl_limit hφ Hwp)
@@ -426,7 +428,7 @@ theorem twp_mass_lim_exec_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_pgl_lim_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢@{IProp GF}
+    (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) (limExec ⟨e, σ⟩) :=
   Tgl.pgl_limExec hφ (twp_tgl_limit hφ Hwp)
@@ -434,7 +436,7 @@ theorem twp_pgl_lim_limit [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
 theorem twp_tgl_of_toVal [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     {e : Exp rT} {σ : State rT} {ε : ENNReal} {v : Val rT} {φ : Val rT → Prop}
     (hev : e.toVal? = some v) (hε : ε < 1)
-    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF}
+    (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Tgl (limExec ⟨e, σ⟩) φ 0 := by
   obtain rfl : Exp.ofVal v = e := Exp.ofVal_of_toVal_some hev

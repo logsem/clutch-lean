@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.Wp
+import Metrology.Iris.LocalBI
 
 /-! # Structural rules of `wp`
 
@@ -18,6 +19,7 @@ variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+local bi IProp GF
 
 section Wp
 variable [BudgetGS B GF]
@@ -33,7 +35,7 @@ noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
 theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset}
     {e : Exp rT} {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
-  have Hloeb : ⊢@{IProp GF} wpBindStmt L K := by
+  have Hloeb : ⊢ wpBindStmt L K := by
     iapply loeb_wand
     iintro !> IH %E' %e' %Φ' HW
     iapply wp_unfold
@@ -95,7 +97,7 @@ noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
 theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     wp L E e (fun v => specUpdate rT E (Φ v)) ⊢ wp L E e Φ := by
-  have Hloeb : ⊢@{IProp GF} wpSpecUpdateStmt L (rT := rT) := by
+  have Hloeb : ⊢ wpSpecUpdateStmt L (rT := rT) := by
     iapply loeb_wand
     iintro !> IH %E' %e' %Φ' HW
     iapply wp_unfold
@@ -141,7 +143,7 @@ noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
 /-- Frame a resource into the postcondition. -/
 theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
     iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ Φ v) := by
-  have Hloeb : ⊢@{IProp GF} wpFrameLStmt L (rT := rT) := by
+  have Hloeb : ⊢ wpFrameLStmt L (rT := rT) := by
     iapply loeb_wand
     iintro !> IH %E' %e' %R' %Φ' HR HW
     iapply wp_unfold

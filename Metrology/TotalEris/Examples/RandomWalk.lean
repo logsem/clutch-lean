@@ -2,6 +2,7 @@ module
 
 public import Metrology.TotalEris
 public import Metrology.Code.RandomWalk
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -21,6 +22,7 @@ namespace Examples
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 /-! ## `finalPos` and the RSM scaffold -/
 
@@ -73,7 +75,7 @@ theorem finalPos_dec (li : List (Fin 2)) :
 /-! ## Termination spec -/
 
 theorem unifRw1d_terminate (E : CoPset) :
-    ⊢@{IProp GF} tglWp (rT := rT) E unifRw1d
+    ⊢ tglWp (rT := rT) E unifRw1d
       (fun v => iprop(⌜v = .unit⌝)) := by
   sorry
 

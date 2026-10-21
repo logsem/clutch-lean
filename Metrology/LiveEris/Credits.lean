@@ -6,6 +6,7 @@ public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
 public import Iris.ProofMode.InstancesUpdates
 public import Metrology.Iris.Algebra
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -156,23 +157,24 @@ end Resources
 namespace Credit
 
 variable {GF : BundledGFunctors} [ILC : LCGS GF]
+local bi IProp GF
 
 theorem frag_ext {ε₁ δ₁ ε₂ δ₂} (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
-    creditFrag ε₁ δ₁ ⊢@{IProp GF} creditFrag ε₂ δ₂ := by
+    creditFrag ε₁ δ₁ ⊢ creditFrag ε₂ δ₂ := by
   simp [hε, hδ]
 
 theorem auth_ext {ε₁ δ₁ ε₂ δ₂} (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
-    creditAuth ε₁ δ₁ ⊢@{IProp GF} creditAuth ε₂ δ₂ := by
+    creditAuth ε₁ δ₁ ⊢ creditAuth ε₂ δ₂ := by
   simp [hε, hδ]
 
 theorem frag_split {ε₁ δ₁ ε₂ δ₂} :
-    creditFrag (ε₁ + ε₂) (δ₁ + δ₂) ⊢@{IProp GF} creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ := by
+    creditFrag (ε₁ + ε₂) (δ₁ + δ₂) ⊢ creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ := by
   unfold creditFrag
   rw [← credits_op, Auth.frag_op]
   exact iOwn_op.mp
 
 theorem frag_combine {ε₁ δ₁ ε₂ δ₂} :
-    creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ ⊢@{IProp GF} creditFrag (ε₁ + ε₂) (δ₁ + δ₂) := by
+    creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ ⊢ creditFrag (ε₁ + ε₂) (δ₁ + δ₂) := by
   unfold creditFrag
   iintro ⟨H1, H2⟩
   icombine H1 H2 as H
@@ -182,38 +184,38 @@ instance {ε₁ δ₁ ε₂ δ₂} : Iris.ProofMode.CombineSepAs (creditFrag ε�
     (creditFrag ε₂ δ₂) (creditFrag (ε₁ + ε₂) (δ₁ + δ₂)) where
   combine_sep_as := frag_combine
 
-theorem frag_sep {ε δ} : creditFrag ε δ ⊣⊢@{IProp GF} ↯ε ∗ ↻δ :=
+theorem frag_sep {ε δ} : creditFrag ε δ ⊣⊢ ↯ε ∗ ↻δ :=
   ⟨(frag_ext (add_zero ε).symm (zero_add δ).symm).trans frag_split,
    frag_combine.trans (frag_ext (add_zero ε) (zero_add δ))⟩
 
-theorem err_split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢@{IProp GF} ↯ε₁ ∗ ↯ε₂ :=
+theorem err_split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ :=
   (frag_ext rfl (add_zero 0).symm).trans frag_split
 
-theorem err_combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢@{IProp GF} ↯(ε₁ + ε₂) :=
+theorem err_combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢ ↯(ε₁ + ε₂) :=
   frag_combine.trans (frag_ext rfl (add_zero 0))
 
-theorem div_split {δ₁ δ₂} : ↻(δ₁ + δ₂) ⊢@{IProp GF} ↻δ₁ ∗ ↻δ₂ :=
+theorem div_split {δ₁ δ₂} : ↻(δ₁ + δ₂) ⊢ ↻δ₁ ∗ ↻δ₂ :=
   (frag_ext (add_zero 0).symm rfl).trans frag_split
 
-theorem div_combine {δ₁ δ₂} : ↻δ₁ ∗ ↻δ₂ ⊢@{IProp GF} ↻(δ₁ + δ₂) :=
+theorem div_combine {δ₁ δ₂} : ↻δ₁ ∗ ↻δ₂ ⊢ ↻(δ₁ + δ₂) :=
   frag_combine.trans (frag_ext (add_zero 0) rfl)
 
 theorem frag_weaken {ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞} (hε : ε₂ ≤ ε₁) (hδ : δ₂ ≤ δ₁) :
-    creditFrag ε₁ δ₁ ⊢@{IProp GF} creditFrag ε₂ δ₂ := by
+    creditFrag ε₁ δ₁ ⊢ creditFrag ε₂ δ₂ := by
   iintro H
   ihave H := frag_ext (tsub_add_cancel_of_le hε).symm (tsub_add_cancel_of_le hδ).symm $$ H
   ihave ⟨-, H⟩ := frag_split $$ H
   iexact H
 
-theorem err_weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢@{IProp GF} ↯ε₂ :=
+theorem err_weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢ ↯ε₂ :=
   frag_weaken h le_rfl
 
-theorem div_weaken {δ₁ δ₂ : ℝ≥0∞} (h : δ₂ ≤ δ₁) : ↻δ₁ ⊢@{IProp GF} ↻δ₂ :=
+theorem div_weaken {δ₁ δ₂ : ℝ≥0∞} (h : δ₂ ≤ δ₁) : ↻δ₁ ⊢ ↻δ₂ :=
   frag_weaken le_rfl h
 
-theorem zero : ⊢@{IProp GF} |==> creditFrag 0 0 := iOwn_unit
+theorem zero : ⊢ |==> creditFrag 0 0 := iOwn_unit
 
-theorem frag_valid {ε δ : ℝ≥0∞} : creditFrag ε δ ⊢@{IProp GF} ⌜ε < 1 ∧ δ < ∞⌝ := by
+theorem frag_valid {ε δ : ℝ≥0∞} : creditFrag ε δ ⊢ ⌜ε < 1 ∧ δ < ∞⌝ := by
   unfold creditFrag
   iintro H
   ihave Hv := iOwn_cmraValid $$ H
@@ -221,12 +223,12 @@ theorem frag_valid {ε δ : ℝ≥0∞} : creditFrag ε δ ⊢@{IProp GF} ⌜ε 
   ipureintro
   exact Auth.frag_valid.mp hv
 
-theorem err_contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢@{IProp GF} False := by
+theorem err_contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢ False := by
   iintro H
   ihave %⟨hlt, _⟩ := frag_valid $$ H
   exact absurd h (not_le.mpr hlt)
 
-theorem auth_valid {εₛ δₛ : ℝ≥0∞} : creditAuth εₛ δₛ ⊢@{IProp GF} ⌜εₛ < 1 ∧ δₛ < ∞⌝ := by
+theorem auth_valid {εₛ δₛ : ℝ≥0∞} : creditAuth εₛ δₛ ⊢ ⌜εₛ < 1 ∧ δₛ < ∞⌝ := by
   unfold creditAuth
   iintro H
   ihave Hv := iOwn_cmraValid $$ H
@@ -235,7 +237,7 @@ theorem auth_valid {εₛ δₛ : ℝ≥0∞} : creditAuth εₛ δₛ ⊢@{IPro
   exact Auth.auth_valid.mp hv
 
 theorem supply_bound {εₛ δₛ ε δ : ℝ≥0∞} :
-    ⊢@{IProp GF} creditAuth εₛ δₛ -∗ creditFrag ε δ -∗ ⌜ε ≤ εₛ ∧ δ ≤ δₛ⌝ := by
+    ⊢ creditAuth εₛ δₛ -∗ creditFrag ε δ -∗ ⌜ε ≤ εₛ ∧ δ ≤ δₛ⌝ := by
   unfold creditFrag creditAuth
   iintro Hs H
   icombine Hs H gives Hv
@@ -244,14 +246,14 @@ theorem supply_bound {εₛ δₛ ε δ : ℝ≥0∞} :
   exact credits_includedN.mp ((Auth.auth_both_valid.mp hv).1 0)
 
 theorem div_bound {εₛ δₛ δ : ℝ≥0∞} :
-    ⊢@{IProp GF} creditAuth εₛ δₛ -∗ ↻δ -∗ ⌜δ ≤ δₛ⌝ := by
+    ⊢ creditAuth εₛ δₛ -∗ ↻δ -∗ ⌜δ ≤ δₛ⌝ := by
   iintro Hs H
   ihave %⟨-, h⟩ := supply_bound $$ Hs H
   ipureintro
   exact h
 
 theorem supply_decrease {εₛ δₛ ε δ : ℝ≥0∞} :
-    ⊢@{IProp GF} creditAuth εₛ δₛ -∗ creditFrag ε δ -∗ |==> creditAuth (εₛ - ε) (δₛ - δ) := by
+    ⊢ creditAuth εₛ δₛ -∗ creditFrag ε δ -∗ |==> creditAuth (εₛ - ε) (δₛ - δ) := by
   iintro Hs H
   ihave %⟨hε, hδ⟩ := supply_bound $$ Hs H
   unfold creditFrag creditAuth
@@ -263,7 +265,7 @@ theorem supply_decrease {εₛ δₛ ε δ : ℝ≥0∞} :
   · simpa using (tsub_add_cancel_of_le hδ).symm
 
 theorem supply_increase {εₛ δₛ ε δ : ℝ≥0∞} (hε : εₛ + ε < 1) (hδ : δₛ + δ < ∞) :
-    creditAuth εₛ δₛ ⊢@{IProp GF} |==> (creditAuth (εₛ + ε) (δₛ + δ) ∗ creditFrag ε δ) := by
+    creditAuth εₛ δₛ ⊢ |==> (creditAuth (εₛ + ε) (δₛ + δ) ∗ creditFrag ε δ) := by
   unfold creditFrag creditAuth
   have Hupd : (● credits εₛ δₛ) ~~> (● credits (εₛ + ε) (δₛ + δ)) • (◯ credits ε δ : Auth LiveCredit) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
@@ -278,7 +280,7 @@ theorem supply_increase {εₛ δₛ ε δ : ℝ≥0∞} (hε : εₛ + ε < 1) 
   iapply iOwn_op $$ H
 
 theorem supply_convert {εₛ δₛ ε : ℝ≥0∞} :
-    ⊢@{IProp GF} creditAuth εₛ δₛ -∗ ↯ε -∗ |==> (creditAuth (εₛ - ε) (δₛ + ε) ∗ ↻ε) := by
+    ⊢ creditAuth εₛ δₛ -∗ ↯ε -∗ |==> (creditAuth (εₛ - ε) (δₛ + ε) ∗ ↻ε) := by
   iintro Hs H
   ihave %⟨hε, _⟩ := supply_bound $$ Hs H
   ihave %⟨hεₛ, hδₛ⟩ := auth_valid $$ Hs

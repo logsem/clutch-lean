@@ -3,6 +3,7 @@ module
 public import Metrology.Micrometer.Examples.RandomizedResponse.Zcdp
 public import Metrology.Code.RandomizedResponseTwice
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -26,6 +27,7 @@ section Logic
 
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
 
 /-- `wp_rr_of` at the zCDP coupling `rrCoupling_zcdp`: one round against the spec in context `K`,
 spending `(ln 3, 0)`. -/
@@ -67,7 +69,7 @@ theorem wp_rr2_fill (K : Ectx rT) (b₁ b₂ b₁' b₂' : Bool) (Φ : Val rT �
 
 /-- The two-bit program against itself, spending `(ln 3, 0)` per bit. -/
 theorem wp_rr2 (b₁ b₂ b₁' b₂' : Bool) :
-    ⊢@{IProp GF} ⤇ rr2 (rT := rT) b₁' b₂' -∗ ↯b (budget + budget) -∗
+    ⊢ ⤇ rr2 (rT := rT) b₁' b₂' -∗ ↯b (budget + budget) -∗
       wp zcdpLifting ⊤ (rr2 b₁ b₂) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb

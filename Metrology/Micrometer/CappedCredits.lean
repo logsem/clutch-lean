@@ -3,6 +3,7 @@ module
 public import Metrology.Iris.CappedCredits
 public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Couplings.Divergences.Concentrated
+import Metrology.Iris.LocalBI
 
 /-! # Absorbing budgets and DP capped credits
 
@@ -131,15 +132,16 @@ open Iris GradedDivergence
 
 variable {GF : BundledGFunctors}
   [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{u}).Absorbing b} GF]
+local bi IProp GF
 
 /-- Any DP credit can be spent: valid DP budgets cancel. -/
 theorem dp_supply_decrease {s c : ℝ≥0∞ × ℝ≥0∞} :
-    ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r :=
+    ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r :=
   supply_decrease_of_valid (bad := {b | (codensity dp.{u}).Absorbing b}) fun _ ↦
     isAddLeftRegular_of_not_absorbing_codensity_dp
 
 /-- A DP credit with slack at least `1` is contradictory. -/
-theorem dp_contradict_of_one_le {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) : ↯c (ε, δ) ⊢@{IProp GF} False :=
+theorem dp_contradict_of_one_le {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) : ↯c (ε, δ) ⊢ False :=
   contradict (absorbing_codensity_dp_iff.2 (.inr hδ))
 
 end CappedCredit

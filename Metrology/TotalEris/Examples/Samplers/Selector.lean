@@ -4,6 +4,7 @@ public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
 public import Metrology.TotalEris.Examples.Samplers.RealDecrTrial
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -24,6 +25,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section distribution
 
@@ -383,7 +385,7 @@ theorem beq_int_lit {n m : Int} :
     ((BaseLit.int n : BaseLit ℝ) == BaseLit.int m) = (n == m) := rfl
 
 theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
-    ⊢@{IProp GF} ↯ (CCreditV F m) -∗
+    ⊢ ↯ (CCreditV F m) -∗
       tglWp E pl(&C #(.int (m : ℤ)))
         (fun v : Val ℝ => iprop(∃ n : ℕ,
           ⌜v.1 = pl(#(.int (Int.ofNat n)))⌝ ∗ ⌜n = 0 ∨ n = 1 ∨ n = 2⌝ ∗ ↯ (F n))) := by
@@ -431,7 +433,7 @@ theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
       itrivial
 
 theorem twp_Bii (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
-    ⊢@{IProp GF} ↯ (BiiCreditV F k x) -∗
+    ⊢ ↯ (BiiCreditV F k x) -∗
       tglWp E pl(&Bii #(.int (k : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
@@ -480,7 +482,7 @@ theorem twp_Bii (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 
 
 theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1)
     (B : ℝ) (hB0 : 0 < B) (hB1 : B < 1) :
-    ⊢@{IProp GF} ∀ (N : ℕ) (y : ℝ), ⌜0 ≤ y⌝ -∗ ⌜y ≤ B⌝ -∗
+    ⊢ ∀ (N : ℕ) (y : ℝ), ⌜0 ≤ y⌝ -∗ ⌜y ≤ B⌝ -∗
       ↯ (SCreditV F k x y N) -∗
       tglWp E pl(&S #(.int (k : ℤ)) #(.real x) #(.real y) #(.int (N : ℤ)))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
@@ -551,7 +553,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
 
 theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : ℕ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1)
     (hy0 : 0 ≤ y) (hy1 : y ≤ 1) :
-    ⊢@{IProp GF} ↯ (SCreditV F k x y N) -∗
+    ⊢ ↯ (SCreditV F k x y N) -∗
       tglWp E pl(&S #(.int (k : ℤ)) #(.real x) #(.real y) #(.int (N : ℤ)))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε_spec
@@ -594,7 +596,7 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
     itrivial
 
 theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
-    ⊢@{IProp GF} ↯ (SCreditV F k x x 0) -∗
+    ⊢ ↯ (SCreditV F k x x 0) -∗
       tglWp E pl(&S0 #(.int (k : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε
@@ -636,7 +638,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
     itrivial
 
 theorem twp_B (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx : 0 ≤ x ∧ x ≤ 1) :
-    ⊢@{IProp GF} ↯ (BCreditV F k x) -∗
+    ⊢ ↯ (BCreditV F k x) -∗
       tglWp E pl(&B #(.int (k : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε

@@ -4,6 +4,7 @@ public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
 public import Metrology.TotalEris.Examples.Samplers.RealDecrTrial
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -19,6 +20,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section distribution
 
@@ -164,7 +166,7 @@ end conservation
 section specification
 
 theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measurable (F a)) (L : ℕ) :
-    ⊢@{IProp GF} ↯ (NegExpCreditV F L) -∗
+    ⊢ ↯ (NegExpCreditV F L) -∗
       tglWp E pl(&NegExp #(.int (L : ℤ)))
         (fun p : Val ℝ => iprop(∃ (vz : ℕ) (vr : ℝ),
           ⌜p.1 = .pair (pl(#(.int (Int.ofNat vz)))) pl(#(.real vr))⌝ ∗

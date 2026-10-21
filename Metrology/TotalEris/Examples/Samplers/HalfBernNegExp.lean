@@ -5,6 +5,7 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Reals
 public import Metrology.TotalEris.Examples.Samplers.RealDecrTrial
 public import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -20,6 +21,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section program
 
@@ -147,7 +149,7 @@ end conservation
 section specification
 
 theorem twp_LeHalf (E : CoPset) (r : ℝ) :
-    ⊢@{IProp GF} tglWp E pl(&LeHalf #(.real r))
+    ⊢ tglWp E pl(&LeHalf #(.real r))
       (fun v : Val ℝ => iprop(⌜v.1 = .lit (.bool (LeHalfSpec r))⌝)) := by
   twp_pures
   twp_value
@@ -158,7 +160,7 @@ theorem twp_LeHalf (E : CoPset) (r : ℝ) :
   rfl
 
 theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
-    ⊢@{IProp GF} ↯ (BNEHalfCreditV F) -∗
+    ⊢ ↯ (BNEHalfCreditV F) -∗
       tglWp E pl(&BNEHalf #.unit)
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
@@ -264,7 +266,7 @@ theorem FairCoin_fv : (FairCoin : Exp ℝ).fv = ∅ := by
   Exp.closeRec_fresh x FairCoin k (by simp [FairCoin_fv])
 
 theorem twp_FairCoin (E : CoPset) (F : Bool → ℝ≥0∞) :
-    ⊢@{IProp GF} ↯ (FairCoinCreditV F) -∗
+    ⊢ ↯ (FairCoinCreditV F) -∗
       tglWp E pl(&FairCoin #.unit)
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε

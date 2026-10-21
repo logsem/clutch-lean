@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris.ErisGS
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.TotalEris.TotalPrimitiveLaws
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -58,22 +59,23 @@ theorem measurable_litReal_elim (g : rT → ENNReal) (hg : Measurable g) :
 namespace TotalEris
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 open ErrorCredit
 
 theorem errInterp_supply_decrease {εₛ ε : ENNReal} :
-    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢@{IProp GF} |==> errInterp (rT := rT) (εₛ - ε) := by
+    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ |==> errInterp (rT := rT) (εₛ - ε) := by
   iintro ⟨Hs, Hε⟩
   iapply supply_decrease $$ Hs Hε
 
 theorem errInterp_supply_bound {εₛ ε : ENNReal} :
-    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢@{IProp GF} errInterp (rT := rT) εₛ ∗ ↯ε ∗ ⌜ε ≤ εₛ⌝ := by
+    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ errInterp (rT := rT) εₛ ∗ ↯ε ∗ ⌜ε ≤ εₛ⌝ := by
   iintro ⟨Hs, Hε⟩
   ihave %hLe := supply_bound $$ Hs Hε
   iframe Hs Hε %hLe
 
 theorem errInterp_supply_increase {ε δ : ENNReal} (h : ε + δ < 1) :
-    iprop(errInterp (rT := rT) ε) ⊢@{IProp GF} |==> (errInterp (rT := rT) (ε + δ) ∗ ↯δ) :=
+    iprop(errInterp (rT := rT) ε) ⊢ |==> (errInterp (rT := rT) (ε + δ) ∗ ↯δ) :=
   ErrorCredit.supply_increase h
 
 theorem twp_err_incr {E : CoPset} {e : Exp rT} {ε : ENNReal} {Φ : Val rT → IProp GF}

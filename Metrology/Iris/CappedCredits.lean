@@ -6,6 +6,7 @@ public import Mathlib.Order.Defs.Unbundled
 public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
+import Metrology.Iris.LocalBI
 
 /-!
 # Capped credits
@@ -124,6 +125,7 @@ namespace CappedCredit
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] {bad : Set B}
   [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)] {GF : BundledGFunctors}
   [ICC : CappedCreditGS B bad GF]
+local bi IProp GF
 
 /-! ### Splitting and combining -/
 
@@ -134,13 +136,13 @@ theorem frag_add {a b : B} :
   Auth.frag_op
 
 /-- A credit splits into two credits (Rocq `gccredit_split`). -/
-theorem split {a b : B} : ↯c (a + b) ⊢@{IProp GF} ↯c a ∗ ↯c b := by
+theorem split {a b : B} : ↯c (a + b) ⊢ ↯c a ∗ ↯c b := by
   unfold cc
   rw [frag_add]
   exact iOwn_op.1
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯c a ∗ ↯c b ⊢@{IProp GF} ↯c (a + b) := by
+theorem combine {a b : B} : ↯c a ∗ ↯c b ⊢ ↯c (a + b) := by
   unfold cc
   rw [frag_add]
   exact iOwn_op.2
@@ -151,18 +153,18 @@ instance combineSepAs_cc {a b : B} :
   combine_sep_as := combine
 
 /-- A credit can be weakened to a smaller one. -/
-theorem weaken {a b : B} (hb : b ≤ a) : ↯c a ⊢@{IProp GF} ↯c b := by
+theorem weaken {a b : B} (hb : b ≤ a) : ↯c a ⊢ ↯c b := by
   obtain ⟨c, rfl⟩ := exists_add_of_le hb
   exact split.trans BI.sep_elim_left
 
 /-- The zero credit is free. -/
-theorem zero : ⊢@{IProp GF} |==> ↯c (0 : B) :=
+theorem zero : ⊢ |==> ↯c (0 : B) :=
   iOwn_unit (ε := UCMRA.unit)
 
 /-! ### Validity -/
 
 /-- A credit is never bad (Rocq `gccredit_valid`). -/
-theorem valid {c : B} : ↯c c ⊢@{IProp GF} ⌜c ∉ bad⌝ := by
+theorem valid {c : B} : ↯c c ⊢ ⌜c ∉ bad⌝ := by
   unfold cc
   iintro Hc
   ihave Hv := iOwn_cmraValid $$ Hc
@@ -171,7 +173,7 @@ theorem valid {c : B} : ↯c c ⊢@{IProp GF} ⌜c ∉ bad⌝ := by
   exact Auth.frag_valid.mp hv
 
 /-- A bad credit is contradictory (Rocq `gccredit_ge_top_False`). -/
-theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢@{IProp GF} False := by
+theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢ False := by
   iintro Hc
   ihave %hc := valid $$ Hc
   exact absurd h hc
@@ -179,7 +181,7 @@ theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢@{IProp GF} False := by
 /-! ### Spending and allocating against the authority -/
 
 /-- A credit never exceeds the authoritative budget (Rocq `gcsupply_bound`). -/
-theorem supply_bound {s c : B} : ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
+theorem supply_bound {s c : B} : ⊢ ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
   unfold cc ccAuth
   iintro Hs Hc
   icombine Hs Hc gives Hv
@@ -189,7 +191,7 @@ theorem supply_bound {s c : B} : ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ ⌜c 
 
 /-- Spending a cancelable credit `c` takes it out of the budget (Rocq `gcsupply_decrease`). -/
 theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
-    ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
+    ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
   iintro Hs Hc
   ihave %hcs := supply_bound $$ Hs Hc
   obtain ⟨r, hr⟩ := exists_add_of_le hcs
@@ -202,14 +204,14 @@ theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
 
 /-- When every valid budget cancels, any credit can be spent. -/
 theorem supply_decrease_of_valid (hcancel : ∀ c ∉ bad, IsAddLeftRegular c) {s c : B} :
-    ⊢@{IProp GF} ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
+    ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
   iintro Hs Hc
   ihave %hc := valid $$ Hc
   iapply supply_decrease (hcancel c hc) $$ Hs Hc
 
 /-- Growing the budget by `c` hands out a credit `c`, as long as the new budget is not bad. -/
 theorem supply_increase {s c : B} (h : s + c ∉ bad) :
-    ●↯c s ⊢@{IProp GF} |==> (●↯c (s + c) ∗ ↯c c) := by
+    ●↯c s ⊢ |==> (●↯c (s + c) ∗ ↯c c) := by
   have hup : (● s : Auth (CappedCredit B bad)) ~~> (● (s + c) : Auth (CappedCredit B bad)) • ◯ c :=
     Auth.auth_update_alloc (alloc_local_update h)
   unfold cc ccAuth
@@ -220,7 +222,7 @@ theorem supply_increase {s c : B} (h : s + c ∉ bad) :
 
 /-- A credit splits off any smaller credit. -/
 theorem difference [Sub B] [OrderedSub B] {a b : B} (h : b ≤ a) :
-    ↯c a ⊢@{IProp GF} ↯c b ∗ ↯c (a - b) := by
+    ↯c a ⊢ ↯c b ∗ ↯c (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
 /-- Credits are timeless. -/

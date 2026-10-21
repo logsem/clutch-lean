@@ -7,6 +7,7 @@ public import Iris.Instances.Lib.NaInvariants
 public import Iris.Instances.Lib.Invariants
 public import Metrology.Iris.Countable
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 /-! # Value relations and the refinement judgement
 
@@ -99,10 +100,11 @@ instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
 
 section SimpleLRels
 variable {GF : BundledGFunctors}
+local bi IProp GF
 
 /-- Two units are closed. -/
 theorem lrel_unit_closed (v1 v2 : Val rT) :
-    ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢@{IProp GF} ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ := by
+    ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢ ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ := by
   iintro %h !%
   exact ⟨h.1 ▸ Exp.lit_isClosedEmpty _, h.2 ▸ Exp.lit_isClosedEmpty _⟩
 
@@ -148,23 +150,23 @@ noncomputable def lrel_real : lrel rT GF where
 
 /-! ### A literal is related to itself -/
 
-theorem lrel_unit_lit : ⊢@{IProp GF} lrel_unit.car (.unit : Val rT) .unit := by
+theorem lrel_unit_lit : ⊢ lrel_unit.car (.unit : Val rT) .unit := by
   unfold lrel_unit; ipureintro; exact ⟨rfl, rfl⟩
 
-theorem lrel_int_lit (n : Int) : ⊢@{IProp GF} lrel_int.car (.int n : Val rT) (.int n) := by
+theorem lrel_int_lit (n : Int) : ⊢ lrel_int.car (.int n : Val rT) (.int n) := by
   unfold lrel_int; iexists n; ipureintro; exact ⟨rfl, rfl⟩
 
 theorem lrel_nat_lit {n : Int} (hn : 0 ≤ n) :
-    ⊢@{IProp GF} lrel_nat.car (.int n : Val rT) (.int n) := by
+    ⊢ lrel_nat.car (.int n : Val rT) (.int n) := by
   unfold lrel_nat
   iexists n.toNat
   ipureintro
   refine ⟨?_, ?_⟩ <;> rw [Int.toNat_of_nonneg hn]
 
-theorem lrel_bool_lit (b : Bool) : ⊢@{IProp GF} lrel_bool.car (.bool b : Val rT) (.bool b) := by
+theorem lrel_bool_lit (b : Bool) : ⊢ lrel_bool.car (.bool b : Val rT) (.bool b) := by
   unfold lrel_bool; iexists b; ipureintro; exact ⟨rfl, rfl⟩
 
-theorem lrel_real_lit (r : rT) : ⊢@{IProp GF} lrel_real.car (.real r : Val rT) (.real r) := by
+theorem lrel_real_lit (r : rT) : ⊢ lrel_real.car (.real r : Val rT) (.real r) := by
   unfold lrel_real; iexists r; ipureintro; exact ⟨rfl, rfl⟩
 
 /-- Pairs related componentwise. -/

@@ -4,6 +4,7 @@ public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Code.Coins
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Series
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -18,6 +19,7 @@ noncomputable section
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 def headsCost (s a : ℝ) (k : ℕ) (b : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((1 + Real.exp s) / 2) ^ k * Real.exp (s * (b - a)))
@@ -26,7 +28,7 @@ abbrev headsPost (a : ℝ) (b : ℤ) : Val rT → IProp GF :=
   fun v => iprop(∃ m : ℤ, ⌜v = .int m ∧ (b : ℝ) + m < a⌝)
 
 theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) (b : ℤ) :
-    iprop(↯(headsCost s a k b)) ⊢@{IProp GF}
+    iprop(↯(headsCost s a k b)) ⊢
       tglWp E pl(&heads #(.int (k : ℤ))) (headsPost (rT := rT) a b) := by
   induction k generalizing b with
   | zero =>
@@ -79,7 +81,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
     linarith
 
 theorem twp_heads_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
-    iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), headsCost s a n 0)) ⊢@{IProp GF}
+    iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), headsCost s a n 0)) ⊢
       tglWp E pl(&heads #(.int (n : ℤ))) (headsPost (rT := rT) a 0) := by
   iintro Herr
   iapply twp_err_biInf solve_not_value
@@ -114,7 +116,7 @@ theorem headsCost_hoeffding {n : ℕ} (hn : 0 < n) (t : ℝ) :
         ring
 
 theorem twp_heads_hoeffding (E : CoPset) {n : ℕ} (hn : 0 < n) {t : ℝ} (ht : 0 ≤ t) :
-    iprop(↯(ENNReal.ofReal (Real.exp (-2 * t ^ 2 / n)))) ⊢@{IProp GF}
+    iprop(↯(ENNReal.ofReal (Real.exp (-2 * t ^ 2 / n)))) ⊢
       tglWp E pl(&heads #(.int (n : ℤ))) (headsPost (rT := rT) (n / 2 + t) 0) := by
   iintro Herr
   iapply twp_heads_chernoff E

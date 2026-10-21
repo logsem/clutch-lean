@@ -7,6 +7,7 @@ public import Metrology.TotalEris.Examples.Samplers.HalfBernNegExp
 public import Metrology.TotalEris.Examples.Samplers.BernoulliGeometric
 public import Metrology.TotalEris.Examples.Samplers.BernIter
 public import Metrology.TotalEris.Examples.Samplers.Selector
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -22,6 +23,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section program
 
@@ -586,7 +588,7 @@ end conservation
 section specification
 
 theorem twp_G1 (E : CoPset) (F : ℕ → ℝ≥0∞) :
-    ⊢@{IProp GF} ↯ (G1CreditV F) -∗
+    ⊢ ↯ (G1CreditV F) -∗
       tglWp E pl(&G1 #.unit)
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε_spec
@@ -648,7 +650,7 @@ theorem twp_G1 (E : CoPset) (F : ℕ → ℝ≥0∞) :
     iapply IH $$ Hterm Hexp
 
 theorem twp_G2 (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measurable (F a)) :
-    ⊢@{IProp GF} ↯ (G2CreditV F) -∗
+    ⊢ ↯ (G2CreditV F) -∗
       tglWp E pl(&G2 #.unit)
         (fun p : Val ℝ => iprop(∃ (k : ℕ) (r : ℝ),
           ⌜0 ≤ r ∧ r < 1⌝ ∗

@@ -4,6 +4,7 @@ public import Metrology.LiveEris.CreditRules
 public import Metrology.LiveEris.Tactics
 public import Metrology.LiveEris.Adequacy
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -35,10 +36,11 @@ theorem stopOrSpin_lc {rT : Type _} : (stopOrSpin : Exp rT).IsLocallyClosed :=
 
 variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT]
   [LiveGS rT hlc GF]
+local bi IProp GF
 
 theorem lwp_spin (Q : State rT → State rT → Prop) (E : CoPset) (Φ : Val rT → IProp GF) :
-    iprop(↻1) ⊢@{IProp GF} lwp Q E (Exp.app spin pl(#(.unit))) Φ := by
-  have H : ⊢@{IProp GF} iprop(∀ Ψ : Val rT → IProp GF,
+    iprop(↻1) ⊢ lwp Q E (Exp.app spin pl(#(.unit))) Φ := by
+  have H : ⊢ iprop(∀ Ψ : Val rT → IProp GF,
       ↻1 -∗ lwp Q E (Exp.app (spin (rT := rT)) pl(#(.unit))) Ψ) := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %Ψ Hd
@@ -84,7 +86,7 @@ theorem third_add_one : (3⁻¹ : ℝ≥0∞) + 1 ≤ 2 * (2 * 3⁻¹) := by
 theorem lwp_of_err_liminf_zero {Q : State rT → State rT → Prop} {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} {ε : ℕ → ℝ≥0∞} (hlim : Filter.liminf ε Filter.atTop = 0)
     (Hnv : e.toVal? = none) :
-    iprop(∀ k, ↯(ε k) -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(∀ k, ↯(ε k) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
   imod Credit.zero with H0
@@ -97,7 +99,7 @@ theorem lwp_of_err_liminf_zero {Q : State rT → State rT → Prop} {E : CoPset}
     iapply Hwp $$ Hk
 
 theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (k : ℕ) :
-    iprop(↯((2⁻¹ : ℝ≥0∞) ^ (2 * k)) ∗ ↻(3⁻¹)) ⊢@{IProp GF}
+    iprop(↯((2⁻¹ : ℝ≥0∞) ^ (2 * k)) ∗ ↻(3⁻¹)) ⊢
       lwp Q E (Exp.app stopOrSpin pl(#(.unit))) (fun v => iprop(⌜v = .unit⌝)) := by
   induction k with
   | zero =>
@@ -152,7 +154,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
         iapply Credit.frag_ext (by simp) (by simp) $$ Hcr
 
 theorem lwp_stopOrSpin (Q : State rT → State rT → Prop) (E : CoPset) :
-    iprop(↻(3⁻¹)) ⊢@{IProp GF}
+    iprop(↻(3⁻¹)) ⊢
       lwp Q E (Exp.app stopOrSpin pl(#(.unit))) (fun v => iprop(⌜v = .unit⌝)) := by
   have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ (2 * k)) Filter.atTop = 0 := by
     simp_rw [pow_mul]

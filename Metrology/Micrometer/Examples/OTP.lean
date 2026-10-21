@@ -8,6 +8,7 @@ public import Metrology.Micrometer.AppRelRules
 public import Metrology.Micrometer.Compatibility
 public import Metrology.Micrometer.RelTactics
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -60,6 +61,7 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
 section Refinement
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+local bi IProp GF
 
 section Generic
 
@@ -69,7 +71,7 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
 /-- The encryption refines the ideal sampler in any lawful lifting. -/
 theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
+    ⊢ REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
   rel_couple_UU (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN)
   iintro %n %_
   rel_pures
@@ -79,7 +81,7 @@ theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
 /-- The ideal sampler refines the encryption in any lawful lifting. -/
 theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
+    ⊢ REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
   rel_couple_UU (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN)
   iintro %n ⟨%hn0, %hnN⟩
   rel_pures
@@ -90,12 +92,12 @@ end Generic
 
 /-- The encryption refines the ideal sampler in codensity tv. -/
 theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int :=
+    ⊢ REL[codensity tv] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int :=
   otp_refines_gen m N hN
 
 /-- The ideal sampler refines the encryption in codensity tv. -/
 theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int :=
+    ⊢ REL[codensity tv] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int :=
   otp_refines_rev_gen m N hN
 
 end Refinement

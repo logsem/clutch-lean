@@ -4,6 +4,7 @@ public import Metrology.TotalEris.DistributionAdequacy
 public import Metrology.TotalEris.Examples.Samplers.Gauss
 public import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
 public import Mathlib.Probability.Distributions.Gaussian.Real
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -24,6 +25,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 section credit
 
@@ -59,7 +61,7 @@ end credit
 section specification
 
 theorem twp_Gauss (E : CoPset) (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
-    ⊢@{IProp GF} ↯ (GaussCreditV F) -∗
+    ⊢ ↯ (GaussCreditV F) -∗
       tglWp E pl(&Gauss #.unit)
         (fun v : Val ℝ => iprop(∃ y : ℝ, ⌜v.1 = .lit (.real y)⌝ ∗ ↯ (F y))) := by
   iintro Hε

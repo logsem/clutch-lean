@@ -11,6 +11,7 @@ public import Mathlib.Topology.ContinuousMap.Weierstrass
 public import Mathlib.MeasureTheory.Integral.Bochner.VitaliCaratheodory
 public import Mathlib.MeasureTheory.Function.Floor
 public import Mathlib.Analysis.Calculus.ContDiff.Polynomial
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -52,14 +53,15 @@ namespace ProbLang
 -- Also wonder if we can generalize Lusin's arguments beyond just real-valued samplers
 -- variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 def DistSpec (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : Prop :=
   ∀ (F : ℝ → ℝ≥0∞), Measurable F →
-    ⊢@{IProp GF} [{ ↯ ∫⁻ x, F x ∂μ }] e @  E [{ r, RET .real r; ↯ (F r) }]
+    [{ ↯ ∫⁻ x, F x ∂μ }] e @  E [{ r, RET .real r; ↯ (F r) }]
 
 def DistSpecOn (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) (K : Set ℝ)
     (G : ℝ → ℝ≥0∞) : Prop :=
-  ⊢@{IProp GF} [{ ↯ (∫⁻ x in K, G x ∂μ + μ Kᶜ) }] e @ E
+  [{ ↯ (∫⁻ x in K, G x ∂μ + μ Kᶜ) }] e @ E
     [{ r, RET .real r; ⌜r ∈ K⌝ ∗ ↯ (G r) }]
 
 def DistSpecLusin (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : Prop :=
@@ -67,11 +69,11 @@ def DistSpecLusin (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : 
 
 def DistSpecLSC (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : Prop :=
   ∀ G : ℝ → ℝ≥0∞, LowerSemicontinuous G →
-    ⊢@{IProp GF} [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]
+    [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]
 
 def DistSpecSimple (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : Prop :=
   ∀ s : MeasureTheory.SimpleFunc ℝ ℝ≥0∞,
-    ⊢@{IProp GF} [{ ↯ ∫⁻ x, s x ∂μ }] e @ E [{ r, RET .real r; ↯ (s r) }]
+    [{ ↯ ∫⁻ x, s x ∂μ }] e @ E [{ r, RET .real r; ↯ (s r) }]
 
 def DistSpecPoly (E : CoPset) (e : Exp ℝ) (μ : MeasureTheory.Measure ℝ) : Prop :=
   ∀ K (p : Polynomial ℝ), IsCompact K →
@@ -115,7 +117,7 @@ theorem DistSpec_of_local {E : CoPset} {e : Exp ℝ} {μ : MeasureTheory.Measure
     iapply ErrorCredit.contradict h $$ HG
 
 theorem DistSpecOn_univ {E : CoPset} {e : Exp ℝ} {μ : MeasureTheory.Measure ℝ} {G : ℝ → ℝ≥0∞}
-    (h : ⊢@{IProp GF} [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]) :
+    (h : [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]) :
     DistSpecOn (GF := GF) E e μ Set.univ G := by
   unfold DistSpecOn
   iintro %Φ Hamp HΦ
@@ -147,7 +149,7 @@ theorem DistSpec_of_global {E : CoPset} {e : Exp ℝ} {μ : MeasureTheory.Measur
     (C : (ℝ → ℝ≥0∞) → Prop) (hv : e.toVal? = none)
     (happrox : ∀ F, Measurable F → ∀ ε, 0 < ε → ∃ G, C G ∧ (∀ x, min (F x) 1 ≤ G x) ∧
       ∫⁻ x, G x ∂μ ≤ ∫⁻ x, F x ∂μ + ε)
-    (hS : ∀ G, C G → ⊢@{IProp GF} [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]) :
+    (hS : ∀ G, C G → [{ ↯ ∫⁻ x, G x ∂μ }] e @ E [{ r, RET .real r; ↯ (G r) }]) :
     DistSpec (GF := GF) E e μ :=
   DistSpec_of_local (fun K G => K = Set.univ ∧ C G) hv
     (fun F hF ε hε =>

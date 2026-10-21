@@ -2,6 +2,7 @@ module
 
 public import Metrology.LiveEris.CreditRules
 public import Metrology.Iris.StepFupd
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -248,6 +249,7 @@ theorem AdeqBound.of_primStep (hD : MeasurableSet {σ : State rT | D σ})
 section Iris
 
 variable {GF : BundledGFunctors} [LiveGS rT .hasNoLC GF] {Q : State rT → State rT → Prop}
+local bi IProp GF
 
 theorem glm_adequacy (hD : MeasurableSet {σ : State rT | D σ})
     (hφ : MeasurableSet {v : Val rT | φ v}) (i : Coord) (k : ℕ) {e : Exp rT} {σ : State rT}
@@ -298,10 +300,10 @@ theorem lwp_adequacy_body (hD : MeasurableSet {σ : State rT | D σ})
     (hφ : MeasurableSet {v : Val rT | φ v}) (i : Coord)
     (hck : ∀ σ σ' c, Checkpoint Q σ σ' c → D σ' ∨ 1 ≤ c i) (k : ℕ)
     (IH : ∀ k' < k, ∀ (e : Exp rT) (σ : State rT) (c : Coord → ℝ≥0∞),
-      iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢@{IProp GF}
+      iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢
         iprop(|={⊤,∅}=> |={∅}[∅]▷=>^[k'] ⌜AdeqBound D φ i k' ⟨e, σ⟩ c⌝))
     (e : Exp rT) (σ : State rT) (c : Coord → ℝ≥0∞) :
-    iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢@{IProp GF}
+    iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢
       iprop(|={⊤,∅}=> |={∅}[∅]▷=>^[k] ⌜AdeqBound D φ i k ⟨e, σ⟩ c⌝) := by
   let Ψ : Exp rT → IProp GF := fun e' => iprop(∀ σ' c', stateInterp σ' ∗ creditInterp c' -∗
     |={⊤,∅}=> |={∅}[∅]▷=>^[k] ⌜AdeqBound D φ i k ⟨e', σ'⟩ c'⌝)
@@ -346,7 +348,7 @@ theorem lwp_adequacy_core (hD : MeasurableSet {σ : State rT | D σ})
     (hφ : MeasurableSet {v : Val rT | φ v}) (i : Coord)
     (hck : ∀ σ σ' c, Checkpoint Q σ σ' c → D σ' ∨ 1 ≤ c i) (k : ℕ) (e : Exp rT)
     (σ : State rT) (c : Coord → ℝ≥0∞) :
-    iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢@{IProp GF}
+    iprop(stateInterp σ ∗ creditInterp c ∗ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) ⊢
       iprop(|={⊤,∅}=> |={∅}[∅]▷=>^[k] ⌜AdeqBound D φ i k ⟨e, σ⟩ c⌝) := by
   induction k using Nat.strong_induction_on generalizing e σ c with
   | _ k IH => exact lwp_adequacy_body hD hφ i hck k IH e σ c
@@ -357,6 +359,7 @@ end Iris
 
 variable {GF : BundledGFunctors} [AppPreGS rT GF] [LCPreGS GF] [InvGpreS GF]
   {Q : State rT → State rT → Prop}
+local bi IProp GF
 
 /-- Adequacy for one coordinate of the credit vector: a LiveEris proof with `↯ε ∗ ↻δ` bounds
 `progressBound D φ m` below by `1 - c i`, for every `m`, provided every checkpoint is a `D`-step or
@@ -365,7 +368,7 @@ theorem lwp_adequacy {e : Exp rT} {σ : State rT} {ε δ : ℝ≥0∞}
     (hD : MeasurableSet {σ : State rT | D σ}) (hφ : MeasurableSet {v : Val rT | φ v})
     (i : Coord) (hck : ∀ σ σ' c, Checkpoint Q σ σ' c → D σ' ∨ 1 ≤ c i) (hδ : δ < ∞)
     (Hwp : ∀ [LiveGS rT .hasNoLC GF],
-      iprop(↯ε ∗ ↻δ) ⊢@{IProp GF} lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
+      iprop(↯ε ∗ ↻δ) ⊢ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
     (m : ℕ) : 1 - creditVec ε δ i ≤ progressBound D φ m ⟨e, σ⟩ := by
   by_cases hε : 1 ≤ ε
   · have h1 : 1 ≤ creditVec ε δ i := by
@@ -374,7 +377,7 @@ theorem lwp_adequacy {e : Exp rT} {σ : State rT} {ε δ : ℝ≥0∞}
       · exact hε.trans le_self_add
     simp [tsub_eq_zero_of_le h1]
   push Not at hε
-  refine pure_soundness (PROP := IProp GF) ?_
+  refine pure_soundness (PROP := bi%) ?_
   refine step_fupdN_soundness (hlc := .hasNoLC) (GF := GF) m 0 (fun Hinv => ?_)
   iintro -
   imod (app_ra_init (GF := GF) σ) with ⟨%IA, HappAuth⟩
@@ -399,7 +402,7 @@ running, with probability at least `1 - ε`. -/
 theorem lwp_adequacy_safety {e : Exp rT} {σ : State rT} {ε δ : ℝ≥0∞} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v}) (hδ : δ < ∞)
     (Hwp : ∀ [LiveGS rT .hasNoLC GF],
-      iprop(↯ε ∗ ↻δ) ⊢@{IProp GF} lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
+      iprop(↯ε ∗ ↻δ) ⊢ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
     (m : ℕ) : 1 - ε ≤ progressBound (fun _ => True) φ m ⟨e, σ⟩ :=
   lwp_adequacy (D := fun _ => True) (by simp) hφ .err (fun _ _ _ _ => .inl trivial) hδ Hwp m
 
@@ -410,7 +413,7 @@ theorem lwp_adequacy_liveness {e : Exp rT} {σ : State rT} {ε δ : ℝ≥0∞} 
     {P : State rT → Prop} (hP : MeasurableSet {σ : State rT | P σ})
     (hφ : MeasurableSet {v : Val rT | φ v}) (hQP : ∀ σ σ', Q σ σ' → P σ') (hδ : δ < ∞)
     (Hwp : ∀ [LiveGS rT .hasNoLC GF],
-      iprop(↯ε ∗ ↻δ) ⊢@{IProp GF} lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
+      iprop(↯ε ∗ ↻δ) ⊢ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
     (m : ℕ) : 1 - (ε + δ) ≤ progressBound P φ m ⟨e, σ⟩ :=
   lwp_adequacy hP hφ .tot (fun σ σ' _ h => h.imp (hQP σ σ') id) hδ Hwp m
 
@@ -519,7 +522,7 @@ theorem limExec_good_ge (hφ : MeasurableSet {v : Val rT | φ v}) {ρ : Cfg rT} 
 is at most `ε`. -/
 theorem lwp_adequacy_execN {e : Exp rT} {σ : State rT} {ε : ℝ≥0∞} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ [LiveGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF} lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
+    (Hwp : ∀ [LiveGS rT .hasNoLC GF], iprop(↯ε) ⊢ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝)))
     (k : ℕ) : execN k ⟨e, σ⟩ (badVal φ) ≤ ε :=
   execN_bad_le hφ (lwp_adequacy_safety (δ := 0) hφ ENNReal.zero_lt_top
     (fun [LiveGS rT .hasNoLC GF] => sep_elim_left.trans Hwp) k)
@@ -528,7 +531,7 @@ theorem lwp_adequacy_execN {e : Exp rT} {σ : State rT} {ε : ℝ≥0∞} {φ : 
 `ε`, whatever the progress predicate. -/
 theorem lwp_adequacy_eris {e : Exp rT} {σ : State rT} {ε : ℝ≥0∞} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
-    (Hwp : ∀ [LiveGS rT .hasNoLC GF], iprop(↯ε) ⊢@{IProp GF} lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) :
+    (Hwp : ∀ [LiveGS rT .hasNoLC GF], iprop(↯ε) ⊢ lwp Q ⊤ e (fun v => iprop(⌜φ v⌝))) :
     limExec ⟨e, σ⟩ (badVal φ) ≤ ε :=
   limExec_bad_le hφ fun k => lwp_adequacy_safety (δ := 0) hφ ENNReal.zero_lt_top
     (fun [LiveGS rT .hasNoLC GF] => sep_elim_left.trans Hwp) k
@@ -538,7 +541,7 @@ satisfying `φ` with probability at least `1 - ε`. -/
 theorem lwp_adequacy_total {e : Exp rT} {σ : State rT} {ε : ℝ≥0∞} {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v})
     (Hwp : ∀ [LiveGS rT .hasNoLC GF],
-      iprop(↯ε) ⊢@{IProp GF} lwp (fun _ _ => False) ⊤ e (fun v => iprop(⌜φ v⌝))) :
+      iprop(↯ε) ⊢ lwp (fun _ _ => False) ⊤ e (fun v => iprop(⌜φ v⌝))) :
     1 - ε ≤ limExec ⟨e, σ⟩ (goodVal φ) := by
   have h := lwp_adequacy_liveness (σ := σ) (δ := 0) (P := fun _ => False) (by simp) hφ
     (fun _ _ h => h) ENNReal.zero_lt_top (fun [LiveGS rT .hasNoLC GF] => sep_elim_left.trans Hwp) 1

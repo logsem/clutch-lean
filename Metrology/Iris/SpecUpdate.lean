@@ -3,6 +3,7 @@ module
 public import Metrology.Iris.SpecProgram
 public import Metrology.ProbLang.Exec
 public import Iris.Instances.Lib.FUpd
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -32,6 +33,7 @@ section SpecUpdate
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [iSpec : SpecUpdateGS rT GF]
+local bi IProp GF
 
 /-- Update of the spec side by `n` deterministic steps; rules that know their step count state it
 here, and `specUpdateN_specUpdate` forgets `n`, which is all `wp` needs. -/
@@ -180,7 +182,7 @@ theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
 
 /-- Frame a resource `R` around `specUpdate`. -/
 theorem specUpdate_frame_l {E : CoPset} {R P : IProp GF} :
-    iprop(R ∗ specUpdate rT E P) ⊢@{IProp GF} specUpdate rT E iprop(P ∗ R) := by
+    iprop(R ∗ specUpdate rT E P) ⊢ specUpdate rT E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩
   iapply specUpdate_mono
   iframe HP

@@ -5,6 +5,7 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -27,10 +28,11 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
+local bi IProp GF
 
 /-- A draw from a fresh tape refines a plain draw. -/
 theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
+    ⊢ REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
   rel_alloctape_l α as Hα
   rel_pures
   rel_couple_TU α
@@ -42,7 +44,7 @@ theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
 Both tapes are presampled, each left tape coupled with its right twin along `id`, before either
 program draws; afterwards every draw only reads its tape. -/
 theorem drawAB_refines_drawBA (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
+    ⊢ REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
   rel_alloctape_l α as Hα
   rel_alloctape_r α' as Hα'
   rel_alloctape_l β as Hβ

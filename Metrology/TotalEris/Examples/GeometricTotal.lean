@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.Code.Geometric
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -20,12 +21,13 @@ namespace Examples
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 abbrev geoPost : Val rT → IProp GF :=
   fun w => iprop(∃ m : Int, ⌜w = .int m ∧ 0 ≤ m⌝)
 
 theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
-    iprop(↯ε) ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    iprop(↯ε) ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   refine ErrorCredit.Induction.external_simple (k := (3/2 : NNReal)) hε (by norm_num) ?_
   iintro ⟨IH, Herr⟩
   twp_pures
@@ -63,13 +65,13 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg (E : CoPset) :
-    ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   iapply twp_err_pos solve_not_value
   iintro %ε %hε Herr
   iapply geo_nonneg_pos_err E ε hε $$ Herr
 
 theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
-    iprop(↯((2⁻¹ : ENNReal) ^ k)) ⊢@{IProp GF}
+    iprop(↯((2⁻¹ : ENNReal) ^ k)) ⊢
       tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   induction k with
   | zero =>
@@ -107,7 +109,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
       exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg_of_depth (E : CoPset) :
-    ⊢@{IProp GF} tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
   have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ENNReal) ^ k) Filter.atTop = 0 :=
     (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
   iapply fupd_tglWp
@@ -135,7 +137,7 @@ theorem geo_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
     Tgl (limExec ⟨Exp.app geometric pl(#(.unit)), σ⟩) geoPredicate 0 := by
   refine twp_tgl (GF := GF) measurableSet_geoPredicate ?_
   intro _
-  have hwp : ⊢@{IProp GF}
+  have hwp : ⊢
       tglWp ⊤ (Exp.app geometric pl(#(.unit))) fun v => iprop(⌜geoPredicate v⌝) :=
     (geo_nonneg ⊤).trans
       (ErisWpGS.tglWp_mono fun _ => by iintro ⟨%m, %hm⟩; ipureintro; exact ⟨m, hm⟩)

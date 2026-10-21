@@ -2,6 +2,7 @@ module
 
 public import Metrology.LiveEris.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -76,9 +77,10 @@ theorem lintegral_randCredit_le {z : Int} (Hz : 0 < z) (σ : State rT) {H : ℕ 
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [LiveGS rT hlc GF]
 variable {Q : State rT → State rT → Prop}
+local bi IProp GF
 
 private theorem creditAuth_creditInterp {ε δ : ℝ≥0∞} :
-    creditAuth ε δ ⊢@{IProp GF} LiveWpGS.creditInterp (creditVec ε δ) := by
+    creditAuth ε δ ⊢ LiveWpGS.creditInterp (creditVec ε δ) := by
   iintro Ha
   isimp only [liveWpGS_creditInterp_eq]
   iexists δ
@@ -99,7 +101,7 @@ theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
     (hPgl : ∀ σ₁, Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩))
     (HIntf : ∀ σ₁, (∫⁻ ρ, f ρ ∂(primStep ⟨e₁, σ₁⟩)) ≤ ε₁)
     (HIntg : ∀ σ₁, (∫⁻ ρ, g ρ ∂(primStep ⟨e₁, σ₁⟩)) ≤ δ₁) :
-    iprop(creditFrag ε₁ δ₁) ⊢@{IProp GF}
+    iprop(creditFrag ε₁ δ₁) ⊢
       iprop((∀ σ₁ ρ, ⌜R σ₁ ρ⌝ -∗ creditFrag (f ρ) (g ρ) -∗ lwp Q E ρ.expr Φ) -∗
         lwp Q E e₁ Φ) := by
   iintro Hcr Hcont
@@ -177,7 +179,7 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
     {Φ : Val rT → IProp GF} (Hz : 0 < z) (HF : ∀ n, F n ≤ 1) (HG : ∀ n, G n ≤ 1)
     (HSumF : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁)
     (HSumG : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
-    iprop(creditFrag ε₁ δ₁) ⊢@{IProp GF}
+    iprop(creditFrag ε₁ δ₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ creditFrag (F n.toNat) (G n.toNat) -∗ Φ (.int n)) -∗
         lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
   set R : State rT → Cfg rT → Prop :=
@@ -221,7 +223,7 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
 /-- `rand z` spends error credits only; outcomes with more than one credit are impossible. -/
 theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) (HSum : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁) :
-    iprop(↯ε₁) ⊢@{IProp GF}
+    iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(F n.toNat) -∗ Φ (.int n)) -∗
         lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
   have hsum : (∑ n ∈ Finset.range z.toNat, min (F n) 1) / (z.toNat : ℝ≥0∞) ≤ ε₁ :=
@@ -242,7 +244,7 @@ theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → �
 theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hz : 0 < z) (HG : ∀ n, G n ≤ 1)
     (HSum : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
-    iprop(↻δ₁) ⊢@{IProp GF}
+    iprop(↻δ₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↻(G n.toNat) -∗ Φ (.int n)) -∗
         lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
   have hzero : (∑ n ∈ Finset.range z.toNat, (0 : ℝ≥0∞)) / (z.toNat : ℝ≥0∞) ≤ 0 := by simp
@@ -258,7 +260,7 @@ theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → �
 theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hnv : e.toVal? = none) :
     iprop(creditFrag ε δ ∗
-      ∀ ε' δ', ⌜ε < ε'⌝ -∗ ⌜δ < δ'⌝ -∗ creditFrag ε' δ' -∗ lwp Q E e Φ) ⊢@{IProp GF}
+      ∀ ε' δ', ⌜ε < ε'⌝ -∗ ⌜δ < δ'⌝ -∗ creditFrag ε' δ' -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_lift_step_glm Hnv
@@ -315,7 +317,7 @@ theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val
 
 theorem lwp_err_incr {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hnv : e.toVal? = none) :
-    iprop(↯ε ∗ ∀ ε', ⌜ε < ε'⌝ -∗ ↯ε' -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(↯ε ∗ ∀ ε', ⌜ε < ε'⌝ -∗ ↯ε' -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_credit_incr Hnv
   iframe Hcr
@@ -325,7 +327,7 @@ theorem lwp_err_incr {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT �
 
 theorem lwp_div_incr {E : CoPset} {e : Exp rT} {δ : ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hnv : e.toVal? = none) :
-    iprop(↻δ ∗ ∀ δ', ⌜δ < δ'⌝ -∗ ↻δ' -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(↻δ ∗ ∀ δ', ⌜δ < δ'⌝ -∗ ↻δ' -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_credit_incr Hnv
   iframe Hcr
@@ -335,7 +337,7 @@ theorem lwp_div_incr {E : CoPset} {e : Exp rT} {δ : ℝ≥0∞} {Φ : Val rT �
 
 /-- A client may assume an arbitrarily small error credit. -/
 theorem lwp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : e.toVal? = none) :
-    iprop(∀ ε, ⌜0 < ε⌝ -∗ ↯ε -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(∀ ε, ⌜0 < ε⌝ -∗ ↯ε -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
   imod Credit.zero with Hcr
@@ -345,7 +347,7 @@ theorem lwp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : 
 
 /-- A client may assume an arbitrarily small divergence credit. -/
 theorem lwp_div_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : e.toVal? = none) :
-    iprop(∀ δ, ⌜0 < δ⌝ -∗ ↻δ -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(∀ δ, ⌜0 < δ⌝ -∗ ↻δ -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
   imod Credit.zero with Hcr
@@ -356,7 +358,7 @@ theorem lwp_div_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : 
 /-- If the spec holds at error cost `ε i` for every `i` in a set, it suffices to pay the infimum. -/
 theorem lwp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {S : Set ι}
     {ε : ι → ℝ≥0∞} (Hnv : e.toVal? = none) :
-    iprop(↯(⨅ i ∈ S, ε i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(↯(⨅ i ∈ S, ε i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply lwp_err_incr Hnv
   iframe Herr
@@ -370,7 +372,7 @@ theorem lwp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → I
 infimum. -/
 theorem lwp_div_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {S : Set ι}
     {δ : ι → ℝ≥0∞} (Hnv : e.toVal? = none) :
-    iprop(↻(⨅ i ∈ S, δ i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(↻(⨅ i ∈ S, δ i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hdiv, Hwp⟩
   iapply lwp_div_incr Hnv
   iframe Hdiv
@@ -382,7 +384,7 @@ theorem lwp_div_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → I
 
 theorem lwp_err_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l) (Hnv : e.toVal? = none) :
-    iprop(↯(Filter.liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢@{IProp GF}
+    iprop(↯(Filter.liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply lwp_err_biInf (S := S) Hnv
@@ -392,7 +394,7 @@ theorem lwp_err_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → 
 
 theorem lwp_div_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     {l : Filter ι} {S : Set ι} {δ : ι → ℝ≥0∞} (hS : S ∈ l) (Hnv : e.toVal? = none) :
-    iprop(↻(Filter.liminf δ l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢@{IProp GF}
+    iprop(↻(Filter.liminf δ l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
   iintro ⟨Hdiv, Hwp⟩
   iapply lwp_div_biInf (S := S) Hnv
@@ -405,7 +407,7 @@ theorem lwp_div_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → 
 /-- Before a step, error credits may be converted into divergence credits. -/
 theorem lwp_convert {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT → IProp GF}
     (Hnv : e.toVal? = none) :
-    iprop(↯ε ∗ (↻ε -∗ lwp Q E e Φ)) ⊢@{IProp GF} lwp Q E e Φ := by
+    iprop(↯ε ∗ (↻ε -∗ lwp Q E e Φ)) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_of_credit_decrease Hnv
   iintro %σ %c ⟨Hσ, Hc⟩

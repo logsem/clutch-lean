@@ -4,6 +4,7 @@ public import Metrology.TotalEris.TotalPrimitiveLaws
 public import Metrology.TotalEris.TotalLifting
 public import Metrology.TotalEris.Glm
 public import Metrology.TotalEris.ErrorRules
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -151,6 +152,7 @@ theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT} {α : Loc} {N : Int
     _ ≤ ε₁ := by rw [← hSumImage]; exact HSum
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 /-- **Advanced-composition presample rule**: presample tape `α` of positive bound, spending
 per-outcome credit `↯(ε₂ n)` whose `Ico`-average is `≤ ε₁`. -/
@@ -164,7 +166,7 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
       (∀ (n : TapeIdx t.bound),
         ↯(ε₂ n) ∗
         α ↪ₐ ⟨t.bound, t.presamples ++ [n]⟩ -∗ tglWp E e Φ))
-      ⊢@{IProp GF} tglWp E e Φ := by
+      ⊢ tglWp E e Φ := by
   iintro ⟨Herr, Htape, Hcont⟩
   iapply twp_lift_step_fupd_glm hv
   iintro %σ₁ %ε_now ⟨Hσ, Hε_now⟩
@@ -226,7 +228,7 @@ theorem twp_presample {E : CoPset} {e : Exp rT} {α : Loc} {Φ : Val rT → IPro
     iprop(α ↪ₐ t ∗
       (∀ (n : TapeIdx t.bound),
         α ↪ₐ ⟨t.bound, t.presamples ++ [n]⟩ -∗ tglWp E e Φ))
-      ⊢@{IProp GF} tglWp E e Φ := by
+      ⊢ tglWp E e Φ := by
   iintro ⟨Htape, Hcont⟩
   iapply fupd_tglWp
   imod ErrorCredit.zero with Herr

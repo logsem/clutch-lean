@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.ProgCoupl
+import Metrology.Iris.LocalBI
 
 /-! # Micrometer weakest precondition
 
@@ -18,6 +19,7 @@ variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+local bi IProp GF
 
 /-! ## `wpPre` and its fixpoint `wp` -/
 
@@ -214,7 +216,7 @@ theorem wp_strong_mono {E1 E2 : CoPset} {e : Exp rT} {Φ Ψ : Val rT → IProp G
   iintro ⟨HW, HΦ⟩
   -- Löb induction on the statement generalized over masks, expression and postconditions: rebind
   -- the spec phase with `specCoupl_bind`, then recurse under the later after the program step.
-  have Hloeb : ⊢@{IProp GF} wpStrongMonoStmt L (rT := rT) := by
+  have Hloeb : ⊢ wpStrongMonoStmt L (rT := rT) := by
     iapply loeb_wand
     iintro !> IH %E1' %E2' %e' %Φ' %Ψ' %HE' HW' #HΦ'
     iapply wp_unfold

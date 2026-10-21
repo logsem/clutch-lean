@@ -3,6 +3,7 @@ module
 public import Metrology.Micrometer.ContinuousCouplings
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -25,6 +26,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] [L.IsReflexive] [L.IsSupportLocal]
   [L.HasBind] {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-! ## `urand ~ urand` -/
 
@@ -32,7 +34,7 @@ omit [L.IsReflexive] in
 /-- Two draws coupled at equality within `c` return the same real. -/
 theorem urands_spend (c : B) (hc : IsAddLeftRegular c)
     (Hcpl : L.Rel c (· = ·) (unifUnit (T := rT)) unifUnit) :
-    ⊢@{IProp GF} ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
+    ⊢ ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
   rel_couple_urands_spend (· = ·) c hc Hcpl
   iframe Hc
@@ -48,7 +50,7 @@ theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → 
       (unifUnit.map fun y ↦ (⟨K.fill pl(#(.real y)), σ'⟩ : Cfg rT))
       (Cfg.drawCostReal σ σ' K R) c)
     (hR : ∀ x y, R x y < (⊤ : B) → x = y) :
-    ⊢@{IProp GF} ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
+    ⊢ ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
   rel_couple_urands_law law R c hc hhead
   iframe Hc
@@ -59,7 +61,7 @@ theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → 
 /-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
 theorem urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (ε : ℝ≥0∞)
     (hc : IsAddLeftRegular (s ε)) :
-    ⊢@{IProp GF} ↯b (s ε) -∗
+    ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
   rel_couple_urands_adv id (MeasureTheory.MeasurePreserving.id _) ε (fun _ ↦ ε)
@@ -73,7 +75,7 @@ theorem urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (ε : �
 theorem urands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (Bad : Set rT)
     (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (unifUnit Bad))) :
-    ⊢@{IProp GF} ↯b (s (unifUnit Bad)) -∗
+    ⊢ ↯b (s (unifUnit Bad)) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
   rel_couple_urands_avoid Bad hBad habs hc
@@ -87,7 +89,7 @@ theorem urands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (Bad :
 theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int) (hN : 0 < N)
     (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞) (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁)
     (hc : IsAddLeftRegular (s ε₁)) :
-    ⊢@{IProp GF} ↯b (s ε₁) -∗
+    ⊢ ↯b (s ε₁) -∗
       REL[L] (pl(rand(#(.int N), #(.unit))) : Exp rT) << pl(rand(#(.int N), #(.unit))) :
         lrel_int := by
   iintro Hc
@@ -100,7 +102,7 @@ theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int)
 /-- Avoiding one outcome costs `s (1/N)`. -/
 theorem rands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N bad : Int) (hN : 0 < N)
     (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (N.toNat : ℝ≥0∞)⁻¹)) :
-    ⊢@{IProp GF} ↯b (s (N.toNat : ℝ≥0∞)⁻¹) -∗
+    ⊢ ↯b (s (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[L] (pl(rand(#(.int N), #(.unit))) : Exp rT) << pl(rand(#(.int N), #(.unit))) :
         lrel_int := by
   iintro Hc
@@ -135,7 +137,7 @@ variable {GF : BundledGFunctors} [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS
 
 /-- A uniform real avoids `0` for free: the point has no mass. -/
 theorem urand_avoid_zero_real :
-    ⊢@{IProp GF} ↯b (0 : ℝ≥0∞) -∗
+    ⊢ ↯b (0 : ℝ≥0∞) -∗
       REL[codensity tv] (pl(urand) : Exp ℝ) << pl(urand) : lrel_real := by
   have h0 : unifUnit ({0} : Set ℝ) = 0 := by
     show MeasureTheory.volume.restrict (Set.Icc (0 : ℝ) 1) {0} = 0
@@ -170,7 +172,7 @@ theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC G
 
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (pl(rand(#(.int N), #(.unit))) : Exp ℝ) << pl(urand) :
+    ⊢ REL[codensity tv] (pl(rand(#(.int N), #(.unit))) : Exp ℝ) << pl(urand) :
       lrel_true := by
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
@@ -181,7 +183,7 @@ theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#(.int N), #(.unit))) :
+    ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#(.int N), #(.unit))) :
       lrel_true := by
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
   iintro %x %_

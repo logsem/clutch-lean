@@ -5,6 +5,7 @@ public import Metrology.ProbLang.Reals
 public import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Series
 public import Metrology.Code.Samplers
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -20,6 +21,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 theorem intOfNat_emod_two_eq_zero {n : ℕ} (hn : n % 2 = 0) : Int.ofNat n % 2 = 0 := by
   simp only [Int.ofNat_eq_natCast]; omega
@@ -301,7 +303,7 @@ end conservation
 section specification
 
 theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 : 0 < B) (hB1 : B < 1) :
-    ⊢@{IProp GF} ∀ (N : ℕ) (x : ℝ), ⌜0 ≤ x⌝ -∗ ⌜x ≤ B⌝ -∗
+    ⊢ ∀ (N : ℕ) (x : ℝ), ⌜0 ≤ x⌝ -∗ ⌜x ≤ B⌝ -∗
       ↯ (RealDecrTrialCreditV F N x) -∗
       tglWp E pl(&DecrTrial #(.int (N : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
@@ -367,7 +369,7 @@ theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 
     · iexact Hexp
 
 theorem twp_DecrTrial (E : CoPset) (F : ℕ → ℝ≥0∞) (N : ℕ) (x : ℝ) (Hx : 0 ≤ x ∧ x ≤ 1) :
-    ⊢@{IProp GF} ↯ (RealDecrTrialCreditV F N x) -∗
+    ⊢ ↯ (RealDecrTrialCreditV F N x) -∗
       tglWp E pl(&DecrTrial #(.int (N : ℤ)) #(.real x))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε_spec

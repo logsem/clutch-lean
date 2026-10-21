@@ -4,6 +4,7 @@ public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.ProbLang.Erasure
 public import Metrology.Iris.StepFupd
+import Metrology.Iris.LocalBI
 
 /-! # Adequacy of the Micrometer logic
 
@@ -49,6 +50,7 @@ section Adequacy
 
 variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
+local bi IProp GF
 
 /-- A spec coupling whose continuations give `m`-fuel execution couplings at `P`-states gives one
 itself, given the one-round lemma `herase` at `P`-states; `P := True` gives
@@ -192,7 +194,7 @@ because `execN 0` is the zero measure. -/
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (b : B) (He : e.toVal? = some v) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢
     |={⊤, ∅}=> ⌜execCoupl L φ b (n + 1) ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   obtain rfl : e = Exp.ofVal v := (Exp.ofVal_of_toVal_some He).symm
   iintro ⟨Hσ, Hs, Hb, Hwp⟩
@@ -214,7 +216,7 @@ after `n` later steps: each `▷` pays for one program step. -/
 theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢
     |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   induction n generalizing b e e' σ σ' with
   | zero =>
@@ -260,17 +262,18 @@ variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} 
   {GF : BundledGFunctors} [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF]
   [InvGpreS GF]
 
+local bi IProp GF
 /-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
 theorem execCoupl_of_step_fupdN (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
     (Hstep : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-        wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+        wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢
       |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ := by
-  refine pure_soundness (PROP := IProp GF) ?_
+  refine pure_soundness (PROP := bi%) ?_
   refine step_fupdN_soundness (hlc := .hasNoLC) n 0 fun Hinv => ?_
   iintro -
   imod app_ra_init σ with ⟨%IA, HappAuth⟩
@@ -291,7 +294,7 @@ variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 theorem wp_adequacy_exec_n [L.IsZeroLeft] (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
 
@@ -304,7 +307,7 @@ variable [L.IsZeroLeft] [L.IsLeftContinuous]
 /-- A weakest precondition from a budget credit `b` couples the limit executions at budget `b`. -/
 theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   limExecV_lift fun n => wp_adequacy_exec_n e e' σ σ' n φ b Hwp
 
@@ -312,7 +315,7 @@ theorem wp_adequacy (e e' : Exp rT) (σ σ' : State rT) (b : B) (φ : Val rT →
 theorem wp_adequacy_budget_lim [L.IsBudgetClosed] (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   IsBudgetClosed.of_forall_gt fun b' hb' =>
     wp_adequacy e e' σ σ' b' φ fun IGS IBC => Hwp IGS IBC b' hb'
@@ -322,7 +325,7 @@ theorem wp_adequacy_budget_lim [L.IsBudgetClosed] (e e' : Exp rT) (σ σ' : Stat
 theorem wp_adequacy_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp rT)
     (σ σ' : State rT) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   IsSound.sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
@@ -330,7 +333,7 @@ theorem wp_adequacy_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp r
 theorem wp_adequacy_div_budget_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L.IsBudgetClosed]
     (e e' : Exp rT) (σ σ' : State rT) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   IsSound.sound
     ((wp_adequacy_budget_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
@@ -339,7 +342,7 @@ theorem wp_adequacy_div_budget_lim {D : GradedDivergence.{0} B} [L.IsSound D] [L
 theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s] (e e' : Exp rT)
     (σ σ' : State rT) (φ : Val rT → Val rT → Prop) (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b (s ε) -∗
+      ⊢ ⤇ e' -∗ ↯b (s ε) -∗
         wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ Set.univ ≤ limExecV ⟨e', σ'⟩ Set.univ + ε :=
   IsMassDetecting.measure_le_add .univ .univ (wp_adequacy e e' σ σ' (s ε) φ Hwp)
@@ -470,13 +473,14 @@ section TermStep
 variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetGS B GF] [CanonicallyOrderedAdd B]
   [Nontrivial B] [L.IsLawful]
+local bi IProp GF
 
 /-- `wp_adequacy_step_fupdN` for a run of mass `1`. -/
 theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
     (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
     (hterm : execN n ⟨e, σ⟩ Set.univ = 1) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢@{IProp GF}
+      wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝)) ⊢
     |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   induction n generalizing b e e' σ σ' with
   | zero => simp at hterm
@@ -508,11 +512,12 @@ variable [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} 
   {GF : BundledGFunctors} [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF]
   [InvGpreS GF] [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
+local bi IProp GF
 /-- `wp_adequacy_exec_n` for a run of mass `1`. -/
 theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b
     (fun _ _ => wp_adequacy_step_fupdN_term b e e' σ σ' n φ hterm) Hwp
@@ -522,7 +527,7 @@ so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term
 theorem wp_adequacy_term [L.IsSupportLocal] (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (b : B)
     (φ : Val rT → Val rT → Prop) (hterm : execN n ⟨e, σ⟩ Set.univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
-      ⊢@{IProp GF} ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+      ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
   rw [limExecV, limExec_term hterm]
   exact wp_adequacy_exec_n_term e e' σ σ' n φ b hterm Hwp

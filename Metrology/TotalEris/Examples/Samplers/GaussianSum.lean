@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris.Examples.Samplers.GaussianConcentration
 public import Metrology.Code.GaussSum
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -17,6 +18,7 @@ namespace Examples
 noncomputable section
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
+local bi IProp GF
 
 theorem Gauss_lc : (Gauss : Exp ℝ).IsLocallyClosed := by is_lc
 
@@ -56,7 +58,7 @@ theorem gaussCreditV_exp_le (c s : ℝ) :
     _ = Real.exp (c + s ^ 2 / 2) := by rw [← Real.exp_add, one_mul]
 
 theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) (b : ℝ) :
-    iprop(↯(gaussSumCost s a k b)) ⊢@{IProp GF}
+    iprop(↯(gaussSumCost s a k b)) ⊢
       tglWp E pl(&gaussSum #(.int (k : ℤ))) (gaussSumPost a b) := by
   induction k generalizing b with
   | zero =>
@@ -106,7 +108,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
     exact ⟨rfl, by linarith⟩
 
 theorem twp_gaussSum_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
-    iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), gaussSumCost s a n 0)) ⊢@{IProp GF}
+    iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), gaussSumCost s a n 0)) ⊢
       tglWp E pl(&gaussSum #(.int (n : ℤ))) (gaussSumPost a 0) := by
   iintro Herr
   iapply twp_err_biInf solve_not_value
@@ -123,7 +125,7 @@ theorem gaussSumCost_tail {n : ℕ} (hn : 0 < n) (a : ℝ) :
   ring
 
 theorem twp_gaussSum_tail (E : CoPset) {n : ℕ} (hn : 0 < n) {a : ℝ} (ha : 0 ≤ a) :
-    iprop(↯(ENNReal.ofReal (Real.exp (-a ^ 2 / (2 * n))))) ⊢@{IProp GF}
+    iprop(↯(ENNReal.ofReal (Real.exp (-a ^ 2 / (2 * n))))) ⊢
       tglWp E pl(&gaussSum #(.int (n : ℤ))) (gaussSumPost a 0) := by
   iintro Herr
   iapply twp_gaussSum_chernoff E

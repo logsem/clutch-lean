@@ -2,6 +2,7 @@ module
 
 public import Metrology.TotalEris
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -16,16 +17,17 @@ namespace TotalEris
 
 variable {rT : Type _} [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi IProp GF
 
 /-- `tglWp_value` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
   iapply tglWp_value
   itrivial
 
 /-- `twp_alloc` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.alloc (.ofVal v))
+    ⊢ tglWp E (.alloc (.ofVal v))
       (fun w => iprop(∃ l : Loc,
         ⌜w = .loc l⌝ ∗ appHeapFrag l v)) := by
   iapply twp_alloc
@@ -36,7 +38,7 @@ example (E : CoPset) (v : Val rT) :
 example (E : CoPset) (l : Loc) (z : Int)
     (n : { z' : Int // 0 ≤ z' ∧ z' < z })
     (ns : List { z' : Int // 0 ≤ z' ∧ z' < z }) :
-    ⊢@{IProp GF} l ↪ₐ ⟨z, n :: ns⟩ -∗
+    ⊢ l ↪ₐ ⟨z, n :: ns⟩ -∗
       tglWp E (pl(rand(#(.int z), #(.lbl l))))
         (fun w : Val rT => iprop(⌜w = .int n.val⌝ ∗ l ↪ₐ ⟨z, ns⟩)) := by
   iintro Hl
@@ -47,7 +49,7 @@ example (E : CoPset) (l : Loc) (z : Int)
 
 /-- `twp_rand_tape_empty` -/
 example (E : CoPset) (l : Loc) (z : Int) (Hz : 0 < z) :
-    ⊢@{IProp GF} l ↪ₐ ⟨z, []⟩ -∗
+    ⊢ l ↪ₐ ⟨z, []⟩ -∗
       tglWp E (pl(rand(#(.int z), #(.lbl l))))
         (fun w : Val rT => iprop(∃ n : Int,
           ⌜0 ≤ n ∧ n < z⌝ ∗ ⌜w = .int n⌝ ∗ l ↪ₐ ⟨z, []⟩)) := by
@@ -60,7 +62,7 @@ example (E : CoPset) (l : Loc) (z : Int) (Hz : 0 < z) :
 
 /-- `tglWp_mono` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝))
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝))
       -∗ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
   iintro HW
   iapply tglWp_mono (Φ := fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝))
@@ -69,13 +71,13 @@ example (E : CoPset) (v : Val rT) :
 
 /-- `tglWp_fupd` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝))
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝))
       -∗ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) :=
   entails_wand tglWp_fupd
 
 /-- `tglWp_wand` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜w = v ∨ w = v⌝)) := by
   iintro HW
   iapply tglWp_wand
@@ -85,7 +87,7 @@ example (E : CoPset) (v : Val rT) :
 
 /-- `tglWp_strong_mono` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝)) := by
   iintro HW
   iapply tglWp_strong_mono
@@ -94,7 +96,7 @@ example (E : CoPset) (v : Val rT) :
 
 /-- `tglWp_bind_value` -/
 example (E : CoPset) (v : Val rT) (K : Ectx rT) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w =>
+    ⊢ tglWp E (.ofVal v) (fun w =>
         tglWp E (K.fill (.ofVal w)) (fun w' => iprop(⌜w' = v⌝))) -∗
       tglWp E (K.fill (Exp.ofVal v)) (fun w' => iprop(⌜w' = v⌝)) :=
   entails_wand tglWp_bind_value
@@ -102,20 +104,20 @@ example (E : CoPset) (v : Val rT) (K : Ectx rT) :
 /-- `ErrorCredit.Induction.increasing` -/
 example [ECGS GF] (ε : ENNReal) (ε' : NNReal) (P : IProp GF)
     (hε : 0 < ε) (hε' : ε < ε') :
-    ⊢@{IProp GF} iprop(□ ((↯(ε' : ENNReal) -∗ P) ∗ ↯ε -∗ P)) -∗
+    ⊢ iprop(□ ((↯(ε' : ENNReal) -∗ P) ∗ ↯ε -∗ P)) -∗
       iprop(↯ε -∗ P) :=
   entails_wand (ErrorCredit.Induction.increasing hε hε')
 
 /-- `tglWp_bind` -/
 example (E : CoPset) (e : Exp rT) (K : Ectx rT) (φ : Val rT → Prop) :
-    ⊢@{IProp GF} tglWp E e (fun v =>
+    ⊢ tglWp E e (fun v =>
         tglWp E (K.fill (.ofVal v)) (fun w => iprop(⌜φ w⌝))) -∗
       tglWp E (K.fill e) (fun w => iprop(⌜φ w⌝)) :=
   entails_wand tglWp_bind
 
 /-- `(λ x. !x) (alloc v) ⇓ v` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} tglWp E
+    ⊢ tglWp E
       (pl((fun x, !x) (alloc({Exp.ofVal v}))) : Exp rT)
       (fun w => iprop(⌜w = v⌝)) := by
   twp_bind (Exp.alloc (Exp.ofVal v))
@@ -128,13 +130,13 @@ example (E : CoPset) (v : Val rT) :
 
 /-- `fupd_tglWp` -/
 example (E : CoPset) (v : Val rT) :
-    ⊢@{IProp GF} iprop(|={E}=> tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝))) -∗
+    ⊢ iprop(|={E}=> tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝))) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) :=
   entails_wand fupd_tglWp
 
 /-- `tglWp_frame_left` -/
 example (E : CoPset) (v : Val rT) (R : Prop) (HR : R) :
-    ⊢@{IProp GF} tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜R⌝ ∗ ⌜w = v⌝)) := by
   iintro HW
   iapply tglWp_frame_left
@@ -142,7 +144,7 @@ example (E : CoPset) (v : Val rT) (R : Prop) (HR : R) :
 
 /-- `twp_rand_exp'` with `F 0 = 0`, `F 1 = ε` -/
 example (E : CoPset) (ε : ENNReal) :
-    ⊢@{IProp GF} ↯ε -∗
+    ⊢ ↯ε -∗
       tglWp E (pl(rand(#(.int 2), #(.unit))))
         (fun w : Val rT => iprop(∃ n : Int, ⌜0 ≤ n ∧ n < 2 ∧
           w = .int n⌝)) := by
@@ -162,7 +164,7 @@ example (E : CoPset) (ε : ENNReal) :
 
 /-- `twp_rand_exp` with zero error -/
 example (E : CoPset) (ε : ENNReal) :
-    ⊢@{IProp GF} ↯ε -∗
+    ⊢ ↯ε -∗
       tglWp E (pl(rand(#(.int 1), #(.unit))))
         (fun w : Val rT => iprop(⌜w = .int 0⌝)) := by
   iintro Hε

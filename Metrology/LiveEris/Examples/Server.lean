@@ -1,6 +1,7 @@
 module
 
 public import Metrology.LiveEris.Examples.StopOrSpin
+import Metrology.Iris.LocalBI
 import Metrology.ProbLang.Syntax.Notation
 
 @[expose] public section
@@ -42,6 +43,7 @@ def FlagUp {rT : Type _} (σ : State rT) : Prop := ∃ l : Loc, σ.heap[l]? = so
 
 variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT]
   [LiveGS rT hlc GF]
+local bi IProp GF
 
 omit [LawfulProbLangℝ rT] in
 theorem ctrUp_store (ℓ : Loc) (n : ℤ) (σ : State rT) (h : σ.heap[ℓ]? = some (.int n)) :
@@ -58,7 +60,7 @@ noncomputable abbrev ServeStmt (ℓ : Loc) : IProp GF :=
     ℓ ↦ (.int n : Val rT) -∗ lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ)
 
 theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
-    ⊢@{IProp GF} □ ▷ ServeStmt (rT := rT) ℓ -∗ ∀ (n : ℤ) (Ψ : Val rT → IProp GF),
+    ⊢ □ ▷ ServeStmt (rT := rT) ℓ -∗ ∀ (n : ℤ) (Ψ : Val rT → IProp GF),
       ℓ ↦ (.int n : Val rT) -∗ ↯((2⁻¹ : ℝ≥0∞) ^ k) -∗
         lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
   induction k with
@@ -98,9 +100,9 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
 
 /-- The counter server makes progress: its spec needs no credits. -/
 theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
-    iprop(ℓ ↦ (.int n : Val rT)) ⊢@{IProp GF}
+    iprop(ℓ ↦ (.int n : Val rT)) ⊢
       lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
-  have H : ⊢@{IProp GF} ServeStmt (rT := rT) ℓ := by
+  have H : ⊢ ServeStmt (rT := rT) ℓ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %n' %Ψ' Hl
     iapply lwp_of_err_liminf_zero liminf_half_pow (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
@@ -115,7 +117,7 @@ noncomputable abbrev FlagStmt : IProp GF :=
       lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#(.loc l))) Ψ)
 
 theorem lwp_serveFlag_depth (k : ℕ) :
-    ⊢@{IProp GF} □ ▷ FlagStmt (rT := rT) -∗ ∀ (l : Loc) (Ψ : Val rT → IProp GF),
+    ⊢ □ ▷ FlagStmt (rT := rT) -∗ ∀ (l : Loc) (Ψ : Val rT → IProp GF),
       l ↦ (.bool false : Val rT) -∗ ↯((2⁻¹ : ℝ≥0∞) ^ k) -∗
         lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#(.loc l))) Ψ := by
   induction k with
@@ -153,7 +155,7 @@ theorem lwp_serveFlag_depth (k : ℕ) :
       iapply IHk $$ IH %l %_ Hl
       iapply Credit.frag_ext (by simp) rfl $$ He
 
-theorem lwp_serveFlag : ⊢@{IProp GF} FlagStmt (rT := rT) := by
+theorem lwp_serveFlag : ⊢ FlagStmt (rT := rT) := by
   iapply loeb_wand_intuitionistically
   iintro !> #IH %l %Ψ Hl
   iapply lwp_of_err_liminf_zero liminf_half_pow (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
@@ -161,7 +163,7 @@ theorem lwp_serveFlag : ⊢@{IProp GF} FlagStmt (rT := rT) := by
   iapply lwp_serveFlag_depth k $$ IH %l %Ψ Hl Hk
 
 theorem lwp_flagServer (Ψ : Val rT → IProp GF) :
-    ⊢@{IProp GF} lwp (fun _ σ' => FlagUp σ') ⊤ flagServer Ψ := by
+    ⊢ lwp (fun _ σ' => FlagUp σ') ⊤ flagServer Ψ := by
   live_bind (Exp.alloc (Exp.ofVal (.bool false)) : Exp rT)
   iapply lwp_alloc
   iintro %l Hl
