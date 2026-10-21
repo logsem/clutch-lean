@@ -45,8 +45,10 @@ section
 variable (E : CoPset) (e t : Exp rT)
 
 variable {io : InOut}
+variable (P : _) (A : lrel rT GF)
+
 /-- `refines` eliminates `|={⊤}=>`. -/
-instance elim_fupd_refines (P : _) (A : lrel rT GF) :
+instance elim_fupd_refines :
     ElimModal True false io false iprop(|={⊤}=> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal _ := calc
@@ -56,7 +58,7 @@ instance elim_fupd_refines (P : _) (A : lrel rT GF) :
     _ ⊢ refines L E e t A                      := fupd_refines
 
 /-- `refines` eliminates `|==>`. -/
-instance elim_bupd_refines (P : _) (A : lrel rT GF) :
+instance elim_bupd_refines :
     ElimModal True false io false iprop(|==> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal h :=
@@ -165,6 +167,7 @@ theorem refines_na_alloc (N : Namespace) : iprop%
   iapply Hcont $$ Hinv
 
 variable {N : Namespace}
+
 /-- Open the non-atomic invariant `N` around a refinement, which then runs at mask `E \ N` with the
 closing update. -/
 theorem refines_na_inv

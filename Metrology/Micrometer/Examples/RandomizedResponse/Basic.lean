@@ -261,8 +261,10 @@ variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsSupportLocal] [L.HasBind]
   (hcpl : RRCoupling L c) {D : GradedDivergence.{0} B} [L.IsSound D]
 include hc hcpl
 
+variable (b b' : Bool) (k : ℕ) (σ σ' : State rT)
+
 /-- `k` rounds couple equal outputs at `k • c`, given a coupling of one round's draws at `c`. -/
-theorem rrCount_rel (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
+theorem rrCount_rel :
     L.Rel (k • c) (· = ·) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
   -- relational adequacy at `lrel_int`, whose carrier forces equal outputs
   (approximates_coupling (GF := MicrometerFunctor rT B) (fun _ _ ↦ lrel_int) _ _ _ σ σ' _
@@ -270,8 +272,7 @@ theorem rrCount_rel (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
       rrCount_refines_of c (rr_refines_of c hc hcpl) b b' k).mono le_rfl adequacyRel_eq_subset
 
 /-- `k` rounds are within `k • c` in every divergence `L` is sound for. -/
-theorem rrCount_div (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
-    D (k • c) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
+theorem rrCount_div : D (k • c) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
   IsSound.sound (rrCount_rel c hc hcpl b b' k σ σ')
 
 /-- The loop as a mechanism is `k • c`-private in every divergence `L` is sound for. -/

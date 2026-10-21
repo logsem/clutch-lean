@@ -170,6 +170,7 @@ noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
     stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
 
 variable {b : B}
+
 /-- At an absorbing budget the continuation holds trivially. -/
 theorem wpProgBody_absorbing (hb : L.Absorbing b) :
     ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by

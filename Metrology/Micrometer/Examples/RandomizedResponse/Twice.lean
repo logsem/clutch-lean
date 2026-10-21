@@ -159,6 +159,7 @@ theorem rr2_zcdp : zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (li
 /-! ## From zCDP to DP -/
 
 variable {δ : ℝ}
+
 /-- The two-bit program is `(ln 9, δ)`-DP for every `δ > 0`, converting the zCDP coupling with
 `zcdpToDp`. -/
 theorem rr2_dp (hδ : 0 < δ) :

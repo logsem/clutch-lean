@@ -174,8 +174,10 @@ theorem lrel_bool_lit (b : Bool) : ⊢ lrel_bool.car (.bool b : Val rT) (.bool b
 theorem lrel_real_lit (r : rT) : ⊢ lrel_real.car (.real r : Val rT) (.real r) := by
   unfold lrel_real; iexists r; ipureintro; exact ⟨rfl, rfl⟩
 
+variable (A B : lrel rT GF)
+
 /-- Pairs related componentwise. -/
-noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
+noncomputable def lrel_prod : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (a1 a2 b1 b2 : Val rT),
       ⌜ v1.1 = .pair a1.1 b1.1 ⌝ ∗ ⌜ v2.1 = .pair a2.1 b2.1 ⌝ ∗
@@ -192,7 +194,7 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     · rw [h2]; simp [fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
 /-- Sums related when both are injections of the same side, with related payloads. -/
-noncomputable def lrel_sum (A B : lrel rT GF) : lrel rT GF where
+noncomputable def lrel_sum : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (w1 w2 : Val rT),
       (⌜ v1.1 = .inl w1.1 ⌝ ∗ ⌜ v2.1 = .inl w2.1 ⌝ ∗ A w1 w2) ∨

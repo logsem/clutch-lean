@@ -75,8 +75,10 @@ theorem findList_steps (m : List (Int × Int)) (k : Int) :
       pure_step
       exact ih
 
+variable (l : List Int)
+
 /-- `listLength` computes list length. -/
-theorem listLength_steps (l : List Int) :
+theorem listLength_steps :
     PureSteps (pl% &listLength {ofVal (intListVal l)})
       (ofVal (.int l.length : Val rT)) := by
   induction l with
@@ -92,7 +94,7 @@ theorem listLength_steps (l : List Int) :
     exact ProbLang.PureSteps.refl _
 
 /-- `listRemoveNth` removes the `i`-th element, returning `SOME (lᵢ, l \ i)`. -/
-theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
+theorem listRemoveNth_steps (i : Nat) (hlen : i < l.length) :
     PureSteps (pl% &listRemoveNth {ofVal (intListVal l)} #int i)
       (ofVal (.inr (.pair (.int l[i]) (intListVal (l.eraseIdx i))) : Val rT)) := by
   induction l generalizing i with

@@ -263,8 +263,10 @@ theorem refines_couple_TT (α α' : Loc) (f : Int → Int)
   rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n HαNew Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
+variable (f : Int → Int)
+
 /-- Append coupled samples `n` and `f n` to a left and a right tape, without any program step. -/
-theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int} (f : Int → Int)
+theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int}
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     appNatTape α z ns ∗ specNatTape αₛ z nsₛ ∗
@@ -281,8 +283,10 @@ theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int} (f : Int
 /-! ## Advanced couplings (tv-style) -/
 
 variable {s : ENNReal →+o B}
+variable [L.IsExpectationAdditive s]
+
 /-- Couple two unlabelled draws along `f`, redistributing the credit `s ε₁` as `s (ε₂ n)`. -/
-theorem refines_couple_rands_lr_adv [L.IsExpectationAdditive s] (f : Int → Int)
+theorem refines_couple_rands_lr_adv
     (ε₁ : ENNReal) (ε₂ : Int → ENNReal) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z)
     (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
@@ -302,7 +306,7 @@ theorem refines_couple_rands_lr_adv [L.IsExpectationAdditive s] (f : Int → Int
   iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two unlabelled draws identically, avoiding the outcome `bad` for a credit `s (1/z)`. -/
-theorem refines_couple_rands_lr_avoid [L.IsExpectationAdditive s] (bad : Int)
+theorem refines_couple_rands_lr_avoid (bad : Int)
     (Hz : 0 < z) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) : iprop%
     ↯b (s (z.toNat : ENNReal)⁻¹) ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗

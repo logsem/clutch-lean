@@ -74,10 +74,11 @@ theorem choice_DP : (choiceMech σ).DP ⊤ (ofReal (log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ budget
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ choice_refines b b'
 
+variable [IsMarkovKernel (choiceMech σ)]
+
 /-- The public choice is `(0, (ln 3)² / 2)`-zCDP, given that it terminates almost surely: it
 refines both ways at `(ln 3, 0)` (Bun–Steinke 2016, Prop. 3.3). -/
-theorem choice_zCDP [IsMarkovKernel (choiceMech σ)] :
-    (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) := by
+theorem choice_zCDP : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) := by
   have := progMech_zCDP_of_dp (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ (adj := ⊤)
     (log 3).toNNReal (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq)
     (fun b b' _ _ _ ↦ choice_refines b b') fun b b' _ _ _ ↦ choice_refines b' b
@@ -85,7 +86,7 @@ theorem choice_zCDP [IsMarkovKernel (choiceMech σ)] :
 
 /-- The public choice is `((ln 3)² / 2 + 2 √((ln 3)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. -/
-theorem choice_DP_sqrt [IsMarkovKernel (choiceMech σ)] {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+theorem choice_DP_sqrt {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
     (choiceMech σ).DP ⊤
       (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ))))
       (ofReal δ) := by

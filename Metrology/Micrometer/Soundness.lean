@@ -32,12 +32,14 @@ local bi IProp GF
 
 /-! ## Pure facts: equal booleans and boolean results -/
 
+variable (v v' : Val rT)
+
 /-- Two values are the same boolean. -/
-def boolEqVal (v v' : Val rT) : Prop :=
+def boolEqVal : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
 /-- Related booleans are the same boolean. -/
-theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC GF] (v v' : Val rT) :
+theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC GF] :
     ⊢ lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iunfold lrel_bool
   iintro ⟨%b, %h⟩

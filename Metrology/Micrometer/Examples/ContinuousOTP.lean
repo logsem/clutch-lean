@@ -137,15 +137,17 @@ section Adequacy
 
 variable {GF : BundledGFunctors}
 
+variable (m : ℝ) (σ σ' : State ℝ)
+
 /-- The limit distributions of the encryption and the ideal sample are coupled at budget `0`. -/
-theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
+theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
     (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩)
       (limExecV ⟨otp_ideal, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
     fun _ _ => otp_refines_real m
 
 /-- The reverse coupling of the limit distributions at budget `0`. -/
-theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
+theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
     (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩)
       (limExecV ⟨otp_enc m, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
@@ -213,10 +215,12 @@ section Typing
 
 theorem otp_ideal_typed : Typed (rT := rT) empty otp_ideal .real := .urand
 
-theorem otpLam_typed (m : rT) : Typed empty (otpLam m) (.arrow .real .real) :=
+variable (m : rT)
+
+theorem otpLam_typed : Typed empty (otpLam m) (.arrow .real .real) :=
   Typed.lam ∅ fun _ _ => .unop_real (.binop_real .lit_real (.fvar (by simp [Tctx.insert])) rfl) rfl
 
-theorem otp_enc_typed (m : rT) : Typed empty (otp_enc m) .real := .app (otpLam_typed m) .urand
+theorem otp_enc_typed : Typed empty (otp_enc m) .real := .app (otpLam_typed m) .urand
 
 end Typing
 

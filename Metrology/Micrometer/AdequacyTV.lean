@@ -32,9 +32,11 @@ variable [AppPreGS rT GF] [SpecPreGS rT GF] [BudgetCreditPreGS ℝ≥0∞ GF] [I
 section
 variable (ε : ENNReal)
 
+variable (φ : Val rT → Val rT → Prop)
+
 /-- A `wp` proof at `codensity tv` with credit `ε` gives an additive coupling of the limit
 executions (`wp_adequacy`). -/
-theorem wp_adequacy_tv (φ : Val rT → Val rT → Prop)
+theorem wp_adequacy_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -42,7 +44,7 @@ theorem wp_adequacy_tv (φ : Val rT → Val rT → Prop)
   (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
 /-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_budget_lim`). -/
-theorem wp_adequacy_budget_lim_tv (φ : Val rT → Val rT → Prop)
+theorem wp_adequacy_budget_lim_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :

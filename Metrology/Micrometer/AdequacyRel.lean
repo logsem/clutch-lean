@@ -56,14 +56,14 @@ local bi IProp GF
 theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fill ([] : Ectx rT) e) :=
   rfl
 
+variable (v : Val rT)
+
 /-- Spec ownership of a value in the empty context is that of the value. -/
-theorem spec_fill_nil_eq_ofVal (v : Val rT) :
-    (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
+theorem spec_fill_nil_eq_ofVal : (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
   rfl
 
 /-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
-theorem spec_fill_nil_exists (v : Val rT) :
-    ⤇ fill ([] : Ectx rT) v.1 ⊢ ∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝ := by
+theorem spec_fill_nil_exists : ⤇ fill ([] : Ectx rT) v.1 ⊢ ∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝ := by
   rw [spec_fill_nil_eq_ofVal]
   iintro Hj
   iexists v
@@ -84,9 +84,11 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
 local bi IProp GF
 
+variable (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
+
 /-- A refinement from `↯b b`, proved for every ghost-state instance, gives a lifting at budget `b`
 of the two limit outputs (clutch-dp's `adequacy_rel.v`). -/
-theorem approximates_coupling (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
+theorem approximates_coupling
     (b : B)
     (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
@@ -117,7 +119,7 @@ theorem approximates_coupling (φ : Val rT → Val rT → Prop) (e e' : Exp rT) 
   iapply HA IR IBC v v' $$ HAv
 
 /-- `approximates_coupling` without budget credits. -/
-theorem refines_coupling (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
+theorem refines_coupling
     (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ refines L ⊤ e e' (A IR IBC)) :

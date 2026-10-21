@@ -51,9 +51,12 @@ theorem specCoupl_close_val {hlc : HasLC} [InvGS_gen hlc GF] {v : Val rT} : ipro
   iintro %σ₂ %ρ' %b₂ >⟨Hσ, Hs, Hb, >HΦ⟩
   iframe
 
+variable [Add B]
+variable [L.IsTopAbsorbing]
+
 /-- After an atomic step, the closing update `|={E2, E1}=>` moves out to the `specCoupl`
 postcondition. -/
-theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
+theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal]
     [L.HasBind] (h : Atomic e) : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
       progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
@@ -97,8 +100,7 @@ theorem specCoupl_close_step_of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
     iapply wp_value_of_toVal htv $$ HΦv
 
 /-- Atomic expressions are `OpenInv`. -/
-theorem of_atomic [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal] [L.HasBind]
-    (h : Atomic e) : OpenInv L e := by
+theorem of_atomic [L.IsLawful] [L.IsSupportLocal] [L.HasBind] (h : Atomic e) : OpenInv L e := by
   intro GF _ _ E1 E2 Φ
   iintro HF
   iapply MicrometerWpGS.wp_unfold
@@ -133,19 +135,23 @@ variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
 instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where
   out := of_atomic Atomic.urand
 
-instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#loc l) where
+variable (l : Loc)
+
+instance isOpenInv_load : IsOpenInv L (rT := rT) pl(!#loc l) where
   out := of_atomic (load l)
 
-instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (.store pl(#loc l) v.1) where
+instance isOpenInv_store (v : Val rT) : IsOpenInv L (.store pl(#loc l) v.1) where
   out := of_atomic (store l v)
 
 instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (.alloc v.1) where
   out := of_atomic (alloc v)
 
-instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
+variable (z : Int)
+
+instance isOpenInv_rand_unit : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
   out := of_atomic (rand_unit z)
 
-instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
+instance isOpenInv_rand_lbl (l : Loc) :
     IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
   out := of_atomic (rand_lbl z l)
 
@@ -167,16 +173,18 @@ theorem elimAcc_close {β : X → IProp GF} {γ : X → Option (IProp GF)} {x : 
     iexact HΦ
   | some P => iapply HΦ $$ Hcl
 
+variable [h : IsOpenInv L e]
+
 /-- `imod` opens a `|={E1, E2}=>` around `wp` of an `IsOpenInv` expression. -/
 instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut}
-    [h : IsOpenInv L e] :
+ :
     ElimModal True p io false iprop(|={E1, E2}=> P) P
       (wp L E1 e Φ) (wp L E2 e (fun v => iprop(|={E2, E1}=> Φ v))) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (mono wand_elim_right).trans (wp_atomic h.out)
 
 /-- `iinv` opens an invariant around `wp` of an `IsOpenInv` expression. -/
-instance (priority := low) elimAcc_wp_atomic [h : IsOpenInv L e]
+instance (priority := low) elimAcc_wp_atomic
     (E₁ E₂ : CoPset) (α β : X → _) (γ : X → _) :
     ElimAcc True (fupd E₁ E₂) (fupd E₂ E₁) α β γ (wp L E₁ e Φ)
       (fun x => wp L E₂ e (fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v)))) where

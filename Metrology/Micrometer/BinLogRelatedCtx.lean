@@ -98,6 +98,7 @@ theorem TctxRelated.eq_nil_of_empty (HCtx : TctxRelated L Δ .empty Γrc) : Γrc
     split at h <;> simp at h
 
 variable {τ : Ty}
+
 /-- A typed context filling is locally closed with free variables in the relation context. -/
 theorem ctx_fill_lc_fv {Γtc : Tctx} {K : Ctx rT} {e : Exp rT}
     (HCtxRel : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc (K.fill e) τ) :
@@ -167,6 +168,7 @@ variable {Γtc : Tctx}
 variable {e e' : Exp rT}
 variable {τ : Ty}
 variable {K : Ctx rT}
+
 /-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
 `Hrel` is valid (⊢) because binder frames use it under □; `Hbinders` and `Ctx.BindersFresh` keep
 the frames' binders fresh for the plugged terms, the frame code and the relational context. -/

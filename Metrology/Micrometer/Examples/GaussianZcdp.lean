@@ -165,9 +165,11 @@ variable (hv : v ≠ 0)
 
 include hv hgauss
 
+variable (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ)
+
 /-- `k` releases are `(0, k (a - a')² / (2 v))`-zCDP for inputs `a` and `a'`. Conditional on the
 sampler spec `hgauss`. -/
-theorem release_zcdp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) :
+theorem release_zcdp :
     zcdpDivergence (0, k * cost v a a') (limExecV ⟨release gauss a k, σ⟩)
       (limExecV ⟨release gauss a' k, σ'⟩) :=
   IsSound.sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
@@ -175,9 +177,10 @@ theorem release_zcdp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) :
 /-! ## From zCDP to DP -/
 
 variable {δ : ℝ}
+
 /-- `k` releases are `(ε, δ)`-DP for inputs `a` and `a'` and every `δ > 0`, with `ε` the best
 Rényi conversion of the composed zCDP budget. Conditional on the sampler spec `hgauss`. -/
-theorem release_dp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) (hδ : 0 < δ) :
+theorem release_dp (hδ : 0 < δ) :
     dp (⨅ α ∈ Set.Ioi (1 : ℝ), ofReal α * (k * cost v a a') +
         ofReal (log (1 / δ) / (α - 1)), ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by

@@ -26,14 +26,15 @@ open OrderAddMonoidHom (coe_id)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
+variable (ε : ℝ≥0∞)
+
 /-- Credits on the two flips: nothing on heads, `2ε` on tails. -/
-noncomputable def flipCredit (ε : ℝ≥0∞) (n : Int) : ℝ≥0∞ :=
+noncomputable def flipCredit (n : Int) : ℝ≥0∞ :=
   -- written as the cast of `k = (2 : ℝ≥0)` to match `refines_ind_amp`'s `↯b ((k : ℝ≥0∞) * ε)`
   if n = 0 then 0 else ((2 : NNReal) : ℝ≥0∞) * ε
 
 /-- The flip credits average to `ε`, as `refines_randU_r_adv` requires. -/
-theorem flipCredit_avg (ε : ℝ≥0∞) :
-    (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int).toNat ≤ ε := by
+theorem flipCredit_avg : (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int).toNat ≤ ε := by
   rw [show Finset.Ico (0 : Int) 2 = {0, 1} by decide]
   simp [flipCredit]
   exact div_le_of_le_mul (mul_comm _ _).le

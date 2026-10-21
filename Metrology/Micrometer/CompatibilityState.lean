@@ -179,6 +179,7 @@ theorem refines_store : iprop%
 
 variable {α α' : Loc}
 variable {z : Int}
+
 /-- Closes the tape invariant again once both tapes are handed back empty. -/
 theorem natTapes_empty_close : iprop%
     appNatTape α z [] ∗ specNatTape α' z [] ⊢

@@ -365,6 +365,7 @@ section PureSteps
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing] {e₂ : Exp rT} {φ : Prop} {n : Nat}
 
 variable {E' : CoPset}
+
 /-- A pure step, by a step of the unit law; at budget `⊤` the spec coupling is absorbing. -/
 theorem wp_lift_pure_det_step (Hpure : PureStep e₁ e₂) :
     (|={E}[E']▷=> wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
@@ -395,8 +396,10 @@ theorem wp_pure_step_one (Hstep : PureStep e₁ e₂) : ▷ wp L E e₂ Φ ⊢ w
   iintro !> !> !>
   iexact H
 
+variable [Hex : PureExec φ n e₁ e₂]
+
 /-- `n` pure steps given by a `PureExec` instance, each under a step-update. -/
-theorem wp_pure_step_fupd [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
+theorem wp_pure_step_fupd (Hφ : φ) :
     (|={E}[E']▷=>^[n] wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   have Hsteps := Hex.pure_exec Hφ
   clear Hex
@@ -414,8 +417,7 @@ theorem wp_pure_step_fupd [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
     iapply IH Hrest $$ H
 
 /-- `n` pure steps given by a `PureExec` instance, under `n` laters; the form the tactics use. -/
-theorem wp_pure_step_later [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
-    ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ Φ := by
+theorem wp_pure_step_later (Hφ : φ) : ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ Φ := by
   refine .trans ?_ (wp_pure_step_fupd (E' := E) (e₂ := e₂) Hφ)
   induction n with
   | zero => exact .rfl

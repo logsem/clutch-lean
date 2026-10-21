@@ -193,9 +193,11 @@ theorem specCoupl_ind {Ψ : State rT → Cfg rT → B → IProp GF} : iprop%
 
 /-! ## Coupling rules: wrappers around `specCoupl_rec` -/
 
+variable (law : L.BindLaw)
+
 /-- Introduce a spec coupling by a step of any bind law, whose spec distribution is the image of
 the law's spec-side head measure under `f'` (Rocq `spec_coupl_rec_map`). -/
-theorem specCoupl_couple_map (law : L.BindLaw) {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
+theorem specCoupl_couple_map {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
     (hf' : Measurable f') (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
     (hhead : law.head μ₁ ν₀ R b) (hside : law.SideForExec μ₁ ν₀ R f')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -212,7 +214,7 @@ theorem specCoupl_couple_map (law : L.BindLaw) {ν₀ : Measure (Cfg rT)} {f' : 
 
 /-- Introduce a spec coupling by a step of any bind law between erasable distributions (Rocq
 `spec_coupl_rec`). -/
-theorem specCoupl_couple_law (law : L.BindLaw)
+theorem specCoupl_couple_law
     (hhead : law.head μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R b)
     (hside : law.SideForExec μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R id)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -244,6 +246,7 @@ variable {b₁ b₂ : B} (hb : b₁ + b₂ ≤ b)
 include hb
 
 variable {S : State rT → Cfg rT → Prop}
+
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
 related pair. -/
 theorem specCoupl_couple_rel
@@ -307,8 +310,10 @@ theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.deco
   rw [heq]
   exact primStep_atomic e σ hne
 
+variable [L.IsReflexive]
+
 /-- Couple a Dirac program state against one spec step, on a measurable set carrying the step. -/
-theorem specCoupl_step_concentrated [L.IsReflexive] {S : Set (Cfg rT)} (Hred : Reducible e₁' σ₁')
+theorem specCoupl_step_concentrated {S : Set (Cfg rT)} (Hred : Reducible e₁' σ₁')
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
     (∀ e₂' σ₂', ⌜⟨e₂', σ₂'⟩ ∈ S⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
@@ -327,7 +332,7 @@ theorem specCoupl_step_concentrated [L.IsReflexive] {S : Set (Cfg rT)} (Hred : R
 
 /-- `specCoupl_step_concentrated` on the step's support, for a non-`urand` redex. -/
 @[discrete]
-theorem specCoupl_step [L.IsReflexive] (Hred : Discrete.Reducible e₁' σ₁')
+theorem specCoupl_step (Hred : Discrete.Reducible e₁' σ₁')
     (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
     (∀ e₂' σ₂', ⌜0 < primStep ⟨e₁', σ₁'⟩ {⟨e₂', σ₂'⟩}⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
@@ -343,6 +348,7 @@ variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 variable {e₂' : Exp rT}
 variable {σ₂' : State rT}
+
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget, by a step of the unit
 law (Rocq `spec_coupl_steps_det`, `spec_coupl_mono_grade`). -/
 theorem fupd_specCoupl_steps_det_of_le {b₁ : B}
@@ -372,6 +378,7 @@ theorem fupd_specCoupl_steps_det_of_le {b₁ : B}
     exact (top_le_iff.1 hb) ▸ absorbing_top
 
 variable {b₁ b₂ : B}
+
 /-- A spec coupling absorbs a leading fancy update and may weaken its budget. -/
 theorem fupd_specCoupl_of_le (hb : b₁ ≤ b₂) :
     iprop(|={E}=> specCoupl L E σ e' σ' b₁ Z) ⊢ specCoupl L E σ e' σ' b₂ Z :=

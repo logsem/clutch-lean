@@ -114,16 +114,17 @@ theorem noisyCount_DP : (noisyCountMech lap n σ).DP Adjacent (ofReal (1 / b)) 0
   fun _ _ h ↦ wp_adequacy_div _ _ σ σ _
     fun _ _ ↦ wp_noisyCount (hlap _ _) h
 
+variable [IsMarkovKernel (noisyCountMech lap n σ)]
+
 /-- The noisy count is `(0, (1/b)² / 2)`-zCDP for adjacent databases, given that it terminates
 almost surely (Bun–Steinke 2016, Prop. 3.3). Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_zCDP [IsMarkovKernel (noisyCountMech lap n σ)] :
-    (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 / b) ^ 2 / 2)) := by
+theorem noisyCount_zCDP : (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 / b) ^ 2 / 2)) := by
   have := zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ)
   rwa [coe_toNNReal _ (by positivity)] at this
 
 /-- The noisy count is `((1/b)² / 2 + 2 √((1/b)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_DP_sqrt [IsMarkovKernel (noisyCountMech lap n σ)] {δ : ℝ} (hδ : 0 < δ)
+theorem noisyCount_DP_sqrt {δ : ℝ} (hδ : 0 < δ)
     (hδ₁ : δ < 1) :
     (noisyCountMech lap n σ).DP Adjacent
       (ofReal ((1 / b) ^ 2 / 2 + 2 * √((1 / b) ^ 2 / 2 * log (1 / δ))))

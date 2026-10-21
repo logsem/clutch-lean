@@ -46,6 +46,7 @@ local bi IProp GF
 
 variable {b t : Exp rT}
 variable {u : Val rT}
+
 /-- β-step on the left for a constant function: the body `b` is locally closed, so it
 ignores the argument. -/
 theorem refines_beta_const_l (hb : b.IsLocallyClosed) : iprop%
@@ -73,9 +74,10 @@ include hφ
 
 variable {r' : Exp rT}
 variable {φ' : Prop}
+variable [Hex' : PureExec φ' 1 e' r']
+
 /-- One pure step on each side reduces the goal to the reducts, under a later. -/
-theorem refines_pure_step [Hex' : PureExec φ' 1 e' r'] (hφ' : φ') : iprop%
-    ▷ refines L ⊤ r r' A ⊢ refines L ⊤ e e' A := by
+theorem refines_pure_step (hφ' : φ') : iprop% ▷ refines L ⊤ r r' A ⊢ refines L ⊤ e e' A := by
   iintro H
   rw [eq_fill_nil e, eq_fill_nil e']
   iapply refines_pure_l (Hex := Hex) hφ
@@ -85,7 +87,7 @@ theorem refines_pure_step [Hex' : PureExec φ' 1 e' r'] (hφ' : φ') : iprop%
   iexact H
 
 /-- One pure step on each side to values related at `A` closes the goal. -/
-theorem refines_pure_ret {v v' : Val rT} [Hex' : PureExec φ' 1 e' r']
+theorem refines_pure_ret {v v' : Val rT}
     (hφ' : φ') (hr : r = v.1) (hr' : r' = v'.1) :
     A.car v v' ⊢ refines L ⊤ e e' A := by
   iintro HA

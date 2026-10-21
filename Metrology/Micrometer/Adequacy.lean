@@ -322,10 +322,12 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   simp only [map_dirac' measurable_expr]
   exact rel_dirac ⟨v, v', toVal?_ofVal v, toVal?_ofVal v', hφ⟩ b₂
 
+variable (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
+
 /-- Inside the logic, a `wp` gives the coupling of the `n`-fuel left run with the right limit run
 after `n` later steps: each `▷` pays for one program step. -/
-theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
-    (φ : Val rT → Val rT → Prop) :
+theorem wp_adequacy_step_fupdN [L.IsZeroLeft]
+ :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
       wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
     |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
@@ -360,8 +362,7 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] (b : B) (e e' : Exp rT) (σ σ' : 
       iapply ih b₄ e₃ e₄' σ₄ σ₄' $$ HZ
 
 /-- `wp_adequacy_step_fupdN` for a run of mass `1`. -/
-theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (b : B) (e e' : Exp rT)
-    (σ σ' : State rT) (n : Nat) (φ : Val rT → Val rT → Prop)
+theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal]
     (hterm : execN n ⟨e, σ⟩ univ = 1) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
       wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
@@ -432,16 +433,20 @@ variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 section
 variable (n : Nat)
 
+variable (φ : Val rT → Val rT → Prop) (b : B)
+
 /-- A `wp` proof from `↯b b` couples the `n`-fuel left run with the right limit run at budget
 `b`. -/
-theorem wp_adequacy_exec_n [L.IsZeroLeft] (φ : Val rT → Val rT → Prop) (b : B)
+theorem wp_adequacy_exec_n [L.IsZeroLeft]
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
 
+variable [L.IsSupportLocal]
+
 /-- `wp_adequacy_exec_n` for a run of mass `1`. -/
-theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (φ : Val rT → Val rT → Prop) (b : B)
+theorem wp_adequacy_exec_n_term
     (hterm : execN n ⟨e, σ⟩ univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -451,7 +456,7 @@ theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (φ : Val rT → Val rT → P
 
 /-- `wp_adequacy` for a program whose run has mass `1` within `n` steps: the limit is that run,
 so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term`). -/
-theorem wp_adequacy_term [L.IsSupportLocal] (b : B)
+theorem wp_adequacy_term (b : B)
     (φ : Val rT → Val rT → Prop) (hterm : execN n ⟨e, σ⟩ univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -483,16 +488,18 @@ theorem wp_adequacy_budget_lim [L.IsBudgetClosed]
     wp_adequacy e e' σ σ' b' φ fun IGS IBC => Hwp IGS IBC b' hb'
 
 variable {D : GradedDivergence.{0} B}
+variable [L.IsSound D]
+
 /-- A `wp` proof from `↯b b` whose results agree bounds the divergence of the limit outputs by `b`
 (adequacy, Thm. 8.2; clutch-dp `wp_diffpriv`). -/
-theorem wp_adequacy_div [L.IsSound D]
+theorem wp_adequacy_div
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- `wp_adequacy_div` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
-theorem wp_adequacy_div_budget_lim [L.IsSound D]
+theorem wp_adequacy_div_budget_lim
     [L.IsBudgetClosed]
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
       ⊢ ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝))) :

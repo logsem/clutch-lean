@@ -38,6 +38,7 @@ def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
     | none => if x = y then some A else none
 
 variable {Γ : RelCtx rT GF}
+
 theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup p.1).isSome := by
   induction Γ with
   | nil => cases h
@@ -49,6 +50,7 @@ theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup
       cases hr : lookup rest p.1 <;> simp_all
 
 variable {y : Var}
+
 theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
   | nil => simp [lookup] at h
@@ -119,7 +121,9 @@ theorem env_ltyped2_domSubset :
   obtain ⟨p, hp, rfl⟩ := hy
   exact mem_of_lookup_isSome ((hDom p.1).mp (lookup_isSome_of_mem hp))
 
-theorem env_ltyped2_lookup (x : Var) (A : lrel rT GF) (hΓ : Γ.lookup x = some A) :
+variable (x : Var) (A : lrel rT GF)
+
+theorem env_ltyped2_lookup (hΓ : Γ.lookup x = some A) :
     env_ltyped2 Γ vs ⊢ ∃ v1 v2, ⌜vs.lookup x = some (v1, v2)⌝ ∗ A v1 v2 := by
   unfold env_ltyped2
   iintro ⟨%Hdom, -, Hall⟩
@@ -129,7 +133,7 @@ theorem env_ltyped2_lookup (x : Var) (A : lrel rT GF) (hΓ : Γ.lookup x = some 
   iapply Hall $$ %x %A %v1 %v2 %hΓ %hvs_eq
 
 /-- Extend a related substitution by a variable bound to closed related values. -/
-theorem env_ltyped2_insert (x : Var) (A : lrel rT GF)
+theorem env_ltyped2_insert
     (v1 v2) (hv1c : v1.1.isClosed .empty) (hv2c : v2.1.isClosed .empty) : iprop%
     A v1 v2 ∗ env_ltyped2 Γ vs ⊢ env_ltyped2 ((x, A) :: Γ) ((x, (v1, v2)) :: vs) := by
   unfold env_ltyped2
@@ -278,6 +282,7 @@ theorem bin_log_related_nil_intro : refines L E e e' A ⊢ bin_log_related L E [
 
 variable {x y : Var}
 variable {τE τE' : Exp rT}
+
 /-- Renaming the innermost relational variable `x` to a fresh `y`. -/
 theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)

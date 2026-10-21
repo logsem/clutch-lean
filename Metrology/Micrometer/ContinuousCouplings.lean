@@ -131,6 +131,7 @@ theorem Cfg.uniformReal_lift_adv [AddCommMonoid B] [PartialOrder B] [Canonically
 /-! ## `urand` against `rand N` along a map -/
 
 variable {N : Int}
+
 /-- Coupling the uniform real with a uniform integer along `g`, which pushes `unifUnit` to
 `unifInt N`. -/
 theorem Cfg.uniformReal_rel_uniform [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
@@ -309,10 +310,12 @@ section Reflexive
 variable [L.IsReflexive]
 
 variable {s : ℝ≥0∞ →+o B}
+variable [L.IsExpectationAdditive s]
+
 /-- Couple `urand ~ K[urand]` along a measure-preserving `f`, turning `↯b (s ε₁)` into
 `↯b (s (ε₂ (f x)))` at the draw `x`, where `ε₁` bounds the mean of `ε₂` (the `urand` form of
 `wp_couple_rand_rand_adv`). -/
-theorem wp_couple_urand_urand_adv [L.IsExpectationAdditive s] (f : rT → rT)
+theorem wp_couple_urand_urand_adv (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) (ε₁ : ℝ≥0∞) (ε₂ : rT → ℝ≥0∞)
     (hε₂ : Measurable ε₂) (hamort : ∫⁻ y, ε₂ y ∂unifUnit ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
@@ -371,7 +374,7 @@ theorem wp_couple_urand_urand_adv [L.IsExpectationAdditive s] (f : rT → rT)
 /-- Couple `urand ~ K[urand]` identically, avoiding the measurable set `Bad` for
 `↯b (s (unifUnit Bad))` when `s 1` is absorbing (the `urand` form of
 `wp_couple_rand_rand_avoid`). -/
-theorem wp_couple_urand_urand_avoid [L.IsExpectationAdditive s] (Bad : Set rT)
+theorem wp_couple_urand_urand_avoid (Bad : Set rT)
     (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (unifUnit Bad)))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(urand) ∗ ↯b (s (unifUnit Bad)) ∗

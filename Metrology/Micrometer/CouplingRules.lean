@@ -31,6 +31,7 @@ local bi IProp GF
 variable {l : Loc}
 variable {z : Int}
 variable {ns : List Int}
+
 /-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
 theorem appNatTape_fold [AppGS rT GF]
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
@@ -74,8 +75,10 @@ theorem randUnit_step_pure (σ : State rT) {P A : IProp GF} :
   ipureintro
   exact randUnit_uniform_step Hz σ
 
+variable (α : Loc)
+
 /-- A `rand` on an empty program tape steps to the uniform distribution. -/
-theorem appNatTape_empty_rand_step (α : Loc) (σ : State rT) :
+theorem appNatTape_empty_rand_step (σ : State rT) :
     ⊢ appStateAuth σ -∗ appNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
         primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
@@ -87,7 +90,7 @@ theorem appNatTape_empty_rand_step (α : Loc) (σ : State rT) :
   exact randLbl_empty_uniform_step Hz hlk
 
 /-- A `rand` on an empty spec tape steps to the uniform distribution. -/
-theorem specNatTape_empty_rand_step (α : Loc) (e : Exp rT) (σ : State rT) :
+theorem specNatTape_empty_rand_step (e : Exp rT) (σ : State rT) :
     ⊢ specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
         primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
@@ -348,11 +351,12 @@ theorem wp_couple_rand_rand_spend (N : Int) (HN : 0 < N) (S : Int → Int → Pr
     wp L E pl(rand(#N, #())) Φ :=
   wp_couple_rand_rand_lift N N HN HN S c hc Hcpl K E Φ
 
+variable (zL zR : Int) (f : Int → Int) (b binj : B) (HzL : 0 < zL) (HzR : 0 < zR)
+
 /-- Couple `rand zL ~ K[rand zR]` along `f`, given a lifting `Hcpl` of the two uniform draws at
 cost `binj ≤ b`: the left draw is `n`, the right draw is `f n` (clutch's
 `wp_couple_rand_rand_inj`, for any `L`). -/
-theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int)
-    (b binj : B) (HzL : 0 < zL) (HzR : 0 < zR)
+theorem wp_couple_rand_rand_inj
     (Hcpl : L.Rel binj (fun n m ↦ 0 ≤ n ∧ n < zL ∧ m = f n) (unifInt zL HzL) (unifInt zR HzR))
     (hb : binj ≤ b) (hc : IsAddLeftRegular binj) (K : Ectx rT) (E : CoPset)
     (Φ : Val rT → _) : iprop%
@@ -369,8 +373,7 @@ theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int)
 /-- Couple `rand zL ~ K[rand zR]` along `f`, given a lifting `Hcpl` of the two uniform draws at
 cost `binj ≤ b`: the left draw is `f m`, the right draw is `m` (clutch's
 `wp_couple_rand_rand_rev_inj`, for any `L`). -/
-theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
-    (b binj : B) (HzL : 0 < zL) (HzR : 0 < zR)
+theorem wp_couple_rand_rand_rev_inj
     (Hcpl : L.Rel binj (fun n m ↦ 0 ≤ m ∧ m < zR ∧ n = f m) (unifInt zL HzL) (unifInt zR HzR))
     (hb : binj ≤ b) (hc : IsAddLeftRegular binj) (K : Ectx rT) (E : CoPset)
     (Φ : Val rT → _) : iprop%
@@ -386,10 +389,12 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
 
 /-! ### Outcome-dependent credits -/
 
+variable [L.IsReflexive]
+
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`, turning `↯b (s ε₁)` into `↯b (s (ε₂ n))` at
 draw `n`, where `ε₁` bounds the average of `ε₂` (credits paid in expectation,
 Eris `wp_couple_rand_adv_comp`). -/
-theorem wp_couple_rand_rand_adv [L.IsReflexive]
+theorem wp_couple_rand_rand_adv
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z : Int) (f : Int → Int) (ε₁ : ENNReal)
     (ε₂ : Int → ENNReal)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
@@ -445,7 +450,7 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
 
 /-- Couple `rand z ~ K[rand z]` along the identity, avoiding the outcome `bad` for
 `↯b (s (1 / z))` when `s 1` is absorbing. -/
-theorem wp_couple_rand_rand_avoid [L.IsReflexive]
+theorem wp_couple_rand_rand_avoid
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z bad : Int) (Hz : 0 < z)
     (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) (K : Ectx rT) (E : CoPset)
@@ -481,9 +486,11 @@ theorem isAddLeftRegular_natCast_div {a b : ℕ} (hb : b ≠ 0) :
   (IsAddRegular.of_ne_top
     (div_ne_top (natCast_ne_top _) (Nat.cast_ne_zero.2 hb))).1
 
+variable (zL zR : Int) (f : Int → Int) (ε : ENNReal)
+
 /-- Couple `rand zL ~ K[rand zR]` (`zL ≤ zR`) along an injection `f : [0,zL) ↪ [0,zR)`, spending
 `(zR - zL)/zR` error credits (Approxis's `wp_couple_rand_rand_inj`). -/
-theorem wp_couple_rand_rand_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal)
+theorem wp_couple_rand_rand_inj_tv
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂)
     (HzL : 0 < zL) (Hle : zL ≤ zR)
@@ -498,7 +505,7 @@ theorem wp_couple_rand_rand_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal
 
 /-- Couple `rand zL ~ K[rand zR]` (`zR ≤ zL`) along an injection `f : [0,zR) ↪ [0,zL)`, spending
 `(zL - zR)/zL` error credits (Approxis's `wp_couple_rand_rand_rev_inj`). -/
-theorem wp_couple_rand_rand_rev_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal)
+theorem wp_couple_rand_rand_rev_inj_tv
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂)
     (HzR : 0 < zR) (Hle : zR ≤ zL)

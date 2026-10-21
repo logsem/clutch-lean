@@ -190,8 +190,10 @@ variable (τ : Ty)
 
 theorem interp_ref : interp L (.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
+variable (v v' : Val rT)
+
 /-- `⟦μX.τ⟧` unfolds once, with the recursive occurrence under `▷`. -/
-theorem interp_rec_car (v v' : Val rT) :
+theorem interp_rec_car :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
@@ -199,7 +201,7 @@ theorem interp_rec_car (v v' : Val rT) :
       ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩ })
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
-theorem interp_exists_car (v v' : Val rT) :
+theorem interp_exists_car :
     (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ∃ A, (interp L τ (cons A Δ)).car v v') :=
   rfl
@@ -216,6 +218,7 @@ theorem interp_closed (τ : Ty) (v v' : Val rT) :
 /-! ## Substitution lemmas -/
 
 variable {τ' : Ty}
+
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
 theorem interp_rename_under {ξ : Nat → Nat}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),

@@ -66,12 +66,14 @@ theorem absorbing_codensity_dp_iff {ε δ : ℝ≥0∞} :
     · exact absorbing_codensity_dp.mono (mk_le_mk.2 ⟨zero_le, hδ⟩)
 
 variable {δ : ℝ≥0∞}
+
 /-- A total variation budget is absorbing exactly from `1` on. -/
 theorem absorbing_codensity_tv_iff : (codensity tv.{u}).Absorbing δ ↔ 1 ≤ δ :=
   ⟨fun h ↦ codensity_tv_rel_false_iff.1 (h _ _ _), absorbing_codensity_tv_one.mono⟩
 
 variable {α : ℝ}
 variable {ρ : ℝ≥0∞}
+
 /-- A Rényi budget is absorbing exactly at `⊤`. -/
 theorem absorbing_codensity_renyi_iff (hα : 1 < α) :
     (codensity (renyiDivergence.{u} α)).Absorbing ρ ↔ ρ = (⊤ : ℝ≥0∞) :=

@@ -57,6 +57,7 @@ variable [L.IsLawful] [L.IsTopAbsorbing] {e e' e1 e2 e2' t : Exp rT} {K' : Ectx 
 
 variable {φ : Prop}
 variable {n : ℕ}
+
 /-- A pure step on the left, which earns a `▷`. -/
 theorem refines_pure_l [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
     ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
@@ -252,6 +253,7 @@ end Steps
 /-! ## Value rules -/
 
 variable {v v' : Val rT}
+
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
 theorem refines_arrow_val (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢

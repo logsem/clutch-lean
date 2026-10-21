@@ -95,6 +95,7 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 /-! ### Heap -/
 
 variable {v : Val rT}
+
 /-- Allocating `v` returns a fresh location `l` that points to `v`. -/
 theorem wp_alloc : iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (.alloc (.ofVal v)) Φ := by
   iintro HΦ
@@ -210,6 +211,7 @@ theorem wp_rand_nonpos (Hz : ¬ 0 < z) : Φ (.int (-1)) ⊢ wp L E pl(rand(#z, #
     iexact HΦ
 
 variable {ns : List Int}
+
 /-- A labeled `rand z` on a tape with bound `z` pops the tape's head. -/
 theorem wp_rand_tape {n : Int} : iprop%
     appNatTape l z (n :: ns) ∗ (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
@@ -302,6 +304,7 @@ theorem wp_rand_tape_wrong_bound {M : Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop
     iapply HΦ $$ HlNat %⟨hv0, hvz⟩
 
 variable {N : Int}
+
 /-- A labeled `rand z` with `z ≤ 0` on an empty tape returns `-1`. -/
 theorem wp_rand_lbl_nonpos (Hz : ¬ 0 < z) : iprop%
     appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢

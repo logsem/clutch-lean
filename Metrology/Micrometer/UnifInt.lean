@@ -42,17 +42,19 @@ variable {rT : Type} {B : Type} {L : GradedLifting.{0} B} {z zL zR : Int}
   ∃ n : Int, 0 ≤ n ∧ n < z ∧
     c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (f n)), σ'⟩
 
+variable (s : ENNReal → B)
+
 /-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤`
 elsewhere. Unlike `Cfg.drawCost`, which is keyed by both draws, this is keyed by the left draw
 along the bijection `f`. -/
-noncomputable def Cfg.advLeftover [_root_.Top B] (s : ENNReal → B) (z : Int) (f : Int → Int)
+noncomputable def Cfg.advLeftover [_root_.Top B] (z : Int) (f : Int → Int)
     (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) : Cfg rT → Cfg rT → B :=
   fun ρ₁ ρ₂ => by
     classical
     exact if h : CoupledDraw z f σ σ' K ρ₁ ρ₂ then s (ε₂ h.choose) else ⊤
 
 /-- At the pair drawn from `n`, the leftover is `s (ε₂ n)`. -/
-theorem Cfg.advLeftover_apply [_root_.Top B] (s : ENNReal → B) (f : Int → Int)
+theorem Cfg.advLeftover_apply [_root_.Top B] (f : Int → Int)
     (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) {n : Int} (h0 : 0 ≤ n) (hn : n < z) :
     advLeftover s z f σ σ' K ε₂ ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ =
       s (ε₂ n) := by
@@ -78,8 +80,10 @@ noncomputable def unifInt (z : Int) (hz : 0 < z) : Measure Int :=
 instance unifInt.isProbabilityMeasure {hz : 0 < z} : IsProbabilityMeasure (unifInt z hz) :=
   PMF.toMeasure.isProbabilityMeasure _
 
+variable (hz : 0 < z)
+
 /-- Integrals against `unifInt z` are averages over `[0, z)`. -/
-theorem lintegral_unifInt (hz : 0 < z) (φ : Int → ENNReal) :
+theorem lintegral_unifInt (φ : Int → ENNReal) :
     ∫⁻ n, φ n ∂unifInt z hz = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, φ n := by
   have hcard : (Finset.Ico (0 : Int) z).card = z.toNat := by rw [card_Ico]; omega
   rw [unifInt, lintegral_countable', tsum_eq_sum fun n hn => by
@@ -90,7 +94,7 @@ theorem lintegral_unifInt (hz : 0 < z) (φ : Int → ENNReal) :
     PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
 
 /-- `unifInt z` gives each set the share of `[0, z)` it contains. -/
-theorem unifInt_apply (hz : 0 < z) (S : Set Int) :
+theorem unifInt_apply (S : Set Int) :
     unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, S.indicator 1 n := by
   rw [← lintegral_unifInt, lintegral_indicator_one of_discrete]
 
@@ -169,6 +173,7 @@ theorem randUnit_uniform_step [MeasurableSingletonClass rT] (Hz : 0 < z)
     primStep_rand_unit Hz σ⟩
 
 variable {σ : State rT}
+
 /-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
 theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {l : Loc}
     {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
@@ -191,6 +196,7 @@ variable (Hz : 0 < z)
 include Hz
 
 variable {M : Int}
+
 /-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] (HneM : z ≠ M)
     (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
@@ -207,6 +213,7 @@ theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] (σ : State rT) (l
   simp only [↓reduceIte]
 
 variable {l : Loc}
+
 /-- `primStep_rand_lbl_empty` with discrete reducibility. -/
 theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {σ : State rT}
     (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
@@ -416,6 +423,7 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT]
 
 variable {e : Exp rT}
 variable {ε : ENNReal}
+
 /-- A coupling with a step of `e` gives one with a step of `K[e]`. -/
 theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [MeasurableSpace α]
     {μ : Measure α} {R : Set (α × Cfg rT)} {K : Ectx rT}
@@ -509,7 +517,9 @@ instance heapView_tape_frag_discreteE :
 instance appTapesFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF] :
     Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
 
-instance specTapesFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF] :
+variable [SpecGS rT GF]
+
+instance specTapesFrag_timeless [MeasurableSingletonClass rT] :
     Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
 
 instance heapView_heap_frag_discreteE :
@@ -521,18 +531,19 @@ instance appHeapFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF] :
   unfold appHeapFrag
   exact iOwn_timeless
 
-instance specHeapFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF] :
-    Timeless (l ↦ₛ v : IProp GF) := by
+instance specHeapFrag_timeless [MeasurableSingletonClass rT] : Timeless (l ↦ₛ v : IProp GF) := by
   unfold specHeapFrag
   exact iOwn_timeless
 
-instance appNatTape_timeless [MeasurableSingletonClass rT] [AppGS rT GF] (z : Int) (ns : List Int) :
+variable (z : Int) (ns : List Int)
+
+instance appNatTape_timeless [MeasurableSingletonClass rT] [AppGS rT GF] :
     Timeless (appNatTape l z ns : IProp GF) := by
   unfold appNatTape
   infer_instance
 
-instance specNatTape_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (z : Int) (ns : List Int) : Timeless (specNatTape l z ns : IProp GF) := by
+instance specNatTape_timeless [MeasurableSingletonClass rT]
+ : Timeless (specNatTape l z ns : IProp GF) := by
   unfold specNatTape
   infer_instance
 

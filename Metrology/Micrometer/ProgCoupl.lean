@@ -121,6 +121,7 @@ theorem progCoupl_intro_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
 /-! ## Structural rules -/
 
 variable {S : Set (Cfg rT)}
+
 /-- Continuations need only cover a set carrying the program step (via the law's `head_supp`). -/
 theorem progCoupl_strong_mono (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
@@ -188,9 +189,11 @@ theorem dirac_bind_pexecN_one (Hred' : Reducible e₁' σ₁') :
   rw [dirac_bind (by fun_prop), pexecN_one,
     stepOrFinal_not_isValue (val_stuck Hred')]
 
+variable (law : L.BindLaw)
+
 /-- Couple one program step against one spec step by a step of any bind law (Rocq
 `prog_coupl_one_step_top`). -/
-theorem progCoupl_steps_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
+theorem progCoupl_steps_law (Hred : Reducible e₁ σ₁)
     (Hred' : Reducible e₁' σ₁')
     (hhead : law.head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R b)
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R id) : iprop%
@@ -201,9 +204,10 @@ theorem progCoupl_steps_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
     (dirac_bind_pexecN_one Hred' ▸ hside) (dret σ₁')
 
 variable {b₁ b₂ : B}
+
 /-- `progCoupl_steps_law` spending `b₁` of the budget `b` on the step and carrying `b₂` through
 it, for a law whose heads shift (Rocq `wp_couple_spend`, `gbl_head_shift`). -/
-theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift]
+theorem progCoupl_steps_spend_law [Add B] [law.HeadShift]
     (hb : b₁ + b₂ ≤ b) (hb₂ : b₂ < (⊤ : B)) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (hhead : law.head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R b₁)
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
@@ -333,6 +337,7 @@ variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorb
   [L.IsSupportLocal]
 
 variable {b₁ b₂ : B}
+
 /-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
 `b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
 theorem progCoupl_steps {S : Cfg rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)

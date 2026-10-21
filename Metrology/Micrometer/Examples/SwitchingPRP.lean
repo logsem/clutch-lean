@@ -50,13 +50,15 @@ local bi IProp GF
 The postconditions of creation; the query lemmas and the loop work with the unfolded points-to
 facts. -/
 
+variable (f : Val rT) (m : List (Int × Int))
+
 /-- `f` is an idealised random function with output space `[0, N)` and memo table `m`
 (program side). -/
-def isRandomFunction (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
+def isRandomFunction : IProp GF := iprop%
   ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ assocVal m)
 
 /-- `isRandomFunction` for the spec-side program (points-to `↦ₛ`). -/
-def isSRandomFunction (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
+def isSRandomFunction : IProp GF := iprop%
   ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ₛ assocVal m)
 
 /-- The pure permutation invariant: the sampled values `m.map (·.2)` together with the
@@ -64,14 +66,16 @@ fresh list `r` are a permutation of `[0, N)`. -/
 def prpPerm (m : List (Int × Int)) (r : List Int) : Prop :=
   (m.map snd ++ r).Perm ((range N.toNat).map ofNat)
 
+variable (f : Val rT) (m : List (Int × Int)) (r : List Int)
+
 /-- `f` is an idealised random permutation of `[0, N)` with memo table `m` and fresh
 list `r` (program side). -/
-def isPRP (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp GF := iprop%
+def isPRP : IProp GF := iprop%
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
     (ℓm ↦ assocVal m) ∗ (ℓfv ↦ intListVal r)
 
 /-- `isPRP` for the spec-side program (points-to `↦ₛ`). -/
-def isSPRP (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp GF := iprop%
+def isSPRP : IProp GF := iprop%
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
     (ℓm ↦ₛ assocVal m) ∗ (ℓfv ↦ₛ intListVal r)
 
@@ -235,6 +239,7 @@ theorem prpPerm_nodup : r.Nodup :=
   (h.nodup_iff.mpr (nodup_range.map fun _ _ hab => ofNat.inj hab)).of_append_right
 
 variable {y : Int}
+
 /-- Every element of the fresh list lies in `[0, N)`. -/
 theorem prpPerm_mem_range (hy : y ∈ r) : 0 ≤ y ∧ y < N := by
   have hy' : y ∈ (range N.toNat).map ofNat :=
@@ -248,9 +253,11 @@ theorem prpPerm_mem_range (hy : y ∈ r) : 0 ≤ y ∧ y < N := by
 theorem prpPerm_length : m.length + r.length = N.toNat := by
   simpa using h.length_eq
 
+variable (n : Int)
+
 /-- The fresh list is nonempty at a fresh in-range query: the map's keys are distinct
 and in `[0, N)`, so they cannot already cover all of `[0, N)`. -/
-theorem prpPerm_fresh_nonempty (n : Int) (hn : 0 ≤ n ∧ n < N)
+theorem prpPerm_fresh_nonempty (hn : 0 ≤ n ∧ n < N)
     (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N) (hnodup : (m.map fst).Nodup)
     (hfresh : n ∉ m.map fst) : 0 < r.length := by
   by_contra hr
@@ -264,7 +271,7 @@ theorem prpPerm_fresh_nonempty (n : Int) (hn : 0 ≤ n ∧ n < N)
   simp [hlenm] at hle
 
 /-- Memoising a sampled fresh value preserves the permutation invariant. -/
-theorem prpPerm_insert (n : Int) (hy : y ∈ r) : prpPerm N ((n, y) :: m) (r.erase y) := by
+theorem prpPerm_insert (hy : y ∈ r) : prpPerm N ((n, y) :: m) (r.erase y) := by
   refine List.Perm.trans ?_ h
   simp only [map_cons, cons_append]
   exact perm_middle.symm.trans
