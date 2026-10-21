@@ -28,8 +28,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## Ghost state -/
 
-/-- The Micrometer ghost-state components. The lifting and the budget camera are not part of this
-class: the lifting is the explicit first argument of `wp`, the budget is a `BudgetGS B GF`. -/
+/-- The Micrometer ghost-state components, excluding budget (`BudgetGS B GF`) -/
 class MicrometerGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   appGS : AppGS rT GF
@@ -42,7 +41,8 @@ section MicrometerInstance
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
 
-/-- The weakest-precondition ghost state assembled from `MicrometerGS`. -/
+open MicrometerWpGS SpecUpdateGS
+
 @[reducible]
 noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) GF where
   hlc := hlc
@@ -50,10 +50,10 @@ noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) 
   stateInterp σ := appStateAuth σ
 
 @[simp] theorem micrometerWpGS_stateInterp_eq :
-    (MicrometerWpGS.stateInterp : State rT → IProp GF) = appStateAuth := rfl
+    (stateInterp : _ → IProp GF) = appStateAuth := rfl
 
 @[simp] theorem micrometerWpGS_specInterp_eq :
-    (SpecUpdateGS.specInterp : Cfg rT → IProp GF) = Cfg.specAuth := rfl
+    (specInterp : _  → IProp GF) = Cfg.specAuth := rfl
 
 end MicrometerInstance
 
