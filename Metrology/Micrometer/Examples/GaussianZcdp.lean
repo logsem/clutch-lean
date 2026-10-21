@@ -174,9 +174,10 @@ theorem release_zcdp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) :
 
 /-! ## From zCDP to DP -/
 
+variable {δ : ℝ}
 /-- `k` releases are `(ε, δ)`-DP for inputs `a` and `a'` and every `δ > 0`, with `ε` the best
 Rényi conversion of the composed zCDP budget. Conditional on the sampler spec `hgauss`. -/
-theorem release_dp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) {δ : ℝ} (hδ : 0 < δ) :
+theorem release_dp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) (hδ : 0 < δ) :
     dp (⨅ α ∈ Set.Ioi (1 : ℝ), ofReal α * (k * cost v a a') +
         ofReal (log (1 / δ) / (α - 1)), ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by
@@ -186,7 +187,7 @@ theorem release_dp (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) {δ : ℝ} (hδ :
 
 /-- `k` releases are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for inputs at distance at most `r`, where
 `ρₖ = k r² / (2 v)`: the privacy loss grows as `√k`. Conditional on the sampler spec `hgauss`. -/
-theorem release_dp_sqrt {a a' r : ℝ} (h : |a - a'| ≤ r) (k : ℕ) (σ σ' : State ℝ) {δ : ℝ}
+theorem release_dp_sqrt {a a' r : ℝ} (h : |a - a'| ≤ r) (k : ℕ) (σ σ' : State ℝ)
     (hδ : 0 < δ) (hδ₁ : δ < 1) :
     dp (ofReal (k * (r ^ 2 / (2 * v)) + 2 * √(k * (r ^ 2 / (2 * v)) * log (1 / δ))),
         ofReal δ)

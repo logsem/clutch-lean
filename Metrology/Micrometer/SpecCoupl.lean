@@ -243,9 +243,10 @@ section
 variable {b₁ b₂ : B} (hb : b₁ + b₂ ≤ b)
 include hb
 
+variable {S : State rT → Cfg rT → Prop}
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
 related pair. -/
-theorem specCoupl_couple_rel {S : State rT → Cfg rT → Prop}
+theorem specCoupl_couple_rel
     (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
@@ -278,7 +279,7 @@ theorem specCoupl_erasables {S : State rT → State rT → Prop} (Hcpl : L.Rel b
   iapply H $$ %σ₂ %σ₂' %HS
 
 /-- Couple an erasable distribution against `n` spec steps. -/
-theorem specCoupl_erasable_steps {S : State rT → Cfg rT → Prop}
+theorem specCoupl_erasable_steps
     (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
@@ -287,7 +288,7 @@ theorem specCoupl_erasable_steps {S : State rT → Cfg rT → Prop}
     Heras₁ (dret σ₁')
 
 /-- Couple a Dirac program state against `n` spec steps. -/
-theorem specCoupl_steps {S : State rT → Cfg rT → Prop}
+theorem specCoupl_steps
     (Hcpl : L.Rel b₁ S (dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
@@ -340,9 +341,11 @@ end SplitBudget
 section Budget
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
+variable {e₂' : Exp rT}
+variable {σ₂' : State rT}
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget, by a step of the unit
 law (Rocq `spec_coupl_steps_det`, `spec_coupl_mono_grade`). -/
-theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b₁ : B}
+theorem fupd_specCoupl_steps_det_of_le {b₁ : B}
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
@@ -368,13 +371,14 @@ theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b�
     iapply specCoupl_absorbing
     exact (top_le_iff.1 hb) ▸ absorbing_top
 
+variable {b₁ b₂ : B}
 /-- A spec coupling absorbs a leading fancy update and may weaken its budget. -/
-theorem fupd_specCoupl_of_le {b₁ b₂ : B} (hb : b₁ ≤ b₂) :
+theorem fupd_specCoupl_of_le (hb : b₁ ≤ b₂) :
     iprop(|={E}=> specCoupl L E σ e' σ' b₁ Z) ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_specCoupl_steps_det_of_le (pexecN_zero _) hb
 
 /-- A spec coupling at a smaller budget proves one at a larger budget. -/
-theorem specCoupl_mono_budget {b₁ b₂ : B} (hb : b₁ ≤ b₂) :
+theorem specCoupl_mono_budget (hb : b₁ ≤ b₂) :
     specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
@@ -384,7 +388,7 @@ theorem fupd_specCoupl :
   fupd_specCoupl_of_le le_rfl
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on the coupling at its end. -/
-theorem specCoupl_steps_det {e₂' : Exp rT} {σ₂' : State rT}
+theorem specCoupl_steps_det
     (Hstep : pexecN n ⟨e₁', σ₁'⟩ = dirac ⟨e₂', σ₂'⟩) :
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)

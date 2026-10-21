@@ -37,8 +37,8 @@ def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
     | some B => some B
     | none => if x = y then some A else none
 
-theorem lookup_isSome_of_mem {Γ : RelCtx rT GF} {p : Var × lrel rT GF}
-    (h : p ∈ Γ) : (Γ.lookup p.1).isSome := by
+variable {Γ : RelCtx rT GF}
+theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup p.1).isSome := by
   induction Γ with
   | nil => cases h
   | cons q rest ih =>
@@ -48,8 +48,8 @@ theorem lookup_isSome_of_mem {Γ : RelCtx rT GF} {p : Var × lrel rT GF}
     · have := ih hRest
       cases hr : lookup rest p.1 <;> simp_all
 
-theorem mem_of_lookup_isSome {Γ : RelCtx rT GF} {y : Var}
-    (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
+variable {y : Var}
+theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
   | nil => simp [lookup] at h
   | cons q rest ih =>
@@ -64,8 +64,7 @@ theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
       | some B => some B
       | none => if z = y then some A else none := rfl
 
-theorem lookup_eq_none_of_not_mem {Γ : RelCtx rT GF} {y : Var}
-    (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
+theorem lookup_eq_none_of_not_mem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
   | none => rfl
   | some _ => exact absurd (mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
@@ -277,8 +276,10 @@ theorem bin_log_related_nil_intro : refines L E e e' A ⊢ bin_log_related L E [
     show substMap (snd ([] : ValSubstMap rT)) e' = e' from rfl]
   iexact H
 
+variable {x y : Var}
+variable {τE τE' : Exp rT}
 /-- Renaming the innermost relational variable `x` to a fresh `y`. -/
-theorem bin_log_related_rename {x y : Var} {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y)
+theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)
     (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
     bin_log_related L E ((x, A) :: Γ) τE τE' B ⊢
@@ -323,7 +324,7 @@ theorem bin_log_related_rename {x y : Var} {τE τE' : Exp rT} {B : lrel rT GF} 
   iexact Hrefines
 
 /-- `bin_log_related_rename` for the type-level judgement. -/
-theorem bin_log_related_ty_rename {Δ : TyEnv rT GF} {x y : Var} {τE τE' : Exp rT} {τ : Ty}
+theorem bin_log_related_ty_rename {Δ : TyEnv rT GF} {τ : Ty}
     (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)
     (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :

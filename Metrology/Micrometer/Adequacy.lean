@@ -482,16 +482,17 @@ theorem wp_adequacy_budget_lim [L.IsBudgetClosed]
   IsBudgetClosed.of_forall_gt fun b' hb' =>
     wp_adequacy e e' σ σ' b' φ fun IGS IBC => Hwp IGS IBC b' hb'
 
+variable {D : GradedDivergence.{0} B}
 /-- A `wp` proof from `↯b b` whose results agree bounds the divergence of the limit outputs by `b`
 (adequacy, Thm. 8.2; clutch-dp `wp_diffpriv`). -/
-theorem wp_adequacy_div {D : GradedDivergence.{0} B} [L.IsSound D]
+theorem wp_adequacy_div [L.IsSound D]
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- `wp_adequacy_div` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
-theorem wp_adequacy_div_budget_lim {D : GradedDivergence.{0} B} [L.IsSound D]
+theorem wp_adequacy_div_budget_lim [L.IsSound D]
     [L.IsBudgetClosed]
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
       ⊢ ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝))) :

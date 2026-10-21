@@ -234,8 +234,9 @@ include h
 theorem prpPerm_nodup : r.Nodup :=
   (h.nodup_iff.mpr (nodup_range.map fun _ _ hab => ofNat.inj hab)).of_append_right
 
+variable {y : Int}
 /-- Every element of the fresh list lies in `[0, N)`. -/
-theorem prpPerm_mem_range {y : Int} (hy : y ∈ r) : 0 ≤ y ∧ y < N := by
+theorem prpPerm_mem_range (hy : y ∈ r) : 0 ≤ y ∧ y < N := by
   have hy' : y ∈ (range N.toNat).map ofNat :=
     h.mem_iff.mp (mem_append_right _ hy)
   obtain ⟨j, hj, rfl⟩ := mem_map.mp hy'
@@ -263,7 +264,7 @@ theorem prpPerm_fresh_nonempty (n : Int) (hn : 0 ≤ n ∧ n < N)
   simp [hlenm] at hle
 
 /-- Memoising a sampled fresh value preserves the permutation invariant. -/
-theorem prpPerm_insert (n : Int) {y : Int} (hy : y ∈ r) : prpPerm N ((n, y) :: m) (r.erase y) := by
+theorem prpPerm_insert (n : Int) (hy : y ∈ r) : prpPerm N ((n, y) :: m) (r.erase y) := by
   refine List.Perm.trans ?_ h
   simp only [map_cons, cons_append]
   exact perm_middle.symm.trans

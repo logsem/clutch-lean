@@ -364,8 +364,9 @@ step is a step of the unit law, so no bind is needed. -/
 section PureSteps
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing] {e₂ : Exp rT} {φ : Prop} {n : Nat}
 
+variable {E' : CoPset}
 /-- A pure step, by a step of the unit law; at budget `⊤` the spec coupling is absorbing. -/
-theorem wp_lift_pure_det_step {E' : CoPset} (Hpure : PureStep e₁ e₂) :
+theorem wp_lift_pure_det_step (Hpure : PureStep e₁ e₂) :
     (|={E}[E']▷=> wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
   have Hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr (val_stuck (Hpure.safe default))
@@ -395,7 +396,7 @@ theorem wp_pure_step_one (Hstep : PureStep e₁ e₂) : ▷ wp L E e₂ Φ ⊢ w
   iexact H
 
 /-- `n` pure steps given by a `PureExec` instance, each under a step-update. -/
-theorem wp_pure_step_fupd {E' : CoPset} [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
+theorem wp_pure_step_fupd [Hex : PureExec φ n e₁ e₂] (Hφ : φ) :
     (|={E}[E']▷=>^[n] wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   have Hsteps := Hex.pure_exec Hφ
   clear Hex

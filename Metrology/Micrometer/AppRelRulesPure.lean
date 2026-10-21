@@ -55,8 +55,10 @@ variable [L.IsLawful] [L.IsTopAbsorbing] {e e' e1 e2 e2' t : Exp rT} {K' : Ectx 
 
 /-! ## Pure steps and the left `wp` -/
 
+variable {φ : Prop}
+variable {n : ℕ}
 /-- A pure step on the left, which earns a `▷`. -/
-theorem refines_pure_l {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
+theorem refines_pure_l [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
     ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
@@ -66,7 +68,7 @@ theorem refines_pure_l {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : �
   iapply H $$ HK Hna Herr Hpos
 
 /-- A pure step on the right; spec steps earn no `▷`. -/
-theorem refines_pure_r {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
+theorem refines_pure_r [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
   iunfold refines
   iintro H %K' %b Hj Hna Herr Hpos
@@ -249,8 +251,9 @@ end Steps
 
 /-! ## Value rules -/
 
+variable {v v' : Val rT}
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
-theorem refines_arrow_val {v v' : Val rT} (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow_val (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
     refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
@@ -262,7 +265,7 @@ theorem refines_arrow_val {v v' : Val rT} (hv : v.1.isClosedEmpty ∧ v'.1.isClo
   iapply H $$ %w1 %w2 HA
 
 /-- `refines_arrow_val` with the argument hypothesis given as a refinement. -/
-theorem refines_arrow {v v' : Val rT} (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
       refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
     refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by

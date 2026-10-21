@@ -215,8 +215,9 @@ theorem interp_closed (τ : Ty) (v v' : Val rT) :
 
 /-! ## Substitution lemmas -/
 
+variable {τ' : Ty}
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
-theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat}
+theorem interp_rename_under {ξ : Nat → Nat}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
       interp L (τ'.rename ξ) Δ = interp L τ' (comp Δ ξ))
     (X : lrel rT GF) :
@@ -258,7 +259,7 @@ theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
   | k + 1 => interp_ren (σ k) X Δ
 
 /-- The substitution hypothesis for a type body extends under a new relation binder. -/
-theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty}
+theorem interp_substG_under {σ : Nat → Ty}
     (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
       interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
     (X : lrel rT GF) :

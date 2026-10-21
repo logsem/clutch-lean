@@ -158,9 +158,10 @@ theorem rr2_zcdp : zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (li
 
 /-! ## From zCDP to DP -/
 
+variable {δ : ℝ}
 /-- The two-bit program is `(ln 9, δ)`-DP for every `δ > 0`, converting the zCDP coupling with
 `zcdpToDp`. -/
-theorem rr2_dp {δ : ℝ} (hδ : 0 < δ) :
+theorem rr2_dp (hδ : 0 < δ) :
     dp (ofReal (log 9), ofReal δ)
       (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
   have h := codensity_sound <| (zcdpToDp hδ).map_rel
@@ -184,7 +185,7 @@ theorem rr2_zCDP : (rr2Mech σ).zCDP ⊤ (ofReal (log 9)) 0 :=
 
 /-- Randomized response on two bits is `(ln 9, δ)`-DP as a mechanism, for every `δ > 0`
 (Def. 2.1). -/
-theorem rr2_DP {δ : ℝ} (hδ : 0 < δ) : (rr2Mech σ).DP ⊤ (ofReal (log 9)) (ofReal δ) :=
+theorem rr2_DP (hδ : 0 < δ) : (rr2Mech σ).DP ⊤ (ofReal (log 9)) (ofReal δ) :=
   fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ
 
 end Adequacy

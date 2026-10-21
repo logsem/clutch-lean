@@ -94,9 +94,9 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 
 /-! ### Heap -/
 
+variable {v : Val rT}
 /-- Allocating `v` returns a fresh location `l` that points to `v`. -/
-theorem wp_alloc {v : Val rT} : iprop%
-    (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (.alloc (.ofVal v)) Φ := by
+theorem wp_alloc : iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (.alloc (.ofVal v)) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_head_step alloc_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
@@ -114,8 +114,7 @@ theorem wp_alloc {v : Val rT} : iprop%
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
 /-- Loading from `l` returns the value `l` points to. -/
-theorem wp_load {v : Val rT} : iprop%
-    appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp L E pl(!#loc l) Φ := by
+theorem wp_load : iprop% appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp L E pl(!#loc l) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply wp_lift_atomic_head_step load_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ
@@ -210,8 +209,9 @@ theorem wp_rand_nonpos (Hz : ¬ 0 < z) : Φ (.int (-1)) ⊢ wp L E pl(rand(#z, #
     iframe Hσ
     iexact HΦ
 
+variable {ns : List Int}
 /-- A labeled `rand z` on a tape with bound `z` pops the tape's head. -/
-theorem wp_rand_tape {n : Int} {ns : List Int} : iprop%
+theorem wp_rand_tape {n : Int} : iprop%
     appNatTape l z (n :: ns) ∗ (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -271,7 +271,7 @@ theorem wp_rand_tape_empty (Hz : 0 < z) : iprop%
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
 
 /-- A labeled `rand z` on a tape with another bound draws a fresh `n` and keeps the tape. -/
-theorem wp_rand_tape_wrong_bound {M : Int} {ns : List Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop%
+theorem wp_rand_tape_wrong_bound {M : Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop%
     appNatTape l M ns ∗ (∀ n, appNatTape l M ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -301,8 +301,9 @@ theorem wp_rand_tape_wrong_bound {M : Int} {ns : List Int} (Hz : 0 < z) (HneM : 
     · iunfold appNatTape; iexists fs; iframe %hmap HlBack
     iapply HΦ $$ HlNat %⟨hv0, hvz⟩
 
+variable {N : Int}
 /-- A labeled `rand z` with `z ≤ 0` on an empty tape returns `-1`. -/
-theorem wp_rand_lbl_nonpos {N : Int} (Hz : ¬ 0 < z) : iprop%
+theorem wp_rand_lbl_nonpos (Hz : ¬ 0 < z) : iprop%
     appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢
     wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -456,7 +457,7 @@ theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (HneM : z ≠ M) : iprop%
 end
 
 /-- A spec-side labeled `rand z` with `z ≤ 0` on an empty tape steps to `#(-1)`. -/
-theorem wp_rand_lbl_nonpos_r {N : Int} (Hz : ¬ 0 < z) : iprop%
+theorem wp_rand_lbl_nonpos_r (Hz : ¬ 0 < z) : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specTapesFrag l ⟨N, []⟩ ∗
     (specTapesFrag l ⟨N, []⟩ -∗ ⤇ K.fill pl(#(-1)) -∗ wp L E e Φ) ⊢
     wp L E e Φ := by

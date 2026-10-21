@@ -28,8 +28,11 @@ local bi IProp GF
 
 /-! ## Raw tapes to tape predicates -/
 
+variable {l : Loc}
+variable {z : Int}
+variable {ns : List Int}
 /-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
-theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
+theorem appNatTape_fold [AppGS rT GF]
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
     l ↪ₐ ⟨z, fs⟩ ⊢ appNatTape l z ns := by
   iintro Hb
@@ -38,7 +41,7 @@ theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
   iframe %hfs Hb
 
 /-- A raw spec tape holding `fs` gives the user-level spec tape predicate on its values. -/
-theorem specNatTape_fold [SpecGS rT GF] {l : Loc} {z : Int} {ns : List Int}
+theorem specNatTape_fold [SpecGS rT GF]
     {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
     l ↪ₛ ⟨z, fs⟩ ⊢ specNatTape l z ns := by
   iintro Hb

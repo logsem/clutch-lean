@@ -168,8 +168,9 @@ theorem randUnit_uniform_step [MeasurableSingletonClass rT] (Hz : 0 < z)
   ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
     primStep_rand_unit Hz σ⟩
 
+variable {σ : State rT}
 /-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
-theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {σ : State rT} {l : Loc}
+theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {l : Loc}
     {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
     primStep ⟨pl(rand(#z, #lbl l)), σ⟩ =
       match σ.tapes[l]? with
@@ -189,8 +190,9 @@ section
 variable (Hz : 0 < z)
 include Hz
 
+variable {M : Int}
 /-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {M : Int} (HneM : z ≠ M)
+theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] (HneM : z ≠ M)
     (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
     primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
@@ -204,8 +206,9 @@ theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] (σ : State rT) (l
   rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
   simp only [↓reduceIte]
 
+variable {l : Loc}
 /-- `primStep_rand_lbl_empty` with discrete reducibility. -/
-theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {σ : State rT} {l : Loc}
+theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {σ : State rT}
     (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
     Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
       primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
@@ -213,8 +216,8 @@ theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {σ : State rT}
     primStep_rand_lbl_empty Hz σ l Hlk⟩
 
 /-- `primStep_rand_lbl_wrong` with discrete reducibility. -/
-theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {M : Int} (HneM : z ≠ M)
-    {σ : State rT} {l : Loc} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
+theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] (HneM : z ≠ M)
+    {σ : State rT} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
     Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
       primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
@@ -411,9 +414,11 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT]
 
 /-! ## Couplings of steps under an evaluation context -/
 
+variable {e : Exp rT}
+variable {ε : ENNReal}
 /-- A coupling with a step of `e` gives one with a step of `K[e]`. -/
 theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [MeasurableSpace α]
-    {μ : Measure α} {e : Exp rT} {σ : State rT} {R : Set (α × Cfg rT)} {ε : ENNReal} {K : Ectx rT}
+    {μ : Measure α} {R : Set (α × Cfg rT)} {K : Ectx rT}
     (hv : ¬ e.isValue) (Hcpl : AddCoupl ε R μ (primStep ⟨e, σ⟩)) :
     AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R (p.1, ⟨e'', p.2.state⟩)} μ
       (primStep ⟨K.fill e, σ⟩) := by
@@ -422,7 +427,7 @@ theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [Measurable
 
 /-- `AddCoupl_steps_ctx_bind_r` for a relation on expressions only. -/
 theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
-    {μ : Measure (Cfg rT)} {e : Exp rT} {σ : State rT} {R : Exp rT → Exp rT → Prop} {ε : ENNReal}
+    {μ : Measure (Cfg rT)} {R : Exp rT → Exp rT → Prop}
     {K : Ectx rT} (hv : ¬ e.isValue)
     (Hcpl : AddCoupl ε {p : Cfg rT × Cfg rT | R p.1.expr p.2.expr} μ (primStep ⟨e, σ⟩)) :
     AddCoupl ε {p | ∃ e'', p.2.expr = K.fill e'' ∧ R p.1.expr e''} μ (primStep ⟨K.fill e, σ⟩) :=

@@ -177,15 +177,17 @@ theorem refines_store : iprop%
 
 /-! ### Sampling: shared machinery -/
 
+variable {α α' : Loc}
+variable {z : Int}
 /-- Closes the tape invariant again once both tapes are handed back empty. -/
-theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
+theorem natTapes_empty_close : iprop%
     appNatTape α z [] ∗ specNatTape α' z [] ⊢
     ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
   (sep_mono app_natTape_to_empty spec_natTape_to_empty).trans later_intro
 
 /-- Two draws `rand z` from tapes shared through an `lrel_tape` invariant, coupled along the
 identity; the tape bound `N` need not equal `z`. -/
-theorem refines_rand_lbl_of_pos {α α' : Loc} {N z : Int} (hz : 0 < z)
+theorem refines_rand_lbl_of_pos {N z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
     refines L ⊤ pl(rand(#z, #lbl α)) pl(rand(#z, #lbl α')) A := by
@@ -215,7 +217,7 @@ theorem refines_rand_lbl_of_pos {α α' : Loc} {N z : Int} (hz : 0 < z)
     iapply HA m hm.1 hm.2
 
 /-- Two unlabelled draws `rand z #()`, coupled along the identity. -/
-theorem refines_rand_unit_of_pos {z : Int} (hz : 0 < z)
+theorem refines_rand_unit_of_pos (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     ⊢ refines L ⊤ pl(rand(#z, #())) pl(rand(#z, #())) A := by
   rw [eq_fill_nil pl(rand(#z, #()))]

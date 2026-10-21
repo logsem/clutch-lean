@@ -44,8 +44,9 @@ theorem fupd_refines {e t : Exp rT} :
 section
 variable (E : CoPset) (e t : Exp rT)
 
+variable {io : InOut}
 /-- `refines` eliminates `|={⊤}=>`. -/
-instance elim_fupd_refines {io : InOut} (P : _) (A : lrel rT GF) :
+instance elim_fupd_refines (P : _) (A : lrel rT GF) :
     ElimModal True false io false iprop(|={⊤}=> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal _ := calc
@@ -55,7 +56,7 @@ instance elim_fupd_refines {io : InOut} (P : _) (A : lrel rT GF) :
     _ ⊢ refines L E e t A                      := fupd_refines
 
 /-- `refines` eliminates `|==>`. -/
-instance elim_bupd_refines {io : InOut} (P : _) (A : lrel rT GF) :
+instance elim_bupd_refines (P : _) (A : lrel rT GF) :
     ElimModal True false io false iprop(|==> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal h :=
@@ -163,9 +164,10 @@ theorem refines_na_alloc (N : Namespace) : iprop%
   imodintro
   iapply Hcont $$ Hinv
 
+variable {N : Namespace}
 /-- Open the non-atomic invariant `N` around a refinement, which then runs at mask `E \ N` with the
 closing update. -/
-theorem refines_na_inv {N : Namespace}
+theorem refines_na_inv
     (HNE : ↑N ⊆ E) : iprop%
     naInvP (rT := rT) N P ∗ (▷ P ∗ naCloseP (rT := rT) P N E -∗ refines L (E \ ↑N) e1 e2 A) ⊢
     refines L E e1 e2 A := by
@@ -179,7 +181,7 @@ theorem refines_na_inv {N : Namespace}
   iapply IH $$ [$HP $Hclose]
 
 /-- Close the non-atomic invariant `N` by returning `▷ P`, continuing at mask `E`. -/
-theorem refines_na_close {N : Namespace} : iprop%
+theorem refines_na_close : iprop%
     ▷ P ∗ naCloseP (rT := rT) P N E ∗ refines L E e1 e2 A ⊢ refines L (E \ ↑N) e1 e2 A := by
   iintro ⟨HP, Hclose, IH⟩
   iapply refines_na_update

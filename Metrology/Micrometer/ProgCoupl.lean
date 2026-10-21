@@ -120,8 +120,9 @@ theorem progCoupl_intro_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
 
 /-! ## Structural rules -/
 
+variable {S : Set (Cfg rT)}
 /-- Continuations need only cover a set carrying the program step (via the law's `head_supp`). -/
-theorem progCoupl_strong_mono {S : Set (Cfg rT)} (hSmeas : MeasurableSet S)
+theorem progCoupl_strong_mono (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
@@ -150,7 +151,7 @@ theorem progCoupl_strong_mono {S : Set (Cfg rT)} (hSmeas : MeasurableSet S)
   · simp [piecewise_eq_of_notMem _ _ _ hmem] at hR
 
 /-- The continuation may assume the program landed in `S` (Rocq `prog_coupl_strengthen`). -/
-theorem progCoupl_strengthen {S : Set (Cfg rT)} (hSmeas : MeasurableSet S)
+theorem progCoupl_strengthen (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b fun e₂ σ₂ e₂' σ₂' b' =>
@@ -199,9 +200,10 @@ theorem progCoupl_steps_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
   progCoupl_intro_law law Hred (dirac_bind_pexecN_one Hred' ▸ hhead)
     (dirac_bind_pexecN_one Hred' ▸ hside) (dret σ₁')
 
+variable {b₁ b₂ : B}
 /-- `progCoupl_steps_law` spending `b₁` of the budget `b` on the step and carrying `b₂` through
 it, for a law whose heads shift (Rocq `wp_couple_spend`, `gbl_head_shift`). -/
-theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift] {b₁ b₂ : B}
+theorem progCoupl_steps_spend_law [Add B] (law : L.BindLaw) [law.HeadShift]
     (hb : b₁ + b₂ ≤ b) (hb₂ : b₂ < (⊤ : B)) (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (hhead : law.head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R b₁)
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
@@ -314,7 +316,7 @@ end Canonical
 /-- Couple one program step against one spec step within `b₁`, adding `b₂` to every
 leftover. -/
 theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {b₁ b₂ : B} (hb : b₁ + b₂ ≤ b)
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hb : b₁ + b₂ ≤ b)
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
@@ -330,9 +332,10 @@ section SplitBudget
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
   [L.IsSupportLocal]
 
+variable {b₁ b₂ : B}
 /-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
 `b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
-theorem progCoupl_steps {b₁ b₂ : B} {S : Cfg rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
+theorem progCoupl_steps {S : Cfg rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' b₂) ⊢
@@ -346,7 +349,7 @@ theorem progCoupl_steps {b₁ b₂ : B} {S : Cfg rT → Cfg rT → Prop} (hb : b
 
 /-- `progCoupl_step_l_erasable_adv` with a relational lifting within `b₁`, leaving `b₂` to the
 continuation. -/
-theorem progCoupl_step_l_erasable {b₁ b₂ : B} {S : Cfg rT → State rT → Prop}
+theorem progCoupl_step_l_erasable {S : Cfg rT → State rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁) (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) μ₁')
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ σ₂', ⌜S ⟨e₂, σ₂⟩ σ₂'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' b₂) ⊢

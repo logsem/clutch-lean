@@ -65,12 +65,15 @@ theorem absorbing_codensity_dp_iff {ε δ : ℝ≥0∞} :
     · exact absorbing_codensity_dp_top_left
     · exact absorbing_codensity_dp.mono (mk_le_mk.2 ⟨zero_le, hδ⟩)
 
+variable {δ : ℝ≥0∞}
 /-- A total variation budget is absorbing exactly from `1` on. -/
-theorem absorbing_codensity_tv_iff {δ : ℝ≥0∞} : (codensity tv.{u}).Absorbing δ ↔ 1 ≤ δ :=
+theorem absorbing_codensity_tv_iff : (codensity tv.{u}).Absorbing δ ↔ 1 ≤ δ :=
   ⟨fun h ↦ codensity_tv_rel_false_iff.1 (h _ _ _), absorbing_codensity_tv_one.mono⟩
 
+variable {α : ℝ}
+variable {ρ : ℝ≥0∞}
 /-- A Rényi budget is absorbing exactly at `⊤`. -/
-theorem absorbing_codensity_renyi_iff {α : ℝ} (hα : 1 < α) {ρ : ℝ≥0∞} :
+theorem absorbing_codensity_renyi_iff (hα : 1 < α) :
     (codensity (renyiDivergence.{u} α)).Absorbing ρ ↔ ρ = (⊤ : ℝ≥0∞) :=
   ⟨fun h ↦ by_contra fun hρ ↦ not_absorbing_codensity_renyi hα (lt_top_iff_ne_top.2 hρ) h,
     fun h ↦ h ▸ absorbing_top⟩
@@ -86,7 +89,7 @@ instance fact_not_absorbing_codensity_tv_zero :
   ⟨fun h ↦ by simpa using absorbing_codensity_tv_iff.1 h⟩
 
 /-- The zero Rényi budget is not absorbing. -/
-instance fact_not_absorbing_codensity_renyi_zero {α : ℝ} [hα : Fact (1 < α)] :
+instance fact_not_absorbing_codensity_renyi_zero [hα : Fact (1 < α)] :
     Fact ((0 : ℝ≥0∞) ∉ {b | (codensity (renyiDivergence.{u} α)).Absorbing b}) :=
   ⟨fun h ↦ by simpa using (absorbing_codensity_renyi_iff hα.out).1 h⟩
 
@@ -103,12 +106,12 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_dp {b : ℝ≥0∞ × ℝ≥
   exact isAddLeftRegular_mk.2 ⟨(of_ne_top hε).1, (of_ne_top hδ').1⟩
 
 /-- A total variation budget that is not absorbing cancels. -/
-theorem isAddLeftRegular_of_not_absorbing_codensity_tv {δ : ℝ≥0∞}
+theorem isAddLeftRegular_of_not_absorbing_codensity_tv
     (h : ¬(codensity tv.{u}).Absorbing δ) : IsAddLeftRegular δ :=
   (of_ne_top fun hδ ↦ h (absorbing_codensity_tv_iff.2 (by simp [hδ]))).1
 
 /-- A Rényi budget that is not absorbing cancels. -/
-theorem isAddLeftRegular_of_not_absorbing_codensity_renyi {α : ℝ} {ρ : ℝ≥0∞}
+theorem isAddLeftRegular_of_not_absorbing_codensity_renyi
     (h : ¬(codensity (renyiDivergence.{u} α)).Absorbing ρ) : IsAddLeftRegular ρ :=
   (of_ne_top fun hρ ↦
     h (by rw [hρ]; exact absorbing_top)).1

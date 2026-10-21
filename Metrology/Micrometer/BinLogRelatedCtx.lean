@@ -97,8 +97,9 @@ theorem TctxRelated.eq_nil_of_empty (HCtx : TctxRelated L Δ .empty Γrc) : Γrc
     simp only [Tctx.empty, lookup] at h
     split at h <;> simp at h
 
+variable {τ : Ty}
 /-- A typed context filling is locally closed with free variables in the relation context. -/
-theorem ctx_fill_lc_fv {Γtc : Tctx} {K : Ctx rT} {e : Exp rT} {τ : Ty}
+theorem ctx_fill_lc_fv {Γtc : Tctx} {K : Ctx rT} {e : Exp rT}
     (HCtxRel : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc (K.fill e) τ) :
     (K.fill e).IsLocallyClosed ∧ (K.fill e).fv ⊆ (Γrc.map (·.1)).toFinset :=
   ⟨Hty.isLocallyClosed, fv_subset_relCtxDom HCtxRel Hty⟩
@@ -110,7 +111,7 @@ theorem Ctx.BindersFresh.cons_extend {K' : Ctx rT} {bAtoms : Finset Var} (hSingl
   dom_cons x A Γrc ▸ hSingleton ▸ h
 
 /-- A body related at the binder `x` is related at every fresh `y` after `close x`, `open y`. -/
-theorem bin_log_related_close_cofinite {τ : Ty} (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
+theorem bin_log_related_close_cofinite (hxRc : x ∉ (Γrc'.map (·.1)).toFinset)
     (hKe_lc : Ke.IsLocallyClosed) (hKe'_lc : Ke'.IsLocallyClosed)
     (Hbody : ⊢ bin_log_related_ty L ⊤ Δ ((x, A) :: Γrc') Ke Ke' τ) :
     ∀ y, y ∉ (Γrc'.map (·.1)).toFinset ∪ {x} ∪ Ke.fv ∪ Ke'.fv →
@@ -162,11 +163,15 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 
 /-! ## Typed contexts -/
 
+variable {Γtc : Tctx}
+variable {e e' : Exp rT}
+variable {τ : Ty}
+variable {K : Ctx rT}
 /-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
 `Hrel` is valid (⊢) because binder frames use it under □; `Hbinders` and `Ctx.BindersFresh` keep
 the frames' binders fresh for the plugged terms, the frame code and the relational context. -/
-theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} {Γtc' : Tctx}
-    {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
+theorem bin_log_related_under_typed_ctx {Γtc' : Tctx}
+    {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
     (Hty_e' : Typed Γtc e' τ)
     (Hbinders : ∀ x ∈ binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ payloadFv K)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
@@ -311,8 +316,8 @@ local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc
 /-- `bin_log_related_under_typed_ctx` for a hypothesis under a resource `P` such as budget
 credits, restricted to linear contexts; no freshness hypotheses are needed since no linear frame
 closes a variable over the hole. -/
-theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc : Tctx} {e e' : Exp rT} {τ : Ty}
-    {Γtc' : Tctx} {τ' : Ty} {K : Ctx rT} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
+theorem bin_log_related_under_linear_ctx {P : IProp GF}
+    {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
       ⊢ P -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
     ∀ (Δ : TyEnv rT GF) (Γrc' : RelCtx rT GF), TctxRelated L Δ Γtc' Γrc' →

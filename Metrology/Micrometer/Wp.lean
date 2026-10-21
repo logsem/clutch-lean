@@ -169,8 +169,9 @@ noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
   iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
     stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
 
+variable {b : B}
 /-- At an absorbing budget the continuation holds trivially. -/
-theorem wpProgBody_absorbing {b : B} (hb : L.Absorbing b) :
+theorem wpProgBody_absorbing (hb : L.Absorbing b) :
     ⊢ □ ∀ e₃ σ₃ e₃' σ₃', wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b := by
   iintro !> %e₃ %σ₃ %e₃' %σ₃' !>
   iapply specCoupl_absorbing hb
@@ -178,7 +179,7 @@ theorem wpProgBody_absorbing {b : B} (hb : L.Absorbing b) :
 /-- The continuation can be mapped under its later by an update from the old `wp` to a new one,
 which may change the mask, the expression and the postcondition. -/
 theorem wpProgBody_wand {E' : CoPset} {e₃ e₄ : Exp rT}
-    {σ₃ : State rT} {e₃' : Exp rT} {σ₃' : State rT} {b : B} : iprop%
+    {σ₃ : State rT} {e₃' : Exp rT} {σ₃' : State rT} : iprop%
     wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b ∗ ▷ (wp L E e₃ Φ ={E, E'}=∗ wp L E' e₄ Ψ) ⊢
       wpProgBody L E' Ψ e₄ σ₃ e₃' σ₃' b := by
   iintro ⟨HBody, HWand⟩ !>

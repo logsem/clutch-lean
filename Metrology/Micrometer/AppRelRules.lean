@@ -280,8 +280,9 @@ theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int} (f : Int
 
 /-! ## Advanced couplings (tv-style) -/
 
+variable {s : ENNReal →+o B}
 /-- Couple two unlabelled draws along `f`, redistributing the credit `s ε₁` as `s (ε₂ n)`. -/
-theorem refines_couple_rands_lr_adv {s : ENNReal →+o B} [L.IsExpectationAdditive s] (f : Int → Int)
+theorem refines_couple_rands_lr_adv [L.IsExpectationAdditive s] (f : Int → Int)
     (ε₁ : ENNReal) (ε₂ : Int → ENNReal) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z)
     (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
@@ -301,7 +302,7 @@ theorem refines_couple_rands_lr_adv {s : ENNReal →+o B} [L.IsExpectationAdditi
   iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two unlabelled draws identically, avoiding the outcome `bad` for a credit `s (1/z)`. -/
-theorem refines_couple_rands_lr_avoid {s : ENNReal →+o B} [L.IsExpectationAdditive s] (bad : Int)
+theorem refines_couple_rands_lr_avoid [L.IsExpectationAdditive s] (bad : Int)
     (Hz : 0 < z) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) : iprop%
     ↯b (s (z.toNat : ENNReal)⁻¹) ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
