@@ -21,6 +21,9 @@ open scoped ENNReal
 namespace ProbLang
 namespace Retry
 
+open ENNReal (div_le_of_le_mul add_halves)
+open OrderAddMonoidHom (coe_id)
+
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-- Credits on the two flips: nothing on heads, `2ε` on tails. -/
@@ -33,7 +36,7 @@ theorem flipCredit_avg (ε : ℝ≥0∞) :
     (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int).toNat ≤ ε := by
   rw [show Finset.Ico (0 : Int) 2 = {0, 1} by decide]
   simp [flipCredit]
-  exact ENNReal.div_le_of_le_mul (mul_comm _ _).le
+  exact div_le_of_le_mul (mul_comm _ _).le
 
 section Refines
 
@@ -41,15 +44,14 @@ variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS 
 local bi IProp GF
 
 /-- The value `0` refines `retry`, with no budget: the spec terminates almost surely. -/
-theorem zero_refines_retry :
-    ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
+theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
   -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
   -- tails doubles the credit (`flipCredit`); the step map is the identity
   iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
     (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by
-      rw [ENNReal.add_halves]⟩)
+      rw [add_halves]⟩)
     (fun b hb ↦ ⟨b, hb, le_rfl⟩) absorbing_codensity_tv_one (by norm_num)
-  simp only [OrderAddMonoidHom.coe_id, id_eq]
+  simp only [coe_id, id_eq]
   iintro !> %ε %_ #IH Hε
   -- `ε ≥ 1` is absorbing; otherwise `ε` is finite and can be spent on the flip
   by_cases h1 : 1 ≤ ε
@@ -58,7 +60,7 @@ theorem zero_refines_retry :
   rel_pures_r
   rel_apply_r (refines_randU_r_adv (s := .id ℝ≥0∞) 2 (by norm_num) ε (flipCredit ε)
     (flipCredit_avg ε) (IsAddRegular.of_ne_top (by simpa using (not_le.1 h1).ne_top)).1)
-  simp only [OrderAddMonoidHom.coe_id, id_eq]
+  simp only [coe_id, id_eq]
   iframe Hε
   iintro %n %hn Hn
   obtain rfl | rfl : n = 0 ∨ n = 1 := by omega

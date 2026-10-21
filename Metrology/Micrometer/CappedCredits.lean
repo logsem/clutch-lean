@@ -49,7 +49,10 @@ end GradedLifting
 
 namespace GradedDivergence
 
-open MeasureTheory GradedLifting
+open MeasureTheory GradedLifting IsTopAbsorbing
+open Prod (mk_le_mk isAddLeftRegular_mk)
+open IsAddRegular (of_ne_top)
+open Function (update)
 
 /-! ## Which budgets are absorbing for dp, tv and Rényi -/
 
@@ -60,7 +63,7 @@ theorem absorbing_codensity_dp_iff {ε δ : ℝ≥0∞} :
   · exact (codensity_dp_rel_false_iff hε).1 (h _ _ _)
   · rintro (rfl | hδ)
     · exact absorbing_codensity_dp_top_left
-    · exact absorbing_codensity_dp.mono (Prod.mk_le_mk.2 ⟨zero_le, hδ⟩)
+    · exact absorbing_codensity_dp.mono (mk_le_mk.2 ⟨zero_le, hδ⟩)
 
 /-- A total variation budget is absorbing exactly from `1` on. -/
 theorem absorbing_codensity_tv_iff {δ : ℝ≥0∞} : (codensity tv.{u}).Absorbing δ ↔ 1 ≤ δ :=
@@ -70,7 +73,7 @@ theorem absorbing_codensity_tv_iff {δ : ℝ≥0∞} : (codensity tv.{u}).Absorb
 theorem absorbing_codensity_renyi_iff {α : ℝ} (hα : 1 < α) {ρ : ℝ≥0∞} :
     (codensity (renyiDivergence.{u} α)).Absorbing ρ ↔ ρ = (⊤ : ℝ≥0∞) :=
   ⟨fun h ↦ by_contra fun hρ ↦ not_absorbing_codensity_renyi hα (lt_top_iff_ne_top.2 hρ) h,
-    fun h ↦ h ▸ IsTopAbsorbing.absorbing_top (L := codensity _)⟩
+    fun h ↦ h ▸ absorbing_top⟩
 
 /-- The zero DP budget is not absorbing. -/
 instance fact_not_absorbing_codensity_dp_zero :
@@ -97,18 +100,18 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_dp {b : ℝ≥0∞ × ℝ≥
   obtain ⟨ε, δ⟩ := b
   obtain ⟨hε, hδ⟩ := not_or.1 (absorbing_codensity_dp_iff.not.1 h)
   have hδ' : δ ≠ (⊤ : ℝ≥0∞) := ne_top_of_lt (not_le.1 hδ)
-  exact Prod.isAddLeftRegular_mk.2 ⟨(IsAddRegular.of_ne_top hε).1, (IsAddRegular.of_ne_top hδ').1⟩
+  exact isAddLeftRegular_mk.2 ⟨(of_ne_top hε).1, (of_ne_top hδ').1⟩
 
 /-- A total variation budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_tv {δ : ℝ≥0∞}
     (h : ¬(codensity tv.{u}).Absorbing δ) : IsAddLeftRegular δ :=
-  (IsAddRegular.of_ne_top fun hδ ↦ h (absorbing_codensity_tv_iff.2 (by simp [hδ]))).1
+  (of_ne_top fun hδ ↦ h (absorbing_codensity_tv_iff.2 (by simp [hδ]))).1
 
 /-- A Rényi budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_renyi {α : ℝ} {ρ : ℝ≥0∞}
     (h : ¬(codensity (renyiDivergence.{u} α)).Absorbing ρ) : IsAddLeftRegular ρ :=
-  (IsAddRegular.of_ne_top fun hρ ↦
-    h (by rw [hρ]; exact IsTopAbsorbing.absorbing_top (L := codensity _))).1
+  (of_ne_top fun hρ ↦
+    h (by rw [hρ]; exact absorbing_top)).1
 
 /-- Some Rényi curve is valid but does not cancel: `⊤` at order `2` and `0` elsewhere. -/
 theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
@@ -118,10 +121,10 @@ theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
   -- invisible because the curve is `⊤` there.
   let two : Set.Ioi (1 : ℝ) := ⟨2, by norm_num⟩
   let three : Set.Ioi (1 : ℝ) := ⟨3, by norm_num⟩
-  refine ⟨Function.update 0 two ⊤, fun h ↦ ?_, fun h ↦ ?_⟩
+  refine ⟨update 0 two ⊤, fun h ↦ ?_, fun h ↦ ?_⟩
   · have := congrFun (absorbing_codensity_renyiCurve_iff.1 h) three
     simp [two, three] at this
-  · have := congrFun (h (a₁ := Function.update 0 two 1) (a₂ := 0) <| funext fun α ↦ by
+  · have := congrFun (h (a₁ := update 0 two 1) (a₂ := 0) <| funext fun α ↦ by
       by_cases hα : α = two <;> simp [hα]) two
     simp at this
 

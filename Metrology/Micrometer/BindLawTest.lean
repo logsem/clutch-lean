@@ -17,6 +17,8 @@ open scoped ENNReal
 namespace ProbLang
 namespace BindLawTest
 
+open BindLaw (dpRhs dpChoice)
+
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {GF : BundledGFunctors}
   [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
@@ -38,7 +40,7 @@ theorem progCoupl_dpRhs {ε₁ ε₂ δ₁ : ℝ≥0∞} {D : Cfg rT → ℝ≥0
   have := prim_step_mass Hred'
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' => if S ρ ρ' then (ε₂, D ρ') else ⊤
   iintro H
-  iapply progCoupl_steps_law (R := R) BindLaw.dpRhs Hred Hred'
+  iapply progCoupl_steps_law (R := R) dpRhs Hred Hred'
     ⟨ε₁, ε₂, δ₁, D, S, hD, inferInstance, inferInstance, hS, fun _ _ h => by simp [R, h], le_rfl⟩
     (.of_forall fun _ _ => trivial)
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
@@ -68,7 +70,7 @@ theorem progCoupl_dpChoice_spend {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ :
     if S₁ ρ ρ' ∨ S₂ ρ ρ' then (if ρ ∈ P then (ε₂, δ₂) else (ε₂', δ₂))
     else (⊤ : ℝ≥0∞ × ℝ≥0∞)
   iintro H
-  iapply progCoupl_steps_spend_law (R := R) BindLaw.dpChoice hb hc Hred Hred'
+  iapply progCoupl_steps_spend_law (R := R) dpChoice hb hc Hred Hred'
     ⟨ε₁, δ₁, ε₁', δ₁', ε₂, ε₂', δ₂, S₁, S₂, P, T, hP, hT, inferInstance, inferInstance, h₁, h₂,
       hPT₁, hPT₂, fun _ _ hx h => by simp [R, hx, h], fun _ _ hx h => by simp [R, hx, h], le_rfl⟩
     (.of_forall fun _ _ => trivial)

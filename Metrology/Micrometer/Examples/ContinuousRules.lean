@@ -21,6 +21,9 @@ namespace ProbLang
 namespace ContinuousRules
 
 open LawfulProbLangℝ
+open Set (Icc inter_subset_left)
+open OrderAddMonoidHom (coe_id)
+open Exp (lit_isClosedEmpty)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
@@ -62,11 +65,11 @@ theorem urands_spend (c : B) (hc : IsAddLeftRegular c)
 
 section Reflexive
 
-variable [L.IsReflexive]
+variable [L.IsReflexive] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
 
 open MeasureTheory in
 /-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
-theorem urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (ε : ℝ≥0∞)
+theorem urands_adv (ε : ℝ≥0∞)
     (hc : IsAddLeftRegular (s ε)) :
     ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
@@ -79,7 +82,7 @@ theorem urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (ε : �
   rel_values
 
 /-- Avoiding a measurable set `Bad` of left draws costs its mass. -/
-theorem urands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (Bad : Set rT)
+theorem urands_avoid (Bad : Set rT)
     (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (unifUnit Bad))) :
     ⊢ ↯b (s (unifUnit Bad)) -∗
@@ -93,7 +96,7 @@ theorem urands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (Bad :
 /-! ## `rand ~ rand`: the tactic forms -/
 
 /-- Coupling along the identity with credits paid in expectation returns the same integer. -/
-theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int) (hN : 0 < N)
+theorem rands_adv (N : Int) (hN : 0 < N)
     (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞) (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁)
     (hc : IsAddLeftRegular (s ε₁)) :
     ⊢ ↯b (s ε₁) -∗
@@ -107,7 +110,7 @@ theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int)
   rel_values
 
 /-- Avoiding one outcome costs `s (1/N)`. -/
-theorem rands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N bad : Int) (hN : 0 < N)
+theorem rands_avoid (N bad : Int) (hN : 0 < N)
     (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (N.toNat : ℝ≥0∞)⁻¹)) :
     ⊢ ↯b (s (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) :
@@ -150,15 +153,15 @@ theorem urand_avoid_zero_real :
     ⊢ ↯b (0 : ℝ≥0∞) -∗
       REL[codensity tv] (pl(urand) : Exp ℝ) << pl(urand) : lrel_real := by
   have h0 : unifUnit ({0} : Set ℝ) = 0 := by
-    show volume.restrict (Set.Icc (0 : ℝ) 1) {0} = 0
+    show volume.restrict (Icc (0 : ℝ) 1) {0} = 0
     rw [Measure.restrict_apply (measurableSet_singleton 0)]
-    exact measure_mono_null Set.inter_subset_left Real.volume_singleton
+    exact measure_mono_null inter_subset_left Real.volume_singleton
   iintro Hc
   rel_apply (refines_couple_urands_avoid (s := .id ℝ≥0∞) ({0} : Set ℝ)
     (measurableSet_singleton 0) absorbing_codensity_tv_one
-    (by simp only [OrderAddMonoidHom.coe_id, id_eq, h0]
+    (by simp only [coe_id, id_eq, h0]
         exact (IsAddRegular.of_ne_top (by simp)).1))
-  simp only [OrderAddMonoidHom.coe_id, id_eq, h0]
+  simp only [coe_id, id_eq, h0]
   iframe Hc
   iintro %x ⟨%_, %hx⟩
   rel_values
@@ -189,7 +192,7 @@ theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
   rel_values
   iunfold lrel_true
   ipureintro
-  exact ⟨Exp.lit_isClosedEmpty _, Exp.lit_isClosedEmpty _⟩
+  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
@@ -200,7 +203,7 @@ theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
   rel_values
   iunfold lrel_true
   ipureintro
-  exact ⟨Exp.lit_isClosedEmpty _, Exp.lit_isClosedEmpty _⟩
+  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
 
 end Real
 

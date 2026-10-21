@@ -11,7 +11,8 @@ Left heap/tape steps, one-sided and coupled draws (`U` unlabelled, `T` tape, lef
 
 @[expose] public section
 
-open Iris Iris.ProofMode ProbLang.MicrometerWpGS ProbLang.Ectx ProbLang.Exp
+open Iris hiding wp_bind
+open Iris.ProofMode ProbLang.MicrometerWpGS ProbLang.Ectx ProbLang.Exp
 open scoped AppGS
 
 namespace ProbLang
@@ -46,12 +47,12 @@ theorem refines_couple_rands_spend (N : Int) (HN : 0 < N) (S : Int → Int → P
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_rand_spend N HN S c hc Hcpl (K2.comp K') ⊤ _
   iframe Hj Hc
   iintro %r %r' %hS HKres
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int r : Val rT) = pl(#r) from rfl]
+  rw [show ofVal (.int r) = pl(#r) from rfl]
   iapply Hcnt $$ %r %r' %hS %K2 %b HKres Hna Herr Hpos
 
 section Reflexive
@@ -95,7 +96,7 @@ theorem refines_store_l {v' : Val rT} : iprop%
 
 /-- Left tape allocation `tape z`: continue with a fresh empty tape of bound `z`. -/
 theorem refines_alloctape_l : iprop%
-    (∀ l, appTapesFrag l (Tape.empty z) -∗ refines L E (K.fill pl(#lbl l)) t A) ⊢
+    (∀ l, appTapesFrag l (.empty z) -∗ refines L E (K.fill pl(#lbl l)) t A) ⊢
     refines L E (K.fill pl(tape(#z))) t A := by
   iintro Hlog
   iapply refines_wp_l
@@ -192,12 +193,12 @@ theorem refines_couple_rands_lr (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n <
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_rand z f hdom hbij Hz (K2.comp K') ⊤ _
   iframe Hj
   iintro %n %Hn HKres
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int n : Val rT) = pl(#n) from rfl]
+  rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple a left tape draw with a right unlabelled draw along `f`. -/
@@ -210,12 +211,12 @@ theorem refines_couple_TU (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n �
   unfold refines
   iintro ⟨Hα, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_tape_rand z f hdom hbij Hz (K2.comp K') ⊤ α _
   iframe Hα Hj
   iintro %n ⟨HαNew, HKres, %Hn⟩
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int n : Val rT) = pl(#n) from rfl]
+  rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n HαNew %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple a left unlabelled draw with a right tape draw along `f`. -/
@@ -228,12 +229,12 @@ theorem refines_couple_UT (α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n �
   unfold refines
   iintro ⟨Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_tape z f hdom hbij Hz (K2.comp K') ⊤ α' _
   iframe Hα' Hj
   iintro %n ⟨Hα'New, HKres, %Hn⟩
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int n : Val rT) = pl(#n) from rfl]
+  rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two tape draws along `f`. -/
@@ -248,12 +249,12 @@ theorem refines_couple_TT (α α' : Loc) (f : Int → Int)
   unfold refines
   iintro ⟨Hα, Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_lbl_rand_lbl z f hdom hbij Hz (K2.comp K') ⊤ α α' _
   iframe Hα Hα' Hj
   iintro %n ⟨HαNew, Hα'New, HKres, %Hn⟩
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int n : Val rT) = pl(#n) from rfl]
+  rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n HαNew Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Append coupled samples `n` and `f n` to a left and a right tape, without any program step. -/
@@ -285,12 +286,12 @@ theorem refines_couple_rands_lr_adv {s : ENNReal →+o B} [L.IsExpectationAdditi
   unfold refines
   iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_rand_adv z f ε₁ ε₂ hdom hbij Hz hamort hc (K2.comp K') ⊤ _
   iframe Hj Hε
   iintro %n %Hn - Hec HKres
   isimp only [← fill_comp K2 K'] at HKres
-  rw [show ofVal (.int n : Val rT) = pl(#n) from rfl]
+  rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two unlabelled draws identically, avoiding the outcome `bad` for a credit `s (1/z)`. -/

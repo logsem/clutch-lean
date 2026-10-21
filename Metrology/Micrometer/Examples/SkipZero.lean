@@ -20,6 +20,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace SkipZero
 
+
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 section Refines
@@ -49,7 +50,7 @@ read off `unif_refines_skipZero` by adequacy. -/
 theorem unif_le_skipZero (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Exp rT)}
     (hS : MeasurableSet S) :
     limExecV ⟨unif N, σ⟩ S ≤ limExecV ⟨skipZero N, σ'⟩ S + (N.toNat : ℝ≥0∞)⁻¹ :=
-  tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (L := codensity tv)
+  tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞)
     (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq)
     fun _ _ ↦ unif_refines_skipZero N hN) S hS
 

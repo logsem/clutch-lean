@@ -23,6 +23,9 @@ namespace ProbLang.RelTactics
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode ProbLang.MicrometerWpGS
+open Elab.Term (exprToSyntax synthesizeSyntheticMVarsNoPostponing registerSyntheticMVarWithCurrRef)
+open ProofModeM (runTactic)
+open Exp (unop lit ofVal)
 
 /-! ## Reading the goal: sides of a refinement -/
 
@@ -63,7 +66,7 @@ meta def RelGoal.withSide (g : RelGoal) (side : Side) (x : LeanExpr) : LeanExpr 
 /-- Run `k` on the `refines` goal of the proof-mode context. -/
 meta def runTacticRel {β : Type} (name : Name) (k : MVarId → RelGoal → ProofModeM β) :
     TacticM β :=
-  ProofModeM.runTactic name fun mvar {hyps, goal, ..} => do
+  runTactic name fun mvar {hyps, goal, ..} => do
     let app := (← instantiateMVars goal).consumeMData
     unless app.isAppOf ``refines do
       throwError "{name}: the goal {goal} is not a refinement `REL[L] e << e' : A`"
@@ -87,11 +90,11 @@ meta def fillLiteral? (e : LeanExpr) : MetaM (Option LeanExpr) := do
   have x : Q(Exp $α) := e.getArg! 2
   if isLiteralCtx K then
     have K : Q(Ectx $α) := K
-    return some (← fill K x)
+    return some (← fillQ K x)
   if K.isAppOfArity ``HAppend.hAppend 6 && isLiteralCtx (K.getArg! 4) then
     have Kd : Q(Ectx $α) := K.getArg! 4
     have Kabs : Q(Ectx $α) := K.getArg! 5
-    let inner : Q(Exp $α) ← fill Kd x
+    let inner : Q(Exp $α) ← fillQ Kd x
     return some q(Ectx.fill $Kabs $inner)
   return none
 
@@ -115,7 +118,7 @@ where
 
 /-- Fill every concrete `Ectx.fill` of `P` and unfold value embeddings of literals. -/
 meta def cleanFills (P : LeanExpr) : MetaM LeanExpr :=
-  Meta.transform P (post := fun e => do
+  transform P (post := fun e => do
     if let some e' ← fillLiteral? e then return .visit e'
     if let some e' := unVal? e then return .visit e'
     return .continue)
@@ -158,7 +161,7 @@ after each failure; this is the redex search every tactic uses. The context `K` 
 abstract tail the side is written with. -/
 meta partial def searchSide {β : Type} (g : RelGoal) (side : Side)
     (pred : Q(Ectx $(g.α)) → Q(Exp $(g.α)) → ProofModeM β) : ProofModeM (Option β) := do
-  let (Kabs?, inner) ← splitAbstractCtx (β := g.α) (g.side side)
+  let (Kabs?, inner) ← splitAbstractCtx (g.side side)
   let (Kis, e₀) ← extractAllEctxItems inner
   let rec go (e₀ : Q(Exp $(g.α))) : List Q(EctxItem $(g.α)) → ProofModeM (Option β)
     | Kis => do
@@ -197,7 +200,7 @@ meta def elabRule (stx : Term) : ProofModeM LeanExpr := do
   let (mvs, _, _) ← forallMetaTelescope ty
   for m in mvs do
     if (← isSyntheticMVar m) && !(← m.mvarId!.isAssignedOrDelayedAssigned) then
-      Term.registerSyntheticMVarWithCurrRef m.mvarId! (.typeClass .none)
+      registerSyntheticMVarWithCurrRef m.mvarId! (.typeClass .none)
   return mkAppN val mvs
 
 /-- Close the goal by the rule `stx`, whose conclusion must unify with the goal as it stands. -/
@@ -207,7 +210,7 @@ meta def applyRule (tac : Name) (mvar : MVarId) (g : RelGoal) (stx : Term)
   let some (_, Q) := entailsParts? (← instantiateMVars (← inferType val))
     | throwError "{tac}: {stx} does not conclude an entailment"
   unless ← isDefEq Q g.app do throwError "{tac}: cannot apply {stx} to {← ppExpr g.app}"
-  Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
+  synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
   finishRule mvar g val pre
 
 /-- The engine of `rel_apply`: apply the rule `stx` at a redex found on `sides`. Each side of its
@@ -237,7 +240,7 @@ meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : Ta
           | failure
     unless (← observing? (go holes)).isSome do
       throwError "{tac}: cannot apply {stx} to {← ppExpr g.e} << {← ppExpr g.t}"
-    Term.synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
+    synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
     finishRule mvar g val
 
 /-! ## `rel_apply`: any rule with a context hole -/
@@ -260,13 +263,13 @@ elab "rel_apply " colGt lem:term : tactic => relApplyCore `rel_apply [.l, .r] le
 `pl_step_simp` shows as `!b`) rather than `pureStepResult`'s reduced `Decidable.rec` term. -/
 meta def foldSymbolicNot {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)) (e₁ e₂ : Q(Exp $α)) :
     MetaM Q(Exp $α) := do
-  let ~q(Exp.unop $op $v) := e₁ | return e₂
-  let ~q(Exp.lit (.bool $b)) := e₂ | return e₂
+  let ~q(unop $op $v) := e₁ | return e₂
+  let ~q(lit (.bool $b)) := e₂ | return e₂
   if b.isConstOf ``Bool.true || b.isConstOf ``Bool.false then return e₂
   let r : Q(Option (Exp $α)) ← whnf q(@UnOp.eval $α
     (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $v)
-  let ~q(some (Exp.lit (.bool $b'))) := r | return e₂
-  return q(Exp.lit (.bool $b'))
+  let ~q(some (lit (.bool $b'))) := r | return e₂
+  return q(lit (.bool $b'))
 
 /-- One pure step on `side`, at the innermost redex (defeq to `focus?` if given). -/
 meta def relPureCore (side : Side) (focus? : Option Term) : TacticM Unit :=
@@ -292,9 +295,9 @@ meta def relPureCore (side : Side) (focus? : Option Term) : TacticM Unit :=
       if step.names.isEmpty then pure e₂ else pure (← reattachNames step.names 0 e₂).1
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
     let rule := if side.isL then ``refines_pure_l else ``refines_pure_r
-    let stx ← `($(mkIdent rule) (K := $(← Term.exprToSyntax K))
-      (e := $(← Term.exprToSyntax step.e₁)) (e' := $(← Term.exprToSyntax e₂syn))
-      (Hex := $(← Term.exprToSyntax step.inst)) $(← Term.exprToSyntax HΦ))
+    let stx ← `($(mkIdent rule) (K := $(← exprToSyntax K))
+      (e := $(← exprToSyntax step.e₁)) (e' := $(← exprToSyntax e₂syn))
+      (Hex := $(← exprToSyntax step.inst)) $(← exprToSyntax HΦ))
     applyRule `rel_pure mvar g stx (pre := fun P => pure (P.replace fun x =>
       if x == e₂syn then some e₂ else none))
 
@@ -339,19 +342,18 @@ macro "rel_pures" : tactic => `(tactic| (rel_pures_l; rel_pures_r))
 meta def asVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := do
   have e0 : Q(Exp $α) := e.consumeMData
   match e0 with
-  | ~q(Exp.ofVal $v) => return some v
+  | ~q(ofVal $v) => return some v
   | ~q(Val.fst $v) => return some v
   | _ => exprAsVal? e
 
 /-- `rel_values_core` reduces `REL v << v' @ E : A` to `|={⊤}=> A v v'` (at `E = ⊤`) or to
 `naOwnP E ={⊤}=∗ naOwnP ⊤ ∗ A v v'`. -/
 elab "rel_values_core" : tactic => runTacticRel `rel_values fun mvar g => do
-  have α : Q(Type) := g.α
-  let some v₁ ← asVal? (α := α) g.e | throwError "rel_values: {← ppExpr g.e} is not a value"
-  let some v₂ ← asVal? (α := α) g.t | throwError "rel_values: {← ppExpr g.t} is not a value"
+  let some v₁ ← asVal? g.e | throwError "rel_values: {← ppExpr g.e} is not a value"
+  let some v₂ ← asVal? g.t | throwError "rel_values: {← ppExpr g.t} is not a value"
   let rule := if ← isDefEq g.E q((⊤ : CoPset)) then ``refines_ret else ``refines_ret_na
-  let stx ← `($(mkIdent rule) (v1 := $(← Term.exprToSyntax v₁))
-    (v2 := $(← Term.exprToSyntax v₂)) (by kernel_rfl) (by kernel_rfl))
+  let stx ← `($(mkIdent rule) (v1 := $(← exprToSyntax v₁))
+    (v2 := $(← exprToSyntax v₂)) (by kernel_rfl) (by kernel_rfl))
   applyRule `rel_values mvar g stx
 
 /-- `rel_lit` proves `A v v` for a base relation `A` at a literal `v`, or a product of such. -/
@@ -404,15 +406,15 @@ elab "rel_bind " colGt e:term:max ppSpace colGt e':term:max : tactic =>
     let (K, f, goal₁) ← reshapeSide `rel_bind g .l e
     let g₁ := { g with app := goal₁, e := q(Ectx.fill $K $f) }
     let (K', f', _) ← reshapeSide `rel_bind g₁ .r e'
-    let stx ← `(refines_bind_sep $(← Term.exprToSyntax K) $(← Term.exprToSyntax K')
-      (e := $(← Term.exprToSyntax f)) (e' := $(← Term.exprToSyntax f')))
+    let stx ← `(refines_bind_sep $(← exprToSyntax K) $(← exprToSyntax K')
+      (e := $(← exprToSyntax f)) (e' := $(← exprToSyntax f')))
     applyRule `rel_bind mvar g stx
 
 /-- `e` with every `Exp.fix` subterm that is definitionally a `@[pl_fold]` constant replaced by
 that constant. -/
 meta def foldPlConsts (e : LeanExpr) : MetaM LeanExpr := do
   let consts := (plFoldExt.getState (← getEnv)).toList
-  Meta.transform e (pre := fun x => do
+  transform e (pre := fun x => do
     unless x.isAppOfArity ``Exp.fix 2 do return .continue
     for c in consts do
       let some app ← withNewMCtxDepth (allowLevelAssignments := true) do
@@ -463,7 +465,7 @@ meta def findResourceHyp (g : IrisGoal) : ProofModeM Name := do
 /-- `rel_frame_resource` gives the resource asked by `(∃ v,)? R ∗ (R' -∗ Q)` from the context and
 reintroduces the updated one under the same name. -/
 elab "rel_frame_resource" : tactic => do
-  let (tac : TSyntax `tactic) ← ProofModeM.runTactic `rel fun mvar g => do
+  let (tac : TSyntax `tactic) ← runTactic `rel fun mvar g => do
     addMVarGoal mvar
     let H := mkIdent (← findResourceHyp g)
     let ex := (← instantiateMVars g.goal).consumeMData.isAppOfArity ``BI.BIBase.exists 4
@@ -601,10 +603,9 @@ macro "rel_couple_urands " f:term:max ppSpace hmp:term:max : tactic =>
 
 /-- `rel_arrow_val_core` applies `refines_arrow_val` to a refinement between closures. -/
 elab "rel_arrow_val_core" : tactic => runTacticRel `rel_arrow_val fun mvar g => do
-  have α : Q(Type) := g.α
-  let some v₁ ← asVal? (α := α) g.e | throwError "rel_arrow_val: {← ppExpr g.e} is not a value"
-  let some v₂ ← asVal? (α := α) g.t | throwError "rel_arrow_val: {← ppExpr g.t} is not a value"
-  let stx ← `(refines_arrow_val (v := $(← Term.exprToSyntax v₁)) (v' := $(← Term.exprToSyntax v₂))
+  let some v₁ ← asVal? g.e | throwError "rel_arrow_val: {← ppExpr g.e} is not a value"
+  let some v₂ ← asVal? g.t | throwError "rel_arrow_val: {← ppExpr g.t} is not a value"
+  let stx ← `(refines_arrow_val (v := $(← exprToSyntax v₁)) (v' := $(← exprToSyntax v₂))
     ⟨⟨by is_lc, by simp⟩, ⟨by is_lc, by simp⟩⟩)
   applyRule `rel_arrow_val mvar g stx
 

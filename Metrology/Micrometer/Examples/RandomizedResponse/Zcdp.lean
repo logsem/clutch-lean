@@ -15,6 +15,7 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
+
 /-- One round couples at `(ln 3, 0)`: each report is at most three times likelier under one bit. -/
 theorem rrCoupling_zcdp : RRCoupling zcdpLifting budget := fun b b' ↦
   zcdpLifting_rel_of_fiber .of_discrete .of_discrete fun c ↦

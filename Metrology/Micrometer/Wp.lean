@@ -10,7 +10,7 @@ program step, a later and another spec phase. Main result: `wp_strong_mono`. -/
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE GradedLifting
 
 namespace ProbLang
 
@@ -27,6 +27,8 @@ section Wp
 variable [BudgetGS B GF] {n : Nat} {E E1 E2 : CoPset} {e : Exp rT} {v : Val rT}
   {Φ Ψ : Val rT → IProp GF}
 open SpecUpdateGS BIFUpdate
+open Exp (ofVal toVal?_ofVal ofVal_of_toVal_some)
+open LawfulSet (empty_subset subset_refl)
 
 /-- The type of `wp` as a function of its mask, expression and postcondition. -/
 abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
@@ -47,7 +49,7 @@ abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
             stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗ wp E e₃ Φ)
 
 /-- `wpPre` is non-expansive in the postcondition and needs `wp` to agree only one step lower. -/
-theorem wpPre_ne_aux {wp wp' : WpType (rT := rT) (GF := GF)} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
+theorem wpPre_ne_aux {wp wp' : WpType} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
     (Hwp : ∀ m, m < n → ∀ e₃, wp E e₃ Φ ≡{m}≡ wp' E e₃ Ψ) :
     wpPre L wp E e Φ ≡{n}≡ wpPre L wp' E e Ψ := by
   refine forall_ne fun _ => forall_ne fun _ => forall_ne fun _ => forall_ne fun _ => ?_
@@ -76,13 +78,11 @@ noncomputable def wp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IPro
   fixpoint (wpPre L) E e Φ
 
 /-- `wp` is its own one-step unfolding. -/
-theorem wp_unfold :
-    wp L E e Φ = wpPre L (wp L) E e Φ :=
+theorem wp_unfold : wp L E e Φ = wpPre L (wp L) E e Φ :=
   congrFun (congrFun (congrFun (fixpoint_unfold ⟨wpPre L, OFE.ne_of_contractive _⟩) E) e) Φ
 
 /-- The forward direction of `wp_unfold`. -/
-theorem wp_unfold_mp :
-    wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
+theorem wp_unfold_mp : wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
   (equiv_iff.mp wp_unfold).1
 
 /-! ## `WP[L] e @ E {{ Φ }}` notation
@@ -107,7 +107,7 @@ macro_rules
     `(wp $L $E $e iprop($Φ))
 
 /-- Prints `wp L E e Φ` back as `WP[L] e @ E {{ Φ }}`, dropping `@ ⊤`. -/
-@[app_unexpander MicrometerWpGS.wp]
+@[app_unexpander wp]
 meta def unexpandWp : Lean.PrettyPrinter.Unexpander
   | `($_ $L $E $e $Φ) => do
     let post : Lean.TSyntax `micrometerWpPost ← match Φ with
@@ -122,12 +122,12 @@ meta def unexpandWp : Lean.PrettyPrinter.Unexpander
 
 /-! ## Values -/
 
-theorem wp_value_fupd : (|={E}=> Φ v) ⊢ wp L E (Exp.ofVal v) Φ := by
+theorem wp_value_fupd : (|={E}=> Φ v) ⊢ wp L E (.ofVal v) Φ := by
   iintro HΦ
   iapply wp_unfold
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-  rw [Exp.toVal?_ofVal]
-  imod subset LawfulSet.empty_subset with Hclose
+  rw [toVal?_ofVal]
+  imod subset empty_subset with Hclose
   imodintro
   iapply specCoupl_ret
   imod Hclose
@@ -135,15 +135,15 @@ theorem wp_value_fupd : (|={E}=> Φ v) ⊢ wp L E (Exp.ofVal v) Φ := by
   imodintro
   iframe
 
-theorem wp_value : Φ v ⊢ wp L E (Exp.ofVal v) Φ :=
+theorem wp_value : Φ v ⊢ wp L E (.ofVal v) Φ :=
   fupd_intro.trans wp_value_fupd
 
 theorem wp_value_of_toVal (h : e.toVal? = some v) : Φ v ⊢ wp L E e Φ := by
-  rw [← Exp.ofVal_of_toVal_some h]
+  rw [← ofVal_of_toVal_some h]
   exact wp_value
 
 theorem wp_value_fupd_of_toVal (h : e.toVal? = some v) : (|={E}=> Φ v) ⊢ wp L E e Φ := by
-  rw [← Exp.ofVal_of_toVal_some h]
+  rw [← ofVal_of_toVal_some h]
   exact wp_value_fupd
 
 /-- A weakest precondition at a value unfolds to a spec coupling. -/
@@ -220,7 +220,7 @@ theorem wp_strong_mono (HE : E1 ⊆ E2) : iprop%
     imod subset HE' with Hclose
     imod wp_unfold_mp $$ HW' %σ₁ %e₁' %σ₁' %b₁ Hres with HW'
     imodintro
-    iapply specCoupl_bind LawfulSet.subset_refl
+    iapply specCoupl_bind subset_refl
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HZ₁
     cases htv : e'.toVal? with
@@ -247,7 +247,7 @@ theorem wp_strong_mono (HE : E1 ⊆ E2) : iprop%
 
 theorem wp_wand : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ := by
   iintro ⟨HW, #HΦ⟩
-  iapply wp_strong_mono LawfulSet.subset_refl
+  iapply wp_strong_mono subset_refl
   iframe HW
   iintro !> %σ %ρ %v %b ⟨Hσ, Hs, Hb, HΦv⟩ !>
   iframe
@@ -255,7 +255,7 @@ theorem wp_wand : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E 
 
 theorem wp_fupd : wp L E e (fun v => iprop(|={E}=> Φ v)) ⊢ wp L E e Φ := by
   iintro HW
-  iapply wp_strong_mono LawfulSet.subset_refl
+  iapply wp_strong_mono subset_refl
   iframe HW
   iintro !> %σ %ρ %v %b ⟨Hσ, Hs, Hb, HΦ⟩
   imod HΦ
@@ -277,8 +277,7 @@ theorem wp_mono (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ := by
   iintro !> %v HΦv
   iapply HΦ $$ HΦv
 
-theorem wp_mask_mono (HE : E1 ⊆ E2) :
-    wp L E1 e Φ ⊢ wp L E2 e Φ := by
+theorem wp_mask_mono (HE : E1 ⊆ E2) : wp L E1 e Φ ⊢ wp L E2 e Φ := by
   iintro HW
   iapply wp_strong_mono HE
   iframe HW

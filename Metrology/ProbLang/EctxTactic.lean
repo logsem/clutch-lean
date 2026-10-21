@@ -144,10 +144,10 @@ public meta def quoteList {α : Q(Type)} : List Q(EctxItem $α) → Q(Ectx $α)
   | x :: xs => q($x :: $(quoteList xs))
 
 /-- Defeq to `Ectx.fill K e`, but computed at the meta level (no residual `Ectx.fill`). -/
-public meta partial def fill {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
+public meta partial def fillQ {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
   match K with
   | ~q([]) => pure e
-  | ~q($Ki :: $K') => do fill K' (← fillItem e Ki)
+  | ~q($Ki :: $K') => do fillQ K' (← fillItem e Ki)
 
 /-- A decomposition `e = Ectx.fill K e'` with a `result` computed at `e'`. -/
 public meta structure ECtxResultOf (α : Q(Type)) (β : Type) where
@@ -373,7 +373,7 @@ elab "pure_step_core" : tactic => do
     let e₁ : Q(Exp $α) ← instantiateMVars step.e₁
     let e₂syn : Q(Exp $α) ← instantiateMVars step.e₂syn
     let e₂ ← displayReduct e₂syn step.names
-    let e₂full : Q(Exp $α) ← fill K e₂
+    let e₂full : Q(Exp $α) ← fillQ K e₂
     let Ks ← Term.exprToSyntax K
     let e₁s ← Term.exprToSyntax e₁
     let e₂s ← Term.exprToSyntax e₂syn

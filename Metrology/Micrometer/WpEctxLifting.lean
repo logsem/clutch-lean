@@ -10,7 +10,7 @@ The step-lifting rules of `WpLifting` restated for `headStep`, mainly `wp_lift_a
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.BI Iris.ProofMode OFE COFE GradedLifting
 
 namespace ProbLang
 
@@ -24,6 +24,8 @@ section Wp
 variable [BudgetGS B GF] {E E1 E2 : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
 local bi IProp GF
 open SpecUpdateGS
+open Exp (decompItem_none_of_lc_headReducible)
+open Set (univ)
 
 /-- `wp_lift_step_prog_couple` stated with head-step reducibility (Rocq
 `wp_lift_head_step_prog_couple`); the reducibility premise goes unused, since `progCoupl` already
@@ -63,7 +65,7 @@ theorem wp_lift_atomic_head_step (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocally
   isplitr; · ipureintro; exact Reducible.toDiscrete hne (reducible_of_headReducible Hlc Hhr)
   iintro !> %e₂ %σ₂ %Hpstep
   have hpos : 0 < headStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩} :=
-    primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible Hlc Hhr) ▸ Hpstep
+    primStep_eq_headStep (decompItem_none_of_lc_headReducible Hlc Hhr) ▸ Hpstep
   iapply H $$ %e₂ %σ₂ %hpos
 
 /-! ## Head-step rules over a carrying set (no countability)
@@ -75,7 +77,7 @@ so the carrying set is padded to `Set.univ` there, where concentration is free. 
 open scoped Classical in
 /-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, is measurable. -/
 theorem measurableSet_headPad (hSmeas : ∀ σ₁, MeasurableSet (S σ₁)) (σ₁ : State rT) :
-    MeasurableSet (if HeadReducible e₁ σ₁ then S σ₁ else Set.univ) := by
+    MeasurableSet (if HeadReducible e₁ σ₁ then S σ₁ else univ) := by
   split_ifs; exacts [hSmeas σ₁, MeasurableSet.univ]
 
 open scoped Classical in
@@ -83,9 +85,9 @@ open scoped Classical in
 theorem concentrated_headPad (Hlc : e₁.IsLocallyClosed)
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁))
     (σ₁ : State rT) :
-    Concentrated (primStep ⟨e₁, σ₁⟩) (if HeadReducible e₁ σ₁ then S σ₁ else Set.univ) := by
+    Concentrated (primStep ⟨e₁, σ₁⟩) (if HeadReducible e₁ σ₁ then S σ₁ else univ) := by
   split_ifs with hhr
-  · rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible Hlc hhr)]
+  · rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible Hlc hhr)]
     exact hSconc σ₁ hhr
   · exact Concentrated.univ
 

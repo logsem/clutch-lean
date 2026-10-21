@@ -24,35 +24,43 @@ open Iris Iris.BI Iris.ProofMode OFE COFE MicrometerWpGS GradedLifting GradedDiv
 
 namespace OTP
 
+open _root_.Int (emod_nonneg emod_lt_of_pos emod_add_emod emod_eq_of_lt emod_sub_emod add_emod_emod
+  sub_add_cancel add_sub_cancel)
+open Exp (ofVal_of_toVal_some)
+
 variable {rT : Type}
 
 /-! ## The bijection: adding the key modulo `N` -/
 
-/-- Adds the key `m` modulo `N`. -/
-def addMod (m N n : Int) : Int := (n + m) % N
-
 theorem emod_bounds (a : Int) {N : Int} (hN : 0 < N) : 0 ≤ a % N ∧ a % N < N :=
-  ⟨Int.emod_nonneg _ hN.ne', Int.emod_lt_of_pos _ hN⟩
+  ⟨emod_nonneg _ hN.ne', emod_lt_of_pos _ hN⟩
 
-theorem addMod_dom (m N : Int) (hN : 0 < N) :
-    ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
+section AddMod
+
+variable (m N n : Int)
+
+/-- Adds the key `m` modulo `N`. -/
+def addMod : Int := (n + m) % N
+
+theorem addMod_dom (hN : 0 < N) : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ addMod m N n ∧ addMod m N n < N :=
   fun _ _ _ => emod_bounds _ hN
 
 /-- Adding `m` modulo `N` is a bijection on `[0, N)`. -/
-theorem addMod_bij (m N : Int) (hN : 0 < N) :
+theorem addMod_bij (hN : 0 < N) :
     ∀ m' : Int, 0 ≤ m' → m' < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ addMod m N n = m' := by
   intro m' hm'0 hm'N
   refine ⟨(m' - m) % N, ⟨emod_bounds _ hN, ?_⟩, ?_⟩
   · unfold addMod
-    rw [Int.emod_add_emod, Int.sub_add_cancel, Int.emod_eq_of_lt hm'0 hm'N]
+    rw [emod_add_emod, sub_add_cancel, emod_eq_of_lt hm'0 hm'N]
   · rintro n ⟨⟨hn0, hnN⟩, hadd⟩
     unfold addMod at hadd
-    rw [← hadd, Int.emod_sub_emod, Int.add_sub_cancel, Int.emod_eq_of_lt hn0 hnN]
+    rw [← hadd, emod_sub_emod, add_sub_cancel, emod_eq_of_lt hn0 hnN]
 
 /-- Adding `-m` undoes adding `m`, used for the reverse refinement. -/
-theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
-    (m + (n + (-m)) % N) % N = n := by
-  rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
+theorem addMod_neg_inv (hn0 : 0 ≤ n) (hnN : n < N) : (m + (n + (-m)) % N) % N = n := by
+  rw [add_emod_emod, show m + (n + -m) = n by ring, emod_eq_of_lt hn0 hnN]
+
+end AddMod
 
 /-! ## The output relation -/
 
@@ -62,7 +70,7 @@ def otpφ (v v' : Val rT) : Prop :=
 
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
   rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
-  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+  exact (ofVal_of_toVal_some hv).symm.trans (ofVal_of_toVal_some hv')
 
 /-! ## The refinement in the logic
 
@@ -77,22 +85,21 @@ local bi IProp GF
 section Generic
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
+  {L : GradedLifting.{0} B} [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
+  [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N)
+
+include hN
 
 /-- The encryption refines the ideal sampler in any lawful lifting. -/
-theorem otp_refines_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
-    ⊢ REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
+theorem otp_refines_gen : ⊢ REL[L] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int := by
   rel_couple_UU (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN)
   iintro %n %_
   rel_pures
-  rw [show (m + n) % N = addMod m N n by rw [addMod, Int.add_comm]]
+  rw [show (m + n) % N = addMod m N n by rw [addMod, add_comm]]
   rel_values
 
 /-- The ideal sampler refines the encryption in any lawful lifting. -/
-theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    [L.IsTopAbsorbing] [L.HasBind] (m N : Int) (hN : 0 < N) :
-    ⊢ REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
+theorem otp_refines_rev_gen : ⊢ REL[L] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int := by
   rel_couple_UU (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN)
   iintro %n ⟨%hn0, %hnN⟩
   rel_pures
@@ -160,22 +167,29 @@ theorem otp_adequate_rev_gen (GF : BundledGFunctors) [RefinesPreGS rT B GF] (m N
   refines_coupling (GF := GF) (fun _ _ => lrel_int) otpφ _ _ σ σ' (fun _ _ => lrel_int_to_otpφ)
     fun _ _ => otp_refines_rev_gen m N hN
 
+section Closed
+
+variable (m N : Int) (hN : 0 < N) (σ σ' : State rT)
+
+include hN
+
 /-- `otp_adequate_gen` at `MicrometerFunctor`. -/
-theorem otp_adequate_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_closed_gen :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_gen (MicrometerFunctor rT B) m N hN σ σ'
 
 /-- `otp_adequate_rev_gen` at `MicrometerFunctor`. -/
-theorem otp_adequate_rev_closed_gen (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_rev_closed_gen :
     L.Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev_gen (MicrometerFunctor rT B) m N hN σ σ'
 
 /-- The encryption and the ideal program are at divergence zero. -/
-theorem otp_div_gen {D : GradedDivergence.{0} B} [L.IsSound D] (m N : Int) (hN : 0 < N)
-    (σ σ' : State rT) :
+theorem otp_div_gen {D : GradedDivergence.{0} B} [L.IsSound D] :
     D 0 (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   IsSound.sound ((otp_adequate_closed_gen (L := L) m N hN σ σ').mono le_rfl
     adequacyRel_otpφ_subset_eq)
+
+end Closed
 
 end Generic
 
@@ -193,16 +207,22 @@ theorem otp_adequate_rev (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev_gen GF m N hN σ σ'
 
+section ClosedTv
+
+variable (m N : Int) (hN : 0 < N) (σ σ' : State rT)
+
+include hN
+
 /-! ### Closed statements at the concrete model `MicrometerFunctor rT` -/
 
 /-- `otp_adequate` at `MicrometerFunctor`. -/
-theorem otp_adequate_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_closed :
     (codensity tv).Rel 0 (adequacyRel otpφ)
       (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_adequate_closed_gen m N hN σ σ'
 
 /-- `otp_adequate_rev` at `MicrometerFunctor`. -/
-theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_rev_closed :
     (codensity tv).Rel 0 (adequacyRel otpφ)
       (limExecV ⟨otp_ideal N, σ⟩) (limExecV ⟨otp_enc m N, σ'⟩) :=
   otp_adequate_rev_closed_gen m N hN σ σ'
@@ -211,9 +231,10 @@ theorem otp_adequate_rev_closed (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
 
 /-- The encryption is `0`-differentially private with respect to the ideal program.
 `tv δ` is `dp (0, δ)`, so this is `otp_div_gen` at `L := codensity tv`, `D := tv`. -/
-theorem otp_dp (m N : Int) (hN : 0 < N) (σ σ' : State rT) :
-    dp.{0} (0, 0) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
+theorem otp_dp : dp.{0} (0, 0) (limExecV ⟨otp_enc m N, σ⟩) (limExecV ⟨otp_ideal N, σ'⟩) :=
   otp_div_gen (L := codensity tv) (D := tv) m N hN σ σ'
+
+end ClosedTv
 
 end OTP
 

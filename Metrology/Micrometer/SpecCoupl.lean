@@ -12,6 +12,7 @@ absorbing budget or at the continuation `Z`; its introduction, bind, fancy-updat
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
 open MeasureTheory (Measure)
+open MeasureTheory.Measure ErasableExpr BindLaw IsTopAbsorbing BIFUpdate
 
 namespace ProbLang
 
@@ -70,8 +71,7 @@ variable {E : CoPset} {σ σ₁ σ' σ₁' : State rT} {e' e₁' : Exp rT} {b : 
   {R : State rT → Cfg rT → B}
 
 /-- `specCouplPre` is monotone, so its least fixpoint `specCoupl` exists. -/
-instance specCouplPre_mono :
-    BIMonoPred (specCouplPre L E Z) where
+instance specCouplPre_mono : BIMonoPred (specCouplPre L E Z) where
   mono_pred {Φ Ψ _ _} := by
     iintro #Hwand %s Hs
     icases Hs with ⟨HVac | HZ | HCpl⟩
@@ -148,7 +148,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
     iexists law, n, μ₁, μ₁', ν₀, f', R
     iframe %
     iintro %σ₂ %ρ %hR
-    imod BIFUpdate.subset HE with Hclose
+    imod subset HE with Hclose
     imod HCpl_cont $$ %σ₂ %ρ %hR
     imod Hclose
     imodintro
@@ -198,7 +198,7 @@ theorem specCoupl_couple_map (law : L.BindLaw) {ν₀ : Measure (Cfg rT)} {f' : 
       specCoupl L E σ₂ (f' ρ).expr (f' ρ).state (R σ₂ ρ) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
   -- `iframe %` closes the pure conjunct `⌜Measurable f' ∧ …⌝` from this hypothesis
-  have hmap := And.intro hf' hspec
+  have hmap : _ ∧ _ := ⟨hf', hspec⟩
   iintro H
   iapply specCoupl_rec
   iexists law, n, μ₁, μ₁', ν₀, f', R
@@ -215,7 +215,7 @@ theorem specCoupl_couple_law (law : L.BindLaw)
       specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
   iintro H
-  iapply specCoupl_couple_map law measurable_id Measure.map_id.symm hhead hside
+  iapply specCoupl_couple_map law measurable_id map_id.symm hhead hside
     Heras₁ Heras₁'
   iintro %σ₂ %⟨e₂', σ₂'⟩ %hR
   simp only [id]
@@ -228,7 +228,7 @@ theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
       specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_couple_law (BindLaw.canonical L) Hcpl (.of_forall fun _ _ => trivial) Heras₁ Heras₁'
+  specCoupl_couple_law (canonical L) Hcpl (.of_forall fun _ _ => trivial) Heras₁ Heras₁'
 
 section SplitBudget
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
@@ -244,7 +244,7 @@ theorem specCoupl_couple_rel {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
   have := Heras₁.isProbabilityMeasure
   have := Heras₁'.isProbabilityMeasure
   iintro H
-  iapply specCoupl_couple (IsLawful.mono (IsTopAbsorbing.frame Hcpl) hb le_rfl) Heras₁ Heras₁'
+  iapply specCoupl_couple (IsLawful.mono (frame Hcpl) hb le_rfl) Heras₁ Heras₁'
   iintro %σ₂ %e₂' %σ₂' %hR
   obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
   rw [relCost_of hS, zero_add]
@@ -261,7 +261,7 @@ theorem specCoupl_erasables {b₁ b₂ : B} {S : State rT → State rT → Prop}
   iintro H
   have heq : μ₁'.bind (fun σ => pexecN 0 ⟨e₁', σ⟩) = μ₁'.map (fun σ => (⟨e₁', σ⟩ : Cfg rT)) := by
     simp only [pexecN_zero]
-    exact Measure.bind_dirac_eq_map _ (by fun_prop)
+    exact bind_dirac_eq_map _ (by fun_prop)
   iapply specCoupl_couple_rel (S := fun σ₂ c => S σ₂ c.state ∧ c.expr = e₁') (n := 0) hb
     (heq ▸ Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩)
     Heras₁ Heras₁'
@@ -275,15 +275,15 @@ theorem specCoupl_erasable_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Pr
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_couple_rel (n := n) hb (by rwa [Measure.dirac_bind (by fun_prop)])
-    Heras₁ (ErasableExpr.dret σ₁')
+  specCoupl_couple_rel (n := n) hb (by rwa [dirac_bind (by fun_prop)])
+    Heras₁ (dret σ₁')
 
 /-- Couple a Dirac program state against `n` spec steps. -/
 theorem specCoupl_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
-    (Hcpl : L.Rel b₁ S (Measure.dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
+    (Hcpl : L.Rel b₁ S (dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_erasable_steps hb Hcpl (ErasableExpr.dret σ₁)
+  specCoupl_erasable_steps hb Hcpl (dret σ₁)
 
 /-! ## One spec step -/
 
@@ -305,7 +305,7 @@ theorem specCoupl_step_concentrated [L.IsReflexive] {S : Set (Cfg rT)} (Hred : R
   have := prim_step_mass Hred
   have hpexec1 : pexecN 1 ⟨e₁', σ₁'⟩ = primStep ⟨e₁', σ₁'⟩ := by
     rw [pexecN_one, stepOrFinal_not_isValue (val_stuck Hred)]
-  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (Measure.dirac σ₁)
+  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (dirac σ₁)
       (pexecN 1 ⟨e₁', σ₁'⟩) := by
     rw [hpexec1]
     exact rel_dirac_left _ hSmeas hSconc σ₁
@@ -333,7 +333,7 @@ variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget, by a step of the unit
 law (Rocq `spec_coupl_steps_det`, `spec_coupl_mono_grade`). -/
 theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b₁ : B}
-    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = Measure.dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
+    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
   -- the unit law only carries a finite budget; at b₁ = ⊤ exit through absorption
@@ -342,12 +342,12 @@ theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b�
     -- one unit-law round between point masses: leftover `b₁` at the target pair, `⊤` elsewhere
     let R : State rT → Cfg rT → B := fun s c => if s = σ ∧ c = ⟨e₂', σ₂'⟩ then b₁ else (⊤ : B)
     have hR : R σ ⟨e₂', σ₂'⟩ = b₁ := ite_eq_left ⟨rfl, rfl⟩
-    have hhead : (BindLaw.unit L).head (Measure.dirac σ)
-        ((Measure.dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) R b := by
-      rw [Measure.dirac_bind (by fun_prop), Hstep]
-      exact BindLaw.unit_head_dirac (hR ▸ hb₁) (hR ▸ hb)
-    iapply specCoupl_couple_law (BindLaw.unit L) hhead (.of_forall fun _ _ => trivial)
-      (ErasableExpr.dret σ) (ErasableExpr.dret σ₁')
+    have hhead : (BindLaw.unit L).head (dirac σ)
+        ((dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) R b := by
+      rw [dirac_bind (by fun_prop), Hstep]
+      exact unit_head_dirac (hR ▸ hb₁) (hR ▸ hb)
+    iapply specCoupl_couple_law (.unit L) hhead (.of_forall fun _ _ => trivial)
+      (dret σ) (dret σ₁')
     iintro %σ₂ %e₂'' %σ₂'' %hlt
     by_cases hS : σ₂ = σ ∧ e₂'' = e₂' ∧ σ₂'' = σ₂'
     · obtain ⟨rfl, rfl, rfl⟩ := hS
@@ -356,7 +356,7 @@ theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b�
     · simp [R, hS] at hlt
   · iintro -
     iapply specCoupl_absorbing
-    exact (top_le_iff.1 hb) ▸ IsTopAbsorbing.absorbing_top
+    exact (top_le_iff.1 hb) ▸ absorbing_top
 
 /-- A spec coupling absorbs a leading fancy update and may weaken its budget. -/
 theorem fupd_specCoupl_of_le {b₁ b₂ : B} (hb : b₁ ≤ b₂) :
@@ -375,7 +375,7 @@ theorem fupd_specCoupl :
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on the coupling at its end. -/
 theorem specCoupl_steps_det {e₂' : Exp rT} {σ₂' : State rT}
-    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = Measure.dirac ⟨e₂', σ₂'⟩) :
+    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = dirac ⟨e₂', σ₂'⟩) :
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)
 

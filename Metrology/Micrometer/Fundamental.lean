@@ -18,11 +18,12 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 namespace ProbLang
 
 open Cslib Exp RelCtx
+open List (map_cons toFinset_cons)
 
 section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {e : Exp rT} {τ : Ty}
 local bi IProp GF
 
 /-! ## Typing contexts as relational contexts -/
@@ -33,29 +34,27 @@ def TctxRelated (Δ : TyEnv rT GF) (Γtc : Tctx) (Γrc : RelCtx rT GF) : Prop :=
   ∀ x, (Γtc x).map (fun τ => interp L τ Δ) = Γrc.lookup x
 
 section TctxLemmas
-variable {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF} {x : Var} {e : Exp rT}
-  {τ τ1 τ2 : Ty} {S : Finset Var}
+variable {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF} {x : Var} {τ1 τ2 : Ty}
+  {S : Finset Var} (HCtx : TctxRelated L Δ Γtc Γrc)
+include HCtx
 
 /-- A variable typed in `Γtc` is bound in `Γrc`. -/
-theorem TctxRelated.lookup_isSome (HCtx : TctxRelated L Δ Γtc Γrc) (hx : (Γtc x).isSome) :
-    (Γrc.lookup x).isSome := by
+theorem TctxRelated.lookup_isSome (hx : (Γtc x).isSome) : (Γrc.lookup x).isSome := by
   rw [← HCtx x]
   simpa using hx
 
 /-- A variable of type `τ` in `Γtc` maps to `interp L τ Δ` in `Γrc`. -/
-theorem TctxRelated.lookup_some (HCtx : TctxRelated L Δ Γtc Γrc) (hx : Γtc x = some τ) :
-    Γrc.lookup x = some (interp L τ Δ) := by
+theorem TctxRelated.lookup_some (hx : Γtc x = some τ) : Γrc.lookup x = some (interp L τ Δ) := by
   rw [← HCtx x, hx]
   rfl
 
 /-- Relatedness survives entering a type binder: shift `Γtc` and extend `Δ` by `A`. -/
-theorem TctxRelated.shift (HCtx : TctxRelated L Δ Γtc Γrc) (A : lrel rT GF) :
-    TctxRelated L (TyEnv.cons A Δ) Γtc.shift Γrc := by
+theorem TctxRelated.shift (A : lrel rT GF) : TctxRelated L (.cons A Δ) Γtc.shift Γrc := by
   intro x
   simpa [Tctx.shift, Option.map_map, Function.comp_def, interp_ren] using HCtx x
 
 /-- Relatedness survives binding a fresh term variable `x : τ` on both sides. -/
-theorem TctxRelated.insert (HCtx : TctxRelated L Δ Γtc Γrc) (x : Var) (τ : Ty)
+theorem TctxRelated.insert (x : Var) (τ : Ty)
     (hfresh : Γrc.lookup x = none) :
     TctxRelated L Δ (Γtc.insert x τ) ((x, interp L τ Δ) :: Γrc) := by
   intro y
@@ -66,20 +65,18 @@ theorem TctxRelated.insert (HCtx : TctxRelated L Δ Γtc Γrc) (x : Var) (τ : T
     cases Γtc y <;> simp [hyx]
 
 /-- The free variables of a term typed in `Γtc` lie in the domain of `Γrc`. -/
-theorem fv_subset_relCtxDom (HCtx : TctxRelated L Δ Γtc Γrc) (Hty : Typed Γtc e τ) :
-    e.fv ⊆ (Γrc.map (·.1)).toFinset :=
+theorem fv_subset_relCtxDom (Hty : Typed Γtc e τ) : e.fv ⊆ (Γrc.map (·.1)).toFinset :=
   fun x hx => mem_of_lookup_isSome (HCtx.lookup_isSome (Hty.fvSubset x hx))
 
 /-- The same for the body of a binder typed cofinitely: pick one fresh `y` and drop it again. -/
-theorem fv_subset_of_cofinite (HCtx : TctxRelated L Δ Γtc Γrc)
-    (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
+theorem fv_subset_of_cofinite (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset := by
   intro z hz
   obtain ⟨y, hy⟩ := HasFresh.fresh_exists (S ∪ (Γrc.map (·.1)).toFinset ∪ {z})
   simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hy
   have hzdom := fv_subset_relCtxDom (HCtx.insert y τ1 (lookup_eq_none_of_not_mem hy.1.2))
     (Hbody y hy.1.1) (fv_subset_open e y hz)
-  simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert] at hzdom
+  simp only [map_cons, toFinset_cons, Finset.mem_insert] at hzdom
   exact hzdom.resolve_left fun h => hy.2 h.symm
 
 end TctxLemmas
@@ -91,7 +88,7 @@ variable [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [CanonicallyOrderedAdd B] [
 
 variable (L) in
 /-- Every well-typed expression is related to itself under any related contexts. -/
-theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
+theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
     (Γrc : RelCtx rT GF) (HCtx : TctxRelated L Δ Γtc Γrc) :
     ⊢ bin_log_related_ty L ⊤ Δ Γrc e e τ := by
   induction Hty generalizing Δ Γrc with
@@ -154,17 +151,17 @@ theorem fundamental {Γtc : Tctx} {e : Exp rT} {τ : Ty} (Hty : Typed Γtc e τ)
     have he_fv := fv_subset_relCtxDom (HCtx.shift default) Hbody
     refine bin_log_related_tlam Δ Γrc hLC hLC he_fv he_fv fun A => ?_
     imodintro
-    iapply ih (TyEnv.cons A Δ) Γrc (HCtx.shift A)
+    iapply ih (.cons A Δ) Γrc (HCtx.shift A)
   | @tunpack S _ e1 e2 τ τ2 _ Hbody2 ih1 ih2 =>
     let S' : Finset Var := S ∪ (Γrc.map (·.1)).toFinset
     have he2_lc : ∀ x ∉ S', (open' e2 (.fvar x)).IsLocallyClosed := fun x hx =>
       (Hbody2 x (not_mem_union_dom hx).1).isLocallyClosed
     exact bin_log_related_unpack Δ Γrc S' (ih1 Δ Γrc HCtx) he2_lc he2_lc fun A x hx =>
-      ih2 x (not_mem_union_dom hx).1 (TyEnv.cons A Δ) _
+      ih2 x (not_mem_union_dom hx).1 (.cons A Δ) _
         ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
 
 /-- A closed well-typed expression refines itself at its type. -/
-theorem refines_typed (Δ : TyEnv rT GF) {e : Exp rT} {τ : Ty} (Hty : Typed Tctx.empty e τ) :
+theorem refines_typed (Δ : TyEnv rT GF) (Hty : Typed .empty e τ) :
     ⊢ refines L ⊤ e e (interp L τ Δ) := by
   have Hfund := fundamental L Hty Δ [] (by intro x; simp [Tctx.empty, lookup])
   iapply bin_log_related_nil_elim

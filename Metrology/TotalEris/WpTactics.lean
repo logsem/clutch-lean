@@ -96,7 +96,7 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     have e' : Q(Exp $α) := focus
     let Φc : Q(Val $α → IProp $GF) ←
       withLocalDeclDQ `v q(Val $α) fun v => do
-        let body : Q(Exp $α) ← fill K q(Exp.ofVal $v)
+        let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
         mkLambdaFVars #[v]
           q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
     let pf ← addBIGoal hyps
@@ -125,7 +125,7 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let e₂syn : Q(Exp $α) ← instantiateMVars step.e₂syn
     let e₂ ← displayReduct e₂syn step.names
     -- An `Ectx.fill` redex would hide the next redex from `twp_pures`.
-    let inner : Q(Exp $α) ← fill K e₂
+    let inner : Q(Exp $α) ← fillQ K e₂
     let pf ← addBIGoal hyps
       q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $inner $Φ)
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)

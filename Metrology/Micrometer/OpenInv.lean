@@ -8,12 +8,11 @@ import Metrology.Iris.LocalBI
 /-! # `OpenInv`: opening invariants around `wp`
 
 `OpenInv L e` says `wp` of `e` may open invariants around it; atomic `e` satisfy it
-(`OpenInv.of_atomic`), and `IsOpenInv` instances make `imod`/`iinv` use it on `wp` goals. -/
+(`of_atomic`), and `IsOpenInv` instances make `imod`/`iinv` use it on `wp` goals. -/
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang.MicrometerWpGS GradedLifting
 
 namespace ProbLang
 
@@ -21,7 +20,7 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
 /-- `wp` of `e` may open invariants around it: a mask-changing update before `e` can be closed after
-its single step. Holds for physically atomic `e` (`OpenInv.of_atomic`). -/
+its single step. Holds for physically atomic `e` (`of_atomic`). -/
 def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
   ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
@@ -126,27 +125,29 @@ class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
   out : OpenInv L e
 
 section Instances
+open OpenInv (of_atomic)
+open Atomic (load store alloc rand_unit rand_lbl)
 variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
   [L.HasBind]
 
 instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where
-  out := OpenInv.of_atomic Atomic.urand
+  out := of_atomic Atomic.urand
 
 instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#loc l) where
-  out := OpenInv.of_atomic (Atomic.load l)
+  out := of_atomic (load l)
 
-instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#loc l) v.1) where
-  out := OpenInv.of_atomic (Atomic.store l v)
+instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (.store pl(#loc l) v.1) where
+  out := of_atomic (store l v)
 
-instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (Exp.alloc v.1) where
-  out := OpenInv.of_atomic (Atomic.alloc v)
+instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (.alloc v.1) where
+  out := of_atomic (alloc v)
 
 instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
-  out := OpenInv.of_atomic (Atomic.rand_unit z)
+  out := of_atomic (rand_unit z)
 
 instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
     IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
-  out := OpenInv.of_atomic (Atomic.rand_lbl z l)
+  out := of_atomic (rand_lbl z l)
 
 end Instances
 
@@ -176,7 +177,7 @@ instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut}
 
 /-- `iinv` opens an invariant around `wp` of an `IsOpenInv` expression. -/
 instance (priority := low) elimAcc_wp_atomic [h : IsOpenInv L e]
-    (E₁ E₂ : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
+    (E₁ E₂ : CoPset) (α β : X → _) (γ : X → _) :
     ElimAcc True (fupd E₁ E₂) (fupd E₂ E₁) α β γ (wp L E₁ e Φ)
       (fun x => wp L E₂ e (fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v)))) where
   elim_acc := by
@@ -191,7 +192,7 @@ instance (priority := low) elimAcc_wp_atomic [h : IsOpenInv L e]
     iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
 /-- `iinv` with an accessor that keeps the mask `E` works around any `wp`. -/
-instance elimAcc_wp_nonatomic (E : CoPset) (α β : X → IProp GF) (γ : X → Option (IProp GF)) :
+instance elimAcc_wp_nonatomic (E : CoPset) (α β : X → _) (γ : X → _) :
     ElimAcc True (fupd E E) (fupd E E) α β γ (wp L E e Φ)
       (fun x => wp L E e (fun v => iprop(|={E}=> β x ∗ (γ x -∗? Φ v)))) where
   elim_acc := by

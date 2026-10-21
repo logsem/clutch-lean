@@ -19,10 +19,13 @@ A closed refinement proved for every ghost-state instance relates the two limit 
 
 namespace ProbLang
 
-open Iris Iris.BI Iris.ProofMode OFE COFE Iris.Std DisjointLeibnizSet Auth HeapView
+open Iris hiding wp_mono
+open Iris.BI Iris.ProofMode OFE COFE Iris.Std DisjointLeibnizSet Auth HeapView
 open ProbLang.MicrometerWpGS
 open GradedLifting
-open MeasureTheory (Measure)
+open MeasureTheory.Measure (dirac map_dirac')
+open Ectx (fill)
+open Exp (ofVal)
 
 /-! ## Ghost state that adequacy allocates -/
 
@@ -36,8 +39,11 @@ class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
   [inv : InvGpreS GF]
   [nainv : NaInvG GF]
 
-attribute [reducible, instance] RefinesPreGS.app RefinesPreGS.spec RefinesPreGS.bc
-  RefinesPreGS.inv RefinesPreGS.nainv
+namespace RefinesPreGS
+
+attribute [reducible, instance] app spec bc inv nainv
+
+end RefinesPreGS
 
 /-! ## Spec ownership in the empty context -/
 
@@ -47,18 +53,17 @@ variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [SpecGS rT G
 local bi IProp GF
 
 /-- Spec ownership of `e` is that of `e` in the empty context. -/
-theorem spec_eq_fill_nil (e : Exp rT) :
-    (iprop(⤇ e) : IProp GF) = iprop(⤇ Ectx.fill ([] : Ectx rT) e) :=
+theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fill ([] : Ectx rT) e) :=
   rfl
 
 /-- Spec ownership of a value in the empty context is that of the value. -/
 theorem spec_fill_nil_eq_ofVal (v : Val rT) :
-    (iprop(⤇ Ectx.fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ Exp.ofVal v) :=
+    (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
   rfl
 
 /-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
 theorem spec_fill_nil_exists (v : Val rT) :
-    ⤇ Ectx.fill ([] : Ectx rT) v.1 ⊢ ∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝ := by
+    ⤇ fill ([] : Ectx rT) v.1 ⊢ ∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝ := by
   rw [spec_fill_nil_eq_ofVal]
   iintro Hj
   iexists v
@@ -103,7 +108,7 @@ theorem approximates_coupling (φ : Val rT → Val rT → Prop) (e e' : Exp rT) 
   rw [spec_eq_fill_nil e']
   ispecialize HlogR $$ %([] : Ectx rT) %r He' Htok Hr %hr
   -- Postcondition weakening: drop the token and leftover credit, and get `φ` from `HA`.
-  iapply MicrometerWpGS.wp_mono $$ HlogR
+  iapply wp_mono $$ HlogR
   intro v
   iintro ⟨%v', %_, Hspec, -, -, -, HAv⟩
   iexists v'
@@ -140,23 +145,24 @@ The side condition of `approximates_div` and of the examples' adequacy. -/
 
 section EqRelations
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
+local bi IProp GF
 
 /-- `lrel_int` relates only equal values. -/
-theorem lrel_int_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜v = v'⌝ := by
+theorem lrel_int_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_int.car v v' -∗ ⌜v = v'⌝ := by
   unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
 
 /-- `lrel_bool` relates only equal values. -/
-theorem lrel_bool_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
+theorem lrel_bool_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
   unfold lrel_bool; iintro ⟨%b, %⟨rfl, rfl⟩⟩; ipureintro; rfl
 
 /-- A product of relations between equal values relates only equal values. -/
-theorem lrel_prod_car_eq {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    {A A' : lrel rT GF} (hA : ∀ v v', ⊢@{IProp GF} A.car v v' -∗ ⌜v = v'⌝)
-    (hA' : ∀ v v', ⊢@{IProp GF} A'.car v v' -∗ ⌜v = v'⌝) (v v' : Val rT) :
-    ⊢@{IProp GF} (lrel_prod A A').car v v' -∗ ⌜v = v'⌝ := by
+theorem lrel_prod_car_eq [MicrometerRGS rT hlc GF] {A A' : lrel rT GF}
+    (hA : ∀ v v', ⊢ A.car v v' -∗ ⌜v = v'⌝)
+    (hA' : ∀ v v', ⊢ A'.car v v' -∗ ⌜v = v'⌝) (v v' : Val rT) :
+    ⊢ (lrel_prod A A').car v v' -∗ ⌜v = v'⌝ := by
   unfold lrel_prod
   iintro ⟨%a, %a', %b, %b', %h, %h', Ha, Hb⟩
   ihave %rfl := hA a a' $$ Ha
@@ -174,8 +180,8 @@ variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- A value runs to itself. -/
 theorem limExecV_of_isVal {e : Exp rT} (σ : State rT)
-    (hv : IsVal e) : limExecV ⟨e, σ⟩ = Measure.dirac e := by
-  rw [limExecV, limExec_of_isVal hv, asExpr, Measure.map_dirac' Cfg.measurable_expr]
+    (hv : IsVal e) : limExecV ⟨e, σ⟩ = dirac e := by
+  rw [limExecV, limExec_of_isVal hv, asExpr, map_dirac' Cfg.measurable_expr]
 
 end Support
 
@@ -206,7 +212,8 @@ instance MicrometerFunctor_WsatGpreS : WsatGpreS (MicrometerFunctor rT B) where
   enabled := ⟨1, rfl⟩
   disabled := ⟨2, rfl⟩
 
-instance MicrometerFunctor_LcGpreS : LcGpreS (MicrometerFunctor rT B) where lc_elem := ⟨3, rfl⟩
+instance MicrometerFunctor_LcGpreS : LcGpreS (MicrometerFunctor rT B) where
+  lc_elem := ⟨3, rfl⟩
 
 instance MicrometerFunctor_InvGpreS : InvGpreS (MicrometerFunctor rT B) where
   toWsatGpreS := MicrometerFunctor_WsatGpreS rT B
@@ -226,7 +233,8 @@ instance MicrometerFunctor_SpecPreGS : SpecPreGS rT (MicrometerFunctor rT B) whe
 instance MicrometerFunctor_BudgetCreditPreGS : BudgetCreditPreGS B (MicrometerFunctor rT B) where
   bc := ⟨7, rfl⟩
 
-instance MicrometerFunctor_NaInvG : NaInvG (MicrometerFunctor rT B) where inv := ⟨8, rfl⟩
+instance MicrometerFunctor_NaInvG : NaInvG (MicrometerFunctor rT B) where
+  inv := ⟨8, rfl⟩
 
 instance MicrometerFunctor_RefinesPreGS : RefinesPreGS rT B (MicrometerFunctor rT B) where
 

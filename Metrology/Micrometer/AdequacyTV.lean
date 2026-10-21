@@ -17,7 +17,8 @@ open scoped ENNReal
 namespace ProbLang
 
 open Iris Iris.BI ProbLang.MicrometerWpGS GradedLifting GradedDivergence Set
-open MeasureTheory (Measure)
+open Exp (ofVal)
+open MeasureTheory.Measure (dirac dirac_apply')
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {GF : BundledGFunctors}
 local bi IProp GF
@@ -33,7 +34,7 @@ executions (`wp_adequacy`). -/
 theorem wp_adequacy_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
-        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
@@ -41,7 +42,7 @@ theorem wp_adequacy_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
 theorem wp_adequacy_budget_lim_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
-        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy_budget_lim e e' σ σ' ε φ Hwp).addCoupl
 
@@ -50,7 +51,7 @@ every event. -/
 theorem wp_adequacy_div_tv (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
-        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
+        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
@@ -59,7 +60,7 @@ theorem wp_adequacy_div_tv (ε : ENNReal)
 theorem wp_adequacy_div_budget_lim_tv (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
-        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)))
+        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div_budget_lim e e' σ σ' ε Hwp) S hS
@@ -68,7 +69,7 @@ theorem wp_adequacy_div_budget_lim_tv (ε : ENNReal)
 theorem wp_adequacy_mass_tv (φ : Val rT → Val rT → Prop) (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
-        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜φ v v'⌝))) :
+        wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ univ ≤ limExecV ⟨e', σ'⟩ univ + ε :=
   wp_adequacy_mass (s := OrderAddMonoidHom.id ℝ≥0∞) e e' σ σ' φ ε Hwp
 
@@ -112,16 +113,16 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
     (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁)
-    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (Measure.dirac σ₁')) : iprop%
+    (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (dirac σ₁')) : iprop%
     (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
       progCoupl (codensity tv.{0}) e₁ σ₁ e₁' σ₁' ε Z := by
   iintro H
   -- A Dirac measure is concentrated on `σ₁'`, so the coupling can be restricted to `p.2 = σ₁'`;
   -- the right side is then the erasable `dret σ₁'`.
-  have hconc : Measure.dirac σ₁' {σ₁'}ᶜ = 0 := by
-    rw [Measure.dirac_apply' _ (by measurability)]; simp
+  have hconc : dirac σ₁' {σ₁'}ᶜ = 0 := by
+    rw [dirac_apply' _ (by measurability)]; simp
   have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}
-      (primStep ⟨e₁, σ₁⟩) (Measure.dirac σ₁') :=
+      (primStep ⟨e₁, σ₁⟩) (dirac σ₁') :=
     AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl
   iapply progCoupl_step_l_erasable Hε Hred HcplR.codensity (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %σ₂' %HR'

@@ -15,10 +15,14 @@ A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome c
 (Eris `wp_couple_rand_adv_comp`, spec side). -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
-open MeasureTheory (Measure)
 open scoped ENNReal AppGS
 
 namespace ProbLang
+
+open Cfg Ectx Exp BudgetCredit BIFUpdate LawfulSet IsLawful IsTopAbsorbing ErasableExpr
+open MeasureTheory.Measure (dirac map_map map_id)
+open _root_.Measurable (of_discrete)
+open Function (Injective invFun leftInverse_invFun comp_apply)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {B : Type}
   [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
@@ -43,59 +47,59 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
-  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
+  imod supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
+  imod subset empty_subset with Hclose
   imodintro
   let rgt : Int → Cfg rT := fun n ↦ ⟨K.fill pl(#n), σ₁'⟩
-  have hrgt : Function.Injective rgt := fun m m' h ↦ by
-    simpa [rgt] using Ectx.fill_injective K ((Cfg.mk.injEq ..).mp h).1
+  have hrgt : Injective rgt := fun m m' h ↦ by
+    simpa [rgt] using fill_injective K ((mk.injEq ..).mp h).1
   let R : State rT → Cfg rT → B := fun σ ρ ↦
-    if σ = σ₁ ∧ ∃ n, 0 ≤ n ∧ n < N ∧ ρ = rgt n then s (ε₂ (Function.invFun rgt ρ)) + r else ⊤
+    if σ = σ₁ ∧ ∃ n, 0 ≤ n ∧ n < N ∧ ρ = rgt n then s (ε₂ (invFun rgt ρ)) + r else ⊤
   have hR {n : Int} (h0 : 0 ≤ n) (hN : n < N) : R σ₁ (rgt n) = s (ε₂ n) + r := by
     dsimp only [R]
-    rw [ite_eq_left ⟨rfl, n, h0, hN, rfl⟩, Function.leftInverse_invFun hrgt n]
+    rw [ite_eq_left ⟨rfl, n, h0, hN, rfl⟩, leftInverse_invFun hrgt n]
   have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
-  have hcpl : L b R (Measure.dirac σ₁)
-      ((Measure.dirac σ₁').bind fun σ ↦
+  have hcpl : L b R (dirac σ₁)
+      ((dirac σ₁').bind fun σ ↦
         pexecN 1 ⟨K.fill pl(rand(#N, #())), σ⟩) := by
-    rw [dirac_bind_pexecN_one hredR, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
-      Cfg.uniform_eq_map HN, Measure.map_map (by fun_prop) Measurable.of_discrete,
-      ← Measure.map_id (μ := Measure.dirac σ₁)]
+    rw [dirac_bind_pexecN_one hredR, primStep_fill rand_not_isValue, primStep_rand_unit HN,
+      uniform_eq_map HN, map_map (by fun_prop) of_discrete,
+      ← map_id (μ := dirac σ₁)]
     -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
     -- frame the remainder r, push to configurations
     have h₀ := IsTopAbsorbing.frame (c := r) <| IsExpectationAdditive.add_right (s := s)
-      (c := ε₂) Measurable.of_discrete <|
-        rel_dirac_left (L := L) (unifInt N HN) (A := Set.Ico 0 N) MeasurableSet.of_discrete
+      (c := ε₂) of_discrete <|
+        rel_dirac_left (L := L) (unifInt N HN) MeasurableSet.of_discrete
           (unifInt_compl_Ico HN) σ₁
-    refine IsLawful.map measurable_id Measurable.of_discrete (IsLawful.mono h₀ ?_ ?_)
+    refine map measurable_id of_discrete (mono h₀ ?_ ?_)
     · refine le_trans ?_ hr.ge
       gcongr
       rw [zero_add, lintegral_unifInt, ← ENNReal.div_eq_inv_mul] at *
       exact OrderHomClass.mono s hamort
     · -- on drawn pairs the leftover is s(ε₂ n) + r, elsewhere ⊤
       intro σ n
-      dsimp only [id, Function.comp_apply]
+      dsimp only [id, comp_apply]
       by_cases h : σ = σ₁ ∧ 0 ≤ n ∧ n < N
       · obtain ⟨h, h0, hN⟩ := h
         subst σ
-        rw [show (⟨K.fill (Exp.lit (.int n)), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN,
-          relCost_of (S := fun x y ↦ x = σ₁ ∧ y ∈ Set.Ico 0 N) ⟨rfl, h0, hN⟩, zero_add]
-      · rw [relCost_of_not (S := fun x y ↦ x = σ₁ ∧ y ∈ Set.Ico 0 N)
+        rw [show (⟨K.fill (lit (.int n)), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN,
+          relCost_of ⟨rfl, h0, hN⟩, zero_add]
+      · rw [relCost_of_not
           (fun h' ↦ h ⟨h'.1, h'.2.1, h'.2.2⟩)]
         exact le_top.trans (le_self_add.trans le_self_add)
   -- the coupling `hcpl` fires the spec step; each outcome `n` returns its own credit
-  iapply specCoupl_couple hcpl (ErasableExpr.dret σ₁) (ErasableExpr.dret σ₁')
+  iapply specCoupl_couple hcpl (dret σ₁) (dret σ₁')
   iintro %σ₂ %e₂' %σ₂' %hlt
   obtain ⟨hσ, n, h0, hN, hρ⟩ : σ₂ = σ₁ ∧ ∃ n, 0 ≤ n ∧ n < N ∧ (⟨e₂', σ₂'⟩ : Cfg rT) = rgt n := by
     by_contra hno
     simp [R, hno] at hlt
-  obtain ⟨he, hσ'⟩ := (Cfg.mk.injEq ..).mp hρ
+  obtain ⟨he, hσ'⟩ := (mk.injEq ..).mp hρ
   subst σ₂ e₂' σ₂'
   rw [show (⟨K.fill pl(#n), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN]
   imodintro
   iapply specCoupl_ret
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
-  imod BudgetCredit.supply_increase $$ Hb with ⟨Hb, Hfrag⟩
+  imod supply_increase $$ Hb with ⟨Hb, Hfrag⟩
   imod Hclose
   imodintro
   rw [add_comm (s (ε₂ n))]
@@ -117,11 +121,11 @@ theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT
     refines L E e (K.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hlog⟩ %K' %b Hj Hna Herr Hpos
-  isimp only [Ectx.fill_comp K' K] at Hj
+  isimp only [fill_comp K' K] at Hj
   iapply wp_rand_r_adv N HN ε₁ ε₂ hamort hc (K'.comp K)
   iframe Hj Hc
   iintro %n %hn Hn HKRes
-  isimp only [← Ectx.fill_comp K' K] at HKRes
+  isimp only [← fill_comp K' K] at HKRes
   iapply Hlog $$ %n %hn Hn %K' %b HKRes Hna Herr Hpos
 
 end Rel

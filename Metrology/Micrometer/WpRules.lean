@@ -10,7 +10,7 @@ across a step), the proof-mode instances, and `wp_of_absorbing` for an absorbing
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE GradedLifting
 
 namespace ProbLang
 
@@ -21,6 +21,8 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
 open BIFUpdate BIUpdateFUpdate
+open Exp (ofVal ofVal_of_toVal_some toVal?_eq_none)
+open LawfulSet (subset_refl empty_subset)
 
 section Wp
 variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {P R : IProp GF}
@@ -31,12 +33,12 @@ variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {P R : IProp GF}
 variable (L) in
 /-- The statement of `wp_bind` at the context `K`, proved by Löb induction. -/
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
-  ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
+  ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
 /-- Bind: a `wp` for `e` whose postcondition is a `wp` for `K[v]` proves the `wp` for `K[e]`. -/
 theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset}
     {e : Exp rT} {Φ : Val rT → IProp GF} :
-    wp L E e (fun v => wp L E (K.fill (Exp.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
+    wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
   have Hloeb : ⊢ wpBindStmt L K := by
     iapply loeb_wand
     iintro !> IH %E' %e' %Φ' HW
@@ -44,7 +46,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
     iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
     imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
     imodintro
-    iapply specCoupl_bind LawfulSet.subset_refl
+    iapply specCoupl_bind subset_refl
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
@@ -52,15 +54,15 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
       -- e' is a value: run the inner wp's spec phase in place of the outer one
       -- (fupd_specCoupl, hence IsTopAbsorbing)
       iapply fupd_specCoupl
-      rw [show e' = Exp.ofVal v from (Exp.ofVal_of_toVal_some htv).symm]
+      rw [show e' = ofVal v from (ofVal_of_toVal_some htv).symm]
       imod HBody with ⟨Hσ', Hs', Hb', HInner⟩
       imod wp_unfold_mp $$ HInner %σ₂ %ρ₂.expr %ρ₂.state %b₂ [$Hσ' $Hs' $Hb'] with HInner'
       imodintro
       iexact HInner'
     | none =>
-      have hv : ¬ e'.isValue := Exp.toVal?_eq_none.mp htv
+      have hv : ¬ e'.isValue := toVal?_eq_none.mp htv
       have hvKfill : ¬ (K.fill e').isValue := fun hKv => hv (Ectx.fill_isValue hKv)
-      have hKfillnone : (K.fill e').toVal? = none := Exp.toVal?_eq_none.mpr hvKfill
+      have hKfillnone : (K.fill e').toVal? = none := toVal?_eq_none.mpr hvKfill
       iapply specCoupl_ret
       simp only [hKfillnone]
       -- e' steps: push K through the program step, recurse by Löb
@@ -104,7 +106,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
     imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
     imodintro
-    iapply specCoupl_bind LawfulSet.subset_refl
+    iapply specCoupl_bind subset_refl
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
@@ -114,7 +116,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
       imod HUpd $$ %ρ₂ Hs' with ⟨%ρ₃, %n, %Hstep, Hs'', HΦv⟩
       cases ρ₃ with
       | mk e₃' σ₃' =>
-        imod subset LawfulSet.empty_subset with Hclose
+        imod subset empty_subset with Hclose
         imodintro
         iapply specCoupl_steps_det Hstep
         iapply specCoupl_ret
@@ -288,7 +290,7 @@ theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {
   iapply wp_unfold
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨-, -, Hb⟩
   ihave %hle := supply_bound $$ Hb Hc
-  imod subset LawfulSet.empty_subset with -
+  imod subset empty_subset with -
   imodintro
   iapply specCoupl_absorbing (hc.mono hle)
 

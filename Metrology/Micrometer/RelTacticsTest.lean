@@ -176,7 +176,7 @@ example :
 
 /-- The `_atomic` forms leave the rule's premise. -/
 example (l : Loc) :
-    ⊢ (l ↦ (.int 3 : Val rT)) -∗
+    ⊢ (l ↦ .int 3) -∗
       REL[L] (pl(!#loc l + #0) : Exp rT) << pl(#3) : lrel_int := by
   iintro Hl
   rel_load_l_atomic

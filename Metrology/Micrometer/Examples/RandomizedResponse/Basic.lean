@@ -26,6 +26,10 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
+open Exp (close closeRec)
+open ENNReal (ofReal mul_inv_cancel div_eq_inv_mul toReal_ofReal ofReal_ne_top)
+open Real (log log_nonneg exp_log rpow_sub rpow_one div_rpow)
+
 /-! ## The reported bit and its arithmetic
 
 The facts the divergence files feed into `RRCoupling`: the fiber bound `rrOut_fiber_le_three`
@@ -34,9 +38,16 @@ and the moment `fDiv_rrOut`. -/
 section Distribution
 
 open MeasureTheory ProbabilityTheory
+open Finset (mem_Ico filter_insert filter_singleton)
+open Set (indicator singleton_subset_iff)
+open EReal (coe_mul coe_add coe_eq_coe_iff)
+
+section Fibers
+
+variable (b c : Bool)
 
 /-- The reported bit as a function of the draw. -/
-def rrOut (b : Bool) (r : Int) : Bool := if r < 3 then b else !b
+def rrOut (r : Int) : Bool := if r < 3 then b else !b
 
 /-- The draw of one round, uniform on `{0, 1, 2, 3}`. -/
 noncomputable abbrev draw : Measure Int :=
@@ -45,25 +56,23 @@ noncomputable abbrev draw : Measure Int :=
 /-- Each of the four draws has mass `1/4`. -/
 theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹ := by
   rw [draw, unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-    PMF.uniformOfFinset_apply_of_mem _ (Finset.mem_Ico.2 ⟨h0, h4⟩)]
+    PMF.uniformOfFinset_apply_of_mem _ (mem_Ico.2 ⟨h0, h4⟩)]
   rfl
 
 /-- One round reports its bit with probability `3/4`. -/
-theorem map_rrOut_singleton (b c : Bool) :
-    draw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
+theorem map_rrOut_singleton : draw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
   rw [Measure.map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
     show Finset.Ico (0 : Int) 4 = {0, 1, 2, 3} by decide]
-  cases b <;> cases c <;> norm_num [rrOut, Set.indicator, Finset.filter_insert,
-    Finset.filter_singleton, ENNReal.div_eq_inv_mul, mul_comm]
+  cases b <;> cases c <;> norm_num [rrOut, indicator, filter_insert,
+    filter_singleton, div_eq_inv_mul, mul_comm]
 
 /-- Draws `0` and `3` report different bits, so each report is hit by one and missed by the
 other. -/
-theorem rrOut_zero_three (b c : Bool) :
-    rrOut b 0 = c ∧ rrOut b 3 ≠ c ∨ rrOut b 3 = c ∧ rrOut b 0 ≠ c := by
+theorem rrOut_zero_three : rrOut b 0 = c ∧ rrOut b 3 ≠ c ∨ rrOut b 3 = c ∧ rrOut b 0 ≠ c := by
   decide +revert
 
 /-- One fiber of the reported bit misses a draw, so it has mass at most `3/4`. -/
-theorem rrOut_fiber_le (b c : Bool) : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
+theorem rrOut_fiber_le : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
   obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k ≠ c := by
     rcases rrOut_zero_three b c with ⟨-, h⟩ | ⟨-, h⟩
     · exact ⟨3, by norm_num, by norm_num, h⟩
@@ -73,13 +82,15 @@ theorem rrOut_fiber_le (b c : Bool) : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ :
         rw [prob_compl_eq_one_sub (measurableSet_singleton k), draw_singleton hk0 hk4]
 
 /-- Every fiber of the reported bit contains a draw, so it has mass at least `1/4`. -/
-theorem rrOut_fiber_ge (b c : Bool) : 4⁻¹ ≤ draw (rrOut b ⁻¹' {c}) := by
+theorem rrOut_fiber_ge : 4⁻¹ ≤ draw (rrOut b ⁻¹' {c}) := by
   obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k = c := by
     rcases rrOut_zero_three b c with ⟨h, -⟩ | ⟨h, -⟩
     · exact ⟨0, by norm_num, by norm_num, h⟩
     · exact ⟨3, by norm_num, by norm_num, h⟩
   rw [← draw_singleton hk0 hk4]
-  exact measure_mono (Set.singleton_subset_iff.2 hk)
+  exact measure_mono (singleton_subset_iff.2 hk)
+
+end Fibers
 
 /-- Each fiber's mass under one bit is at most three times its mass under the other. -/
 theorem rrOut_fiber_le_three (b b' c : Bool) :
@@ -87,7 +98,7 @@ theorem rrOut_fiber_le_three (b b' c : Bool) :
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := by
         rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
-          ENNReal.mul_inv_cancel (by norm_num) (by norm_num)]
+          mul_inv_cancel (by norm_num) (by norm_num)]
     _ ≤ _ := by gcongr; exact rrOut_fiber_ge b' c
 
 /-- The `α`-th moment between rounds on different bits is `(3^α + 3^{1-α}) / 4`. -/
@@ -95,13 +106,13 @@ theorem fDiv_rrOut {α : ℝ} (hα : 1 < α) (b : Bool) :
     fDiv (· ^ α) (draw.map (rrOut b)) (draw.map (rrOut !b)) = ((3 ^ α + 3 ^ (1 - α)) / 4 : ℝ) := by
   rw [fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero (by linarith)),
     Fintype.sum_bool, map_rrOut_singleton, map_rrOut_singleton, map_rrOut_singleton,
-    map_rrOut_singleton, Real.rpow_sub (by norm_num), Real.rpow_one]
+    map_rrOut_singleton, rpow_sub (by norm_num), rpow_one]
   -- the two perspectives are `(3/4)^α (1/4)^{1-α}` and `(1/4)^α (3/4)^{1-α}`; move to ℝ and
   -- clear denominators
   cases b
   all_goals
-    norm_num [persp_rpow_of_pos, Real.div_rpow]
-    rw [← EReal.coe_mul, ← EReal.coe_mul, ← EReal.coe_add, EReal.coe_eq_coe_iff]
+    norm_num [persp_rpow_of_pos, div_rpow]
+    rw [← coe_mul, ← coe_mul, ← coe_add, coe_eq_coe_iff]
     field_simp
   ring
 
@@ -174,7 +185,7 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
       wp L ⊤ (rr b) Φ := by
   iintro ⟨Hj, Hb, H⟩
   -- unfold rr's let binder so wp_bind/tp_bind can focus the draw
-  simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
+  simp only [rr, close, closeRec, ↓reduceIte]
   wp_bind (pl% rand(#4, #()))
   tp_bind (pl% rand(#4, #()))
   iapply wp_couple_rand_rand_spend 4 (by norm_num) _ c hc (hcpl b b')
@@ -247,7 +258,7 @@ noncomputable abbrev rrCountMech (k : ℕ) (σ : State rT) : Mechanism Bool (Exp
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsSupportLocal] [L.HasBind] [L.IsZeroLeft]
   [L.IsLeftContinuous] [L.IsBudgetClosed] (c : B) (hc : IsAddLeftRegular c)
-  (hcpl : RRCoupling L c)
+  (hcpl : RRCoupling L c) {D : GradedDivergence.{0} B} [L.IsSound D]
 include hc hcpl
 
 /-- `k` rounds couple equal outputs at `k • c`, given a coupling of one round's draws at `c`. -/
@@ -259,14 +270,12 @@ theorem rrCount_rel (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
       rrCount_refines_of c (rr_refines_of c hc hcpl) b b' k).mono le_rfl adequacyRel_eq_subset
 
 /-- `k` rounds are within `k • c` in every divergence `L` is sound for. -/
-theorem rrCount_div {D : GradedDivergence.{0} B} [L.IsSound D] (b b' : Bool) (k : ℕ)
-    (σ σ' : State rT) :
+theorem rrCount_div (b b' : Bool) (k : ℕ) (σ σ' : State rT) :
     D (k • c) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨rrCount b' k, σ'⟩) :=
   IsSound.sound (rrCount_rel c hc hcpl b b' k σ σ')
 
 /-- The loop as a mechanism is `k • c`-private in every divergence `L` is sound for. -/
-theorem rrCount_isPrivate {D : GradedDivergence.{0} B} [L.IsSound D] (k : ℕ) (σ : State rT) :
-    (rrCountMech k σ).IsPrivate D ⊤ (k • c) :=
+theorem rrCount_isPrivate (k : ℕ) (σ : State rT) : (rrCountMech k σ).IsPrivate D ⊤ (k • c) :=
   fun b b' _ ↦ rrCount_div c hc hcpl b b' k σ σ
 
 end Adequacy
@@ -274,13 +283,13 @@ end Adequacy
 /-! ## The budget `(ln 3, 0)` of the DP and zCDP files -/
 
 /-- The DP factor of budget `ln 3` is `3`. -/
-theorem expBudget_log_three : expBudget (ENNReal.ofReal (Real.log 3)) = 3 := by
-  rw [expBudget_of_ne_top ENNReal.ofReal_ne_top,
-    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num)]
+theorem expBudget_log_three : expBudget (ofReal (log 3)) = 3 := by
+  rw [expBudget_of_ne_top ofReal_ne_top,
+    toReal_ofReal (log_nonneg (by norm_num)), exp_log (by norm_num)]
   norm_num
 
 /-- The privacy budget `(ln 3, 0)`, shared by the dp and zCDP liftings. -/
-noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (Real.log 3), 0)
+noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 3), 0)
 
 /-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
 theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp

@@ -17,6 +17,8 @@ The `wp` rules that couple a program draw with a spec draw or tape: free rules a
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 open scoped AppGS
+open Cfg Exp BIFUpdate LawfulSet BudgetCredit ENNReal
+open List (map_eq_nil_iff)
 
 namespace ProbLang
 
@@ -54,17 +56,59 @@ section CouplingRules
 
 variable [BudgetGS B GF] [L.IsReflexive]
 
+/-! ### Step premises for the core rule -/
+
+/-- A unit-label `rand` steps to the uniform distribution, in the shape of the core rule's
+`HstepL`/`HstepR` premise (it needs no resource). -/
+theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
+    ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#z, #())) σ ∧
+      primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ⌝ := by
+  iintro - -
+  ipureintro
+  exact randUnit_uniform_step Hz σ
+
+/-- A `rand` on an empty program tape steps to the uniform distribution. -/
+theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State rT) :
+    ⊢ appStateAuth σ -∗ appNatTape α z [] -∗
+      ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
+        primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
+  unfold appNatTape
+  iintro Hσ ⟨%fs, %hmap, Hb⟩
+  obtain rfl : fs = [] := map_eq_nil_iff.mp hmap
+  ihave %hlk := app_state_lookup_tape $$ Hσ Hb
+  ipureintro
+  exact randLbl_empty_uniform_step Hz hlk
+
+/-- A `rand` on an empty spec tape steps to the uniform distribution. -/
+theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp rT)
+    (σ : State rT) :
+    ⊢ specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
+      ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
+        primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
+  unfold specNatTape
+  iintro Hs ⟨%fs, %hmap, Hb⟩
+  obtain rfl : fs = [] := map_eq_nil_iff.mp hmap
+  ihave %hlk := spec_auth_lookup_tape $$ Hs Hb
+  ipureintro
+  exact randLbl_empty_uniform_step Hz hlk
+
+/-! ### The core rule -/
+
+section Draw
+variable (z : Int) (f : Int → Int)
+  (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
+  (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
+  (Hz : 0 < z) (K : Ectx rT) (E : CoPset)
+include hdom hbij Hz
+
 /-- Core rule: if the resource `A` shows that `eL` (program side) and `eR` (spec side) each step to
 `Cfg.uniform z`, couple the two draws along the bijection `f` at budget `0` and return `A`. -/
-theorem wp_couple_rand_core (z : Int) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) {eL eR : Exp rT} (K : Ectx rT) (E : CoPset) (A : IProp GF) [Timeless A]
+theorem wp_couple_rand_core {eL eR : Exp rT} (A : _) [Timeless A]
     (HvL : eL.toVal? = none) (HvR : ¬ eR.isValue)
     (HstepL : ∀ σ, ⊢ appStateAuth σ -∗ A -∗
-      ⌜Discrete.Reducible eL σ ∧ primStep ⟨eL, σ⟩ = Cfg.uniform z σ⌝)
-    (HstepR : ∀ e' σ', ⊢ Cfg.specAuth ⟨e', σ'⟩ -∗ A -∗
-      ⌜Discrete.Reducible eR σ' ∧ primStep ⟨eR, σ'⟩ = Cfg.uniform z σ'⌝)
+      ⌜Discrete.Reducible eL σ ∧ primStep ⟨eL, σ⟩ = uniform z σ⌝)
+    (HstepR : ∀ e' σ', ⊢ specAuth ⟨e', σ'⟩ -∗ A -∗
+      ⌜Discrete.Reducible eR σ' ∧ primStep ⟨eR, σ'⟩ = uniform z σ'⌝)
     (Φ : Val rT → _) : iprop%
     ▷ A ∗ ⤇ K.fill eR ∗ (∀ n, A ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E eL Φ := by
@@ -81,14 +125,14 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   have hcpl : L.Rel 0 (CoupledDraw z f σ₁ σ₁' K)
       (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
     rw [hL.2, primStep_fill HvR, hR.2]
-    exact Cfg.uniform_rel_bij_fill Hz σ₁ σ₁' f K hdom hbij
-  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
+    exact uniform_rel_bij_fill Hz σ₁ σ₁' f K hdom hbij
+  imod subset empty_subset with Hclose
   imodintro
   iexists CoupledDraw z f σ₁ σ₁' K, 0, b
   iframe %hb %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, hn0, hnz, heq1, heq2⟩
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq1
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq2
   iintro !> !>
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
   imod Hclose
@@ -99,61 +143,62 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
   iframe HA Hj'
   ipureintro; exact ⟨hn0, hnz⟩
 
-/-! ### Step premises for the core rule -/
-
-/-- A unit-label `rand` steps to the uniform distribution, in the shape of the core rule's
-`HstepL`/`HstepR` premise (it needs no resource). -/
-theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
-    ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#z, #())) σ ∧
-      primStep ⟨pl(rand(#z, #())), σ⟩ = Cfg.uniform z σ⌝ := by
-  iintro - -
-  ipureintro
-  exact randUnit_uniform_step Hz σ
-
-/-- A `rand` on an empty program tape steps to the uniform distribution. -/
-theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State rT) :
-    ⊢ appStateAuth σ -∗ appNatTape α z [] -∗
-      ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
-        primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = Cfg.uniform z σ⌝ := by
-  unfold appNatTape
-  iintro Hσ ⟨%fs, %hmap, Hb⟩
-  obtain rfl : fs = [] := List.map_eq_nil_iff.mp hmap
-  ihave %hlk := app_state_lookup_tape $$ Hσ Hb
-  ipureintro
-  exact randLbl_empty_uniform_step Hz hlk
-
-/-- A `rand` on an empty spec tape steps to the uniform distribution. -/
-theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp rT)
-    (σ : State rT) :
-    ⊢ Cfg.specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
-      ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
-        primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = Cfg.uniform z σ⌝ := by
-  unfold specNatTape
-  iintro Hs ⟨%fs, %hmap, Hb⟩
-  obtain rfl : fs = [] := List.map_eq_nil_iff.mp hmap
-  ihave %hlk := spec_auth_lookup_tape $$ Hs Hb
-  ipureintro
-  exact randLbl_empty_uniform_step Hz hlk
-
 /-! ### Instances: unit draws, labelled draws, mixed -/
 
 /-- Couple `rand z ~ K[rand z]` along a bijection `f`. -/
-theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
+theorem wp_couple_rand_rand (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#z, #())) ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #())) Φ := by
   iintro ⟨Hj, Hcnt⟩
   iapply wp_couple_rand_core z f hdom hbij Hz K E iprop(emp)
-    Exp.rand_toVal?_eq_none Exp.rand_not_isValue
+    rand_toVal?_eq_none rand_not_isValue
     (fun σ => randUnit_step_pure Hz σ) (fun _ σ' => randUnit_step_pure Hz σ') Φ
   isplitr
   · iintro !>; iempintro
   iframe Hj
   iintro %n ⟨-, Hj', %hn⟩
   iapply Hcnt $$ %n %hn Hj'
+
+/-- Couple `rand` on an empty tape with a spec `rand` on an empty tape, along `f`. -/
+theorem wp_couple_rand_lbl_rand_lbl (α α' : Loc) (Φ : Val rT → _) : iprop%
+    ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
+    (∀ n, appNatTape α z [] ∗ specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗
+      ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
+    wp L E pl(rand(#z, #lbl α)) Φ := by
+  iintro ⟨Hα, Hα', Hj, Hcnt⟩
+  iapply wp_couple_rand_core z f hdom hbij Hz (eR := pl(rand(#z, #lbl α'))) K E
+    iprop(appNatTape α z [] ∗ specNatTape α' z [])
+    rand_toVal?_eq_none rand_not_isValue
+    (fun σ => by iintro Hσ ⟨HA, -⟩; iapply (appNatTape_empty_rand_step Hz α σ) $$ Hσ HA)
+    (fun e' σ' => by iintro Hs ⟨-, HS⟩; iapply (specNatTape_empty_rand_step Hz α' e' σ') $$ Hs HS)
+    Φ
+  isplitl [Hα Hα']
+  · iintro !>; iframe
+  iframe Hj
+  iintro %n ⟨⟨HA, HS⟩, Hj', %hn⟩
+  iapply Hcnt
+  iframe HA HS Hj' %hn
+
+/-- Couple `rand` on an empty tape with a spec `rand`, along `f`. -/
+theorem wp_couple_tape_rand (α : Loc) (Φ : Val rT → _) : iprop%
+    ▷ appNatTape α z [] ∗ ⤇ K.fill pl(rand(#z, #())) ∗
+    (∀ n, appNatTape α z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
+    wp L E pl(rand(#z, #lbl α)) Φ :=
+  wp_couple_rand_core z f hdom hbij Hz K E iprop(appNatTape α z [])
+    rand_toVal?_eq_none rand_not_isValue
+    (appNatTape_empty_rand_step Hz α) (fun _ σ' => randUnit_step_pure Hz σ') Φ
+
+/-- Couple `rand` with a spec `rand` on an empty tape, along `f`. -/
+theorem wp_couple_rand_tape (α' : Loc) (Φ : Val rT → _) : iprop%
+    ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
+    (∀ n, specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
+    wp L E pl(rand(#z, #())) Φ :=
+  wp_couple_rand_core z f hdom hbij Hz K E iprop(specNatTape α' z [])
+    rand_toVal?_eq_none rand_not_isValue
+    (fun σ => randUnit_step_pure Hz σ) (specNatTape_empty_rand_step Hz α') Φ
+
+end Draw
 
 /-- Couple two `rand`s whose tapes have a size `M ≠ z`, so both draw fresh, along `f`. -/
 theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
@@ -168,7 +213,7 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
   iintro ⟨Hα, Hα', Hj, Hcnt⟩
   iapply wp_couple_rand_core z f hdom hbij Hz (eR := pl(rand(#z, #lbl α'))) K E
     iprop(appNatTape α M xs ∗ specNatTape α' M ys)
-    Exp.rand_toVal?_eq_none Exp.rand_not_isValue
+    rand_toVal?_eq_none rand_not_isValue
     (fun σ => by
       unfold appNatTape
       iintro Hσ ⟨⟨%fs, -, Hb⟩, -⟩
@@ -187,53 +232,6 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
   iintro %n ⟨⟨HA, HS⟩, Hj', %hn⟩
   iapply Hcnt
   iframe HA HS Hj' %hn
-
-/-- Couple `rand` on an empty tape with a spec `rand` on an empty tape, along `f`. -/
-theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α α' : Loc) (Φ : Val rT → _) : iprop%
-    ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
-    (∀ n, appNatTape α z [] ∗ specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗
-      ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp L E pl(rand(#z, #lbl α)) Φ := by
-  iintro ⟨Hα, Hα', Hj, Hcnt⟩
-  iapply wp_couple_rand_core z f hdom hbij Hz (eR := pl(rand(#z, #lbl α'))) K E
-    iprop(appNatTape α z [] ∗ specNatTape α' z [])
-    Exp.rand_toVal?_eq_none Exp.rand_not_isValue
-    (fun σ => by iintro Hσ ⟨HA, -⟩; iapply (appNatTape_empty_rand_step Hz α σ) $$ Hσ HA)
-    (fun e' σ' => by iintro Hs ⟨-, HS⟩; iapply (specNatTape_empty_rand_step Hz α' e' σ') $$ Hs HS)
-    Φ
-  isplitl [Hα Hα']
-  · iintro !>; iframe
-  iframe Hj
-  iintro %n ⟨⟨HA, HS⟩, Hj', %hn⟩
-  iapply Hcnt
-  iframe HA HS Hj' %hn
-
-/-- Couple `rand` on an empty tape with a spec `rand`, along `f`. -/
-theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α : Loc) (Φ : Val rT → _) : iprop%
-    ▷ appNatTape α z [] ∗ ⤇ K.fill pl(rand(#z, #())) ∗
-    (∀ n, appNatTape α z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp L E pl(rand(#z, #lbl α)) Φ :=
-  wp_couple_rand_core z f hdom hbij Hz K E iprop(appNatTape α z [])
-    Exp.rand_toVal?_eq_none Exp.rand_not_isValue
-    (appNatTape_empty_rand_step Hz α) (fun _ σ' => randUnit_step_pure Hz σ') Φ
-
-/-- Couple `rand` with a spec `rand` on an empty tape, along `f`. -/
-theorem wp_couple_rand_tape (z : Int) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α' : Loc) (Φ : Val rT → _) : iprop%
-    ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
-    (∀ n, specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
-    wp L E pl(rand(#z, #())) Φ :=
-  wp_couple_rand_core z f hdom hbij Hz K E iprop(specNatTape α' z [])
-    Exp.rand_toVal?_eq_none Exp.rand_not_isValue
-    (fun σ => randUnit_step_pure Hz σ) (specNatTape_empty_rand_step Hz α') Φ
 
 /-! ### Presampling onto tapes -/
 
@@ -257,7 +255,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %hlk := app_state_lookup_tape $$ Hσ Hα
   ihave %hlkₛ := spec_auth_lookup_tape $$ Hs Hαₛ
-  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
+  imod subset empty_subset with Hclose
   imodintro
   iexists (fun σ₂ σ₂' => ∃ n, 0 ≤ n ∧ n < z ∧
       σ₂ = σ₁.update_tapes (·.insert α ⟨z, fs ++ [tapeIdxOf Hz n]⟩) ∧
@@ -304,11 +302,11 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
     (∀ n m, ⌜S n m⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
-  iapply wp_lift_prim_steps_coupl Exp.rand_toVal?_eq_none
+  iapply wp_lift_prim_steps_coupl rand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hdec⟩
-  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
+  imod supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hdec⟩
+  imod subset empty_subset with Hclose
   imodintro
   let S' : Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
     ∃ n m, S n m ∧ c₁ = ⟨pl(#n), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#m), σ₁'⟩
@@ -318,12 +316,12 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
   have hredR := ((randUnit_uniform_step HzR σ₁').1.toReducible).fill K
   have hcpl : L.Rel c S' (primStep ⟨pl(rand(#zL, #())), σ₁⟩)
       (primStep ⟨K.fill pl(rand(#zR, #())), σ₁'⟩) := by
-    rw [primStep_rand_unit HzL, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HzR]
-    exact Cfg.uniform_rel_fill HzL HzR σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
+    rw [primStep_rand_unit HzL, primStep_fill rand_not_isValue, primStep_rand_unit HzR]
+    exact uniform_rel_fill HzL HzR σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
   iframe %hsum %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, m, hS, heq1, heq2⟩
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq1
-  obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp heq2
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq1
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq2
   iintro !> !>
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
   imod Hclose
@@ -354,7 +352,7 @@ theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int)
     (∀ n, ⌜0 ≤ n ∧ n < zL⌝ -∗ ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
   iintro ⟨Hj, Herr, Hcnt⟩
-  ihave Herr := BudgetCredit.weaken hb $$ Herr
+  ihave Herr := weaken hb $$ Herr
   iapply wp_couple_rand_rand_lift zL zR HzL HzR _ binj hc Hcpl K E Φ
   iframe Hj Herr
   iintro %n %m %⟨hn0, hnz, rfl⟩ Hj'
@@ -372,7 +370,7 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
     (∀ m, ⌜0 ≤ m ∧ m < zR⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int (f m))) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
   iintro ⟨Hj, Herr, Hcnt⟩
-  ihave Herr := BudgetCredit.weaken hb $$ Herr
+  ihave Herr := weaken hb $$ Herr
   iapply wp_couple_rand_rand_lift zL zR HzL HzR _ binj hc Hcpl K E Φ
   iframe Hj Herr
   iintro %n %m %⟨hm0, hmz, rfl⟩ Hj'
@@ -396,22 +394,22 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
     wp L E pl(rand(#z, #())) Φ := by
   classical
   iintro ⟨Hj, Herr, Hcnt⟩
-  iapply wp_lift_prim_steps_coupl_adv_absorbing Exp.rand_toVal?_eq_none
+  iapply wp_lift_prim_steps_coupl_adv_absorbing rand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   have hredL := (randUnit_uniform_step Hz σ₁).1.toReducible
   have hredR := (randUnit_uniform_step Hz σ₁').1.toReducible.fill K
-  imod BudgetCredit.supply_decrease hc $$ Hb Herr with ⟨%r, %hr, Hb⟩
-  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
+  imod supply_decrease hc $$ Hb Herr with ⟨%r, %hr, Hb⟩
+  imod subset empty_subset with Hclose
   have hb : s ε₁ + r ≤ b := hr.ge
   imodintro
-  have hlift := Cfg.uniform_lift_adv (L := L) (s := s) Hz f ε₁ ε₂ σ₁ σ₁' K hdom hbij hamort
-  iexists Cfg.advLeftover s z f σ₁ σ₁' K ε₂, s ε₁, r
+  have hlift := uniform_lift_adv (L := L) (s := s) Hz f ε₁ ε₂ σ₁ σ₁' K hdom hbij hamort
+  iexists advLeftover s z f σ₁ σ₁' K ε₂, s ε₁, r
   iframe %hb %hredL %hredR %hlift
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
   -- leftover absorbing: exit left; on a coupled draw it is s (ε₂ n) + r: re-mint the credit; off
   -- the graph it is ⊤, hence absorbing (contradiction)
-  by_cases habs : L.Absorbing (Cfg.advLeftover s z f σ₁ σ₁' K ε₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + r)
+  by_cases habs : L.Absorbing (advLeftover s z f σ₁ σ₁' K ε₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + r)
   · imod Hclose
     imodintro
     ileft
@@ -419,12 +417,12 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
     exact habs
   by_cases hg : CoupledDraw z f σ₁ σ₁' K ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩
   · obtain ⟨n, hn0, hnz, h1, h2⟩ := hg
-    obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h1
-    obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp h2
-    rw [Cfg.advLeftover_apply s f _ _ K ε₂ hn0 hnz] at habs ⊢
+    obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h1
+    obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h2
+    rw [advLeftover_apply s f _ _ K ε₂ hn0 hnz] at habs ⊢
     have hna : ¬ L.Absorbing (s (ε₂ n)) := fun h => habs (h.mono le_self_add)
     imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
-    imod BudgetCredit.supply_increase $$ Hb with ⟨Hb, Hfrag⟩
+    imod supply_increase $$ Hb with ⟨Hb, Hfrag⟩
     imod Hclose
     imodintro
     iright
@@ -434,7 +432,7 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
     iapply Hcnt $$ %n %⟨hn0, hnz⟩ %hna Hfrag Hj'
   · exfalso
     refine habs ?_
-    simp only [Cfg.advLeftover, hg, ↓reduceDIte]
+    simp only [advLeftover, hg, ↓reduceDIte]
     exact IsTopAbsorbing.absorbing_top.mono le_self_add
 
 /-- Couple `rand z ~ K[rand z]` along the identity, avoiding the outcome `bad` for
@@ -473,7 +471,7 @@ variable [BudgetCreditGS ENNReal GF]
 theorem isAddLeftRegular_natCast_div {a b : ℕ} (hb : b ≠ 0) :
     IsAddLeftRegular ((a : ENNReal) / b) :=
   (IsAddRegular.of_ne_top
-    (ENNReal.div_ne_top (ENNReal.natCast_ne_top _) (Nat.cast_ne_zero.2 hb))).1
+    (div_ne_top (natCast_ne_top _) (Nat.cast_ne_zero.2 hb))).1
 
 /-- Couple `rand zL ~ K[rand zR]` (`zL ≤ zR`) along an injection `f : [0,zL) ↪ [0,zR)`, spending
 `(zR - zL)/zR` error credits (Approxis's `wp_couple_rand_rand_inj`). -/

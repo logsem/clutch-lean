@@ -20,7 +20,9 @@ open scoped ENNReal
 namespace ProbLang
 namespace Presample
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (N : Int) (hN : 0 < N)
+
+include hN
 
 section Rel
 
@@ -31,8 +33,7 @@ variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
 local bi IProp GF
 
 /-- A draw from a fresh tape refines a plain draw. -/
-theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
-    ⊢ REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
+theorem drawTape_refines_draw : ⊢ REL[L] (drawTape (rT := rT) N) << draw N : lrel_int := by
   rel_alloctape_l α as Hα
   rel_pures
   rel_couple_TU α
@@ -43,7 +44,7 @@ theorem drawTape_refines_draw (N : Int) (hN : 0 < N) :
 /-- Drawing from `α` then `β` refines drawing from `β` then `α`, at budget `0`.
 Both tapes are presampled, each left tape coupled with its right twin along `id`, before either
 program draws; afterwards every draw only reads its tape. -/
-theorem drawAB_refines_drawBA (N : Int) (hN : 0 < N) :
+theorem drawAB_refines_drawBA :
     ⊢ REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
   rel_alloctape_l α as Hα
   rel_alloctape_r α' as Hα'
@@ -72,8 +73,7 @@ end Rel
 /-! ## Adequacy: from the refinement to a bound on executions -/
 
 /-- On every event, drawing in the order `α, β` is at most as likely as in the order `β, α`. -/
-theorem drawAB_le_drawBA (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Exp rT)}
-    (hS : MeasurableSet S) :
+theorem drawAB_le_drawBA (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨drawAB N, σ⟩ S ≤ limExecV ⟨drawBA N, σ'⟩ S := by
   simpa using tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (L := codensity tv)
     (fun _ _ ↦ lrel_prod lrel_int lrel_int) _ _ σ σ' 0

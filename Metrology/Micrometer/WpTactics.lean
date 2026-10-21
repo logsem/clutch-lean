@@ -23,6 +23,9 @@ namespace ProbLang.MicrometerWpGS
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode
+open Exp (ofVal toVal?_ofVal toVal? closedFunVal? openRec closeRec)
+open UPred (instBIUPred)
+open Term (exprToSyntax)
 
 /-! ## Lemmas the tactics apply
 
@@ -64,10 +67,9 @@ end PureSteps
 
 variable {E : CoPset} {Φ : Val rT → IProp GF}
 
-/-- Close a value `wp` whose expression is only equal to `Exp.ofVal v`. -/
-public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) :
-    Φ v ⊢ wp L E e Φ :=
-  heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
+/-- Close a value `wp` whose expression is only equal to `ofVal v`. -/
+public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = ofVal v) : Φ v ⊢ wp L E e Φ :=
+  heq ▸ wp_value_of_toVal (toVal?_ofVal v)
 
 /-- Refold the expression of a `wp` along an equality. -/
 public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') : wp L E e' Φ ⊢ wp L E e Φ :=
@@ -81,7 +83,7 @@ public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSinglet
     {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
     [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     [L.IsTopAbsorbing] [L.HasBind] {E : CoPset}
-    (v : Val rT) {ea : Exp rT} (heq : ea = .alloc (Exp.ofVal v)) {Φ : Val rT → IProp GF} : iprop%
+    (v) {ea : Exp rT} (heq : ea = .alloc (ofVal v)) {Φ : Val rT → IProp GF} : iprop%
     (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E ea Φ :=
   heq ▸ wp_alloc
 
@@ -152,11 +154,11 @@ public section
 attribute [pl_step_simp] beq_self_eq_true beq_false_of_ne
 
 /-- Erases `openRec` around a closed spliced constant. -/
-simproc [pl_step_simp] openRecClosedLeaf (Exp.openRec _ _ _) := fun e => do
+simproc [pl_step_simp] openRecClosedLeaf (openRec _ _ _) := fun e => do
   return (← eraseOpenCloseLeaf? e).getD .continue
 
 /-- Erases `closeRec` around a closed spliced constant. -/
-simproc [pl_step_simp] closeRecClosedLeaf (Exp.closeRec _ _ _) := fun e => do
+simproc [pl_step_simp] closeRecClosedLeaf (closeRec _ _ _) := fun e => do
   return (← eraseOpenCloseLeaf? e).getD .continue
 
 end
@@ -194,7 +196,7 @@ meta structure WpGoal where
   Φ : LeanExpr
   hu : QuotedLevelDefEq u 0
   hprop : $prop =Q IProp $GF
-  hbi : $bi =Q UPred.instBIUPred
+  hbi : $bi =Q instBIUPred
 
 /-- The leading `wp` arguments `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget`, shared
 by every lemma the tactics apply (as `mkAppOptM` arguments; class instances on `L` follow as
@@ -216,8 +218,8 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
       | throwError "the goal {goal} must be an `IProp` at universe level 0"
     let ~q(IProp $GF) := prop
       | throwError "the goal {goal} must be an `IProp`"
-    let ~q(UPred.instBIUPred) := bi
-      | throwError "expected the BI of `IProp` to be `UPred.instBIUPred`"
+    let ~q(instBIUPred) := bi
+      | throwError "expected the BI of `IProp` to be `instBIUPred`"
     let goalE : LeanExpr := (← instantiateMVars goal).consumeMData
     unless goalE.getAppFn.consumeMData.isConstOf ``MicrometerWpGS.wp do
       throwError "the goal {goal} must be a `wp`"
@@ -256,7 +258,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
     -- level so the continuation displays the clean refocused expression.
     let Φc : LeanExpr ←
       withLocalDeclDQ `v q(Val $α) fun v => do
-        let body : Q(Exp $α) ← fill K q(Exp.ofVal $v)
+        let body : Q(Exp $α) ← fillQ K q(ofVal $v)
         mkLambdaFVars #[v] (g.mkWp body g.Φ)
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
@@ -269,8 +271,8 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
 meta def evalWithGoalExp (mk : Term → ProofModeM (TSyntax `tactic)) : TacticM Unit := do
   let tac ← runTacticWp fun mvar g => do
     addMVarGoal mvar
-    mk (← Term.exprToSyntax (g.e : LeanExpr))
-  Tactic.evalTactic tac
+    mk (← exprToSyntax (g.e : LeanExpr))
+  evalTactic tac
 
 /-! ## `wp_pure` — take a pure step at a redex, auto-discovering its context -/
 
@@ -299,11 +301,11 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
       let cleaned ← reduceExp e₂syn
       if step.names.isEmpty then pure cleaned
       else pure (← reattachNames step.names 0 cleaned).1
-    let inner : Q(Exp $α) ← fill K e₂
+    let inner : Q(Exp $α) ← fillQ K e₂
     have newGoal : Q(IProp $GF) := g.mkWp inner g.Φ
     let pf ← addBIGoal hyps newGoal
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
-    let gs ← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
+    let gs ← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
     let stepPf ← mkAppOptM ``MicrometerWpGS.wp_pure_step_ctx
       (g.prefix.append #[none, none, none, some K, some φ, some n,
@@ -332,25 +334,25 @@ macro "wp_pures" : tactic =>
 elab "wp_value" : tactic =>
   runTacticWp fun mvar g => do
     let { α, GF, hyps, E, e, .. } := g
-    -- Fast path: an `Exp.ofVal v` head is a value with a *lemma* witness — the
+    -- Fast path: an `ofVal v` head is a value with a *lemma* witness — the
     -- computational `toVal?` may be stuck on an abstract `v`.
     let e0 : Q(Exp $α) ← pure e.consumeMData
     let (v, hproof) ← show ProofModeM (Q(Val $α) × LeanExpr) from
       match e0 with
-      | ~q(Exp.ofVal $v) => return (v, q(Exp.toVal?_ofVal $v))
-      -- Val.fst v is Exp.ofVal v unfolded
-      | ~q(Val.fst $v) => return (v, q(Exp.toVal?_ofVal $v))
+      | ~q(ofVal $v) => return (v, q(toVal?_ofVal $v))
+      -- Val.fst v is ofVal v unfolded
+      | ~q(Val.fst $v) => return (v, q(toVal?_ofVal $v))
       | _ => do
-        -- A closure's value check goes through the kernel (`Exp.closedFunVal?`).
-        let tv : Q(Option (Val $α)) ← match ← Exp.closedFunVal? α e with
+        -- A closure's value check goes through the kernel (`closedFunVal?`).
+        let tv : Q(Option (Val $α)) ← match ← closedFunVal? α e with
           | some (some v) => have v : Q(Val $α) := v; pure q(some $v)
           | some none => pure q(none)
-          | none => whnf q(Exp.toVal? $e)
+          | none => whnf q(toVal? $e)
         let ~q(some $v) := tv
           | throwTacticEx `wp_value mvar m!"{← ppExpr e} is not a value"
-        let hproof : Q(Exp.toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar
-          q(Exp.toVal? $e = some $v)
-        (← Tactic.evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
+        let hproof : Q(toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar
+          q(toVal? $e = some $v)
+        (← evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
         return (v, hproof)
     have goal : Q(IProp $GF) := LeanExpr.headBeta (mkApp g.Φ v)
     let c : Q(Prop) ← mkFreshExprMVarQ q(Prop)
@@ -377,13 +379,13 @@ stepped β-residual back to its library form before applying an induction hypoth
 elab "wp_show" colGt ppSpace e':term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_expr_eq (e := $eS) (e' := $e') (by kernel_rfl)))
 
-/-- `wp_value_at v` closes `wp L E e Φ` with `e` only definitionally `Exp.ofVal v`, leaving
+/-- `wp_value_at v` closes `wp L E e Φ` with `e` only definitionally `ofVal v`, leaving
 `Φ v`. -/
 elab "wp_value_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_value_eq (e := $eS) $v (by kernel_rfl)))
 
 /-- `wp_alloc_at v` applies `wp_alloc` to `wp L E (alloc e) Φ` with `e` only definitionally
-`Exp.ofVal v`. -/
+`ofVal v`. -/
 elab "wp_alloc_at" colGt ppSpace v:term : tactic =>
   evalWithGoalExp fun eS => `(tactic| iapply (wp_alloc_eq (ea := $eS) $v (by kernel_rfl)))
 
@@ -428,11 +430,11 @@ focus of its expression at which `pred` succeeds. -/
 meta def findSpecFocus {α : Q(Type)} {β : Type} (tac : Name) (mvar : MVarId) (g : WpGoal)
     (noFocus : Q(Exp $α) → MessageData) (pred : Q(Exp $α) → ProofModeM β) :
     ProofModeM (Name × Q(Exp $α) × Option Q(Ectx $α) × ECtxResultOf α β) := do
-  let some (hypName, espec) ← findSpecHyp (β := α) g
+  let some (hypName, espec) ← findSpecHyp g
     | throwTacticEx tac mvar m!"no `⤇` hypothesis found"
   -- A library lemma's hypothesis has the shape `Ectx.fill K inner` with `K` abstract:
   -- discover on `inner` and let the caller append `K` to the found frames.
-  let (Kabs?, especInner) ← splitAbstractCtx (β := α) espec
+  let (Kabs?, especInner) ← splitAbstractCtx espec
   -- A prior spec step may leave the hypothesis as an unreduced (concrete) `Ectx.fill`;
   -- expose the head constructor for discovery (anchors still use `espec` verbatim).
   let especW : Q(Exp $α) ← whnf especInner
@@ -453,22 +455,22 @@ elab "tp_pure_core" : tactic => do
     have K : Q(Ectx $α) := appendAbstractCtx Kd Kabs?
     let (e₁, e₂syn) := res.result
     let e₂ : Q(Exp $α) ← reduceExp e₂syn
-    let e₂inner : Q(Exp $α) ← fill Kd e₂
+    let e₂inner : Q(Exp $α) ← fillQ Kd e₂
     have e₂full : Q(Exp $α) := match Kabs? with
       | some Kabs => q(Ectx.fill $Kabs $e₂inner)
       | none => e₂inner
-    let Ks ← Term.exprToSyntax K
-    let e₁s ← Term.exprToSyntax e₁
+    let Ks ← exprToSyntax K
+    let e₁s ← exprToSyntax e₁
     -- `e'` must be passed in synthesis form (`Exp.open' …`) for the `PureExec`
     -- instance to be found; the anchored `e₂full` carries the reduced display form.
-    let e₂s ← Term.exprToSyntax e₂syn
-    let especS ← Term.exprToSyntax espec
-    let e₂fullS ← Term.exprToSyntax e₂full
+    let e₂s ← exprToSyntax e₂syn
+    let especS ← exprToSyntax espec
+    let e₂fullS ← exprToSyntax e₂full
     let hypIdent := mkIdent hypName
-    `(tactic| imod (step_pure_at (K := $Ks) (e := $e₁s) (e' := $e₂s)
+    `(tactic| imod (step_pure_at $Ks (e := $e₁s) (e' := $e₂s)
         (e₁full := $especS) (e₂full := $e₂fullS) (by kernel_rfl) (by kernel_rfl) (by is_value))
         $$ $hypIdent:ident with $hypIdent:ident)
-  Tactic.evalTactic tacSeq
+  evalTactic tacSeq
 
 /-- `tp_pure` takes one pure step on the `⤇` hypothesis, then erases stuck `openRec`/`closeRec`
 wrappers (otherwise they accumulate and every later step re-`whnf`s them). -/
@@ -496,14 +498,14 @@ elab "tp_bind" colGt ppSpace focus:term:max : tactic => do
       fun e => do guard (← isDefEq e focusE)
     have Kd : Q(Ectx $α) := res.K
     have K : Q(Ectx $α) := appendAbstractCtx Kd Kabs?
-    let Ks ← Term.exprToSyntax K
+    let Ks ← exprToSyntax K
     -- Use the user's `focus` term, not the matched subterm, so the hypothesis reads cleanly.
-    let es ← Term.exprToSyntax (focusE : LeanExpr)
-    let especS ← Term.exprToSyntax espec
+    let es ← exprToSyntax (focusE : LeanExpr)
+    let especS ← exprToSyntax espec
     let hypIdent := mkIdent hypName
     `(tacticSeq|
       ihave $hypIdent:ident := specProgFrag_reshape
         (e₁ := $especS) (e₂ := Ectx.fill $Ks $es) (by kernel_rfl) $$ $hypIdent:ident)
-  Tactic.evalTactic tacSeq
+  evalTactic tacSeq
 
 end ProbLang.MicrometerWpGS

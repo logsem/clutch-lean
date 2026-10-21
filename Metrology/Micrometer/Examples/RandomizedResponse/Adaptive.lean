@@ -22,6 +22,14 @@ open scoped ENNReal
 namespace ProbLang
 namespace RandomizedResponse
 
+open MeasureTheory.Measure (ext_iff_singleton map_apply map_map id_comp)
+open Set (Ico indicator finite_Ico)
+open Finset (filter_insert filter_singleton)
+open ENNReal (ofReal div_eq_inv_mul isAddLeftRegular_ofReal)
+open Real (log)
+open BindLaw (escort)
+open Cfg (drawCost drawCost_apply)
+
 /-! ## The second round: one `rr3` draw at `log (3/2)` -/
 
 /-- The report of `rr3 b` as a function of its draw. -/
@@ -31,19 +39,19 @@ def rr3Out (b : Bool) (r : Int) : Bool := if r < 2 then b else !b
 randomized response on `d`. -/
 theorem map_unifInt_three {h : Int → Bool} {d : Bool} (h0 : h 0 = d) (h1 : h 1 = d)
     (h2 : h 2 = !d) : (unifInt 3 (by norm_num)).map h = randResp d := by
-  refine Measure.ext_iff_singleton.2 fun c ↦ ?_
-  rw [Measure.map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
+  refine ext_iff_singleton.2 fun c ↦ ?_
+  rw [map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
     show Finset.Ico (0 : Int) 3 = {0, 1, 2} by decide]
-  cases d <;> cases c <;> simp_all [randResp, Set.indicator, Finset.filter_insert,
-    Finset.filter_singleton, ENNReal.div_eq_inv_mul, mul_comm]
+  cases d <;> cases c <;> simp_all [randResp, indicator, filter_insert,
+    filter_singleton, div_eq_inv_mul, mul_comm]
 
 /-- The second round couples along equal reports at `log (3/2)`. -/
 theorem rr3_coupling :
-    (codensity (renyiDivergence 2)).Rel (ENNReal.ofReal (Real.log (3 / 2)))
+    (codensity (renyiDivergence 2)).Rel (ofReal (log (3 / 2)))
       (fun r r' ↦ rr3Out false r = rr3Out true r') (unifInt 3 (by norm_num))
       (unifInt 3 (by norm_num)) :=
   codensity_renyi_rel_of_map .of_discrete .of_discrete <| by
-    rw [map_unifInt_three (d := false) rfl rfl rfl, map_unifInt_three (d := true) rfl rfl rfl]
+    rw [map_unifInt_three rfl rfl rfl, map_unifInt_three rfl rfl rfl]
     exact renyiDivergence_randResp
 
 /-! ## The first round: the escort head at `log (19/12)` -/
@@ -58,11 +66,11 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
 cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/
 theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
-    (BindLaw.escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+    (escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
-      (Cfg.drawCost σ σ' K adaptiveCost) (ENNReal.ofReal (Real.log (19 / 12))) := by
+      (drawCost σ σ' K adaptiveCost) (ofReal (log (19 / 12))) := by
   classical
-  have hK (a b : Exp rT) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
+  have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
   -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
   -- at draw `2`, right reports `true` at draws `0, 1`)
   have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) :=
@@ -77,18 +85,18 @@ theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
         (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
       ext
       simp
-  have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Set.Ico 0 3)ᶜ = 0 := by
-    rw [Measure.map_apply .of_discrete ((Set.finite_Ico 0 3).image x).measurableSet.compl]
+  have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Ico 0 3)ᶜ = 0 := by
+    rw [map_apply .of_discrete ((finite_Ico 0 3).image x).measurableSet.compl]
     exact measure_mono_null (fun n hn h ↦ hn ⟨n, h, rfl⟩) (unifInt_compl_Ico _)
-  refine escortHead_of_map hf hg ((Set.finite_Ico 0 3).image _).measurableSet
-    ((Set.finite_Ico 0 3).image _).measurableSet hsupp hsupp stageTwoCost ?_ ?_
+  refine escortHead_of_map hf hg ((finite_Ico 0 3).image _).measurableSet
+    ((finite_Ico 0 3).image _).measurableSet hsupp hsupp stageTwoCost ?_ ?_
   · rintro _ _ ⟨n, ⟨hn0, hn3⟩, rfl⟩ ⟨m, ⟨hm0, hm3⟩, rfl⟩ hfg
-    rw [Cfg.drawCost_apply]
+    rw [drawCost_apply]
     interval_cases n <;> interval_cases m <;> simp_all [adaptiveCost, rr3Out]
-  · rw [Measure.map_map hf .of_discrete, Measure.map_map hg .of_discrete,
+  · rw [map_map hf .of_discrete, map_map hg .of_discrete,
       map_unifInt_three (d := false) (by simp) (by simp) (by simp),
       map_unifInt_three (d := true) (by simp [hK]) (by simp [hK]) (by simp [hK])]
-    simpa [Measure.id_comp] using renyiDivergence_randResp_escort
+    simpa [id_comp] using renyiDivergence_randResp_escort
 
 /-! ## The relational proof -/
 
@@ -102,12 +110,12 @@ local bi IProp GF
 /-- The adaptive program on `false` refines it on `true` at equal pairs of reports, spending
 `log (19/12)`: the escort law at the first draw, the canonical law at the second. -/
 theorem rrAdaptive_refines :
-    ⊢ ↯b (ENNReal.ofReal (Real.log (19 / 12))) -∗
+    ⊢ ↯b (ofReal (log (19 / 12))) -∗
       REL[codensity (renyiDivergence 2)] (rrAdaptive (rT := rT) false) << (rrAdaptive true) :
         lrel_prod lrel_bool lrel_bool := by
   iintro Hb
-  rel_couple_UU_law (BindLaw.escort 2) adaptiveCost (ENNReal.ofReal (Real.log (19 / 12)))
-    (ENNReal.isAddLeftRegular_ofReal _) escortHead_rr3
+  rel_couple_UU_law (escort 2) adaptiveCost (ofReal (log (19 / 12)))
+    (isAddLeftRegular_ofReal _) escortHead_rr3
   iframe Hb
   iintro %n %m %hR Hb
   rel_pures
@@ -119,7 +127,7 @@ theorem rrAdaptive_refines :
   -- report `true`, spend the remaining `log (3/2)` on the second draw
   · rel_values
   · rel_couple_UU_spend (fun r r' ↦ rr3Out false r = rr3Out true r') _
-      (ENNReal.isAddLeftRegular_ofReal _) rr3_coupling
+      (isAddLeftRegular_ofReal _) rr3_coupling
     iframe Hb
     iintro %r %r' %hr
     rel_pures
@@ -134,7 +142,7 @@ end Logic
 /-- The adaptive program on `false` and on `true` is within Rényi budget `log (19/12)` at
 order `2`, as `AdaptiveRenyi.renyiDivergence_adaptive` computes for the measures. -/
 theorem rrAdaptive_renyi (σ σ' : State rT) :
-    renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12)))
+    renyiDivergence 2 (ofReal (log (19 / 12)))
       (limExecV ⟨rrAdaptive false, σ⟩) (limExecV ⟨rrAdaptive true, σ'⟩) :=
   approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (fun _ _ ↦ lrel_prod lrel_bool lrel_bool)
     _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)

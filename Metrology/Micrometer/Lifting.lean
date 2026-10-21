@@ -25,30 +25,6 @@ open SpecUpdateGS
 
 /-! ## Coupled steps with a leftover `R` -/
 
-/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
-(Rocq `wp_lift_step_couple_adv`). -/
-theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b -∗ |={E, ∅}=>
-      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
-        ⌜b₁ + b₂ ≤ b⌝ ∗
-        ⌜Reducible e₁ σ₁⌝ ∗
-        ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
-          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
-            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
-    wp L E e₁ Φ := by
-  iintro H
-  iapply wp_lift_step_prog_couple hv
-  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hred, %hred', %hcpl, H⟩
-  imodintro
-  iapply progCoupl_steps_adv hb hred hred' hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
-  iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
-
 /-- Lift a coupled program and spec step whose leftover `R` is the new budget at each pair. -/
 theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (hv : e₁.toVal? = none) : iprop%
@@ -71,13 +47,38 @@ theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 
+variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
+  [L.IsSupportLocal]
+
+/-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
+(Rocq `wp_lift_step_couple_adv`). -/
+theorem wp_lift_prim_steps_coupl_adv (hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
+      budgetInterp b -∗ |={E, ∅}=>
+      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
+        ⌜b₁ + b₂ ≤ b⌝ ∗
+        ⌜Reducible e₁ σ₁⌝ ∗
+        ⌜Reducible e₁' σ₁'⌝ ∗
+        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
+          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
+            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
+    wp L E e₁ Φ := by
+  iintro H
+  iapply wp_lift_step_prog_couple hv
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %b₁, %b₂, %hb, %hred, %hred', %hcpl, H⟩
+  imodintro
+  iapply progCoupl_steps_adv hb hred hred' hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
+  iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
+
 /-! ## Absorbing exit and presampling -/
 
 /-- Budget-splitting coupled step whose continuation may exit with an absorbing budget instead of
 proving `wp` (Rocq `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is
 `L.Absorbing b`). -/
-theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
-    [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hv : e₁.toVal? = none) : iprop%
+theorem wp_lift_prim_steps_coupl_adv_absorbing (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
@@ -111,8 +112,7 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
 
 /-- Presample both sides: couple erasable distributions of the program and spec states at cost
 `0` (Rocq `wp_couple_erasables`). -/
-theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] : iprop%
+theorem wp_couple_erasables : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),

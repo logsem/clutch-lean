@@ -13,6 +13,7 @@ continuing `FundamentalCompat`. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
+open Ectx (fill)
 
 namespace ProbLang
 
@@ -32,13 +33,13 @@ variable {Δ : TyEnv rT GF}
 /-- The literal-pattern case of `pat_match_related`. -/
 theorem pat_match_lit {l l' : BaseLit rT} {v v' : Val rT}
     (hv : v = .ofBaseLit l') (hv' : v' = .ofBaseLit l') (hll : l = l' ∨ ¬ (l == l') = true) :
-    ⊢ (∃ (b b' : Val rT), ⌜tryMatch (.lit l) v.1 = some b.1 ∧
+    ⊢ (∃ b b', ⌜tryMatch (.lit l) v.1 = some b.1 ∧
       tryMatch (.lit l) v'.1 = some b'.1⌝ ∗ (interp L Ty.unit Δ).car b b') ∨
       ⌜tryMatch (.lit l) v.1 = none ∧ tryMatch (.lit l) v'.1 = none⌝ := by
   subst hv hv'
   rcases hll with rfl | hne
   · ileft
-    iexists (.unit : Val _), (.unit : Val _)
+    iexists .unit, .unit
     isplitr
     · ipureintro; exact ⟨tryMatch_lit_eq l, tryMatch_lit_eq l⟩
     rw [interp_unit]
@@ -50,9 +51,9 @@ theorem pat_match_lit {l l' : BaseLit rT} {v v' : Val rT}
 /-- Related values at a pattern's type either both match `p`, binding values related at the bound
 type, or both fail. -/
 theorem pat_match_related {τs τb : Ty} {p : Pat rT}
-    (Hpat : PatTyped τs p τb) (v v' : Val rT) :
+    (Hpat : PatTyped τs p τb) (v v') :
     (interp L τs Δ).car v v' ⊢
-      (∃ (b b' : Val rT), ⌜tryMatch p v.1 = some b.1 ∧ tryMatch p v'.1 = some b'.1⌝ ∗
+      (∃ b b', ⌜tryMatch p v.1 = some b.1 ∧ tryMatch p v'.1 = some b'.1⌝ ∗
         (interp L τb Δ).car b b') ∨
       ⌜tryMatch p v.1 = none ∧ tryMatch p v'.1 = none⌝ := by
   induction Hpat generalizing v v' with
@@ -68,8 +69,8 @@ theorem pat_match_related {τs τb : Ty} {p : Pat rT}
     iintro Hv
     iunfold lrel_int at Hv
     icases Hv with ⟨%n, %h⟩
-    have hll : (BaseLit.int z : BaseLit rT) = .int n ∨
-        ¬ ((BaseLit.int z : BaseLit rT) == .int n) = true := by
+    have hll : (.int z : BaseLit rT) = .int n ∨
+        ¬ ((.int z : BaseLit rT) == .int n) = true := by
       by_cases hzn : z = n <;> simp [hzn]
     iapply pat_match_lit h.1 h.2 hll
   | @lit_bool b =>
@@ -77,8 +78,8 @@ theorem pat_match_related {τs τb : Ty} {p : Pat rT}
     iintro Hv
     iunfold lrel_bool at Hv
     icases Hv with ⟨%b', %h⟩
-    have hll : (BaseLit.bool b : BaseLit rT) = .bool b' ∨
-        ¬ ((BaseLit.bool b : BaseLit rT) == .bool b') = true := by
+    have hll : (.bool b : BaseLit rT) = .bool b' ∨
+        ¬ ((.bool b : BaseLit rT) == .bool b') = true := by
       by_cases hbb : b = b' <;> simp [hbb]
     iapply pat_match_lit h.1 h.2 hll
   | lit_unit =>
@@ -149,7 +150,7 @@ end Patterns
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
-variable {A C : lrel rT GF} {e e' e1 e2 e1' e2' : Exp rT}
+variable {A C : lrel rT GF} {e e' e1 e2 e1' e2' : Exp rT} {l : BaseLit rT} {ι : Type _}
 
 /-! ## Operators
 
@@ -158,21 +159,21 @@ lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step
 (`refines_{un,bin}op_val`). -/
 
 /-- A binary operator on two values that evaluates to a literal is related to itself. -/
-theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) {l : BaseLit rT}
+theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT)
     (heval : op.eval w1.1 w2.1 = some (.lit l))
     (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢ refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
   refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
 
 /-- A unary operator on a value that evaluates to a literal is related to itself. -/
-theorem refines_unop_val (op : UnOp) (w : Val rT) {l : BaseLit rT}
+theorem refines_unop_val (op : UnOp) (w : Val rT)
     (heval : op.eval w.1 = some (.lit l)) (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢ refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
 /-- Binds both operands of a binary operator, whose values lie in a family `V`, then continues
 for every pair of indices. -/
-theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT)
+theorem refines_binop_bind (op : BinOp) (V : ι → Val rT)
     (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e1 e1' A ⊢
     refines L ⊤ e2 e2' A -∗
@@ -184,8 +185,8 @@ theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT)
   iintro %v2 %v2' Hv2
   icases hA v2 v2' $$ Hv2 with ⟨%i2, %hv2, %hv2'⟩
   rw [fill_binopR, fill_binopR, hv2, hv2',
-    show binop op e1 (V i2).1 = Ectx.fill [binopL op (V i2)] e1 from rfl,
-    show binop op e1' (V i2).1 = Ectx.fill [binopL op (V i2)] e1' from rfl]
+    show binop op e1 (V i2).1 = fill [binopL op (V i2)] e1 from rfl,
+    show binop op e1' (V i2).1 = fill [binopL op (V i2)] e1' from rfl]
   iapply refines_bind [binopL op (V i2)] [binopL op (V i2)] $$ IH1
   iintro %v1 %v1' Hv1
   icases hA v1 v1' $$ Hv1 with ⟨%i1, %hv1, %hv1'⟩
@@ -194,7 +195,7 @@ theorem refines_binop_bind (op : BinOp) {ι : Type _} (V : ι → Val rT)
 
 /-- Binds the operand of a unary operator, whose values lie in a family `V`, then continues
 for every index. -/
-theorem refines_unop_bind (op : UnOp) {ι : Type _} (V : ι → Val rT)
+theorem refines_unop_bind (op : UnOp) (V : ι → Val rT)
     (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e e' A ⊢
     (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
@@ -311,10 +312,10 @@ theorem bin_log_related_unboxed_eq (HUnboxed : UnboxedType τ) : iprop%
   iapply refines_bind [binopR .eq (substMap vs.fst e1)]
     [binopR .eq (substMap vs.snd e1')] $$ (IH2 $$ %vs Hvs)
   iintro %v2 %v2' #Hv2
-  rw [show Ectx.fill [binopR .eq (substMap vs.fst e1)] v2.1 =
-      Ectx.fill [binopL .eq v2] (substMap vs.fst e1) from rfl,
-    show Ectx.fill [binopR .eq (substMap vs.snd e1')] v2'.1 =
-      Ectx.fill [binopL .eq v2'] (substMap vs.snd e1') from rfl]
+  rw [show fill [binopR .eq (substMap vs.fst e1)] v2.1 =
+      fill [binopL .eq v2] (substMap vs.fst e1) from rfl,
+    show fill [binopR .eq (substMap vs.snd e1')] v2'.1 =
+      fill [binopL .eq v2'] (substMap vs.snd e1') from rfl]
   iapply refines_bind [binopL .eq v2] [binopL .eq v2'] $$ (IH1 $$ %vs Hvs)
   iintro %v1 %v1' #Hv1
   ihave Heq : iprop(|={⊤}=> ⌜v1 = v2 ↔ v1' = v2'⌝) $$ [Hv1 Hv2]
@@ -350,7 +351,7 @@ theorem bin_log_related_scrut {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   rw [substMap_scrut, substMap_scrut, ← fill_scrut p, ← fill_scrut p]
-  iapply refines_bind [EctxItem.scrut p] [EctxItem.scrut p] $$ (IH $$ %vs Hvs)
+  iapply refines_bind [.scrut p] [.scrut p] $$ (IH $$ %vs Hvs)
   iintro %v %v' #Hv
   rw [fill_scrut, fill_scrut, eq_fill_nil (.scrut v.1 p),
     eq_fill_nil (.scrut v'.1 p)]
@@ -376,7 +377,7 @@ theorem bin_log_related_scrut {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p
     imodintro
     rw [interp_sum, interp_unit]
     unfold lrel_sum
-    iexists (.unit : Val _), (.unit : Val _)
+    iexists .unit, .unit
     iright
     isplitr; · ipureintro; rfl
     isplitr; · ipureintro; rfl
@@ -388,13 +389,12 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 /-! ## Sampling -/
 
 /-- `urand` is compatible, coupling the two samples by the identity. -/
-theorem bin_log_related_urand :
-    ⊢ bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
+theorem bin_log_related_urand : ⊢ bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs -
   rw [substMap_urand, substMap_urand, interp_real,
-    eq_fill_nil (Exp.urand : Exp rT)]
-  iapply refines_couple_urands_lr id (MeasureTheory.MeasurePreserving.id _)
+    eq_fill_nil .urand]
+  iapply refines_couple_urands_lr id (.id _)
   iintro %r -
   simp only [id_eq, fill_nil]
   iapply refines_ret (v1 := .real r) (v2 := .real r) rfl rfl
@@ -447,9 +447,9 @@ theorem bin_log_related_rand_unit : iprop%
     iunfold lrel_unit at Hu
     icases Hu with ⟨%hv2, %hv2'⟩
     rw [hv2, hv2',
-      show Ectx.fill [randR t1] pl(#()) = Ectx.fill [randL .unit] t1
+      show fill [randR t1] pl(#()) = fill [randL .unit] t1
         from rfl,
-      show Ectx.fill [randR t1'] pl(#()) = Ectx.fill [randL .unit] t1'
+      show fill [randR t1'] pl(#()) = fill [randL .unit] t1'
         from rfl]
     iapply refines_rand_unit_int $$ IH1
 

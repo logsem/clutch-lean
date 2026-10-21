@@ -18,12 +18,13 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 
 namespace ProbLang
 
+variable {rT : Type} {GF : BundledGFunctors}
+
 open Cslib Exp ValSubstMap RelCtx Ectx SubstMap
 
 section Fundamental
-variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [OrderTop B] {L : GradedLifting.{0} B} [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
 variable {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT} {A C : lrel rT GF}
   {S : Finset Var}
@@ -120,9 +121,9 @@ theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
     (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
     (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
     (hv : v.1.isClosedEmpty) (hv' : v'.1.isClosedEmpty) :
-    substMap (ValSubstMap.fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) =
+    substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) =
       open' (substMap vs.fst e) v.1 ∧
-    substMap (ValSubstMap.snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) =
+    substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) =
       open' (substMap vs.snd e') v'.1 :=
   ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_not_mem hxdom) hv.1,
     substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
@@ -154,12 +155,16 @@ theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     lam_substMap_isLocallyClosed hvs.2
       (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
 
+section Closed
+variable (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
+  (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
+  (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
+  (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
+  (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
+include hvs hdom he_lc he'_lc he_fv he'_fv
+
 /-- Both substituted `lam` terms are closed. -/
-theorem substMap_lam_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
-    (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
-    (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
-    (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
-    (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
+theorem substMap_lam_closed :
     (lam (substMap vs.fst e)).isClosedEmpty ∧ (lam (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   obtain ⟨hlam_lc, hlam'_lc⟩ := substMap_lam_lc hvs he_lc he'_lc
@@ -167,11 +172,7 @@ theorem substMap_lam_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     ⟨hlam'_lc, substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
 /-- Both substituted `fix` terms are closed. -/
-theorem substMap_fix_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
-    (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
-    (he_lc : ∀ f ∉ S, (open' e (.fvar f)).IsLocallyClosed)
-    (he'_lc : ∀ f ∉ S, (open' e' (.fvar f)).IsLocallyClosed)
-    (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
+theorem substMap_fix_closed :
     (fix (substMap vs.fst e)).isClosedEmpty ∧ (fix (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   exact ⟨⟨fix_substMap_isLocallyClosed hvs.1
@@ -181,10 +182,11 @@ theorem substMap_fix_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
       (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc,
       substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
+end Closed
+
 end Fundamental
 
 section Fresh
-variable {rT : Type} {GF : BundledGFunctors}
 
 /-- A variable fresh for a set, both terms and a substitution domain exists. -/
 theorem exists_fresh_var (S : Finset Var) (e e' : Exp rT) (vs : ValSubstMap rT) :

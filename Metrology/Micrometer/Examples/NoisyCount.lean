@@ -28,6 +28,12 @@ open GradedDivergence (dp codensity codensity_complete dp_laplace)
 namespace ProbLang
 namespace NoisyCount
 
+open Exp (ofVal)
+open Finset (sum_sub_distrib sum_eq_single)
+open ENNReal (ofReal)
+open Kernel (zCDP_of_DP_of_symm DP_of_zCDP_sq)
+open Real (log coe_toNNReal)
+
 variable {lap : Val ℝ} {b : ℝ≥0} {n : ℕ}
 
 /-- Assumed rule for the sampler `lap`: `lap #a` against a spec copy of `lap #a'` is coupled like a
@@ -37,9 +43,9 @@ def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrdere
     [BudgetCreditGS B GF] (L : GradedLifting.{0} B) (lap : Val ℝ) (b : ℝ≥0) : Prop :=
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
     IsAddLeftRegular c → L.Rel c S (laplace a b) (laplace a' b) →
-    (⤇ K.fill pl({Exp.ofVal lap} #a') ∗ ↯b c ∗
+    (⤇ K.fill pl({ofVal lap} #a') ∗ ↯b c ∗
       (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#y) -∗ Φ (.real x)) ⊢
-      wp L E pl({Exp.ofVal lap} #a) Φ)
+      wp L E pl({ofVal lap} #a) Φ)
 
 /-- Databases that differ in at most one entry. -/
 def Adjacent (db db' : Fin n → Bool) : Prop :=
@@ -49,8 +55,8 @@ def Adjacent (db db' : Fin n → Bool) : Prop :=
 theorem abs_count_sub_le {db db' : Fin n → Bool} (h : Adjacent db db') :
     |count db - count db'| ≤ 1 := by
   obtain ⟨i, hi⟩ := h
-  rw [count, count, ← Finset.sum_sub_distrib,
-    Finset.sum_eq_single i (fun j _ hj ↦ by simp [hi j hj]) (by simp)]
+  rw [count, count, ← sum_sub_distrib,
+    sum_eq_single i (fun j _ hj ↦ by simp [hi j hj]) (by simp)]
   cases db i <;> cases db' i <;> norm_num
 
 /-- Adjacency of databases is symmetric. -/
@@ -60,7 +66,7 @@ instance : Std.Symm (Adjacent (n := n)) :=
 /-! ## The program logic proof -/
 
 /-- The privacy budget `(1/b, 0)`. -/
-noncomputable abbrev budget (b : ℝ≥0) : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (1 / b), 0)
+noncomputable abbrev budget (b : ℝ≥0) : ℝ≥0∞ × ℝ≥0∞ := (ofReal (1 / b), 0)
 
 section Privacy
 
@@ -73,7 +79,7 @@ Conditional on the sampler spec `hlap`. -/
 theorem wp_noisyCount (hlap : LaplaceSpec (GF := GF) (codensity dp) lap b)
     {db db' : Fin n → Bool} (h : Adjacent db db') :
     ⊢ ⤇ noisyCount lap db' -∗ ↯b (budget b) -∗
-      wp (codensity dp) ⊤ (noisyCount lap db) (fun v ↦ iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
+      wp (codensity dp) ⊤ (noisyCount lap db) (fun v ↦ iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
   simp only [noisyCount]
@@ -92,41 +98,41 @@ noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
     Mechanism (Fin n → Bool) (Exp ℝ) :=
   progMech (noisyCount lap) σ
 
+section Closed
+
+variable
+  (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
+    (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
+    LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b) (σ : State ℝ)
+
+include hlap
+
 /-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1). Conditional on the
 sampler spec `hlap`, which is assumed for every ghost-state instance because adequacy allocates
 its own. -/
-theorem noisyCount_DP
-    (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
-      (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
-      LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
-    (σ : State ℝ) : (noisyCountMech lap n σ).DP Adjacent (ENNReal.ofReal (1 / b)) 0 :=
-  fun _ _ h ↦ wp_adequacy_div (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) _ _ σ σ _
+theorem noisyCount_DP : (noisyCountMech lap n σ).DP Adjacent (ofReal (1 / b)) 0 :=
+  fun _ _ h ↦ wp_adequacy_div _ _ σ σ _
     fun _ _ ↦ wp_noisyCount (hlap _ _) h
 
 /-- The noisy count is `(0, (1/b)² / 2)`-zCDP for adjacent databases, given that it terminates
 almost surely (Bun–Steinke 2016, Prop. 3.3). Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_zCDP
-    (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
-      (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
-      LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
-    (σ : State ℝ) [IsMarkovKernel (noisyCountMech lap n σ)] :
-    (noisyCountMech lap n σ).zCDP Adjacent 0 (ENNReal.ofReal ((1 / b) ^ 2 / 2)) := by
-  have := Kernel.zCDP_of_DP_of_symm (ε := (1 / (b : ℝ)).toNNReal) (noisyCount_DP (n := n) hlap σ)
-  rwa [Real.coe_toNNReal _ (by positivity)] at this
+theorem noisyCount_zCDP [IsMarkovKernel (noisyCountMech lap n σ)] :
+    (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 / b) ^ 2 / 2)) := by
+  have := zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ)
+  rwa [coe_toNNReal _ (by positivity)] at this
 
 /-- The noisy count is `((1/b)² / 2 + 2 √((1/b)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_DP_sqrt
-    (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
-      (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
-      LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
-    (σ : State ℝ) [IsMarkovKernel (noisyCountMech lap n σ)] {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+theorem noisyCount_DP_sqrt [IsMarkovKernel (noisyCountMech lap n σ)] {δ : ℝ} (hδ : 0 < δ)
+    (hδ₁ : δ < 1) :
     (noisyCountMech lap n σ).DP Adjacent
-      (ENNReal.ofReal ((1 / b) ^ 2 / 2 + 2 * √((1 / b) ^ 2 / 2 * Real.log (1 / δ))))
-      (ENNReal.ofReal δ) := by
-  have := Kernel.DP_of_zCDP_sq (ε := (1 / (b : ℝ)).toNNReal) hδ hδ₁
-    (Kernel.zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ))
-  rwa [Real.coe_toNNReal _ (by positivity)] at this
+      (ofReal ((1 / b) ^ 2 / 2 + 2 * √((1 / b) ^ 2 / 2 * log (1 / δ))))
+      (ofReal δ) := by
+  have := DP_of_zCDP_sq hδ hδ₁
+    (zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ))
+  rwa [coe_toNNReal _ (by positivity)] at this
+
+end Closed
 
 end Privacy
 
