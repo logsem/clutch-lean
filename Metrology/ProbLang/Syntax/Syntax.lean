@@ -799,6 +799,14 @@ instance : Coe (BaseLit rT) (Val rT) := ⟨Val.ofBaseLit⟩
 
 instance : Coe (Val rT) (Exp rT) := ⟨Val.fst⟩
 
+/-! Coercions into `BaseLit`, so `#z` works for `z : Int` (also `Bool`, `Unit`, `rT`). Locations
+and labels are `Int` abbreviations, so they have no coercion: write `#loc l`, `#lbl l`. -/
+
+instance : Coe Int (BaseLit rT) := ⟨.int⟩
+instance : Coe Bool (BaseLit rT) := ⟨.bool⟩
+instance : Coe Unit (BaseLit rT) := ⟨fun _ => .unit⟩
+instance : Coe rT (BaseLit rT) := ⟨.real⟩
+
 abbrev Val.int  (n : Int) : Val rT  := Val.ofBaseLit (.int n)
 abbrev Val.bool (b : Bool) : Val rT := Val.ofBaseLit (.bool b)
 abbrev Val.unit : Val rT            := Val.ofBaseLit .unit

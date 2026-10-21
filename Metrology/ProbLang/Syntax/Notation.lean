@@ -93,6 +93,11 @@ syntax:max "(" pl_pat " : " pl_ty ")"                           : pl_pat
 syntax:max "{" term "}"                                         : pl_exp
 syntax:max "&" term:max                                         : pl_exp
 syntax:max "#" term:max                                         : pl_exp
+syntax:max (priority := high) "#" noWs "int " term:max          : pl_exp
+syntax:max (priority := high) "#" noWs "bool " term:max         : pl_exp
+syntax:max (priority := high) "#" noWs "real " term:max         : pl_exp
+syntax:max (priority := high) "#" noWs &"loc " term:max         : pl_exp
+syntax:max (priority := high) "#" noWs &"lbl " term:max         : pl_exp
 syntax:max ident                                                : pl_exp
 syntax:max "(" pl_exp ")"                                       : pl_exp
 syntax:max "(" pl_exp " : " pl_ty ")"                           : pl_exp
@@ -268,6 +273,30 @@ meta def mkNamedLam (b : NamedBinder) (body : Term) : TermElabM Term := do
 meta def mkNamedFix (b : NamedBinder) (body : Term) : TermElabM Term := do
   closeNamedHead (← `(Exp.fix)) b body
 
+/-- Whether `e` is a dotted constructor such as `.int z` (possibly parenthesized): such a payload
+needs its expected type, and elaborates as before. -/
+meta partial def isDottedLit (e : Syntax) : Bool :=
+  if e.isOfKind ``Lean.Parser.Term.paren then isDottedLit e[1]
+  else if e.isOfKind ``Lean.Parser.Term.app then isDottedLit e[0]
+  else e.isOfKind ``Lean.Parser.Term.dotIdent
+
+/-- The payload of a literal `#e`: `e` as a `BaseLit` when it elaborates as one, otherwise `e`
+elaborated on its own and coerced (so `#(n + 1)` works for `n : Int`). -/
+elab "pl_lit% " e:term:max : term <= ty => do
+  let s ← saveState
+  try
+    -- some failures (e.g. `HAdd ℤ ℕ (BaseLit rT)` in `#(n + 1)`) are logged, not thrown
+    let msgs ← Core.getMessageLog
+    Core.resetMessageLog
+    let r ← withoutErrToSorry <| withSynthesize <| elabTermEnsuringType e ty
+    let failed := (← Core.getMessageLog).hasErrors
+    modifyThe Core.State fun st => { st with messages := msgs ++ st.messages }
+    if failed then throwError "literal payload is not a `BaseLit`"
+    return r
+  catch _ =>
+    s.restore
+    elabTermEnsuringType (← `(($e :))) ty
+
 mutual
 
 /-- Translates `pl_exp` syntax to an `Exp` term. `env` maps in-scope source names to fresh
@@ -283,7 +312,13 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) :
   | `(pl_exp|# $n:num)     => `(Exp.lit (.int $n))
   | `(pl_exp|#true)        => `(Exp.lit (.bool true))
   | `(pl_exp|#false)       => `(Exp.lit (.bool false))
-  | `(pl_exp|# $e)         => `(Exp.lit $e)
+  | `(pl_exp|#int $t)      => `(Exp.lit (.int $t))
+  | `(pl_exp|#bool $t)     => `(Exp.lit (.bool $t))
+  | `(pl_exp|#real $t)     => `(Exp.lit (.real $t))
+  | `(pl_exp|#loc $t)      => `(Exp.lit (.loc $t))
+  | `(pl_exp|#lbl $t)      => `(Exp.lit (.lbl $t))
+  | `(pl_exp|# $e)         =>
+      if isDottedLit e then `(Exp.lit $e) else `(Exp.lit (pl_lit% $e))
   | `(pl_exp|$i:ident)     => do
       checkNotReserved i
       let atomStr := env.find? i.getId |>.getD i.getId.toString
@@ -543,7 +578,12 @@ meta def unexpPatInr : Unexpander
 
 @[app_unexpander Exp.lit]
 meta def unexpLit : Unexpander
-  | `($_ $arg) => `(pl(# $arg))
+  | `($_ $arg) => do
+    if let `($f:ident $a) := arg then
+      if (`BaseLit.loc).isSuffixOf f.getId then return ← `(pl(#loc $a))
+      if (`BaseLit.lbl).isSuffixOf f.getId then return ← `(pl(#lbl $a))
+      if (`BaseLit.real).isSuffixOf f.getId then return ← `(pl(# $a))
+    `(pl(# $arg))
   | _ => throw ()
 
 @[app_unexpander BaseLit.int]
