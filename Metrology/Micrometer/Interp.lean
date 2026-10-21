@@ -110,8 +110,11 @@ namespace NEFun
   { fn := fun Δ => F (A.fn Δ)
     ne := fun h => NonExpansive.ne (A.ne h) }
 
+section
+variable (A : NEFun rT GF)
+
 /-- The recursive relation binding the innermost type variable. -/
-@[reducible] noncomputable def rec' (A : NEFun rT GF) : NEFun rT GF :=
+@[reducible] noncomputable def rec' : NEFun rT GF :=
   { fn := fun Δ => lrel_rec
       { f := fun X => A.fn (cons X Δ)
         ne := ⟨fun {_ _ _} hXY => A.ne (cons_ne_head hXY)⟩ }
@@ -119,14 +122,16 @@ namespace NEFun
 
 variable (L) in
 /-- The universal relation binding the innermost type variable. -/
-@[reducible] noncomputable def forall' (A : NEFun rT GF) : NEFun rT GF :=
+@[reducible] noncomputable def forall' : NEFun rT GF :=
   { fn := fun Δ => lrel_forall L (fun X => A.fn (cons X Δ))
     ne := fun h => lrel_forall_ne L (fun _ => A.ne (cons_ne_tail h)) }
 
 /-- The existential relation binding the innermost type variable. -/
-@[reducible] noncomputable def exists' (A : NEFun rT GF) : NEFun rT GF :=
+@[reducible] noncomputable def exists' : NEFun rT GF :=
   { fn := fun Δ => lrel_exists (fun X => A.fn (cons X Δ))
     ne := fun h => lrel_exists_ne (fun _ => A.ne (cons_ne_tail h)) }
+
+end
 
 end NEFun
 
@@ -169,19 +174,24 @@ variable (Δ : TyEnv rT GF)
 @[simp] theorem interp_real : interp L .real Δ = lrel_real := rfl
 @[simp] theorem interp_tape : interp L .tape Δ = lrel_tape := rfl
 
-theorem interp_prod (τ1 τ2 : Ty) :
-    interp L (.prod τ1 τ2) Δ = lrel_prod (interp L τ1 Δ) (interp L τ2 Δ) := rfl
+section
+variable (τ1 τ2 : Ty)
 
-theorem interp_sum (τ1 τ2 : Ty) :
-    interp L (.sum τ1 τ2) Δ = lrel_sum (interp L τ1 Δ) (interp L τ2 Δ) := rfl
+theorem interp_prod : interp L (.prod τ1 τ2) Δ = lrel_prod (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
-theorem interp_arrow (τ1 τ2 : Ty) :
-    interp L (.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
+theorem interp_sum : interp L (.sum τ1 τ2) Δ = lrel_sum (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
-theorem interp_ref (τ : Ty) : interp L (.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
+theorem interp_arrow : interp L (.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
+
+end
+
+section
+variable (τ : Ty)
+
+theorem interp_ref : interp L (.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
 /-- `⟦μX.τ⟧` unfolds once, with the recursive occurrence under `▷`. -/
-theorem interp_rec_car (τ : Ty) (v v' : Val rT) :
+theorem interp_rec_car (v v' : Val rT) :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
@@ -189,10 +199,12 @@ theorem interp_rec_car (τ : Ty) (v v' : Val rT) :
       ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩ })
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
-theorem interp_exists_car (τ : Ty) (v v' : Val rT) :
+theorem interp_exists_car (v v' : Val rT) :
     (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
       ∃ A, (interp L τ (cons A Δ)).car v v') :=
   rfl
+
+end
 
 end HeadShape
 

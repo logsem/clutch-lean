@@ -113,7 +113,7 @@ theorem refines_alloctape_nat_l : iprop%
   iapply refines_alloctape_l
   iintro %l Hl
   iapply Hlog $$ %l
-  iapply appNatTape_fold (l := l) (z := z) (ns := []) (fs := []) rfl
+  iapply appNatTape_fold (ns := []) (fs := []) rfl
   rw [Tape.empty] at *
   iexact Hl
 
@@ -141,8 +141,12 @@ theorem refines_randT_l {n : Int} {ns : List Int} : iprop%
   iintro Hl' %Hbnds
   iapply Hlog $$ Hl' %Hbnds
 
+section
+variable (Hz : 0 < z)
+include Hz
+
 /-- Left draw from an empty tape: behaves like an unlabelled draw, keeping the tape empty. -/
-theorem refines_randT_empty_l (Hz : 0 < z) : iprop%
+theorem refines_randT_empty_l : iprop%
     appNatTape l z [] ∗
     (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
     refines L E (K.fill pl(rand(#z, #lbl l))) t A := by
@@ -154,7 +158,7 @@ theorem refines_randT_empty_l (Hz : 0 < z) : iprop%
   iapply Hlog $$ %n Hl' %Hbnds
 
 /-- Right unlabelled draw `rand z`: continue at every outcome `0 ≤ n < z`. -/
-theorem refines_randU_r (Hz : 0 < z) : iprop%
+theorem refines_randU_r : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
     refines L E e (K.fill pl(rand(#z, #()))) A := by
   unfold refines
@@ -167,7 +171,7 @@ theorem refines_randU_r (Hz : 0 < z) : iprop%
   iapply Hlog $$ %n %Hbnds %K' %b HKRes Hna Herr Hpos
 
 /-- Right draw from an empty spec tape: continue at every outcome, keeping the tape empty. -/
-theorem refines_randT_empty_r (Hz : 0 < z) : iprop%
+theorem refines_randT_empty_r : iprop%
     specNatTape l z [] ∗
     (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
     refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
@@ -179,6 +183,8 @@ theorem refines_randT_empty_r (Hz : 0 < z) : iprop%
   iintro %n HαNew HKRes %Hbnds
   isimp only [← fill_comp K' K] at HKRes
   iapply Hlog $$ %n HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
+
+end
 
 /-! ## Budget-free couplings along a bijection
 

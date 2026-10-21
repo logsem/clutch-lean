@@ -241,8 +241,11 @@ theorem bin_log_related_bool_binop (op : BinOp) (Hres : op.boolResTy = some τ) 
     cases op <;> simp [BinOp.boolResTy] at Hres <;> subst Hres
     all_goals (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
+section
+variable (op : UnOp)
+
 /-- Unary operators on an integer are compatible. -/
-theorem bin_log_related_int_unop (op : UnOp) (Hres : op.intResTy = some τ) :
+theorem bin_log_related_int_unop (Hres : op.intResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .int ⊢
     bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -256,7 +259,7 @@ theorem bin_log_related_int_unop (op : UnOp) (Hres : op.intResTy = some τ) :
       | (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
 
 /-- Unary operators on a boolean are compatible. -/
-theorem bin_log_related_bool_unop (op : UnOp) (Hres : op.boolResTy = some τ) :
+theorem bin_log_related_bool_unop (Hres : op.boolResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .bool ⊢
     bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -272,7 +275,7 @@ theorem bin_log_related_bool_unop (op : UnOp) (Hres : op.boolResTy = some τ) :
 /-! ## Real operators -/
 
 /-- Unary operators on a real are compatible. -/
-theorem bin_log_related_real_unop (op : UnOp) (Hres : op.realResTy = some τ) :
+theorem bin_log_related_real_unop (Hres : op.realResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .real ⊢
     bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -282,6 +285,8 @@ theorem bin_log_related_real_unop (op : UnOp) (Hres : op.realResTy = some τ) :
     iintro %r
     cases op <;> simp [UnOp.realResTy] at Hres <;> subst Hres
     all_goals (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
+
+end
 
 /-- Binary operators on two reals are compatible. -/
 theorem bin_log_related_real_binop (op : BinOp) (Hres : op.realResTy = some τ) : iprop%

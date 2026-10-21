@@ -29,9 +29,12 @@ section
 variable [AppPreGS rT GF] [SpecPreGS rT GF] [BudgetCreditPreGS ℝ≥0∞ GF] [InvGpreS GF]
   (e e' : Exp rT) (σ σ' : State rT)
 
+section
+variable (ε : ENNReal)
+
 /-- A `wp` proof at `codensity tv` with credit `ε` gives an additive coupling of the limit
 executions (`wp_adequacy`). -/
-theorem wp_adequacy_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
+theorem wp_adequacy_tv (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -39,7 +42,7 @@ theorem wp_adequacy_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
   (wp_adequacy e e' σ σ' ε φ Hwp).addCoupl
 
 /-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_budget_lim`). -/
-theorem wp_adequacy_budget_lim_tv (ε : ENNReal) (φ : Val rT → Val rT → Prop)
+theorem wp_adequacy_budget_lim_tv (φ : Val rT → Val rT → Prop)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
@@ -48,7 +51,7 @@ theorem wp_adequacy_budget_lim_tv (ε : ENNReal) (φ : Val rT → Val rT → Pro
 
 /-- `wp_adequacy_div` at `tv`: programs whose results agree up to `ε` differ by at most `ε` on
 every event. -/
-theorem wp_adequacy_div_tv (ε : ENNReal)
+theorem wp_adequacy_div_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)))
@@ -57,13 +60,15 @@ theorem wp_adequacy_div_tv (ε : ENNReal)
   tv_iff.1 (wp_adequacy_div e e' σ σ' ε Hwp) S hS
 
 /-- As `wp_adequacy_div_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_div_budget_lim`). -/
-theorem wp_adequacy_div_budget_lim_tv (ε : ENNReal)
+theorem wp_adequacy_div_budget_lim_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div_budget_lim e e' σ σ' ε Hwp) S hS
+
+end
 
 /-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
 theorem wp_adequacy_mass_tv (φ : Val rT → Val rT → Prop) (ε : ENNReal)

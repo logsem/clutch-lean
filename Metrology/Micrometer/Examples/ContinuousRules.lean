@@ -166,10 +166,14 @@ theorem urand_avoid_zero_real :
   iintro %x ⟨%_, %hx⟩
   rel_values
 
+section
+variable (N : Int) (hN : 0 < N)
+include hN
+
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
 program's. -/
 theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] (N : Int) (hN : 0 < N) :
+    [BudgetCreditGS ℝ≥0∞ GF] :
     ⤇ pl(rand(#N, #())) ⊢
       wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
         iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
@@ -184,7 +188,7 @@ theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC G
   exact ⟨rfl, hx⟩
 
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
-theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
+theorem rand_urand_floor_real :
     ⊢ REL[codensity tv] (pl(rand(#N, #())) : Exp ℝ) << pl(urand) :
       lrel_true := by
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
@@ -195,7 +199,7 @@ theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
   exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
-theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
+theorem urand_rand_floor_real :
     ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#N, #())) :
       lrel_true := by
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
@@ -204,6 +208,8 @@ theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
   iunfold lrel_true
   ipureintro
   exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
+
+end
 
 end Real
 

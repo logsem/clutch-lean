@@ -91,10 +91,13 @@ theorem concentrated_headPad (Hlc : e₁.IsLocallyClosed)
     exact hSconc σ₁ hhr
   · exact Concentrated.univ
 
+section
+variable (Hv : e₁.toVal? = none)
+include Hv
+
 open scoped Classical in
 /-- Head step, for any `rT`: outcomes range over a measurable set `S σ₁` carrying `headStep`. -/
-theorem wp_lift_head_step_concentrated (Hv : e₁.toVal? = none)
-    (Hlc : e₁.IsLocallyClosed := by is_lc)
+theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜HeadReducible e₁ σ₁⌝ ∗ ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗
@@ -112,8 +115,7 @@ theorem wp_lift_head_step_concentrated (Hv : e₁.toVal? = none)
 
 open scoped Classical in
 /-- Atomic head step with a mask change `E1`/`E2`, over a measurable set carrying `headStep`. -/
-theorem wp_lift_atomic_head_step_fupd_concentrated (Hv : e₁.toVal? = none)
-    (Hlc : e₁.IsLocallyClosed := by is_lc)
+theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E1}=> ⌜HeadReducible e₁ σ₁⌝ ∗
@@ -132,8 +134,7 @@ theorem wp_lift_atomic_head_step_fupd_concentrated (Hv : e₁.toVal? = none)
 
 open scoped Classical in
 /-- Atomic head step over a measurable set carrying `headStep`, from the mask-changing rule. -/
-theorem wp_lift_atomic_head_step_concentrated (Hv : e₁.toVal? = none)
-    (Hlc : e₁.IsLocallyClosed := by is_lc)
+theorem wp_lift_atomic_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜HeadReducible e₁ σ₁⌝ ∗
@@ -147,6 +148,8 @@ theorem wp_lift_atomic_head_step_concentrated (Hv : e₁.toVal? = none)
   iframe %Hhred
   iintro %e₂ %σ₂ %Hmem !> !>
   iapply H $$ %e₂ %σ₂ %Hmem
+
+end
 
 end HeadRules
 

@@ -265,12 +265,12 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
 (`adv`, Rocq's "advanced", marks a per-pair leftover.) -/
 
 section Canonical
-variable [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
+variable [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] (Hred : Reducible e₁ σ₁)
+include Hred
 
 /-- Couple a program step with `n` spec steps from an erasable distribution, by the canonical law
 with per-pair leftover `R`. -/
-theorem progCoupl_intro (Hred : Reducible e₁ σ₁)
-    (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+theorem progCoupl_intro (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
@@ -279,7 +279,7 @@ theorem progCoupl_intro (Hred : Reducible e₁ σ₁)
 
 /-- `progCoupl_steps_law` for the canonical law: a lifting with per-pair leftover `R` at the whole
 budget `b`. -/
-theorem progCoupl_steps_adv' (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
+theorem progCoupl_steps_adv' (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
       Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
@@ -288,8 +288,8 @@ theorem progCoupl_steps_adv' (Hred : Reducible e₁ σ₁) (Hred' : Reducible e�
 
 /-- A program step against an erasable spec-state distribution, spec expression fixed, with
 per-pair leftover `R`. -/
-theorem progCoupl_step_l_erasable_adv {R : Cfg rT → State rT → B} (Hred : Reducible e₁ σ₁)
-    (Heras : ErasableExpr μ₁' σ₁') (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
+theorem progCoupl_step_l_erasable_adv {R : Cfg rT → State rT → B} (Heras : ErasableExpr μ₁' σ₁')
+    (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
     (∀ e₂ σ₂ σ₂', ⌜R ⟨e₂, σ₂⟩ σ₂' < (⊤ : B)⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' (R ⟨e₂, σ₂⟩ σ₂')) ⊢
     progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical

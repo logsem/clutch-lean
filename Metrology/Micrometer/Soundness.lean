@@ -124,10 +124,13 @@ theorem refines_ctx_div {D : GradedDivergence.{0} B} [L.IsSound D] (β : B) (e e
   IsSound.sound ((refines_ctx_coupling L β e e' τ Hlog K σ σ' HK Hlin).mono le_rfl
     adequacyRel_boolEqVal_eq)
 
+section
+variable (s : ENNReal →+o B) [L.IsMassDetecting s]
+include s
+
 /-- A refinement from `↯b (s δ)` bounds the chance that a linear boolean context returns `b`
 by that of the other side plus `δ`. -/
-theorem refines_ctx_mass (s : ENNReal →+o B) [L.IsMassDetecting s] (δ : ENNReal)
-    (e e' : Exp rT) (τ : Ty)
+theorem refines_ctx_mass (δ : ENNReal) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       Δ, ⊢ ↯b (s δ) -∗ refines L ⊤ e e' (interp L τ Δ))
     (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K empty τ empty .bool)
@@ -142,8 +145,8 @@ theorem refines_ctx_mass (s : ENNReal →+o B) [L.IsMassDetecting s] (δ : ENNRe
 variable (L) in
 /-- A budget-free refinement makes each typed boolean context with fresh binders return `b` on the
 left no more often than on the right, from the same state (the inequality inside `CtxRefines`). -/
-theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
-    (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
+theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ)
+    (Hty_e' : Typed Γtc e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF) Δ Γrc,
       TctxRelated L Δ Γtc Γrc → ⊢ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ empty .bool →
@@ -166,8 +169,8 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
     adequacyRel_boolEqVal_mem
 
 /-- `refines_sound_open_fresh` for closed programs. -/
-theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
-    (Hty_e : Typed empty e τ) (Hty_e' : Typed empty e' τ)
+theorem refines_sound_fresh (e e' : Exp rT) (τ : Ty) (Hty_e : Typed empty e τ)
+    (Hty_e' : Typed empty e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       Δ, ⊢ refines L ⊤ e e' (interp L τ Δ)) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K empty τ empty .bool →
@@ -178,6 +181,8 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   obtain rfl := HCtx.eq_nil_of_empty
   iapply bin_log_related_nil_intro
   iapply Hlog IR IBC Δ
+
+end
 
 end Bind
 

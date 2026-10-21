@@ -45,7 +45,7 @@ theorem choice_refines (b b' : Bool) :
   -- identity coupling; `P = T = {0}` are the draws that run `rr` and get `ε₂ = ln 3`, the rest
   -- get `ε₂' = 0` (the two `e ▸ h` proofs keep `{0}` in `{0}` and its complement out)
   rel_apply (refines_couple_rands_dpChoice
-    (ε₂ := ofReal (log 3)) (ε₂' := 0) (δ₂ := 0) (P := {0}) (T := {0}) 2 (by norm_num)
+    (ε₂ := ofReal (log 3)) (ε₂' := 0) (δ₂ := 0) (T := {0}) 2 (by norm_num)
     (refl _) (refl _) (fun _ _ h e ↦ e ▸ h) (fun _ _ h e ↦ e ▸ h)
     (by simp))
   iframe Hb

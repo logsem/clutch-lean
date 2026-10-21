@@ -24,6 +24,7 @@ open ProbLang.Possible (headStepSupport)
 open scoped AppGS
 
 namespace ProbLang
+open HeadStepSupport
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
@@ -309,7 +310,7 @@ theorem wp_rand_lbl_nonpos {N : Int} (Hz : ¬ 0 < z) : iprop%
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
   imodintro
-  isplitr; · ipureintro; exact ⟨_, (HeadStepSupport.rand_lbl_nonpos Hz hlook).pos⟩
+  isplitr; · ipureintro; exact ⟨_, (rand_lbl_nonpos Hz hlook).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -350,7 +351,7 @@ theorem wp_rand_step_r {x : BaseLit rT} {R : IProp GF} {C : State rT → Prop}
   imodintro
   iapply specCoupl_step (.of_headStepSupport_fill K Hwitness (by is_lc))
   iintro %e₂' %σ₂' %Hstep
-  obtain ⟨e', rfl, Hstep'⟩ := HeadStepSupport.of_primStep_fill Hwitness (by is_lc) Hstep
+  obtain ⟨e', rfl, Hstep'⟩ := of_primStep_fill Hwitness (by is_lc) Hstep
   obtain ⟨rfl, n, rfl, hn⟩ := hstep _ _ _ hC Hstep'
   imodintro
   iapply specCoupl_ret
@@ -392,8 +393,12 @@ theorem wp_rand_nonpos_r (Hz : ¬ 0 < z) : iprop%
   iintro %_ %rfl - Hj'
   iapply Hwp $$ Hj'
 
+section
+variable (Hz : 0 < z)
+include Hz
+
 /-- A spec-side labeled `rand z` on an empty tape with bound `z` draws a fresh `n` in `[0, z)`. -/
-theorem wp_rand_tape_empty_r (Hz : 0 < z) : iprop%
+theorem wp_rand_tape_empty_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z [] ∗
     (∀ n, specNatTape l z [] -∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
     wp L E e Φ := by
@@ -414,7 +419,7 @@ theorem wp_rand_tape_empty_r (Hz : 0 < z) : iprop%
   iapply Hwp $$ HαNat Hj' %hn
 
 /-- `wp_rand_tape_empty_r` with the tape and spec resources handed back as one `∗` (Rocq form). -/
-theorem wp_rand_empty_r (Hz : 0 < z) : iprop%
+theorem wp_rand_empty_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z [] ∗
     (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
     wp L E e Φ := by
@@ -425,8 +430,7 @@ theorem wp_rand_empty_r (Hz : 0 < z) : iprop%
   iapply Hwp $$ [$Hα $Hj']
 
 /-- A spec-side labeled `rand z` on a tape with another bound draws a fresh `n`, tape kept. -/
-theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (Hz : 0 < z)
-    (HneM : z ≠ M) : iprop%
+theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (HneM : z ≠ M) : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l M ns ∗
     (∀ n, specNatTape l M ns ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
     wp L E e Φ := by
@@ -448,6 +452,8 @@ theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (Hz : 0 < z)
   ihave HαNat : specNatTape l M ns $$ [Hαb]
   · iunfold specNatTape; iexists fs; iframe %hmap Hαb
   iapply Hwp $$ [$HαNat $Hj'] %hn
+
+end
 
 /-- A spec-side labeled `rand z` with `z ≤ 0` on an empty tape steps to `#(-1)`. -/
 theorem wp_rand_lbl_nonpos_r {N : Int} (Hz : ¬ 0 < z) : iprop%

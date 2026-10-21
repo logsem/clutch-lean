@@ -19,6 +19,7 @@ import Metrology.Iris.LocalBI
 on the `⤇` hypothesis. Both find the evaluation context with `ProbLang/EctxTactic.lean`. -/
 
 namespace ProbLang.MicrometerWpGS
+open Ectx (fill)
 
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
@@ -93,17 +94,21 @@ variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} {hlc : HasLC
   [InvGS_gen hlc GF] [SpecGS rT GF] {E : CoPset} {e₁full e₂full e e' : Exp rT}
 local bi IProp GF
 
+section
+variable (K : Ectx rT)
+include K
+
 /-- `step_pure` with both endpoints anchored by equalities, so `tp_pure` can match the `⤇`
 hypothesis syntactically rather than as an unreduced `Ectx.fill`. -/
-public theorem step_pure_at (K : Ectx rT) {φ : Prop} {n : ℕ}
+public theorem step_pure_at {φ : Prop} {n : ℕ}
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (Hφ : φ) [PureExec φ n e e'] :
     ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
   exact step_pure K Hφ
 
 /-- `step_pure_at` for a run of pure steps. -/
-public theorem step_pure_steps_at (K : Ectx rT)
-    (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (h : PureSteps e e') :
+public theorem step_pure_steps_at (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e')
+    (h : PureSteps e e') :
     ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
   have := h.pureExec
@@ -111,11 +116,13 @@ public theorem step_pure_steps_at (K : Ectx rT)
 
 /-- `step_alloc` with the allocated value anchored by an equality, so the points-to reads in
 the caller's form (e.g. `assocVal []` rather than a raw `Val.mk`). -/
-public theorem step_alloc_at (K : Ectx rT) {v : Exp rT} (hv : IsVal v) {vv : Val rT}
+public theorem step_alloc_at {v : Exp rT} (hv : IsVal v) {vv : Val rT}
     (hvv : vv = ⟨v, hv, hv.lc⟩) :
     ⤇ K.fill (.alloc v) ⊢ specUpdate rT E iprop(∃ l : Loc, ⤇ K.fill pl(#loc l) ∗ l ↦ₛ vv) := by
   subst hvv
   exact step_alloc K hv
+
+end
 
 /-- Rewrite the expression of a `⤇` hypothesis along an equality. -/
 public theorem specProgFrag_reshape {e₁ e₂ : Exp rT} (h : e₁ = e₂) :
@@ -409,7 +416,7 @@ public meta partial def splitAbstractCtx {β : Q(Type)} (espec : Q(Exp $β)) :
     ProofModeM (Option Q(Ectx $β) × Q(Exp $β)) := do
   let e : Q(Exp $β) ← pure espec.consumeMData
   match e with
-  | ~q(Ectx.fill $Kctx $inner) => peel Kctx inner
+  | ~q(fill $Kctx $inner) => peel Kctx inner
   | _ => return (none, espec)
 where
   peel (Kctx : Q(Ectx $β)) (inner : Q(Exp $β)) :
@@ -457,7 +464,7 @@ elab "tp_pure_core" : tactic => do
     let e₂ : Q(Exp $α) ← reduceExp e₂syn
     let e₂inner : Q(Exp $α) ← fillQ Kd e₂
     have e₂full : Q(Exp $α) := match Kabs? with
-      | some Kabs => q(Ectx.fill $Kabs $e₂inner)
+      | some Kabs => q(fill $Kabs $e₂inner)
       | none => e₂inner
     let Ks ← exprToSyntax K
     let e₁s ← exprToSyntax e₁
@@ -505,7 +512,7 @@ elab "tp_bind" colGt ppSpace focus:term:max : tactic => do
     let hypIdent := mkIdent hypName
     `(tacticSeq|
       ihave $hypIdent:ident := specProgFrag_reshape
-        (e₁ := $especS) (e₂ := Ectx.fill $Ks $es) (by kernel_rfl) $$ $hypIdent:ident)
+        (e₁ := $especS) (e₂ := fill $Ks $es) (by kernel_rfl) $$ $hypIdent:ident)
   evalTactic tacSeq
 
 end ProbLang.MicrometerWpGS

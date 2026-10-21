@@ -19,6 +19,7 @@ lifting `L`. Each finds the focus `K[e₀]` on its side, innermost first, and ap
 rule of `AppRelRulesPure.lean` or `AppRelRules.lean` there. -/
 
 namespace ProbLang.RelTactics
+open Ectx (fill)
 
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
@@ -95,7 +96,7 @@ meta def fillLiteral? (e : LeanExpr) : MetaM (Option LeanExpr) := do
     have Kd : Q(Ectx $α) := K.getArg! 4
     have Kabs : Q(Ectx $α) := K.getArg! 5
     let inner : Q(Exp $α) ← fillQ Kd x
-    return some q(Ectx.fill $Kabs $inner)
+    return some q(fill $Kabs $inner)
   return none
 
 /-- `Exp.ofVal v` for a value built by `exprAsVal?`, as the plain expression. -/
@@ -382,7 +383,7 @@ meta def reshapeSide (tac : Name) (g : RelGoal) (side : Side) (focus : Term) :
         {← ppExpr (g.side side)}"
   have K : Q(Ectx $α) := K
   let f : Q(Exp $α) ← instantiateMVars f
-  return (K, f, g.withSide side q(Ectx.fill $K $f))
+  return (K, f, g.withSide side q(fill $K $f))
 
 /-- Replace the goal by the definitionally equal `goal'`. -/
 meta def changeGoal (mvar : MVarId) (g : RelGoal) (goal' : LeanExpr) : ProofModeM Unit := do
@@ -404,7 +405,7 @@ refinement `REL e << e' : A` and its continuation as a separating conjunction. -
 elab "rel_bind " colGt e:term:max ppSpace colGt e':term:max : tactic =>
   runTacticRel `rel_bind fun mvar g => do
     let (K, f, goal₁) ← reshapeSide `rel_bind g .l e
-    let g₁ := { g with app := goal₁, e := q(Ectx.fill $K $f) }
+    let g₁ := { g with app := goal₁, e := q(fill $K $f) }
     let (K', f', _) ← reshapeSide `rel_bind g₁ .r e'
     let stx ← `(refines_bind_sep $(← exprToSyntax K) $(← exprToSyntax K')
       (e := $(← exprToSyntax f)) (e' := $(← exprToSyntax f')))

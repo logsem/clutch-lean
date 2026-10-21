@@ -16,6 +16,7 @@ import Metrology.Iris.LocalBI
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
+open PureSteps (fill)
 open Ectx (fill)
 
 namespace ProbLang
@@ -85,7 +86,7 @@ theorem listLength_steps (l : List Int) :
   | cons n l ih =>
     simp only [intListVal]
     pure_step 5
-    refine (PureSteps.fill [.binopR .plus _] ih).trans ?_
+    refine (fill [.binopR .plus _] ih).trans ?_
     pure_steps
     rw [length_cons, cast_succ, add_comm]
     exact ProbLang.PureSteps.refl _
@@ -106,7 +107,7 @@ theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
       simp only [intListVal, getElem_cons_succ, eraseIdx_cons_succ]
       pure_step 9
       rw [cast_succ, add_sub_cancel_right]
-      refine (PureSteps.fill [.case _ _] (ih j hj)).trans ?_
+      refine (fill [.case _ _] (ih j hj)).trans ?_
       pure_steps
 
 end Recursions

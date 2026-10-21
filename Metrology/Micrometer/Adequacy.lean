@@ -429,18 +429,20 @@ section Lawful
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
+section
+variable (n : Nat)
+
 /-- A `wp` proof from `↯b b` couples the `n`-fuel left run with the right limit run at budget
 `b`. -/
-theorem wp_adequacy_exec_n [L.IsZeroLeft] (n : Nat)
-    (φ : Val rT → Val rT → Prop) (b : B)
+theorem wp_adequacy_exec_n [L.IsZeroLeft] (φ : Val rT → Val rT → Prop) (b : B)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
   execCoupl_of_step_fupdN e e' σ σ' n φ b (fun _ _ => wp_adequacy_step_fupdN b e e' σ σ' n φ) Hwp
 
 /-- `wp_adequacy_exec_n` for a run of mass `1`. -/
-theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (n : Nat)
-    (φ : Val rT → Val rT → Prop) (b : B) (hterm : execN n ⟨e, σ⟩ univ = 1)
+theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (φ : Val rT → Val rT → Prop) (b : B)
+    (hterm : execN n ⟨e, σ⟩ univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
@@ -449,13 +451,15 @@ theorem wp_adequacy_exec_n_term [L.IsSupportLocal] (n : Nat)
 
 /-- `wp_adequacy` for a program whose run has mass `1` within `n` steps: the limit is that run,
 so neither `IsZeroLeft` nor `IsLeftContinuous` is needed (Rocq `wp_adequacy_term`). -/
-theorem wp_adequacy_term [L.IsSupportLocal] (n : Nat) (b : B)
+theorem wp_adequacy_term [L.IsSupportLocal] (b : B)
     (φ : Val rT → Val rT → Prop) (hterm : execN n ⟨e, σ⟩ univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
   rw [limExecV, limExec_term hterm]
   exact wp_adequacy_exec_n_term e e' σ σ' n φ b hterm Hwp
+
+end
 
 /-! ### Taking the limit on the left, and reading off a divergence -/
 

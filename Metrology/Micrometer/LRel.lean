@@ -68,18 +68,20 @@ noncomputable def lrel.toFunChain (c : Chain (lrel rT GF)) :
   chain k := (c.chain k).car
   cauchy h := (c.cauchy h : _)
 
+section
+variable (v1 v2 : Val rT)
+
 /-- Evaluation of a binary relation at a pair of values. -/
-abbrev lrel.appAt (v1 v2 : Val rT) :
-    (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
+abbrev lrel.appAt : (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
 
 /-- Evaluation at a pair of values is nonexpansive. -/
-instance lrel.appAt_ne (v1 v2 : Val rT) :
-    OFE.NonExpansive (appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
+instance lrel.appAt_ne : OFE.NonExpansive (appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
 /-- A relation's proposition at a fixed pair of values is nonexpansive in the relation. -/
-instance lrel.car_ne (v1 v2 : Val rT) :
-    OFE.NonExpansive (fun A : lrel rT GF => A.car v1 v2) where
+instance lrel.car_ne : OFE.NonExpansive (fun A : lrel rT GF => A.car v1 v2) where
   ne {_ _ _} hAB := hAB v1 v2
+
+end
 
 /-- Value relations are complete: limits are taken pointwise. -/
 noncomputable instance isCOFE_lrel : IsCOFE (lrel rT GF) where

@@ -37,11 +37,14 @@ theorem specCouplState_ne {Φ : SpecCouplState rT B → IProp GF} : NonExpansive
 variable [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
 
+section
+variable (E : CoPset)
+
 variable (L) in
 /-- One spec-side coupled round: a bind-law step within `b` from an erasable program-state
 distribution `μ₁` against the spec's `n`-step run `ν₀.map f'`, then `Φ` at each pair with finite
 leftover (Rocq `spec_coupl_pre`). -/
-abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
+abbrev specCouplCouple (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : Measure (State rT))
       (ν₀ : Measure (Cfg rT)) (f' : Cfg rT → Cfg rT) (R : State rT → Cfg rT → B),
@@ -54,17 +57,19 @@ abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' 
 
 variable (L) in
 /-- The body of the `specCoupl` fixpoint: absorbed, done, or one more coupling step. -/
-abbrev specCouplPre (E : CoPset) (Z : State rT → Cfg rT → B → IProp GF)
-    (Φ : SpecCouplState rT B → IProp GF) : SpecCouplState rT B → IProp GF :=
+abbrev specCouplPre (Z : State rT → Cfg rT → B → IProp GF) (Φ : SpecCouplState rT B → IProp GF) :
+    SpecCouplState rT B → IProp GF :=
   fun ⟨σ₁, ⟨e₁', σ₁'⟩, b⟩ => iprop%
     ⌜L.Absorbing b⌝ ∨ Z σ₁ ⟨e₁', σ₁'⟩ b ∨ specCouplCouple L E σ₁ e₁' σ₁' b Φ
 
 variable (L) in
 /-- Least fixpoint of spec-only coupled rounds, exiting at an absorbing budget or at `Z`
 (Rocq `spec_coupl`). -/
-abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
+abbrev specCoupl (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
     (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)
+
+end
 
 variable {E : CoPset} {σ σ₁ σ' σ₁' : State rT} {e' e₁' : Exp rT} {b : B} {n : Nat}
   {Z Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} {μ₁ μ₁' : Measure (State rT)}
@@ -234,10 +239,14 @@ section SplitBudget
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
   [L.IsSupportLocal]
 
+section
+variable {b₁ b₂ : B} (hb : b₁ + b₂ ≤ b)
+include hb
+
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
 related pair. -/
-theorem specCoupl_couple_rel {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
-    (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
+theorem specCoupl_couple_rel {S : State rT → Cfg rT → Prop}
+    (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
@@ -251,8 +260,7 @@ theorem specCoupl_couple_rel {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
   iapply H $$ %σ₂ %e₂' %σ₂' %hS
 
 /-- Couple two erasable distributions before `Z`, leaving `b₂` to the continuation. -/
-theorem specCoupl_erasables {b₁ b₂ : B} {S : State rT → State rT → Prop}
-    (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ μ₁')
+theorem specCoupl_erasables {S : State rT → State rT → Prop} (Hcpl : L.Rel b₁ S μ₁ μ₁')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ σ₂', ⌜S σ₂ σ₂'⌝ -∗ |={E}=> specCoupl L E σ₂ e₁' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
@@ -270,8 +278,8 @@ theorem specCoupl_erasables {b₁ b₂ : B} {S : State rT → State rT → Prop}
   iapply H $$ %σ₂ %σ₂' %HS
 
 /-- Couple an erasable distribution against `n` spec steps. -/
-theorem specCoupl_erasable_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
-    (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
+theorem specCoupl_erasable_steps {S : State rT → Cfg rT → Prop}
+    (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
@@ -279,11 +287,13 @@ theorem specCoupl_erasable_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Pr
     Heras₁ (dret σ₁')
 
 /-- Couple a Dirac program state against `n` spec steps. -/
-theorem specCoupl_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
+theorem specCoupl_steps {S : State rT → Cfg rT → Prop}
     (Hcpl : L.Rel b₁ S (dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_erasable_steps hb Hcpl (dret σ₁)
+
+end
 
 /-! ## One spec step -/
 

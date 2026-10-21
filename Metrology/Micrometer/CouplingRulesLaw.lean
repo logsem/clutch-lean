@@ -194,8 +194,11 @@ theorem choiceCost_of_lt_top {n m : Int}
   · exact ⟨hS, ite_eq_left hS⟩
   · simp [choiceCost, hS] at h
 
+section
+variable (N : Int) (HN : 0 < N)
+
 /-- The DP choice head for the draws `rand N ~ K[rand N]`, pushed to configurations. -/
-theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State rT)
+theorem dpChoice_head_draws (K : Ectx rT) (σ σ' : State rT)
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T) :
@@ -237,7 +240,7 @@ theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State
 
 /-- Couple `rand N ~ K[rand N]` by the DP choice rule, spending the choice budget and handing
 `choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
-theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 < N)
+theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF]
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
@@ -259,7 +262,7 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF] (N :
 /-- Couple `rand N ~ rand N` by the DP choice rule, spending the choice budget and handing
 `choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
 theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset}
-    {K K' : Ectx rT} {A : lrel rT GF} (N : Int) (HN : 0 < N)
+    {K K' : Ectx rT} {A : lrel rT GF}
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
@@ -277,6 +280,8 @@ theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset
   obtain ⟨hS, hcost⟩ := choiceCost_of_lt_top hR
   rw [hcost]
   iapply Hcnt $$ %n %m %hS
+
+end
 
 /-- `rel_couple_UU_dpChoice h₁ h₂ hPT₁ hPT₂ hc` couples `rand N ~ rand N` by the DP choice rule
 (relational `wp_couple_rand_rand_dpChoice`). -/

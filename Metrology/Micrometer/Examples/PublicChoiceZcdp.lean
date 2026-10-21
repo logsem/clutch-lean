@@ -74,20 +74,25 @@ theorem isProbabilityMeasure_choice (b : Bool) (σ : State ℝ) :
     Set.preimage_univ]
   simpa using h
 
+section
+variable (σ : State ℝ)
+
 /-- The public choice is a Markov kernel. -/
-instance isMarkovKernel_choiceMech (σ : State ℝ) : IsMarkovKernel (choiceMech σ) :=
+instance isMarkovKernel_choiceMech : IsMarkovKernel (choiceMech σ) :=
   ⟨fun b ↦ isProbabilityMeasure_choice b σ⟩
 
 /-- The public choice is `(0, (ln 3)² / 2)`-zCDP for any two bits (Def. 2.4). -/
-theorem choice_zCDP_real (σ : State ℝ) : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) :=
+theorem choice_zCDP_real : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) :=
   choice_zCDP σ
 
 /-- The public choice is `((ln 3)² / 2 + 2 √((ln 3)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`. -/
-theorem choice_DP_sqrt_real (σ : State ℝ) {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+theorem choice_DP_sqrt_real {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
     (choiceMech σ).DP ⊤
       (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ))))
       (ofReal δ) :=
   choice_DP_sqrt σ hδ hδ₁
+
+end
 
 end ProbLang.PublicChoice

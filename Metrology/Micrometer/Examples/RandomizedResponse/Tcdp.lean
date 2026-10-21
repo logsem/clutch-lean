@@ -27,7 +27,7 @@ theorem rrCoupling_tcdp : RRCoupling (tcdpLifting ω) (ofReal (log 3)) := fun b 
 
 /-- `k` rounds are `k ln 3`-tCDP below the order `ω` (Def. 2.5). -/
 theorem rrCount_tCDP : (rrCountMech k σ).tCDP ⊤ ω (k * ofReal (log 3)) := by
-  simpa [nsmul_eq_mul] using rrCount_isPrivate (L := tcdpLifting ω) (ofReal (log 3))
+  simpa [nsmul_eq_mul] using rrCount_isPrivate (ofReal (log 3))
     (isAddLeftRegular_ofReal _) (rrCoupling_tcdp ω) k σ
 
 /-- Randomized response in a loop of `k` rounds is DP at every slack `δ > 0`: map its tCDP

@@ -90,6 +90,6 @@ end OneRound
 /-- `k` rounds are `(k ln 3, 0)`-DP (Def. 2.1). -/
 theorem rrCount_DP (k : ℕ) (σ : State rT) : (rrCountMech k σ).DP ⊤ (k * ofReal (log 3)) 0 := by
   simpa [nsmul_eq_mul] using
-    rrCount_isPrivate (L := codensity dp) budget isAddLeftRegular_budget rrCoupling_dp k σ
+    rrCount_isPrivate budget isAddLeftRegular_budget rrCoupling_dp k σ
 
 end ProbLang.RandomizedResponse

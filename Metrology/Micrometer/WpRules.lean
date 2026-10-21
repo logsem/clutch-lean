@@ -180,9 +180,13 @@ theorem wp_frame_r : iprop% wp L E e Φ ∗ R ⊢ wp L E e fun v => iprop(Φ v �
 theorem wp_frame_wand : iprop% R ∗ wp L E e (fun v => iprop(R -∗ Φ v)) ⊢ wp L E e Φ :=
   wp_frame_l.trans (wp_mono fun _ => wand_elim_right)
 
+section
+variable (HE : E2 ⊆ E1) (hv : e.toVal? = none)
+include HE hv
+
 /-- A non-value `e` takes a step, so an update that crosses a later can run around it and hand
 its result to the postcondition. -/
-theorem wp_step_fupd (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_step_fupd : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> P) ∗ wp L E2 e (fun v => iprop(P -∗ Φ v)) ⊢ wp L E1 e Φ := by
   iintro ⟨HR, HW⟩
   iapply wp_unfold
@@ -210,7 +214,7 @@ theorem wp_step_fupd (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
   iapply HWand $$ HP
 
 /-- Frame a resource available only after one step into the postcondition. -/
-theorem wp_frame_step_l (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_frame_step_l : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> R) ∗ wp L E2 e Φ ⊢ wp L E1 e fun v => iprop(R ∗ Φ v) := by
   iintro ⟨HR, HW⟩
   iapply wp_step_fupd HE hv
@@ -221,9 +225,11 @@ theorem wp_frame_step_l (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
   iframe
 
 /-- Frame a resource available only after one step into the postcondition, on the right. -/
-theorem wp_frame_step_r (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_frame_step_r : iprop%
     wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) :=
   (sep_comm.1.trans (wp_frame_step_l HE hv)).trans (wp_mono fun _ => sep_comm.1)
+
+end
 
 /-! ## Proof-mode instances -/
 

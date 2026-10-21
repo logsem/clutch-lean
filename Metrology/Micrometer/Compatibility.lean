@@ -65,9 +65,12 @@ theorem refines_beta_const_r {b t : Exp rT} {u : Val rT} (hb : b.IsLocallyClosed
   rw [show fill [] (open' b u.1) = b from (open_lc 0 u.1 b hb).symm]
   iexact H
 
+section
+variable {φ : Prop} (hφ : φ) {r : Exp rT} [Hex : PureExec φ 1 e r]
+include hφ
+
 /-- One pure step on each side reduces the goal to the reducts, under a later. -/
-theorem refines_pure_step {r r' : Exp rT} {φ φ' : Prop}
-    [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ') : iprop%
+theorem refines_pure_step {r' : Exp rT} {φ' : Prop} [Hex' : PureExec φ' 1 e' r'] (hφ' : φ') : iprop%
     ▷ refines L ⊤ r r' A ⊢ refines L ⊤ e e' A := by
   iintro H
   rw [eq_fill_nil e, eq_fill_nil e']
@@ -78,9 +81,8 @@ theorem refines_pure_step {r r' : Exp rT} {φ φ' : Prop}
   iexact H
 
 /-- One pure step on each side to values related at `A` closes the goal. -/
-theorem refines_pure_ret {r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
-    [Hex : PureExec φ 1 e r] [Hex' : PureExec φ' 1 e' r'] (hφ : φ) (hφ' : φ')
-    (hr : r = v.1) (hr' : r' = v'.1) :
+theorem refines_pure_ret {r' : Exp rT} {φ' : Prop} {v v' : Val rT} [Hex' : PureExec φ' 1 e' r']
+    (hφ' : φ') (hr : r = v.1) (hr' : r' = v'.1) :
     A.car v v' ⊢ refines L ⊤ e e' A := by
   iintro HA
   iapply refines_pure_step (Hex := Hex) (Hex' := Hex') hφ hφ'
@@ -90,11 +92,12 @@ theorem refines_pure_ret {r r' : Exp rT} {φ φ' : Prop} {v v' : Val rT}
   iexact HA
 
 /-- The same pure step on both sides, to a value related to itself at `A`. -/
-theorem refines_pure_both {r : Exp rT} {φ : Prop} [Hex : PureExec φ 1 e r] (hφ : φ)
-    (hrv : IsVal r) (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
+theorem refines_pure_both (hrv : IsVal r) (HA : ⊢ A ⟨r, hrv, hrv.lc⟩ ⟨r, hrv, hrv.lc⟩) :
     ⊢ refines L ⊤ e e A := by
   iapply refines_pure_ret (v := ⟨r, hrv, hrv.lc⟩) (v' := ⟨r, hrv, hrv.lc⟩) hφ hφ rfl rfl
   iapply HA
+
+end
 
 /-- A binary operator applied to the same values on both sides, with a result related to itself. -/
 theorem refines_binop_pure (op : BinOp) (v1 v2 r : Exp rT) (hv1 : IsVal v1) (hv2 : IsVal v2)
@@ -296,8 +299,10 @@ end Binding
 
 /-! ### Quantifiers -/
 
+variable {C : lrel rT GF → lrel rT GF}
+
 /-- Packing a witness `A` relates `e` at `∃ C` as soon as it is related at `C A`. -/
-theorem refines_pack (A : lrel rT GF) {C : lrel rT GF → lrel rT GF} :
+theorem refines_pack (A : lrel rT GF) :
     refines L ⊤ e e' (C A) ⊢ refines L ⊤ e e' (lrel_exists C) := by
   iintro IH
   iapply refines_wand $$ IH
@@ -310,8 +315,8 @@ theorem refines_pack (A : lrel rT GF) {C : lrel rT GF → lrel rT GF} :
 
 /-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
 instance. -/
-theorem refines_forall {C : lrel rT GF → lrel rT GF}
-    (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
+theorem refines_forall (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅)
+    (he'_fv : e'.fv = ∅) :
     □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
   iintro #H
   iapply refines_ret (v1 := ⟨.lam e, .lam (by is_lc), by is_lc⟩)

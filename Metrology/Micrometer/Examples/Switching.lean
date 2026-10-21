@@ -34,17 +34,19 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## The error budget -/
 
+section
+variable (N : Int)
+
 /-- Total error of `q` coupled rounds from `c` memoised entries: `∑_{i<q} (c + i) / N`, since
 round `i` meets a collision with probability `(c + i) / N`. -/
-noncomputable def loopErr (N : Int) (c q : Nat) : ENNReal :=
+noncomputable def loopErr (c q : Nat) : ENNReal :=
   (∑ i ∈ range q, ((c + i : Nat) : ENNReal)) / (N.toNat : ENNReal)
 
-theorem loopErr_mono (N : Int) (c : Nat) {q q' : Nat} (h : q ≤ q') :
-    loopErr N c q ≤ loopErr N c q' :=
+theorem loopErr_mono (c : Nat) {q q' : Nat} (h : q ≤ q') : loopErr N c q ≤ loopErr N c q' :=
   div_le_div_right (sum_le_sum_of_subset (range_mono h)) _
 
 /-- The first round costs `c / N` and the remaining rounds start from `c + 1` entries. -/
-theorem loopErr_succ (N : Int) (c q : Nat) :
+theorem loopErr_succ (c q : Nat) :
     loopErr N c (q + 1) = (c : ENNReal) / (N.toNat : ENNReal) + loopErr N (c + 1) q := by
   simp only [loopErr, sum_range_succ', ← ENNReal.add_div]
   rw [add_comm]
@@ -52,7 +54,7 @@ theorem loopErr_succ (N : Int) (c q : Nat) :
   exact sum_congr rfl fun i _ => by rw [← add_assoc, add_right_comm]
 
 /-- The loop error is at most the birthday bound `q (q - 1) / (2 N)`. -/
-theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
+theorem loopErr_zero_le_birthday (q : Nat) :
     loopErr N 0 q ≤ ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
   simp only [loopErr, Nat.zero_add]
   rw [← cast_sum, sum_range_id]
@@ -64,6 +66,8 @@ theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
     _ = ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
         rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
           ENNReal.mul_inv (.inl (by norm_num)) (.inl (by norm_num)), mul_assoc]
+
+end
 
 /-! ## The coupled games -/
 

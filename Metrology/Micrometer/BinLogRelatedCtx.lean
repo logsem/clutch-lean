@@ -16,6 +16,7 @@ and under a resource `P` such as budget credits when `K.IsLinear`. -/
 @[expose] public section
 
 namespace ProbLang
+open Ctx (fill)
 
 variable {rT : Type} {GF : BundledGFunctors}
 
@@ -281,7 +282,7 @@ theorem bin_log_related_under_typed_ctx {Γtc : Tctx} {e e' : Exp rT} {τ : Ty} 
     | @unpackR x e1 _ τ_pkg _ Hty_e1 =>
       have hxRc := HfreshHead x (mem_singleton_self _)
       refine bin_log_related_unpack Δ Γrc'
-        ((Γrc'.map (·.1)).toFinset ∪ {x} ∪ (Ctx.fill K' e).fv ∪ (Ctx.fill K' e').fv)
+        ((Γrc'.map (·.1)).toFinset ∪ {x} ∪ (fill K' e).fv ∪ (fill K' e').fv)
         (Fund Hty_e1)
         (fun y _ => open_close_isLocallyClosed x y HtyK.isLocallyClosed)
         (fun y _ => open_close_isLocallyClosed x y HtyK'.isLocallyClosed) fun A y hy => ?_

@@ -58,9 +58,13 @@ variable [BudgetGS B GF] [L.IsReflexive]
 
 /-! ### Step premises for the core rule -/
 
+section
+variable {z : Int} (Hz : 0 < z)
+include Hz
+
 /-- A unit-label `rand` steps to the uniform distribution, in the shape of the core rule's
 `HstepL`/`HstepR` premise (it needs no resource). -/
-theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp GF} :
+theorem randUnit_step_pure (σ : State rT) {P A : IProp GF} :
     ⊢ P -∗ A -∗ ⌜Discrete.Reducible pl(rand(#z, #())) σ ∧
       primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ⌝ := by
   iintro - -
@@ -68,7 +72,7 @@ theorem randUnit_step_pure {z : Int} (Hz : 0 < z) (σ : State rT) {P A : IProp G
   exact randUnit_uniform_step Hz σ
 
 /-- A `rand` on an empty program tape steps to the uniform distribution. -/
-theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State rT) :
+theorem appNatTape_empty_rand_step (α : Loc) (σ : State rT) :
     ⊢ appStateAuth σ -∗ appNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
         primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
@@ -80,8 +84,7 @@ theorem appNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (σ : State
   exact randLbl_empty_uniform_step Hz hlk
 
 /-- A `rand` on an empty spec tape steps to the uniform distribution. -/
-theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp rT)
-    (σ : State rT) :
+theorem specNatTape_empty_rand_step (α : Loc) (e : Exp rT) (σ : State rT) :
     ⊢ specAuth ⟨e, σ⟩ -∗ specNatTape α z [] -∗
       ⌜Discrete.Reducible pl(rand(#z, #lbl α)) σ ∧
         primStep ⟨pl(rand(#z, #lbl α)), σ⟩ = uniform z σ⌝ := by
@@ -91,6 +94,8 @@ theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp r
   ihave %hlk := spec_auth_lookup_tape $$ Hs Hb
   ipureintro
   exact randLbl_empty_uniform_step Hz hlk
+
+end
 
 /-! ### The core rule -/
 

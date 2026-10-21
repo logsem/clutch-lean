@@ -20,21 +20,24 @@ variable {rT : Type} [LawfulProbLangℝ rT] {X : Type} [MeasurableSpace X]
 
 /-! ## The mechanism of a program family -/
 
+section
+variable (p : X → Exp rT) (σ : State rT)
+
 /-- The program family `p` run from state `σ`, as a mechanism on its inputs. -/
-noncomputable def progMech (p : X → Exp rT) (σ : State rT)
+noncomputable def progMech
     (hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT) := by exact .of_discrete) :
     Mechanism X (Exp rT) :=
   ⟨fun x ↦ limExecV ⟨p x, σ⟩, limExecV.measurable.comp hp⟩
 
 @[simp]
-theorem progMech_apply (p : X → Exp rT) (σ : State rT) {hp} (x : X) :
-    progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
+theorem progMech_apply {hp} (x : X) : progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
   rfl
 
 /-- A program mechanism has total mass at most one. -/
-instance isSubMarkovKernel_progMech (p : X → Exp rT) (σ : State rT) {hp} :
-    IsSubMarkovKernel (progMech p σ hp) where
+instance isSubMarkovKernel_progMech {hp} : IsSubMarkovKernel (progMech p σ hp) where
   isSubProbabilityMeasure _ := limExecV.isSubProbabilityMeasure _
+
+end
 
 variable [MeasurableSingletonClass rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]

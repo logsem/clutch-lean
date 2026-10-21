@@ -25,6 +25,6 @@ theorem rrCoupling_zcdp : RRCoupling zcdpLifting budget := fun b b' ↦
 theorem rrCount_zCDP {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (k : ℕ)
     (σ : State rT) : (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
   simpa [nsmul_eq_mul] using
-    rrCount_isPrivate (L := zcdpLifting) budget isAddLeftRegular_budget rrCoupling_zcdp k σ
+    rrCount_isPrivate budget isAddLeftRegular_budget rrCoupling_zcdp k σ
 
 end ProbLang.RandomizedResponse

@@ -41,9 +41,11 @@ theorem fupd_refines {e t : Exp rT} :
   iintro >H
   iexact H
 
+section
+variable (E : CoPset) (e t : Exp rT)
+
 /-- `refines` eliminates `|={⊤}=>`. -/
-instance elim_fupd_refines {io : InOut} (E : CoPset) (e t : Exp rT) (P : _)
-    (A : lrel rT GF) :
+instance elim_fupd_refines {io : InOut} (P : _) (A : lrel rT GF) :
     ElimModal True false io false iprop(|={⊤}=> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal _ := calc
@@ -53,8 +55,7 @@ instance elim_fupd_refines {io : InOut} (E : CoPset) (e t : Exp rT) (P : _)
     _ ⊢ refines L E e t A                      := fupd_refines
 
 /-- `refines` eliminates `|==>`. -/
-instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT) (P : _)
-    (A : lrel rT GF) :
+instance elim_bupd_refines {io : InOut} (P : _) (A : lrel rT GF) :
     ElimModal True false io false iprop(|==> P) P
       (refines L E e t A) (refines L E e t A) where
   elim_modal h :=
@@ -62,12 +63,13 @@ instance elim_bupd_refines {io : InOut} (E : CoPset) (e t : Exp rT) (P : _)
       ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
 
 /-- `refines` is closed under `◇`. -/
-instance is_except_0_refines (E : CoPset) (e t : Exp rT) (A : lrel rT GF) :
-    IsExcept0 (refines L E e t A) where
+instance is_except_0_refines (A : lrel rT GF) : IsExcept0 (refines L E e t A) where
   is_except0 := calc
     ◇ refines L E e t A ⊢ ◇ |={⊤}=> refines L E e t A := except0_mono fupd_intro
     _ ⊢ |={⊤}=> refines L E e t A := except0
     _ ⊢ refines L E e t A := fupd_refines
+
+end
 
 /-! ### Bind and return -/
 
@@ -96,8 +98,12 @@ theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT)
   isimp only [← fill_comp K'' K' v'.1] at Hj
   iapply Hf $$ %K'' %b' Hj Hna Herr Hpos
 
+section
+variable {v1 v2 : Val rT} (hv1 : e1 = v1.1) (hv2 : e2 = v2.1)
+include hv1 hv2
+
 /-- Values refine at `A` when `naOwnP E` updates to `naOwnP ⊤` together with `A v1 v2`. -/
-theorem refines_ret_na {v1 v2 : Val rT} (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) : iprop%
+theorem refines_ret_na : iprop%
     (naOwnP (rT := rT) E ={⊤}=∗ naOwnP (rT := rT) ⊤ ∗ A v1 v2) ⊢ refines L E e1 e2 A := by
   subst hv1 hv2
   unfold refines
@@ -109,9 +115,7 @@ theorem refines_ret_na {v1 v2 : Val rT} (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) : ip
   iframe HK HF Herr Hpos HA
 
 /-- Two values refine each other at `A` when they are related at `A` after a `⊤` update. -/
-theorem refines_ret {v1 v2 : Val rT}
-    (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) :
-    (|={⊤}=> A v1 v2) ⊢ refines L ⊤ e1 e2 A := by
+theorem refines_ret : (|={⊤}=> A v1 v2) ⊢ refines L ⊤ e1 e2 A := by
   iintro HA
   iapply refines_ret_na hv1 hv2
   iintro Hna
@@ -120,8 +124,7 @@ theorem refines_ret {v1 v2 : Val rT}
   iframe Hna HA
 
 /-- Values refine at `A` when a `⊤` update gives the missing `naOwnP (⊤ \ E)` and `A v1 v2`. -/
-theorem refines_ret_na_compl {v1 v2 : Val rT}
-    (hv1 : e1 = v1.1) (hv2 : e2 = v2.1) : iprop%
+theorem refines_ret_na_compl : iprop%
     (|={⊤}=> naOwnP (rT := rT) (⊤ \ E) ∗ A v1 v2) ⊢ refines L E e1 e2 A := by
   iintro HFA
   iapply refines_ret_na hv1 hv2
@@ -135,6 +138,8 @@ theorem refines_ret_na_compl {v1 v2 : Val rT}
   iframe HA
   iapply hun
   iframe Hnais HF
+
+end
 
 /-! ### Non-atomic invariants -/
 
