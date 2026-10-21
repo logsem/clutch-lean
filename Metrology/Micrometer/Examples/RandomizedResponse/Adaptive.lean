@@ -7,6 +7,7 @@ public import Metrology.Couplings.Examples.AdaptiveRenyi
 public import Metrology.Couplings.BindLaws
 public import Metrology.Couplings.Divergences.Power
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -95,11 +96,13 @@ section Logic
 
 open Iris Iris.BI Iris.ProofMode
 
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
+
 /-- The adaptive program on `false` refines it on `true` at equal pairs of reports, spending
 `log (19/12)`: the escort law at the first draw, the canonical law at the second. -/
-theorem rrAdaptive_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} ↯b (ENNReal.ofReal (Real.log (19 / 12))) -∗
+theorem rrAdaptive_refines :
+    ⊢ ↯b (ENNReal.ofReal (Real.log (19 / 12))) -∗
       REL[codensity (renyiDivergence 2)] (rrAdaptive (rT := rT) false) << (rrAdaptive true) :
         lrel_prod lrel_bool lrel_bool := by
   iintro Hb

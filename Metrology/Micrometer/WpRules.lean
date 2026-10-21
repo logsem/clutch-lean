@@ -10,19 +10,21 @@ across a step), the proof-mode instances, and `wp_of_absorbing` for an absorbing
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
+open BIFUpdate BIUpdateFUpdate
 
 section Wp
-variable [BudgetGS B GF]
+variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {P R : IProp GF}
+  {Φ Ψ : Val rT → IProp GF} {p : Bool} {io : InOut} {n : Nat}
 
 /-! ## Bind and spec updates -/
 
@@ -42,7 +44,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
     iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
     imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
     imodintro
-    iapply specCoupl_bind Std.LawfulSet.subset_refl
+    iapply specCoupl_bind LawfulSet.subset_refl
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
@@ -74,8 +76,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
   iapply Hloeb $$ %E %e %Φ
 
 /-- A spec update before a `wp` can be absorbed into it. -/
-theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} :
+theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     specUpdate rT E (wp L E e Φ) ⊢ wp L E e Φ := by
   unfold specUpdate
   iintro HS
@@ -94,8 +95,7 @@ noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
 
 /-- A spec update in the postcondition can be absorbed into the `wp`. -/
-theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} :
+theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     wp L E e (fun v => specUpdate rT E (Φ v)) ⊢ wp L E e Φ := by
   have Hloeb : ⊢ wpSpecUpdateStmt L (rT := rT) := by
     iapply loeb_wand
@@ -104,7 +104,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
     iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
     imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
     imodintro
-    iapply specCoupl_bind Std.LawfulSet.subset_refl
+    iapply specCoupl_bind LawfulSet.subset_refl
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
@@ -114,7 +114,7 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset} {e : 
       imod HUpd $$ %ρ₂ Hs' with ⟨%ρ₃, %n, %Hstep, Hs'', HΦv⟩
       cases ρ₃ with
       | mk e₃' σ₃' =>
-        imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+        imod subset LawfulSet.empty_subset with Hclose
         imodintro
         iapply specCoupl_steps_det Hstep
         iapply specCoupl_ret
@@ -141,8 +141,7 @@ noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) R Φ, R -∗ wp L E e Φ -∗ wp L E e fun v => iprop(R ∗ Φ v)
 
 /-- Frame a resource into the postcondition. -/
-theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
-    iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ Φ v) := by
+theorem wp_frame_l : iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ Φ v) := by
   have Hloeb : ⊢ wpFrameLStmt L (rT := rT) := by
     iapply loeb_wand
     iintro !> IH %E' %e' %R' %Φ' HR HW
@@ -172,19 +171,16 @@ theorem wp_frame_l {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IPr
   iapply Hloeb $$ %E %e %R %Φ HR HW
 
 /-- Frame a resource into the postcondition, on the right. -/
-theorem wp_frame_r {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
-    iprop% wp L E e Φ ∗ R ⊢ wp L E e fun v => iprop(Φ v ∗ R) :=
+theorem wp_frame_r : iprop% wp L E e Φ ∗ R ⊢ wp L E e fun v => iprop(Φ v ∗ R) :=
   (sep_comm.1.trans wp_frame_l).trans (wp_mono fun _ => sep_comm.1)
 
 /-- A framed resource pays for a wand in the postcondition. -/
-theorem wp_frame_wand {E : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF} :
-    iprop% R ∗ wp L E e (fun v => iprop(R -∗ Φ v)) ⊢ wp L E e Φ :=
+theorem wp_frame_wand : iprop% R ∗ wp L E e (fun v => iprop(R -∗ Φ v)) ⊢ wp L E e Φ :=
   wp_frame_l.trans (wp_mono fun _ => wand_elim_right)
 
 /-- A non-value `e` takes a step, so an update that crosses a later can run around it and hand
 its result to the postcondition. -/
-theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF}
-    (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_step_fupd (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> P) ∗ wp L E2 e (fun v => iprop(P -∗ Φ v)) ⊢ wp L E1 e Φ := by
   iintro ⟨HR, HW⟩
   iapply wp_unfold
@@ -212,8 +208,7 @@ theorem wp_step_fupd {E1 E2 : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT �
   iapply HWand $$ HP
 
 /-- Frame a resource available only after one step into the postcondition. -/
-theorem wp_frame_step_l {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF}
-    (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_frame_step_l (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> R) ∗ wp L E2 e Φ ⊢ wp L E1 e fun v => iprop(R ∗ Φ v) := by
   iintro ⟨HR, HW⟩
   iapply wp_step_fupd HE hv
@@ -224,47 +219,40 @@ theorem wp_frame_step_l {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val r
   iframe
 
 /-- Frame a resource available only after one step into the postcondition, on the right. -/
-theorem wp_frame_step_r {E1 E2 : CoPset} {e : Exp rT} {R : IProp GF} {Φ : Val rT → IProp GF}
-    (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
+theorem wp_frame_step_r (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) :=
   (sep_comm.1.trans (wp_frame_step_l HE hv)).trans (wp_mono fun _ => sep_comm.1)
 
 /-! ## Proof-mode instances -/
 
 /-- `wp` is closed under `◇`. -/
-instance isExcept0_wp {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
-    IsExcept0 (wp L E e Φ) where
-  is_except0 := (except0_mono fupd_intro).trans (BIFUpdate.except0.trans fupd_wp)
+instance isExcept0_wp : IsExcept0 (wp L E e Φ) where
+  is_except0 := (except0_mono fupd_intro).trans (except0.trans fupd_wp)
 
 /-- Framing through `wp` frames the postcondition. -/
-instance frame_wp {p : Bool} {E : CoPset} {e : Exp rT} {R : IProp GF}
-    {Φ Ψ : Val rT → IProp GF} [inst : ∀ v, Frame p R (Φ v) (Ψ v)] :
+instance frame_wp [inst : ∀ v, Frame p R (Φ v) (Ψ v)] :
     Frame p R (wp L E e Φ) (wp L E e Ψ) where
   frame := wp_frame_l.trans (wp_mono fun v => (inst v).frame)
 
 /-- A `wp` absorbs a leading `|={E}=>`. -/
-instance addModal_fupd_wp {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
-    AddModal iprop(|={E}=> P) P (wp L E e Φ) where
-  add_modal := fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
+instance addModal_fupd_wp : AddModal iprop(|={E}=> P) P (wp L E e Φ) where
+  add_modal := fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
 
 /-- A `wp` eliminates a leading `|==>`. -/
-instance elimModal_bupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF}
-    {Φ : Val rT → IProp GF} :
+instance elimModal_bupd_wp :
     ElimModal True p io false iprop(|==> P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
-    (sep_mono_left BIUpdateFUpdate.fupd_of_bupd).trans <|
-    fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
+    (sep_mono_left fupd_of_bupd).trans <|
+    fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
 
 /-- A `wp` eliminates a leading `|={E}=>`. -/
-instance elimModal_fupd_wp {p : Bool} {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF}
-    {Φ : Val rT → IProp GF} :
+instance elimModal_fupd_wp :
     ElimModal True p io false iprop(|={E}=> P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
-    fupd_frame_right.trans <| (BIFUpdate.mono wand_elim_right).trans fupd_wp
+    fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
 
 /-- A `wp` eliminates a leading `specUpdate`. -/
-instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : InOut}
-    {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
+instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := by
     simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
@@ -278,8 +266,7 @@ instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {io : I
     iapply Hcnt $$ HPv
 
 /-- A `wp` eliminates a leading `specUpdateN`. -/
-instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] {n : Nat}
-    {io : InOut} {E : CoPset} {e : Exp rT} {P : IProp GF} {Φ : Val rT → IProp GF} :
+instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal h :=
     (sep_mono_left specUpdateN_specUpdate).trans ((elimModal_specUpdate_wp (io := io)).elim_modal h)
@@ -292,6 +279,7 @@ A local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`, so credit rule
 
 section BudgetCredits
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
+open BudgetCredit
 
 /-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
 theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
@@ -299,8 +287,8 @@ theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {
   iintro Hc
   iapply wp_unfold
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨-, -, Hb⟩
-  ihave %hle := BudgetCredit.supply_bound $$ Hb Hc
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with -
+  ihave %hle := supply_bound $$ Hb Hc
+  imod subset LawfulSet.empty_subset with -
   imodintro
   iapply specCoupl_absorbing (hc.mono hle)
 

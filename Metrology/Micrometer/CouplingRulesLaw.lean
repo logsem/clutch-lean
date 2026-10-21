@@ -3,6 +3,7 @@ module
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.BindLaws
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 /-! # Law-driven `rand` couplings
 
@@ -14,7 +15,8 @@ import Metrology.ProbLang.Syntax.Notation
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open MeasureTheory (Measure)
 open scoped ENNReal
 
 namespace ProbLang
@@ -65,6 +67,7 @@ variable [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyO
   [OrderTop B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC} {GF : BundledGFunctors}
   [MeasurableSingletonClass rT] [BudgetCreditGS B GF]
+local bi IProp GF
 
 section Wp
 
@@ -77,7 +80,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
     (hhead : ∀ σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K R) c)
-    (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b c ∗
     (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#int m) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#N, #())) Φ := by
@@ -86,7 +89,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   -- not via `wp_lift_prim_steps_coupl_law`: that needs the remainder `r < ⊤`; at `r = ⊤` we exit
   -- by absorption instead
@@ -100,7 +103,7 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
       (primStep ⟨K.fill pl(rand(#N, #())), σ₁'⟩) (Cfg.drawCost σ₁ σ₁' K R) c := by
     rw [primStep_rand_unit HN, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
       Cfg.uniform_eq_map HN, Cfg.uniform_eq_map HN,
-      MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
+      Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
         (Ectx.fillCfg.measurable K) Measurable.of_discrete]
     exact hhead σ₁ σ₁'
   iapply progCoupl_steps_spend_law law hr.ge hrTop (randUnit_uniform_step HN σ₁).1.toReducible
@@ -168,6 +171,8 @@ section Choice
 
 variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
+  {GF : BundledGFunctors} [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
 
 /-- The continuation budget of a choice draw: `(ε₂, δ₂)` on `P`, `(ε₂', δ₂)` off it. -/
 noncomputable def choiceBudget (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞) (r : Int) : ℝ≥0∞ × ℝ≥0∞ := by
@@ -230,13 +235,12 @@ theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State
 
 /-- Couple `rand N ~ K[rand N]` by the DP choice rule, spending the choice budget and handing
 `choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
-theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (HN : 0 < N)
+theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 < N)
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞))
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
     (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
       ⤇ K.fill pl(#r') -∗ Φ (.int r)) ⊢
@@ -252,9 +256,8 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} {GF : BundledGFunctors} [Micr
 
 /-- Couple `rand N ~ rand N` by the DP choice rule, spending the choice budget and handing
 `choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
-theorem refines_couple_rands_dpChoice {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF}
-    (N : Int) (HN : 0 < N)
+theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset}
+    {K K' : Ectx rT} {A : lrel rT GF} (N : Int) (HN : 0 < N)
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)

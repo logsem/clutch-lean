@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.AppWeakestpre
+import Metrology.Iris.LocalBI
 
 /-! # Further lifting rules
 
@@ -12,22 +13,23 @@ presampling both sides at cost `0` (Rocq `approxis/lifting.v`). -/
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 namespace ProbLang.MicrometerWpGS
 
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
-  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF]
+  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E : CoPset}
+  {e₁ : Exp rT} {Φ : Val rT → IProp GF}
+local bi IProp GF
+open SpecUpdateGS
 
 /-! ## Coupled steps with a leftover `R` -/
 
 /-- Lift a program step coupled with a spec step within `b₁`, adding `b₂` to every leftover
 (Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF}
-    (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
         ⌜b₁ + b₂ ≤ b⌝ ∗
@@ -35,7 +37,7 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
-          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
+          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
             budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
     wp L E e₁ Φ := by
   iintro H
@@ -49,16 +51,15 @@ theorem wp_lift_prim_steps_coupl_adv [AddCommMonoid B] [CanonicallyOrderedAdd B]
 
 /-- Lift a coupled program and spec step whose leftover `R` is the new budget at each pair. -/
 theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
-    {E : CoPset} {e₁ : Exp rT} {Φ : Val rT → IProp GF}
     (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B),
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
-          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
+          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
             budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp L E e₂ Φ)) ⊢
     wp L E e₁ Φ := by
   iintro H
@@ -76,10 +77,8 @@ theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
 proving `wp` (Rocq `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is
 `L.Absorbing b`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B]
-    [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e₁ : Exp rT}
-    {Φ : Val rT → IProp GF}
-    (hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+    [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hv : e₁.toVal? = none) : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
         ⌜b₁ + b₂ ≤ b⌝ ∗
@@ -88,7 +87,7 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
         ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
           ⌜L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)⌝ ∨
-          (stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₂', σ₂'⟩ ∗
+          (stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
             budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ))) ⊢
     wp L E e₁ Φ := by
   iintro H
@@ -113,17 +112,16 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing [AddCommMonoid B] [CanonicallyOrd
 /-- Presample both sides: couple erasable distributions of the program and spec states at cost
 `0` (Rocq `wp_couple_erasables`). -/
 theorem wp_couple_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} : iprop%
-    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₁'⟩ ∗
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] : iprop%
+    (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b -∗ |={E, ∅}=>
       ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),
         ⌜ErasableExpr μ₁ σ₁⌝ ∗ ⌜ErasableExpr μ₁' σ₁'⌝ ∗
         ⌜L.Rel 0 R μ₁ μ₁'⌝ ∗
         (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={∅, E}=>
-          stateInterp σ₂ ∗ SpecUpdateGS.specInterp ⟨e₁', σ₂'⟩ ∗ budgetInterp b ∗
-            wp L E e Φ)) ⊢
-    wp L E e Φ := by
+          stateInterp σ₂ ∗ specInterp ⟨e₁', σ₂'⟩ ∗ budgetInterp b ∗
+            wp L E e₁ Φ)) ⊢
+    wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩

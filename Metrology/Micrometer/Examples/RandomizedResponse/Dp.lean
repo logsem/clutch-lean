@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.Examples.RandomizedResponse.Basic
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -26,10 +27,14 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
 /-! ## One round, by `wp` -/
 
+section Wp
+
+variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
 /-- One round against the spec, spending `(ln 3, 0)`. -/
-theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ⤇ rr (rT := rT) b' -∗ ↯b budget -∗
+theorem wp_rr (b b' : Bool) :
+    ⊢ ⤇ rr (rT := rT) b' -∗ ↯b budget -∗
       wp (codensity dp) ⊤ (rr b) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
@@ -37,6 +42,8 @@ theorem wp_rr {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   iframe Hj Hb
   iintro %d Hj
   iapply spec_fill_nil_exists (.bool d) $$ Hj
+
+end Wp
 
 /-- Randomized response is `(ln 3, 0)`-DP for any two private bits, through `wp_rr`. -/
 theorem rr_dp (b b' : Bool) (σ σ' : State rT) :
@@ -50,11 +57,17 @@ theorem rr_event_le (b b' : Bool) (σ σ' : State rT) (S : Set (Exp rT))
 
 /-! ## One round, by refinement -/
 
+section Refines
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
 /-- One round refines itself at equal reports, spending `(ln 3, 0)`. -/
-theorem rr_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
+theorem rr_refines (b b' : Bool) :
+    ⊢ ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
   rr_refines_of budget isAddLeftRegular_budget rrCoupling_dp b b'
+
+end Refines
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
 noncomputable abbrev rrMech (σ : State rT) : Mechanism Bool (Exp rT) :=

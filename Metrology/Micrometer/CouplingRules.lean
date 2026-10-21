@@ -21,29 +21,51 @@ open scoped AppGS
 namespace ProbLang
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
-variable {B : Type} {L : GradedLifting.{0} B}
+variable {B : Type} {L : GradedLifting.{0} B} {hlc : HasLC} {GF : BundledGFunctors}
+local bi IProp GF
+
+/-! ## Raw tapes to tape predicates -/
+
+/-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
+theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
+    {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
+    l ↪ₐ ⟨z, fs⟩ ⊢ appNatTape l z ns := by
+  iintro Hb
+  iunfold appNatTape
+  iexists fs
+  iframe %hfs Hb
+
+/-- A raw spec tape holding `fs` gives the user-level spec tape predicate on its values. -/
+theorem specNatTape_fold [SpecGS rT GF] {l : Loc} {z : Int} {ns : List Int}
+    {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
+    l ↪ₛ ⟨z, fs⟩ ⊢ specNatTape l z ns := by
+  iintro Hb
+  iunfold specNatTape
+  iexists fs
+  iframe %hfs Hb
+
+variable [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B]
+  [CanonicallyOrderedAdd B] [OrderTop B] [MicrometerGS rT hlc GF] [L.IsLawful] [L.IsSupportLocal]
+  [L.IsTopAbsorbing] [L.HasBind]
 
 /-! ## Coupling two draws along a bijection, at no cost -/
 
 section CouplingRules
 
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
-local bi IProp GF
+variable [BudgetGS B GF] [L.IsReflexive]
 
 /-- Core rule: if the resource `A` shows that `eL` (program side) and `eR` (spec side) each step to
 `Cfg.uniform z`, couple the two draws along the bijection `f` at budget `0` and return `A`. -/
 theorem wp_couple_rand_core (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) {eL eR : Exp rT} (K : Ectx rT) (E : CoPset) (A : IProp GF) [BI.Timeless A]
+    (Hz : 0 < z) {eL eR : Exp rT} (K : Ectx rT) (E : CoPset) (A : IProp GF) [Timeless A]
     (HvL : eL.toVal? = none) (HvR : ¬ eR.isValue)
     (HstepL : ∀ σ, ⊢ appStateAuth σ -∗ A -∗
       ⌜Discrete.Reducible eL σ ∧ primStep ⟨eL, σ⟩ = Cfg.uniform z σ⌝)
     (HstepR : ∀ e' σ', ⊢ Cfg.specAuth ⟨e', σ'⟩ -∗ A -∗
       ⌜Discrete.Reducible eR σ' ∧ primStep ⟨eR, σ'⟩ = Cfg.uniform z σ'⌝)
-    (Φ : Val rT → IProp GF) : iprop%
+    (Φ : Val rT → _) : iprop%
     ▷ A ∗ ⤇ K.fill eR ∗ (∀ n, A ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E eL Φ := by
   iintro ⟨HA, Hj, Hcnt⟩
@@ -60,7 +82,7 @@ theorem wp_couple_rand_core (z : Int) (f : Int → Int)
       (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
     rw [hL.2, primStep_fill HvR, hR.2]
     exact Cfg.uniform_rel_bij_fill Hz σ₁ σ₁' f K hdom hbij
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   iexists CoupledDraw z f σ₁ σ₁' K, 0, b
   iframe %hb %hredL %hredR %hcpl
@@ -119,7 +141,7 @@ theorem specNatTape_empty_rand_step {z : Int} (Hz : 0 < z) (α : Loc) (e : Exp r
 theorem wp_couple_rand_rand (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#z, #())) ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #())) Φ := by
@@ -138,7 +160,7 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
     (Hz : 0 < z) (HneM : z ≠ M) (K : Ectx rT) (E : CoPset) (α α' : Loc)
-    (xs ys : List Int) (Φ : Val rT → IProp GF) : iprop%
+    (xs ys : List Int) (Φ : Val rT → _) : iprop%
     ▷ appNatTape α M xs ∗ ▷ specNatTape α' M ys ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
     (∀ n, appNatTape α M xs ∗ specNatTape α' M ys ∗ ⤇ K.fill pl(#int (f n)) ∗
       ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
@@ -170,7 +192,7 @@ theorem wp_couple_rand_lbl_rand_lbl_wrong (z M : Int) (f : Int → Int)
 theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α α' : Loc) (Φ : Val rT → IProp GF) : iprop%
+    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α α' : Loc) (Φ : Val rT → _) : iprop%
     ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
     (∀ n, appNatTape α z [] ∗ specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗
       ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
@@ -193,7 +215,7 @@ theorem wp_couple_rand_lbl_rand_lbl (z : Int) (f : Int → Int)
 theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α : Loc) (Φ : Val rT → IProp GF) : iprop%
+    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α : Loc) (Φ : Val rT → _) : iprop%
     ▷ appNatTape α z [] ∗ ⤇ K.fill pl(rand(#z, #())) ∗
     (∀ n, appNatTape α z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #lbl α)) Φ :=
@@ -205,7 +227,7 @@ theorem wp_couple_tape_rand (z : Int) (f : Int → Int)
 theorem wp_couple_rand_tape (z : Int) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α' : Loc) (Φ : Val rT → IProp GF) : iprop%
+    (Hz : 0 < z) (K : Ectx rT) (E : CoPset) (α' : Loc) (Φ : Val rT → _) : iprop%
     ▷ specNatTape α' z [] ∗ ⤇ K.fill pl(rand(#z, #lbl α')) ∗
     (∀ n, specNatTape α' z [] ∗ ⤇ K.fill pl(#int (f n)) ∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #())) Φ :=
@@ -213,40 +235,7 @@ theorem wp_couple_rand_tape (z : Int) (f : Int → Int)
     Exp.rand_toVal?_eq_none Exp.rand_not_isValue
     (fun σ => randUnit_step_pure Hz σ) (specNatTape_empty_rand_step Hz α') Φ
 
-end CouplingRules
-
-/-! ## Presampling onto tapes -/
-
-section NatTapeBridges
-
-variable {GF : BundledGFunctors}
-local bi IProp GF
-
-/-- A raw tape holding `fs` gives the user-level tape predicate on its values. -/
-theorem appNatTape_fold [AppGS rT GF] {l : Loc} {z : Int} {ns : List Int}
-    {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
-    l ↪ₐ ⟨z, fs⟩ ⊢ appNatTape l z ns := by
-  iintro Hb
-  iunfold appNatTape
-  iexists fs
-  iframe %hfs Hb
-
-/-- A raw spec tape holding `fs` gives the user-level spec tape predicate on its values. -/
-theorem specNatTape_fold [SpecGS rT GF] {l : Loc} {z : Int} {ns : List Int}
-    {fs : List { z' : Int // 0 ≤ z' ∧ z' < z }} (hfs : fs.map (fun x => x.val) = ns) :
-    l ↪ₛ ⟨z, fs⟩ ⊢ specNatTape l z ns := by
-  iintro Hb
-  iunfold specNatTape
-  iexists fs
-  iframe %hfs Hb
-
-end NatTapeBridges
-
-section TapePresampling
-
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
+/-! ### Presampling onto tapes -/
 
 /-- Presample one draw onto a program tape and one onto a spec tape, coupled along a bijection
 `f`. -/
@@ -268,7 +257,7 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %hlk := app_state_lookup_tape $$ Hσ Hα
   ihave %hlkₛ := spec_auth_lookup_tape $$ Hs Hαₛ
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   iexists (fun σ₂ σ₂' => ∃ n, 0 ≤ n ∧ n < z ∧
       σ₂ = σ₁.update_tapes (·.insert α ⟨z, fs ++ [tapeIdxOf Hz n]⟩) ∧
@@ -293,15 +282,15 @@ theorem wp_couple_tapes_bij {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     (by simp [← Hfsₛ, tapeIdxOf_val Hz hd.1 hd.2]) $$ Hαₛ'
   iapply Hcnt $$ %n %⟨hn0, hnz⟩ HnatA HnatS
 
-end TapePresampling
+end CouplingRules
+
+
 
 /-! ## Rules that spend budget credits -/
 
 section CreditRules
 
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT] [MicrometerGS rT hlc GF]
-  [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal]
+variable [BudgetCreditGS B GF]
 
 /-! ### The general rule: any lifting of the two uniform draws -/
 
@@ -310,7 +299,7 @@ cancelable budget `c`; spends `↯b c`. -/
 theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
     (S : Int → Int → Prop) (c : B) (hc : IsAddLeftRegular c)
     (Hcpl : L.Rel c S (unifInt zL HzL) (unifInt zR HzR)) (K : Ectx rT) (E : CoPset)
-    (Φ : Val rT → IProp GF) : iprop%
+    (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b c ∗
     (∀ n m, ⌜S n m⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
@@ -319,7 +308,7 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hdec⟩
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   let S' : Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
     ∃ n m, S n m ∧ c₁ = ⟨pl(#n), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#m), σ₁'⟩
@@ -347,7 +336,7 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR)
 `hoare_couple_laplace`, for uniform draws). -/
 theorem wp_couple_rand_rand_spend (N : Int) (HN : 0 < N) (S : Int → Int → Prop) (c : B)
     (hc : IsAddLeftRegular c) (Hcpl : L.Rel c S (unifInt N HN) (unifInt N HN))
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b c ∗
     (∀ r r', ⌜S r r'⌝ -∗ ⤇ K.fill pl(#r') -∗ Φ (.int r)) ⊢
     wp L E pl(rand(#N, #())) Φ :=
@@ -360,7 +349,7 @@ theorem wp_couple_rand_rand_inj (zL zR : Int) (f : Int → Int)
     (b binj : B) (HzL : 0 < zL) (HzR : 0 < zR)
     (Hcpl : L.Rel binj (fun n m ↦ 0 ≤ n ∧ n < zL ∧ m = f n) (unifInt zL HzL) (unifInt zR HzR))
     (hb : binj ≤ b) (hc : IsAddLeftRegular binj) (K : Ectx rT) (E : CoPset)
-    (Φ : Val rT → IProp GF) : iprop%
+    (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b b ∗
     (∀ n, ⌜0 ≤ n ∧ n < zL⌝ -∗ ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
@@ -378,7 +367,7 @@ theorem wp_couple_rand_rand_rev_inj (zL zR : Int) (f : Int → Int)
     (b binj : B) (HzL : 0 < zL) (HzR : 0 < zR)
     (Hcpl : L.Rel binj (fun n m ↦ 0 ≤ m ∧ m < zR ∧ n = f m) (unifInt zL HzL) (unifInt zR HzR))
     (hb : binj ≤ b) (hc : IsAddLeftRegular binj) (K : Ectx rT) (E : CoPset)
-    (Φ : Val rT → IProp GF) : iprop%
+    (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b b ∗
     (∀ m, ⌜0 ≤ m ∧ m < zR⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int (f m))) ⊢
     wp L E pl(rand(#zL, #())) Φ := by
@@ -400,7 +389,7 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
     (Hz : 0 < z) (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁)
-    (hc : IsAddLeftRegular (s ε₁)) (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (hc : IsAddLeftRegular (s ε₁)) (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#z, #())) ∗ ↯b (s ε₁) ∗
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⌜¬ L.Absorbing (s (ε₂ n))⌝ -∗ ↯b (s (ε₂ n)) -∗
       ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
@@ -413,7 +402,7 @@ theorem wp_couple_rand_rand_adv [L.IsReflexive]
   have hredL := (randUnit_uniform_step Hz σ₁).1.toReducible
   have hredR := (randUnit_uniform_step Hz σ₁').1.toReducible.fill K
   imod BudgetCredit.supply_decrease hc $$ Hb Herr with ⟨%r, %hr, Hb⟩
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   have hb : s ε₁ + r ≤ b := hr.ge
   imodintro
   have hlift := Cfg.uniform_lift_adv (L := L) (s := s) Hz f ε₁ ε₂ σ₁ σ₁' K hdom hbij hamort
@@ -454,7 +443,7 @@ theorem wp_couple_rand_rand_avoid [L.IsReflexive]
     {s : ENNReal →+o B} [L.IsExpectationAdditive s] (z bad : Int) (Hz : 0 < z)
     (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) (K : Ectx rT) (E : CoPset)
-    (Φ : Val rT → IProp GF) : iprop%
+    (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#z, #())) ∗ ↯b (s (z.toNat : ENNReal)⁻¹) ∗
     (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗ ⤇ K.fill pl(#n) -∗ Φ (.int n)) ⊢
     wp L E pl(rand(#z, #())) Φ := by
@@ -476,8 +465,9 @@ end CreditRules
 
 section CouplingRulesTV
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
-  [MicrometerGS rT hlc GF] [BudgetCreditGS ENNReal GF]
+open GradedDivergence
+
+variable [BudgetCreditGS ENNReal GF]
 
 /-- A finite ratio of naturals is cancelable, so it can be spent as a tv credit. -/
 theorem isAddLeftRegular_natCast_div {a b : ℕ} (hb : b ≠ 0) :
@@ -492,10 +482,10 @@ theorem wp_couple_rand_rand_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENNReal
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂)
     (HzL : 0 < zL) (Hle : zL ≤ zR)
     (hε : ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal) ≤ ε)
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b ε ∗
     (∀ n, ⌜0 ≤ n ∧ n < zL⌝ -∗ ⤇ K.fill pl(#int (f n)) -∗ Φ (.int n)) ⊢
-    wp GradedDivergence.tv.codensity E pl(rand(#zL, #())) Φ :=
+    wp tv.codensity E pl(rand(#zL, #())) Φ :=
   wp_couple_rand_rand_inj zL zR f ε _ HzL (HzL.trans_le Hle)
     (unifInt_addCoupl_inj HzL Hle f hdom hinj).codensity hε
     (isAddLeftRegular_natCast_div (by omega)) K E Φ
@@ -507,10 +497,10 @@ theorem wp_couple_rand_rand_rev_inj_tv (zL zR : Int) (f : Int → Int) (ε : ENN
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂)
     (HzR : 0 < zR) (Hle : zR ≤ zL)
     (hε : ((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal) ≤ ε)
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b ε ∗
     (∀ m, ⌜0 ≤ m ∧ m < zR⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int (f m))) ⊢
-    wp GradedDivergence.tv.codensity E pl(rand(#zL, #())) Φ :=
+    wp tv.codensity E pl(rand(#zL, #())) Φ :=
   wp_couple_rand_rand_rev_inj zL zR f ε _ (HzR.trans_le Hle) HzR
     (unifInt_addCoupl_rev_inj HzR Hle f hdom hinj).codensity hε
     (isAddLeftRegular_natCast_div (by omega)) K E Φ

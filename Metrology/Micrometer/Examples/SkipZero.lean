@@ -5,6 +5,7 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -21,10 +22,14 @@ namespace SkipZero
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
+section Refines
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
+
 /-- A uniform draw refines `skipZero` in `codensity tv`, spending `↯b (1/N)` to avoid `0`. -/
-theorem unif_refines_skipZero {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] (N : Int) (hN : 0 < N) :
-    ⊢@{IProp GF} ↯b (N.toNat : ℝ≥0∞)⁻¹ -∗
+theorem unif_refines_skipZero (N : Int) (hN : 0 < N) :
+    ⊢ ↯b (N.toNat : ℝ≥0∞)⁻¹ -∗
       REL[codensity tv] (unif (rT := rT) N) << skipZero N : lrel_int := by
   iintro Hε
   -- couple the two draws along the identity, using the credit to rule out `0` on the left
@@ -36,6 +41,8 @@ theorem unif_refines_skipZero {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC
   -- `n ≠ 0`, so `skipZero`'s branch returns `n` too
   rel_pures
   rel_values
+
+end Refines
 
 /-- On every event, `unif N` is at most `1/N` more likely than `skipZero N`: the tv bound,
 read off `unif_refines_skipZero` by adequacy. -/

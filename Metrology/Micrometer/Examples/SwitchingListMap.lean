@@ -5,6 +5,7 @@ public import Metrology.Couplings.Divergences.Tv
 public import Metrology.Micrometer.WpTactics
 public import Metrology.Code.Switching
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -19,7 +20,7 @@ open scoped AppGS ENNReal
 namespace ProbLang
 namespace Switching
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-! ## The meta-level model of maps -/
 
@@ -45,8 +46,6 @@ theorem alookup_eq_none_iff {k : Int} {m : List (Int × Int)} :
 /-! ## Pure recursions -/
 
 section Recursions
-
-omit [MeasurableSingletonClass rT]
 
 /-- `findList` computes association-list lookup. -/
 theorem findList_steps (m : List (Int × Int)) (k : Int) :
@@ -112,10 +111,13 @@ Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versio
 
 section MapOps
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+variable [MeasurableSingletonClass rT] {hlc : HasLC} {GF : BundledGFunctors}
+  [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF] {E : CoPset} {Φ : Val rT → _} (K : Ectx rT)
+  {e : Exp rT}
+local bi IProp GF
 
 /-- `initMap ()` allocates a location holding the empty map. -/
-theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
+theorem wp_initMap : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢
     WP[codensity tv] (pl% &initMap #()) @ E {{ Φ }} := by
   iintro HΦ
@@ -127,7 +129,7 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
   iexact HΦ
 
 /-- Spec-side `wp_initMap`. -/
-theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+theorem wp_initMap_r : iprop%
     ⤇ K.fill (pl% &initMap #()) ∗
     (∀ ℓ : Loc, ⤇ K.fill pl(#loc ℓ) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗
       WP[codensity tv] e @ E {{ Φ }}) ⊢
@@ -141,8 +143,7 @@ theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IP
   iapply Hcnt $$ %ℓ Hj Hl
 
 /-- `getMap ℓ k` returns the lookup of `k` and leaves the map unchanged. -/
-theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_getMap (ℓ : Loc) (m : List (Int × Int)) (k : Int) : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal m : Val rT)) -∗ Φ (optIntVal (alookup k m))) ⊢
     WP[codensity tv] (pl% &getMap #loc ℓ #k) @ E {{ Φ }} := by
@@ -157,8 +158,7 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
   iapply HΦ $$ Hl
 
 /-- Spec-side `wp_getMap`. -/
-theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k : Int)
-    {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+theorem wp_getMap_r (ℓ : Loc) (m : List (Int × Int)) (k : Int) : iprop%
     ⤇ K.fill (pl% &getMap #loc ℓ #k) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (⤇ K.fill (Exp.ofVal (optIntVal (alookup k m))) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗
       WP[codensity tv] e @ E {{ Φ }}) ⊢
@@ -172,8 +172,7 @@ theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int
   iapply Hcnt $$ Hj Hl
 
 /-- `setMap ℓ k y` conses the binding `(k, y)` onto the stored map. -/
-theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_setMap (ℓ : Loc) (m : List (Int × Int)) (k y : Int) : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal ((k, y) :: m) : Val rT)) -∗ Φ .unit) ⊢
     WP[codensity tv] (pl% &setMap #loc ℓ #k #y) @ E {{ Φ }} := by
@@ -192,8 +191,7 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
   iexact HΦ
 
 /-- Spec-side `wp_setMap`. -/
-theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
-    {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+theorem wp_setMap_r (ℓ : Loc) (m : List (Int × Int)) (k y : Int) : iprop%
     ⤇ K.fill (pl% &setMap #loc ℓ #k #y) ∗
       (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (⤇ K.fill pl(#()) -∗ (ℓ ↦ₛ (assocVal ((k, y) :: m) : Val rT)) -∗

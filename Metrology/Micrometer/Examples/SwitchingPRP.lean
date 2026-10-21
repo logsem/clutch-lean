@@ -3,6 +3,7 @@ module
 public import Metrology.Micrometer.Examples.SwitchingListMap
 public import Metrology.Micrometer.CouplingRules
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 import Mathlib.Data.List.GetD
 
 @[expose] public section
@@ -33,6 +34,8 @@ def prpQueryV (ℓm ℓfv : Loc) : Val rT :=
 section PRP
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+  {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
+local bi IProp GF
 
 /-! ## Representation predicates
 
@@ -42,11 +45,11 @@ facts. -/
 /-- `f` is an idealised random function with output space `[0, N)` and memo table `m`
 (program side). -/
 def isRandomFunction (N : Int) (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
-  ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ (assocVal m : Val rT))
+  ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ assocVal m)
 
 /-- `isRandomFunction` for the spec-side program (points-to `↦ₛ`). -/
 def isSRandomFunction (N : Int) (f : Val rT) (m : List (Int × Int)) : IProp GF := iprop%
-  ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ₛ (assocVal m : Val rT))
+  ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ₛ assocVal m)
 
 /-- The pure permutation invariant: the sampled values `m.map (·.2)` together with the
 fresh list `r` are a permutation of `[0, N)`. -/
@@ -57,17 +60,17 @@ def prpPerm (N : Int) (m : List (Int × Int)) (r : List Int) : Prop :=
 list `r` (program side). -/
 def isPRP (N : Int) (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp GF := iprop%
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
-    (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT))
+    (ℓm ↦ assocVal m) ∗ (ℓfv ↦ intListVal r)
 
 /-- `isPRP` for the spec-side program (points-to `↦ₛ`). -/
 def isSPRP (N : Int) (f : Val rT) (m : List (Int × Int)) (r : List Int) : IProp GF := iprop%
   ∃ (ℓm ℓfv : Loc), ⌜f = prpQueryV ℓm ℓfv⌝ ∗ ⌜prpPerm N m r⌝ ∗
-    (ℓm ↦ₛ (assocVal m : Val rT)) ∗ (ℓfv ↦ₛ (intListVal r : Val rT))
+    (ℓm ↦ₛ assocVal m) ∗ (ℓfv ↦ₛ intListVal r)
 
 /-! ## Creation -/
 
 /-- Creating a random function (program side). -/
-theorem wp_randomFunction {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} : iprop%
+theorem wp_randomFunction (N : Int) : iprop%
     (∀ f, isRandomFunction N f [] -∗ Φ f) ⊢
     WP[codensity tv] (randomFunction N) @ E {{ Φ }} := by
   iintro HΦ
@@ -84,7 +87,7 @@ theorem wp_randomFunction {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} : ip
   rfl
 
 /-- Creating a random permutation (program side). -/
-theorem wp_randomPermutation {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} : iprop%
+theorem wp_randomPermutation (N : Int) : iprop%
     (∀ f, isPRP N f [] ((List.range N.toNat).map Int.ofNat) -∗ Φ f) ⊢
     WP[codensity tv] (randomPermutation N) @ E {{ Φ }} := by
   iintro HΦ
@@ -105,8 +108,7 @@ theorem wp_randomPermutation {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} :
   exact ⟨rfl, List.Perm.refl _⟩
 
 /-- Creating a random function (spec side). -/
-theorem wp_randomFunction_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_randomFunction_r (K : Ectx rT) (N : Int) : iprop%
     ⤇ K.fill (randomFunction N) ∗
     (∀ f, ⤇ K.fill (Exp.ofVal f) -∗ isSRandomFunction N f [] -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
@@ -125,8 +127,7 @@ theorem wp_randomFunction_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
   rfl
 
 /-- Creating a random permutation (spec side). -/
-theorem wp_randomPermutation_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_randomPermutation_r (K : Ectx rT) (N : Int) : iprop%
     ⤇ K.fill (randomPermutation N) ∗
     (∀ f, ⤇ K.fill (Exp.ofVal f) -∗
       isSPRP N f [] ((List.range N.toNat).map Int.ofNat) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
@@ -150,9 +151,9 @@ theorem wp_randomPermutation_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
 /-! ## Queries at known inputs -/
 
 /-- Query a random function at a previously-queried input (program side). -/
-theorem wp_rfQuery_prev {E : CoPset} (N : Int) (ℓ : Loc) (m : List (Int × Int))
-    (n y : Int) (hlk : alookup n m = some y) {Φ : Val rT → IProp GF} : iprop%
-    (ℓ ↦ (assocVal m : Val rT)) ∗ ((ℓ ↦ (assocVal m : Val rT)) -∗ Φ (.int y)) ⊢
+theorem wp_rfQuery_prev (N : Int) (ℓ : Loc) (m : List (Int × Int))
+    (n y : Int) (hlk : alookup n m = some y) : iprop%
+    (ℓ ↦ assocVal m) ∗ ((ℓ ↦ assocVal m) -∗ Φ (.int y)) ⊢
     WP[codensity tv] (pl% {rfQuery N ℓ} #int n) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pure 1
@@ -166,11 +167,10 @@ theorem wp_rfQuery_prev {E : CoPset} (N : Int) (ℓ : Loc) (m : List (Int × Int
   iapply HΦ $$ Hl
 
 /-- Query a random function at a previously-queried input (spec side). -/
-theorem wp_rfQuery_prev_r {E : CoPset} (K : Ectx rT) (N : Int) (ℓ : Loc)
-    (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y)
-    {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#int y) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
+theorem wp_rfQuery_prev_r (K : Ectx rT) (N : Int) (ℓ : Loc)
+    (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y) : iprop%
+    ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ (ℓ ↦ₛ assocVal m) ∗
+    (⤇ K.fill pl(#int y) -∗ (ℓ ↦ₛ assocVal m) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pure
@@ -183,10 +183,10 @@ theorem wp_rfQuery_prev_r {E : CoPset} (K : Ectx rT) (N : Int) (ℓ : Loc)
   iapply Hcnt $$ Hj Hl
 
 /-- Query a random permutation at a previously-queried input (program side). -/
-theorem wp_prpQuery_prev {E : CoPset} (ℓm ℓfv : Loc) (m : List (Int × Int))
-    (n y : Int) (hlk : alookup n m = some y) {Φ : Val rT → IProp GF} : iprop%
-    (ℓm ↦ (assocVal m : Val rT)) ∗
-    ((ℓm ↦ (assocVal m : Val rT)) -∗ Φ (.int y)) ⊢
+theorem wp_prpQuery_prev (ℓm ℓfv : Loc) (m : List (Int × Int))
+    (n y : Int) (hlk : alookup n m = some y) : iprop%
+    (ℓm ↦ assocVal m) ∗
+    ((ℓm ↦ assocVal m) -∗ Φ (.int y)) ⊢
     WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #int n) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pure 1
@@ -200,11 +200,10 @@ theorem wp_prpQuery_prev {E : CoPset} (ℓm ℓfv : Loc) (m : List (Int × Int))
   iapply HΦ $$ Hl
 
 /-- Query a random permutation at a previously-queried input (spec side). -/
-theorem wp_prpQuery_prev_r {E : CoPset} (K : Ectx rT) (ℓm ℓfv : Loc)
-    (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y)
-    {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#int y) -∗ (ℓm ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
+theorem wp_prpQuery_prev_r (K : Ectx rT) (ℓm ℓfv : Loc)
+    (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y) : iprop%
+    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ (ℓm ↦ₛ assocVal m) ∗
+    (⤇ K.fill pl(#int y) -∗ (ℓm ↦ₛ assocVal m) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pure
@@ -295,19 +294,18 @@ every unused value; the `m.length` used values have no partner, and their mass
 of clutch's `wp_prf_prp_couple_eq_err`. -/
 
 /-- A fresh query to the random function against the random permutation costs `m.length / N`. -/
-theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv : Loc)
+theorem wp_rfQuery_prpQuery_fresh (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv : Loc)
     (m : List (Int × Int)) (r : List Int) (n : Int) (ε : ENNReal)
     (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)
     (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
-    (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε)
-    {Φ : Val rT → IProp GF} : iprop%
+    (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε) : iprop%
     ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ ↯b ε ∗
-    (ℓ ↦ (assocVal m : Val rT)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
-    (ℓfv ↦ₛ (intListVal r : Val rT)) ∗
+    (ℓ ↦ assocVal m) ∗ (ℓm ↦ₛ assocVal m) ∗
+    (ℓfv ↦ₛ intListVal r) ∗
     (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#int y) -∗
-      (ℓ ↦ (assocVal ((n, y) :: m) : Val rT)) -∗
-      (ℓm ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗
-      (ℓfv ↦ₛ (intListVal (r.erase y) : Val rT)) -∗ Φ (.int y)) ⊢
+      (ℓ ↦ assocVal ((n, y) :: m)) -∗
+      (ℓm ↦ₛ assocVal ((n, y) :: m)) -∗
+      (ℓfv ↦ₛ intListVal (r.erase y)) -∗ Φ (.int y)) ⊢
     WP[codensity tv] (pl% {rfQuery N ℓ} #int n) @ E {{ Φ }} := by
   obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
     prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε
@@ -371,19 +369,18 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
 /-- The mirror of `wp_rfQuery_prpQuery_fresh`: the random permutation on the program
 side against the random function on the spec side, coupling the permutation's index
 draw with `rand N` along `i ↦ r[i]`. -/
-theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv : Loc)
+theorem wp_prpQuery_rfQuery_fresh (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv : Loc)
     (m : List (Int × Int)) (r : List Int) (n : Int) (ε : ENNReal)
     (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)
     (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
-    (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε)
-    {Φ : Val rT → IProp GF} : iprop%
+    (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε) : iprop%
     ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ ↯b ε ∗
-    (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT)) ∗
-    (ℓ ↦ₛ (assocVal m : Val rT)) ∗
+    (ℓm ↦ assocVal m) ∗ (ℓfv ↦ intListVal r) ∗
+    (ℓ ↦ₛ assocVal m) ∗
     (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#int y) -∗
-      (ℓm ↦ (assocVal ((n, y) :: m) : Val rT)) -∗
-      (ℓfv ↦ (intListVal (r.erase y) : Val rT)) -∗
-      (ℓ ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗ Φ (.int y)) ⊢
+      (ℓm ↦ assocVal ((n, y) :: m)) -∗
+      (ℓfv ↦ intListVal (r.erase y)) -∗
+      (ℓ ↦ₛ assocVal ((n, y) :: m)) -∗ Φ (.int y)) ⊢
     WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #int n) @ E {{ Φ }} := by
   obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
     prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε

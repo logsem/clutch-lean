@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.Divergences.Mechanism
+import Metrology.Iris.LocalBI
 
 /-! # Programs as mechanisms
 
@@ -41,15 +42,18 @@ variable [MeasurableSingletonClass rT] {B : Type} [AddCommMonoid B] [PartialOrde
 
 /-! ## Privacy from refinement -/
 
+section
+variable (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → Exp rT) (σ : State rT)
+  {hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT)} {adj : Adjacency X} (b : B)
+  (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
+local bi IProp GF
+
 /-- A refinement at equal results from `↯b b` on adjacent inputs couples the mechanism's
 outputs at `b` along equality (clutch-dp's `adequacy_rel.v`). -/
-theorem progMech_rel (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → Exp rT)
-    (σ : State rT) {hp} {adj : Adjacency X} (b : B)
-    (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
-    (HA : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF) (v v' : Val rT),
-      ⊢@{IProp GF} (A IR IBC).car v v' -∗ ⌜v = v'⌝)
-    (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF)
-      (IBC : BudgetCreditGS B GF), ⊢@{IProp GF} ↯b b -∗ refines L ⊤ (p x) (p x') (A IR IBC))
+theorem progMech_rel
+    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
+    (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
+      ⊢ ↯b b -∗ refines L ⊤ (p x) (p x') (A IR IBC))
     ⦃x x' : X⦄ (hx : adj x x') :
     L.Rel b (· = ·) (progMech p σ hp x) (progMech p σ hp x') :=
   -- closed-program adequacy gives `L.Rel b (adequacyRel (· = ·))`; weaken that relation to `=`
@@ -59,15 +63,13 @@ theorem progMech_rel (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → E
 /-- A program family whose members on adjacent inputs refine each other at equal results from
 `↯b b` is a `b`-private mechanism, for every divergence the lifting is sound for
 (Approximate Span Liftings, Def. 2.1–2.5). -/
-theorem progMech_isPrivate (GF : BundledGFunctors) [RefinesPreGS rT B GF]
-    {D : GradedDivergence.{0} B} [L.IsSound D] (p : X → Exp rT) (σ : State rT) {hp}
-    {adj : Adjacency X} (b : B)
-    (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
-    (HA : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF) (v v' : Val rT),
-      ⊢@{IProp GF} (A IR IBC).car v v' -∗ ⌜v = v'⌝)
-    (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF)
-      (IBC : BudgetCreditGS B GF), ⊢@{IProp GF} ↯b b -∗ refines L ⊤ (p x) (p x') (A IR IBC)) :
+theorem progMech_isPrivate {D : GradedDivergence.{0} B} [L.IsSound D]
+    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
+    (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
+      ⊢ ↯b b -∗ refines L ⊤ (p x) (p x') (A IR IBC)) :
     (progMech p σ hp).IsPrivate D adj b :=
   fun _ _ hx ↦ IsSound.sound (progMech_rel GF p σ b A HA Hlog hx)
+
+end
 
 end ProbLang

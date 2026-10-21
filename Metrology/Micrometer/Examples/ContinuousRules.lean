@@ -24,24 +24,12 @@ open LawfulProbLangℝ
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] [L.IsReflexive] [L.IsSupportLocal]
-  [L.HasBind] {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing]
+  {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
 local bi IProp GF
 
 /-! ## `urand ~ urand` -/
 
-omit [L.IsReflexive] in
-/-- Two draws coupled at equality within `c` return the same real. -/
-theorem urands_spend (c : B) (hc : IsAddLeftRegular c)
-    (Hcpl : L.Rel c (· = ·) (unifUnit (T := rT)) unifUnit) :
-    ⊢ ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
-  iintro Hc
-  rel_couple_urands_spend (· = ·) c hc Hcpl
-  iframe Hc
-  iintro %x %y %rfl
-  rel_values
-
-omit [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 /-- A law step whose finite leftovers sit on the diagonal returns the same real. -/
 theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → rT → B) (c : B)
     (hc : IsAddLeftRegular c)
@@ -58,13 +46,32 @@ theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → 
   obtain rfl := hR x y hxy
   rel_values
 
+section SupportLocal
+
+variable [L.IsSupportLocal] [L.HasBind]
+
+/-- Two draws coupled at equality within `c` return the same real. -/
+theorem urands_spend (c : B) (hc : IsAddLeftRegular c)
+    (Hcpl : L.Rel c (· = ·) (unifUnit (T := rT)) unifUnit) :
+    ⊢ ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
+  iintro Hc
+  rel_couple_urands_spend (· = ·) c hc Hcpl
+  iframe Hc
+  iintro %x %y %rfl
+  rel_values
+
+section Reflexive
+
+variable [L.IsReflexive]
+
+open MeasureTheory in
 /-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
 theorem urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (ε : ℝ≥0∞)
     (hc : IsAddLeftRegular (s ε)) :
     ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
-  rel_couple_urands_adv id (MeasureTheory.MeasurePreserving.id _) ε (fun _ ↦ ε)
+  rel_couple_urands_adv id (MeasurePreserving.id _) ε (fun _ ↦ ε)
     measurable_const (by simp) hc
   iframe Hc
   iintro %x %_ -
@@ -111,16 +118,18 @@ theorem rands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N bad 
   iintro %n %_
   rel_values
 
-omit [MeasurableSingletonClass rT] in
+end Reflexive
+
+end SupportLocal
+
 /-- The DP choice rule along two equality couplings returns the same integer. -/
-theorem rands_dpChoice [MeasurableSingletonClass rT] {GF : BundledGFunctors}
-    [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N)
+theorem rands_dpChoice [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N)
     {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {P T : Set Int}
     (h₁ : (codensity dp).Rel (ε₁, δ₁) (· = ·) (unifInt N hN) (unifInt N hN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') (· = ·) (unifInt N hN) (unifInt N hN))
     (hPT₁ : ∀ r r', r ∈ P → r = r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → r = r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) :
-    ⊢@{IProp GF} ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) -∗
+    ⊢ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) -∗
       REL[codensity dp] (pl(rand(#N, #())) : Exp rT) <<
         pl(rand(#N, #())) : lrel_int := by
   iintro Hc
@@ -135,14 +144,15 @@ section Real
 
 variable {GF : BundledGFunctors} [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
 
+open MeasureTheory in
 /-- A uniform real avoids `0` for free: the point has no mass. -/
 theorem urand_avoid_zero_real :
     ⊢ ↯b (0 : ℝ≥0∞) -∗
       REL[codensity tv] (pl(urand) : Exp ℝ) << pl(urand) : lrel_real := by
   have h0 : unifUnit ({0} : Set ℝ) = 0 := by
-    show MeasureTheory.volume.restrict (Set.Icc (0 : ℝ) 1) {0} = 0
-    rw [MeasureTheory.Measure.restrict_apply (measurableSet_singleton 0)]
-    exact MeasureTheory.measure_mono_null Set.inter_subset_left Real.volume_singleton
+    show volume.restrict (Set.Icc (0 : ℝ) 1) {0} = 0
+    rw [Measure.restrict_apply (measurableSet_singleton 0)]
+    exact measure_mono_null Set.inter_subset_left Real.volume_singleton
   iintro Hc
   rel_apply (refines_couple_urands_avoid (s := .id ℝ≥0∞) ({0} : Set ℝ)
     (measurableSet_singleton 0) absorbing_codensity_tv_one
@@ -157,7 +167,7 @@ theorem urand_avoid_zero_real :
 program's. -/
 theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
     [BudgetCreditGS ℝ≥0∞ GF] (N : Int) (hN : 0 < N) :
-    ⤇ pl(rand(#N, #())) ⊢@{IProp GF}
+    ⤇ pl(rand(#N, #())) ⊢
       wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
         iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
   iintro Hj

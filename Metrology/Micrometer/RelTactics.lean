@@ -65,7 +65,7 @@ meta def runTacticRel {β : Type} (name : Name) (k : MVarId → RelGoal → Proo
     TacticM β :=
   ProofModeM.runTactic name fun mvar {hyps, goal, ..} => do
     let app := (← instantiateMVars goal).consumeMData
-    unless app.isAppOf ``ProbLang.refines do
+    unless app.isAppOf ``refines do
       throwError "{name}: the goal {goal} is not a refinement `REL[L] e << e' : A`"
     let args := app.getAppArgs
     let n := args.size
@@ -125,7 +125,7 @@ meta def cleanFills (P : LeanExpr) : MetaM LeanExpr :=
 /-- The premise and conclusion of an entailment `P ⊢ Q`. -/
 meta def entailsParts? (ty : LeanExpr) : Option (LeanExpr × LeanExpr) :=
   let ty := ty.consumeMData
-  if ty.isAppOfArity ``Iris.BI.BIBase.Entails 4 then some (ty.getArg! 2, ty.getArg! 3)
+  if ty.isAppOfArity ``BI.BIBase.Entails 4 then some (ty.getArg! 2, ty.getArg! 3)
   else none
 
 /-- Unify a rule's redex pattern with `e`, matching value holes `?v.1` against any value. -/
@@ -187,7 +187,7 @@ meta def finishRule (mvar : MVarId) (g : RelGoal) (val : LeanExpr)
   let P ← cleanFills (← pre (← instantiateMVars P))
   have P : Q($(g.prop)) := P
   let pf ← addBIGoal g.hyps P
-  mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, val])
+  mvar.assign (← mkAppM ``BI.BIBase.Entails.trans #[pf, val])
   addSideGoals (← instantiateMVars val)
 
 /-- Elaborate a rule term, instantiating its remaining arguments with metavariables. -/
@@ -219,7 +219,7 @@ meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : Ta
     let some (_, Q) := entailsParts? (← instantiateMVars (← inferType val))
       | throwError "{tac}: {stx} does not conclude an entailment"
     let Q ← instantiateMVars Q
-    unless Q.consumeMData.isAppOf ``ProbLang.refines do
+    unless Q.consumeMData.isAppOf ``refines do
       throwError "{tac}: {stx} does not conclude a refinement"
     let qargs := Q.consumeMData.getAppArgs
     let holes ← sides.filterMapM fun s => do
@@ -446,10 +446,10 @@ meta def firstExplicitArg? (e : LeanExpr) : MetaM (Option LeanExpr) := do
 for: same head as `R` and the same first location argument. -/
 meta def findResourceHyp (g : IrisGoal) : ProofModeM Name := do
   let mut goal := (← instantiateMVars g.goal).consumeMData
-  if goal.isAppOfArity ``Iris.BI.BIBase.exists 4 then
+  if goal.isAppOfArity ``BI.BIBase.exists 4 then
     let .lam _ ty body _ := goal.appArg!.consumeMData | throwError "rel: unexpected goal {goal}"
     goal := body.instantiate1 (← mkFreshExprMVar ty)
-  unless goal.isAppOfArity ``Iris.BI.BIBase.sep 4 do throwError "rel: unexpected goal {goal}"
+  unless goal.isAppOfArity ``BI.BIBase.sep 4 do throwError "rel: unexpected goal {goal}"
   let R := (goal.getArg! 2).consumeMData
   let some loc ← firstExplicitArg? R | throwError "rel: no location in {R}"
   let some (name, _) ← g.hyps.findM? fun _ _ _ ty => do
@@ -466,7 +466,7 @@ elab "rel_frame_resource" : tactic => do
   let (tac : TSyntax `tactic) ← ProofModeM.runTactic `rel fun mvar g => do
     addMVarGoal mvar
     let H := mkIdent (← findResourceHyp g)
-    let ex := (← instantiateMVars g.goal).consumeMData.isAppOfArity ``Iris.BI.BIBase.exists 4
+    let ex := (← instantiateMVars g.goal).consumeMData.isAppOfArity ``BI.BIBase.exists 4
     if ex then `(tactic| (iexists _; isplitl [$H:ident]; iexact $H:ident; iintro $H:ident))
     else `(tactic| (isplitl [$H:ident]; iexact $H:ident; iintro $H:ident))
   evalTactic tac

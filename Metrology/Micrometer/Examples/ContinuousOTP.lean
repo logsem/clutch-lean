@@ -27,20 +27,23 @@ open Iris Iris.BI Iris.ProofMode OFE COFE MicrometerWpGS MeasureTheory GradedLif
 
 namespace ContinuousOTP
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type}
 
 section Abstract
 
+variable [LawfulProbLangℝ rT]
+
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
+
+open ProbLangℝ LawfulProbLangℝ
 
 /-- The body of `otp_enc m` as a lambda, which `otp_enc m` applies to `urand`. -/
 abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#m + k)
 
 /-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
 theorem otp_refines (m : rT)
-    (hmp : MeasurePreserving (fun r => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
-      LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit) :
+    (hmp : MeasurePreserving (fun r => realFrac (realAdd m r)) unifUnit unifUnit) :
     ⊢ REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %_
@@ -54,9 +57,8 @@ encryption sends `g r` back to `r`. -/
 
 /-- The ideal sample refines the encrypted sample, given the inverse rotation `g`. -/
 theorem otp_refines_rev (m : rT) (g : rT → rT)
-    (hmp : MeasurePreserving g LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit)
-    (hinv : ∀ r ∈ LawfulProbLangℝ.unifUnitSupport,
-      ProbLangℝ.realFrac (ProbLangℝ.realAdd m (g r)) = r) :
+    (hmp : MeasurePreserving g unifUnit unifUnit)
+    (hinv : ∀ r ∈ unifUnitSupport, realFrac (realAdd m (g r)) = r) :
     ⊢ REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %hr
@@ -70,25 +72,30 @@ end Abstract
 
 The measure-preservation hypothesis holds by rotation invariance of `Uniform[0,1]`. -/
 
+section Real
+
+variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
+
 /-- At `ℝ`, the encrypted sample refines the ideal sample. -/
-theorem otp_refines_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real :=
+theorem otp_refines_real (m : ℝ) :
+    ⊢ REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
 /-- The rotation undoing the addition of `m`. -/
 noncomputable def invRot (m : ℝ) : ℝ → ℝ := fun r => Int.fract (-m + r)
 
 /-- At `ℝ`, the ideal sample refines the encrypted sample. -/
-theorem otp_refines_rev_real (m : ℝ) {hlc : HasLC} {GF : BundledGFunctors}
-    [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} REL[codensity tv] otp_ideal << otp_enc m : lrel_real :=
+theorem otp_refines_rev_real (m : ℝ) :
+    ⊢ REL[codensity tv] otp_ideal << otp_enc m : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     -- on `(0, 1)`, `fract (m + fract (-m + r)) = fract r = r`
     obtain ⟨hr0, hr1⟩ : r ∈ Set.Ioo 0 1 := hr
     show Int.fract (m + Int.fract (-m + r)) = r
     rw [fract_add_fract_right, show m + (-m + r) = r by ring]
     exact Int.fract_eq_self.mpr ⟨hr0.le, hr1⟩
+
+end Real
 
 /-! ## Adequacy: exiting the logic
 
@@ -99,17 +106,23 @@ execution distributions, with no Iris in sight. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ r : rT, v = .real r ∧ v' = .real r
 
-theorem lrel_real_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
+theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
+  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
+  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+
+section Lawful
+
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
+local bi IProp GF
+
+theorem lrel_real_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_real
   iintro ⟨%r, %hv, %hv'⟩
   ipureintro
   exact ⟨r, hv, hv'⟩
 
-omit [LawfulProbLangℝ rT] in
-theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
-  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
-  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+end Lawful
 
 section Adequacy
 
@@ -179,8 +192,6 @@ Both programs are typed `real`, so `refines_sound_fresh` turns the refinements i
 for every well-typed boolean context. -/
 
 section Typing
-
-omit [LawfulProbLangℝ rT]
 
 theorem otp_ideal_typed : Typed (rT := rT) Tctx.empty otp_ideal .real := .urand
 

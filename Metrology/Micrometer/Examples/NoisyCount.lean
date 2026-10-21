@@ -9,6 +9,7 @@ public import Metrology.Micrometer.MechanismZcdp
 public import Metrology.ProbLang.Reals
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -61,12 +62,17 @@ instance : Std.Symm (Adjacent (n := n)) :=
 /-- The privacy budget `(1/b, 0)`. -/
 noncomputable abbrev budget (b : ℝ≥0) : ℝ≥0∞ × ℝ≥0∞ := (ENNReal.ofReal (1 / b), 0)
 
+section Privacy
+
+variable [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
+  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
 /-- The noisy counts of adjacent databases release the same value, spending `↯b (1/b, 0)`.
 Conditional on the sampler spec `hlap`. -/
-theorem wp_noisyCount [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (hlap : LaplaceSpec (GF := GF) (codensity dp) lap b)
+theorem wp_noisyCount (hlap : LaplaceSpec (GF := GF) (codensity dp) lap b)
     {db db' : Fin n → Bool} (h : Adjacent db db') :
-    ⊢@{IProp GF} ⤇ noisyCount lap db' -∗ ↯b (budget b) -∗
+    ⊢ ⤇ noisyCount lap db' -∗ ↯b (budget b) -∗
       wp (codensity dp) ⊤ (noisyCount lap db) (fun v ↦ iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
@@ -89,7 +95,7 @@ noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
 /-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1). Conditional on the
 sampler spec `hlap`, which is assumed for every ghost-state instance because adequacy allocates
 its own. -/
-theorem noisyCount_DP [Fact (0 < b)]
+theorem noisyCount_DP
     (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
       (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
       LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
@@ -99,7 +105,7 @@ theorem noisyCount_DP [Fact (0 < b)]
 
 /-- The noisy count is `(0, (1/b)² / 2)`-zCDP for adjacent databases, given that it terminates
 almost surely (Bun–Steinke 2016, Prop. 3.3). Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_zCDP [Fact (0 < b)]
+theorem noisyCount_zCDP
     (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
       (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
       LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
@@ -110,7 +116,7 @@ theorem noisyCount_zCDP [Fact (0 < b)]
 
 /-- The noisy count is `((1/b)² / 2 + 2 √((1/b)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_DP_sqrt [Fact (0 < b)]
+theorem noisyCount_DP_sqrt
     (hlap : ∀ (_ : MicrometerGS ℝ .hasNoLC (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)))
       (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) (MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞))),
       LaplaceSpec (GF := MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)) (codensity dp) lap b)
@@ -121,6 +127,8 @@ theorem noisyCount_DP_sqrt [Fact (0 < b)]
   have := Kernel.DP_of_zCDP_sq (ε := (1 / (b : ℝ)).toNNReal) hδ hδ₁
     (Kernel.zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ))
   rwa [Real.coe_toNNReal _ (by positivity)] at this
+
+end Privacy
 
 end NoisyCount
 end ProbLang

@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.Interp
+import Metrology.Iris.LocalBI
 
 /-! # The semantic typing judgement
 
@@ -71,39 +72,44 @@ end RelCtx
 
 section env_typed
 variable {GF : BundledGFunctors}
+local bi IProp GF
+
+open RelCtx ValSubstMap
+
+section
+variable (Γ : RelCtx rT GF) (vs : ValSubstMap rT)
 
 /-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations; the
 closedness conjunct also covers shadowed entries, as `SubstMap.AllClosed` needs. -/
-noncomputable def env_ltyped2 (Γ : RelCtx rT GF) (vs : ValSubstMap rT) : IProp GF := iprop%
+noncomputable def env_ltyped2 : IProp GF := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
   (∀ x A v1 v2, ⌜Γ.lookup x = some A⌝ -∗ ⌜vs.lookup x = some (v1, v2)⌝ -∗ A v1 v2)
 
-/-- `env_ltyped2` is persistent. -/
-instance env_ltyped2_persistent (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+instance env_ltyped2_persistent :
     Persistent (env_ltyped2 Γ vs) := by
   unfold env_ltyped2
   infer_instance
 
-theorem env_ltyped2_domEq (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_domEq :
     env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
   sep_elim_left
 
-theorem env_ltyped2_allClosed (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_allClosed :
     env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ :=
   sep_elim_right.trans sep_elim_left
 
-theorem env_ltyped2_fst_allClosed [LawfulProbLangℝ rT] (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_fst_allClosed [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
-    ValSubstMap.proj_allClosed Prod.fst fun p hp => (hc p hp).1
+    proj_allClosed Prod.fst fun p hp => (hc p hp).1
 
-theorem env_ltyped2_snd_allClosed [LawfulProbLangℝ rT] (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_snd_allClosed [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
-    ValSubstMap.proj_allClosed Prod.snd fun p hp => (hc p hp).2
+    proj_allClosed Prod.snd fun p hp => (hc p hp).2
 
-theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
+theorem env_ltyped2_domSubset :
     env_ltyped2 Γ vs ⊢ ⌜(Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset⌝ := by
   iintro Hvs
   ihave %hDom := env_ltyped2_domEq Γ vs $$ Hvs
@@ -111,10 +117,9 @@ theorem env_ltyped2_domSubset (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   intro y hy
   simp only [List.mem_toFinset, List.mem_map] at hy ⊢
   obtain ⟨p, hp, rfl⟩ := hy
-  exact ValSubstMap.mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hp))
+  exact mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hp))
 
-theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
-    (hΓ : Γ.lookup x = some A) :
+theorem env_ltyped2_lookup (x : Var) (A : lrel rT GF) (hΓ : Γ.lookup x = some A) :
     env_ltyped2 Γ vs ⊢ ∃ v1 v2, ⌜vs.lookup x = some (v1, v2)⌝ ∗ A v1 v2 := by
   unfold env_ltyped2
   iintro ⟨%Hdom, -, Hall⟩
@@ -123,30 +128,8 @@ theorem env_ltyped2_lookup (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
   iframe %hvs_eq
   iapply Hall $$ %x %A %v1 %v2 %hΓ %hvs_eq
 
-theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
-  unfold env_ltyped2
-  isplitr
-  · ipureintro; simp [RelCtx.lookup, ValSubstMap.lookup]
-  isplitr
-  · ipureintro; simp
-  iintro %x %A %v1 %v2 %hΓ
-  simp [RelCtx.lookup] at hΓ
-
-theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
-    env_ltyped2 ([] : RelCtx rT GF) vs ⊢ ⌜vs = []⌝ := by
-  unfold env_ltyped2
-  iintro ⟨%Hdom, -, -⟩ !%
-  cases vs with
-  | nil => rfl
-  | cons p rest =>
-    exfalso
-    have hsome : (ValSubstMap.lookup (p :: rest) p.1).isSome := by
-      simp only [ValSubstMap.lookup]
-      cases ValSubstMap.lookup rest p.1 <;> simp
-    simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
-
 /-- Extend a related substitution by a variable bound to closed related values. -/
-theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (A : lrel rT GF)
+theorem env_ltyped2_insert (x : Var) (A : lrel rT GF)
     (v1 v2 : Val rT) (hv1c : v1.1.isClosed .empty) (hv2c : v2.1.isClosed .empty) : iprop%
     A v1 v2 ∗ env_ltyped2 Γ vs ⊢ env_ltyped2 ((x, A) :: Γ) ((x, (v1, v2)) :: vs) := by
   unfold env_ltyped2
@@ -186,7 +169,7 @@ theorem env_ltyped2_insert (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (x : Var) (
       iexact HA
 
 /-- Drop a fresh head variable from both the context and the substitution. -/
-theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var) (A : lrel rT GF)
+theorem env_ltyped2_drop_head (y : Var) (A : lrel rT GF)
     (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
     env_ltyped2 ((y, A) :: Γ) vs ⊢ env_ltyped2 Γ (vs.delete y) := by
   unfold env_ltyped2
@@ -196,22 +179,46 @@ theorem env_ltyped2_drop_head (Γ : RelCtx rT GF) (vs : ValSubstMap rT) (y : Var
     intro z
     by_cases hzy : z = y
     · subst hzy
-      rw [RelCtx.lookup_eq_none_of_not_mem hyNotDom, ValSubstMap.lookup_delete_self]
+      rw [lookup_eq_none_of_not_mem hyNotDom, lookup_delete_self]
       simp
-    · rw [ValSubstMap.lookup_delete_other vs y z hzy]
+    · rw [lookup_delete_other vs y z hzy]
       have heq := Hdom z
-      rw [RelCtx.lookup_cons] at heq
+      rw [lookup_cons] at heq
       cases hΓz : Γ.lookup z <;> simpa [hΓz, hzy] using heq
   isplitr
-  · ipureintro; exact fun p hp => Hclosed p ((ValSubstMap.mem_delete _ _ _).mp hp).1
+  · ipureintro; exact fun p hp => Hclosed p ((mem_delete _ _ _).mp hp).1
   iintro %z %B %v1 %v2 %hΓz %hvsz
   have hzy : z ≠ y := by
     rintro rfl
-    rw [ValSubstMap.lookup_delete_self] at hvsz
+    rw [lookup_delete_self] at hvsz
     cases hvsz
-  rw [ValSubstMap.lookup_delete_other vs y z hzy] at hvsz
-  have hΓhead : RelCtx.lookup ((y, A) :: Γ) z = some B := by rw [RelCtx.lookup_cons, hΓz]
+  rw [lookup_delete_other vs y z hzy] at hvsz
+  have hΓhead : RelCtx.lookup ((y, A) :: Γ) z = some B := by rw [lookup_cons, hΓz]
   iapply Hall $$ %z %B %v1 %v2 %hΓhead %hvsz
+
+end
+
+theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
+  unfold env_ltyped2
+  isplitr
+  · ipureintro; simp [RelCtx.lookup, ValSubstMap.lookup]
+  isplitr
+  · ipureintro; simp
+  iintro %x %A %v1 %v2 %hΓ
+  simp [RelCtx.lookup] at hΓ
+
+theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
+    env_ltyped2 ([] : RelCtx rT GF) vs ⊢ ⌜vs = []⌝ := by
+  unfold env_ltyped2
+  iintro ⟨%Hdom, -, -⟩ !%
+  cases vs with
+  | nil => rfl
+  | cons p rest =>
+    exfalso
+    have hsome : (ValSubstMap.lookup (p :: rest) p.1).isSome := by
+      simp only [ValSubstMap.lookup]
+      cases ValSubstMap.lookup rest p.1 <;> simp
+    simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
 
 end env_typed
 
@@ -221,6 +228,9 @@ section bin_log_related
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
+local bi IProp GF
+
+open RelCtx ValSubstMap
 
 variable (L) in
 /-- The semantic typing judgement: related substitutions give related expressions. -/
@@ -240,22 +250,25 @@ scoped notation:100 E "; " Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ
 
 /-- `Δ; Γ ⊨[L] e ≤log≤ e' : τ` is the judgement at the full mask `⊤`. -/
 scoped notation:100 Δ "; " Γ " ⊨[" L "] " e " ≤log≤ " e' " : " τ =>
-  bin_log_related_ty L (⊤ : CoPset) Δ Γ e e' τ
+  bin_log_related_ty L ⊤ Δ Γ e e' τ
 
 /-! ## The empty context and renaming -/
 
+section
+variable {E : CoPset} {Γ : RelCtx rT GF} {A : lrel rT GF}
+
 /-- At the empty context, the semantic typing judgement is a closed refinement. -/
-theorem bin_log_related_nil_elim {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} :
+theorem bin_log_related_nil_elim {e e' : Exp rT} :
     bin_log_related L E [] e e' A ⊢ refines L E e e' A := by
   show bin_log_related L E [] e e' A ⊢ refines L E (Exp.substMap (ValSubstMap.fst []) e)
     (Exp.substMap (ValSubstMap.snd []) e') A
   unfold bin_log_related
   iintro H
-  iapply H $$ %([] : ValSubstMap rT)
+  iapply H $$ %([] : _)
   iapply env_ltyped2_empty
 
 /-- A closed refinement is the semantic typing judgement at the empty context. -/
-theorem bin_log_related_nil_intro {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} :
+theorem bin_log_related_nil_intro {e e' : Exp rT} :
     refines L E e e' A ⊢ bin_log_related L E [] e e' A := by
   unfold bin_log_related
   iintro H %vs Hvs
@@ -265,11 +278,10 @@ theorem bin_log_related_nil_intro {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} 
     show Exp.substMap (ValSubstMap.snd ([] : ValSubstMap rT)) e' = e' from rfl]
   iexact H
 
-/-- Rename the innermost relational variable `x` to a fresh `y` (used for named context binders,
-`bin_log_related_close_cofinite`). -/
-theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A : lrel rT GF}
-    {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y) (hxNotDom : x ∉ (Γ.map (·.1)).toFinset)
-    (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
+/-- Renaming the innermost relational variable `x` to a fresh `y`. -/
+theorem bin_log_related_rename {x y : Var} {τE τE' : Exp rT} {B : lrel rT GF} (hxy : x ≠ y)
+    (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)
+    (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
     bin_log_related L E ((x, A) :: Γ) τE τE' B ⊢
     bin_log_related L E ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) B := by
   -- From `vs` related at `(y, A) :: Γ`, build `vs' := (x ↦ vs y) :: vs.delete y`, related at
@@ -277,10 +289,10 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
   unfold bin_log_related
   iintro Hold %vs #Hvs
   have hyHeadLookup : RelCtx.lookup ((y, A) :: Γ) y = some A := by
-    rw [RelCtx.lookup_cons, RelCtx.lookup_eq_none_of_not_mem hyNotDom]; simp
+    rw [lookup_cons, lookup_eq_none_of_not_mem hyNotDom]; simp
   icases env_ltyped2_lookup _ vs _ _ hyHeadLookup $$ Hvs with ⟨%w1, %w2, %hvsLookupY, HAw⟩
   ihave %hvsClosed := env_ltyped2_allClosed _ vs $$ Hvs
-  obtain ⟨hw1c, hw2c⟩ := hvsClosed _ (ValSubstMap.mem_of_lookup_eq_some hvsLookupY)
+  obtain ⟨hw1c, hw2c⟩ := hvsClosed _ (mem_of_lookup_eq_some hvsLookupY)
   ihave HvsDrop := env_ltyped2_drop_head Γ vs y A hyNotDom $$ Hvs
   ihave Hvs' := env_ltyped2_insert Γ (vs.delete y) x A _ _ hw1c hw2c $$ [$HAw $HvsDrop]
   set vs' : ValSubstMap rT := (x, (w1, w2)) :: vs.delete y
@@ -288,7 +300,7 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
   ihave %hvsDom := env_ltyped2_domEq _ vs $$ Hvs
   have hvsLookupX : vs.lookup x = none := by
     have hΓheadX : RelCtx.lookup ((y, A) :: Γ) x = none := by
-      rw [RelCtx.lookup_cons, RelCtx.lookup_eq_none_of_not_mem hxNotDom]; simp [hxy]
+      rw [lookup_cons, lookup_eq_none_of_not_mem hxNotDom]; simp [hxy]
     cases hvs : vs.lookup x with
     | none => rfl
     | some _ => simpa [hΓheadX] using (hvsDom x).mpr (by rw [hvs]; rfl)
@@ -298,27 +310,29 @@ theorem bin_log_related_rename {E : CoPset} {Γ : RelCtx rT GF} {x y : Var} {A :
     obtain ⟨p, hpmem, rfl⟩ := h
     simpa [hvsLookupX] using ValSubstMap.lookup_isSome_of_mem ⟨p.2, hpmem⟩
   have hswapFst :=
-    Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [ValSubstMap.fst_dom])
-      (ValSubstMap.proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
-      (by rw [ValSubstMap.fst_lookup, hvsLookupY]; rfl) hyFvE
+    Exp.substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [fst_dom])
+      (proj_allClosed Prod.fst fun p hp => (hvsClosed p hp).1)
+      (by rw [fst_lookup, hvsLookupY]; rfl) hyFvE
   have hswapSnd :=
-    Exp.substMap_subst_fvar_lookup vs.snd τE' x y w2.1 (by rwa [ValSubstMap.snd_dom])
-      (ValSubstMap.proj_allClosed Prod.snd fun p hp => (hvsClosed p hp).2)
-      (by rw [ValSubstMap.snd_lookup, hvsLookupY]; rfl) hyFvE'
-  rw [← ValSubstMap.fst_delete] at hswapFst
-  rw [← ValSubstMap.snd_delete] at hswapSnd
+    Exp.substMap_subst_fvar_lookup vs.snd τE' x y w2.1 (by rwa [snd_dom])
+      (proj_allClosed Prod.snd fun p hp => (hvsClosed p hp).2)
+      (by rw [snd_lookup, hvsLookupY]; rfl) hyFvE'
+  rw [← fst_delete] at hswapFst
+  rw [← snd_delete] at hswapSnd
   rw [show Exp.substMap vs.fst (τE.subst x (.fvar y)) = Exp.substMap vs'.fst τE from hswapFst,
     show Exp.substMap vs.snd (τE'.subst x (.fvar y)) = Exp.substMap vs'.snd τE' from hswapSnd]
   iexact Hrefines
 
 /-- `bin_log_related_rename` for the type-level judgement. -/
-theorem bin_log_related_ty_rename {E : CoPset} {Δ : TyEnv rT GF} {Γ : RelCtx rT GF} {x y : Var}
-    {A : lrel rT GF} {τE τE' : Exp rT} {τ : Ty} (hxy : x ≠ y)
+theorem bin_log_related_ty_rename {Δ : TyEnv rT GF} {x y : Var} {τE τE' : Exp rT} {τ : Ty}
+    (hxy : x ≠ y)
     (hxNotDom : x ∉ (Γ.map (·.1)).toFinset) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset)
     (hyFvE : y ∉ τE.fv) (hyFvE' : y ∉ τE'.fv) :
     bin_log_related_ty L E Δ ((x, A) :: Γ) τE τE' τ ⊢
     bin_log_related_ty L E Δ ((y, A) :: Γ) (τE.subst x (.fvar y)) (τE'.subst x (.fvar y)) τ :=
   bin_log_related_rename hxy hxNotDom hyNotDom hyFvE hyFvE'
+
+end
 
 end bin_log_related
 

@@ -9,7 +9,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Renyi
 One round couples at the curve `α ↦ ρ_α` order by order, so `k` rounds are private for `α ↦ k ρ_α`
 (`rrCount_curve`); as `ρ_α ≤ ln 3`, this lies below the zCDP line, giving `(k ln 3, 0)`-zCDP. -/
 
-open MeasureTheory GradedLifting GradedDivergence
+open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence
 open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
@@ -76,7 +76,7 @@ theorem rrCoupling_zcdp_of_curve : RRCoupling zcdpLifting budget := fun b b' ↦
 (Def. 2.4). -/
 theorem rrCount_zCDP_of_curve (k : ℕ) (σ : State rT) :
     (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 :=
-  ProbabilityTheory.Kernel.zCDP_of_renyiCurve_le (rrCount_curve k σ) fun α ↦ by
+  Kernel.zCDP_of_renyiCurve_le (rrCount_curve k σ) fun α ↦ by
     simpa using mul_le_mul' le_rfl (rrRenyi_le_log_three α.2)
 
 end ProbLang.RandomizedResponse

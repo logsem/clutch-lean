@@ -18,6 +18,7 @@ set_option linter.discrete false
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 open scoped AppGS
+open Exp EctxItem Ectx OpenInv Std.LawfulSet
 
 namespace ProbLang
 
@@ -28,24 +29,25 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
   [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 local bi IProp GF
+variable {e e' e1 e2 e1' e2' : Exp rT} {A : lrel rT GF}
 
 /-! ### Allocation -/
 
 /-- Compatibility of `alloc`: both sides allocate and the new cells are tied by the invariant of
 `lrel_ref A`. -/
-theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_alloc : iprop%
     refines L ⊤ e e' A ⊢ refines L ⊤ (.alloc e) (.alloc e') (lrel_ref A) := by
-  show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.alloc] e) (Ectx.fill [EctxItem.alloc] e') (lrel_ref A)
+  show _ ⊢ refines L ⊤ (Ectx.fill [alloc] e) (Ectx.fill [alloc] e') (lrel_ref A)
   iintro IH
-  iapply refines_bind [EctxItem.alloc] [EctxItem.alloc] $$ IH
+  iapply refines_bind [alloc] [alloc] $$ IH
   iintro %v %v' #HA
-  rw [Ectx.fill_alloc, Ectx.fill_alloc, Ectx.eq_fill_nil (Exp.alloc v.1),
-    Ectx.eq_fill_nil (Exp.alloc v'.1)]
+  rw [fill_alloc, fill_alloc, eq_fill_nil (alloc v.1),
+    eq_fill_nil (alloc v'.1)]
   iapply refines_alloc_r
   iintro %l' Hl'
   iapply refines_alloc_l
   iintro %l Hl
-  imod Iris.inv_alloc (P := iprop(∃ w1 w2, appHeapFrag l w1 ∗ specHeapFrag l' w2 ∗ A w1 w2))
+  imod inv_alloc (P := iprop(∃ w1 w2, appHeapFrag l w1 ∗ specHeapFrag l' w2 ∗ A w1 w2))
     $$ [Hl Hl' HA] with #HInv
   · iintro !>
     iexists v, v'
@@ -59,7 +61,7 @@ theorem refines_alloc {e e' : Exp rT} {A : lrel rT GF} : iprop%
   itrivial
 
 /-- Compatibility of tape allocation: both sides allocate an empty tape, tied by an invariant. -/
-theorem refines_alloctape {e e' : Exp rT} : iprop%
+theorem refines_alloctape : iprop%
     refines L ⊤ e e' lrel_int ⊢ refines L ⊤ (.tape e) (.tape e') lrel_tape := by
   show _ ⊢
     refines L ⊤ (Ectx.fill [EctxItem.tape] e) (Ectx.fill [EctxItem.tape] e') lrel_tape
@@ -68,13 +70,13 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
   iintro %v %v' Hint
   iunfold lrel_int at Hint
   icases Hint with ⟨%n, %hv, %hv'⟩
-  rw [Ectx.fill_tape, Ectx.fill_tape, hv, hv',
-    Ectx.eq_fill_nil (pl(tape(#n)) : Exp rT)]
+  rw [fill_tape, fill_tape, hv, hv',
+    eq_fill_nil (pl(tape(#n)) : Exp rT)]
   iapply refines_alloctape_r
   iintro %l' Hl'
   iapply refines_alloctape_l
   iintro %l Hl
-  imod Iris.inv_alloc (P := iprop(appTapesFrag l ⟨n, []⟩ ∗ specTapesFrag l' ⟨n, []⟩))
+  imod inv_alloc (P := iprop(appTapesFrag l ⟨n, []⟩ ∗ specTapesFrag l' ⟨n, []⟩))
     $$ [Hl Hl'] with #HInv
   · ihave Hl'e := spec_natTape_to_empty $$ Hl'
     rw [← show Tape.empty n = ⟨n, []⟩ from rfl]
@@ -91,28 +93,28 @@ theorem refines_alloctape {e e' : Exp rT} : iprop%
 /-! ### Loads and stores -/
 
 /-- Compatibility of `load`: opens the `lrel_ref A` invariant around the atomic left load. -/
-theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_load : iprop%
     refines L ⊤ e e' (lrel_ref A) ⊢ refines L ⊤ (.load e) (.load e') A := by
-  show _ ⊢ refines L ⊤ (Ectx.fill [EctxItem.load] e) (Ectx.fill [EctxItem.load] e') A
+  show _ ⊢ refines L ⊤ (Ectx.fill [load] e) (Ectx.fill [load] e') A
   iintro IH
-  iapply refines_bind [EctxItem.load] [EctxItem.load] $$ IH
+  iapply refines_bind [load] [load] $$ IH
   iintro %v %v' HRef
   iunfold lrel_ref at HRef
   icases HRef with ⟨%l, %l', %heq, %heq', #Hinv⟩
-  rw [Ectx.fill_load, Ectx.fill_load, heq, heq', Ectx.eq_fill_nil (pl(!#loc l) : Exp rT)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.load l))
+  rw [fill_load, fill_load, heq, heq', eq_fill_nil (pl(!#loc l) : Exp rT)]
+  iapply refines_atomic_l (of_atomic (Atomic.load l))
   iintro %K' Hr
   iinv Hinv with ⟨%w1, %w2, >Hw1, >Hw2, #HwAL⟩ Hclose
   imodintro
   ihave HStep := step_load K' $$ [$Hr $Hw2]
   iapply specUpdate_wp
-  iapply specUpdate_bind Std.LawfulSet.subset_refl
+  iapply specUpdate_bind subset_refl
   iframe HStep
   iintro ⟨HKRes, Hw2'⟩
   iapply specUpdate_ret
-  have HE : (∅ : CoPset) ⊆ ⊤ \ ↑(logN.@ (l, l')) := Std.LawfulSet.empty_subset
+  have HE : (∅ : CoPset) ⊆ ⊤ \ ↑(logN.@ (l, l')) := empty_subset
   -- `A w1 w2` from the invariant is still under ▷; spend the load's step to remove it.
-  iapply wp_step_fupd HE Exp.load_toVal?_eq_none
+  iapply wp_step_fupd HE load_toVal?_eq_none
   isplitl [HwAL]
   · iapply step_fupd_intro HE $$ HwAL
   iapply wp_load
@@ -123,41 +125,41 @@ theorem refines_load {e e' : Exp rT} {A : lrel rT GF} : iprop%
     iexists w1, w2
     iframe Hw1' Hw2' HwA
   imodintro
-  iexists Exp.ofVal w2
+  iexists ofVal w2
   iframe HKRes
-  iapply refines_ret (e1 := Ectx.fill [] w1.1) (e2 := Exp.ofVal w2) rfl rfl
+  iapply refines_ret (e1 := Ectx.fill [] w1.1) (e2 := ofVal w2) rfl rfl
   imodintro
   iexact HwA
 
 /-- Compatibility of `store`: opens the `lrel_ref A` invariant around the atomic left store. -/
-theorem refines_store {e1 e2 e1' e2' : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_store : iprop%
     refines L ⊤ e1 e1' (lrel_ref A) ⊢
     refines L ⊤ e2 e2' A -∗ refines L ⊤ (.store e1 e2) (.store e1' e2') lrel_unit := by
   show _ ⊢ refines L ⊤ e2 e2' A -∗
-    refines L ⊤ (Ectx.fill [EctxItem.storeR e1] e2) (Ectx.fill [EctxItem.storeR e1'] e2') lrel_unit
+    refines L ⊤ (Ectx.fill [storeR e1] e2) (Ectx.fill [storeR e1'] e2') lrel_unit
   iintro IH1 IH2
-  iapply refines_bind [EctxItem.storeR e1] [EctxItem.storeR e1'] $$ IH2
+  iapply refines_bind [storeR e1] [storeR e1'] $$ IH2
   iintro %w %w' #HwA
-  rw [show Ectx.fill [EctxItem.storeR e1] w.1 = Ectx.fill [EctxItem.storeL w] e1 from rfl,
-    show Ectx.fill [EctxItem.storeR e1'] w'.1 = Ectx.fill [EctxItem.storeL w'] e1' from rfl]
-  iapply refines_bind [EctxItem.storeL w] [EctxItem.storeL w'] $$ IH1
+  rw [show Ectx.fill [storeR e1] w.1 = Ectx.fill [storeL w] e1 from rfl,
+    show Ectx.fill [storeR e1'] w'.1 = Ectx.fill [storeL w'] e1' from rfl]
+  iapply refines_bind [storeL w] [storeL w'] $$ IH1
   iintro %v %v' HRef
   iunfold lrel_ref at HRef
   icases HRef with ⟨%l, %l', %heq, %heq', #Hinv⟩
-  rw [show Ectx.fill [EctxItem.storeL w] v.1 = Exp.store v.1 w.1 from rfl,
-    show Ectx.fill [EctxItem.storeL w'] v'.1 = Exp.store v'.1 w'.1 from rfl, heq, heq',
-    Ectx.eq_fill_nil (Exp.store pl(#loc l) w.1)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.store l w))
+  rw [show Ectx.fill [storeL w] v.1 = store v.1 w.1 from rfl,
+    show Ectx.fill [storeL w'] v'.1 = store v'.1 w'.1 from rfl, heq, heq',
+    eq_fill_nil (store pl(#loc l) w.1)]
+  iapply refines_atomic_l (of_atomic (Atomic.store l w))
   iintro %K' Hr
   iinv Hinv with ⟨%v1, %v2, >Hv1, >Hv2, -⟩ Hclose
   imodintro
-  ihave HStep := step_store K' w'.2 (Exp.toVal?_ofVal w') $$ [$Hr $Hv2]
+  ihave HStep := step_store K' w'.2 (toVal?_ofVal w') $$ [$Hr $Hv2]
   iapply specUpdate_wp
-  iapply specUpdate_bind Std.LawfulSet.subset_refl
+  iapply specUpdate_bind subset_refl
   iframe HStep
   iintro ⟨HKRes, Hv2'⟩
   iapply specUpdate_ret
-  rw [show Exp.store pl(#loc l) w.1 = .store pl(#loc l) (.ofVal w) from rfl]
+  rw [show store pl(#loc l) w.1 = .store pl(#loc l) (.ofVal w) from rfl]
   iapply wp_store
   iframe Hv1
   iintro Hw1'
@@ -182,13 +184,13 @@ theorem natTapes_empty_close {α α' : Loc} {z : Int} : iprop%
 
 /-- Two draws `rand z` from tapes shared through an `lrel_tape` invariant, coupled along the
 identity; the tape bound `N` need not equal `z`. -/
-theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz : 0 < z)
+theorem refines_rand_lbl_of_pos {α α' : Loc} {N z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
-    Iris.inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
+    inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
     refines L ⊤ pl(rand(#z, #lbl α)) pl(rand(#z, #lbl α')) A := by
   iintro #Hinv
-  rw [Ectx.eq_fill_nil (pl(rand(#z, #lbl α)) : Exp rT)]
-  iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl z α))
+  rw [eq_fill_nil (pl(rand(#z, #lbl α)) : Exp rT)]
+  iapply refines_atomic_l (of_atomic (Atomic.rand_lbl z α))
   iintro %K' Hr
   iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
   imodintro
@@ -212,10 +214,10 @@ theorem refines_rand_lbl_of_pos {A : lrel rT GF} {α α' : Loc} {N z : Int} (hz 
     iapply HA m hm.1 hm.2
 
 /-- Two unlabelled draws `rand z #()`, coupled along the identity. -/
-theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
+theorem refines_rand_unit_of_pos {z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     ⊢ refines L ⊤ pl(rand(#z, #())) pl(rand(#z, #())) A := by
-  rw [Ectx.eq_fill_nil (pl(rand(#z, #())) : Exp rT)]
+  rw [eq_fill_nil (pl(rand(#z, #())) : Exp rT)]
   iapply refines_couple_rands_lr id id_dom_range id_bij_range hz
   iintro %m ⟨%hm0, %hmz⟩
   iapply refines_ret (e1 := Ectx.fill [] pl(#m)) (e2 := Ectx.fill [] pl(#int (id m)))
@@ -227,67 +229,67 @@ theorem refines_rand_unit_of_pos {A : lrel rT GF} {z : Int} (hz : 0 < z)
 
 /-- Compatibility of `rand` with a tape at `nat`; the fundamental theorem uses
 `refines_rand_tape_int`. -/
-theorem refines_rand_tape {e1 e1' e2 e2' : Exp rT} : iprop%
+theorem refines_rand_tape : iprop%
     refines L ⊤ e1 e1' lrel_pos_nat ⊢
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
   show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
-    refines L ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_nat
+    refines L ⊤ (Ectx.fill [randR e1] e2) (Ectx.fill [randR e1'] e2') lrel_nat
   iintro IH1 IH2
-  iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
+  iapply refines_bind [randR e1] [randR e1'] $$ IH2
   iintro %w %w' HTapeRel
   iunfold lrel_tape at HTapeRel
   icases HTapeRel with ⟨%α, %α', %N, %hw, %hw', #Hinv⟩
-  rw [show Ectx.fill [EctxItem.randR e1] w.1 = Ectx.fill [EctxItem.randL w] e1 from rfl,
-    show Ectx.fill [EctxItem.randR e1'] w'.1 = Ectx.fill [EctxItem.randL w'] e1' from rfl]
-  iapply refines_bind [EctxItem.randL w] [EctxItem.randL w'] $$ IH1
+  rw [show Ectx.fill [randR e1] w.1 = Ectx.fill [randL w] e1 from rfl,
+    show Ectx.fill [randR e1'] w'.1 = Ectx.fill [randL w'] e1' from rfl]
+  iapply refines_bind [randL w] [randL w'] $$ IH1
   iintro %v %v' HPosNat
   iunfold lrel_pos_nat at HPosNat
   icases HPosNat with ⟨%M, %hM, %hv, %hv'⟩
-  rw [show Ectx.fill [EctxItem.randL w] v.1 = Exp.rand v.1 w.1 from rfl,
-    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
+  rw [show Ectx.fill [randL w] v.1 = rand v.1 w.1 from rfl,
+    show Ectx.fill [randL w'] v'.1 = rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   iapply refines_rand_lbl_of_pos (by exact_mod_cast hM) (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
 /-- Compatibility of `rand` without a tape at `nat`; the fundamental theorem uses
 `refines_rand_unit_int`. -/
-theorem refines_rand_unit {e e' : Exp rT} : iprop%
+theorem refines_rand_unit : iprop%
     refines L ⊤ e e' lrel_pos_nat ⊢
-    refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
+    refines L ⊤ (Ectx.fill [randL .unit] e) (Ectx.fill [randL .unit] e')
       lrel_nat := by
   iintro IH
-  iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH
+  iapply refines_bind [randL .unit] [randL .unit] $$ IH
   iintro %v %v' HPosNat
   iunfold lrel_pos_nat at HPosNat
   icases HPosNat with ⟨%n, %hn, %hv, %hv'⟩
-  rw [show Ectx.fill [EctxItem.randL .unit] v.1 = Exp.rand v.1 pl(#()) from rfl,
-    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#()) from rfl, hv, hv']
+  rw [show Ectx.fill [randL .unit] v.1 = rand v.1 pl(#()) from rfl,
+    show Ectx.fill [randL .unit] v'.1 = rand v'.1 pl(#()) from rfl, hv, hv']
   iapply refines_rand_unit_of_pos (by exact_mod_cast hn) fun m h0 _ => lrel_nat_lit h0
 
 /-! ### Sampling: compatibility at `int` -/
 
 /-- Compatibility of `rand` with a tape at `int`; a non-positive bound returns `-1` on both
 sides. -/
-theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
+theorem refines_rand_tape_int : iprop%
     refines L ⊤ e1 e1' lrel_int ⊢
     refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
   show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
-    refines L ⊤ (Ectx.fill [EctxItem.randR e1] e2) (Ectx.fill [EctxItem.randR e1'] e2') lrel_int
+    refines L ⊤ (Ectx.fill [randR e1] e2) (Ectx.fill [randR e1'] e2') lrel_int
   iintro IH1 IH2
-  iapply refines_bind [EctxItem.randR e1] [EctxItem.randR e1'] $$ IH2
+  iapply refines_bind [randR e1] [randR e1'] $$ IH2
   iintro %w %w' HTapeRel
   iunfold lrel_tape at HTapeRel
   icases HTapeRel with ⟨%α, %α', %N, %hw, %hw', #Hinv⟩
-  rw [show Ectx.fill [EctxItem.randR e1] w.1 = Ectx.fill [EctxItem.randL w] e1 from rfl,
-    show Ectx.fill [EctxItem.randR e1'] w'.1 = Ectx.fill [EctxItem.randL w'] e1' from rfl]
-  iapply refines_bind [EctxItem.randL w] [EctxItem.randL w'] $$ IH1
+  rw [show Ectx.fill [randR e1] w.1 = Ectx.fill [randL w] e1 from rfl,
+    show Ectx.fill [randR e1'] w'.1 = Ectx.fill [randL w'] e1' from rfl]
+  iapply refines_bind [randL w] [randL w'] $$ IH1
   iintro %v %v' HInt
   iunfold lrel_int at HInt
   icases HInt with ⟨%n, %hv, %hv'⟩
-  rw [show Ectx.fill [EctxItem.randL w] v.1 = Exp.rand v.1 w.1 from rfl,
-    show Ectx.fill [EctxItem.randL w'] v'.1 = Exp.rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
+  rw [show Ectx.fill [randL w] v.1 = rand v.1 w.1 from rfl,
+    show Ectx.fill [randL w'] v'.1 = rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   by_cases hnpos : 0 < n
   · iapply refines_rand_lbl_of_pos hnpos (fun m _ _ => lrel_int_lit m) $$ Hinv
-  · rw [Ectx.eq_fill_nil (pl(rand(#n, #lbl α)) : Exp rT)]
-    iapply refines_atomic_l (OpenInv.of_atomic (Atomic.rand_lbl n α))
+  · rw [eq_fill_nil (pl(rand(#n, #lbl α)) : Exp rT)]
+    iapply refines_atomic_l (of_atomic (Atomic.rand_lbl n α))
     iintro %K' Hr
     iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
     imodintro
@@ -309,17 +311,17 @@ theorem refines_rand_tape_int {e1 e1' e2 e2' : Exp rT} : iprop%
 
 /-- Compatibility of the unlabelled `rand e #()` at `int`, stated in the hole form that
 `bin_log_related_rand_unit` produces. -/
-theorem refines_rand_unit_int {e e' : Exp rT} : iprop%
+theorem refines_rand_unit_int : iprop%
     refines L ⊤ e e' lrel_int ⊢
-    refines L ⊤ (Ectx.fill [EctxItem.randL .unit] e) (Ectx.fill [EctxItem.randL .unit] e')
+    refines L ⊤ (Ectx.fill [randL .unit] e) (Ectx.fill [randL .unit] e')
       lrel_int := by
   iintro IH
-  iapply refines_bind [EctxItem.randL .unit] [EctxItem.randL .unit] $$ IH
+  iapply refines_bind [randL .unit] [randL .unit] $$ IH
   iintro %v %v' HInt
   iunfold lrel_int at HInt
   icases HInt with ⟨%n, %hv, %hv'⟩
-  rw [show Ectx.fill [EctxItem.randL .unit] v.1 = Exp.rand v.1 pl(#()) from rfl,
-    show Ectx.fill [EctxItem.randL .unit] v'.1 = Exp.rand v'.1 pl(#()) from rfl, hv, hv']
+  rw [show Ectx.fill [randL .unit] v.1 = rand v.1 pl(#()) from rfl,
+    show Ectx.fill [randL .unit] v'.1 = rand v'.1 pl(#()) from rfl, hv, hv']
   by_cases hnpos : 0 < n
   · iapply refines_rand_unit_of_pos hnpos fun m _ _ => lrel_int_lit m
   · -- n ≤ 0: both sides return -1 deterministically, no coupling needed.

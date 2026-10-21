@@ -32,17 +32,21 @@ theorem zero_refines_one_tv [BudgetCreditGS ℝ≥0∞ GF] :
     ↯b (1 : ℝ≥0∞) ⊢ REL[codensity tv] (pl(#0) : Exp rT) << pl(#1) : lrel_int :=
   refines_of_absorbing absorbing_codensity_tv_one
 
+section Capped
+
+variable {GF : BundledGFunctors}
+  [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
+local bi IProp GF
+
 /-- In the capped view, a DP credit with `δ ≥ 1` is contradictory, so it proves anything. -/
-theorem capped_dp_exit {GF : BundledGFunctors}
-    [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF] {ε δ : ℝ≥0∞}
-    (hδ : 1 ≤ δ) (P : IProp GF) : ↯c (ε, δ) ⊢ P :=
+theorem capped_dp_exit {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) (P : _) : ↯c (ε, δ) ⊢ P :=
   (CappedCredit.dp_contradict_of_one_le hδ).trans false_elim
 
 /-- A capped credit is valid exactly when its budget is not absorbing. -/
-theorem capped_valid {GF : BundledGFunctors}
-    [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
-    (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢ ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
+theorem capped_valid (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢ ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
   CappedCredit.valid (bad := {b | (codensity dp.{0}).Absorbing b})
+
+end Capped
 
 end AbsorbingExit
 end ProbLang

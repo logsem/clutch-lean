@@ -5,6 +5,7 @@ public import Metrology.Couplings.Divergences.DpAvoid
 public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -20,18 +21,22 @@ open scoped ENNReal
 namespace ProbLang
 namespace LeakyRR
 
-open RandomizedResponse (rr_refines)
+open RandomizedResponse (rr_refines budget)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
+section Refines
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
 /-- `leakyRR N b` refines `leakyRR N b'` at equal reports, spending `(ln 3, 1/N)`. -/
-theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) (hN : 0 < N) (b b' : Bool) :
-    ⊢@{IProp GF} ↯b (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
+theorem leakyRR_refines (N : Int) (hN : 0 < N) (b b' : Bool) :
+    ⊢ ↯b (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[codensity dp] (leakyRR (rT := rT) N b) << leakyRR N b' : lrel_bool := by
   -- split the budget: `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
   rw [show (ENNReal.ofReal (Real.log 3), (N.toNat : ℝ≥0∞)⁻¹) =
-    (0, (N.toNat : ℝ≥0∞)⁻¹) + RandomizedResponse.budget by simp]
+    (0, (N.toNat : ℝ≥0∞)⁻¹) + budget by simp]
   iintro Hb
   ihave ⟨Hδ, Hε⟩ := BudgetCredit.split $$ Hb
   -- couple the two draws along "equal and not `0`" at `(0, μ{0}) = (0, 1/N)`
@@ -42,6 +47,8 @@ theorem leakyRR_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
   -- `hr` rules out the leaking branch on both sides
   rel_pures
   iapply rr_refines b b' $$ Hε
+
+end Refines
 
 /-- `leakyRR N` on private bits, started from state `σ`. -/
 noncomputable abbrev leakyRRMech (N : Int) (σ : State rT) : Mechanism Bool (Exp rT) :=

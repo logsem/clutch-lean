@@ -22,7 +22,7 @@ open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-! ## Program state and spec
 
@@ -31,8 +31,8 @@ without an `L` metavariable. -/
 
 /-- The ghost state of `wp`: invariants, the program-state interpretation, and (from
 `SpecUpdateGS`) the spec interpretation `specInterp`. -/
-class MicrometerWpGS {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
+class MicrometerWpGS [MeasurableSingletonClass rT] (GF : BundledGFunctors)
+    extends SpecUpdateGS rT GF where
   /-- Whether later credits are available (adequacy uses `.hasNoLC`). -/
   hlc : HasLC
   /-- The invariant ghost state. -/
@@ -50,13 +50,18 @@ class BudgetGS (B : Type) (GF : BundledGFunctors) where
   /-- The resource holding a given budget. -/
   interp : B → IProp GF
 
+section Budget
+variable {B : Type} {GF : BundledGFunctors}
+open BudgetGS
+
 /-- The resource `wp` owns for budget `b`. -/
-abbrev budgetInterp {B : Type} {GF : BundledGFunctors} [BudgetGS B GF] (b : B) : IProp GF :=
-  BudgetGS.interp b
+abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF :=
+  interp b
 
 /-- With budget credits, the budget resource is the authoritative credit `bcAuth`. -/
-instance BudgetGS.ofBudgetCredit {B : Type} [AddCommMonoid B] {GF : BundledGFunctors}
-    [BudgetCreditGS B GF] : BudgetGS B GF :=
+instance BudgetGS.ofBudgetCredit [AddCommMonoid B] [BudgetCreditGS B GF] : BudgetGS B GF :=
   ⟨bcAuth⟩
+
+end Budget
 
 end ProbLang

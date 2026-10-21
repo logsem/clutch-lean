@@ -39,7 +39,7 @@ theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC
 
 /-- Results related along equal booleans end in `b` together. -/
 theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
-    (ha : a ∈ ({pl(#b)} : Set (Exp rT))) : a' ∈ ({pl(#b)} : Set (Exp rT)) := by
+    (ha : a ∈ ({pl(#b)} : Set _)) : a' ∈ ({pl(#b)} : Set _) := by
   obtain ⟨v, v', hv, hv', b'', hvb1, hvb2⟩ := h
   have hv1 : v.1 = pl(#b'') := congrArg Val.fst hvb1
   rw [show v.1 = pl(#b) from (Exp.ofVal_of_toVal_some hv).trans ha] at hv1
@@ -84,7 +84,7 @@ variable (L) in
 booleans. -/
 theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF), ⊢ ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
+      Δ, ⊢ ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
     (K : Ctx rT) (σ σ' : State rT) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
     (Hlin : K.IsLinear) :
     L.Rel β (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ⟩) (limExecV ⟨K.fill e', σ'⟩) := by
@@ -111,7 +111,7 @@ theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
 `β`, for a divergence `D` the lifting is sound for. -/
 theorem refines_ctx_div {D : GradedDivergence.{0} B} [L.IsSound D] (β : B) (e e' : Exp rT)
     (τ : Ty) (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF), ⊢ ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
+      Δ, ⊢ ↯b β -∗ refines L ⊤ e e' (interp L τ Δ))
     (K : Ctx rT) (σ σ' : State rT) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
     (Hlin : K.IsLinear) :
     D β (limExecV ⟨K.fill e, σ⟩) (limExecV ⟨K.fill e', σ'⟩) :=
@@ -123,53 +123,13 @@ by that of the other side plus `δ`. -/
 theorem refines_ctx_mass (s : ENNReal →+o B) [L.IsMassDetecting s] (δ : ENNReal)
     (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF), ⊢ ↯b (s δ) -∗ refines L ⊤ e e' (interp L τ Δ))
+      Δ, ⊢ ↯b (s δ) -∗ refines L ⊤ e e' (interp L τ Δ))
     (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
     (Hlin : K.IsLinear) :
     limExec ⟨K.fill e, σ⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ'⟩ (finalBool b) + δ := by
   rw [limExec_finalBool, limExec_finalBool]
   exact IsMassDetecting.measure_le_add (.singleton _) (.singleton _)
     (refines_ctx_coupling L (s δ) e e' τ Hlog K σ σ' HK Hlin) adequacyRel_boolEqVal_mem
-
-end Bind
-
-end Budget
-
-end RefinesSound
-
-/-! ## Differential privacy -/
-
-section RefinesSoundDp
-open MeasureTheory GradedDivergence
-open scoped _root_.ENNReal
-variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
-  [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
-local bi IProp GF
-
-/-- An `(ε, δ)`-DP refinement makes every linear boolean context `(ε, δ)`-DP:
-`P[K[e] = b] ≤ e^ε P[K[e'] = b] + δ`. -/
-theorem refines_ctx_dp {ε δ : ℝ≥0∞} (hε : ε ≠ ∞) (e e' : Exp rT) (τ : Ty)
-    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF)
-      (Δ : TyEnv rT GF),
-        ⊢ ↯b (ε, δ) -∗ refines (codensity dp) ⊤ e e' (interp (codensity dp) τ Δ))
-    (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
-    (Hlin : K.IsLinear) :
-    limExec ⟨K.fill e, σ⟩ (finalBool b) ≤
-      expBudget ε * limExec ⟨K.fill e', σ'⟩ (finalBool b) + δ := by
-  rw [limExec_finalBool, limExec_finalBool]
-  exact dp_measure_le_add hε (refines_ctx_coupling _ (ε, δ) e e' τ Hlog K σ σ' HK Hlin)
-    (.singleton _) (.singleton _) adequacyRel_boolEqVal_mem
-
-end RefinesSoundDp
-
-section RefinesSoundFree
-open MeasureTheory
-variable {rT : Type} {GF : BundledGFunctors}
-  [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
-  [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed] [RefinesPreGS rT B GF]
-variable [L.HasBind] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
-local bi IProp GF
 
 /-! ## Without credits -/
 
@@ -178,9 +138,8 @@ variable (L) in
 left no more often than on the right, from the same state (the inequality inside `CtxRefines`). -/
 theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γtc : Tctx)
     (e e' : Exp rT) (τ : Ty) (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
-    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
-        ⊢ bin_log_related_ty L (hlc := .hasNoLC) ⊤ Δ Γrc e e' τ) :
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF) Δ Γrc,
+      TctxRelated L Δ Γtc Γrc → ⊢ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ Tctx.empty .bool →
       Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
@@ -204,7 +163,7 @@ theorem refines_sound_open_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (Γ
 theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : Exp rT) (τ : Ty)
     (Hty_e : Typed Tctx.empty e τ) (Hty_e' : Typed Tctx.empty e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
-      (Δ : TyEnv rT GF), ⊢ refines L (hlc := .hasNoLC) ⊤ e e' (interp L τ Δ)) :
+      Δ, ⊢ refines L ⊤ e e' (interp L τ Δ)) :
     ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Tctx.empty τ Tctx.empty .bool →
       Ctx.BindersFresh K ∅ → (∀ x ∈ Ctx.binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ Ctx.payloadFv K) →
       limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
@@ -214,6 +173,35 @@ theorem refines_sound_fresh (s : ENNReal →+o B) [L.IsMassDetecting s] (e e' : 
   iapply bin_log_related_nil_intro
   iapply Hlog IR IBC Δ
 
-end RefinesSoundFree
+end Bind
+
+end Budget
+
+end RefinesSound
+
+/-! ## Differential privacy -/
+
+section RefinesSoundDp
+open MeasureTheory GradedDivergence
+open scoped _root_.ENNReal
+variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+  [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
+/-- An `(ε, δ)`-DP refinement makes every linear boolean context `(ε, δ)`-DP:
+`P[K[e] = b] ≤ e^ε P[K[e'] = b] + δ`. -/
+theorem refines_ctx_dp {ε δ : ℝ≥0∞} (hε : ε ≠ ∞) (e e' : Exp rT) (τ : Ty)
+    (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF)
+      Δ,
+        ⊢ ↯b (ε, δ) -∗ refines (codensity dp) ⊤ e e' (interp (codensity dp) τ Δ))
+    (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K Tctx.empty τ Tctx.empty .bool)
+    (Hlin : K.IsLinear) :
+    limExec ⟨K.fill e, σ⟩ (finalBool b) ≤
+      expBudget ε * limExec ⟨K.fill e', σ'⟩ (finalBool b) + δ := by
+  rw [limExec_finalBool, limExec_finalBool]
+  exact dp_measure_le_add hε (refines_ctx_coupling _ (ε, δ) e e' τ Hlog K σ σ' HK Hlin)
+    (.singleton _) (.singleton _) adequacyRel_boolEqVal_mem
+
+end RefinesSoundDp
 
 end ProbLang

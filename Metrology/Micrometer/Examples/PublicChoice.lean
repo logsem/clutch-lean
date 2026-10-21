@@ -6,6 +6,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 public import Metrology.Micrometer.MechanismZcdp
 import Metrology.ProbLang.Syntax.Notation
 import Mathlib.Algebra.Regular.Prod
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -16,7 +17,7 @@ import Mathlib.Algebra.Regular.Prod
 Refining both ways makes `choice` also `(0, (ln 3)² / 2)`-zCDP once it terminates almost surely
 (`choice_zCDP`). -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
+open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting ProbabilityTheory
 open GradedDivergence (dp codensity)
 open scoped ENNReal
 
@@ -27,10 +28,14 @@ open RandomizedResponse (budget rr_refines)
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
+section Refines
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+local bi IProp GF
+
 /-- `choice b` refines `choice b'` at equal reports, spending `(ln 3, 0)` by the choice law. -/
-theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (b b' : Bool) :
-    ⊢@{IProp GF} ↯b budget -∗ REL[codensity dp] (choice (rT := rT) b) << choice b' : lrel_bool := by
+theorem choice_refines (b b' : Bool) :
+    ⊢ ↯b budget -∗ REL[codensity dp] (choice (rT := rT) b) << choice b' : lrel_bool := by
   -- put `budget` in the choice law's shape `(max (ε₁+ε₂) (ε₁'+ε₂'), δ₁+δ₁'+δ₂)`
   rw [show budget = (max (0 + ENNReal.ofReal (Real.log 3)) (0 + 0), 0 + 0 + 0) by simp]
   iintro Hb
@@ -51,6 +56,8 @@ theorem choice_refines {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
     · rel_pures
       rel_values
 
+end Refines
+
 /-- The mechanism running `choice` on a private bit from state `σ`. -/
 noncomputable abbrev choiceMech (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech choice σ
@@ -62,7 +69,7 @@ theorem choice_DP (σ : State rT) : (choiceMech σ).DP ⊤ (ENNReal.ofReal (Real
 
 /-- The public choice is `(0, (ln 3)² / 2)`-zCDP, given that it terminates almost surely: it
 refines both ways at `(ln 3, 0)` (Bun–Steinke 2016, Prop. 3.3). -/
-theorem choice_zCDP (σ : State rT) [ProbabilityTheory.IsMarkovKernel (choiceMech σ)] :
+theorem choice_zCDP (σ : State rT) [IsMarkovKernel (choiceMech σ)] :
     (choiceMech σ).zCDP ⊤ 0 (ENNReal.ofReal (Real.log 3 ^ 2 / 2)) := by
   have := progMech_zCDP_of_dp (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ (adj := ⊤)
     (Real.log 3).toNNReal (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq)
@@ -71,12 +78,12 @@ theorem choice_zCDP (σ : State rT) [ProbabilityTheory.IsMarkovKernel (choiceMec
 
 /-- The public choice is `((ln 3)² / 2 + 2 √((ln 3)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. -/
-theorem choice_DP_sqrt (σ : State rT) [ProbabilityTheory.IsMarkovKernel (choiceMech σ)] {δ : ℝ}
+theorem choice_DP_sqrt (σ : State rT) [IsMarkovKernel (choiceMech σ)] {δ : ℝ}
     (hδ : 0 < δ) (hδ₁ : δ < 1) :
     (choiceMech σ).DP ⊤
       (ENNReal.ofReal (Real.log 3 ^ 2 / 2 + 2 * √(Real.log 3 ^ 2 / 2 * Real.log (1 / δ))))
       (ENNReal.ofReal δ) := by
-  have := ProbabilityTheory.Kernel.DP_of_zCDP_sq (ε := (Real.log 3).toNNReal) hδ hδ₁
+  have := Kernel.DP_of_zCDP_sq (ε := (Real.log 3).toNNReal) hδ hδ₁
     (by rw [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num))]; exact choice_zCDP σ)
   rwa [Real.coe_toNNReal _ (Real.log_nonneg (by norm_num))] at this
 

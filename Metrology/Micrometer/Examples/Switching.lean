@@ -5,6 +5,7 @@ public import Metrology.Micrometer.Adequacy
 public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -59,13 +60,15 @@ theorem loopErr_zero_le_birthday (N : Int) (q : Nat) :
 section Games
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
+  {E : CoPset} {Φ : Val rT → _}
+local bi IProp GF
 
 /-! ### One round: recording the answer -/
 
 /-- The tail of a round: record `(n, y)` in both result lists, then run the next round.
 `hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`. -/
-theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
-    {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)} {Φ : Val rT → IProp GF}
+theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
+    {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)}
     (hloop : loop = wLoop N := by rfl) : iprop%
     ⤇ K.fill (pl% (#loc resS ← inr(((#n, #y), !#loc resS));
       {loop} {fS.fst} #loc resS (#int (↑(q + 1)) - #1))) ∗
@@ -107,11 +110,10 @@ Loop invariant: both maps hold the same memo table `m`, `r` lists the values the
 not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
 nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`), so `q` rounds cost
 `loopErr N |m| q`. -/
-theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
+theorem wp_wLoop (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
-    (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
-    {Φ : Val rT → IProp GF} : iprop%
+    (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N) : iprop%
     ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #loc resS #int q) ∗
     ↯b (loopErr N m.length q) ∗
     (ℓ ↦ (assocVal m : Val rT)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
@@ -183,9 +185,8 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
       iframe
 
 /-- The program `wPRF` refines the spec `wPRP` up to the loop error. -/
-theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_wPRF_wPRP (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
+    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
     ⤇ K.fill (wPRP N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
     WP[codensity tv] (wPRF N Q) @ E {{ Φ }} := by
@@ -230,11 +231,10 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
 /-! ### The loop, random permutation against random function -/
 
 /-- `wp_wLoop` with the roles swapped: the random permutation on the program side. -/
-theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
+theorem wp_wLoop_rev (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS : Loc)
     (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
-    (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
-    {Φ : Val rT → IProp GF} : iprop%
+    (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N) : iprop%
     ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #loc resS #int q) ∗
     ↯b (loopErr N m.length q) ∗
     (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT)) ∗
@@ -304,9 +304,8 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
       iframe
 
 /-- The program `wPRP` refines the spec `wPRF` up to the loop error. -/
-theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε)
-    {Φ : Val rT → IProp GF} : iprop%
+theorem wp_wPRP_wPRF (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
+    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
     ⤇ K.fill (wPRF N Q) ∗ ↯b ε ∗
     (∀ v : Val rT, ⤇ K.fill (Exp.ofVal v) -∗ Φ v) ⊢
     WP[codensity tv] (wPRP N Q) @ E {{ Φ }} := by

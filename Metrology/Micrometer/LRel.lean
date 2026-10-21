@@ -46,6 +46,8 @@ theorem lrel.ext {GF : BundledGFunctors} {A B : lrel rT GF}
 
 /-! ### OFE and COFE structure, used for recursive relations -/
 
+open lrel
+
 /-- Value relations are an OFE under pointwise distance. -/
 instance ofe_lrel {GF : BundledGFunctors} : OFE (lrel rT GF) where
   Dist n A B := ∀ v1 v2, A.car v1 v2 ≡{n}≡ B.car v1 v2
@@ -70,26 +72,26 @@ abbrev lrel.appAt {GF : BundledGFunctors} (v1 v2 : Val rT) :
 
 /-- Evaluation at a pair of values is nonexpansive. -/
 instance lrel.appAt_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
-    OFE.NonExpansive (lrel.appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
+    OFE.NonExpansive (appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
 /-- Value relations are complete: limits are taken pointwise. -/
 noncomputable instance isCOFE_lrel {GF : BundledGFunctors} : IsCOFE (lrel rT GF) where
   compl c :=
-    { car := IsCOFE.compl (lrel.toFunChain c)
+    { car := IsCOFE.compl (toFunChain c)
       persistent v1 v2 :=
-        (limitPreserving_persistent (lrel.appAt v1 v2)).compl
-          (lrel.toFunChain c) fun k => (c.chain k).persistent v1 v2
+        (limitPreserving_persistent (appAt v1 v2)).compl
+          (toFunChain c) fun k => (c.chain k).persistent v1 v2
       closed v1 v2 :=
-        (Iris.BI.LimitPreserving.entails (lrel.appAt v1 v2)
+        (LimitPreserving.entails (appAt v1 v2)
             (Function.const _ iprop(⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝))).compl
-          (lrel.toFunChain c) fun k => (c.chain k).closed v1 v2 }
-  conv_compl {_ c} v1 v2 := IsCOFE.conv_compl (c := lrel.toFunChain c) v1 v2
+          (toFunChain c) fun k => (c.chain k).closed v1 v2 }
+  conv_compl {_ c} v1 v2 := IsCOFE.conv_compl (c := toFunChain c) v1 v2
 
 /-- The empty relation. -/
 instance inhabited_lrel {GF : BundledGFunctors} : Inhabited (lrel rT GF) where
   default :=
     { car := fun _ _ => iprop(False)
-      closed := fun _ _ => Iris.BI.false_elim }
+      closed := fun _ _ => false_elim }
 
 /-- A relation's proposition at a fixed pair of values is nonexpansive in the relation. -/
 instance lrel.car_ne {GF : BundledGFunctors} (v1 v2 : Val rT) :
@@ -187,8 +189,8 @@ noncomputable def lrel_prod (A B : lrel rT GF) : lrel rT GF where
     · rw [h2]; simp [Exp.fv]; exact ⟨hAcl.2.2, hBcl.2.2⟩
 
 /-- Related components give related pairs. -/
-theorem lrel_prod_pair {A B : lrel rT GF} {a a' b b' : Val rT} :
-    iprop% A a a' ∗ B b b' ⊢ (lrel_prod A B).car (.pair a b) (.pair a' b') := by
+theorem lrel_prod_pair {A B : lrel rT GF} {a a' b b' : Val rT} : iprop%
+    A a a' ∗ B b b' ⊢ (lrel_prod A B).car (.pair a b) (.pair a' b') := by
   iintro ⟨HA, HB⟩
   iunfold lrel_prod
   iexists a, a', b, b'
@@ -283,7 +285,7 @@ instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) wh
 
 theorem lrel_exists_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
-    (lrel_exists C1 : lrel rT GF) ≡{n}≡ lrel_exists C2 := by
+    lrel_exists C1 ≡{n}≡ lrel_exists C2 := by
   intro v1 v2
   show iprop(_ ∗ ∃ _, _) ≡{n}≡ iprop(_ ∗ ∃ _, _)
   exact sep_ne.ne .rfl <| exists_ne fun A => h A v1 v2
@@ -309,11 +311,11 @@ variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors} [Micromete
 
 /-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/
 @[reducible] noncomputable def naOwnP (E : CoPset) : IProp GF :=
-  Iris.NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
+  NonAtomicInvariant.own (MicrometerRGS.nais (rT := rT) GF) E
 
 /-- The non-atomic invariant `P` at namespace `N`, in the pool of `MicrometerRGS`. -/
 @[reducible] noncomputable def naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
-  Iris.NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
+  NonAtomicInvariant.inv (MicrometerRGS.nais (rT := rT) GF) N P
 
 /-- The update that closes the non-atomic invariant `P` at `N`, opened from mask `E`. -/
 @[reducible] noncomputable def naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
@@ -383,7 +385,7 @@ noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗
       □ (∀ (w1 w2 : Val rT), A1 w1 w2 -∗
-        refines L (⊤ : CoPset) (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
+        refines L ⊤ (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 variable (L) in
@@ -392,7 +394,7 @@ noncomputable def lrel_forall (C : lrel rT GF → lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop% ∀ (A : lrel rT GF), (lrel_arr L lrel_unit (C A)).car v1 v2
   closed v1 v2 := by
     iintro Hall
-    ihave Hinst := Hall $$ %(default : lrel rT GF)
+    ihave Hinst := Hall $$ %default
     iapply (lrel_arr L lrel_unit (C default)).closed v1 v2 $$ Hinst
 
 /-- Locations whose contents stay `A`-related, kept in an invariant. -/
@@ -400,7 +402,7 @@ noncomputable def lrel_ref (A : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (l1 l2 : Loc),
       ⌜ v1 = .loc l1 ⌝ ∗ ⌜ v2 = .loc l2 ⌝ ∗
-      Iris.inv (logN.@ (l1, l2)) iprop(∃ w1 w2, appHeapFrag l1 w1 ∗ specHeapFrag l2 w2 ∗ A w1 w2)
+      inv (logN.@ (l1, l2)) iprop(∃ w1 w2, appHeapFrag l1 w1 ∗ specHeapFrag l2 w2 ∗ A w1 w2)
   closed v1 v2 := by
     iintro ⟨%l1, %l2, %h1, %h2, _⟩ !%
     exact ⟨h1 ▸ Exp.lit_isClosedEmpty _, h2 ▸ Exp.lit_isClosedEmpty _⟩
@@ -410,7 +412,7 @@ noncomputable def lrel_tape : lrel rT GF where
   car v1 v2 := iprop%
     ∃ (α1 α2 : Loc) (z : Int),
       ⌜ v1 = .lbl α1 ⌝ ∗ ⌜ v2 = .lbl α2 ⌝ ∗
-      Iris.inv (logN.@ (α1, α2)) iprop(appTapesFrag α1 ⟨z, []⟩ ∗ specTapesFrag α2 ⟨z, []⟩)
+      inv (logN.@ (α1, α2)) iprop(appTapesFrag α1 ⟨z, []⟩ ∗ specTapesFrag α2 ⟨z, []⟩)
   closed v1 v2 := by
     iintro ⟨%α1, %α2, %z, %h1, %h2, _⟩ !%
     exact ⟨h1 ▸ Exp.lit_isClosedEmpty _, h2 ▸ Exp.lit_isClosedEmpty _⟩
@@ -433,14 +435,14 @@ instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
   ne {n A B} hAB v1 v2 := by
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     refine exists_ne fun l1 => exists_ne fun l2 => ?_
-    refine sep_ne.ne .rfl <| sep_ne.ne .rfl <| (Iris.inv_ne _).ne ?_
+    refine sep_ne.ne .rfl <| sep_ne.ne .rfl <| (inv_ne _).ne ?_
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     exact exists_ne fun w1 => exists_ne fun w2 => sep_ne.ne .rfl <| sep_ne.ne .rfl (hAB w1 w2)
 
 variable (L) in
 theorem lrel_forall_ne {n : Nat} {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
-    (lrel_forall L C1 : lrel rT GF) ≡{n}≡ lrel_forall L C2 := by
+    lrel_forall L C1 ≡{n}≡ lrel_forall L C2 := by
   intro v1 v2
   show iprop(∀ _, _) ≡{n}≡ iprop(∀ _, _)
   exact forall_ne fun A => lrel_arr_ne_2.ne .rfl (h A) v1 v2

@@ -146,9 +146,10 @@ end Rel
 section Wp
 
 variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- The program reports `bif d then b else !b`. -/
-theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
+theorem wp_report (d b : Bool) (Φ : Val rT → _) :
     Φ (.bool (bif d then b else !b)) ⊢
       wp L ⊤ pl(if #bool d then #b else ~#b) Φ := by
   cases d <;> cases b <;>
@@ -156,7 +157,7 @@ theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     iintro H <;> wp_pures <;> wp_value <;> imodintro <;> iexact H
 
 /-- The spec reports `bif d then b else !b`, under any evaluation context. -/
-theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
+theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → _) :
     ⤇ K.fill pl(if #bool d then #b else ~#b) ∗
       (⤇ K.fill pl(#bool (bif d then b else !b)) -∗ wp L ⊤ e Φ) ⊢ wp L ⊤ e Φ := by
   cases d <;> cases b <;>
@@ -168,7 +169,7 @@ draws at `c`: both sides report the same bit. -/
 theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
     (hc : IsAddLeftRegular c)
     (hcpl : RRCoupling L c)
-    (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
+    (K : Ectx rT) (b b' : Bool) (Φ : Val rT → _) :
     ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#bool d) -∗ Φ (.bool d)) ⊢
       wp L ⊤ (rr b) Φ := by
   iintro ⟨Hj, Hb, H⟩

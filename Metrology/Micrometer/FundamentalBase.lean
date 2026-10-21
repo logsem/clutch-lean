@@ -18,19 +18,21 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 
 namespace ProbLang
 
-open Cslib Exp
+open Cslib Exp ValSubstMap RelCtx Ectx SubstMap
 
 section Fundamental
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
+variable {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT} {A C : lrel rT GF}
+  {S : Finset Var}
 
 /-! ## Lifting `refines` rules to `bin_log_related` -/
 
 /-- Lift a unary `refines` rule for `f` to open terms by pushing `substMap` through `f`. -/
-theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A C : lrel rT GF}
-    {f : Exp rT → Exp rT} (hf : ∀ σ t, substMap σ (f t) = f (substMap σ t))
+theorem bin_log_related_lift1 {f : Exp rT → Exp rT}
+    (hf : ∀ σ t, substMap σ (f t) = f (substMap σ t))
     (H : ∀ t t', refines L ⊤ t t' A ⊢ refines L ⊤ (f t) (f t') C) :
     bin_log_related L ⊤ Γ e e' A ⊢ bin_log_related L ⊤ Γ (f e) (f e') C := by
   unfold bin_log_related
@@ -39,8 +41,8 @@ theorem bin_log_related_lift1 {Γ : RelCtx rT GF} {e e' : Exp rT} {A C : lrel rT
   iapply H _ _ $$ (IH $$ %vs Hvs)
 
 /-- Lift a binary `refines` rule for `f` to open terms. -/
-theorem bin_log_related_lift2 {Γ : RelCtx rT GF} {e1 e2 e1' e2' : Exp rT}
-    {A1 A2 C : lrel rT GF} {f : Exp rT → Exp rT → Exp rT}
+theorem bin_log_related_lift2 {e1 e2 e1' e2' : Exp rT}
+    {A1 A2 : lrel rT GF} {f : Exp rT → Exp rT → Exp rT}
     (hf : ∀ σ t1 t2, substMap σ (f t1 t2) = f (substMap σ t1) (substMap σ t2))
     (H : ∀ t1 t2 t1' t2', iprop%
       refines L ⊤ t1 t1' A1 ⊢ refines L ⊤ t2 t2' A2 -∗ refines L ⊤ (f t1 t2) (f t1' t2') C) : iprop%
@@ -52,8 +54,8 @@ theorem bin_log_related_lift2 {Γ : RelCtx rT GF} {e1 e2 e1' e2' : Exp rT}
   iapply H _ _ _ _ $$ (IH1 $$ %vs Hvs) (IH2 $$ %vs Hvs)
 
 /-- Lift a ternary `refines` rule for `f` to open terms. -/
-theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' : Exp rT}
-    {A0 A1 A2 C : lrel rT GF} {f : Exp rT → Exp rT → Exp rT → Exp rT}
+theorem bin_log_related_lift3 {e0 e1 e2 e0' e1' e2' : Exp rT}
+    {A0 A1 A2 : lrel rT GF} {f : Exp rT → Exp rT → Exp rT → Exp rT}
     (hf : ∀ σ t0 t1 t2,
       substMap σ (f t0 t1 t2) = f (substMap σ t0) (substMap σ t1) (substMap σ t2))
     (H : ∀ t0 t1 t2 t0' t1' t2', iprop%
@@ -68,7 +70,7 @@ theorem bin_log_related_lift3 {Γ : RelCtx rT GF} {e0 e1 e2 e0' e1' e2' : Exp rT
   iapply H _ _ _ _ _ _ $$ (IH0 $$ %vs Hvs) (IH1 $$ %vs Hvs) (IH2 $$ %vs Hvs)
 
 /-- Literals are related to themselves at any type containing them. -/
-theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT) {A : lrel rT GF}
+theorem bin_log_related_lit (Γ : RelCtx rT GF) (l : BaseLit rT)
     (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢ bin_log_related L ⊤ Γ (.lit l) (.lit l) A := by
   unfold bin_log_related
@@ -87,8 +89,8 @@ theorem bin_log_related_var (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (x : Var) (τ
   icases env_ltyped2_lookup Γ vs x (interp L τ Δ) hΓ $$ Hvs with ⟨%v1, %v2, %hvs_eq, HA⟩
   ihave %hfst_closed := env_ltyped2_fst_allClosed Γ vs $$ Hvs
   ihave %hsnd_closed := env_ltyped2_snd_allClosed Γ vs $$ Hvs
-  rw [substMap_fvar_lookup_some _ _ hfst_closed (by rw [ValSubstMap.fst_lookup, hvs_eq]; rfl),
-    substMap_fvar_lookup_some _ _ hsnd_closed (by rw [ValSubstMap.snd_lookup, hvs_eq]; rfl)]
+  rw [substMap_fvar_lookup_some _ _ hfst_closed (by rw [fst_lookup, hvs_eq]; rfl),
+    substMap_fvar_lookup_some _ _ hsnd_closed (by rw [snd_lookup, hvs_eq]; rfl)]
   iapply refines_ret rfl rfl
   imodintro
   iexact HA
@@ -97,16 +99,16 @@ section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
 
 /-- Beta reduction on both sides, one step later, as a closed `refines` rule. -/
-theorem refines_beta {e e' : Exp rT} {v v' : Val rT} {A : lrel rT GF}
-    (he : (Exp.lam e).IsLocallyClosed) (he' : (Exp.lam e').IsLocallyClosed) : iprop%
+theorem refines_beta {v v' : Val rT}
+    (he : (lam e).IsLocallyClosed) (he' : (lam e').IsLocallyClosed) : iprop%
     ▷ refines L ⊤ (open' e v.1) (open' e' v'.1) A ⊢
     refines L ⊤ (.app (.lam e) v.1) (.app (.lam e') v'.1) A := by
-  rw [Ectx.eq_fill_nil (.app (.lam e) v.1), Ectx.eq_fill_nil (.app (.lam e') v'.1)]
+  rw [eq_fill_nil (.app (.lam e) v.1), eq_fill_nil (.app (.lam e') v'.1)]
   iintro H
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨v.2.toIsValue, he⟩
   inext
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨v'.2.toIsValue, he'⟩
-  simp only [Ectx.fill_nil]
+  simp only [fill_nil]
   iexact H
 
 end Steps
@@ -114,28 +116,27 @@ end Steps
 /-! ## Substitution and closedness helpers -/
 
 /-- Substituting a fresh variable bound to a value pair commutes with opening, on both sides. -/
-theorem substMap_open_fresh_pair {vs : ValSubstMap rT} {x : Var} {v v' : Val rT}
-    {e e' : Exp rT} (hfst : SubstMap.AllClosed vs.fst) (hsnd : SubstMap.AllClosed vs.snd)
+theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
+    (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
     (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
     (hv : v.1.isClosedEmpty) (hv' : v'.1.isClosedEmpty) :
     substMap (ValSubstMap.fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) =
       open' (substMap vs.fst e) v.1 ∧
     substMap (ValSubstMap.snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) =
       open' (substMap vs.snd e') v'.1 :=
-  ⟨substMap_open_fresh hfst hxe (ValSubstMap.fst_lookup_eq_none_of_not_mem hxdom) hv.1,
-    substMap_open_fresh hsnd hxe' (ValSubstMap.snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
+  ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_not_mem hxdom) hv.1,
+    substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
 
 /-- Free variables of both terms lie in the domains of the left and right substitutions. -/
-theorem fv_subset_substMap_dom {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT}
-    (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
+theorem fv_subset_substMap_dom (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
     (he : e.fv ⊆ (Γ.map (·.1)).toFinset) (he' : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
     e.fv ⊆ (vs.fst.map (·.1)).toFinset ∧ e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
-  rw [ValSubstMap.fst_dom, ValSubstMap.snd_dom]
+  rw [fst_dom, snd_dom]
   exact ⟨he.trans hdom, he'.trans hdom⟩
 
 /-- A related substitution is closed on both sides. -/
 theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
-    env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst ∧ SubstMap.AllClosed vs.snd⌝ := by
+    env_ltyped2 Γ vs ⊢ ⌜AllClosed vs.fst ∧ AllClosed vs.snd⌝ := by
   iintro Hvs
   ihave %hfst := env_ltyped2_fst_allClosed Γ vs $$ Hvs
   ihave %hsnd := env_ltyped2_snd_allClosed Γ vs $$ Hvs
@@ -143,44 +144,41 @@ theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   exact ⟨hfst, hsnd⟩
 
 /-- Substituting into a `lam` body keeps both sides locally closed. -/
-theorem substMap_lam_lc {vs : ValSubstMap rT} {e e' : Exp rT} {S : Finset Var}
-    (hvs : SubstMap.AllClosed vs.fst ∧ SubstMap.AllClosed vs.snd)
+theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed) :
-    (Exp.lam (substMap vs.fst e)).IsLocallyClosed ∧
-      (Exp.lam (substMap vs.snd e')).IsLocallyClosed :=
+    (lam (substMap vs.fst e)).IsLocallyClosed ∧
+      (lam (substMap vs.snd e')).IsLocallyClosed :=
   ⟨lam_substMap_isLocallyClosed hvs.1
-      (fun _ hy => ValSubstMap.fst_lookup_eq_none_of_not_mem hy) he_lc,
+      (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
     lam_substMap_isLocallyClosed hvs.2
-      (fun _ hy => ValSubstMap.snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
+      (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
 
 /-- Both substituted `lam` terms are closed. -/
-theorem substMap_lam_closed {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT}
-    {S : Finset Var} (hvs : SubstMap.AllClosed vs.fst ∧ SubstMap.AllClosed vs.snd)
+theorem substMap_lam_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
     (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
-    (Exp.lam (substMap vs.fst e)).isClosedEmpty ∧ (Exp.lam (substMap vs.snd e')).isClosedEmpty := by
+    (lam (substMap vs.fst e)).isClosedEmpty ∧ (lam (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   obtain ⟨hlam_lc, hlam'_lc⟩ := substMap_lam_lc hvs he_lc he'_lc
   exact ⟨⟨hlam_lc, substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
     ⟨hlam'_lc, substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
 /-- Both substituted `fix` terms are closed. -/
-theorem substMap_fix_closed {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT}
-    {S : Finset Var} (hvs : SubstMap.AllClosed vs.fst ∧ SubstMap.AllClosed vs.snd)
+theorem substMap_fix_closed (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
     (he_lc : ∀ f ∉ S, (open' e (.fvar f)).IsLocallyClosed)
     (he'_lc : ∀ f ∉ S, (open' e' (.fvar f)).IsLocallyClosed)
     (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
-    (Exp.fix (substMap vs.fst e)).isClosedEmpty ∧ (Exp.fix (substMap vs.snd e')).isClosedEmpty := by
+    (fix (substMap vs.fst e)).isClosedEmpty ∧ (fix (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   exact ⟨⟨fix_substMap_isLocallyClosed hvs.1
-      (fun _ hy => ValSubstMap.fst_lookup_eq_none_of_not_mem hy) he_lc,
+      (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
       substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
     ⟨fix_substMap_isLocallyClosed hvs.2
-      (fun _ hy => ValSubstMap.snd_lookup_eq_none_of_not_mem hy) he'_lc,
+      (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc,
       substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
 end Fundamental
@@ -199,7 +197,7 @@ theorem exists_fresh_var (S : Finset Var) (e e' : Exp rT) (vs : ValSubstMap rT) 
 theorem not_mem_union_dom {S : Finset Var} {Γrc : RelCtx rT GF} {x : Var}
     (hx : x ∉ S ∪ (Γrc.map (·.1)).toFinset) : x ∉ S ∧ Γrc.lookup x = none := by
   simp only [Finset.mem_union, not_or] at hx
-  exact ⟨hx.1, RelCtx.lookup_eq_none_of_not_mem hx.2⟩
+  exact ⟨hx.1, lookup_eq_none_of_not_mem hx.2⟩
 
 end Fresh
 

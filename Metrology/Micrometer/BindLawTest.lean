@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 public import Metrology.Couplings.BindLaws
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -18,14 +19,16 @@ namespace BindLawTest
 
 variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {GF : BundledGFunctors}
   [MicrometerWpGS (rT := rT) GF]
+local bi IProp GF
+
+variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
+  {Z : Exp rT → State rT → Exp rT → State rT → ℝ≥0∞ × ℝ≥0∞ → IProp GF}
 
 open Classical in
 /-- A program step coupled with a spec step by right-keyed adaptive DP composition: the head DP
 lifting of `S` costs `(ε₁, δ₁)`, and each related pair continues at `(ε₂, D ρ')`, paid as
 `(ε₁ + ε₂, δ₁ + e^{ε₁} E[D])` (Rocq `GBL_DP_rhs`). -/
-theorem progCoupl_dpRhs {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {ε₁ ε₂ δ₁ : ℝ≥0∞} {D : Cfg rT → ℝ≥0∞} {S : Cfg rT → Cfg rT → Prop}
-    {Z : Exp rT → State rT → Exp rT → State rT → ℝ≥0∞ × ℝ≥0∞ → IProp GF}
+theorem progCoupl_dpRhs {ε₁ ε₂ δ₁ : ℝ≥0∞} {D : Cfg rT → ℝ≥0∞} {S : Cfg rT → Cfg rT → Prop}
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (hD : Measurable D)
     (hS : (codensity dp).Rel (ε₁, δ₁) S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' (ε₂, D ⟨e₂', σ₂'⟩)) ⊢
@@ -48,10 +51,8 @@ open Classical in
 /-- A program step coupled by the DP choice rule while `c` of the budget rides through it on every
 leftover, so the head spends only part of `b`
 (Rocq `GBL_DP_choice_head_shift`, `wp_couple_spend`). -/
-theorem progCoupl_dpChoice_spend {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-    {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {c b : ℝ≥0∞ × ℝ≥0∞} {S₁ S₂ : Cfg rT → Cfg rT → Prop}
-    {P : Set (Cfg rT)} {T : Set (Cfg rT)}
-    {Z : Exp rT → State rT → Exp rT → State rT → ℝ≥0∞ × ℝ≥0∞ → IProp GF}
+theorem progCoupl_dpChoice_spend {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {c b : ℝ≥0∞ × ℝ≥0∞}
+    {S₁ S₂ : Cfg rT → Cfg rT → Prop} {P T : Set (Cfg rT)}
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁') (hP : MeasurableSet P)
     (hT : MeasurableSet T)
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩))

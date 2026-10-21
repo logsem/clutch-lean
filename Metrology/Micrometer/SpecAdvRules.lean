@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.AppRelRules
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -13,7 +14,8 @@ set_option linter.discrete false
 A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome credits `↯b (s (ε₂ n))`
 (Eris `wp_couple_rand_adv_comp`, spec side). -/
 
-open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
+open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
+open MeasureTheory (Measure)
 open scoped ENNReal AppGS
 
 namespace ProbLang
@@ -26,12 +28,13 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {B : T
 section Wp
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- A spec draw `K[rand N]` turns `↯b (s ε₁)` into `↯b (s (ε₂ n))` at the outcome `n`, where `ε₁`
 bounds the average of `ε₂`. -/
 theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
-    (K : Ectx rT) {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
+    (K : Ectx rT) {E : CoPset} {e : Exp rT} {Φ : Val rT → _} : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (s ε₁) ∗
     (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ ⤇ K.fill pl(#n) -∗ wp L E e Φ) ⊢
     wp L E e Φ := by
@@ -41,7 +44,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   let rgt : Int → Cfg rT := fun n ↦ ⟨K.fill pl(#n), σ₁'⟩
   have hrgt : Function.Injective rgt := fun m m' h ↦ by
@@ -52,12 +55,12 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     dsimp only [R]
     rw [ite_eq_left ⟨rfl, n, h0, hN, rfl⟩, Function.leftInverse_invFun hrgt n]
   have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
-  have hcpl : L b R (MeasureTheory.Measure.dirac σ₁)
-      ((MeasureTheory.Measure.dirac σ₁').bind fun σ ↦
+  have hcpl : L b R (Measure.dirac σ₁)
+      ((Measure.dirac σ₁').bind fun σ ↦
         pexecN 1 ⟨K.fill pl(rand(#N, #())), σ⟩) := by
     rw [dirac_bind_pexecN_one hredR, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
-      Cfg.uniform_eq_map HN, MeasureTheory.Measure.map_map (by fun_prop) Measurable.of_discrete,
-      ← MeasureTheory.Measure.map_id (μ := MeasureTheory.Measure.dirac σ₁)]
+      Cfg.uniform_eq_map HN, Measure.map_map (by fun_prop) Measurable.of_discrete,
+      ← Measure.map_id (μ := Measure.dirac σ₁)]
     -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
     -- frame the remainder r, push to configurations
     have h₀ := IsTopAbsorbing.frame (c := r) <| IsExpectationAdditive.add_right (s := s)
@@ -104,12 +107,12 @@ end Wp
 section Rel
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
+local bi IProp GF
 
 /-- `wp_rand_r_adv` for refinements: the spec draws alone, splitting `↯b (s ε₁)` by outcome. -/
 theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT GF} (N : Int)
     (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
-    (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) :
-    iprop%
+    (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
     ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#n)) A) ⊢
     refines L E e (K.fill pl(rand(#N, #()))) A := by
   unfold refines

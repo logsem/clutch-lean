@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.Examples.RandomizedResponse.Adaptive
 public import Metrology.Couplings.Examples.AdaptiveFillKl
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -101,11 +102,13 @@ section Logic
 
 open Iris Iris.BI Iris.ProofMode
 
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
+
 /-- The adaptive program on `false` refines it on `true` at equal pairs of reports, spending
 filled KL `(4/9) log 2`: the chain-rule law at the first draw, the canonical law at the second. -/
-theorem rrAdaptive_refines_fillKl {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} ↯b (ENNReal.ofReal (4 * Real.log 2 / 9)) -∗
+theorem rrAdaptive_refines_fillKl :
+    ⊢ ↯b (ENNReal.ofReal (4 * Real.log 2 / 9)) -∗
       REL[codensity klDivergence.fill] (rrAdaptive (rT := rT) false) << (rrAdaptive true) :
         lrel_prod lrel_bool lrel_bool := by
   iintro Hb

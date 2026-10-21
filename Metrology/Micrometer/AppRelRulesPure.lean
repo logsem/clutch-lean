@@ -6,6 +6,7 @@ public import Metrology.Micrometer.Model
 public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.OpenInv
+import Metrology.Iris.LocalBI
 
 /-! # Refinement rules without coupled draws
 
@@ -21,10 +22,27 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
+/-! ## Budget predicates -/
+
+section Predicates
+variable (B : Type) [AddCommMonoid B] [PartialOrder B]
+
+/-- Every positive budget splits into two positive budgets (true for tv, where halving works). -/
+abbrev PosSplits : Prop := ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
+
+variable {B}
+
+/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`); unrelated to
+the divergence class `GradedDivergence.HasSlack`. -/
+abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
+
+end Predicates
+
 section AppRelRules
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
+  [BudgetCreditGS B GF] {E : CoPset} {K : Ectx rT} {A A' : lrel rT GF}
+local bi IProp GF
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
@@ -32,19 +50,17 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 /-! ## Pure steps and the left `wp` -/
 
 /-- A pure step on the left, which earns a `▷`. -/
-theorem refines_pure_l {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
-    {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
+theorem refines_pure_l {e e' t : Exp rT} {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     iprop% ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
   iintro H %K' %b HK Hna Herr Hpos
-  iapply MicrometerWpGS.wp_pure_step_later (Hex := HexK) Hφ
+  iapply wp_pure_step_later (Hex := HexK) Hφ
   inext
   iapply H $$ HK Hna Herr Hpos
 
 /-- A pure step on the right; spec steps earn no `▷`. -/
-theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT GF}
-    {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
+theorem refines_pure_r {e e' t : Exp rT} {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
   iunfold refines
   iintro H %K' %b Hj Hna Herr Hpos
@@ -58,7 +74,7 @@ theorem refines_pure_r {E : CoPset} {K : Ectx rT} {e e' t : Exp rT} {A : lrel rT
   iapply H $$ %K' %b HK' Hna Herr Hpos
 
 /-- Run the left focus by any `wp`, continuing with a refinement of the context. -/
-theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF} :
+theorem refines_wp_l {e1 t : Exp rT} :
     wp L ⊤ e1 (fun v => refines L E (K.fill v.1) t A) ⊢ refines L E (K.fill e1) t A := by
   iunfold refines
   iintro He %K' %b HK Hna Herr Hpos
@@ -74,7 +90,7 @@ theorem refines_wp_l {E : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
 /-- Open invariants around the atomic left step `e1`: given the spec thread, open masks to `E'`, run
 `e1`, close them, and return the (possibly stepped) right program `t'` with a refinement of the
 continuation. -/
-theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel rT GF}
+theorem refines_atomic_l {E' : CoPset} {e1 t : Exp rT}
     (Hopen : OpenInv L e1) : iprop%
     (∀ (K' : Ectx rT), ⤇ K'.fill t -∗
       |={⊤, E'}=> wp L E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
@@ -99,7 +115,7 @@ theorem refines_atomic_l {E E' : CoPset} {K : Ectx rT} {e1 t : Exp rT} {A : lrel
 /-! ## Steps on the right (spec program) -/
 
 /-- Run the right program by a spec update that ends in a value. -/
-theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_step_r {K' : Ectx rT} {e1 e2 : Exp rT} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
       specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
     refines L E e1 (K'.fill e2) A := by
@@ -115,8 +131,7 @@ theorem refines_step_r {E : CoPset} {K' : Ectx rT} {e1 e2 : Exp rT} {A : lrel rT
   iapply Hrefines $$ %K'' %b HK'' Hna Herr Hpos
 
 /-- Rewrite the right program by any spec update. -/
-theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
-    {A : lrel rT GF} : iprop%
+theorem refines_steps_r {K' : Ectx rT} {e1 e2 e2' : Exp rT} : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
     (|={⊤}=> refines L E e1 (K'.fill e2') A) -∗ refines L E e1 (K'.fill e2) A := by
   iunfold refines
@@ -132,7 +147,7 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
   iapply Hlog $$ %K'' %b HKres Hna Herr Hpos
 
 /-- Right-side `alloc`: continue with the fresh spec location. -/
-theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
+theorem refines_alloc_r {v : Val rT} {t : Exp rT} :
     iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#loc l)) A) ⊢
     refines L E t (K.fill (.alloc v.1)) A := by
   iintro Hlog
@@ -147,8 +162,7 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
   iapply Hlog $$ %l Hl
 
 /-- Right-side load from a spec location. -/
-theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
-    {A : lrel rT GF} : iprop%
+theorem refines_load_r {l : Loc} {v : Val rT} {t : Exp rT} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v -∗ refines L E t (K.fill v.1) A) ⊢
     refines L E t (K.fill pl(!#loc l)) A := by
   iintro ⟨Hl, Hlog⟩
@@ -164,8 +178,7 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
   iapply Hlog $$ HlRes
 
 /-- Right-side store to a spec location. -/
-theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
-    {A : lrel rT GF} : iprop%
+theorem refines_store_r {l : Loc} {v v' : Val rT} {e : Exp rT} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#())) A) ⊢
     refines L E e (K.fill (.store pl(#loc l) v'.1)) A := by
   iintro ⟨Hl, Hlog⟩
@@ -180,8 +193,7 @@ theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e 
   iapply Hlog $$ Hl'
 
 /-- Right-side draw from a spec tape, consuming its first entry. -/
-theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
-    {e : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_randT_r {l : Loc} {z n : Int} {ns : List Int} {e : Exp rT} : iprop%
     specNatTape l z (n :: ns) ∗
     (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
     refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
@@ -195,7 +207,7 @@ theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : L
   iapply Hlog $$ HαNew %Hbnds %K' %b HKRes Hna Herr Hpos
 
 /-- Right-side tape allocation: continue with a fresh empty spec tape. -/
-theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
+theorem refines_alloctape_r {z : Int} {e : Exp rT} :
     iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#lbl l)) A) ⊢
     refines L E e (K.fill pl(tape(#z))) A := by
   unfold refines
@@ -210,7 +222,7 @@ theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A
 /-! ## Structural rules -/
 
 /-- Weaken the result relation of a refinement. -/
-theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
+theorem refines_wand {e1 e2 : Exp rT} : iprop%
     refines L E e1 e2 A ⊢ (∀ v1 v2, A v1 v2 ={⊤}=∗ A' v1 v2) -∗ refines L E e1 e2 A' := by
   iintro He HAA
   ihave H := refines_bind [] [] $$ He
@@ -221,7 +233,7 @@ theorem refines_wand {E : CoPset} {e1 e2 : Exp rT} {A A' : lrel rT GF} : iprop%
   iapply HAA $$ %v %v' HA
 
 /-- `refines_bind` as an entailment from its two premises. -/
-theorem refines_bind_sep (K K' : Ectx rT) {E : CoPset} {A A' : lrel rT GF} {e e' : Exp rT} : iprop%
+theorem refines_bind_sep (K K' : Ectx rT) {e e' : Exp rT} : iprop%
     refines L E e e' A ∗
       (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') ⊢
     refines L E (K.fill e) (K'.fill e') A' := by
@@ -233,8 +245,7 @@ end Steps
 /-! ## Value rules -/
 
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
-theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
-    (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow_val {v v' : Val rT} (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
     refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
@@ -246,8 +257,7 @@ theorem refines_arrow_val {v v' : Val rT} {A A' : lrel rT GF}
   iapply H $$ %w1 %w2 HA
 
 /-- `refines_arrow_val` with the argument hypothesis given as a refinement. -/
-theorem refines_arrow {v v' : Val rT} {A A' : lrel rT GF}
-    (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow {v v' : Val rT} (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
       refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
     refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
@@ -267,20 +277,9 @@ at `s = dpSlack`); the unseeded forms draw it from the threaded budget, which ne
 section Credits
 variable [CanonicallyOrderedAdd B]
 
-variable (B) in
-omit [OrderTop B] [CanonicallyOrderedAdd B] in
-/-- Every positive budget splits into two positive budgets (true for tv, where halving works). -/
-abbrev PosSplits : Prop := ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
-
-omit [OrderTop B] [CanonicallyOrderedAdd B] in
-/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`); unrelated to
-the divergence class `GradedDivergence.HasSlack`. -/
-abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
-
 /-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b`; the
 only way to reach the credit threaded through `refines` (`ec` is Rocq's "error credit"). -/
-theorem refines_get_ec (hsplit : PosSplits B)
-    {E : CoPset} {e e' : Exp rT} {A : lrel rT GF} : iprop%
+theorem refines_get_ec (hsplit : PosSplits B) {e e' : Exp rT} : iprop%
     (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
   unfold refines
   iintro Hcnt %K %b Hj Hna Herr %Hpos
@@ -292,16 +291,16 @@ section Absorbing
 variable [L.IsLawful]
 
 /-- An absorbing credit `↯b c` discharges any refinement. -/
-theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {E : CoPset} {e e' : Exp rT}
-    {A : lrel rT GF} : ↯b c ⊢ refines L E e e' A := by
+theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) {e e' : Exp rT} :
+    ↯b c ⊢ refines L E e e' A := by
   unfold refines
   iintro Hc %K %b - - - -
   iapply wp_of_absorbing hc $$ Hc
 
 /-- A seed credit `↯b (s ε)` amplifies by `k` up to the absorbing `↯b (s 1)` (Rocq
 `refines_ind_amp`, seed made explicit). -/
-theorem refines_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {E : CoPset} {e e' : Exp rT}
-    {A : lrel rT GF} {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
+theorem refines_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {e e' : Exp rT}
+    {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ refines L E e e' A) -∗
       ↯b (s ε') -∗ refines L E e e' A) ⊢
     ↯b (s ε) -∗ refines L E e e' A := by
@@ -312,10 +311,8 @@ theorem refines_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {E : CoPset} 
 
 /-- Amplification rule for `refines`: seed a credit `↯b (s ε)` from the threaded budget and amplify
 it by `k` (Rocq `refines_ind_amp`). -/
-theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : lrel rT GF}
-    {k : NNReal} (hsplit : PosSplits B)
-    (hslack : HasSlack s) (habs : L.Absorbing (s 1))
-    (hk : 1 < k) : iprop%
+theorem refines_ind_amp {s : ENNReal →+o B} {e e' : Exp rT} {k : NNReal} (hsplit : PosSplits B)
+    (hslack : HasSlack s) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗ □ (↯b (s ((k : ENNReal) * ε)) -∗ refines L E e e' A) -∗ ↯b (s ε) -∗
       refines L E e e' A) ⊢
     refines L E e e' A := by
@@ -329,8 +326,7 @@ theorem refines_ind_amp {s : ENNReal →+o B} {E : CoPset} {e e' : Exp rT} {A : 
 /-- A seed credit `↯b (s ε)` amplifies a function body uniformly in its arguments (core of
 `refines_arrow_val_err`). -/
 theorem refines_app_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {v v' : Val rT}
-    {A A' : lrel rT GF} {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) :
-    iprop%
+    {k : NNReal} (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε', ⌜0 < ε'⌝ -∗
       □ (↯b (s ((k : ENNReal) * ε')) -∗
         ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
@@ -343,10 +339,9 @@ theorem refines_app_ind_amp_of_bc {s : ENNReal →+o B} {ε : ENNReal} {v v' : V
 
 /-- Amplification for closures: the budget-seeded form of `refines_app_ind_amp_of_bc`, giving a
 refinement at `A → A'` (Rocq `refines_arrow_val_err`). -/
-theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {A A' : lrel rT GF}
-    {k : NNReal} (hsplit : PosSplits B)
-    (hslack : HasSlack s) (habs : L.Absorbing (s 1))
-    (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow_val_err {s : ENNReal →+o B} {v v' : Val rT} {k : NNReal}
+    (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.Absorbing (s 1)) (hk : 1 < k)
+    (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗
       □ (↯b (s ((k : ENNReal) * ε)) -∗
         ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗

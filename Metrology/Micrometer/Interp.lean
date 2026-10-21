@@ -5,6 +5,7 @@ public import Metrology.Micrometer.Model
 public import Metrology.ProbLang.Metatheory
 public import Metrology.ProbLang.ValSubstMap
 public import Metrology.ProbLang.Syntax.Types
+import Metrology.Iris.LocalBI
 
 /-! # Interpretation of types
 
@@ -28,18 +29,20 @@ variable {GF : BundledGFunctors}
 /-- A semantic type environment assigns a logical relation to each type variable. -/
 abbrev TyEnv (rT : Type) (GF : BundledGFunctors) := Nat → lrel rT GF
 
+variable {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF}
+
 /-- Extend a type environment with a new innermost variable. -/
 def TyEnv.cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
   | n + 1 => Δ n
 
-theorem TyEnv.cons_ne_head {n : Nat} {X Y : lrel rT GF} {Δ : TyEnv rT GF} (h : X ≡{n}≡ Y) :
-    TyEnv.cons X Δ ≡{n}≡ TyEnv.cons Y Δ
+theorem TyEnv.cons_ne_head {Y : lrel rT GF} (h : X ≡{n}≡ Y) :
+    cons X Δ ≡{n}≡ cons Y Δ
   | 0 => h
   | _ + 1 => Dist.rfl
 
-theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h : Δ ≡{n}≡ Δ') :
-    TyEnv.cons X Δ ≡{n}≡ TyEnv.cons X Δ'
+theorem TyEnv.cons_ne_tail (h : Δ ≡{n}≡ Δ') :
+    cons X Δ ≡{n}≡ cons X Δ'
   | 0 => Dist.rfl
   | m + 1 => h m
 
@@ -48,15 +51,30 @@ theorem TyEnv.cons_ne_tail {n : Nat} {X : lrel rT GF} {Δ Δ' : TyEnv rT GF} (h 
   fun n => Δ (ξ n)
 
 theorem TyEnv.comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) :
-    TyEnv.cons X (TyEnv.comp Δ ξ) = TyEnv.comp (TyEnv.cons X Δ) (Renaming.under ξ) := by
+    cons X (comp Δ ξ) = comp (cons X Δ) (Renaming.under ξ) := by
   funext n; cases n <;> rfl
 
 end TyEnvSetup
 
+/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`).
+
+The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
+`unboxed_type_lit_shape` instead. -/
+@[simp] def Exp.isUnboxedV : Exp rT → Prop
+  | .lit _ => True
+  | .inl (.lit _) => True
+  | .inr (.lit _) => True
+  | _ => False
+
+/-- A value is unboxed when its underlying expression is. -/
+@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
+
 section interp
+open TyEnv
 variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
+  [BudgetCreditGS B GF] {n : Nat} {Δ Δ' : TyEnv rT GF}
+local bi IProp GF
 
 /-! ## Interpreting types -/
 
@@ -77,52 +95,54 @@ namespace NEFun
 
 /-- Apply a binary relation constructor pointwise. -/
 @[reducible] noncomputable def map2 (F : lrel rT GF → lrel rT GF → lrel rT GF)
-    [OFE.NonExpansive₂ F] (A B : NEFun rT GF) : NEFun rT GF :=
+    [NonExpansive₂ F] (A B : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => F (A.fn Δ) (B.fn Δ)
-    ne := fun h => OFE.NonExpansive₂.ne (A.ne h) (B.ne h) }
+    ne := fun h => NonExpansive₂.ne (A.ne h) (B.ne h) }
 
 /-- Apply a unary relation constructor pointwise. -/
 @[reducible] noncomputable def map1 (F : lrel rT GF → lrel rT GF)
-    [OFE.NonExpansive F] (A : NEFun rT GF) : NEFun rT GF :=
+    [NonExpansive F] (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => F (A.fn Δ)
-    ne := fun h => OFE.NonExpansive.ne (A.ne h) }
+    ne := fun h => NonExpansive.ne (A.ne h) }
 
 /-- The recursive relation binding the innermost type variable. -/
 @[reducible] noncomputable def rec' (A : NEFun rT GF) : NEFun rT GF :=
   { fn := fun Δ => lrel_rec
-      { f := fun X => A.fn (TyEnv.cons X Δ)
-        ne := ⟨fun {_ _ _} hXY => A.ne (TyEnv.cons_ne_head hXY)⟩ }
-    ne := fun h => lrel_rec_ne (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
+      { f := fun X => A.fn (cons X Δ)
+        ne := ⟨fun {_ _ _} hXY => A.ne (cons_ne_head hXY)⟩ }
+    ne := fun h => lrel_rec_ne (fun _ => A.ne (cons_ne_tail h)) }
 
 variable (L) in
 /-- The universal relation binding the innermost type variable. -/
 @[reducible] noncomputable def forall' (A : NEFun rT GF) : NEFun rT GF :=
-  { fn := fun Δ => lrel_forall L (fun X => A.fn (TyEnv.cons X Δ))
-    ne := fun h => lrel_forall_ne L (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
+  { fn := fun Δ => lrel_forall L (fun X => A.fn (cons X Δ))
+    ne := fun h => lrel_forall_ne L (fun _ => A.ne (cons_ne_tail h)) }
 
 /-- The existential relation binding the innermost type variable. -/
 @[reducible] noncomputable def exists' (A : NEFun rT GF) : NEFun rT GF :=
-  { fn := fun Δ => lrel_exists (fun X => A.fn (TyEnv.cons X Δ))
-    ne := fun h => lrel_exists_ne (fun _ => A.ne (TyEnv.cons_ne_tail h)) }
+  { fn := fun Δ => lrel_exists (fun X => A.fn (cons X Δ))
+    ne := fun h => lrel_exists_ne (fun _ => A.ne (cons_ne_tail h)) }
 
 end NEFun
+
+open NEFun
 
 variable (L) in
 /-- Interpret a type as a non-expansive function of the type environment. -/
 noncomputable def interpNE : Ty → NEFun rT GF
-  | .unit         => NEFun.const lrel_unit
-  | .int          => NEFun.const lrel_int
-  | .bool         => NEFun.const lrel_bool
-  | .real         => NEFun.const lrel_real
-  | .tape         => NEFun.const lrel_tape
-  | .var x        => NEFun.ofCtx x
-  | .prod τ1 τ2   => NEFun.map2 lrel_prod (interpNE τ1) (interpNE τ2)
-  | .sum  τ1 τ2   => NEFun.map2 lrel_sum  (interpNE τ1) (interpNE τ2)
-  | .arrow τ1 τ2  => NEFun.map2 (lrel_arr L) (interpNE τ1) (interpNE τ2)
-  | .ref τ        => NEFun.map1 lrel_ref (interpNE τ)
-  | .rec' τ'      => NEFun.rec'    (interpNE τ')
-  | .forall' τ'   => NEFun.forall' L (interpNE τ')
-  | .exists' τ'   => NEFun.exists' (interpNE τ')
+  | .unit         => const lrel_unit
+  | .int          => const lrel_int
+  | .bool         => const lrel_bool
+  | .real         => const lrel_real
+  | .tape         => const lrel_tape
+  | .var x        => ofCtx x
+  | .prod τ1 τ2   => map2 lrel_prod (interpNE τ1) (interpNE τ2)
+  | .sum  τ1 τ2   => map2 lrel_sum  (interpNE τ1) (interpNE τ2)
+  | .arrow τ1 τ2  => map2 (lrel_arr L) (interpNE τ1) (interpNE τ2)
+  | .ref τ        => map1 lrel_ref (interpNE τ)
+  | .rec' τ'      => rec'    (interpNE τ')
+  | .forall' τ'   => forall' L (interpNE τ')
+  | .exists' τ'   => exists' (interpNE τ')
 
 variable (L) in
 /-- The logical relation interpreting type `τ` in the type environment `Δ`. -/
@@ -130,7 +150,7 @@ noncomputable def interp (τ : Ty) (Δ : TyEnv rT GF) : lrel rT GF :=
   (interpNE L τ).fn Δ
 
 /-- `interp` is non-expansive in the type environment. -/
-theorem interp_ne_env (τ : Ty) {n : Nat} {Δ Δ' : TyEnv rT GF} (h : Δ ≡{n}≡ Δ') :
+theorem interp_ne_env (τ : Ty) (h : Δ ≡{n}≡ Δ') :
     interp L τ Δ ≡{n}≡ interp L τ Δ' := (interpNE L τ).ne h
 
 /-! ### `interp` head-shape equations -/
@@ -156,55 +176,55 @@ theorem interp_ref (Δ : TyEnv rT GF) (τ : Ty) :
 /-- `⟦μX.τ⟧` unfolds once, with the recursive occurrence under `▷`. -/
 theorem interp_rec_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ▷ (interp L τ (TyEnv.cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
+      ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
-    { f := fun X => interp L τ (TyEnv.cons X Δ)
-      ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (TyEnv.cons_ne_head hXY)⟩ })
+    { f := fun X => interp L τ (cons X Δ)
+      ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩ })
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
 theorem interp_exists_car (Δ : TyEnv rT GF) (τ : Ty) (v v' : Val rT) :
     (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
-      ∃ A, (interp L τ (TyEnv.cons A Δ)).car v v') :=
+      ∃ A, (interp L τ (cons A Δ)).car v v') :=
   rfl
 
 /-- Related values are closed. -/
-theorem interp_closed {Δ : TyEnv rT GF} (τ : Ty) (v v' : Val rT) :
+theorem interp_closed (τ : Ty) (v v' : Val rT) :
     (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
   (interp L τ Δ).closed v v'
 
 /-! ## Substitution lemmas -/
 
 /-- The renaming hypothesis for a type body extends under a new relation binder. -/
-theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat} {Δ : TyEnv rT GF}
+theorem interp_rename_under {τ' : Ty} {ξ : Nat → Nat}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
-      interp L (τ'.rename ξ) Δ = interp L τ' (TyEnv.comp Δ ξ))
+      interp L (τ'.rename ξ) Δ = interp L τ' (comp Δ ξ))
     (X : lrel rT GF) :
-    interp L (τ'.rename (Renaming.under ξ)) (TyEnv.cons X Δ) =
-      interp L τ' (TyEnv.cons X (TyEnv.comp Δ ξ)) :=
-  (ih _ _).trans (congrArg (interp L τ') (TyEnv.comp_upren X Δ ξ).symm)
+    interp L (τ'.rename (Renaming.under ξ)) (cons X Δ) =
+      interp L τ' (cons X (comp Δ ξ)) :=
+  (ih _ _).trans (congrArg (interp L τ') (comp_upren X Δ ξ).symm)
 
 /-- Renaming a type's variables equals precomposing its environment with the renaming. -/
 theorem interp_rename (τ : Ty) (ξ : Nat → Nat) (Δ : TyEnv rT GF) :
-    interp L (τ.rename ξ) Δ = interp L τ (TyEnv.comp Δ ξ) := by
+    interp L (τ.rename ξ) Δ = interp L τ (comp Δ ξ) := by
   induction τ generalizing ξ Δ with
   | prod τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_prod (ih1 ξ Δ) (ih2 ξ Δ)
   | sum τ1 τ2 ih1 ih2 => exact congrArg₂ lrel_sum (ih1 ξ Δ) (ih2 ξ Δ)
   | arrow τ1 τ2 ih1 ih2 => exact congrArg₂ (lrel_arr L) (ih1 ξ Δ) (ih2 ξ Δ)
   | ref τ ih => exact congrArg lrel_ref (ih ξ Δ)
   -- Binder cases: the bodies agree for every X, so equality follows from being n-close at every n
-  -- (OFE.eq_dist) via the constructor's _ne lemma.
+  -- (eq_dist) via the constructor's _ne lemma.
   | rec' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_rename_under ih X).dist
   | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_rename_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_rename_under ih X).dist
   | exists' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_rename_under ih X).dist
   | _ => rfl
 
 /-- Shifting `τ` past a new type variable does not change its interpretation. -/
 theorem interp_ren (τ : Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    interp L (Ty.shift τ) (TyEnv.cons X Δ) = interp L τ Δ :=
-  interp_rename τ (· + 1) (TyEnv.cons X Δ)
+    interp L (Ty.shift τ) (cons X Δ) = interp L τ Δ :=
+  interp_rename τ (· + 1) (cons X Δ)
 
 variable (L) in
 /-- The type environment sending variable `n` to `⟦σ n⟧Δ`. -/
@@ -212,17 +232,17 @@ variable (L) in
   fun n => interp L (σ n) Δ
 
 theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
-    ∀ n, semSubst L (up σ) (TyEnv.cons X Δ) n = TyEnv.cons X (semSubst L σ Δ) n
+    ∀ n, semSubst L (up σ) (cons X Δ) n = cons X (semSubst L σ Δ) n
   | 0 => rfl
   | k + 1 => interp_ren (σ k) X Δ
 
 /-- The substitution hypothesis for a type body extends under a new relation binder. -/
-theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty} {Δ : TyEnv rT GF}
+theorem interp_substG_under {τ' : Ty} {σ : Nat → Ty}
     (ih : ∀ (σ : Nat → Ty) (Δ : TyEnv rT GF),
       interp L (τ'.subst σ) Δ = interp L τ' (semSubst L σ Δ))
     (X : lrel rT GF) :
-    interp L (τ'.subst (up σ)) (TyEnv.cons X Δ) = interp L τ' (TyEnv.cons X (semSubst L σ Δ)) :=
-  (ih _ _).trans <| OFE.eq_dist.mpr fun _ => interp_ne_env τ' fun k => (semSubst_up σ X Δ k).dist
+    interp L (τ'.subst (up σ)) (cons X Δ) = interp L τ' (cons X (semSubst L σ Δ)) :=
+  (ih _ _).trans <| eq_dist.mpr fun _ => interp_ne_env τ' fun k => (semSubst_up σ X Δ k).dist
 
 /-- Substituting into a type equals interpreting the substitution into the environment. -/
 theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
@@ -234,44 +254,26 @@ theorem interp_substG (τ : Ty) (σ : Nat → Ty) (Δ : TyEnv rT GF) :
   | ref τ ih => exact congrArg lrel_ref (ih σ Δ)
   -- Binder cases: as in `interp_rename`.
   | rec' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_rec_ne fun X => (interp_substG_under ih X).dist
   | forall' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_substG_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_forall_ne L fun X => (interp_substG_under ih X).dist
   | exists' τ' ih =>
-    exact OFE.eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
+    exact eq_dist.mpr fun _ => lrel_exists_ne fun X => (interp_substG_under ih X).dist
   | _ => rfl
 
 /-- Substituting `τ'` for the innermost variable interprets it as `⟦τ'⟧Δ`. -/
 theorem interp_subst (τ' τ : Ty) (Δ : TyEnv rT GF) :
-    interp L (Ty.single τ τ') Δ = interp L τ (TyEnv.cons (interp L τ' Δ) Δ) := by
+    interp L (Ty.single τ τ') Δ = interp L τ (cons (interp L τ' Δ) Δ) := by
   unfold Ty.single
   refine (interp_substG τ _ Δ).trans (congrArg (interp L τ) ?_)
   funext n; cases n <;> rfl
 
-end interp
-
 /-! ## Equality on `EqType` and `UnboxedType` -/
 
-/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`).
-
-The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
-`unboxed_type_lit_shape` instead. -/
-@[simp] def Exp.isUnboxedV : Exp rT → Prop
-  | .lit _ => True
-  | .inl (.lit _) => True
-  | .inr (.lit _) => True
-  | _ => False
-
-/-- A value is unboxed when its underlying expression is. -/
-@[reducible] def Val.isUnboxed (v : Val rT) : Prop := v.1.isUnboxedV
-
-section equality
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF]
+variable {τ : Ty} {v v' v1 v2 w1 w2 : Val rT}
 
 /-- Related values at an unboxed type are both literals. -/
-theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
+theorem unboxed_type_lit_shape (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜∃ l l', v.1 = .lit l ∧ v'.1 = .lit l'⌝ := by
   cases H
   · -- unit
@@ -292,14 +294,14 @@ theorem unboxed_type_lit_shape {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H :
     exact ⟨_, _, Val.ext_iff.mp h1, Val.ext_iff.mp h2⟩
 
 /-- Related values at an unboxed type are both unboxed. -/
-theorem unboxed_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : UnboxedType τ) :
+theorem unboxed_type_sound (H : UnboxedType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜Val.isUnboxed v ∧ Val.isUnboxed v'⌝ := by
   refine (unboxed_type_lit_shape H).trans (pure_mono ?_)
   rintro ⟨_, _, h1, h2⟩
   exact ⟨by simp [Val.isUnboxed, h1], by simp [Val.isUnboxed, h2]⟩
 
 /-- Related values at an `EqType` are equal. -/
-theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType τ) :
+theorem eq_type_sound (H : EqType τ) :
     (interp L τ Δ).car v v' ⊢ ⌜v = v'⌝ := by
   induction H generalizing v v'
   · -- unit
@@ -339,7 +341,7 @@ theorem eq_type_sound {τ : Ty} {Δ : TyEnv rT GF} {v v' : Val rT} (H : EqType �
       rw [h1, h2, heq]
 
 /-- On an `EqType`, two related pairs agree on equality, `v1 = w1 ↔ v2 = w2`. -/
-theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : EqType τ) :
+theorem eq_type_eq_iff (H : EqType τ) :
     (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   iintro H1 H2
   ihave %heq1 := eq_type_sound H $$ H1
@@ -351,7 +353,7 @@ theorem eq_type_eq_iff {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : 
 
 /-- On an unboxed type, two related pairs agree on equality, `v1 = w1 ↔ v2 = w2`; this makes `=`
 compatible (`bin_log_related_unboxed_eq`). -/
-theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H : UnboxedType τ) :
+theorem unboxed_type_eq (H : UnboxedType τ) :
     (interp L τ Δ).car v1 v2 ⊢ (interp L τ Δ).car w1 w2 -∗ |={⊤}=> ⌜v1 = w1 ↔ v2 = w2⌝ := by
   cases H
   · exact eq_type_eq_iff .unit
@@ -380,6 +382,6 @@ theorem unboxed_type_eq {τ : Ty} {Δ : TyEnv rT GF} {v1 v2 w1 w2 : Val rT} (H :
         ipureintro
         exact iff_of_false hl hr
 
-end equality
+end interp
 
 end ProbLang

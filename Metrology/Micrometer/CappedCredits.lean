@@ -24,15 +24,20 @@ open MeasureTheory
 
 variable {B : Type*} {L : GradedLifting.{u} B}
 
+section UpperSet
+
+variable [Add B] [Preorder B] [Top B] [L.IsLawful]
+
 /-- Absorbing budgets form an upper set. -/
-theorem isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
+theorem isUpperSet_absorbing :
     IsUpperSet {b | L.Absorbing b} :=
   fun _ _ hb h ↦ Absorbing.mono h hb
 
 /-- Absorbing budgets form an upper set, as a `Fact`. -/
-instance fact_isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
-    Fact (IsUpperSet {b | L.Absorbing b}) :=
+instance fact_isUpperSet_absorbing : Fact (IsUpperSet {b | L.Absorbing b}) :=
   ⟨isUpperSet_absorbing⟩
+
+end UpperSet
 
 /-- A budget is not absorbing for a sound lifting once the divergence fails there. -/
 theorem not_absorbing_of_not_sound [Zero B] [Top B] {D : GradedDivergence.{u} B} [L.IsSound D]

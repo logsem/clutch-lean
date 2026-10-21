@@ -6,6 +6,7 @@ public import Metrology.Micrometer.AdequacyRel
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -34,10 +35,14 @@ theorem flipCredit_avg (ε : ℝ≥0∞) :
   simp [flipCredit]
   exact ENNReal.div_le_of_le_mul (mul_comm _ _).le
 
+section Refines
+
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
+
 /-- The value `0` refines `retry`, with no budget: the spec terminates almost surely. -/
-theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] :
-    ⊢@{IProp GF} REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
+theorem zero_refines_retry :
+    ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
   -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
   -- tails doubles the credit (`flipCredit`); the step map is the identity
   iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
@@ -64,6 +69,8 @@ theorem zero_refines_retry {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF
     rel_fold
     iapply IH $$ Hn
 
+end Refines
+
 /-- On every event, `retry` is at least as likely as the value `0`. -/
 theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨pl(#0), σ⟩ S ≤ limExecV ⟨retry, σ'⟩ S := by
@@ -71,9 +78,10 @@ theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet
     (fun _ _ ↦ lrel_int) _ _ σ σ' 0 (fun _ _ ↦ lrel_int_car_eq)
     fun _ _ ↦ by iintro -; iapply zero_refines_retry) S hS
 
+open MeasureTheory in
 /-- `retry` returns `0` with probability `1`. -/
 theorem retry_eq_zero (σ : State rT) : limExecV ⟨retry, σ⟩ {pl(#0)} = 1 :=
-  le_antisymm (MeasureTheory.IsSubProbabilityMeasure.measure_le_one _) <| by
+  le_antisymm (IsSubProbabilityMeasure.measure_le_one _) <| by
     simpa [limExecV_of_isVal σ .lit] using zero_le_retry σ σ (measurableSet_singleton pl(#0))
 
 end Retry

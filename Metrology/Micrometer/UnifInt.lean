@@ -20,12 +20,44 @@ injections, under a context, with outcome-dependent cost) and proves the `primSt
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
+open MeasureTheory (Measure)
+open GradedDivergence (tv)
 open scoped AppGS
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
-variable {B : Type} {L : GradedLifting.{0} B}
+variable {rT : Type} {B : Type} {L : GradedLifting.{0} B} {z zL zR : Int}
+
+/-! ## Coupled draws and their leftover cost -/
+
+/-- The outcome of a coupled draw: the left draw is `n`, the right draw is `f n` under `K`. -/
+@[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
+    Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
+  ∃ n : Int, 0 ≤ n ∧ n < z ∧
+    c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (f n)), σ'⟩
+
+/-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤`
+elsewhere. Unlike `Cfg.drawCost`, which is keyed by both draws, this is keyed by the left draw
+along the bijection `f`. -/
+noncomputable def Cfg.advLeftover [_root_.Top B] (s : ENNReal → B) (z : Int) (f : Int → Int)
+    (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) : Cfg rT → Cfg rT → B :=
+  fun ρ₁ ρ₂ => by
+    classical
+    exact if h : CoupledDraw z f σ σ' K ρ₁ ρ₂ then s (ε₂ h.choose) else ⊤
+
+/-- At the pair drawn from `n`, the leftover is `s (ε₂ n)`. -/
+theorem Cfg.advLeftover_apply [_root_.Top B] (s : ENNReal → B) (f : Int → Int)
+    (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) {n : Int} (h0 : 0 ≤ n) (hn : n < z) :
+    Cfg.advLeftover s z f σ σ' K ε₂ ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ =
+      s (ε₂ n) := by
+  classical
+  have hex : CoupledDraw z f σ σ' K ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ :=
+    ⟨n, h0, hn, rfl, rfl⟩
+  obtain ⟨he, -⟩ := (Cfg.mk.injEq ..).mp hex.choose_spec.2.2.1
+  simp only [Exp.lit.injEq, BaseLit.int.injEq] at he
+  simp only [Cfg.advLeftover, hex, ↓reduceDIte, ← he]
+
+variable [ProbLang.LawfulProbLangℝ rT]
 
 /-! ## The uniform measure `unifInt` and its exact bijection coupling -/
 
@@ -37,12 +69,12 @@ open MeasureTheory
 noncomputable def unifInt (z : Int) (hz : 0 < z) : Measure Int :=
   (PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure
 
-instance unifInt.isProbabilityMeasure {z : Int} {hz : 0 < z} :
+instance unifInt.isProbabilityMeasure {hz : 0 < z} :
     IsProbabilityMeasure (unifInt z hz) :=
   PMF.toMeasure.isProbabilityMeasure _
 
 /-- Integrals against `unifInt z` are averages over `[0, z)`. -/
-theorem lintegral_unifInt {z : Int} (hz : 0 < z) (φ : Int → ENNReal) :
+theorem lintegral_unifInt (hz : 0 < z) (φ : Int → ENNReal) :
     ∫⁻ n, φ n ∂unifInt z hz = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, φ n := by
   have hcard : (Finset.Ico (0 : Int) z).card = z.toNat := by rw [Int.card_Ico]; omega
   rw [unifInt, lintegral_countable', tsum_eq_sum fun n hn => by
@@ -53,7 +85,7 @@ theorem lintegral_unifInt {z : Int} (hz : 0 < z) (φ : Int → ENNReal) :
     PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
 
 /-- `unifInt z` gives each set the share of `[0, z)` it contains. -/
-theorem unifInt_apply {z : Int} (hz : 0 < z) (S : Set Int) :
+theorem unifInt_apply (hz : 0 < z) (S : Set Int) :
     unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, S.indicator 1 n := by
   rw [← lintegral_unifInt, lintegral_indicator_one MeasurableSet.of_discrete]
 
@@ -64,12 +96,12 @@ theorem unifInt_singleton_zero {N : Int} (hN : 0 < N) :
     PMF.uniformOfFinset_apply_of_mem _ (Finset.mem_Ico.2 ⟨le_rfl, hN⟩), Int.card_Ico, sub_zero]
 
 /-- `unifInt z` is carried by `[0, z)`. -/
-theorem unifInt_compl_Ico {z : Int} (hz : 0 < z) : unifInt z hz (Set.Ico 0 z)ᶜ = 0 := by
+theorem unifInt_compl_Ico (hz : 0 < z) : unifInt z hz (Set.Ico 0 z)ᶜ = 0 := by
   rw [unifInt, PMF.toMeasure_apply_eq_zero_iff _ measurableSet_Ico.compl]
   simp [Set.disjoint_compl_right_iff_subset]
 
 /-- The uniform measure on `[0, z)` is invariant under a bijection of `[0, z)`. -/
-theorem unifInt_map_bijOn {z : Int} (hz : 0 < z) (f : Int → Int)
+theorem unifInt_map_bijOn (hz : 0 < z) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     (unifInt z hz).map f = unifInt z hz := by
@@ -80,7 +112,7 @@ theorem unifInt_map_bijOn {z : Int} (hz : 0 < z) (f : Int → Int)
 variable (L) in
 /-- Exact coupling of two uniform draws on `[0, z)` along a bijection `f`. -/
 theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] {z : Int} (hz : 0 < z) (f : Int → Int)
+    [L.IsReflexive] [L.IsSupportLocal] (hz : 0 < z) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     L.Rel 0 (fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) (unifInt z hz) (unifInt z hz) := by
@@ -91,14 +123,14 @@ theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
   exact h.mono le_rfl fun n m ⟨hm, h0, h1⟩ => ⟨h0, h1, hm.symm⟩
 
 /-- `Cfg.uniform z σ` is `unifInt z` pushed to integer literals. -/
-theorem Cfg.uniform_eq_map {z : Int} (hz : 0 < z) (σ : State rT) :
+theorem Cfg.uniform_eq_map (hz : 0 < z) (σ : State rT) :
     Cfg.uniform z σ = (unifInt z hz).map fun n => (⟨pl(#int n), σ⟩ : Cfg rT) :=
   Cfg.uniform_eq_map_uniformOfFinset hz σ
 
 /-- A lifting of two uniform integer draws pushes forward to the configurations they step to, under
 an evaluation context `K` on the right. -/
 theorem Cfg.uniform_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    {b : B} {zL zR : Int} (HzL : 0 < zL) (HzR : 0 < zR) (σ σ' : State rT) (K : Ectx rT)
+    {b : B} (HzL : 0 < zL) (HzR : 0 < zR) (σ σ' : State rT) (K : Ectx rT)
     {S : Int → Int → Prop} {S' : Cfg rT → Cfg rT → Prop}
     (h : L.Rel b S (unifInt zL HzL) (unifInt zR HzR))
     (hS : ∀ n m, S n m → S' ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int m), σ'⟩) :
@@ -112,7 +144,7 @@ end UniformInt
 /-! ## Steps of `rand` -/
 
 /-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) (σ : State rT) :
+theorem primStep_rand_unit [MeasurableSingletonClass rT] (Hz : 0 < z) (σ : State rT) :
     primStep ⟨pl(rand(#z, #())), σ⟩ = Cfg.uniform z σ := by
   have Hwitness : HeadStepSupport ⟨pl(rand(#z, #())), σ⟩ ⟨pl(#0), σ⟩ :=
     .RandNoTapeS Hz le_rfl Hz
@@ -121,7 +153,7 @@ theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) 
   rfl
 
 /-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
-theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+theorem randUnit_uniform_step [MeasurableSingletonClass rT] (Hz : 0 < z)
     (σ : State rT) :
     Discrete.Reducible pl(rand(#z, #())) σ ∧
       primStep ⟨pl(rand(#z, #())), σ⟩ = Cfg.uniform z σ :=
@@ -129,7 +161,7 @@ theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < 
     primStep_rand_unit Hz σ⟩
 
 /-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
-theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State rT} {l : Loc}
+theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {σ : State rT} {l : Loc}
     {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
     primStep ⟨pl(rand(#z, #lbl l)), σ⟩ =
       match σ.tapes[l]? with
@@ -138,7 +170,7 @@ theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State
         if M = z then
           match ns with
           | [] => Cfg.uniform z σ
-          | n :: ns => MeasureTheory.Measure.dirac ⟨.lit <| .int n,
+          | n :: ns => Measure.dirac ⟨.lit <| .int n,
               σ.update_tapes fun t => t.insert l ⟨M, ns⟩⟩
         else Cfg.uniform z σ := by
   rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
@@ -146,7 +178,7 @@ theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State
   rfl
 
 /-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
+theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {M : Int} (Hz : 0 < z)
     (HneM : z ≠ M) (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
     primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ := by
@@ -154,14 +186,14 @@ theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {z M : Int} (Hz : 
   simp only [ite_eq_right (Ne.symm HneM)]
 
 /-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] (Hz : 0 < z)
     (σ : State rT) (l : Loc) (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
     primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ := by
   rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
   simp only [↓reduceIte]
 
 /-- `primStep_rand_lbl_empty` with discrete reducibility. -/
-theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] (Hz : 0 < z)
     {σ : State rT} {l : Loc} (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
     Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
       primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ :=
@@ -169,7 +201,7 @@ theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz :
     primStep_rand_lbl_empty Hz σ l Hlk⟩
 
 /-- `primStep_rand_lbl_wrong` with discrete reducibility. -/
-theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
+theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {M : Int} (Hz : 0 < z)
     (HneM : z ≠ M) {σ : State rT} {l : Loc} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
     Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
@@ -179,15 +211,9 @@ theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz
 
 /-! ## Configuration couplings of `rand` draws along a bijection -/
 
-/-- The outcome of a coupled draw: the left draw is `n`, the right draw is `f n` under `K`. -/
-@[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
-    Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
-  ∃ n : Int, 0 ≤ n ∧ n < z ∧
-    c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (f n)), σ'⟩
-
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)`. -/
 theorem Cfg.uniform_rel_bij_fill [MeasurableSingletonClass rT] [Zero B] [Add B]
-    [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] {z : Int}
+    [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
     (Hz : 0 < z) (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
@@ -197,7 +223,7 @@ theorem Cfg.uniform_rel_bij_fill [MeasurableSingletonClass rT] [Zero B] [Add B]
 
 /-- Exact coupling of `rand z ~ rand z` along a bijection of `[0, z)` (the `tv` instance of
 `unifInt_rel_bij`). -/
-theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] (Hz : 0 < z)
     (σ σ' : State rT) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     AddCoupl 0
@@ -207,14 +233,14 @@ theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] {z : Int} (Hz : 0
   rw [Cfg.uniform_eq_map Hz, Cfg.uniform_eq_map Hz]
   refine Rel.addCoupl (S := fun (c₁ c₂ : Cfg rT) => ∃ n, 0 ≤ n ∧ n < z ∧
     c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨pl(#int (f n)), σ'⟩)
-    ((unifInt_rel_bij GradedDivergence.tv.codensity Hz f hdom hbij).map ?_
+    ((unifInt_rel_bij tv.codensity Hz f hdom hbij).map ?_
       Measurable.of_discrete Measurable.of_discrete)
   rintro n _ ⟨h0, h1, hm⟩
   exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)` (the `tv` instance of
 `Cfg.uniform_rel_bij_fill`). -/
-theorem Cfg.uniform_addCoupl_bij_fill [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
+theorem Cfg.uniform_addCoupl_bij_fill [MeasurableSingletonClass rT] (Hz : 0 < z)
     (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
@@ -231,7 +257,7 @@ larger support (Rocq `ARcoupl_rand_rand_inj`, `ARcoupl_rand_rand_rev_inj`). -/
 `rand zL ~ rand zR` for `zL ≤ zR` along `f`, with error `(zR - zL)/zR`. -/
 -- Proof: the left mass `∑ φ` is at most `S = ∑ ψ ∘ f`, which is at most `∑ ψ` and at most `zL`;
 -- rescaling from `1/zL` to `1/zR` costs at most `(zR - zL)/zR`.
-theorem unifInt_addCoupl_inj {zL zR : Int} (HzL : 0 < zL) (Hle : zL ≤ zR) (f : Int → Int)
+theorem unifInt_addCoupl_inj (HzL : 0 < zL) (Hle : zL ≤ zR) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
     AddCoupl (((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal))
@@ -260,7 +286,7 @@ theorem unifInt_addCoupl_inj {zL zR : Int} (HzL : 0 < zL) (Hle : zL ≤ zR) (f :
 /-- Uniform coupling along an injection, smaller bound on the right:
 `rand zL ~ rand zR` for `zR ≤ zL` along `f : [0, zR) ↪ [0, zL)`; the left draw is
 `f m` when the right draw is `m`, with error `(zL - zR)/zL`. -/
-theorem unifInt_addCoupl_rev_inj {zL zR : Int} (HzR : 0 < zR) (Hle : zR ≤ zL) (f : Int → Int)
+theorem unifInt_addCoupl_rev_inj (HzR : 0 < zR) (Hle : zR ≤ zL) (f : Int → Int)
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
     AddCoupl (((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal))
@@ -305,7 +331,7 @@ theorem unifInt_addCoupl_rev_inj {zL zR : Int} (HzR : 0 < zR) (Hle : zR ≤ zL) 
         exact_mod_cast Int.toNat_le_toNat Hle
 
 /-- `unifInt_addCoupl_inj` pushed to configurations. -/
-theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
+theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT]
     (HzL : 0 < zL) (Hle : zL ≤ zR) (σ σ' : State rT) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
@@ -320,7 +346,7 @@ theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
   exact ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
 /-- `unifInt_addCoupl_rev_inj` pushed to configurations. -/
-theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
+theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT]
     (HzR : 0 < zR) (Hle : zR ≤ zL) (σ σ' : State rT) (f : Int → Int)
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
@@ -343,7 +369,7 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
 
 /-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the left (the `tv`
 instance of `Cfg.uniform_rel_fill`). -/
-theorem Cfg.uniform_addCoupl_inj_fill [MeasurableSingletonClass rT] {zL zR : Int}
+theorem Cfg.uniform_addCoupl_inj_fill [MeasurableSingletonClass rT]
     (HzL : 0 < zL) (Hle : zL ≤ zR) (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
@@ -357,7 +383,7 @@ theorem Cfg.uniform_addCoupl_inj_fill [MeasurableSingletonClass rT] {zL zR : Int
 
 /-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the right (the `tv`
 instance of `Cfg.uniform_rel_fill`). -/
-theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT] {zL zR : Int}
+theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT]
     (HzR : 0 < zR) (Hle : zR ≤ zL) (σ σ' : State rT) (f : Int → Int) (K : Ectx rT)
     (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
@@ -371,7 +397,6 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill [MeasurableSingletonClass rT] {zL zR :
 
 /-! ## Couplings of steps under an evaluation context -/
 
-open MeasureTheory in
 /-- A coupling with a step of `e` gives one with a step of `K[e]`. -/
 theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [MeasurableSpace α]
     {μ : Measure α} {e : Exp rT} {σ : State rT} {R : Set (α × Cfg rT)} {ε : ENNReal} {K : Ectx rT}
@@ -381,7 +406,6 @@ theorem AddCoupl_steps_ctx_bind_r [MeasurableSingletonClass rT] {α} [Measurable
   rw [primStep_fill hv, ← Measure.map_id (μ := μ)]
   exact Hcpl.map id K.fillCfg measurable_id (Ectx.fillCfg.measurable K) fun HR => ⟨_, rfl, HR⟩
 
-open MeasureTheory in
 /-- `AddCoupl_steps_ctx_bind_r` for a relation on expressions only. -/
 theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
     {μ : Measure (Cfg rT)} {e : Exp rT} {σ : State rT} {R : Exp rT → Exp rT → Prop} {ε : ENNReal}
@@ -392,33 +416,11 @@ theorem AddCoupl_steps_ctx_bind_r_no_state [MeasurableSingletonClass rT]
 
 /-! ## Outcome-dependent cost of a coupled draw -/
 
-/-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤`
-elsewhere. Unlike `Cfg.drawCost`, which is keyed by both draws, this is keyed by the left draw
-along the bijection `f`. -/
-noncomputable def Cfg.advLeftover [_root_.Top B] (s : ENNReal → B) (z : Int) (f : Int → Int)
-    (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) : Cfg rT → Cfg rT → B :=
-  fun ρ₁ ρ₂ => by
-    classical
-    exact if h : CoupledDraw z f σ σ' K ρ₁ ρ₂ then s (ε₂ h.choose) else ⊤
-
-omit [LawfulProbLangℝ rT] in
-/-- At the pair drawn from `n`, the leftover is `s (ε₂ n)`. -/
-theorem Cfg.advLeftover_apply [_root_.Top B] (s : ENNReal → B) {z : Int} (f : Int → Int)
-    (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) {n : Int} (h0 : 0 ≤ n) (hn : n < z) :
-    Cfg.advLeftover s z f σ σ' K ε₂ ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ =
-      s (ε₂ n) := by
-  classical
-  have hex : CoupledDraw z f σ σ' K ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ :=
-    ⟨n, h0, hn, rfl, rfl⟩
-  obtain ⟨he, -⟩ := (Cfg.mk.injEq ..).mp hex.choose_spec.2.2.1
-  simp only [Exp.lit.injEq, BaseLit.int.injEq] at he
-  simp only [Cfg.advLeftover, hex, ↓reduceDIte, ← he]
-
 /-- Coupling `rand z ~ K[rand z]` along a bijection `f`, paying `s (ε₂ n)` at the left draw `n`
 out of `s ε₁`. -/
 theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B]
     [CanonicallyOrderedAdd B] [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-    {s : ENNReal →+o B} [L.IsExpectationAdditive s] {z : Int} (Hz : 0 < z) (f : Int → Int)
+    {s : ENNReal →+o B} [L.IsExpectationAdditive s] (Hz : 0 < z) (f : Int → Int)
     (ε₁ : ENNReal) (ε₂ : Int → ENNReal) (σ σ' : State rT) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
@@ -444,7 +446,7 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
     (unifInt_rel_bij L Hz f hdom hbij)
   rw [primStep_rand_unit Hz, primStep_fill Exp.rand_not_isValue, primStep_rand_unit Hz,
     Cfg.uniform_eq_map Hz σ, Cfg.uniform_eq_map Hz σ',
-    MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
+    Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
       (Ectx.fillCfg.measurable K) Measurable.of_discrete]
   refine IsLawful.map Measurable.of_discrete Measurable.of_discrete
     (IsLawful.mono h hint fun n m => ?_)
@@ -459,11 +461,11 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
 /-! ## The identity bijection and one-point avoidance -/
 
 /-- `id` maps `[0, z)` into itself. -/
-theorem id_dom_range {z : Int} : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
+theorem id_dom_range : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
   fun _ h0 hlt => ⟨h0, hlt⟩
 
 /-- Avoiding one value `bad` costs an average of at most `1/z`. -/
-theorem avoid_one_amort {z : Int} (bad : Int) :
+theorem avoid_one_amort (bad : Int) :
     (∑ n ∈ Finset.Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
       (z.toNat : ENNReal)⁻¹ := by
   rw [← one_div]
@@ -472,7 +474,7 @@ theorem avoid_one_amort {z : Int} (bad : Int) :
   split <;> simp
 
 /-- `id` is a bijection of `[0, z)`. -/
-theorem id_bij_range {z : Int} : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ id n = m :=
+theorem id_bij_range : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ id n = m :=
   fun m h0 hlt => ⟨m, ⟨⟨h0, hlt⟩, rfl⟩, fun _ ⟨_, heq⟩ => heq⟩
 
 /-! ## Timeless tape and heap points-to predicates -/
@@ -486,32 +488,32 @@ instance heapView_tape_frag_discreteE (l : Loc) (t : Tape) :
   View.frag_discrete
 
 instance appTapesFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF] (l : Loc) (t : Tape) :
-    BI.Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
+    Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
 
 instance specTapesFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (t : Tape) : BI.Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
+    (l : Loc) (t : Tape) : Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
 
 instance heapView_heap_frag_discreteE (l : Loc) (v : Val rT) :
     OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree v)) :=
   View.frag_discrete
 
 instance appHeapFrag_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
-    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ v : IProp GF) := by
+    (l : Loc) (v : Val rT) : Timeless (l ↦ v : IProp GF) := by
   unfold appHeapFrag
   exact iOwn_timeless
 
 instance specHeapFrag_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (v : Val rT) : BI.Timeless (l ↦ₛ v : IProp GF) := by
+    (l : Loc) (v : Val rT) : Timeless (l ↦ₛ v : IProp GF) := by
   unfold specHeapFrag
   exact iOwn_timeless
 
 instance appNatTape_timeless [MeasurableSingletonClass rT] [AppGS rT GF]
-    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (appNatTape l z ns : IProp GF) := by
+    (l : Loc) (z : Int) (ns : List Int) : Timeless (appNatTape l z ns : IProp GF) := by
   unfold appNatTape
   infer_instance
 
 instance specNatTape_timeless [MeasurableSingletonClass rT] [SpecGS rT GF]
-    (l : Loc) (z : Int) (ns : List Int) : BI.Timeless (specNatTape l z ns : IProp GF) := by
+    (l : Loc) (z : Int) (ns : List Int) : Timeless (specNatTape l z ns : IProp GF) := by
   unfold specNatTape
   infer_instance
 

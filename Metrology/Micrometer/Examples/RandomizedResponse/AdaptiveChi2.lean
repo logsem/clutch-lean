@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.Examples.RandomizedResponse.Adaptive
+import Metrology.Iris.LocalBI
 
 @[expose] public section
 
@@ -72,11 +73,13 @@ section Logic
 
 open Iris Iris.BI Iris.ProofMode
 
+variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS PowerBudget GF]
+local bi IProp GF
+
 /-- The adaptive program on `false` refines it on `true` at equal pairs of reports, spending χ²
 `7/12`: the regraded escort law at the first draw, the canonical law at the second. -/
-theorem rrAdaptive_refines_chi2 {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
-    [BudgetCreditGS PowerBudget GF] :
-    ⊢@{IProp GF} ↯b (ofReal (7 / 12)) -∗
+theorem rrAdaptive_refines_chi2 :
+    ⊢ ↯b (ofReal (7 / 12)) -∗
       REL[chi2Lifting] (rrAdaptive (rT := rT) false) << (rrAdaptive true) :
         lrel_prod lrel_bool lrel_bool := by
   iintro Hb

@@ -33,45 +33,47 @@ section Wp
 
 variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-  [BudgetGS B GF] [Add B] [L.IsLawful] [L.IsTopAbsorbing]
+  [BudgetGS B GF]
+local bi IProp GF
+open Iris.BI
+
+section PureSteps
+
+variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 /-- One `PureExec` step at a redex under `K`. -/
 public theorem wp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     wp L E (K.fill e₂) Φ ⊢ wp L E (K.fill e₁) Φ := by
   have : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
-  exact (BI.laterN_intro n).trans (wp_pure_step_later Hφ)
+  exact (laterN_intro n).trans (wp_pure_step_later Hφ)
+
+variable {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
 
 /-- A run of pure steps, from `PureSteps`. -/
-public theorem wp_pure_steps {E : CoPset} {e₁ e₂ : Exp rT} {Φ : Val rT → IProp GF}
-    (h : PureSteps e₁ e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
+public theorem wp_pure_steps (h : PureSteps e₁ e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   have := h.pureExec
-  (BI.laterN_intro _).trans (wp_pure_step_later trivial)
+  (laterN_intro _).trans (wp_pure_step_later trivial)
 
 /-- `wp_pure_steps` with the source only equal to the goal's expression. -/
-public theorem wp_pure_steps_at {E : CoPset} {e₁ e₁' e₂ : Exp rT} {Φ : Val rT → IProp GF}
-    (heq : e₁ = e₁') (h : PureSteps e₁' e₂) : wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
+public theorem wp_pure_steps_at {e₁' : Exp rT} (heq : e₁ = e₁') (h : PureSteps e₁' e₂) :
+    wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   heq ▸ wp_pure_steps h
 
-end Wp
+end PureSteps
 
-section WpEq
-
-variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
-  [BudgetGS B GF] {E : CoPset}
+variable {E : CoPset} {Φ : Val rT → IProp GF}
 
 /-- Close a value `wp` whose expression is only equal to `Exp.ofVal v`. -/
-public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v)
-    {Φ : Val rT → IProp GF} : Φ v ⊢ wp L E e Φ :=
+public theorem wp_value_eq (v : Val rT) {e : Exp rT} (heq : e = Exp.ofVal v) :
+    Φ v ⊢ wp L E e Φ :=
   heq ▸ wp_value_of_toVal (Exp.toVal?_ofVal v)
 
 /-- Refold the expression of a `wp` along an equality. -/
-public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') {Φ : Val rT → IProp GF} :
-    wp L E e' Φ ⊢ wp L E e Φ :=
+public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') : wp L E e' Φ ⊢ wp L E e Φ :=
   heq ▸ .rfl
 
-end WpEq
+end Wp
 
 /-- `wp_alloc` with the allocated value anchored by an equality. -/
 public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
@@ -86,19 +88,19 @@ public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSinglet
 section Spec
 
 variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} {hlc : HasLC}
-  [InvGS_gen hlc GF] [SpecGS rT GF] {E : CoPset}
+  [InvGS_gen hlc GF] [SpecGS rT GF] {E : CoPset} {e₁full e₂full e e' : Exp rT}
 local bi IProp GF
 
 /-- `step_pure` with both endpoints anchored by equalities, so `tp_pure` can match the `⤇`
 hypothesis syntactically rather than as an unreduced `Ectx.fill`. -/
-public theorem step_pure_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT) {φ : Prop} {n : ℕ}
+public theorem step_pure_at (K : Ectx rT) {φ : Prop} {n : ℕ}
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (Hφ : φ) [PureExec φ n e e'] :
     ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
   exact step_pure K Hφ
 
 /-- `step_pure_at` for a run of pure steps. -/
-public theorem step_pure_steps_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT)
+public theorem step_pure_steps_at (K : Ectx rT)
     (h₁ : e₁full = K.fill e) (h₂ : e₂full = K.fill e') (h : PureSteps e e') :
     ⤇ e₁full ⊢ specUpdate rT E (⤇ e₂full) := by
   subst h₁ h₂
@@ -109,14 +111,13 @@ public theorem step_pure_steps_at {e₁full e₂full e e' : Exp rT} (K : Ectx rT
 the caller's form (e.g. `assocVal []` rather than a raw `Val.mk`). -/
 public theorem step_alloc_at (K : Ectx rT) {v : Exp rT} (hv : IsVal v) {vv : Val rT}
     (hvv : vv = ⟨v, hv, hv.lc⟩) :
-    ⤇ (K.fill (.alloc v)) ⊢
-      specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#loc l))) ∗ (l ↦ₛ vv)) := by
+    ⤇ K.fill (.alloc v) ⊢ specUpdate rT E iprop(∃ l : Loc, ⤇ K.fill pl(#loc l) ∗ l ↦ₛ vv) := by
   subst hvv
   exact step_alloc K hv
 
 /-- Rewrite the expression of a `⤇` hypothesis along an equality. -/
 public theorem specProgFrag_reshape {e₁ e₂ : Exp rT} (h : e₁ = e₂) :
-    (⤇ e₁) ⊢ (⤇ e₂) := h ▸ .rfl
+    ⤇ e₁ ⊢ ⤇ e₂ := h ▸ .rfl
 
 end Spec
 
@@ -174,14 +175,14 @@ macro "pl_step_finish" : tactic =>
 meta structure WpGoal where
   {u : Level}
   {α : Q(Type)}
-  instPL : Q(ProbLang.LawfulProbLangℝ $α)
+  instPL : Q(LawfulProbLangℝ $α)
   {B : Q(Type)}
   instPO : Q(PartialOrder $B)
   instOT : Q(OrderTop $B)
   L : Q(GradedLifting.{0} $B)
   {GF : Q(BundledGFunctors.{0, 0, 0})}
-  instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF)
-  instBudget : Q(ProbLang.BudgetGS $B $GF)
+  instWp : Q(MicrometerWpGS (rT := $α) $GF)
+  instBudget : Q(BudgetGS $B $GF)
   /-- The full `wp` application, with `E`, `e`, `Φ` as the trailing arguments. -/
   wpApp : LeanExpr
   {prop : Q(Type u)}
@@ -218,20 +219,20 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     let ~q(UPred.instBIUPred) := bi
       | throwError "expected the BI of `IProp` to be `UPred.instBIUPred`"
     let goalE : LeanExpr := (← instantiateMVars goal).consumeMData
-    unless goalE.getAppFn.consumeMData.isConstOf ``ProbLang.MicrometerWpGS.wp do
+    unless goalE.getAppFn.consumeMData.isConstOf ``MicrometerWpGS.wp do
       throwError "the goal {goal} must be a `wp`"
     let args := goalE.getAppArgs
     -- `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget, E, e, Φ`
     unless args.size == 12 do
       throwError "unexpected `wp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
-    have instPL : Q(ProbLang.LawfulProbLangℝ $α) := args[1]!
+    have instPL : Q(LawfulProbLangℝ $α) := args[1]!
     have B : Q(Type) := args[2]!
     have instPO : Q(PartialOrder $B) := args[3]!
     have instOT : Q(OrderTop $B) := args[4]!
     have L : Q(GradedLifting.{0} $B) := args[5]!
-    have instWp : Q(ProbLang.MicrometerWpGS (rT := $α) $GF) := args[7]!
-    have instBudget : Q(ProbLang.BudgetGS $B $GF) := args[8]!
+    have instWp : Q(MicrometerWpGS (rT := $α) $GF) := args[7]!
+    have instBudget : Q(BudgetGS $B $GF) := args[8]!
     have E : Q(CoPset) := args[9]!
     have e : Q(Exp $α) := args[10]!
     let Φ : LeanExpr := args[11]!
@@ -259,7 +260,7 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
         mkLambdaFVars #[v] (g.mkWp body g.Φ)
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
-    let bindPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_bind
+    let bindPf ← mkAppOptM ``MicrometerWpGS.wp_bind
       (g.prefix.append #[none, none, none, some K, some g.E, some e', some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
@@ -284,7 +285,7 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
       let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
       let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
       let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
-      let some inst ← ProofModeM.trySynthInstanceQ q(ProbLang.PureExec $φ $n $e₁' $e₂syn)
+      let some inst ← ProofModeM.trySynthInstanceQ q(PureExec $φ $n $e₁' $e₂syn)
         | failure
       return ({ e₁ := e₁', e₂syn, names, φ, n, inst } : PureStepAt α instPL)
       | throwTacticEx `wp_pure mvar m!"no pure step applies"
@@ -304,7 +305,7 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
     let gs ← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
-    let stepPf ← mkAppOptM ``ProbLang.MicrometerWpGS.wp_pure_step_ctx
+    let stepPf ← mkAppOptM ``MicrometerWpGS.wp_pure_step_ctx
       (g.prefix.append #[none, none, none, some K, some φ, some n,
         some e₁, some e₂, some step.inst, some HΦ, some g.E, some g.Φ])
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
@@ -362,8 +363,8 @@ elab "wp_value" : tactic =>
         pure (← observing? (iSolveSidecondition c)).isSome
       else pure false
     have target : Q(IProp $GF) := if useNoFupd then goal else q(iprop(|={$E}=> $goal))
-    let valLemma := if useNoFupd then ``ProbLang.MicrometerWpGS.wp_value_of_toVal
-      else ``ProbLang.MicrometerWpGS.wp_value_fupd_of_toVal
+    let valLemma := if useNoFupd then ``MicrometerWpGS.wp_value_of_toVal
+      else ``MicrometerWpGS.wp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
     let valPf ← mkAppOptM valLemma
       (g.prefix.append #[some E, some e, some v, some g.Φ, some hproof])

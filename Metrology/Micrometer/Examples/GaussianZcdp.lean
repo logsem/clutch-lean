@@ -23,30 +23,14 @@ DP with `ε` of order `√k`. Every result is conditional on the sampler spec `G
 open scoped ENNReal NNReal
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting ProbabilityTheory
-open GradedDivergence (dp zcdpDivergence zcdpLifting)
+open GradedDivergence
 
 namespace ProbLang
 namespace GaussianRelease
 
 variable {gauss : Val ℝ} {v : ℝ≥0}
 
-/-! ## The sampler spec and the per-draw cost -/
-
-section Spec
-
-variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF] [BudgetCreditGS B GF]
-
-/-- The assumed spec of `gauss`: `gauss #a` couples with a spec copy of `gauss #a'` like a primitive
-sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`). -/
-def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :=
-  ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
-    IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →
-    (⤇ K.fill pl({Exp.ofVal gauss} #a') ∗ ↯b c ∗
-      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#real y) -∗ Φ (.real x)) ⊢
-      wp L E pl({Exp.ofVal gauss} #a) Φ)
-
-end Spec
+/-! ## The per-draw cost -/
 
 /-- The zCDP cost `(a - a')² / (2 v)` of one release. -/
 noncomputable abbrev cost (v : ℝ≥0) (a a' : ℝ) : ℝ≥0∞ := ENNReal.ofReal ((a - a') ^ 2 / (2 * v))
@@ -56,18 +40,37 @@ theorem budget_succ (k : ℕ) (ρ : ℝ≥0∞) :
     ((0 : ℝ≥0∞), ((k + 1 : ℕ) : ℝ≥0∞) * ρ) = (0, ρ) + (0, k * ρ) := by
   rw [Prod.mk_add_mk, add_zero, Nat.cast_succ, add_one_mul, add_comm]
 
-/-! ## The program logic proof: `k` releases spend `k` times the cost -/
-
 section Logic
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS ℝ hlc GF]
-  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
+
+/-! ## The sampler spec -/
+
+section Spec
+
+variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+  [BudgetCreditGS B GF]
+
+/-- The assumed spec of `gauss`: `gauss #a` couples with a spec copy of `gauss #a'` like a primitive
+sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand_spend`). -/
+def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :=
+  ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → _),
+    IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →
+    (⤇ K.fill pl({Exp.ofVal gauss} #a') ∗ ↯b c ∗
+      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#real y) -∗ Φ (.real x)) ⊢
+      wp L E pl({Exp.ofVal gauss} #a) Φ)
+
+end Spec
+
+/-! ## The program logic proof: `k` releases spend `k` times the cost -/
+
+variable [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
 /-- `k` releases against the spec in context `K`, spending `(0, (a - a')² / (2 v))` per release:
 both sides release the same tuple. Conditional on the sampler spec `hgauss`. -/
 theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLifting gauss v)
-    (a a' : ℝ) (k : ℕ) (K : Ectx ℝ) (Φ : Val ℝ → IProp GF) :
+    (a a' : ℝ) (k : ℕ) (K : Ectx ℝ) (Φ : Val ℝ → _) :
     ⤇ K.fill (release gauss a' k) ∗ ↯b ((0 : ℝ≥0∞), (k : ℝ≥0∞) * cost v a a') ∗
       (∀ w, ⤇ K.fill (Exp.ofVal w) -∗ Φ w) ⊢
       wp zcdpLifting ⊤ (release gauss a k) Φ := by
@@ -100,7 +103,7 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     wp_bind pl({Exp.ofVal gauss} #a)
     tp_bind pl({Exp.ofVal gauss} #a')
     iapply hgauss a a' (· = ·) (0, cost v a a') _ _ _ (by simp)
-      (GradedDivergence.zcdpLifting_rel_gaussianReal hv)
+      (zcdpLifting_rel_gaussianReal hv)
     iframe Hj Hb₁
     iintro %x %_ %rfl Hj
     wp_value_at (Val.pair (.real x) w)
@@ -149,7 +152,7 @@ theorem release_zcdp (hv : v ≠ 0)
     (a a' : ℝ) (k : ℕ) (σ σ' : State ℝ) :
     zcdpDivergence (0, k * cost v a a') (limExecV ⟨release gauss a k, σ⟩)
       (limExecV ⟨release gauss a' k, σ'⟩) :=
-  GradedLifting.IsSound.sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
+  IsSound.sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
 
 /-! ## From zCDP to DP -/
 
@@ -162,7 +165,7 @@ theorem release_dp (hv : v ≠ 0)
     dp (⨅ α ∈ Set.Ioi (1 : ℝ), ENNReal.ofReal α * (k * cost v a a') +
         ENNReal.ofReal (Real.log (1 / δ) / (α - 1)), ENNReal.ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by
-  have h := GradedDivergence.codensity_sound <| (LiftingRelHom.zcdpToDp hδ).map_rel
+  have h := codensity_sound <| (LiftingRelHom.zcdpToDp hδ).map_rel
     (release_coupling_of GF₀ hv hgauss a a' k σ σ')
   simpa only [LiftingRelHom.zcdpToDp_map, zero_add] using h
 
@@ -189,8 +192,8 @@ theorem release_dp_sqrt (hv : v ≠ 0)
     ((release_coupling_of GF₀ hv hgauss a a' k σ σ').mono
       (b' := (0, k * ENNReal.ofReal (r ^ 2 / (2 * v)))) (Prod.mk_le_mk.2 ⟨le_rfl, by gcongr⟩)
       fun _ _ ↦ id)
-  have := GradedDivergence.codensity_sound
-    (GradedDivergence.codensity_dp_rel_of_zcdp hδ hδ₁ hz)
+  have := codensity_sound
+    (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
   rwa [zero_add, hk, ENNReal.toReal_ofReal hρ, ← ENNReal.ofReal_add hρ (by positivity)] at this
 
 end GaussianRelease

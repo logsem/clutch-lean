@@ -24,7 +24,7 @@ open Iris Iris.BI Iris.ProofMode OFE COFE MicrometerWpGS GradedLifting GradedDiv
 
 namespace OTP
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type}
 
 /-! ## The bijection: adding the key modulo `N` -/
 
@@ -54,13 +54,24 @@ theorem addMod_neg_inv (m N n : Int) (hn0 : 0 ≤ n) (hnN : n < N) :
     (m + (n + (-m)) % N) % N = n := by
   rw [Int.add_emod_emod, show m + (n + -m) = n by ring, Int.emod_eq_of_lt hn0 hnN]
 
+/-! ## The output relation -/
+
+/-- The two programs return the same integer. -/
+def otpφ (v v' : Val rT) : Prop :=
+  ∃ n : Int, v = .int n ∧ v' = .int n
+
+theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
+  rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
+  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+
 /-! ## The refinement in the logic
 
 `rel_couple_UU` couples the two draws along `addMod`, at no cost. -/
 
 section Refinement
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
+variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {hlc : HasLC} {GF : BundledGFunctors}
+  [MicrometerRGS rT hlc GF]
 local bi IProp GF
 
 section Generic
@@ -90,15 +101,21 @@ theorem otp_refines_rev_gen [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
 
 end Generic
 
+section Tv
+
+variable [BudgetCreditGS ℝ≥0∞ GF]
+
 /-- The encryption refines the ideal sampler in codensity tv. -/
-theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
+theorem otp_refines (m N : Int) (hN : 0 < N) :
     ⊢ REL[codensity tv] (otp_enc (rT := rT) m N) << otp_ideal N : lrel_int :=
   otp_refines_gen m N hN
 
 /-- The ideal sampler refines the encryption in codensity tv. -/
-theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
+theorem otp_refines_rev (m N : Int) (hN : 0 < N) :
     ⊢ REL[codensity tv] (otp_ideal (rT := rT) N) << otp_enc m N : lrel_int :=
   otp_refines_rev_gen m N hN
+
+end Tv
 
 end Refinement
 
@@ -107,21 +124,21 @@ end Refinement
 The limit distributions of `otp_enc m N` and `otp_ideal N` are coupled by integer
 equality with zero error. -/
 
-/-- The two programs return the same integer. -/
-def otpφ (v v' : Val rT) : Prop :=
-  ∃ n : Int, v = .int n ∧ v' = .int n
+variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 
-theorem lrel_int_to_otpφ {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) : ⊢@{IProp GF} lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
+section Lrel
+
+variable {hlc : HasLC} {GF : BundledGFunctors}
+local bi IProp GF
+
+theorem lrel_int_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_int
   iintro ⟨%n, %hv, %hv'⟩
   ipureintro
   exact ⟨n, hv, hv'⟩
 
-omit [LawfulProbLangℝ rT] in
-theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
-  rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
-  exact (Exp.ofVal_of_toVal_some hv).symm.trans (Exp.ofVal_of_toVal_some hv')
+end Lrel
 
 section Generic
 

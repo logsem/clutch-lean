@@ -2,6 +2,7 @@ module
 
 public import Metrology.Micrometer.PrimitiveLaws
 import Metrology.ProbLang.Syntax.Notation
+import Metrology.Iris.LocalBI
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.AppRelRules
 
@@ -14,6 +15,7 @@ Program rules for `urand` (`wp_urand`) and its coupling along a measure-preservi
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
+open MeasureTheory (MeasurePreserving IsProbabilityMeasure)
 open scoped AppGS
 
 namespace ProbLang
@@ -56,7 +58,7 @@ theorem Cfg.measurableSet_realLit_image (σ : State rT) :
 
 /-- `urand` head-reduces in every state. -/
 theorem headReducible_urand (σ : State rT) : HeadReducible pl(urand) σ :=
-  show Cfg.uniformReal σ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
+  show Cfg.uniformReal σ ≠ 0 from IsProbabilityMeasure.ne_zero _
 
 /-- `urand` reduces in every state. -/
 theorem reducible_urand (σ : State rT) : Reducible pl(urand) σ :=
@@ -85,7 +87,7 @@ Unlike the discrete `unifInt_rel_bij`, a bijection is not enough here:
 reflexive `L`. -/
 theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
+    (hmp : MeasurePreserving f unifUnit unifUnit) :
     L.Rel 0
       (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨pl(#real (f r)), σ'⟩)
@@ -99,7 +101,7 @@ theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
 of `Cfg.uniformReal_rel_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) :
+    (hmp : MeasurePreserving f unifUnit unifUnit) :
     AddCoupl 0
       {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#real r), σ⟩ ∧ p.2 = ⟨pl(#real (f r)), σ'⟩}
@@ -111,13 +113,14 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
+local bi IProp GF
 
 section Unary
 variable [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
   [L.IsTopAbsorbing] [L.HasBind]
 
 /-- A program `urand` returns some `r` in the support of `unifUnit`, after a `▷`. -/
-theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
+theorem wp_urand {E : CoPset} {Φ : Val rT → _} : iprop%
     (▷ ∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_step_concentrated Exp.urand_toVal?_eq_none
@@ -134,8 +137,8 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
 
 /-- Couple `urand ~ K[urand]` along a measure-preserving `f`, at no cost. -/
 theorem wp_couple_urand_urand (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit)
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
+    (hmp : MeasurePreserving f unifUnit unifUnit)
+    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(urand) ∗
     (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#real (f r)) -∗ Φ (.real r)) ⊢
     wp L E pl(urand) Φ := by
@@ -143,7 +146,7 @@ theorem wp_couple_urand_urand (f : rT → rT)
   iapply wp_lift_prim_steps_coupl Exp.urand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imod BIFUpdate.subset LawfulSet.empty_subset with Hclose
   imodintro
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#real r), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#real (f r)), σ₁'⟩
@@ -178,7 +181,7 @@ variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsRefle
 /-- Relational form of `wp_couple_urand_urand`: couple the two `urand`s along a measure-preserving
 `f`. -/
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
-    (hmp : MeasureTheory.MeasurePreserving f unifUnit unifUnit) : iprop%
+    (hmp : MeasurePreserving f unifUnit unifUnit) : iprop%
     (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗
       refines L E (K.fill pl(#real r)) (K'.fill pl(#real (f r))) A) ⊢
     refines L E (K.fill pl(urand)) (K'.fill pl(urand)) A := by

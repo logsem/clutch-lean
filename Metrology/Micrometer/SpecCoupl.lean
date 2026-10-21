@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.MicrometerWpGS
+import Metrology.Iris.LocalBI
 
 /-! # The `specCoupl` modality
 
@@ -9,15 +10,15 @@ absorbing budget or at the continuation `Z`; its introduction, bind, fancy-updat
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open MeasureTheory (Measure)
 
 namespace ProbLang
 
 variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
-variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
-  {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
+variable {B : Type} {GF : BundledGFunctors}
 
 /-! ## The modality -/
 
@@ -28,14 +29,21 @@ abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonCla
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
 instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
+/-- Every predicate on the discrete `SpecCouplState` is non-expansive. -/
+theorem specCouplState_ne {Φ : SpecCouplState rT B → IProp GF} : NonExpansive Φ where
+  ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
+
+variable [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} [MicrometerWpGS (rT := rT) GF]
+local bi IProp GF
+
 variable (L) in
 /-- One spec-side coupled round: a bind-law step within `b` from an erasable program-state
 distribution `μ₁` against the spec's `n`-step run `ν₀.map f'`, then `Φ` at each pair with finite
 leftover (Rocq `spec_coupl_pre`). -/
 abbrev specCouplCouple (E : CoPset) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
-  (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : MeasureTheory.Measure (State rT))
-      (ν₀ : MeasureTheory.Measure (Cfg rT)) (f' : Cfg rT → Cfg rT) (R : State rT → Cfg rT → B),
+  (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : Measure (State rT))
+      (ν₀ : Measure (Cfg rT)) (f' : Cfg rT → Cfg rT) (R : State rT → Cfg rT → B),
       ⌜Measurable f' ∧ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f'⌝ ∗
       ⌜law.head μ₁ ν₀ R b⌝ ∗
       ⌜law.SideForExec μ₁ ν₀ R f'⌝ ∗
@@ -57,13 +65,12 @@ abbrev specCoupl (E : CoPset) (σ : State rT) (e' : Exp rT) (σ' : State rT) (b 
     (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)
 
-omit [PartialOrder B] [OrderTop B] [MicrometerWpGS (rT := rT) GF] in
-/-- Every predicate on the discrete `SpecCouplState` is non-expansive. -/
-theorem specCouplState_ne {Φ : SpecCouplState rT B → IProp GF} : NonExpansive Φ where
-  ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
+variable {E : CoPset} {σ σ₁ σ' σ₁' : State rT} {e' e₁' : Exp rT} {b : B} {n : Nat}
+  {Z Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} {μ₁ μ₁' : Measure (State rT)}
+  {R : State rT → Cfg rT → B}
 
 /-- `specCouplPre` is monotone, so its least fixpoint `specCoupl` exists. -/
-instance specCouplPre_mono {E : CoPset} {Z : State rT → Cfg rT → B → IProp GF} :
+instance specCouplPre_mono :
     BIMonoPred (specCouplPre L E Z) where
   mono_pred {Φ Ψ _ _} := by
     iintro #Hwand %s Hs
@@ -84,23 +91,18 @@ instance specCouplPre_mono {E : CoPset} {Z : State rT → Cfg rT → B → IProp
 /-! ## Introduction rules: one per disjunct -/
 
 /-- Exit by the first disjunct: an absorbing budget. -/
-theorem specCoupl_absorbing {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} (hb : L.Absorbing b) :
-    ⊢ specCoupl L E σ e' σ' b Z := by
+theorem specCoupl_absorbing (hb : L.Absorbing b) : ⊢ specCoupl L E σ e' σ' b Z := by
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   ileft; ipureintro; exact hb
 
 /-- Exit by the second disjunct: the continuation now. -/
-theorem specCoupl_ret {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} :
-    Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := by
+theorem specCoupl_ret : Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := by
   iintro HZ
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; ileft; iexact HZ
 
 /-- One more coupled round (third disjunct). -/
-theorem specCoupl_rec {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} :
+theorem specCoupl_rec :
     specCouplCouple L E σ e' σ' b
       (fun s => specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z) ⊢
     specCoupl L E σ e' σ' b Z := by
@@ -111,8 +113,7 @@ theorem specCoupl_rec {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT
 /-! ## Structural rules -/
 
 /-- Weaken the continuation `Z` under a persistent implication. -/
-theorem specCoupl_mono {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} : iprop%
+theorem specCoupl_mono : iprop%
     □ (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
     specCoupl L E σ e' σ' b Z₂ := by
   iintro ⟨#HZ, HC⟩
@@ -127,8 +128,7 @@ theorem specCoupl_mono {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State r
     iexact HCpl
 
 /-- Run a second spec coupling from each exit of the first. -/
-theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} (HE : E1 ⊆ E2) : iprop%
+theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
     (∀ σ₂ ρ₂ b', Z₁ σ₂ ρ₂ b' -∗ specCoupl L E2 σ₂ ρ₂.expr ρ₂.state b' Z₂) ∗
     specCoupl L E1 σ e' σ' b Z₁ ⊢ specCoupl L E2 σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩
@@ -155,20 +155,18 @@ theorem specCoupl_bind {E1 E2 : CoPset} {σ : State rT} {e' : Exp rT} {σ' : Sta
     iapply HCpl_cont $$ HZ
 
 /-- `specCoupl_mono` with a spatial implication. -/
-theorem specCoupl_mono_spatial {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} : iprop%
+theorem specCoupl_mono_spatial : iprop%
     (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
     specCoupl L E σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩
-  iapply specCoupl_bind Std.LawfulSet.subset_refl
+  iapply specCoupl_bind LawfulSet.subset_refl
   iframe HC
   iintro %σ₂ %ρ₂ %b₂ Hz1
   iapply specCoupl_ret
   iapply HZ $$ Hz1
 
 /-- `specCoupl` is non-expansive in the continuation `Z`. -/
-theorem specCoupl_ne {n : Nat} {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B}
-    {Z₁ Z₂ : State rT → Cfg rT → B → IProp GF} (HZ : ∀ σ ρ b, Z₁ σ ρ b ≡{n}≡ Z₂ σ ρ b) :
+theorem specCoupl_ne (HZ : ∀ σ ρ b, Z₁ σ ρ b ≡{n}≡ Z₂ σ ρ b) :
     specCoupl L E σ e' σ' b Z₁ ≡{n}≡ specCoupl L E σ e' σ' b Z₂ := by
   unfold specCoupl
   refine least_fixpoint_ne_outer (fun _ s => ?_) (.of_eq rfl)
@@ -176,7 +174,7 @@ theorem specCoupl_ne {n : Nat} {E : CoPset} {σ : State rT} {e' : Exp rT} {σ' :
 
 /-- Induction on `specCoupl`: `Ψ` holds if it follows from one unfolding of `specCouplPre` with
 `Ψ` at every recursive call. -/
-theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp GF} : iprop%
+theorem specCoupl_ind {Ψ : State rT → Cfg rT → B → IProp GF} : iprop%
     □ (∀ σ c b, specCouplPre L E Z (fun s => iprop(Ψ s.1 s.2.1 s.2.2 ∧
       specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z)) (σ, c, b) -∗ Ψ σ c b) ⊢
     ∀ σ e' σ' b, specCoupl L E σ e' σ' b Z -∗ Ψ σ ⟨e', σ'⟩ b := by
@@ -192,11 +190,8 @@ theorem specCoupl_ind {E : CoPset} {Ψ Z : State rT → Cfg rT → B → IProp G
 
 /-- Introduce a spec coupling by a step of any bind law, whose spec distribution is the image of
 the law's spec-side head measure under `f'` (Rocq `spec_coupl_rec_map`). -/
-theorem specCoupl_couple_map (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {n : Nat}
-    {μ₁ μ₁' : MeasureTheory.Measure (State rT)} {ν₀ : MeasureTheory.Measure (Cfg rT)}
-    {f' : Cfg rT → Cfg rT} {R : State rT → Cfg rT → B} (hf' : Measurable f')
-    (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
+theorem specCoupl_couple_map (law : L.BindLaw) {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
+    (hf' : Measurable f') (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
     (hhead : law.head μ₁ ν₀ R b) (hside : law.SideForExec μ₁ ν₀ R f')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=>
@@ -212,9 +207,7 @@ theorem specCoupl_couple_map (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {
 
 /-- Introduce a spec coupling by a step of any bind law between erasable distributions (Rocq
 `spec_coupl_rec`). -/
-theorem specCoupl_couple_law (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {n : Nat}
-    {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+theorem specCoupl_couple_law (law : L.BindLaw)
     (hhead : law.head μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R b)
     (hside : law.SideForExec μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R id)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -222,17 +215,14 @@ theorem specCoupl_couple_law (law : L.BindLaw) {E : CoPset} {σ₁ : State rT} {
       specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z := by
   iintro H
-  iapply specCoupl_couple_map law measurable_id MeasureTheory.Measure.map_id.symm hhead hside
+  iapply specCoupl_couple_map law measurable_id Measure.map_id.symm hhead hside
     Heras₁ Heras₁'
   iintro %σ₂ %⟨e₂', σ₂'⟩ %hR
   simp only [id]
   iapply H $$ %σ₂ %e₂' %σ₂' %hR
 
 /-- Introduce a spec coupling from a lifting of erasable distributions, via the canonical law. -/
-theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {E : CoPset}
-    {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {n : Nat}
-    {R : State rT → Cfg rT → B} {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (Hcpl : L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
@@ -240,13 +230,13 @@ theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] {E 
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_couple_law (BindLaw.canonical L) Hcpl (.of_forall fun _ _ => trivial) Heras₁ Heras₁'
 
+section SplitBudget
+variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
+  [L.IsSupportLocal]
+
 /-- Introduce a spec coupling from a relational lifting within `b₁`, leaving `b₂` to every
 related pair. -/
-theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT}
-    {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} {n : Nat}
-    {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+theorem specCoupl_couple_rel {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
@@ -261,11 +251,7 @@ theorem specCoupl_couple_rel [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLa
   iapply H $$ %σ₂ %e₂' %σ₂' %hS
 
 /-- Couple two erasable distributions before `Z`, leaving `b₂` to the continuation. -/
-theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
-      {σ₁' : State rT}
-    {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → State rT → Prop}
-    {μ₁ μ₁' : MeasureTheory.Measure (State rT)}
+theorem specCoupl_erasables {b₁ b₂ : B} {S : State rT → State rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ μ₁')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ σ₂', ⌜S σ₂ σ₂'⌝ -∗ |={E}=> specCoupl L E σ₂ e₁' σ₂' b₂ Z) ⊢
@@ -275,7 +261,7 @@ theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLaw
   iintro H
   have heq : μ₁'.bind (fun σ => pexecN 0 ⟨e₁', σ⟩) = μ₁'.map (fun σ => (⟨e₁', σ⟩ : Cfg rT)) := by
     simp only [pexecN_zero]
-    exact MeasureTheory.Measure.bind_dirac_eq_map _ (by fun_prop)
+    exact Measure.bind_dirac_eq_map _ (by fun_prop)
   iapply specCoupl_couple_rel (S := fun σ₂ c => S σ₂ c.state ∧ c.expr = e₁') (n := 0) hb
     (heq ▸ Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩)
     Heras₁ Heras₁'
@@ -284,36 +270,70 @@ theorem specCoupl_erasables [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLaw
   iapply H $$ %σ₂ %σ₂' %HS
 
 /-- Couple an erasable distribution against `n` spec steps. -/
-theorem specCoupl_erasable_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
-      {σ₁' : State rT}
-    {n : Nat} {b₁ b₂ b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop}
-    {μ₁ : MeasureTheory.Measure (State rT)}
+theorem specCoupl_erasable_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_couple_rel (n := n) hb (by rwa [MeasureTheory.Measure.dirac_bind (by fun_prop)])
+  specCoupl_couple_rel (n := n) hb (by rwa [Measure.dirac_bind (by fun_prop)])
     Heras₁ (ErasableExpr.dret σ₁')
 
 /-- Couple a Dirac program state against `n` spec steps. -/
-theorem specCoupl_steps [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing]
-    [L.HasBind] [L.IsSupportLocal] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
-      {n : Nat} {b₁ b₂ b : B}
-    {Z : State rT → Cfg rT → B → IProp GF} {S : State rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
-    (Hcpl : L.Rel b₁ S (MeasureTheory.Measure.dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) :
-    iprop% (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
+theorem specCoupl_steps {b₁ b₂ : B} {S : State rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b)
+    (Hcpl : L.Rel b₁ S (Measure.dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
+    (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
     specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_erasable_steps hb Hcpl (ErasableExpr.dret σ₁)
 
+/-! ## One spec step -/
+
+/-- Away from `urand`, a step is carried by its support of positive-mass points. -/
+theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
+    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
+  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
+    ext ρ; simp [pos_iff_ne_zero]
+  show primStep ⟨e, σ⟩ _ = 0
+  rw [heq]
+  exact primStep_atomic e σ hne
+
+/-- Couple a Dirac program state against one spec step, on a measurable set carrying the step. -/
+theorem specCoupl_step_concentrated [L.IsReflexive] {S : Set (Cfg rT)} (Hred : Reducible e₁' σ₁')
+    (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
+    (∀ e₂' σ₂', ⌜⟨e₂', σ₂'⟩ ∈ S⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
+    specCoupl L E σ₁ e₁' σ₁' b Z := by
+  iintro H
+  have := prim_step_mass Hred
+  have hpexec1 : pexecN 1 ⟨e₁', σ₁'⟩ = primStep ⟨e₁', σ₁'⟩ := by
+    rw [pexecN_one, stepOrFinal_not_isValue (val_stuck Hred)]
+  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (Measure.dirac σ₁)
+      (pexecN 1 ⟨e₁', σ₁'⟩) := by
+    rw [hpexec1]
+    exact rel_dirac_left _ hSmeas hSconc σ₁
+  iapply specCoupl_steps (zero_add b).le HcplR
+  iintro %σ₂ %e₂' %σ₂' %HS
+  obtain ⟨rfl, Hmem⟩ := HS
+  iapply H $$ %e₂' %σ₂' %Hmem
+
+/-- `specCoupl_step_concentrated` on the step's support, for a non-`urand` redex. -/
+@[discrete]
+theorem specCoupl_step [L.IsReflexive] (Hred : Discrete.Reducible e₁' σ₁')
+    (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
+    (∀ e₂' σ₂', ⌜0 < primStep ⟨e₁', σ₁'⟩ {⟨e₂', σ₂'⟩}⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
+    specCoupl L E σ₁ e₁' σ₁' b Z :=
+  specCoupl_step_concentrated Hred.toReducible (measurableSet_primStep_support e₁' σ₁')
+    (concentrated_primStep_support e₁' σ₁' hne)
+
+end SplitBudget
+
 /-! ## Budget weakening and fancy updates -/
+
+section Budget
+variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on any smaller budget, by a step of the unit
 law (Rocq `spec_coupl_steps_det`, `spec_coupl_mono_grade`). -/
-theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
-    {E : CoPset} {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT}
-    {n : Nat} {b₁ b : B} {Z : State rT → Cfg rT → B → IProp GF}
-    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
+theorem fupd_specCoupl_steps_det_of_le {e₂' : Exp rT} {σ₂' : State rT} {b₁ : B}
+    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = Measure.dirac ⟨e₂', σ₂'⟩) (hb : b₁ ≤ b) :
     iprop(|={E}=> specCoupl L E σ e₂' σ₂' b₁ Z) ⊢ specCoupl L E σ e₁' σ₁' b Z := by
   classical
   -- the unit law only carries a finite budget; at b₁ = ⊤ exit through absorption
@@ -322,9 +342,9 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     -- one unit-law round between point masses: leftover `b₁` at the target pair, `⊤` elsewhere
     let R : State rT → Cfg rT → B := fun s c => if s = σ ∧ c = ⟨e₂', σ₂'⟩ then b₁ else (⊤ : B)
     have hR : R σ ⟨e₂', σ₂'⟩ = b₁ := ite_eq_left ⟨rfl, rfl⟩
-    have hhead : (BindLaw.unit L).head (MeasureTheory.Measure.dirac σ)
-        ((MeasureTheory.Measure.dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) R b := by
-      rw [MeasureTheory.Measure.dirac_bind (by fun_prop), Hstep]
+    have hhead : (BindLaw.unit L).head (Measure.dirac σ)
+        ((Measure.dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) R b := by
+      rw [Measure.dirac_bind (by fun_prop), Hstep]
       exact BindLaw.unit_head_dirac (hR ▸ hb₁) (hR ▸ hb)
     iapply specCoupl_couple_law (BindLaw.unit L) hhead (.of_forall fun _ _ => trivial)
       (ErasableExpr.dret σ) (ErasableExpr.dret σ₁')
@@ -339,74 +359,27 @@ theorem fupd_specCoupl_steps_det_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     exact (top_le_iff.1 hb) ▸ IsTopAbsorbing.absorbing_top
 
 /-- A spec coupling absorbs a leading fancy update and may weaken its budget. -/
-theorem fupd_specCoupl_of_le [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
-    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
-    (hb : b₁ ≤ b₂) :
+theorem fupd_specCoupl_of_le {b₁ b₂ : B} (hb : b₁ ≤ b₂) :
     iprop(|={E}=> specCoupl L E σ e' σ' b₁ Z) ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_specCoupl_steps_det_of_le (pexecN_zero _) hb
 
 /-- A spec coupling at a smaller budget proves one at a larger budget. -/
-theorem specCoupl_mono_budget [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
-    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b₁ b₂ : B} {Z : State rT → Cfg rT → B → IProp GF}
-    (hb : b₁ ≤ b₂) : specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
+theorem specCoupl_mono_budget {b₁ b₂ : B} (hb : b₁ ≤ b₂) :
+    specCoupl L E σ e' σ' b₁ Z ⊢ specCoupl L E σ e' σ' b₂ Z :=
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
 /-- A spec coupling absorbs a leading fancy update. -/
-theorem fupd_specCoupl [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
-    {σ : State rT} {e' : Exp rT} {σ' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} :
+theorem fupd_specCoupl :
     iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
   fupd_specCoupl_of_le le_rfl
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on the coupling at its end. -/
-theorem specCoupl_steps_det [Add B] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
-    {σ : State rT} {e₁' : Exp rT} {σ₁' : State rT} {e₂' : Exp rT} {σ₂' : State rT} {n : Nat} {b : B}
-    {Z : State rT → Cfg rT → B → IProp GF}
-    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = MeasureTheory.Measure.dirac ⟨e₂', σ₂'⟩) :
+theorem specCoupl_steps_det {e₂' : Exp rT} {σ₂' : State rT}
+    (Hstep : pexecN n ⟨e₁', σ₁'⟩ = Measure.dirac ⟨e₂', σ₂'⟩) :
     specCoupl L E σ e₂' σ₂' b Z ⊢ specCoupl L E σ e₁' σ₁' b Z :=
   fupd_intro.trans (fupd_specCoupl_steps_det_of_le Hstep le_rfl)
 
-/-! ## One spec step -/
-
-/-- Away from `urand`, a step is carried by its support of positive-mass points. -/
-theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
-    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
-  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
-    ext ρ; simp [pos_iff_ne_zero]
-  show primStep ⟨e, σ⟩ _ = 0
-  rw [heq]
-  exact primStep_atomic e σ hne
-
-/-- Couple a Dirac program state against one spec step, on a measurable set carrying the step. -/
-theorem specCoupl_step_concentrated [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF} {S : Set
-    (Cfg rT)} (Hred : Reducible e₁' σ₁')
-    (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
-    (∀ e₂' σ₂', ⌜⟨e₂', σ₂'⟩ ∈ S⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
-  iintro H
-  have := prim_step_mass Hred
-  have hpexec1 : pexecN 1 ⟨e₁', σ₁'⟩ = primStep ⟨e₁', σ₁'⟩ := by
-    rw [pexecN_one, stepOrFinal_not_isValue (val_stuck Hred)]
-  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (MeasureTheory.Measure.dirac σ₁)
-      (pexecN 1 ⟨e₁', σ₁'⟩) := by
-    rw [hpexec1]
-    exact rel_dirac_left _ hSmeas hSconc σ₁
-  iapply specCoupl_steps (zero_add b).le HcplR
-  iintro %σ₂ %e₂' %σ₂' %HS
-  obtain ⟨rfl, Hmem⟩ := HS
-  iapply H $$ %e₂' %σ₂' %Hmem
-
-/-- `specCoupl_step_concentrated` on the step's support, for a non-`urand` redex. -/
-@[discrete]
-theorem specCoupl_step [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
-    [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {σ₁ : State rT} {e₁' : Exp rT}
-    {σ₁' : State rT} {b : B} {Z : State rT → Cfg rT → B → IProp GF}
-    (Hred : Discrete.Reducible e₁' σ₁') (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
-    (∀ e₂' σ₂', ⌜0 < primStep ⟨e₁', σ₁'⟩ {⟨e₂', σ₂'⟩}⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_step_concentrated Hred.toReducible (measurableSet_primStep_support e₁' σ₁')
-    (concentrated_primStep_support e₁' σ₁' hne)
+end Budget
 
 end MicrometerWpGS
 
