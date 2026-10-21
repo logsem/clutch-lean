@@ -164,19 +164,19 @@ instance pureExec_app_lam {body v : Exp rT} :
   pure_exec h := ⟨_, (PureHeadStep.app_lam h.2 h.1.some).toPureStep, rfl⟩
 
 theorem PureHeadStep.cond_true (et ef : Exp rT) :
-    PureHeadStep (.cond pl(#(.bool true)) et ef) et :=
+    PureHeadStep (.cond pl(#true) et ef) et :=
   .of_det _ _ rfl fun _ => by simp [headStep]
 
 theorem PureHeadStep.cond_false (et ef : Exp rT) :
-    PureHeadStep (.cond pl(#(.bool false)) et ef) ef :=
+    PureHeadStep (.cond pl(#false) et ef) ef :=
   .of_det _ _ rfl fun _ => by simp [headStep]
 
 instance pureExec_cond_true {et ef : Exp rT} :
-    PureExec True 1 (.cond pl(#(.bool true)) et ef) et where
+    PureExec True 1 (.cond pl(#true) et ef) et where
   pure_exec _ := ⟨_, (PureHeadStep.cond_true et ef).toPureStep, rfl⟩
 
 instance pureExec_cond_false {et ef : Exp rT} :
-    PureExec True 1 (.cond pl(#(.bool false)) et ef) ef where
+    PureExec True 1 (.cond pl(#false) et ef) ef where
   pure_exec _ := ⟨_, (PureHeadStep.cond_false et ef).toPureStep, rfl⟩
 
 theorem PureHeadStep.fst_pair {e1 e2 : Exp rT} (h1 : IsVal e1) (h2 : IsVal e2) :
@@ -278,7 +278,7 @@ theorem PureHeadStep.scrut_some {v : Exp rT} {p : Pat rT} {b : Exp rT}
 
 theorem PureHeadStep.scrut_none {v : Exp rT} {p : Pat rT}
     (hv : IsVal v) (hmatch : Pat.tryMatch p v = none) :
-    PureHeadStep (.scrut v p) (.inr pl(#(.unit))) :=
+    PureHeadStep (.scrut v p) (.inr pl(#())) :=
   .of_det _ _
     (by
       obtain ⟨_, h⟩ := Exp.toVal?_eq_some_of_isValue (⟨hv⟩ : v.isValue)
@@ -290,7 +290,7 @@ instance pureExec_scrut_some {v : Exp rT} {p : Pat rT} {b : Exp rT} :
   pure_exec h := ⟨_, (PureHeadStep.scrut_some h.1.some h.2).toPureStep, rfl⟩
 
 instance pureExec_scrut_none {v : Exp rT} {p : Pat rT} :
-    PureExec (v.isValue ∧ Pat.tryMatch p v = none) 1 (.scrut v p) (.inr pl(#(.unit))) where
+    PureExec (v.isValue ∧ Pat.tryMatch p v = none) 1 (.scrut v p) (.inr pl(#())) where
   pure_exec h := ⟨_, (PureHeadStep.scrut_none h.1.some h.2).toPureStep, rfl⟩
 
 /-! ## Deterministic steps of one configuration -/
@@ -373,11 +373,11 @@ theorem DetHeadStep.snd_pair {e1 e2 : Exp rT} (h1 : IsVal e1) (h2 : IsVal e2) (�
   (PureHeadStep.snd_pair h1 h2).toDetHeadStep σ
 
 theorem DetHeadStep.cond_true (et ef : Exp rT) (σ : State rT) :
-    DetHeadStep ⟨.cond pl(#(.bool true)) et ef, σ⟩ ⟨et, σ⟩ :=
+    DetHeadStep ⟨.cond pl(#true) et ef, σ⟩ ⟨et, σ⟩ :=
   (PureHeadStep.cond_true et ef).toDetHeadStep σ
 
 theorem DetHeadStep.cond_false (et ef : Exp rT) (σ : State rT) :
-    DetHeadStep ⟨.cond pl(#(.bool false)) et ef, σ⟩ ⟨ef, σ⟩ :=
+    DetHeadStep ⟨.cond pl(#false) et ef, σ⟩ ⟨ef, σ⟩ :=
   (PureHeadStep.cond_false et ef).toDetHeadStep σ
 
 theorem DetHeadStep.app_lam {body v : Exp rT}
@@ -413,7 +413,7 @@ theorem DetHeadStep.case_inr {v el er : Exp rT} (hv : IsVal v) (σ : State rT) :
 
 theorem DetHeadStep.alloc {v : Exp rT} (hv : IsVal v) (σ : State rT) :
     DetHeadStep ⟨.alloc v, σ⟩
-      ⟨pl(#(.loc σ.heap.fresh)), σ.update_heap (·.insert σ.heap.fresh ⟨v, hv, hv.lc⟩)⟩ := by
+      ⟨pl(#loc σ.heap.fresh), σ.update_heap (·.insert σ.heap.fresh ⟨v, hv, hv.lc⟩)⟩ := by
   obtain ⟨w, hw⟩ := hv.check?_some
   exact .of_det _ _
     (by
@@ -422,14 +422,14 @@ theorem DetHeadStep.alloc {v : Exp rT} (hv : IsVal v) (σ : State rT) :
     (by simp [headStep, Exp.asValM, Exp.toVal?, hw, IsVal.subsingleton hv w])
 
 theorem DetHeadStep.load {ℓ : Loc} {v : Val rT} (σ : State rT) (hlookup : σ.heap[ℓ]? = some v) :
-    DetHeadStep ⟨pl(!#(.loc ℓ)), σ⟩ ⟨.ofVal v, σ⟩ :=
+    DetHeadStep ⟨pl(!#loc ℓ), σ⟩ ⟨.ofVal v, σ⟩ :=
   .of_det _ _ rfl (by simp [headStep, hlookup])
 
 theorem DetHeadStep.store {ℓ : Loc} {e : Exp rT} {v_old v_new : Val rT}
     (σ : State rT)
     (hlookup : σ.heap[ℓ]? = some v_old)
     (hnew : e.toVal? = some v_new) :
-    DetHeadStep ⟨.store pl(#(.loc ℓ)) e, σ⟩ ⟨pl(#(.unit)), σ.update_heap (·.insert ℓ v_new)⟩ :=
+    DetHeadStep ⟨.store pl(#loc ℓ) e, σ⟩ ⟨pl(#()), σ.update_heap (·.insert ℓ v_new)⟩ :=
   .of_det _ _
     (by obtain ⟨_, hd⟩ := Exp.toVal?_eq_some_of_isValue (e := (Exp.lit (.loc ℓ) : Exp rT)) ⟨.lit⟩
         simp [Exp.decompItem, hnew, hd])

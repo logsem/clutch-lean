@@ -208,9 +208,9 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
         Φ (.int n : Val rT)) -∗
-      tglWp E (pl(rand(#(.int z), #(.unit)))) Φ) := by
-  have Hnv : (pl(rand(#(.int z), #(.unit))) : Exp rT).toVal? = none := solve_not_value
-  have hhead : ∀ σ₁ : State rT, HeadReducible (pl(rand(#(.int z), #(.unit)))) σ₁ :=
+      tglWp E (pl(rand(#z, #()))) Φ) := by
+  have Hnv : (pl(rand(#z, #())) : Exp rT).toVal? = none := solve_not_value
+  have hhead : ∀ σ₁ : State rT, HeadReducible (pl(rand(#int z, #()))) σ₁ :=
     fun σ₁ => (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ n : Int, 0 ≤ n ∧ n < z ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
@@ -223,7 +223,7 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     · exact zero_le
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨n, _, _, rfl⟩; rfl
-  have hred : ∀ σ₁, Reducible (pl(rand(#(.int z), #(.unit)))) σ₁ :=
+  have hred : ∀ σ₁, Reducible (pl(rand(#int z, #()))) σ₁ :=
     fun σ₁ => reducible_of_headReducible (by is_lc) (hhead σ₁)
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     apply Set.Countable.measurableSet
@@ -232,7 +232,7 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     · exact Set.countable_univ.image _
   have hpgl : ∀ σ₁ : State rT,
       Pgl 0 (R σ₁) (primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩) := fun σ₁ => by
-    show (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
+    show (primStep ⟨pl(rand(#z, #())), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
     refine le_of_eq ?_
     rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))]
     show (Cfg.uniform z σ₁) {ρ : Cfg rT | ¬ R σ₁ ρ} = 0
@@ -268,7 +268,7 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
   iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
-  have hfe : f (⟨pl(#(.int n)), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
+  have hfe : f (⟨pl(#n), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
     simp only [hf]; exact dite_eq_left ⟨Hn₁, Hn₂⟩
   iapply (ErisWpGS.tglWp_value_of_toVal rfl)
   have hn : 0 ≤ n ∧ n < z := ⟨Hn₁, Hn₂⟩
@@ -337,7 +337,7 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨r, rfl, hrsupp⟩ := HRρ
-  have hfe : f (⟨pl(#(.real r)), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
+  have hfe : f (⟨pl(#r), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
   iapply (ErisWpGS.tglWp_value_of_toVal rfl)
   iapply Hcont $$ %r
   iframe %hrsupp
@@ -372,7 +372,7 @@ theorem twp_rand_exp' {E : CoPset} {z : Int} {ε₁ : ENNReal}
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
         Φ (.int n : Val rT)) -∗
-      tglWp E (pl(rand(#(.int z), #(.unit)))) Φ) := by
+      tglWp E (pl(rand(#z, #()))) Φ) := by
   iintro Herr Hcont
   have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ENNReal) ≤ ε₁ :=
     (ENNReal.div_le_div_right

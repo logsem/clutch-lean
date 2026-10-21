@@ -328,7 +328,7 @@ theorem bin_log_related_unboxed_eq (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e1 e2
     _ ↔ v1' = v2' := heqIff
     _ ↔ l1' = l2' := hval hv1'eq hv2'eq
   have hφ : ∀ l l' : BaseLit rT, (Exp.lit l).isValue ∧ (Exp.lit l').isValue ∧
-      BinOp.eval .eq (.lit l) (.lit l') = some pl(#(.bool (decide (l = l')))) :=
+      BinOp.eval .eq (.lit l) (.lit l') = some pl(#bool (decide (l = l'))) :=
     fun _ _ => ⟨IsVal.lit.toIsValue, IsVal.lit.toIsValue, by rw [← Bool.beq_eq_decide_eq]; rfl⟩
   rw [Ectx.eq_fill_nil (.binop .eq (.lit l1) (.lit l2)),
     Ectx.eq_fill_nil (.binop .eq (.lit l1') (.lit l2'))]
@@ -449,9 +449,9 @@ theorem bin_log_related_rand_unit (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
     iunfold lrel_unit at Hu
     icases Hu with ⟨%hv2, %hv2'⟩
     rw [hv2, hv2',
-      show Ectx.fill [EctxItem.randR t1] pl(#(.unit)) = Ectx.fill [EctxItem.randL .unit] t1
+      show Ectx.fill [EctxItem.randR t1] pl(#()) = Ectx.fill [EctxItem.randL .unit] t1
         from rfl,
-      show Ectx.fill [EctxItem.randR t1'] pl(#(.unit)) = Ectx.fill [EctxItem.randL .unit] t1'
+      show Ectx.fill [EctxItem.randR t1'] pl(#()) = Ectx.fill [EctxItem.randL .unit] t1'
         from rfl]
     iapply refines_rand_unit_int $$ IH1
 

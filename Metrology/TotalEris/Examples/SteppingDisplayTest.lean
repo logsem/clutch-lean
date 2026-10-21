@@ -238,7 +238,7 @@ example : ⊢ tglWp E pl((#1, #2))
 /-! ## `@[pl_names]` sampler stalled at `rand` -/
 
 @[pl_names]
-def randLoop : Exp rT := pl% rec f n := if rand(#2, #.unit) = #0 then n else f (n + #1)
+def randLoop : Exp rT := pl% rec f n := if rand(#2, #()) = #0 then n else f (n + #1)
 
 /--
 info:

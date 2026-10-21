@@ -197,13 +197,13 @@ theorem bin_log_related_tlam (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
 /-- Type application `e #()` goes from `∀ τ` to `τ[τ'/0]`. -/
 theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp rT} {τ τ' : Ty} :
     bin_log_related_ty L ⊤ Δ Γ e e' (.forall' τ) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.app e pl(#(.unit))) (.app e' pl(#(.unit))) (τ.single τ') := by
+    bin_log_related_ty L ⊤ Δ Γ (.app e pl(#())) (.app e' pl(#())) (τ.single τ') := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   rw [substMap_app, substMap_app, substMap_lit, substMap_lit,
-    show app (substMap vs.fst e) pl(#(.unit)) =
+    show app (substMap vs.fst e) pl(#()) =
       Ectx.fill [EctxItem.appL .unit] (substMap vs.fst e) from rfl,
-    show app (substMap vs.snd e') pl(#(.unit)) =
+    show app (substMap vs.snd e') pl(#()) =
       Ectx.fill [EctxItem.appL .unit] (substMap vs.snd e') from rfl]
   iapply refines_bind [EctxItem.appL .unit] [EctxItem.appL .unit] $$ (IH $$ %vs Hvs)
   iintro %v %v' Hv
@@ -213,8 +213,8 @@ theorem bin_log_related_tapp (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {e e' : Exp 
   ihave HvArr := lrel_arr_unfold_wand lrel_unit (interp L τ (TyEnv.cons (interp L τ' Δ) Δ)) v v'
     $$ (Hv $$ %(interp L τ' Δ))
   rw [interp_subst τ' τ Δ,
-    show Ectx.fill [EctxItem.appL .unit] v.1 = app v.1 pl(#(.unit)) from rfl,
-    show Ectx.fill [EctxItem.appL .unit] v'.1 = app v'.1 pl(#(.unit)) from rfl]
+    show Ectx.fill [EctxItem.appL .unit] v.1 = app v.1 pl(#()) from rfl,
+    show Ectx.fill [EctxItem.appL .unit] v'.1 = app v'.1 pl(#()) from rfl]
   iapply HvArr $$ %(.unit : Val rT) %(.unit : Val rT)
   iapply lrel_unit_lit
 

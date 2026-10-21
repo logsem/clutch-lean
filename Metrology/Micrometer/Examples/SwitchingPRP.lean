@@ -71,7 +71,7 @@ theorem wp_randomFunction {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} : ip
     (∀ f, isRandomFunction N f [] -∗ Φ f) ⊢
     WP[codensity tv] (randomFunction N) @ E {{ Φ }} := by
   iintro HΦ
-  wp_bind (pl% &initMap #.unit)
+  wp_bind (pl% &initMap #())
   iapply wp_initMap
   iintro %ℓ Hl
   wp_pures
@@ -92,7 +92,7 @@ theorem wp_randomPermutation {E : CoPset} (N : Int) {Φ : Val rT → IProp GF} :
   wp_alloc_at (intListVal ((List.range N.toNat).map Int.ofNat))
   iintro %ℓfv Hfv
   wp_pures
-  wp_bind (pl% alloc(inl(#.unit)))
+  wp_bind (pl% alloc(inl(#())))
   wp_alloc_at (assocVal [])
   iintro %ℓm Hm
   wp_pures
@@ -111,7 +111,7 @@ theorem wp_randomFunction_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
     (∀ f, ⤇ K.fill (Exp.ofVal f) -∗ isSRandomFunction N f [] -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hcnt⟩
-  tp_bind (pl% &initMap #.unit)
+  tp_bind (pl% &initMap #())
   iapply wp_initMap_r
   iframe Hj
   iintro %ℓ Hj Hl
@@ -153,10 +153,10 @@ theorem wp_randomPermutation_r {E : CoPset} (K : Ectx rT) (N : Int) {e : Exp rT}
 theorem wp_rfQuery_prev {E : CoPset} (N : Int) (ℓ : Loc) (m : List (Int × Int))
     (n y : Int) (hlk : alookup n m = some y) {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗ ((ℓ ↦ (assocVal m : Val rT)) -∗ Φ (.int y)) ⊢
-    WP[codensity tv] (pl% {rfQuery N ℓ} #(.int n)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {rfQuery N ℓ} #int n) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pure 1
-  wp_bind (pl% &getMap #(.loc ℓ) #(.int n))
+  wp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap
   iframe Hl
   iintro Hl
@@ -169,12 +169,12 @@ theorem wp_rfQuery_prev {E : CoPset} (N : Int) (ℓ : Loc) (m : List (Int × Int
 theorem wp_rfQuery_prev_r {E : CoPset} (K : Ectx rT) (N : Int) (ℓ : Loc)
     (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {rfQuery N ℓ} #(.int n)) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#(.int y)) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
+    ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
+    (⤇ K.fill pl(#int y) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pure
-  tp_bind (pl% &getMap #(.loc ℓ) #(.int n))
+  tp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap_r
   iframe Hj Hl
   simp only [hlk, optIntVal, Option.map]
@@ -187,10 +187,10 @@ theorem wp_prpQuery_prev {E : CoPset} (ℓm ℓfv : Loc) (m : List (Int × Int))
     (n y : Int) (hlk : alookup n m = some y) {Φ : Val rT → IProp GF} : iprop%
     (ℓm ↦ (assocVal m : Val rT)) ∗
     ((ℓm ↦ (assocVal m : Val rT)) -∗ Φ (.int y)) ⊢
-    WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #(.int n)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #int n) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pure 1
-  wp_bind (pl% &getMap #(.loc ℓm) #(.int n))
+  wp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap
   iframe Hl
   iintro Hl
@@ -203,12 +203,12 @@ theorem wp_prpQuery_prev {E : CoPset} (ℓm ℓfv : Loc) (m : List (Int × Int))
 theorem wp_prpQuery_prev_r {E : CoPset} (K : Ectx rT) (ℓm ℓfv : Loc)
     (m : List (Int × Int)) (n y : Int) (hlk : alookup n m = some y)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #(.int n)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#(.int y)) -∗ (ℓm ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
+    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
+    (⤇ K.fill pl(#int y) -∗ (ℓm ↦ₛ (assocVal m : Val rT)) -∗ WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pure
-  tp_bind (pl% &getMap #(.loc ℓm) #(.int n))
+  tp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap_r
   iframe Hj Hl
   simp only [hlk, optIntVal, Option.map]
@@ -301,20 +301,20 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
     (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
     (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #(.int n)) ∗ ↯b ε ∗
+    ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ ↯b ε ∗
     (ℓ ↦ (assocVal m : Val rT)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
     (ℓfv ↦ₛ (intListVal r : Val rT)) ∗
-    (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#(.int y)) -∗
+    (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#int y) -∗
       (ℓ ↦ (assocVal ((n, y) :: m) : Val rT)) -∗
       (ℓm ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗
       (ℓfv ↦ₛ (intListVal (r.erase y) : Val rT)) -∗ Φ (.int y)) ⊢
-    WP[codensity tv] (pl% {rfQuery N ℓ} #(.int n)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {rfQuery N ℓ} #int n) @ E {{ Φ }} := by
   obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
     prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε
   iintro ⟨Hj, Herr, Hl, Hm, Hfv, Hcnt⟩
   -- program side: fresh lookup
   wp_pure 1
-  wp_bind (pl% &getMap #(.loc ℓ) #(.int n))
+  wp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap
   iframe Hl
   iintro Hl
@@ -322,19 +322,19 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   wp_pures
   -- spec side: fresh lookup and fresh-list length
   tp_pure
-  tp_bind (pl% &getMap #(.loc ℓm) #(.int n))
+  tp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap_r
   iframe Hj Hm
   simp only [hfresh, optIntVal, Option.map]
   iintro Hj Hm
   tp_pures
-  tp_bind (pl% !#(.loc ℓfv))
+  tp_bind (pl% !#loc ℓfv)
   imod step_load $$ [$Hj $Hfv] with ⟨Hj, Hfv⟩
   tp_bind (pl% &listLength {Exp.ofVal (intListVal r)})
   imod (step_pure_steps_at _ rfl rfl (listLength_steps r)) $$ Hj with Hj
   tp_pures
-  wp_bind (pl% rand(#(.int N), #.unit))
-  tp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
+  wp_bind (pl% rand(#N, #()))
+  tp_bind (pl% rand(#int (r.length : Int), #()))
   iapply wp_couple_rand_rand_rev_inj_tv N (r.length : Int) (fun i => r.getD i.toNat 0) ε
     hdom hinj hrlen hRle hεle
   iframe Hj Herr
@@ -344,22 +344,22 @@ theorem wp_rfQuery_prpQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   rw [show r.getD (j : Int).toNat 0 = r[j] by simp [hjN]]
   -- spec side: pop the sampled index and memoise it
   tp_pures
-  tp_bind (pl% !#(.loc ℓfv))
+  tp_bind (pl% !#loc ℓfv)
   imod step_load $$ [$Hj $Hfv] with ⟨Hj, Hfv⟩
-  tp_bind (pl% &listRemoveNth {Exp.ofVal (intListVal r)} #(.int j))
+  tp_bind (pl% &listRemoveNth {Exp.ofVal (intListVal r)} #int j)
   imod (step_pure_steps_at _ rfl rfl (listRemoveNth_steps r j hjN)) $$ Hj with Hj
   tp_pures
-  tp_bind (pl% !#(.loc ℓm))
+  tp_bind (pl% !#loc ℓm)
   imod step_load $$ [$Hj $Hm] with ⟨Hj, Hm⟩
-  tp_bind (Exp.store pl(#(.loc ℓm)) (Exp.ofVal (assocVal ((n, r[j]) :: m))))
+  tp_bind (Exp.store pl(#loc ℓm) (Exp.ofVal (assocVal ((n, r[j]) :: m))))
   imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $Hm] with ⟨Hj, Hm⟩
   tp_pures
-  tp_bind (Exp.store pl(#(.loc ℓfv)) (Exp.ofVal (intListVal (r.eraseIdx j))))
+  tp_bind (Exp.store pl(#loc ℓfv) (Exp.ofVal (intListVal (r.eraseIdx j))))
   imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $Hfv] with ⟨Hj, Hfv⟩
   tp_pures
   -- program side: memoise and return
   wp_pure 1
-  wp_bind (pl% &setMap #(.loc ℓ) #(.int n) #(.int r[j]))
+  wp_bind (pl% &setMap #loc ℓ #int n #int r[j])
   iapply wp_setMap
   iframe Hl
   iintro Hl
@@ -377,26 +377,26 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
     (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N) (hnodup : (m.map Prod.fst).Nodup)
     (hε : (m.length : ENNReal) / (N.toNat : ENNReal) ≤ ε)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {rfQuery N ℓ} #(.int n)) ∗ ↯b ε ∗
+    ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ ↯b ε ∗
     (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT)) ∗
     (ℓ ↦ₛ (assocVal m : Val rT)) ∗
-    (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#(.int y)) -∗
+    (∀ y, ⌜y ∈ r⌝ -∗ ⤇ K.fill pl(#int y) -∗
       (ℓm ↦ (assocVal ((n, y) :: m) : Val rT)) -∗
       (ℓfv ↦ (intListVal (r.erase y) : Val rT)) -∗
       (ℓ ↦ₛ (assocVal ((n, y) :: m) : Val rT)) -∗ Φ (.int y)) ⊢
-    WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #(.int n)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% {prpQuery ℓm ℓfv} #int n) @ E {{ Φ }} := by
   obtain ⟨hrlen, hRle, hdom, hinj, hεle⟩ :=
     prpPerm_coupling_conds hn hfresh hperm hkeys hnodup hε
   iintro ⟨Hj, Herr, Hm, Hfv, Hl, Hcnt⟩
   -- program side: fresh lookup and fresh-list length
   wp_pure 1
-  wp_bind (pl% &getMap #(.loc ℓm) #(.int n))
+  wp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap
   iframe Hm
   iintro Hm
   simp only [hfresh, optIntVal, Option.map]
   wp_pures
-  wp_bind (pl% !#(.loc ℓfv))
+  wp_bind (pl% !#loc ℓfv)
   iapply wp_load
   iframe Hfv
   iintro Hfv
@@ -406,14 +406,14 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   wp_pures
   -- spec side: fresh lookup
   tp_pure
-  tp_bind (pl% &getMap #(.loc ℓ) #(.int n))
+  tp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap_r
   iframe Hj Hl
   simp only [hfresh, optIntVal, Option.map]
   iintro Hj Hl
   tp_pures
-  wp_bind (pl% rand(#(.int (r.length : Int)), #.unit))
-  tp_bind (pl% rand(#(.int N), #.unit))
+  wp_bind (pl% rand(#int (r.length : Int), #()))
+  tp_bind (pl% rand(#N, #()))
   iapply wp_couple_rand_rand_inj_tv (r.length : Int) N (fun i => r.getD i.toNat 0) ε
     hdom hinj hrlen hRle hεle
   iframe Hj Herr
@@ -423,27 +423,27 @@ theorem wp_prpQuery_rfQuery_fresh {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm
   rw [show r.getD (j : Int).toNat 0 = r[j] by simp [hjN]]
   -- spec side: memoise
   tp_pures
-  tp_bind (pl% !#(.loc ℓ))
+  tp_bind (pl% !#loc ℓ)
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
-  tp_bind (Exp.store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((n, r[j]) :: m))))
+  tp_bind (Exp.store pl(#loc ℓ) (Exp.ofVal (assocVal ((n, r[j]) :: m))))
   imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   tp_pures
   -- program side: pop the sampled index and memoise it
   wp_pures
-  wp_bind (pl% !#(.loc ℓfv))
+  wp_bind (pl% !#loc ℓfv)
   iapply wp_load
   iframe Hfv
   iintro Hfv
-  wp_bind (pl% &listRemoveNth {Exp.ofVal (intListVal r)} #(.int j))
+  wp_bind (pl% &listRemoveNth {Exp.ofVal (intListVal r)} #int j)
   wp_steps (listRemoveNth_steps r j hjN)
   wp_value
   wp_pure 3
-  wp_bind (pl% &setMap #(.loc ℓm) #(.int n) #(.int r[j]))
+  wp_bind (pl% &setMap #loc ℓm #int n #int r[j])
   iapply wp_setMap
   iframe Hm
   iintro Hm
   wp_pures
-  wp_bind (Exp.store pl(#(.loc ℓfv)) (Exp.ofVal (intListVal (r.eraseIdx j))))
+  wp_bind (Exp.store pl(#loc ℓfv) (Exp.ofVal (intListVal (r.eraseIdx j))))
   iapply wp_store
   iframe Hfv
   iintro Hfv

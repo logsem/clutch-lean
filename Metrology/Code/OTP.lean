@@ -16,11 +16,11 @@ variable {rT : Type _}
 
 /-- One-time pad: draw a uniform key `k` below `N` and return `(m + k) mod N`. -/
 def otp_enc (m N : Int) : Exp rT :=
-  pl% let k := rand(#(.int N), #(.unit)); (#(.int m) + k) % #(.int N)
+  pl% let k := rand(#N, #()); (#m + k) % #N
 
 /-- The ideal sampler: draw uniformly from `{0, …, N-1}`. -/
 def otp_ideal (N : Int) : Exp rT :=
-  pl% rand(#(.int N), #(.unit))
+  pl% rand(#N, #())
 
 end OTP
 end ProbLang

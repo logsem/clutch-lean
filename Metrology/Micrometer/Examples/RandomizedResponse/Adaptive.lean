@@ -57,23 +57,23 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
 cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/
 theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
-    (BindLaw.escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
-      ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+    (BindLaw.escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+      ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K adaptiveCost) (ENNReal.ofReal (Real.log (19 / 12))) := by
   classical
   have hK (a b : Exp rT) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
   -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
   -- at draw `2`, right reports `true` at draws `0, 1`)
-  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#(.int 2)), σ⟩) :=
+  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) :=
     measurable_to_bool <| by
-      convert measurableSet_singleton (⟨pl(#(.int 2)), σ⟩ : Cfg rT)
+      convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
       ext
       simp
   have hg : Measurable fun (ρ : Cfg rT) ↦
-      decide (ρ = ⟨K.fill pl(#(.int 0)), σ'⟩ ∨ ρ = ⟨K.fill pl(#(.int 1)), σ'⟩) :=
+      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) :=
     measurable_to_bool <| by
-      convert (measurableSet_singleton (⟨K.fill pl(#(.int 1)), σ'⟩ : Cfg rT)).insert
-        (⟨K.fill pl(#(.int 0)), σ'⟩ : Cfg rT)
+      convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
+        (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
       ext
       simp
   have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Set.Ico 0 3)ᶜ = 0 := by

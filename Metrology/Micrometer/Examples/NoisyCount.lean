@@ -36,9 +36,9 @@ def LaplaceSpec {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrdere
     [BudgetCreditGS B GF] (L : GradedLifting.{0} B) (lap : Val ℝ) (b : ℝ≥0) : Prop :=
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
     IsAddLeftRegular c → L.Rel c S (laplace a b) (laplace a' b) →
-    (⤇ K.fill pl({Exp.ofVal lap} #(.real a')) ∗ ↯b c ∗
-      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#(.real y)) -∗ Φ (.real x)) ⊢
-      wp L E pl({Exp.ofVal lap} #(.real a)) Φ)
+    (⤇ K.fill pl({Exp.ofVal lap} #a') ∗ ↯b c ∗
+      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#y) -∗ Φ (.real x)) ⊢
+      wp L E pl({Exp.ofVal lap} #a) Φ)
 
 /-- Databases that differ in at most one entry. -/
 def Adjacent (db db' : Fin n → Bool) : Prop :=

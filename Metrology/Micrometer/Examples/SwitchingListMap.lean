@@ -50,7 +50,7 @@ omit [MeasurableSingletonClass rT]
 
 /-- `findList` computes association-list lookup. -/
 theorem findList_steps (m : List (Int × Int)) (k : Int) :
-    PureSteps (pl% &findList {Exp.ofVal (assocVal m)} #(.int k))
+    PureSteps (pl% &findList {Exp.ofVal (assocVal m)} #k)
       (Exp.ofVal (optIntVal (alookup k m) : Val rT)) := by
   induction m with
   | nil =>
@@ -87,7 +87,7 @@ theorem listLength_steps (l : List Int) :
 
 /-- `listRemoveNth` removes the `i`-th element, returning `SOME (lᵢ, l \ i)`. -/
 theorem listRemoveNth_steps (l : List Int) (i : Nat) (hlen : i < l.length) :
-    PureSteps (pl% &listRemoveNth {Exp.ofVal (intListVal l)} #(.int i))
+    PureSteps (pl% &listRemoveNth {Exp.ofVal (intListVal l)} #int i)
       (Exp.ofVal (Val.inr (Val.pair (Val.int l[i]) (intListVal (l.eraseIdx i))) : Val rT)) := by
   induction l generalizing i with
   | nil => simp at hlen
@@ -117,7 +117,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetC
 /-- `initMap ()` allocates a location holding the empty map. -/
 theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
     (∀ ℓ : Loc, (ℓ ↦ (assocVal [] : Val rT)) -∗ Φ (.loc ℓ)) ⊢
-    WP[codensity tv] (pl% &initMap #.unit) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% &initMap #()) @ E {{ Φ }} := by
   iintro HΦ
   wp_pures
   -- restate the literal as `Exp.ofVal` of the map value so `wp_alloc` applies
@@ -128,8 +128,8 @@ theorem wp_initMap {E : CoPset} {Φ : Val rT → IProp GF} : iprop%
 
 /-- Spec-side `wp_initMap`. -/
 theorem wp_initMap_r {E : CoPset} (K : Ectx rT) {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% &initMap #.unit) ∗
-    (∀ ℓ : Loc, ⤇ K.fill pl(#(.loc ℓ)) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗
+    ⤇ K.fill (pl% &initMap #()) ∗
+    (∀ ℓ : Loc, ⤇ K.fill pl(#loc ℓ) -∗ (ℓ ↦ₛ (assocVal [] : Val rT)) -∗
       WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hcnt⟩
@@ -145,10 +145,10 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal m : Val rT)) -∗ Φ (optIntVal (alookup k m))) ⊢
-    WP[codensity tv] (pl% &getMap #(.loc ℓ) #(.int k)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% &getMap #loc ℓ #k) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
-  wp_bind (pl% !#(.loc ℓ))
+  wp_bind (pl% !#loc ℓ)
   iapply wp_load
   iframe Hl
   iintro Hl
@@ -159,15 +159,15 @@ theorem wp_getMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k : Int)
 /-- Spec-side `wp_getMap`. -/
 theorem wp_getMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% &getMap #(.loc ℓ) #(.int k)) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
+    ⤇ K.fill (pl% &getMap #loc ℓ #k) ∗ (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (⤇ K.fill (Exp.ofVal (optIntVal (alookup k m))) -∗ (ℓ ↦ₛ (assocVal m : Val rT)) -∗
       WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
-  tp_bind (pl% !#(.loc ℓ))
+  tp_bind (pl% !#loc ℓ)
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
-  tp_bind (pl% &findList {Exp.ofVal (assocVal m)} #(.int k))
+  tp_bind (pl% &findList {Exp.ofVal (assocVal m)} #k)
   imod (step_pure_steps_at _ rfl rfl (findList_steps m k)) $$ Hj with Hj
   iapply Hcnt $$ Hj Hl
 
@@ -176,17 +176,17 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {Φ : Val rT → IProp GF} : iprop%
     (ℓ ↦ (assocVal m : Val rT)) ∗
     ((ℓ ↦ (assocVal ((k, y) :: m) : Val rT)) -∗ Φ .unit) ⊢
-    WP[codensity tv] (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) @ E {{ Φ }} := by
+    WP[codensity tv] (pl% &setMap #loc ℓ #k #y) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
-  wp_bind (pl% !#(.loc ℓ))
+  wp_bind (pl% !#loc ℓ)
   iapply wp_load
   iframe Hl
   iintro Hl
   -- restate the stored literal as `Exp.ofVal` of the map value so `wp_store` applies
-  rw [show (Exp.store pl(#(.loc ℓ))
-      (.inr (.pair (.pair pl(#(.int k)) pl(#(.int y))) (Exp.ofVal (assocVal m)))) : Exp rT) =
-    .store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((k, y) :: m))) from rfl]
+  rw [show (Exp.store pl(#loc ℓ)
+      (.inr (.pair (.pair pl(#k) pl(#y)) (Exp.ofVal (assocVal m)))) : Exp rT) =
+    .store pl(#loc ℓ) (Exp.ofVal (assocVal ((k, y) :: m))) from rfl]
   iapply wp_store
   iframe Hl
   iexact HΦ
@@ -194,16 +194,16 @@ theorem wp_setMap {E : CoPset} (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
 /-- Spec-side `wp_setMap`. -/
 theorem wp_setMap_r {E : CoPset} (K : Ectx rT) (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
     {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% &setMap #(.loc ℓ) #(.int k) #(.int y)) ∗
+    ⤇ K.fill (pl% &setMap #loc ℓ #k #y) ∗
       (ℓ ↦ₛ (assocVal m : Val rT)) ∗
-    (⤇ K.fill pl(#(.unit)) -∗ (ℓ ↦ₛ (assocVal ((k, y) :: m) : Val rT)) -∗
+    (⤇ K.fill pl(#()) -∗ (ℓ ↦ₛ (assocVal ((k, y) :: m) : Val rT)) -∗
       WP[codensity tv] e @ E {{ Φ }}) ⊢
     WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
-  tp_bind (pl% !#(.loc ℓ))
+  tp_bind (pl% !#loc ℓ)
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
-  tp_bind (Exp.store pl(#(.loc ℓ)) (Exp.ofVal (assocVal ((k, y) :: m))))
+  tp_bind (Exp.store pl(#loc ℓ) (Exp.ofVal (assocVal ((k, y) :: m))))
   imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   iapply Hcnt $$ Hj Hl
 

@@ -133,7 +133,7 @@ theorem refines_steps_r {E : CoPset} {K' : Ectx rT} {e1 e2 e2' : Exp rT}
 
 /-- Right-side `alloc`: continue with the fresh spec location. -/
 theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#(.loc l))) A) ⊢
+    iprop% (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#loc l)) A) ⊢
     refines L E t (K.fill (.alloc v.1)) A := by
   iintro Hlog
   iapply refines_step_r
@@ -150,7 +150,7 @@ theorem refines_alloc_r {E : CoPset} {K : Ectx rT} {v : Val rT} {t : Exp rT} {A 
 theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Exp rT}
     {A : lrel rT GF} : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v -∗ refines L E t (K.fill v.1) A) ⊢
-    refines L E t (K.fill pl(!#(.loc l))) A := by
+    refines L E t (K.fill pl(!#loc l)) A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_step_r
   iintro %K' Hj
@@ -166,8 +166,8 @@ theorem refines_load_r {E : CoPset} {K : Ectx rT} {l : Loc} {v : Val rT} {t : Ex
 /-- Right-side store to a spec location. -/
 theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e : Exp rT}
     {A : lrel rT GF} : iprop%
-    l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#(.unit))) A) ⊢
-    refines L E e (K.fill (.store pl(#(.loc l)) v'.1)) A := by
+    l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#())) A) ⊢
+    refines L E e (K.fill (.store pl(#loc l) v'.1)) A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_step_r
   iintro %K' Hj
@@ -183,8 +183,8 @@ theorem refines_store_r {E : CoPset} {K : Ectx rT} {l : Loc} {v v' : Val rT} {e 
 theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : List Int}
     {e : Exp rT} {A : lrel rT GF} : iprop%
     specNatTape l z (n :: ns) ∗
-    (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
-    refines L E e (K.fill pl(rand(#(.int z), #(.lbl l)))) A := by
+    (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
+    refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
   unfold refines
   iintro ⟨Hα, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj
@@ -196,8 +196,8 @@ theorem refines_randT_r {E : CoPset} {K : Ectx rT} {l : Loc} {z n : Int} {ns : L
 
 /-- Right-side tape allocation: continue with a fresh empty spec tape. -/
 theorem refines_alloctape_r {E : CoPset} {K : Ectx rT} {z : Int} {e : Exp rT} {A : lrel rT GF} :
-    iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#(.lbl l))) A) ⊢
-    refines L E e (K.fill pl(tape(#(.int z)))) A := by
+    iprop% (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#lbl l)) A) ⊢
+    refines L E e (K.fill pl(tape(#z))) A := by
   unfold refines
   iintro Hlog %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj

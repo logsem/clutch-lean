@@ -17,11 +17,11 @@ variable {rT : Type _}
 /-- Flip a fair coin until it shows `0`, then return `0`. -/
 @[pl_fold]
 def retryLoop : Exp rT :=
-  pl% rec loop u := if rand(#2, #.unit) = #0 then #0 else loop u
+  pl% rec loop u := if rand(#2, #()) = #0 then #0 else loop u
 
 /-- The loop applied to `unit`: returns `0` with probability 1. -/
 def retry : Exp rT :=
-  pl% &retryLoop #.unit
+  pl% &retryLoop #()
 
 end Retry
 end ProbLang

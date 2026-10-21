@@ -23,14 +23,14 @@ theorem twp_choice {GF : BundledGFunctors} [ErisGS ℝ .hasNoLC GF] (b : Bool) :
   simp only [choice, RandomizedResponse.rr]
   cases b
   all_goals
-    twp_bind pl(rand(#2, #.unit))
+    twp_bind pl(rand(#2, #()))
     iapply twp_rand (by norm_num)
     iintro %n %hn
     twp_pures
     obtain rfl | rfl : n = 0 ∨ n = 1 := by omega
     · simp only [beq_self_eq_true]
       twp_pures
-      twp_bind pl(rand(#4, #.unit))
+      twp_bind pl(rand(#4, #()))
       iapply twp_rand (by norm_num)
       iintro %m %hm
       twp_pures

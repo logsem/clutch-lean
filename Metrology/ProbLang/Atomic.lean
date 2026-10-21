@@ -31,7 +31,7 @@ def Discrete.Atomic (e : Exp rT) : Prop :=
 
 omit [LawfulProbLangℝ rT] in
 private theorem store_decompItem (l : Loc) (v : Val rT) :
-    (Exp.store pl(#(.loc l)) v.1).decompItem = none := by
+    (Exp.store pl(#loc l) v.1).decompItem = none := by
   have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
@@ -67,7 +67,7 @@ private theorem of_headStepSupport {e : Exp rT} (hd : e.decompItem = none)
 /-! ## `Discrete.Atomic` for heap and sampling redexes -/
 
 @[discrete]
-theorem load (l : Loc) : Discrete.Atomic (rT := rT) pl(!#(.loc l)) :=
+theorem load (l : Loc) : Discrete.Atomic (rT := rT) pl(!#loc l) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
     | LoadS _ he' =>
@@ -77,7 +77,7 @@ theorem load (l : Loc) : Discrete.Atomic (rT := rT) pl(!#(.loc l)) :=
 
 @[discrete]
 theorem store (l : Loc) (v : Val rT) :
-    Discrete.Atomic (.store pl(#(.loc l)) v.1) :=
+    Discrete.Atomic (.store pl(#loc l) v.1) :=
   of_headStepSupport (store_decompItem l v) fun _ _ _ h => by
     cases h with
     | StoreS _ _ _ => exact IsVal.lit.toIsValue
@@ -90,7 +90,7 @@ theorem alloc (v : Val rT) : Discrete.Atomic (.alloc v.1) :=
 
 /-- `rand` on the empty tape (`#()`) is atomic. -/
 @[discrete]
-theorem rand_unit (z : Int) : Discrete.Atomic (rT := rT) pl(rand(#(.int z), #(.unit))) :=
+theorem rand_unit (z : Int) : Discrete.Atomic (rT := rT) pl(rand(#z, #())) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
     | RandNoTapeS _ _ _ => exact IsVal.lit.toIsValue
@@ -98,7 +98,7 @@ theorem rand_unit (z : Int) : Discrete.Atomic (rT := rT) pl(rand(#(.int z), #(.u
 
 @[discrete]
 theorem rand_lbl (z : Int) (l : Loc) :
-    Discrete.Atomic (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
+    Discrete.Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h <;> exact IsVal.lit.toIsValue
 
@@ -114,10 +114,10 @@ section
 -- these lemmas go through the discrete forms but state the non-discrete `Atomic`
 set_option linter.discrete false
 
-theorem load (l : Loc) : Atomic (rT := rT) pl(!#(.loc l)) :=
+theorem load (l : Loc) : Atomic (rT := rT) pl(!#loc l) :=
   (Discrete.Atomic.load l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
-theorem store (l : Loc) (v : Val rT) : Atomic (.store pl(#(.loc l)) v.1) :=
+theorem store (l : Loc) (v : Val rT) : Atomic (.store pl(#loc l) v.1) :=
   (Discrete.Atomic.store l v).toAtomic
     (by rw [Exp.decomp_snd_of_decompItem_none (store_decompItem l v)]; nofun)
 
@@ -125,11 +125,11 @@ theorem alloc (v : Val rT) : Atomic (.alloc v.1) :=
   (Discrete.Atomic.alloc v).toAtomic
     (by rw [Exp.decomp_snd_of_decompItem_none (alloc_decompItem v)]; nofun)
 
-theorem rand_unit (z : Int) : Atomic (rT := rT) pl(rand(#(.int z), #(.unit))) :=
+theorem rand_unit (z : Int) : Atomic (rT := rT) pl(rand(#z, #())) :=
   (Discrete.Atomic.rand_unit z).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
 theorem rand_lbl (z : Int) (l : Loc) :
-    Atomic (rT := rT) pl(rand(#(.int z), #(.lbl l))) :=
+    Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
   (Discrete.Atomic.rand_lbl z l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
 end

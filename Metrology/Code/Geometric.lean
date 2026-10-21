@@ -16,7 +16,7 @@ namespace Examples
 @[pl_names]
 def geometric {rT : Type _} : Exp rT :=
   pl% rec geo n :=
-        if rand(#2, #.unit) = #0
+        if rand(#2, #()) = #0
           then #0
           else (geo n) + #1
 

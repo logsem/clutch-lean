@@ -150,15 +150,15 @@ variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS B
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → IProp GF) :
     Φ (.bool (bif d then b else !b)) ⊢
-      wp L ⊤ pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) Φ := by
+      wp L ⊤ pl(if #bool d then #b else ~#b) Φ := by
   cases d <;> cases b <;>
     simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
     iintro H <;> wp_pures <;> wp_value <;> imodintro <;> iexact H
 
 /-- The spec reports `bif d then b else !b`, under any evaluation context. -/
 theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → IProp GF) :
-    ⤇ K.fill pl(if #(.bool d) then #(.bool b) else ~#(.bool b)) ∗
-      (⤇ K.fill pl(#(.bool (bif d then b else !b))) -∗ wp L ⊤ e Φ) ⊢ wp L ⊤ e Φ := by
+    ⤇ K.fill pl(if #bool d then #b else ~#b) ∗
+      (⤇ K.fill pl(#bool (bif d then b else !b)) -∗ wp L ⊤ e Φ) ⊢ wp L ⊤ e Φ := by
   cases d <;> cases b <;>
     simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
     iintro ⟨Hj, H⟩ <;> tp_pures <;> iapply H <;> iexact Hj
@@ -169,13 +169,13 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
     (hc : IsAddLeftRegular c)
     (hcpl : RRCoupling L c)
     (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
-    ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#(.bool d)) -∗ Φ (.bool d)) ⊢
+    ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#bool d) -∗ Φ (.bool d)) ⊢
       wp L ⊤ (rr b) Φ := by
   iintro ⟨Hj, Hb, H⟩
   -- unfold rr's let binder so wp_bind/tp_bind can focus the draw
   simp only [rr, Exp.close, Exp.closeRec, ↓reduceIte]
-  wp_bind (pl% rand(#4, #.unit))
-  tp_bind (pl% rand(#4, #.unit))
+  wp_bind (pl% rand(#4, #()))
+  tp_bind (pl% rand(#4, #()))
   iapply wp_couple_rand_rand_spend 4 (by norm_num) _ c hc (hcpl b b')
   iframe Hj Hb
   iintro %r %r' %hR Hj

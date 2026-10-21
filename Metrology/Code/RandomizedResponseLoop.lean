@@ -22,7 +22,7 @@ def rrLoop (b : Bool) : Exp rT := pl%
   rec loop n := if n = #0 then #0 else (if &(rr b) then #1 else #0) + loop (n - #1)
 
 /-- The loop `rrLoop b` run for `k` iterations: the count of `true` reports. -/
-def rrCount (b : Bool) (k : Int) : Exp rT := pl% &(rrLoop b) #(.int k)
+def rrCount (b : Bool) (k : Int) : Exp rT := pl% &(rrLoop b) #k
 
 end RandomizedResponse
 end ProbLang

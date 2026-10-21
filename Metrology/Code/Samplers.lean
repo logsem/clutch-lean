@@ -18,13 +18,13 @@ namespace Examples
 
 @[pl_fold]
 def GeometricTrial {rT : Type _} : Exp rT := pl%
-  rec geo trial N := if trial #.unit then geo trial (N + #1) else N
+  rec geo trial N := if trial #() then geo trial (N + #1) else N
 
 @[pl_fold]
 def IterTrial {rT : Type _} : Exp rT := pl%
   rec iter b k :=
     if k = #0 then #true
-    else if b #.unit then iter b (k - #1) else #false
+    else if b #() then iter b (k - #1) else #false
 
 /-! ## Continuous-uniform trials -/
 
@@ -36,7 +36,7 @@ def DecrTrial {rT : Type _} : Exp rT := pl%
 
 @[pl_fold]
 def LeHalf {rT : Type _} [ProbLangℝ rT] : Exp rT :=
-  pl% fun x, x <= #(.real (ProbLangℝ.realOfRat (1 / 2)))
+  pl% fun x, x <= #real (ProbLangℝ.realOfRat (1 / 2))
 
 @[pl_fold]
 def FairCoin {rT : Type _} [ProbLangℝ rT] : Exp rT := pl%
@@ -64,7 +64,7 @@ def NegExp {rT : Type _} : Exp rT := pl%
 
 @[pl_fold]
 def C {rT : Type _} : Exp rT := pl%
-  fun m, let v := rand(m + #2, #.unit); if v = #0 then #0 else if v = #1 then #1 else #2
+  fun m, let v := rand(m + #2, #()); if v = #0 then #0 else if v = #1 then #1 else #2
 
 @[pl_fold]
 def Bii {rT : Type _} : Exp rT := pl%
@@ -95,21 +95,21 @@ def B {rT : Type _} : Exp rT := pl%
 def G1 {rT : Type _} [ProbLangℝ rT] : Exp rT := pl%
   rec trial u :=
     let k := &GeometricTrial &BNEHalf #0;
-    if &IterTrial &BNEHalf (k * (k - #1)) then k else trial #.unit
+    if &IterTrial &BNEHalf (k * (k - #1)) then k else trial #()
 
 @[pl_fold]
 def G2 {rT : Type _} [ProbLangℝ rT] : Exp rT := pl%
   rec trial u :=
-    let k := &G1 #.unit;
+    let k := &G1 #();
     let x := urand;
-    if &IterTrial (fun _u, &B k x) (k + #1) then (x, k) else trial #.unit
+    if &IterTrial (fun _u, &B k x) (k + #1) then (x, k) else trial #()
 
 @[pl_fold]
 def Gauss {rT : Type _} [ProbLangℝ rT] : Exp rT := pl%
   fun _u,
-    let p := &G2 #.unit;
+    let p := &G2 #();
     let y := fst(p) + toReal(snd(p));
-    let b := &FairCoin #.unit;
+    let b := &FairCoin #();
     if b then -y else y
 
 end Examples

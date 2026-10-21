@@ -18,11 +18,11 @@ variable {rT : Type _}
 in `()`. The sampler `g` is passed as an argument rather than spliced in, so `releaseLoop a`
 contains no opaque `Val` and steps by computation. -/
 def releaseLoop (a : rT) : Exp rT :=
-  pl% rec loop g n := if n = #0 then #.unit else (g #(.real a), loop g (n - #1))
+  pl% rec loop g n := if n = #0 then #() else (g #a, loop g (n - #1))
 
 /-- Release `k` draws of the sampler `g` at the input `a`. -/
 def release (g : Val rT) (a : rT) (k : ℕ) : Exp rT :=
-  pl% &(releaseLoop a) {Exp.ofVal g} #(.int k)
+  pl% &(releaseLoop a) {Exp.ofVal g} #int k
 
 end GaussianRelease
 end ProbLang

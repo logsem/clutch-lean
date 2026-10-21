@@ -149,7 +149,7 @@ end conservation
 section specification
 
 theorem twp_LeHalf (E : CoPset) (r : ℝ) :
-    ⊢ tglWp E pl(&LeHalf #(.real r))
+    ⊢ tglWp E pl(&LeHalf #real r)
       (fun v : Val ℝ => iprop(⌜v.1 = .lit (.bool (LeHalfSpec r))⌝)) := by
   twp_pures
   twp_value
@@ -161,7 +161,7 @@ theorem twp_LeHalf (E : CoPset) (r : ℝ) :
 
 theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
     ⊢ ↯ (BNEHalfCreditV F) -∗
-      tglWp E pl(&BNEHalf #.unit)
+      tglWp E pl(&BNEHalf #())
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
   twp_pure
@@ -171,7 +171,7 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
   iintro %r ⟨%Hrm, Hcr⟩
   have Hr := mem_unifUnitSupport_real_le Hrm
   twp_pure
-  twp_bind pl(&LeHalf #(.real r))
+  twp_bind pl(&LeHalf #real r)
   iapply tglWp_wand
   isplitl []
   · iapply twp_LeHalf
@@ -191,7 +191,7 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
   · have hle : r ≤ 1 / 2 := of_decide_eq_true hbdef
     isimp only [BNEHalfCredit, ite_eq_left hle, ite_eq_right (not_not_intro hle), add_zero] at Hcr
     twp_pure
-    twp_bind pl(&DecrTrial #(.int (0 : ℤ)) #(.real r))
+    twp_bind pl(&DecrTrial #int (0 : ℤ) #real r)
     iapply tglWp_wand
     isplitl [Hcr]
     · iapply (twp_DecrTrial E (LiftParity F) 0 r Hr) $$ Hcr
@@ -267,7 +267,7 @@ theorem FairCoin_fv : (FairCoin : Exp ℝ).fv = ∅ := by
 
 theorem twp_FairCoin (E : CoPset) (F : Bool → ℝ≥0∞) :
     ⊢ ↯ (FairCoinCreditV F) -∗
-      tglWp E pl(&FairCoin #.unit)
+      tglWp E pl(&FairCoin #())
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
   twp_pure
@@ -276,7 +276,7 @@ theorem twp_FairCoin (E : CoPset) (F : Bool → ℝ≥0∞) :
   case hint => rw [FairCoinCredit_lintegral]
   iintro %r ⟨%Hrm, Hcr⟩
   twp_pure
-  twp_bind pl(&LeHalf #(.real r))
+  twp_bind pl(&LeHalf #real r)
   iapply tglWp_wand
   isplitl []
   · iapply twp_LeHalf

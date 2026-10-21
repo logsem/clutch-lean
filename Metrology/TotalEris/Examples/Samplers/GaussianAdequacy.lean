@@ -21,7 +21,7 @@ variable {GF : BundledGFunctors}
 
 open MeasureTheory ProbabilityTheory in
 theorem gauss_std_distSpec :
-    IsDistSpec' (GF := GF) realOfExp (pl(&Gauss #.unit)) (gaussianReal 0 1) := by
+    IsDistSpec' (GF := GF) realOfExp (pl(&Gauss #())) (gaussianReal 0 1) := by
   intro F hFm _ _
   iintro Hε
   iapply ErisWpGS.tglWp_wand
@@ -35,8 +35,8 @@ theorem gauss_std_distSpec :
 
 open MeasureTheory ProbabilityTheory in
 theorem gauss_std_distributed [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] (σ : State ℝ) :
-    (limExec ⟨pl(&Gauss #.unit), σ⟩).map (fun ρ => realOfExp ρ.expr) = gaussianReal 0 1 :=
-  twp_dist_adequacy (pl(&Gauss #.unit)) σ (gaussianReal 0 1)
+    (limExec ⟨pl(&Gauss #()), σ⟩).map (fun ρ => realOfExp ρ.expr) = gaussianReal 0 1 :=
+  twp_dist_adequacy (pl(&Gauss #())) σ (gaussianReal 0 1)
     (gauss_std_distSpec (GF := GF))
 
 end

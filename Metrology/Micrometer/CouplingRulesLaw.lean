@@ -27,17 +27,17 @@ configurations drawn as `n` and `m`, and `⊤` elsewhere (keyed by both draws, u
 `Cfg.advLeftover`). -/
 noncomputable def Cfg.drawCost [_root_.Top B] (σ σ' : State rT) (K : Ectx rT)
     (R : Int → Int → B) (ρ ρ' : Cfg rT) : B :=
-  if h : ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ then
+  if h : ∃ n m : Int, ρ = ⟨pl(#int n), σ⟩ ∧ ρ' = ⟨K.fill pl(#int m), σ'⟩ then
     R h.choose h.choose_spec.choose
   else ⊤
 
 /-- At the configurations drawn as `n` and `m`, `drawCost` is `R n m`. -/
 theorem Cfg.drawCost_apply [_root_.Top B] (σ σ' : State rT) (K : Ectx rT) (R : Int → Int → B)
     (n m : Int) :
-    Cfg.drawCost σ σ' K R ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int m)), σ'⟩ = R n m := by
+    Cfg.drawCost σ σ' K R ⟨pl(#n), σ⟩ ⟨K.fill pl(#m), σ'⟩ = R n m := by
   -- `choose` returns `n, m` back: integer literals and `K.fill` are injective
-  have key (h : ∃ n' m' : Int, (⟨pl(#(.int n)), σ⟩ : Cfg rT) = ⟨pl(#(.int n')), σ⟩ ∧
-      (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT) = ⟨K.fill pl(#(.int m')), σ'⟩) :
+  have key (h : ∃ n' m' : Int, (⟨pl(#int n), σ⟩ : Cfg rT) = ⟨pl(#int n'), σ⟩ ∧
+      (⟨K.fill pl(#m), σ'⟩ : Cfg rT) = ⟨K.fill pl(#m'), σ'⟩) :
       R h.choose h.choose_spec.choose = R n m := by
     obtain ⟨h1, h2⟩ := h.choose_spec.choose_spec
     have e1 := congrArg Cfg.expr h1
@@ -53,7 +53,7 @@ theorem Cfg.drawCost_apply [_root_.Top B] (σ σ' : State rT) (K : Ectx rT) (R :
 /-- A finite `drawCost` forces both configurations to be drawn ones. -/
 theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State rT} {K : Ectx rT}
     {R : Int → Int → B} {ρ ρ' : Cfg rT} (h : Cfg.drawCost σ σ' K R ρ ρ' < (⊤ : B)) :
-    ∃ n m : Int, ρ = ⟨pl(#(.int n)), σ⟩ ∧ ρ' = ⟨K.fill pl(#(.int m)), σ'⟩ := by
+    ∃ n m : Int, ρ = ⟨pl(#int n), σ⟩ ∧ ρ' = ⟨K.fill pl(#int m), σ'⟩ := by
   by_contra hne
   simp only [Cfg.drawCost, hne, dite_false, lt_self_iff_false] at h
 
@@ -74,13 +74,13 @@ variable [MicrometerGS rT hlc GF]
 leftover `R n m` to the draws `n` and `m` (Rocq `wp_couple_spend`). -/
 theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (N : Int)
     (HN : 0 < N) (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c) (K : Ectx rT)
-    (hhead : ∀ σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
-      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+    (hhead : ∀ σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K R) c)
     (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
-    ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯b c ∗
-    (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#(.int m)) -∗ Φ (.int n)) ⊢
-    wp L E pl(rand(#(.int N), #(.unit))) Φ := by
+    ⤇ K.fill pl(rand(#N, #())) ∗ ↯b c ∗
+    (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#int m) -∗ Φ (.int n)) ⊢
+    wp L E pl(rand(#N, #())) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -96,8 +96,8 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
     exact IsTopAbsorbing.absorbing_top.mono (hr ▸ not_lt_top_iff.1 hrTop ▸ le_add_self)
   iapply specCoupl_ret
   simp only [Exp.rand_toVal?_eq_none]
-  have hheadStep : law.head (primStep ⟨pl(rand(#(.int N), #(.unit))), σ₁⟩)
-      (primStep ⟨K.fill pl(rand(#(.int N), #(.unit))), σ₁'⟩) (Cfg.drawCost σ₁ σ₁' K R) c := by
+  have hheadStep : law.head (primStep ⟨pl(rand(#N, #())), σ₁⟩)
+      (primStep ⟨K.fill pl(rand(#N, #())), σ₁'⟩) (Cfg.drawCost σ₁ σ₁' K R) c := by
     rw [primStep_rand_unit HN, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
       Cfg.uniform_eq_map HN, Cfg.uniform_eq_map HN,
       MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
@@ -132,13 +132,13 @@ theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.Is
     {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B)
     (hc : IsAddLeftRegular c)
     (hhead : ∀ (K : Ectx rT) σ σ', law.head
-      ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
-      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+      ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K R) c) : iprop%
     ↯b c ∗ (∀ r r', ⌜R r r' < (⊤ : B)⌝ -∗ ↯b (R r r') -∗
-      refines L E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
-    refines L E (K.fill pl(rand(#(.int N), #(.unit))))
-      (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
+      refines L E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
+    refines L E (K.fill pl(rand(#N, #())))
+      (K'.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K2 K'] at Hj
@@ -147,7 +147,7 @@ theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.Is
   iframe Hj Hc
   iintro %r %r' %hR Hr HKres
   isimp only [← Ectx.fill_comp K2 K'] at HKres
-  rw [show Exp.ofVal (.int r : Val rT) = pl(#(.int r)) from rfl]
+  rw [show Exp.ofVal (.int r : Val rT) = pl(#r) from rfl]
   iapply Hcnt $$ %r %r' %hR Hr %K2 %b HKres Hna Herr Hpos
 
 /-- `rel_couple_UU_law law R c hc hhead` couples `rand N ~ rand N` by a step of `law`,
@@ -192,13 +192,13 @@ theorem dpChoice_head_draws (N : Int) (HN : 0 < N) (K : Ectx rT) (σ σ' : State
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T) :
-    BindLaw.dpChoice.head ((unifInt N HN).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
-      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+    BindLaw.dpChoice.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+      ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K (choiceCost S₁ S₂ P ε₂ ε₂' δ₂))
       (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) := by
   classical
-  let lft : Int → Cfg rT := fun n ↦ ⟨pl(#(.int n)), σ⟩
-  let rgt : Int → Cfg rT := fun m ↦ ⟨K.fill pl(#(.int m)), σ'⟩
+  let lft : Int → Cfg rT := fun n ↦ ⟨pl(#int n), σ⟩
+  let rgt : Int → Cfg rT := fun m ↦ ⟨K.fill pl(#int m), σ'⟩
   have hlft : Function.Injective lft := fun n n' h ↦ by simpa [lft] using h
   have hrgt : Function.Injective rgt := fun m m' h ↦ by
     simpa [rgt] using Ectx.fill_injective K ((Cfg.mk.injEq ..).mp h).1
@@ -237,10 +237,10 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} {GF : BundledGFunctors} [Micr
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → IProp GF) : iprop%
-    ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
+    ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
     (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
-      ⤇ K.fill pl(#(.int r')) -∗ Φ (.int r)) ⊢
-    wp (codensity dp) E pl(rand(#(.int N), #(.unit))) Φ := by
+      ⤇ K.fill pl(#r') -∗ Φ (.int r)) ⊢
+    wp (codensity dp) E pl(rand(#N, #())) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_couple_rand_rand_law BindLaw.dpChoice N HN _ _ hc K
     (fun σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)
@@ -262,9 +262,9 @@ theorem refines_couple_rands_dpChoice {GF : BundledGFunctors} [MicrometerRGS rT 
     iprop%
     ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
     (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
-      refines (codensity dp) E (K.fill pl(#(.int r))) (K'.fill pl(#(.int r'))) A) ⊢
-    refines (codensity dp) E (K.fill pl(rand(#(.int N), #(.unit))))
-      (K'.fill pl(rand(#(.int N), #(.unit)))) A := by
+      refines (codensity dp) E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
+    refines (codensity dp) E (K.fill pl(rand(#N, #())))
+      (K'.fill pl(rand(#N, #()))) A := by
   iintro ⟨Hc, Hcnt⟩
   iapply refines_couple_rands_law BindLaw.dpChoice N HN _ _ hc
     (fun K σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)

@@ -62,11 +62,11 @@ section specification
 
 theorem twp_Gauss (E : CoPset) (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
     ⊢ ↯ (GaussCreditV F) -∗
-      tglWp E pl(&Gauss #.unit)
+      tglWp E pl(&Gauss #())
         (fun v : Val ℝ => iprop(∃ y : ℝ, ⌜v.1 = .lit (.real y)⌝ ∗ ↯ (F y))) := by
   iintro Hε
   twp_pure
-  twp_bind pl(&G2 #.unit)
+  twp_bind pl(&G2 #())
   iapply (tglWp_wand)
   isplitl [Hε]
   · iapply (twp_G2 E (GaussCredit F) (measurable_gaussCredit hFm))
@@ -79,7 +79,7 @@ theorem twp_Gauss (E : CoPset) (F : ℝ → ℝ≥0∞) (hFm : Measurable F) :
   iterate 6 twp_pure
   isimp only [FairCoin_openRec, FairCoin_closeRec, ProbLang.realAdd_real,
     ProbLang.realOfInt_real, Int.cast_natCast]
-  twp_bind pl(&FairCoin #.unit)
+  twp_bind pl(&FairCoin #())
   iapply (tglWp_wand)
   isplitl [Hcr]
   · iapply (twp_FairCoin E (fun b => F (GaussSign (r + (k : ℝ)) b)))

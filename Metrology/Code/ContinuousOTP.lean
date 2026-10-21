@@ -17,7 +17,7 @@ variable {rT : Type _}
 
 /-- The encryption program: sample a uniform key `k` and output the fractional part of `m + k`. -/
 def otp_enc (m : rT) : Exp rT :=
-  pl% let k := urand; frac(#(.real m) + k)
+  pl% let k := urand; frac(#m + k)
 
 /-- The ideal sampler: draw uniformly from the unit interval. -/
 def otp_ideal : Exp rT := pl% urand

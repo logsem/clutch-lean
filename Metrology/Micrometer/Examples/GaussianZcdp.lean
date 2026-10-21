@@ -42,9 +42,9 @@ sampler with law `N(a, v)` in the lifting `L` (the shape of `wp_couple_rand_rand
 def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :=
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → IProp GF),
     IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →
-    (⤇ K.fill pl({Exp.ofVal gauss} #(.real a')) ∗ ↯b c ∗
-      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#(.real y)) -∗ Φ (.real x)) ⊢
-      wp L E pl({Exp.ofVal gauss} #(.real a)) Φ)
+    (⤇ K.fill pl({Exp.ofVal gauss} #a') ∗ ↯b c ∗
+      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#real y) -∗ Φ (.real x)) ⊢
+      wp L E pl({Exp.ofVal gauss} #a) Φ)
 
 end Spec
 
@@ -80,7 +80,7 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     wp_value
     imodintro
     iapply H
-    iapply specProgFrag_reshape (e₁ := K.fill pl(#.unit)) (e₂ := K.fill (Exp.ofVal .unit)) rfl
+    iapply specProgFrag_reshape (e₁ := K.fill pl(#())) (e₂ := K.fill (Exp.ofVal .unit)) rfl
       $$ Hj
   | succ k ih =>
     rw [budget_succ]
@@ -97,15 +97,15 @@ theorem wp_release_fill (hv : v ≠ 0) (hgauss : GaussSpec (GF := GF) zcdpLiftin
     iapply ih
     iframe Hj Hb₂
     iintro %w Hj
-    wp_bind pl({Exp.ofVal gauss} #(.real a))
-    tp_bind pl({Exp.ofVal gauss} #(.real a'))
+    wp_bind pl({Exp.ofVal gauss} #a)
+    tp_bind pl({Exp.ofVal gauss} #a')
     iapply hgauss a a' (· = ·) (0, cost v a a') _ _ _ (by simp)
       (GradedDivergence.zcdpLifting_rel_gaussianReal hv)
     iframe Hj Hb₁
     iintro %x %_ %rfl Hj
     wp_value_at (Val.pair (.real x) w)
     iapply H
-    iapply specProgFrag_reshape (e₁ := Ectx.fill ([.pairL w] ++ K) pl(#(.real x)))
+    iapply specProgFrag_reshape (e₁ := Ectx.fill ([.pairL w] ++ K) pl(#x))
       (e₂ := K.fill (Exp.ofVal (.pair (.real x) w))) rfl $$ Hj
 
 /-- `k` releases against the spec, spending `(0, (a - a')² / (2 v))` per release: both sides

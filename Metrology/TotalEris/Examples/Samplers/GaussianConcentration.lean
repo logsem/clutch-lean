@@ -242,7 +242,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS ℝ hlc GF]
 /-- Any bound on the tail mass is a price for a `t`-bounded sample. -/
 theorem twp_Gauss_tail_of_le (E : CoPset) {t : ℝ} {ε : ℝ≥0∞}
     (hb : (ProbabilityTheory.gaussianReal 0 1) {y : ℝ | t ≤ |y|} ≤ ε) :
-    [{ (↯ ε : IProp GF) }] pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] := by
+    [{ (↯ ε : IProp GF) }] pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] := by
   iintro %Φ Hε HΦ
   iapply (tglWp_wand (Φ := fun v : Val ℝ => iprop(∃ y : ℝ,
     ⌜v.1 = .lit (.real y)⌝ ∗ ↯ (stdTailErr t y))))
@@ -263,25 +263,25 @@ theorem twp_Gauss_tail_of_le (E : CoPset) {t : ℝ} {ε : ℝ≥0∞}
 /-- Markov: `↯(√(2/π)/t)` buys `|y| < t`. -/
 theorem twp_Gauss_tail_markov (E : CoPset) {t : ℝ} (ht : 0 < t) :
     [{ (↯ (ENNReal.ofReal (Real.sqrt (2 / Real.pi) / t)) : IProp GF) }]
-      pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
+      pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
   twp_Gauss_tail_of_le E (gaussianReal_abs_ge_le_markov ht)
 
 /-- Chebyshev: `↯(1/t²)` buys `|y| < t`. -/
 theorem twp_Gauss_tail (E : CoPset) {t : ℝ} (ht : 0 < t) :
     [{ (↯ (ENNReal.ofReal (1 / t ^ 2)) : IProp GF) }]
-      pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
+      pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
   twp_Gauss_tail_of_le E (gaussianReal_abs_ge_le ht)
 
 /-- Chernoff: `↯(exp(-t²/2))` buys `|y| < t`; sharpest of the four for `t ≤ 0.79`. -/
 theorem twp_Gauss_tail_chernoff (E : CoPset) {t : ℝ} (ht : 0 < t) :
     [{ (↯ (ENNReal.ofReal (Real.exp (-t ^ 2 / 2))) : IProp GF) }]
-      pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
+      pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
   twp_Gauss_tail_of_le E (gaussianReal_abs_ge_le_chernoff ht)
 
 /-- Mills: `↯(√(2/π)·exp(-t²/2)/t)` buys `|y| < t`; sharpest of the four for `t ≥ 0.8`. -/
 theorem twp_Gauss_tail_mills (E : CoPset) {t : ℝ} (ht : 0 < t) :
     [{ (↯ (ENNReal.ofReal (Real.sqrt (2 / Real.pi) * Real.exp (-t ^ 2 / 2) / t)) : IProp GF) }]
-      pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
+      pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }] :=
   twp_Gauss_tail_of_le E (gaussianReal_abs_ge_le_mills ht)
 
 end Credit
@@ -292,7 +292,7 @@ open MeasureTheory ProbabilityTheory
 variable {GF : BundledGFunctors}
 
 abbrev gaussStdTailProb (σ : State ℝ) (t : ℝ) : ℝ≥0∞ :=
-  limExec ⟨pl(&Gauss #.unit), σ⟩ ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
+  limExec ⟨pl(&Gauss #()), σ⟩ ((fun ρ : Cfg ℝ => realOfExp ρ.expr) ⁻¹' {y : ℝ | t ≤ |y|})
 
 theorem gauss_std_tail_prob_of_le [AppPreGS ℝ GF] [ECPreGS GF] [InvGpreS GF] {t : ℝ} {ε : ℝ≥0∞}
     (hb : (gaussianReal 0 1) {y : ℝ | t ≤ |y|} ≤ ε) (σ : State ℝ) :

@@ -44,12 +44,12 @@ def assocVal : List (Int × Int) → Val rT
 @[pl_fold] def listRemoveNth : Exp rT := pl%
   rec rem l i :=
     case! l
-    | inl(_u) => inl(#.unit)
+    | inl(_u) => inl(#())
     | inr(p) =>
       if i = #0 then inr((fst(p), snd(p)))
       else
         case! (rem (snd(p)) (i - #1))
-        | inl(_u) => inl(#.unit)
+        | inl(_u) => inl(#())
         | inr(q) => inr((fst(q), inr((fst(p), snd(q)))))
 
 /-! ## Association-list maps in a single cell -/
@@ -58,11 +58,11 @@ def assocVal : List (Int × Int) → Val rT
 @[pl_fold] def findList : Exp rT := pl%
   rec find l k :=
     case! l
-    | inl(_u) => inl(#.unit)
+    | inl(_u) => inl(#())
     | inr(p) => if fst(fst(p)) = k then inr(snd(fst(p))) else find (snd(p)) k
 
 /-- Allocate an empty map. -/
-def initMap : Exp rT := pl% fun _u, alloc(inl(#.unit))
+def initMap : Exp rT := pl% fun _u, alloc(inl(#()))
 
 /-- `SOME v` if `k ↦ v` is in the map, else `NONE`. -/
 @[pl_fold] def getMap : Exp rT := pl% fun m k, &findList (!m) k
@@ -75,16 +75,16 @@ def initMap : Exp rT := pl% fun _u, alloc(inl(#.unit))
 /-- After allocating its map at `ℓ`, `randomFunction N` steps to this closure. -/
 def rfQuery (N : Int) (ℓ : Loc) : Exp rT := pl%
   fun x,
-    case! (&getMap #(.loc ℓ) x)
-    | inl(_u) => (let y := rand(#(.int N), #.unit); &setMap #(.loc ℓ) x y; y)
+    case! (&getMap #loc ℓ x)
+    | inl(_u) => (let y := rand(#N, #()); &setMap #loc ℓ x y; y)
     | inr(y) => y
 
 /-- A lazily sampled random function into `{0, …, N-1}`. -/
 def randomFunction (N : Int) : Exp rT := pl%
-  let m := &initMap #.unit;
+  let m := &initMap #();
   fun x,
     case! (&getMap m x)
-    | inl(_u) => (let y := rand(#(.int N), #.unit); &setMap m x y; y)
+    | inl(_u) => (let y := rand(#N, #()); &setMap m x y; y)
     | inr(y) => y
 
 /-! ## The idealised random permutation -/
@@ -93,25 +93,25 @@ def randomFunction (N : Int) : Exp rT := pl%
 `randomPermutation N` steps to this closure. -/
 def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
   fun x,
-    case! (&getMap #(.loc ℓm) x)
+    case! (&getMap #loc ℓm x)
     | inl(_u) =>
-      (let ln := &listLength (!#(.loc ℓfv));
-       let n := rand(ln, #.unit);
-       case! (&listRemoveNth (!#(.loc ℓfv)) n)
+      (let ln := &listLength (!#loc ℓfv);
+       let n := rand(ln, #());
+       case! (&listRemoveNth (!#loc ℓfv) n)
        | inl(_u) => #0 -- unreachable: `n` is in range
-       | inr(p) => (&setMap #(.loc ℓm) x (fst(p)); #(.loc ℓfv) ← snd(p); fst(p)))
+       | inr(p) => (&setMap #loc ℓm x (fst(p)); #loc ℓfv ← snd(p); fst(p)))
     | inr(y) => y
 
 /-- A lazily sampled random permutation of `{0, …, N-1}`. -/
 def randomPermutation (N : Int) : Exp rT := pl%
   -- `.1`: the expression of the list value
   let fv := alloc({(intListVal ((List.range N.toNat).map Int.ofNat)).1});
-  let m := &initMap #.unit;
+  let m := &initMap #();
   fun x,
     case! (&getMap m x)
     | inl(_u) =>
       (let ln := &listLength (!fv);
-       let n := rand(ln, #.unit);
+       let n := rand(ln, #());
        case! (&listRemoveNth (!fv) n)
        | inl(_u) => #0 -- unreachable: `n` is in range
        | inr(p) => (&setMap m x (fst(p)); fv ← snd(p); fst(p)))
@@ -122,9 +122,9 @@ def randomPermutation (N : Int) : Exp rT := pl%
 /-- Query `f` at `i` uniform inputs, recording the (input, output) pairs in `res`. -/
 @[pl_fold] def wLoop (N : Int) : Exp rT := pl%
   rec loop f res i :=
-    if i = #0 then #.unit
+    if i = #0 then #()
     else
-      (let x := rand(#(.int N), #.unit);
+      (let x := rand(#N, #());
        let y := f x;
        res ← inr(((x, y), !res));
        loop f res (i - #1))
@@ -132,15 +132,15 @@ def randomPermutation (N : Int) : Exp rT := pl%
 /-- The weak PRF game against the random function. -/
 def wPRF (N Q : Int) : Exp rT := pl%
   let f := {randomFunction N};
-  let res := alloc(inl(#.unit));
-  {wLoop N} f res #(.int Q);
+  let res := alloc(inl(#()));
+  {wLoop N} f res #Q;
   !res
 
 /-- The weak PRF game against the random permutation. -/
 def wPRP (N Q : Int) : Exp rT := pl%
   let f := {randomPermutation N};
-  let res := alloc(inl(#.unit));
-  {wLoop N} f res #(.int Q);
+  let res := alloc(inl(#()));
+  {wLoop N} f res #Q;
   !res
 
 /-! ## `openRec`/`closeRec` erasure (`pl_step_simp`)

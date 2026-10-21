@@ -37,7 +37,7 @@ Nothing in a triple names the ambient `GF`, so a statement whose surroundings le
 open must pin it once, by ascribing the precondition:
 
 ```
-[{ (↯ ε : IProp GF) }] pl(&Gauss #.unit) @ E [{ y, RET .real y; ⌜|y| < t⌝ }]
+[{ (↯ ε : IProp GF) }] pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }]
 ```
 
 This is the same pin `⊢@{IProp GF}` performs for a bare-`tglWp` statement, and is

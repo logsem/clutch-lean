@@ -167,9 +167,9 @@ section specification
 
 theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measurable (F a)) (L : ℕ) :
     ⊢ ↯ (NegExpCreditV F L) -∗
-      tglWp E pl(&NegExp #(.int (L : ℤ)))
+      tglWp E pl(&NegExp #int (L : ℤ))
         (fun p : Val ℝ => iprop(∃ (vz : ℕ) (vr : ℝ),
-          ⌜p.1 = .pair (pl(#(.int (Int.ofNat vz)))) pl(#(.real vr))⌝ ∗
+          ⌜p.1 = .pair (pl(#int (Int.ofNat vz))) pl(#vr)⌝ ∗
           ⌜0 ≤ vr ∧ vr < 1⌝ ∗ ↯ (F vz vr))) := by
   iintro Hε_spec
   iapply twp_err_pos solve_not_value
@@ -193,9 +193,9 @@ theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, M
   obtain ⟨Hx0, Hx1⟩ := mem_unifUnitSupport_real.mp Hxm
   have Hxr := mem_unifUnitSupport_real_le Hxm
   twp_pure
-  twp_bind pl(&DecrTrial #(.int (0 : ℤ)) #(.real x))
+  twp_bind pl(&DecrTrial #int (0 : ℤ) #real x)
   iapply (tglWp_wand (Φ := fun v : Val ℝ => iprop(∃ n : ℕ,
-    ⌜v.1 = pl(#(.int (Int.ofNat n)))⌝ ∗ ↯ (NegExpContAmp F x L c n))))
+    ⌜v.1 = pl(#int (Int.ofNat n))⌝ ∗ ↯ (NegExpContAmp F x L c n))))
   isplitl [Hcx]
   · iapply (twp_DecrTrial E (NegExpContAmp F x L c) 0 x Hxr) $$ Hcx
   iintro %⟨w, _⟩ ⟨%n, %rfl, Hcn⟩
@@ -216,7 +216,7 @@ theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, M
     twp_pure
     twp_pure
     rw [← Nat.cast_add_one]
-    twp_bind pl(&NegExp #(.int ((L + 1 : ℕ) : ℤ)))
+    twp_bind pl(&NegExp #int ((L + 1 : ℕ) : ℤ))
     iapply (tglWp_mono fun _ => tglWp_value)
     iapply IH $$ Hterm Hexp
 

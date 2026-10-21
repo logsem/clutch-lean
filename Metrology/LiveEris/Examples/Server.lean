@@ -23,7 +23,7 @@ namespace ProbLang.LiveEris.Examples
 @[pl_fold]
 def serve {rT : Type _} (ℓ : Loc) : Exp rT := pl%
   rec serve u :=
-    if rand(#2, #.unit) = #0 then (#(.loc ℓ) ← (!#(.loc ℓ) + #(.int 1)); serve u) else serve u
+    if rand(#2, #()) = #0 then (#loc ℓ ← (!#loc ℓ + #1); serve u) else serve u
 
 /-- The counter at `ℓ` went up by one. -/
 def CtrUp {rT : Type _} (ℓ : Loc) (σ σ' : State rT) : Prop :=
@@ -32,7 +32,7 @@ def CtrUp {rT : Type _} (ℓ : Loc) (σ σ' : State rT) : Prop :=
 @[pl_fold]
 def serveFlag {rT : Type _} : Exp rT := pl%
   rec serve f :=
-    if rand(#2, #.unit) = #0 then (f ← #true; f ← #false; serve f) else serve f
+    if rand(#2, #()) = #0 then (f ← #true; f ← #false; serve f) else serve f
 
 pl_closed serveFlag
 
@@ -57,12 +57,12 @@ theorem flagUp_store (l : Loc) (σ : State rT) :
 
 noncomputable abbrev ServeStmt (ℓ : Loc) : IProp GF :=
   iprop(∀ (n : ℤ) (Ψ : Val rT → IProp GF),
-    ℓ ↦ (.int n : Val rT) -∗ lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ)
+    ℓ ↦ (.int n : Val rT) -∗ lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ)
 
 theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
     ⊢ □ ▷ ServeStmt (rT := rT) ℓ -∗ ∀ (n : ℤ) (Ψ : Val rT → IProp GF),
       ℓ ↦ (.int n : Val rT) -∗ ↯((2⁻¹ : ℝ≥0∞) ^ k) -∗
-        lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
+        lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ := by
   induction k with
   | zero =>
     iintro - %_ %_ - He
@@ -72,36 +72,36 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
     iintro #IH %n %Ψ Hl He
     live_pure
     live_pure
-    live_bind (pl(rand(#2, #.unit)) : Exp rT)
+    live_bind (pl(rand(#2, #())) : Exp rT)
     iapply (lwp_rand_err (F := fun m => if m = 0 then 0 else (2⁻¹ : ℝ≥0∞) ^ k) (by norm_num)
       (avg_two (by rw [zero_add, two_mul_half_pow]))) $$ He
     iintro %m ⟨%Hm, He⟩
     obtain rfl | rfl : m = 0 ∨ m = 1 := by omega
     · live_pure
       live_pure
-      live_bind (pl(!#(.loc ℓ)) : Exp rT)
+      live_bind (pl(!#loc ℓ) : Exp rT)
       iapply lwp_load
       iframe Hl
       iintro Hl
       live_pure
-      live_bind (Exp.store pl(#(.loc ℓ)) (Exp.ofVal (Val.int (n + 1))) : Exp rT)
+      live_bind (Exp.store pl(#loc ℓ) (Exp.ofVal (Val.int (n + 1))) : Exp rT)
       iapply (lwp_store_progress (v' := Val.int n) (ctrUp_store ℓ n))
       iframe Hl
       inext
       iintro Hl
       live_pure
-      live_bind (Exp.app (serve (rT := rT) ℓ) pl(#(.unit)))
+      live_bind (Exp.app (serve (rT := rT) ℓ) pl(#()))
       iapply IH $$ %(n + 1) %_ Hl
     · live_pure
       live_pure
-      live_bind (Exp.app (serve (rT := rT) ℓ) pl(#(.unit)))
+      live_bind (Exp.app (serve (rT := rT) ℓ) pl(#()))
       iapply IHk $$ IH %n %_ Hl
       iapply Credit.frag_ext (by simp) rfl $$ He
 
 /-- The counter server makes progress: its spec needs no credits. -/
 theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
     iprop(ℓ ↦ (.int n : Val rT)) ⊢
-      lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#(.unit))) Ψ := by
+      lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ := by
   have H : ⊢ ServeStmt (rT := rT) ℓ := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %n' %Ψ' Hl
@@ -114,12 +114,12 @@ theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
 noncomputable abbrev FlagStmt : IProp GF :=
   iprop(∀ (l : Loc) (Ψ : Val rT → IProp GF),
     l ↦ (.bool false : Val rT) -∗
-      lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#(.loc l))) Ψ)
+      lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#loc l)) Ψ)
 
 theorem lwp_serveFlag_depth (k : ℕ) :
     ⊢ □ ▷ FlagStmt (rT := rT) -∗ ∀ (l : Loc) (Ψ : Val rT → IProp GF),
       l ↦ (.bool false : Val rT) -∗ ↯((2⁻¹ : ℝ≥0∞) ^ k) -∗
-        lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#(.loc l))) Ψ := by
+        lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#loc l)) Ψ := by
   induction k with
   | zero =>
     iintro - %_ %_ - He
@@ -129,29 +129,29 @@ theorem lwp_serveFlag_depth (k : ℕ) :
     iintro #IH %l %Ψ Hl He
     live_pure
     live_pure
-    live_bind (pl(rand(#2, #.unit)) : Exp rT)
+    live_bind (pl(rand(#2, #())) : Exp rT)
     iapply (lwp_rand_err (F := fun m => if m = 0 then 0 else (2⁻¹ : ℝ≥0∞) ^ k) (by norm_num)
       (avg_two (by rw [zero_add, two_mul_half_pow]))) $$ He
     iintro %m ⟨%Hm, He⟩
     obtain rfl | rfl : m = 0 ∨ m = 1 := by omega
     · live_pure
       live_pure
-      live_bind (Exp.store pl(#(.loc l)) (Exp.ofVal (.bool true)) : Exp rT)
+      live_bind (Exp.store pl(#loc l) (Exp.ofVal (.bool true)) : Exp rT)
       iapply (lwp_store_progress (v' := .bool false) (fun σ _ => flagUp_store l σ))
       iframe Hl
       inext
       iintro Hl
       live_pure
-      live_bind (Exp.store pl(#(.loc l)) (Exp.ofVal (.bool false)) : Exp rT)
+      live_bind (Exp.store pl(#loc l) (Exp.ofVal (.bool false)) : Exp rT)
       iapply lwp_store
       iframe Hl
       iintro Hl
       live_pure
-      live_bind (Exp.app (serveFlag (rT := rT)) pl(#(.loc l)))
+      live_bind (Exp.app (serveFlag (rT := rT)) pl(#loc l))
       iapply IH $$ %l %_ Hl
     · live_pure
       live_pure
-      live_bind (Exp.app (serveFlag (rT := rT)) pl(#(.loc l)))
+      live_bind (Exp.app (serveFlag (rT := rT)) pl(#loc l))
       iapply IHk $$ IH %l %_ Hl
       iapply Credit.frag_ext (by simp) rfl $$ He
 
@@ -168,7 +168,7 @@ theorem lwp_flagServer (Ψ : Val rT → IProp GF) :
   iapply lwp_alloc
   iintro %l Hl
   live_pure
-  live_bind (Exp.app (serveFlag (rT := rT)) pl(#(.loc l)))
+  live_bind (Exp.app (serveFlag (rT := rT)) pl(#loc l))
   iapply lwp_serveFlag $$ %l %_ Hl
 
 theorem measurableSet_flagUp : MeasurableSet {σ : State rT | FlagUp σ} := by

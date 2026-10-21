@@ -17,11 +17,11 @@ variable {rT : Type _}
 
 /-- A uniform draw from `{0, …, N-1}`. -/
 def unif (N : Int) : Exp rT :=
-  pl% rand(#(.int N), #.unit)
+  pl% rand(#N, #())
 
 /-- A uniform draw from `{0, …, N-1}` that reports `1` whenever it draws `0`. -/
 def skipZero (N : Int) : Exp rT :=
-  pl% let x := rand(#(.int N), #.unit); if x = #0 then #1 else x
+  pl% let x := rand(#N, #()); if x = #0 then #1 else x
 
 end SkipZero
 end ProbLang

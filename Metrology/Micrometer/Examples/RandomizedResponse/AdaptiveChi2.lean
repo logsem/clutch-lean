@@ -54,8 +54,8 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 Rényi escort head `escortHead_rr3` at `log (19/12)`. -/
 theorem escortHead_rr3_chi2 (K : Ectx rT) (σ σ' : State rT) :
     (BindLaw.escortPower 2).head
-      ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#(.int n)), σ⟩ : Cfg rT))
-      ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#(.int m)), σ'⟩ : Cfg rT))
+      ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+      ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (Cfg.drawCost σ σ' K adaptiveCostChi2) (ofReal (7 / 12)) := by
   have hR : (fun ρ ρ' ↦ toRenyi 2 (Cfg.drawCost σ σ' K adaptiveCostChi2 ρ ρ')) =
       Cfg.drawCost σ σ' K adaptiveCost := by

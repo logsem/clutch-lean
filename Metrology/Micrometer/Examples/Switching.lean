@@ -67,36 +67,36 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetC
 theorem wp_wLoop_record {E : CoPset} {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
     {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)} {Φ : Val rT → IProp GF}
     (hloop : loop = wLoop N := by rfl) : iprop%
-    ⤇ K.fill (pl% (#(.loc resS) ← inr(((#(.int n), #(.int y)), !#(.loc resS)));
-      {loop} {fS.fst} #(.loc resS) (#(.int ↑(q + 1)) - #1))) ∗
+    ⤇ K.fill (pl% (#loc resS ← inr(((#n, #y), !#loc resS));
+      {loop} {fS.fst} #loc resS (#int (↑(q + 1)) - #1))) ∗
     (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
-    (⤇ K.fill (pl% {wLoop N} {Exp.ofVal fS} #(.loc resS) #(.int q)) -∗
+    (⤇ K.fill (pl% {wLoop N} {Exp.ofVal fS} #loc resS #int q) -∗
       (resL ↦ (assocVal ((n, y) :: acc) : Val rT)) -∗
       (resS ↦ₛ (assocVal ((n, y) :: acc) : Val rT)) -∗
-      WP[codensity tv] (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q)) @ E {{ Φ }}) ⊢
-    WP[codensity tv] (pl% (#(.loc resL) ← inr(((#(.int n), #(.int y)), !#(.loc resL)));
-      {loop} {fL.fst} #(.loc resL) (#(.int ↑(q + 1)) - #1))) @ E {{ Φ }} := by
+      WP[codensity tv] (pl% {wLoop N} {Exp.ofVal fL} #loc resL #int q) @ E {{ Φ }}) ⊢
+    WP[codensity tv] (pl% (#loc resL ← inr(((#n, #y), !#loc resL));
+      {loop} {fL.fst} #loc resL (#int (↑(q + 1)) - #1))) @ E {{ Φ }} := by
   subst hloop
   iintro ⟨Hj, HresL, HresS, Hcnt⟩
-  tp_bind (pl% !#(.loc resS))
+  tp_bind (pl% !#loc resS)
   imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
-  tp_bind (Exp.store pl(#(.loc resS)) (Exp.ofVal (assocVal ((n, y) :: acc))))
+  tp_bind (Exp.store pl(#loc resS) (Exp.ofVal (assocVal ((n, y) :: acc))))
   imod step_store _ (Val.isVal_ofVal _) (Exp.toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
   tp_pure
   tp_pure
-  wp_bind (pl% !#(.loc resL))
+  wp_bind (pl% !#loc resL)
   iapply wp_load
   iframe HresL
   iintro HresL
-  wp_bind (Exp.store pl(#(.loc resL)) (Exp.ofVal (assocVal ((n, y) :: acc))))
+  wp_bind (Exp.store pl(#loc resL) (Exp.ofVal (assocVal ((n, y) :: acc))))
   iapply wp_store
   iframe HresL
   iintro HresL
   wp_pure 1
   wp_pure 1
   rw [Nat.cast_succ, add_sub_cancel_right]
-  tp_bind (pl% {wLoop N} {Exp.ofVal fS} #(.loc resS) #(.int q))
-  wp_show (pl% {wLoop N} {Exp.ofVal fL} #(.loc resL) #(.int q))
+  tp_bind (pl% {wLoop N} {Exp.ofVal fS} #loc resS #int q)
+  wp_show (pl% {wLoop N} {Exp.ofVal fL} #loc resL #int q)
   iapply Hcnt $$ Hj HresL HresS
 
 /-! ### The loop, random function against random permutation -/
@@ -112,15 +112,15 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int q)) ∗
+    ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #loc resS #int q) ∗
     ↯b (loopErr N m.length q) ∗
     (ℓ ↦ (assocVal m : Val rT)) ∗ (ℓm ↦ₛ (assocVal m : Val rT)) ∗
     (ℓfv ↦ₛ (intListVal r : Val rT)) ∗
     (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
-    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
+    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int q))
+    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #loc resL #int q)
       @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
@@ -134,16 +134,16 @@ theorem wp_wLoop {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL resS 
     iintro ⟨Hj, Herr, Hl, Hm, Hfv, HresL, HresS, Hcnt⟩
     wp_pures
     tp_pures
-    wp_bind (pl% rand(#(.int N), #.unit))
-    tp_bind (pl% rand(#(.int N), #.unit))
+    wp_bind (pl% rand(#N, #()))
+    tp_bind (pl% rand(#N, #()))
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj
     iintro %n ⟨%hn0, %hnN⟩ Hj
     tp_pure
-    tp_bind (pl% {prpQuery ℓm ℓfv} #(.int n))
+    tp_bind (pl% {prpQuery ℓm ℓfv} #n)
     wp_pure 1
-    wp_bind (pl% {rfQuery N ℓ} #(.int n))
+    wp_bind (pl% {rfQuery N ℓ} #n)
     cases hlk : alookup n m with
     | some y =>
       -- cached input: both sides return the memoised `y`, nothing spent
@@ -198,7 +198,7 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   iintro %f ⟨%ℓ, %hf, Hl⟩
   subst hf
   wp_pures
-  wp_bind (pl% alloc(inl(#.unit)))
+  wp_bind (pl% alloc(inl(#())))
   wp_alloc_at (assocVal ([] : List (Int × Int)))
   iintro %resL HresL
   wp_pure 1
@@ -212,14 +212,14 @@ theorem wp_wPRF_wPRP {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   tp_bind (Exp.alloc (Exp.ofVal (assocVal ([] : List (Int × Int)))))
   imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%resS, Hj, HresS⟩
   tp_pure
-  tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resS) #(.int Q.toNat))
-  wp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resL) #(.int Q.toNat))
+  tp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #loc resS #int Q.toNat)
+  wp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #loc resL #int Q.toNat)
   iapply wp_wLoop _ N ℓ ℓm ℓfv resL resS Q.toNat [] _ [] hperm (by simp) (by simp) hN
   simp only [List.length_nil]
   iframe Hj Herr Hl Hm Hfv HresL HresS
   iintro %acc Hj HresL HresS
   tp_pures
-  tp_bind (pl% !#(.loc resS))
+  tp_bind (pl% !#loc resS)
   imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
   wp_pures
   iapply wp_load
@@ -235,15 +235,15 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map Prod.fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map Prod.fst).Nodup) (hN : 0 < N)
     {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int q)) ∗
+    ⤇ K.fill (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #loc resS #int q) ∗
     ↯b (loopErr N m.length q) ∗
     (ℓm ↦ (assocVal m : Val rT)) ∗ (ℓfv ↦ (intListVal r : Val rT)) ∗
     (ℓ ↦ₛ (assocVal m : Val rT)) ∗
     (resL ↦ (assocVal acc : Val rT)) ∗ (resS ↦ₛ (assocVal acc : Val rT)) ∗
-    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#(.unit)) -∗
+    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
        (resL ↦ (assocVal acc' : Val rT)) -∗ (resS ↦ₛ (assocVal acc' : Val rT)) -∗
        Φ .unit) ⊢
-    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int q))
+    WP[codensity tv] (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #loc resL #int q)
       @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
@@ -257,16 +257,16 @@ theorem wp_wLoop_rev {E : CoPset} (K : Ectx rT) (N : Int) (ℓ ℓm ℓfv resL r
     iintro ⟨Hj, Herr, Hm, Hfv, Hl, HresL, HresS, Hcnt⟩
     wp_pures
     tp_pures
-    wp_bind (pl% rand(#(.int N), #.unit))
-    tp_bind (pl% rand(#(.int N), #.unit))
+    wp_bind (pl% rand(#N, #()))
+    tp_bind (pl% rand(#N, #()))
     iapply wp_couple_rand_rand N (fun n => n) (fun n h1 h2 => ⟨h1, h2⟩)
       (fun mm h1 h2 => ⟨mm, ⟨⟨h1, h2⟩, rfl⟩, fun y hy => hy.2⟩) hN
     iframe Hj
     iintro %n ⟨%hn0, %hnN⟩ Hj
     tp_pure
-    tp_bind (pl% {rfQuery N ℓ} #(.int n))
+    tp_bind (pl% {rfQuery N ℓ} #n)
     wp_pure 1
-    wp_bind (pl% {prpQuery ℓm ℓfv} #(.int n))
+    wp_bind (pl% {prpQuery ℓm ℓfv} #n)
     cases hlk : alookup n m with
     | some y =>
       ihave Herr := BudgetCredit.weaken (loopErr_mono N m.length (Nat.le_succ q)) $$ Herr
@@ -319,7 +319,7 @@ theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   iintro %f ⟨%ℓm, %ℓfv, %hf, %hperm, Hm, Hfv⟩
   subst hf
   wp_pures
-  wp_bind (pl% alloc(inl(#.unit)))
+  wp_bind (pl% alloc(inl(#())))
   wp_alloc_at (assocVal ([] : List (Int × Int)))
   iintro %resL HresL
   wp_pure 1
@@ -333,14 +333,14 @@ theorem wp_wPRP_wPRF {E : CoPset} (K : Ectx rT) (N Q : Int) (hN : 0 < N) (hQ : 0
   tp_bind (Exp.alloc (Exp.ofVal (assocVal ([] : List (Int × Int)))))
   imod step_alloc_at _ (Val.isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%resS, Hj, HresS⟩
   tp_pure
-  tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #(.loc resS) #(.int Q.toNat))
-  wp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #(.loc resL) #(.int Q.toNat))
+  tp_bind (pl% {wLoop N} {Exp.ofVal (rfQueryV N ℓ)} #loc resS #int Q.toNat)
+  wp_bind (pl% {wLoop N} {Exp.ofVal (prpQueryV ℓm ℓfv)} #loc resL #int Q.toNat)
   iapply wp_wLoop_rev _ N ℓ ℓm ℓfv resL resS Q.toNat [] _ [] hperm (by simp) (by simp) hN
   simp only [List.length_nil]
   iframe Hj Herr Hm Hfv Hl HresL HresS
   iintro %acc Hj HresL HresS
   tp_pures
-  tp_bind (pl% !#(.loc resS))
+  tp_bind (pl% !#loc resS)
   imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
   wp_pures
   iapply wp_load

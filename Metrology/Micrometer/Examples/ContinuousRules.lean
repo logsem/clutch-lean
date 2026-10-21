@@ -46,8 +46,8 @@ omit [L.IsReflexive] [L.IsSupportLocal] [L.HasBind] in
 theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → rT → B) (c : B)
     (hc : IsAddLeftRegular c)
     (hhead : ∀ (K : Ectx rT) σ σ', law.head
-      (unifUnit.map fun x ↦ (⟨pl(#(.real x)), σ⟩ : Cfg rT))
-      (unifUnit.map fun y ↦ (⟨K.fill pl(#(.real y)), σ'⟩ : Cfg rT))
+      (unifUnit.map fun x ↦ (⟨pl(#real x), σ⟩ : Cfg rT))
+      (unifUnit.map fun y ↦ (⟨K.fill pl(#real y), σ'⟩ : Cfg rT))
       (Cfg.drawCostReal σ σ' K R) c)
     (hR : ∀ x y, R x y < (⊤ : B) → x = y) :
     ⊢ ↯b c -∗ REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
@@ -90,7 +90,7 @@ theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int)
     (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞) (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁)
     (hc : IsAddLeftRegular (s ε₁)) :
     ⊢ ↯b (s ε₁) -∗
-      REL[L] (pl(rand(#(.int N), #(.unit))) : Exp rT) << pl(rand(#(.int N), #(.unit))) :
+      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) :
         lrel_int := by
   iintro Hc
   rel_couple_UU_adv id ε₁ ε₂ id_dom_range id_bij_range hamort hc
@@ -103,7 +103,7 @@ theorem rands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N : Int)
 theorem rands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (N bad : Int) (hN : 0 < N)
     (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (N.toNat : ℝ≥0∞)⁻¹)) :
     ⊢ ↯b (s (N.toNat : ℝ≥0∞)⁻¹) -∗
-      REL[L] (pl(rand(#(.int N), #(.unit))) : Exp rT) << pl(rand(#(.int N), #(.unit))) :
+      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) :
         lrel_int := by
   iintro Hc
   rel_couple_UU_avoid bad habs hc
@@ -121,8 +121,8 @@ theorem rands_dpChoice [MeasurableSingletonClass rT] {GF : BundledGFunctors}
     (hPT₁ : ∀ r r', r ∈ P → r = r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → r = r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) :
     ⊢@{IProp GF} ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) -∗
-      REL[codensity dp] (pl(rand(#(.int N), #(.unit))) : Exp rT) <<
-        pl(rand(#(.int N), #(.unit))) : lrel_int := by
+      REL[codensity dp] (pl(rand(#N, #())) : Exp rT) <<
+        pl(rand(#N, #())) : lrel_int := by
   iintro Hc
   rel_couple_UU_dpChoice h₁ h₂ hPT₁ hPT₂ hc
   iframe Hc
@@ -157,9 +157,9 @@ theorem urand_avoid_zero_real :
 program's. -/
 theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
     [BudgetCreditGS ℝ≥0∞ GF] (N : Int) (hN : 0 < N) :
-    ⤇ pl(rand(#(.int N), #(.unit))) ⊢@{IProp GF}
+    ⤇ pl(rand(#N, #())) ⊢@{IProp GF}
       wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
-        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#(.int ⌊(N : ℝ) * x⌋))) := by
+        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
   iintro Hj
   iapply wp_couple_urand_rand (K := []) N hN _ (measurePreserving_floor_mul N hN)
   simp only [Ectx.fill_nil]
@@ -172,7 +172,7 @@ theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC G
 
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
-    ⊢ REL[codensity tv] (pl(rand(#(.int N), #(.unit))) : Exp ℝ) << pl(urand) :
+    ⊢ REL[codensity tv] (pl(rand(#N, #())) : Exp ℝ) << pl(urand) :
       lrel_true := by
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
@@ -183,7 +183,7 @@ theorem rand_urand_floor_real (N : Int) (hN : 0 < N) :
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real (N : Int) (hN : 0 < N) :
-    ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#(.int N), #(.unit))) :
+    ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#N, #())) :
       lrel_true := by
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
   iintro %x %_

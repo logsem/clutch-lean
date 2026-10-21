@@ -18,7 +18,7 @@ variable {rT : Type _}
 
 def unifRw1dRec : Exp rT :=
   pl% rec f n α :=
-        if n < #1 then #.unit
+        if n < #1 then #()
         else
           let x := rand(#1, α);
           if x < #1
@@ -31,11 +31,11 @@ def unifRw1d : Exp rT :=
 @[pl_fold]
 def biasedWalk (u m : ℕ) (a : ℤ) : Exp rT := pl%
   rec walk n x :=
-    if x = #(.int a) then #true
+    if x = #a then #true
     else if n = #0 then #false
     else
-      (let r := rand(#(.int m), #.unit);
-        if r < #(.int u) then walk (n - #1) (x + #1) else walk (n - #1) (x - #1))
+      (let r := rand(#int m, #());
+        if r < #int u then walk (n - #1) (x + #1) else walk (n - #1) (x - #1))
 
 end Examples
 end TotalEris

@@ -35,7 +35,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [Budget
 local bi IProp GF
 
 /-- The body of `otp_enc m` as a lambda, which `otp_enc m` applies to `urand`. -/
-abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#(.real m) + k)
+abbrev otpLam (m : rT) : Exp rT := pl% fun k, frac(#m + k)
 
 /-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
 theorem otp_refines (m : rT)

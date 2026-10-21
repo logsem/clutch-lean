@@ -29,7 +29,7 @@ abbrev headsPost (a : ℝ) (b : ℤ) : Val rT → IProp GF :=
 
 theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) (b : ℤ) :
     iprop(↯(headsCost s a k b)) ⊢
-      tglWp E pl(&heads #(.int (k : ℤ))) (headsPost (rT := rT) a b) := by
+      tglWp E pl(&heads #int (k : ℤ)) (headsPost (rT := rT) a b) := by
   induction k generalizing b with
   | zero =>
     iintro Herr
@@ -47,7 +47,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
   | succ k IH =>
     iintro Herr
     twp_pures
-    twp_bind pl(rand(#(.int 2), #(.unit)))
+    twp_bind pl(rand(#2, #()))
     let F : ℕ → ℝ≥0∞ := fun x => headsCost s a k (b + x)
     have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ℝ≥0∞) ≤
         headsCost s a (k + 1) b := by
@@ -66,7 +66,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
     twp_pure
     twp_pure
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
-    twp_bind pl(&heads #(.int (k : ℤ)))
+    twp_bind pl(&heads #int (k : ℤ))
     iapply (tglWp_wand (Φ := headsPost a (b + n)))
     isplitl [Hcr]
     · iapply IH
@@ -82,7 +82,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
 
 theorem twp_heads_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
     iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), headsCost s a n 0)) ⊢
-      tglWp E pl(&heads #(.int (n : ℤ))) (headsPost (rT := rT) a 0) := by
+      tglWp E pl(&heads #int (n : ℤ)) (headsPost (rT := rT) a 0) := by
   iintro Herr
   iapply twp_err_biInf solve_not_value
   iframe Herr
@@ -117,7 +117,7 @@ theorem headsCost_hoeffding {n : ℕ} (hn : 0 < n) (t : ℝ) :
 
 theorem twp_heads_hoeffding (E : CoPset) {n : ℕ} (hn : 0 < n) {t : ℝ} (ht : 0 ≤ t) :
     iprop(↯(ENNReal.ofReal (Real.exp (-2 * t ^ 2 / n)))) ⊢
-      tglWp E pl(&heads #(.int (n : ℤ))) (headsPost (rT := rT) (n / 2 + t) 0) := by
+      tglWp E pl(&heads #int (n : ℤ)) (headsPost (rT := rT) (n / 2 + t) 0) := by
   iintro Herr
   iapply twp_heads_chernoff E
   iapply ErrorCredit.weaken ((biInf_le (fun s => headsCost s (n / 2 + t) n 0)

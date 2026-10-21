@@ -25,8 +25,8 @@ local bi IProp GF
 
 /-- Pure steps on both sides, inside a non-empty context on the right. -/
 example (n : Int) :
-    ⊢ REL[L] (pl((fun x, x + #1) #(.int n)) : Exp rT) <<
-      pl(fst((#(.int (n + 1)), #(.int 0)))) : lrel_int := by
+    ⊢ REL[L] (pl((fun x, x + #1) #n) : Exp rT) <<
+      pl(fst((#(n + 1), #0))) : lrel_int := by
   rel_pure_l
   rel_pures_l
   rel_pure_r
@@ -34,7 +34,7 @@ example (n : Int) :
 
 /-- `rel_pure_l e` steps at the focus `e`, leaving the outer redex. -/
 example (n : Int) :
-    ⊢ REL[L] (pl(#(.int n) + (#1 + #2)) : Exp rT) << pl(#(.int (n + 3))) :
+    ⊢ REL[L] (pl(#n + (#1 + #2)) : Exp rT) << pl(#(n + 3)) :
       lrel_int := by
   rel_pure_l pl(#1 + #2)
   rel_pure_l
@@ -59,7 +59,7 @@ example :
 
 /-- Coupling two unlabelled draws inside contexts, along the identity. -/
 example :
-    ⊢ REL[L] (pl(rand(#4, #.unit) + #0) : Exp rT) << pl(fst((rand(#4, #.unit), #0))) :
+    ⊢ REL[L] (pl(rand(#4, #()) + #0) : Exp rT) << pl(fst((rand(#4, #()), #0))) :
       lrel_int := by
   rel_couple_UU
   iintro %n %_
@@ -73,7 +73,7 @@ example :
 
 /-- One-sided draws. -/
 example :
-    ⊢ REL[L] (pl(rand(#4, #.unit); #.unit) : Exp rT) << pl(rand(#3, #.unit); #.unit) :
+    ⊢ REL[L] (pl(rand(#4, #()); #()) : Exp rT) << pl(rand(#3, #()); #()) :
       lrel_unit := by
   rel_rand_r
   iintro %m %_
@@ -85,7 +85,7 @@ example :
 /-- Tapes: allocate, couple a labelled draw with an unlabelled one, then draw from a tape. -/
 example :
     ⊢ REL[L] (pl(let α := tape(#4); rand(#4, α)) : Exp rT) <<
-      pl(let α := tape(#4); rand(#4, #.unit)) : lrel_int := by
+      pl(let α := tape(#4); rand(#4, #())) : lrel_int := by
   rel_alloctape_l α as Hα
   rel_alloctape_r α' as Hα'
   rel_pures
@@ -97,7 +97,7 @@ example :
 /-- `rel_rand_l` draws from a presampled tape in the context. -/
 example (α : Loc) :
     ⊢ appNatTape α 4 [2] -∗
-      REL[L] (pl(rand(#4, #(.lbl α)) + #0) : Exp rT) << pl(#2) : lrel_int := by
+      REL[L] (pl(rand(#4, #lbl α) + #0) : Exp rT) << pl(#2) : lrel_int := by
   iintro Hα
   rel_rand_l
   iintro %_
@@ -151,7 +151,7 @@ example :
 
 /-- An unlabelled draw coupled with a spec tape by `rel_couple_UT`. -/
 example :
-    ⊢ REL[L] (pl(rand(#4, #.unit)) : Exp rT) <<
+    ⊢ REL[L] (pl(rand(#4, #())) : Exp rT) <<
       pl(let α := tape(#4); rand(#4, α)) : lrel_int := by
   rel_alloctape_r α as Hα
   rel_pures_r
@@ -177,7 +177,7 @@ example :
 /-- The `_atomic` forms leave the rule's premise. -/
 example (l : Loc) :
     ⊢ (l ↦ (.int 3 : Val rT)) -∗
-      REL[L] (pl(!#(.loc l) + #0) : Exp rT) << pl(#3) : lrel_int := by
+      REL[L] (pl(!#loc l + #0) : Exp rT) << pl(#3) : lrel_int := by
   iintro Hl
   rel_load_l_atomic
   iexists _
@@ -207,14 +207,14 @@ example :
 
 /-- Integer comparisons step from literals and from hypotheses in the context. -/
 example (n : Int) (h : n ≠ 0) :
-    ⊢ REL[L] (pl(if #(.int n) = #0 then #1 else #2) : Exp rT) <<
+    ⊢ REL[L] (pl(if #n = #0 then #1 else #2) : Exp rT) <<
       pl(if #0 = #0 then #2 else #1) : lrel_int := by
   rel_pures
   rel_values
 
 /-- Pairs of literals close by `rel_values`. -/
 example :
-    ⊢ REL[L] (pl((#1, #(.bool true))) : Exp rT) << pl((#1, #(.bool true))) :
+    ⊢ REL[L] (pl((#1, #true)) : Exp rT) << pl((#1, #true)) :
       lrel_prod lrel_int lrel_bool := by
   rel_values
 

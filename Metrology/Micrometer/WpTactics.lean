@@ -110,7 +110,7 @@ the caller's form (e.g. `assocVal []` rather than a raw `Val.mk`). -/
 public theorem step_alloc_at (K : Ectx rT) {v : Exp rT} (hv : IsVal v) {vv : Val rT}
     (hvv : vv = ⟨v, hv, hv.lc⟩) :
     ⤇ (K.fill (.alloc v)) ⊢
-      specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#(.loc l)))) ∗ (l ↦ₛ vv)) := by
+      specUpdate rT E iprop(∃ (l : Loc), (⤇ (K.fill pl(#loc l))) ∗ (l ↦ₛ vv)) := by
   subst hvv
   exact step_alloc K hv
 

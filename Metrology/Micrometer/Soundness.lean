@@ -39,10 +39,10 @@ theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC
 
 /-- Results related along equal booleans end in `b` together. -/
 theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
-    (ha : a ∈ ({pl(#(.bool b))} : Set (Exp rT))) : a' ∈ ({pl(#(.bool b))} : Set (Exp rT)) := by
+    (ha : a ∈ ({pl(#b)} : Set (Exp rT))) : a' ∈ ({pl(#b)} : Set (Exp rT)) := by
   obtain ⟨v, v', hv, hv', b'', hvb1, hvb2⟩ := h
-  have hv1 : v.1 = pl(#(.bool b'')) := congrArg Val.fst hvb1
-  rw [show v.1 = pl(#(.bool b)) from (Exp.ofVal_of_toVal_some hv).trans ha] at hv1
+  have hv1 : v.1 = pl(#b'') := congrArg Val.fst hvb1
+  rw [show v.1 = pl(#b) from (Exp.ofVal_of_toVal_some hv).trans ha] at hv1
   obtain rfl : b'' = b := by simpa using hv1.symm
   exact (Exp.ofVal_of_toVal_some hv').symm.trans (congrArg Val.fst hvb2)
 
@@ -58,7 +58,7 @@ variable [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
 
 /-- The runs of `ρ` that end in the boolean `b` are the mass of its results at `b`. -/
 theorem limExec_finalBool (ρ : Cfg rT) (b : Bool) :
-    limExec ρ (finalBool b) = limExecV ρ {pl(#(.bool b))} := by
+    limExec ρ (finalBool b) = limExecV ρ {pl(#b)} := by
   unfold limExecV asExpr
   rw [Measure.map_apply (by fun_prop) (MeasurableSet.singleton _)]
   rfl

@@ -305,7 +305,7 @@ section specification
 theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 : 0 < B) (hB1 : B < 1) :
     ⊢ ∀ (N : ℕ) (x : ℝ), ⌜0 ≤ x⌝ -∗ ⌜x ≤ B⌝ -∗
       ↯ (RealDecrTrialCreditV F N x) -∗
-      tglWp E pl(&DecrTrial #(.int (N : ℤ)) #(.real x))
+      tglWp E pl(&DecrTrial #int (N : ℤ) #real x)
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   set k : ℝ≥0 := ⟨1 / B, by positivity⟩
   have hk1 : 1 < k := by
@@ -361,7 +361,7 @@ theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 
     ihave ⟨Hexp, Hterm⟩ := ErrorCredit.split $$ Hcy'
     twp_pure
     rw [← Nat.cast_add_one]
-    twp_bind pl(&DecrTrial #(.int ((N + 1 : ℕ) : ℤ)) #(.real y))
+    twp_bind pl(&DecrTrial #int ((N + 1 : ℕ) : ℤ) #real y)
     iapply (tglWp_mono fun _ => tglWp_value)
     iapply IH $$ Hterm
     · ipureintro; exact hy.1
@@ -370,7 +370,7 @@ theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 
 
 theorem twp_DecrTrial (E : CoPset) (F : ℕ → ℝ≥0∞) (N : ℕ) (x : ℝ) (Hx : 0 ≤ x ∧ x ≤ 1) :
     ⊢ ↯ (RealDecrTrialCreditV F N x) -∗
-      tglWp E pl(&DecrTrial #(.int (N : ℤ)) #(.real x))
+      tglWp E pl(&DecrTrial #int (N : ℤ) #real x)
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε_spec
   iterate 3 twp_pure
@@ -402,7 +402,7 @@ theorem twp_DecrTrial (E : CoPset) (F : ℕ → ℝ≥0∞) (N : ℕ) (x : ℝ) 
     ihave Hcy' := ErrorCredit.ext heq.symm $$ Hcy
     twp_pure
     rw [← Nat.cast_add_one]
-    twp_bind pl(&DecrTrial #(.int ((N + 1 : ℕ) : ℤ)) #(.real y))
+    twp_bind pl(&DecrTrial #int ((N + 1 : ℕ) : ℤ) #real y)
     iapply (tglWp_mono fun _ => tglWp_value)
     iapply (twp_DecrTrial_tail E F y hy.1 (hlt.trans_le Hx.2))
     · ipureintro; exact hy.1.le

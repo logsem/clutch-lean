@@ -18,7 +18,7 @@ variable {rT : Type _}
 /-- Randomized response on `b` that releases `b` outright when a uniform draw from
 `{0, …, N-1}` is `0`, i.e. with probability `1/N`. -/
 def leakyRR (N : Int) (b : Bool) : Exp rT :=
-  pl% let x := rand(#(.int N), #.unit); if x = #0 then #(.bool b) else &(RandomizedResponse.rr b)
+  pl% let x := rand(#N, #()); if x = #0 then #b else &(RandomizedResponse.rr b)
 
 end LeakyRR
 end ProbLang

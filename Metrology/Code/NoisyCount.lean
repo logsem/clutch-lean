@@ -18,7 +18,7 @@ noncomputable def count {n : ℕ} (db : Fin n → Bool) : ℝ :=
 
 /-- The program that applies the sampler value `lap` to the count of `db`. -/
 noncomputable def noisyCount (lap : Val ℝ) {n : ℕ} (db : Fin n → Bool) : Exp ℝ :=
-  pl% {Exp.ofVal lap} #(.real (count db))
+  pl% {Exp.ofVal lap} #real (count db)
 
 end NoisyCount
 end ProbLang

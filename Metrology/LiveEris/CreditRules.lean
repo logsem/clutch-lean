@@ -41,7 +41,7 @@ theorem randCredit_measurable (z : Int) (H : ℕ → ℝ≥0∞) : Measurable (r
 
 omit [LawfulProbLangℝ rT] in
 theorem randCredit_int {z n : Int} {H : ℕ → ℝ≥0∞} {σ : State rT} (hn : 0 ≤ n ∧ n < z) :
-    randCredit z H (⟨pl(#(.int n)), σ⟩ : Cfg rT) = H n.toNat := by
+    randCredit z H (⟨pl(#n), σ⟩ : Cfg rT) = H n.toNat := by
   simp [randCredit, hn]
 
 omit [LawfulProbLangℝ rT] in
@@ -52,12 +52,12 @@ theorem randCredit_le_one {z : Int} {H : ℕ → ℝ≥0∞} (hH : ∀ n, H n �
   · exact zero_le
 
 theorem rand_headReducible {z : Int} (Hz : 0 < z) (σ : State rT) :
-    HeadReducible (pl(rand(#(.int z), #(.unit))) : Exp rT) σ :=
+    HeadReducible (pl(rand(#z, #())) : Exp rT) σ :=
   (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
 
 theorem lintegral_randCredit_le {z : Int} (Hz : 0 < z) (σ : State rT) {H : ℕ → ℝ≥0∞} {b : ℝ≥0∞}
     (HSum : (∑ n ∈ Finset.range z.toNat, H n) / z.toNat ≤ b) :
-    (∫⁻ ρ, randCredit z H ρ ∂(primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩)) ≤ b := by
+    (∫⁻ ρ, randCredit z H ρ ∂(primStep ⟨pl(rand(#z, #())), σ⟩)) ≤ b := by
   rw [primStep_eq_headStep
     (Exp.decompItem_none_of_lc_headReducible (by is_lc) (rand_headReducible Hz σ))]
   show (∫⁻ ρ, randCredit z H ρ ∂(Cfg.uniform z σ)) ≤ b
@@ -181,12 +181,12 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
     (HSumG : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
     iprop(creditFrag ε₁ δ₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ creditFrag (F n.toNat) (G n.toNat) -∗ Φ (.int n)) -∗
-        lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
+        lwp Q E (pl(rand(#z, #()))) Φ) := by
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ n : Int, (0 ≤ n ∧ n < z) ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨n, -, rfl⟩; rfl
-  have hred : ∀ σ₁ : State rT, Reducible (pl(rand(#(.int z), #(.unit))) : Exp rT) σ₁ :=
+  have hred : ∀ σ₁ : State rT, Reducible (pl(rand(#z, #())) : Exp rT) σ₁ :=
     fun σ₁ => reducible_of_headReducible (by is_lc) (rand_headReducible Hz σ₁)
   have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
     apply Set.Countable.measurableSet
@@ -194,8 +194,8 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
     · rintro ρ ⟨n, -, rfl⟩; exact ⟨n, trivial, rfl⟩
     · exact Set.countable_univ.image _
   have hpgl : ∀ σ₁ : State rT,
-      Pgl 0 (R σ₁) (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) := fun σ₁ => by
-    show (primStep ⟨pl(rand(#(.int z), #(.unit))), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
+      Pgl 0 (R σ₁) (primStep ⟨pl(rand(#z, #())), σ₁⟩) := fun σ₁ => by
+    show (primStep ⟨pl(rand(#z, #())), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
     refine le_of_eq ?_
     rw [primStep_eq_headStep
       (Exp.decompItem_none_of_lc_headReducible (by is_lc) (rand_headReducible Hz σ₁))]
@@ -225,7 +225,7 @@ theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → �
     (Hz : 0 < z) (HSum : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(F n.toNat) -∗ Φ (.int n)) -∗
-        lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
+        lwp Q E (pl(rand(#z, #()))) Φ) := by
   have hsum : (∑ n ∈ Finset.range z.toNat, min (F n) 1) / (z.toNat : ℝ≥0∞) ≤ ε₁ :=
     (ENNReal.div_le_div_right (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
   have hzero : (∑ n ∈ Finset.range z.toNat, (0 : ℝ≥0∞)) / (z.toNat : ℝ≥0∞) ≤ 0 := by simp
@@ -246,7 +246,7 @@ theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → �
     (HSum : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
     iprop(↻δ₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↻(G n.toNat) -∗ Φ (.int n)) -∗
-        lwp Q E (pl(rand(#(.int z), #(.unit)))) Φ) := by
+        lwp Q E (pl(rand(#z, #()))) Φ) := by
   have hzero : (∑ n ∈ Finset.range z.toNat, (0 : ℝ≥0∞)) / (z.toNat : ℝ≥0∞) ≤ 0 := by simp
   iintro Hcr Hcont
   iapply (lwp_rand_credit Hz (fun _ => zero_le) HG hzero HSum) $$ Hcr

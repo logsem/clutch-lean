@@ -17,7 +17,7 @@ variable {rT : Type _}
 
 /-- Flip a public coin: on `0` run randomized response on `b`, on `1` answer `true`. -/
 def choice (b : Bool) : Exp rT :=
-  pl% if rand(#2, #.unit) = #0 then &(RandomizedResponse.rr b) else #(.bool true)
+  pl% if rand(#2, #()) = #0 then &(RandomizedResponse.rr b) else #true
 
 end PublicChoice
 end ProbLang

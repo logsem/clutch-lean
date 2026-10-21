@@ -56,7 +56,7 @@ theorem walkCost_avg {u m : ℕ} (hum : u < m) {a x : ℤ} (hxa : x < a) :
 theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ) (x : ℤ)
     (hx : x ≤ a) :
     iprop(↯(walkCost u m a x)) ⊢
-      tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (n : ℤ)))) pl(#(.int x)))
+      tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (n : ℤ))) pl(#x))
         (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
   induction n generalizing x with
   | zero =>
@@ -78,7 +78,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     twp_pures
     rw [walk_beq_int_lit, beq_eq_false_iff_ne.mpr hxa]
     twp_pures
-    twp_bind pl(rand(#(.int (m : ℤ)), #(.unit)))
+    twp_bind pl(rand(#int (m : ℤ), #()))
     let F : ℕ → ℝ≥0∞ := fun r => walkCost u m a (if r < u then x + 1 else x - 1)
     have HSum : (∑ r ∈ Finset.range (m : ℤ).toNat, F r) / ((m : ℤ).toNat : ℝ≥0∞) ≤
         walkCost u m a x := by
@@ -96,8 +96,8 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
       twp_pure
       rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
       simp only [Exp.ofVal]
-      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (k : ℤ))))
-        pl(#(.int (x + 1))))
+      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ)))
+        pl(#(x + 1)))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH (x + 1) (by omega)
       iapply ErrorCredit.ext (by simp [F, show r.toNat < u by omega]) $$ Hcr
@@ -107,16 +107,16 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
       twp_pure
       rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
       simp only [Exp.ofVal]
-      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (k : ℤ))))
-        pl(#(.int (x - 1))))
+      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ)))
+        pl(#(x - 1)))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH (x - 1) (by omega)
       iapply ErrorCredit.ext (by simp [F, show ¬r.toNat < u by omega]) $$ Hcr
 
 theorem twp_biasedWalk_zero (E : CoPset) {u m : ℕ} (hum : u < m) (a n : ℕ) :
     iprop(↯(ENNReal.ofReal (((u : ℝ) / (m - u)) ^ a))) ⊢
-      tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#(.int (n : ℤ))))
-        pl(#(.int 0))) (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
+      tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (n : ℤ)))
+        pl(#0)) (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
   iintro Herr
   iapply twp_biasedWalk E hum a n 0 (by omega)
   iapply ErrorCredit.ext (by simp [walkCost]) $$ Herr

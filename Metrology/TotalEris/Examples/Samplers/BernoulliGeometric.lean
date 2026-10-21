@@ -31,8 +31,8 @@ structure AbstractBernoulli (v : Val rT) (γ : ↑unitInterval) : Prop where
   spec {E} : ⊢ iprop(
     ∀ (F : Bool → ℝ≥0∞),
       ↯ (.ofReal γ * F true + (1 - .ofReal γ) * F false) -∗
-      tglWp E pl(&v.1 #.unit) (fun w : Val rT => iprop(
-        ∃ b : Bool, ⌜w.1 = pl(#(.bool b))⌝ ∗ ↯ (F b))))
+      tglWp E pl(&v.1 #()) (fun w : Val rT => iprop(
+        ∃ b : Bool, ⌜w.1 = pl(#b)⌝ ∗ ↯ (F b))))
 
 end abstractBernoulli
 
@@ -125,8 +125,8 @@ theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v 
     ⊢
       ∀ (F : Int → ℝ≥0∞),
       ↯ (shiftGeometricPMFCreditV γ shift F) -∗
-      tglWp E pl(&GeometricTrial &v.1 #(.int shift)) (fun w : Val rT => iprop(
-        ∃ z : ℤ, ⌜w.1 = pl(#(.int z))⌝ ∗ ⌜shift ≤ z⌝ ∗ ↯ (F z))) := by
+      tglWp E pl(&GeometricTrial &v.1 #shift) (fun w : Val rT => iprop(
+        ∃ z : ℤ, ⌜w.1 = pl(#z)⌝ ∗ ⌜shift ≤ z⌝ ∗ ↯ (F z))) := by
   iintro %F Hε_spec
   iapply twp_err_pos solve_not_value
   iintro %ε_term %Hε_term_pos Hε_term
@@ -135,7 +135,7 @@ theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v 
     (one_lt_terminationFactor γ hγ0 hγ1) $$ [] Hε_term
   iintro !> ⟨IH, Hε_term⟩ %shift Hε_spec
   twp_pures
-  twp_bind pl({v.fst} #.unit)
+  twp_bind pl({v.fst} #())
   iapply tglWp_wand
   isplitl [Hε_spec Hε_term]
   · iapply Hspec.spec $$ %(geometricContAmp F γ shift ε_term)
@@ -157,7 +157,7 @@ theorem twp_GeometricTrial (E : CoPset) {γ : ↑unitInterval} (shift : Int) (v 
     itrivial
   · twp_pure
     twp_pure
-    twp_bind pl(&GeometricTrial &v.1 #(.int (shift + 1)))
+    twp_bind pl(&GeometricTrial &v.1 #(shift + 1))
     iapply tglWp_wand
     isplitl [Hε IH]
     · rw [geometricContAmp]

@@ -386,14 +386,14 @@ theorem beq_int_lit {n m : Int} :
 
 theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
     ⊢ ↯ (CCreditV F m) -∗
-      tglWp E pl(&C #(.int (m : ℤ)))
+      tglWp E pl(&C #int (m : ℤ))
         (fun v : Val ℝ => iprop(∃ n : ℕ,
-          ⌜v.1 = pl(#(.int (Int.ofNat n)))⌝ ∗ ⌜n = 0 ∨ n = 1 ∨ n = 2⌝ ∗ ↯ (F n))) := by
+          ⌜v.1 = pl(#int (Int.ofNat n))⌝ ∗ ⌜n = 0 ∨ n = 1 ∨ n = 2⌝ ∗ ↯ (F n))) := by
   iintro Hε
   twp_pure
-  twp_bind pl(rand(#(.int (m : ℤ)) + #2, #.unit))
+  twp_bind pl(rand(#int (m : ℤ) + #2, #()))
   twp_pures
-  twp_bind (Exp.rand (pl(#(.int ((m : ℤ) + 2)))) pl(#(.unit)))
+  twp_bind (Exp.rand (pl(#int ((m : ℤ) + 2))) pl(#()))
   iapply (twp_rand_exp' (ε₂ := CCredit F) (Hz := by omega) (HSum := cCredit_sum_div_le F m)) $$ Hε
   iintro %n ⟨%hn, Hcr⟩
   iapply (ErisWpGS.tglWp_value_of_toVal (v := (.int n : Val ℝ)) rfl)
@@ -434,12 +434,12 @@ theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
 
 theorem twp_Bii (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
     ⊢ ↯ (BiiCreditV F k x) -∗
-      tglWp E pl(&Bii #(.int (k : ℤ)) #(.real x))
+      tglWp E pl(&Bii #int (k : ℤ) #x)
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
   twp_pure
   twp_pure
-  twp_bind pl(&C (#2 * #(.int (k : ℤ))))
+  twp_bind pl(&C (#2 * #int (k : ℤ)))
   twp_pure
   have h2k : (2 * (k : ℤ)) = ((2 * k : ℕ) : ℤ) := by push_cast; ring
   rw [h2k]
@@ -484,7 +484,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
     (B : ℝ) (hB0 : 0 < B) (hB1 : B < 1) :
     ⊢ ∀ (N : ℕ) (y : ℝ), ⌜0 ≤ y⌝ -∗ ⌜y ≤ B⌝ -∗
       ↯ (SCreditV F k x y N) -∗
-      tglWp E pl(&S #(.int (k : ℤ)) #(.real x) #(.real y) #(.int (N : ℤ)))
+      tglWp E pl(&S #int (k : ℤ) #x #y #int (N : ℤ))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   have hkpos : (0 : ℝ) ≤ 1 / B := by positivity
   set kf : ℝ≥0 := ⟨1 / B, hkpos⟩
@@ -521,7 +521,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
   rcases hyz : ProbLangℝ.realLt y z with _ | _
   · isimp only [SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
     twp_pure
-    twp_bind pl(&Bii #(.int (k : ℤ)) #(.real x))
+    twp_bind pl(&Bii #int (k : ℤ) #real x)
     iapply tglWp_wand
     isplitl [Hcz]
     · iapply (twp_Bii E (SbiiCredit F k x N z ((kf : ℝ≥0∞) * ε_term)) k x hx0 hx1) $$ Hcz
@@ -533,7 +533,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
       twp_pure
       twp_pure
       rw [← Nat.cast_add_one]
-      twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int ((N + 1 : ℕ) : ℤ)))
+      twp_bind pl(&S #int (k : ℤ) #real x #z #int ((N + 1 : ℕ) : ℤ))
       iapply (tglWp_mono fun _ => tglWp_value)
       have hzB : z ≤ B := (not_lt.mp (of_decide_eq_false hyz)).trans hyB
       iapply IH $$ Hterm %(N + 1) %z %hzr.1 %hzB Hexp
@@ -554,7 +554,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
 theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : ℕ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1)
     (hy0 : 0 ≤ y) (hy1 : y ≤ 1) :
     ⊢ ↯ (SCreditV F k x y N) -∗
-      tglWp E pl(&S #(.int (k : ℤ)) #(.real x) #(.real y) #(.int (N : ℤ)))
+      tglWp E pl(&S #int (k : ℤ) #x #y #int (N : ℤ))
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε_spec
   iterate 5 twp_pure
@@ -567,7 +567,7 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
   rcases hyz : ProbLangℝ.realLt y z with _ | _
   · isimp only [SCredit, SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
     twp_pure
-    twp_bind pl(&Bii #(.int (k : ℤ)) #(.real x))
+    twp_bind pl(&Bii #int (k : ℤ) #real x)
     iapply tglWp_wand
     isplitl [Hcz]
     · iapply (twp_Bii E (SbiiCredit F k x N z 0) k x hx0 hx1) $$ Hcz
@@ -578,7 +578,7 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
       twp_pure
       twp_pure
       rw [← Nat.cast_add_one]
-      twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int ((N + 1 : ℕ) : ℤ)))
+      twp_bind pl(&S #int (k : ℤ) #real x #z #int ((N + 1 : ℕ) : ℤ))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply twp_S_tail E F k x hx0 hx1 z hz01.1 hz01.2 $$ %(N + 1) %z %hz01.1.le %le_rfl Hcbii
     | true =>
@@ -597,7 +597,7 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
 
 theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 0 ≤ x) (hx1 : x ≤ 1) :
     ⊢ ↯ (SCreditV F k x x 0) -∗
-      tglWp E pl(&S0 #(.int (k : ℤ)) #(.real x))
+      tglWp E pl(&S0 #int (k : ℤ) #x)
         (fun v : Val ℝ => iprop(∃ n : ℕ, ⌜v.1 = .lit (.int (Int.ofNat n))⌝ ∗ ↯ (F n))) := by
   iintro Hε
   twp_pure
@@ -611,7 +611,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
   rcases hyz : ProbLangℝ.realLt x z with _ | _
   · isimp only [SCredit, SCreditAmp, of_decide_eq_false hyz, reduceIte] at Hcz
     twp_pure
-    twp_bind pl(&Bii #(.int (k : ℤ)) #(.real x))
+    twp_bind pl(&Bii #int (k : ℤ) #real x)
     iapply tglWp_wand
     isplitl [Hcz]
     · iapply (twp_Bii E (SbiiCredit F k x 0 z 0) k x hx0 hx1) $$ Hcz
@@ -620,7 +620,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
     | false =>
       isimp only [SbiiCredit, Bool.false_eq_true, reduceIte, add_zero] at Hcbii
       twp_pure
-      twp_bind pl(&S #(.int (k : ℤ)) #(.real x) #(.real z) #(.int (1 : ℤ)))
+      twp_bind pl(&S #int (k : ℤ) #real x #z #(1 : ℤ))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply (twp_S E F k x z 1 hx0 hx1 hz01.1.le hz01.2.le) $$ Hcbii
     | true =>
@@ -639,12 +639,12 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
 
 theorem twp_B (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx : 0 ≤ x ∧ x ≤ 1) :
     ⊢ ↯ (BCreditV F k x) -∗
-      tglWp E pl(&B #(.int (k : ℤ)) #(.real x))
+      tglWp E pl(&B #int (k : ℤ) #x)
         (fun v : Val ℝ => iprop(∃ b : Bool, ⌜v.1 = .lit (.bool b)⌝ ∗ ↯ (F b))) := by
   iintro Hε
   twp_pure
   twp_pure
-  twp_bind pl(&S0 #(.int (k : ℤ)) #(.real x))
+  twp_bind pl(&S0 #int (k : ℤ) #real x)
   iapply tglWp_wand
   isplitl [Hε]
   · iapply (twp_S0 E (BS0Credit F) k x hx.1 hx.2)

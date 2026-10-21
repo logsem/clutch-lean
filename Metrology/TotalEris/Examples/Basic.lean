@@ -39,7 +39,7 @@ example (E : CoPset) (l : Loc) (z : Int)
     (n : { z' : Int // 0 ≤ z' ∧ z' < z })
     (ns : List { z' : Int // 0 ≤ z' ∧ z' < z }) :
     ⊢ l ↪ₐ ⟨z, n :: ns⟩ -∗
-      tglWp E (pl(rand(#(.int z), #(.lbl l))))
+      tglWp E (pl(rand(#z, #lbl l)))
         (fun w : Val rT => iprop(⌜w = .int n.val⌝ ∗ l ↪ₐ ⟨z, ns⟩)) := by
   iintro Hl
   iapply twp_rand_tape
@@ -50,7 +50,7 @@ example (E : CoPset) (l : Loc) (z : Int)
 /-- `twp_rand_tape_empty` -/
 example (E : CoPset) (l : Loc) (z : Int) (Hz : 0 < z) :
     ⊢ l ↪ₐ ⟨z, []⟩ -∗
-      tglWp E (pl(rand(#(.int z), #(.lbl l))))
+      tglWp E (pl(rand(#z, #lbl l)))
         (fun w : Val rT => iprop(∃ n : Int,
           ⌜0 ≤ n ∧ n < z⌝ ∗ ⌜w = .int n⌝ ∗ l ↪ₐ ⟨z, []⟩)) := by
   iintro Hl
@@ -145,7 +145,7 @@ example (E : CoPset) (v : Val rT) (R : Prop) (HR : R) :
 /-- `twp_rand_exp'` with `F 0 = 0`, `F 1 = ε` -/
 example (E : CoPset) (ε : ENNReal) :
     ⊢ ↯ε -∗
-      tglWp E (pl(rand(#(.int 2), #(.unit))))
+      tglWp E (pl(rand(#2, #())))
         (fun w : Val rT => iprop(∃ n : Int, ⌜0 ≤ n ∧ n < 2 ∧
           w = .int n⌝)) := by
   iintro Hcr
@@ -165,7 +165,7 @@ example (E : CoPset) (ε : ENNReal) :
 /-- `twp_rand_exp` with zero error -/
 example (E : CoPset) (ε : ENNReal) :
     ⊢ ↯ε -∗
-      tglWp E (pl(rand(#(.int 1), #(.unit))))
+      tglWp E (pl(rand(#1, #())))
         (fun w : Val rT => iprop(⌜w = .int 0⌝)) := by
   iintro Hε
   iapply (twp_rand_exp (Hz := by decide) (Hbd := fun _ => zero_le) (HSum := by simp)) $$ Hε

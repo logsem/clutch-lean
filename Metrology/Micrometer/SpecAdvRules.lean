@@ -32,8 +32,8 @@ bounds the average of `ε₂`. -/
 theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
     (K : Ectx rT) {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} : iprop%
-    ⤇ K.fill pl(rand(#(.int N), #(.unit))) ∗ ↯b (s ε₁) ∗
-    (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ ⤇ K.fill pl(#(.int n)) -∗ wp L E e Φ) ⊢
+    ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (s ε₁) ∗
+    (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ ⤇ K.fill pl(#n) -∗ wp L E e Φ) ⊢
     wp L E e Φ := by
   classical
   iintro ⟨Hj, Hc, Hcnt⟩
@@ -43,7 +43,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
   imod BudgetCredit.supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hb⟩
   imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
   imodintro
-  let rgt : Int → Cfg rT := fun n ↦ ⟨K.fill pl(#(.int n)), σ₁'⟩
+  let rgt : Int → Cfg rT := fun n ↦ ⟨K.fill pl(#n), σ₁'⟩
   have hrgt : Function.Injective rgt := fun m m' h ↦ by
     simpa [rgt] using Ectx.fill_injective K ((Cfg.mk.injEq ..).mp h).1
   let R : State rT → Cfg rT → B := fun σ ρ ↦
@@ -54,7 +54,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
   have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
   have hcpl : L b R (MeasureTheory.Measure.dirac σ₁)
       ((MeasureTheory.Measure.dirac σ₁').bind fun σ ↦
-        pexecN 1 ⟨K.fill pl(rand(#(.int N), #(.unit))), σ⟩) := by
+        pexecN 1 ⟨K.fill pl(rand(#N, #())), σ⟩) := by
     rw [dirac_bind_pexecN_one hredR, primStep_fill Exp.rand_not_isValue, primStep_rand_unit HN,
       Cfg.uniform_eq_map HN, MeasureTheory.Measure.map_map (by fun_prop) Measurable.of_discrete,
       ← MeasureTheory.Measure.map_id (μ := MeasureTheory.Measure.dirac σ₁)]
@@ -88,7 +88,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     simp [R, hno] at hlt
   obtain ⟨he, hσ'⟩ := (Cfg.mk.injEq ..).mp hρ
   subst σ₂ e₂' σ₂'
-  rw [show (⟨K.fill pl(#(.int n)), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN]
+  rw [show (⟨K.fill pl(#n), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN]
   imodintro
   iapply specCoupl_ret
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
@@ -110,8 +110,8 @@ theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT
     (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) :
     iprop%
-    ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#(.int n))) A) ⊢
-    refines L E e (K.fill pl(rand(#(.int N), #(.unit)))) A := by
+    ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#n)) A) ⊢
+    refines L E e (K.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [Ectx.fill_comp K' K] at Hj

@@ -32,7 +32,7 @@ local bi IProp GF
 /-- `wp_rr_of` at the zCDP coupling `rrCoupling_zcdp`: one round against the spec in context `K`,
 spending `(ln 3, 0)`. -/
 theorem wp_rr_step (K : Ectx rT) (b b' : Bool) (Φ : Val rT → IProp GF) :
-    ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#(.bool c)) -∗ Φ (.bool c)) ⊢
+    ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#bool c) -∗ Φ (.bool c)) ⊢
       wp zcdpLifting ⊤ (rr b) Φ :=
   wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp K b b' Φ
 
@@ -64,7 +64,7 @@ theorem wp_rr2_fill (K : Ectx rT) (b₁ b₂ b₁' b₂' : Bool) (Φ : Val rT �
   imodintro
   iapply H
   -- the spec holds the pair expression; restate it as Exp.ofVal of the pair value
-  iapply specProgFrag_reshape (e₁ := K.fill pl((#(.bool c₁), #(.bool c₂))))
+  iapply specProgFrag_reshape (e₁ := K.fill pl((#bool c₁, #bool c₂)))
     (e₂ := K.fill (Exp.ofVal (.pair (.bool c₁) (.bool c₂)))) rfl $$ Hj
 
 /-- The two-bit program against itself, spending `(ln 3, 0)` per bit. -/

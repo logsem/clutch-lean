@@ -92,7 +92,7 @@ theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
 
 /-- `Cfg.uniform z σ` is `unifInt z` pushed to integer literals. -/
 theorem Cfg.uniform_eq_map {z : Int} (hz : 0 < z) (σ : State rT) :
-    Cfg.uniform z σ = (unifInt z hz).map fun n => (⟨pl(#(.int n)), σ⟩ : Cfg rT) :=
+    Cfg.uniform z σ = (unifInt z hz).map fun n => (⟨pl(#int n), σ⟩ : Cfg rT) :=
   Cfg.uniform_eq_map_uniformOfFinset hz σ
 
 /-- A lifting of two uniform integer draws pushes forward to the configurations they step to, under
@@ -101,7 +101,7 @@ theorem Cfg.uniform_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLaw
     {b : B} {zL zR : Int} (HzL : 0 < zL) (HzR : 0 < zR) (σ σ' : State rT) (K : Ectx rT)
     {S : Int → Int → Prop} {S' : Cfg rT → Cfg rT → Prop}
     (h : L.Rel b S (unifInt zL HzL) (unifInt zR HzR))
-    (hS : ∀ n m, S n m → S' ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int m)), σ'⟩) :
+    (hS : ∀ n m, S n m → S' ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int m), σ'⟩) :
     L.Rel b S' (Cfg.uniform zL σ) ((Cfg.uniform zR σ').map K.fillCfg) := by
   rw [Cfg.uniform_eq_map HzL, Cfg.uniform_eq_map HzR,
     Measure.map_map (Ectx.fillCfg.measurable K) Measurable.of_discrete]
@@ -113,8 +113,8 @@ end UniformInt
 
 /-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) (σ : State rT) :
-    primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ := by
-  have Hwitness : HeadStepSupport ⟨pl(rand(#(.int z), #(.unit))), σ⟩ ⟨pl(#(.int 0)), σ⟩ :=
+    primStep ⟨pl(rand(#z, #())), σ⟩ = Cfg.uniform z σ := by
+  have Hwitness : HeadStepSupport ⟨pl(rand(#z, #())), σ⟩ ⟨pl(#0), σ⟩ :=
     .RandNoTapeS Hz le_rfl Hz
   rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc)
     (HeadReducible.of_headStepSupport Hwitness))]
@@ -123,15 +123,15 @@ theorem primStep_rand_unit [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z) 
 /-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
 theorem randUnit_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     (σ : State rT) :
-    Discrete.Reducible pl(rand(#(.int z), #(.unit))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩ = Cfg.uniform z σ :=
+    Discrete.Reducible pl(rand(#z, #())) σ ∧
+      primStep ⟨pl(rand(#z, #())), σ⟩ = Cfg.uniform z σ :=
   ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
     primStep_rand_unit Hz σ⟩
 
 /-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
 theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State rT} {l : Loc}
-    {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ ρ) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ =
+    {ρ : Cfg rT} (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ =
       match σ.tapes[l]? with
       | none => 0
       | some ⟨M, ns⟩ =>
@@ -149,22 +149,22 @@ theorem primStep_rand_lbl_eq [MeasurableSingletonClass rT] {z : Int} {σ : State
 theorem primStep_rand_lbl_wrong [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
     (HneM : z ≠ M) (σ : State rT) (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ := by
   rw [primStep_rand_lbl_eq (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl), Hlk]
   simp only [ite_eq_right (Ne.symm HneM)]
 
 /-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_lbl_empty [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     (σ : State rT) (l : Loc) (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ := by
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ := by
   rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
   simp only [↓reduceIte]
 
 /-- `primStep_rand_lbl_empty` with discrete reducibility. -/
 theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz : 0 < z)
     {σ : State rT} {l : Loc} (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
+    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
+      primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ :=
   ⟨.of_headStepSupport (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl) (by is_lc),
     primStep_rand_lbl_empty Hz σ l Hlk⟩
 
@@ -172,8 +172,8 @@ theorem randLbl_empty_uniform_step [MeasurableSingletonClass rT] {z : Int} (Hz :
 theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz : 0 < z)
     (HneM : z ≠ M) {σ : State rT} {l : Loc} {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }}
     (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    Discrete.Reducible pl(rand(#(.int z), #(.lbl l))) σ ∧
-      primStep ⟨pl(rand(#(.int z), #(.lbl l))), σ⟩ = Cfg.uniform z σ :=
+    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧
+      primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = Cfg.uniform z σ :=
   ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
     primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
 
@@ -183,7 +183,7 @@ theorem randLbl_wrong_uniform_step [MeasurableSingletonClass rT] {z M : Int} (Hz
 @[reducible] def CoupledDraw (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
     Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
   ∃ n : Int, 0 ≤ n ∧ n < z ∧
-    c₁ = ⟨pl(#(.int n)), σ⟩ ∧ c₂ = ⟨K.fill pl(#(.int (f n))), σ'⟩
+    c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (f n)), σ'⟩
 
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)`. -/
 theorem Cfg.uniform_rel_bij_fill [MeasurableSingletonClass rT] [Zero B] [Add B]
@@ -202,11 +202,11 @@ theorem Cfg.uniform_addCoupl_bij [MeasurableSingletonClass rT] {z : Int} (Hz : 0
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
     AddCoupl 0
       {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < z ∧
-        p.1 = ⟨pl(#(.int n)), σ⟩ ∧ p.2 = ⟨pl(#(.int (f n))), σ'⟩}
+        p.1 = ⟨pl(#int n), σ⟩ ∧ p.2 = ⟨pl(#int (f n)), σ'⟩}
       (Cfg.uniform z σ) (Cfg.uniform z σ') := by
   rw [Cfg.uniform_eq_map Hz, Cfg.uniform_eq_map Hz]
   refine Rel.addCoupl (S := fun (c₁ c₂ : Cfg rT) => ∃ n, 0 ≤ n ∧ n < z ∧
-    c₁ = ⟨pl(#(.int n)), σ⟩ ∧ c₂ = ⟨pl(#(.int (f n))), σ'⟩)
+    c₁ = ⟨pl(#int n), σ⟩ ∧ c₂ = ⟨pl(#int (f n)), σ'⟩)
     ((unifInt_rel_bij GradedDivergence.tv.codensity Hz f hdom hbij).map ?_
       Measurable.of_discrete Measurable.of_discrete)
   rintro n _ ⟨h0, h1, hm⟩
@@ -311,7 +311,7 @@ theorem Cfg.uniform_addCoupl_inj [MeasurableSingletonClass rT] {zL zR : Int}
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
     AddCoupl (((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal))
       {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < zL ∧
-        p.1 = ⟨pl(#(.int n)), σ⟩ ∧ p.2 = ⟨pl(#(.int (f n))), σ'⟩}
+        p.1 = ⟨pl(#int n), σ⟩ ∧ p.2 = ⟨pl(#int (f n)), σ'⟩}
       (Cfg.uniform zL σ) (Cfg.uniform zR σ') := by
   rw [Cfg.uniform_eq_map HzL, Cfg.uniform_eq_map (HzL.trans_le Hle)]
   refine AddCoupl.map _ _ Measurable.of_discrete Measurable.of_discrete ?_
@@ -326,7 +326,7 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
     AddCoupl (((zL - zR).toNat : ENNReal) / (zL.toNat : ENNReal))
       {p : Cfg rT × Cfg rT | ∃ m, 0 ≤ m ∧ m < zR ∧
-        p.1 = ⟨pl(#(.int (f m))), σ⟩ ∧ p.2 = ⟨pl(#(.int m)), σ'⟩}
+        p.1 = ⟨pl(#int (f m)), σ⟩ ∧ p.2 = ⟨pl(#int m), σ'⟩}
       (Cfg.uniform zL σ) (Cfg.uniform zR σ') := by
   rw [Cfg.uniform_eq_map (HzR.trans_le Hle), Cfg.uniform_eq_map HzR]
   refine AddCoupl.map _ _ Measurable.of_discrete Measurable.of_discrete ?_
@@ -339,7 +339,7 @@ theorem Cfg.uniform_addCoupl_rev_inj [MeasurableSingletonClass rT] {zL zR : Int}
 @[reducible] def CoupledDrawRev (z : Int) (f : Int → Int) (σ σ' : State rT) (K : Ectx rT) :
     Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
   ∃ m : Int, 0 ≤ m ∧ m < z ∧
-    c₁ = ⟨pl(#(.int (f m))), σ⟩ ∧ c₂ = ⟨K.fill pl(#(.int m)), σ'⟩
+    c₁ = ⟨pl(#int (f m)), σ⟩ ∧ c₂ = ⟨K.fill pl(#int m), σ'⟩
 
 /-- Coupling of `rand zL ~ K[rand zR]` along an injection, smaller bound on the left (the `tv`
 instance of `Cfg.uniform_rel_fill`). -/
@@ -405,10 +405,10 @@ omit [LawfulProbLangℝ rT] in
 /-- At the pair drawn from `n`, the leftover is `s (ε₂ n)`. -/
 theorem Cfg.advLeftover_apply [_root_.Top B] (s : ENNReal → B) {z : Int} (f : Int → Int)
     (σ σ' : State rT) (K : Ectx rT) (ε₂ : Int → ENNReal) {n : Int} (h0 : 0 ≤ n) (hn : n < z) :
-    Cfg.advLeftover s z f σ σ' K ε₂ ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int (f n))), σ'⟩ =
+    Cfg.advLeftover s z f σ σ' K ε₂ ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ =
       s (ε₂ n) := by
   classical
-  have hex : CoupledDraw z f σ σ' K ⟨pl(#(.int n)), σ⟩ ⟨K.fill pl(#(.int (f n))), σ'⟩ :=
+  have hex : CoupledDraw z f σ σ' K ⟨pl(#int n), σ⟩ ⟨K.fill pl(#int (f n)), σ'⟩ :=
     ⟨n, h0, hn, rfl, rfl⟩
   obtain ⟨he, -⟩ := (Cfg.mk.injEq ..).mp hex.choose_spec.2.2.1
   simp only [Exp.lit.injEq, BaseLit.int.injEq] at he
@@ -424,8 +424,8 @@ theorem Cfg.uniform_lift_adv [MeasurableSingletonClass rT] [AddCommMonoid B] [Pa
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
     (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) :
     L (s ε₁) (Cfg.advLeftover s z f σ σ' K ε₂)
-      (primStep ⟨pl(rand(#(.int z), #(.unit))), σ⟩)
-      (primStep ⟨K.fill pl(rand(#(.int z), #(.unit))), σ'⟩) := by
+      (primStep ⟨pl(rand(#z, #())), σ⟩)
+      (primStep ⟨K.fill pl(rand(#z, #())), σ'⟩) := by
   classical
   -- Idea: `c m = ε₂ (f⁻¹ m)` is paid in expectation over the exact bijection coupling
   -- (`IsExpectationAdditive.add_right`); the average of `c` is the amortised bound `hamort`.

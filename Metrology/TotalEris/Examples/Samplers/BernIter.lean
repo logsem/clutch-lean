@@ -28,7 +28,7 @@ structure AbstractBernoulliI (v : Val ℝ) (γ : ↑unitInterval) (I : IProp GF)
   spec {E} : ⊢ iprop(
     ∀ (F : Bool → ℝ≥0∞),
       ↯ (.ofReal γ * F true + (1 - .ofReal γ) * F false) ∗ I -∗
-      tglWp E pl(&v.1 #.unit)
+      tglWp E pl(&v.1 #())
         (fun w : Val ℝ => iprop(∃ b : Bool, ⌜w.1 = .lit (.bool b)⌝ ∗ ↯ (F b) ∗ I)))
 
 theorem AbstractBernoulli.toAbstractBernoulliI {v : Val ℝ} {γ : ↑unitInterval}
@@ -86,7 +86,7 @@ theorem twp_IterTrial (E : CoPset) (v : Val ℝ) (γ : ↑unitInterval) (I : IPr
     (Hspec : AbstractBernoulliI v γ I)
     (F : Bool → ℝ≥0∞) (N : ℕ) :
     ⊢ ↯ (IterCreditV F γ N) ∗ I -∗
-      tglWp E pl(&IterTrial &v.1 #(.int (N : ℤ)))
+      tglWp E pl(&IterTrial &v.1 #int (N : ℤ))
         (fun w : Val ℝ => iprop(∃ b : Bool, ⌜w.1 = .lit (.bool b)⌝ ∗ ↯ (F b) ∗ I)) := by
   induction N generalizing F with
   | zero =>
@@ -100,7 +100,7 @@ theorem twp_IterTrial (E : CoPset) (v : Val ℝ) (γ : ↑unitInterval) (I : IPr
   | succ N IH =>
     iintro ⟨Hcr, HI⟩
     twp_pures
-    twp_bind pl({v.fst} #.unit)
+    twp_bind pl({v.fst} #())
     iapply tglWp_wand
     isplitl [Hcr HI]
     · iapply Hspec.spec $$ %(IterCont F γ N)
@@ -119,7 +119,7 @@ theorem twp_IterTrial (E : CoPset) (v : Val ℝ) (γ : ↑unitInterval) (I : IPr
     · twp_pure
       twp_pure
       rw [Nat.cast_add_one, add_sub_cancel_right]
-      twp_bind pl(&IterTrial {v.fst} #(.int (N : ℤ)))
+      twp_bind pl(&IterTrial {v.fst} #int (N : ℤ))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH
       rw [IterCont]

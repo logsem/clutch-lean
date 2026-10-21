@@ -41,12 +41,12 @@ theorem lwp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
 theorem lwp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
-    iprop(l ↦ v ∗ (l ↦ v -∗ Φ v)) ⊢ lwp Q E pl(!#(.loc l)) Φ := by
+    iprop(l ↦ v ∗ (l ↦ v -∗ Φ v)) ⊢ lwp Q E pl(!#loc l) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply lwp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w) (by is_lc)
   iintro %σ₁ %c ⟨Hσ, Hc⟩
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
-  have hred : HeadReducible pl(!#(.loc l)) σ₁ := (HeadStepSupport.LoadS hlook rfl).ne_zero
+  have hred : HeadReducible pl(!#loc l) σ₁ := (HeadStepSupport.LoadS hlook rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %hstep
@@ -60,12 +60,12 @@ theorem lwp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} 
     iapply HΦ $$ Hl
 
 theorem lwp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp GF} :
-    iprop(l ↦ v' ∗ (l ↦ v -∗ Φ .unit)) ⊢ lwp Q E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
+    iprop(l ↦ v' ∗ (l ↦ v -∗ Φ .unit)) ⊢ lwp Q E (.store pl(#loc l) (.ofVal v)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply lwp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w) (by is_lc)
   iintro %σ₁ %c ⟨Hσ, Hc⟩
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
-  have hred : HeadReducible (.store pl(#(.loc l)) (.ofVal v)) σ₁ :=
+  have hred : HeadReducible (.store pl(#loc l) (.ofVal v)) σ₁ :=
     (HeadStepSupport.StoreS (Exp.toVal?_ofVal v)
       (by rw [hlook]; exact Option.isSome_some) rfl).ne_zero
   imodintro
@@ -86,12 +86,12 @@ theorem lwp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp 
 theorem lwp_store_progress {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp GF}
     (hQ : ∀ σ : State rT, σ.heap[l]? = some v' → Q σ (σ.update_heap (·.insert l v))) :
     iprop(l ↦ v' ∗ ▷ (l ↦ v -∗ Φ .unit))
-      ⊢ lwp Q E (.store pl(#(.loc l)) (.ofVal v)) Φ := by
+      ⊢ lwp Q E (.store pl(#loc l) (.ofVal v)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply lwp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w) (by is_lc)
   iintro %σ₁ %c ⟨Hσ, Hc⟩
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
-  have hred : HeadReducible (.store pl(#(.loc l)) (.ofVal v)) σ₁ :=
+  have hred : HeadReducible (.store pl(#loc l) (.ofVal v)) σ₁ :=
     (HeadStepSupport.StoreS (Exp.toVal?_ofVal v)
       (by rw [hlook]; exact Option.isSome_some) rfl).ne_zero
   imodintro
@@ -114,11 +114,11 @@ theorem lwp_store_progress {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT �
 
 theorem lwp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (hz : 0 < z) :
     iprop(∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n))
-      ⊢ lwp Q E pl(rand(#(.int z), #(.unit))) Φ := by
+      ⊢ lwp Q E pl(rand(#z, #())) Φ := by
   iintro HΦ
   iapply lwp_lift_atomic_head_step (Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w) (by is_lc)
   iintro %σ₁ %c ⟨Hσ, Hc⟩ !>
-  have hred : HeadReducible pl(rand(#(.int z), #(.unit))) σ₁ :=
+  have hred : HeadReducible pl(rand(#z, #())) σ₁ :=
     (HeadStepSupport.RandNoTapeS hz (le_refl _) hz).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %hstep

@@ -130,20 +130,20 @@ variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [
 instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where
   out := OpenInv.of_atomic Atomic.urand
 
-instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#(.loc l)) where
+instance isOpenInv_load (l : Loc) : IsOpenInv L (rT := rT) pl(!#loc l) where
   out := OpenInv.of_atomic (Atomic.load l)
 
-instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#(.loc l)) v.1) where
+instance isOpenInv_store (l : Loc) (v : Val rT) : IsOpenInv L (Exp.store pl(#loc l) v.1) where
   out := OpenInv.of_atomic (Atomic.store l v)
 
 instance isOpenInv_alloc (v : Val rT) : IsOpenInv L (Exp.alloc v.1) where
   out := OpenInv.of_atomic (Atomic.alloc v)
 
-instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.unit))) where
+instance isOpenInv_rand_unit (z : Int) : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
   out := OpenInv.of_atomic (Atomic.rand_unit z)
 
 instance isOpenInv_rand_lbl (z : Int) (l : Loc) :
-    IsOpenInv L (rT := rT) pl(rand(#(.int z), #(.lbl l))) where
+    IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
   out := OpenInv.of_atomic (Atomic.rand_lbl z l)
 
 end Instances

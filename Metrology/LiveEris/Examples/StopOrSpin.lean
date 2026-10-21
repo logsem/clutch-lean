@@ -28,8 +28,8 @@ pl_closed spin
 @[pl_fold]
 def stopOrSpin {rT : Type _} : Exp rT := pl%
   rec loop u :=
-    if rand(#2, #.unit) = #0 then #.unit
-    else (if rand(#2, #.unit) = #0 then loop u else &spin u)
+    if rand(#2, #()) = #0 then #()
+    else (if rand(#2, #()) = #0 then loop u else &spin u)
 
 theorem stopOrSpin_lc {rT : Type _} : (stopOrSpin : Exp rT).IsLocallyClosed :=
   Exp.lcb_imp_lc (by rfl)
@@ -39,9 +39,9 @@ variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ 
 local bi IProp GF
 
 theorem lwp_spin (Q : State rT → State rT → Prop) (E : CoPset) (Φ : Val rT → IProp GF) :
-    iprop(↻1) ⊢ lwp Q E (Exp.app spin pl(#(.unit))) Φ := by
+    iprop(↻1) ⊢ lwp Q E (Exp.app spin pl(#())) Φ := by
   have H : ⊢ iprop(∀ Ψ : Val rT → IProp GF,
-      ↻1 -∗ lwp Q E (Exp.app (spin (rT := rT)) pl(#(.unit))) Ψ) := by
+      ↻1 -∗ lwp Q E (Exp.app (spin (rT := rT)) pl(#())) Ψ) := by
     iapply loeb_wand_intuitionistically
     iintro !> #IH %Ψ Hd
     live_pure_excused
@@ -49,7 +49,7 @@ theorem lwp_spin (Q : State rT → State rT → Prop) (E : CoPset) (Φ : Val rT 
     inext
     iintro Hd
     live_pure
-    live_bind (Exp.app (spin (rT := rT)) pl(#(.unit)))
+    live_bind (Exp.app (spin (rT := rT)) pl(#()))
     iapply IH $$ Hd
   iintro Hd
   iapply H $$ %Φ Hd
@@ -100,7 +100,7 @@ theorem lwp_of_err_liminf_zero {Q : State rT → State rT → Prop} {E : CoPset}
 
 theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (k : ℕ) :
     iprop(↯((2⁻¹ : ℝ≥0∞) ^ (2 * k)) ∗ ↻(3⁻¹)) ⊢
-      lwp Q E (Exp.app stopOrSpin pl(#(.unit))) (fun v => iprop(⌜v = .unit⌝)) := by
+      lwp Q E (Exp.app stopOrSpin pl(#())) (fun v => iprop(⌜v = .unit⌝)) := by
   induction k with
   | zero =>
     iintro ⟨He, -⟩
@@ -112,7 +112,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
     ihave Hcr := Credit.frag_sep.2 $$ [$He $Hd]
     live_pure
     live_pure
-    live_bind (pl(rand(#2, #.unit)) : Exp rT)
+    live_bind (pl(rand(#2, #())) : Exp rT)
     iapply (lwp_rand_credit (F := fun n => if n = 0 then 0 else (2⁻¹ : ℝ≥0∞) ^ (2 * k + 1))
       (G := fun n => if n = 0 then 0 else 2 * 3⁻¹) (by norm_num)
       (fun n => by split <;> first | exact zero_le | exact half_pow_le_one _)
@@ -127,7 +127,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
     · live_pures
       ihave Hcr := Credit.frag_ext (ε₂ := (2⁻¹ : ℝ≥0∞) ^ (2 * k + 1)) (δ₂ := 2 * 3⁻¹)
         (by simp) (by simp) $$ Hcr
-      live_bind (pl(rand(#2, #.unit)) : Exp rT)
+      live_bind (pl(rand(#2, #())) : Exp rT)
       iapply (lwp_rand_credit (F := fun n => if n = 0 then (2⁻¹ : ℝ≥0∞) ^ (2 * k) else 0)
         (G := fun n => if n = 0 then 3⁻¹ else 1) (by norm_num)
         (fun n => by split <;> first | exact zero_le | exact half_pow_le_one _)
@@ -138,7 +138,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
       obtain rfl | rfl : n = 0 ∨ n = 1 := by omega
       · live_pure
         live_pure
-        live_bind (Exp.app (stopOrSpin (rT := rT)) pl(#(.unit)))
+        live_bind (Exp.app (stopOrSpin (rT := rT)) pl(#()))
         iapply lwp_wand
         isplitl [Hcr]
         · iapply IH
@@ -149,13 +149,13 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
           ipureintro; rfl
       · live_pure
         live_pure
-        live_bind (Exp.app (spin (rT := rT)) pl(#(.unit)))
+        live_bind (Exp.app (spin (rT := rT)) pl(#()))
         iapply lwp_spin
         iapply Credit.frag_ext (by simp) (by simp) $$ Hcr
 
 theorem lwp_stopOrSpin (Q : State rT → State rT → Prop) (E : CoPset) :
     iprop(↻(3⁻¹)) ⊢
-      lwp Q E (Exp.app stopOrSpin pl(#(.unit))) (fun v => iprop(⌜v = .unit⌝)) := by
+      lwp Q E (Exp.app stopOrSpin pl(#())) (fun v => iprop(⌜v = .unit⌝)) := by
   have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ (2 * k)) Filter.atTop = 0 := by
     simp_rw [pow_mul]
     exact (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
@@ -183,14 +183,14 @@ theorem one_sub_third : (1 : ℝ≥0∞) - 3⁻¹ = 2 / 3 := by
 
 /-- Stop-or-spin never returns anything but `()`. -/
 theorem stopOrSpin_safe (σ : State ℝ) :
-    limExec ⟨Exp.app stopOrSpin pl(#(.unit)), σ⟩ (badVal (· = .unit)) = 0 :=
+    limExec ⟨Exp.app stopOrSpin pl(#()), σ⟩ (badVal (· = .unit)) = 0 :=
   nonpos_iff_eq_zero.mp <| limExec_bad_le measurableSet_eq_unit fun k =>
     lwp_adequacy_safety (GF := liveGF) (Q := fun _ _ => False) (δ := 3⁻¹) measurableSet_eq_unit
       (by simp) (fun [LiveGS ℝ .hasNoLC liveGF] => sep_elim_right.trans (lwp_stopOrSpin _ ⊤)) k
 
 /-- Stop-or-spin terminates, returning `()`, with probability at least `2/3`. -/
 theorem stopOrSpin_terminates (σ : State ℝ) :
-    2 / 3 ≤ limExec ⟨Exp.app stopOrSpin pl(#(.unit)), σ⟩ (goodVal (· = .unit)) := by
+    2 / 3 ≤ limExec ⟨Exp.app stopOrSpin pl(#()), σ⟩ (goodVal (· = .unit)) := by
   have h := lwp_adequacy_liveness (GF := liveGF) (σ := σ) (Q := fun _ _ => False) (ε := 0)
     (δ := 3⁻¹) (P := fun _ => False) (by simp) measurableSet_eq_unit (fun _ _ h => h) (by simp)
     (fun [LiveGS ℝ .hasNoLC liveGF] => sep_elim_right.trans (lwp_stopOrSpin _ ⊤)) 1

@@ -27,11 +27,11 @@ abbrev geoPost : Val rT → IProp GF :=
   fun w => iprop(∃ m : Int, ⌜w = .int m ∧ 0 ≤ m⌝)
 
 theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
-    iprop(↯ε) ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    iprop(↯ε) ⊢ tglWp E (Exp.app geometric pl(#())) (geoPost (rT := rT)) := by
   refine ErrorCredit.Induction.external_simple (k := (3/2 : NNReal)) hε (by norm_num) ?_
   iintro ⟨IH, Herr⟩
   twp_pures
-  twp_bind pl(rand(#(.int 2), #(.unit)))
+  twp_bind pl(rand(#2, #()))
   let F : ℕ → ENNReal := fun n => if n = 0 then 0 else (3/2 : NNReal) * ε
   have htoNat : (2 : Int).toNat = 2 := rfl
   have hF : ∑ n ∈ Finset.range 2, F n = (3/2 : NNReal) * ε := by
@@ -52,7 +52,7 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     itrivial
   · twp_pure
     twp_pure
-    twp_bind (Exp.app geometric pl(#(.unit)))
+    twp_bind (Exp.app geometric pl(#()))
     iapply ErisWpGS.tglWp_wand (Φ := geoPost)
     isplitl [Hcr IH]
     · iapply IH
@@ -65,14 +65,14 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
     exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg (E : CoPset) :
-    ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    ⊢ tglWp E (Exp.app geometric pl(#())) (geoPost (rT := rT)) := by
   iapply twp_err_pos solve_not_value
   iintro %ε %hε Herr
   iapply geo_nonneg_pos_err E ε hε $$ Herr
 
 theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
     iprop(↯((2⁻¹ : ENNReal) ^ k)) ⊢
-      tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+      tglWp E (Exp.app geometric pl(#())) (geoPost (rT := rT)) := by
   induction k with
   | zero =>
     iintro Herr
@@ -81,7 +81,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
   | succ k IH =>
     iintro Herr
     twp_pures
-    twp_bind pl(rand(#(.int 2), #(.unit)))
+    twp_bind pl(rand(#2, #()))
     let F : ℕ → ENNReal := fun n => if n = 0 then 0 else (2⁻¹ : ENNReal) ^ k
     have hsum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤
         (2⁻¹ : ENNReal) ^ (k + 1) := by
@@ -96,7 +96,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
       itrivial
     · twp_pure
       twp_pure
-      twp_bind (Exp.app geometric pl(#(.unit)))
+      twp_bind (Exp.app geometric pl(#()))
       iapply ErisWpGS.tglWp_wand (Φ := geoPost)
       isplitl [Hcr]
       · iapply IH
@@ -109,7 +109,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
       exact ⟨rfl, by omega⟩
 
 theorem geo_nonneg_of_depth (E : CoPset) :
-    ⊢ tglWp E (Exp.app geometric pl(#(.unit))) (geoPost (rT := rT)) := by
+    ⊢ tglWp E (Exp.app geometric pl(#())) (geoPost (rT := rT)) := by
   have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ENNReal) ^ k) Filter.atTop = 0 :=
     (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
   iapply fupd_tglWp
@@ -134,11 +134,11 @@ theorem measurableSet_geoPredicate :
   exact ⟨m, rfl⟩
 
 theorem geo_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
-    Tgl (limExec ⟨Exp.app geometric pl(#(.unit)), σ⟩) geoPredicate 0 := by
+    Tgl (limExec ⟨Exp.app geometric pl(#()), σ⟩) geoPredicate 0 := by
   refine twp_tgl (GF := GF) measurableSet_geoPredicate ?_
   intro _
   have hwp : ⊢
-      tglWp ⊤ (Exp.app geometric pl(#(.unit))) fun v => iprop(⌜geoPredicate v⌝) :=
+      tglWp ⊤ (Exp.app geometric pl(#())) fun v => iprop(⌜geoPredicate v⌝) :=
     (geo_nonneg ⊤).trans
       (ErisWpGS.tglWp_mono fun _ => by iintro ⟨%m, %hm⟩; ipureintro; exact ⟨m, hm⟩)
   iintro -
@@ -146,7 +146,7 @@ theorem geo_tgl [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
 
 /-- The geometric sampler almost-surely terminates. -/
 theorem geo_mass_one [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT) :
-    1 ≤ (limExec ⟨Exp.app geometric pl(#(.unit)), σ⟩) Set.univ := by
+    1 ≤ (limExec ⟨Exp.app geometric pl(#()), σ⟩) Set.univ := by
   simpa using Tgl.termination_ineq (geo_tgl (GF := GF) σ)
 
 end Examples

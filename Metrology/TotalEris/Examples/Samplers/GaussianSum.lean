@@ -59,7 +59,7 @@ theorem gaussCreditV_exp_le (c s : ℝ) :
 
 theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) (b : ℝ) :
     iprop(↯(gaussSumCost s a k b)) ⊢
-      tglWp E pl(&gaussSum #(.int (k : ℤ))) (gaussSumPost a b) := by
+      tglWp E pl(&gaussSum #int (k : ℤ)) (gaussSumPost a b) := by
   induction k generalizing b with
   | zero =>
     iintro Herr
@@ -79,7 +79,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
     twp_pure; twp_pure; twp_pure
     isimp only [Gauss_openRec, Gauss_closeRec]
     twp_pure
-    twp_bind pl(&Gauss #.unit)
+    twp_bind pl(&Gauss #())
     iapply tglWp_wand
     isplitl [Herr]
     · iapply twp_Gauss E (fun y => gaussSumCost s a k (b + y)) (by unfold gaussSumCost; fun_prop)
@@ -96,7 +96,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
     twp_pure
     twp_pure
     rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
-    twp_bind pl(&gaussSum #(.int (k : ℤ)))
+    twp_bind pl(&gaussSum #int (k : ℤ))
     iapply tglWp_wand (Φ := gaussSumPost a (b + y))
     isplitl [Hcr]
     · iapply IH $$ Hcr
@@ -109,7 +109,7 @@ theorem twp_gaussSum_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : �
 
 theorem twp_gaussSum_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
     iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), gaussSumCost s a n 0)) ⊢
-      tglWp E pl(&gaussSum #(.int (n : ℤ))) (gaussSumPost a 0) := by
+      tglWp E pl(&gaussSum #int (n : ℤ)) (gaussSumPost a 0) := by
   iintro Herr
   iapply twp_err_biInf solve_not_value
   iframe Herr
@@ -126,7 +126,7 @@ theorem gaussSumCost_tail {n : ℕ} (hn : 0 < n) (a : ℝ) :
 
 theorem twp_gaussSum_tail (E : CoPset) {n : ℕ} (hn : 0 < n) {a : ℝ} (ha : 0 ≤ a) :
     iprop(↯(ENNReal.ofReal (Real.exp (-a ^ 2 / (2 * n))))) ⊢
-      tglWp E pl(&gaussSum #(.int (n : ℤ))) (gaussSumPost a 0) := by
+      tglWp E pl(&gaussSum #int (n : ℤ)) (gaussSumPost a 0) := by
   iintro Herr
   iapply twp_gaussSum_chernoff E
   iapply ErrorCredit.weaken ((biInf_le (fun s => gaussSumCost s a n 0)
