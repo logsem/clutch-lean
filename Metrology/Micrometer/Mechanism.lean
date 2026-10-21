@@ -29,12 +29,14 @@ noncomputable def progMech
     Mechanism X (Exp rT) :=
   ⟨fun x ↦ limExecV ⟨p x, σ⟩, limExecV.measurable.comp hp⟩
 
+variable {hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT)}
+
 @[simp]
-theorem progMech_apply {hp} (x : X) : progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
+theorem progMech_apply (x : X) : progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
   rfl
 
 /-- A program mechanism has total mass at most one. -/
-instance isSubMarkovKernel_progMech {hp} : IsSubMarkovKernel (progMech p σ hp) where
+instance isSubMarkovKernel_progMech : IsSubMarkovKernel (progMech p σ hp) where
   isSubProbabilityMeasure _ := limExecV.isSubProbabilityMeasure _
 
 end
