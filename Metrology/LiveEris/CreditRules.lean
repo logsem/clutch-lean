@@ -61,7 +61,7 @@ theorem lintegral_randCredit_le {z : Int} (Hz : 0 < z) (σ : State rT) {H : ℕ 
   rw [primStep_eq_headStep
     (Exp.decompItem_none_of_lc_headReducible (by is_lc) (rand_headReducible Hz σ))]
   show (∫⁻ ρ, randCredit z H ρ ∂(Cfg.uniform z σ)) ≤ b
-  rw [Cfg.lintegral_uniform' Hz σ (randCredit_measurable z H), ← ENNReal.div_eq_inv_mul]
+  rw [Cfg.lintegral_uniform Hz σ (randCredit_measurable z H), ← ENNReal.div_eq_inv_mul]
   convert HSum using 2
   refine Finset.sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
     ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)

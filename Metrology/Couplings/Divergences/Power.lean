@@ -15,10 +15,6 @@ universe u
 open MeasureTheory Measure ProbabilityTheory GradedLifting
 open scoped ENNReal
 
-/-- The Rényi order `2` is above one. -/
-instance fact_one_lt_two_real : Fact (1 < (2 : ℝ)) :=
-  ⟨one_lt_two⟩
-
 namespace GradedDivergence
 
 /-! ## Power budgets -/

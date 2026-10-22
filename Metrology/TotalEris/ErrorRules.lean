@@ -271,7 +271,7 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : 
     have hφ : Measurable f := (measurable_litInt_elim _).comp Cfg.measurable_expr
     rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))]
     show (∫⁻ ρ, f ρ ∂(Cfg.uniform z σ₁)) ≤ ε₁
-    rw [Cfg.lintegral_uniform' Hz σ₁ hφ, ← ENNReal.div_eq_inv_mul]
+    rw [Cfg.lintegral_uniform Hz σ₁ hφ, ← ENNReal.div_eq_inv_mul]
     convert HSum using 2
     refine Finset.sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
       ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)

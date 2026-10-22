@@ -129,8 +129,6 @@ theorem exists_not_codensity_renyi_bind_lintegral :
       IsProbabilityMeasure μ ∧ IsMarkovKernel κ ∧ IsMarkovKernel η ∧
       (∀ x, (codensity (renyiDivergence 2)).Rel (ρ₂ x) (· = ·) (κ x) (η x)) ∧
       ¬(codensity (renyiDivergence 2)).Rel (∫⁻ x, ρ₂ x ∂μ) (· = ·) (κ ∘ₘ μ) (η ∘ₘ μ) := by
-  -- local: `Power.lean`'s instance is not imported here
-  have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
   have hhalf {Z : Type} [MeasurableSpace Z] (a b : Z) :
       IsProbabilityMeasure ((2⁻¹ : ℝ≥0∞) • (dirac a + dirac b)) :=
     ⟨by simp [← two_mul, ENNReal.mul_inv_cancel two_ne_zero ofNat_ne_top]⟩

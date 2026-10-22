@@ -255,14 +255,14 @@ theorem bin_log_related_under_typed_ctx {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx
     -- binder into the cofinite premise of `bin_log_related_lam`
     | @lam _ x τ _ =>
       have hxRc := HfreshHead x (mem_singleton_self _)
-      have HCtxInner := HCtx.insert x τ (lookup_eq_none_of_not_mem hxRc)
+      have HCtxInner := HCtx.insert x τ (lookup_eq_none_of_notMem hxRc)
       obtain ⟨hKfe_lc, hKfe_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK
       obtain ⟨hKfe'_lc, hKfe'_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK'
       exact bin_log_related_lam_step hxRc hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv
         (IHinner _ HCtxInner (.cons_extend rfl HfreshTail))
     | @fix _ f τ τ' =>
       have hfRc := HfreshHead f (mem_singleton_self _)
-      have HCtxInner := HCtx.insert f (.arrow τ τ') (lookup_eq_none_of_not_mem hfRc)
+      have HCtxInner := HCtx.insert f (.arrow τ τ') (lookup_eq_none_of_notMem hfRc)
       obtain ⟨hKfe_lc, hKfe_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK
       obtain ⟨hKfe'_lc, hKfe'_fv⟩ := ctx_fill_lc_fv HCtxInner HtyK'
       exact bin_log_related_fix_step hfRc hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv
@@ -275,14 +275,14 @@ theorem bin_log_related_under_typed_ctx {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx
       refine bin_log_related_tlam Δ Γrc' hKfe_lc hKfe'_lc hKfe_fv hKfe'_fv fun A => ?_
       imodintro
       iapply ih HKtail HbindersK' (.cons A Δ) Γrc' (HCtx.shift A) Hfr
-    | @unpackL x e2 _ τ_pkg _ _ Hty_e2 =>
+    | @unpackL x e2 _ τ_pkg _ Hty_e2 =>
       have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
         rename_unpack Hty_e2 y (hy ∘ mem_union_left _)
       refine bin_log_related_unpack Δ Γrc' _ (IHinner Γrc' HCtx Hfr)
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         fun A y hy => ?_
       exact fundamental L (hRen y hy) (.cons A Δ) _
-        ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))
+        ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_notMem (hy ∘ mem_union_right _)))
     | @unpackR x e1 _ τ_pkg _ Hty_e1 =>
       have hxRc := HfreshHead x (mem_singleton_self _)
       refine bin_log_related_unpack Δ Γrc'
@@ -292,7 +292,7 @@ theorem bin_log_related_under_typed_ctx {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx
         (fun y _ => open_close_isLocallyClosed x y HtyK'.isLocallyClosed) fun A y hy => ?_
       exact bin_log_related_close_cofinite hxRc HtyK.isLocallyClosed HtyK'.isLocallyClosed
         (ih HKtail HbindersK' (.cons A Δ) _
-          ((HCtx.shift A).insert x τ_pkg (lookup_eq_none_of_not_mem hxRc))
+          ((HCtx.shift A).insert x τ_pkg (lookup_eq_none_of_notMem hxRc))
           (.cons_extend rfl HfreshTail)) y hy
 
 /-! ## Linear contexts: carrying a resource `P` -/
@@ -387,14 +387,14 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc' : Tctx} {τ' : Ty
     | fold => ih_frame; iapply bin_log_related_fold $$ H
     | unfold => ih_frame; iapply bin_log_related_unfold $$ H
     | tapp => ih_frame; iapply bin_log_related_tapp $$ H
-    | @unpackL x e2 _ τ_pkg _ _ Hty_e2 =>
+    | @unpackL x e2 _ τ_pkg _ Hty_e2 =>
       ih_frame
       have hRen := fun y (hy : y ∉ insert x e2.fv ∪ (Γrc'.map (·.1)).toFinset) =>
         rename_unpack Hty_e2 y (hy ∘ mem_union_left _)
       iapply bin_log_related_unpack_wand Δ Γrc' _
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         (fun A y hy => fundamental L (hRen y hy) (.cons A Δ) _
-          ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))) $$ H
+          ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_notMem (hy ∘ mem_union_right _)))) $$ H
 
 end Prim
 

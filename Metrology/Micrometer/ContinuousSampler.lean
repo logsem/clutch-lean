@@ -113,7 +113,7 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {hlc : HasLC}
-  {GF : BundledGFunctors} [MeasurableSingletonClass rT]
+  {GF : BundledGFunctors}
 local bi IProp GF
 
 section Unary

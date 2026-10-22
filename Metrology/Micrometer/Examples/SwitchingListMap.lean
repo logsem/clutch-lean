@@ -119,7 +119,7 @@ Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versio
 
 section MapOps
 
-variable [MeasurableSingletonClass rT] {hlc : HasLC} {GF : BundledGFunctors}
+variable {hlc : HasLC} {GF : BundledGFunctors}
   [MicrometerGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF] {E : CoPset} {Φ : Val rT → _} (K : Ectx rT)
   {e : Exp rT}
 local bi IProp GF

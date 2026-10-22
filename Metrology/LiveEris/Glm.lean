@@ -163,7 +163,7 @@ instance glmPre_mono {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} : BIMonoP
       iapply Hwand $$ HΦ
     · iright; iexact HPS
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
+    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
 
 theorem glm_ne {n : Nat} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
     {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (HZ : ∀ ρ c', Z₁ ρ c' ≡{n}≡ Z₂ ρ c') :

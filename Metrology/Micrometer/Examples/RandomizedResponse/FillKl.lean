@@ -46,7 +46,7 @@ theorem rrCoupling_fillKl :
   rcases Bool.eq_or_eq_not b' b with rfl | rfl
   exacts [IsGraded.mono zero_le (IsReflexive.refl _), klDivergence_rrOut b]
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (α : ℝ) [Fact (1 < α)]
+variable {rT : Type} [LawfulProbLangℝ rT] (α : ℝ) [Fact (1 < α)]
   (k : ℕ) (σ : State rT)
 
 /-- `k` rounds are `k (log 3) / 2`-private in filled KL. -/

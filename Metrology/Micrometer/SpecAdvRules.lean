@@ -24,7 +24,7 @@ open MeasureTheory.Measure (dirac map_map map_id)
 open _root_.Measurable (of_discrete)
 open Function (Injective invFun leftInverse_invFun comp_apply)
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {B : Type}
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type}
   [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]

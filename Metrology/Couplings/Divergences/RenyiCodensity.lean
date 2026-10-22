@@ -27,7 +27,7 @@ Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. -/
 /-- The perspective of `t ↦ t ^ α` is positively homogeneous. -/
 theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
-  rw [persp_rpow_mul hα hs hs ha hb, persp_self hs, one_rpow, mul_one]
+  rw [persp_rpow_mul hα hs hs ha hb, persp_self, one_rpow, mul_one]
 
 /-- The perspective of `t ↦ t ^ α` at `h` and `h ^ (α / (α - 1))` is `1`. -/
 theorem persp_rpow_conj (hα : 1 < α) {h : ℝ} (hh : 0 < h) :
@@ -86,7 +86,7 @@ of `t ↦ t ^ α` at `S`. -/
 theorem persp_rpow_conj_mul_self (hα : 1 < α) {t S : ℝ} (ht : 0 < t) (hS : 0 ≤ S) :
     persp (· ^ α) (t * S) (t ^ (α / (α - 1)) * S) = S := by
   rw [persp_rpow_mul hα ht.le (rpow_nonneg ht.le _) hS hS, persp_rpow_conj hα ht, one_mul,
-    persp_self hS, one_rpow, mul_one]
+    persp_self, one_rpow, mul_one]
 
 /-- Away from the singular case, the `[0, 1]`-valued weighting `h ∝ (p / q) ^ (α - 1)` turns the
 perspective of the weighted sums into the sum of perspectives. -/

@@ -40,10 +40,10 @@ theorem persp_of_ne_zero {a b : ℝ} (hb : b ≠ 0) :
   simp [persp, hb]
 
 /-- The perspective at equal arguments is `a f 1`. -/
-theorem persp_self {a : ℝ} (ha : 0 ≤ a) : persp f a a = ((a * f 1 : ℝ) : EReal) := by
-  rcases ha.eq_or_lt with rfl | ha
+theorem persp_self (a : ℝ) : persp f a a = ((a * f 1 : ℝ) : EReal) := by
+  rcases eq_or_ne a 0 with rfl | ha
   · simp
-  · rw [persp_of_ne_zero ha.ne', div_self ha.ne']
+  · rw [persp_of_ne_zero ha, div_self ha]
 
 /-- An affine minorant `c t + c'` of `f` on `[0, ∞)` gives slope at most `derivAtTop f`. -/
 theorem le_derivAtTop_of_affine_le {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) :

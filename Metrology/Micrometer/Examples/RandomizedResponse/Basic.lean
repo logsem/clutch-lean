@@ -125,7 +125,7 @@ This is the one fact each divergence file proves. -/
 def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
   ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   [L.IsLawful] [L.IsTopAbsorbing]
 

@@ -25,7 +25,7 @@ open RandomizedResponse (rr_refines budget)
 open ENNReal (ofReal)
 open Real (log)
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 section Refines
 

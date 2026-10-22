@@ -306,7 +306,7 @@ end SimpleLRels
 def logN : Namespace := nroot.@ (1 : Pos)
 
 /-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
-class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   micrometerGS : MicrometerGS rT hlc GF
   naInvG : NaInvG GF

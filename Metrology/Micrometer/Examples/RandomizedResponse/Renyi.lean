@@ -53,7 +53,7 @@ theorem rrCoupling_renyi : RRCoupling (codensity (renyiDivergence α)) (rrRenyi 
       toReal_ofReal (div_nonneg (log_nonneg this) (by linarith [hα.out])),
       mul_div_cancel₀ _ (by linarith [hα.out]), exp_log (by linarith)]
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- `k` rounds are `(α, k ρ_α)`-RDP (Def. 2.3). -/
 theorem rrCount_RDP (k : ℕ) (σ : State rT) : (rrCountMech k σ).RDP ⊤ α (k * rrRenyi α) :=

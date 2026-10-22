@@ -20,7 +20,7 @@ open Iris Iris.BI ProbLang.MicrometerWpGS GradedLifting GradedDivergence Set
 open Exp (ofVal)
 open MeasureTheory.Measure (dirac dirac_apply')
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {GF : BundledGFunctors}
+variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
 local bi IProp GF
 
 /-! ## Unary adequacy at `tv` -/

@@ -18,7 +18,7 @@ open ENNReal (ofReal isAddLeftRegular_ofReal)
 open Real (log)
 open LiftingRelHom (zcdpToTcdp tcdpToDp tcdpToDp_map)
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (ω : ℝ) (k : ℕ)
+variable {rT : Type} [LawfulProbLangℝ rT] (ω : ℝ) (k : ℕ)
   (σ : State rT)
 
 /-- One round is a tCDP coupling at `ln 3`, the image of its zCDP coupling. -/

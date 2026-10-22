@@ -243,7 +243,7 @@ theorem fDiv_map_some_add_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
   simp_rw [hev]
   refine (Finset.sum_le_sum fun i _ ↦ persp_add_le hf toReal_nonneg toReal_nonneg
     toReal_nonneg toReal_nonneg).trans ?_
-  simp only [persp_self toReal_nonneg, hf1, mul_zero, EReal.coe_zero, add_zero]
+  simp only [persp_self, hf1, mul_zero, EReal.coe_zero, add_zero]
   exact sum_persp_le_fDiv hf hf_cont (hk.comp measurable_some)
 
 /-- Filling the lost mass of two measures of equal mass does not raise an `f`-divergence with

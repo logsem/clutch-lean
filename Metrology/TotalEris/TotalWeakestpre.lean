@@ -86,7 +86,7 @@ instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
     iintro !> %e'
     iapply Hwand
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
+    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
 
 /-- The total weakest precondition: `e` terminates under mask `E` and satisfies `Φ`. -/
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=

@@ -20,7 +20,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace SkipZero
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 section Refines
 

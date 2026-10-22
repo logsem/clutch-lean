@@ -21,7 +21,7 @@ theorem rrCoupling_zcdp : RRCoupling zcdpLifting budget := fun b b' ↦
     expBudget_log_three ▸ rrOut_fiber_le_three b b' c
 
 /-- `k` rounds are `(k ln 3, 0)`-zCDP (Def. 2.4). -/
-theorem rrCount_zCDP {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (k : ℕ)
+theorem rrCount_zCDP {rT : Type} [LawfulProbLangℝ rT] (k : ℕ)
     (σ : State rT) : (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
   simpa [nsmul_eq_mul] using rrCount_isPrivate budget isAddLeftRegular_budget rrCoupling_zcdp k σ
 

@@ -14,7 +14,7 @@ open scoped AppGS
 namespace ProbLang
 namespace RelTacticsTest
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {hlc : HasLC}
+variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC}
   {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] {B : Type} [AddCommMonoid B]
   [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B}
   [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]

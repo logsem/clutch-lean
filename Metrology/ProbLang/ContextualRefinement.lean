@@ -218,7 +218,6 @@ inductive TypedCtxItem : CtxItem rT → Tctx → Ty → Tctx → Ty → Prop
   | tapp {Γ τ τ'} :
       TypedCtxItem .tapp Γ (.forall' τ) Γ (τ.single τ')
   | unpackL {x : Var} {e2 Γ τ τ2} :
-      x ∉ e2.fv →
       Typed ((Γ.shift).insert x τ) e2 τ2.shift →
       TypedCtxItem (.unpackL x e2) Γ (.exists' τ) Γ τ2
   | unpackR {x : Var} {e1 Γ τ τ2} :
@@ -290,7 +289,7 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
   | unfold      => exact (.tunfold he : Typed _ (.app recUnfold _) _)
   | tlam        => exact .tlam he
   | tapp        => exact .tapp he
-  | @unpackL x e2 _ _ _ _ h2 =>
+  | @unpackL x e2 _ _ _ h2 =>
       exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack h2)
   | @unpackR x _ _ _ _ h1 =>
       exact Typed.tunpack (insert x e.fv) h1 (Typed.rename_unpack he)

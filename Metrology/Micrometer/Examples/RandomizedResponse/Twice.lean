@@ -28,7 +28,7 @@ open LiftingRelHom (zcdpToDp zcdpToDp_map zcdpToDp_budget_le_of_rho_zero)
 
 /-! ## The program logic proof -/
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (K : Ectx rT)
+variable {rT : Type} [LawfulProbLangℝ rT] (K : Ectx rT)
   (b₁ b₂ b₁' b₂' : Bool)
 
 section Logic

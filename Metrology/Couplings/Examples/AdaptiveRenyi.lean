@@ -91,7 +91,6 @@ theorem renyiDivergence_randResp_escort :
 `2` (Rocq `escort_adaptive`). -/
 theorem renyiDivergence_adaptive :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (adaptive false) (adaptive true) := by
-  have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
   refine codensity_sound (codensity_renyi_bind_escort (S := (· = ·)) .of_discrete Kernel.id
       (fun _ ↦ by simp [Kernel.id_apply, ae_dirac_eq]) (fun x y hxy ↦ ?_)
       renyiDivergence_randResp_escort)

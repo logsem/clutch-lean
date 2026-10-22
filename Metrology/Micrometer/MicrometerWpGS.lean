@@ -22,7 +22,7 @@ namespace ProbLang
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- The ghost state of `wp`. -/
-class MicrometerWpGS [MeasurableSingletonClass rT] (GF : BundledGFunctors)
+class MicrometerWpGS (GF : BundledGFunctors)
     extends SpecUpdateGS rT GF where
   hlc : HasLC
   invGS : InvGS_gen hlc GF

@@ -101,7 +101,7 @@ theorem otp_refines_rev_real : ⊢ REL[codensity tv] otp_ideal << otp_enc m : lr
     -- on `(0, 1)`, `fract (m + fract (-m + r)) = fract r = r`
     obtain ⟨hr0, hr1⟩ : r ∈ Ioo 0 1 := hr
     show fract (m + fract (-m + r)) = r
-    rw [fract_add_fract_right, show m + (-m + r) = r by ring]
+    rw [Int.fract_add_fract, show m + (-m + r) = r by ring]
     exact fract_eq_self.mpr ⟨hr0.le, hr1⟩
 
 end Real

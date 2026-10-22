@@ -73,7 +73,7 @@ theorem fv_subset_of_cofinite (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (o
   intro z hz
   obtain ⟨y, hy⟩ := HasFresh.fresh_exists (S ∪ (Γrc.map (·.1)).toFinset ∪ {z})
   simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hy
-  have hzdom := fv_subset_relCtxDom (HCtx.insert y τ1 (lookup_eq_none_of_not_mem hy.1.2))
+  have hzdom := fv_subset_relCtxDom (HCtx.insert y τ1 (lookup_eq_none_of_notMem hy.1.2))
     (Hbody y hy.1.1) (fv_subset_open e y hz)
   simp only [map_cons, toFinset_cons, Finset.mem_insert] at hzdom
   exact hzdom.resolve_left fun h => hy.2 h.symm

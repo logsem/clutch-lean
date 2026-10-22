@@ -133,7 +133,7 @@ Each `specCoupl` round is closed by `lift_erasure_erasable_law` and each `progCo
 
 section Adequacy
 
-variable [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+variable [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
 local bi IProp GF
 
@@ -393,7 +393,7 @@ end Adequacy
 
 section Budget
 
-variable [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B] [OrderTop B]
+variable [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [AppPreGS rT GF] [SpecPreGS rT GF]
   [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF] (e e' : Exp rT) (σ σ' : State rT)
 local bi IProp GF

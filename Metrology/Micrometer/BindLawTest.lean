@@ -19,7 +19,7 @@ namespace BindLawTest
 
 open BindLaw (dpRhs dpChoice)
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {GF : BundledGFunctors}
+variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
   [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
 

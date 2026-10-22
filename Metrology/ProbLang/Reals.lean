@@ -156,12 +156,6 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   rw [hL, hR, hA, hB, measure_preimage_add, measure_preimage_add]
   exact add_comm _ _
 
-/-- Reducing the second summand modulo 1 does not change the fractional part of a sum. -/
-public theorem fract_add_fract_right (x y : ℝ) : fract (x + fract y) = fract (x + y) := by
-  have h : x + fract y = (x + y) - ⌊y⌋ := by
-    have := fract_add_floor y; linarith
-  rw [h, fract_sub_intCast]
-
 /-- Adding any real `m` modulo 1 preserves `Uniform[0,1]`. -/
 public theorem measurePreserving_fracAdd (m : ℝ) :
     MeasurePreserving (fun r => realFrac (realAdd m r)) unifUnit unifUnit := by

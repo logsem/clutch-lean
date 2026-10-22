@@ -65,7 +65,7 @@ theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
       | some B => some B
       | none => if z = y then some A else none := rfl
 
-theorem lookup_eq_none_of_not_mem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
+theorem lookup_eq_none_of_notMem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
   | none => rfl
   | some _ => exact absurd (mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
@@ -183,7 +183,7 @@ theorem env_ltyped2_drop_head (y : Var) (A : lrel rT GF)
     intro z
     by_cases hzy : z = y
     · subst hzy
-      rw [lookup_eq_none_of_not_mem hyNotDom, lookup_delete_self]
+      rw [lookup_eq_none_of_notMem hyNotDom, lookup_delete_self]
       simp
     · rw [lookup_delete_other vs y z hzy]
       have heq := Hdom z
@@ -292,7 +292,7 @@ theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
   unfold bin_log_related
   iintro Hold %vs #Hvs
   have hyHeadLookup : lookup ((y, A) :: Γ) y = some A := by
-    rw [lookup_cons, lookup_eq_none_of_not_mem hyNotDom]; simp
+    rw [lookup_cons, lookup_eq_none_of_notMem hyNotDom]; simp
   icases env_ltyped2_lookup _ vs _ _ hyHeadLookup $$ Hvs with ⟨%w1, %w2, %hvsLookupY, HAw⟩
   ihave %hvsClosed := env_ltyped2_allClosed _ vs $$ Hvs
   obtain ⟨hw1c, hw2c⟩ := hvsClosed _ (mem_of_lookup_eq_some hvsLookupY)
@@ -303,7 +303,7 @@ theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
   ihave %hvsDom := env_ltyped2_domEq _ vs $$ Hvs
   have hvsLookupX : vs.lookup x = none := by
     have hΓheadX : lookup ((y, A) :: Γ) x = none := by
-      rw [lookup_cons, lookup_eq_none_of_not_mem hxNotDom]; simp [hxy]
+      rw [lookup_cons, lookup_eq_none_of_notMem hxNotDom]; simp [hxy]
     cases hvs : vs.lookup x with
     | none => rfl
     | some _ => simpa [hΓheadX] using (hvsDom x).mpr (by rw [hvs]; rfl)

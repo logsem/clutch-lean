@@ -78,7 +78,7 @@ theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e�
 
 section Refinement
 
-variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] {hlc : HasLC} {GF : BundledGFunctors}
+variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
   [MicrometerRGS rT hlc GF]
 local bi IProp GF
 
@@ -131,7 +131,7 @@ end Refinement
 The limit distributions of `otp_enc m N` and `otp_ideal N` are coupled by integer
 equality with zero error. -/
 
-variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable [LawfulProbLangℝ rT]
 
 section Lrel
 

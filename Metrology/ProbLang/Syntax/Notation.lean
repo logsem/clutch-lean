@@ -857,7 +857,7 @@ meta def unexpApp : Unexpander
 @[delab app.ProbLang.Exp.annotated]
 meta def delabExpAnnotated : Delab := do
   let e ← getExpr
-  unless e.getAppNumArgs == 2 do failure
+  unless e.getAppNumArgs == 3 do failure
   let mode := pp.problang.annot.get (← getOptions)
   let eStx ← withAppArg delab
   if mode ≥ 2 then

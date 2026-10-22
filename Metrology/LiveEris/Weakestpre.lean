@@ -100,7 +100,7 @@ instance wpPre_mono {Q : State rT → State rT → Prop} {W : WpType rT GF}
       · iapply Hwand
       · inext; iapply wand_rfl
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
+    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
 
 /-- The inner least fixpoint, for a fixed guarded recursion variable `W`. -/
 abbrev wpInner (Q : State rT → State rT → Prop) (W : WpType rT GF) : WpType rT GF :=

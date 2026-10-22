@@ -52,7 +52,7 @@ theorem rr3_coupling_fillKl :
 noncomputable def adaptiveCostKl (n m : Int) : ℝ≥0∞ :=
   if rr3Out false n = rr3Out true m then stageTwoCostKl (rr3Out false n) else ⊤
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- The first draws, as configurations, form a chain-rule head at `(4/9) log 2` with continuation
 cost `adaptiveCostKl`: map the draws to reports and use `klDivergence_randResp`. -/

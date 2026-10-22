@@ -20,7 +20,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace Presample
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (N : Int) (hN : 0 < N)
+variable {rT : Type} [LawfulProbLangℝ rT] (N : Int) (hN : 0 < N)
 
 include hN
 

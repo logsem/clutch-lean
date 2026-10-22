@@ -28,12 +28,12 @@ def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
     | none => if x = y then some p else none
 
 /-- A variable outside the domain has no binding. -/
-theorem lookup_eq_none_of_not_mem {y : Var} : ∀ (vs : ValSubstMap rT),
+theorem lookup_eq_none_of_notMem {y : Var} : ∀ (vs : ValSubstMap rT),
     y ∉ (vs.map (·.1)).toFinset → vs.lookup y = none
   | [], _ => rfl
   | (z, _) :: rest, hyNot => by
     simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert, not_or] at hyNot
-    simp only [lookup, lookup_eq_none_of_not_mem rest hyNot.2]
+    simp only [lookup, lookup_eq_none_of_notMem rest hyNot.2]
     simp [hyNot.1]
 
 /-- A successful lookup returns a listed entry. -/
@@ -183,9 +183,9 @@ theorem fst_lookup :
   proj_lookup Prod.fst vs x
 
 /-- A variable outside the domain has no left binding. -/
-theorem fst_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
+theorem fst_lookup_eq_none_of_notMem {vs : ValSubstMap rT} {y : Var}
     (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.fst y = none := by
-  rw [fst_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
+  rw [fst_lookup, lookup_eq_none_of_notMem vs hy]; rfl
 
 /-- Lookup in the right substitution is the right projection of lookup. -/
 theorem snd_lookup :
@@ -193,9 +193,9 @@ theorem snd_lookup :
   proj_lookup Prod.snd vs x
 
 /-- A variable outside the domain has no right binding. -/
-theorem snd_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
+theorem snd_lookup_eq_none_of_notMem {vs : ValSubstMap rT} {y : Var}
     (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.snd y = none := by
-  rw [snd_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
+  rw [snd_lookup, lookup_eq_none_of_notMem vs hy]; rfl
 
 /-- The left substitution has the same domain. -/
 theorem fst_dom :

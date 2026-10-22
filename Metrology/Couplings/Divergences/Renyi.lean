@@ -16,6 +16,10 @@ open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology
 open scoped ENNReal
 open Real ENNReal
 
+/-- The Rényi order `2` is above one. -/
+instance fact_one_lt_two_real : Fact (1 < (2 : ℝ)) :=
+  ⟨one_lt_two⟩
+
 namespace ProbabilityTheory
 
 variable {X : Type*} [MeasurableSpace X] {α : ℝ}

@@ -27,7 +27,3 @@ theorem nonExpansive_of_discrete_leibniz {T : Type _} [OFE T] [OFE.Discrete T]
     {P : Type _} [OFE P] (f : T → P) : NonExpansive f :=
   ⟨fun _ _ _ hd => .of_eq (congrArg f (OFE.Discrete.discrete hd))⟩
 
-/-- In a discrete OFE, `≡{n}≡` is equality. -/
-theorem eq_of_dist_discrete_leibniz {T : Type _} [OFE T] [OFE.Discrete T]
-    {n : Nat} {x y : T} (hd : x ≡{n}≡ y) : x = y :=
-  OFE.Discrete.discrete hd

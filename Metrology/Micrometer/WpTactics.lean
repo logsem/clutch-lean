@@ -79,7 +79,7 @@ public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') : wp L E e' Φ ⊢ wp L
 end Wp
 
 /-- `wp_alloc` with the allocated value anchored by an equality. -/
-public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT]
     {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
     [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]

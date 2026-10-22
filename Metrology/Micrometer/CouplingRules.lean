@@ -50,7 +50,7 @@ theorem specNatTape_fold [SpecGS rT GF] {fs : List { z' : Int // 0 ≤ z' ∧ z'
   iexists fs
   iframe %hfs Hb
 
-variable [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
+variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] [MicrometerGS rT hlc GF] [L.IsLawful] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 

@@ -14,7 +14,7 @@ open scoped AppGS
 namespace ProbLang
 namespace TotalEris
 
-variable {rT : Type _} [LawfulProbLangℝ rT] [Countable rT] [MeasurableSingletonClass rT]
+variable {rT : Type _} [LawfulProbLangℝ rT] [Countable rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
 

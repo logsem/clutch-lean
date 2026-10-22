@@ -20,7 +20,7 @@ variable {B : Type} {GF : BundledGFunctors}
 
 /-! ## The modality -/
 
-abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
+abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _

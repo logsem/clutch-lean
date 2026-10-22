@@ -67,7 +67,7 @@ section Law
 
 variable [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
-  {GF : BundledGFunctors} [MeasurableSingletonClass rT] [BudgetCreditGS B GF]
+  {GF : BundledGFunctors} [BudgetCreditGS B GF]
 local bi IProp GF
 
 section Wp
@@ -167,7 +167,7 @@ continuation, by which side of `P` the draw fell (Rocq `GBL_DP_choice`). -/
 
 section Choice
 
-variable [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable [LawfulProbLangℝ rT]
   {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
   {GF : BundledGFunctors} [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF

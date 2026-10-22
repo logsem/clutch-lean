@@ -235,7 +235,7 @@ instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
       iintro %s HΦ
       iapply Hwand $$ HΦ
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
+    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
 
 /-- `glm'` unfolds once through `glmPre'`. -/
 theorem glm'_unfold :

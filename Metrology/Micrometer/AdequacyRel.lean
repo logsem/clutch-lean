@@ -31,7 +31,7 @@ open Exp (ofVal)
 
 /-- A functor list `GF` with slots for every camera that refinement adequacy allocates, including a
 budget camera over `B`. -/
-class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
     (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
   [app : AppPreGS rT GF]
   [spec : SpecPreGS rT GF]
@@ -77,7 +77,7 @@ end Spec
 
 section Coupling
 
-variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT] {B : Type}
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed] {GF : BundledGFunctors} [RefinesPreGS rT B GF]
@@ -187,7 +187,7 @@ end Support
 
 section MicrometerFunctor
 
-variable (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable (rT : Type) [LawfulProbLangℝ rT]
 variable (B : Type) [AddCommMonoid B]
 
 /-- A concrete `RefinesPreGS` functor list, with the budget camera over `B` in slot `7`. -/

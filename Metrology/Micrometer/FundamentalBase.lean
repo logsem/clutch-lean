@@ -123,8 +123,8 @@ theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
     (hv : v.1.isClosedEmpty) (hv' : v'.1.isClosedEmpty) :
     substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) = open' (substMap vs.fst e) v.1 ∧
       substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) = open' (substMap vs.snd e') v'.1 :=
-  ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_not_mem hxdom) hv.1,
-    substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
+  ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_notMem hxdom) hv.1,
+    substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_notMem hxdom) hv'.1⟩
 
 /-- Free variables of both terms lie in the domains of the left and right substitutions. -/
 theorem fv_subset_substMap_dom (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
@@ -147,8 +147,8 @@ theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed) :
     (lam (substMap vs.fst e)).IsLocallyClosed ∧ (lam (substMap vs.snd e')).IsLocallyClosed :=
-  ⟨lam_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
-    lam_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
+  ⟨lam_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
+    lam_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc⟩
 
 section Closed
 variable (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
@@ -170,9 +170,9 @@ theorem substMap_lam_closed :
 theorem substMap_fix_closed :
     (fix (substMap vs.fst e)).isClosedEmpty ∧ (fix (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
-  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
+  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
       substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
-    ⟨fix_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc,
+    ⟨fix_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc,
       substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
 end Closed
@@ -192,7 +192,7 @@ theorem exists_fresh_var (S : Finset Var) (e e' : Exp rT) (vs : ValSubstMap rT) 
 theorem not_mem_union_dom {S : Finset Var} {Γrc : RelCtx rT GF} {x : Var}
     (hx : x ∉ S ∪ (Γrc.map (·.1)).toFinset) : x ∉ S ∧ Γrc.lookup x = none := by
   simp only [Finset.mem_union, not_or] at hx
-  exact ⟨hx.1, lookup_eq_none_of_not_mem hx.2⟩
+  exact ⟨hx.1, lookup_eq_none_of_notMem hx.2⟩
 
 end Fresh
 

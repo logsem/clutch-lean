@@ -61,7 +61,7 @@ theorem rr3_coupling :
 noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
   if rr3Out false n = rr3Out true m then stageTwoCost (rr3Out false n) else ⊤
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
 cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/

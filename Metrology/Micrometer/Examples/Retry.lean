@@ -24,7 +24,7 @@ namespace Retry
 open ENNReal (div_le_of_le_mul add_halves)
 open OrderAddMonoidHom (coe_id)
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 variable (ε : ℝ≥0∞)
 

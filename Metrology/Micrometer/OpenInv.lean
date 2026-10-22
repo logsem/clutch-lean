@@ -129,7 +129,7 @@ class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
 section Instances
 open OpenInv (of_atomic)
 open Atomic (load store alloc rand_unit rand_lbl)
-variable [MeasurableSingletonClass rT] [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
+variable [Add B] [L.IsLawful] [L.IsTopAbsorbing] [L.IsSupportLocal]
   [L.HasBind]
 
 instance isOpenInv_urand : IsOpenInv L (rT := rT) .urand where

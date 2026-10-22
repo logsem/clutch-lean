@@ -919,7 +919,7 @@ theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT
   unfold Cfg.uniform Int.isPos; simp only [dite_eq_left hz]
 
 /-- The integral of a measurable `φ` against `Cfg.uniform z σ` is its average over `Ico 0 z`. -/
-theorem Cfg.lintegral_uniform'
+theorem Cfg.lintegral_uniform
     {z : Int} (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
     ∫⁻ c, φ c ∂(Cfg.uniform z σ) =

@@ -202,7 +202,7 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
+  {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 
 section Wp

@@ -41,7 +41,7 @@ instance isSubMarkovKernel_progMech : IsSubMarkovKernel (progMech p σ hp) where
 
 end
 
-variable [MeasurableSingletonClass rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
   [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
 

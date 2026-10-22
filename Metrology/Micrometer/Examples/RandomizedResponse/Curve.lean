@@ -39,7 +39,7 @@ theorem rrCoupling_curve : RRCoupling (codensity renyiCurve) rrCurve := fun b b'
 
 /-! ## `k` rounds -/
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (k : ℕ) (σ : State rT)
+variable {rT : Type} [LawfulProbLangℝ rT] (k : ℕ) (σ : State rT)
 
 /-- `k` rounds are private for the Rényi curve `α ↦ k ρ_α`. -/
 theorem rrCount_curve : (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k * rrRenyi α := by

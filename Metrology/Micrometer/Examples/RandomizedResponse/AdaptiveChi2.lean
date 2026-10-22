@@ -57,7 +57,7 @@ theorem rr3_coupling_chi2 :
     rw [log_ofReal (by norm_num), show (1 : ℝ) + 1 / 2 = 3 / 2 by norm_num]
     exact rr3_coupling
 
-variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- The first draws form a regraded escort head at χ² `7/12`: read along `toRenyi 2` it is the
 Rényi escort head `escortHead_rr3` at `log (19/12)`. -/

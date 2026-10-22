@@ -36,7 +36,7 @@ open Cfg (specAuth)
 /-! ## Ghost state -/
 
 /-- The Micrometer ghost-state components, excluding budget (`BudgetGS B GF`) -/
-class MicrometerGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+class MicrometerGS (rT : Type) [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   specGS : SpecGS rT GF
@@ -46,7 +46,7 @@ attribute [reducible, instance] MicrometerGS.appGS MicrometerGS.specGS Micromete
 
 section MicrometerInstance
 
-variable [MeasurableSingletonClass rT] {hlc : HasLC} {GF : BundledGFunctors}
+variable {hlc : HasLC} {GF : BundledGFunctors}
   [MicrometerGS rT hlc GF]
 
 open MicrometerWpGS SpecUpdateGS
@@ -82,7 +82,7 @@ then inverts `HeadStepSupport` on every possible result and updates the state in
 
 section PrimitiveLaws
 
-variable [MeasurableSingletonClass rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+variable {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsTopAbsorbing] {E : CoPset}
   {Φ : Val rT → IProp GF} {e : Exp rT} {l : Loc} {z : Int} (K : Ectx rT)
