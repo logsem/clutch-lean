@@ -46,7 +46,7 @@ theorem specCoupl_close_val {hlc : HasLC} [InvGS_gen hlc GF] {v : Val rT} : ipro
         stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗
           Φ v) := by
   iintro HSC
-  iapply specCoupl_mono_spatial
+  iapply specCoupl_mono
   iframe
   iintro %σ₂ %ρ' %b₂ >⟨Hσ, Hs, Hb, >HΦ⟩
   iframe
@@ -69,7 +69,7 @@ theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal] [L.HasBin
             stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗
               wp L E1 e₃ Φ) := by
   iintro HSC
-  iapply specCoupl_mono_spatial
+  iapply specCoupl_mono
   iframe
   iintro %σ₂ %ρ' %b₂ HBody
   iapply progCoupl_mono
@@ -88,7 +88,7 @@ theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal] [L.HasBin
   imod HBody4 with ⟨Hσ4, Hs4, Hb4, HW4⟩
   imod wp_unfold_mp $$ HW4 %σ₄ %ρ''.expr %ρ''.state %b₄ [$] with HSC
   imodintro
-  iapply specCoupl_mono_spatial
+  iapply specCoupl_mono
   iframe
   iintro %σ₅ %ρ''' %b₅ HInnerBody
   cases htv : e₃.toVal? with

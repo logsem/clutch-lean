@@ -3,10 +3,7 @@ module
 public import Metrology.Micrometer.MicrometerWpGS
 import Metrology.Iris.LocalBI
 
-/-! # The `specCoupl` modality
-
-`specCoupl L E σ e' σ' b Z`, the least fixpoint of spec-only coupled rounds that exits at an
-absorbing budget or at the continuation `Z`; its introduction, bind, fancy-update and step rules. -/
+/-! # The `specCoupl` modality -/
 
 @[expose] public section
 
@@ -23,14 +20,12 @@ variable {B : Type} {GF : BundledGFunctors}
 
 /-! ## The modality -/
 
-/-- The argument of the `specCoupl` fixpoint: program state, spec configuration and budget. -/
 abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
 instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
 
-/-- Every predicate on the discrete `SpecCouplState` is non-expansive. -/
 theorem specCouplState_ne {Φ : SpecCouplState rT B → IProp GF} : NonExpansive Φ where
   ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
 
@@ -41,9 +36,12 @@ section
 variable (E : CoPset)
 
 variable (L) in
-/-- One spec-side coupled round: a bind-law step within `b` from an erasable program-state
-distribution `μ₁` against the spec's `n`-step run `ν₀.map f'`, then `Φ` at each pair with finite
-leftover (Rocq `spec_coupl_pre`). -/
+/-- Coupling case of `specCoupl`
+- Total budget is `b`,
+- Accepts any bind law,
+- Head must hold on an (erased) step on the left and (erased) `n` steps on the right,
+- `Φ` must hold on the continuation, for all cases with finite credit.
+-/
 abbrev specCouplCouple (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : Measure (State rT))
@@ -56,15 +54,17 @@ abbrev specCouplCouple (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (
       (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=> Φ (σ₂, f' ρ, R σ₂ ρ)))
 
 variable (L) in
-/-- The body of the `specCoupl` fixpoint: absorbed, done, or one more coupling step. -/
+/-- The body of the `specCoupl` fixpoint. One of
+- Absorbing: the credit is sufficiently high,
+- Done,
+- Coupled: via `specCouplCouple`
+-/
 abbrev specCouplPre (Z : State rT → Cfg rT → B → IProp GF) (Φ : SpecCouplState rT B → IProp GF) :
     SpecCouplState rT B → IProp GF :=
   fun ⟨σ₁, ⟨e₁', σ₁'⟩, b⟩ => iprop%
     ⌜L.Absorbing b⌝ ∨ Z σ₁ ⟨e₁', σ₁'⟩ b ∨ specCouplCouple L E σ₁ e₁' σ₁' b Φ
 
 variable (L) in
-/-- Least fixpoint of spec-only coupled rounds, exiting at an absorbing budget or at `Z`
-(Rocq `spec_coupl`). -/
 abbrev specCoupl (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
     (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)
@@ -93,20 +93,17 @@ instance specCouplPre_mono : BIMonoPred (specCouplPre L E Z) where
       iapply Hwand $$ HΦ
   mono_pred_ne := specCouplState_ne
 
-/-! ## Introduction rules: one per disjunct -/
+/-! ## Introduction rules -/
 
-/-- Exit by the first disjunct: an absorbing budget. -/
 theorem specCoupl_absorbing (hb : L.Absorbing b) : ⊢ specCoupl L E σ e' σ' b Z := by
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   ileft; ipureintro; exact hb
 
-/-- Exit by the second disjunct: the continuation now. -/
 theorem specCoupl_ret : Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := by
   iintro HZ
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; ileft; iexact HZ
 
-/-- One more coupled round (third disjunct). -/
 theorem specCoupl_rec :
     specCouplCouple L E σ e' σ' b (fun s => specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z) ⊢
       specCoupl L E σ e' σ' b Z := by
@@ -115,21 +112,6 @@ theorem specCoupl_rec :
   iright; iright; iexact HCpl
 
 /-! ## Structural rules -/
-
-/-- Weaken the continuation `Z` under a persistent implication. -/
-theorem specCoupl_mono : iprop%
-    □ (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
-      specCoupl L E σ e' σ' b Z₂ := by
-  iintro ⟨#HZ, HC⟩
-  unfold specCoupl
-  iapply least_fixpoint_strong_mono (specCouplPre L E Z₁) (specCouplPre L E Z₂) $$ [] HC
-  iintro !> %Φ %s HF
-  icases HF with ⟨HVac | HZ1 | HCpl⟩
-  · ileft; iexact HVac
-  · iright; ileft
-    iapply HZ $$ HZ1
-  · iright; iright
-    iexact HCpl
 
 /-- Run a second spec coupling from each exit of the first. -/
 theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
@@ -158,8 +140,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
     imodintro
     iapply HCpl_cont $$ HZ
 
-/-- `specCoupl_mono` with a spatial implication. -/
-theorem specCoupl_mono_spatial : iprop%
+theorem specCoupl_mono : iprop%
     (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
       specCoupl L E σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩

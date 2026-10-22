@@ -151,7 +151,7 @@ theorem wp_frame_l : iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ 
     iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
     imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
     imodintro
-    iapply specCoupl_mono_spatial
+    iapply specCoupl_mono
     iframe HW'
     iintro %σ₂ %ρ₂ %b₂ HBody
     cases htv : e'.toVal? with
@@ -194,7 +194,7 @@ theorem wp_step_fupd : iprop%
   imod HR
   imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
   imodintro
-  iapply specCoupl_mono_spatial
+  iapply specCoupl_mono
   iframe HW'
   iintro %σ₂ %ρ₂ %b₂ HBody
   simp only [hv]

@@ -183,7 +183,7 @@ theorem wpProgBody_wand {E' : CoPset} {e₃ e₄ : Exp rT}
     wpProgBody L E Φ e₃ σ₃ e₃' σ₃' b ∗ ▷ (wp L E e₃ Φ ={E, E'}=∗ wp L E' e₄ Ψ) ⊢
       wpProgBody L E' Ψ e₄ σ₃ e₃' σ₃' b := by
   iintro ⟨HBody, HWand⟩ !>
-  iapply specCoupl_mono_spatial
+  iapply specCoupl_mono
   iframe HBody
   iintro %σ₄ %ρ₄ %b₄ HF
   imod HF with ⟨Hσ, Hs, Hb, Hwp⟩
