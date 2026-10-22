@@ -150,7 +150,6 @@ theorem specCoupl_mono : iprop%
   iapply specCoupl_ret
   iapply HZ $$ Hz1
 
-/-- `specCoupl` is non-expansive in the continuation `Z`. -/
 theorem specCoupl_ne (HZ : ∀ σ ρ b, Z₁ σ ρ b ≡{n}≡ Z₂ σ ρ b) :
     specCoupl L E σ e' σ' b Z₁ ≡{n}≡ specCoupl L E σ e' σ' b Z₂ := by
   unfold specCoupl
@@ -171,12 +170,12 @@ theorem specCoupl_ind {Ψ : State rT → Cfg rT → B → IProp GF} : iprop%
   obtain ⟨σ'', c, b'⟩ := s
   iapply IH $$ %σ'' %c %b' HF
 
-/-! ## Coupling rules: wrappers around `specCoupl_rec` -/
+/-! ## Bind Law introduction rules -/
 
+section coupling
 variable (law : L.BindLaw)
 
-/-- Introduce a spec coupling by a step of any bind law, whose spec distribution is the image of
-the law's spec-side head measure under `f'` (Rocq `spec_coupl_rec_map`). -/
+/-- Apply a bind law through a measurable map -/
 theorem specCoupl_couple_map {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
     (hf' : Measurable f') (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
     (hhead : law.head μ₁ ν₀ R b) (hside : law.SideForExec μ₁ ν₀ R f')
@@ -184,7 +183,6 @@ theorem specCoupl_couple_map {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
     (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=>
         specCoupl L E σ₂ (f' ρ).expr (f' ρ).state (R σ₂ ρ) Z) ⊢
       specCoupl L E σ₁ e₁' σ₁' b Z := by
-  -- `iframe %` closes the pure conjunct `⌜Measurable f' ∧ …⌝` from this hypothesis
   have hmap : _ ∧ _ := ⟨hf', hspec⟩
   iintro H
   iapply specCoupl_rec
@@ -192,8 +190,7 @@ theorem specCoupl_couple_map {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
   iframe %
   iexact H
 
-/-- Introduce a spec coupling by a step of any bind law between erasable distributions (Rocq
-`spec_coupl_rec`). -/
+/-- Apply a bind law, no map -/
 theorem specCoupl_couple_law
     (hhead : law.head μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R b)
     (hside : law.SideForExec μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R id)
@@ -207,7 +204,7 @@ theorem specCoupl_couple_law
   simp only [id]
   iapply H $$ %σ₂ %e₂' %σ₂' %hR
 
-/-- Introduce a spec coupling from a lifting of erasable distributions, via the canonical law. -/
+/-- Apply the canonical bind law. -/
 theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (Hcpl : L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
@@ -215,6 +212,8 @@ theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
         specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
       specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_couple_law (canonical L) Hcpl (.of_forall fun _ _ => trivial) Heras₁ Heras₁'
+
+end coupling
 
 section SplitBudget
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
@@ -276,8 +275,10 @@ theorem specCoupl_steps
 
 end
 
-/-! ## One spec step -/
 
+/-! ## Discrete steps -/
+
+-- TODO Move me?
 /-- Away from `urand`, a step is carried by its support of positive-mass points. -/
 theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
     Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
@@ -306,7 +307,7 @@ theorem specCoupl_step_concentrated {S : Set (Cfg rT)} (Hred : Reducible e₁' �
   obtain ⟨rfl, Hmem⟩ := HS
   iapply H $$ %e₂' %σ₂' %Hmem
 
-/-- `specCoupl_step_concentrated` on the step's support, for a non-`urand` redex. -/
+/-- Introduce a `specCoupl` around a discrete step. -/
 @[discrete]
 theorem specCoupl_step (Hred : Discrete.Reducible e₁' σ₁')
     (hne : e₁'.decomp.2 ≠ .urand := by no_urand) : iprop%
