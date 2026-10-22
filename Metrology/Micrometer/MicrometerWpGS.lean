@@ -11,10 +11,7 @@ public import Iris.BI.Lib.Fixpoint
 public import Iris.ProofMode.Classes
 public import Iris.ProofMode.InstancesUpdates
 
-/-! # Micrometer ghost state
-
-The ghost-state classes behind `wp`: `MicrometerWpGS` (invariants, program-state and spec
-interpretations) and `BudgetGS` (the budget interpretation). -/
+/-! # Micrometer Ghost State -/
 
 @[expose] public section
 
@@ -24,30 +21,19 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
-/-! ## Program state and spec
-
-`L` is an explicit argument of `wp` (never a class parameter), so modality instances unify
-without an `L` metavariable. -/
-
-/-- The ghost state of `wp`: invariants, the program-state interpretation, and (from
-`SpecUpdateGS`) the spec interpretation `specInterp`. -/
+/-- The ghost state of `wp`. -/
 class MicrometerWpGS [MeasurableSingletonClass rT] (GF : BundledGFunctors)
     extends SpecUpdateGS rT GF where
-  /-- Whether later credits are available (adequacy uses `.hasNoLC`). -/
   hlc : HasLC
-  /-- The invariant ghost state. -/
   invGS : InvGS_gen hlc GF
-  /-- The authoritative program state, `appStateAuth` in `micrometerWpGS_of_components`. -/
   stateInterp : State rT → IProp GF
 
 attribute [reducible, instance] MicrometerWpGS.invGS
 
 /-! ## Budget -/
 
-/-- The budget owned by the state interpretation of `wp` (clutch-dp's `●↯m`). It depends on the
-budget type only, never on `L`. -/
+/-- Ghost state for budget interpretation. -/
 class BudgetGS (B : Type) (GF : BundledGFunctors) where
-  /-- The resource holding a given budget. -/
   interp : B → IProp GF
 
 section Budget
@@ -55,12 +41,10 @@ variable {B : Type} {GF : BundledGFunctors}
 open BudgetGS
 
 /-- The resource `wp` owns for budget `b`. -/
-abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF :=
-  interp b
+abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF := interp b
 
-/-- With budget credits, the budget resource is the authoritative credit `bcAuth`. -/
-instance BudgetGS.ofBudgetCredit [AddCommMonoid B] [BudgetCreditGS B GF] : BudgetGS B GF :=
-  ⟨bcAuth⟩
+/-- `BudgetGS` of `BudgetCreditGS`, using `bcAuth` as the interpretation. -/
+instance BudgetGS.ofBudgetCredit [AddCommMonoid B] [BudgetCreditGS B GF] : BudgetGS B GF := ⟨bcAuth⟩
 
 end Budget
 
