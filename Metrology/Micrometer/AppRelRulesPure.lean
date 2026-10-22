@@ -99,12 +99,11 @@ theorem refines_wp_l :
 /-- Open invariants around the atomic left step `e1`: given the spec thread, open masks to `E'`, run
 `e1`, close them, and return the (possibly stepped) right program `t'` with a refinement of the
 continuation. -/
-theorem refines_atomic_l {E' : CoPset}
-    (Hopen : OpenInv L e1) : iprop%
+theorem refines_atomic_l {E' : CoPset} (Hopen : OpenInv L e1) : iprop%
     (∀ (K' : Ectx rT), ⤇ K'.fill t -∗
-      |={⊤, E'}=> wp L E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
-        ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A)) ⊢
-    refines L E (K.fill e1) t A := by
+        |={⊤, E'}=> wp L E' e1 fun v => iprop(|={E', ⊤}=> ∃ t',
+          ⤇ K'.fill t' ∗ refines L E (K.fill v.1) t' A)) ⊢
+      refines L E (K.fill e1) t A := by
   iunfold refines
   iintro Hlog %K' %b HK Hna Herr Hpos
   iapply wp_bind
@@ -126,8 +125,8 @@ theorem refines_atomic_l {E' : CoPset}
 /-- Run the right program by a spec update that ends in a value. -/
 theorem refines_step_r : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗
-      specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
-    refines L E e1 (K'.fill e2) A := by
+        specUpdate rT ⊤ (∃ (v : Val rT), iprop(⤇ K.fill v.1 ∗ refines L E e1 (K'.fill v.1) A))) ⊢
+      refines L E e1 (K'.fill e2) A := by
   iunfold refines
   iintro He %K'' %b Hj Hna Herr Hpos
   isimp only [fill_comp K'' K' e2] at Hj
@@ -142,7 +141,7 @@ theorem refines_step_r : iprop%
 /-- Rewrite the right program by any spec update. -/
 theorem refines_steps_r : iprop%
     (∀ (K : Ectx rT), ⤇ K.fill e2 -∗ specUpdate rT ⊤ (⤇ K.fill e2')) ⊢
-    (|={⊤}=> refines L E e1 (K'.fill e2') A) -∗ refines L E e1 (K'.fill e2) A := by
+      (|={⊤}=> refines L E e1 (K'.fill e2') A) -∗ refines L E e1 (K'.fill e2) A := by
   iunfold refines
   iintro Hupd Hlog %K'' %b Hj Hna Herr Hpos
   imod Hlog
@@ -158,7 +157,7 @@ theorem refines_steps_r : iprop%
 /-- Right-side `alloc`: continue with the fresh spec location. -/
 theorem refines_alloc_r : iprop%
     (∀ l, l ↦ₛ v -∗ refines L E t (K.fill pl(#loc l)) A) ⊢
-    refines L E t (K.fill (.alloc v.1)) A := by
+      refines L E t (K.fill (.alloc v.1)) A := by
   iintro Hlog
   iapply refines_step_r
   iintro %K' Hj
@@ -188,7 +187,7 @@ theorem refines_load_r : iprop%
 /-- Right-side store to a spec location. -/
 theorem refines_store_r : iprop%
     l ↦ₛ v ∗ (l ↦ₛ v' -∗ refines L E e (K.fill pl(#())) A) ⊢
-    refines L E e (K.fill (.store pl(#loc l) v'.1)) A := by
+      refines L E e (K.fill (.store pl(#loc l) v'.1)) A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_step_r
   iintro %K' Hj
@@ -203,8 +202,8 @@ theorem refines_store_r : iprop%
 /-- Right-side draw from a spec tape, consuming its first entry. -/
 theorem refines_randT_r {z n : Int} {ns : List Int} : iprop%
     specNatTape l z (n :: ns) ∗
-    (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
-    refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
+      (specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
+      refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
   unfold refines
   iintro ⟨Hα, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [fill_comp K' K] at Hj
@@ -217,7 +216,7 @@ theorem refines_randT_r {z n : Int} {ns : List Int} : iprop%
 /-- Right-side tape allocation: continue with a fresh empty spec tape. -/
 theorem refines_alloctape_r {z : Int} : iprop%
     (∀ l, specNatTape l z [] -∗ refines L E e (K.fill pl(#lbl l)) A) ⊢
-    refines L E e (K.fill pl(tape(#z))) A := by
+      refines L E e (K.fill pl(tape(#z))) A := by
   unfold refines
   iintro Hlog %K' %b Hj Hna Herr Hpos
   isimp only [fill_comp K' K] at Hj
@@ -244,7 +243,7 @@ theorem refines_wand : iprop%
 theorem refines_bind_sep (K K' : Ectx rT) : iprop%
     refines L E e e' A ∗
       (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') ⊢
-    refines L E (K.fill e) (K'.fill e') A' := by
+      refines L E (K.fill e) (K'.fill e') A' := by
   iintro ⟨H, Hk⟩
   iapply refines_bind K K' $$ H Hk
 
@@ -257,20 +256,21 @@ variable {v v' : Val rT}
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
 theorem refines_arrow_val (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
+      refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
   iapply refines_ret rfl rfl
   imodintro
   unfold lrel_arr
-  isplitr; · ipureintro; exact hv
+  isplitr
+  · ipureintro; exact hv
   iintro !> %w1 %w2 HA
   iapply H $$ %w1 %w2 HA
 
 /-- `refines_arrow_val` with the argument hypothesis given as a refinement. -/
 theorem refines_arrow (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
-      refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
+        refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+      refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
   iapply refines_arrow_val hv
   iintro !> %v1 %v2 #HA
@@ -308,11 +308,10 @@ theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) : ↯b c ⊢ refines L
 
 /-- A seed credit `↯b (s ε)` amplifies by `k` up to the absorbing `↯b (s 1)` (Rocq
 `refines_ind_amp`, seed made explicit). -/
-theorem refines_ind_amp_of_bc
-    (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
+theorem refines_ind_amp_of_bc (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ refines L E e e' A) -∗
-      ↯b (s ε') -∗ refines L E e e' A) ⊢
-    ↯b (s ε) -∗ refines L E e e' A := by
+        ↯b (s ε') -∗ refines L E e e' A) ⊢
+      ↯b (s ε) -∗ refines L E e e' A := by
   iintro #Hamp Hε
   iapply amplifying hε hk $$ [] Hamp Hε
   iintro !> Hc
@@ -320,13 +319,12 @@ theorem refines_ind_amp_of_bc
 
 /-- A seed credit `↯b (s ε)` amplifies a function body uniformly in its arguments (core of
 `refines_arrow_val_err`). -/
-theorem refines_app_ind_amp_of_bc
-    (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
+theorem refines_app_ind_amp_of_bc (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε', ⌜0 < ε'⌝ -∗
-      □ (↯b (s ((k : ENNReal) * ε')) -∗
-        ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
-      ↯b (s ε') -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A' := by
+        □ (↯b (s ((k : ENNReal) * ε')) -∗
+          ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
+        ↯b (s ε') -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+      ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A' := by
   iintro #Hamp Hε
   iapply amplifying hε hk $$ [] Hamp Hε
   iintro !> Hc %w1 %w2 -
@@ -334,11 +332,11 @@ theorem refines_app_ind_amp_of_bc
 
 /-- Amplification rule for `refines`: seed a credit `↯b (s ε)` from the threaded budget and amplify
 it by `k` (Rocq `refines_ind_amp`). -/
-theorem refines_ind_amp
-    (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
+theorem refines_ind_amp (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.Absorbing (s 1))
+    (hk : 1 < k) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗ □ (↯b (s ((k : ENNReal) * ε)) -∗ refines L E e e' A) -∗ ↯b (s ε) -∗
-      refines L E e e' A) ⊢
-    refines L E e e' A := by
+        refines L E e e' A) ⊢
+      refines L E e e' A := by
   iintro #Hamp
   iapply refines_get_ec hsplit
   iintro %b Herr %hpos
@@ -348,14 +346,13 @@ theorem refines_ind_amp
 
 /-- Amplification for closures: the budget-seeded form of `refines_app_ind_amp_of_bc`, giving a
 refinement at `A → A'` (Rocq `refines_arrow_val_err`). -/
-theorem refines_arrow_val_err
-    (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.Absorbing (s 1)) (hk : 1 < k)
-    (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow_val_err (hsplit : PosSplits B) (hslack : HasSlack s)
+    (habs : L.Absorbing (s 1)) (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗
-      □ (↯b (s ((k : ENNReal) * ε)) -∗
-        ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
-      ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
-    refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
+        □ (↯b (s ((k : ENNReal) * ε)) -∗
+          ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗
+        ↯b (s ε) -∗ ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
+      refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #Hamp
   iapply refines_arrow_val hv
   iintro !> %v1 %v2 HA

@@ -37,8 +37,7 @@ theorem leakyRR_refines (N : Int) (hN : 0 < N) (b b' : Bool) :
     ⊢ ↯b (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[codensity dp] (leakyRR (rT := rT) N b) << leakyRR N b' : lrel_bool := by
   -- split the budget: `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
-  rw [show (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) =
-    (0, (N.toNat : ℝ≥0∞)⁻¹) + budget by simp]
+  rw [show (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) = (0, (N.toNat : ℝ≥0∞)⁻¹) + budget by simp]
   iintro Hb
   ihave ⟨Hδ, Hε⟩ := BudgetCredit.split $$ Hb
   -- couple the two draws along "equal and not `0`" at `(0, μ{0}) = (0, 1/N)`

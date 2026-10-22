@@ -53,11 +53,10 @@ open lrel
 /-- Value relations are an OFE under pointwise distance. -/
 instance ofe_lrel : OFE (lrel rT GF) where
   Dist n A B := ∀ v1 v2, A.car v1 v2 ≡{n}≡ B.car v1 v2
-  dist_eqv := {
-    refl _ _ _ := dist_eqv.refl _
-    symm h v1 v2 := dist_eqv.symm (h v1 v2)
-    trans h1 h2 v1 v2 := dist_eqv.trans (h1 v1 v2) (h2 v1 v2)
-  }
+  dist_eqv :=
+    { refl _ _ _ := dist_eqv.refl _
+      symm h v1 v2 := dist_eqv.symm (h v1 v2)
+      trans h1 h2 v1 v2 := dist_eqv.trans (h1 v1 v2) (h2 v1 v2) }
   eq_dist' :=
     ⟨fun h _ _ _ => h ▸ .rfl, fun h => lrel.ext fun _ _ => OFE.eq_dist.mpr fun _ => h _ _ _⟩
   dist_lt hd hmn v1 v2 := OFE.dist_lt (hd v1 v2) hmn
@@ -101,7 +100,6 @@ instance inhabited_lrel : Inhabited (lrel rT GF) where
   default :=
     { car := fun _ _ => iprop(False)
       closed := fun _ _ => false_elim }
-
 
 /-! ## Relation constructors that do not mention `refines` -/
 
@@ -276,8 +274,7 @@ theorem lrel_rec_ne {C1 C2 : lrel rT GF -n> lrel rT GF}
     (hC : ∀ A : lrel rT GF, C1 A ≡{n}≡ C2 A) :
     lrel_rec C1 ≡{n}≡ lrel_rec C2 :=
   fixpoint_dist fun r w1 w2 =>
-    sep_ne.ne .rfl
-      (OFE.NonExpansive.ne (hC r w1 w2))
+    sep_ne.ne .rfl (OFE.NonExpansive.ne (hC r w1 w2))
 
 /-! ### Nonexpansiveness of the simple constructors -/
 
@@ -312,8 +309,8 @@ def logN : Namespace := nroot.@ (1 : Pos)
 class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   micrometerGS : MicrometerGS rT hlc GF
-  naInvG     : NaInvG GF
-  nais       : NaInvPoolName
+  naInvG : NaInvG GF
+  nais : NaInvPoolName
 
 open MicrometerRGS (naInvG nais)
 
@@ -379,7 +376,6 @@ meta def unexpandRefines : Lean.PrettyPrinter.Unexpander
 /-! ## Relations that refer to the logic -/
 
 -- TODO: Remove the hand-written nonexpansiveness proofs below when nonexp lands
-
 
 variable (L) in
 /-- Closed functions whose applications to `A1`-related arguments refine at `A2`. -/

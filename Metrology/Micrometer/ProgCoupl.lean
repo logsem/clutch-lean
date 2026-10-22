@@ -32,9 +32,8 @@ bind law: both runs are images of the law's head measures under `f` and `f'`, an
 each pair whose leftover is finite (Rocq `prog_coupl`). -/
 abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
-  (∃ (law : L.BindLaw) (n : Nat) (μ₁' : Measure (State rT))
-      (μ₀ ν₀ : Measure (Cfg rT)) (f f' : Cfg rT → Cfg rT)
-      (R : Cfg rT → Cfg rT → B),
+  (∃ (law : L.BindLaw) (n : Nat) (μ₁' : Measure (State rT)) (μ₀ ν₀ : Measure (Cfg rT))
+      (f f' : Cfg rT → Cfg rT) (R : Cfg rT → Cfg rT → B),
       ⌜Reducible e₁ σ₁⌝ ∗
       ⌜Measurable f ∧ primStep ⟨e₁, σ₁⟩ = μ₀.map f⌝ ∗
       ⌜Measurable f' ∧ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f'⌝ ∗
@@ -52,8 +51,7 @@ variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {b : B}
 /-! ### Basic properties -/
 
 /-- `progCoupl` is non-expansive in its continuation. -/
-theorem progCoupl_ne
-    (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
+theorem progCoupl_ne (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ≡{n}≡ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ =>
     exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
@@ -65,7 +63,7 @@ theorem progCoupl_ne
 /-- `progCoupl` is monotone in its continuation. -/
 theorem progCoupl_mono : iprop%
     (∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   iintro ⟨HZ, HCpl⟩
   icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
     %Heras, HCont⟩
@@ -85,15 +83,14 @@ theorem progCoupl_reducible : progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Red
 
 /-- Introduce a program coupling by a step of any bind law, whose program and spec distributions
 are images of the law's head measures under `f` and `f'` (Rocq `prog_coupl_intro_map`). -/
-theorem progCoupl_intro_map (law : L.BindLaw) {μ₀ ν₀ : Measure (Cfg rT)}
-    {f f' : Cfg rT → Cfg rT} (Hred : Reducible e₁ σ₁) (hf : Measurable f)
-    (hprog : primStep ⟨e₁, σ₁⟩ = μ₀.map f) (hf' : Measurable f')
-    (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
+theorem progCoupl_intro_map (law : L.BindLaw) {μ₀ ν₀ : Measure (Cfg rT)} {f f' : Cfg rT → Cfg rT}
+    (Hred : Reducible e₁ σ₁) (hf : Measurable f) (hprog : primStep ⟨e₁, σ₁⟩ = μ₀.map f)
+    (hf' : Measurable f') (hspec : (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f')
     (hhead : law.head μ₀ ν₀ R b) (hside : law.SideForExec μ₀ ν₀ R f')
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
-      Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+        Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   -- paired up so that `iframe %` closes the two `⌜Measurable _ ∧ _ = _.map _⌝` conjuncts
   have hF := (⟨hf, hprog⟩ : _ ∧ _)
   have hF' := (⟨hf', hspec⟩ : _ ∧ _)
@@ -109,8 +106,8 @@ theorem progCoupl_intro_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R id)
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   iintro H
   iapply progCoupl_intro_map law Hred measurable_id map_id.symm
     measurable_id map_id.symm hhead hside Heras
@@ -126,7 +123,7 @@ variable {S : Set (Cfg rT)}
 theorem progCoupl_strong_mono (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
   iintro ⟨Hm, HCpl⟩
   icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
     %Heras, HCont⟩
@@ -155,20 +152,21 @@ theorem progCoupl_strong_mono (hSmeas : MeasurableSet S)
 theorem progCoupl_strengthen (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) :
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b fun e₂ σ₂ e₂' σ₂' b' =>
-      iprop(⌜⟨e₂, σ₂⟩ ∈ S⌝ ∧ Z e₂ σ₂ e₂' σ₂' b') := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b fun e₂ σ₂ e₂' σ₂' b' =>
+        iprop(⌜⟨e₂, σ₂⟩ ∈ S⌝ ∧ Z e₂ σ₂ e₂' σ₂' b') := by
   iintro HCpl
   iapply progCoupl_strong_mono hSmeas hSconc
   iframe HCpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %b' ⟨%Hmem, HZ⟩
-  isplitr; · ipureintro; exact Hmem
+  isplitr
+  · ipureintro; exact Hmem
   iexact HZ
 
 /-- A program step under an evaluation context, for any bind law: the program-side map is
 composed with `K.fill` (Rocq `prog_coupl_ctx_bind`). -/
 theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
     progCoupl L e₁ σ₁ e₁' σ₁' b (fun e₂ => Z (K.fill e₂)) ⊢
-    progCoupl L (K.fill e₁) σ₁ e₁' σ₁' b Z := by
+      progCoupl L (K.fill e₁) σ₁ e₁' σ₁' b Z := by
   iintro HCpl
   icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
     %Heras, HCont⟩
@@ -176,8 +174,7 @@ theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
   obtain ⟨hf', hspec⟩ := Hf'
   have hK : Measurable fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT) := by fun_prop
   iapply progCoupl_intro_map law (Hred.fill K) (hK.comp hf)
-    (by rw [primStep_fill hv, hprog, map_map hK hf]) hf' hspec Hhead Hside
-    Heras
+    (by rw [primStep_fill hv, hprog, map_map hK hf]) hf' hspec Hhead Hside Heras
   simp only [Function.comp_apply]
   iexact HCont
 
@@ -186,20 +183,18 @@ theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
 /-- One spec step from a reducible configuration, written as a `pexecN 1` run from `δ σ₁'`. -/
 theorem dirac_bind_pexecN_one (Hred' : Reducible e₁' σ₁') :
     (dirac σ₁').bind (fun σ => pexecN 1 ⟨e₁', σ⟩) = primStep ⟨e₁', σ₁'⟩ := by
-  rw [dirac_bind (by fun_prop), pexecN_one,
-    stepOrFinal_not_isValue (val_stuck Hred')]
+  rw [dirac_bind (by fun_prop), pexecN_one, stepOrFinal_not_isValue (val_stuck Hred')]
 
 variable (law : L.BindLaw)
 
 /-- Couple one program step against one spec step by a step of any bind law (Rocq
 `prog_coupl_one_step_top`). -/
-theorem progCoupl_steps_law (Hred : Reducible e₁ σ₁)
-    (Hred' : Reducible e₁' σ₁')
+theorem progCoupl_steps_law (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (hhead : law.head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R b)
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R id) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCoupl_intro_law law Hred (dirac_bind_pexecN_one Hred' ▸ hhead)
     (dirac_bind_pexecN_one Hred' ▸ hside) (dret σ₁')
 
@@ -213,8 +208,8 @@ theorem progCoupl_steps_spend_law [Add B] [law.HeadShift]
     (hside : law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
       (fun ρ ρ' => R ρ ρ' + b₂) id) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   -- `HeadShift.shift` needs both primitive steps to be probability measures
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
@@ -235,8 +230,7 @@ theorem progCoupl_det_step [Add B] [L.IsLawful] {e₂ : Exp rT} {σ₂ : State r
       ((dirac σ₁').bind fun σ => pexecN 0 ⟨e₁', σ⟩) R b := by
     rw [dirac_bind (by fun_prop), pexecN_zero, Hdet]
     exact unit_head_dirac (hR ▸ hb) hR.le
-  iapply progCoupl_intro_law (.unit L) Hred hhead (.of_forall fun _ _ => trivial)
-    (dret σ₁')
+  iapply progCoupl_intro_law (.unit L) Hred hhead (.of_forall fun _ _ => trivial) (dret σ₁')
   iintro %e₃ %σ₃ %e₃' %σ₃' %hlt
   by_cases hS : e₃ = e₂ ∧ σ₃ = σ₂ ∧ e₃' = e₁' ∧ σ₃' = σ₁'
   · obtain ⟨rfl, rfl, rfl, rfl⟩ := hS
@@ -253,13 +247,10 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
   iintro H
   -- couple the step with itself (`HeadDiag.diag`: leftover `relCost (· = ·) ρ ρ' + b`), with `f'`
   -- sending the right copy to `⟨e₁', σ₁'⟩`; a finite leftover forces `ρ = ρ'`, so `b` is left
-  iapply progCoupl_intro_map (n := 0) (μ₁' := dirac σ₁')
-    (f' := fun _ => ⟨e₁', σ₁'⟩) law Hred measurable_id map_id.symm
-    measurable_const
-    (by rw [dirac_bind (by fun_prop), pexecN_zero,
-      Measure.map_const, measure_univ, one_smul])
-    (diag _ hb) (fun _ _ _ _ => side_diag _ _ _ _)
-    (dret σ₁')
+  iapply progCoupl_intro_map (n := 0) (μ₁' := dirac σ₁') (f' := fun _ => ⟨e₁', σ₁'⟩) law Hred
+    measurable_id map_id.symm measurable_const
+    (by rw [dirac_bind (by fun_prop), pexecN_zero, Measure.map_const, measure_univ, one_smul])
+    (diag _ hb) (fun _ _ _ _ => side_diag _ _ _ _) (dret σ₁')
   iintro %ρ %ρ' %hR
   obtain ⟨rfl, -⟩ := relCost_add_lt_top_iff.1 hR
   rw [relCost_of rfl, zero_add]
@@ -279,8 +270,8 @@ with per-pair leftover `R`. -/
 theorem progCoupl_intro (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCoupl_intro_law (canonical L) Hred Hcpl (.of_forall fun _ _ => trivial) Heras
 
 /-- `progCoupl_steps_law` for the canonical law: a lifting with per-pair leftover `R` at the whole
@@ -288,8 +279,8 @@ budget `b`. -/
 theorem progCoupl_steps_adv' (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCoupl_steps_law (canonical L) Hred Hred' Hcpl (.of_forall fun _ _ => trivial)
 
 /-- A program step against an erasable spec-state distribution, spec expression fixed, with
@@ -297,15 +288,14 @@ per-pair leftover `R`. -/
 theorem progCoupl_step_l_erasable_adv {R : Cfg rT → State rT → B} (Heras : ErasableExpr μ₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) μ₁') : iprop%
     (∀ e₂ σ₂ σ₂', ⌜R ⟨e₂, σ₂⟩ σ₂' < (⊤ : B)⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' (R ⟨e₂, σ₂⟩ σ₂')) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   classical
   iintro Hcnt
   -- read `μ₁'` as a 0-step spec run from `e₁'`; leftover `⊤` off that expression
   have Hcpl' : L b (fun ρ₁ ρ₂ => if ρ₂.expr = e₁' then R ρ₁ ρ₂.state else (⊤ : B))
       (primStep ⟨e₁, σ₁⟩) (μ₁'.bind fun σ => pexecN 0 ⟨e₁', σ⟩) := by
     simp only [pexecN_zero]
-    rw [bind_dirac_eq_map _ (by fun_prop),
-      ← map_id (μ := primStep ⟨e₁, σ₁⟩)]
+    rw [bind_dirac_eq_map _ (by fun_prop), ← map_id (μ := primStep ⟨e₁, σ₁⟩)]
     exact map measurable_id (by fun_prop) (by simpa using Hcpl)
   iapply progCoupl_intro Hred Hcpl' Heras
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
@@ -324,13 +314,12 @@ theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawf
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
-      Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+        Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)) ⊢
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   -- `IsTopAbsorbing.frame` needs both primitive steps to be probability measures
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
-  progCoupl_steps_adv' Hred Hred'
-    (mono (frame Hcpl) hb le_rfl)
+  progCoupl_steps_adv' Hred Hred' (mono (frame Hcpl) hb le_rfl)
 
 section SplitBudget
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
@@ -344,7 +333,7 @@ theorem progCoupl_steps {S : Cfg rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' b₂) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   iintro Hcnt
   iapply progCoupl_steps_adv hb Hred Hred' Hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
@@ -358,12 +347,11 @@ theorem progCoupl_step_l_erasable {S : Cfg rT → State rT → Prop}
     (hb : b₁ + b₂ ≤ b) (Hred : Reducible e₁ σ₁) (Hcpl : L.Rel b₁ S (primStep ⟨e₁, σ₁⟩) μ₁')
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ σ₂', ⌜S ⟨e₂, σ₂⟩ σ₂'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₂' b₂) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   have := Heras.isProbabilityMeasure
   have := prim_step_mass Hred
   iintro Hcnt
-  iapply progCoupl_step_l_erasable_adv Hred Heras
-    (mono (frame Hcpl) hb le_rfl)
+  iapply progCoupl_step_l_erasable_adv Hred Heras (mono (frame Hcpl) hb le_rfl)
   iintro %e₂ %σ₂ %σ₂' %hR
   obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
   rw [relCost_of hS, zero_add]
@@ -374,7 +362,7 @@ theorem progCoupl_step_l_concentrated [L.IsReflexive] {S : Set (Cfg rT)}
     (Hred : Reducible e₁ σ₁) (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
   iintro H
   have := prim_step_mass Hred
   iapply progCoupl_step_l_erasable (zero_add b).le Hred

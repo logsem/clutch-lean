@@ -34,7 +34,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMon
 /-- A related pair of functions sends related arguments to related applications. -/
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
     (lrel_arr L A B).car v v' ⊢
-    □ (∀ w1 w2, A w1 w2 -∗ refines L ⊤ (app v.1 w1.1) (app v'.1 w2.1) B) :=
+      □ (∀ w1 w2, A w1 w2 -∗ refines L ⊤ (app v.1 w1.1) (app v'.1 w2.1) B) :=
   sep_elim_right
 
 section Steps
@@ -87,8 +87,7 @@ theorem refines_pure_step (hφ' : φ') : iprop% ▷ refines L ⊤ r r' A ⊢ ref
   iexact H
 
 /-- One pure step on each side to values related at `A` closes the goal. -/
-theorem refines_pure_ret {v v' : Val rT}
-    (hφ' : φ') (hr : r = v.1) (hr' : r' = v'.1) :
+theorem refines_pure_ret {v v' : Val rT} (hφ' : φ') (hr : r = v.1) (hr' : r' = v'.1) :
     A.car v v' ⊢ refines L ⊤ e e' A := by
   iintro HA
   iapply refines_pure_step (Hex := Hex) (Hex' := Hex') hφ hφ'
@@ -131,7 +130,7 @@ left operand (a definitional `rw [show ... from rfl]`). -/
 /-- Pairs `(e1, e2)` are related at the product when the components are. -/
 theorem refines_pair : iprop%
     refines L ⊤ e1 e1' A ⊢
-    refines L ⊤ e2 e2' B -∗ refines L ⊤ (pair e1 e2) (pair e1' e2') (lrel_prod A B) := by
+      refines L ⊤ e2 e2' B -∗ refines L ⊤ (pair e1 e2) (pair e1' e2') (lrel_prod A B) := by
   show _ ⊢ refines L ⊤ e2 e2' B -∗ refines L ⊤ (fill [pairR e1] e2)
     (fill [pairR e1'] e2') (lrel_prod A B)
   iintro IH1 IH2
@@ -185,7 +184,7 @@ theorem refines_injr : iprop%
 `A`. -/
 theorem refines_app : iprop%
     refines L ⊤ e1 e1' (lrel_arr L A B) ⊢
-    refines L ⊤ e2 e2' A -∗ refines L ⊤ (app e1 e2) (app e1' e2') B := by
+      refines L ⊤ e2 e2' A -∗ refines L ⊤ (app e1 e2) (app e1' e2') B := by
   show _ ⊢ refines L ⊤ e2 e2' A -∗
     refines L ⊤ (fill [appR e1] e2) (fill [appR e1'] e2') B
   iintro IH1 IH2
@@ -203,13 +202,12 @@ theorem refines_app : iprop%
 
 /-- Sequencing `e1; e2`, encoded as `(λ_. e2) e1` with `e2` locally closed; the result of `e1`,
 related at `A`, is discarded. -/
-theorem refines_seq (A : lrel rT GF)
-    (he2 : e2.IsLocallyClosed) (he2' : e2'.IsLocallyClosed) : iprop%
+theorem refines_seq (A : lrel rT GF) (he2 : e2.IsLocallyClosed)
+    (he2' : e2'.IsLocallyClosed) : iprop%
     refines L ⊤ e1 e1' A ⊢
-    refines L ⊤ e2 e2' B -∗ refines L ⊤ (.app (.lam e2) e1) (.app (.lam e2') e1') B := by
+      refines L ⊤ e2 e2' B -∗ refines L ⊤ (.app (.lam e2) e1) (.app (.lam e2') e1') B := by
   show _ ⊢ refines L ⊤ e2 e2' B -∗
-    refines L ⊤ (fill [appR (.lam e2)] e1)
-      (fill [appR (.lam e2')] e1') B
+    refines L ⊤ (fill [appR (.lam e2)] e1) (fill [appR (.lam e2')] e1') B
   iintro IH1 IH2
   iapply refines_bind [appR (.lam e2)] [appR (.lam e2')] $$ IH1
   iintro %v %v' -
@@ -249,8 +247,8 @@ theorem refines_snd : iprop%
 summand. -/
 theorem refines_case {C : lrel rT GF} : iprop%
     refines L ⊤ e0 e0' (lrel_sum A B) ⊢
-    refines L ⊤ e1 e1' (lrel_arr L A C) -∗ refines L ⊤ e2 e2' (lrel_arr L B C) -∗
-    refines L ⊤ (.case e0 e1 e2) (.case e0' e1' e2') C := by
+      refines L ⊤ e1 e1' (lrel_arr L A C) -∗ refines L ⊤ e2 e2' (lrel_arr L B C) -∗
+      refines L ⊤ (.case e0 e1 e2) (.case e0' e1' e2') C := by
   show _ ⊢ refines L ⊤ e1 e1' (lrel_arr L A C) -∗ refines L ⊤ e2 e2' (lrel_arr L B C) -∗
     refines L ⊤ (fill [.case e1 e2] e0) (fill [.case e1' e2'] e0') C
   iintro IH0 IH1 IH2
@@ -279,8 +277,8 @@ theorem refines_case {C : lrel rT GF} : iprop%
 /-- `if` on related booleans is related when both branches are related. -/
 theorem refines_if : iprop%
     refines L ⊤ e0 e0' lrel_bool ⊢
-    refines L ⊤ e1 e1' A -∗ refines L ⊤ e2 e2' A -∗
-    refines L ⊤ (.cond e0 e1 e2) (.cond e0' e1' e2') A := by
+      refines L ⊤ e1 e1' A -∗ refines L ⊤ e2 e2' A -∗
+      refines L ⊤ (.cond e0 e1 e2) (.cond e0' e1' e2') A := by
   show _ ⊢ refines L ⊤ e1 e1' A -∗ refines L ⊤ e2 e2' A -∗
     refines L ⊤ (fill [condC e1 e2] e0) (fill [condC e1' e2'] e0') A
   iintro IH0 IH1 IH2
@@ -315,7 +313,8 @@ theorem refines_pack (A : lrel rT GF) :
   iintro %v %v' HCA !>
   ihave %hcl := (C A).closed v v' $$ HCA
   iunfold lrel_exists
-  isplitr; · ipureintro; exact hcl
+  isplitr
+  · ipureintro; exact hcl
   iexists A
   iexact HCA
 

@@ -65,8 +65,7 @@ def GaussSpec (L : GradedLifting.{0} B) (gauss : Val ℝ) (v : ℝ≥0) : Prop :
   ∀ (a a' : ℝ) (S : ℝ → ℝ → Prop) (c : B) (K : Ectx ℝ) (E : CoPset) (Φ : Val ℝ → _),
     IsAddLeftRegular c → L.Rel c S (gaussianReal a v) (gaussianReal a' v) →
     (⤇ K.fill pl({ofVal gauss} #a') ∗ ↯b c ∗
-      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#real y) -∗ Φ (.real x)) ⊢
-      wp L E pl({ofVal gauss} #a) Φ)
+      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill pl(#real y) -∗ Φ (.real x)) ⊢ wp L E pl({ofVal gauss} #a) Φ)
 
 end Spec
 
@@ -84,8 +83,7 @@ include hv hgauss
 both sides release the same tuple. Conditional on the sampler spec `hgauss`. -/
 theorem wp_release_fill (K : Ectx ℝ) (Φ : Val ℝ → _) :
     ⤇ K.fill (release gauss a' k) ∗ ↯b ((0 : ℝ≥0∞), (k : ℝ≥0∞) * cost v a a') ∗
-      (∀ w, ⤇ K.fill (ofVal w) -∗ Φ w) ⊢
-      wp zcdpLifting ⊤ (release gauss a k) Φ := by
+      (∀ w, ⤇ K.fill (ofVal w) -∗ Φ w) ⊢ wp zcdpLifting ⊤ (release gauss a k) Φ := by
   induction k generalizing K Φ with
   | zero =>
     iintro ⟨Hj, -, H⟩
@@ -95,8 +93,7 @@ theorem wp_release_fill (K : Ectx ℝ) (Φ : Val ℝ → _) :
     wp_value
     imodintro
     iapply H
-    iapply specProgFrag_reshape (e₁ := K.fill pl(#())) (e₂ := K.fill (ofVal .unit)) rfl
-      $$ Hj
+    iapply specProgFrag_reshape (e₁ := K.fill pl(#())) (e₂ := K.fill (ofVal .unit)) rfl $$ Hj
   | succ k ih =>
     rw [budget_succ]
     iintro ⟨Hj, Hb, H⟩
@@ -114,8 +111,7 @@ theorem wp_release_fill (K : Ectx ℝ) (Φ : Val ℝ → _) :
     iintro %w Hj
     wp_bind pl({ofVal gauss} #a)
     tp_bind pl({ofVal gauss} #a')
-    iapply hgauss a a' (· = ·) (0, cost v a a') _ _ _ (by simp)
-      (zcdpLifting_rel_gaussianReal hv)
+    iapply hgauss a a' (· = ·) (0, cost v a a') _ _ _ (by simp) (zcdpLifting_rel_gaussianReal hv)
     iframe Hj Hb₁
     iintro %x %_ %rfl Hj
     wp_value_at (Val.pair (.real x) w)
@@ -184,8 +180,7 @@ theorem release_dp (hδ : 0 < δ) :
     dp (⨅ α ∈ Set.Ioi (1 : ℝ), ofReal α * (k * cost v a a') +
         ofReal (log (1 / δ) / (α - 1)), ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by
-  have h := codensity_sound <| (zcdpToDp hδ).map_rel
-    (release_coupling_of GF₀ hv hgauss a a' k σ σ')
+  have h := codensity_sound <| (zcdpToDp hδ).map_rel (release_coupling_of GF₀ hv hgauss a a' k σ σ')
   simpa only [zcdpToDp_map, zero_add] using h
 
 /-- `k` releases are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for inputs at distance at most `r`, where
@@ -196,8 +191,7 @@ theorem release_dp_sqrt {a a' r : ℝ} (h : |a - a'| ≤ r) (k : ℕ) (σ σ' : 
         ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by
   have hρ : 0 ≤ k * (r ^ 2 / (2 * (v : ℝ))) := by positivity
-  have hk : (k : ℝ≥0∞) * ofReal (r ^ 2 / (2 * v)) =
-      ofReal (k * (r ^ 2 / (2 * v))) := by
+  have hk : (k : ℝ≥0∞) * ofReal (r ^ 2 / (2 * v)) = ofReal (k * (r ^ 2 / (2 * v))) := by
     rw [ofReal_mul (cast_nonneg k), ofReal_natCast]
   have hcost : cost v a a' ≤ ofReal (r ^ 2 / (2 * v)) := by
     refine ofReal_le_ofReal (div_le_div_of_nonneg_right ?_ (by positivity))
@@ -208,8 +202,7 @@ theorem release_dp_sqrt {a a' r : ℝ} (h : |a - a'| ≤ r) (k : ℕ) (σ σ' : 
     ((release_coupling_of GF₀ hv hgauss a a' k σ σ').mono
       (b' := (0, k * ofReal (r ^ 2 / (2 * v)))) (mk_le_mk.2 ⟨le_rfl, by gcongr⟩)
       fun _ _ ↦ id)
-  have := codensity_sound
-    (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
+  have := codensity_sound (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
   rwa [zero_add, hk, toReal_ofReal hρ, ← ofReal_add hρ (by positivity)] at this
 
 end Closed

@@ -37,13 +37,11 @@ def cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
   | n + 1 => Δ n
 
-theorem cons_ne_head {Y : lrel rT GF} (h : X ≡{n}≡ Y) :
-    cons X Δ ≡{n}≡ cons Y Δ
+theorem cons_ne_head {Y : lrel rT GF} (h : X ≡{n}≡ Y) : cons X Δ ≡{n}≡ cons Y Δ
   | 0 => h
   | _ + 1 => .rfl
 
-theorem cons_ne_tail (h : Δ ≡{n}≡ Δ') :
-    cons X Δ ≡{n}≡ cons X Δ'
+theorem cons_ne_tail (h : Δ ≡{n}≡ Δ') : cons X Δ ≡{n}≡ cons X Δ'
   | 0 => .rfl
   | m + 1 => h m
 
@@ -140,19 +138,19 @@ open NEFun
 variable (L) in
 /-- Interpret a type as a non-expansive function of the type environment. -/
 noncomputable def interpNE : Ty → NEFun rT GF
-  | .unit         => const lrel_unit
-  | .int          => const lrel_int
-  | .bool         => const lrel_bool
-  | .real         => const lrel_real
-  | .tape         => const lrel_tape
-  | .var x        => ofCtx x
-  | .prod τ1 τ2   => map2 lrel_prod (interpNE τ1) (interpNE τ2)
-  | .sum  τ1 τ2   => map2 lrel_sum  (interpNE τ1) (interpNE τ2)
-  | .arrow τ1 τ2  => map2 (lrel_arr L) (interpNE τ1) (interpNE τ2)
-  | .ref τ        => map1 lrel_ref (interpNE τ)
-  | .rec' τ'      => rec'    (interpNE τ')
-  | .forall' τ'   => forall' L (interpNE τ')
-  | .exists' τ'   => exists' (interpNE τ')
+  | .unit => const lrel_unit
+  | .int => const lrel_int
+  | .bool => const lrel_bool
+  | .real => const lrel_real
+  | .tape => const lrel_tape
+  | .var x => ofCtx x
+  | .prod τ1 τ2 => map2 lrel_prod (interpNE τ1) (interpNE τ2)
+  | .sum τ1 τ2 => map2 lrel_sum (interpNE τ1) (interpNE τ2)
+  | .arrow τ1 τ2 => map2 (lrel_arr L) (interpNE τ1) (interpNE τ2)
+  | .ref τ => map1 lrel_ref (interpNE τ)
+  | .rec' τ' => rec' (interpNE τ')
+  | .forall' τ' => forall' L (interpNE τ')
+  | .exists' τ' => exists' (interpNE τ')
 
 variable (L) in
 /-- The logical relation interpreting type `τ` in the type environment `Δ`. -/
@@ -169,7 +167,7 @@ section HeadShape
 variable (Δ : TyEnv rT GF)
 
 @[simp] theorem interp_unit : interp L .unit Δ = lrel_unit := rfl
-@[simp] theorem interp_int  : interp L .int  Δ = lrel_int  := rfl
+@[simp] theorem interp_int : interp L .int Δ = lrel_int := rfl
 @[simp] theorem interp_bool : interp L .bool Δ = lrel_bool := rfl
 @[simp] theorem interp_real : interp L .real Δ = lrel_real := rfl
 @[simp] theorem interp_tape : interp L .tape Δ = lrel_tape := rfl
@@ -224,8 +222,7 @@ theorem interp_rename_under {ξ : Nat → Nat}
     (ih : ∀ (ξ : Nat → Nat) (Δ : TyEnv rT GF),
       interp L (τ'.rename ξ) Δ = interp L τ' (comp Δ ξ))
     (X : lrel rT GF) :
-    interp L (τ'.rename (Renaming.under ξ)) (cons X Δ) =
-      interp L τ' (cons X (comp Δ ξ)) :=
+    interp L (τ'.rename (Renaming.under ξ)) (cons X Δ) = interp L τ' (cons X (comp Δ ξ)) :=
   (ih _ _).trans (congrArg (interp L τ') (comp_upren X Δ ξ).symm)
 
 /-- Renaming a type's variables equals precomposing its environment with the renaming. -/

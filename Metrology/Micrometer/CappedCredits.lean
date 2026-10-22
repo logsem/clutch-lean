@@ -29,8 +29,7 @@ section UpperSet
 variable [Add B] [Preorder B] [Top B] [L.IsLawful]
 
 /-- Absorbing budgets form an upper set. -/
-theorem isUpperSet_absorbing :
-    IsUpperSet {b | L.Absorbing b} :=
+theorem isUpperSet_absorbing : IsUpperSet {b | L.Absorbing b} :=
   fun _ _ hb h ↦ Absorbing.mono h hb
 
 /-- Absorbing budgets form an upper set, as a `Fact`. -/
@@ -115,8 +114,7 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_tv
 /-- A Rényi budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_renyi
     (h : ¬(codensity (renyiDivergence.{u} α)).Absorbing ρ) : IsAddLeftRegular ρ :=
-  (of_ne_top fun hρ ↦
-    h (by rw [hρ]; exact absorbing_top)).1
+  (of_ne_top fun hρ ↦ h (by rw [hρ]; exact absorbing_top)).1
 
 /-- Some Rényi curve is valid but does not cancel: `⊤` at order `2` and `0` elsewhere. -/
 theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :

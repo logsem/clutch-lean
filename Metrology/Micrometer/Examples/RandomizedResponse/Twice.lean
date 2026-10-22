@@ -97,8 +97,7 @@ noncomputable abbrev budget2 : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 9), 0)
 /-- Two rounds at `(ln 3, 0)` cost `(ln 9, 0)`. -/
 theorem budget_add_budget : budget + budget = budget2 := by
   have h3 : 0 ≤ log 3 := log_nonneg (by norm_num)
-  rw [mk_add_mk, add_zero, ← ofReal_add h3 h3, ← log_mul (by norm_num)
-    (by norm_num)]
+  rw [mk_add_mk, add_zero, ← ofReal_add h3 h3, ← log_mul (by norm_num) (by norm_num)]
   norm_num
 
 section Refines
@@ -110,8 +109,7 @@ local bi IProp GF
 bit. -/
 theorem rr2_refines :
     ⊢ ↯b (budget + budget) -∗
-      REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') :
-        lrel_prod lrel_bool lrel_bool := by
+      REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') : lrel_prod lrel_bool lrel_bool := by
   iintro Hb
   icases split $$ Hb with ⟨Hb₁, Hb₂⟩
   simp only [rr2]
@@ -163,13 +161,10 @@ variable {δ : ℝ}
 /-- The two-bit program is `(ln 9, δ)`-DP for every `δ > 0`, converting the zCDP coupling with
 `zcdpToDp`. -/
 theorem rr2_dp (hδ : 0 < δ) :
-    dp (ofReal (log 9), ofReal δ)
-      (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
-  have h := codensity_sound <| (zcdpToDp hδ).map_rel
-    (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
+    dp (ofReal (log 9), ofReal δ) (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
+  have h := codensity_sound <| (zcdpToDp hδ).map_rel (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
   simp only [zcdpToDp_map] at h
-  exact IsGraded.mono
-    (mk_le_mk.2 ⟨zcdpToDp_budget_le_of_rho_zero _, le_rfl⟩) h
+  exact IsGraded.mono (mk_le_mk.2 ⟨zcdpToDp_budget_le_of_rho_zero _, le_rfl⟩) h
 
 /-! ## The mechanism form -/
 

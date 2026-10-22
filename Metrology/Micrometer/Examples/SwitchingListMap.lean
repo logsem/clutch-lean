@@ -79,8 +79,7 @@ variable (l : List Int)
 
 /-- `listLength` computes list length. -/
 theorem listLength_steps :
-    PureSteps (pl% &listLength {ofVal (intListVal l)})
-      (ofVal (.int l.length : Val rT)) := by
+    PureSteps (pl% &listLength {ofVal (intListVal l)}) (ofVal (.int l.length : Val rT)) := by
   induction l with
   | nil =>
     simp only [intListVal]
@@ -128,25 +127,23 @@ local bi IProp GF
 /-- `initMap ()` allocates a location holding the empty map. -/
 theorem wp_initMap : iprop%
     (∀ ℓ : Loc, (ℓ ↦ assocVal []) -∗ Φ (.loc ℓ)) ⊢
-    WP[codensity tv] (pl% &initMap #()) @ E {{ Φ }} := by
+      WP[codensity tv] (pl% &initMap #()) @ E {{ Φ }} := by
   iintro HΦ
   wp_pures
   -- restate the literal as `ofVal` of the map value so `wp_alloc` applies
-  rw [show alloc (.inl (.lit .unit)) =
-    .alloc (ofVal (assocVal [])) from rfl]
+  rw [show alloc (.inl (.lit .unit)) = .alloc (ofVal (assocVal [])) from rfl]
   iapply wp_alloc
   iexact HΦ
 
 /-- Spec-side `wp_initMap`. -/
 theorem wp_initMap_r : iprop%
     ⤇ K.fill (pl% &initMap #()) ∗
-    (∀ ℓ : Loc, ⤇ K.fill pl(#loc ℓ) -∗ (ℓ ↦ₛ assocVal []) -∗
-      WP[codensity tv] e @ E {{ Φ }}) ⊢
-    WP[codensity tv] e @ E {{ Φ }} := by
+      (∀ ℓ : Loc, ⤇ K.fill pl(#loc ℓ) -∗ (ℓ ↦ₛ assocVal []) -∗
+        WP[codensity tv] e @ E {{ Φ }}) ⊢
+      WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hcnt⟩
   tp_pures
-  ihave Hj := specProgFrag_reshape
-    (e₁ := fill K (alloc (.inl (.lit .unit))))
+  ihave Hj := specProgFrag_reshape (e₁ := fill K (alloc (.inl (.lit .unit))))
     (e₂ := K.fill (alloc (ofVal (assocVal [])))) rfl $$ Hj
   imod step_alloc_at K (isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%ℓ, Hj, Hl⟩
   iapply Hcnt $$ %ℓ Hj Hl
@@ -156,8 +153,8 @@ variable (ℓ : Loc) (m : List (Int × Int)) (k y : Int)
 /-- `getMap ℓ k` returns the lookup of `k` and leaves the map unchanged. -/
 theorem wp_getMap : iprop%
     (ℓ ↦ assocVal m) ∗
-    ((ℓ ↦ assocVal m) -∗ Φ (optIntVal (alookup k m))) ⊢
-    WP[codensity tv] (pl% &getMap #loc ℓ #k) @ E {{ Φ }} := by
+      ((ℓ ↦ assocVal m) -∗ Φ (optIntVal (alookup k m))) ⊢
+      WP[codensity tv] (pl% &getMap #loc ℓ #k) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
   wp_bind (pl% !#loc ℓ)
@@ -171,9 +168,9 @@ theorem wp_getMap : iprop%
 /-- Spec-side `wp_getMap`. -/
 theorem wp_getMap_r : iprop%
     ⤇ K.fill (pl% &getMap #loc ℓ #k) ∗ (ℓ ↦ₛ assocVal m) ∗
-    (⤇ K.fill (ofVal (optIntVal (alookup k m))) -∗ (ℓ ↦ₛ assocVal m) -∗
-      WP[codensity tv] e @ E {{ Φ }}) ⊢
-    WP[codensity tv] e @ E {{ Φ }} := by
+      (⤇ K.fill (ofVal (optIntVal (alookup k m))) -∗ (ℓ ↦ₛ assocVal m) -∗
+        WP[codensity tv] e @ E {{ Φ }}) ⊢
+      WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
   tp_bind (pl% !#loc ℓ)
@@ -185,8 +182,8 @@ theorem wp_getMap_r : iprop%
 /-- `setMap ℓ k y` conses the binding `(k, y)` onto the stored map. -/
 theorem wp_setMap : iprop%
     (ℓ ↦ assocVal m) ∗
-    ((ℓ ↦ assocVal ((k, y) :: m)) -∗ Φ .unit) ⊢
-    WP[codensity tv] (pl% &setMap #loc ℓ #k #y) @ E {{ Φ }} := by
+      ((ℓ ↦ assocVal ((k, y) :: m)) -∗ Φ .unit) ⊢
+      WP[codensity tv] (pl% &setMap #loc ℓ #k #y) @ E {{ Φ }} := by
   iintro ⟨Hl, HΦ⟩
   wp_pures
   wp_bind (pl% !#loc ℓ)
@@ -194,8 +191,7 @@ theorem wp_setMap : iprop%
   iframe Hl
   iintro Hl
   -- restate the stored literal as `ofVal` of the map value so `wp_store` applies
-  rw [show store pl(#loc ℓ)
-      (.inr (.pair (.pair pl(#k) pl(#y)) (ofVal (assocVal m)))) =
+  rw [show store pl(#loc ℓ) (.inr (.pair (.pair pl(#k) pl(#y)) (ofVal (assocVal m)))) =
     .store pl(#loc ℓ) (ofVal (assocVal ((k, y) :: m))) from rfl]
   iapply wp_store
   iframe Hl
@@ -203,11 +199,10 @@ theorem wp_setMap : iprop%
 
 /-- Spec-side `wp_setMap`. -/
 theorem wp_setMap_r : iprop%
-    ⤇ K.fill (pl% &setMap #loc ℓ #k #y) ∗
-      (ℓ ↦ₛ assocVal m) ∗
-    (⤇ K.fill pl(#()) -∗ (ℓ ↦ₛ assocVal ((k, y) :: m)) -∗
-      WP[codensity tv] e @ E {{ Φ }}) ⊢
-    WP[codensity tv] e @ E {{ Φ }} := by
+    ⤇ K.fill (pl% &setMap #loc ℓ #k #y) ∗ (ℓ ↦ₛ assocVal m) ∗
+      (⤇ K.fill pl(#()) -∗ (ℓ ↦ₛ assocVal ((k, y) :: m)) -∗
+        WP[codensity tv] e @ E {{ Φ }}) ⊢
+      WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hl, Hcnt⟩
   tp_pures
   tp_bind (pl% !#loc ℓ)

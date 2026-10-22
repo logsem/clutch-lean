@@ -49,10 +49,10 @@ theorem wp_lift_step_couple : iprop%
 /-- Run a spec phase only, then re-enter `wp` at the same program expression. -/
 theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] : iprop%
     (∀ (σ₁ : State rT) e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b₁ -∗ |={E, ∅}=>
-      specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ => iprop(|={∅, E}=>
-        stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗ wp L E e₁ Φ)) ⊢
-    wp L E e₁ Φ := by
+        budgetInterp b₁ -∗ |={E, ∅}=>
+        specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ => iprop(|={∅, E}=>
+          stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗ wp L E e₁ Φ)) ⊢
+      wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
@@ -122,8 +122,7 @@ theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift]
         ⌜Reducible e₁ σ₁⌝ ∗
         ⌜Reducible e₁' σ₁'⌝ ∗
         ⌜law.head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) R b₁⌝ ∗
-        ⌜law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
-          (fun ρ ρ' => R ρ ρ' + b₂) id⌝ ∗
+        ⌜law.SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩) (fun ρ ρ' => R ρ ρ' + b₂) id⌝ ∗
         (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=> ▷ |={∅, E}=>
           stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
             budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢ wp L E e₁ Φ := by
@@ -254,7 +253,8 @@ theorem wp_lift_step_later
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
   imodintro
-  isplitr; · ipureintro; exact Hred.toReducible
+  isplitr
+  · ipureintro; exact Hred.toReducible
   iintro %e₂ %σ₂ %Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
 
@@ -312,13 +312,13 @@ theorem wp_lift_atomic_step_fupd
       ∀ e₂ σ₂, ⌜0 < primStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={E1}[E2]▷=> stateInterp σ₂ ∗
       (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
   iintro H
-  iapply wp_lift_atomic_step_fupd_concentrated Hv
-    (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
+  iapply wp_lift_atomic_step_fupd_concentrated Hv (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
     (fun σ₁ => concentrated_primStep_support e₁ σ₁ hne)
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
   imodintro
-  isplitr; · ipureintro; exact Hred.toReducible
+  isplitr
+  · ipureintro; exact Hred.toReducible
   iintro %e₂ %σ₂ %Hpstep
   iapply H $$ %e₂ %σ₂ %Hpstep
 
@@ -413,7 +413,11 @@ theorem wp_pure_step_fupd (Hφ : φ) :
     simp only [«repeat»]
     iintro H
     iapply wp_lift_pure_det_step Hstep
-    imod H; imodintro; iintro !>; imod H; imodintro
+    imod H
+    imodintro
+    iintro !>
+    imod H
+    imodintro
     iapply IH Hrest $$ H
 
 /-- `n` pure steps given by a `PureExec` instance, under `n` laters; the form the tactics use. -/

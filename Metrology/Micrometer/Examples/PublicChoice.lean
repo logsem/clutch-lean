@@ -88,8 +88,7 @@ theorem choice_zCDP : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) := by
 `0 < δ < 1`, given that it terminates almost surely. -/
 theorem choice_DP_sqrt {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
     (choiceMech σ).DP ⊤
-      (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ))))
-      (ofReal δ) := by
+      (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ)))) (ofReal δ) := by
   have := Kernel.DP_of_zCDP_sq (ε := (log 3).toNNReal) hδ hδ₁
     (by rw [coe_toNNReal _ (log_nonneg (by norm_num))]; exact choice_zCDP σ)
   rwa [coe_toNNReal _ (log_nonneg (by norm_num))] at this

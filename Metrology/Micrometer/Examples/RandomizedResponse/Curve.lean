@@ -20,8 +20,7 @@ open Real (log rpow_le_rpow_of_exponent_le log_rpow log_le_log rpow_sub rpow_sub
 /-! ## One round at every order -/
 
 /-- The Rényi profile `α ↦ ρ_α` of one round, as a budget curve. -/
-noncomputable def rrCurve : RenyiBudget :=
-  fun α ↦ rrRenyi α
+noncomputable def rrCurve : RenyiBudget := fun α ↦ rrRenyi α
 
 /-- The curve is finite at every order, so it cancels pointwise. -/
 theorem isAddLeftRegular_rrCurve : IsAddLeftRegular rrCurve := fun _ _ h ↦

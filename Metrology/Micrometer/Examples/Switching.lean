@@ -64,8 +64,8 @@ theorem loopErr_zero_le_birthday (q : Nat) :
         rw [le_div_iff_mul_le (.inl (by norm_num)) (.inl (by norm_num))]
         exact_mod_cast div_mul_le_self _ 2
     _ = ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
-        rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
-          ENNReal.mul_inv (.inl (by norm_num)) (.inl (by norm_num)), mul_assoc]
+      rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
+        ENNReal.mul_inv (.inl (by norm_num)) (.inl (by norm_num)), mul_assoc]
 
 end
 
@@ -81,9 +81,8 @@ local bi IProp GF
 
 /-- The tail of a round: record `(n, y)` in both result lists, then run the next round.
 `hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`. -/
-theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
-    {resL resS : Loc} {q : Nat} {n y : Int} {acc : List (Int × Int)}
-    (hloop : loop = wLoop N := by rfl) : iprop%
+theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT} {resL resS : Loc}
+    {q : Nat} {n y : Int} {acc : List (Int × Int)} (hloop : loop = wLoop N := by rfl) : iprop%
     ⤇ K.fill (pl% (#loc resS ← inr(((#n, #y), !#loc resS));
       {loop} {fS.fst} #loc resS (#int (↑(q + 1)) - #1))) ∗
     (resL ↦ assocVal acc) ∗ (resS ↦ₛ assocVal acc) ∗
@@ -124,20 +123,18 @@ Loop invariant: both maps hold the same memo table `m`, `r` lists the values the
 not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
 nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`), so `q` rounds cost
 `loopErr N |m| q`. -/
-theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc)
-    (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
-    (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
+theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc) (q : Nat) (m : List (Int × Int)) (r : List Int)
+    (acc : List (Int × Int)) (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map fst).Nodup) (hN : 0 < N) : iprop%
     ⤇ K.fill (pl% {wLoop N} {ofVal (prpQueryV ℓm ℓfv)} #loc resS #int q) ∗
-    ↯b (loopErr N m.length q) ∗
-    (ℓ ↦ assocVal m) ∗ (ℓm ↦ₛ assocVal m) ∗
-    (ℓfv ↦ₛ intListVal r) ∗
-    (resL ↦ assocVal acc) ∗ (resS ↦ₛ assocVal acc) ∗
-    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
-       (resL ↦ assocVal acc') -∗ (resS ↦ₛ assocVal acc') -∗
-       Φ .unit) ⊢
-    WP[codensity tv] (pl% {wLoop N} {ofVal (rfQueryV N ℓ)} #loc resL #int q)
-      @ E {{ Φ }} := by
+      ↯b (loopErr N m.length q) ∗
+      (ℓ ↦ assocVal m) ∗ (ℓm ↦ₛ assocVal m) ∗
+      (ℓfv ↦ₛ intListVal r) ∗
+      (resL ↦ assocVal acc) ∗ (resS ↦ₛ assocVal acc) ∗
+      (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
+        (resL ↦ assocVal acc') -∗ (resS ↦ₛ assocVal acc') -∗
+        Φ .unit) ⊢
+      WP[codensity tv] (pl% {wLoop N} {ofVal (rfQueryV N ℓ)} #loc resL #int q) @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hl, Hm, Hfv, HresL, HresS, Hcnt⟩
@@ -182,8 +179,7 @@ theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc)
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := split $$ Herr
       iapply wp_rfQuery_prpQuery_fresh _ N ℓ ℓm ℓfv m r n
-        ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup
-        le_rfl
+        ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup le_rfl
       iframe Hj Herr Hl Hm Hfv
       iintro %y %hyr Hj Hl Hm Hfv
       tp_pure
@@ -191,19 +187,18 @@ theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc)
       iapply wp_wLoop_record
       iframe Hj HresL HresS
       iintro Hj HresL HresS
-      iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
-        (prpPerm_insert hperm n hyr)
+      iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc) (prpPerm_insert hperm n hyr)
         (fun k hk => (mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
         (nodup_cons.mpr ⟨alookup_eq_none_iff.mp hlk, hnodup⟩)
       simp only [length_cons]
       iframe
 
 /-- The program `wPRF` refines the spec `wPRP` up to the loop error. -/
-theorem wp_wPRF_wPRP (Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
+theorem wp_wPRF_wPRP (Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (ε : ENNReal)
+    (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
     ⤇ K.fill (wPRP N Q) ∗ ↯b ε ∗
-    (∀ v : Val rT, ⤇ K.fill (ofVal v) -∗ Φ v) ⊢
-    WP[codensity tv] (wPRF N Q) @ E {{ Φ }} := by
+      (∀ v : Val rT, ⤇ K.fill (ofVal v) -∗ Φ v) ⊢
+      WP[codensity tv] (wPRF N Q) @ E {{ Φ }} := by
   rw [← toNat_of_nonneg hQ]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := weaken hε $$ Herr
@@ -245,20 +240,18 @@ theorem wp_wPRF_wPRP (Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
 /-! ### The loop, random permutation against random function -/
 
 /-- `wp_wLoop` with the roles swapped: the random permutation on the program side. -/
-theorem wp_wLoop_rev (ℓ ℓm ℓfv resL resS : Loc)
-    (q : Nat) (m : List (Int × Int)) (r : List Int) (acc : List (Int × Int))
-    (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
+theorem wp_wLoop_rev (ℓ ℓm ℓfv resL resS : Loc) (q : Nat) (m : List (Int × Int)) (r : List Int)
+    (acc : List (Int × Int)) (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map fst).Nodup) (hN : 0 < N) : iprop%
     ⤇ K.fill (pl% {wLoop N} {ofVal (rfQueryV N ℓ)} #loc resS #int q) ∗
-    ↯b (loopErr N m.length q) ∗
-    (ℓm ↦ assocVal m) ∗ (ℓfv ↦ intListVal r) ∗
-    (ℓ ↦ₛ assocVal m) ∗
-    (resL ↦ assocVal acc) ∗ (resS ↦ₛ assocVal acc) ∗
-    (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
-       (resL ↦ assocVal acc') -∗ (resS ↦ₛ assocVal acc') -∗
-       Φ .unit) ⊢
-    WP[codensity tv] (pl% {wLoop N} {ofVal (prpQueryV ℓm ℓfv)} #loc resL #int q)
-      @ E {{ Φ }} := by
+      ↯b (loopErr N m.length q) ∗
+      (ℓm ↦ assocVal m) ∗ (ℓfv ↦ intListVal r) ∗
+      (ℓ ↦ₛ assocVal m) ∗
+      (resL ↦ assocVal acc) ∗ (resS ↦ₛ assocVal acc) ∗
+      (∀ acc' : List (Int × Int), ⤇ K.fill pl(#()) -∗
+        (resL ↦ assocVal acc') -∗ (resS ↦ₛ assocVal acc') -∗
+        Φ .unit) ⊢
+      WP[codensity tv] (pl% {wLoop N} {ofVal (prpQueryV ℓm ℓfv)} #loc resL #int q) @ E {{ Φ }} := by
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hm, Hfv, Hl, HresL, HresS, Hcnt⟩
@@ -301,8 +294,7 @@ theorem wp_wLoop_rev (ℓ ℓm ℓfv resL resS : Loc)
       rw [loopErr_succ]
       ihave ⟨Herr, Herr'⟩ := split $$ Herr
       iapply wp_prpQuery_rfQuery_fresh _ N ℓ ℓm ℓfv m r n
-        ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup
-        le_rfl
+        ((m.length : ENNReal) / (N.toNat : ENNReal)) ⟨hn0, hnN⟩ hlk hperm hkeys hnodup le_rfl
       iframe Hj Herr Hm Hfv Hl
       iintro %y %hyr Hj Hm Hfv Hl
       tp_pure
@@ -310,19 +302,18 @@ theorem wp_wLoop_rev (ℓ ℓm ℓfv resL resS : Loc)
       iapply wp_wLoop_record
       iframe Hj HresL HresS
       iintro Hj HresL HresS
-      iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc)
-        (prpPerm_insert hperm n hyr)
+      iapply ih ((n, y) :: m) (r.erase y) ((n, y) :: acc) (prpPerm_insert hperm n hyr)
         (fun k hk => (mem_cons.mp hk).elim (· ▸ ⟨hn0, hnN⟩) (hkeys k))
         (nodup_cons.mpr ⟨alookup_eq_none_iff.mp hlk, hnodup⟩)
       simp only [length_cons]
       iframe
 
 /-- The program `wPRP` refines the spec `wPRF` up to the loop error. -/
-theorem wp_wPRP_wPRF (Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (ε : ENNReal) (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
+theorem wp_wPRP_wPRF (Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (ε : ENNReal)
+    (hε : loopErr N 0 Q.toNat ≤ ε) : iprop%
     ⤇ K.fill (wPRF N Q) ∗ ↯b ε ∗
-    (∀ v : Val rT, ⤇ K.fill (ofVal v) -∗ Φ v) ⊢
-    WP[codensity tv] (wPRP N Q) @ E {{ Φ }} := by
+      (∀ v : Val rT, ⤇ K.fill (ofVal v) -∗ Φ v) ⊢
+      WP[codensity tv] (wPRP N Q) @ E {{ Φ }} := by
   rw [← toNat_of_nonneg hQ]
   iintro ⟨Hj, Herr, Hcnt⟩
   ihave Herr := weaken hε $$ Herr
@@ -368,11 +359,10 @@ end Games
 section AdequacyCor
 
 /-- Adequacy of `wp_wPRF_wPRP`: the two games are `Rel`-close up to the birthday bound. -/
-theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
-    (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (N Q : Int)
+    (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·))
-      (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
+      (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
   apply wp_adequacy_budget_lim (GF := GF)
   intro _ _ ε' hε'
   iintro Hj Herr
@@ -388,19 +378,16 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   rfl
 
 /-- `wPRF_wPRP_switching` at the canonical functors. -/
-theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (σ σ' : State rT) :
+theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·))
-      (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
+      (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
   wPRF_wPRP_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
 /-- Adequacy of `wp_wPRP_wPRF`: the two games are `Rel`-close up to the birthday bound. -/
-theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
-    (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (N Q : Int)
+    (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·))
-      (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
+      (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
   apply wp_adequacy_budget_lim (GF := GF)
   intro _ _ ε' hε'
   iintro Hj Herr
@@ -416,21 +403,19 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   rfl
 
 /-- `wPRP_wPRF_switching` at the canonical functors. -/
-theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q)
-    (σ σ' : State rT) :
+theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·))
-      (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
+      (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
   wPRP_wPRF_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
 
 /-- The weak PRF/PRP switching lemma: any event's probability changes by at most the
 birthday bound. -/
 theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT)
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
-    limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S
-        + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
-    limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S
-        + ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
+    limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S +
+        ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
+      limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S +
+        ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
   ⟨tv_le_add_of_rel
     ((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono le_rfl adequacyRel_eq_subset) hS,
    tv_le_add_of_rel

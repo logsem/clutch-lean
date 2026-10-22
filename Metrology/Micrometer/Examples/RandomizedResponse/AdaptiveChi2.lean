@@ -62,8 +62,7 @@ variable {rT : Type} [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
 /-- The first draws form a regraded escort head at χ² `7/12`: read along `toRenyi 2` it is the
 Rényi escort head `escortHead_rr3` at `log (19/12)`. -/
 theorem escortHead_rr3_chi2 (K : Ectx rT) (σ σ' : State rT) :
-    (escortPower 2).head
-      ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+    (escortPower 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (drawCost σ σ' K adaptiveCostChi2) (ofReal (7 / 12)) := by
   have hR : (fun ρ ρ' ↦ toRenyi 2 (drawCost σ σ' K adaptiveCostChi2 ρ ρ')) =

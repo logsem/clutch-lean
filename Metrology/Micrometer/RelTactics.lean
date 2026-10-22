@@ -65,8 +65,7 @@ meta def RelGoal.withSide (g : RelGoal) (side : Side) (x : LeanExpr) : LeanExpr 
   mkAppN g.app.getAppFn (args.set! i x)
 
 /-- Run `k` on the `refines` goal of the proof-mode context. -/
-meta def runTacticRel {β : Type} (name : Name) (k : MVarId → RelGoal → ProofModeM β) :
-    TacticM β :=
+meta def runTacticRel {β : Type} (name : Name) (k : MVarId → RelGoal → ProofModeM β) : TacticM β :=
   runTactic name fun mvar {hyps, goal, ..} => do
     let app := (← instantiateMVars goal).consumeMData
     unless app.isAppOf ``refines do
@@ -235,9 +234,9 @@ meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : Ta
       | [] => do unless ← isDefEq Q g.app do failure
       | (s, K, pat) :: rest => do
         let some _ ← searchSide g s fun Kc e₀ => do
-            unless ← unifyExp pat e₀ do failure
-            unless ← isDefEq K Kc do failure
-            go rest
+          unless ← unifyExp pat e₀ do failure
+          unless ← isDefEq K Kc do failure
+          go rest
           | failure
     unless (← observing? (go holes)).isSome do
       throwError "{tac}: cannot apply {stx} to {← ppExpr g.e} << {← ppExpr g.t}"
@@ -279,14 +278,14 @@ meta def relPureCore (side : Side) (focus? : Option Term) : TacticM Unit :=
     let instPL : Q(LawfulProbLangℝ $α) ← synthInstanceQ q(LawfulProbLangℝ $α)
     let focusE? : Option Q(Exp $α) ← focus?.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
     let res? : Option (Q(Ectx $α) × PureStepAt α instPL) ← searchSide g side fun K e₁ => do
-        if let some focusE := focusE? then guard (← isDefEq e₁ focusE)
-        let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
-        let e₂syn ← foldSymbolicNot instPL e₁' e₂syn
-        let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
-        let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
-        let some inst ← ProofModeM.trySynthInstanceQ q(ProbLang.PureExec $φ $n $e₁' $e₂syn)
-          | failure
-        return (K, { e₁ := e₁', e₂syn, names, φ, n, inst })
+      if let some focusE := focusE? then guard (← isDefEq e₁ focusE)
+      let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
+      let e₂syn ← foldSymbolicNot instPL e₁' e₂syn
+      let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
+      let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
+      let some inst ← ProofModeM.trySynthInstanceQ q(ProbLang.PureExec $φ $n $e₁' $e₂syn)
+        | failure
+      return (K, { e₁ := e₁', e₂syn, names, φ, n, inst })
     let some (K, step) := res?
       | throwError "rel_pure: no pure step applies to {← ppExpr (g.side side)}"
     let φ : Q(Prop) ← instantiateMVars step.φ
@@ -419,12 +418,12 @@ meta def foldPlConsts (e : LeanExpr) : MetaM LeanExpr := do
     unless x.isAppOfArity ``Exp.fix 2 do return .continue
     for c in consts do
       let some app ← withNewMCtxDepth (allowLevelAssignments := true) do
-          let cE ← mkConstWithFreshMVarLevels c
-          let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType cE)
-          let app := mkAppN cE mvs
-          unless ← isDefEq x app do return none
-          let app ← instantiateMVars app
-          return if app.hasMVar then none else some app
+        let cE ← mkConstWithFreshMVarLevels c
+        let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType cE)
+        let app := mkAppN cE mvs
+        unless ← isDefEq x app do return none
+        let app ← instantiateMVars app
+        return if app.hasMVar then none else some app
         | continue
       return .done app
     return .continue)
@@ -456,10 +455,10 @@ meta def findResourceHyp (g : IrisGoal) : ProofModeM Name := do
   let R := (goal.getArg! 2).consumeMData
   let some loc ← firstExplicitArg? R | throwError "rel: no location in {R}"
   let some (name, _) ← g.hyps.findM? fun _ _ _ ty => do
-      let ty := ty.consumeMData
-      unless ty.getAppFn == R.getAppFn do return false
-      let some l ← firstExplicitArg? ty | return false
-      isDefEq l loc
+    let ty := ty.consumeMData
+    unless ty.getAppFn == R.getAppFn do return false
+    let some l ← firstExplicitArg? ty | return false
+    isDefEq l loc
     | throwError "rel: no hypothesis owns {R}"
   return name
 
@@ -522,12 +521,16 @@ macro "rel_rand_r" : tactic => `(tactic| (rel_pures_r; first
 
 /-- `rel_alloc_l_atomic` applies `refines_alloc_l` at its redex, leaving its premise. -/
 macro "rel_alloc_l_atomic" : tactic => `(tactic| rel_apply_l refines_alloc_l)
+
 /-- `rel_load_l_atomic` applies `refines_load_l` at its redex, leaving its premise. -/
 macro "rel_load_l_atomic" : tactic => `(tactic| rel_apply_l refines_load_l)
+
 /-- `rel_store_l_atomic` applies `refines_store_l` at its redex, leaving its premise. -/
 macro "rel_store_l_atomic" : tactic => `(tactic| rel_apply_l refines_store_l)
+
 /-- `rel_alloctape_l_atomic` applies `refines_alloctape_l` at its redex, leaving its premise. -/
 macro "rel_alloctape_l_atomic" : tactic => `(tactic| rel_apply_l refines_alloctape_l)
+
 /-- `rel_rand_l_atomic` applies `refines_randT_l` at its redex, leaving its premise. -/
 macro "rel_rand_l_atomic" : tactic => `(tactic| rel_apply_l refines_randT_l)
 

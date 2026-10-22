@@ -55,8 +55,7 @@ def Adjacent (db db' : Fin n → Bool) : Prop :=
 theorem abs_count_sub_le {db db' : Fin n → Bool} (h : Adjacent db db') :
     |count db - count db'| ≤ 1 := by
   obtain ⟨i, hi⟩ := h
-  rw [count, count, ← sum_sub_distrib,
-    sum_eq_single i (fun j _ hj ↦ by simp [hi j hj]) (by simp)]
+  rw [count, count, ← sum_sub_distrib, sum_eq_single i (fun j _ hj ↦ by simp [hi j hj]) (by simp)]
   cases db i <;> cases db' i <;> norm_num
 
 /-- Adjacency of databases is symmetric. -/
@@ -111,8 +110,7 @@ include hlap
 sampler spec `hlap`, which is assumed for every ghost-state instance because adequacy allocates
 its own. -/
 theorem noisyCount_DP : (noisyCountMech lap n σ).DP Adjacent (ofReal (1 / b)) 0 :=
-  fun _ _ h ↦ wp_adequacy_div _ _ σ σ _
-    fun _ _ ↦ wp_noisyCount (hlap _ _) h
+  fun _ _ h ↦ wp_adequacy_div _ _ σ σ _ fun _ _ ↦ wp_noisyCount (hlap _ _) h
 
 variable [IsMarkovKernel (noisyCountMech lap n σ)]
 
@@ -124,13 +122,11 @@ theorem noisyCount_zCDP : (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 
 
 /-- The noisy count is `((1/b)² / 2 + 2 √((1/b)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`, given that it terminates almost surely. Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_DP_sqrt {δ : ℝ} (hδ : 0 < δ)
-    (hδ₁ : δ < 1) :
+theorem noisyCount_DP_sqrt {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
     (noisyCountMech lap n σ).DP Adjacent
       (ofReal ((1 / b) ^ 2 / 2 + 2 * √((1 / b) ^ 2 / 2 * log (1 / δ))))
       (ofReal δ) := by
-  have := DP_of_zCDP_sq hδ hδ₁
-    (zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ))
+  have := DP_of_zCDP_sq hδ hδ₁ (zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ))
   rwa [coe_toNNReal _ (by positivity)] at this
 
 end Closed

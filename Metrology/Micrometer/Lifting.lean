@@ -29,15 +29,15 @@ open SpecUpdateGS
 theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b -∗ |={E, ∅}=>
-      ∃ (R : Cfg rT → Cfg rT → B),
-        ⌜Reducible e₁ σ₁⌝ ∗
-        ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
-          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
-            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp L E e₂ Φ)) ⊢
-    wp L E e₁ Φ := by
+        budgetInterp b -∗ |={E, ∅}=>
+        ∃ (R : Cfg rT → Cfg rT → B),
+          ⌜Reducible e₁ σ₁⌝ ∗
+          ⌜Reducible e₁' σ₁'⌝ ∗
+          ⌜L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+          (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
+            stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
+              budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩) ∗ wp L E e₂ Φ)) ⊢
+      wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -54,16 +54,16 @@ variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorb
 (Rocq `wp_lift_step_couple_adv`). -/
 theorem wp_lift_prim_steps_coupl_adv (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b -∗ |={E, ∅}=>
-      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
-        ⌜b₁ + b₂ ≤ b⌝ ∗
-        ⌜Reducible e₁ σ₁⌝ ∗
-        ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
-          stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
-            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
-    wp L E e₁ Φ := by
+        budgetInterp b -∗ |={E, ∅}=>
+        ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
+          ⌜b₁ + b₂ ≤ b⌝ ∗
+          ⌜Reducible e₁ σ₁⌝ ∗
+          ⌜Reducible e₁' σ₁'⌝ ∗
+          ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+          (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ ▷ |={∅, E}=>
+            stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
+              budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢
+      wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_prog_couple hv
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -80,17 +80,17 @@ proving `wp` (Rocq `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is
 `L.Absorbing b`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b -∗ |={E, ∅}=>
-      ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
-        ⌜b₁ + b₂ ≤ b⌝ ∗
-        ⌜Reducible e₁ σ₁⌝ ∗
-        ⌜Reducible e₁' σ₁'⌝ ∗
-        ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
-        (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
-          ⌜L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)⌝ ∨
-          (stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
-            budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ))) ⊢
-    wp L E e₁ Φ := by
+        budgetInterp b -∗ |={E, ∅}=>
+        ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
+          ⌜b₁ + b₂ ≤ b⌝ ∗
+          ⌜Reducible e₁ σ₁⌝ ∗
+          ⌜Reducible e₁' σ₁'⌝ ∗
+          ⌜L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)⌝ ∗
+          (∀ e₂ σ₂ e₂' σ₂', ▷ |={∅, E}=>
+            ⌜L.Absorbing (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂)⌝ ∨
+            (stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
+              budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ))) ⊢
+      wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -114,14 +114,14 @@ theorem wp_lift_prim_steps_coupl_adv_absorbing (hv : e₁.toVal? = none) : iprop
 `0` (Rocq `wp_couple_erasables`). -/
 theorem wp_couple_erasables : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
-      budgetInterp b -∗ |={E, ∅}=>
-      ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),
-        ⌜ErasableExpr μ₁ σ₁⌝ ∗ ⌜ErasableExpr μ₁' σ₁'⌝ ∗
-        ⌜L.Rel 0 R μ₁ μ₁'⌝ ∗
-        (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={∅, E}=>
-          stateInterp σ₂ ∗ specInterp ⟨e₁', σ₂'⟩ ∗ budgetInterp b ∗
-            wp L E e₁ Φ)) ⊢
-    wp L E e₁ Φ := by
+        budgetInterp b -∗ |={E, ∅}=>
+        ∃ (R : State rT → State rT → Prop) (μ₁ μ₁' : MeasureTheory.Measure (State rT)),
+          ⌜ErasableExpr μ₁ σ₁⌝ ∗ ⌜ErasableExpr μ₁' σ₁'⌝ ∗
+          ⌜L.Rel 0 R μ₁ μ₁'⌝ ∗
+          (∀ σ₂ σ₂', ⌜R σ₂ σ₂'⌝ -∗ |={∅, E}=>
+            stateInterp σ₂ ∗ specInterp ⟨e₁', σ₂'⟩ ∗ budgetInterp b ∗
+              wp L E e₁ Φ)) ⊢
+      wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_step_spec_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩

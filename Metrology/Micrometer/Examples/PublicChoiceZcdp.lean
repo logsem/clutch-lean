@@ -70,8 +70,7 @@ theorem isProbabilityMeasure_choice (b : Bool) (σ : State ℝ) :
       iintro -
       iapply twp_choice
   refine ⟨le_antisymm (IsSubProbabilityMeasure.measure_le_one _) ?_⟩
-  rw [limExecV, asExpr, Measure.map_apply Cfg.measurable_expr .univ,
-    Set.preimage_univ]
+  rw [limExecV, asExpr, Measure.map_apply Cfg.measurable_expr .univ, Set.preimage_univ]
   simpa using h
 
 section
@@ -88,9 +87,7 @@ theorem choice_zCDP_real : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) :
 /-- The public choice is `((ln 3)² / 2 + 2 √((ln 3)² / 2 · log (1 / δ)), δ)`-DP at every slack
 `0 < δ < 1`. -/
 theorem choice_DP_sqrt_real {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
-    (choiceMech σ).DP ⊤
-      (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ))))
-      (ofReal δ) :=
+    (choiceMech σ).DP ⊤ (ofReal (log 3 ^ 2 / 2 + 2 * √(log 3 ^ 2 / 2 * log (1 / δ)))) (ofReal δ) :=
   choice_DP_sqrt σ hδ hδ₁
 
 end

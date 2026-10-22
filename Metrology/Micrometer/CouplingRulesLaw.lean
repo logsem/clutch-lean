@@ -66,9 +66,8 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
 section Law
 
 variable [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
-  [OrderTop B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC} {GF : BundledGFunctors}
-  [MeasurableSingletonClass rT] [BudgetCreditGS B GF]
+  [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
+  {GF : BundledGFunctors} [MeasurableSingletonClass rT] [BudgetCreditGS B GF]
 local bi IProp GF
 
 section Wp
@@ -84,8 +83,8 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
       (drawCost σ σ' K R) c)
     (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b c ∗
-    (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#int m) -∗ Φ (.int n)) ⊢
-    wp L E pl(rand(#N, #())) Φ := by
+      (∀ n m, ⌜R n m < (⊤ : B)⌝ -∗ ↯b (R n m) -∗ ⤇ K.fill pl(#int m) -∗ Φ (.int n)) ⊢
+      wp L E pl(rand(#N, #())) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_lift_step_couple
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -134,16 +133,13 @@ end Wp
 leftover `R r r'` to the draws (relational `wp_couple_rand_rand_law`). -/
 theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.IsSupportLocal]
     [L.HasBind] (law : L.BindLaw) [law.HeadShift] [law.SideFree] {E : CoPset} {K K' : Ectx rT}
-    {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B)
-    (hc : IsAddLeftRegular c)
-    (hhead : ∀ (K : Ectx rT) σ σ', law.head
-      ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+    {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c)
+    (hhead : ∀ (K : Ectx rT) σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (drawCost σ σ' K R) c) : iprop%
     ↯b c ∗ (∀ r r', ⌜R r r' < (⊤ : B)⌝ -∗ ↯b (R r r') -∗
-      refines L E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
-    refines L E (K.fill pl(rand(#N, #())))
-      (K'.fill pl(rand(#N, #()))) A := by
+        refines L E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
+      refines L E (K.fill pl(rand(#N, #()))) (K'.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -247,9 +243,9 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF]
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
-    (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
-      ⤇ K.fill pl(#r') -∗ Φ (.int r)) ⊢
-    wp (codensity dp) E pl(rand(#N, #())) Φ := by
+      (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
+        ⤇ K.fill pl(#r') -∗ Φ (.int r)) ⊢
+      wp (codensity dp) E pl(rand(#N, #())) Φ := by
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_couple_rand_rand_law dpChoice N HN _ _ hc K
     (fun σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)
@@ -261,17 +257,15 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF]
 
 /-- Couple `rand N ~ rand N` by the DP choice rule, spending the choice budget and handing
 `choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
-theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset}
-    {K K' : Ectx rT} {A : lrel rT GF}
-    (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
+theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset} {K K' : Ectx rT}
+    {A : lrel rT GF} (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) : iprop%
     ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) ∗
-    (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
-      refines (codensity dp) E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
-    refines (codensity dp) E (K.fill pl(rand(#N, #())))
-      (K'.fill pl(rand(#N, #()))) A := by
+      (∀ r r', ⌜S₁ r r' ∨ S₂ r r'⌝ -∗ ↯b (choiceBudget P ε₂ ε₂' δ₂ r) -∗
+        refines (codensity dp) E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
+      refines (codensity dp) E (K.fill pl(rand(#N, #()))) (K'.fill pl(rand(#N, #()))) A := by
   iintro ⟨Hc, Hcnt⟩
   iapply refines_couple_rands_law dpChoice N HN _ _ hc
     (fun K σ σ' ↦ dpChoice_head_draws N HN K σ σ' h₁ h₂ hPT₁ hPT₂)

@@ -49,8 +49,7 @@ theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : 
   -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
   -- tails doubles the credit (`flipCredit`); the step map is the identity
   iapply refines_ind_amp (s := .id ℝ≥0∞) (k := 2)
-    (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by
-      rw [add_halves]⟩)
+    (fun b hb ↦ ⟨b / 2, b / 2, by simpa using hb.ne', by simpa using hb.ne', by rw [add_halves]⟩)
     (fun b hb ↦ ⟨b, hb, le_rfl⟩) absorbing_codensity_tv_one (by norm_num)
   simp only [coe_id, id_eq]
   iintro !> %ε %_ #IH Hε

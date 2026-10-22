@@ -36,8 +36,8 @@ noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
 /-- Bind: a `wp` for `e` whose postcondition is a `wp` for `K[v]` proves the `wp` for `K[e]`. -/
-theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset}
-    {e : Exp rT} {Φ : Val rT → IProp GF} :
+theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset} {e : Exp rT}
+    {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
   have Hloeb : ⊢ wpBindStmt L K := by
     iapply loeb_wand

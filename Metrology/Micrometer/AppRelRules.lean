@@ -41,9 +41,8 @@ cancelable budget `c`; spends `↯b c` (relational `wp_couple_rand_rand_spend`).
 theorem refines_couple_rands_spend (N : Int) (HN : 0 < N) (S : Int → Int → Prop) (c : B)
     (hc : IsAddLeftRegular c) (Hcpl : L.Rel c S (unifInt N HN) (unifInt N HN)) : iprop%
     ↯b c ∗ (∀ r r', ⌜S r r'⌝ -∗
-      refines L E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
-    refines L E (K.fill pl(rand(#N, #())))
-      (K'.fill pl(rand(#N, #()))) A := by
+        refines L E (K.fill pl(#r)) (K'.fill pl(#r')) A) ⊢
+      refines L E (K.fill pl(rand(#N, #()))) (K'.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -63,7 +62,7 @@ variable [L.IsReflexive]
 /-- Left allocation `ref v`: continue with a fresh location pointing to `v`. -/
 theorem refines_alloc_l {v : Val rT} : iprop%
     (∀ l, l ↦ v -∗ refines L E (K.fill pl(#loc l)) t A) ⊢
-    refines L E (K.fill (.alloc v.1)) t A := by
+      refines L E (K.fill (.alloc v.1)) t A := by
   iintro Hlog
   iapply refines_wp_l
   rw [show alloc v.1 = alloc (ofVal v) from rfl]
@@ -74,7 +73,7 @@ theorem refines_alloc_l {v : Val rT} : iprop%
 /-- Left load `!l`: read the value from the points-to. -/
 theorem refines_load_l : iprop%
     (∃ v, l ↦ v ∗ (l ↦ v -∗ refines L E (K.fill v.1) t A)) ⊢
-    refines L E (K.fill pl(!#loc l)) t A := by
+      refines L E (K.fill pl(!#loc l)) t A := by
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_load
@@ -85,7 +84,7 @@ theorem refines_load_l : iprop%
 /-- Left store `l := v'`: update the points-to to `v'`. -/
 theorem refines_store_l {v' : Val rT} : iprop%
     (∃ v : Val rT, l ↦ v ∗ (l ↦ v' -∗ refines L E (K.fill pl(#())) t A)) ⊢
-    refines L E (K.fill (.store pl(#loc l) v'.1)) t A := by
+      refines L E (K.fill (.store pl(#loc l) v'.1)) t A := by
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
   rw [show store pl(#loc l) v'.1 = store pl(#loc l) (ofVal v') from rfl]
@@ -97,7 +96,7 @@ theorem refines_store_l {v' : Val rT} : iprop%
 /-- Left tape allocation `tape z`: continue with a fresh empty tape of bound `z`. -/
 theorem refines_alloctape_l : iprop%
     (∀ l, appTapesFrag l (.empty z) -∗ refines L E (K.fill pl(#lbl l)) t A) ⊢
-    refines L E (K.fill pl(tape(#z))) t A := by
+      refines L E (K.fill pl(tape(#z))) t A := by
   iintro Hlog
   iapply refines_wp_l
   iapply wp_alloctape
@@ -108,7 +107,7 @@ theorem refines_alloctape_l : iprop%
 couplings consume). -/
 theorem refines_alloctape_nat_l : iprop%
     (∀ l, appNatTape l z [] -∗ refines L E (K.fill pl(#lbl l)) t A) ⊢
-    refines L E (K.fill pl(tape(#z))) t A := by
+      refines L E (K.fill pl(tape(#z))) t A := by
   iintro Hlog
   iapply refines_alloctape_l
   iintro %l Hl
@@ -122,7 +121,7 @@ theorem refines_alloctape_nat_l : iprop%
 /-- Left unlabelled draw `rand z`: continue at every outcome `0 ≤ n < z`. -/
 theorem refines_randU_l (Hz : 0 < z) : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
-    refines L E (K.fill pl(rand(#z, #()))) t A := by
+      refines L E (K.fill pl(rand(#z, #()))) t A := by
   iintro Hlog
   iapply refines_wp_l
   iapply wp_rand Hz
@@ -132,8 +131,8 @@ theorem refines_randU_l (Hz : 0 < z) : iprop%
 /-- Left draw from a non-empty tape: take its head `n`. -/
 theorem refines_randT_l {n : Int} {ns : List Int} : iprop%
     appNatTape l z (n :: ns) ∗
-    (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
-    refines L E (K.fill pl(rand(#z, #lbl l))) t A := by
+      (appNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
+      refines L E (K.fill pl(rand(#z, #lbl l))) t A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_rand_tape
@@ -148,8 +147,8 @@ include Hz
 /-- Left draw from an empty tape: behaves like an unlabelled draw, keeping the tape empty. -/
 theorem refines_randT_empty_l : iprop%
     appNatTape l z [] ∗
-    (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
-    refines L E (K.fill pl(rand(#z, #lbl l))) t A := by
+      (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
+      refines L E (K.fill pl(rand(#z, #lbl l))) t A := by
   iintro ⟨Hl, Hlog⟩
   iapply refines_wp_l
   iapply wp_rand_tape_empty Hz
@@ -160,7 +159,7 @@ theorem refines_randT_empty_l : iprop%
 /-- Right unlabelled draw `rand z`: continue at every outcome `0 ≤ n < z`. -/
 theorem refines_randU_r : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
-    refines L E e (K.fill pl(rand(#z, #()))) A := by
+      refines L E e (K.fill pl(rand(#z, #()))) A := by
   unfold refines
   iintro Hlog %K' %b Hj Hna Herr Hpos
   isimp only [fill_comp K' K] at Hj
@@ -173,8 +172,8 @@ theorem refines_randU_r : iprop%
 /-- Right draw from an empty spec tape: continue at every outcome, keeping the tape empty. -/
 theorem refines_randT_empty_r : iprop%
     specNatTape l z [] ∗
-    (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
-    refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
+      (∀ n, specNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E e (K.fill pl(#n)) A) ⊢
+      refines L E e (K.fill pl(rand(#z, #lbl l))) A := by
   unfold refines
   iintro ⟨Hα, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [fill_comp K' K] at Hj
@@ -194,8 +193,7 @@ end
 theorem refines_couple_rands_lr (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
-    refines L E (K.fill pl(rand(#z, #())))
-      (K'.fill pl(rand(#z, #()))) A := by
+      refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #()))) A := by
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -211,9 +209,8 @@ theorem refines_couple_rands_lr (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n <
 theorem refines_couple_TU (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ appNatTape α z [] ∗ (∀ n, appNatTape α z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
-    refines L E (K.fill pl(rand(#z, #lbl α)))
-      (K'.fill pl(rand(#z, #()))) A := by
+        refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
+      refines L E (K.fill pl(rand(#z, #lbl α))) (K'.fill pl(rand(#z, #()))) A := by
   unfold refines
   iintro ⟨Hα, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -229,9 +226,8 @@ theorem refines_couple_TU (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n �
 theorem refines_couple_UT (α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ specNatTape α' z [] ∗ (∀ n, specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
-    refines L E (K.fill pl(rand(#z, #())))
-      (K'.fill pl(rand(#z, #lbl α'))) A := by
+        refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
+      refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #lbl α'))) A := by
   unfold refines
   iintro ⟨Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -248,10 +244,9 @@ theorem refines_couple_TT (α α' : Loc) (f : Int → Int)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗
-    (∀ n, appNatTape α z [] -∗ specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
-      refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
-    refines L E (K.fill pl(rand(#z, #lbl α)))
-      (K'.fill pl(rand(#z, #lbl α'))) A := by
+      (∀ n, appNatTape α z [] -∗ specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
+        refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
+      refines L E (K.fill pl(rand(#z, #lbl α))) (K'.fill pl(rand(#z, #lbl α'))) A := by
   unfold refines
   iintro ⟨Hα, Hα', Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -270,9 +265,9 @@ theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int}
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
     appNatTape α z ns ∗ specNatTape αₛ z nsₛ ∗
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
-      refines L E e e' A) ⊢
-    refines L E e e' A := by
+      (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
+        refines L E e e' A) ⊢
+      refines L E e e' A := by
   unfold refines
   iintro ⟨Hα, Hαₛ, Hcnt⟩ %K %b Hj Hna Herr Hpos
   iapply wp_couple_tapes_bij f hdom hbij Hz
@@ -291,9 +286,8 @@ theorem refines_couple_rands_lr_adv
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z)
     (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
     ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ↯b (s (ε₂ n)) -∗
-      refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
-    refines L E (K.fill pl(rand(#z, #())))
-      (K'.fill pl(rand(#z, #()))) A := by
+        refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
+      refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #()))) A := by
   unfold refines
   iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
@@ -306,13 +300,11 @@ theorem refines_couple_rands_lr_adv
   iapply Hcnt $$ %n %Hn Hec %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two unlabelled draws identically, avoiding the outcome `bad` for a credit `s (1/z)`. -/
-theorem refines_couple_rands_lr_avoid (bad : Int)
-    (Hz : 0 < z) (habs : L.Absorbing (s 1))
+theorem refines_couple_rands_lr_avoid (bad : Int) (Hz : 0 < z) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (z.toNat : ENNReal)⁻¹)) : iprop%
     ↯b (s (z.toNat : ENNReal)⁻¹) ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
-      refines L E (K.fill pl(#n)) (K'.fill pl(#n)) A) ⊢
-    refines L E (K.fill pl(rand(#z, #())))
-      (K'.fill pl(rand(#z, #()))) A := by
+        refines L E (K.fill pl(#n)) (K'.fill pl(#n)) A) ⊢
+      refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #()))) A := by
   classical
   iintro ⟨Hε, Hcnt⟩
   iapply refines_couple_rands_lr_adv id (z.toNat : ENNReal)⁻¹ (fun n => if n = bad then 1 else 0)

@@ -49,8 +49,7 @@ variable (P : _) (A : lrel rT GF)
 
 /-- `refines` eliminates `|={⊤}=>`. -/
 instance elim_fupd_refines :
-    ElimModal True false io false iprop(|={⊤}=> P) P
-      (refines L E e t A) (refines L E e t A) where
+    ElimModal True false io false iprop(|={⊤}=> P) P (refines L E e t A) (refines L E e t A) where
   elim_modal _ := calc
     _ ⊢ (|={⊤}=> P) ∗ (P -∗ refines L E e t A) := sep_mono_left intuitionisticallyIf_elim
     _ ⊢ |={⊤}=> P ∗ (P -∗ refines L E e t A)   := fupd_frame_right
@@ -59,8 +58,7 @@ instance elim_fupd_refines :
 
 /-- `refines` eliminates `|==>`. -/
 instance elim_bupd_refines :
-    ElimModal True false io false iprop(|==> P) P
-      (refines L E e t A) (refines L E e t A) where
+    ElimModal True false io false iprop(|==> P) P (refines L E e t A) (refines L E e t A) where
   elim_modal h :=
     (sep_mono_left (intuitionisticallyIf_mono BIUpdateFUpdate.fupd_of_bupd)).trans
       ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
@@ -77,8 +75,8 @@ end
 /-! ### Bind and return -/
 
 /-- Sequence two refinements via evaluation-context framing. -/
-theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT)
-    {A' : lrel rT GF} {e e' : Exp rT} : iprop%
+theorem refines_bind [L.IsLawful] [L.IsTopAbsorbing] (K K' : Ectx rT) {A' : lrel rT GF}
+    {e e' : Exp rT} : iprop%
     ⊢ refines L E e e' A -∗
       (∀ v v', A v v' -∗ refines L ⊤ (K.fill v.1) (K'.fill v'.1) A') -∗
       refines L E (K.fill e) (K'.fill e') A' := by
@@ -135,8 +133,7 @@ theorem refines_ret_na_compl : iprop%
   imod HFA with ⟨HF, HA⟩
   imodintro
   -- `naOwnP E ∗ naOwnP (⊤ \ E) ⊢ naOwnP ⊤`, since `E ∪ (⊤ \ E) = ⊤`.
-  have hun := (own_union (GF := GF) (p := nais rT GF) (E2 := ⊤ \ E)
-    disjoint_diff_right).mpr
+  have hun := (own_union (GF := GF) (p := nais rT GF) (E2 := ⊤ \ E) disjoint_diff_right).mpr
   rw [subset_union_diff (s₂ := (⊤ : CoPset)) (fun _ _ => mem_full)] at hun
   iframe HA
   iapply hun
@@ -170,15 +167,13 @@ variable {N : Namespace}
 
 /-- Open the non-atomic invariant `N` around a refinement, which then runs at mask `E \ N` with the
 closing update. -/
-theorem refines_na_inv
-    (HNE : ↑N ⊆ E) : iprop%
+theorem refines_na_inv (HNE : ↑N ⊆ E) : iprop%
     naInvP (rT := rT) N P ∗ (▷ P ∗ naCloseP (rT := rT) P N E -∗ refines L (E \ ↑N) e1 e2 A) ⊢
     refines L E e1 e2 A := by
   iintro ⟨Hinv, IH⟩
   iapply refines_na_update
   iintro Hnais
-  imod inv_acc subseteq_top HNE $$ Hinv Hnais
-    with ⟨HP, Hnais, Hclose⟩
+  imod inv_acc subseteq_top HNE $$ Hinv Hnais with ⟨HP, Hnais, Hclose⟩
   imodintro
   iframe Hnais
   iapply IH $$ [$HP $Hclose]
@@ -207,9 +202,8 @@ open _root_.ProbLang.Val (ext_iff)
 
 /-- If two `logN` invariants have bodies that cannot hold together, they cannot both be opened, so
 their names are equal; `hp` turns that into `l1 = l2`. -/
-theorem fupd_eq_of_inv_excl {P1 P2 : IProp GF} {p1 p2 : Loc × Loc}
-    {l1 l2 : Loc} (HE : ↑logN ⊆ E) (hp : p1 = p2 → l1 = l2)
-    (hfalse : ⊢ P1 -∗ P2 -∗ False) :
+theorem fupd_eq_of_inv_excl {P1 P2 : IProp GF} {p1 p2 : Loc × Loc} {l1 l2 : Loc} (HE : ↑logN ⊆ E)
+    (hp : p1 = p2 → l1 = l2) (hfalse : ⊢ P1 -∗ P2 -∗ False) :
     ⊢ inv (logN.@ p1) P1 -∗ inv (logN.@ p2) P2 -∗ |={E}=> ⌜l1 = l2⌝ := by
   by_cases h : l1 = l2
   · iintro - - !> !%; exact h
@@ -241,8 +235,8 @@ include HE
 /-- Reference type is functional in the program-side location (Rocq `interp_ref_funct`). -/
 theorem lrel_ref_funct :
     ⊢ (lrel_ref A).car (.loc l) (.loc l1) -∗
-        (lrel_ref A).car (.loc l) (.loc l2) -∗
-        |={E}=> ⌜l1 = l2⌝ := by
+      (lrel_ref A).car (.loc l) (.loc l2) -∗
+      |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
   iintro ⟨%l', %l1', %h1, %h2, Hinv1⟩ ⟨%l'', %l2', %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
@@ -254,8 +248,8 @@ theorem lrel_ref_funct :
 /-- Reference type is injective on the program-side location (Rocq `interp_ref_inj`). -/
 theorem lrel_ref_inj :
     ⊢ (lrel_ref A).car (.loc l1) (.loc l) -∗
-        (lrel_ref A).car (.loc l2) (.loc l) -∗
-        |={E}=> ⌜l1 = l2⌝ := by
+      (lrel_ref A).car (.loc l2) (.loc l) -∗
+      |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_ref
   iintro ⟨%l1', %l', %h1, %h2, Hinv1⟩ ⟨%l2', %l'', %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
@@ -267,8 +261,8 @@ theorem lrel_ref_inj :
 /-- Tape type is functional in the program-side location (Rocq `interp_tape_funct`). -/
 theorem lrel_tape_funct :
     ⊢ (lrel_tape : lrel rT GF).car (.lbl l) (.lbl l1) -∗
-        (lrel_tape : lrel rT GF).car (.lbl l) (.lbl l2) -∗
-        |={E}=> ⌜l1 = l2⌝ := by
+      (lrel_tape : lrel rT GF).car (.lbl l) (.lbl l2) -∗
+      |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
   iintro ⟨%l', %l1', %z1, %h1, %h2, Hinv1⟩ ⟨%l'', %l2', %z2, %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by
@@ -280,8 +274,8 @@ theorem lrel_tape_funct :
 /-- Tape type is injective on the program-side location (Rocq `interp_tape_inj`). -/
 theorem lrel_tape_inj :
     ⊢ (lrel_tape : lrel rT GF).car (.lbl l1) (.lbl l) -∗
-        (lrel_tape : lrel rT GF).car (.lbl l2) (.lbl l) -∗
-        |={E}=> ⌜l1 = l2⌝ := by
+      (lrel_tape : lrel rT GF).car (.lbl l2) (.lbl l) -∗
+      |={E}=> ⌜l1 = l2⌝ := by
   unfold lrel_tape
   iintro ⟨%l1', %l', %z1, %h1, %h2, Hinv1⟩ ⟨%l2', %l'', %z2, %h3, %h4, Hinv2⟩
   obtain ⟨rfl, rfl, rfl, rfl⟩ : l = l' ∧ l = l'' ∧ l1 = l1' ∧ l2 = l2' := by

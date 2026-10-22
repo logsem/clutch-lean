@@ -152,8 +152,7 @@ theorem bin_log_related_fix_step {f : Var} {τ1 τ2 : Ty} (hfRc : f ∉ (Γrc'.m
     (hKe'_fv : Ke'.fv ⊆ (((f, interp L (.arrow τ1 τ2) Δ) :: Γrc').map (·.1)).toFinset)
     (Hbody : ⊢ bin_log_related_ty L ⊤ Δ ((f, interp L (.arrow τ1 τ2) Δ) :: Γrc') Ke Ke'
       (.arrow τ1 τ2)) :
-    ⊢ bin_log_related_ty L ⊤ Δ Γrc' (.fix (Ke.close f)) (.fix (Ke'.close f))
-      (.arrow τ1 τ2) :=
+    ⊢ bin_log_related_ty L ⊤ Δ Γrc' (.fix (Ke.close f)) (.fix (Ke'.close f)) (.arrow τ1 τ2) :=
   bin_log_related_fix _ _ _
     (fun y _ => open_close_subst_lc_at f y hKe_lc) (fun y _ => open_close_subst_lc_at f y hKe'_lc)
     (fun _ => close_fv_in_outer_dom hKe_fv) (fun _ => close_fv_in_outer_dom hKe'_fv)
@@ -172,9 +171,8 @@ variable {K : Ctx rT}
 /-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
 `Hrel` is valid (⊢) because binder frames use it under □; `Hbinders` and `Ctx.BindersFresh` keep
 the frames' binders fresh for the plugged terms, the frame code and the relational context. -/
-theorem bin_log_related_under_typed_ctx {Γtc' : Tctx}
-    {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ') (Hty_e : Typed Γtc e τ)
-    (Hty_e' : Typed Γtc e' τ)
+theorem bin_log_related_under_typed_ctx {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ')
+    (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
     (Hbinders : ∀ x ∈ binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ payloadFv K)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
       ⊢ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
@@ -284,8 +282,7 @@ theorem bin_log_related_under_typed_ctx {Γtc' : Tctx}
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         fun A y hy => ?_
       exact fundamental L (hRen y hy) (.cons A Δ) _
-        ((HCtx.shift A).insert y τ_pkg
-          (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))
+        ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))
     | @unpackR x e1 _ τ_pkg _ Hty_e1 =>
       have hxRc := HfreshHead x (mem_singleton_self _)
       refine bin_log_related_unpack Δ Γrc'
@@ -318,8 +315,8 @@ local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc
 /-- `bin_log_related_under_typed_ctx` for a hypothesis under a resource `P` such as budget
 credits, restricted to linear contexts; no freshness hypotheses are needed since no linear frame
 closes a variable over the hole. -/
-theorem bin_log_related_under_linear_ctx {P : IProp GF}
-    {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
+theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc' : Tctx} {τ' : Ty}
+    (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
       ⊢ P -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
     ∀ (Δ : TyEnv rT GF) (Γrc' : RelCtx rT GF), TctxRelated L Δ Γtc' Γrc' →
@@ -397,8 +394,7 @@ theorem bin_log_related_under_linear_ctx {P : IProp GF}
       iapply bin_log_related_unpack_wand Δ Γrc' _
         (fun y hy => (hRen y hy).isLocallyClosed) (fun y hy => (hRen y hy).isLocallyClosed)
         (fun A y hy => fundamental L (hRen y hy) (.cons A Δ) _
-          ((HCtx.shift A).insert y τ_pkg
-            (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))) $$ H
+          ((HCtx.shift A).insert y τ_pkg (lookup_eq_none_of_not_mem (hy ∘ mem_union_right _)))) $$ H
 
 end Prim
 

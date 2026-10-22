@@ -69,8 +69,8 @@ theorem bin_log_related_lam
 /-- Application of related functions to related arguments is related. -/
 theorem bin_log_related_app : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ1 -∗
-    bin_log_related_ty L ⊤ Δ Γ (.app e1 e2) (.app e1' e2') τ2 :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' τ1 -∗
+      bin_log_related_ty L ⊤ Δ Γ (.app e1 e2) (.app e1' e2') τ2 :=
   bin_log_related_lift2 substMap_app fun _ _ _ _ => refines_app
 
 /-- `fix e` is related at `τ1 → τ2` by Löb induction: the body may assume the recursive call is
@@ -100,7 +100,8 @@ theorem bin_log_related_fix
   iapply loeb_wand
   iintro !> #IH
   unfold lrel_arr
-  isplitr; · ipureintro; exact hfix_closed
+  isplitr
+  · ipureintro; exact hfix_closed
   iintro !> %v1 %v2 #HA
   rw [eq_fill_nil (.app (.fix (substMap vs.fst e)) v1.1),
     eq_fill_nil (.app (.fix (substMap vs.snd e')) v2.1)]
@@ -128,48 +129,48 @@ theorem bin_log_related_fix
 /-- Pairs are related componentwise. -/
 theorem bin_log_related_pair : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' τ1 ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ2 -∗
-    bin_log_related_ty L ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' τ2 -∗
+      bin_log_related_ty L ⊤ Δ Γ (.pair e1 e2) (.pair e1' e2') (.prod τ1 τ2) :=
   bin_log_related_lift2 substMap_pair fun _ _ _ _ => refines_pair
 
 /-- The first projection preserves relatedness. -/
 theorem bin_log_related_fst :
     bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
+      bin_log_related_ty L ⊤ Δ Γ (.fst e) (.fst e') τ1 :=
   bin_log_related_lift1 substMap_fst fun _ _ => refines_fst
 
 /-- The second projection preserves relatedness. -/
 theorem bin_log_related_snd :
     bin_log_related_ty L ⊤ Δ Γ e e' (.prod τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
+      bin_log_related_ty L ⊤ Δ Γ (.snd e) (.snd e') τ2 :=
   bin_log_related_lift1 substMap_snd fun _ _ => refines_snd
 
 /-- The left injection preserves relatedness. -/
 theorem bin_log_related_injl :
     bin_log_related_ty L ⊤ Δ Γ e e' τ1 ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
+      bin_log_related_ty L ⊤ Δ Γ (.inl e) (.inl e') (.sum τ1 τ2) :=
   bin_log_related_lift1 substMap_inl fun _ _ => refines_injl
 
 /-- The right injection preserves relatedness. -/
 theorem bin_log_related_injr :
     bin_log_related_ty L ⊤ Δ Γ e e' τ2 ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
+      bin_log_related_ty L ⊤ Δ Γ (.inr e) (.inr e') (.sum τ1 τ2) :=
   bin_log_related_lift1 substMap_inr fun _ _ => refines_injr
 
 /-- `case` on related sums with related branches is related. -/
 theorem bin_log_related_case {τ3 : Ty} : iprop%
     bin_log_related_ty L ⊤ Δ Γ e0 e0' (.sum τ1 τ2) ⊢
-    bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
-    bin_log_related_ty L ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
+      bin_log_related_ty L ⊤ Δ Γ e1 e1' (.arrow τ1 τ3) -∗
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' (.arrow τ2 τ3) -∗
+      bin_log_related_ty L ⊤ Δ Γ (.case e0 e1 e2) (.case e0' e1' e2') τ3 :=
   bin_log_related_lift3 substMap_case fun _ _ _ _ _ _ => refines_case
 
 /-- `if` on related booleans with related branches is related. -/
 theorem bin_log_related_if : iprop%
     bin_log_related_ty L ⊤ Δ Γ e0 e0' .bool ⊢
-    bin_log_related_ty L ⊤ Δ Γ e1 e1' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
+      bin_log_related_ty L ⊤ Δ Γ e1 e1' τ -∗
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
+      bin_log_related_ty L ⊤ Δ Γ (.cond e0 e1 e2) (.cond e0' e1' e2') τ :=
   bin_log_related_lift3 substMap_cond fun _ _ _ _ _ _ => refines_if
 
 /-! ## Polymorphic and recursive types -/
@@ -195,14 +196,12 @@ theorem bin_log_related_tlam (he_lc : e.IsLocallyClosed) (he'_lc : e'.IsLocallyC
 /-- Type application `e #()` goes from `∀ τ` to `τ[τ'/0]`. -/
 theorem bin_log_related_tapp :
     bin_log_related_ty L ⊤ Δ Γ e e' (.forall' τ) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.app e pl(#())) (.app e' pl(#())) (τ.single τ') := by
+      bin_log_related_ty L ⊤ Δ Γ (.app e pl(#())) (.app e' pl(#())) (τ.single τ') := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   rw [substMap_app, substMap_app, substMap_lit, substMap_lit,
-    show app (substMap vs.fst e) pl(#()) =
-      fill [appL .unit] (substMap vs.fst e) from rfl,
-    show app (substMap vs.snd e') pl(#()) =
-      fill [appL .unit] (substMap vs.snd e') from rfl]
+    show app (substMap vs.fst e) pl(#()) = fill [appL .unit] (substMap vs.fst e) from rfl,
+    show app (substMap vs.snd e') pl(#()) = fill [appL .unit] (substMap vs.snd e') from rfl]
   iapply refines_bind [appL .unit] [appL .unit] $$ (IH $$ %vs Hvs)
   iintro %v %v' Hv
   isimp only [show (interp L (.forall' τ) Δ).car v v' =
@@ -219,7 +218,7 @@ theorem bin_log_related_tapp :
 /-- `fold`, the identity on terms, goes from `τ[μ τ/0]` to `μ τ`. -/
 theorem bin_log_related_fold :
     bin_log_related_ty L ⊤ Δ Γ e e' (τ.single (.rec' τ)) ⊢
-    bin_log_related_ty L ⊤ Δ Γ e e' (.rec' τ) := by
+      bin_log_related_ty L ⊤ Δ Γ e e' (.rec' τ) := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   ihave IH' := IH $$ %vs Hvs
@@ -235,7 +234,7 @@ theorem bin_log_related_fold :
 /-- `unfold`, encoded as `recUnfold e`, goes from `μ τ` to `τ[μ τ/0]`. -/
 theorem bin_log_related_unfold :
     bin_log_related_ty L ⊤ Δ Γ e e' (.rec' τ) ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.app recUnfold e) (.app recUnfold e') (τ.single (.rec' τ)) := by
+      bin_log_related_ty L ⊤ Δ Γ (.app recUnfold e) (.app recUnfold e') (τ.single (.rec' τ)) := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   have hru : ∀ σ : SubstMap rT, substMap σ recUnfold = recUnfold := fun σ => by
@@ -260,7 +259,7 @@ theorem bin_log_related_unfold :
 /-- `pack`, the identity on terms, goes from `τ[τ'/0]` to `∃ τ`. -/
 theorem bin_log_related_pack :
     bin_log_related_ty L ⊤ Δ Γ e e' (τ.single τ') ⊢
-    bin_log_related_ty L ⊤ Δ Γ e e' (.exists' τ) := by
+      bin_log_related_ty L ⊤ Δ Γ e e' (.exists' τ) := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   ihave IH' := IH $$ %vs Hvs

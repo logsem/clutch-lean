@@ -36,8 +36,7 @@ local bi IProp GF
 /-- A law step whose finite leftovers sit on the diagonal returns the same real. -/
 theorem urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (R : rT → rT → B) (c : B)
     (hc : IsAddLeftRegular c)
-    (hhead : ∀ (K : Ectx rT) σ σ', law.head
-      (unifUnit.map fun x ↦ (⟨pl(#real x), σ⟩ : Cfg rT))
+    (hhead : ∀ (K : Ectx rT) σ σ', law.head (unifUnit.map fun x ↦ (⟨pl(#real x), σ⟩ : Cfg rT))
       (unifUnit.map fun y ↦ (⟨K.fill pl(#real y), σ'⟩ : Cfg rT))
       (Cfg.drawCostReal σ σ' K R) c)
     (hR : ∀ x y, R x y < (⊤ : B) → x = y) :
@@ -69,21 +68,18 @@ variable [L.IsReflexive] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
 
 open MeasureTheory in
 /-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
-theorem urands_adv (ε : ℝ≥0∞)
-    (hc : IsAddLeftRegular (s ε)) :
+theorem urands_adv (ε : ℝ≥0∞) (hc : IsAddLeftRegular (s ε)) :
     ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
   iintro Hc
-  rel_couple_urands_adv id (MeasurePreserving.id _) ε (fun _ ↦ ε)
-    measurable_const (by simp) hc
+  rel_couple_urands_adv id (MeasurePreserving.id _) ε (fun _ ↦ ε) measurable_const (by simp) hc
   iframe Hc
   iintro %x %_ -
   simp only [id_eq]
   rel_values
 
 /-- Avoiding a measurable set `Bad` of left draws costs its mass. -/
-theorem urands_avoid (Bad : Set rT)
-    (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1))
+theorem urands_avoid (Bad : Set rT) (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1))
     (hc : IsAddLeftRegular (s (unifUnit Bad))) :
     ⊢ ↯b (s (unifUnit Bad)) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
@@ -100,8 +96,7 @@ theorem rands_adv (N : Int) (hN : 0 < N)
     (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞) (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁)
     (hc : IsAddLeftRegular (s ε₁)) :
     ⊢ ↯b (s ε₁) -∗
-      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) :
-        lrel_int := by
+      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) : lrel_int := by
   iintro Hc
   rel_couple_UU_adv id ε₁ ε₂ id_dom_range id_bij_range hamort hc
   iframe Hc
@@ -113,8 +108,7 @@ theorem rands_adv (N : Int) (hN : 0 < N)
 theorem rands_avoid (N bad : Int) (hN : 0 < N)
     (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (N.toNat : ℝ≥0∞)⁻¹)) :
     ⊢ ↯b (s (N.toNat : ℝ≥0∞)⁻¹) -∗
-      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) :
-        lrel_int := by
+      REL[L] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) : lrel_int := by
   iintro Hc
   rel_couple_UU_avoid bad habs hc
   iframe Hc
@@ -133,8 +127,7 @@ theorem rands_dpChoice [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) 
     (hPT₁ : ∀ r r', r ∈ P → r = r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → r = r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) :
     ⊢ ↯b (max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) -∗
-      REL[codensity dp] (pl(rand(#N, #())) : Exp rT) <<
-        pl(rand(#N, #())) : lrel_int := by
+      REL[codensity dp] (pl(rand(#N, #())) : Exp rT) << pl(rand(#N, #())) : lrel_int := by
   iintro Hc
   rel_couple_UU_dpChoice h₁ h₂ hPT₁ hPT₂ hc
   iframe Hc
@@ -159,8 +152,9 @@ theorem urand_avoid_zero_real :
   iintro Hc
   rel_apply (refines_couple_urands_avoid (s := .id ℝ≥0∞) ({0} : Set ℝ)
     (measurableSet_singleton 0) absorbing_codensity_tv_one
-    (by simp only [coe_id, id_eq, h0]
-        exact (IsAddRegular.of_ne_top (by simp)).1))
+    (by
+      simp only [coe_id, id_eq, h0]
+      exact (IsAddRegular.of_ne_top (by simp)).1))
   simp only [coe_id, id_eq, h0]
   iframe Hc
   iintro %x ⟨%_, %hx⟩
@@ -189,8 +183,7 @@ theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC G
 
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem rand_urand_floor_real :
-    ⊢ REL[codensity tv] (pl(rand(#N, #())) : Exp ℝ) << pl(urand) :
-      lrel_true := by
+    ⊢ REL[codensity tv] (pl(rand(#N, #())) : Exp ℝ) << pl(urand) : lrel_true := by
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values
@@ -200,8 +193,7 @@ theorem rand_urand_floor_real :
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real :
-    ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#N, #())) :
-      lrel_true := by
+    ⊢ REL[codensity tv] (pl(urand) : Exp ℝ) << pl(rand(#N, #())) : lrel_true := by
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values

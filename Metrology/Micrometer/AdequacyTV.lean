@@ -118,8 +118,8 @@ variable [MicrometerWpGS (rT := rT) GF]
 with the right Dirac measure. -/
 theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
-    {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF}
-    (Hε : ε₁ + ε₂ ≤ ε) (Hred : Reducible e₁ σ₁)
+    {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF} (Hε : ε₁ + ε₂ ≤ ε)
+    (Hred : Reducible e₁ σ₁)
     (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (dirac σ₁')) : iprop%
     (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
       progCoupl (codensity tv.{0}) e₁ σ₁ e₁' σ₁' ε Z := by
@@ -128,8 +128,7 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
   -- the right side is then the erasable `dret σ₁'`.
   have hconc : dirac σ₁' {σ₁'}ᶜ = 0 := by
     rw [dirac_apply' _ (by measurability)]; simp
-  have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'}
-      (primStep ⟨e₁, σ₁⟩) (dirac σ₁') :=
+  have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'} (primStep ⟨e₁, σ₁⟩) (dirac σ₁') :=
     AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl
   iapply progCoupl_step_l_erasable Hε Hred HcplR.codensity (ErasableExpr.dret σ₁')
   iintro %e₂ %σ₂ %σ₂' %HR'

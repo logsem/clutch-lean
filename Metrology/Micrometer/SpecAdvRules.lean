@@ -40,8 +40,8 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
     (K : Ectx rT) {E : CoPset} {e : Exp rT} {Φ : Val rT → _} : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (s ε₁) ∗
-    (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ ⤇ K.fill pl(#n) -∗ wp L E e Φ) ⊢
-    wp L E e Φ := by
+      (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ ⤇ K.fill pl(#n) -∗ wp L E e Φ) ⊢
+      wp L E e Φ := by
   classical
   iintro ⟨Hj, Hc, Hcnt⟩
   iapply wp_lift_step_spec_couple
@@ -59,18 +59,15 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
     dsimp only [R]
     rw [ite_eq_left ⟨rfl, n, h0, hN, rfl⟩, leftInverse_invFun hrgt n]
   have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
-  have hcpl : L b R (dirac σ₁)
-      ((dirac σ₁').bind fun σ ↦
+  have hcpl : L b R (dirac σ₁) ((dirac σ₁').bind fun σ ↦
         pexecN 1 ⟨K.fill pl(rand(#N, #())), σ⟩) := by
     rw [dirac_bind_pexecN_one hredR, primStep_fill rand_not_isValue, primStep_rand_unit HN,
-      uniform_eq_map HN, map_map (by fun_prop) of_discrete,
-      ← map_id (μ := dirac σ₁)]
+      uniform_eq_map HN, map_map (by fun_prop) of_discrete, ← map_id (μ := dirac σ₁)]
     -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
     -- frame the remainder r, push to configurations
     have h₀ := IsTopAbsorbing.frame (c := r) <| IsExpectationAdditive.add_right (s := s)
       (c := ε₂) of_discrete <|
-        rel_dirac_left (L := L) (unifInt N HN) MeasurableSet.of_discrete
-          (unifInt_compl_Ico HN) σ₁
+        rel_dirac_left (L := L) (unifInt N HN) MeasurableSet.of_discrete (unifInt_compl_Ico HN) σ₁
     refine map measurable_id of_discrete (mono h₀ ?_ ?_)
     · refine le_trans ?_ hr.ge
       gcongr
@@ -84,8 +81,7 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
         subst σ
         rw [show (⟨K.fill (lit (.int n)), σ₁'⟩ : Cfg rT) = rgt n from rfl, hR h0 hN,
           relCost_of ⟨rfl, h0, hN⟩, zero_add]
-      · rw [relCost_of_not
-          (fun h' ↦ h ⟨h'.1, h'.2.1, h'.2.2⟩)]
+      · rw [relCost_of_not (fun h' ↦ h ⟨h'.1, h'.2.1, h'.2.2⟩)]
         exact le_top.trans (le_self_add.trans le_self_add)
   -- the coupling `hcpl` fires the spec step; each outcome `n` returns its own credit
   iapply specCoupl_couple hcpl (dret σ₁) (dret σ₁')
@@ -118,7 +114,7 @@ theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT
     (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
     ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#n)) A) ⊢
-    refines L E e (K.fill pl(rand(#N, #()))) A := by
+      refines L E e (K.fill pl(rand(#N, #()))) A := by
   unfold refines
   iintro ⟨Hc, Hlog⟩ %K' %b Hj Hna Herr Hpos
   isimp only [fill_comp K' K] at Hj

@@ -50,8 +50,7 @@ theorem pat_match_lit {l l' : BaseLit rT} {v v' : Val rT}
 
 /-- Related values at a pattern's type either both match `p`, binding values related at the bound
 type, or both fail. -/
-theorem pat_match_related {τs τb : Ty} {p : Pat rT}
-    (Hpat : PatTyped τs p τb) (v v') :
+theorem pat_match_related {τs τb : Ty} {p : Pat rT} (Hpat : PatTyped τs p τb) (v v') :
     (interp L τs Δ).car v v' ⊢
       (∃ b b', ⌜tryMatch p v.1 = some b.1 ∧ tryMatch p v'.1 = some b'.1⌝ ∗
         (interp L τb Δ).car b b') ∨
@@ -100,8 +99,10 @@ theorem pat_match_related {τs τb : Ty} {p : Pat rT}
         rw [interp_prod]
         unfold lrel_prod
         iexists ba, ba', bb, bb'
-        isplitr; · ipureintro; rfl
-        isplitr; · ipureintro; rfl
+        isplitr
+        · ipureintro; rfl
+        isplitr
+        · ipureintro; rfl
         iframe HBa HBb
       · iright
         ipureintro
@@ -159,15 +160,14 @@ lemma binds the operands (`refines_{un,bin}op_bind`) and takes one pure step
 (`refines_{un,bin}op_val`). -/
 
 /-- A binary operator on two values that evaluates to a literal is related to itself. -/
-theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT)
-    (heval : op.eval w1.1 w2.1 = some (.lit l))
+theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) (heval : op.eval w1.1 w2.1 = some (.lit l))
     (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢ refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
   refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
 
 /-- A unary operator on a value that evaluates to a literal is related to itself. -/
-theorem refines_unop_val (op : UnOp) (w : Val rT)
-    (heval : op.eval w.1 = some (.lit l)) (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+theorem refines_unop_val (op : UnOp) (w : Val rT) (heval : op.eval w.1 = some (.lit l))
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
     ⊢ refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
   refines_unop_pure op _ _ w.2 IsVal.lit heval HA
 
@@ -176,9 +176,9 @@ for every pair of indices. -/
 theorem refines_binop_bind (op : BinOp) (V : ι → Val rT)
     (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e1 e1' A ⊢
-    refines L ⊤ e2 e2' A -∗
-    (∀ i1 i2, refines L ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) C) -∗
-    refines L ⊤ (.binop op e1 e2) (.binop op e1' e2') C := by
+      refines L ⊤ e2 e2' A -∗
+      (∀ i1 i2, refines L ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) C) -∗
+      refines L ⊤ (.binop op e1 e2) (.binop op e1' e2') C := by
   iintro IH1 IH2 Hcont
   rw [← fill_binopR op e1 e2, ← fill_binopR op e1' e2']
   iapply refines_bind [binopR op e1] [binopR op e1'] $$ IH2
@@ -198,8 +198,8 @@ for every index. -/
 theorem refines_unop_bind (op : UnOp) (V : ι → Val rT)
     (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
     refines L ⊤ e e' A ⊢
-    (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
-    refines L ⊤ (.unop op e) (.unop op e') C := by
+      (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
+      refines L ⊤ (.unop op e) (.unop op e') C := by
   iintro IH Hcont
   rw [← fill_unop op e, ← fill_unop op e']
   iapply refines_bind [unop op] [unop op] $$ IH
@@ -216,8 +216,8 @@ variable (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) {τ : Ty}
 /-- Binary operators on two integers are compatible. -/
 theorem bin_log_related_int_binop (op : BinOp) (Hres : op.intResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' .int -∗
-    bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' .int -∗
+      bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_int]
     iintro IH1 IH2
@@ -231,8 +231,8 @@ theorem bin_log_related_int_binop (op : BinOp) (Hres : op.intResTy = some τ) : 
 /-- Binary operators on two booleans are compatible. -/
 theorem bin_log_related_bool_binop (op : BinOp) (Hres : op.boolResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .bool ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' .bool -∗
-    bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' .bool -∗
+      bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_bool]
     iintro IH1 IH2
@@ -247,7 +247,7 @@ variable (op : UnOp)
 /-- Unary operators on an integer are compatible. -/
 theorem bin_log_related_int_unop (Hres : op.intResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .int ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+      bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_int]
     iintro IH
@@ -261,7 +261,7 @@ theorem bin_log_related_int_unop (Hres : op.intResTy = some τ) :
 /-- Unary operators on a boolean are compatible. -/
 theorem bin_log_related_bool_unop (Hres : op.boolResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .bool ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+      bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_bool]
     iintro IH
@@ -277,7 +277,7 @@ theorem bin_log_related_bool_unop (Hres : op.boolResTy = some τ) :
 /-- Unary operators on a real are compatible. -/
 theorem bin_log_related_real_unop (Hres : op.realResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .real ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
+      bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
     rw [interp_real]
     iintro IH
@@ -291,8 +291,8 @@ end
 /-- Binary operators on two reals are compatible. -/
 theorem bin_log_related_real_binop (op : BinOp) (Hres : op.realResTy = some τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .real ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' .real -∗
-    bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' .real -∗
+      bin_log_related_ty L ⊤ Δ Γ (.binop op e1 e2) (.binop op e1' e2') τ :=
   bin_log_related_lift2 (fun σ => substMap_binop σ op) fun _ _ _ _ => by
     rw [interp_real]
     iintro IH1 IH2
@@ -308,8 +308,8 @@ theorem bin_log_related_real_binop (op : BinOp) (Hres : op.realResTy = some τ) 
 /-- Equality on unboxed types (literals) is compatible. -/
 theorem bin_log_related_unboxed_eq (HUnboxed : UnboxedType τ) : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' τ ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ (.binop .eq e1 e2) (.binop .eq e1' e2') .bool := by
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
+      bin_log_related_ty L ⊤ Δ Γ (.binop .eq e1 e2) (.binop .eq e1' e2') .bool := by
   unfold bin_log_related_ty bin_log_related
   iintro IH1 IH2 %vs #Hvs
   rw [substMap_binop, substMap_binop, ← fill_binopR .eq (substMap vs.fst e1),
@@ -352,14 +352,13 @@ theorem bin_log_related_unboxed_eq (HUnboxed : UnboxedType τ) : iprop%
 /-- Matching a scrutinee against a typed pattern is compatible; the result is `τb + unit`. -/
 theorem bin_log_related_scrut {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p τb) :
     bin_log_related_ty L ⊤ Δ Γ e e' τs ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.scrut e p) (.scrut e' p) (.sum τb .unit) := by
+      bin_log_related_ty L ⊤ Δ Γ (.scrut e p) (.scrut e' p) (.sum τb .unit) := by
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   rw [substMap_scrut, substMap_scrut, ← fill_scrut p, ← fill_scrut p]
   iapply refines_bind [.scrut p] [.scrut p] $$ (IH $$ %vs Hvs)
   iintro %v %v' #Hv
-  rw [fill_scrut, fill_scrut, eq_fill_nil (.scrut v.1 p),
-    eq_fill_nil (.scrut v'.1 p)]
+  rw [fill_scrut, fill_scrut, eq_fill_nil (.scrut v.1 p), eq_fill_nil (.scrut v'.1 p)]
   icases pat_match_related Hpat v v' $$ Hv with (⟨%bb, %bb', %hr, Hbnd⟩ | %hn)
   · iapply refines_pure_l (Hex := pureExec_scrut_some) ⟨v.2.toIsValue, hr.1⟩
     inext
@@ -371,8 +370,10 @@ theorem bin_log_related_scrut {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p
     unfold lrel_sum
     iexists bb, bb'
     ileft
-    isplitr; · ipureintro; rfl
-    isplitr; · ipureintro; rfl
+    isplitr
+    · ipureintro; rfl
+    isplitr
+    · ipureintro; rfl
     iexact Hbnd
   · iapply refines_pure_l (Hex := pureExec_scrut_none) ⟨v.2.toIsValue, hn.1⟩
     inext
@@ -384,8 +385,10 @@ theorem bin_log_related_scrut {p : Pat rT} {τs τb : Ty} (Hpat : PatTyped τs p
     unfold lrel_sum
     iexists .unit, .unit
     iright
-    isplitr; · ipureintro; rfl
-    isplitr; · ipureintro; rfl
+    isplitr
+    · ipureintro; rfl
+    isplitr
+    · ipureintro; rfl
     iapply lrel_unit_lit
 
 section Prim
@@ -397,8 +400,7 @@ variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind
 theorem bin_log_related_urand : ⊢ bin_log_related_ty L ⊤ Δ Γ .urand .urand .real := by
   unfold bin_log_related_ty bin_log_related
   iintro %vs -
-  rw [substMap_urand, substMap_urand, interp_real,
-    eq_fill_nil .urand]
+  rw [substMap_urand, substMap_urand, interp_real, eq_fill_nil .urand]
   iapply refines_couple_urands_lr id (.id _)
   iintro %r -
   simp only [id_eq, fill_nil]
@@ -411,7 +413,7 @@ theorem bin_log_related_urand : ⊢ bin_log_related_ty L ⊤ Δ Γ .urand .urand
 /-- Allocation is compatible. -/
 theorem bin_log_related_alloc :
     bin_log_related_ty L ⊤ Δ Γ e e' τ ⊢
-    bin_log_related_ty L ⊤ Δ Γ (.alloc e) (.alloc e') (.ref τ) :=
+      bin_log_related_ty L ⊤ Δ Γ (.alloc e) (.alloc e') (.ref τ) :=
   bin_log_related_lift1 substMap_alloc fun _ _ => refines_alloc
 
 /-- Loading is compatible. -/
@@ -422,8 +424,8 @@ theorem bin_log_related_load :
 /-- Storing is compatible. -/
 theorem bin_log_related_store : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' (.ref τ) ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
-    bin_log_related_ty L ⊤ Δ Γ (.store e1 e2) (.store e1' e2') .unit :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' τ -∗
+      bin_log_related_ty L ⊤ Δ Γ (.store e1 e2) (.store e1' e2') .unit :=
   bin_log_related_lift2 substMap_store fun _ _ _ _ => refines_store
 
 /-- Tape allocation is compatible. -/
@@ -434,15 +436,15 @@ theorem bin_log_related_alloctape :
 /-- Sampling from a tape is compatible. -/
 theorem bin_log_related_rand_tape : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' .tape -∗
-    bin_log_related_ty L ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' .tape -∗
+      bin_log_related_ty L ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
   bin_log_related_lift2 substMap_rand fun _ _ _ _ => refines_rand_tape_int
 
 /-- Sampling without a tape (unit label) is compatible. -/
 theorem bin_log_related_rand_unit : iprop%
     bin_log_related_ty L ⊤ Δ Γ e1 e1' .int ⊢
-    bin_log_related_ty L ⊤ Δ Γ e2 e2' .unit -∗
-    bin_log_related_ty L ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
+      bin_log_related_ty L ⊤ Δ Γ e2 e2' .unit -∗
+      bin_log_related_ty L ⊤ Δ Γ (.rand e1 e2) (.rand e1' e2') .int :=
   bin_log_related_lift2 substMap_rand fun t1 t2 t1' _ => by
     rw [interp_int, interp_unit]
     iintro IH1 IH2
@@ -452,10 +454,8 @@ theorem bin_log_related_rand_unit : iprop%
     iunfold lrel_unit at Hu
     icases Hu with ⟨%hv2, %hv2'⟩
     rw [hv2, hv2',
-      show fill [randR t1] pl(#()) = fill [randL .unit] t1
-        from rfl,
-      show fill [randR t1'] pl(#()) = fill [randL .unit] t1'
-        from rfl]
+      show fill [randR t1] pl(#()) = fill [randL .unit] t1 from rfl,
+      show fill [randR t1'] pl(#()) = fill [randL .unit] t1' from rfl]
     iapply refines_rand_unit_int $$ IH1
 
 end Prim

@@ -63,8 +63,8 @@ theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹
 theorem map_rrOut_singleton : draw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
   rw [Measure.map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
     show Finset.Ico (0 : Int) 4 = {0, 1, 2, 3} by decide]
-  cases b <;> cases c <;> norm_num [rrOut, indicator, filter_insert,
-    filter_singleton, div_eq_inv_mul, mul_comm]
+  cases b <;> cases c <;> norm_num [rrOut, indicator, filter_insert, filter_singleton,
+    div_eq_inv_mul, mul_comm]
 
 /-- Draws `0` and `3` report different bits, so each report is hit by one and missed by the
 other. -/
@@ -79,7 +79,7 @@ theorem rrOut_fiber_le : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
     · exact ⟨0, by norm_num, by norm_num, h⟩
   calc _ ≤ draw {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
     _ = 1 - 4⁻¹ := by
-        rw [prob_compl_eq_one_sub (measurableSet_singleton k), draw_singleton hk0 hk4]
+      rw [prob_compl_eq_one_sub (measurableSet_singleton k), draw_singleton hk0 hk4]
 
 /-- Every fiber of the reported bit contains a draw, so it has mass at least `1/4`. -/
 theorem rrOut_fiber_ge : 4⁻¹ ≤ draw (rrOut b ⁻¹' {c}) := by
@@ -97,8 +97,8 @@ theorem rrOut_fiber_le_three (b b' c : Bool) :
     draw (rrOut b ⁻¹' {c}) ≤ 3 * draw (rrOut b' ⁻¹' {c}) :=
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := by
-        rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
-          mul_inv_cancel (by norm_num) (by norm_num)]
+      rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
+        mul_inv_cancel (by norm_num) (by norm_num)]
     _ ≤ _ := by gcongr; exact rrOut_fiber_ge b' c
 
 /-- The `α`-th moment between rounds on different bits is `(3^α + 3^{1-α}) / 4`. -/
@@ -137,8 +137,7 @@ local bi IProp GF
 /-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
 at `c`. -/
 theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
-    (hc : IsAddLeftRegular c)
-    (hcpl : RRCoupling L c) (b b' : Bool) :
+    (hc : IsAddLeftRegular c) (hcpl : RRCoupling L c) (b b' : Bool) :
     ⊢ ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
   iintro Hb
   rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
@@ -178,9 +177,7 @@ theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → _) :
 /-- One round against the spec in context `K`, spending `↯b c` given a coupling of the two
 draws at `c`: both sides report the same bit. -/
 theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
-    (hc : IsAddLeftRegular c)
-    (hcpl : RRCoupling L c)
-    (K : Ectx rT) (b b' : Bool) (Φ : Val rT → _) :
+    (hc : IsAddLeftRegular c) (hcpl : RRCoupling L c) (K : Ectx rT) (b b' : Bool) (Φ : Val rT → _) :
     ⤇ K.fill (rr b') ∗ ↯b c ∗ (∀ d, ⤇ K.fill pl(#bool d) -∗ Φ (.bool d)) ⊢
       wp L ⊤ (rr b) Φ := by
   iintro ⟨Hj, Hb, H⟩

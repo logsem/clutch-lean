@@ -40,11 +40,11 @@ namespace OpenInv
 /-- At a value, the closing update `|={E2, E1}=>` moves out to the `specCoupl` postcondition. -/
 theorem specCoupl_close_val {hlc : HasLC} [InvGS_gen hlc GF] {v : Val rT} : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ => iprop(|={∅, E2}=>
-      stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗
-        (|={E2, E1}=> Φ v))) ⊢
-    specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ => iprop(|={∅, E1}=>
-      stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗
-        Φ v) := by
+        stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗
+          (|={E2, E1}=> Φ v))) ⊢
+      specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ => iprop(|={∅, E1}=>
+        stateInterp σ₂ ∗ specInterp ρ' ∗ budgetInterp b₂ ∗
+          Φ v) := by
   iintro HSC
   iapply specCoupl_mono_spatial
   iframe
@@ -56,18 +56,18 @@ variable [L.IsTopAbsorbing]
 
 /-- After an atomic step, the closing update `|={E2, E1}=>` moves out to the `specCoupl`
 postcondition. -/
-theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal]
-    [L.HasBind] (h : Atomic e) : iprop%
+theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal] [L.HasBind]
+    (h : Atomic e) : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
-      progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
-        ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E2}=>
-          stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗
-            wp L E2 e₃ (fun v => iprop(|={E2, E1}=> Φ v)))) ⊢
-    specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ =>
-      progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
-        ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E1}=>
-          stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗
-            wp L E1 e₃ Φ) := by
+        progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
+          ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E2}=>
+            stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗
+              wp L E2 e₃ (fun v => iprop(|={E2, E1}=> Φ v)))) ⊢
+      specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ =>
+        progCoupl L e σ₂ ρ'.expr ρ'.state b₂ fun e₃ σ₃ e₃' σ₃' b₃ => iprop%
+          ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E1}=>
+            stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗
+              wp L E1 e₃ Φ) := by
   iintro HSC
   iapply specCoupl_mono_spatial
   iframe
@@ -151,8 +151,7 @@ variable (z : Int)
 instance isOpenInv_rand_unit : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
   out := of_atomic (rand_unit z)
 
-instance isOpenInv_rand_lbl (l : Loc) :
-    IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
+instance isOpenInv_rand_lbl (l : Loc) : IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
   out := of_atomic (rand_lbl z l)
 
 end Instances
@@ -176,16 +175,14 @@ theorem elimAcc_close {β : X → IProp GF} {γ : X → Option (IProp GF)} {x : 
 variable [h : IsOpenInv L e]
 
 /-- `imod` opens a `|={E1, E2}=>` around `wp` of an `IsOpenInv` expression. -/
-instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut}
- :
+instance (priority := low) elimModal_fupd_wp_atomic {p : Bool} {io : InOut} :
     ElimModal True p io false iprop(|={E1, E2}=> P) P
       (wp L E1 e Φ) (wp L E2 e (fun v => iprop(|={E2, E1}=> Φ v))) where
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (mono wand_elim_right).trans (wp_atomic h.out)
 
 /-- `iinv` opens an invariant around `wp` of an `IsOpenInv` expression. -/
-instance (priority := low) elimAcc_wp_atomic
-    (E₁ E₂ : CoPset) (α β : X → _) (γ : X → _) :
+instance (priority := low) elimAcc_wp_atomic (E₁ E₂ : CoPset) (α β : X → _) (γ : X → _) :
     ElimAcc True (fupd E₁ E₂) (fupd E₂ E₁) α β γ (wp L E₁ e Φ)
       (fun x => wp L E₂ e (fun v => iprop(|={E₂}=> β x ∗ (γ x -∗? Φ v)))) where
   elim_acc := by

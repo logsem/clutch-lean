@@ -31,8 +31,8 @@ open Exp (ofVal)
 
 /-- A functor list `GF` with slots for every camera that refinement adequacy allocates, including a
 budget camera over `B`. -/
-class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
-    [MeasurableSingletonClass rT] (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
+class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
+    (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
   [app : AppPreGS rT GF]
   [spec : SpecPreGS rT GF]
   [bc : BudgetCreditPreGS B GF]
@@ -88,9 +88,7 @@ variable (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
 
 /-- A refinement from `↯b b`, proved for every ghost-state instance, gives a lifting at budget `b`
 of the two limit outputs (clutch-dp's `adequacy_rel.v`). -/
-theorem approximates_coupling
-    (b : B)
-    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
+theorem approximates_coupling (b : B) (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ ↯b b -∗ refines L ⊤ e e' (A IR IBC)) :
     L.Rel b (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
@@ -119,8 +117,7 @@ theorem approximates_coupling
   iapply HA IR IBC v v' $$ HAv
 
 /-- `approximates_coupling` without budget credits. -/
-theorem refines_coupling
-    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
+theorem refines_coupling (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ refines L ⊤ e e' (A IR IBC)) :
     L.Rel 0 (adequacyRel φ) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
@@ -131,8 +128,7 @@ theorem refines_coupling
 /-- A refinement at equal results from `↯b b` bounds the output divergence by `b`
 (clutch-dp's `adequacy_rel.v`). -/
 theorem approximates_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp rT)
-    (σ σ' : State rT) (b : B)
-    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
+    (σ σ' : State rT) (b : B) (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ ↯b b -∗ refines L ⊤ e e' (A IR IBC)) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
@@ -181,8 +177,8 @@ section Support
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 /-- A value runs to itself. -/
-theorem limExecV_of_isVal {e : Exp rT} (σ : State rT)
-    (hv : IsVal e) : limExecV ⟨e, σ⟩ = dirac e := by
+theorem limExecV_of_isVal {e : Exp rT} (σ : State rT) (hv : IsVal e) :
+    limExecV ⟨e, σ⟩ = dirac e := by
   rw [limExecV, limExec_of_isVal hv, asExpr, map_dirac' Cfg.measurable_expr]
 
 end Support

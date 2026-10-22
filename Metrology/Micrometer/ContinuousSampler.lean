@@ -40,14 +40,13 @@ theorem Cfg.measurable_realLit : Measurable (fun r : rT => (⟨pl(#real r), σ�
 /-- Pairing a real literal with the state `σ` is a measurable embedding. -/
 theorem Cfg.measurableEmbedding_realLit :
     MeasurableEmbedding (fun r : rT => (⟨pl(#real r), σ⟩ : Cfg rT)) :=
-  measurableEquivProd.symm.measurableEmbedding.comp
-    ((measurableEmbedding_prod_mk_right σ).comp
-      (lit.measurableEmbedding.comp real.measurableEmbedding))
+  measurableEquivProd.symm.measurableEmbedding.comp ((measurableEmbedding_prod_mk_right σ).comp
+    (lit.measurableEmbedding.comp real.measurableEmbedding))
 
 /-- The configurations `⟨#r, σ⟩` with `r` in the support are the image of the support. -/
 theorem Cfg.realLit_image_eq :
     {ρ : Cfg rT | ∃ r, ρ = ⟨pl(#real r), σ⟩ ∧ r ∈ unifUnitSupport} =
-    (fun r : rT => (⟨pl(#real r), σ⟩ : Cfg rT)) '' unifUnitSupport := by
+      (fun r : rT => (⟨pl(#real r), σ⟩ : Cfg rT)) '' unifUnitSupport := by
   ext
   simp [and_comm, eq_comm]
 
@@ -69,8 +68,7 @@ theorem reducible_urand : Reducible pl(urand) σ :=
 
 /-- One primitive step of `urand` is `Cfg.uniformReal σ`. -/
 theorem primStep_urand : primStep ⟨pl(urand), σ⟩ = uniformReal σ :=
-  primStep_eq_headStep
-    (decompItem_none_of_lc_headReducible (by is_lc) (headReducible_urand σ))
+  primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc) (headReducible_urand σ))
 
 /-- The step of `urand` is concentrated on real literals from the support of `unifUnit`. -/
 theorem Cfg.concentrated_primStep_urand :
@@ -93,8 +91,7 @@ reflexive `L`. -/
 theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) :
-    L.Rel 0
-      (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
+    L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨pl(#real (f r)), σ'⟩)
       (uniformReal σ) (uniformReal σ') := by
   have h := (rel_graph (L := L) unifUnit hmp.measurable).restrict
@@ -107,8 +104,7 @@ theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
 of `Cfg.uniformReal_rel_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) :
-    AddCoupl 0
-      {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
+    AddCoupl 0 {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#real r), σ⟩ ∧ p.2 = ⟨pl(#real (f r)), σ'⟩}
       (uniformReal σ) (uniformReal σ') :=
   (uniformReal_rel_bij σ σ' f hmp).addCoupl
@@ -116,8 +112,8 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
 /-! ## Program rules -/
 
 section Rules
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSingletonClass rT]
+variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {hlc : HasLC}
+  {GF : BundledGFunctors} [MeasurableSingletonClass rT]
 local bi IProp GF
 
 section Unary
@@ -141,12 +137,11 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → _} : iprop%
   iapply HΦ $$ %r %hr
 
 /-- Couple `urand ~ K[urand]` along a measure-preserving `f`, at no cost. -/
-theorem wp_couple_urand_urand (f : rT → rT)
-    (hmp : MeasurePreserving f unifUnit unifUnit)
+theorem wp_couple_urand_urand (f : rT → rT) (hmp : MeasurePreserving f unifUnit unifUnit)
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(urand) ∗
-    (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#real (f r)) -∗ Φ (.real r)) ⊢
-    wp L E pl(urand) Φ := by
+      (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#real (f r)) -∗ Φ (.real r)) ⊢
+      wp L E pl(urand) Φ := by
   iintro ⟨Hj, Hcnt⟩
   iapply wp_lift_prim_steps_coupl urand_toVal?_eq_none
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
@@ -156,9 +151,12 @@ theorem wp_couple_urand_urand (f : rT → rT)
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#real r), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#real (f r)), σ₁'⟩
   iexists R, 0, b
-  isplitr; · ipureintro; rw [zero_add]
-  isplitr; · ipureintro; exact reducible_urand σ₁
-  isplitr; · ipureintro; exact (reducible_urand σ₁').fill K
+  isplitr
+  · ipureintro; rw [zero_add]
+  isplitr
+  · ipureintro; exact reducible_urand σ₁
+  isplitr
+  · ipureintro; exact (reducible_urand σ₁').fill K
   isplitr
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill urand_not_isValue, primStep_urand σ₁']
@@ -188,8 +186,8 @@ variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsRefle
 theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) : iprop%
     (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗
-      refines L E (K.fill pl(#real r)) (K'.fill pl(#real (f r))) A) ⊢
-    refines L E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
+        refines L E (K.fill pl(#real r)) (K'.fill pl(#real (f r))) A) ⊢
+      refines L E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K' pl(urand)] at Hj

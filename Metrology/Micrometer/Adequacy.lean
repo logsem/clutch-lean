@@ -78,8 +78,7 @@ theorem execCoupl_erasable_of_term {μ₁ : Measure (State rT)} {R : State rT �
   have := hErase₁.isProbabilityMeasure
   have hmass : μ₁.bind (fun σ => execN m ⟨e₁, σ⟩) univ = 1 := by
     have h := congrArg (· univ) (hErase₁ e₁ m)
-    simp only [asExpr, map_apply measurable_expr .univ,
-      preimage_univ] at h
+    simp only [asExpr, map_apply measurable_expr .univ, preimage_univ] at h
     rw [h, hterm]
   have hAc := ae_iff.1 (ae_measure_univ_eq_one_of_bind hek hmass)
   -- head_supp: setting the leftover to ⊤ off the mass-1 set keeps the head, so continuations are
@@ -104,8 +103,7 @@ theorem execCoupl_prog_of_term {μ₀ : Measure (Cfg rT)} {f : Cfg rT → Cfg rT
     execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩ := by
   classical
   have hA : MeasurableSet {ρ : Cfg rT | execN m (f ρ) univ = 1} :=
-    (measurable_coe .univ).comp ((execN_measurable m).comp hf)
-      (measurableSet_singleton 1)
+    (measurable_coe .univ).comp ((execN_measurable m).comp hf) (measurableSet_singleton 1)
   have : IsSubProbabilityMeasure μ₀ := ⟨by
     have h := congrArg (· univ) hprog
     simp only [map_apply hf .univ, preimage_univ] at h
@@ -116,8 +114,7 @@ theorem execCoupl_prog_of_term {μ₀ : Measure (Cfg rT)} {f : Cfg rT → Cfg rT
   rw [hprog, Measure.bind_map hf (execN_measurable m)] at hterm
   have (ρ : Cfg rT) : IsSubProbabilityMeasure ((execN m ∘ f) ρ) :=
     execN.isSubProbabilityMeasure m (f ρ)
-  have hAc := ae_iff.1
-    (ae_measure_univ_eq_one_of_bind ((execN_measurable m).comp hf) hterm)
+  have hAc := ae_iff.1 (ae_measure_univ_eq_one_of_bind ((execN_measurable m).comp hf) hterm)
   -- head_supp: setting the leftover to ⊤ off the mass-1 set keeps the head, so continuations are
   -- only needed there
   refine lift_erasure_erasable_exp_lhs_kanto_law law hErase₁' hf hprog hf' hspec
@@ -157,9 +154,9 @@ theorem wp_adequacy_spec_coupl_guard (hP : P σ₁)
       (∀ σ₂ ρ, P σ₂ → R σ₂ ρ < (⊤ : B) → execCoupl L φ (R σ₂ ρ) m ⟨e₁, σ₂⟩ (f' ρ)) →
       execCoupl L φ b₀ m ⟨e₁, σ₀⟩ ⟨e₀', σ₀'⟩) : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
-    (∀ σ₂ e₂' σ₂' b', ⌜P σ₂⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
+      (∀ σ₂ e₂' σ₂' b', ⌜P σ₂⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   set Ψ : State rT → Cfg rT → B → IProp GF := fun σ₀ ρ₀ b₀ => iprop(
     ⌜P σ₀⌝ -∗
     (∀ σ₂ e₂' σ₂' b', ⌜P σ₂⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
@@ -194,9 +191,9 @@ theorem wp_adequacy_spec_coupl_guard (hP : P σ₁)
 /-- A spec coupling whose continuations give `m`-fuel execution couplings gives one itself. -/
 theorem wp_adequacy_spec_coupl : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
-    (∀ σ₂ e₂' σ₂' b', Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
+      (∀ σ₂ e₂' σ₂' b', Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro Hspec HZ
   iapply wp_adequacy_spec_coupl_guard (fun _ => True) n m e₁ σ₁ e₁' σ₁' Z φ b trivial
     (fun _ hf' hspec hhead hside hErase hErase' hCont =>
@@ -209,17 +206,17 @@ theorem wp_adequacy_spec_coupl : iprop%
 /-- `wp_adequacy_spec_coupl` with no later steps. -/
 theorem wp_adequacy_spec_coupl_zero : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
-    (∀ σ₂ e₂' σ₂' b', Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
-      |={∅}=> ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
+      (∀ σ₂ e₂' σ₂' b', Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
+        |={∅}=> ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl 0 m e₁ σ₁ e₁' σ₁' Z φ b
 
 /-- `wp_adequacy_spec_coupl` for a run of mass `1`. -/
 theorem wp_adequacy_spec_coupl_term [L.IsSupportLocal] (hterm : execN m ⟨e₁, σ₁⟩ univ = 1) : iprop%
     specCoupl L ∅ σ₁ e₁' σ₁' b Z ⊢
-    (∀ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₁, σ₂⟩ univ = 1⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
+      (∀ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₁, σ₂⟩ univ = 1⌝ -∗ Z σ₂ ⟨e₂', σ₂'⟩ b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₁, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b m ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_spec_coupl_guard (fun σ => execN m ⟨e₁, σ⟩ univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
     hterm fun hterm₀ hf' hspec hhead hside hErase hErase' hCont =>
       execCoupl_erasable_of_term hterm₀ hf' hspec hhead hside hErase hErase' hCont
@@ -244,9 +241,9 @@ theorem wp_adequacy_prog_coupl_guard
       (∀ ρ ρ', P (f ρ).1 (f ρ).2 → R ρ ρ' < (⊤ : B) → execCoupl L φ (R ρ ρ') m (f ρ) (f' ρ')) →
       execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩) : iprop%
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
-    (∀ e₂ σ₂ e₂' σ₂' b', ⌜P e₂ σ₂⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
+      (∀ e₂ σ₂ e₂' σ₂' b', ⌜P e₂ σ₂⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro ⟨%law, %k, %μ₁', %μ₀, %ν₀, %f, %f', %R, %_, %hF, %hF', %hhead, %hside, %hErase', Hcnt⟩
     Hcoupl
   iapply mono
@@ -265,9 +262,9 @@ theorem wp_adequacy_prog_coupl_guard
 `m + 1`-fuel one. -/
 theorem wp_adequacy_prog_coupl (hnone : e₁.toVal? = none) : iprop%
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
-    (∀ e₂ σ₂ e₂' σ₂' b', Z e₂ σ₂ e₂' σ₂' b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
+      (∀ e₂ σ₂ e₂' σ₂' b', Z e₂ σ₂ e₂' σ₂' b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ := by
   iintro Hprog HZ
   iapply wp_adequacy_prog_coupl_guard (fun _ _ => True) n m e₁ σ₁ e₁' σ₁' Z φ b
     (fun hErase' hf hprog hf' hspec hhead hside hCont => by
@@ -281,9 +278,9 @@ theorem wp_adequacy_prog_coupl (hnone : e₁.toVal? = none) : iprop%
 theorem wp_adequacy_prog_coupl_term [L.IsSupportLocal] (hnone : e₁.toVal? = none)
     (hterm : execN (m + 1) ⟨e₁, σ₁⟩ univ = 1) : iprop%
     progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢
-    (∀ e₂ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₂, σ₂⟩ univ = 1⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
-      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
+      (∀ e₂ σ₂ e₂' σ₂' b', ⌜execN m ⟨e₂, σ₂⟩ univ = 1⌝ -∗ Z e₂ σ₂ e₂' σ₂' b' -∗
+        |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b' m ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝) -∗
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b (m + 1) ⟨e₁, σ₁⟩ ⟨e₁', σ₁'⟩⌝ :=
   wp_adequacy_prog_coupl_guard (fun e σ => execN m ⟨e, σ⟩ univ = 1) n m e₁ σ₁ e₁' σ₁' Z φ b
     fun hErase' hf hprog hf' hspec hhead hside hCont =>
       execCoupl_prog_of_term hnone hterm hErase' hf hprog hf' hspec hhead hside hCont
@@ -305,8 +302,8 @@ because `execN 0` is the zero measure. -/
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (b : B) (He : e.toVal? = some v) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
-    |={⊤, ∅}=> ⌜execCoupl L φ b (n + 1) ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
+        wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
+      |={⊤, ∅}=> ⌜execCoupl L φ b (n + 1) ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   obtain rfl : e = ofVal v := (ofVal_of_toVal_some He).symm
   iintro ⟨Hσ, Hs, Hb, Hwp⟩
   imod wp_value_specCoupl_unfold ⊤ He $$ Hwp %σ %e' %σ' %b [$] with HspecC
@@ -317,8 +314,7 @@ theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
   imod subset empty_subset with -
   iintro !%
   unfold execCoupl limExecV asExpr
-  rw [execN_succ_isValue v.isValue n,
-      limExec_of_isVal (e := ofVal v') v'.2]
+  rw [execN_succ_isValue v.isValue n, limExec_of_isVal (e := ofVal v') v'.2]
   simp only [map_dirac' measurable_expr]
   exact rel_dirac ⟨v, v', toVal?_ofVal v, toVal?_ofVal v', hφ⟩ b₂
 
@@ -326,11 +322,10 @@ variable (b : B) (e e' : Exp rT) (σ σ' : State rT) (n : Nat) (φ : Val rT → 
 
 /-- Inside the logic, a `wp` gives the coupling of the `n`-fuel left run with the right limit run
 after `n` later steps: each `▷` pays for one program step. -/
-theorem wp_adequacy_step_fupdN [L.IsZeroLeft]
- :
+theorem wp_adequacy_step_fupdN [L.IsZeroLeft] :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
-    |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
+        wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
+      |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   induction n generalizing b e e' σ σ' with
   | zero =>
     iintro -
@@ -362,11 +357,10 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft]
       iapply ih b₄ e₃ e₄' σ₄ σ₄' $$ HZ
 
 /-- `wp_adequacy_step_fupdN` for a run of mass `1`. -/
-theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal]
-    (hterm : execN n ⟨e, σ⟩ univ = 1) :
+theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (hterm : execN n ⟨e, σ⟩ univ = 1) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
-      wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
-    |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
+        wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
+      |={⊤, ∅}=> |={∅}[∅]▷=>^[n] ⌜execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩⌝ := by
   induction n generalizing b e e' σ σ' with
   | zero => simp at hterm
   | succ n ih =>
@@ -405,8 +399,7 @@ variable [MeasurableSingletonClass rT] [AddCommMonoid B] [PartialOrder B] [Order
 local bi IProp GF
 
 /-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
-theorem execCoupl_of_step_fupdN (n : Nat)
-    (φ : Val rT → Val rT → Prop) (b : B)
+theorem execCoupl_of_step_fupdN (n : Nat) (φ : Val rT → Val rT → Prop) (b : B)
     (Hstep : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
         wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝)) ⊢
@@ -446,8 +439,7 @@ theorem wp_adequacy_exec_n [L.IsZeroLeft]
 variable [L.IsSupportLocal]
 
 /-- `wp_adequacy_exec_n` for a run of mass `1`. -/
-theorem wp_adequacy_exec_n_term
-    (hterm : execN n ⟨e, σ⟩ univ = 1)
+theorem wp_adequacy_exec_n_term (hterm : execN n ⟨e, σ⟩ univ = 1)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b b -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     execCoupl L φ b n ⟨e, σ⟩ ⟨e', σ'⟩ :=
@@ -499,17 +491,14 @@ theorem wp_adequacy_div
   sound ((wp_adequacy e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- `wp_adequacy_div` at `b` from `wp` proofs at every budget `b' > b`, by `IsBudgetClosed`. -/
-theorem wp_adequacy_div_budget_lim
-    [L.IsBudgetClosed]
+theorem wp_adequacy_div_budget_lim [L.IsBudgetClosed]
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF) (b' : B), b < b' →
       ⊢ ⤇ e' -∗ ↯b b' -∗ wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝))) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
-  sound
-    ((wp_adequacy_budget_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
+  sound ((wp_adequacy_budget_lim e e' σ σ' b (· = ·) Hwp).mono le_rfl adequacyRel_eq_subset)
 
 /-- A `wp` proof from `↯b (s ε)` bounds the left output mass by the right output mass plus `ε`. -/
-theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s]
-    (ε : ENNReal)
+theorem wp_adequacy_mass {s : ENNReal →+o B} [L.IsMassDetecting s] (ε : ENNReal)
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF),
       ⊢ ⤇ e' -∗ ↯b (s ε) -∗
         wp L ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :

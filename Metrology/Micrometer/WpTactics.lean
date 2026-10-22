@@ -263,10 +263,9 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
     have e' : Q(Exp $α) := focus
     -- Continuation `fun v => wp L E (K.fill (ofVal v)) Φ`, with `K` filled at the meta
     -- level so the continuation displays the clean refocused expression.
-    let Φc : LeanExpr ←
-      withLocalDeclDQ `v q(Val $α) fun v => do
-        let body : Q(Exp $α) ← fillQ K q(ofVal $v)
-        mkLambdaFVars #[v] (g.mkWp body g.Φ)
+    let Φc : LeanExpr ← withLocalDeclDQ `v q(Val $α) fun v => do
+      let body : Q(Exp $α) ← fillQ K q(ofVal $v)
+      mkLambdaFVars #[v] (g.mkWp body g.Φ)
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
     let bindPf ← mkAppOptM ``MicrometerWpGS.wp_bind
@@ -331,8 +330,7 @@ macro "wp_pure " n:num : tactic =>
 
 /-- `wp_pures` takes pure steps until none applies. -/
 macro "wp_pures" : tactic =>
-  `(tactic| ((repeat (wp_pure_core; pl_step_finish));
-             pl_step_finish))
+  `(tactic| ((repeat (wp_pure_core; pl_step_finish)); pl_step_finish))
 
 /-! ## `wp_value` — discharge a value WP -/
 
@@ -344,8 +342,7 @@ elab "wp_value" : tactic =>
     -- Fast path: an `ofVal v` head is a value with a *lemma* witness — the
     -- computational `toVal?` may be stuck on an abstract `v`.
     let e0 : Q(Exp $α) ← pure e.consumeMData
-    let (v, hproof) ← show ProofModeM (Q(Val $α) × LeanExpr) from
-      match e0 with
+    let (v, hproof) ← show ProofModeM (Q(Val $α) × LeanExpr) from match e0 with
       | ~q(ofVal $v) => return (v, q(toVal?_ofVal $v))
       -- Val.fst v is ofVal v unfolded
       | ~q(Val.fst $v) => return (v, q(toVal?_ofVal $v))
@@ -357,8 +354,7 @@ elab "wp_value" : tactic =>
           | none => whnf q(toVal? $e)
         let ~q(some $v) := tv
           | throwTacticEx `wp_value mvar m!"{← ppExpr e} is not a value"
-        let hproof : Q(toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar
-          q(toVal? $e = some $v)
+        let hproof : Q(toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar q(toVal? $e = some $v)
         (← evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
         return (v, hproof)
     have goal : Q(IProp $GF) := LeanExpr.headBeta (mkApp g.Φ v)
@@ -419,8 +415,7 @@ public meta partial def splitAbstractCtx {β : Q(Type)} (espec : Q(Exp $β)) :
   | ~q(fill $Kctx $inner) => peel Kctx inner
   | _ => return (none, espec)
 where
-  peel (Kctx : Q(Ectx $β)) (inner : Q(Exp $β)) :
-      ProofModeM (Option Q(Ectx $β) × Q(Exp $β)) := do
+  peel (Kctx : Q(Ectx $β)) (inner : Q(Exp $β)) : ProofModeM (Option Q(Ectx $β) × Q(Exp $β)) := do
     let KctxW : Q(Ectx $β) ← whnf Kctx
     match KctxW with
     | ~q(List.nil) => return (none, inner)
@@ -490,8 +485,7 @@ macro "tp_pure " n:num : tactic =>
 
 /-- `tp_pures` takes pure steps on the `⤇` hypothesis until none applies. -/
 macro "tp_pures" : tactic =>
-  `(tactic| ((repeat (tp_pure_core; pl_step_finish));
-             pl_step_finish))
+  `(tactic| ((repeat (tp_pure_core; pl_step_finish)); pl_step_finish))
 
 /-- `tp_bind e` rewrites the `⤇` hypothesis to `⤇ Ectx.fill K e`, so spec-step lemmas
 (`step_load`, `step_store`, …) match syntactically. -/

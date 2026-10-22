@@ -73,18 +73,16 @@ theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
   have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
   -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
   -- at draw `2`, right reports `true` at draws `0, 1`)
-  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) :=
-    measurable_to_bool <| by
-      convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
-      ext
-      simp
+  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) := measurable_to_bool <| by
+    convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
+    ext
+    simp
   have hg : Measurable fun (ρ : Cfg rT) ↦
-      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) :=
-    measurable_to_bool <| by
-      convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
-        (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
-      ext
-      simp
+      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) := measurable_to_bool <| by
+    convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
+      (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
+    ext
+    simp
   have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Ico 0 3)ᶜ = 0 := by
     rw [map_apply .of_discrete ((finite_Ico 0 3).image x).measurableSet.compl]
     exact measure_mono_null (fun n hn h ↦ hn ⟨n, h, rfl⟩) (unifInt_compl_Ico _)

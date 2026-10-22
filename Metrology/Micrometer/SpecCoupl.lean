@@ -108,9 +108,8 @@ theorem specCoupl_ret : Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := 
 
 /-- One more coupled round (third disjunct). -/
 theorem specCoupl_rec :
-    specCouplCouple L E σ e' σ' b
-      (fun s => specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z) ⊢
-    specCoupl L E σ e' σ' b Z := by
+    specCouplCouple L E σ e' σ' b (fun s => specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z) ⊢
+      specCoupl L E σ e' σ' b Z := by
   iintro HCpl
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; iright; iexact HCpl
@@ -120,7 +119,7 @@ theorem specCoupl_rec :
 /-- Weaken the continuation `Z` under a persistent implication. -/
 theorem specCoupl_mono : iprop%
     □ (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
-    specCoupl L E σ e' σ' b Z₂ := by
+      specCoupl L E σ e' σ' b Z₂ := by
   iintro ⟨#HZ, HC⟩
   unfold specCoupl
   iapply least_fixpoint_strong_mono (specCouplPre L E Z₁) (specCouplPre L E Z₂) $$ [] HC
@@ -135,7 +134,7 @@ theorem specCoupl_mono : iprop%
 /-- Run a second spec coupling from each exit of the first. -/
 theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
     (∀ σ₂ ρ₂ b', Z₁ σ₂ ρ₂ b' -∗ specCoupl L E2 σ₂ ρ₂.expr ρ₂.state b' Z₂) ∗
-    specCoupl L E1 σ e' σ' b Z₁ ⊢ specCoupl L E2 σ e' σ' b Z₂ := by
+      specCoupl L E1 σ e' σ' b Z₁ ⊢ specCoupl L E2 σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩
   -- iterate on the fixpoint with the claim "the bind hypothesis gives `specCoupl … Z₂` here"
   let Φ : SpecCouplState rT B → IProp GF := fun s => iprop%
@@ -162,7 +161,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
 /-- `specCoupl_mono` with a spatial implication. -/
 theorem specCoupl_mono_spatial : iprop%
     (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
-    specCoupl L E σ e' σ' b Z₂ := by
+      specCoupl L E σ e' σ' b Z₂ := by
   iintro ⟨HZ, HC⟩
   iapply specCoupl_bind LawfulSet.subset_refl
   iframe HC
@@ -181,8 +180,8 @@ theorem specCoupl_ne (HZ : ∀ σ ρ b, Z₁ σ ρ b ≡{n}≡ Z₂ σ ρ b) :
 `Ψ` at every recursive call. -/
 theorem specCoupl_ind {Ψ : State rT → Cfg rT → B → IProp GF} : iprop%
     □ (∀ σ c b, specCouplPre L E Z (fun s => iprop(Ψ s.1 s.2.1 s.2.2 ∧
-      specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z)) (σ, c, b) -∗ Ψ σ c b) ⊢
-    ∀ σ e' σ' b, specCoupl L E σ e' σ' b Z -∗ Ψ σ ⟨e', σ'⟩ b := by
+        specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z)) (σ, c, b) -∗ Ψ σ c b) ⊢
+      ∀ σ e' σ' b, specCoupl L E σ e' σ' b Z -∗ Ψ σ ⟨e', σ'⟩ b := by
   iintro #IH %σ %e' %σ' %b HC
   let Ψ' : SpecCouplState rT B → IProp GF := fun s => Ψ s.1 s.2.1 s.2.2
   have HΨne : NonExpansive Ψ' := specCouplState_ne
@@ -202,8 +201,8 @@ theorem specCoupl_couple_map {ν₀ : Measure (Cfg rT)} {f' : Cfg rT → Cfg rT}
     (hhead : law.head μ₁ ν₀ R b) (hside : law.SideForExec μ₁ ν₀ R f')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=>
-      specCoupl L E σ₂ (f' ρ).expr (f' ρ).state (R σ₂ ρ) Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
+        specCoupl L E σ₂ (f' ρ).expr (f' ρ).state (R σ₂ ρ) Z) ⊢
+      specCoupl L E σ₁ e₁' σ₁' b Z := by
   -- `iframe %` closes the pure conjunct `⌜Measurable f' ∧ …⌝` from this hypothesis
   have hmap : _ ∧ _ := ⟨hf', hspec⟩
   iintro H
@@ -219,11 +218,10 @@ theorem specCoupl_couple_law
     (hside : law.SideForExec μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) R id)
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
-      specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
+        specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
+      specCoupl L E σ₁ e₁' σ₁' b Z := by
   iintro H
-  iapply specCoupl_couple_map law measurable_id map_id.symm hhead hside
-    Heras₁ Heras₁'
+  iapply specCoupl_couple_map law measurable_id map_id.symm hhead hside Heras₁ Heras₁'
   iintro %σ₂ %⟨e₂', σ₂'⟩ %hR
   simp only [id]
   iapply H $$ %σ₂ %e₂' %σ₂' %hR
@@ -233,8 +231,8 @@ theorem specCoupl_couple [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal]
     (Hcpl : L b R μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜R σ₂ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={E}=>
-      specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z :=
+        specCoupl L E σ₂ e₂' σ₂' (R σ₂ ⟨e₂', σ₂'⟩) Z) ⊢
+      specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_couple_law (canonical L) Hcpl (.of_forall fun _ _ => trivial) Heras₁ Heras₁'
 
 section SplitBudget
@@ -253,7 +251,7 @@ theorem specCoupl_couple_rel
     (Hcpl : L.Rel b₁ S μ₁ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
+      specCoupl L E σ₁ e₁' σ₁' b Z := by
   have := Heras₁.isProbabilityMeasure
   have := Heras₁'.isProbabilityMeasure
   iintro H
@@ -267,7 +265,7 @@ theorem specCoupl_couple_rel
 theorem specCoupl_erasables {S : State rT → State rT → Prop} (Hcpl : L.Rel b₁ S μ₁ μ₁')
     (Heras₁ : ErasableExpr μ₁ σ₁) (Heras₁' : ErasableExpr μ₁' σ₁') : iprop%
     (∀ σ₂ σ₂', ⌜S σ₂ σ₂'⌝ -∗ |={E}=> specCoupl L E σ₂ e₁' σ₂' b₂ Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
+      specCoupl L E σ₁ e₁' σ₁' b Z := by
   have := Heras₁.isProbabilityMeasure
   have := Heras₁'.isProbabilityMeasure
   iintro H
@@ -275,8 +273,7 @@ theorem specCoupl_erasables {S : State rT → State rT → Prop} (Hcpl : L.Rel b
     simp only [pexecN_zero]
     exact bind_dirac_eq_map _ (by fun_prop)
   iapply specCoupl_couple_rel (S := fun σ₂ c => S σ₂ c.state ∧ c.expr = e₁') (n := 0) hb
-    (heq ▸ Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩)
-    Heras₁ Heras₁'
+    (heq ▸ Hcpl.map_right fun _ _ HS => ⟨HS, rfl⟩) Heras₁ Heras₁'
   iintro %σ₂ %e₂' %σ₂' %HS
   obtain ⟨HS, rfl⟩ := HS
   iapply H $$ %σ₂ %σ₂' %HS
@@ -286,15 +283,14 @@ theorem specCoupl_erasable_steps
     (Hcpl : L.Rel b₁ S μ₁ (pexecN n ⟨e₁', σ₁'⟩))
     (Heras₁ : ErasableExpr μ₁ σ₁) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z :=
-  specCoupl_couple_rel (n := n) hb (by rwa [dirac_bind (by fun_prop)])
-    Heras₁ (dret σ₁')
+      specCoupl L E σ₁ e₁' σ₁' b Z :=
+  specCoupl_couple_rel (n := n) hb (by rwa [dirac_bind (by fun_prop)]) Heras₁ (dret σ₁')
 
 /-- Couple a Dirac program state against `n` spec steps. -/
 theorem specCoupl_steps
     (Hcpl : L.Rel b₁ S (dirac σ₁) (pexecN n ⟨e₁', σ₁'⟩)) : iprop%
     (∀ σ₂ e₂' σ₂', ⌜S σ₂ ⟨e₂', σ₂'⟩⌝ -∗ |={E}=> specCoupl L E σ₂ e₂' σ₂' b₂ Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z :=
+      specCoupl L E σ₁ e₁' σ₁' b Z :=
   specCoupl_erasable_steps hb Hcpl (dret σ₁)
 
 end
@@ -316,13 +312,12 @@ variable [L.IsReflexive]
 theorem specCoupl_step_concentrated {S : Set (Cfg rT)} (Hred : Reducible e₁' σ₁')
     (hSmeas : MeasurableSet S) (hSconc : Concentrated (primStep ⟨e₁', σ₁'⟩) S) : iprop%
     (∀ e₂' σ₂', ⌜⟨e₂', σ₂'⟩ ∈ S⌝ -∗ |={E}=> specCoupl L E σ₁ e₂' σ₂' b Z) ⊢
-    specCoupl L E σ₁ e₁' σ₁' b Z := by
+      specCoupl L E σ₁ e₁' σ₁' b Z := by
   iintro H
   have := prim_step_mass Hred
   have hpexec1 : pexecN 1 ⟨e₁', σ₁'⟩ = primStep ⟨e₁', σ₁'⟩ := by
     rw [pexecN_one, stepOrFinal_not_isValue (val_stuck Hred)]
-  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (dirac σ₁)
-      (pexecN 1 ⟨e₁', σ₁'⟩) := by
+  have HcplR : L.Rel 0 (fun σ c => σ = σ₁ ∧ c ∈ S) (dirac σ₁) (pexecN 1 ⟨e₁', σ₁'⟩) := by
     rw [hpexec1]
     exact rel_dirac_left _ hSmeas hSconc σ₁
   iapply specCoupl_steps (zero_add b).le HcplR
@@ -365,8 +360,7 @@ theorem fupd_specCoupl_steps_det_of_le {b₁ : B}
         ((dirac σ₁').bind fun σ => pexecN n ⟨e₁', σ⟩) R b := by
       rw [dirac_bind (by fun_prop), Hstep]
       exact unit_head_dirac (hR ▸ hb₁) (hR ▸ hb)
-    iapply specCoupl_couple_law (.unit L) hhead (.of_forall fun _ _ => trivial)
-      (dret σ) (dret σ₁')
+    iapply specCoupl_couple_law (.unit L) hhead (.of_forall fun _ _ => trivial) (dret σ) (dret σ₁')
     iintro %σ₂ %e₂'' %σ₂'' %hlt
     by_cases hS : σ₂ = σ ∧ e₂'' = e₂' ∧ σ₂'' = σ₂'
     · obtain ⟨rfl, rfl, rfl⟩ := hS
@@ -390,8 +384,7 @@ theorem specCoupl_mono_budget (hb : b₁ ≤ b₂) :
   fupd_intro.trans (fupd_specCoupl_of_le hb)
 
 /-- A spec coupling absorbs a leading fancy update. -/
-theorem fupd_specCoupl :
-    iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
+theorem fupd_specCoupl : iprop(|={E}=> specCoupl L E σ e' σ' b Z) ⊢ specCoupl L E σ e' σ' b Z :=
   fupd_specCoupl_of_le le_rfl
 
 /-- A deterministic spec run to `⟨e₂', σ₂'⟩` passes on the coupling at its end. -/

@@ -141,15 +141,13 @@ variable (m : ℝ) (σ σ' : State ℝ)
 
 /-- The limit distributions of the encryption and the ideal sample are coupled at budget `0`. -/
 theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩)
-      (limExecV ⟨otp_ideal, σ'⟩) :=
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩) (limExecV ⟨otp_ideal, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
     fun _ _ => otp_refines_real m
 
 /-- The reverse coupling of the limit distributions at budget `0`. -/
 theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩)
-      (limExecV ⟨otp_enc m, σ'⟩) :=
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩) (limExecV ⟨otp_enc m, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
     fun _ _ => otp_refines_rev_real m
 
@@ -166,8 +164,7 @@ variable (m : ℝ) (σ : State ℝ)
 
 /-- The encrypted and ideal samples have the same distribution. -/
 theorem otp_distribution_eq (σ' : State ℝ) : limExecV ⟨otp_enc m, σ⟩ = limExecV ⟨otp_ideal, σ'⟩ :=
-  tv_eq_of_rel
-    ((otp_adequate_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ σ').mono le_rfl
+  tv_eq_of_rel ((otp_adequate_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ σ').mono le_rfl
       adequacyRel_otpφ_subset_eq)
     ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ' σ).mono le_rfl
       adequacyRel_otpφ_subset_eq)
@@ -238,24 +235,20 @@ of each outcome. -/
 theorem otp_ctx_refines_real :
     ∀ K σ₀ b,
       TypedCtx K empty .real empty .bool → BindersFresh K ∅ →
-      (∀ x ∈ binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧
-        x ∉ payloadFv K) →
+      (∀ x ∈ binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ payloadFv K) →
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF)
-    (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
+  refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
     fun _ _ _ => otp_refines_real m
 
 /-- The converse inequality: the ideal sample is at most the encryption. -/
 theorem otp_ctx_refines_rev_real :
     ∀ K σ₀ b,
       TypedCtx K empty .real empty .bool → BindersFresh K ∅ →
-      (∀ x ∈ binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧
-        x ∉ payloadFv K) →
+      (∀ x ∈ binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧ x ∉ payloadFv K) →
       limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF)
-    (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
+  refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ _ => otp_refines_rev_real m
 
 /-- Every well-typed boolean context sees the same distribution on both programs. -/

@@ -62,8 +62,7 @@ outputs at `b` along equality (clutch-dp's `adequacy_rel.v`). -/
 theorem progMech_rel ⦃x x' : X⦄ (hx : adj x x') :
     L.Rel b (· = ·) (progMech p σ hp x) (progMech p σ hp x') :=
   -- closed-program adequacy gives `L.Rel b (adequacyRel (· = ·))`; weaken that relation to `=`
-  (approximates_coupling A (· = ·) _ _ σ σ b HA (Hlog x x' hx)).mono le_rfl
-    adequacyRel_eq_subset
+  (approximates_coupling A (· = ·) _ _ σ σ b HA (Hlog x x' hx)).mono le_rfl adequacyRel_eq_subset
 
 /-- A program family whose members on adjacent inputs refine each other at equal results from
 `↯b b` is a `b`-private mechanism, for every divergence the lifting is sound for

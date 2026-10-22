@@ -55,14 +55,15 @@ theorem wp_lift_atomic_head_step (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocally
     (hne : e₁.decomp.2 ≠ .urand := by no_urand) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜∃ ρ : Cfg rT, 0 < headStep ⟨e₁, σ₁⟩ {ρ}⌝ ∗
       ▷ ∀ e₂ σ₂, ⌜0 < headStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={E}=> stateInterp σ₂ ∗
-      (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
+        (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_atomic_step Hv hne
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro
   have Hhr : HeadReducible e₁ σ₁ := fun hz => by obtain ⟨ρ, hρ⟩ := Hhred; simp [hz] at hρ
-  isplitr; · ipureintro; exact Reducible.toDiscrete hne (reducible_of_headReducible Hlc Hhr)
+  isplitr
+  · ipureintro; exact Reducible.toDiscrete hne (reducible_of_headReducible Hlc Hhr)
   iintro !> %e₂ %σ₂ %Hpstep
   have hpos : 0 < headStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩} :=
     primStep_eq_headStep (decompItem_none_of_lc_headReducible Hlc Hhr) ▸ Hpstep
@@ -108,7 +109,8 @@ theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro
-  isplitr; · ipureintro; exact reducible_of_headReducible Hlc Hhred
+  isplitr
+  · ipureintro; exact reducible_of_headReducible Hlc Hhred
   iintro !> %e₂ %σ₂ %Hmem
   rw [ite_eq_left Hhred] at Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
@@ -120,14 +122,15 @@ theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed :
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E1}=> ⌜HeadReducible e₁ σ₁⌝ ∗
       ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E1}[E2]▷=> stateInterp σ₂ ∗
-      (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
+        (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
   iintro H
-  iapply wp_lift_atomic_step_fupd_concentrated Hv
-    (measurableSet_headPad hSmeas) (concentrated_headPad Hlc hSconc)
+  iapply wp_lift_atomic_step_fupd_concentrated Hv (measurableSet_headPad hSmeas)
+    (concentrated_headPad Hlc hSconc)
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro
-  isplitr; · ipureintro; exact reducible_of_headReducible Hlc Hhred
+  isplitr
+  · ipureintro; exact reducible_of_headReducible Hlc Hhred
   iintro %e₂ %σ₂ %Hmem
   rw [ite_eq_left Hhred] at Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
@@ -139,7 +142,7 @@ theorem wp_lift_atomic_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by 
     (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜HeadReducible e₁ σ₁⌝ ∗
       ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E}=> stateInterp σ₂ ∗
-      (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
+        (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
   iintro H
   iapply wp_lift_atomic_head_step_fupd_concentrated Hv Hlc hSmeas hSconc
   iintro %σ₁ Hσ

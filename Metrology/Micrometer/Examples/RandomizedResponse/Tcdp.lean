@@ -34,13 +34,10 @@ theorem rrCount_tCDP : (rrCountMech k σ).tCDP ⊤ ω (k * ofReal (log 3)) := by
 coupling along `tcdpToDp`, at the best order below `ω` ([t/D]). -/
 theorem rrCount_DP_of_tCDP {δ : ℝ} (hδ : 0 < δ) :
     (rrCountMech k σ).DP ⊤
-      (⨅ α ∈ Set.Ioo 1 ω, ofReal α * (k * ofReal (log 3)) +
-        ofReal (log (1 / δ) / (α - 1)))
+      (⨅ α ∈ Set.Ioo 1 ω, ofReal α * (k * ofReal (log 3)) + ofReal (log (1 / δ) / (α - 1)))
       (ofReal δ) := fun b b' _ ↦ by
-  have hc := rrCount_rel (ofReal (log 3))
-    (isAddLeftRegular_ofReal _) (rrCoupling_tcdp ω) b b' k σ σ
+  have hc := rrCount_rel (ofReal (log 3)) (isAddLeftRegular_ofReal _) (rrCoupling_tcdp ω) b b' k σ σ
   rw [nsmul_eq_mul] at hc
-  simpa [tcdpToDp_map] using
-    codensity_sound ((tcdpToDp hδ).map_rel hc)
+  simpa [tcdpToDp_map] using codensity_sound ((tcdpToDp hδ).map_rel hc)
 
 end ProbLang.RandomizedResponse

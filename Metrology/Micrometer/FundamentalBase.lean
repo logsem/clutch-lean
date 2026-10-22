@@ -48,7 +48,7 @@ theorem bin_log_related_lift2 {e1 e2 e1' e2' : Exp rT}
     (H : ∀ t1 t2 t1' t2', iprop%
       refines L ⊤ t1 t1' A1 ⊢ refines L ⊤ t2 t2' A2 -∗ refines L ⊤ (f t1 t2) (f t1' t2') C) : iprop%
     bin_log_related L ⊤ Γ e1 e1' A1 ⊢
-    bin_log_related L ⊤ Γ e2 e2' A2 -∗ bin_log_related L ⊤ Γ (f e1 e2) (f e1' e2') C := by
+      bin_log_related L ⊤ Γ e2 e2' A2 -∗ bin_log_related L ⊤ Γ (f e1 e2) (f e1' e2') C := by
   unfold bin_log_related
   iintro IH1 IH2 %vs #Hvs
   rw [hf, hf]
@@ -63,8 +63,8 @@ theorem bin_log_related_lift3 {e0 e1 e2 e0' e1' e2' : Exp rT}
       refines L ⊤ t0 t0' A0 ⊢ refines L ⊤ t1 t1' A1 -∗ refines L ⊤ t2 t2' A2 -∗
       refines L ⊤ (f t0 t1 t2) (f t0' t1' t2') C) : iprop%
     bin_log_related L ⊤ Γ e0 e0' A0 ⊢
-    bin_log_related L ⊤ Γ e1 e1' A1 -∗ bin_log_related L ⊤ Γ e2 e2' A2 -∗
-    bin_log_related L ⊤ Γ (f e0 e1 e2) (f e0' e1' e2') C := by
+      bin_log_related L ⊤ Γ e1 e1' A1 -∗ bin_log_related L ⊤ Γ e2 e2' A2 -∗
+      bin_log_related L ⊤ Γ (f e0 e1 e2) (f e0' e1' e2') C := by
   unfold bin_log_related
   iintro IH0 IH1 IH2 %vs #Hvs
   rw [hf, hf]
@@ -103,7 +103,7 @@ variable [L.IsLawful] [L.IsTopAbsorbing]
 theorem refines_beta {v v' : Val rT}
     (he : (lam e).IsLocallyClosed) (he' : (lam e').IsLocallyClosed) : iprop%
     ▷ refines L ⊤ (open' e v.1) (open' e' v'.1) A ⊢
-    refines L ⊤ (.app (.lam e) v.1) (.app (.lam e') v'.1) A := by
+      refines L ⊤ (.app (.lam e) v.1) (.app (.lam e') v'.1) A := by
   rw [eq_fill_nil (.app (.lam e) v.1), eq_fill_nil (.app (.lam e') v'.1)]
   iintro H
   iapply refines_pure_l (Hex := pureExec_app_lam) ⟨v.2.toIsValue, he⟩
@@ -121,10 +121,8 @@ theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
     (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
     (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
     (hv : v.1.isClosedEmpty) (hv' : v'.1.isClosedEmpty) :
-    substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) =
-      open' (substMap vs.fst e) v.1 ∧
-    substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) =
-      open' (substMap vs.snd e') v'.1 :=
+    substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) = open' (substMap vs.fst e) v.1 ∧
+      substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) = open' (substMap vs.snd e') v'.1 :=
   ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_not_mem hxdom) hv.1,
     substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_not_mem hxdom) hv'.1⟩
 
@@ -148,12 +146,9 @@ theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
 theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
     (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed) :
-    (lam (substMap vs.fst e)).IsLocallyClosed ∧
-      (lam (substMap vs.snd e')).IsLocallyClosed :=
-  ⟨lam_substMap_isLocallyClosed hvs.1
-      (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
-    lam_substMap_isLocallyClosed hvs.2
-      (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
+    (lam (substMap vs.fst e)).IsLocallyClosed ∧ (lam (substMap vs.snd e')).IsLocallyClosed :=
+  ⟨lam_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
+    lam_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc⟩
 
 section Closed
 variable (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
@@ -175,11 +170,9 @@ theorem substMap_lam_closed :
 theorem substMap_fix_closed :
     (fix (substMap vs.fst e)).isClosedEmpty ∧ (fix (substMap vs.snd e')).isClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
-  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1
-      (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
+  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_not_mem hy) he_lc,
       substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
-    ⟨fix_substMap_isLocallyClosed hvs.2
-      (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc,
+    ⟨fix_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_not_mem hy) he'_lc,
       substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
 
 end Closed

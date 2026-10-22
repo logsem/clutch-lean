@@ -107,8 +107,7 @@ theorem refines_ctx_coupling (β : B) (e e' : Exp rT) (τ : Ty)
     iapply bin_log_related_nil_intro
     iapply Hlog IR IBC Δ $$ Hb
   -- The credit passes through the linear context as a frame.
-  have H := bin_log_related_under_linear_ctx HK Hlin Hrel (default : TyEnv rT GF) []
-    empty_nil
+  have H := bin_log_related_under_linear_ctx HK Hlin Hrel (default : TyEnv rT GF) [] empty_nil
   -- `interp L .bool _` is `lrel_bool` by `rfl`.
   show ⊢ ↯b β -∗ refines L ⊤ (K.fill e) (K.fill e') (interp L .bool default)
   iintro Hb
@@ -167,8 +166,7 @@ theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e 
         bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' Hbinders (Hlog IR IBC) _ _
           empty_nil HfreshK
       exact HrelClosed.trans bin_log_related_nil_elim
-  exact measure_le (s := s) (.singleton _) (.singleton _) hCpl
-    adequacyRel_boolEqVal_mem
+  exact measure_le (s := s) (.singleton _) (.singleton _) hCpl adequacyRel_boolEqVal_mem
 
 /-- `refines_sound_open_fresh` for closed programs. -/
 theorem refines_sound_fresh (e e' : Exp rT) (τ : Ty) (Hty_e : Typed empty e τ)
@@ -205,8 +203,7 @@ local bi IProp GF
 `P[K[e] = b] ≤ e^ε P[K[e'] = b] + δ`. -/
 theorem refines_ctx_dp {ε δ : ℝ≥0∞} (hε : ε ≠ ∞) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF)
-      Δ,
-        ⊢ ↯b (ε, δ) -∗ refines (codensity dp) ⊤ e e' (interp (codensity dp) τ Δ))
+      Δ, ⊢ ↯b (ε, δ) -∗ refines (codensity dp) ⊤ e e' (interp (codensity dp) τ Δ))
     (K : Ctx rT) (σ σ' : State rT) (b : Bool) (HK : TypedCtx K empty τ empty .bool)
     (Hlin : K.IsLinear) :
     limExec ⟨K.fill e, σ⟩ (finalBool b) ≤

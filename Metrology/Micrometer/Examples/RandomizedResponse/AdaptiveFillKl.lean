@@ -65,11 +65,10 @@ theorem fillKlHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
   have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
   -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
   -- at draw `2`, right reports `true` at draws `0, 1`)
-  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) :=
-    measurable_to_bool <| by
-      convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
-      ext
-      simp
+  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) := measurable_to_bool <| by
+    convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
+    ext
+    simp
   have hg : Measurable fun (ρ : Cfg rT) ↦
       decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) :=
     measurable_to_bool <| by
@@ -85,16 +84,14 @@ theorem fillKlHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
     rw [map_map hf .of_discrete]
     exact map_unifInt_three (by simp) (by simp) (by simp)
   have hνg : ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT)).map
-      (fun ρ ↦ decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩)) =
-      randResp true := by
+      (fun ρ ↦ decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩)) = randResp true := by
     rw [map_map hg .of_discrete]
     exact map_unifInt_three (by simp [hK]) (by simp [hK]) (by simp [hK])
   refine fillKlHead_of_map (ε := ofReal (log 2 / 3)) hf hg
     ((finite_Ico 0 3).image _).measurableSet ((finite_Ico 0 3).image _).measurableSet
     hsupp hsupp (fun c ↦ ?_) stageTwoCostKl ?_ ?_ ?_
   · rw [← map_apply hf (measurableSet_singleton c),
-      ← map_apply hg (measurableSet_singleton c), hμf, hνg, randResp_singleton,
-      randResp_singleton]
+      ← map_apply hg (measurableSet_singleton c), hμf, hνg, randResp_singleton, randResp_singleton]
     split_ifs <;> norm_num
   · rintro _ _ ⟨n, ⟨hn0, hn3⟩, rfl⟩ ⟨m, ⟨hm0, hm3⟩, rfl⟩ hfg
     rw [drawCost_apply]

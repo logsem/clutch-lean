@@ -54,8 +54,7 @@ theorem TctxRelated.shift (A : lrel rT GF) : TctxRelated L (.cons A Δ) Γtc.shi
   simpa [Tctx.shift, Option.map_map, Function.comp_def, interp_ren] using HCtx x
 
 /-- Relatedness survives binding a fresh term variable `x : τ` on both sides. -/
-theorem TctxRelated.insert (x : Var) (τ : Ty)
-    (hfresh : Γrc.lookup x = none) :
+theorem TctxRelated.insert (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
     TctxRelated L Δ (Γtc.insert x τ) ((x, interp L τ Δ) :: Γrc) := by
   intro y
   by_cases hyx : y = x
@@ -88,8 +87,8 @@ variable [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind] [CanonicallyOrderedAdd B] [
 
 variable (L) in
 /-- Every well-typed expression is related to itself under any related contexts. -/
-theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF)
-    (Γrc : RelCtx rT GF) (HCtx : TctxRelated L Δ Γtc Γrc) :
+theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF)
+    (HCtx : TctxRelated L Δ Γtc Γrc) :
     ⊢ bin_log_related_ty L ⊤ Δ Γrc e e τ := by
   induction Hty generalizing Δ Γrc with
   | @fvar _ x τ hx => exact bin_log_related_var Δ Γrc x τ (HCtx.lookup_some hx)

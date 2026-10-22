@@ -58,8 +58,7 @@ theorem wpPre_ne_aux {wp wp' : WpType} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
   refine or_ne.ne (.of_eq rfl) (or_ne.ne ?_ (.of_eq rfl))
   cases htv : e.toVal? with
   | some v =>
-    exact ne.ne <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
-      sep_ne.ne (.of_eq rfl) (HΦ v)
+    exact ne.ne <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) (HΦ v)
   | none =>
     refine progCoupl_ne fun e₃ _ _ _ _ => ?_
     refine Contractive.distLater_dist fun m Hm => ?_
@@ -96,7 +95,7 @@ syntax term : micrometerWpPost
 
 /-- `WP[L] e @ E {{ Φ }}` is `wp L E e Φ`. -/
 syntax (name := micrometerWp) "WP[" term "] " term:max (" @ " term:max)?
-  " {" noWs "{ " micrometerWpPost " }" noWs "}" : term
+    " {" noWs "{ " micrometerWpPost " }" noWs "}" : term
 
 macro_rules
   | `(WP[$L] $e $[@ $E]? {{ $v:ident, $P:term }}) => do

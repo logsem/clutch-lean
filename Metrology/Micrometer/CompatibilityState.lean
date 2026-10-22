@@ -26,9 +26,8 @@ namespace ProbLang
 section Compatibility
 variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
-  [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
-  [L.HasBind]
+  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [CanonicallyOrderedAdd B] [L.IsLawful]
+  [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 local bi IProp GF
 variable {e e' e1 e2 e1' e2' : Exp rT} {A : lrel rT GF}
 
@@ -42,8 +41,7 @@ theorem refines_alloc : iprop%
   iintro IH
   iapply refines_bind [alloc] [alloc] $$ IH
   iintro %v %v' #HA
-  rw [fill_alloc, fill_alloc, eq_fill_nil (alloc v.1),
-    eq_fill_nil (alloc v'.1)]
+  rw [fill_alloc, fill_alloc, eq_fill_nil (alloc v.1), eq_fill_nil (alloc v'.1)]
   iapply refines_alloc_r
   iintro %l' Hl'
   iapply refines_alloc_l
@@ -64,15 +62,13 @@ theorem refines_alloc : iprop%
 /-- Compatibility of tape allocation: both sides allocate an empty tape, tied by an invariant. -/
 theorem refines_alloctape : iprop%
     refines L ⊤ e e' lrel_int ⊢ refines L ⊤ (.tape e) (.tape e') lrel_tape := by
-  show _ ⊢
-    refines L ⊤ (fill [.tape] e) (fill [.tape] e') lrel_tape
+  show _ ⊢ refines L ⊤ (fill [.tape] e) (fill [.tape] e') lrel_tape
   iintro IH
   iapply refines_bind [.tape] [.tape] $$ IH
   iintro %v %v' Hint
   iunfold lrel_int at Hint
   icases Hint with ⟨%n, %hv, %hv'⟩
-  rw [fill_tape, fill_tape, hv, hv',
-    eq_fill_nil pl(tape(#n))]
+  rw [fill_tape, fill_tape, hv, hv', eq_fill_nil pl(tape(#n))]
   iapply refines_alloctape_r
   iintro %l' Hl'
   iapply refines_alloctape_l
@@ -135,7 +131,7 @@ theorem refines_load : iprop%
 /-- Compatibility of `store`: opens the `lrel_ref A` invariant around the atomic left store. -/
 theorem refines_store : iprop%
     refines L ⊤ e1 e1' (lrel_ref A) ⊢
-    refines L ⊤ e2 e2' A -∗ refines L ⊤ (.store e1 e2) (.store e1' e2') lrel_unit := by
+      refines L ⊤ e2 e2' A -∗ refines L ⊤ (.store e1 e2) (.store e1' e2') lrel_unit := by
   show _ ⊢ refines L ⊤ e2 e2' A -∗
     refines L ⊤ (fill [storeR e1] e2) (fill [storeR e1'] e2') lrel_unit
   iintro IH1 IH2
@@ -183,7 +179,7 @@ variable {z : Int}
 /-- Closes the tape invariant again once both tapes are handed back empty. -/
 theorem natTapes_empty_close : iprop%
     appNatTape α z [] ∗ specNatTape α' z [] ⊢
-    ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
+      ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
   (sep_mono app_natTape_to_empty spec_natTape_to_empty).trans later_intro
 
 /-- Two draws `rand z` from tapes shared through an `lrel_tape` invariant, coupled along the
@@ -191,7 +187,7 @@ identity; the tape bound `N` need not equal `z`. -/
 theorem refines_rand_lbl_of_pos {N z : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
-    refines L ⊤ pl(rand(#z, #lbl α)) pl(rand(#z, #lbl α')) A := by
+      refines L ⊤ pl(rand(#z, #lbl α)) pl(rand(#z, #lbl α')) A := by
   iintro #Hinv
   rw [eq_fill_nil pl(rand(#z, #lbl α))]
   iapply refines_atomic_l (of_atomic (.rand_lbl z α))
@@ -235,7 +231,7 @@ theorem refines_rand_unit_of_pos (hz : 0 < z)
 `refines_rand_tape_int`. -/
 theorem refines_rand_tape : iprop%
     refines L ⊤ e1 e1' lrel_pos_nat ⊢
-    refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
+      refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
   show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
     refines L ⊤ (fill [randR e1] e2) (fill [randR e1'] e2') lrel_nat
   iintro IH1 IH2
@@ -257,8 +253,7 @@ theorem refines_rand_tape : iprop%
 `refines_rand_unit_int`. -/
 theorem refines_rand_unit : iprop%
     refines L ⊤ e e' lrel_pos_nat ⊢
-    refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e')
-      lrel_nat := by
+      refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e') lrel_nat := by
   iintro IH
   iapply refines_bind [randL .unit] [randL .unit] $$ IH
   iintro %v %v' HPosNat
@@ -274,7 +269,7 @@ theorem refines_rand_unit : iprop%
 sides. -/
 theorem refines_rand_tape_int : iprop%
     refines L ⊤ e1 e1' lrel_int ⊢
-    refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
+      refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_int := by
   show _ ⊢ refines L ⊤ e2 e2' lrel_tape -∗
     refines L ⊤ (fill [randR e1] e2) (fill [randR e1'] e2') lrel_int
   iintro IH1 IH2
@@ -308,8 +303,7 @@ theorem refines_rand_tape_int : iprop%
     imodintro
     iexists pl(#(-1))
     iframe HKRes
-    iapply refines_ret (e1 := fill [] pl(#(-1))) (v1 := .int (-1)) (v2 := .int (-1))
-      rfl rfl
+    iapply refines_ret (e1 := fill [] pl(#(-1))) (v1 := .int (-1)) (v2 := .int (-1)) rfl rfl
     imodintro
     iapply lrel_int_lit (-1)
 
@@ -317,8 +311,7 @@ theorem refines_rand_tape_int : iprop%
 `bin_log_related_rand_unit` produces. -/
 theorem refines_rand_unit_int : iprop%
     refines L ⊤ e e' lrel_int ⊢
-    refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e')
-      lrel_int := by
+      refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e') lrel_int := by
   iintro IH
   iapply refines_bind [randL .unit] [randL .unit] $$ IH
   iintro %v %v' HInt
