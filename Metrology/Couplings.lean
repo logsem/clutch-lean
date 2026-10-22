@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Couplings.Measure
+public import Metrology.Couplings.EReal
 public import Metrology.Couplings.SubProbability
 public import Metrology.Couplings.AdditiveCouplings
 public import Metrology.Couplings.ApproximateCouplings

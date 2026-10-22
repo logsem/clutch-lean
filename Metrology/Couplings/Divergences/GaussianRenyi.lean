@@ -5,7 +5,8 @@ public import Metrology.Couplings.Divergences.Gaussian
 /-! # Rényi divergence of Gaussians, and the Gaussian mechanism is zCDP
 
 The Rényi divergence `α (a - a')² / (2 v)` between `N(a, v)` and `N(a', v)` (Mironov 2017,
-Prop. 7), and from it `zCDP_gaussianMech` (Bun–Steinke 2016, Prop. 1.6). -/
+Prop. 7), and from it `zCDP_gaussianMech` (Bun–Steinke 2016, Prop. 1.6), and `k` independent
+Gaussian queries `gaussianMechPow`. -/
 
 @[expose] public section
 
@@ -127,5 +128,49 @@ theorem zCDP_gaussianMech {σ : ℝ≥0} (hσ : σ ≠ 0) (r : ℝ) :
   push_cast
   gcongr ?_ / _
   exact sq_le_sq' (abs_le.1 h).1 (abs_le.1 h).2
+
+
+/-! ## `k` independent Gaussian queries -/
+
+/-- Splitting off the first coordinate of a tuple of reals. -/
+noncomputable abbrev consEquiv (k : ℕ) : (Fin (k + 1) → ℝ) ≃ᵐ ℝ × (Fin k → ℝ) :=
+  MeasurableEquiv.piFinSuccAbove (fun _ ↦ ℝ) 0
+
+/-- `k` independent queries of the Gaussian mechanism with standard deviation `σ` on the same
+input. -/
+noncomputable def gaussianMechPow (σ : ℝ≥0) : (k : ℕ) → Mechanism ℝ (Fin k → ℝ)
+  | 0 => Kernel.const ℝ (dirac isEmptyElim)
+  | k + 1 => (gaussianMech σ ×ₖ gaussianMechPow σ k).map (consEquiv k).symm
+
+/-- Each of the `k` queries is a probability measure, so their product is one. -/
+instance isMarkovKernel_gaussianMechPow (σ : ℝ≥0) : ∀ k, IsMarkovKernel (gaussianMechPow σ k)
+  | 0 => by
+    rw [gaussianMechPow]
+    infer_instance
+  | k + 1 => by
+    have := isMarkovKernel_gaussianMechPow σ k
+    rw [gaussianMechPow]
+    exact Kernel.IsMarkovKernel.map _ (consEquiv k).symm.measurable
+
+/-- No queries give the point mass at the empty tuple. -/
+theorem gaussianMechPow_zero_apply (σ : ℝ≥0) (a : ℝ) :
+    gaussianMechPow σ 0 a = dirac isEmptyElim := by
+  rw [gaussianMechPow, Kernel.const_apply]
+
+/-- One more query draws a fresh first coordinate. -/
+theorem gaussianMechPow_succ_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
+    gaussianMechPow σ (k + 1) a =
+      ((gaussianReal a (σ ^ 2)).prod (gaussianMechPow σ k a)).map (consEquiv k).symm := by
+  rw [gaussianMechPow, Kernel.map_apply _ (consEquiv k).symm.measurable, Kernel.prod_apply]
+  rfl
+
+/-- The `k` Gaussian queries are independent draws from `N(a, σ²)`. -/
+theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
+    gaussianMechPow σ k a = Measure.pi fun _ ↦ gaussianReal a (σ ^ 2) := by
+  induction k with
+  | zero => exact (gaussianMechPow_zero_apply σ a).trans (Measure.pi_of_empty _ _).symm
+  | succ k ih =>
+    rw [gaussianMechPow_succ_apply, ih]
+    exact ((measurePreserving_piFinSuccAbove (fun _ ↦ gaussianReal a (σ ^ 2)) 0).symm _).map_eq
 
 end Mechanism

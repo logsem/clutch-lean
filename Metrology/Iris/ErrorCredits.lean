@@ -7,6 +7,7 @@ public import Iris.Instances.IProp.Instance
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
 public import Metrology.Iris.Algebra
+public import Metrology.Couplings.Measure
 import Metrology.Iris.LocalBI
 
 @[expose] public section
@@ -231,19 +232,6 @@ the trade reaches `1` credit, which `contradict` refutes. -/
 
 namespace Induction
 
-/-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1`. -/
-theorem err_amp_power {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :
-    ∃ n : ℕ, 1 ≤ ε * (k : ℝ≥0∞) ^ n := by
-  obtain rfl | hε' := eq_or_ne ε ∞
-  · exact ⟨0, by simp⟩
-  · lift ε to ℝ≥0 using hε' with ε
-    obtain ⟨n, hn⟩ := pow_unbounded_of_one_lt ε⁻¹ (by exact_mod_cast hk)
-    have hlift : (1 : ℝ≥0) ≤ ε * k ^ n := by
-      rw [mul_comm]
-      refine (inv_le_iff_one_le_mul₀ ?_).mp hn.le
-      exact_mod_cast hε
-    exact ⟨n, by exact_mod_cast hlift⟩
-
 /-- For `ε > 0` and `k > 1`, some `n` makes `n(k-1)ε + ε' ≥ 1` (pure arithmetic). -/
 theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : ε ≤ ε') (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε' := by
@@ -327,7 +315,7 @@ theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < �
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P) ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
-  obtain ⟨n, hn⟩ := err_amp_power hε hk
+  obtain ⟨n, hn⟩ := ENNReal.exists_pow_mul_ge_one hε hk
   iinduction n generalizing %ε %hε %hn Hε with
   | zero =>
     iexfalso

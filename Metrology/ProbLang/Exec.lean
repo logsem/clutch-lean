@@ -72,15 +72,6 @@ theorem execN_univ_le_one (n : Nat) (ρ : Cfg rT) : (execN n ρ) univ ≤ 1 := b
 instance execN.isSubProbabilityMeasure (n : Nat) (ρ : Cfg rT) :
     IsSubProbabilityMeasure (execN n ρ) := ⟨execN_univ_le_one n ρ⟩
 
-/-- Bind is monotone in the kernel. -/
-theorem Measure.bind_mono_right' {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
-    (μ : Measure α) (f g : α → Measure β) (Hf : Measurable f) (Hg : Measurable g)
-    (h : ∀ a, f a ≤ g a) :
-    μ.bind f ≤ μ.bind g := by
-  refine le_intro fun S HS HNE => ?_
-  rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
-  exact lintegral_mono (fun a => h a S)
-
 /-- One more step of fuel only adds terminated runs. -/
 theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ := by
   induction n generalizing ρ with
@@ -335,6 +326,46 @@ theorem pexecN_plus (n m : Nat) (ρ : Cfg rT) : pexecN (n + m) ρ = (pexecN n ρ
 theorem pexecN_det_trans {n m : Nat} {ρ ρ' ρ'' : Cfg rT} (Hn : pexecN n ρ = dirac ρ')
     (Hm : pexecN m ρ' = dirac ρ'') : pexecN (n + m) ρ = dirac ρ'' := by
   rw [pexecN_plus, Hn, dirac_bind pexecN_measurable, Hm]
+
+/-! ### Deterministic steps give Dirac `pexecN` -/
+
+/-- A deterministic step `DetStep ρ ρ'` makes one-step execution the Dirac measure at `ρ'`. -/
+theorem pexecN_1_of_DetStep {ρ ρ' : Cfg rT} (h : DetStep ρ ρ') :
+    pexecN 1 ρ = dirac ρ' := by
+  rw [pexecN_one]
+  obtain ⟨-, h2⟩ := h
+  have hnv : ¬ ρ.expr.isValue := by
+    refine val_stuck (σ := ρ.2) ?_
+    simp [h2]
+  rw [stepOrFinal_not_isValue hnv]
+  exact h2
+
+/-- `n`-step version of `pexecN_1_of_DetStep`. -/
+theorem pexecN_of_DetExec {n : ℕ} {ρ ρ' : Cfg rT} (h : DetExec n ρ ρ') :
+    pexecN n ρ = dirac ρ' := by
+  induction n generalizing ρ with
+  | zero => obtain ⟨⟨rfl⟩⟩ := h.det_exec; rfl
+  | succ k ih =>
+    obtain ⟨ρmid, hstep, hrest⟩ := h.det_exec
+    rw [show k + 1 = 1 + k from Nat.add_comm _ _, pexecN_plus,
+        pexecN_1_of_DetStep hstep,
+        dirac_bind pexecN_measurable, ih ⟨hrest⟩]
+
+/-- Pure steps `nsteps PureStep n e1 e2` are deterministic executions at any fixed state `σ`. -/
+theorem DetExec.of_nsteps_PureStep {n : ℕ} {e1 e2 : Exp rT} (σ : State rT)
+    (h : nsteps PureStep n e1 e2) :
+    DetExec n ⟨e1, σ⟩ ⟨e2, σ⟩ := by
+  induction n generalizing e1 with
+  | zero => simp [nsteps] at h; subst h; exact ⟨rfl⟩
+  | succ k ih =>
+    obtain ⟨c, hstep, hrest⟩ := h
+    exact (ih hrest).succ ⟨hstep.safe σ, hstep.det σ⟩
+
+/-- Under `PureExec φ n e1 e2` and `φ`, `n`-step execution is the Dirac measure at `⟨e2, σ⟩`. -/
+theorem pexecN_of_PureExec {φ : Prop} {n : ℕ} {e1 e2 : Exp rT}
+    [h : PureExec φ n e1 e2] (σ : State rT) (hφ : φ) :
+    pexecN n (⟨e1, σ⟩ : Cfg rT) = dirac ⟨e2, σ⟩ :=
+  pexecN_of_DetExec (DetExec.of_nsteps_PureStep σ (h.pure_exec hφ))
 
 /-- `limExec` is `n` steps of `pexecN` followed by `limExec`. -/
 theorem limExec_pexecN (n : Nat) (ρ : Cfg rT) : limExec ρ = (pexecN n ρ).bind limExec := by

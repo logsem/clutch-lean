@@ -18,10 +18,6 @@ namespace ProbLang
 
 variable {rT : Type _}
 
-/-- A proof that an expression is not a value, by case analysis on a value witness. -/
-macro "solve_not_value" : term =>
-  `(Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
-
 namespace TotalEris
 
 section Lifting

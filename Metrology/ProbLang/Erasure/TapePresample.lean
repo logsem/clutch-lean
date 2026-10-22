@@ -13,7 +13,7 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
-open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+open MeasureTheory MeasureTheory.Measure
 
 /-! ## Almost-sure facts about a presampled state -/
 

@@ -15,7 +15,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+open MeasureTheory MeasureTheory.Measure
 
 /-- Sampling the initial state from `μ` does not change `execN m` at any budget `m`. -/
 def Erasable (μ : Measure (State rT)) (σ : State rT) : Prop :=

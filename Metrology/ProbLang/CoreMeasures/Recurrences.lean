@@ -380,64 +380,6 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
   · exact hMset.compl
   · exact MeasurableSet.empty
 
-/-! ### Eliminating `Option` measurably -/
-
-/-- Matching on a measurable `f a : Option β` is measurable when the `none` branch is measurable in
-`a` and the `some b` branch is measurable in `(a, b)` jointly. -/
-theorem _root_.Option.measurable_elim_param
-    {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    {f : α → Option β} (hf : Measurable f)
-    {default : α → γ} (hdef : Measurable default)
-    {some_branch : α × β → γ} (hsome : Measurable some_branch) :
-    Measurable (fun a => Option.casesOn (motive := fun _ => γ) (f a) (default a)
-      (fun b => some_branch (a, b))) := by
-  intro S hS
-  have hpre : (fun a => Option.casesOn (motive := fun _ => γ) (f a) (default a)
-        (fun b => some_branch (a, b))) ⁻¹' S =
-      ({a | f a = none} ∩ default ⁻¹' S)
-      ∪ (fun a => (a, f a)) ⁻¹' ((fun q : α × β => (q.1, (some q.2 : Option β))) ''
-            ((fun q : α × β => some_branch q) ⁻¹' S)) := by
-    ext a
-    rcases hfa : f a with _ | b
-    · simp [hfa]
-    · simp only [hfa, mem_preimage, mem_union, mem_inter_iff,
-        mem_ofPred_eq, mem_image, Prod.mk.injEq]
-      constructor
-      · intro h; right; exact ⟨(a, b), h, rfl, rfl⟩
-      · rintro (⟨hcontra, _⟩ | ⟨⟨a', b'⟩, hab, rfl, hbeq⟩)
-        · simp_all
-        · exact Option.some_injective _ hbeq ▸ hab
-  rw [hpre]
-  refine MeasurableSet.union ?_ ?_
-  · exact (hf MeasurableSet.singleton_none).inter (hdef hS)
-  · refine MeasurableSet.preimage ?_ (measurable_id.prodMk hf)
-    exact (MeasurableEmbedding.id.prodMap MeasurableEmbedding.some_mk).measurableSet_image'
-      (hsome hS)
-
-/-- `Option.measurable_elim_param` with `0` as the `none` branch. -/
-theorem _root_.Option.measurable_elim_param_zero
-    {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    [Zero γ] [MeasurableSpace γ]
-    {f : α → Option β} (hf : Measurable f)
-    {some_branch : α × β → γ} (hsome : Measurable some_branch) :
-    Measurable (fun a => Option.casesOn (motive := fun _ => γ) (f a) 0
-      (fun b => some_branch (a, b))) :=
-  Option.measurable_elim_param hf measurable_const hsome
-
-/-- `Option.measurable_elim_param` for `Option.bind`. -/
-theorem _root_.Option.measurable_bind_param
-    {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β]
-    [_mγ : MeasurableSpace (Option γ)]
-    {f : α → Option β} (hf : Measurable f)
-    {some_branch : α × β → Option γ} (hsome : Measurable some_branch) :
-    Measurable (fun a => (f a).bind (fun b => some_branch (a, b))) := by
-  have hrw : (fun a => (f a).bind (fun b => some_branch (a, b))) =
-      fun a => Option.casesOn (motive := fun _ => Option γ) (f a)
-          none (fun b => some_branch (a, b)) := by
-    funext a; cases f a <;> rfl
-  rw [hrw]
-  exact Option.measurable_elim_param hf measurable_const hsome
-
 /-! ### Macros for `headStep` continuations
 
 Each macro applies `measurable_casesOn_param` with every arm except the named ones set to `0`.

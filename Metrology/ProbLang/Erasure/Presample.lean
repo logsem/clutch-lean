@@ -14,7 +14,7 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
-open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+open MeasureTheory MeasureTheory.Measure
 
 /-! ## The uniform index distribution -/
 
@@ -209,16 +209,6 @@ theorem tapePresample_bind_dirac_measurable {α : Loc}
       (ProbabilityTheory.Kernel.mk (fun ρ : Cfg rT => tapePresample ρ.state α) hk) :=
     ⟨1, ENNReal.one_lt_top, fun _ => tapePresample_univ_le_one⟩
   exact Measure.measurable_map_uncurry hg hk
-
-/-! ## Bind-map distributivity -/
-
-/-- `Measure.bind_map_comm` when every space is discrete, so no measurability side conditions. -/
-theorem Measure.bind_map_comm_of_discrete {α β γ : Type*}
-    [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
-    [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β] [DiscreteMeasurableSpace γ]
-    (μ : Measure α) (k : α → Measure β) (f : β → γ) :
-    (μ.bind k).map f = μ.bind (fun a => (k a).map f) :=
-  Measure.bind_map_comm μ k f .of_discrete Measurable.of_discrete.aemeasurable
 
 /-! ## Tape persistence through a prim step -/
 

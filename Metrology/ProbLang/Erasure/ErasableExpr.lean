@@ -15,7 +15,7 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
-open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+open MeasureTheory MeasureTheory.Measure
 open Set
 open Cfg (measurable_expr)
 

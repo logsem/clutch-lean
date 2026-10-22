@@ -50,14 +50,6 @@ variable [MeasurableSpace Y] {ν : Measure Y}
 
 /-! ## Conditioning on the fibers -/
 
-/-- Precomposing a kernel with `g` is pushing the measure forward along `g`. -/
-theorem _root_.ProbabilityTheory.Kernel.comap_comp_eq_comp_map {Z : Type*} [MeasurableSpace Z]
-    {g : Y → Z} (κ : Kernel Z X) (hg : Measurable g) : κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
-  ext A hA
-  rw [bind_apply hA (Kernel.aemeasurable _), bind_apply hA (Kernel.aemeasurable _),
-    lintegral_map (κ.measurable_coe hA) hg]
-  rfl
-
 section FiberCond
 
 variable {Z : Type*} [MeasurableSpace Z] [DiscreteMeasurableSpace Z] {f : X → Z} {g : Y → Z}

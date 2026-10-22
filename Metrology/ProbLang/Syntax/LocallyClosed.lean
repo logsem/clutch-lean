@@ -198,6 +198,32 @@ theorem open_close_isLocallyClosed {e : Exp rT} (x y : Var) (he : IsLocallyClose
   rw [open_close_subst_lc x y e he]
   exact subst_lc he (.fvar y)
 
+/-- `e[x ↦ y][y ↦ w] = e[x ↦ w]` for `y` fresh in `e`. -/
+theorem subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
+    Exp.subst (Exp.subst e x (.fvar y)) y w = Exp.subst e x w := by
+  induction e with
+  | fvar z =>
+    by_cases h1 : x = z
+    · subst h1
+      simp [Exp.subst]
+    · have hyz : y ≠ z := fun h => hyv (h ▸ by simp [Exp.fv])
+      simp [Exp.subst, h1, hyz]
+  | bvar _ | lit _ | fail | urand => rfl
+  | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
+  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
+    have hyv' : y ∉ e.fv := fun h => hyv (by simpa [Exp.fv] using h)
+    simp [Exp.subst, ih hyv']
+  | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
+  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+    have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inl h)
+    have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr h)
+    simp [Exp.subst, ih1 hyv1, ih2 hyv2]
+  | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
+    have hyv0 : y ∉ e0.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inl h)
+    have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inl h))
+    have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inr h))
+    simp [Exp.subst, ih0 hyv0, ih1 hyv1, ih2 hyv2]
+
 /-- Opening `close e x` with any locally closed `v` substitutes `v` for `x`. -/
 theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
     (he : IsLocallyClosed e) (hv : IsLocallyClosed v) :
@@ -209,10 +235,7 @@ theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
   have hzcl : z ∉ (close e x).fv := close_preserve_not_fvar e hze
   rw [subst_intro z v (close e x) hzcl hv, open_close_subst_lc x z e he]
   -- Rename `x` to the fresh `z`, then substitute `v` for `z`.
-  have subst_rename : ∀ e : Exp rT, z ∉ e.fv → subst (subst e x (fvar z)) z v = subst e x v := by
-    intro e hze
-    induction e <;> grind
-  exact subst_rename e hze
+  exact subst_subst_fvar_id e v x z hze
 
 /-- `e` is locally closed and has no free variables. -/
 def IsClosedEmpty (e : Exp rT) : Prop := IsLocallyClosed e ∧ e.fv = ∅
@@ -235,6 +258,38 @@ theorem fv_subset_open (e : Exp rT) (y : Var) : e.fv ⊆ (open' e (fvar y)).fv :
   fv_subset_openRec 0 y e
 
 end Exp
+
+/-! ## Free variables of `close` -/
+
+/-- Closing a term at an atom introduces no new free variables. -/
+theorem closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
+    (hy : y ∈ (closeRec k x e).fv) : y ∈ e.fv := by
+  induction e generalizing k with
+  | bvar _ => simp [closeRec, fv] at hy
+  | fvar z =>
+      simp [closeRec] at hy
+      by_cases hxz : x = z
+      · rw [ite_eq_left hxz] at hy; simp [fv] at hy
+      · rw [ite_eq_right hxz] at hy; exact hy
+  | lit _ | fail | urand => simp [closeRec, fv] at hy
+  | lam e ih | fix e ih =>
+      simp only [closeRec, fv] at hy ⊢
+      exact ih (k+1) hy
+  | unop _ e ih | fst e ih | snd e ih
+  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
+      simp only [closeRec, fv] at hy ⊢
+      exact ih k hy
+  | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
+  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+      simp only [closeRec, fv, mem_union] at hy ⊢
+      exact hy.imp (ih1 k) (ih2 k)
+  | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
+      simp only [closeRec, fv, mem_union] at hy ⊢
+      exact hy.imp (Or.imp (ih0 k) (ih1 k)) (ih2 k)
+
+/-- Closing a term introduces no new free variables. -/
+theorem close_fv_subset (e : Exp α) (x : Var) : (close e x).fv ⊆ e.fv :=
+  fun y hy => closeRec_fv_subset e x 0 y hy
 
 /-! ## The `pl_step_simp` cleanup set
 

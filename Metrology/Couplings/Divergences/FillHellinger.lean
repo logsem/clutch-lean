@@ -7,6 +7,7 @@ public import Metrology.Couplings.Divergences.FillKl
 
 `fill (hellingerDivergence α)` for `α ∈ (0, 1)` is equivalent to the Hölder test bound
 `HellDualBound` on the `α`-affinity (`fill_hellinger_iff`), from which its divergence laws follow.
+Its codensity lifting has the same laws as filled KL (`codensity_fill_hellinger_laws`).
 -/
 
 @[expose] public section
@@ -628,5 +629,22 @@ instance isBudgetClosed_fill_hellinger : (fill (hellingerDivergence.{u} α)).IsB
     exact ((fill_hellinger_iff hα.out.1 hα.out.2).1 (h r' hr')).mono har'.le
 
 end Laws
+
+/-! ## The codensity lifting of filled Hellinger -/
+
+/-- The codensity lifting of filled `α`-Hellinger has the same laws as filled KL. -/
+theorem codensity_fill_hellinger_laws (α : ℝ) [Fact (α ∈ Set.Ioo (0 : ℝ) 1)] :
+    (codensity (fill (hellingerDivergence.{u} α))).IsLawful ∧
+      (codensity (fill (hellingerDivergence.{u} α))).HasBind ∧
+      GradedLifting.IsReflexive (codensity (fill (hellingerDivergence.{u} α))) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsSupportLocal ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsTopAbsorbing ∧
+      GradedLifting.IsZeroLeft (codensity (fill (hellingerDivergence.{u} α))) ∧
+      GradedLifting.IsLeftContinuous (codensity (fill (hellingerDivergence.{u} α))) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsSound (fill (hellingerDivergence α)) ∧
+      (codensity (fill (hellingerDivergence.{u} α))).IsComplete (fill (hellingerDivergence α)) ∧
+      GradedLifting.IsBudgetClosed (codensity (fill (hellingerDivergence.{u} α))) :=
+  ⟨inferInstance, inferInstance, inferInstance, inferInstance, inferInstance, inferInstance,
+    inferInstance, inferInstance, inferInstance, inferInstance⟩
 
 end GradedDivergence

@@ -82,6 +82,11 @@ theorem relCost_anti [Zero B] [Preorder B] [OrderTop B] (h : ∀ x y, S x y → 
   · rw [relCost_of hS, relCost_of (h x y hS)]
   · exact (relCost_of_not (B := B) hS).symm ▸ le_top
 
+/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
+theorem _root_.GradedDivergence.le_add_relCost_iff {a b : ℝ≥0∞} :
+    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
+  by_cases hS : S x y <;> simp [hS]
+
 end relCost
 
 section Classes

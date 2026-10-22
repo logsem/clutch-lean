@@ -3,6 +3,7 @@ module
 public import Mathlib.MeasureTheory.Measure.FiniteMeasure
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.Kernel.Composition.MeasureComp
 
 /-! # Measure facts
 
@@ -14,7 +15,7 @@ General lemmas about binding, pushing forward and suprema of measures, the measu
 universe u
 
 open MeasureTheory
-open scoped ENNReal
+open scoped ENNReal NNReal ProbabilityTheory
 open ENNReal (ofReal tsum_eq_iSup_sum finsetSum_iSup_of_monotone mul_iSup toReal_sum mul_ne_top
   ofReal_ne_top toReal_mul toReal_ofReal toReal_nonneg ofReal_sum_of_nonneg ofReal_mul
   ofReal_toReal)
@@ -48,6 +49,32 @@ theorem bind_mono_left {μ μ' : Measure X} (h : μ ≤ μ') {f : X → Measure 
     (hf : Measurable f := by fun_prop) : μ.bind f ≤ μ'.bind f := le_iff.2 fun s hs ↦ by
   rw [bind_apply hs hf.aemeasurable, bind_apply hs hf.aemeasurable]
   exact lintegral_mono' h le_rfl
+
+/-- Precomposing a kernel with `g` is pushing the measure forward along `g`. -/
+theorem _root_.ProbabilityTheory.Kernel.comap_comp_eq_comp_map {ν : Measure Y}
+    {g : Y → Z} (κ : ProbabilityTheory.Kernel Z X) (hg : Measurable g) :
+    κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
+  ext A hA
+  rw [bind_apply hA (ProbabilityTheory.Kernel.aemeasurable _),
+    bind_apply hA (ProbabilityTheory.Kernel.aemeasurable _),
+    lintegral_map (κ.measurable_coe hA) hg]
+  rfl
+
+/-- Binding is monotone in the kernel. -/
+theorem bind_mono_right' (μ : Measure X) (f g : X → Measure Y) (Hf : Measurable f)
+    (Hg : Measurable g) (h : ∀ a, f a ≤ g a) : μ.bind f ≤ μ.bind g := by
+  refine le_intro fun S HS HNE => ?_
+  rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
+  exact lintegral_mono fun a => h a S
+
+/-- `bind_map_comm` when every space is discrete, so no measurability side conditions. -/
+theorem bind_map_comm_of_discrete [DiscreteMeasurableSpace X] [DiscreteMeasurableSpace Y]
+    [DiscreteMeasurableSpace Z] (μ : Measure X) (k : X → Measure Y) (f : Y → Z) :
+    (μ.bind k).map f = μ.bind fun a => (k a).map f := by
+  ext S hS
+  rw [map_apply .of_discrete hS, bind_apply .of_discrete Measurable.of_discrete.aemeasurable,
+    bind_apply hS Measurable.of_discrete.aemeasurable]
+  simp_rw [map_apply .of_discrete hS]
 
 /-! ## Suprema of increasing sequences of measures -/
 
@@ -213,6 +240,20 @@ theorem inv_mul_le_inv_mul_add {a d : ℕ} (ha : a ≠ 0) {S : ℝ≥0∞} (hS :
 /-- Finite budgets `ENNReal.ofReal x` cancel on the left. -/
 theorem isAddLeftRegular_ofReal (x : ℝ) : IsAddLeftRegular (ofReal x) :=
   (IsAddRegular.of_ne_top ofReal_ne_top).1
+
+
+/-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1`. -/
+theorem exists_pow_mul_ge_one {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :
+    ∃ n : ℕ, 1 ≤ ε * (k : ℝ≥0∞) ^ n := by
+  obtain rfl | hε' := eq_or_ne ε ∞
+  · exact ⟨0, by simp⟩
+  · lift ε to ℝ≥0 using hε' with ε
+    obtain ⟨n, hn⟩ := pow_unbounded_of_one_lt ε⁻¹ (by exact_mod_cast hk)
+    have hlift : (1 : ℝ≥0) ≤ ε * k ^ n := by
+      rw [mul_comm]
+      refine (inv_le_iff_one_le_mul₀ ?_).mp hn.le
+      exact_mod_cast hε
+    exact ⟨n, by exact_mod_cast hlift⟩
 
 end ENNReal
 

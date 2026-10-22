@@ -16,14 +16,7 @@ open scoped ENNReal
 
 namespace GradedDivergence
 
-variable {X Y : Type u}
-
-/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
-theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
-    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
-  by_cases hS : S x y <;> simp [hS]
-
-variable [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
+variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
 
 /-! ## The divergence -/
 

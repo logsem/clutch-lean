@@ -346,7 +346,7 @@ theorem DetStep.fill (h : DetStep cfg1 cfg2) :
 
 /-! ## Deterministic head steps of the stateful constructs
 
-The rules `alloc`, `load` and `store`, as `DetHeadStep`. -/
+The rules `alloc`, `load`, `store`, `tape` and `rand_tape`, as `DetHeadStep`. -/
 
 /-- Allocation of a value is a deterministic head step. -/
 theorem DetHeadStep.alloc {v : Exp rT} (hv : IsVal v) (σ : State rT) :
@@ -369,6 +369,30 @@ theorem DetHeadStep.store {ℓ : Loc} {e : Exp rT} {v_old v_new : Val rT} (σ : 
   .of_det _ _ (by
     obtain ⟨_, hd⟩ := toVal?_eq_some_of_isValue (e := (lit (.loc ℓ) : Exp rT)) ⟨.lit⟩
     simp [decompItem, hnew, hd]) (by simp [headStep, asValM, hnew, hlookup])
+
+/-- Tape allocation: `tape #z` deterministically allocates a fresh empty tape of
+bound `z`. -/
+theorem DetHeadStep.tape {z : Int} (σ : State rT) :
+    DetHeadStep ⟨pl(tape(#z)), σ⟩
+      ⟨pl(#lbl σ.tapes.fresh),
+       σ.update_tapes (·.insert σ.tapes.fresh (Tape.empty z))⟩ :=
+  .of_det _ _
+    (by obtain ⟨_, hd⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩;
+        simp [Exp.decompItem, hd])
+    (by simp [headStep])
+
+/-- Tape rand: with `σ.tapes[α] = some ⟨z, n :: ns⟩`, the random sample
+`rand z α` deterministically returns `n` and pops the head. -/
+theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
+    (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z })
+    {σ : State rT} (htape : σ.tapes[l]? = some ⟨z, n :: ns⟩) :
+    DetHeadStep ⟨pl(rand(#z, #lbl l)), σ⟩
+      ⟨pl(#int n), σ.update_tapes (·.insert l ⟨z, ns⟩)⟩ :=
+  .of_det _ _
+    (by obtain ⟨_, hd1⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#lbl l) : Exp rT)) ⟨.lit⟩
+        obtain ⟨_, hd2⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩
+        simp [Exp.decompItem, hd1, hd2])
+    (by simp [headStep, htape])
 
 end DetSteps
 

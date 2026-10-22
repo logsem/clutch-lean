@@ -3,6 +3,7 @@ module
 public meta import Metrology.Meta.Discrete
 public import Std
 public import Std.Data.ExtTreeMap.Lemmas
+public import Iris.Std.HeapInstances
 public import Mathlib.Basic.Countable.Basic
 public import Mathlib.MeasureTheory.MeasurableSpace.Basic
 public import Mathlib.MeasureTheory.MeasurableSpace.Defs
@@ -968,6 +969,10 @@ theorem Exp.rand_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.rand e₁ e₂).toVa
 theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.urand_not_isValue
 
+/-- A proof that an expression is not a value, by case analysis on a value witness. -/
+macro "solve_not_value" : term =>
+  `(Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
+
 /-- Same as `Val.fst`, under its own head symbol so that frame lemmas (`fillItem`) and the
 `delabExpOfVal` delaborator can match it syntactically. -/
 def Exp.ofVal (v : Val α) : Exp α := v.1
@@ -1075,6 +1080,15 @@ instance [Countable V] : Countable (LocHeap V) :=
 
 instance : GetElem? (LocHeap V) Loc V (fun (m : ExtTreeMap Loc V compare) k => k ∈ m) :=
   inferInstanceAs (GetElem? (ExtTreeMap Loc V compare) _ _ _)
+
+open Iris.Std (PartialMap) in
+/-- `ExtTreeMap.insert` agrees with `PartialMap.insert`. -/
+theorem _root_.Std.ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
+    (h : LocHeap V) (l : Loc) (v : V) :
+    h.insert l v = PartialMap.insert h l v :=
+  ExtTreeMap.ext_getElem? fun k => by
+    show (h.insert l v)[k]? = (h.alter l (fun _ => some v))[k]?
+    simp [ExtTreeMap.getElem?_insert, ExtTreeMap.getElem?_alter]
 
 /-- Machine state: the heap and the random tapes. -/
 structure State (α : Type _) where

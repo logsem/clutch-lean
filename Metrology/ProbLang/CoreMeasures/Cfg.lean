@@ -2,6 +2,7 @@ module
 
 public import Metrology.ProbLang.CoreMeasures.Exp
 public import Metrology.ProbLang.CoreMeasures.Val
+public import Metrology.ProbLang.CoreMeasures.Recurrences
 public import Metrology.ProbLang.CoreMeasures.State
 
 @[expose] public section
@@ -88,5 +89,42 @@ theorem measurable_mk : Measurable (fun (p : Exp α × State α) => mk p.1 p.2) 
   measurable_iff.mpr ⟨measurable_fst, measurable_snd⟩
 
 end Cfg
+
+/-! ## Values inside expressions and configurations -/
+
+/-- `Exp.ofVal` is a measurable embedding of values into expressions. -/
+theorem measurableEmbedding_ofVal {rT : Type _} [LawfulProbLangℝ rT] :
+    MeasurableEmbedding (Exp.ofVal : Val rT → Exp rT) := by
+  refine ⟨fun a b h => Val.ext h, Exp.ofVal.measurable, fun s hs => ?_⟩
+  obtain ⟨U, hU, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hs
+  have hrange : Set.range (Val.fst : Val rT → Exp rT) = {e : Exp rT | e.isValue} := by
+    ext e
+    simp only [Set.mem_range, Set.mem_ofPred_eq]
+    constructor
+    · rintro ⟨v, rfl⟩; exact Val.isValue v
+    · intro h; exact ⟨Val.mk e h.some h.some.lc, rfl⟩
+  show MeasurableSet (Val.fst '' (Val.fst ⁻¹' U))
+  rw [Set.image_preimage_eq_inter_range, hrange]
+  have hsplit : {e : Exp rT | e.isValue} = {e | e.isValueR} ∩ {e | Exp.lcb 0 e = true} := by
+    ext e; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
+  rw [hsplit]
+  exact hU.inter (Exp.isValueR.measurable.setOf.inter Exp.lcb_zero.measurableSet)
+
+/-- The set of expressions that are values satisfying `φ` is measurable. -/
+theorem measurableSet_ofValSet {rT : Type _} [LawfulProbLangℝ rT] {φ : Val rT → Prop}
+    (hφ : MeasurableSet {v : Val rT | φ v}) :
+    MeasurableSet {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} := by
+  have heq : {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} = Exp.ofVal '' {v | φ v} := by
+    ext e
+    simp only [Set.mem_ofPred_eq, Set.mem_image]
+    exact ⟨fun ⟨v, he, hv⟩ => ⟨v, hv, he.symm⟩, fun ⟨v, hv, he⟩ => ⟨v, he.symm, hv⟩⟩
+  rw [heq]
+  exact measurableEmbedding_ofVal.measurableSet_image' hφ
+
+/-- The set of configurations whose expression is a value satisfying `φ` is measurable. -/
+theorem measurableSet_TglCfgSet {rT : Type _} [LawfulProbLangℝ rT] {φ : Val rT → Prop}
+    (hφ : MeasurableSet {v : Val rT | φ v}) :
+    MeasurableSet {ρ : Cfg rT | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v} :=
+  (measurableSet_ofValSet hφ).preimage Cfg.measurable_expr
 
 end ProbLang

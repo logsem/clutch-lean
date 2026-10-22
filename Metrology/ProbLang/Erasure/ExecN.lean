@@ -15,7 +15,7 @@ namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
-open MeasureTheory MeasureTheory.Measure ProbLang.Measure
+open MeasureTheory MeasureTheory.Measure
 open Cfg Exp State Ectx Pat
 open List (cons_append nil_append)
 open ProbLang.Option (unwrapM)

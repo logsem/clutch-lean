@@ -118,36 +118,6 @@ theorem Exp.subst_subst_ne {e v v' : Exp α} {x y : Var}
     Exp.subst (Exp.subst e x v) y v' = Exp.subst (Exp.subst e y v') x v := by
   rw [Exp.subst_subst hne hxv', Exp.subst_fresh y v v' hyv]
 
-/-! ### α-renaming
-
-Used by the binder cases of the Soundness precongruence to rename an atom `x ↦ .fvar y`. -/
-
-/-- `e[x ↦ y][y ↦ w] = e[x ↦ w]` for `y` fresh in `e`. -/
-theorem Exp.subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
-    Exp.subst (Exp.subst e x (.fvar y)) y w = Exp.subst e x w := by
-  induction e with
-  | fvar z =>
-    by_cases h1 : x = z
-    · subst h1
-      simp [Exp.subst]
-    · have hyz : y ≠ z := fun h => hyv (h ▸ by simp [Exp.fv])
-      simp [Exp.subst, h1, hyz]
-  | bvar _ | lit _ | fail | urand => rfl
-  | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
-    have hyv' : y ∉ e.fv := fun h => hyv (by simpa [Exp.fv] using h)
-    simp [Exp.subst, ih hyv']
-  | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
-    have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inl h)
-    have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr h)
-    simp [Exp.subst, ih1 hyv1, ih2 hyv2]
-  | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
-    have hyv0 : y ∉ e0.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inl h)
-    have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inl h))
-    have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [Exp.fv]; exact Or.inr (Or.inr h))
-    simp [Exp.subst, ih0 hyv0, ih1 hyv1, ih2 hyv2]
-
 /-! ### Closed substitution maps -/
 
 /-- Every value in `vs` is closed. -/

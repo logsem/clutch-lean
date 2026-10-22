@@ -3,7 +3,6 @@ module
 public import Metrology.Couplings.Examples.AdaptiveRenyi
 public import Metrology.Couplings.Examples.GaussianComposition
 public import Metrology.Couplings.Examples.KLCoinFlips
-public import Metrology.Couplings.Examples.FillKl
 public import Metrology.Couplings.Examples.AdaptiveFillKl
 
 /-! # Examples

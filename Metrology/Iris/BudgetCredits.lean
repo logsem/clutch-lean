@@ -187,7 +187,7 @@ theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} 
       □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ P) -∗ ↯b (s ε') -∗ P) -∗
       ↯b (s ε) -∗ P := by
   iintro #Hexit #Hamp Hε
-  obtain ⟨n, hn⟩ := ErrorCredit.Induction.err_amp_power hε hk
+  obtain ⟨n, hn⟩ := ENNReal.exists_pow_mul_ge_one hε hk
   iinduction n generalizing %ε %hε %hn Hε with
   | zero =>
     simp only [pow_zero, mul_one] at hn

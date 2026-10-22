@@ -21,15 +21,6 @@ namespace LiveEris
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-theorem measurable_litInt_elim (g : Int → ℝ≥0∞) :
-    Measurable (fun e : Exp rT => match e with | .lit (.int n) => g n | _ => 0) := by
-  convert_to Measurable ((fun x => x.getD 0) ∘
-    Option.map ((fun x => x.getD 0) ∘ Option.map g ∘ BaseLit.int.π) ∘ Exp.lit.π (rT := rT))
-  swap; fun_prop
-  ext e
-  cases e <;> try rfl
-  case lit b => cases b <;> rfl
-
 /-- The credit assigned to the outcome of `rand z`: `H n` on the integer `n` in range, else `0`. -/
 def randCredit (z : Int) (H : ℕ → ℝ≥0∞) (ρ : Cfg rT) : ℝ≥0∞ :=
   match ρ.expr with

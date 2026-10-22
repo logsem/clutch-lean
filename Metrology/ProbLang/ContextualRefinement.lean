@@ -424,36 +424,6 @@ def CtxItem.payloadFv : CtxItem rT → Finset Var
   | .randR e1 => e1.fv
   | _ => ∅
 
-/-- Closing a term at an atom introduces no new free variables. -/
-theorem closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
-    (hy : y ∈ (closeRec k x e).fv) : y ∈ e.fv := by
-  induction e generalizing k with
-  | bvar _ => simp [closeRec, fv] at hy
-  | fvar z =>
-      simp [closeRec] at hy
-      by_cases hxz : x = z
-      · rw [ite_eq_left hxz] at hy; simp [fv] at hy
-      · rw [ite_eq_right hxz] at hy; exact hy
-  | lit _ | fail | urand => simp [closeRec, fv] at hy
-  | lam e ih | fix e ih =>
-      simp only [closeRec, fv] at hy ⊢
-      exact ih (k+1) hy
-  | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
-      simp only [closeRec, fv] at hy ⊢
-      exact ih k hy
-  | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
-      simp only [closeRec, fv, mem_union] at hy ⊢
-      exact hy.imp (ih1 k) (ih2 k)
-  | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
-      simp only [closeRec, fv, mem_union] at hy ⊢
-      exact hy.imp (Or.imp (ih0 k) (ih1 k)) (ih2 k)
-
-/-- Closing a term introduces no new free variables. -/
-theorem close_fv_subset (e : Exp α) (x : Var) : (close e x).fv ⊆ e.fv :=
-  fun y hy => closeRec_fv_subset e x 0 y hy
-
 /-- Filling a frame adds at most the free variables stored in the frame. -/
 theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     (k.fill body).fv ⊆ k.payloadFv ∪ body.fv := by

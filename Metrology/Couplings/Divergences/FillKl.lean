@@ -1,5 +1,6 @@
 module
 
+public import Metrology.Couplings.Codensity
 public import Metrology.Couplings.Divergences.Fill
 public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.Kl
@@ -8,7 +9,9 @@ public import Metrology.Couplings.Divergences.Kl
 # Filled KL
 
 `fill klDivergence` (Rocq `FillDiv` at KL) is equivalent to the Donsker–Varadhan test bound
-`KlDualBound` (`fill_kl_iff`), from which its divergence laws follow.
+`KlDualBound` (`fill_kl_iff`), from which its divergence laws follow. Its codensity lifting has
+every lifting law (`codensity_fill_kl_laws`), and lifts of equality read back as KL bounds
+(`klDiv_le_of_codensity_fill_kl`).
 -/
 
 @[expose] public section
@@ -547,6 +550,46 @@ instance isLeftContinuous_fill_kl : (fill klDivergence.{u}).IsLeftContinuous whe
 /-- Filled KL has closed budgets. -/
 instance isBudgetClosed_fill_kl : (fill klDivergence.{u}).IsBudgetClosed where
   of_forall_gt h := fill_kl_iff.2 (klDualBound_of_forall_gt fun _ hr ↦ fill_kl_iff.1 (h _ hr))
+
+/-! ## The codensity lifting of filled KL -/
+
+section Codensity
+
+variable {b : ℝ≥0∞}
+
+/-- The codensity lifting of filled KL is lawful, binds, is reflexive, support local, top absorbing,
+zero-left, left continuous, sound, complete and budget closed. -/
+theorem codensity_fill_kl_laws :
+    (codensity (fill klDivergence.{u})).IsLawful ∧ (codensity (fill klDivergence.{u})).HasBind ∧
+      GradedLifting.IsReflexive (codensity (fill klDivergence.{u})) ∧
+      (codensity (fill klDivergence.{u})).IsSupportLocal ∧
+      (codensity (fill klDivergence.{u})).IsTopAbsorbing ∧
+      GradedLifting.IsZeroLeft (codensity (fill klDivergence.{u})) ∧
+      GradedLifting.IsLeftContinuous (codensity (fill klDivergence.{u})) ∧
+      (codensity (fill klDivergence.{u})).IsSound (fill klDivergence) ∧
+      (codensity (fill klDivergence.{u})).IsComplete (fill klDivergence) ∧
+      GradedLifting.IsBudgetClosed (codensity (fill klDivergence.{u})) :=
+  ⟨inferInstance, inferInstance, inferInstance, inferInstance, inferInstance, inferInstance,
+    inferInstance, inferInstance, inferInstance, inferInstance⟩
+
+/-- The filled-KL lifting of equality is filled KL. -/
+theorem codensity_fill_kl_rel_eq_iff [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
+    (codensity (fill klDivergence)).Rel b (· = ·) μ ν ↔ fill klDivergence b μ ν :=
+  codensity_rel_eq_iff
+
+/-- Between probability measures, the filled-KL lifting of equality is KL. -/
+theorem codensity_fill_kl_rel_eq_iff_of_isProbabilityMeasure [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] :
+    (codensity (fill klDivergence)).Rel b (· = ·) μ ν ↔ klDivergence b μ ν :=
+  codensity_fill_kl_rel_eq_iff.trans fill_kl_iff_of_isProbabilityMeasure
+
+/-- A filled-KL lifting of equality from a terminating program bounds Mathlib's KL divergence
+(compare `klDiv_le_of_markovCodensity`). -/
+theorem klDiv_le_of_codensity_fill_kl [IsProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+    (h : (codensity (fill klDivergence)).Rel b (· = ·) μ ν) : klDiv μ ν ≤ b :=
+  klDiv_le_of_fill (codensity_sound h)
+
+end Codensity
 
 end GradedDivergence
 
