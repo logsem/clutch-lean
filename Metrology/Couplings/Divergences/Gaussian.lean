@@ -81,10 +81,6 @@ theorem gaussianPDFReal_le_exp_mul {a a' r ε x : ℝ} (hr : 0 < r) (hε : 0 ≤
         = ((x - a') ^ 2 - (x - a) ^ 2) / (2 * v) + -(x - a') ^ 2 / (2 * v) := by ring
     _ ≤ ε + -(x - a') ^ 2 / (2 * v) := by linarith
 
-end ProbabilityTheory
-
-namespace Real
-
 /-! ## Numeric facts behind the tail bound -/
 
 /-- The constant `0.66` exceeds `√(e / (2π))`, the slack in the Gaussian tail bound. -/
@@ -129,7 +125,7 @@ theorem gaussian_tail_le {h c δ : ℝ} (hh : c - 1 / (2 * c) ≤ h) (hc : (1 + 
     _ ≤ 0.66 * (δ / 0.66) := mul_le_mul sqrt_exp_one_div_two_pi_le hexp (exp_pos _).le (by norm_num)
     _ = δ := by field_simp
 
-end Real
+end ProbabilityTheory
 
 namespace GradedDivergence
 

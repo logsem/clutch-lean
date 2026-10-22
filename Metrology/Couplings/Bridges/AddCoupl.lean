@@ -32,7 +32,7 @@ theorem expCoupl_iff_codensity_tv [IsSubProbabilityMeasure μ] {E : X → Y → 
     ExpCoupl δ E μ ν ↔ tv.codensity δ E μ ν :=
   ⟨codensity_tv_iff.2, expCoupl_of_codensity_tv⟩
 
-/-- An additive coupling is a coupling in expectation for the relation's leftover. -/
+/-- Additive couplings are couplings in expectation at the relation's leftover cost. -/
 theorem addCoupl_iff_expCoupl_relCost {S : Set (X × Y)} :
     AddCoupl δ S μ ν ↔ ExpCoupl δ (relCost fun x y ↦ (x, y) ∈ S) μ ν := by
   refine ⟨fun h f g hf hg hf1 hg1 hfg ↦ h ⟨f, hf, hf1⟩ ⟨g, hg, hg1⟩ fun {x y} hxy ↦ ?_, ?_⟩
@@ -64,16 +64,15 @@ theorem expCoupl_of_addCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasu
     (HY : ∀ a b, R a b → c a b ≤ ε₂) (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} μ ν) :
     ExpCoupl δ c μ ν :=
   fun f g hf hg hf1 hg1 hfg ↦
-    (expCoupl_iff_codensity_tv.2
-      ((addCoupl_iff_codensity_tv.1 Hcpl).frame_le_of_isTopAbsorbing HY)
-        f g hf hg hf1 hg1 hfg).trans (by gcongr)
+    (expCoupl_of_codensity_tv
+      ((addCoupl_iff_codensity_tv.1 Hcpl).frame_le_of_isTopAbsorbing HY) f g hf hg hf1 hg1
+        hfg).trans (by gcongr)
 
 /-- Adding a constant to the cost of a coupling in expectation adds it to the bound. -/
-theorem expCoupl_add_const [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    {c : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞}
+theorem expCoupl_add_const [IsSubProbabilityMeasure μ] {c : X → Y → ℝ≥0∞} {ε₁ ε₂ : ℝ≥0∞}
     (Hε : ε₁ + ε₂ ≤ δ) (H : ExpCoupl ε₁ c μ ν) : ExpCoupl δ (fun a b ↦ c a b + ε₂) μ ν :=
   fun f g hf hg hf1 hg1 hfg ↦
-    (expCoupl_iff_codensity_tv.2 (IsTopAbsorbing.frame (expCoupl_iff_codensity_tv.1 H))
+    (expCoupl_of_codensity_tv (IsTopAbsorbing.frame (expCoupl_iff_codensity_tv.1 H))
       f g hf hg hf1 hg1 hfg).trans (by gcongr)
 
 /-- A total variation lifting may assume the right sample lies in a set carrying `ν`.

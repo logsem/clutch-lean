@@ -137,8 +137,8 @@ instance isSound_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGrade
 
 /-- A codensity lifting of equality gives the divergence within its budget. -/
 theorem codensity_sound [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded] [D.IsReflexive]
-    {μ ν : Measure X} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    (h : (codensity D).Rel b (· = ·) μ ν) : D b μ ν :=
+    {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
+    (h : (codensity D).Rel b (· = ·) μ₁ μ₂) : D b μ₁ μ₂ :=
   IsSound.sound (D := D) h
 
 /-- The codensity lifting of a divergence is complete for it exactly when the divergence is
@@ -159,15 +159,15 @@ instance isComplete_codensity [AddZeroClass B] [Preorder B] [CanonicallyOrderedA
 
 /-- The divergence within a budget gives a codensity lifting of equality within it. -/
 theorem codensity_complete [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B] [OrderTop B]
-    [D.IsGraded] [D.IsComposable] {μ ν : Measure X} [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : D b μ ν) : (codensity D).Rel b (· = ·) μ ν :=
+    [D.IsGraded] [D.IsComposable] {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
+    [IsSubProbabilityMeasure μ₂] (h : D b μ₁ μ₂) : (codensity D).Rel b (· = ·) μ₁ μ₂ :=
   IsComplete.complete h
 
 /-- For a reflexive, composable divergence, the codensity lifting of equality is the divergence. -/
 theorem codensity_rel_eq_iff [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
-    [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] {μ ν : Measure X}
-    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
-    (codensity D).Rel b (· = ·) μ ν ↔ D b μ ν :=
+    [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] {μ₁ μ₂ : Measure X}
+    [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂] :
+    (codensity D).Rel b (· = ·) μ₁ μ₂ ↔ D b μ₁ μ₂ :=
   ⟨codensity_sound, codensity_complete⟩
 
 /-! ## Lifting classes from divergence classes -/
@@ -252,15 +252,14 @@ instance isTopAbsorbing_codensity [Add B] [Preorder B] [Top B] [CanonicallyOrder
     (codensity D).IsTopAbsorbing :=
   ⟨codensity_top⟩
 
-/-- A left measure of mass at most `δ` is related to everything at the slack `s δ`: every test
-output has mass at most `δ`. -/
+/-- A left measure of mass at most `δ` is related to everything at the slack `s δ`, so every test's
+mass is within `δ`. -/
 theorem codensity_of_measure_univ_le [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
     [Top B] [D.IsGraded] {s : ℝ≥0∞ →+o B} [D.HasSlack s] {δ : ℝ≥0∞} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (hμ : μ Set.univ ≤ δ) : D.codensity (s δ) R μ ν := by
   intro I _ c _ k l _ _ _
   refine IsGraded.mono le_self_add (HasSlack.of_forall_le fun S _ ↦ ?_)
-  calc (k ∘ₘ μ) S
-      ≤ μ Set.univ := by
+  calc (k ∘ₘ μ) S ≤ μ Set.univ := by
         rw [bind_apply ‹_› k.measurable.aemeasurable]
         exact lintegral_le_meas (fun _ ↦ IsSubProbabilityMeasure.measure_le_one _) (by simp)
     _ ≤ (l ∘ₘ ν) S + δ := hμ.trans le_add_self

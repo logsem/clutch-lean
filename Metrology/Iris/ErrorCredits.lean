@@ -76,7 +76,7 @@ instance {ε : ErrorCredit} : CMRA.Cancelable ε where
     rintro rfl; simp at h1
 
 /-- A local update of error credits that moves credits between the two sides. -/
-theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
+theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
   rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, CMRA.op]
   · rintro H rfl
@@ -85,8 +85,7 @@ theorem ErrorCredit.localUpdate {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : 
     exact ⟨Std.lt_of_le_of_lt h1 H, rfl⟩
   · rintro H rfl
     have hnt : ε₂ ≠ ∞ := by rintro rfl; simp at H
-    obtain rfl : (ε + ε₂') = ε₁' :=
-      ENNReal.add_left_inj hnt |>.mp (.trans (add_rotate ..).symm h2)
+    obtain rfl : (ε + ε₂') = ε₁' := ENNReal.add_left_inj hnt |>.mp (.trans (add_rotate ..).symm h2)
     refine ⟨?_, by grind⟩
     refine Std.lt_of_le_of_lt ?_ H
     rw [add_comm]
@@ -98,6 +97,8 @@ instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
+
+instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
 
 /-- Ghost-state resource for error credits. -/
 class ECPreGS (GF : BundledGFunctors) where
@@ -115,13 +116,11 @@ variable {GF : BundledGFunctors} [IEC : ECGS GF]
 
 /-- Authoritative total of error credits, written `●↯ ε`. -/
 def ecAuth (ε : ℝ≥0∞) : IProp GF := iOwn (E := IEC.ec) IEC.γec (● ε)
+
 /-- Ownership of `ε` error credits, written `↯ε`. -/
 def ec (ε : ℝ≥0∞) : IProp GF := iOwn (E := IEC.ec) IEC.γec (◯ ε)
 notation "↯ " r:50 => ec r
 notation "●↯ " r:50 => ecAuth r
-
-instance : CMRA.Discrete (Auth ErrorCredit) := by infer_instance
-instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
 
 end Resources
 
@@ -136,7 +135,7 @@ local bi IProp GF
 theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢ ↯ε₂ := by simp [he]
 
 /-- Equal authoritative totals are interchangeable. -/
-theorem extAuth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢ ●↯ ε₂ := by simp [he]
+theorem ext_auth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢ ●↯ ε₂ := by simp [he]
 
 /-- Credits split additively. -/
 theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
@@ -159,6 +158,7 @@ theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢ ↯(ε₁ + ε₂) := 
   icombine H1 H2 as Hε
   iexact Hε
 
+/-- Credit ownership combines by addition under `icombine`. -/
 instance {ε₁ ε₂} : Iris.ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯ε₂) (↯(ε₁ + ε₂)) where
   combine_sep_as := combine
 
@@ -182,7 +182,7 @@ theorem supply_decrease {εₛ ε} : ⊢ ●↯ εₛ -∗ ↯ε -∗ |==> ●�
   ihave Hc := iOwn_op |>.mpr $$ [$Hs $Hε]
   refine iOwn_update <| Auth.auth_update_dealloc ?_
   simp only [UCMRA.unit]
-  refine localUpdate zero_le ?_
+  refine local_update zero_le ?_
   simpa [add_zero] using (tsub_add_cancel_of_le hle).symm
 
 /-- Allocating `ε₂` credits increases the authoritative total, while it stays below `1`. -/
@@ -192,7 +192,7 @@ theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
   have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
     simp only [CMRA.Valid, CMRA.op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
-    exact fun _ => ⟨h, add_comm _ _⟩
+    exact fun _ ↦ ⟨h, add_comm _ _⟩
   iintro Hε
   imod (iOwn_update hupd) $$ Hε with H
   imodintro
@@ -221,6 +221,7 @@ theorem contradict {ε : ℝ≥0∞} (h : 1 ≤ ε) : ↯ε ⊢ False := by
   ihave %hle := valid $$ Hε
   exact absurd h (Std.not_le.mpr hle)
 
+/-- Error credits are timeless. -/
 instance ec_timeless (ε : ℝ≥0∞) : BI.Timeless (↯ε : IProp GF) := iOwn_timeless
 
 /-! ## Error amplification
@@ -324,8 +325,7 @@ theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < �
 
 /-- Amplification, with the amplification step quantified over every positive `ε'`. -/
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
-    □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P)
-      ⊢ ↯ε -∗ P := by
+    □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P) ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
   obtain ⟨n, hn⟩ := err_amp_power hε hk
   iinduction n generalizing %ε %hε %hn Hε with

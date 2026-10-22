@@ -6,6 +6,6 @@ public import Metrology.Couplings.Examples.KLCoinFlips
 public import Metrology.Couplings.Examples.FillKl
 public import Metrology.Couplings.Examples.AdaptiveFillKl
 
-/-! Worked examples of the graded-lifting hierarchy on concrete mechanisms. -/
+/-! # Examples
 
-@[expose] public section
+Worked examples of the graded-lifting hierarchy on concrete mechanisms. -/

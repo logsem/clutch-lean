@@ -13,12 +13,10 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 noncomputable section ProbLangMeasures
 
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang
-
 /-! # Measurable space on patterns
 
-The σ-algebra on `Pat`, derived with the `MeasurableSpace` deriver (`CylinderGen.lean`), which
-also generates `Shape`, `Leaves` and their measurability lemmas. -/
+The σ-algebra on `Pat`, derived with the `MeasurableSpace` deriving handler (`CylinderGen.lean`),
+which also generates `Shape`, `Leaves` and their measurability lemmas. -/
 
 namespace ProbLang.Pat
 

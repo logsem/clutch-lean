@@ -13,8 +13,6 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 noncomputable section ProbLangMeasures
 
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang
-
 /-! # Measurable space on evaluation-context items
 
 Gives `EctxItem` (one frame of an evaluation context `Ectx`) its σ-algebra by `deriving`. -/

@@ -23,6 +23,7 @@ noncomputable abbrev coin : Measure Bool := bernoulliMeasure true false p
 noncomputable def flipAgain : Kernel Bool (Bool × Bool) :=
   ⟨fun a ↦ (coin p).map (a, ·), .of_discrete⟩
 
+/-- Each second flip is a probability measure. -/
 instance isMarkovKernel_flipAgain : IsMarkovKernel (flipAgain p) :=
   ⟨fun _ ↦ (isProbabilityMeasure_map_iff (by fun_prop)).2 inferInstance⟩
 
@@ -40,9 +41,7 @@ theorem flipAgain_rel (a : Bool) : (markovCodensity klDivergence).Rel (klDiv (co
       · simp
       · simp [relCost_of_not h]
 
-/-- The KL divergence between two flips of a `p`-coin and of a `q`-coin is at most twice that
-between one flip of each, by `BindLaw.kl`; its mass side condition holds since coin flips lose
-no mass. -/
+/-- Two flips cost at most twice the KL divergence of one flip, by the KL bind law. -/
 theorem klDiv_two_flips_le :
     klDiv (flipAgain p ∘ₘ coin p) (flipAgain q ∘ₘ coin q) ≤ 2 * klDiv (coin p) (coin q) := by
   rw [two_mul]

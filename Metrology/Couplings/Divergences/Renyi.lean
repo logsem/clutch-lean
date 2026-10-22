@@ -14,9 +14,9 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology
 open scoped ENNReal
+open Real ENNReal
 
 namespace ProbabilityTheory
-open Real ENNReal
 
 variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 
@@ -26,13 +26,13 @@ variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 noncomputable def renyiDiv (α : ℝ) (μ ν : Measure X) : EReal :=
   ((α - 1)⁻¹ : ℝ) * ENNReal.log (fDiv (· ^ α) μ ν).toENNReal
 
+/-- The `α`-moment divergence is nonnegative. -/
 theorem fDiv_rpow_nonneg {μ ν : Measure X} : 0 ≤ fDiv (· ^ α) μ ν :=
   fDiv_nonneg_of_nonneg fun _ ht ↦ rpow_nonneg ht α
 
 end ProbabilityTheory
 
 namespace GradedDivergence
-open Real ENNReal
 
 /-! ## The moment threshold `e^{(α-1)ρ}` -/
 
@@ -46,20 +46,24 @@ noncomputable def renyiThresh (α : ℝ) (ρ : ℝ≥0∞) : EReal :=
 
 /-- For finite `ρ` and `1 ≤ α`, the Rényi threshold is `exp ((α - 1) * ρ)`. -/
 theorem renyiThresh_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
-    renyiThresh α ρ = ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
+    renyiThresh α ρ = ((exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
   rw [renyiThresh, expBudget_of_ne_top (by finiteness), toReal_mul,
     toReal_ofReal (sub_nonneg.2 hα), EReal.coe_ennreal_ofReal, max_eq_left (exp_pos _).le]
 
+/-- The Rényi threshold at `⊤` is `⊤`. -/
 theorem renyiThresh_top (hα : 1 < α) : renyiThresh α ⊤ = ⊤ := by
   simp [renyiThresh, mul_top (ofReal_pos.2 (sub_pos.2 hα)).ne']
 
+/-- The Rényi threshold at budget `0` is `1`. -/
 @[simp]
 theorem renyiThresh_zero : renyiThresh α 0 = 1 := by
   simp [renyiThresh]
 
+/-- The Rényi threshold is monotone in the budget. -/
 theorem renyiThresh_mono : Monotone (renyiThresh α) := fun _ _ h ↦
   EReal.coe_ennreal_le_coe_ennreal_iff.2 (expBudget_mono (by gcongr))
 
+/-- The Rényi threshold is nonnegative. -/
 theorem renyiThresh_nonneg : 0 ≤ renyiThresh α ρ :=
   EReal.coe_ennreal_nonneg _
 
@@ -99,9 +103,10 @@ theorem renyiDivergence_iff : renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ 
 
 /-- At a finite budget, the Rényi divergence bound is the `α`-th moment bound. -/
 theorem renyiDivergence_iff_of_ne_top (hα : 1 ≤ α) (hρ : ρ ≠ ⊤) :
-    renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((Real.exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
+    renyiDivergence α ρ μ ν ↔ fDiv (· ^ α) μ ν ≤ ((exp ((α - 1) * ρ.toReal) : ℝ) : EReal) := by
   rw [renyiDivergence_iff, renyiThresh_of_ne_top hα hρ]
 
+/-- Every pair of measures is within the Rényi budget `⊤`. -/
 theorem renyiDivergence_top (hα : 1 < α) (μ ν : Measure X) : renyiDivergence α ⊤ μ ν :=
   renyiDivergence_iff.2 (renyiThresh_top hα ▸ le_top)
 
@@ -117,12 +122,12 @@ theorem renyiDivergence_iff_renyiDiv_le (hα : 1 < α) :
 end GradedDivergence
 
 namespace ProbabilityTheory
-open Real ENNReal
 
 /-! ## Support: the weight `t ↦ t ^ α` -/
 
 variable {X : Type*} [MeasurableSpace X] {α : ℝ}
 
+/-- The map `t ↦ t ^ α` is continuous within `[0, ∞)` at `0` for `α > 0`. -/
 theorem continuousWithinAt_rpow_zero (hα : 0 < α) :
     ContinuousWithinAt (· ^ α : ℝ → ℝ) (Ici 0) 0 :=
   (continuousAt_rpow_const 0 α (.inr hα.le)).continuousWithinAt
@@ -142,14 +147,17 @@ theorem persp_rpow_of_pos (α : ℝ) {p q : ℝ} (hq : 0 < q) :
 theorem persp_rpow_zero_right (hα : 1 < α) {p : ℝ} (hp : 0 < p) : persp (· ^ α) p 0 = ⊤ := by
   rw [persp_zero_right, derivAtTop_rpow hα, EReal.coe_mul_top_of_pos hp]
 
+/-- The perspective of `t ↦ t ^ α` at `(0, q)` is `0`. -/
 theorem persp_rpow_zero_left (hα : 0 < α) {q : ℝ} (hq : 0 ≤ q) : persp (· ^ α) 0 q = 0 := by
   rcases hq.eq_or_lt with rfl | hq
   · simp
   · simp [persp_rpow_of_pos α hq, zero_rpow hα.ne']
 
+/-- The perspective of `t ↦ t ^ α` is nonnegative. -/
 theorem persp_rpow_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) : 0 ≤ persp (· ^ α) p q :=
   persp_nonneg (fun _ ht ↦ rpow_nonneg ht α) hp hq
 
+/-- The perspective of `t ↦ t ^ α` is positive at a positive first argument. -/
 theorem persp_rpow_pos (hα : 1 < α) {x y : ℝ} (hx : 0 < x) (hy : 0 ≤ y) :
     0 < persp (· ^ α) x y := by
   rcases hy.eq_or_lt with rfl | hy
@@ -183,6 +191,7 @@ theorem mul_div_rpow_eq_rpow_mul_rpow_sub {p r : ℝ} (hp : 0 ≤ p) (hr : 0 < r
   rw [Real.div_rpow hp hr.le, Real.rpow_sub hr, Real.rpow_one]
   field_simp
 
+/-- The perspective of `t ↦ t ^ α` is antitone in its second argument. -/
 theorem persp_rpow_anti_right (hα : 1 < α) {p q q' : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) (h : q ≤ q') :
     persp (· ^ α) p q' ≤ persp (· ^ α) p q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -193,9 +202,9 @@ theorem persp_rpow_anti_right (hα : 1 < α) {p q q' : ℝ} (hp : 0 ≤ p) (hq :
       exact le_top
   rw [persp_rpow_of_pos α (hq.trans_le h), persp_rpow_of_pos α hq, EReal.coe_le_coe_iff,
     mul_div_rpow_eq_rpow_mul_rpow_sub hp (hq.trans_le h), mul_div_rpow_eq_rpow_mul_rpow_sub hp hq]
-  exact mul_le_mul_of_nonneg_left
-    (rpow_le_rpow_of_nonpos hq h (by linarith)) (rpow_nonneg hp α)
+  exact mul_le_mul_of_nonneg_left (rpow_le_rpow_of_nonpos hq h (by linarith)) (rpow_nonneg hp α)
 
+/-- The perspective of `t ↦ t ^ α` is monotone in its first argument. -/
 theorem persp_rpow_mono_left (hα : 1 < α) {p p' q : ℝ} (hp : 0 ≤ p) (h : p ≤ p') (hq : 0 ≤ q) :
     persp (· ^ α) p q ≤ persp (· ^ α) p' q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -209,8 +218,7 @@ theorem persp_rpow_mono_left (hα : 1 < α) {p p' q : ℝ} (hp : 0 ≤ p) (h : p
 
 /-- For `b > 0`, `(e^{(α - 1) r} / b)^{1/α} * b = e^{(α - 1) r / α} b^{(α - 1) / α}`. -/
 theorem rpow_inv_exp_div_mul_eq (hα : 1 < α) {b : ℝ} (hb : 0 < b) (r : ℝ) :
-    (Real.exp ((α - 1) * r) / b) ^ α⁻¹ * b =
-      Real.exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
+    (exp ((α - 1) * r) / b) ^ α⁻¹ * b = exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
   have hα0 : 0 < α := zero_lt_one.trans hα
   rw [div_rpow (exp_pos _).le hb.le, ← exp_mul, div_mul_eq_mul_div, mul_div_assoc,
     show (α - 1) / α = 1 - α⁻¹ by field_simp, Real.rpow_sub hb, Real.rpow_one]
@@ -220,8 +228,8 @@ theorem rpow_inv_exp_div_mul_eq (hα : 1 < α) {b : ℝ} (hb : 0 < b) (r : ℝ) 
 /-- A perspective bound by `e^{(α - 1) r}` is the Hölder bound
 `a ≤ e^{(α - 1) r / α} b^{(α - 1) / α}`. -/
 theorem persp_rpow_le_exp_iff (hα : 1 < α) {a b r : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
-    persp (· ^ α) a b ≤ ((Real.exp ((α - 1) * r) : ℝ) : EReal) ↔
-      a ≤ Real.exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
+    persp (· ^ α) a b ≤ ((exp ((α - 1) * r) : ℝ) : EReal) ↔
+      a ≤ exp ((α - 1) / α * r) * b ^ ((α - 1) / α) := by
   have hα0 : 0 < α := zero_lt_one.trans hα
   rcases hb.eq_or_lt with rfl | hb
   · rw [zero_rpow (div_ne_zero (sub_ne_zero.2 hα.ne') hα0.ne'), mul_zero]
@@ -285,20 +293,17 @@ theorem fDiv_rpow_comp_le (hα : 1 < α) {M N : ℕ} (μ₁ μ₂ : Measure (ULi
         rw [Finset.sum_comm]
         exact Finset.sum_congr rfl fun j _ ↦ persp_rpow_mul_sum hα toReal_nonneg toReal_nonneg
           (fun _ ↦ toReal_nonneg) fun _ ↦ toReal_nonneg
-    _ ≤ ∑ j, persp (· ^ α) (μ₁ {j}).toReal (μ₂ {j}).toReal *
-          ⨆ j, fDiv (· ^ α) (κ j) (η j) := by
+    _ ≤ ∑ j, persp (· ^ α) (μ₁ {j}).toReal (μ₂ {j}).toReal * ⨆ j, fDiv (· ^ α) (κ j) (η j) := by
         refine Finset.sum_le_sum fun j _ ↦ mul_le_mul_of_nonneg_left ?_ hP
         rw [← fDiv_eq_sum hf hf_cont]
         exact le_iSup (fun j ↦ fDiv (· ^ α) (κ j) (η j)) j
-    _ = (∑ j, persp (· ^ α) (μ₁ {j}).toReal (μ₂ {j}).toReal) *
-          ⨆ j, fDiv (· ^ α) (κ j) (η j) := by
+    _ = (∑ j, persp (· ^ α) (μ₁ {j}).toReal (μ₂ {j}).toReal) * ⨆ j, fDiv (· ^ α) (κ j) (η j) := by
         rw [mul_comm, EReal.mul_finset_sum_of_nonneg _ _ fun _ _ ↦ hP]
         simp_rw [mul_comm]
 
 end ProbabilityTheory
 
 namespace GradedDivergence
-open Real ENNReal
 
 variable {X : Type u} [MeasurableSpace X] {α : ℝ} {ρ : ℝ≥0∞} {μ ν : Measure X}
 

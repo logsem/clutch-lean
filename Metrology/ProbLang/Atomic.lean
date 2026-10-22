@@ -17,7 +17,21 @@ namespace ProbLang
 
 /-! ## The two notions -/
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
+
+private theorem store_decompItem (l : Loc) (v : Val rT) :
+    (Exp.store pl(#loc l) v.1).decompItem = none := by
+  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
+  show (v.1.toVal?.casesOn _ _ : Option _) = none
+  rw [hv]
+  rfl
+
+private theorem alloc_decompItem (v : Val rT) : (Exp.alloc v.1).decompItem = none := by
+  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
+  show (v.1.toVal?.casesOn _ _ : Option _) = none
+  rw [hv]
+
+variable [LawfulProbLangℝ rT]
 
 /-- The step measure is concentrated on value configurations: the form the program logic
 consumes (`Micrometer.OpenInv.of_atomic`), which also covers `urand`. -/
@@ -29,21 +43,9 @@ def Atomic (e : Exp rT) : Prop :=
 def Discrete.Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
-omit [LawfulProbLangℝ rT] in
-private theorem store_decompItem (l : Loc) (v : Val rT) :
-    (Exp.store pl(#loc l) v.1).decompItem = none := by
-  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
-  show (v.1.toVal?.casesOn _ _ : Option _) = none
-  rw [hv]
-  rfl
-
-omit [LawfulProbLangℝ rT] in
-private theorem alloc_decompItem (v : Val rT) : (Exp.alloc v.1).decompItem = none := by
-  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
-  show (v.1.toVal?.casesOn _ _ : Option _) = none
-  rw [hv]
-
 namespace Discrete.Atomic
+
+variable (z : Int) (l : Loc) (v : Val rT)
 
 /-- `Discrete.Atomic` implies `Atomic` for redexes that are not `urand`; the side condition holds
 by computation at concrete redexes. -/
@@ -66,8 +68,9 @@ private theorem of_headStepSupport {e : Exp rT} (hd : e.decompItem = none)
 
 /-! ## `Discrete.Atomic` for heap and sampling redexes -/
 
+/-- A load is discretely atomic. -/
 @[discrete]
-theorem load (l : Loc) : Discrete.Atomic (rT := rT) pl(!#loc l) :=
+theorem load : Discrete.Atomic (rT := rT) pl(!#loc l) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
     | LoadS _ he' =>
@@ -75,29 +78,32 @@ theorem load (l : Loc) : Discrete.Atomic (rT := rT) pl(!#loc l) :=
       subst he'
       exact v.2.toIsValue
 
+/-- A store of a value is discretely atomic. -/
 @[discrete]
-theorem store (l : Loc) (v : Val rT) :
+theorem store :
     Discrete.Atomic (.store pl(#loc l) v.1) :=
   of_headStepSupport (store_decompItem l v) fun _ _ _ h => by
     cases h with
     | StoreS _ _ _ => exact IsVal.lit.toIsValue
 
+/-- An allocation of a value is discretely atomic. -/
 @[discrete]
-theorem alloc (v : Val rT) : Discrete.Atomic (.alloc v.1) :=
+theorem alloc : Discrete.Atomic (.alloc v.1) :=
   of_headStepSupport (alloc_decompItem v) fun _ _ _ h => by
     cases h with
     | AllocS _ _ _ => exact IsVal.lit.toIsValue
 
-/-- `rand` on the empty tape (`#()`) is atomic. -/
+/-- `rand` on the empty tape (`#()`) is discretely atomic. -/
 @[discrete]
-theorem rand_unit (z : Int) : Discrete.Atomic (rT := rT) pl(rand(#z, #())) :=
+theorem rand_unit : Discrete.Atomic (rT := rT) pl(rand(#z, #())) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
     | RandNoTapeS _ _ _ => exact IsVal.lit.toIsValue
     | RandNonposS _ => exact IsVal.lit.toIsValue
 
+/-- `rand` on a labelled tape is discretely atomic. -/
 @[discrete]
-theorem rand_lbl (z : Int) (l : Loc) :
+theorem rand_lbl :
     Discrete.Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h <;> exact IsVal.lit.toIsValue
@@ -105,6 +111,8 @@ theorem rand_lbl (z : Int) (l : Loc) :
 end Discrete.Atomic
 
 namespace Atomic
+
+variable (z : Int) (l : Loc) (v : Val rT)
 
 /-! ## `Atomic` for the redexes the program logic opens invariants around
 
@@ -114,21 +122,26 @@ section
 -- these lemmas go through the discrete forms but state the non-discrete `Atomic`
 set_option linter.discrete false
 
-theorem load (l : Loc) : Atomic (rT := rT) pl(!#loc l) :=
+/-- A load is atomic. -/
+theorem load : Atomic (rT := rT) pl(!#loc l) :=
   (Discrete.Atomic.load l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
-theorem store (l : Loc) (v : Val rT) : Atomic (.store pl(#loc l) v.1) :=
+/-- A store of a value is atomic. -/
+theorem store : Atomic (.store pl(#loc l) v.1) :=
   (Discrete.Atomic.store l v).toAtomic
     (by rw [Exp.decomp_snd_of_decompItem_none (store_decompItem l v)]; nofun)
 
-theorem alloc (v : Val rT) : Atomic (.alloc v.1) :=
+/-- An allocation of a value is atomic. -/
+theorem alloc : Atomic (.alloc v.1) :=
   (Discrete.Atomic.alloc v).toAtomic
     (by rw [Exp.decomp_snd_of_decompItem_none (alloc_decompItem v)]; nofun)
 
-theorem rand_unit (z : Int) : Atomic (rT := rT) pl(rand(#z, #())) :=
+/-- `rand` on the empty tape (`#()`) is atomic. -/
+theorem rand_unit : Atomic (rT := rT) pl(rand(#z, #())) :=
   (Discrete.Atomic.rand_unit z).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 
-theorem rand_lbl (z : Int) (l : Loc) :
+/-- `rand` on a labelled tape is atomic. -/
+theorem rand_lbl :
     Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
   (Discrete.Atomic.rand_lbl z l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
 

@@ -13,7 +13,7 @@ noncomputable section DPCoupling
 
 open MeasureTheory Measure EReal
 
-/-- The DP error map `x ↦ e^ε x + δ`, where `exp ε` is `expBudget ε` from `Divergences/Dp.lean`. -/
+/-- The DP error map `x ↦ e^ε x + δ`, where `exp ε` is `EReal.exp ↑ε`. -/
 abbrev DPF (ε δ x : ENNReal) := exp ε * x + δ
 
 variable {α β α' β' : Type _}
@@ -66,7 +66,7 @@ theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β
   case Gb => exact min_le_left _ _
   rw [lintegral_bind Hfm.aemeasurable Hf'm.aemeasurable,
       lintegral_bind Hgm.aemeasurable Hg'm.aemeasurable]
-  calc  ∫⁻ a, ∫⁻ (x : α'), f' x ∂f a ∂μₗ
+  calc ∫⁻ a, ∫⁻ (x : α'), f' x ∂f a ∂μₗ
     _ ≤ ∫⁻ a, δ' + F a ∂μₗ := ?_
     _ ≤ δ' + ∫⁻ a, F a ∂μₗ := ?_
     _ ≤ δ' + δ + exp ε * ∫⁻ b, G b ∂μᵣ := ?_

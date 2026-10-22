@@ -81,8 +81,7 @@ class HasSlack [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop whe
     [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] :
     (∀ S, MeasurableSet S → μ S ≤ ν S + δ) → D (s δ) μ ν
 
-/-- Scaled point masses within budget `s δ` differ in mass by at most `δ`, so `s δ` bounds a gap in
-termination probability. -/
+/-- Scaled point masses within budget `s δ` have left mass at most the right mass plus `δ`. -/
 class IsMassDetecting [AddZeroClass B] [Preorder B] (s : ℝ≥0∞ →+o B) : Prop where
   le_add_of {p q δ : ℝ≥0∞} (hp : p ≤ 1) (hq : q ≤ 1) :
     D (s δ) (p • dirac PUnit.unit.{u + 1}) (q • dirac PUnit.unit) → p ≤ q + δ
@@ -163,10 +162,12 @@ variable (D φ) in
 def comap : GradedDivergence.{u} B' :=
   fun b ↦ D (φ b)
 
+/-- Unfolding of the regraded divergence. -/
 theorem comap_def {b : B'} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
     D.comap φ b μ ν ↔ D (φ b) μ ν :=
   Iff.rfl
 
+/-- Regrading twice is regrading along the composite map. -/
 theorem comap_comap {B'' : Type*} {ψ : B'' → B'} : (D.comap φ).comap ψ = D.comap (φ ∘ ψ) :=
   rfl
 
@@ -223,6 +224,7 @@ variable (D) in
 def pi : GradedDivergence.{u} (∀ i, B i) :=
   fun b _ _ μ ν ↦ ∀ i, D i (b i) μ ν
 
+/-- Unfolding of a family of divergences. -/
 theorem pi_def {b : ∀ i, B i} {X : Type u} [MeasurableSpace X] {μ ν : Measure X} :
     pi D b μ ν ↔ ∀ i, D i (b i) μ ν :=
   Iff.rfl

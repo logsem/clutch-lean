@@ -24,7 +24,7 @@ theorem derivAtTop_klFun : derivAtTop klFun = ⊤ := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
   have h : Tendsto (fun t : ℝ ↦ Real.log t + (1 / t - 1)) atTop atTop :=
     Real.tendsto_log_atTop.atTop_add
-      ((tendsto_const_nhds (x := (1 : ℝ))).div_atTop tendsto_id |>.sub_const 1)
+      (tendsto_const_nhds.div_atTop tendsto_id |>.sub_const 1)
   refine h.congr' ?_
   filter_upwards [eventually_gt_atTop 0] with t ht
   rw [klFun]
@@ -57,6 +57,7 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
 `klFun` used to prove the finite chain rule. -/
 noncomputable def klTerm (p q : ℝ) : ℝ := p * Real.log (p / q) + q - p
 
+/-- The perspective of `klFun` is the generalized KL term. -/
 theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
     persp klFun p q = klTerm p q := by
   rcases hq.eq_or_lt with rfl | hq
@@ -65,6 +66,7 @@ theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
   have : q * (p / q) = p := mul_div_cancel₀ p hq.ne'
   linear_combination (Real.log (p / q) - 1) * this
 
+/-- The generalized KL term is nonnegative. -/
 theorem klTerm_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
     0 ≤ klTerm p q := by
   have := persp_nonneg (fun _ ht ↦ klFun_nonneg ht) hp hq
@@ -111,7 +113,7 @@ theorem fDiv_klFun_eq_sum {I : Type*} [Fintype I] [MeasurableSpace I]
   exact .inl (h i (hq.resolve_right (measure_ne_top _ _)))
 
 /-- Chain rule for generalized KL between finite spaces when the two kernels lose the same mass
-at every point (Rocq proves it only at mass `1`, `KL_top_composable_gen` under `FillKL`). -/
+at every point (Rocq `KL_top_composable_gen`). -/
 theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Measure (ULift.{u} (Fin M)))
     [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
     (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N))) [IsSubMarkovKernel κ]
@@ -197,7 +199,7 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
         gcongr
         exact mul_le_of_le_one_left (EReal.toReal_nonneg hd₀) hp1
 
-/-! ## Point masses (used for the counterexample) -/
+/-! ## Scaled point masses -/
 
 /-- Between scaled point masses the `klFun`-divergence is the generalized KL term. -/
 theorem fDiv_klFun_smul_dirac {a b : ℝ≥0∞} (ha : a ≠ ⊤) (hb : b ≠ ⊤) (hab : b = 0 → a = 0) :
@@ -220,6 +222,7 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ ν : Measure
 noncomputable def klDivergence : GradedDivergence.{u} ℝ≥0∞ :=
   bofDivergence klFun 0
 
+/-- The budget bounds the `klFun`-divergence. -/
 theorem klDivergence_iff_fDiv : klDivergence r μ ν ↔ fDiv klFun μ ν ≤ r := by
   rw [klDivergence, bofDivergence_iff, bofThresh_zero_left]
 
@@ -244,8 +247,8 @@ theorem klDivergence_comp_self [IsFiniteMeasure μ] [IsFiniteMeasure ν] (κ : K
 
 /-! ## Composition: equal mass works, general case fails -/
 
-/-- Composition for kernels that lose the same mass at every point, with no filling (Rocq
-`pdiv_chain_KL` needs mass `1`). -/
+/-- Composition of generalized KL for kernels that lose the same mass at every point (Rocq
+`pdiv_chain_KL`). -/
 theorem klDivergence_comp_of_mass_eq {b c : ℝ≥0∞} {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
     [IsSubProbabilityMeasure μ₂] {κ η : Kernel X Y} [IsSubMarkovKernel κ] [IsSubMarkovKernel η]
     (hmass : ∀ x, κ x univ = η x univ) (hμ : klDivergence b μ₁ μ₂)

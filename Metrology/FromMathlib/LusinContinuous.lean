@@ -158,8 +158,7 @@ theorem InternallySmoothClosed.internallySmoothCompact_of_isTightMeasureSet
 
 instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
     μ.InternallySmoothClosed := by
-  have hApprox :
-      ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r →
+  have hApprox : ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r →
         ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r := by
     apply MeasurableSpace.induction_on_inter
       (C := fun A _ ↦ ∀ r, 0 < r → ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r)
@@ -226,15 +225,13 @@ instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
         simp only [mem_iInter, mem_diff, mem_iUnion]
         exact ⟨fun h => ⟨(h 0).1, fun ⟨i, hxi⟩ => (h i).2 hxi⟩,
           fun h i => ⟨h.1, fun hxi => h.2 ⟨i, hxi⟩⟩⟩
-      have hAccum (n : ℕ) :
-          ⋂ j ≤ n, (⋃ i, U i) \ F j = (⋃ i, U i) \ Set.accumulate F n := by
+      have hAccum (n : ℕ) : ⋂ j ≤ n, (⋃ i, U i) \ F j = (⋃ i, U i) \ Set.accumulate F n := by
         ext x
         simp only [Set.accumulate, mem_iInter, mem_diff, mem_iUnion, exists_prop]
         exact ⟨fun h => ⟨(h 0 (Nat.zero_le _)).1, fun ⟨i, hi, hxi⟩ => (h i hi).2 hxi⟩,
           fun h i hi => ⟨h.1, fun hxi => h.2 ⟨i, hi, hxi⟩⟩⟩
       have hlim :
-          Tendsto (fun n ↦ μ (⋂ j ≤ n, (⋃ i, U i) \ F j)) atTop
-            (𝓝 (μ (⋂ i, (⋃ n, U n) \ F i))) :=
+          Tendsto (fun n ↦ μ (⋂ j ≤ n, (⋃ i, U i) \ F j)) atTop (𝓝 (μ (⋂ i, (⋃ n, U n) \ F i))) :=
         tendsto_measure_iInter_le (s := fun n => (⋃ i, U i) \ F n)
           (fun n => ((isOpen_iUnion hU).measurableSet.diff (hF n).measurableSet).nullMeasurableSet)
           ⟨0, by finiteness⟩
@@ -254,8 +251,7 @@ instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
 instance [IsCompletelyPseudoMetrizableSpace α] [SecondCountableTopology α] [BorelSpace α]
     [IsFiniteMeasure μ] :
     μ.InternallySmoothCompact :=
-  InternallySmoothClosed.internallySmoothCompact_of_isTightMeasureSet
-    isTightMeasureSet_singleton
+  InternallySmoothClosed.internallySmoothCompact_of_isTightMeasureSet isTightMeasureSet_singleton
 
 /-- A measure is smooth if measurable sets can be approximated by open sets. -/
 class Smooth (μ : Measure α) : Prop where
@@ -297,7 +293,8 @@ instance [μ.OuterRegular] [SigmaFinite μ] : μ.Smooth where
     refine ⟨⋃ n, U n, isOpen_iUnion ho, ?_⟩
     calc
     _ = μ ((⋃ n, U n) \ A) := by
-      suffices ⋃ i, (spanningSets μ i) ∩ A ⊆ ⋃ i, U i from by simp_all [← iUnion_inter, symmDiff, diff_eq_empty.2]
+      suffices ⋃ i, (spanningSets μ i) ∩ A ⊆ ⋃ i, U i from by
+        simp_all [← iUnion_inter, symmDiff, diff_eq_empty.2]
       exact iUnion_mono'' hsub
     _ ≤ ∑' n, μ (U n \ A) := by simp [iUnion_diff, measure_iUnion_le]
     _ ≤ ∑' n, μ (U n \ (((spanningSets μ n) ∩ A))) := by gcongr; exact inter_subset_right
@@ -336,7 +333,7 @@ theorem _root_.PerfectlyNormalSpace.smooth_of_finiteSpanningSetsInOpen [Perfectl
     refine ⟨⋃ n, U n, isOpen_iUnion ho, ?_⟩
     calc
     _ = μ ((⋃ n, U n) ∆ ⋃ n, hs.set n ∩ A) := by congr; simp [← iUnion_inter, hs.spanning]
-    _ ≤ ∑' n, μ (U n ∆ (hs.set n ∩ A)):= by grw [iUnion_symmDiff_iUnion_subset, measure_iUnion_le]
+    _ ≤ ∑' n, μ (U n ∆ (hs.set n ∩ A)) := by grw [iUnion_symmDiff_iUnion_subset, measure_iUnion_le]
     _ ≤ ∑' (n : ℕ), r * 2 ^ (-1 - n : ℤ) := by gcongr; apply hle
     _ = _ := by simp [ENNReal.tsum_mul_left, ENNReal.tsum_two_zpow_neg_add_one]
 
@@ -347,8 +344,7 @@ theorem Measurable.exists_continuous_restrict (μ : Measure α) [μ.Smooth]
     ∃ s, MeasurableSet s ∧ (μ sᶜ ≤ ε) ∧ ContinuousOn f s := by
   obtain ⟨b, hb⟩ := TopologicalSpace.exists_seq_basis β
   have hm (n : ℕ) := (hb.isOpen (mem_range_self n)).measurableSet.preimage hf
-  have (n : ℕ) : ∃ U, IsOpen U ∧
-    μ (U ∆ (f ⁻¹' (b n))) ≤ ε * 2 ^ (-1 - n : ℤ) := by
+  have (n : ℕ) : ∃ U, IsOpen U ∧ μ (U ∆ (f ⁻¹' (b n))) ≤ ε * 2 ^ (-1 - n : ℤ) := by
     refine Measure.Smooth.smooth (hm n) _ ?_
     exact ENNReal.mul_pos hε.ne.symm (ENNReal.zpow_pos (by simp) (by simp) (-1 - n)).ne.symm
   choose g ho hg using this
@@ -393,8 +389,7 @@ private theorem Measurable.exists_restrict_of_approx (μ : Measure α) [μ.Smoot
   obtain ⟨s, hs, hsμ, hsc⟩ := hf.exists_continuous_restrict μ hε2
   obtain ⟨K, hK, hpK, hKμ⟩ := h_approx hs (ε / 2) hε2
   refine ⟨K, hpK, ?_, hsc.mono hK⟩
-  calc μ Kᶜ
-      ≤ μ sᶜ + μ (s \ K) := by
+  calc μ Kᶜ ≤ μ sᶜ + μ (s \ K) := by
         simp only [compl_eq_univ_diff]
         exact (measure_mono (sdiff_triangle _ s K)).trans (measure_union_le _ _)
     _ ≤ ε / 2 + ε / 2 := add_le_add hsμ hKμ.le
@@ -429,8 +424,7 @@ private theorem Measurable.exists_continuousOn_of_approx [μ.Smooth]
     obtain ⟨s, hs, hsμ, hsc⟩ := hf.exists_continuous_restrict μ hε2
     obtain ⟨K, hK, hpK, hKμ⟩ := h_approx (hA.inter hs) (ε / 2) hε2
     refine ⟨K, hK.trans inter_subset_left, hpK, hsc.mono (hK.trans inter_subset_right), ?_⟩
-    calc μ (A \ K)
-        ≤ μ (A \ (A ∩ s)) + μ ((A ∩ s) \ K) :=
+    calc μ (A \ K) ≤ μ (A \ (A ∩ s)) + μ ((A ∩ s) \ K) :=
           (measure_mono (sdiff_triangle A (A ∩ s) K)).trans (measure_union_le _ _)
       _ ≤ μ sᶜ + μ ((A ∩ s) \ K) := by
           gcongr; intro x ⟨_, hx⟩; exact fun h ↦ hx ⟨‹_›, h⟩
@@ -444,8 +438,7 @@ theorem Measurable.exists_isClosed_continuousOn (μ : Measure α) [μ.Internally
     [OpensMeasurableSpace β] (hf : Measurable f)
     {A : Set α} (hA : MeasurableSet A) (hAμ : μ A ≠ ⊤) {ε : ℝ≥0∞} (hε : 0 < ε) :
     ∃ K ⊆ A, IsClosed K ∧ ContinuousOn f K ∧ μ (A \ K) < ε :=
-  hf.exists_continuousOn_of_approx hA hAμ hε
-    Measure.InternallySmoothClosed.internally_smooth_closed
+  hf.exists_continuousOn_of_approx hA hAμ hε Measure.InternallySmoothClosed.internally_smooth_closed
 
 /-- **Lusin's theorem** (localized, compact) -/
 theorem Measurable.exists_isCompact_continuousOn (μ : Measure α) [T2Space α]

@@ -52,19 +52,25 @@ The `args` are the fields, or for a structural recursion, `f (t_c b)` at the rec
 the shift `shift? = (t_c, ht_c)` if any. `hyp?`, if any, proves the arm measurable (as a function of
 the tuple of its arguments); otherwise it is constant. -/
 structure Arm where
+  /-- The arm, applied to the parameter and the arguments. -/
   arm : Expr
+  /-- The equation of `f` on the constructor. -/
   eq : Expr
+  /-- The proof that the arm is measurable, if it is not constant. -/
   hyp? : Option Expr
+  /-- The shift `t_c` of the parameter at recursive calls, with its measurability. -/
   shift? : Option (Expr × Expr) := none
   deriving Inhabited
 
+variable (ctx : Ctx)
+
 /-- `xs`, which belong to the constructors `cs` in order, as an array indexed by constructor. -/
-def Ctx.spread (ctx : Ctx) (cs : Array Ctor) (xs : Array α) : Array (Option α) :=
+def Ctx.spread (cs : Array Ctor) (xs : Array α) : Array (Option α) :=
   ctx.ctors.map fun c => (cs.findIdx? (·.idx == c.idx)).bind (xs[·]?)
 
 /-- The arms of the constructors, from their `arms` and equations `eqs`, the hypotheses `hs` of
 the constructors `measured`, and the shifts of the constructors `shifted`. -/
-def Ctx.mkArms (ctx : Ctx) (arms eqs : Array Expr) (measured : Array Ctor) (hs : Array Expr)
+def Ctx.mkArms (arms eqs : Array Expr) (measured : Array Ctor) (hs : Array Expr)
     (shifted : Array Ctor := #[]) (shifts : Array (Expr × Expr) := #[]) : Array Arm :=
   let (hOf, shiftOf) := (ctx.spread measured hs, ctx.spread shifted shifts)
   ctx.ctors.map fun c =>
@@ -76,6 +82,7 @@ structure Recursion where
   /-- Structural recursion: the arms take `f` at recursive fields (else: by cases, the arms take
   the fields). -/
   structural : Bool
+  /-- The function. -/
   f : Expr
   /-- The type of the parameter, if `f : β → T → α`. -/
   β? : Option Expr
@@ -90,21 +97,26 @@ def Recursion.domain (r : Recursion) (leaves : Expr) : MetaM Expr :=
   | none => pure leaves
   | some β => mkAppM ``Prod #[β, leaves]
 
+variable (r : Recursion)
+
 /-- An argument of an arm on the leaves of a shape: as the equation takes it, as the arm takes it,
 and a proof that the latter is measurable in the leaves. -/
 structure Arg where
+  /-- The argument as the equation takes it. -/
   field : Expr
+  /-- The argument as the arm takes it. -/
   arm : Expr
+  /-- The proof that `arm` is measurable in the leaves. -/
   measurable : Expr
   deriving Inhabited
 
 /-- `e.symm ⟨s, v⟩`: the value of shape `s` with leaves `v`. -/
-def Ctx.ofLeaves (ctx : Ctx) (s v : Expr) : MetaM Expr := do
+def Ctx.ofLeaves (s v : Expr) : MetaM Expr := do
   mkAppM ``DFunLike.coe #[← mkAppM ``MeasurableEquiv.symm #[ctx.equiv], ← ctx.sigmaMk s v]
 
 /-- `fun v => f (e.symm ⟨s, v⟩)`, or `fun p => f p.1 (e.symm ⟨s, p.2⟩)` with a parameter: the
 function on the leaves of shape `s`. -/
-def Ctx.onLeaves (ctx : Ctx) (r : Recursion) (s : Expr) : MetaM Expr := do
+def Ctx.onLeaves (s : Expr) : MetaM Expr := do
   withLocalDeclD `v (← r.domain (ctx.leaves s)) fun v => do
     let value ← match r.β? with
       | none => pure (mkApp r.f (← ctx.ofLeaves s v))
@@ -116,7 +128,7 @@ def Ctx.onLeaves (ctx : Ctx) (r : Recursion) (s : Expr) : MetaM Expr := do
 /-- The argument of an arm at a recursive field, of value `x := e.symm ⟨s, vi⟩`, where `vi` is
 measurable by `hvi`: for a function by cases, `x` itself; for a structural recursion, `f x`
 (measurable by the motive `ih`), or with a parameter `b`, `f (t_c b) x`. -/
-def Ctx.recursiveArg (ctx : Ctx) (r : Recursion) (shift? : Option (Expr × Expr)) (b? : Option Arg)
+def Ctx.recursiveArg (shift? : Option (Expr × Expr)) (b? : Option Arg)
     (s ih vi hvi : Expr) : MetaM Arg := do
   let x ← ctx.ofLeaves s vi
   if !r.structural then
@@ -135,7 +147,7 @@ def Ctx.recursiveArg (ctx : Ctx) (r : Recursion) (shift? : Option (Expr × Expr)
 
 /-- The arguments of `arm` on the leaves `lv` of shape `c slots`, which are measurable in `v` (by
 `hv`) by `hlv`; with a parameter, the parameter (`v.1`) first. -/
-def Ctx.argsOnLeaves (ctx : Ctx) (r : Recursion) (arm : Arm) (slots : Array ShapeSlot)
+def Ctx.argsOnLeaves (arm : Arm) (slots : Array ShapeSlot)
     (v hv lv hlv : Expr) : MetaM (Array Arg) := do
   let param ← r.β?.mapM fun _ => do
     let (b, hb) ← measurableProj true v hv
@@ -156,7 +168,7 @@ def Ctx.argsOnLeaves (ctx : Ctx) (r : Recursion) (arm : Arm) (slots : Array Shap
 
 /-- On the leaves `v` of shape `c slots`, the function is the arm of `c` applied to its arguments,
 which is measurable by its `hyp?`. -/
-def Ctx.fiberArm (ctx : Ctx) (r : Recursion) (c : Ctor) (slots : Array ShapeSlot) : MetaM Expr := do
+def Ctx.fiberArm (c : Ctor) (slots : Array ShapeSlot) : MetaM Expr := do
   withLocalDeclD `v (← r.domain (← ctx.leavesTy slots)) fun v => do
   let hv ← measurableId v
   let (lv, hlv) ← match r.β? with
@@ -180,7 +192,7 @@ def Ctx.fiberArm (ctx : Ctx) (r : Recursion) (c : Ctor) (slots : Array ShapeSlot
 
 /-- `Measurable f` (or `Measurable (uncurry f)`), from its measurability on the leaves of every
 shape, by induction on shapes. -/
-def Ctx.fiberProof (ctx : Ctx) (r : Recursion) : MetaM Expr := do
+def Ctx.fiberProof : MetaM Expr := do
   -- its induction hypothesis at recursive fields is the `ih` of `Ctx.recursiveArg`
   let motive ← withLocalDeclD `s ctx.shape fun s => do
     mkLambdaFVars #[s] (← mkAppM ``Measurable #[← ctx.onLeaves r s])

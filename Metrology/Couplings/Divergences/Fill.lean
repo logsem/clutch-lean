@@ -2,11 +2,12 @@ module
 
 public import Metrology.Couplings.Divergence
 
-/-! # Filling lost mass
-`withBot` puts the lost mass on a fresh point `none` and `Kernel.dropBot` forgets it (used by
-`BindLaw.massEq`); `fill D` is the Rocq `FillDiv`. Filling before comparing composes whenever `D`
-composes along Markov kernels (`isComposable_onWithBot`); the laws of `fill klDivergence` are in
-`FillKl`. -/
+/-!
+# Filling lost mass
+
+`withBot` puts the lost mass on a fresh point `none`, `Kernel.dropBot` forgets it, and `fill D` is
+the Rocq `FillDiv`.
+-/
 
 @[expose] public section
 
@@ -80,6 +81,7 @@ noncomputable def withBot (κ : Kernel X Y) : Kernel X (Option Y) where
     exact (κ.measurable_coe (measurable_some hs)).add
       ((measurable_const.sub (κ.measurable_coe .univ)).mul_const _)
 
+/-- The filled kernel at `x` is the filled measure `κ x`. -/
 theorem withBot_apply (κ : Kernel X Y) (x : X) : κ.withBot x = (κ x).withBot := rfl
 
 /-- Filling the lost mass makes a sub-Markov kernel Markov. -/
@@ -100,9 +102,9 @@ theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ 
   -- both sides agree on `s`: `some` contributes `κ x s`, `none` contributes `0`
   ext x s hs
   have hm := (dropBot : Kernel (Option Y) Y).measurable_coe hs
-  rw [Kernel.comp_apply' _ _ _ hs, withBot_apply, Measure.withBot, lintegral_add_measure,
+  rw [comp_apply' _ _ _ hs, withBot_apply, Measure.withBot, lintegral_add_measure,
     MeasureTheory.lintegral_map hm measurable_some, lintegral_smul_measure, lintegral_dirac' _ hm]
-  simp only [dropBot, Kernel.coe_mk, Option.elim_none, Option.elim_some, Measure.coe_zero,
+  simp only [dropBot, coe_mk, Option.elim_none, Option.elim_some, Measure.coe_zero,
     Pi.zero_apply, smul_zero, add_zero]
   simp_rw [dirac_apply' _ hs]
   exact lintegral_indicator_one hs
@@ -110,10 +112,9 @@ theorem dropBot_comp_withBot (κ : Kernel X Y) : dropBot ∘ₖ κ.withBot = κ 
 /-- Forgetting `none` on a relabelled measure gives the measure back. -/
 theorem dropBot_comp_map_some (μ : Measure X) : dropBot ∘ₘ μ.map some = μ := by
   ext s hs
-  rw [Measure.bind_apply hs (Kernel.aemeasurable _),
-    MeasureTheory.lintegral_map ((dropBot : Kernel (Option X) X).measurable_coe hs)
-      measurable_some]
-  simp only [dropBot, Kernel.coe_mk, Option.elim_some]
+  rw [Measure.bind_apply hs (aemeasurable _),
+    MeasureTheory.lintegral_map ((dropBot : Kernel (Option X) X).measurable_coe hs) measurable_some]
+  simp only [dropBot, coe_mk, Option.elim_some]
   simp_rw [dirac_apply' _ hs]
   exact lintegral_indicator_one hs
 
@@ -129,7 +130,7 @@ theorem withBot_dropBot_comp (P : Measure (Option X)) [IsProbabilityMeasure P] :
   have : IsSubProbabilityMeasure (dropBot ∘ₘ P) := isSubProbabilityMeasure_bind P _
   refine Measure.ext_option fun s hs hn ↦ ?_
   rw [Measure.withBot_apply_of_none_notMem _ hs hn,
-    Measure.bind_apply (measurable_some hs) (Kernel.aemeasurable _)]
+    Measure.bind_apply (measurable_some hs) (aemeasurable _)]
   have : (fun o ↦ dropBot o (some ⁻¹' s)) = s.indicator 1 := by
     funext o
     cases o with
@@ -142,7 +143,7 @@ theorem withBot_dropBot_comp (P : Measure (Option X)) [IsProbabilityMeasure P] :
 /-- Forgetting `none` undoes filling a measure. -/
 theorem dropBot_comp_withBot' (μ : Measure X) : dropBot ∘ₘ μ.withBot = μ := by
   ext s hs
-  rw [Measure.bind_apply hs (Kernel.aemeasurable _),
+  rw [Measure.bind_apply hs (aemeasurable _),
     Measure.lintegral_withBot _ ((dropBot : Kernel (Option X) X).measurable_coe hs)]
   simp only [dropBot, coe_mk, Option.elim_some, Option.elim_none, Measure.coe_zero, Pi.zero_apply,
     mul_zero, add_zero]
@@ -154,8 +155,10 @@ noncomputable def liftBot (κ : Kernel X Y) : Kernel (Option X) (Option Y) where
   toFun o := o.elim (dirac none) fun x ↦ (κ x).withBot
   measurable' := measurable_option_elim κ.withBot.measurable _
 
+/-- The lifted kernel keeps `none` at `none`. -/
 @[simp] theorem liftBot_none (κ : Kernel X Y) : κ.liftBot none = dirac none := rfl
 
+/-- The lifted kernel fills `κ` at points of the form `some x`. -/
 @[simp] theorem liftBot_some (κ : Kernel X Y) (x : X) : κ.liftBot (some x) = (κ x).withBot := rfl
 
 /-- The filled kernel is Markov. -/
@@ -168,9 +171,9 @@ theorem withBot_comp (κ : Kernel X Y) [IsSubMarkovKernel κ] (μ : Measure X)
     [IsSubProbabilityMeasure μ] : (κ ∘ₘ μ).withBot = κ.liftBot ∘ₘ μ.withBot := by
   have : IsSubProbabilityMeasure (κ ∘ₘ μ) := isSubProbabilityMeasure_bind μ _
   refine Measure.ext_option fun s hs hn ↦ ?_
-  rw [Measure.withBot_apply_of_none_notMem _ hs hn, Measure.bind_apply hs (Kernel.aemeasurable _),
+  rw [Measure.withBot_apply_of_none_notMem _ hs hn, Measure.bind_apply hs (aemeasurable _),
     Measure.lintegral_withBot _ (κ.liftBot.measurable_coe hs),
-    Measure.bind_apply (measurable_some hs) (Kernel.aemeasurable _)]
+    Measure.bind_apply (measurable_some hs) (aemeasurable _)]
   simp [Measure.withBot_apply_of_none_notMem _ hs hn, dirac_apply' _ hs, hn]
 
 end ProbabilityTheory.Kernel

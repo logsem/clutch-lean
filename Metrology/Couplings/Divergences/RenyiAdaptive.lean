@@ -14,6 +14,7 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting
 open scoped ENNReal
+open ENNReal
 
 namespace GradedDivergence
 
@@ -37,7 +38,7 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
   · simpa using renyiDivergence_top hα μ ((expBudget c)⁻¹ • ν)
   have : IsFiniteMeasure ((expBudget c)⁻¹ • ν) := ⟨by
     rw [Measure.smul_apply, smul_eq_mul]
-    exact ENNReal.mul_lt_top (ENNReal.inv_lt_top.2 (zero_lt_one.trans_le (one_le_expBudget c)))
+    exact mul_lt_top (inv_lt_top.2 (zero_lt_one.trans_le (one_le_expBudget c)))
       (measure_lt_top ν _)⟩
   have hf := convexOn_rpow hα.le
   have hf0 := continuousWithinAt_rpow_zero (zero_lt_one.trans hα)
@@ -51,21 +52,21 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
       ∑ i, persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal) n k
       (le_iSup_of_le hk le_rfl)).trans h
   have hs : ((expBudget c)⁻¹).toReal = exp (-c.toReal) := by
-    rw [expBudget_of_ne_top hc, ← ENNReal.ofReal_inv_of_pos (exp_pos _),
-      ENNReal.toReal_ofReal (by positivity), exp_neg]
+    rw [expBudget_of_ne_top hc, ← ofReal_inv_of_pos (exp_pos _),
+      toReal_ofReal (by positivity), exp_neg]
   -- every cell is finite (the sum is bounded by `h`), so we can work in ℝ
   have hfin (i : Fin n) :
       ((persp (· ^ α) (p i) (q i)).toReal : EReal) = persp (· ^ α) (p i) (q i) :=
     have hnn (j : Fin n) : 0 ≤ persp (· ^ α) (p j) (q j) :=
-      persp_rpow_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg
+      persp_rpow_nonneg toReal_nonneg toReal_nonneg
     EReal.coe_toReal (ne_top_of_le_ne_top (EReal.coe_ne_top _)
       ((Finset.single_le_sum (fun j _ ↦ hnn j) (Finset.mem_univ i)).trans hsum))
       (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hnn i))
   -- each cell costs `e^{(α - 1) c}` times more
   have hcell (i : Fin n) : persp (· ^ α) (p i) (((expBudget c)⁻¹ • ν) (k ⁻¹' {i})).toReal =
       ((exp ((α - 1) * c.toReal) * (persp (· ^ α) (p i) (q i)).toReal : ℝ) : EReal) := by
-    rw [Measure.smul_apply, smul_eq_mul, ENNReal.toReal_mul, hs, ← one_mul (p i),
-      persp_rpow_mul hα zero_le_one (exp_pos _).le ENNReal.toReal_nonneg ENNReal.toReal_nonneg,
+    rw [Measure.smul_apply, smul_eq_mul, toReal_mul, hs, ← one_mul (p i),
+      persp_rpow_mul hα zero_le_one (exp_pos _).le toReal_nonneg toReal_nonneg,
       persp_rpow_of_pos α (exp_pos _), one_mul, ← hfin i, ← EReal.coe_mul, EReal.coe_eq_coe_iff,
       one_div, ← exp_neg, neg_neg, ← exp_mul, ← exp_add, EReal.toReal_coe]
     ring_nf
@@ -74,21 +75,13 @@ theorem renyiDivergence_smul_inv_expBudget (hα : 1 < α) {c : ℝ≥0∞} (hc :
     simpa only [hfin] using hsum
   rw [Finset.sum_congr rfl fun i _ ↦ hcell i]
   rw [← EReal.coe_finset_sum, EReal.coe_le_coe_iff, ← Finset.mul_sum,
-    ENNReal.toReal_add hρ hc, mul_add, exp_add, mul_comm (exp ((α - 1) * ρ.toReal))]
+    toReal_add hρ hc, mul_add, exp_add, mul_comm (exp ((α - 1) * ρ.toReal))]
   gcongr
 
 /-! ## The escort rule -/
 
-/-- Adaptive Rényi composition at budgets `ρ₂ x` that depend on the left outcome: if `μ` is within
-budget `ρ` of the reduct of an `S`-supported kernel `r`, weighted by `e^{-ρ₂}`, the composite lifts
-at `ρ` (Rocq `escort_adaptive`).
-
-With `ν₀ = r ∘ₘ ν` the hypothesis is the moment bound
-`∫ (dμ/dν₀)^α e^{(α - 1) ρ₂} dν₀ ≤ e^{(α - 1) ρ}`. If `D_α(μ ‖ ν₀) = ρ₁`, it holds at
-`ρ = ρ₁ + (α - 1)⁻¹ log E_π[e^{(α - 1) ρ₂}]`, the exponential mean of `ρ₂` under the `α`-escort
-`π ∝ (dμ/dν₀)^α ν₀` (Rocq `escort_moment_eq`). The same mean under `μ` is unsound (Rocq
-`lq_adaptive_unsound`), and so is the plain average `ρ₁ + E_μ[ρ₂]`
-(`exists_not_codensity_renyi_bind_lintegral`). -/
+/-- Adaptive Rényi composition: if `μ` is within budget `ρ` of the `e^{-ρ₂}`-weighted reduct of an
+`S`-supported kernel `r`, the composite lifts at `ρ` (Rocq `escort_adaptive`). -/
 theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {R : X' → Y' → ℝ≥0∞} {κ : Kernel X X'} {η : Kernel Y Y'}
     [IsSubMarkovKernel κ] [IsSubMarkovKernel η] {S : X → Y → Prop} {ρ₂ : X → ℝ≥0∞}
@@ -97,6 +90,10 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
     (h : renyiDivergence α ρ μ ((r ∘ₘ ν).withDensity fun x ↦ (expBudget (ρ₂ x))⁻¹)) :
     (renyiDivergence α).codensity ρ R (κ ∘ₘ μ) (η ∘ₘ ν) := by
   classical
+  -- With `ν₀ = r ∘ₘ ν`, `h` is the moment bound `∫ (dμ/dν₀)^α e^{(α - 1) ρ₂} dν₀ ≤ e^{(α - 1) ρ}`.
+  -- It holds at `ρ₁ + (α - 1)⁻¹ log E_π[e^{(α - 1) ρ₂}]` for the `α`-escort `π ∝ (dμ/dν₀)^α ν₀`
+  -- (Rocq `escort_moment_eq`); the same mean under `μ`, or the plain average, is unsound
+  -- (`exists_not_codensity_renyi_bind_lintegral`).
   have hw : Measurable fun x ↦ (expBudget (ρ₂ x))⁻¹ := by fun_prop
   set w : X → ℝ≥0∞ := fun x ↦ (expBudget (ρ₂ x))⁻¹
   set r' := r.withDensity fun _ ↦ w
@@ -125,10 +122,8 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
 
 /-! ## Paying the average budget is unsound -/
 
-/-- Paying the average of the per-outcome budgets is unsound: at `α = 2`, with `μ` a fair coin on
-both sides (so the head costs `0`), the branches lift equality at budgets `0` and `log 2`, but the
-composite does not lift it at their average `(log 2) / 2`. Its second moment is `3 / 2 > √2`
-(Rocq `expcomp_expectation_rule_unsound`). -/
+/-- Paying the average of the per-outcome budgets is unsound (Rocq
+`expcomp_expectation_rule_unsound`). -/
 theorem exists_not_codensity_renyi_bind_lintegral :
     ∃ (μ : Measure Bool) (κ η : Kernel Bool (Fin 3)) (ρ₂ : Bool → ℝ≥0∞),
       IsProbabilityMeasure μ ∧ IsMarkovKernel κ ∧ IsMarkovKernel η ∧
@@ -138,7 +133,7 @@ theorem exists_not_codensity_renyi_bind_lintegral :
   have : Fact (1 < (2 : ℝ)) := ⟨one_lt_two⟩
   have hhalf {Z : Type} [MeasurableSpace Z] (a b : Z) :
       IsProbabilityMeasure ((2⁻¹ : ℝ≥0∞) • (dirac a + dirac b)) :=
-    ⟨by simp [← two_mul, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top]⟩
+    ⟨by simp [← two_mul, ENNReal.mul_inv_cancel two_ne_zero ofNat_ne_top]⟩
   set μ : Measure Bool := (2⁻¹ : ℝ≥0∞) • (dirac false + dirac true)
   set κ : Kernel Bool (Fin 3) := ⟨fun x ↦ cond x (dirac 1) (dirac 0), .of_discrete⟩
   set η : Kernel Bool (Fin 3) :=
@@ -161,24 +156,24 @@ theorem exists_not_codensity_renyi_bind_lintegral :
     · exact IsReflexive.refl _
     -- the second moment of the `true` branch is `2 = e^{log 2}`
     change renyiDivergence 2 (ENNReal.ofReal (Real.log 2)) (κ true) (η true)
-    rw [renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
+    rw [renyiDivergence_iff_of_ne_top one_le_two ofReal_ne_top,
       fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)]
     simp [κ, η, Fin.sum_univ_three]
     rw [persp_of_ne_zero (by norm_num), persp_of_ne_zero (by norm_num), ← EReal.coe_add,
-      ENNReal.toReal_ofReal (Real.log_nonneg one_le_two), EReal.coe_le_coe_iff]
+      toReal_ofReal (Real.log_nonneg one_le_two), EReal.coe_le_coe_iff]
     norm_num [Real.exp_log]
   -- the composite's second moment is `3 / 2`, above `e^{(log 2) / 2} = √2`
   have hbud : ∫⁻ x, cond x (ENNReal.ofReal (Real.log 2)) 0 ∂μ =
       ENNReal.ofReal (Real.log 2 / 2) := by
     simp [μ, lintegral_smul_measure, lintegral_add_measure, div_eq_inv_mul]
   have := codensity_sound h
-  rw [hbud, renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
+  rw [hbud, renyiDivergence_iff_of_ne_top one_le_two ofReal_ne_top,
     fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)] at this
   simp only [Fin.sum_univ_three, hcomp] at this
   simp [κ, η] at this
   rw [persp_of_ne_zero (by norm_num), persp_of_ne_zero (by norm_num),
     persp_of_ne_zero (by norm_num), ← EReal.coe_add, ← EReal.coe_add,
-    ENNReal.toReal_ofReal (by positivity), EReal.coe_le_coe_iff] at this
+    toReal_ofReal (by positivity), EReal.coe_le_coe_iff] at this
   norm_num at this
   have hsq : Real.exp (Real.log 2 / 2) ^ 2 = 2 := by
     rw [sq, ← Real.exp_add, add_halves, Real.exp_log two_pos]

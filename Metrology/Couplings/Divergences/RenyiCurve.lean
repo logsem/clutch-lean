@@ -11,7 +11,7 @@ lifting is the order-wise one (`codensity_renyiCurve_iff`). -/
 
 universe u
 
-open MeasureTheory Measure ProbabilityTheory GradedLifting Set
+open MeasureTheory Measure ProbabilityTheory GradedLifting Set Function
 open scoped ENNReal
 
 /-- Rényi orders are above one. -/
@@ -32,6 +32,7 @@ noncomputable def renyiCurve : GradedDivergence.{u} RenyiBudget :=
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 
+/-- A Rényi curve bound is a Rényi bound at every order. -/
 theorem renyiCurve_iff {ρ : RenyiBudget} {μ ν : Measure X} :
     renyiCurve ρ μ ν ↔ ∀ α : Ioi (1 : ℝ), renyiDivergence α (ρ α) μ ν :=
   Iff.rfl
@@ -50,7 +51,7 @@ instance isReflexive_renyiCurve : renyiCurve.{u}.IsReflexive :=
 instance isComposable_renyiCurve : renyiCurve.{u}.IsComposable :=
   isComposable_pi
 
-/-- The zero measure is within every curve of every measure. -/
+/-- The zero measure is within every Rényi curve of every measure. -/
 instance isZeroLeft_renyiCurve : renyiCurve.{u}.IsZeroLeft :=
   isZeroLeft_pi
 
@@ -66,24 +67,23 @@ instance isRightMonotone_renyiCurve : renyiCurve.{u}.IsRightMonotone :=
 instance isLeftAntitone_renyiCurve : renyiCurve.{u}.IsLeftAntitone :=
   isLeftAntitone_pi
 
-/-- A bound at every larger curve is a bound at the curve: raise one order at a time. -/
+/-- Rényi curve bounds are closed under decreasing limits of the budget. -/
 instance isBudgetClosed_renyiCurve : renyiCurve.{u}.IsBudgetClosed :=
   isBudgetClosed_pi
 
 /-! ## The codensity lifting of a curve -/
 
-/-- A codensity lifting of a Rényi curve is one at every order: tests at a single order are curve
-tests with slack `⊤` at the other orders. -/
+/-- A codensity lifting of a Rényi curve is one at every order. -/
 theorem codensity_renyiCurve_iff {ρ : RenyiBudget} {R : X → Y → RenyiBudget} {μ : Measure X}
     {ν : Measure Y} : renyiCurve.codensity ρ R μ ν ↔
       ∀ α : Ioi (1 : ℝ), (renyiDivergence α).codensity (ρ α) (fun x y ↦ R x y α) μ ν := by
   classical
   refine ⟨fun h α I _ c hc k l _ _ hkl ↦ ?_, fun h I _ c _ k l _ _ hkl α ↦ ?_⟩
   · -- slack `c` at order `α`, `⊤` elsewhere: other orders pass by `renyiDivergence_top`
-    have hlt : ρ + Function.update ⊤ α c < ⊤ := lt_top_iff_ne_top.2 fun htop ↦
+    have hlt : ρ + update ⊤ α c < ⊤ := lt_top_iff_ne_top.2 fun htop ↦
       hc.ne (by simpa using congrFun htop α)
     have hkl' (x : X) (y : Y) (β : Ioi (1 : ℝ)) :
-        renyiDivergence β ((R x y + Function.update (⊤ : RenyiBudget) α c) β) (k x) (l y) := by
+        renyiDivergence β ((R x y + update (⊤ : RenyiBudget) α c) β) (k x) (l y) := by
       rcases eq_or_ne β α with rfl | hβ
       · simpa using hkl x y
       · simpa [hβ] using renyiDivergence_top β.2 (k x) (l y)
@@ -99,8 +99,8 @@ theorem absorbing_codensity_renyiCurve_iff {ρ : RenyiBudget} :
   classical
   refine ⟨fun h ↦ by_contra fun hρ ↦ ?_,
     fun h ↦ h ▸ IsTopAbsorbing.absorbing_top (L := codensity _)⟩
-  obtain ⟨α, hα⟩ := Function.ne_iff.1 hρ
+  obtain ⟨α, hα⟩ := ne_iff.1 hρ
   refine not_absorbing_codensity_renyi α.2 (lt_top_iff_ne_top.2 hα) fun R μ ν _ _ ↦ ?_
-  simpa using codensity_renyiCurve_iff.1 (h (fun x y ↦ Function.update ⊤ α (R x y)) μ ν) α
+  simpa using codensity_renyiCurve_iff.1 (h (fun x y ↦ update ⊤ α (R x y)) μ ν) α
 
 end GradedDivergence

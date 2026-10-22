@@ -7,7 +7,7 @@ import Metrology.Iris.LocalBI
 
 @[expose] public section
 
-/-! # Error credit rules  -/
+/-! # Error credit rules -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
   ProbLang.TotalEris.ErisWpGS
@@ -18,29 +18,36 @@ namespace ProbLang
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
 -- TODO: Move me
+/-- Read a literal expression through `value`, with a default for non-literals. -/
 def Exp.asLit (default : ℝ≥0∞) (value : BaseLit rT → ℝ≥0∞) : Exp rT → ℝ≥0∞ :=
   (fun x => x.getD default) ∘ Option.map value ∘ Exp.lit.π
 
+/-- `Exp.asLit` is measurable when `value` is. -/
 @[fun_prop]
 theorem Exp.measurable_asLit (default : ℝ≥0∞) (value : BaseLit rT → ℝ≥0∞)
     (Hm : Measurable value) : Measurable (Exp.asLit default value) := by
   unfold Exp.asLit; fun_prop
 
+/-- Read an integer literal through `value`, with a default for other literals. -/
 def BaseLit.asInt (default : ℝ≥0∞) (value : Int → ℝ≥0∞) : BaseLit rT → ℝ≥0∞ :=
   (fun x => x.getD default) ∘ Option.map value ∘ BaseLit.int.π
 
+/-- `BaseLit.asInt` is measurable. -/
 @[fun_prop]
 theorem BaseLit.measurable_asInt (default : ℝ≥0∞) (value : Int → ℝ≥0∞) :
     Measurable (BaseLit.asInt (rT := rT) default value) := by unfold asInt; fun_prop
 
+/-- Read a real literal through `value`, with a default for other literals. -/
 def BaseLit.asReal (default : ℝ≥0∞) (value : rT → ℝ≥0∞) : BaseLit rT → ℝ≥0∞ :=
   (fun x => x.getD default) ∘ Option.map value ∘ BaseLit.real.π
 
+/-- `BaseLit.asReal` is measurable when `value` is. -/
 @[fun_prop]
 theorem BaseLit.measurable_asReal (default : ℝ≥0∞) (value : rT → ℝ≥0∞) (hv : Measurable value) :
     Measurable (BaseLit.asReal default value) := by unfold asReal; fun_prop
 
-theorem measurable_litInt_elim (g : Int → ENNReal) :
+/-- Eliminating an integer literal through `g` is measurable. -/
+theorem measurable_litInt_elim (g : Int → ℝ≥0∞) :
     Measurable (fun e : Exp rT => match e with | .lit (.int n) => g n | _ => 0) := by
   convert_to Measurable (Exp.asLit 0 (BaseLit.asInt 0 g))
   swap
@@ -49,7 +56,8 @@ theorem measurable_litInt_elim (g : Int → ENNReal) :
   cases e <;> try rfl
   case lit b => cases b <;> rfl
 
-theorem measurable_litReal_elim (g : rT → ENNReal) (hg : Measurable g) :
+/-- Eliminating a real literal through `g` is measurable. -/
+theorem measurable_litReal_elim (g : rT → ℝ≥0∞) (hg : Measurable g) :
     Measurable (fun e : Exp rT => match e with | .lit (.real r) => g r | _ => 0) := by
   convert_to Measurable (Exp.asLit 0 (BaseLit.asReal 0 g))
   swap
@@ -65,23 +73,32 @@ local bi IProp GF
 
 open ErrorCredit
 
-theorem errInterp_supply_decrease {εₛ ε : ENNReal} :
+variable {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {ε₁ : ℝ≥0∞}
+
+/-- Supplying a credit `ε` decreases the supply `εₛ` by `ε`. -/
+theorem errInterp_supply_decrease {εₛ ε : ℝ≥0∞} :
     iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ |==> errInterp (rT := rT) (εₛ - ε) := by
   iintro ⟨Hs, Hε⟩
   iapply supply_decrease $$ Hs Hε
 
-theorem errInterp_supply_bound {εₛ ε : ENNReal} :
+/-- The supply bounds any credit drawn from it. -/
+theorem errInterp_supply_bound {εₛ ε : ℝ≥0∞} :
     iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ errInterp (rT := rT) εₛ ∗ ↯ε ∗ ⌜ε ≤ εₛ⌝ := by
   iintro ⟨Hs, Hε⟩
   ihave %hLe := supply_bound $$ Hs Hε
   iframe Hs Hε %hLe
 
-theorem errInterp_supply_increase {ε δ : ENNReal} (h : ε + δ < 1) :
+/-- The supply can mint a credit `δ` while staying below `1`. -/
+theorem errInterp_supply_increase {ε δ : ℝ≥0∞} (h : ε + δ < 1) :
     iprop(errInterp (rT := rT) ε) ⊢ |==> (errInterp (rT := rT) (ε + δ) ∗ ↯δ) :=
-  ErrorCredit.supply_increase h
+  supply_increase h
 
-theorem twp_err_incr {E : CoPset} {e : Exp rT} {ε : ENNReal} {Φ : Val rT → IProp GF}
-    (Hnv : e.toVal? = none) :
+section nv
+variable (Hnv : e.toVal? = none)
+include Hnv
+
+/-- A client may assume any strictly larger error credit. -/
+theorem twp_err_incr {ε : ℝ≥0∞} :
     iprop(↯ε ∗ ∀ ε', ⌜ε < ε'⌝ -∗ ↯ε' -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply twp_lift_step_fupd_glm Hnv
@@ -113,8 +130,8 @@ theorem twp_err_incr {E : CoPset} {e : Exp rT} {ε : ENNReal} {Φ : Val rT → I
     iapply execStutter_free
     iexact HGlm
 
-/-- Thin-air credit rule: A client is free to assume an arbitrarily small error credit. -/
-theorem twp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : e.toVal? = none) :
+/-- A client may assume an arbitrarily small positive error credit (thin air). -/
+theorem twp_err_pos :
     iprop(∀ ε, ⌜0 < ε⌝ -∗ ↯ε -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro Hwp
   iapply fupd_tglWp
@@ -123,8 +140,8 @@ theorem twp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : 
   iapply twp_err_incr Hnv
   iframe
 
-theorem twp_err_pos_add {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {a : ℝ≥0∞}
-    (Hnv : e.toVal? = none) :
+/-- A client holding `↯ a` may assume an arbitrarily small extra positive credit. -/
+theorem twp_err_pos_add {a : ℝ≥0∞} :
     ⊢ ↯ a -∗ (∀ ε, ⌜0 < ε⌝ -∗ ↯ (a + ε) -∗ tglWp E e Φ) -∗ tglWp E e Φ := by
   iintro Ha Hwp
   iapply twp_err_pos Hnv
@@ -132,10 +149,8 @@ theorem twp_err_pos_add {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {a 
   icombine Ha Hε as H
   iapply Hwp $$ %ε %Hε H
 
-/-- If a program's spec holds at every credit cost in a set, you only have to pay the infimum of
-those costs. -/
-theorem twp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {S : Set ι}
-    {ε : ι → ℝ≥0∞} (Hnv : e.toVal? = none) :
+/-- If a spec holds at every credit cost in a set, paying the infimum of the costs suffices. -/
+theorem twp_err_biInf {ι : Type _} {S : Set ι} {ε : ι → ℝ≥0∞} :
     iprop(↯(⨅ i ∈ S, ε i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply twp_err_incr Hnv
@@ -144,23 +159,23 @@ theorem twp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → I
   obtain ⟨i, hi⟩ := iInf_lt_iff.mp Hlt
   obtain ⟨hiS, hlt⟩ := iInf_lt_iff.mp hi
   iapply Hwp $$ %i %hiS
-  iapply ErrorCredit.weaken hlt.le $$ Hε'
+  iapply weaken hlt.le $$ Hε'
 
-/-- If the spec holds at cost `ε i` for every `i` in some set in the filter `l`, you only have to
-pay `liminf ε` along `l`. -/
-theorem twp_err_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
-    {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l) (Hnv : e.toVal? = none) :
+end nv
+
+/-- If a spec holds at cost `ε i` on a set in `l`, paying `liminf ε` along `l` suffices. -/
+theorem twp_err_liminf {ι : Type _} {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l)
+    (Hnv : e.toVal? = none) :
     iprop(↯(Filter.liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply twp_err_biInf (S := S) Hnv
   iframe Hwp
-  iapply ErrorCredit.weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
+  iapply weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
     fun i hi => biInf_le ε hi)) $$ Herr
 
-/-- Spend `↯ε₁` on a primitive step whose outcomes `ρ` (all in `R`) each receive `↯(f ρ)`,
-given that `f` averages to at most `ε₁`. -/
-theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
-    {Φ : Val rT → IProp GF} {R : State rT → Cfg rT → Prop} {f : Cfg rT → ENNReal}
+/-- Spend `↯ε₁` on a primitive step whose outcomes `ρ` (all in `R`) each receive `↯(f ρ)`, when
+`f` averages to at most `ε₁`. -/
+theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cfg rT → ℝ≥0∞}
     (hv : e₁.toVal? = none)
     (Hbd : ∀ ρ, f ρ ≤ 1)
     (Hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁)
@@ -187,15 +202,16 @@ theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
   have hexp : 0 + ∫⁻ ρ, ((ε_now - ε₁) + f ρ) ∂(primStep ⟨e₁, σ₁⟩) ≤ ε_now := by
     rw [zero_add, MeasureTheory.lintegral_add_left measurable_const,
         MeasureTheory.lintegral_const]
-    calc (ε_now - ε₁) * (primStep ⟨e₁, σ₁⟩) Set.univ + ∫⁻ ρ, f ρ ∂primStep ⟨e₁, σ₁⟩
-        ≤ (ε_now - ε₁) * 1 + ε₁ := by gcongr; exacts [primStep_univ_le_one _, HInt σ₁]
+    calc _ ≤ (ε_now - ε₁) * 1 + ε₁ := by gcongr; exacts [primStep_univ_le_one _, HInt σ₁]
       _ = ε_now := by rw [mul_one]; exact tsub_add_cancel_of_le hLe
   iframe %Hred %hRmeas %hbnd %hexp %hPgl
   iintro %ρ %HRρ
   imod errInterp_supply_decrease $$ [$Hε_now $Herr] with Hε_minus
   imodintro
   by_cases hlt : (ε_now - ε₁) + f ρ < 1
-  case neg => push Not at hlt; iapply execStutter_spend hlt
+  case neg =>
+    push Not at hlt
+    iapply execStutter_spend hlt
   case pos =>
     iapply execStutter_free
     imod errInterp_supply_increase hlt $$ Hε_minus with ⟨Hε_new, Hcr⟩
@@ -205,9 +221,9 @@ theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
     iframe Hσ Hε_new
     iapply Hcont $$ %σ₁ %ρ %HRρ Hcr
 
-/-- Use `twp_rand_exp'` instead; it drops the boundedness hypothesis. -/
-theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → ENNReal}
-    {Φ : Val rT → IProp GF} (Hz : 0 < z) (Hbd : ∀ n, ε₂ n ≤ 1)
+/-- Spend `↯ε₁` on `rand(#z, #())`, giving outcome `n` the credit `ε₂ n` when the `ε₂` are at most
+`1` and average to at most `ε₁`. -/
+theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : ∀ n, ε₂ n ≤ 1)
     (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
@@ -218,7 +234,7 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     fun σ₁ => (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ n : Int, 0 ≤ n ∧ n < z ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
-  set f : Cfg rT → ENNReal := fun ρ => match ρ.expr with
+  set f : Cfg rT → ℝ≥0∞ := fun ρ => match ρ.expr with
     | .lit (.int n) => if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0
     | _ => 0 with hf
   have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
@@ -280,11 +296,11 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
   have hn : 0 ≤ n ∧ n < z := ⟨Hn₁, Hn₂⟩
   iapply Hcont $$ %n
   iframe %hn
-  iapply (ErrorCredit.ext hfe) $$ Hcr
+  iapply (ext hfe) $$ Hcr
 
-theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
-    {ε₂ : rT → ENNReal} {Φ : Val rT → IProp GF}
-    (hε₂ : Measurable ε₂) (Hbd : ∀ r, ε₂ r ≤ 1)
+/-- Spend `↯ε₁` on `urand`, giving outcome `r` the credit `ε₂ r` when the `ε₂` are at most `1`
+and integrate to at most `ε₁`. -/
+theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂) (Hbd : ∀ r, ε₂ r ≤ 1)
     (HInt : (∫⁻ r, ε₂ r ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
@@ -301,8 +317,7 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   have hgemb : ∀ σ₁ : State rT,
       MeasurableEmbedding (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) := fun σ₁ => by
     have hcomp : (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) =
-        Cfg.measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘
-            Exp.lit ∘ BaseLit.real := rfl
+        Cfg.measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘ Exp.lit ∘ BaseLit.real := rfl
     rw [hcomp]
     exact Cfg.measurableEquivProd.symm.measurableEmbedding.comp
       ((measurableEmbedding_prod_mk_right σ₁).comp
@@ -310,11 +325,12 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   set R : State rT → Cfg rT → Prop :=
     fun σ₁ ρ => ∃ r : rT, ρ = (⟨.lit (.real r), σ₁⟩ : Cfg rT) ∧ r ∈ LawfulProbLangℝ.unifUnitSupport
     with hR
-  set f : Cfg rT → ENNReal := fun ρ => match ρ.expr with
+  set f : Cfg rT → ℝ≥0∞ := fun ρ => match ρ.expr with
     | .lit (.real r) => ε₂ r
     | _ => 0 with hf
   have hrange : ∀ σ₁ : State rT, {ρ : Cfg rT | R σ₁ ρ} =
-      (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) '' LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
+      (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) ''
+        LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
     ext ρ
     simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
     exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
@@ -350,12 +366,10 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   iapply (ErisWpGS.tglWp_value_of_toVal rfl)
   iapply Hcont $$ %r
   iframe %hrsupp
-  iapply (ErrorCredit.ext hfe) $$ Hcr
+  iapply (ext hfe) $$ Hcr
 
 /-- `twp_urand_exp` without the bound, via the clamped credit `min (ε₂ r) 1`. -/
-theorem twp_urand_exp' {E : CoPset} {ε₁ : ENNReal}
-    {ε₂ : rT → ENNReal} {Φ : Val rT → IProp GF}
-    (hε₂ : Measurable ε₂)
+theorem twp_urand_exp' {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
     (HInt : (∫⁻ r, ε₂ r ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
@@ -368,31 +382,30 @@ theorem twp_urand_exp' {E : CoPset} {ε₁ : ENNReal}
   by_cases h : ε₂ r ≤ 1
   · iapply Hcont $$ %r
     iframe %hrsupp
-    iapply (ErrorCredit.ext (show min (ε₂ r) 1 = ε₂ r from min_eq_left h)) $$ Hcr
+    iapply (ext (show min (ε₂ r) 1 = ε₂ r from min_eq_left h)) $$ Hcr
   · push Not at h
     iexfalso
-    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1))) $$ Hcr
+    iapply (contradict (le_min h.le (le_refl 1))) $$ Hcr
 
 /-- `twp_rand_exp` without the bound, via the clamped credit `min (ε₂ n) 1`. -/
-theorem twp_rand_exp' {E : CoPset} {z : Int} {ε₁ : ENNReal}
-    {ε₂ : ℕ → ENNReal} {Φ : Val rT → IProp GF} (Hz : 0 < z)
+theorem twp_rand_exp' {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
     (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
         Φ (.int n : Val rT)) -∗
       tglWp E (pl(rand(#z, #()))) Φ) := by
   iintro Herr Hcont
-  have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ENNReal) ≤ ε₁ :=
+  have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ℝ≥0∞) ≤ ε₁ :=
     (ENNReal.div_le_div_right (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
   iapply (twp_rand_exp Hz (fun n => min_le_right _ _) hsum) $$ Herr
   iintro %n ⟨%Hn, Hcr⟩
   by_cases h : ε₂ n.toNat ≤ 1
   · iapply Hcont $$ %n
     iframe %Hn
-    iapply (ErrorCredit.ext (show min (ε₂ n.toNat) 1 = ε₂ n.toNat from min_eq_left h)) $$ Hcr
+    iapply (ext (show min (ε₂ n.toNat) 1 = ε₂ n.toNat from min_eq_left h)) $$ Hcr
   · push Not at h
     iexfalso
-    iapply (ErrorCredit.contradict (le_min h.le (le_refl 1))) $$ Hcr
+    iapply (contradict (le_min h.le (le_refl 1))) $$ Hcr
 
 end TotalEris
 end ProbLang

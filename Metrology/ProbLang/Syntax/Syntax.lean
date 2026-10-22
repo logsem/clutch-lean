@@ -723,62 +723,10 @@ theorem Pat.tryMatch_lit_ne {l1 l2 : BaseLit rT} (h : ¬ (l1 == l2) = true) :
   show (if (l1 == l2) = true then some (Exp.lit BaseLit.unit) else none) = _
   rw [ite_eq_right h]
 
-/-! ## Sublanguages -/
-
-/-- A sublanguage, given as a type of witnesses for each expression. -/
-abbrev Fragment (rT : Type _) := Exp rT → Type
-
-/-- Expressions together with a witness that they lie in the fragment. -/
-abbrev FragExp (F : Fragment rT) := (e : Exp rT) × F e
-
-/-- Expressions in both fragments. -/
-def Both (F G : Fragment rT) : Fragment rT :=
-  fun e => F e × G e
-
-/-- Expressions in either fragment. -/
-def Either (F G : Fragment rT) : Fragment rT :=
-  fun e => F e ⊕ G e
-
-/-- The fragment of all expressions. -/
-def Any : Fragment rT :=
-  fun _ => Unit
-
-/-- The empty fragment. -/
-def None : Fragment rT :=
-  fun _ => Empty
-
-/-- Pairs each witness of `F` with extra data `M`. -/
-def Overlay (F : Fragment rT) (M : Exp rT → Type) : Fragment rT :=
-  fun e => F e × M e
-
-/-- Inclusion of fragments: a map from `F`-witnesses to `G`-witnesses. -/
-def SubFrag (F G : Fragment rT) :=
-  ∀ e, F e → G e
-scoped infixr:25 " ⊆f " => SubFrag
-
-def SubFrag.id : F ⊆f F := fun _ x => x
-def SubFrag.comp (f : F ⊆f G) (g : G ⊆f H) : F ⊆f H := fun e x => g e (f e x)
-def SubFrag.map (f : F ⊆f G) : FragExp F → FragExp G
-  | ⟨e, w⟩ => ⟨e, f e w⟩
-
-/-- The underlying expression. -/
-def FragExp.erase {F : Fragment rT} : FragExp F → Exp rT := Sigma.fst
-
-/-- Fragments whose membership can be decided by a function. -/
-class Checkable (F : Fragment rT) where
-  check? : (e : Exp rT) → Option (F e)
-
-/-- Checks `e` against the fragment. -/
-def FragExp.mk? {F : Fragment rT} [Checkable F] (e : Exp rT) : Option (FragExp F) :=
-  (Checkable.check? e).map (⟨e, ·⟩)
-
-instance [Checkable F] [Checkable G] : Checkable (Both F G) where
-  check? e := do return (← Checkable.check? e, ← Checkable.check? e)
-
 /-! ## Values -/
 
-/-- Witness that an expression is a value; `Type`-valued so that `check?` can return the witness
-and `IsVal` is a `Fragment`. It is a subsingleton, and `Exp.isValue` is its `Prop` form. -/
+/-- Witness that an expression is a value; `Type`-valued so that `check?` can return the witness;
+a subsingleton, with `Exp.isValue` its `Prop` form. -/
 inductive IsVal : Exp rT → Type
   | lit  : IsVal (.lit b)
   -- A runtime function is closed, so `IsVal e → IsLocallyClosed e` (`IsVal.lc`).
@@ -788,7 +736,12 @@ inductive IsVal : Exp rT → Type
   | inl  : IsVal e → IsVal (.inl e)
   | inr  : IsVal e → IsVal (.inr e)
 
-omit [ProbLangℝ rT] in
+end WithRealParam
+
+section NoRealParam
+
+variable {rT : Type _}
+
 theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .lit => .lit _
   | _, .lam h => h
@@ -796,6 +749,12 @@ theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .pair w1 w2 => .pair w1.lc w2.lc
   | _, .inl w => .inl w.lc
   | _, .inr w => .inr w.lc
+
+end NoRealParam
+
+section WithRealParam
+
+variable {rT : Type _} [ProbLangℝ rT]
 
 /-- A value: an expression with a witness that it is a value, and its local closedness.
 A `structure`, not `(e : Exp α) × IsVal e`, so that `Val α` does not reduce to `Sigma`:
@@ -843,12 +802,21 @@ abbrev Val.real (r : rT) : Val rT   := Val.ofBaseLit (.real r)
   | none => .inl .unit
   | some v => .inr v
 
-omit [ProbLangℝ rT] in
+end WithRealParam
+
+section NoRealParam
+
+variable {rT : Type _}
+
 @[simp] theorem Val.pair_fst (v w : Val rT) : (Val.pair v w).1 = .pair v.1 w.1 := rfl
-omit [ProbLangℝ rT] in
 @[simp] theorem Val.inl_fst (v : Val rT) : (Val.inl v).1 = .inl v.1 := rfl
-omit [ProbLangℝ rT] in
 @[simp] theorem Val.inr_fst (v : Val rT) : (Val.inr v).1 = .inr v.1 := rfl
+
+end NoRealParam
+
+section WithRealParam
+
+variable {rT : Type _} [ProbLangℝ rT]
 
 namespace IsVal
 
@@ -873,8 +841,6 @@ theorem subsingleton : (w1 w2 : IsVal e) → w1 = w2
 instance : Subsingleton (IsVal e) := ⟨subsingleton⟩
 
 end IsVal
-
-instance : Checkable (@IsVal rT) where check? := IsVal.check?
 
 /-- Propositional form of `IsVal`. -/
 def Exp.isValue (e : Exp rT) : Prop := Nonempty (IsVal e)
@@ -1013,14 +979,24 @@ theorem Exp.toVal?_ofVal (v : Val α) : (Exp.ofVal v).toVal? = some v := by
   | none => exact absurd w.toIsValue (IsVal.not_isValue_of_check?_none hc)
   | some w' => exact congrArg some (Val.ext rfl)
 
-omit [ProbLangℝ rT] in
+end WithRealParam
+
+section NoRealParam
+
+variable {rT : Type _}
+
 /-- `v.snd`, typed for lemmas keyed on the syntactic `Exp.ofVal` shape. -/
 def Val.isVal_ofVal (v : Val rT) : IsVal (Exp.ofVal v) := v.2
 
+end NoRealParam
+
+section WithRealParam
+
+variable {rT : Type _} [ProbLangℝ rT]
 @[simp] theorem Val.toVal?_fst (v : Val α) : v.fst.toVal? = some v := Exp.toVal?_ofVal v
 
-theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v)
-    : Exp.ofVal v = e := by
+theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v) :
+    Exp.ofVal v = e := by
   simp only [toVal?] at h
   split at h
   · simp at h; exact congrArg Val.fst h.symm
@@ -1049,7 +1025,8 @@ def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
   | plus,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 + z2)
   | minus, .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 - z2)
   | mult,  .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * z2)
-  -- Total (n / 0 = 0, n % 0 = n), agreeing with Rocq's `Z.quot`/`Z.rem`.
+  -- Total Euclidean division (`Int.ediv`/`emod`, `n / 0 = 0`, `n % 0 = n`); differs from Rocq's
+  -- `Z.quot`/`Z.rem` on negative operands.
   | div,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / z2)
   | mod,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 % z2)
   | and,   .lit (.bool b1), .lit (.bool b2) => some <| .lit <| .bool (b1 && b2)
@@ -1101,13 +1078,13 @@ instance : GetElem? (LocHeap V) Loc V (fun (m : ExtTreeMap Loc V compare) k => k
 
 /-- Machine state: the heap and the random tapes. -/
 structure State (α : Type _) where
-  heap  : LocHeap (Val α)
+  heap : LocHeap (Val α)
   tapes : LocHeap Tape
   deriving Inhabited, Countable
 
 /-- Applies `f` to the heap. -/
-def State.update_heap (σ : State α) (f : ExtTreeMap Loc (Val α) → ExtTreeMap Loc (Val α))
-    : State α :=
+def State.update_heap (σ : State α)
+    (f : ExtTreeMap Loc (Val α) → ExtTreeMap Loc (Val α)) : State α :=
   ⟨f σ.heap, σ.tapes⟩
 
 /-- Applies `f` to the tapes. -/

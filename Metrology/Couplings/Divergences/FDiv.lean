@@ -7,7 +7,7 @@ public import Metrology.Couplings.SubProbability
 
 /-! # Integral `f`-divergences
 
-`fDiv f μ ν` is `∫ f (dμ/dν) dν + f′(∞) μ⊥(X)` (Approximate Span Liftings, Def. 2.7), with its
+`fDiv f μ ν` is `∫ f (dμ/dν) dν + f'(∞) μ⊥(X)` (Approximate Span Liftings, Def. 2.7), with its
 basic values and monotonicity. Main result: partition sums are below it (`sum_persp_le_fDiv`). -/
 
 @[expose] public section
@@ -17,6 +17,11 @@ open scoped ENNReal
 
 namespace ProbabilityTheory
 open ENNReal (toReal_nonneg)
+open EReal (coe_add_top coe_ennreal_nonneg coe_ennreal_pos coe_ennreal_toReal coe_le_coe_iff coe_mul
+  coe_nonneg coe_toReal top_mul_of_pos)
+open Finset (measurable_sum single_le_sum sum_add_distrib sum_eq_single sum_le_sum sum_mul
+  sum_nonneg)
+open Real (norm_of_nonneg)
 
 variable {f g : ℝ → ℝ}
 
@@ -45,8 +50,12 @@ theorem fDiv_of_not_integrable (h : ¬Integrable (fun x ↦ f (μ.rnDeriv ν x).
 
 /-! ## Values, sign and absolute continuity -/
 
+section
+
+variable (μ ν : Measure X)
+
 /-- On the diagonal the `f`-divergence is the mass times `f 1`. -/
-theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
+theorem fDiv_self_eq [IsFiniteMeasure μ] :
     fDiv f μ μ = (((μ univ).toReal * f 1 : ℝ) : EReal) := by
   have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ f 1 :=
     μ.rnDeriv_self.mono fun x hx ↦ by simp [hx]
@@ -54,16 +63,8 @@ theorem fDiv_self_eq (μ : Measure X) [IsFiniteMeasure μ] :
     singularPart_self]
   simp [measureReal_def]
 
-/-- The `f`-divergence of a measure from itself vanishes when `f 1 = 0`. -/
-theorem fDiv_self (hf1 : f 1 = 0) (μ : Measure X) [SigmaFinite μ] : fDiv f μ μ = 0 := by
-  have h : (fun x ↦ f (μ.rnDeriv μ x).toReal) =ᵐ[μ] fun _ ↦ 0 :=
-    μ.rnDeriv_self.mono fun x hx ↦ by simp [hx, hf1]
-  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
-    singularPart_self]
-  simp
-
 /-- From the zero measure the `f`-divergence is the mass times `f 0`. -/
-theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
+theorem fDiv_zero_left_eq [IsFiniteMeasure ν] :
     fDiv f 0 ν = (((ν univ).toReal * f 0 : ℝ) : EReal) := by
   have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ f 0 :=
     (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx]
@@ -71,37 +72,31 @@ theorem fDiv_zero_left_eq (ν : Measure X) [IsFiniteMeasure ν] :
     singularPart_zero]
   simp [measureReal_def]
 
-/-- The `f`-divergence from the zero measure vanishes when `f 0 = 0`. -/
-theorem fDiv_zero_left (hf0 : f 0 = 0) (ν : Measure X) : fDiv f 0 ν = 0 := by
-  have h : (fun x ↦ f ((0 : Measure X).rnDeriv ν x).toReal) =ᵐ[ν] fun _ ↦ 0 :=
-    (rnDeriv_zero ν).mono fun x hx ↦ by simp [hx, hf0]
-  rw [fDiv_of_integrable ((integrable_zero _ _ _).congr h.symm), integral_congr_ae h,
-    singularPart_zero]
-  simp
-
 /-- For a sub-probability measure `μ`, `μ(univ) * c ≤ max 0 c`. -/
-theorem toReal_univ_mul_le_max (μ : Measure X) [IsSubProbabilityMeasure μ] (c : ℝ) :
+theorem toReal_univ_mul_le_max [IsSubProbabilityMeasure μ] (c : ℝ) :
     (μ univ).toReal * c ≤ max 0 c := by
   obtain ⟨h0, h1⟩ := IsSubProbabilityMeasure.toReal_mem_Icc (μ := μ) univ
   exact (mul_le_mul_of_nonneg_left (le_max_right 0 _) h0).trans
     (mul_le_of_le_one_left (le_max_left _ _) h1)
 
 /-- The `f`-divergence of a sub-probability measure with itself is at most `max 0 (f 1)`. -/
-theorem fDiv_self_le (μ : Measure X) [IsSubProbabilityMeasure μ] :
+theorem fDiv_self_le [IsSubProbabilityMeasure μ] :
     fDiv f μ μ ≤ ((max 0 (f 1) : ℝ) : EReal) := by
-  rw [fDiv_self_eq, EReal.coe_le_coe_iff]
+  rw [fDiv_self_eq, coe_le_coe_iff]
   exact toReal_univ_mul_le_max μ _
 
 /-- The `f`-divergence of the zero measure from a sub-probability measure `ν` is at most
 `max 0 (f 0)`. -/
-theorem fDiv_zero_left_le (ν : Measure X) [IsSubProbabilityMeasure ν] :
+theorem fDiv_zero_left_le [IsSubProbabilityMeasure ν] :
     fDiv f 0 ν ≤ ((max 0 (f 0) : ℝ) : EReal) := by
-  rw [fDiv_zero_left_eq, EReal.coe_le_coe_iff]
+  rw [fDiv_zero_left_eq, coe_le_coe_iff]
   exact toReal_univ_mul_le_max ν _
 
 /-- Against the zero measure the `f`-divergence is the mass times the slope at infinity. -/
-theorem fDiv_zero_right_eq (μ : Measure X) : fDiv f μ 0 = derivAtTop f * μ univ := by
+theorem fDiv_zero_right_eq : fDiv f μ 0 = derivAtTop f * μ univ := by
   simp [fDiv_of_integrable integrable_zero_measure]
+
+end
 
 /-- A divergence with infinite slope at infinity that is finite forces absolute continuity. -/
 theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
@@ -110,16 +105,16 @@ theorem absolutelyContinuous_of_fDiv_ne_top [μ.HaveLebesgueDecomposition ν]
   · rw [← singularPart_eq_zero, ← measure_univ_eq_zero]
     by_contra h0
     rw [fDiv_of_integrable hint, hf,
-      EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 h0)), EReal.coe_add_top] at h
+      top_mul_of_pos (coe_ennreal_pos.2 (pos_iff_ne_zero.2 h0)), coe_add_top] at h
     exact h rfl
   · exact absurd (fDiv_of_not_integrable hint) h
 
-/-- A nonnegative function has nonnegative `f`-divergence. -/
+/-- A function nonnegative on `[0, ∞)` has nonnegative `f`-divergence. -/
 theorem fDiv_nonneg_of_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ fDiv f μ ν := by
   by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
   · rw [fDiv_of_integrable hint]
-    exact add_nonneg (EReal.coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ toReal_nonneg))
-      (mul_nonneg (derivAtTop_nonneg hf) (EReal.coe_ennreal_nonneg _))
+    exact add_nonneg (coe_nonneg.2 (integral_nonneg fun _ ↦ hf _ toReal_nonneg))
+      (mul_nonneg (derivAtTop_nonneg hf) (coe_ennreal_nonneg _))
   · simp [fDiv_of_not_integrable hint]
 
 /-! ## Partition sums are below the `f`-divergence -/
@@ -132,8 +127,8 @@ theorem _root_.ContinuousOn.measurable_comp_of_nonneg (hf : ContinuousOn f (Ici 
   exact h ▸ (hf.comp_continuous (continuous_id.max continuous_const)
     fun t ↦ le_max_right t 0).measurable.comp hG
 
-/-- A real multiple of `D` below `m` is a real multiple of some `d`, with `d ≥ 0` when `D ≥ 0`.
-It lets `sum_persp_integral_le_fDiv` replace the slope `derivAtTop f` by a real number. -/
+/-- Multiplying by `D : EReal` on scalars `0 ≤ r ≤ m` is multiplying by a real `d`, nonnegative
+when `D` is. -/
 theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0) (hbot : D ≠ ⊥) :
     ∃ d : ℝ, (∀ r : ℝ, 0 ≤ r → r ≤ m → (r : EReal) * D = (r * d : ℝ)) ∧ (0 ≤ D → 0 ≤ d) := by
   by_cases hDtop : D = ⊤
@@ -141,26 +136,29 @@ theorem exists_real_mul_eq_coe_mul (D : EReal) (m : ℝ) (hD : D = ⊤ → m = 0
     obtain rfl : r = 0 := le_antisymm (by simpa [hD hDtop] using hrm) hr
     simp
   · refine ⟨D.toReal, fun r _ _ ↦ ?_, EReal.toReal_nonneg⟩
-    rw [EReal.coe_mul, EReal.coe_toReal hDtop hbot]
+    rw [coe_mul, coe_toReal hDtop hbot]
 
-/-- Weighted partition sums are below the `f`-divergence: Jensen on the density part, the slope
-at infinity on the singular part. Either the weights cover everything (a partition or Markov
-kernel), or `f ≥ 0` so the uncovered part only drops a nonnegative amount. -/
-theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
-    {ι : Type*} (s : Finset ι) {w : ι → X → ℝ} (hw : ∀ i, Measurable (w i))
-    (hw0 : ∀ i x, 0 ≤ w i x) (hw1 : ∀ x, ∑ i ∈ s, w i x ≤ 1)
+section
+
+variable (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
+  [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+include hf hf_cont
+
+/-- Weighted partition sums are below the `f`-divergence, when the weights sum to `1` or `f` is
+nonnegative. -/
+theorem sum_persp_integral_le_fDiv {ι : Type*} (s : Finset ι) {w : ι → X → ℝ}
+    (hw : ∀ i, Measurable (w i)) (hw0 : ∀ i x, 0 ≤ w i x) (hw1 : ∀ x, ∑ i ∈ s, w i x ≤ 1)
     (h : (∀ x, ∑ i ∈ s, w i x = 1) ∨ ∀ t, 0 ≤ t → 0 ≤ f t) :
     ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν) ≤ fDiv f μ ν := by
+  -- Jensen on the density part and the slope at infinity on the singular part; either the
+  -- weights cover everything or `f ≥ 0`, so the uncovered part only drops a nonnegative amount
   by_cases hint : Integrable (fun x ↦ f (μ.rnDeriv ν x).toReal) ν
   swap
   · simp [fDiv_of_not_integrable hint]
   set G : X → ℝ := fun x ↦ (μ.rnDeriv ν x).toReal
   set μs := μ.singularPart ν
-  have hwi (i) (hi : i ∈ s) (x) : w i x ≤ 1 :=
-    (Finset.single_le_sum (fun j _ ↦ hw0 j x) hi).trans (hw1 x)
-  have hwb (i) (hi : i ∈ s) (x) : ‖w i x‖ ≤ 1 :=
-    (Real.norm_of_nonneg (hw0 i x)).le.trans (hwi i hi x)
+  have hwi (i) (hi : i ∈ s) (x) : w i x ≤ 1 := (single_le_sum (fun j _ ↦ hw0 j x) hi).trans (hw1 x)
+  have hwb (i) (hi : i ∈ s) (x) : ‖w i x‖ ≤ 1 := (norm_of_nonneg (hw0 i x)).le.trans (hwi i hi x)
   have hint_w (i) (hi : i ∈ s) (ρ : Measure X) [IsFiniteMeasure ρ] : Integrable (w i) ρ :=
     .of_bound (hw i).aestronglyMeasurable 1 (ae_of_all _ (hwb i hi))
   have hsplit (i) (hi : i ∈ s) : ∫ x, w i x ∂μ = ∫ x, w i x * G x ∂ν + ∫ x, w i x ∂μs := by
@@ -176,7 +174,7 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
   -- infinite slope with singular mass makes fDiv = ⊤; otherwise trade the slope for a real `d`
   by_cases htop : derivAtTop f = ⊤ ∧ μs univ ≠ 0
   · rw [fDiv_of_integrable hint, htop.1,
-      EReal.top_mul_of_pos (EReal.coe_ennreal_pos.2 (pos_iff_ne_zero.2 htop.2)), EReal.coe_add_top]
+      top_mul_of_pos (coe_ennreal_pos.2 (pos_iff_ne_zero.2 htop.2)), coe_add_top]
     exact le_top
   obtain ⟨d, hd, hd0⟩ := exists_real_mul_eq_coe_mul (derivAtTop f) (μs.real univ)
     (fun hD ↦ by simp [measureReal_def, not_not.1 (not_and.1 htop hD)]) (derivAtTop_ne_bot hf)
@@ -192,55 +190,46 @@ theorem sum_persp_integral_le_fDiv (hf : ConvexOn ℝ (Ici 0) f)
             integrable_toReal_rnDeriv hint (hw i) (hw0 i) (hwi i hi))
             (by rw [persp_zero_right, hd _ hs0 (hsing (hint_w i hi _) (hwi i hi))])
   calc ∑ i ∈ s, persp f (∫ x, w i x ∂μ) (∫ x, w i x ∂ν)
-      ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) :=
-        Finset.sum_le_sum hterm
+      ≤ ∑ i ∈ s, ((∫ x, w i x * f (G x) ∂ν + (∫ x, w i x ∂μs) * d : ℝ) : EReal) := sum_le_sum hterm
     _ = ((∫ x, (∑ i ∈ s, w i x) * f (G x) ∂ν + (∫ x, ∑ i ∈ s, w i x ∂μs) * d : ℝ) : EReal) := by
-        rw [← EReal.coe_finset_sum, Finset.sum_add_distrib, ← Finset.sum_mul,
+        rw [← EReal.coe_finset_sum, sum_add_distrib, ← sum_mul,
           ← integral_finsetSum _ fun i hi ↦ hint.bdd_mul (hw i).aestronglyMeasurable
             (ae_of_all _ (hwb i hi)),
           ← integral_finsetSum _ fun i hi ↦ hint_w i hi _]
-        simp_rw [Finset.sum_mul]
+        simp_rw [sum_mul]
         rfl
     _ ≤ ((∫ x, f (G x) ∂ν + μs.real univ * d : ℝ) : EReal) := by
-        rw [EReal.coe_le_coe_iff]
+        rw [coe_le_coe_iff]
         rcases h with h | h
         · simp [h]
         refine add_le_add (integral_mono ?_ hint fun x ↦
           mul_le_of_le_one_left (h _ toReal_nonneg) (hw1 x))
-          (mul_le_mul_of_nonneg_right
-            (hsing (integrable_finsetSum _ fun i hi ↦ hint_w i hi _) hw1)
+          (mul_le_mul_of_nonneg_right (hsing (integrable_finsetSum _ fun i hi ↦ hint_w i hi _) hw1)
             (hd0 (derivAtTop_nonneg h)))
-        exact hint.bdd_mul (Finset.measurable_sum _ fun i _ ↦ hw i).aestronglyMeasurable
+        exact hint.bdd_mul (measurable_sum _ fun i _ ↦ hw i).aestronglyMeasurable
           (ae_of_all _ fun x ↦
-            (Real.norm_of_nonneg (Finset.sum_nonneg fun i _ ↦ hw0 i x)).le.trans (hw1 x))
+            (norm_of_nonneg (sum_nonneg fun i _ ↦ hw0 i x)).le.trans (hw1 x))
     _ = fDiv f μ ν := by
         rw [fDiv_of_integrable hint, EReal.coe_add, ← hd _ measureReal_nonneg le_rfl, mul_comm,
-          measureReal_def, EReal.coe_ennreal_toReal (measure_ne_top _ _)]
+          measureReal_def, coe_ennreal_toReal (measure_ne_top _ _)]
 
 /-- Partition sums are below the `f`-divergence (the ≤ half of Thm. 4.7). -/
-theorem sum_persp_le_fDiv (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ι : Type*} [Fintype ι] [MeasurableSpace ι]
+theorem sum_persp_le_fDiv {ι : Type*} [Fintype ι] [MeasurableSpace ι]
     [MeasurableSingletonClass ι] {k : X → ι} (hk : Measurable k) :
     ∑ i, persp f (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal ≤ fDiv f μ ν := by
   have hA (i : ι) : MeasurableSet (k ⁻¹' {i}) := hk (measurableSet_singleton i)
   have hsum (x : X) : ∑ i, (k ⁻¹' {i}).indicator (1 : X → ℝ) x = 1 := by
-    rw [Finset.sum_eq_single (k x) (fun i _ hi ↦ by simp [hi.symm]) (by simp)]
+    rw [sum_eq_single (k x) (fun i _ hi ↦ by simp [hi.symm]) (by simp)]
     simp
   simpa only [integral_indicator_const _ (hA _), smul_eq_mul, mul_one, measureReal_def] using
-    sum_persp_integral_le_fDiv (μ := μ) (ν := ν) hf hf_cont Finset.univ
-      (fun i ↦ measurable_const.indicator (hA i))
+    sum_persp_integral_le_fDiv hf hf_cont Finset.univ (fun i ↦ measurable_const.indicator (hA i))
       (fun i x ↦ indicator_nonneg (fun _ _ ↦ zero_le_one) x) (fun x ↦ (hsum x).le) (.inl hsum)
 
-/-- Between probability measures a normalised `f`-divergence is nonnegative. -/
-theorem fDiv_nonneg (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    (hf1 : f 1 = 0) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] : 0 ≤ fDiv f μ ν := by
-  simpa [persp_of_ne_zero, hf1] using
-    sum_persp_le_fDiv hf hf_cont (μ := μ) (ν := ν) (k := fun _ : X ↦ (0 : Fin 1)) measurable_const
+/-! ## Monotonicity -/
 
-/-- A larger weight gives a larger `f`-divergence; only the smaller weight needs to be convex, so
-that its integral is bounded below. -/
-theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    (h : ∀ t, 0 ≤ t → f t ≤ g t) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
+/-- The `f`-divergence is monotone in `f` on `[0, ∞)`, when the smaller `f` is convex and
+continuous at `0`. -/
+theorem fDiv_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) :
     fDiv f μ ν ≤ fDiv g μ ν := by
   by_cases hg : Integrable (fun x ↦ g (μ.rnDeriv ν x).toReal) ν
   swap
@@ -250,14 +239,23 @@ theorem fDiv_mono (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f 
   obtain ⟨a, c, hac⟩ :=
     hf.exists_affine_le_real isClosed_Ici (hf.continuousOn_Ici hf_cont).lowerSemicontinuousOn
   have hfG : Integrable (fun x ↦ f (G x)) ν :=
-    integrable_of_le_of_le
-      ((hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
+    integrable_of_le_of_le ((hf.continuousOn_Ici hf_cont).measurable_comp_of_nonneg hG
         fun _ ↦ toReal_nonneg).aestronglyMeasurable
       (ae_of_all _ fun _ ↦ hac _ toReal_nonneg)
       (ae_of_all _ fun _ ↦ h _ toReal_nonneg)
       ((integrable_toReal_rnDeriv.const_mul a).add (integrable_const c)) hg
   rw [fDiv_of_integrable hfG, fDiv_of_integrable hg]
-  exact add_le_add (EReal.coe_le_coe_iff.2 (integral_mono hfG hg fun _ ↦ h _ toReal_nonneg))
-    (mul_le_mul_of_nonneg_right (derivAtTop_mono h) (EReal.coe_ennreal_nonneg _))
+  exact add_le_add (coe_le_coe_iff.2 (integral_mono hfG hg fun _ ↦ h _ toReal_nonneg))
+    (mul_le_mul_of_nonneg_right (derivAtTop_mono h) (coe_ennreal_nonneg _))
+
+end
+
+/-! ## Nonnegativity -/
+
+/-- Between probability measures a normalised `f`-divergence is nonnegative. -/
+theorem fDiv_nonneg (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
+    (hf1 : f 1 = 0) [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] : 0 ≤ fDiv f μ ν := by
+  simpa [persp_of_ne_zero, hf1] using
+    sum_persp_le_fDiv hf hf_cont (μ := μ) (ν := ν) (k := fun _ : X ↦ (0 : Fin 1)) measurable_const
 
 end ProbabilityTheory

@@ -27,29 +27,10 @@ namespace ClosedCtx
 
 def empty : ClosedCtx := ∅
 
-def insert (X : ClosedCtx) (x : Var) : ClosedCtx := Insert.insert x X
-
-def subset (X Y : ClosedCtx) : Prop := X ⊆ Y
-
-theorem subset.insert {X Y : ClosedCtx} (h : X.subset Y) (x : Var) :
-    (X.insert x).subset (Y.insert x) := by
-  intro z hz
-  rcases Finset.mem_insert.mp hz with rfl | hz
-  · exact Finset.mem_insert_self _ _
-  · exact Finset.mem_insert_of_mem (h hz)
-
 end ClosedCtx
 
 /-- `e` is locally closed with free variables in `X`. -/
 def Exp.isClosed (X : ClosedCtx) (e : Exp rT) : Prop := e.IsLocallyClosed ∧ e.fv ⊆ X
-
-theorem Exp.isClosed_weaken {X Y : ClosedCtx} (hXY : X.subset Y)
-    {e : Exp α} (h : e.isClosed X) : e.isClosed Y :=
-  ⟨h.1, fun _ hz => hXY (h.2 hz)⟩
-
-theorem Exp.isClosed_weaken_empty {X : ClosedCtx} {e : Exp α}
-    (h : e.isClosed .empty) : e.isClosed X :=
-  ⟨h.1, fun _ hz => by simpa [ClosedCtx.empty] using h.2 hz⟩
 
 theorem Exp.notMem_fv_of_isClosed_empty {e : Exp α} (h : e.isClosed .empty) (x : Var) :
     x ∉ e.fv :=
@@ -67,7 +48,7 @@ namespace SubstMap
 
 def empty : SubstMap rT := []
 
-/-- Cons a pair on the left; it does not shadow an existing binding (`lookup_insert_of_isSome`). -/
+/-- Cons a pair on the left; it does not shadow an existing binding. -/
 def insert (vs : SubstMap rT) (x : Var) (v : Exp rT) : SubstMap rT := (x, v) :: vs
 
 def delete (vs : SubstMap rT) (x : Var) : SubstMap rT :=
@@ -87,15 +68,6 @@ def lookup : SubstMap rT → Var → Option (Exp rT)
         | some w => some w
         | none => if y = x then some v else none := rfl
 
-/-- Inserting over an already-bound key leaves its lookup unchanged. -/
-theorem lookup_insert_of_isSome {vs : SubstMap rT} {x : Var} {w v : Exp rT}
-    (h : vs.lookup x = some w) : (vs.insert x v).lookup x = some w := by
-  simp [lookup_insert, h]
-
-theorem lookup_insert_of_none {vs : SubstMap rT} {x : Var} {v : Exp rT}
-    (h : vs.lookup x = none) : (vs.insert x v).lookup x = some v := by
-  simp [lookup_insert, h]
-
 end SubstMap
 
 /-- Substitute sequentially, rightmost pair first:
@@ -112,21 +84,7 @@ def Exp.substMap (vs : SubstMap rT) (e : Exp rT) : Exp rT :=
 @[simp] theorem Exp.substMap_cons (p : Var × Exp rT) (vs : SubstMap rT) (e : Exp rT) :
     e.substMap (p :: vs) = Exp.subst (e.substMap vs) p.1 p.2 := rfl
 
-theorem Exp.substMap_singleton (x : Var) (v e : Exp rT) :
-    e.substMap [(x, v)] = Exp.subst e x v := rfl
-
 /-! ### Substitution and closedness -/
-
-theorem Exp.subst_isClosed {X : ClosedCtx} {e v : Exp α} {x : Var}
-    (he : e.isClosed (X.insert x)) (hv : v.isClosed X) :
-    (Exp.subst e x v).isClosed X := by
-  refine ⟨Exp.subst_lc he.1 hv.1, fun z hz => ?_⟩
-  rcases Finset.mem_union.mp (Exp.fv_subst_subset e x v hz) with h | h
-  · obtain ⟨hfv, hne⟩ := Finset.mem_sdiff.mp h
-    rcases Finset.mem_insert.mp (he.2 hfv) with rfl | hx
-    · exact absurd (Finset.mem_singleton.mpr rfl) hne
-    · exact hx
-  · exact hv.2 h
 
 /-! ### Commutation of substitutions -/
 
@@ -209,10 +167,6 @@ theorem SubstMap.AllClosed_cons {x : Var} {v : Exp rT} {vs : SubstMap rT} :
     · exact hv
     · exact hvs p hpm
 
-theorem SubstMap.AllClosed_delete {vs : SubstMap rT} (x : Var)
-    (h : SubstMap.AllClosed vs) : SubstMap.AllClosed (vs.delete x) :=
-  fun p hp => h p (List.mem_filter.mp hp).1
-
 theorem SubstMap.AllClosed_filter (vs : SubstMap rT) (P : Var × Exp rT → Bool)
     (h : SubstMap.AllClosed vs) :
     SubstMap.AllClosed (vs.filter P) :=
@@ -284,25 +238,6 @@ theorem Exp.substMap_subst_fvar_comm
     have hzNotFvY : z ∉ (Exp.fvar (rT := rT) y).fv := by simpa [Exp.fv] using hzy
     rw [Exp.substMap_cons, Exp.substMap_cons, ih hxNotRest hyNotRest hvs_rest,
       ← Exp.subst_subst_ne hzx hzNotFvY (Exp.notMem_fv_of_isClosed_empty hw_closed x)]
-
-theorem Exp.substMap_isClosed_empty {e : Exp rT} (vs : SubstMap rT)
-    (he : e.isClosed .empty) : e.substMap vs = e := by
-  induction vs with
-  | nil => rfl
-  | cons p vs ih =>
-      rw [Exp.substMap_cons, ih]
-      exact Exp.subst_fresh _ _ _ (Exp.notMem_fv_of_isClosed_empty he _)
-
-/-- Substituting atoms outside `X` leaves a term closed in `X` unchanged (Clutch). -/
-theorem Exp.substMap_isClosed {X : ClosedCtx} {e : Exp rT} (vs : SubstMap rT)
-    (he : e.isClosed X)
-    (hvs : ∀ p ∈ vs, p.1 ∉ X) :
-    e.substMap vs = e := by
-  induction vs with
-  | nil => rfl
-  | cons p vs ih =>
-      rw [Exp.substMap_cons, ih fun q hq => hvs q (List.mem_cons_of_mem _ hq)]
-      exact Exp.subst_fresh _ _ _ fun h => hvs p List.mem_cons_self (he.2 h)
 
 /-! ### `substMap` through constructors
 
@@ -554,35 +489,6 @@ theorem Exp.fix_substMap_isLocallyClosed {e : Exp rT} {σ : SubstMap rT} {L D : 
   rw [← hbridge]
   exact Exp.substMap_lc hσ (he y fun h => hy (Finset.mem_union_left _ h))
 
-/-- A free variable of `substMap vs e` is free in `e` or in one of the substituted values. -/
-theorem Exp.fv_substMap_subset (vs : SubstMap rT) (e : Exp rT) :
-    (Exp.substMap vs e).fv ⊆
-      e.fv ∪ ((vs.map (·.2)).foldr (fun w acc => w.fv ∪ acc) ∅) := by
-  induction vs generalizing e with
-  | nil => simp [Exp.substMap]
-  | cons p rest ih =>
-    obtain ⟨z, w⟩ := p
-    rw [Exp.substMap_cons]
-    intro y hy
-    simp only [List.map_cons, List.foldr_cons, Finset.mem_union]
-    rcases Finset.mem_union.mp (fv_subst_subset (substMap rest e) z w hy) with hL | hR
-    · rcases Finset.mem_union.mp (ih (e := e) (Finset.mem_sdiff.mp hL).1) with h_e | h_rest
-      · exact .inl h_e
-      · exact .inr (.inr h_rest)
-    · exact .inr (.inl hR)
-
-theorem SubstMap.allClosed_values_fv_empty {vs : SubstMap rT}
-    (hClosed : SubstMap.AllClosed vs) :
-    ((vs.map (·.2)).foldr (fun w acc => w.fv ∪ acc) ∅) = ∅ := by
-  induction vs with
-  | nil => rfl
-  | cons p rest ih =>
-    obtain ⟨z, w⟩ := p
-    obtain ⟨hwClosed, hRestClosed⟩ := SubstMap.AllClosed_cons.mp hClosed
-    simp only [List.map_cons, List.foldr_cons]
-    rw [ih hRestClosed, Exp.fv_eq_empty_of_isClosed_empty hwClosed]
-    simp
-
 theorem Exp.fv_substMap_sdiff_dom {vs : SubstMap rT} {e : Exp rT}
     (hClosed : SubstMap.AllClosed vs) :
     (Exp.substMap vs e).fv ⊆ e.fv \ (vs.map (·.1)).toFinset := by
@@ -793,94 +699,6 @@ inductive ProbHeadStepPred : Exp rT → State rT → Prop
 def HeadStepPred (e : Exp rT) (σ : State rT) : Prop :=
   DetHeadStepPred e σ ∨ ProbHeadStepPred e σ
 
-/-- Boolean test for `DetHeadStepPred` (`isDetHeadStep_iff_pred`). -/
-def isDetHeadStep (e : Exp rT) (σ : State rT) : Bool :=
-  match e with
-  | .app (.lam _) e2 => decide e2.isValue
-  | .app (.fix _) e2 => decide e2.isValue
-  | .unop op e =>
-      decide e.isValue && (op.eval e).isSome
-  | .binop op e1 e2 =>
-      decide e1.isValue && decide e2.isValue && (op.eval e1 e2).isSome
-  | .cond (.lit (.bool _)) _ _ => true
-  | .fst (.pair e1 e2) => decide e1.isValue && decide e2.isValue
-  | .snd (.pair e1 e2) => decide e1.isValue && decide e2.isValue
-  | .case (.inl e) _ _ => decide e.isValue
-  | .case (.inr e) _ _ => decide e.isValue
-  | .alloc ed => decide ed.isValue
-  | .load (.lit (.loc ℓ)) => σ.heap[ℓ]?.isSome
-  | .store (.lit (.loc ℓ)) e => decide e.isValue && σ.heap[ℓ]?.isSome
-  | .tape (.lit (.int _)) => true
-  | .scrut e _ => decide e.isValue
-  | _ => false
-
-theorem val_not_HeadStepPred {e : Exp rT} {σ : State rT}
-    (hv : e.isValue) : ¬ HeadStepPred e σ := by
-  rw [Exp.isValue_iff_isValueR] at hv
-  rintro (hdet | hprob)
-  · cases hdet <;> simp [Exp.isValueR] at hv
-  · cases hprob <;> simp [Exp.isValueR] at hv
-
-theorem isDetHeadStep_iff_pred (e : Exp rT) (σ : State rT) :
-    isDetHeadStep e σ = true ↔ DetHeadStepPred e σ := by
-  constructor
-  · intro h
-    unfold isDetHeadStep at h
-    split at h
-    · exact .betaLam (by simpa using h)
-    · exact .betaFix (by simpa using h)
-    · rw [Bool.and_eq_true, decide_eq_true_eq, Option.isSome_iff_exists] at h
-      obtain ⟨hv, e'', heval⟩ := h
-      exact .unop hv heval
-    · rw [Bool.and_eq_true, Bool.and_eq_true, decide_eq_true_eq,
-          decide_eq_true_eq, Option.isSome_iff_exists] at h
-      obtain ⟨⟨hv1, hv2⟩, e', heval⟩ := h
-      exact .binop hv1 hv2 heval
-    · rename_i b _ _
-      cases b
-      · exact .ifFalse
-      · exact .ifTrue
-    · rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h
-      exact .fst h.1 h.2
-    · rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h
-      exact .snd h.1 h.2
-    · rw [decide_eq_true_eq] at h
-      exact .caseL h
-    · rw [decide_eq_true_eq] at h
-      exact .caseR h
-    · rw [decide_eq_true_eq] at h
-      exact .alloc h
-    · rw [Option.isSome_iff_exists] at h
-      obtain ⟨v, hv⟩ := h
-      exact .load hv
-    · rw [Bool.and_eq_true, decide_eq_true_eq] at h
-      exact .store h.1 h.2
-    · exact .tape
-    · rename_i e p
-      rw [decide_eq_true_eq] at h
-      cases hm : Pat.tryMatch p e with
-      | some bindings => exact .scrutSuccess h hm
-      | none => exact .scrutFailure h hm
-    · simp at h
-  · intro hpred
-    cases hpred with
-    | betaLam hv => simp [isDetHeadStep, hv]
-    | betaFix hv => simp [isDetHeadStep, hv]
-    | unop hv heval => simp [isDetHeadStep, hv, heval]
-    | binop hv1 hv2 heval => simp [isDetHeadStep, hv1, hv2, heval]
-    | ifTrue => simp [isDetHeadStep]
-    | ifFalse => simp [isDetHeadStep]
-    | fst hv1 hv2 => simp [isDetHeadStep, hv1, hv2]
-    | snd hv1 hv2 => simp [isDetHeadStep, hv1, hv2]
-    | caseL hv => simp [isDetHeadStep, hv]
-    | caseR hv => simp [isDetHeadStep, hv]
-    | alloc hv => simp [isDetHeadStep, hv]
-    | load hlook => simp [isDetHeadStep, hlook]
-    | store hv hsome => simp [isDetHeadStep, hv, hsome]
-    | tape => simp [isDetHeadStep]
-    | scrutSuccess hv _ => simp [isDetHeadStep, hv]
-    | scrutFailure hv _ => simp [isDetHeadStep, hv]
-
 theorem HeadStepPred_iff_exists_support (e : Exp rT) (σ : State rT) :
     HeadStepPred e σ ↔ ∃ ρ', HeadStepSupport ⟨e, σ⟩ ρ' := by
   constructor
@@ -982,12 +800,12 @@ theorem det_or_prob_or_zero
 /-! ## Tape and fresh-location updates -/
 
 /-- Reading the tape just written returns it. -/
-theorem State.upd_tape_some (σ : State rT) (α : Loc) (t : Tape) :
+theorem State.upd_tape_some {rT : Type _} (σ : State rT) (α : Loc) (t : Tape) :
     (σ.update_tapes (·.insert α t)).tapes[α]? = some t := by
   simp [State.update_tapes]
 
 /-- Writes to distinct tapes commute. -/
-theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
+theorem State.upd_diff_tape_comm {rT : Type _} {σ : State rT} {α β : Loc} {bs bs' : Tape}
     (hne : α ≠ β) :
     ((σ.update_tapes (·.insert β bs)).update_tapes (·.insert α bs')) =
       ((σ.update_tapes (·.insert α bs')).update_tapes (·.insert β bs)) := by
@@ -1005,7 +823,7 @@ theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
     · simp [hαk, hβk]
 
 /-- Writing tape `β` leaves the lookup at `α ≠ β` unchanged. -/
-theorem State.upd_diff_tape_tot {σ : State rT} {α β : Loc} {bs : Tape}
+theorem State.upd_diff_tape_tot {rT : Type _} {σ : State rT} {α β : Loc} {bs : Tape}
     (hne : α ≠ β) :
     (σ.update_tapes (·.insert β bs)).tapes[α]? = σ.tapes[α]? := by
   simp [State.update_tapes, Std.ExtTreeMap.getElem?_insert, Ne.symm hne]
@@ -1049,7 +867,7 @@ theorem _root_.Std.ExtTreeMap.fresh_insert_of_mem
   rw [hkeys]
 
 /-- Overwriting an existing tape keeps `tapes.fresh`. -/
-theorem State.fresh_loc_upd_some {σ : State rT} {α : Loc} {bs bs' : Tape}
+theorem State.fresh_loc_upd_some {rT : Type _} {σ : State rT} {α : Loc} {bs bs' : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert α bs').fresh = σ.tapes.fresh :=
   Std.ExtTreeMap.fresh_insert_of_mem σ.tapes h
@@ -1061,34 +879,6 @@ theorem _root_.Std.ExtTreeMap.elem_fresh_ne
   have hfresh := Std.ExtTreeMap.fresh_get? t
   rw [heq, h] at hfresh
   simp at hfresh
-
-theorem State.fresh_loc_upd_swap {σ : State rT} {α : Loc} {bs bs' : Tape} {t : Tape}
-    (h : σ.tapes[α]? = some bs) :
-    ((σ.tapes.insert α bs').insert (σ.tapes.insert α bs').fresh t) =
-      ((σ.tapes.insert σ.tapes.fresh t).insert α bs') := by
-  rw [State.fresh_loc_upd_some h]
-  have hne : σ.tapes.fresh ≠ α := Std.ExtTreeMap.elem_fresh_ne h
-  apply Std.ExtTreeMap.ext_getElem?
-  intro k
-  simp [Std.ExtTreeMap.getElem?_insert]
-  by_cases hαk : α = k
-  · subst hαk
-    simp [hne]
-  · by_cases hfk : σ.tapes.fresh = k
-    · subst hfk
-      simp [hαk]
-    · simp [hαk, hfk]
-
-/-- Allocating a fresh tape keeps existing lookups. -/
-theorem State.fresh_loc_lookup {σ : State rT} {α : Loc} {bs : Tape} {t : Tape}
-    (h : σ.tapes[α]? = some bs) :
-    (σ.tapes.insert σ.tapes.fresh t)[α]? = some bs := by
-  have hne : σ.tapes.fresh ≠ α := Std.ExtTreeMap.elem_fresh_ne h
-  rw [Std.ExtTreeMap.getElem?_insert]
-  have hcmp : compare σ.tapes.fresh α ≠ .eq := by
-    simp [compare, compareOfLessAndEq]
-    split <;> simp_all
-  simp [hcmp, h]
 
 /-! ## `Cfg.uniform` -/
 
@@ -1128,7 +918,7 @@ theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT
       (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold Cfg.uniform Int.isPos; simp only [dite_eq_left hz]
 
-/-- Countability-free: measurability of `φ` is assumed rather than derived from discreteness. -/
+/-- The integral of a measurable `φ` against `Cfg.uniform z σ` is its average over `Ico 0 z`. -/
 theorem Cfg.lintegral_uniform'
     {z : Int} (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
@@ -1146,13 +936,6 @@ theorem Cfg.lintegral_uniform'
   refine Finset.sum_congr rfl fun n hn => ?_
   rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
       PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
-
-theorem Cfg.lintegral_uniform [Countable rT]
-    {z : Int} (Hz : 0 < z) (σ : State rT) (φ : Cfg rT → ENNReal) :
-    ∫⁻ c, φ c ∂(Cfg.uniform z σ) =
-      ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Finset.Ico (0 : Int) z,
-        φ (⟨.lit (.int n), σ⟩ : Cfg rT) :=
-  Cfg.lintegral_uniform' Hz σ Measurable.of_discrete
 
 /-! ## Tape updates preserve head-step shape -/
 
@@ -1211,58 +994,5 @@ theorem State.head_step_dzero_upd_tapes
     exact absurd h0 (Cfg.uniform_ne_zero _ _)
   case urand h0 =>
     exact absurd h0 (MeasureTheory.IsProbabilityMeasure.ne_zero _)
-
-/-- Overwriting a tape preserves deterministic head redexes. -/
-theorem State.det_head_step_upd_tapes
-    {e : Exp rT} {σ : State rT} {α : Loc} {bs' : Tape}
-    (hdet : ProbLang.DetHeadStepPred e σ) :
-    ProbLang.DetHeadStepPred e (σ.update_tapes (·.insert α bs')) := by
-  cases hdet with
-  | betaLam hv => exact .betaLam hv
-  | betaFix hv => exact .betaFix hv
-  | unop hv heval => exact .unop hv heval
-  | binop hv1 hv2 heval => exact .binop hv1 hv2 heval
-  | ifTrue => exact .ifTrue
-  | ifFalse => exact .ifFalse
-  | fst hv1 hv2 => exact .fst hv1 hv2
-  | snd hv1 hv2 => exact .snd hv1 hv2
-  | caseL hv => exact .caseL hv
-  | caseR hv => exact .caseR hv
-  | alloc hv => exact .alloc hv
-  | load hlook => exact .load hlook
-  | store hv hsome => exact .store hv hsome
-  | tape => exact .tape
-  | scrutSuccess hv hm => exact .scrutSuccess hv hm
-  | scrutFailure hv hm => exact .scrutFailure hv hm
-
-/-- In any context, `rand z α` on an empty tape steps exactly like the tapeless `rand z ()`,
-whatever the tape bound. -/
-theorem State.prim_step_empty_tape [Countable rT]
-    {K : ProbLang.Ectx rT} {σ : State rT} {α : Loc} {z : Int} {N : Int}
-    (hmem : σ.tapes[α]? = some ⟨N, []⟩) :
-    ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit (.lbl α))), σ⟩ =
-      ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit .unit)), σ⟩ := by
-  have hv_lbl : ¬ (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).isValue := by
-    intro h; obtain ⟨hv⟩ := h; cases hv
-  have hv_unit : ¬ (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).isValue := by
-    intro h; obtain ⟨hv⟩ := h; cases hv
-  rw [primStep_fill hv_lbl, primStep_fill hv_unit]
-  suffices h : ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ =
-      ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ by rw [h]
-  have hdecomp_lbl : (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).decomp =
-      ([], .rand (.lit (.int z)) (.lit (.lbl α))) := by
-    rw [Exp.decomp_unfold]
-    simp only [Exp.decompItem]
-    rw [show (Exp.lit (rT := rT) (.lbl α)).toVal? = some (.lbl α) from rfl,
-      show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
-  have hdecomp_unit : (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).decomp =
-      ([], .rand (.lit (.int z)) (.lit .unit)) := by
-    rw [Exp.decomp_unfold]
-    simp only [Exp.decompItem]
-    rw [show (Exp.lit (rT := rT) .unit).toVal? = some .unit from rfl,
-      show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
-  simp only [primStep, hdecomp_lbl, hdecomp_unit, Ectx.fillCfg_empty, MeasureTheory.Measure.map_id]
-  simp only [headStep, hmem]
-  rw [ite_self]
 
 end ProbLang

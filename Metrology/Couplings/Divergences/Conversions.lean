@@ -60,8 +60,7 @@ theorem renyi_of_dp (hα : 1 < α) {ε : ℝ≥0∞} [IsSubProbabilityMeasure μ
           field_simp
       _ ≤ p * exp e ^ (α - 1) := by gcongr
       _ = exp ((α - 1) * e) * p := by rw [← exp_mul, mul_comm e, mul_comm]
-  calc ∑ i, persp (· ^ α) (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal
-      ≤ ∑ i, ((exp ((α - 1) * e) * (μ (k ⁻¹' {i})).toReal : ℝ) : EReal) :=
+  calc _ ≤ ∑ i, ((exp ((α - 1) * e) * (μ (k ⁻¹' {i})).toReal : ℝ) : EReal) :=
         Finset.sum_le_sum fun i _ ↦ hcell i
     _ = ((exp ((α - 1) * e) * (μ (k ⁻¹' univ)).toReal : ℝ) : EReal) := by
         rw [← EReal.coe_finset_sum, ← Finset.mul_sum, ← ENNReal.toReal_sum (by finiteness),
@@ -155,8 +154,8 @@ theorem dp_of_renyi [IsFiniteMeasure μ] [IsFiniteMeasure ν] {ρ : ℝ≥0∞} 
   · simpa using dp_top_left
   intro _
   rw [expBudget_of_ne_top (by finiteness), ENNReal.toReal_add hρ ENNReal.ofReal_ne_top]
-  refine (bound_of_fDiv_rpow_le hα hδ ((renyiDivergence_iff_of_ne_top hα.le hρ).1 h)).mono ?_
-    le_rfl
+  have hb := bound_of_fDiv_rpow_le hα hδ ((renyiDivergence_iff_of_ne_top hα.le hρ).1 h)
+  refine hb.mono ?_ le_rfl
   gcongr
   rw [ENNReal.toReal_ofReal']
   exact le_max_left _ _
@@ -198,8 +197,7 @@ theorem bound_of_forall_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {
     have hs : √(ρ * log (1 / δ)) = ρ * t := by
       rw [show ρ * log (1 / δ) = (ρ * t) ^ 2 by rw [mul_pow, ht2]; field_simp,
         sqrt_sq (by positivity)]
-    have heq : ξ + (1 + t) * ρ + log (1 / δ) / (1 + t - 1) =
-        ξ + ρ + 2 * √(ρ * log (1 / δ)) := by
+    have heq : ξ + (1 + t) * ρ + log (1 / δ) / (1 + t - 1) = ξ + ρ + 2 * √(ρ * log (1 / δ)) := by
       rw [hs, add_sub_cancel_left, show log (1 / δ) = ρ * t ^ 2 by rw [ht2]; field_simp]
       field_simp
       ring
@@ -400,17 +398,11 @@ theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
         ENNReal.ofReal δ) :=
   rfl
 
-end LiftingRelHom
-
-/-! ## Closed-form budgets -/
-
-/-- At `ρ = 0` the budget of `zcdpToDp_map` is at most `ξ`: send the order to infinity. So pure
-zCDP liftings are DP at `(ξ, δ)` for every `δ > 0`. -/
-theorem LiftingRelHom.zcdpToDp_budget_le_of_rho_zero (ξ : ℝ≥0∞) {δ : ℝ} :
-    ⨅ α ∈ Set.Ioi (1 : ℝ), ξ + ENNReal.ofReal α * 0 +
-      ENNReal.ofReal (Real.log (1 / δ) / (α - 1)) ≤ ξ := by
+/-- At `ρ = 0` the budget of `zcdpToDp_map` is at most `ξ`, by sending the order to infinity. -/
+theorem zcdpToDp_budget_le_of_rho_zero (ξ : ℝ≥0∞) :
+    ⨅ α ∈ Ioi (1 : ℝ), ξ + ENNReal.ofReal α * 0 + ENNReal.ofReal (log (1 / δ) / (α - 1)) ≤ ξ := by
   refine ENNReal.le_of_forall_pos_le_add fun t ht _ ↦ ?_
-  set l := Real.log (1 / δ)
+  set l := log (1 / δ)
   have hl : 0 < |l| + 1 := by positivity
   have ht' : (0 : ℝ) < t := ht
   refine (iInf₂_le (1 + (|l| + 1) / t) (lt_add_of_pos_right _ (div_pos hl ht'))).trans ?_
@@ -419,6 +411,8 @@ theorem LiftingRelHom.zcdpToDp_budget_le_of_rho_zero (ξ : ℝ≥0∞) {δ : ℝ
   refine ENNReal.ofReal_le_of_le_toReal ?_
   rw [ENNReal.coe_toReal, div_div_eq_mul_div, div_le_iff₀ hl]
   nlinarith [le_abs_self l]
+
+end LiftingRelHom
 
 namespace GradedDivergence
 

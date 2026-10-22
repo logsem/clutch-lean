@@ -13,12 +13,10 @@ meta import Metrology.ProbLang.CoreMeasures.CylinderGen
 
 noncomputable section ProbLangMeasures
 
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang
-
 /-! # Measurable space on expressions
 
-The σ-algebra on `Exp`, derived with the `MeasurableSpace` handler (`CylinderGen.lean`); it makes
-every constructor a measurable embedding. -/
+The σ-algebra on `Exp`, derived with the `MeasurableSpace` deriving handler (`CylinderGen.lean`);
+it makes every constructor a measurable embedding. -/
 
 namespace ProbLang.Exp
 

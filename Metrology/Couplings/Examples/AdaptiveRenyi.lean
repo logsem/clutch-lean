@@ -5,32 +5,36 @@ public import Metrology.Couplings.Divergences.RenyiAdaptive
 /-! # Adaptive Rényi example: two-stage randomized response
 
 A second randomized response runs only when the first report is `true`; the escort rule gives
-Rényi budget `log (19 / 12)` at order `2` (`renyiDivergence_adaptive`), below the non-adaptive one. -/
+Rényi budget `log (19 / 12)` at order `2` (`renyiDivergence_adaptive`), below the non-adaptive
+one. -/
 
 @[expose] public section
 
-open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence
+open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence ENNReal Real
 open scoped ENNReal
 
 namespace AdaptiveRenyi
 
+variable (d : Bool)
+
 /-! ## The mechanism -/
 
 /-- Randomized response: report the input bit with probability `2 / 3`. -/
-noncomputable def randResp (d : Bool) : Measure Bool :=
+noncomputable def randResp : Measure Bool :=
   (2 / 3 : ℝ≥0∞) • dirac d + (1 / 3 : ℝ≥0∞) • dirac (!d)
 
-instance isProbabilityMeasure_randResp (d : Bool) : IsProbabilityMeasure (randResp d) := ⟨by
+/-- Randomized response is a probability measure. -/
+instance isProbabilityMeasure_randResp : IsProbabilityMeasure (randResp d) := ⟨by
   simp [randResp]
   rw [div_eq_mul_inv, ← add_one_mul, two_add_one_eq_three,
     ENNReal.mul_inv_cancel (by norm_num) (by norm_num)]⟩
 
-/-- The second stage: after a reported `true`, run randomized response again; after `false`,
-release nothing new. It outputs both reports. -/
-noncomputable def stageTwo (d : Bool) : Kernel Bool (Bool × Bool) :=
+/-- The second stage reruns randomized response after a reported `true` and outputs both reports. -/
+noncomputable def stageTwo : Kernel Bool (Bool × Bool) :=
   ⟨fun b ↦ cond b ((randResp d).map (Prod.mk true)) (dirac (false, false)), .of_discrete⟩
 
-instance isMarkovKernel_stageTwo (d : Bool) : IsMarkovKernel (stageTwo d) := ⟨by
+/-- The second stage is a Markov kernel. -/
+instance isMarkovKernel_stageTwo : IsMarkovKernel (stageTwo d) := ⟨by
   rintro (_ | _)
   · exact inferInstanceAs (IsProbabilityMeasure (dirac _))
   · exact inferInstanceAs (IsProbabilityMeasure (map _ _))⟩
@@ -40,10 +44,11 @@ noncomputable def stageTwoCost (b : Bool) : ℝ≥0∞ :=
   cond b (ENNReal.ofReal (Real.log (3 / 2))) 0
 
 /-- The two-stage adaptive mechanism on input `d`. -/
-noncomputable def adaptive (d : Bool) : Measure (Bool × Bool) :=
+noncomputable def adaptive : Measure (Bool × Bool) :=
   stageTwo d ∘ₘ randResp d
 
-instance isProbabilityMeasure_adaptive (d : Bool) : IsProbabilityMeasure (adaptive d) := by
+/-- The adaptive mechanism is a probability measure. -/
+instance isProbabilityMeasure_adaptive : IsProbabilityMeasure (adaptive d) := by
   unfold adaptive
   infer_instance
 
@@ -52,18 +57,18 @@ instance isProbabilityMeasure_adaptive (d : Bool) : IsProbabilityMeasure (adapti
 /-- The multiplier of the expensive branch is `3 / 2`. -/
 theorem expBudget_log_three_halves :
     expBudget (ENNReal.ofReal (Real.log (3 / 2))) = 3 / 2 := by
-  rw [expBudget_ofReal (Real.log_nonneg (by norm_num)), Real.exp_log (by norm_num),
-    ENNReal.ofReal_div_of_pos (by norm_num)]
+  rw [expBudget_ofReal (log_nonneg (by norm_num)), Real.exp_log (by norm_num),
+    ofReal_div_of_pos (by norm_num)]
   simp
 
 /-- Randomized response on adjacent inputs is within Rényi budget `log (3 / 2)` at order `2`. -/
 theorem renyiDivergence_randResp :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (3 / 2))) (randResp false) (randResp true) := by
-  rw [renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
+  rw [renyiDivergence_iff_of_ne_top one_le_two ofReal_ne_top,
     fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)]
   simp [randResp]
   rw [persp_of_ne_zero (by norm_num), persp_of_ne_zero (by norm_num), ← EReal.coe_add,
-    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
+    toReal_ofReal (log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
   norm_num [Real.exp_log]
 
 /-! ## The adaptive bound -/
@@ -74,12 +79,12 @@ theorem renyiDivergence_randResp_escort :
     renyiDivergence 2 (ENNReal.ofReal (Real.log (19 / 12))) (randResp false)
       (((Kernel.id : Kernel Bool Bool) ∘ₘ randResp true).withDensity
         fun b ↦ (expBudget (stageTwoCost b))⁻¹) := by
-  rw [renyiDivergence_iff_of_ne_top one_le_two ENNReal.ofReal_ne_top,
+  rw [renyiDivergence_iff_of_ne_top one_le_two ofReal_ne_top,
     fDiv_eq_sum (convexOn_rpow one_le_two) (continuousWithinAt_rpow_zero two_pos)]
   simp [randResp, stageTwoCost, withDensity_apply _ (measurableSet_singleton _),
     expBudget_log_three_halves]
   rw [persp_of_ne_zero (by norm_num), persp_of_ne_zero (by norm_num), ← EReal.coe_add,
-    ENNReal.toReal_ofReal (Real.log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
+    toReal_ofReal (log_nonneg (by norm_num)), EReal.coe_le_coe_iff]
   norm_num [Real.exp_log]
 
 /-- The adaptive mechanism on adjacent inputs is within Rényi budget `log (19 / 12)` at order
@@ -103,15 +108,14 @@ theorem renyiDivergence_adaptive :
 
 /-! ## Adaptivity helps -/
 
-/-- The adaptive budget is strictly below the worst-case non-adaptive budget: the first stage's
-`log (3 / 2)` plus the largest second-stage cost. -/
-theorem log_nineteen_twelfths_lt :
+/-- The adaptive budget is strictly below the worst-case non-adaptive one. -/
+theorem renyi_adaptive_budget_lt_nonadaptive :
     ENNReal.ofReal (Real.log (19 / 12)) <
       ENNReal.ofReal (Real.log (3 / 2)) + ⨆ b, stageTwoCost b := by
-  have hlog : 0 ≤ Real.log (3 / 2) := Real.log_nonneg (by norm_num)
+  have hlog : 0 ≤ Real.log (3 / 2) := log_nonneg (by norm_num)
   rw [show ⨆ b, stageTwoCost b = ENNReal.ofReal (Real.log (3 / 2)) by simp [iSup_bool_eq,
-      stageTwoCost], ← ENNReal.ofReal_add hlog hlog,
-    ENNReal.ofReal_lt_ofReal_iff (by positivity), ← Real.log_mul (by norm_num) (by norm_num)]
-  exact Real.log_lt_log (by norm_num) (by norm_num)
+      stageTwoCost], ← ofReal_add hlog hlog,
+    ofReal_lt_ofReal_iff (by positivity), ← log_mul (by norm_num) (by norm_num)]
+  exact log_lt_log (by norm_num) (by norm_num)
 
 end AdaptiveRenyi

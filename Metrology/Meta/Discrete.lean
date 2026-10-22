@@ -9,10 +9,8 @@ open Lean Elab Command Term Meta
 /-!
 # The `@[discrete]` attribute
 
-A `@[discrete]` declaration may only be referenced by other `@[discrete]` declarations;
-other references trigger the `linter.discrete` warning at the use site.
-Discrete declarations assume steps with atomic support (no `urand`), e.g. `wp_lift_step_later`;
-the linter flags continuous developments that rely on them.
+A `@[discrete]` declaration (one that assumes atomic-support steps, no `urand`) may only be
+referenced by other `@[discrete]` declarations; other uses get the `linter.discrete` warning.
 -/
 
 namespace Metrology.Discrete
@@ -21,8 +19,7 @@ meta initialize discreteExt : SimplePersistentEnvExtension Name NameSet ←
   registerSimplePersistentEnvExtension {
     addImportedFn := fun es => es.foldl (fun s arr => arr.foldl (·.insert ·) s) {}
     addEntryFn    := fun s n => s.insert n
-    toArrayFn     := fun es => es.toArray
-  }
+    toArrayFn     := fun es => es.toArray }
 
 /-- Whether `declName` is marked `@[discrete]`. -/
 meta def isDiscrete (env : Environment) (declName : Name) : Bool :=
@@ -35,14 +32,12 @@ meta initialize registerBuiltinAttribute {
   descr := "Mark a definition as belonging to the discrete fragment. It may only be referenced \
     by other discrete definitions; non-discrete clients get a `linter.discrete` warning."
   add   := fun decl _stx _kind => do
-    modifyEnv fun env => discreteExt.addEntry env decl
-}
+    modifyEnv fun env => discreteExt.addEntry env decl }
 
 meta register_option linter.discrete : Bool := {
   defValue := true
   descr    := "if true, warn when a `@[discrete]` declaration is referenced from a \
-    non-discrete declaration"
-}
+    non-discrete declaration" }
 
 /-- The fully-qualified names defined by this command: its binder `.const` occurrences.
 Parsing the surface `declId` instead would give unqualified names that miss `discreteExt`. -/
@@ -75,8 +70,7 @@ meta def discreteUse : Linter where
         let .original .. := info.stx.getHeadInfo | return
         if (← warned.get).contains declName then return
         warned.modify (·.insert declName)
-        logWarningAt info.stx
-          (.tagged linter.discrete.name
+        logWarningAt info.stx (.tagged linter.discrete.name
             m!"`{.ofConstName declName true}` is discrete and may only be referenced by \
               discrete declarations."))
 

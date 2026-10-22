@@ -16,10 +16,11 @@ open Iris Iris.Std Iris.BI Iris.ProofMode
 namespace ProbLang
 namespace TotalEris
 
+variable {GF : BundledGFunctors} [InvGS_gen .hasNoLC GF] {E : CoPset} {α : Type _}
+
+/-- A family of fupds of plain propositions combines into one fupd of the conjunction. -/
 theorem iProp_fupd_plainly_forall_2_no_lc
-    {GF : BundledGFunctors} [InvGS_gen .hasNoLC GF]
-    {E : CoPset} {α : Type _} {Φ : α → IProp GF}
-    [∀ x, Plain (Φ x)] :
+    {Φ : α → IProp GF} [∀ x, Plain (Φ x)] :
     (∀ x, iprop(|={E}=> Φ x)) ⊢ iprop(|={E}=> ∀ x, Φ x) := by
   simp only [fupd, uPred_fupd, le_upd_unfold_no_le.to_eq]
   iintro H ⟨Hwsat, HE⟩
@@ -35,12 +36,10 @@ theorem iProp_fupd_plainly_forall_2_no_lc
   iapply except0_intro
   iapply plainly_elim $$ HP
 
-/-- The shape of `glmPrimStep'`'s per-outcome continuation. -/
+/-- If each `x` with `R x` gives `|={E}=> ⌜P x⌝`, then `|={E}=> ⌜∀ x, R x → P x⌝`. -/
 theorem iProp_fupd_plainly_forall_pure_impl_no_lc
-    {GF : BundledGFunctors} [InvGS_gen .hasNoLC GF]
-    {E : CoPset} {α : Type _} {R : α → Prop} {P : α → Prop} :
-    (∀ x, iprop(⌜R x⌝ -∗ |={E}=> ⌜P x⌝))
-      ⊢@{IProp GF} iprop(|={E}=> ⌜∀ x, R x → P x⌝) := by
+    {R : α → Prop} {P : α → Prop} :
+    (∀ x, iprop(⌜R x⌝ -∗ |={E}=> ⌜P x⌝)) ⊢@{IProp GF} iprop(|={E}=> ⌜∀ x, R x → P x⌝) := by
   iintro H
   ihave H' : iprop(∀ x, |={E}=> ⌜R x → P x⌝) $$ [H]
   · iintro %x

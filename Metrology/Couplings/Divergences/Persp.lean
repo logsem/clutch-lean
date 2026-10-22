@@ -39,6 +39,7 @@ theorem persp_of_ne_zero {a b : ℝ} (hb : b ≠ 0) :
     persp f a b = ((b * f (a / b) : ℝ) : EReal) := by
   simp [persp, hb]
 
+/-- The perspective at equal arguments is `a f 1`. -/
 theorem persp_self {a : ℝ} (ha : 0 ≤ a) : persp f a a = ((a * f 1 : ℝ) : EReal) := by
   rcases ha.eq_or_lt with rfl | ha
   · simp
@@ -56,9 +57,11 @@ theorem le_derivAtTop_of_affine_le {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + 
   rw [EReal.coe_le_coe_iff, le_div_iff₀ ht, add_mul, div_mul_cancel₀ _ ht.ne']
   exact h t ht.le
 
+/-- A nonnegative weight has nonnegative slope at `∞`. -/
 theorem derivAtTop_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) : 0 ≤ derivAtTop f := by
   simpa using le_derivAtTop_of_affine_le (c := 0) (by simpa using hf)
 
+/-- The slope at `∞` is monotone in the weight. -/
 theorem derivAtTop_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) : derivAtTop f ≤ derivAtTop g := by
   refine limsup_le_limsup ?_
   filter_upwards [eventually_gt_atTop 0] with t ht
@@ -89,9 +92,11 @@ theorem le_derivAtTop (hf : ConvexOn ℝ (Ici 0) f) {x h : ℝ} (hx : 0 ≤ x) (
     linarith [hlow t h2]
   exact absurd (le_limsup_of_frequently_le hev.frequently) (not_le.2 hr)
 
+/-- The slope at `∞` of a convex weight is not `⊥`. -/
 theorem derivAtTop_ne_bot (hf : ConvexOn ℝ (Ici 0) f) : derivAtTop f ≠ ⊥ :=
   ne_bot_of_le_ne_bot (EReal.coe_ne_bot _) (le_derivAtTop hf le_rfl one_pos)
 
+/-- The slope at `∞` of a convex weight times a finite mass is not `⊥`. -/
 theorem derivAtTop_mul_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {m : ℝ≥0∞} (hm : m ≠ ⊤) :
     derivAtTop f * m ≠ ⊥ := by
   rw [← EReal.coe_ennreal_toReal hm]
@@ -114,10 +119,12 @@ theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t)
   calc c * a + c' * b = b * (c * (a / b) + c') := by field_simp
     _ ≤ b * f (a / b) := mul_le_mul_of_nonneg_left (h _ (div_nonneg ha hb.le)) hb.le
 
+/-- The perspective of a nonnegative weight is nonnegative. -/
 theorem persp_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
     0 ≤ persp f a b := by
   simpa using affine_le_persp (c := 0) (c' := 0) (by simpa using hf) ha hb
 
+/-- The perspective is monotone in the weight. -/
 theorem persp_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp f a b ≤ persp g a b := by
   rcases hb.eq_or_lt with rfl | hb
@@ -125,6 +132,7 @@ theorem persp_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) {a b : ℝ} (ha : 0 ≤ 
   rw [persp_of_ne_zero hb.ne', persp_of_ne_zero hb.ne', EReal.coe_le_coe_iff]
   exact mul_le_mul_of_nonneg_left (h _ (div_nonneg ha hb.le)) hb.le
 
+/-- The perspective of a convex weight is not `⊥`. -/
 theorem persp_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {a b : ℝ} (ha : 0 ≤ a) : persp f a b ≠ ⊥ := by
   rcases eq_or_ne b 0 with rfl | hb
   · rw [persp_zero_right]
@@ -264,10 +272,12 @@ end ProbabilityTheory
 
 namespace EReal
 
+/-- The coercion `ℝ → EReal` commutes with finite sums. -/
 theorem coe_finset_sum {ι : Type*} (s : Finset ι) (x : ι → ℝ) :
     ((∑ i ∈ s, x i : ℝ) : EReal) = ∑ i ∈ s, (x i : EReal) :=
   map_sum (⟨⟨(↑), coe_zero⟩, coe_add⟩ : ℝ →+ EReal) x s
 
+/-- A finite sum of terms that are not `⊥` is not `⊥`. -/
 theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i ∈ s, a i ≠ ⊥) :
     ∑ i ∈ s, a i ≠ ⊥ := by
   classical
@@ -278,6 +288,7 @@ theorem sum_ne_bot {ι : Type*} (s : Finset ι) {a : ι → EReal} (ha : ∀ i �
     rw [Finset.sum_insert hj]
     exact add_ne_bot_iff.2 ⟨ha.1, ih ha.2⟩
 
+/-- Finite sums of convergent `EReal` functions converge, when no limit is `⊥`. -/
 theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : ι → α → EReal}
     {a : ι → EReal} (hg : ∀ i ∈ s, Tendsto (g i) l (𝓝 (a i))) (ha : ∀ i ∈ s, a i ≠ ⊥) :
     Tendsto (fun n ↦ ∑ i ∈ s, g i n) l (𝓝 (∑ i ∈ s, a i)) := by
@@ -290,6 +301,7 @@ theorem tendsto_finset_sum {ι α : Type*} {l : Filter α} (s : Finset ι) {g : 
     exact (continuousAt_add (Or.inr (sum_ne_bot s ha.2)) (Or.inl ha.1)).tendsto.comp
       (hg.1.prodMk_nhds (ih hg.2 ha.2))
 
+/-- `EReal.toENNReal` commutes with finite sums of nonnegative terms. -/
 theorem toENNReal_sum {ι : Type*} (s : Finset ι) {x : ι → EReal} (hx : ∀ i ∈ s, 0 ≤ x i) :
     (∑ i ∈ s, x i).toENNReal = ∑ i ∈ s, (x i).toENNReal := by
   classical

@@ -16,14 +16,22 @@ open scoped ENNReal
 
 namespace GradedDivergence
 
-variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
+variable {X Y : Type u}
+
+/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
+theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
+    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
+  by_cases hS : S x y <;> simp [hS]
+
+variable [MeasurableSpace X] [MeasurableSpace Y] {δ : ℝ≥0∞}
 
 /-! ## The divergence -/
 
-/-- One-sided total variation within `δ`: every event gains at most `δ` from `ν` to `μ`. -/
+/-- The hockey-stick divergence at multiplier `1`: every event gains at most `δ` from `ν` to `μ`. -/
 noncomputable def tv : GradedDivergence.{u} ℝ≥0∞ :=
   fun δ ↦ dp (0, δ)
 
+/-- Total variation within `δ` bounds every measurable event by `δ`. -/
 theorem tv_iff {μ ν : Measure X} : tv δ μ ν ↔ ∀ S, MeasurableSet S → μ S ≤ ν S + δ := by
   simp [tv, dp_iff]
 
@@ -34,35 +42,45 @@ theorem tv_smul_dirac_iff {a a' : ℝ≥0∞} :
 
 /-! ## Divergence classes -/
 
+/-- Total variation is graded. -/
 instance isGraded_tv : tv.{u}.IsGraded where
   mono _ _ hb := IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, hb⟩)
   top _ _ := tv_iff.2 fun _ _ ↦ by simp
 
+/-- Total variation is reflexive. -/
 instance isReflexive_tv : tv.{u}.IsReflexive where
   refl μ _ := IsReflexive.refl (D := dp) μ
 
+/-- Total variation is composable. -/
 instance isComposable_tv : tv.{u}.IsComposable where
   comp _ _ := fun h hκη ↦ by simpa [tv] using IsComposable.comp (D := dp) h hκη
 
+/-- Total variation of the zero measure on the left is free. -/
 instance isZeroLeft_tv : tv.{u}.IsZeroLeft where
   zero_left δ := IsZeroLeft.zero_left (0, δ)
 
+/-- Total variation is left continuous. -/
 instance isLeftContinuous_tv : tv.{u}.IsLeftContinuous where
   iSup_left δ := IsLeftContinuous.iSup_left (b := (0, δ))
 
+/-- Total variation is monotone on the right. -/
 instance isRightMonotone_tv : tv.{u}.IsRightMonotone where
   right_mono δ := IsRightMonotone.right_mono (b := (0, δ))
 
+/-- Total variation is antitone on the left. -/
 instance isLeftAntitone_tv : tv.{u}.IsLeftAntitone where
   left_anti δ := IsLeftAntitone.left_anti (b := (0, δ))
 
+/-- Total variation is budget closed. -/
 instance isBudgetClosed_tv : tv.{u}.IsBudgetClosed where
   -- `h0` is the dp guard `0 < ⊤`; close the event bound under `δ' ↓ δ`
   of_forall_gt := fun h h0 ↦ .of_forall_lt fun δ' hδ' ↦ h δ' hδ' h0
 
+/-- Total variation has slack along the identity. -/
 instance hasSlack_tv : tv.{u}.HasSlack (OrderAddMonoidHom.id ℝ≥0∞) where
   of_forall_le h := tv_iff.2 h
 
+/-- Total variation detects mass along the identity. -/
 instance isMassDetecting_tv : tv.{u}.IsMassDetecting (OrderAddMonoidHom.id ℝ≥0∞) where
   le_add_of _ _ := tv_smul_dirac_iff.1
 
@@ -105,7 +123,7 @@ theorem codensity_tv_of_lintegral_le [IsSubProbabilityMeasure μ]
     fun x y ↦ tsub_le_iff_right.2 <| (tv_iff.1 (hkl x y) S hS).trans_eq (by ring)
   rw [bind_apply hS k.measurable.aemeasurable, bind_apply hS l.measurable.aemeasurable]
   calc ∫⁻ x, k x S ∂μ
-      ≤ ∫⁻ x, k x S - c ∂μ + c := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
+    _ ≤ ∫⁻ x, k x S - c ∂μ + c := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
     _ ≤ ∫⁻ y, l y S ∂ν + (δ + c) := by
         rw [← add_assoc]
         gcongr
@@ -116,15 +134,14 @@ theorem codensity_tv_iff [IsSubProbabilityMeasure μ] :
       (∀ y, g y ≤ 1) → (∀ x y, f x ≤ g y + E x y) → ∫⁻ x, f x ∂μ ≤ ∫⁻ y, g y ∂ν + δ :=
   ⟨fun h _ _ ↦ lintegral_le_of_codensity_tv h, codensity_tv_of_lintegral_le⟩
 
-/-- A leftover keyed on the right sample is paid in expectation; this uses linearity of the
-tests, so it is specific to total variation. -/
+/-- Total variation liftings add a right-keyed leftover in expectation. -/
 instance isExpectationAdditive_codensity_tv :
     (codensity tv.{u}).IsExpectationAdditive (OrderAddMonoidHom.id ℝ≥0∞) where
   add_right {_ _} _ _ b R μ ν _ _ c hc h := by
     simp only [OrderAddMonoidHom.coe_id, id]
     refine codensity_tv_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
     calc ∫⁻ x, f x ∂μ
-        ≤ ∫⁻ y, min (g y + c y) 1 ∂ν + b := by
+      _ ≤ ∫⁻ y, min (g y + c y) 1 ∂ν + b := by
           refine lintegral_le_of_codensity_tv h hf ((hg.add hc).min measurable_const) hf1
             (fun _ ↦ min_le_right _ _) fun x y ↦ ?_
           rcases le_total (g y + c y) 1 with hle | hle
@@ -137,12 +154,6 @@ instance isExpectationAdditive_codensity_tv :
           ring
 
 /-! ### Comparison with DP -/
-
-omit [MeasurableSpace X] [MeasurableSpace Y] in
-/-- A bound on `a` by `b` plus the leftover of a relation holds iff it holds on related points. -/
-theorem le_add_relCost_iff {S : X → Y → Prop} {a b : ℝ≥0∞} {x : X} {y : Y} :
-    a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
-  by_cases hS : S x y <;> simp [hS]
 
 /-- Total variation liftings are DP liftings at multiplier `1`, with each leftover `e` read as the
 DP leftover `dpSlack e = (0, e)`. -/

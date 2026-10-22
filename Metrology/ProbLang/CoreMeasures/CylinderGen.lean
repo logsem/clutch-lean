@@ -23,26 +23,28 @@ It views `T ≃ Σ s : T.Shape, T.Leaves s`: the shape is the constructor tree w
 It declares, in order (one section each):
 
 1. `T.Shape`, with the constructions of an `inductive` and `Countable`, and `T.Leaves s`, with its
-   σ-algebra;
+σ-algebra;
 2. `T.toSigma`, `T.ofSigma`, their inverse laws `T.ofSigma_toSigma` and `T.toSigma_ofSigma`,
-   `T.equivSigma`, the σ-algebra on `T` (the comap of `toSigma`), `T.measurableEquiv`, and
-   `T.shape`, with a `simp` lemma `T.shape_c` per constructor `c`;
+`T.equivSigma`, the σ-algebra on `T` (the comap of `toSigma`), `T.measurableEquiv`, and
+`T.shape`, with a `simp` lemma `T.shape_c` per constructor `c`;
 3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`,
-   where `c.ι` and `c.π` (constructor and projection of the tuple of fields) are as declared by
-   `@[constructors, uncurriedProjections]`, and declared here unless `T` has them;
+where `c.ι` and `c.π` (constructor and projection of the tuple of fields) are as declared by
+`@[constructors, uncurriedProjections]`, and declared here unless `T` has them;
 4. `T.measurable_cases` and `T.measurable_struct_rec` (for functions by cases, and by structural
-   recursion), their `_param` variants, which thread a parameter, `T.measurable_casesOn(_param)`
-   (for functions by `T.casesOn`), and `c.π.measurable`;
+recursion), their `_param` variants, which thread a parameter, `T.measurable_casesOn(_param)`
+(for functions by `T.casesOn`), and `c.π.measurable`;
 5. `MeasurableSingletonClass T`, when the leaves have measurable singletons.
 
 `T.measurable_struct_rec(_param)` exist when `T` has recursive fields, and `c.π.measurable` when
-`c` has fields. `c.measurable`, `c.π.measurable` and, when `T` has several constructors,
-`T.measurable_casesOn(_param)` are `fun_prop` lemmas.
+`c` has fields. `c.measurable` (for a constructor with fields), `c.π.measurable` and, when `T` has
+several constructors, `T.measurable_casesOn(_param)` are `fun_prop` lemmas.
 -/
 
 namespace Metrology.CylinderGen
 
 meta section
+
+variable (ctx : Ctx)
 
 /-! ## 1. Shapes and leaves -/
 
@@ -61,7 +63,7 @@ def addUncurried (I : Name) : MetaM Unit := do
 
 /-- `T.Shape`: for each constructor of `T`, a constructor with its base fields, and with shapes for
 its recursive fields. It gets the constructions of an `inductive` declaration, and `ι` and `π`. -/
-def Ctx.addShape (ctx : Ctx) : MetaM Unit := do
+def Ctx.addShape : MetaM Unit := do
   let name := ctx.T ++ `Shape
   ensureFresh name
   let ctors ← ctx.ctors.mapM fun c => do
@@ -86,7 +88,7 @@ def Ctx.addShape (ctx : Ctx) : MetaM Unit := do
   addUncurried name
 
 /-- `T.Leaves s`: the leaves of the values of shape `s`. -/
-def Ctx.addLeaves (ctx : Ctx) : MetaM Unit := do
+def Ctx.addLeaves : MetaM Unit := do
   let type ← mkArrow ctx.shape (.sort ctx.w.succ)
   let value ← withLocalDeclD `s ctx.shape fun s => do
     let motive ← mkLambdaFVars #[s] (.sort ctx.w.succ)
@@ -96,7 +98,7 @@ def Ctx.addLeaves (ctx : Ctx) : MetaM Unit := do
 
 /-- Declares `T.Leaves.name : ∀ s, cls (T.Leaves s)`, assembled from the instances for products,
 under the instance `binders`. -/
-def Ctx.addLeavesInstance (ctx : Ctx) (name : Name) (cls : Expr → MetaM Expr)
+def Ctx.addLeavesInstance (name : Name) (cls : Expr → MetaM Expr)
     (binders : Array Expr := #[]) : MetaM Unit := do
   let (type, value) ← withLocalDeclD `s ctx.shape fun s => do
     let motive ← mkLambdaFVars #[s] (← cls (ctx.leaves s))
@@ -111,7 +113,7 @@ def Ctx.addLeavesInstance (ctx : Ctx) (name : Name) (cls : Expr → MetaM Expr)
 /-- A function of `p : Σ s, T.Leaves s`, by induction on the shape `p.1`, of type
 `motiveAt s v`, and given by `arm c slots vs` on the leaves `v` of shape `c slots`, whose components
 are `vs`. -/
-def Ctx.sigmaRec (ctx : Ctx) (motiveAt : Expr → Expr → MetaM Expr)
+def Ctx.sigmaRec (motiveAt : Expr → Expr → MetaM Expr)
     (arm : Ctor → Array ShapeSlot → Array Expr → MetaM Expr) : MetaM Expr := do
   withLocalDeclD `p (← ctx.sigma) fun p => do
     let motive ← withLocalDeclD `s ctx.shape fun s => do
@@ -125,7 +127,7 @@ def Ctx.sigmaRec (ctx : Ctx) (motiveAt : Expr → Expr → MetaM Expr)
 
 /-- `⟨c args, (leaves)⟩`, from what each field contributes: its argument of the shape constructor,
 if any (base and recursive fields), and its leaves. -/
-def Ctx.sigmaOf (ctx : Ctx) (c : Ctor) (parts : Array (Option Expr × Expr)) : MetaM Expr := do
+def Ctx.sigmaOf (c : Ctor) (parts : Array (Option Expr × Expr)) : MetaM Expr := do
   let leaves ← mkNestedProdValue (parts.map (·.2)).toList ctx.unit
   ctx.sigmaMk (ctx.shapeOf c (parts.filterMap (·.1))) leaves
 
@@ -134,7 +136,7 @@ def recursivePart (E : Expr) : MetaM (Option Expr × Expr) :=
   return (← mkAppM ``Sigma.fst #[E], ← mkAppM ``Sigma.snd #[E])
 
 /-- `T.toSigma (c xs) = ⟨c (base fields, shapes of recursive fields), (leaves of the fields)⟩`. -/
-def Ctx.addToSigma (ctx : Ctx) : MetaM Unit := do
+def Ctx.addToSigma : MetaM Unit := do
   let σ ← ctx.sigma
   let value ← withLocalDeclD `x ctx.ty fun x => do
     mkLambdaFVars #[x] (← ctx.recurse (← mkLambdaFVars #[x] σ) x fun c slots => do
@@ -145,7 +147,7 @@ def Ctx.addToSigma (ctx : Ctx) : MetaM Unit := do
   ctx.declare (ctx.T ++ `toSigma) (← mkArrow ctx.ty σ) value (isDef := true)
 
 /-- `T.ofSigma ⟨c xs, v⟩ = c (base fields, leaves of `v`, `ofSigma` of the recursive fields)`. -/
-def Ctx.addOfSigma (ctx : Ctx) : MetaM Unit := do
+def Ctx.addOfSigma : MetaM Unit := do
   let value ← ctx.sigmaRec (fun _ _ => pure ctx.ty) fun c slots vs => do
     let fields ← (slots.zip vs).mapM fun
       | (.base x, _) => pure x
@@ -156,7 +158,7 @@ def Ctx.addOfSigma (ctx : Ctx) : MetaM Unit := do
 
 /-- `T.ofSigma_toSigma : ofSigma (toSigma x) = x`, by induction on `x`: a congruence per
 constructor. -/
-def Ctx.addLeftInverse (ctx : Ctx) : MetaM Unit := do
+def Ctx.addLeftInverse : MetaM Unit := do
   let proof ← withLocalDeclD `x ctx.ty fun x => do
     let roundTrip := mkApp (ctx.member `ofSigma) (mkApp (ctx.member `toSigma) x)
     let motive ← mkLambdaFVars #[x] (← mkEq roundTrip x)
@@ -169,7 +171,7 @@ def Ctx.addLeftInverse (ctx : Ctx) : MetaM Unit := do
 /-- `T.toSigma_ofSigma : toSigma (ofSigma ⟨s, v⟩) = ⟨s, v⟩`, by induction on `s`: both sides are
 `G Es := ⟨c (base fields, shapes of Es), (leaves of v, leaves of Es)⟩` applied to the values `Es`
 at the recursive fields, so congruence with the motive closes it. -/
-def Ctx.addRightInverse (ctx : Ctx) : MetaM Unit := do
+def Ctx.addRightInverse : MetaM Unit := do
   let σ ← ctx.sigma
   let roundTrip (s v : Expr) : MetaM Expr := do
     let sv ← ctx.sigmaMk s v
@@ -194,7 +196,7 @@ def Ctx.addRightInverse (ctx : Ctx) : MetaM Unit := do
 
 /-- `T.toSigma` and `T.ofSigma`, their inverse laws, and `T.equivSigma : T ≃ Σ s, T.Leaves s`,
 the σ-algebra on `T` (the comap of `toSigma`), and `T.measurableEquiv`. -/
-def Ctx.addEquiv (ctx : Ctx) : MetaM Unit := do
+def Ctx.addEquiv : MetaM Unit := do
   ctx.addToSigma
   ctx.addOfSigma
   ctx.addLeftInverse
@@ -211,7 +213,7 @@ def Ctx.addEquiv (ctx : Ctx) : MetaM Unit := do
   ctx.declare (ctx.T ++ `measurableEquiv) (← inferType e) e (insts := true) (isDef := true)
 
 /-- `T.shape x`, the shape of `x`, with a `simp` equation `T.shape_c` per constructor. -/
-def Ctx.addShapeFn (ctx : Ctx) : MetaM Unit := do
+def Ctx.addShapeFn : MetaM Unit := do
   let value ← withLocalDeclD `x ctx.ty fun x => do
     mkLambdaFVars #[x] (← mkAppM ``Sigma.fst #[mkApp (ctx.member `toSigma) x])
   ctx.declare (ctx.T ++ `shape) (← mkArrow ctx.ty ctx.shape) value (isDef := true)
@@ -236,7 +238,7 @@ def measurableEquivTy (A B : Expr) : MetaM Expr := mkAppOptM ``MeasurableEquiv #
 /-- The splitting of a field into a shape index and leaves: all index (`Shapes.point`) for a base
 field, all leaves (`Shapes.leaf`) for a data field, and `T.measurableEquiv` for a recursive one.
 `instantiateFor` fixes their universes from the goal, so as not to depend on their order. -/
-def Ctx.fieldEquiv (ctx : Ctx) (f : Field) : MetaM Expr := do
+def Ctx.fieldEquiv (f : Field) : MetaM Expr := do
   match f.kind with
   | .base =>
     let sigma ← mkAppM ``Sigma #[.lam `_ f.type ctx.punit .default]
@@ -244,9 +246,9 @@ def Ctx.fieldEquiv (ctx : Ctx) (f : Field) : MetaM Expr := do
   | .data => instantiateFor ``Shapes.leaf (← measurableEquivTy f.type (← ctx.ulift f.type))
   | .recursive => pure ctx.equiv
 
-/-- Splits the tuple of fields of `c` into a shape index and leaves: `A ≃ᵐ Σ κ, …`, with `true`,
-or `A ≃ᵐ …` if no field is indexed. -/
-def Ctx.splitFields (ctx : Ctx) (c : Ctor) : MetaM (Expr × Bool) := do
+/-- Splits the tuple of fields of `c` into a shape index and leaves `A ≃ᵐ Σ κ, …`, and says whether
+some field is indexed (otherwise the splitting is `A ≃ᵐ …`). -/
+def Ctx.splitFields (c : Ctor) : MetaM (Expr × Bool) := do
   if c.fields.isEmpty then
     return (← instantiateFor ``Shapes.unit (← measurableEquivTy (mkConst ``Unit) ctx.punit), false)
   let pieces ← c.fields.mapM fun f => return (← ctx.fieldEquiv f, f.indexed)
@@ -258,7 +260,7 @@ def Ctx.splitFields (ctx : Ctx) (c : Ctor) : MetaM (Expr × Bool) := do
       | false, false => ``MeasurableEquiv.prodCongr
     return (← mkAppM pair #[e, e'], i || i')
 
-/-- `fun a => rfl : ∀ a, lhs a = lhs a`, for `a` in the domain of the function `ι`. -/
+/-- The proof `fun a => rfl` of `∀ a, lhs a = lhs a`, for `a` in the domain of the function `ι`. -/
 def reflOn (ι : Expr) (lhs : Expr → MetaM Expr) : MetaM Expr := do
   withLocalDeclD `a (← inferType ι).bindingDomain! fun a => do
     mkLambdaFVars #[a] (← mkEqRefl (← lhs a))
@@ -267,7 +269,7 @@ def reflOn (ι : Expr) (lhs : Expr → MetaM Expr) : MetaM Expr := do
 `c.measurable` and `c.ι.inj`. `c.ι.measurable` is about the `@[constructors]` function `c.ι`;
 `c.measurable` states the same for `fun p => T.c p.1 p.2.1 …`, so that `fun_prop` matches
 applications of `T.c`. -/
-def Ctx.addConstructor (ctx : Ctx) (c : Ctor) : MetaM Unit := do
+def Ctx.addConstructor (c : Ctor) : MetaM Unit := do
   let ι := ctx.const (c.name ++ `ι)
   let some_ (a : Expr) := mkAppM ``Option.some #[a]
   let (g, indexed) ← ctx.splitFields c
@@ -301,13 +303,13 @@ def withParam [Inhabited α] (β? : Option Expr) (k : Array Expr → MetaM α) :
   withLocalDecls (β?.toArray.map fun β => decl `b .default (pure β)) k
 
 /-- Runs `k bs xs` with the parameter `bs` (as `withParam`) and the fields `xs` of `c`. -/
-def Ctx.withArgs [Inhabited α] (ctx : Ctx) (β? : Option Expr) (c : Ctor)
+def Ctx.withArgs [Inhabited α] (β? : Option Expr) (c : Ctor)
     (k : Array Expr → Array Expr → MetaM α) : MetaM α :=
   withParam β? fun bs => ctx.withFields c (k bs)
 
 /-- Runs `k` with `α : Type u` and `[MeasurableSpace α]`, and with `param` also `β : Type v` and
 `[MeasurableSpace β]` (as `βs`), named apart from the parameters of `T`. -/
-def Ctx.withTypeVars [Inhabited α] (ctx : Ctx) (param : Bool)
+def Ctx.withTypeVars [Inhabited α] (param : Bool)
     (k : Expr → Expr → Array Expr → MetaM α) : MetaM α := do
   let params ← ctx.params.toList.mapM (·.fvarId!.getUserName)
   let (a, u) := (fresh `α params, fresh `u ctx.levelParams)
@@ -320,12 +322,12 @@ def Ctx.withTypeVars [Inhabited α] (ctx : Ctx) (param : Bool)
 
 /-- The constructors whose arm needs a measurability hypothesis: all of them with a parameter, and
 otherwise those with a field that is not base (the other arms are constant). -/
-def Ctx.measured (ctx : Ctx) (param : Bool) : Array Ctor :=
+def Ctx.measured (param : Bool) : Array Ctor :=
   ctx.ctors.filter fun c => param || c.fields.any (·.kind != .base)
 
 /-- `∀ b xs, f b (T.c xs) = arm b args`, with the parameter `b : β` if `β?`, where `args` are the
 fields, or with `structural`, `f (t b)` at the recursive fields, for the shift `t` if `shift?`. -/
-def Ctx.eqType (ctx : Ctx) (c : Ctor) (structural : Bool) (f arm : Expr)
+def Ctx.eqType (c : Ctor) (structural : Bool) (f arm : Expr)
     (β? shift? : Option Expr) : MetaM Expr :=
   ctx.withArgs β? c fun bs xs => do
     let b := match shift? with | some t => bs.map (mkApp t) | none => bs
@@ -339,7 +341,7 @@ def Ctx.eqType (ctx : Ctx) (c : Ctor) (structural : Bool) (f arm : Expr)
 arms are. The arms of `measurable_struct_rec` take the function at the recursive fields, and
 those of `measurable_cases` the fields themselves. With `param`, the function takes a parameter,
 which a recursive call may change by a shift `t_c` (by default `id`). -/
-def Ctx.addRecursion (ctx : Ctx) (structural param : Bool) : MetaM Unit := do
+def Ctx.addRecursion (structural param : Bool) : MetaM Unit := do
   let name := ctx.T ++ match structural, param with
     | false, false => `measurable_cases
     | false, true => `measurable_cases_param
@@ -379,7 +381,7 @@ def Ctx.addRecursion (ctx : Ctx) (structural param : Bool) : MetaM Unit := do
 
 /-- `fun b x => T.casesOn x (arms[c] b …)`: the function by cases (with a parameter, if `β?`) whose
 arm for `c` is `arms[c]` applied to the parameter and the fields. -/
-def Ctx.casesOnFn (ctx : Ctx) (α : Expr) (β? : Option Expr) (arms : Array Expr) : MetaM Expr :=
+def Ctx.casesOnFn (α : Expr) (β? : Option Expr) (arms : Array Expr) : MetaM Expr :=
   withParam β? fun bs => withLocalDeclD `x ctx.ty fun x => do
     let alts ← ctx.ctors.mapM fun c => ctx.withFields c fun xs => do
       mkLambdaFVars xs (mkAppN arms[c.idx]! (bs ++ xs)).headBeta
@@ -388,7 +390,7 @@ def Ctx.casesOnFn (ctx : Ctx) (α : Expr) (β? : Option Expr) (arms : Array Expr
 /-- From `h : Measurable (uncurry g)`, for `g : β → T → α`, the statement and proof of
 `Measurable fun p : T × β => g p.2 p.1`: the value first, so that `fun_prop` matches
 `T.casesOn p.1 …`. -/
-def Ctx.measurableSwapped (ctx : Ctx) (β g h : Expr) : MetaM (Expr × Expr) := do
+def Ctx.measurableSwapped (β g h : Expr) : MetaM (Expr × Expr) := do
   withLocalDeclD `p (← mkAppM ``Prod #[ctx.ty, β]) fun p => do
     let swapFn ← mkLambdaFVars #[p] (← mkAppM ``Prod.swap #[p])
     let swap ← instantiateFor ``measurable_swap (← mkAppM ``Measurable #[swapFn])
@@ -397,7 +399,7 @@ def Ctx.measurableSwapped (ctx : Ctx) (β g h : Expr) : MetaM (Expr × Expr) := 
 
 /-- `T.measurable_casesOn` (`T.measurable_casesOn_param`): a function by `T.casesOn` is measurable
 if its arms `c_c`, as functions of the tuple `(b, x₁, …)` of the parameter and the fields, are. -/
-def Ctx.addCasesOn (ctx : Ctx) (param : Bool) : MetaM Unit := do
+def Ctx.addCasesOn (param : Bool) : MetaM Unit := do
   let name := ctx.T ++ if param then `measurable_casesOn_param else `measurable_casesOn
   let measured := ctx.measured param
   ctx.withTypeVars param fun α iα βs => do
@@ -427,7 +429,7 @@ def Ctx.addCasesOn (ctx : Ctx) (param : Bool) : MetaM Unit := do
 /-- `c.π.measurable`: the projection on constructor `c` is `T.casesOn` with arms `some` on `c` and
 `none` elsewhere, as functions of the tuple of the fields, so it is measurable by
 `T.measurable_casesOn`. -/
-def Ctx.addProjection (ctx : Ctx) (c : Ctor) : MetaM Unit := do
+def Ctx.addProjection (c : Ctor) : MetaM Unit := do
   let π := ctx.const (c.name ++ `π)
   let τ ← mkNestedProdType (c.fields.map ctx.fieldType).toList
   let α ← mkAppM ``Option #[τ]
@@ -448,7 +450,7 @@ def Ctx.addProjection (ctx : Ctx) (c : Ctor) : MetaM Unit := do
 
 /-- `MeasurableSingletonClass T`, given measurable singletons in the parameters that occur in data
 fields, if the data fields have them. -/
-def Ctx.addSingletons (ctx : Ctx) : MetaM Unit := do
+def Ctx.addSingletons : MetaM Unit := do
   let msc (ty : Expr) := mkAppOptM ``MeasurableSingletonClass #[ty, none]
   let dataTys : Array Expr :=
     ctx.ctors.flatMap fun c => (c.fields.filter (·.kind == .data)).map (·.type)
@@ -486,6 +488,7 @@ initialize registerDerivingHandler ``MeasurableSpace fun Ts => do
   Ts.forM generate
   return true
 
+/-- Shows the class (base, data or recursive) of each field of each constructor of `T`. -/
 elab "#cylinder_classify " id:ident : command => liftTermElabM do
   withCtx (← realizeGlobalConstNoOverloadWithInfo id) fun ctx => do
     -- strings, so that a constructor's line does not wrap

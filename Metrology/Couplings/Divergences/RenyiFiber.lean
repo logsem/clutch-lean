@@ -50,6 +50,14 @@ variable [MeasurableSpace Y] {ν : Measure Y}
 
 /-! ## Conditioning on the fibers -/
 
+/-- Precomposing a kernel with `g` is pushing the measure forward along `g`. -/
+theorem _root_.ProbabilityTheory.Kernel.comap_comp_eq_comp_map {Z : Type*} [MeasurableSpace Z]
+    {g : Y → Z} (κ : Kernel Z X) (hg : Measurable g) : κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
+  ext A hA
+  rw [bind_apply hA (Kernel.aemeasurable _), bind_apply hA (Kernel.aemeasurable _),
+    lintegral_map (κ.measurable_coe hA) hg]
+  rfl
+
 section FiberCond
 
 variable {Z : Type*} [MeasurableSpace Z] [DiscreteMeasurableSpace Z] {f : X → Z} {g : Y → Z}
@@ -58,6 +66,7 @@ variable {Z : Type*} [MeasurableSpace Z] [DiscreteMeasurableSpace Z] {f : X → 
 noncomputable def fiberCond (μ : Measure X) (f : X → Z) : Kernel Z X :=
   ⟨fun z ↦ μ[|f ⁻¹' {z}], .of_discrete⟩
 
+/-- The fiber kernel at `z` is `μ` conditioned on the fiber over `z`. -/
 theorem fiberCond_apply (z : Z) : fiberCond μ f z = μ[|f ⁻¹' {z}] :=
   rfl
 
@@ -73,15 +82,6 @@ theorem fiberCond_comp_map [Fintype Z] (hf : Measurable f) [IsFiniteMeasure μ] 
   conv_rhs => rw [← sum_meas_smul_cond_fiber hf μ]
   simp [fiberCond_apply, map_apply hf (measurableSet_singleton _), mul_comm]
 
-omit [DiscreteMeasurableSpace Z] in
-/-- Precomposing a kernel with `g` is pushing the measure forward along `g`. -/
-theorem _root_.ProbabilityTheory.Kernel.comap_comp_eq_comp_map (κ : Kernel Z X)
-    (hg : Measurable g) : κ.comap g hg ∘ₘ ν = κ ∘ₘ ν.map g := by
-  ext A hA
-  rw [bind_apply hA (Kernel.aemeasurable _), bind_apply hA (Kernel.aemeasurable _),
-    lintegral_map (κ.measurable_coe hA) hg]
-  rfl
-
 /-- Reweighting by a function of the fiber commutes with recombining the fibers. -/
 theorem fiberCond_comp_withDensity (hf : Measurable f) (ξ : Measure Z) (w : Z → ℝ≥0∞) :
     (fiberCond μ f ∘ₘ ξ).withDensity (fun x ↦ w (f x)) = fiberCond μ f ∘ₘ ξ.withDensity w := by
@@ -89,7 +89,7 @@ theorem fiberCond_comp_withDensity (hf : Measurable f) (ξ : Measure Z) (w : Z �
   have hF : Measurable fun x ↦ A.indicator (fun x ↦ w (f x)) x :=
     (Measurable.of_discrete.comp hf).indicator hA
   rw [withDensity_apply _ hA, ← lintegral_indicator hA,
-    Measure.lintegral_bind (Kernel.aemeasurable _) hF.aemeasurable,
+    lintegral_bind (Kernel.aemeasurable _) hF.aemeasurable,
     bind_apply hA (Kernel.aemeasurable _),
     lintegral_withDensity_eq_lintegral_mul _ .of_discrete (Kernel.measurable_coe _ hA)]
   refine lintegral_congr fun z ↦ ?_
@@ -101,25 +101,25 @@ end FiberCond
 
 /-! ## Liftings of equal images for composable divergences -/
 
-section Composable
+section Fintype
 
 variable {Z : Type u} [MeasurableSpace Z] [Fintype Z] [DiscreteMeasurableSpace Z] {f : X → Z}
-  {g : Y → Z} {B : Type*} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
-  [OrderTop B] {D : GradedDivergence.{u} B} [D.IsGraded] [D.IsReflexive] [D.IsComposable]
-  [D.IsZeroLeft] {ρ : B} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+  {g : Y → Z} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
 
 /-- A bound between the images of `μ` and `ν` lifts equal images in the codensity lifting of a
 composable divergence, when no image charged by `μ` is null for `ν`: bind the fibers. -/
-theorem codensity_rel_of_map (hf : Measurable f) (hg : Measurable g)
+theorem codensity_rel_of_map {B : Type*} [AddCommMonoid B] [PartialOrder B]
+    [CanonicallyOrderedAdd B] [OrderTop B] {D : GradedDivergence.{u} B} [D.IsGraded]
+    [D.IsReflexive] [D.IsComposable] [D.IsZeroLeft] {ρ : B} (hf : Measurable f) (hg : Measurable g)
     (hfib : ∀ z, ν (g ⁻¹' {z}) = 0 → μ (f ⁻¹' {z}) = 0) (h : D ρ (μ.map f) (ν.map g)) :
     (codensity D).Rel ρ (fun x y ↦ f x = g y) μ ν := by
   classical
   rw [codensity_rel_iff]
   intro I _ c _ k l _ _ hkl
   have e1 : k ∘ₘ μ = (k ∘ₖ fiberCond μ f) ∘ₘ μ.map f := by
-    rw [← Measure.comp_assoc, fiberCond_comp_map hf]
+    rw [← comp_assoc, fiberCond_comp_map hf]
   have e2 : l ∘ₘ ν = (l ∘ₖ fiberCond ν g) ∘ₘ ν.map g := by
-    rw [← Measure.comp_assoc, fiberCond_comp_map hg]
+    rw [← comp_assoc, fiberCond_comp_map hg]
   rw [e1, e2]
   refine IsComposable.comp h fun z ↦ ?_
   rw [Kernel.comp_apply, Kernel.comp_apply, fiberCond_apply, fiberCond_apply]
@@ -143,33 +143,26 @@ theorem codensity_rel_of_map (hf : Measurable f) (hg : Measurable g)
     · simp only [K, Kernel.piecewise_apply, hp, ↓reduceIte]
       exact IsGraded.mono zero_le (IsReflexive.refl _)
   have hπ : ∀ᵐ p ∂π, p ∈ (f ⁻¹' {z}) ×ˢ (g ⁻¹' {z}) := by
-    rw [Measure.ae_prod_mem_iff_ae_ae_mem hS]
+    rw [ae_prod_mem_iff_ae_ae_mem hS]
     filter_upwards [ae_cond_mem hF] with x hx
     filter_upwards [ae_cond_mem hG] with y hy
     exact ⟨hx, hy⟩
   have hKπ : K ∘ₘ π = k ∘ₘ μ[|f ⁻¹' {z}] := by
-    rw [Measure.comp_congr (κ := K) (η := k.comap Prod.fst measurable_fst)
+    rw [comp_congr (κ := K) (η := k.comap Prod.fst measurable_fst)
         (hπ.mono fun p hp ↦ by simp [K, Kernel.piecewise_apply, hp]),
-      Kernel.comap_comp_eq_comp_map _ measurable_fst, Measure.map_fst_prod, measure_univ, one_smul]
+      Kernel.comap_comp_eq_comp_map _ measurable_fst, map_fst_prod, measure_univ, one_smul]
   have hLπ : L ∘ₘ π = l ∘ₘ ν[|g ⁻¹' {z}] := by
-    rw [Kernel.comap_comp_eq_comp_map _ measurable_snd, Measure.map_snd_prod, measure_univ,
+    rw [Kernel.comap_comp_eq_comp_map _ measurable_snd, map_snd_prod, measure_univ,
       one_smul]
   rw [← hKπ, ← hLπ]
   exact zero_add c ▸ IsComposable.comp (IsReflexive.refl π) hK
 
-end Composable
-
 /-! ## Rényi liftings of equal images -/
-
-section Renyi
-
-variable {Z : Type u} [MeasurableSpace Z] [Fintype Z] [DiscreteMeasurableSpace Z] {f : X → Z}
-  {g : Y → Z} {α : ℝ} {ρ : ℝ≥0∞} [Fact (1 < α)]
-  [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
 
 /-- A Rényi bound between the images of `μ` and `ν` lifts equal images: condition `μ` on the
 fibers to witness the lifting. -/
-theorem codensity_renyi_rel_of_map (hf : Measurable f) (hg : Measurable g)
+theorem codensity_renyi_rel_of_map {α : ℝ} {ρ : ℝ≥0∞} [Fact (1 < α)] (hf : Measurable f)
+    (hg : Measurable g)
     (h : renyiDivergence α ρ (μ.map f) (ν.map g)) :
     (codensity (renyiDivergence α)).Rel ρ (fun x y ↦ f x = g y) μ ν := by
   refine codensity_renyi_of_kernel (measurable_relCost_fiber hf) (r := (fiberCond μ f).comap g hg)
@@ -178,12 +171,9 @@ theorem codensity_renyi_rel_of_map (hf : Measurable f) (hg : Measurable g)
   · have := IsComposable.comp_self (fiberCond μ f) h
     rwa [fiberCond_comp_map hf, ← Kernel.comap_comp_eq_comp_map _ hg] at this
 
-end Renyi
+end Fintype
 
-/-! ## zCDP liftings from fiber bounds
-
-Same witness as `codensity_renyi_rel_of_map`, but under countable `Y`/`Z` instead of finite
-discrete `Z`. -/
+/-! ## zCDP liftings from fiber bounds -/
 
 section Zcdp
 
@@ -213,16 +203,16 @@ theorem dp_fiberKernel (hf : Measurable f) (hg : Measurable g) [IsFiniteMeasure 
         rcases eq_or_ne (μ (f ⁻¹' {z})) 0 with h0 | h0
         · exact (measure_mono inter_subset_left).trans (by simp [h0])
         calc μ (f ⁻¹' {z} ∩ A)
-            = (μ (f ⁻¹' {z}))⁻¹ * μ (f ⁻¹' {z} ∩ A) * μ (f ⁻¹' {z}) := by
+          _ = (μ (f ⁻¹' {z}))⁻¹ * μ (f ⁻¹' {z} ∩ A) * μ (f ⁻¹' {z}) := by
               rw [mul_right_comm, ENNReal.inv_mul_cancel h0 (measure_ne_top _ _), one_mul]
           _ ≤ (μ (f ⁻¹' {z}))⁻¹ * μ (f ⁻¹' {z} ∩ A) * (expBudget ε * ν (g ⁻¹' {z})) := by
               gcongr
               exact h z
           _ = _ := by ring
     _ = expBudget ε * (fiberKernel μ f g ∘ₘ ν) A := by
-        rw [ENNReal.tsum_mul_left, Measure.bind_apply hA (Kernel.aemeasurable _)]
+        rw [ENNReal.tsum_mul_left, bind_apply hA (Kernel.aemeasurable _)]
         change _ = expBudget ε * ∫⁻ y, φ (g y) ∂ν
-        rw [← lintegral_map (f := φ) .of_discrete hg, lintegral_countable']
+        rw [← lintegral_map .of_discrete hg, lintegral_countable']
         simp [map_apply hg (measurableSet_singleton _), φ]
 
 /-- The fiber kernel stays on equal images, so it pays no cost. -/

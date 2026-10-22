@@ -9,7 +9,7 @@ public import Metrology.Couplings.Divergences.GaussianRenyi
 
 @[expose] public section
 
-open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence Real Set
+open MeasureTheory Measure ProbabilityTheory GradedLifting GradedDivergence Real Set ENNReal
 open scoped ENNReal NNReal
 
 namespace Mechanism
@@ -59,7 +59,7 @@ theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
 
 /-! ## Composition in the zCDP lifting and DP bounds -/
 
-variable {σ : ℝ≥0} {r δ : ℝ}
+variable {σ : ℝ≥0} (r : ℝ) {δ : ℝ}
 
 /-- `k` Gaussian queries of inputs at distance at most `r` lift equality in the zCDP lifting at
 `k` times the budget `r² / (2 σ²)` of one query. -/
@@ -80,28 +80,29 @@ theorem zcdpLifting_rel_gaussianMechPow (hσ : σ ≠ 0) {a a' : ℝ} (h : |a - 
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ε, δ)`-DP for inputs at distance at
 most `r`, with `ε` the best Rényi conversion of the composed zCDP budget `k r² / (2 σ²)`. -/
-theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
+theorem DP_gaussianMechPow (hσ : σ ≠ 0) (hδ : 0 < δ) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
       (⨅ α ∈ Ioi (1 : ℝ), ENNReal.ofReal α * (k * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) +
-        ENNReal.ofReal (log (1 / δ) / (α - 1)))
+        ENNReal.ofReal (Real.log (1 / δ) / (α - 1)))
       (ENNReal.ofReal δ) := fun a a' h ↦ by
   simpa using codensity_sound
-    ((LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow hσ h k))
+    ((LiftingRelHom.zcdpToDp hδ).map_rel (zcdpLifting_rel_gaussianMechPow r hσ h k))
 
 /-- `k` Gaussian queries with standard deviation `σ` are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for
 inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. -/
-theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ₁ : δ < 1) (k : ℕ) :
+theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (hδ : 0 < δ) (hδ₁ : δ < 1) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
-      (ENNReal.ofReal (k * (r ^ 2 / (2 * σ ^ 2)) + 2 * √(k * (r ^ 2 / (2 * σ ^ 2)) * log (1 / δ))))
+      (ENNReal.ofReal
+        (k * (r ^ 2 / (2 * σ ^ 2)) + 2 * √(k * (r ^ 2 / (2 * σ ^ 2)) * Real.log (1 / δ))))
       (ENNReal.ofReal δ) := fun a a' h ↦ by
   have hρ : 0 ≤ k * (r ^ 2 / (2 * (σ : ℝ) ^ 2)) := by positivity
   have hk : (k : ℝ≥0∞) * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2)) =
       ENNReal.ofReal (k * (r ^ 2 / (2 * (σ : ℝ) ^ 2))) := by
-    rw [ENNReal.ofReal_mul (Nat.cast_nonneg k), ENNReal.ofReal_natCast]
+    rw [ofReal_mul (Nat.cast_nonneg k), ofReal_natCast]
   -- `codensity_dp_rel_of_zcdp` is stated for the codensity lifting of `zcdpDivergence`.
   have hz := ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl).map_rel
-    (zcdpLifting_rel_gaussianMechPow hσ h k)
+    (zcdpLifting_rel_gaussianMechPow r hσ h k)
   have := codensity_sound (codensity_dp_rel_of_zcdp hδ hδ₁ hz)
-  rwa [zero_add, hk, ENNReal.toReal_ofReal hρ, ← ENNReal.ofReal_add hρ (by positivity)] at this
+  rwa [zero_add, hk, toReal_ofReal hρ, ← ofReal_add hρ (by positivity)] at this
 
 end Mechanism

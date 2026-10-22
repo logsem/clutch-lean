@@ -19,17 +19,19 @@ open scoped ENNReal NNReal
 namespace ProbabilityTheory
 open ENNReal
 
+variable (a : ℝ) (b : ℝ≥0)
+
 /-- The density `exp (-|x - a| / b) / (2 b)` of the Laplace distribution. -/
-noncomputable def laplacePDF (a : ℝ) (b : ℝ≥0) (x : ℝ) : ℝ≥0∞ :=
+noncomputable def laplacePDF (x : ℝ) : ℝ≥0∞ :=
   ENNReal.ofReal (Real.exp (-|x - a| / b) / (2 * b))
 
-/-- The Laplace distribution with location `a` and scale `b`. -/
-noncomputable def laplace (a : ℝ) (b : ℝ≥0) : Measure ℝ :=
+/-- The Laplace distribution with location `a` and scale `b`, a probability measure for `0 < b`. -/
+noncomputable def laplace : Measure ℝ :=
   volume.withDensity (laplacePDF a b)
 
 /-- The Laplace density is measurable. -/
 @[fun_prop]
-theorem measurable_laplacePDF (a : ℝ) (b : ℝ≥0) : Measurable (laplacePDF a b) := by
+theorem measurable_laplacePDF : Measurable (laplacePDF a b) := by
   unfold laplacePDF
   fun_prop
 
@@ -39,8 +41,10 @@ theorem measurable_exponentialPDF (r : ℝ) : Measurable (exponentialPDF r) := b
   unfold exponentialPDF
   fun_prop
 
+variable {b}
+
 /-- Off the location, the Laplace density is an even mixture of two exponential densities. -/
-theorem laplacePDF_eq (a : ℝ) {b : ℝ≥0} (hb : 0 < b) {x : ℝ} (hx : x ≠ a) :
+theorem laplacePDF_eq (hb : 0 < b) {x : ℝ} (hx : x ≠ a) :
     laplacePDF a b x = 2⁻¹ * (exponentialPDF b⁻¹ (x - a) + exponentialPDF b⁻¹ (a - x)) := by
   have hb' : (0 : ℝ) < b := hb
   have h2 : (2⁻¹ : ℝ≥0∞) = ENNReal.ofReal 2⁻¹ := by
@@ -60,7 +64,7 @@ theorem laplacePDF_eq (a : ℝ) {b : ℝ≥0} (hb : 0 < b) {x : ℝ} (hx : x ≠
     field_simp
 
 /-- The Laplace distribution is a probability measure. -/
-instance isProbabilityMeasure_laplace (a : ℝ) {b : ℝ≥0} [hb : Fact (0 < b)] :
+instance isProbabilityMeasure_laplace [hb : Fact (0 < b)] :
     IsProbabilityMeasure (laplace a b) where
   measure_univ := by
     have hr : (0 : ℝ) < (b : ℝ)⁻¹ := inv_pos.2 hb.out
@@ -75,9 +79,11 @@ instance isProbabilityMeasure_laplace (a : ℝ) {b : ℝ≥0} [hb : Fact (0 < b)
       lintegral_exponentialPDF_eq_one hr, one_add_one_eq_two,
       ENNReal.inv_mul_cancel two_ne_zero ENNReal.ofNat_ne_top]
 
+variable (b)
+
 /-- The Laplace distribution with scale `b` is measurable in its location parameter. -/
 @[fun_prop]
-theorem measurable_laplace (b : ℝ≥0) : Measurable fun a ↦ laplace a b := by
+theorem measurable_laplace : Measurable fun a ↦ laplace a b := by
   refine Measure.measurable_of_measurable_coe _ fun S hS ↦ ?_
   simp_rw [laplace, withDensity_apply _ hS]
   exact Measurable.lintegral_prod_right' (f := fun p : ℝ × ℝ ↦ laplacePDF p.1 b p.2)

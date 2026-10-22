@@ -15,7 +15,7 @@ typing contexts `Tctx`. Results: typed terms are locally closed; `Typed.rename` 
 namespace ProbLang
 open Cslib Exp
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
 
 /-! ## Type variables: renaming and substitution -/
 
@@ -67,12 +67,6 @@ def Ty.single (τ τ' : Ty) : Ty := τ.subst (fun n => match n with | 0 => τ' |
 
 /-- Shift every type variable up by one. -/
 def Ty.shift (τ : Ty) : Ty := τ.rename (· + 1)
-
-/-- Rename the output types of a substitution. -/
-def Ty.renameSubst (ξ : Renaming) (σ : Substitution) : Substitution := (σ · |>.rename ξ)
-
-/-- Compose substitutions: first `σ₁`, then `σ₂`. -/
-def Ty.substComp (σ₂ σ₁ : Substitution) : Substitution := fun n => (σ₁ n).subst σ₂
 
 /-! ## Operand classes and operator result types -/
 
@@ -174,15 +168,22 @@ def recUnfold : Exp rT := .lam (.bvar 0)
 /-- Matching `p` against a scrutinee of type `τs` yields bindings of type `τb`. `.wildcard`
 binds the whole scrutinee: bindings live outside `Pat`, so there is no `.var` pattern. -/
 inductive PatTyped : Ty → Pat rT → Ty → Prop
-  | wildcard {τ}        : PatTyped τ .wildcard τ
-  | lit_int {z}        : PatTyped .int  (.lit (.int z))  .unit
-  | lit_bool {b}       : PatTyped .bool (.lit (.bool b)) .unit
-  | lit_unit           : PatTyped .unit (.lit .unit)     .unit
+  /-- The wildcard binds the whole scrutinee. -/
+  | wildcard {τ} : PatTyped τ .wildcard τ
+  /-- An integer literal pattern. -/
+  | lit_int {z} : PatTyped .int (.lit (.int z)) .unit
+  /-- A boolean literal pattern. -/
+  | lit_bool {b} : PatTyped .bool (.lit (.bool b)) .unit
+  /-- The unit literal pattern. -/
+  | lit_unit : PatTyped .unit (.lit .unit) .unit
+  /-- A pair pattern matches componentwise. -/
   | pair {τ1 τ2 p1 p2 b1 b2} :
       PatTyped τ1 p1 b1 → PatTyped τ2 p2 b2 →
       PatTyped (.prod τ1 τ2) (.pair p1 p2) (.prod b1 b2)
-  | inl {τ1 τ2 p b}    : PatTyped τ1 p b → PatTyped (.sum τ1 τ2) (.inl p) b
-  | inr {τ1 τ2 p b}    : PatTyped τ2 p b → PatTyped (.sum τ1 τ2) (.inr p) b
+  /-- A left-injection pattern matches a left summand. -/
+  | inl {τ1 τ2 p b} : PatTyped τ1 p b → PatTyped (.sum τ1 τ2) (.inl p) b
+  /-- A right-injection pattern matches a right summand. -/
+  | inr {τ1 τ2 p b} : PatTyped τ2 p b → PatTyped (.sum τ1 τ2) (.inr p) b
 
 /-! ## Typing judgment
 
@@ -243,10 +244,10 @@ inductive Typed : Tctx → Exp rT → Ty → Prop
       Typed Γ e1 τ → Typed Γ e2 τ →
       Typed Γ (.cond e0 e1 e2) τ
   | lam (L : Finset Var) {Γ e τ1 τ2} :
-      (∀ x ∉ L, Typed (Γ.insert x τ1) (Exp.open' e (.fvar x)) τ2) →
+      (∀ x ∉ L, Typed (Γ.insert x τ1) (open' e (.fvar x)) τ2) →
       Typed Γ (.lam e) (.arrow τ1 τ2)
   | fix (L : Finset Var) {Γ e τ1 τ2} :
-      (∀ f ∉ L, Typed (Γ.insert f (.arrow τ1 τ2)) (Exp.open' e (.fvar f)) (.arrow τ1 τ2)) →
+      (∀ f ∉ L, Typed (Γ.insert f (.arrow τ1 τ2)) (open' e (.fvar f)) (.arrow τ1 τ2)) →
       Typed Γ (.fix e) (.arrow τ1 τ2)
   | app {Γ e1 e2 τ1 τ2} :
       Typed Γ e1 (.arrow τ1 τ2) →
@@ -276,7 +277,7 @@ the thunk's argument is unused, and typing forces `e` to be locally closed. -/
   /-- `unpack e1 as x in e2` is `(λx. e2) e1`. -/
   | tunpack (L : Finset Var) {Γ e1 e2 τ τ2} :
       Typed Γ e1 (.exists' τ) →
-      (∀ x ∉ L, Typed (Γ.shift.insert x τ) (Exp.open' e2 (.fvar x)) τ2.shift) →
+      (∀ x ∉ L, Typed (Γ.shift.insert x τ) (open' e2 (.fvar x)) τ2.shift) →
       Typed Γ (.app (.lam e2) e1) τ2
   | alloc {Γ e τ} :
       Typed Γ e τ → Typed Γ (.alloc e) (.ref τ)
@@ -301,9 +302,9 @@ the thunk's argument is unused, and typing forces `e` to be locally closed. -/
 
 /-! ## Typed terms are locally closed and have free variables in the context -/
 
-omit [LawfulProbLangℝ rT] in
+/-- Typed expressions are locally closed. -/
 theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
-    (h : Typed Γ e τ) : Exp.IsLocallyClosed e := by
+    (h : Typed Γ e τ) : IsLocallyClosed e := by
   induction h with
   | fvar _ => exact .fvar _
   | lit_int | lit_bool | lit_unit | lit_real => exact .lit _
@@ -327,12 +328,12 @@ theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
   | app _ _ ih1 ih2 => exact .app ih1 ih2
   | @tlam Γ e τ _ ih =>
       refine .lam ∅ e (fun x _ => ?_)
-      rwa [Exp.open', ← Exp.open_lc 0 (Exp.fvar x) e ih]
+      rwa [open', ← open_lc 0 (Exp.fvar x) e ih]
   | tapp _ ih => exact .app ih (.lit _)
   | tfold _ ih => exact ih
   | tunfold _ ih =>
       refine .app (.lam ∅ (.bvar 0) (fun x _ => ?_)) ih
-      simp [Exp.open', Exp.openRec]; exact .fvar x
+      simp [open', openRec]; exact .fvar x
   | tpack _ ih => exact ih
   | @tunpack L Γ e1 e2 τ τ2 _ _ ih1 ih2 => exact .app (.lam L e2 ih2) ih1
   | alloc _ ih => exact .alloc ih
@@ -343,40 +344,39 @@ theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
   | rand_unit _ _ ih1 ih2 => exact .rand ih1 ih2
   | scrut _ _ ih => exact .scrut _ ih
 
-omit [LawfulProbLangℝ rT] in
+/-- A free variable of a binder body, opened at a fresh atom, lies in the context's domain. -/
 private theorem isSome_of_mem_fv_open {Γ : Tctx} {L : Finset Var} {e : Exp rT} {τ : Ty}
-    {x : Var} (ih : ∀ y ∉ L, ∀ z ∈ (Exp.open' e (.fvar y)).fv, (Γ.insert y τ z).isSome)
+    {x : Var} (ih : ∀ y ∉ L, ∀ z ∈ (open' e (.fvar y)).fv, (Γ.insert y τ z).isSome)
     (hx : x ∈ e.fv) : (Γ x).isSome := by
   obtain ⟨y, hy⟩ := Cslib.HasFresh.fresh_exists (L ∪ {x})
   have hyL : y ∉ L := fun h => hy (Finset.mem_union_left _ h)
   have hxy : x ≠ y := fun h => hy (Finset.mem_union_right _ (Finset.mem_singleton.mpr h.symm))
-  have hres := ih y hyL x (Exp.fv_subset_open e y hx)
+  have hres := ih y hyL x (fv_subset_open e y hx)
   unfold Tctx.insert at hres
   rwa [ite_eq_right hxy] at hres
 
-omit [LawfulProbLangℝ rT] in
 /-- Every typed expression's free variables lie in the typing context's domain. -/
 theorem Typed.fvSubset {Γ : Tctx} {e : Exp rT} {τ : Ty}
     (h : Typed Γ e τ) : ∀ x ∈ e.fv, (Γ x).isSome := by
   induction h with
   | fvar hx =>
     intro x hx'
-    simp [Exp.fv, Finset.mem_singleton] at hx'
+    simp [fv, Finset.mem_singleton] at hx'
     subst hx'; rw [hx]; rfl
-  | lit_int | lit_bool | lit_unit | lit_real | urand => intro x hx; simp [Exp.fv] at hx
+  | lit_int | lit_bool | lit_unit | lit_real | urand => intro x hx; simp [fv] at hx
   | binop_real _ _ _ ih1 ih2 | binop_int _ _ _ ih1 ih2 | binop_bool _ _ _ ih1 ih2
   | unboxed_eq _ _ _ ih1 ih2 | pair _ _ ih1 ih2 | app _ _ ih1 ih2
   | store _ _ ih1 ih2 | rand _ _ ih1 ih2 | rand_unit _ _ ih1 ih2 =>
     intro x hx
-    simp only [Exp.fv, Finset.mem_union] at hx
+    simp only [fv, Finset.mem_union] at hx
     exact hx.elim (ih1 x) (ih2 x)
   | unop_int _ _ ih | unop_bool _ _ ih | unop_real _ _ ih
   | fst _ ih | snd _ ih | inl _ ih | inr _ ih | tapp _ ih
   | alloc _ ih | load _ ih | alloc_tape _ ih | scrut _ _ ih =>
-    intro x hx; simp [Exp.fv] at hx; exact ih x hx
+    intro x hx; simp [fv] at hx; exact ih x hx
   | case _ _ _ ih0 ih1 ih2 | cond _ _ _ ih0 ih1 ih2 =>
     intro x hx
-    simp only [Exp.fv, Finset.mem_union] at hx
+    simp only [fv, Finset.mem_union] at hx
     exact hx.elim (Or.elim · (ih0 x) (ih1 x)) (ih2 x)
   | lam _ _ ih | fix _ _ ih => exact fun x hx => isSome_of_mem_fv_open ih hx
   | tlam _ ih =>
@@ -388,10 +388,10 @@ theorem Typed.fvSubset {Γ : Tctx} {e : Exp rT} {τ : Ty}
   | tunfold _ ih =>
     intro x hx
     apply ih
-    simpa [Exp.fv, recUnfold] using hx
+    simpa [fv, recUnfold] using hx
   | tunpack _ _ _ ih1 ih2 =>
     intro x hx
-    simp only [Exp.fv, Finset.mem_union] at hx
+    simp only [fv, Finset.mem_union] at hx
     refine hx.elim (fun hx => ?_) (ih1 x)
     have hres := isSome_of_mem_fv_open ih2 hx
     unfold Tctx.shift at hres
@@ -431,17 +431,16 @@ theorem Tctx.shift_insert (Γ : Tctx) (x : Var) (τ : Ty) :
 
 /-! ## Renaming a context atom preserves typing -/
 
-omit [LawfulProbLangℝ rT] in
 /-- `Typed.rename` for a context presented as `Γ.insert x τ_x`, so induction goes through; binder
 cases swap the fresh atom past `x` and `y` (`Tctx.insert_swap`). -/
 theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
     {Γ' : Tctx} (h : Typed Γ' e τ) :
     ∀ (x y : Var) (τ_x : Ty) (Γ : Tctx),
       Γ' = Γ.insert x τ_x → y ∉ e.fv ∪ {x} →
-      Typed (Γ.insert y τ_x) (Exp.subst e x (Exp.fvar y)) τ := by
+      Typed (Γ.insert y τ_x) (subst e x (Exp.fvar y)) τ := by
   induction h with
     (intro x y τ_x Γ heq hy; subst heq
-     simp only [Exp.fv, Exp.subst, Finset.mem_union, Finset.mem_singleton, not_or] at hy ⊢)
+     simp only [fv, subst, Finset.mem_union, Finset.mem_singleton, not_or] at hy ⊢)
   | @fvar Γ' z τ hz =>
       by_cases hxz : x = z
       · subst hxz
@@ -477,20 +476,20 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
   | @lam L Γ' e τ1 τ2 _ ih =>
       refine .lam (L ∪ {x, y}) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
-      rw [← Exp.subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
+      rw [← subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
         Tctx.insert_swap Γ hzy.symm τ_x τ1]
       refine ih z hzL x y τ_x (Γ.insert z τ1) (Tctx.insert_swap Γ hzx.symm τ_x τ1) ?_
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
-      exact ⟨Exp.open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
+      exact ⟨open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
   | @fix L Γ' e τ1 τ2 _ ih =>
       refine .fix (L ∪ {x, y}) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
-      rw [← Exp.subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
+      rw [← subst_open_var z x (.fvar y) e hzx.symm (.fvar y),
         Tctx.insert_swap Γ hzy.symm τ_x (.arrow τ1 τ2)]
       refine ih z hzL x y τ_x (Γ.insert z (.arrow τ1 τ2))
         (Tctx.insert_swap Γ hzx.symm τ_x (.arrow τ1 τ2)) ?_
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
-      exact ⟨Exp.open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
+      exact ⟨open_fresh_preserve_not_fvar e hy.1 hzy.symm, hy.2⟩
   | app _ _ ih1 ih2 =>
       exact .app (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | tlam _ ih =>
@@ -500,19 +499,19 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
   | tapp _ ih => exact .tapp (ih x y τ_x Γ rfl (by simp [hy]))
   | tfold _ ih => exact .tfold (ih x y τ_x Γ rfl (by simp [hy]))
   | tunfold _ ih =>
-      rw [show Exp.subst (recUnfold (rT := rT)) x (Exp.fvar y) = recUnfold by
-        simp [recUnfold, Exp.subst]]
+      rw [show subst (recUnfold (rT := rT)) x (Exp.fvar y) = recUnfold by
+        simp [recUnfold, subst]]
       exact .tunfold (ih x y τ_x Γ rfl (by simp [hy]))
   | tpack _ ih => exact .tpack (ih x y τ_x Γ rfl (by simp [hy]))
   | @tunpack L Γ' e1 e2 τ τ2 _ _ ih1 ih2 =>
       refine .tunpack (L ∪ {x, y}) (ih1 x y τ_x Γ rfl (by simp [hy])) fun z hz => ?_
       obtain ⟨hzx, hzy, hzL⟩ : z ≠ x ∧ z ≠ y ∧ z ∉ L := by simpa using hz
-      rw [← Exp.subst_open_var z x (.fvar y) e2 hzx.symm (.fvar y),
+      rw [← subst_open_var z x (.fvar y) e2 hzx.symm (.fvar y),
         Tctx.shift_insert, Tctx.insert_swap Γ.shift hzy.symm τ_x.shift τ]
       refine ih2 z hzL x y τ_x.shift (Γ.shift.insert z τ) ?_ ?_
       · rw [Tctx.shift_insert, Tctx.insert_swap Γ.shift hzx.symm τ_x.shift τ]
       simp only [Finset.mem_union, Finset.mem_singleton, not_or]
-      exact ⟨Exp.open_fresh_preserve_not_fvar e2 hy.1.1 hzy.symm, hy.2⟩
+      exact ⟨open_fresh_preserve_not_fvar e2 hy.1.1 hzy.symm, hy.2⟩
   | alloc _ ih => exact .alloc (ih x y τ_x Γ rfl (by simp [hy]))
   | load _ ih => exact .load (ih x y τ_x Γ rfl (by simp [hy]))
   | store _ _ ih1 ih2 =>
@@ -527,7 +526,7 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
 /-- Renaming the context atom `x` to a fresh `y` preserves typing. -/
 theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
     (x y : Var) (h : Typed (Γ.insert x τ_x) e τ) (hy : y ∉ e.fv ∪ {x}) :
-    Typed (Γ.insert y τ_x) (Exp.subst e x (Exp.fvar y)) τ :=
+    Typed (Γ.insert y τ_x) (subst e x (Exp.fvar y)) τ :=
   Typed.rename_aux h x y τ_x Γ rfl hy
 
 /-! ## Lifting a single-atom typing to the cofinite binder premises
@@ -538,164 +537,22 @@ theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
 theorem Typed.rename_lam {Γ : Tctx} {x : Var} {e : Exp α} {τ τ' : Ty}
     (he : Typed (Γ.insert x τ) e τ') :
     ∀ y ∉ insert x e.fv,
-      Typed (Γ.insert y τ) (Exp.open' (Exp.close e x) (Exp.fvar y)) τ' := fun y hy => by
-  rw [Exp.open_close_subst_lc x y e he.isLocallyClosed]
+      Typed (Γ.insert y τ) (open' (close e x) (Exp.fvar y)) τ' := fun y hy => by
+  rw [open_close_subst_lc x y e he.isLocallyClosed]
   exact he.rename x y (by rwa [Finset.union_comm, ← Finset.insert_eq])
 
 /-- `Typed.rename_lam` for `fix` premises. -/
 theorem Typed.rename_fix {Γ : Tctx} {f : Var} {e : Exp α} {τ τ' : Ty}
     (he : Typed (Γ.insert f (.arrow τ τ')) e (.arrow τ τ')) :
     ∀ g ∉ insert f e.fv,
-      Typed (Γ.insert g (.arrow τ τ'))
-        (Exp.open' (Exp.close e f) (Exp.fvar g)) (.arrow τ τ') :=
+      Typed (Γ.insert g (.arrow τ τ')) (open' (close e f) (Exp.fvar g)) (.arrow τ τ') :=
   rename_lam he
 
 /-- `Typed.rename_lam` for `tunpack` premises. -/
 theorem Typed.rename_unpack {Γ : Tctx} {x : Var} {e2 : Exp α} {τ τ2 : Ty}
     (he2 : Typed (Γ.shift.insert x τ) e2 τ2.shift) :
     ∀ y ∉ insert x e2.fv,
-      Typed (Γ.shift.insert y τ)
-        (Exp.open' (Exp.close e2 x) (Exp.fvar y)) τ2.shift :=
+      Typed (Γ.shift.insert y τ) (open' (close e2 x) (Exp.fvar y)) τ2.shift :=
   rename_lam he2
-
-/-! ## De Bruijn calculus for types
-
-Standard renaming/substitution lemmas (Autosubst style); not used by the typing proofs above. -/
-
-/-- Apply `up` `k` times. -/
-@[simp] def upN : Nat → Substitution → Substitution
-  | 0,     σ => σ
-  | k + 1, σ => up (upN k σ)
-
-theorem under_id : ∀ n, Renaming.under id n = n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem under_comp (ξ₁ ξ₂ : Renaming)
-    : ∀ n, Renaming.under ξ₁ (Renaming.under ξ₂ n) = Renaming.under (ξ₁ ∘ ξ₂) n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.rename_id (τ : Ty) : τ.rename id = τ := by
-  induction τ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [rename, show Renaming.under id = id from funext under_id, ih]
-  | _ => simp only [rename, *]
-
-theorem Ty.rename_rename (ξ₁ ξ₂ : Nat → Nat) (τ : Ty) :
-    (τ.rename ξ₂).rename ξ₁ = τ.rename (ξ₁ ∘ ξ₂) := by
-  induction τ generalizing ξ₁ ξ₂ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, ih]
-    rw [show Renaming.under ξ₁ ∘ Renaming.under ξ₂ = Renaming.under (ξ₁ ∘ ξ₂) from
-      funext (under_comp _ _)]
-  | _ => simp only [Ty.rename, *]
-
-theorem up_upren (ξ : Nat → Nat) : ∀ n,
-    up (fun k => .var (ξ k)) n = .var (Renaming.under ξ n)
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.rename_eq_subst (ξ : Nat → Nat) (τ : Ty) :
-    τ.rename ξ = τ.subst (fun n => .var (ξ n)) := by
-  induction τ generalizing ξ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, Ty.subst, ih,
-      show (fun n => Ty.var (Renaming.under ξ n)) = up (fun k => .var (ξ k))
-        from funext fun n => (up_upren ξ n).symm]
-  | _ => simp only [Ty.rename, Ty.subst, *]
-
-theorem up_var : ∀ n, up .var n = .var n
-  | 0     => rfl
-  | _ + 1 => rfl
-
-theorem Ty.subst_id (τ : Ty) : τ.subst .var = τ := by
-  induction τ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst]
-    rw [show up .var = .var from funext up_var, ih]
-  | _ => simp only [Ty.subst, *]
-
-theorem up_subst_upren (σ : Nat → Ty) (ξ : Nat → Nat) : ∀ n,
-    up (σ ∘ ξ) n = up σ (Renaming.under ξ n)
-  | 0     => rfl
-  | _ + 1 => rfl
-
-/-- Substituting after renaming equals substituting along the composite. -/
-theorem Ty.subst_rename (σ : Nat → Ty) (ξ : Nat → Nat) (τ : Ty) :
-    (τ.rename ξ).subst σ = τ.subst (σ ∘ ξ) := by
-  induction τ generalizing σ ξ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.rename, Ty.subst, ih,
-      show up σ ∘ Renaming.under ξ = up (σ ∘ ξ) from funext fun n => (up_subst_upren σ ξ n).symm]
-  | _ => simp only [Ty.rename, Ty.subst, *]
-
-theorem up_renameSubst (ξ : Nat → Nat) (σ : Nat → Ty) : ∀ n,
-    up (Ty.renameSubst ξ σ) n = Ty.renameSubst (Renaming.under ξ) (up σ) n
-  | 0     => rfl
-  | n + 1 => by
-    simp only [up, Ty.renameSubst, Ty.rename_rename]; rfl
-
-/-- Renaming after substituting equals substituting renamed types. -/
-theorem Ty.rename_subst (ξ : Nat → Nat) (σ : Nat → Ty) (τ : Ty) :
-    (τ.subst σ).rename ξ = τ.subst (Ty.renameSubst ξ σ) := by
-  induction τ generalizing ξ σ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst, Ty.rename, ih,
-      show Ty.renameSubst (Renaming.under ξ) (up σ) = up (Ty.renameSubst ξ σ)
-        from funext fun n => (up_renameSubst ξ σ n).symm]
-  | _ => simp only [Ty.subst, Ty.rename, *]
-
-theorem up_substComp (σ₁ σ₂ : Nat → Ty) : ∀ n,
-    up (Ty.substComp σ₂ σ₁) n = Ty.substComp (up σ₂) (up σ₁) n
-  | 0     => rfl
-  | n + 1 => by
-    simp only [up, Ty.substComp, Ty.rename_subst, Ty.subst_rename]; rfl
-
-theorem Ty.subst_subst (σ₁ σ₂ : Nat → Ty) (τ : Ty) :
-    (τ.subst σ₁).subst σ₂ = τ.subst (Ty.substComp σ₂ σ₁) := by
-  induction τ generalizing σ₁ σ₂ with
-  | var n => rfl
-  | rec' τ ih | forall' τ ih | exists' τ ih =>
-    simp only [Ty.subst, ih,
-      show Ty.substComp (up σ₂) (up σ₁) = up (Ty.substComp σ₂ σ₁)
-        from funext fun n => (up_substComp σ₁ σ₂ n).symm]
-  | _ => simp only [Ty.subst, *]
-
-/-- Substituting into a shifted type is a no-op. -/
-theorem Ty.single_shift (τ τ' : Ty) :
-    Ty.single τ.shift τ' = τ := by
-  simp only [Ty.single, Ty.shift, Ty.subst_rename]
-  exact τ.subst_id
-
-theorem upN_var : ∀ (k n : Nat), upN k .var n = .var n
-  | 0,     _ => rfl
-  | k + 1, n => by
-    show up (upN k .var) n = _
-    rw [funext (upN_var k), up_var]
-
-theorem upN_lt : ∀ {k n : Nat} (σ : Nat → Ty), n < k → upN k σ n = .var n
-  | _ + 1, 0,     _, _ => rfl
-  | k + 1, n + 1, σ, h => by
-    show up (upN k σ) (n + 1) = .var (n + 1)
-    simp only [up, upN_lt σ (Nat.lt_of_succ_lt_succ h), Ty.rename]
-
-theorem upN_ge : ∀ {k n : Nat} (σ : Nat → Ty), k ≤ n →
-    upN k σ n = (σ (n - k)).rename (· + k)
-  | 0,     n,     σ, _ => by
-    show σ n = _
-    rw [← Ty.rename_id (σ n)]; rfl
-  | k + 1, n + 1, σ, h => by
-    show up (upN k σ) (n + 1) = _
-    simp only [up, upN_ge σ (Nat.le_of_succ_le_succ h), Ty.rename_rename,
-               Nat.add_sub_add_right]
-    rfl
-  | _ + 1, 0,     _, h => absurd h (by omega)
 
 end ProbLang

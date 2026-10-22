@@ -19,8 +19,7 @@ variable {rT : Type _}
 
 /-! ## Lookup -/
 
-/-- The pair assigned to `x`, preferring the entry nearest the end of the list, matching
-`SubstMap.lookup` so that `fst_lookup`/`snd_lookup` hold. -/
+/-- The pair assigned to `x`, where later entries shadow earlier ones. -/
 def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
   | [], _ => none
   | (y, p) :: rest, x =>
@@ -34,17 +33,18 @@ theorem lookup_eq_none_of_not_mem {y : Var} : ∀ (vs : ValSubstMap rT),
   | [], _ => rfl
   | (z, _) :: rest, hyNot => by
     simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert, not_or] at hyNot
-    simp only [ValSubstMap.lookup, lookup_eq_none_of_not_mem rest hyNot.2]
+    simp only [lookup, lookup_eq_none_of_not_mem rest hyNot.2]
     simp [hyNot.1]
 
+/-- A successful lookup returns a listed entry. -/
 theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
     (h : vs.lookup y = some (w1, w2)) : (y, (w1, w2)) ∈ vs := by
   induction vs with
-  | nil => simp [ValSubstMap.lookup] at h
+  | nil => simp [lookup] at h
   | cons p rest ih =>
     obtain ⟨z, ⟨v1, v2⟩⟩ := p
-    simp only [ValSubstMap.lookup] at h
-    cases hr : ValSubstMap.lookup rest y with
+    simp only [lookup] at h
+    cases hr : lookup rest y with
     | some q =>
       rw [hr] at h
       obtain rfl : q = (w1, w2) := by injection h
@@ -56,11 +56,13 @@ theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
         obtain ⟨rfl, rfl⟩ : v1 = w1 ∧ v2 = w2 := by simpa using h
         exact List.mem_cons.mpr (.inl rfl)
 
+/-- A variable with a binding occurs in the list. -/
 theorem mem_of_lookup_isSome {vs : ValSubstMap rT} {x : Var}
     (h : (vs.lookup x).isSome) : ∃ p ∈ vs, p.1 = x := by
   obtain ⟨⟨w1, w2⟩, hw⟩ := Option.isSome_iff_exists.mp h
   exact ⟨(x, (w1, w2)), mem_of_lookup_eq_some hw, rfl⟩
 
+/-- A listed variable has a binding. -/
 theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
     (hmem : ∃ w, (x, w) ∈ vs) : (vs.lookup x).isSome := by
   obtain ⟨w, hmem⟩ := hmem
@@ -68,8 +70,8 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
   | nil => simp at hmem
   | cons q rest ih =>
     obtain ⟨k, v⟩ := q
-    simp only [ValSubstMap.lookup]
-    cases hr : ValSubstMap.lookup rest x with
+    simp only [lookup]
+    cases hr : lookup rest x with
     | some _ => rfl
     | none =>
       rcases List.mem_cons.mp hmem with hq | hm
@@ -80,16 +82,20 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
 
 /-! ## Deleting a variable -/
 
+section delete
+variable (vs : ValSubstMap rT) (x : Var)
+
 /-- Remove every entry for `x`. -/
-def delete (vs : ValSubstMap rT) (x : Var) : ValSubstMap rT :=
+def delete : ValSubstMap rT :=
   vs.filter fun p => !decide (p.1 = x)
 
-theorem delete_cons (z : Var) (w : Val rT × Val rT) (rest : ValSubstMap rT) (x : Var) :
-    ValSubstMap.delete ((z, w) :: rest) x =
-      if z = x then rest.delete x else (z, w) :: rest.delete x := by
-  by_cases hzx : z = x <;> simp [ValSubstMap.delete, hzx]
+/-- Deleting from a cons drops the head exactly when it matches. -/
+theorem delete_cons (z : Var) (w : Val rT × Val rT) (rest : ValSubstMap rT) :
+    delete ((z, w) :: rest) x = if z = x then rest.delete x else (z, w) :: rest.delete x := by
+  by_cases hzx : z = x <;> simp [delete, hzx]
 
-theorem lookup_delete_self (vs : ValSubstMap rT) (x : Var) :
+/-- A deleted variable has no binding. -/
+theorem lookup_delete_self :
     (vs.delete x).lookup x = none := by
   induction vs with
   | nil => rfl
@@ -98,9 +104,10 @@ theorem lookup_delete_self (vs : ValSubstMap rT) (x : Var) :
     rw [delete_cons]
     split_ifs with hzx
     · exact ih
-    · simp [ValSubstMap.lookup, ih, Ne.symm hzx]
+    · simp [lookup, ih, Ne.symm hzx]
 
-theorem lookup_delete_other (vs : ValSubstMap rT) (x z : Var) (hxz : z ≠ x) :
+/-- Deleting `x` leaves the binding of any other variable. -/
+theorem lookup_delete_other (z : Var) (hxz : z ≠ x) :
     (vs.delete x).lookup z = vs.lookup z := by
   induction vs with
   | nil => rfl
@@ -109,25 +116,31 @@ theorem lookup_delete_other (vs : ValSubstMap rT) (x z : Var) (hxz : z ≠ x) :
     rw [delete_cons]
     split_ifs with hwx
     · subst hwx
-      simp only [ValSubstMap.lookup, ih]
-      cases ValSubstMap.lookup rest z <;> simp [hxz]
-    · simp [ValSubstMap.lookup, ih]
+      simp only [lookup, ih]
+      cases lookup rest z <;> simp [hxz]
+    · simp [lookup, ih]
 
-theorem mem_delete (vs : ValSubstMap rT) (x : Var) (p : Var × (Val rT × Val rT)) :
+/-- Membership in a deletion. -/
+theorem mem_delete (p : Var × (Val rT × Val rT)) :
     p ∈ vs.delete x ↔ p ∈ vs ∧ p.1 ≠ x := by
   simp [delete, List.mem_filter]
+
+end delete
 
 /-! ## Projections to `SubstMap`
 
 `proj_*` hold for any projection `f` of the value pair; `fst_*`/`snd_*` instantiate `f`. -/
 
+section proj
+variable (f : Val rT × Val rT → Val rT)
+
 /-- Projecting the values does not change the domain. -/
-theorem proj_dom (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) :
+theorem proj_dom (vs : ValSubstMap rT) :
     ((vs.map fun p => (p.1, (f p.2).1)).map (·.1)).toFinset = (vs.map (·.1)).toFinset := by
   simp only [List.map_map]; rfl
 
 /-- Projecting commutes with `delete`. -/
-theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x : Var) :
+theorem proj_delete (vs : ValSubstMap rT) (x : Var) :
     (vs.delete x).map (fun p => (p.1, (f p.2).1)) =
       (vs.map fun p => (p.1, (f p.2).1)).filter fun p => !decide (p.1 = x) := by
   induction vs with
@@ -139,22 +152,13 @@ theorem proj_delete (f : Val rT × Val rT → Val rT) (vs : ValSubstMap rT) (x :
 
 variable [LawfulProbLangℝ rT]
 
-/-- The substitution of left values. -/
-def fst (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
-
-/-- The substitution of right values. -/
-def snd (vs : ValSubstMap rT) : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
-
-section proj
-variable (f : Val rT × Val rT → Val rT)
-
 /-- Projecting commutes with lookup. -/
 theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
     SubstMap.lookup (vs.map fun p => (p.1, (f p.2).1)) x = (vs.lookup x).map fun q => (f q).1
   | [], _ => rfl
   | (y, w) :: rest, x => by
-    simp only [List.map_cons, SubstMap.lookup, ValSubstMap.lookup, proj_lookup rest x]
-    cases ValSubstMap.lookup rest x <;> simp
+    simp only [List.map_cons, SubstMap.lookup, lookup, proj_lookup rest x]
+    cases lookup rest x <;> simp
 
 /-- Projected values are closed when all the paired values are. -/
 theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
@@ -165,35 +169,51 @@ theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClos
 
 end proj
 
-theorem fst_lookup (vs : ValSubstMap rT) (x : Var) :
+variable [LawfulProbLangℝ rT] (vs : ValSubstMap rT) (x : Var)
+
+/-- The substitution of left values. -/
+def fst : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)
+
+/-- The substitution of right values. -/
+def snd : SubstMap rT := vs.map fun p => (p.1, p.2.2.1)
+
+/-- Lookup in the left substitution is the left projection of lookup. -/
+theorem fst_lookup :
     SubstMap.lookup vs.fst x = (vs.lookup x).map fun p => p.1.1 :=
   proj_lookup Prod.fst vs x
 
+/-- A variable outside the domain has no left binding. -/
 theorem fst_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
     (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.fst y = none := by
   rw [fst_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
 
-theorem snd_lookup (vs : ValSubstMap rT) (x : Var) :
+/-- Lookup in the right substitution is the right projection of lookup. -/
+theorem snd_lookup :
     SubstMap.lookup vs.snd x = (vs.lookup x).map fun p => p.2.1 :=
   proj_lookup Prod.snd vs x
 
+/-- A variable outside the domain has no right binding. -/
 theorem snd_lookup_eq_none_of_not_mem {vs : ValSubstMap rT} {y : Var}
     (hy : y ∉ (vs.map (·.1)).toFinset) : SubstMap.lookup vs.snd y = none := by
   rw [snd_lookup, lookup_eq_none_of_not_mem vs hy]; rfl
 
-theorem fst_dom (vs : ValSubstMap rT) :
+/-- The left substitution has the same domain. -/
+theorem fst_dom :
     (vs.fst.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
   proj_dom Prod.fst vs
 
-theorem snd_dom (vs : ValSubstMap rT) :
+/-- The right substitution has the same domain. -/
+theorem snd_dom :
     (vs.snd.map (·.1)).toFinset = (vs.map (·.1)).toFinset :=
   proj_dom Prod.snd vs
 
-theorem fst_delete (vs : ValSubstMap rT) (x : Var) :
+/-- The left substitution commutes with `delete`. -/
+theorem fst_delete :
     (vs.delete x).fst = vs.fst.filter fun p => !decide (p.1 = x) :=
   proj_delete Prod.fst vs x
 
-theorem snd_delete (vs : ValSubstMap rT) (x : Var) :
+/-- The right substitution commutes with `delete`. -/
+theorem snd_delete :
     (vs.delete x).snd = vs.snd.filter fun p => !decide (p.1 = x) :=
   proj_delete Prod.snd vs x
 

@@ -21,6 +21,7 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 
 /-! ## Lines -/
 
+/-- An order above `1` is a nonzero extended real. -/
 theorem ofReal_ioi_ne_zero (α : Ioi (1 : ℝ)) : ENNReal.ofReal α ≠ 0 :=
   (ENNReal.ofReal_pos.2 (zero_lt_one.trans α.2)).ne'
 
@@ -49,19 +50,23 @@ theorem concentratedLine_of_notMem {b : ℝ≥0∞ × ℝ≥0∞} {α : Ioi (1 :
     concentratedLine A b α = ⊤ := by
   simp [concentratedLine, hα]
 
+/-- Lines are monotone in the budget. -/
 theorem concentratedLine_mono : Monotone (concentratedLine A) := fun b c h α ↦ by
   by_cases hα : (α : ℝ) ∈ A
   · simpa [concentratedLine, hα] using add_le_add h.1 (mul_le_mul_right h.2 _)
   · simp [concentratedLine, hα]
 
+/-- An infinite shift makes the line `⊤`. -/
 theorem concentratedLine_fst_top (ρ : ℝ≥0∞) : concentratedLine A (⊤, ρ) = ⊤ := by
   ext α
   by_cases hα : (α : ℝ) ∈ A <;> simp [concentratedLine, hα]
 
+/-- An infinite slope makes the line `⊤`. -/
 theorem concentratedLine_snd_top (ξ : ℝ≥0∞) : concentratedLine A (ξ, ⊤) = ⊤ := by
   ext α
   simp [concentratedLine, ENNReal.mul_top (ofReal_ioi_ne_zero α)]
 
+/-- The line of the top budget is `⊤`. -/
 theorem concentratedLine_top : concentratedLine A ⊤ = ⊤ :=
   concentratedLine_snd_top A ⊤
 
@@ -86,9 +91,9 @@ noncomputable def concentratedDivergence (A : Set ℝ) : GradedDivergence.{u} (�
 noncomputable abbrev zcdpDivergence : GradedDivergence.{u} (ℝ≥0∞ × ℝ≥0∞) :=
   concentratedDivergence (Ioi 1)
 
-/-- `(ρ, ω)`-tCDP: Rényi bounds `α ρ` at the orders `1 < α < ω` (Eq. 7). -/
 -- a `def`: `Prod.mk 0` sends `⊤` to `(0, ⊤) ≠ ⊤`, so the generic `comap` instances do not fire; the
 -- tCDP instances below use that the line at `(0, ⊤)` is still `⊤`.
+/-- `(ρ, ω)`-tCDP: Rényi bounds `α ρ` at the orders `1 < α < ω` (Eq. 7). -/
 noncomputable def tcdpDivergence (ω : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   (concentratedDivergence (Ioo 1 ω)).comap (Prod.mk 0)
 
@@ -150,19 +155,19 @@ instance isComposable_concentrated : (concentratedDivergence.{u} A).IsComposable
 
 /-- The zero measure is within every concentrated budget of every measure. -/
 instance isZeroLeft_concentrated : (concentratedDivergence.{u} A).IsZeroLeft :=
-  GradedDivergence.isZeroLeft_comap
+  isZeroLeft_comap
 
 /-- Concentrated divergences are left continuous. -/
 instance isLeftContinuous_concentrated : (concentratedDivergence.{u} A).IsLeftContinuous :=
-  GradedDivergence.isLeftContinuous_comap
+  isLeftContinuous_comap
 
 /-- Concentrated divergences are monotone in the right measure. -/
 instance isRightMonotone_concentrated : (concentratedDivergence.{u} A).IsRightMonotone :=
-  GradedDivergence.isRightMonotone_comap
+  isRightMonotone_comap
 
 /-- Concentrated divergences are antitone in the left measure. -/
 instance isLeftAntitone_concentrated : (concentratedDivergence.{u} A).IsLeftAntitone :=
-  GradedDivergence.isLeftAntitone_comap
+  isLeftAntitone_comap
 
 /-- A bound at every larger budget is one at the budget: raise the shift `ξ`. -/
 instance isBudgetClosed_concentrated : (concentratedDivergence.{u} A).IsBudgetClosed where
@@ -187,19 +192,19 @@ instance isComposable_tcdp : (tcdpDivergence.{u} ω).IsComposable :=
 
 /-- The zero measure is within every tCDP budget of every measure. -/
 instance isZeroLeft_tcdp : (tcdpDivergence.{u} ω).IsZeroLeft :=
-  GradedDivergence.isZeroLeft_comap
+  isZeroLeft_comap
 
 /-- tCDP divergences are left continuous. -/
 instance isLeftContinuous_tcdp : (tcdpDivergence.{u} ω).IsLeftContinuous :=
-  GradedDivergence.isLeftContinuous_comap
+  isLeftContinuous_comap
 
 /-- tCDP divergences are monotone in the right measure. -/
 instance isRightMonotone_tcdp : (tcdpDivergence.{u} ω).IsRightMonotone :=
-  GradedDivergence.isRightMonotone_comap
+  isRightMonotone_comap
 
 /-- tCDP divergences are antitone in the left measure. -/
 instance isLeftAntitone_tcdp : (tcdpDivergence.{u} ω).IsLeftAntitone :=
-  GradedDivergence.isLeftAntitone_comap
+  isLeftAntitone_comap
 
 /-- A value above `α ρ` is `α ρ'` for some `ρ' > ρ` (for budget closedness of tCDP). -/
 theorem exists_lt_and_ofReal_mul_eq_of_mul_lt {α : Ioi (1 : ℝ)} {ρ t : ℝ≥0∞}
@@ -285,8 +290,8 @@ theorem codensity_tcdp_of_tcdpLifting [IsSubProbabilityMeasure μ] [IsSubProbabi
 
 variable (A ω)
 
-/-- Concentrated liftings are lawful; `(⊤, 0) < ⊤` has line `⊤`, so `isLawful_comap` does not
-apply and top-absorption of codensity is used instead. -/
+/-- Concentrated liftings are lawful, by top-absorption of codensity since the line at `(⊤, ρ)` is
+`⊤`. -/
 instance isLawful_concentratedLifting : (concentratedLifting.{u} A).IsLawful :=
   isLawful_comap_codensity (concentratedLine_mono A) (concentratedLine_add A)
 
@@ -386,27 +391,27 @@ instance isBudgetClosed_tcdpLifting : (tcdpLifting.{u} ω).IsBudgetClosed where
 variable {A ω}
 
 /-- A concentrated lifting of equality gives the concentrated divergence. -/
-theorem concentratedLifting_sound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : (concentratedLifting A).Rel b (· = ·) μ ν) :
-    concentratedDivergence A b μ ν :=
+theorem concentratedLifting_sound {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
+    [IsSubProbabilityMeasure μ₂] (h : (concentratedLifting A).Rel b (· = ·) μ₁ μ₂) :
+    concentratedDivergence A b μ₁ μ₂ :=
   IsSound.sound (D := concentratedDivergence A) h
 
 /-- The concentrated divergence gives a concentrated lifting of equality. -/
-theorem concentratedLifting_complete {μ ν : Measure X} [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : concentratedDivergence A b μ ν) :
-    (concentratedLifting A).Rel b (· = ·) μ ν :=
+theorem concentratedLifting_complete {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
+    [IsSubProbabilityMeasure μ₂] (h : concentratedDivergence A b μ₁ μ₂) :
+    (concentratedLifting A).Rel b (· = ·) μ₁ μ₂ :=
   IsComplete.complete h
 
 /-- A tCDP lifting of equality gives the tCDP divergence. -/
-theorem tcdpLifting_sound {μ ν : Measure X} [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : (tcdpLifting ω).Rel ρ (· = ·) μ ν) :
-    tcdpDivergence ω ρ μ ν :=
+theorem tcdpLifting_sound {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
+    [IsSubProbabilityMeasure μ₂] (h : (tcdpLifting ω).Rel ρ (· = ·) μ₁ μ₂) :
+    tcdpDivergence ω ρ μ₁ μ₂ :=
   IsSound.sound (D := tcdpDivergence ω) h
 
 /-- The tCDP divergence gives a tCDP lifting of equality. -/
-theorem tcdpLifting_complete {μ ν : Measure X} [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : tcdpDivergence ω ρ μ ν) :
-    (tcdpLifting ω).Rel ρ (· = ·) μ ν :=
+theorem tcdpLifting_complete {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁]
+    [IsSubProbabilityMeasure μ₂] (h : tcdpDivergence ω ρ μ₁ μ₂) :
+    (tcdpLifting ω).Rel ρ (· = ·) μ₁ μ₂ :=
   IsComplete.complete h
 
 /-! ## Codensity of the concentrated divergence -/
@@ -513,13 +518,12 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {A : Set ℝ}
   {b : ℝ≥0∞ × ℝ≥0∞} {S : X → Y → Prop} {μ : Measure X} {ν : Measure Y}
 
 /-- A Rényi-curve lifting below the line of `b` at every order of `A` is a concentrated lifting at
-`b` (below the zCDP line, a zCDP lifting). -/
+`b`. -/
 theorem concentratedLifting_rel_of_renyiCurve_le [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] {c : RenyiBudget} (h : (codensity renyiCurve).Rel c S μ ν)
     (hc : ∀ α : Ioi (1 : ℝ), (α : ℝ) ∈ A → c α ≤ b.1 + ENNReal.ofReal α * b.2) :
     (concentratedLifting A).Rel b S μ ν :=
   concentratedLifting_rel_iff.2 fun α hα ↦
-    (((LiftingHom.renyiCurveToRenyi α).toLiftingRelHom rfl).map_rel h).mono (hc α hα)
-      fun _ _ h ↦ h
+    (((LiftingHom.renyiCurveToRenyi α).toLiftingRelHom rfl).map_rel h).mono (hc α hα) fun _ _ h ↦ h
 
 end GradedDivergence

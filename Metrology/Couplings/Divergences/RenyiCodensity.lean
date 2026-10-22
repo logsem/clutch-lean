@@ -24,6 +24,7 @@ variable {α : ℝ}
 
 Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. -/
 
+/-- The perspective of `t ↦ t ^ α` is positively homogeneous. -/
 theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
   rw [persp_rpow_mul hα hs hs ha hb, persp_self hs, one_rpow, mul_one]
@@ -133,8 +134,7 @@ theorem exists_sum_persp_rpow_le (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
     simp [ite_mul, apply_ite (· ^ (α / (α - 1))), zero_rpow hβ.ne', hqj,
       persp_rpow_zero_right hα hpj]
   push Not at hsing
-  obtain ⟨h, hh, heq⟩ :=
-    exists_persp_rpow_eq_sum hα hp hq fun i hi ↦ (hsing i hi).antisymm (hp i)
+  obtain ⟨h, hh, heq⟩ := exists_persp_rpow_eq_sum hα hp hq fun i hi ↦ (hsing i hi).antisymm (hp i)
   exact ⟨h, hh, heq.ge⟩
 
 end ProbabilityTheory
@@ -165,9 +165,8 @@ theorem fDiv_mass_comp_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : �
     (lintegral_ne_top_of_le_one Q hG1)]
   rw [toReal_lintegral_ofReal_comp hπ ha, toReal_lintegral_ofReal_comp hπ hb]
 
-/-- On a finite partition `π`, masses `s w` on the left and `s w ^ (α / (α - 1))` on the right
-give sub-Markov tests into a point whose divergence is `s` times the perspective of the
-`w`-weighted cell masses. -/
+/-- Weighted masses on a finite partition give sub-Markov tests into a point whose divergence is `s`
+times the perspective of the weighted cell masses. -/
 theorem exists_mass_fDiv_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : ℕ}
     {π : I → Fin n} (hπ : Measurable π) {s : ℝ} (hs : 0 < s) (hs1 : s ≤ 1) {w : Fin n → ℝ}
     (hw : ∀ j, 0 ≤ w j ∧ w j ≤ 1) :
@@ -193,10 +192,58 @@ theorem exists_mass_fDiv_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : 
       (Finset.sum_nonneg fun j _ ↦ mul_nonneg (rpow_nonneg (hw j).1 _) toReal_nonneg)]
   simp only [Finset.mul_sum, mul_assoc]
 
+/-! ## The slack-Hölder bound and Rényi couplings -/
+
+/-- The slack-Hölder bound: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
+satisfy `E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `SH`). -/
+def SlackHolder (α : ℝ) (ρ : ℝ≥0∞) (R : X → Y → ℝ≥0∞) (μ : Measure X) (ν : Measure Y) : Prop :=
+  ∀ ⦃f : X → ℝ≥0∞⦄ ⦃g : Y → ℝ≥0∞⦄, Measurable f → Measurable g →
+    (∀ x y, R x y < ⊤ → f x ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * R x y) * g y) →
+    ∫⁻ x, f x ∂μ ≤
+      expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α)
+
+/-- The Hölder-dual Rényi coupling of a relation: tests ordered on `S` satisfy
+`E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `RDPcoupl`). -/
+def RdpCoupl (α : ℝ) (ρ : ℝ≥0∞) (S : X → Y → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
+  ∀ ⦃f : X → ℝ≥0∞⦄ ⦃g : Y → ℝ≥0∞⦄, Measurable f → Measurable g → (∀ x y, S x y → f x ≤ g y) →
+    ∫⁻ x, f x ∂μ ≤
+      expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α)
+
+/-- The Rényi coupling of `S` is the slack-Hölder bound at the leftover of `S` (Rocq
+`SH_boolean`). -/
+theorem rdpCoupl_iff_slackHolder {S : X → Y → Prop} :
+    RdpCoupl α ρ S μ ν ↔ SlackHolder α ρ (relCost S) μ ν := by
+  have (f : X → ℝ≥0∞) (g : Y → ℝ≥0∞) (x : X) (y : Y) :
+      ((relCost S x y : ℝ≥0∞) < ⊤ → f x ≤
+        expBudget (ENNReal.ofReal ((α - 1) / α) * relCost S x y) * g y) ↔ (S x y → f x ≤ g y) := by
+    by_cases hS : S x y <;> simp [hS]
+  simp only [RdpCoupl, SlackHolder, this]
+
+/-- Values in slack-Hölder relation at `r`, truncated at `M` and scaled by `t` into `[0, 1]`, give
+point masses in Rényi relation at `r`. -/
+theorem renyiDivergence_dirac_truncated (hα : 1 < α) {r a b t M : ℝ≥0∞} (hr : r ≠ ⊤)
+    (hab : a ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * r) * b) (ha : t * min a M ≤ 1)
+    (hb : (t * min b M) ^ (α / (α - 1)) ≤ 1) :
+    renyiDivergence α r ((t * min a M) • dirac PUnit.unit.{u + 1})
+      ((t * min b M) ^ (α / (α - 1)) • dirac PUnit.unit) := by
+  have hβγ : α / (α - 1) * ((α - 1) / α) = 1 := by
+    have : α - 1 ≠ 0 := sub_ne_zero.2 hα.ne'
+    have : α ≠ 0 := (zero_lt_one.trans hα).ne'
+    field_simp
+  rw [renyiDivergence_smul_dirac_iff hα hr (ne_top_of_le_ne_top one_ne_top ha)
+    (ne_top_of_le_ne_top one_ne_top hb), ← rpow_mul, hβγ, rpow_one,
+    mul_left_comm]
+  gcongr
+  exact min_le_mul_min hab (one_le_expBudget _)
+
 /-! ## Tests into a point decide the codensity lifting -/
 
+section
+
+variable [hα : Fact (1 < α)]
+
 /-- A Rényi codensity lifting passes its tests into a point at slack `0`. -/
-theorem renyiDivergence_comp_of_codensity [hα : Fact (1 < α)]
+theorem renyiDivergence_comp_of_codensity
     (h : (renyiDivergence α).codensity ρ R μ ν) {k : Kernel X PUnit.{u + 1}}
     {l : Kernel Y PUnit.{u + 1}} [IsSubMarkovKernel k] [IsSubMarkovKernel l]
     (hkl : ∀ x y, R x y < ⊤ → renyiDivergence α (R x y) (k x) (l y)) :
@@ -208,11 +255,10 @@ theorem renyiDivergence_comp_of_codensity [hα : Fact (1 < α)]
     · simpa using hkl x y hR
     · simpa [hR] using renyiDivergence_top hα.out (k x) (l y)
 
-/-- Tests into a point at slack `0` decide the Rényi codensity lifting: a test into a finite
-partition becomes one into a point by weighting its cells with the optimal Hölder weights, and the
-slack is absorbed by scaling both masses down. -/
-theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν]
+variable [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+
+/-- Tests into a point at slack `0` decide the Rényi codensity lifting (Rocq `SH_iff_bind_unit`). -/
+theorem codensity_renyi_of_unitTests
     (h : ∀ (k : Kernel X PUnit.{u + 1}) (l : Kernel Y PUnit.{u + 1}) [IsSubMarkovKernel k]
       [IsSubMarkovKernel l], (∀ x y, R x y < ⊤ → renyiDivergence α (R x y) (k x) (l y)) →
       renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν)) :
@@ -225,8 +271,7 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
   -- `s` absorbs the slack `c`: scale both test masses by `s`
   set s := exp (-((α - 1) * c.toReal)) with hs_def
   have hs : 0 < s := exp_pos _
-  have hs1 : s ≤ 1 :=
-    exp_le_one_iff.2 (neg_nonpos.2 (mul_nonneg (by linarith) toReal_nonneg))
+  have hs1 : s ≤ 1 := exp_le_one_iff.2 (neg_nonpos.2 (mul_nonneg (by linarith) toReal_nonneg))
   rw [renyiDivergence_iff_of_ne_top hα1.le hρc.ne, fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun π ↦ iSup_le fun hπ ↦ ?_
   -- step 1: pick Hölder weights `w ∝ (p / q) ^ (α - 1)` so the partition sum is one point test
@@ -263,45 +308,15 @@ theorem codensity_renyi_of_unitTests [hα : Fact (1 < α)] [IsSubProbabilityMeas
 
 /-- The Rényi codensity lifting is decided by tests into a point at slack `0` (Rocq
 `SH_iff_bind_unit`, `kanto_bind`). -/
-theorem codensity_renyi_iff_unitTests [Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] :
+theorem codensity_renyi_iff_unitTests :
     (renyiDivergence α).codensity ρ R μ ν ↔
       ∀ (k : Kernel X PUnit.{u + 1}) (l : Kernel Y PUnit.{u + 1}) [IsSubMarkovKernel k]
         [IsSubMarkovKernel l], (∀ x y, R x y < ⊤ → renyiDivergence α (R x y) (k x) (l y)) →
         renyiDivergence α ρ (k ∘ₘ μ) (l ∘ₘ ν) :=
   ⟨fun h _ _ _ _ ↦ renyiDivergence_comp_of_codensity h, codensity_renyi_of_unitTests⟩
 
-/-! ## The slack-Hölder bound and Rényi couplings -/
-
-/-- The slack-Hölder bound: tests with `f x ≤ e^{(α - 1) R x y / α} g y` wherever `R x y < ⊤`
-satisfy `E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `SH`). -/
-def SlackHolder (α : ℝ) (ρ : ℝ≥0∞) (R : X → Y → ℝ≥0∞) (μ : Measure X) (ν : Measure Y) : Prop :=
-  ∀ ⦃f : X → ℝ≥0∞⦄ ⦃g : Y → ℝ≥0∞⦄, Measurable f → Measurable g →
-    (∀ x y, R x y < ⊤ → f x ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * R x y) * g y) →
-    ∫⁻ x, f x ∂μ ≤
-      expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α)
-
-/-- The Hölder-dual Rényi coupling of a relation: tests ordered on `S` satisfy
-`E_μ[f] ≤ e^{(α - 1) ρ / α} ‖g‖_{α / (α - 1)}` in `ν` (Rocq `RDPcoupl`). -/
-def RdpCoupl (α : ℝ) (ρ : ℝ≥0∞) (S : X → Y → Prop) (μ : Measure X) (ν : Measure Y) : Prop :=
-  ∀ ⦃f : X → ℝ≥0∞⦄ ⦃g : Y → ℝ≥0∞⦄, Measurable f → Measurable g → (∀ x y, S x y → f x ≤ g y) →
-    ∫⁻ x, f x ∂μ ≤
-      expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) * (∫⁻ y, g y ^ (α / (α - 1)) ∂ν) ^ ((α - 1) / α)
-
-/-- The Rényi coupling of `S` is the slack-Hölder bound at the leftover of `S` (Rocq
-`SH_boolean`). -/
-theorem rdpCoupl_iff_slackHolder {S : X → Y → Prop} :
-    RdpCoupl α ρ S μ ν ↔ SlackHolder α ρ (relCost S) μ ν := by
-  have (f : X → ℝ≥0∞) (g : Y → ℝ≥0∞) (x : X) (y : Y) :
-      ((relCost S x y : ℝ≥0∞) < ⊤ → f x ≤
-        expBudget (ENNReal.ofReal ((α - 1) / α) * relCost S x y) * g y) ↔ (S x y → f x ≤ g y) := by
-    by_cases hS : S x y <;> simp [hS]
-  simp only [RdpCoupl, SlackHolder, this]
-
-/-- A slack-Hölder bound gives the Rényi codensity lifting: tests into a point are Hölder bounds
-(Rocq `SH_to_bind_unit`, `kanto_bind`). -/
-theorem codensity_renyi_of_slackHolder [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (h : SlackHolder α ρ R μ ν) :
+/-- A slack-Hölder bound gives the Rényi codensity lifting (Rocq `SH_to_bind_unit`). -/
+theorem codensity_renyi_of_slackHolder (h : SlackHolder α ρ R μ ν) :
     (renyiDivergence α).codensity ρ R μ ν := by
   refine codensity_renyi_of_unitTests fun k l _ _ hkl ↦ ?_
   rcases eq_or_ne ρ ⊤ with rfl | hρ
@@ -320,27 +335,9 @@ theorem codensity_renyi_of_slackHolder [hα : Fact (1 < α)] [IsSubProbabilityMe
           (measure_ne_top _ _)] at this
   simpa only [← rpow_mul, hγβ, rpow_one] using this
 
-/-- Values in slack-Hölder relation at `r`, truncated at `M` and scaled by `t` into `[0, 1]`, give
-point masses in Rényi relation at `r`. -/
-theorem renyiDivergence_dirac_truncated (hα : 1 < α) {r a b t M : ℝ≥0∞} (hr : r ≠ ⊤)
-    (hab : a ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * r) * b) (ha : t * min a M ≤ 1)
-    (hb : (t * min b M) ^ (α / (α - 1)) ≤ 1) :
-    renyiDivergence α r ((t * min a M) • dirac PUnit.unit.{u + 1})
-      ((t * min b M) ^ (α / (α - 1)) • dirac PUnit.unit) := by
-  have hβγ : α / (α - 1) * ((α - 1) / α) = 1 := by
-    have : α - 1 ≠ 0 := sub_ne_zero.2 hα.ne'
-    have : α ≠ 0 := (zero_lt_one.trans hα).ne'
-    field_simp
-  rw [renyiDivergence_smul_dirac_iff hα hr (ne_top_of_le_ne_top one_ne_top ha)
-    (ne_top_of_le_ne_top one_ne_top hb), ← rpow_mul, hβγ, rpow_one,
-    mul_left_comm]
-  gcongr
-  exact min_le_mul_min hab (one_le_expBudget _)
-
-/-- A Rényi codensity lifting bounds each truncation of a slack-Hölder test: scale the test into
-`[0, 1]` and test into a point (Rocq `bind_unit_to_SH_truncated`). -/
-theorem slackHolder_truncated_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (hρ : ρ ≠ ⊤) (h : (renyiDivergence α).codensity ρ R μ ν)
+/-- A Rényi codensity lifting bounds each truncation of a slack-Hölder test (Rocq
+`bind_unit_to_SH_truncated`). -/
+theorem slackHolder_truncated_of_codensity (hρ : ρ ≠ ⊤) (h : (renyiDivergence α).codensity ρ R μ ν)
     {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞} (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ x y, R x y < ⊤ → f x ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * R x y) * g y)
     (N : ℕ) : ∫⁻ x, min (f x) (N + 1) ∂μ ≤ expBudget (ENNReal.ofReal ((α - 1) / α) * ρ) *
@@ -382,11 +379,9 @@ theorem slackHolder_truncated_of_codensity [hα : Fact (1 < α)] [IsSubProbabili
         gcongr with y
         exact min_le_left _ _
 
-/-- A Rényi codensity lifting at a finite budget is a slack-Hölder bound: truncate the tests at
-`N + 1`, scale them into `[0, 1]`, test into a point, and let `N → ∞` (Rocq
+/-- A Rényi codensity lifting at a finite budget is a slack-Hölder bound (Rocq
 `bind_unit_to_SH`). -/
-theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (hρ : ρ ≠ ⊤)
+theorem slackHolder_of_codensity (hρ : ρ ≠ ⊤)
     (h : (renyiDivergence α).codensity ρ R μ ν) : SlackHolder α ρ R μ ν := by
   intro f g hf hg hfg
   have htrunc := slackHolder_truncated_of_codensity hρ h hf hg hfg
@@ -400,15 +395,13 @@ theorem slackHolder_of_codensity [hα : Fact (1 < α)] [IsSubProbabilityMeasure 
 
 /-- The Rényi codensity lifting at a finite budget is the slack-Hölder bound (Rocq
 `SH_iff_bind_unit`). -/
-theorem codensity_renyi_iff_slackHolder [Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (hρ : ρ ≠ ⊤) :
+theorem codensity_renyi_iff_slackHolder (hρ : ρ ≠ ⊤) :
     (renyiDivergence α).codensity ρ R μ ν ↔ SlackHolder α ρ R μ ν :=
   ⟨slackHolder_of_codensity hρ, codensity_renyi_of_slackHolder⟩
 
 /-- Rényi couplings of a relation are exactly its Rényi codensity liftings (Rocq
 `RDPcoupl_iff_codensity`). -/
-theorem rdpCoupl_iff_codensity [Fact (1 < α)] [IsSubProbabilityMeasure μ]
-    [IsSubProbabilityMeasure ν] (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
+theorem rdpCoupl_iff_codensity (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
     RdpCoupl α ρ S μ ν ↔ (codensity (renyiDivergence α)).Rel ρ S μ ν :=
   rdpCoupl_iff_slackHolder.trans (codensity_renyi_iff_slackHolder hρ).symm
 
@@ -416,22 +409,21 @@ theorem rdpCoupl_iff_codensity [Fact (1 < α)] [IsSubProbabilityMeasure μ]
 
 /-- A zCDP relational lifting is a Hölder-dual Rényi coupling along `ξ + α ρ` at every order (Rocq
 `gcf_zCDP_iff`). -/
-theorem zcdpLifting_rel_iff_rdpCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    {ξ ρ : ℝ≥0∞} (hξ : ξ ≠ ⊤) (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
+theorem zcdpLifting_rel_iff_rdpCoupl {ξ ρ : ℝ≥0∞} (hξ : ξ ≠ ⊤) (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
     zcdpLifting.Rel (ξ, ρ) S μ ν ↔
       ∀ α : Ioi (1 : ℝ), RdpCoupl α (ξ + ENNReal.ofReal α * ρ) S μ ν := by
   refine concentratedLifting_rel_iff.trans (forall_congr' fun α ↦ ?_)
-  have hne : ξ + ENNReal.ofReal α * ρ ≠ ⊤ :=
-    add_ne_top.2 ⟨hξ, mul_ne_top ofReal_ne_top hρ⟩
+  have hne : ξ + ENNReal.ofReal α * ρ ≠ ⊤ := add_ne_top.2 ⟨hξ, mul_ne_top ofReal_ne_top hρ⟩
   exact ⟨fun h ↦ (rdpCoupl_iff_codensity hne).2 (h α.2), fun h _ ↦ (rdpCoupl_iff_codensity hne).1 h⟩
 
 /-- A tCDP relational lifting is a Hölder-dual Rényi coupling along `α ρ` at every order below `ω`
 (Rocq `gcf_tCDP_iff`). -/
-theorem tcdpLifting_rel_iff_rdpCoupl [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
-    {ω : ℝ} {ρ : ℝ≥0∞} (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
+theorem tcdpLifting_rel_iff_rdpCoupl {ω : ℝ} {ρ : ℝ≥0∞} (hρ : ρ ≠ ⊤) {S : X → Y → Prop} :
     (tcdpLifting ω).Rel ρ S μ ν ↔
       ∀ α : Ioi (1 : ℝ), (α : ℝ) < ω → RdpCoupl α (ENNReal.ofReal α * ρ) S μ ν := by
   refine tcdpLifting_rel_iff.trans (forall_congr' fun α ↦ forall_congr' fun _ ↦ ?_)
   exact (rdpCoupl_iff_codensity (mul_ne_top ofReal_ne_top hρ)).symm
+
+end
 
 end GradedDivergence

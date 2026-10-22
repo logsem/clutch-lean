@@ -21,9 +21,9 @@ open Std Iris COFE ProbabilityTheory MeasureTheory
 noncomputable section
 
 /-- Measures form a discrete OFE: distance is equality at every step. -/
-instance authMeasureOFE [MeasurableSpace α] : OFE (Measure α) where
+instance [MeasurableSpace α] : OFE (Measure α) where
   Dist _ x y := x = y
-  dist_eqv := ⟨fun _ => rfl, (Eq.symm ·), (Eq.trans · ·)⟩
+  dist_eqv := ⟨fun _ ↦ rfl, Eq.symm, Eq.trans⟩
   eq_dist' := .symm <| forall_const _
   dist_lt H _ := H
 
@@ -36,7 +36,7 @@ instance [MeasurableSpace α] : CMRA (Measure α) where
   op_ne.ne {_ _ _} H := by rw [H]
   pcore_ne := by simp
   validN_ne := (· ▸ ·)
-  valid_iff_validN := ⟨fun H _ => H, fun H => H 0⟩
+  valid_iff_validN := ⟨fun H _ ↦ H, fun H ↦ H 0⟩
   validN_succ := (·)
   validN_op_left := (le_of_add_le_of_nonneg_left · <| zero_le)
   assoc := by simp [add_assoc]
@@ -47,6 +47,9 @@ instance [MeasurableSpace α] : CMRA (Measure α) where
     rintro ⟨rfl⟩ _
     exact ⟨0, Option.some_inj.mpr (zero_add 0).symm⟩
   extend {_ _ y1 y2} _ := (⟨y1, y2, ·, rfl, rfl⟩)
+
+/-- The discrete OFE on measures is discrete. -/
+instance [MeasurableSpace α] : OFE.Discrete (Measure α) := ⟨id⟩
 
 /-- The zero measure is the unit. -/
 instance [MeasurableSpace α] : UCMRA (Measure α) where

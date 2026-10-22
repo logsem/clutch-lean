@@ -21,27 +21,35 @@ Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ`
 section SpecRA
 open Std Iris Iris.Std COFE ProbLang
 
-variable {rT : Type _} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type _}
 
 /-! ## Cameras and discrete OFE instances -/
 
 instance cofe_exp : COFE (Exp rT) := COFE.ofDiscrete _
 instance discrete_exp : OFE.Discrete (Exp rT) := ⟨id⟩
-instance discreteE_exp (x : Exp rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
 instance cofe_tape : COFE Tape := COFE.ofDiscrete _
 instance discrete_tape : OFE.Discrete Tape := ⟨id⟩
-instance discreteE_tape (x : Tape) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
 instance cofe_val : COFE (Val rT) := COFE.ofDiscrete _
 instance discrete_val : OFE.Discrete (Val rT) := ⟨id⟩
-instance discreteE_val (x : Val rT) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
+
+/-- Inclusion of exclusive elements forces equality. -/
+theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT}
+    (H : some (Excl.excl e1) ≼ some (Excl.excl e2)) : e1 = e2 := by
+  have h := Option.inc_iff.mp H
+  simp at h
+  rcases h with h | h
+  · exact h
+  · simpa using Excl.inc_iff.mp h
+
+variable [LawfulProbLangℝ rT]
 
 /-- Ghost state for the spec-side program: an exclusive expression. -/
-abbrev SpecProg (α : Type _) [ProbLang.LawfulProbLangℝ α] :=
+abbrev SpecProg (α : Type _) [LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))
 /-- Heap camera with values in `Agree`. -/
-abbrev SpecHeap (rT : Type _) [ProbLang.LawfulProbLangℝ rT] :=
+abbrev SpecHeap (rT : Type _) [LawfulProbLangℝ rT] :=
   HeapView Loc (Agree (Val rT)) LocHeap
 /-- Tape camera with tapes in `Agree`. -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
@@ -63,8 +71,7 @@ theorem LocHeap.asAgree_get? [OFE V] (h : LocHeap V) (l : Loc) :
   simp only [LocHeap.asAgree, PartialMap.map, LawfulPartialMap.get?_bindAlter]
   cases PartialMap.get? h l <;> rfl
 
-/-- The operational semantics updates heaps with `ExtTreeMap.insert`, the ghost-state lemmas with
-`PartialMap.insert`; they agree. -/
+/-- `ExtTreeMap.insert` agrees with `PartialMap.insert`. -/
 theorem Std.ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
     (h : LocHeap V) (l : Loc) (v : V) :
     h.insert l v = PartialMap.insert h l v :=
@@ -103,25 +110,32 @@ theorem LocHeap.get?_of_asAgree_get? [OFE V] {h : LocHeap V} {l : Loc} {v : V} {
 /-! ## Ghost-state classes -/
 
 /-- Ghost-state resources needed for the spec side. -/
-class SpecPreGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+class SpecPreGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+  /-- Ghost cell for the spec program. -/
   prog : ElemG GF (constOF (SpecProg rT))
+  /-- Ghost cell for the spec heap. -/
   heap : ElemG GF (constOF (SpecHeap rT))
+  /-- Ghost cell for the spec tapes. -/
   tapes : ElemG GF (constOF SpecTapes)
 
 attribute [reducible, instance] SpecPreGS.prog SpecPreGS.heap SpecPreGS.tapes
 
 /-- `SpecPreGS` together with the ghost names. -/
-class SpecGS (rT : outParam (Type _)) [ProbLang.LawfulProbLangℝ rT] (GF : BundledGFunctors)
-   extends SpecPreGS rT GF where
+class SpecGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors)
+    extends SpecPreGS rT GF where
+  /-- Ghost name of the spec program. -/
   γprog : GName
+  /-- Ghost name of the spec heap. -/
   γheap : GName
+  /-- Ghost name of the spec tapes. -/
   γtapes : GName
-
-section Resources
 
 /-! ## Spec ownership assertions -/
 
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
+local bi IProp GF
+
+open ProbLang.Cfg
 
 /-- Authoritative ownership of the spec program. -/
 def specProgAuth (e : Exp rT) : IProp GF := iOwn (E := ISpec.prog) ISpec.γprog (.auth e)
@@ -151,26 +165,7 @@ notation "⤇ " t:50 => specProgFrag t
 notation l:50 " ↦ₛ " v:50 => specHeapFrag l v
 notation l:50 " ↪ₛ " τ:50 => specTapesFrag l τ
 
-end Resources
-
-section Algebra
-
-variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
-local bi IProp GF
-
-open ProbLang.Cfg
-
 /-! ## Authority-fragment lemmas -/
-
-omit [LawfulProbLangℝ rT] in
-/-- Inclusion of exclusive elements forces equality. -/
-theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT} (H : some (Excl.excl e1) ≼ some (Excl.excl e2)) :
-    e1 = e2 := by
-  have h := Option.inc_iff.mp H
-  simp at h
-  rcases h with h | h
-  · exact h
-  · simpa using Excl.inc_iff.mp h
 
 /-- The authority and the fragment `⤇ e2` agree on the spec expression. -/
 theorem specAuth_specFrag_agree {e1 e2 : Exp rT} {σ : State rT} :
@@ -189,7 +184,7 @@ theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
   iintro Ha Hf
   ihave %rfl := specAuth_specFrag_agree $$ Ha Hf
   unfold specAuth specProgAuth specProgFrag
-  simp only []
+  dsimp only
   ihave ⟨He, Hh, Ht⟩ := Ha
   have hupd : SpecProg.frag e1 • SpecProg.auth e1 ~~> SpecProg.frag e3 • SpecProg.auth e3 :=
     Auth.auth_update (.option (.exclusive trivial))
@@ -291,11 +286,9 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
       Cfg.specAuth (ISpec := IS) ⟨e, σ⟩ ∗ specProgFrag (ISpec := IS) e := by
   imod (iOwn_alloc (E := ISPre.prog) (SpecProg.auth e • SpecProg.frag e)
     (Auth.auth_both_valid_2 trivial .rfl)) with ⟨%γp, Hp⟩
-  imod (iOwn_alloc (E := ISPre.heap)
-    (HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap))
+  imod (iOwn_alloc (E := ISPre.heap) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap))
     HeapView.auth_one_valid) with ⟨%γH, HH⟩
-  imod (iOwn_alloc (E := ISPre.tapes)
-    (HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes))
+  imod (iOwn_alloc (E := ISPre.tapes) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes))
     HeapView.auth_one_valid) with ⟨%γT, HT⟩
   imodintro
   let IS : SpecGS rT GF := {
@@ -304,21 +297,14 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
     γheap := γH
     γtapes := γT }
   iexists IS
-  unfold ProbLang.Cfg.specAuth specProgAuth specHeapAuth specTapesAuth specProgFrag
+  unfold specAuth specProgAuth specHeapAuth specTapesAuth specProgFrag
   ihave ⟨Hpa, Hpf⟩ := iOwn_op $$ Hp
-  simp only []
+  dsimp only
   iframe
-
-end Algebra
 
 /-! ## Spec tapes over plain integers
 
 Analogue of `appNatTape`. -/
-
-section NatSpecTape
-
-variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
-local bi IProp GF
 
 /-- Spec-side tape holding the integers `ns`, each below `z`. -/
 noncomputable def specNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
@@ -342,7 +328,9 @@ theorem spec_empty_to_natTape {l : Loc} {z : Int} :
   unfold specNatTape
   iintro Hl
   iexists []
-  isplitr; · ipureintro; rfl
+  isplitr
+  · ipureintro
+    rfl
   iexact Hl
 
 /-- Reading the head of an integer tape exposes the head of the spec tape, with a way back. -/
@@ -357,19 +345,17 @@ theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
   iexists x, xs
   isplitl [Hl]
   · iexact Hl
-  isplitr; · ipureintro; exact hx
+  isplitr
+  · ipureintro
+    exact hx
   iintro Hl
   iexists xs
-  isplitr; · ipureintro; exact hxs
+  isplitr
+  · ipureintro
+    exact hxs
   iexact Hl
 
-end NatSpecTape
-
 /-! ## Exclusivity of points-to assertions -/
-
-section ValidHelpers
-variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
-local bi IProp GF
 
 /-- Two heap points-to assertions at one location are contradictory. -/
 theorem specHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
@@ -390,7 +376,5 @@ theorem specTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
   ihave %hv := internalCmraValid_discrete $$ Hv
   exfalso
   exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
-
-end ValidHelpers
 
 end SpecRA

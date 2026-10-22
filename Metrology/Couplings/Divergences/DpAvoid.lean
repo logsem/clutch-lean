@@ -16,8 +16,7 @@ namespace GradedDivergence
 
 variable {X : Type*} [MeasurableSpace X]
 
-/-- A sub-probability measure couples with itself along equality outside `T` at slack `μ T`
-(the DP counterpart of the tv rule `refines_couple_rands_lr_avoid`). -/
+/-- A sub-probability measure couples with itself along equality outside `T` at slack `μ T`. -/
 theorem codensity_dp_avoid (μ : Measure X) [IsSubProbabilityMeasure μ] {T : Set X}
     (hT : MeasurableSet T) : (codensity dp).Rel (0, μ T) (fun x y ↦ x = y ∧ x ∉ T) μ μ := by
   refine (codensity_dp_rel_iff ENNReal.zero_ne_top).2 fun f g _ hg hf1 _ hfg ↦ ?_

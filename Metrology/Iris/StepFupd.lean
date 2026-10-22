@@ -10,7 +10,7 @@ public import Iris.ProofMode
 Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s; the main results
 `step_fupdN_pure_imp_forall₃`/`₄` let adequacy pull a pure fact out of the step-updates. -/
 
-open Std Iris.Std Iris.BI Iris.ProofMode
+open Std Iris.Std Iris.BI Iris.BI.BIBase Iris.ProofMode Iris.Std.LawfulSet
 
 namespace Iris
 
@@ -20,12 +20,10 @@ section StepFUpd
 
 variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 
-open Iris.BI.BIBase
-
 /-- An update to `n+1` laters is an `n+1`-fold step-update. -/
 theorem fupd_laterN_to_step_fupdN (E : CoPset) (n : Nat) {Q : PROP} : iprop%
     (|={E}=> ▷^[n+1] Q) ⊢ |={E}[E]▷=>^[n+1] Q :=
-  (BIFUpdate.mono (step_fupdN_intro Std.LawfulSet.subset_refl)).trans BIFUpdate.trans
+  (BIFUpdate.mono (step_fupdN_intro subset_refl)).trans BIFUpdate.trans
 
 /-- An except-0 under a step-update can be dropped. -/
 theorem step_fupd_except0 (E1 E2 : CoPset) {P : PROP} : iprop%
@@ -43,10 +41,10 @@ theorem step_fupdN_except0 (E1 E2 : CoPset) {P : PROP} (n : Nat) : iprop%
 theorem fupd_step_fupdN_pure {p : Prop} (n : Nat) (h : p) : ⊢@{PROP} |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ :=
   calc (emp : PROP) ⊢ ⌜p⌝ := pure_intro h
     _ ⊢ ▷^[n] ⌜p⌝ := laterN_intro n
-    _ ⊢ |={∅}[∅]▷=>^[n] ⌜p⌝ := step_fupdN_intro Std.LawfulSet.subset_refl
+    _ ⊢ |={∅}[∅]▷=>^[n] ⌜p⌝ := step_fupdN_intro subset_refl
     _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ⌜p⌝ := fupd_intro
 
-/-- A pure-guarded wand under `|={∅}=>` moves the update inside the wand (used by `LiveEris`). -/
+/-- A pure-guarded wand under `|={∅}=>` moves the update inside the wand. -/
 theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
     (⌜p⌝ -∗ |={∅}=> P) ⊢ |={∅}=> (⌜p⌝ -∗ P) := by
   iintro HwP
@@ -57,14 +55,14 @@ theorem fupd_pure_wand_intro [BIAffine PROP] {p : Prop} {P : PROP} : iprop%
   · iintro !> %hp'
     exact absurd hp' hp
 
-/-- Step-update version of `fupd_pure_wand_intro` (used by `LiveEris`). -/
+/-- Step-update version of `fupd_pure_wand_intro`. -/
 theorem step_fupdN_pure_wand_intro (E : CoPset) (n : Nat) {p q : Prop} : iprop%
     (⌜p⌝ -∗ |={E}[E]▷=>^[n] ⌜q⌝) ⊢@{PROP} |={E}[E]▷=>^[n] (⌜p⌝ -∗ ⌜q⌝) := by
   iintro H
   by_cases hp : p
   · ispecialize H $$ %hp
     iapply step_fupdN_mono (wand_intro sep_elim_left) $$ [$]
-  · iapply step_fupdN_intro Std.LawfulSet.subset_refl
+  · iapply step_fupdN_intro subset_refl
     iintro !> %hp'
     exact absurd hp' hp
 
@@ -76,17 +74,15 @@ section StepFUpdPlain
 
 variable {PROP : Type _} [Sbi PROP] [BIFUpdate PROP] [BIFUpdateSbi PROP] [BIAffine PROP]
 
-open Iris.BI.BIBase
-
 /-- A plain `∀` commutes with an update followed by `n` step-updates at the empty mask. -/
 theorem fupd_step_fupdN_plain_forall (Φ : A → PROP) [∀ x, Plain (Φ x)] (n : Nat) : iprop%
     (∀ x, |={∅}=> |={∅}[∅]▷=>^[n] Φ x) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ x, Φ x := by
   cases n with
-  | zero => simp only [Nat.repeat]; exact (fupd_plain_forall Std.LawfulSet.subset_refl).mpr
+  | zero => simp only [Nat.repeat]; exact (fupd_plain_forall subset_refl).mpr
   | succ n =>
     calc _ ⊢ ∀ x, |={∅}=> ▷^[n+1] ◇ Φ x :=
         forall_mono fun _ => (BIFUpdate.mono step_fupdN_plain).trans BIFUpdate.trans
-      _ ⊢ |={∅}=> ∀ x, ▷^[n+1] ◇ Φ x := (fupd_plain_forall Std.LawfulSet.subset_refl).mpr
+      _ ⊢ |={∅}=> ∀ x, ▷^[n+1] ◇ Φ x := (fupd_plain_forall subset_refl).mpr
       _ ⊢ |={∅}=> ▷^[n+1] ∀ x, ◇ Φ x := BIFUpdate.mono (laterN_forall (n+1)).mpr
       _ ⊢ |={∅}=> ▷^[n+1] ◇ ∀ x, Φ x := BIFUpdate.mono (laterN_mono (n+1) except0_forall.mpr)
       _ ⊢ |={∅}[∅]▷=>^[n+1] ◇ ∀ x, Φ x := fupd_laterN_to_step_fupdN ∅ n
@@ -135,12 +131,12 @@ theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → 
   · iapply fupd_step_fupdN_pure n fun h => absurd h hG
 
 /-- The four-variable version of `step_fupdN_pure_imp_forall₃`. -/
-theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C → D → Prop} {n : Nat} :
-    iprop% (∀ a b c d, ⌜G a b c d⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c d⌝) ⊢@{PROP}
+theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C → D → Prop}
+    {n : Nat} : iprop%
+    (∀ a b c d, ⌜G a b c d⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c d⌝) ⊢@{PROP}
       |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c d, G a b c d → q a b c d⌝ := by
   classical
-  have hpure : (∀ a b c d, ⌜G a b c d → q a b c d⌝) ⊢@{PROP}
-      ⌜∀ a b c d, G a b c d → q a b c d⌝ :=
+  have hpure : (∀ a b c d, ⌜G a b c d → q a b c d⌝) ⊢@{PROP} ⌜∀ a b c d, G a b c d → q a b c d⌝ :=
     (forall_mono fun a => (forall_mono fun b => (forall_mono fun c => pure_forall.2).trans
       pure_forall.2).trans pure_forall.2).trans pure_forall.2
   refine .trans ?_ ((fupd_step_fupdN_plain_forall₄

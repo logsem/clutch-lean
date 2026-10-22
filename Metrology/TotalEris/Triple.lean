@@ -61,7 +61,9 @@ declare_syntax_cat twpPost
 syntax " [" noWs "{ " ((ppSpace (binderIdent <|> bracketedBinder))+ ", ")?
   "RET " term:min "; " term:min " }" noWs "] " : twpPost
 
+/-- The total triple notation `[{ P }] e [{ RET v; Q }]`. -/
 syntax (name := twpTriple) twpPre twpProg twpPost : term
+/-- The total triple notation with the program logic instance pinned by `⊢@{PROP}`. -/
 syntax (name := twpTriplePinned) "⊢@{" term "} " twpPre twpProg twpPost : term
 
 meta def parseTwpPre : TSyntax `twpPre → MacroM Term

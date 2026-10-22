@@ -18,6 +18,7 @@ namespace ProbLang
 
 variable {rT : Type _}
 
+/-- A proof that an expression is not a value, by case analysis on a value witness. -/
 macro "solve_not_value" : term =>
   `(Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
 
@@ -26,12 +27,13 @@ namespace TotalEris
 section Lifting
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT] [ErisGS rT hlc GF]
+variable {E : CoPset} {Φ : Val rT → IProp GF} {l : Loc} {z : Int}
 
 /-! ## Heap operations -/
 
-theorem twp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
-    iprop(∀ l, appHeapFrag l v -∗ Φ (.loc l))
-      ⊢ tglWp E (.alloc (.ofVal v)) Φ := by
+/-- Total weakest precondition of `ref v` (Eris `wp_alloc`). -/
+theorem twp_alloc {v : Val rT} :
+    iprop(∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ tglWp E (.alloc (.ofVal v)) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
@@ -50,14 +52,14 @@ theorem twp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
     iframe Hσ'
     iapply HΦ $$ %σ₁.heap.fresh Hl
 
-theorem twp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} :
+/-- Total weakest precondition of `!l` (Eris `wp_load`). -/
+theorem twp_load {v : Val rT} :
     iprop(l ↦ v ∗ (l ↦ v -∗ Φ v)) ⊢ tglWp E pl(!#loc l) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
-  have hred : HeadReducible pl(!#loc l) σ₁ :=
-    (HeadStepSupport.LoadS hlook rfl).ne_zero
+  have hred : HeadReducible pl(!#loc l) σ₁ := (HeadStepSupport.LoadS hlook rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
@@ -71,9 +73,9 @@ theorem twp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} 
     iframe Hσ
     iapply HΦ $$ Hl
 
-theorem twp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp GF} :
-    iprop(l ↦ v' ∗ (l ↦ v -∗ Φ .unit))
-      ⊢ tglWp E (.store pl(#loc l) (.ofVal v)) Φ := by
+/-- Total weakest precondition of `l ← v` (Eris `wp_store`). -/
+theorem twp_store {v v' : Val rT} :
+    iprop(l ↦ v' ∗ (l ↦ v -∗ Φ .unit)) ⊢ tglWp E (.store pl(#loc l) (.ofVal v)) Φ := by
   iintro ⟨Hl, HΦ⟩
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
@@ -97,9 +99,9 @@ theorem twp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp 
 
 /-! ## Tape operations -/
 
-theorem twp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
-    iprop(∀ l, l ↪ₐ Tape.empty z -∗ Φ (.lbl l))
-      ⊢ tglWp E pl(tape(#z)) Φ := by
+/-- Total weakest precondition of `alloc_tape z` (Eris `wp_alloc_tape`). -/
+theorem twp_alloctape :
+    iprop(∀ l, l ↪ₐ Tape.empty z -∗ Φ (.lbl l)) ⊢ tglWp E pl(tape(#z)) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
@@ -118,9 +120,9 @@ theorem twp_alloctape {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} :
 
 /-! ## Random sampling -/
 
-theorem twp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) :
-    iprop(∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n))
-      ⊢ tglWp E pl(rand(#z, #())) Φ := by
+/-- Total weakest precondition of `rand z` without a tape (Eris `wp_rand`). -/
+theorem twp_rand (Hz : 0 < z) :
+    iprop(∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢ tglWp E pl(rand(#z, #())) Φ := by
   iintro HΦ
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
@@ -137,8 +139,9 @@ theorem twp_rand {E : CoPset} {z : Int} {Φ : Val rT → IProp GF} (Hz : 0 < z) 
     ipureintro; exact ⟨Hv0, Hvz⟩
   | RandNonposS hnz => exact absurd Hz hnz
 
-theorem twp_rand_tape {E : CoPset} {l : Loc} {z : Int} {n : { z' : Int // 0 ≤ z' ∧ z' < z }}
-    {ns : List { z' : Int // 0 ≤ z' ∧ z' < z }} {Φ : Val rT → IProp GF} :
+/-- Total weakest precondition of `rand(l) z` on a tape with head `n` (Eris `wp_rand_tape`). -/
+theorem twp_rand_tape {n : { z' : Int // 0 ≤ z' ∧ z' < z }}
+    {ns : List { z' : Int // 0 ≤ z' ∧ z' < z }} :
     iprop(l ↪ₐ ⟨z, n :: ns⟩ ∗ (l ↪ₐ ⟨z, ns⟩ -∗ Φ (.int n.val)))
       ⊢ tglWp E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -167,8 +170,9 @@ theorem twp_rand_tape {E : CoPset} {l : Loc} {z : Int} {n : { z' : Int // 0 ≤ 
   | RandTapeNonposEmptyS hnz _ _ => exact absurd Hzpos hnz
   | RandTapeNonposOtherS hnz _ _ => exact absurd Hzpos hnz
 
-theorem twp_rand_tape_empty {E : CoPset} {l : Loc} {z : Int}
-    {Φ : Val rT → IProp GF} (Hz : 0 < z) :
+/-- Total weakest precondition of `rand(l) z` on an empty tape (Eris `wp_rand_tape_empty`). -/
+theorem twp_rand_tape_empty
+    (Hz : 0 < z) :
     iprop(l ↪ₐ ⟨z, []⟩ ∗ (∀ n, l ↪ₐ ⟨z, []⟩ -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)))
       ⊢ tglWp E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩

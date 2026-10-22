@@ -15,14 +15,13 @@ and give `P`. It comes with bind, monotonicity and framing rules; the `step_*` r
 `SpecRules.lean` produce it.
 -/
 
-open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure Measurable
+open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure
 
 namespace ProbLang
 
-/-- The interpretation of a spec configuration used by `specUpdate` and by `wp`'s state
-interpretation; kept abstract so `MicrometerWpGS` can extend it. -/
-class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    (GF : BundledGFunctors) where
+/-- The abstract interpretation of a spec configuration, extended by `MicrometerWpGS`. -/
+class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+  /-- The proposition interpreting a spec configuration. -/
   specInterp : Cfg rT → IProp GF
 
 open SpecUpdateGS
@@ -33,25 +32,21 @@ section SpecUpdate
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [iSpec : SpecUpdateGS rT GF]
+variable {n m : Nat} {E E1 E2 : CoPset} {P Q R : IProp GF}
 local bi IProp GF
 
-/-- Update of the spec side by `n` deterministic steps; rules that know their step count state it
-here, and `specUpdateN_specUpdate` forgets `n`, which is all `wp` needs. -/
-def specUpdateN (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecUpdateGS rT GF]
-    (n : Nat) (E : CoPset) (P : IProp GF) :
-    IProp GF := iprop%
+variable (rT) in
+/-- Update of the spec side by exactly `n` deterministic steps. -/
+def specUpdateN (n : Nat) (E : CoPset) (P : IProp GF) : IProp GF := iprop%
   ∀ (ρ : Cfg rT), specInterp ρ -∗ |={E}=> ∃ ρ', ⌜pexecN n ρ = dirac ρ'⌝ ∗ specInterp ρ' ∗ P
 
+variable (rT) in
 /-- Update of the spec side by some number of deterministic steps. -/
-abbrev specUpdate (rT : Type _) [LawfulProbLangℝ rT] [MeasurableSingletonClass rT]
-    {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecUpdateGS rT GF]
-    (E : CoPset) (P : IProp GF) :
-    IProp GF := iprop%
+abbrev specUpdate (E : CoPset) (P : IProp GF) : IProp GF := iprop%
   ∀ (ρ : Cfg rT), specInterp ρ -∗ |={E}=> (∃ ρ' n, ⌜pexecN n ρ = dirac ρ'⌝ ∗ specInterp ρ' ∗ P)
 
 /-- Forgetting the step count turns `specUpdateN` into `specUpdate`. -/
-theorem specUpdateN_specUpdate {n : Nat} {E : CoPset} {P : IProp GF} :
+theorem specUpdateN_specUpdate :
     specUpdateN rT n E P ⊢ specUpdate rT E P := by
   unfold specUpdateN specUpdate
   iintro H %ρ Hρ
@@ -65,7 +60,7 @@ theorem specUpdateN_specUpdate {n : Nat} {E : CoPset} {P : IProp GF} :
 /-! ## Return and bind -/
 
 /-- Zero steps: `P` holds straight away. -/
-theorem specUpdateN_zero {E : CoPset} {P : IProp GF} : P ⊢ specUpdateN rT 0 E P := by
+theorem specUpdateN_zero : P ⊢ specUpdateN rT 0 E P := by
   unfold specUpdateN
   iintro HP %ρ Hρ !>
   iexists ρ
@@ -74,13 +69,13 @@ theorem specUpdateN_zero {E : CoPset} {P : IProp GF} : P ⊢ specUpdateN rT 0 E 
   rfl
 
 /-- Return: `P` already holds, so take no spec steps. -/
-theorem specUpdate_ret {E : CoPset} {P : IProp GF} : P ⊢ specUpdate rT E P := by
+theorem specUpdate_ret : P ⊢ specUpdate rT E P := by
   iintro _
   iapply specUpdateN_specUpdate
   iapply specUpdateN_zero $$ [$]
 
 /-- Bind: run `n` steps, then `m` more; step counts add. -/
-theorem specUpdateN_bind {n m : Nat} {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : iprop%
+theorem specUpdateN_bind (HE : E1 ⊆ E2) : iprop%
     specUpdateN rT n E1 P ∗ (P -∗ specUpdateN rT m E2 Q) ⊢ specUpdateN rT (n + m) E2 Q := by
   unfold specUpdateN
   iintro ⟨Hn, Hm⟩ %ρ Hρ
@@ -94,8 +89,8 @@ theorem specUpdateN_bind {n m : Nat} {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 
   ipureintro
   exact pexecN_det_trans hexec₁ hexec₂
 
-/-- Bind: chain two spec updates (the step counts add). -/
-theorem specUpdate_bind {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : iprop%
+/-- Bind: chain two spec updates. -/
+theorem specUpdate_bind (HE : E1 ⊆ E2) : iprop%
     specUpdate rT E1 P ∗ (P -∗ specUpdate rT E2 Q) ⊢ specUpdate rT E2 Q := by
   unfold specUpdate
   iintro ⟨H₁, H₂⟩ %ρ Hρ
@@ -112,7 +107,7 @@ theorem specUpdate_bind {E1 E2 : CoPset} {P Q : IProp GF} (HE : E1 ⊆ E2) : ipr
 /-! ## Monotonicity, fancy updates and framing -/
 
 /-- Monotonicity of `specUpdateN` along a fancy update. -/
-theorem specUpdateN_mono_fupd {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
+theorem specUpdateN_mono_fupd : iprop%
     specUpdateN rT n E P ∗ (P ={E}=∗ Q) ⊢ specUpdateN rT n E Q := by
   unfold specUpdateN
   iintro ⟨HP, HPQ⟩ %ρ Hρ
@@ -125,7 +120,7 @@ theorem specUpdateN_mono_fupd {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
   assumption
 
 /-- Monotonicity of `specUpdate` along a fancy update. -/
-theorem specUpdate_mono_fupd {E : CoPset} {P Q : IProp GF} : iprop%
+theorem specUpdate_mono_fupd : iprop%
     specUpdate rT E P ∗ (P ={E}=∗ Q) ⊢ specUpdate rT E Q := by
   unfold specUpdate
   iintro ⟨HP, HPQ⟩ %ρ Hρ
@@ -138,7 +133,7 @@ theorem specUpdate_mono_fupd {E : CoPset} {P Q : IProp GF} : iprop%
   assumption
 
 /-- Monotonicity of `specUpdateN` in the postcondition. -/
-theorem specUpdateN_mono {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
+theorem specUpdateN_mono : iprop%
     specUpdateN rT n E P ∗ (P -∗ Q) ⊢ specUpdateN rT n E Q := by
   iintro ⟨HP, HPQ⟩
   iapply specUpdateN_mono_fupd
@@ -147,7 +142,7 @@ theorem specUpdateN_mono {n : Nat} {E : CoPset} {P Q : IProp GF} : iprop%
   iapply HPQ $$ [$]
 
 /-- Monotonicity of `specUpdate` in the postcondition. -/
-theorem specUpdate_mono {E : CoPset} {P Q : IProp GF} : iprop%
+theorem specUpdate_mono : iprop%
     specUpdate rT E P ∗ (P -∗ Q) ⊢ specUpdate rT E Q := by
   iintro ⟨HP, HPQ⟩
   iapply specUpdate_mono_fupd
@@ -156,7 +151,7 @@ theorem specUpdate_mono {E : CoPset} {P Q : IProp GF} : iprop%
   iapply HPQ $$ [$]
 
 /-- A fancy update in front of `specUpdateN` can be absorbed. -/
-theorem fupd_specUpdateN {n : Nat} {E : CoPset} {P : IProp GF} : iprop%
+theorem fupd_specUpdateN : iprop%
     (|={E}=> specUpdateN rT n E P) ⊢ specUpdateN rT n E P := by
   unfold specUpdateN
   iintro H %ρ Hρ
@@ -164,7 +159,7 @@ theorem fupd_specUpdateN {n : Nat} {E : CoPset} {P : IProp GF} : iprop%
   iapply H $$ [$]
 
 /-- A fancy update in front of `specUpdate` can be absorbed. -/
-theorem fupd_specUpdate {E : CoPset} {P : IProp GF} : iprop%
+theorem fupd_specUpdate : iprop%
     (|={E}=> specUpdate rT E P) ⊢ specUpdate rT E P := by
   unfold specUpdate
   iintro H %ρ Hρ
@@ -172,7 +167,7 @@ theorem fupd_specUpdate {E : CoPset} {P : IProp GF} : iprop%
   iapply H $$ [$]
 
 /-- Frame a resource `R` around `specUpdateN`. -/
-theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
+theorem specUpdateN_frame_l : iprop%
     R ∗ specUpdateN rT n E P ⊢ specUpdateN rT n E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩
   iapply specUpdateN_mono
@@ -181,7 +176,7 @@ theorem specUpdateN_frame_l {n : Nat} {E : CoPset} {R P : IProp GF} : iprop%
   iframe
 
 /-- Frame a resource `R` around `specUpdate`. -/
-theorem specUpdate_frame_l {E : CoPset} {R P : IProp GF} :
+theorem specUpdate_frame_l :
     iprop(R ∗ specUpdate rT E P) ⊢ specUpdate rT E iprop(P ∗ R) := by
   iintro ⟨HR, HP⟩
   iapply specUpdate_mono
@@ -193,7 +188,7 @@ end SpecUpdate
 
 /-- The default `SpecUpdateGS`, interpreting a configuration by `Cfg.specAuth`. -/
 instance defaultSpecUpdateGS {rT : Type _} [LawfulProbLangℝ rT]
-    [MeasurableSingletonClass rT] {GF} [SpecGS rT GF] : SpecUpdateGS rT GF where
+    {GF} [SpecGS rT GF] : SpecUpdateGS rT GF where
   specInterp := Cfg.specAuth
 
 end ProbLang

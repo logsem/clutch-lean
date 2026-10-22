@@ -93,11 +93,8 @@ def bc (c : B) : IProp GF := iOwn (E := IBC.bc) IBC.γbc (◯ (c : BudgetCredit 
 notation "↯b " c:50 => bc c
 notation "●↯b " s:50 => bcAuth s
 
-end Resources
-
 namespace BudgetCredit
 
-variable {B : Type} [AddCommMonoid B] {GF : BundledGFunctors} [IBC : BudgetCreditGS B GF]
 local bi IProp GF
 
 /-- Credits are timeless. -/
@@ -111,7 +108,7 @@ instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_ti
 /-- Fragments add like the budgets they carry. -/
 theorem frag_add {a b : B} :
     (◯ (a + b : BudgetCredit B) : Auth (BudgetCredit B)) =
-      (◯ (a : BudgetCredit B) : Auth (BudgetCredit B)) • (◯ (b : BudgetCredit B)) :=
+      (◯ (a : BudgetCredit B) : Auth (BudgetCredit B)) • ◯ (b : BudgetCredit B) :=
   Auth.frag_op
 
 /-- A credit splits into two credits. -/
@@ -182,9 +179,8 @@ theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSu
     ↯b a ⊢ ↯b b ∗ ↯b (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 
-/-- Amplify a slack credit `↯b (s ε)` by `k` until it covers `s 1`, where `s` embeds additive error
-into budgets. Unlike error credits, `↯b (s 1)` is not contradictory, so the caller supplies the exit
-`□ (↯b (s 1) -∗ P)` (Approxis `ec_ind_amp`). -/
+/-- Amplify a slack credit `↯b (s ε)` until it covers `s 1`, with the caller supplying the exit
+(Approxis `ec_ind_amp`). -/
 theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} {ε : ENNReal}
     {k : NNReal} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) : iprop%
     □ (↯b (s 1) -∗ P) ⊢
@@ -205,6 +201,8 @@ theorem amplifying [Preorder B] [CanonicallyOrderedAdd B] {s : ENNReal →+o B} 
       %(hn.trans (le_of_eq (by ring))) Hε
 
 end BudgetCredit
+
+end Resources
 
 /-- Allocating a fresh budget `b` yields both the authority and a credit `b`. -/
 theorem bc_alloc {B : Type} [AddCommMonoid B] {GF : BundledGFunctors}

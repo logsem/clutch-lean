@@ -12,13 +12,10 @@ open Lean Meta
 
 For each constructor `c` of an inductive type:
 
-* `@[constructors]`: `c.ι`, `c` as a function of the tuple of its fields;
-* `@[uncurriedProjections]`: `c.π`, its inverse, `some` of the tuple of the fields on `c` and `none`
-  elsewhere, with a `simp` equation `c.π.eq_d` per constructor `d`; nothing for a constructor
-  without fields.
+* `@[constructors]`: `c.ι`, the constructor `c` as a function of the tuple of its fields;
+* `@[uncurriedProjections]`: `c.π`, its inverse into `Option` of that tuple, with `simp` equations.
 
-Used by `deriving instance MeasurableSpace` (`ProbLang/CoreMeasures/CylinderGen.lean`), which makes
-every `c.ι` a measurable embedding with inverse `c.π`.
+Used by `deriving instance MeasurableSpace` (`CylinderGen`, `MeasurableSyntax`).
 -/
 
 namespace Metrology.Meta
@@ -89,26 +86,26 @@ def mkCtorProj (c : ConstructorVal) : MetaM Unit := do
   let levels := c.levelParams.map .param
   let name := c.name.str "π"
   withCtorTuple c fun params T tuple => do
-  let value (d : Name) (args : Array Expr) : MetaM Expr := do
-    if d == c.name then mkSome tuple (← mkNestedProdValue args.toList) else mkNone tuple
-  let alts ← info.ctors.toArray.mapM fun d => withCtorArgs d params fun args => do
-    mkLambdaFVars args (← value d args)
-  let body ← withLocalDeclD `x T fun x => do
-    let resultTy ← mkAppM ``Option #[tuple]
-    mkLambdaFVars (params.push x) (← mkCasesOnConst c.induct levels params resultTy x alts)
-  addAndCompile <| .defnDecl {
-    name, levelParams := c.levelParams, type := ← inferType body, value := body
-    hints := .abbrev, safety := .safe }
-  for d in info.ctors do
-    let thm := name.str ("eq_" ++ d.getString!)
-    withCtorArgs d params fun args => do
-      let xs := params ++ args
-      let lhs := mkApp (mkAppN (mkConst name levels) params) (mkAppN (mkConst d levels) xs)
-      addDecl <| .thmDecl {
-        name := thm, levelParams := c.levelParams
-        type := ← mkForallFVars xs (← mkEq lhs (← value d args))
-        value := ← mkLambdaFVars xs (← mkEqRefl lhs) }
-    addSimpTheorem simpExtension thm (post := true) (inv := false) .global (eval_prio default)
+    let value (d : Name) (args : Array Expr) : MetaM Expr := do
+      if d == c.name then mkSome tuple (← mkNestedProdValue args.toList) else mkNone tuple
+    let alts ← info.ctors.toArray.mapM fun d => withCtorArgs d params fun args => do
+      mkLambdaFVars args (← value d args)
+    let body ← withLocalDeclD `x T fun x => do
+      let resultTy ← mkAppM ``Option #[tuple]
+      mkLambdaFVars (params.push x) (← mkCasesOnConst c.induct levels params resultTy x alts)
+    addAndCompile <| .defnDecl {
+      name, levelParams := c.levelParams, type := ← inferType body, value := body
+      hints := .abbrev, safety := .safe }
+    for d in info.ctors do
+      let thm := name.str ("eq_" ++ d.getString!)
+      withCtorArgs d params fun args => do
+        let xs := params ++ args
+        let lhs := mkApp (mkAppN (mkConst name levels) params) (mkAppN (mkConst d levels) xs)
+        addDecl <| .thmDecl {
+          name := thm, levelParams := c.levelParams
+          type := ← mkForallFVars xs (← mkEq lhs (← value d args))
+          value := ← mkLambdaFVars xs (← mkEqRefl lhs) }
+      addSimpTheorem simpExtension thm (post := true) (inv := false) .global (eval_prio default)
 
 syntax (name := constructors) "constructors" : attr
 

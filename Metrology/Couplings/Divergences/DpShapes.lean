@@ -14,29 +14,29 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set
 open scoped ENNReal
+open ENNReal (add_ne_top)
 
 namespace GradedDivergence
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ : Measure X} {ν : Measure Y}
-  {ε ε₁ ε₂ δ δ₁ δ₂ : ℝ≥0∞} {S : X → Y → Prop}
+  [IsSubProbabilityMeasure μ] {ε ε₁ ε₂ δ δ₁ δ₂ : ℝ≥0∞} {S : X → Y → Prop}
 
 /-! ## Budget keyed on the right or left outcome -/
 
 open Classical in
 /-- Adaptive composition keyed on the right outcome: after a DP lifting of `S`, the budgets
 `(ε₂, D y)` on `S` cost `(ε₁ + ε₂, δ₁ + e^{ε₁} E_ν[D])` (Rocq `dp_rhs_head`). -/
-theorem codensity_dp_rhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (ε₁, δ₁) S μ ν)
-    {D : Y → ℝ≥0∞} (hD : Measurable D) :
+theorem codensity_dp_rhs (h : (codensity dp).Rel (ε₁, δ₁) S μ ν) {D : Y → ℝ≥0∞}
+    (hD : Measurable D) :
     dp.codensity (ε₁ + ε₂, δ₁ + expBudget ε₁ * ∫⁻ y, D y ∂ν)
       (fun x y ↦ if S x y then (ε₂, D y) else ⊤) μ ν := by
   rcases eq_or_ne (ε₁ + ε₂) ⊤ with hε | hε
   · exact hε ▸ codensity_dp_top_left
-  obtain ⟨hε₁, hε₂⟩ := ENNReal.add_ne_top.1 hε
+  obtain ⟨hε₁, hε₂⟩ := add_ne_top.1 hε
   refine codensity_dp_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
   -- apply the head to the right test `min 1 (e^{ε₂} g + D)`: `D` moves into `∫ dν` and is scaled
   -- by `e^{ε₁}`
-  calc ∫⁻ x, f x ∂μ
-      ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * g y + D y) ∂ν + δ₁ :=
+  calc ∫⁻ x, f x ∂μ ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * g y + D y) ∂ν + δ₁ :=
         (codensity_dp_rel_iff hε₁).1 h _ _ hf (by fun_prop) hf1 (fun _ ↦ min_le_left _ _)
           fun x y hS ↦ le_min (hf1 x) (by simpa [hS, hε₂.lt_top] using hfg x y)
     _ ≤ expBudget ε₁ * (expBudget ε₂ * ∫⁻ y, g y ∂ν + ∫⁻ y, D y ∂ν) + δ₁ := by
@@ -50,7 +50,7 @@ theorem codensity_dp_rhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
 open Classical in
 /-- Adaptive composition keyed on the right outcome after a total variation lifting: no
 multiplier is spent on the head (Rocq `dp_rhs_head_of_AR`). -/
-theorem codensity_dp_rhs_of_tv [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+theorem codensity_dp_rhs_of_tv [IsSubProbabilityMeasure ν]
     (h : (codensity tv).Rel δ₁ S μ ν) {D : Y → ℝ≥0∞} (hD : Measurable D) :
     dp.codensity (ε₂, δ₁ + ∫⁻ y, D y ∂ν) (fun x y ↦ if S x y then (ε₂, D y) else ⊤) μ ν := by
   simpa using codensity_dp_rhs (codensity_tv_rel_iff_dp.1 h) hD
@@ -58,18 +58,17 @@ theorem codensity_dp_rhs_of_tv [IsSubProbabilityMeasure μ] [IsSubProbabilityMea
 open Classical in
 /-- Adaptive composition keyed on the left outcome: after a DP lifting of `S`, the budgets
 `(ε₂, D x)` on `S` cost `(ε₁ + ε₂, δ₁ + E_μ[D])` (Rocq `dp_lhs_head`). -/
-theorem codensity_dp_lhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (ε₁, δ₁) S μ ν)
-    {D : X → ℝ≥0∞} (hD : Measurable D) :
+theorem codensity_dp_lhs (h : (codensity dp).Rel (ε₁, δ₁) S μ ν) {D : X → ℝ≥0∞}
+    (hD : Measurable D) :
     dp.codensity (ε₁ + ε₂, δ₁ + ∫⁻ x, D x ∂μ) (fun x y ↦ if S x y then (ε₂, D x) else ⊤) μ ν := by
   rcases eq_or_ne (ε₁ + ε₂) ⊤ with hε | hε
   · exact hε ▸ codensity_dp_top_left
-  obtain ⟨hε₁, hε₂⟩ := ENNReal.add_ne_top.1 hε
+  obtain ⟨hε₁, hε₂⟩ := add_ne_top.1 hε
   refine codensity_dp_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
   have hf1' (x : X) : f x - D x ≤ 1 := tsub_le_self.trans (hf1 x)
   -- pay `D` on the μ side: test the head with `f - D` and add `∫ D dμ` back, so no `e^{ε₁}`
   -- multiplies it
-  calc ∫⁻ x, f x ∂μ
-      ≤ ∫⁻ x, (f x - D x) + D x ∂μ := lintegral_mono fun _ ↦ le_tsub_add
+  calc ∫⁻ x, f x ∂μ ≤ ∫⁻ x, (f x - D x) + D x ∂μ := lintegral_mono fun _ ↦ le_tsub_add
     _ = ∫⁻ x, f x - D x ∂μ + ∫⁻ x, D x ∂μ := lintegral_add_right _ hD
     _ ≤ expBudget ε₁ * ∫⁻ y, min 1 (expBudget ε₂ * g y) ∂ν + δ₁ + ∫⁻ x, D x ∂μ := by
         gcongr
@@ -85,9 +84,8 @@ theorem codensity_dp_lhs [IsSubProbabilityMeasure μ] (h : (codensity dp).Rel (�
         ring
 
 open Classical in
-/-- The `if S then E else ⊤` version of `codensity_dp_of_lintegral_le`, whose test premise only
-constrains pairs in `S` (Rocq `dp_kanto_head`). -/
-theorem codensity_dp_ite_of_lintegral_le [IsSubProbabilityMeasure μ] {E : X → Y → ℝ≥0∞ × ℝ≥0∞}
+/-- The `if S then E else ⊤` version of `codensity_dp_of_lintegral_le` (Rocq `dp_kanto_head`). -/
+theorem codensity_dp_ite_of_lintegral_le {E : X → Y → ℝ≥0∞ × ℝ≥0∞}
     (h : ∀ f g, Measurable f → Measurable g → (∀ x, f x ≤ 1) → (∀ y, g y ≤ 1) →
       (∀ x y, S x y → (E x y).1 < ⊤ → f x ≤ expBudget (E x y).1 * g y + (E x y).2) →
       ∫⁻ x, f x ∂μ ≤ expBudget ε * ∫⁻ y, g y ∂ν + δ) :
@@ -99,15 +97,14 @@ theorem codensity_dp_ite_of_lintegral_le [IsSubProbabilityMeasure μ] {E : X →
 
 /-- One branch of `codensity_dp_choice`: on `P`, a DP lifting of `S` that sends `P` into `T`
 bounds the test integral with the continuation's slack `δ₂` taken out. -/
-theorem setLIntegral_le_of_codensity_dp [IsSubProbabilityMeasure μ] (hε₁ : ε₁ ≠ ⊤)
+theorem setLIntegral_le_of_codensity_dp (hε₁ : ε₁ ≠ ⊤)
     (h : (codensity dp).Rel (ε₁, δ₁) S μ ν) {P : Set X} {T : Set Y} (hP : MeasurableSet P)
     (hT : MeasurableSet T) (hPT : ∀ x y, x ∈ P → S x y → y ∈ T) {f : X → ℝ≥0∞} {g : Y → ℝ≥0∞}
     (hf : Measurable f) (hg : Measurable g) (hf1 : ∀ x, f x ≤ 1)
     (hfg : ∀ x y, x ∈ P → S x y → f x ≤ expBudget ε₂ * g y + δ₂) :
     ∫⁻ x in P, f x - δ₂ ∂μ ≤ expBudget (ε₁ + ε₂) * ∫⁻ y in T, g y ∂ν + δ₁ := by
   have hf1' (x : X) : P.indicator (fun x ↦ f x - δ₂) x ≤ 1 :=
-    calc P.indicator (fun x ↦ f x - δ₂) x
-        ≤ f x - δ₂ := indicator_le_self' (fun _ _ ↦ zero_le) x
+    calc P.indicator (fun x ↦ f x - δ₂) x ≤ f x - δ₂ := indicator_le_self' (fun _ _ ↦ zero_le) x
       _ ≤ f x := tsub_le_self
       _ ≤ 1 := hf1 x
   calc ∫⁻ x in P, f x - δ₂ ∂μ
@@ -130,7 +127,7 @@ open Classical in
 /-- The choice rule: two DP liftings of the same pair, chosen by a measurable left predicate `P`
 whose two sides the relations send to the two sides of a measurable `T` (Rocq
 `dp_kanto_head_choice`). -/
-theorem codensity_dp_choice [IsSubProbabilityMeasure μ] {S₁ S₂ : X → Y → Prop}
+theorem codensity_dp_choice {S₁ S₂ : X → Y → Prop}
     {ε₁' ε₂' δ₁' : ℝ≥0∞} (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ μ ν)
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ μ ν) {P : Set X} {T : Set Y} (hP : MeasurableSet P)
     (hT : MeasurableSet T) (hPT₁ : ∀ x y, x ∈ P → S₁ x y → y ∈ T)
@@ -141,19 +138,17 @@ theorem codensity_dp_choice [IsSubProbabilityMeasure μ] {S₁ S₂ : X → Y �
   set ε := max (ε₁ + ε₂) (ε₁' + ε₂')
   rcases eq_or_ne ε ⊤ with hε | hε
   · exact hε ▸ codensity_dp_top_left
-  obtain ⟨hε₁, hε₂⟩ := ENNReal.add_ne_top.1 (ne_top_of_le_ne_top hε (le_max_left _ _))
-  obtain ⟨hε₁', hε₂'⟩ := ENNReal.add_ne_top.1 (ne_top_of_le_ne_top hε (le_max_right _ _))
+  obtain ⟨hε₁, hε₂⟩ := add_ne_top.1 (ne_top_of_le_ne_top hε (le_max_left _ _))
+  obtain ⟨hε₁', hε₂'⟩ := add_ne_top.1 (ne_top_of_le_ne_top hε (le_max_right _ _))
   refine codensity_dp_of_lintegral_le fun f g hf hg hf1 _ hfg ↦ ?_
-  have hb₁ := setLIntegral_le_of_codensity_dp (ε₂ := ε₂) (δ₂ := δ₂) hε₁ h₁ hP hT hPT₁ hf hg hf1
+  have hb₁ := setLIntegral_le_of_codensity_dp hε₁ h₁ hP hT hPT₁ hf hg hf1
     fun x y hx hS ↦ by simpa [hx, hS, hε₂.lt_top] using hfg x y
-  have hb₂ := setLIntegral_le_of_codensity_dp (ε₂ := ε₂') (δ₂ := δ₂) hε₁' h₂ hP.compl hT.compl
+  have hb₂ := setLIntegral_le_of_codensity_dp hε₁' h₂ hP.compl hT.compl
     hPT₂ hf hg hf1 fun x y hx hS ↦ by simpa [show x ∉ P from hx, hS, hε₂'.lt_top] using hfg x y
-  calc ∫⁻ x, f x ∂μ
-      ≤ ∫⁻ x, f x - δ₂ ∂μ + δ₂ := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
+  calc ∫⁻ x, f x ∂μ ≤ ∫⁻ x, f x - δ₂ ∂μ + δ₂ := IsSubProbabilityMeasure.lintegral_le_tsub_add _ _
     _ = ∫⁻ x in P, f x - δ₂ ∂μ + ∫⁻ x in Pᶜ, f x - δ₂ ∂μ + δ₂ := by
         rw [lintegral_add_compl _ hP]
-    _ ≤ (expBudget ε * ∫⁻ y in T, g y ∂ν + δ₁) + (expBudget ε * ∫⁻ y in Tᶜ, g y ∂ν + δ₁') +
-          δ₂ := by
+    _ ≤ (expBudget ε * ∫⁻ y in T, g y ∂ν + δ₁) + (expBudget ε * ∫⁻ y in Tᶜ, g y ∂ν + δ₁') + δ₂ := by
         gcongr
         · exact hb₁.trans (by gcongr; exact le_max_left _ _)
         · exact hb₂.trans (by gcongr; exact le_max_right _ _)
@@ -162,10 +157,10 @@ theorem codensity_dp_choice [IsSubProbabilityMeasure μ] {S₁ S₂ : X → Y �
         ring
 
 open Classical in
-/-- The choice rule on a countable right space: no right outcome may be related to both sides of
-`P` (Rocq `dp_kanto_head_choice`). -/
+/-- A special case of `codensity_dp_choice` on a countable right space (Rocq
+`dp_kanto_head_choice`). -/
 theorem codensity_dp_choice_of_countable [Countable Y] [MeasurableSingletonClass Y]
-    [IsSubProbabilityMeasure μ] {S₁ S₂ : X → Y → Prop} {ε₁' ε₂' δ₁' : ℝ≥0∞}
+    {S₁ S₂ : X → Y → Prop} {ε₁' ε₂' δ₁' : ℝ≥0∞}
     (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ μ ν) (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ μ ν)
     {P : Set X} (hP : MeasurableSet P)
     (hS : ∀ x x' y, x ∈ P → x' ∉ P → ¬(S₁ x y ∧ S₂ x' y)) :

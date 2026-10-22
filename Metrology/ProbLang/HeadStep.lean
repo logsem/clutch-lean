@@ -22,30 +22,34 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {T : Type _} [MeasurableSpace T]
 
 /-! ## Measure combinators and samplers used by `headStep` -/
 
 /-- Apply `f` to the value of an `Option`, giving the zero measure on `none`. -/
 def Option.unwrapM {α : Type _} [MeasurableSpace β] (f : α → Measure β) : Option α → Measure β
-| some v => f v
-| none => 0
+  | some v => f v
+  | none => 0
 
 /-- Apply `f` to the value of `e`, giving the zero measure when `e` is not a value. -/
 @[simp]
-def Exp.asValM [MeasurableSpace T] (e : Exp rT) (f : Val rT → Measure T) : Measure T :=
+def Exp.asValM (e : Exp rT) (f : Val rT → Measure T) : Measure T :=
   match e.toVal? with | none => 0 | some v => f v
 
 /-- Keep the measure `m` when `e` is a value, otherwise the zero measure. -/
-def Exp.isValM [MeasurableSpace T] (e : Exp rT) (m : Measure T) : Measure T :=
+def Exp.isValM (e : Exp rT) (m : Measure T) : Measure T :=
   if e.isValue then m else 0
 
-@[simp] theorem Exp.isValM_some [MeasurableSpace T] {e : Exp α} {m : Measure T} (He : e.isValue) :
+/-- `isValM` keeps the measure when the expression is a value. -/
+@[simp] theorem Exp.isValM_some {e : Exp α} {m : Measure T} (He : e.isValue) :
     e.isValM m = m := ite_eq_left He
 
-theorem Exp.isValM_some' [MeasurableSpace T] {e : Exp α} {m : Measure T} (w : IsVal e) :
+/-- `isValM` keeps the measure given an `IsVal` witness. -/
+theorem Exp.isValM_some' {e : Exp α} {m : Measure T} (w : IsVal e) :
     e.isValM m = m := isValM_some w.toIsValue
 
-@[simp] theorem Exp.isValM_none [MeasurableSpace T] {e : Exp α} {m : Measure T} (He : ¬ e.isValue) :
+/-- `isValM` is the zero measure when the expression is not a value. -/
+@[simp] theorem Exp.isValM_none {e : Exp α} {m : Measure T} (He : ¬ e.isValue) :
     e.isValM m = 0 := ite_eq_right He
 
 /-- Witness that `z` is positive, if it is. -/
@@ -71,59 +75,58 @@ def Cfg.uniformReal (σ : State rT) : Measure (Cfg rT) :=
 /-- One head-reduction step of a configuration, as a sub-probability measure; the zero measure means
 there is no head redex (stuck). -/
 def headStep : Cfg rT → Measure (Cfg rT)
-| ⟨.app (.lam e1) e2, σ⟩ =>
-  e2.isValM <|
-  dirac ⟨Exp.open' e1 e2, σ⟩
-| ⟨.app (.fix e1) e2, σ⟩ =>
-  e2.isValM <|
-  dirac ⟨Exp.app (Exp.open' e1 (.fix e1)) e2, σ⟩
-| ⟨.unop op e, σ⟩ =>
-  e.isValM <|
-  (op.eval e).unwrapM <|
-  (dirac ⟨·, σ⟩)
-| ⟨.binop op e1 e2, σ⟩ =>
-  e1.isValM <|
-  e2.isValM <|
-  (op.eval e1 e2).unwrapM <|
-  (dirac ⟨·, σ⟩)
-| ⟨.cond (.lit (.bool true)) et _, σ⟩ => dirac ⟨et, σ⟩
-| ⟨.cond (.lit (.bool false)) _ ef, σ⟩ => dirac ⟨ef, σ⟩
-| ⟨.fst (.pair e1 e2), σ⟩ => e1.isValM <| e2.isValM <| (dirac ⟨e1, σ⟩)
-| ⟨.snd (.pair e1 e2), σ⟩ => e1.isValM <| e2.isValM <| (dirac ⟨e2, σ⟩)
-| ⟨.case (.inl e) el _, σ⟩ => e.isValM <| (dirac ⟨el.app e, σ⟩)
-| ⟨.case (.inr e) _ er, σ⟩ => e.isValM <| (dirac ⟨er.app e, σ⟩)
-| ⟨.alloc ed, σ⟩ =>
-  ed.asValM fun vd =>
-  let ℓ := σ.heap.fresh
-  dirac ⟨.lit <| .loc ℓ, σ.update_heap fun t => t.insert ℓ vd⟩
-| ⟨.load (.lit (.loc ℓ)), σ⟩ =>
-  match σ.heap[ℓ]? with | none => 0 | some v => (dirac ⟨.ofVal v, σ⟩)
-| ⟨.store (.lit (.loc ℓ)) e, σ⟩ =>
-  e.asValM fun v =>
-  match σ.heap[ℓ]? with
-  | none => 0
-  | some _ => dirac ⟨.lit .unit, σ.update_heap fun t => t.insert ℓ v⟩
-| ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ => Cfg.uniform z σ
-| ⟨.tape (.lit (.int z)), σ⟩ =>
-  let α := σ.tapes.fresh
-  dirac ⟨.lit <| .lbl α, σ.update_tapes fun t => t.insert α (.empty z)⟩
-| ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ =>
-  match σ.tapes[α]? with
-  | none => 0
-  | some ⟨M, ns⟩ =>
-    if M = z
-      then
+  | ⟨.app (.lam e1) e2, σ⟩ =>
+    e2.isValM <|
+    dirac ⟨Exp.open' e1 e2, σ⟩
+  | ⟨.app (.fix e1) e2, σ⟩ =>
+    e2.isValM <|
+    dirac ⟨Exp.app (Exp.open' e1 (.fix e1)) e2, σ⟩
+  | ⟨.unop op e, σ⟩ =>
+    e.isValM <|
+    (op.eval e).unwrapM <|
+    (dirac ⟨·, σ⟩)
+  | ⟨.binop op e1 e2, σ⟩ =>
+    e1.isValM <|
+    e2.isValM <|
+    (op.eval e1 e2).unwrapM <|
+    (dirac ⟨·, σ⟩)
+  | ⟨.cond (.lit (.bool true)) et _, σ⟩ => dirac ⟨et, σ⟩
+  | ⟨.cond (.lit (.bool false)) _ ef, σ⟩ => dirac ⟨ef, σ⟩
+  | ⟨.fst (.pair e1 e2), σ⟩ => e1.isValM <| e2.isValM <| (dirac ⟨e1, σ⟩)
+  | ⟨.snd (.pair e1 e2), σ⟩ => e1.isValM <| e2.isValM <| (dirac ⟨e2, σ⟩)
+  | ⟨.case (.inl e) el _, σ⟩ => e.isValM <| (dirac ⟨el.app e, σ⟩)
+  | ⟨.case (.inr e) _ er, σ⟩ => e.isValM <| (dirac ⟨er.app e, σ⟩)
+  | ⟨.alloc ed, σ⟩ =>
+    ed.asValM fun vd =>
+    let ℓ := σ.heap.fresh
+    dirac ⟨.lit <| .loc ℓ, σ.update_heap fun t => t.insert ℓ vd⟩
+  | ⟨.load (.lit (.loc ℓ)), σ⟩ =>
+    match σ.heap[ℓ]? with | none => 0 | some v => (dirac ⟨.ofVal v, σ⟩)
+  | ⟨.store (.lit (.loc ℓ)) e, σ⟩ =>
+    e.asValM fun v =>
+    match σ.heap[ℓ]? with
+    | none => 0
+    | some _ => dirac ⟨.lit .unit, σ.update_heap fun t => t.insert ℓ v⟩
+  | ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ => Cfg.uniform z σ
+  | ⟨.tape (.lit (.int z)), σ⟩ =>
+    let α := σ.tapes.fresh
+    dirac ⟨.lit <| .lbl α, σ.update_tapes fun t => t.insert α (.empty z)⟩
+  | ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ =>
+    match σ.tapes[α]? with
+    | none => 0
+    | some ⟨M, ns⟩ =>
+      if M = z then
         match ns with
         | [] => Cfg.uniform z σ
         | n :: ns => dirac ⟨.lit <| .int n, σ.update_tapes fun t => t.insert α ⟨M, ns⟩⟩
       else Cfg.uniform z σ
-| ⟨.scrut e p, σ⟩ =>
-  e.isValM <|
-  match Pat.tryMatch p e with
-  | some bindings => dirac ⟨.inl bindings, σ⟩
-  | none => dirac ⟨.inr (.lit .unit), σ⟩
-| ⟨.urand, σ⟩ => Cfg.uniformReal σ
-| _ => 0
+  | ⟨.scrut e p, σ⟩ =>
+    e.isValM <|
+    match Pat.tryMatch p e with
+    | some bindings => dirac ⟨.inl bindings, σ⟩
+    | none => dirac ⟨.inr (.lit .unit), σ⟩
+  | ⟨.urand, σ⟩ => Cfg.uniformReal σ
+  | _ => 0
 
 /-! ## The `head_case` tactic: one named goal per branch of `headStep` -/
 
@@ -137,15 +140,15 @@ macro "head_case_names" : tactic =>
   `(tactic| (
     unfold headStep
     split
-    on_goal 1  => rename_goal beta.lam
-    on_goal 2  => rename_goal beta.fix
-    on_goal 3  => rename_goal unop
-    on_goal 4  => rename_goal binop
-    on_goal 5  => rename_goal cond.true
-    on_goal 6  => rename_goal cond.false
-    on_goal 7  => rename_goal fst
-    on_goal 8  => rename_goal snd
-    on_goal 9  => rename_goal case.left
+    on_goal 1 => rename_goal beta.lam
+    on_goal 2 => rename_goal beta.fix
+    on_goal 3 => rename_goal unop
+    on_goal 4 => rename_goal binop
+    on_goal 5 => rename_goal cond.true
+    on_goal 6 => rename_goal cond.false
+    on_goal 7 => rename_goal fst
+    on_goal 8 => rename_goal snd
+    on_goal 9 => rename_goal case.left
     on_goal 10 => rename_goal case.right
     on_goal 11 => rename_goal alloc
     on_goal 12 => rename_goal load
@@ -160,29 +163,35 @@ macro "head_case_names" : tactic =>
 
 /-- Decompose the Cfg equality hypothesis left by `split` on `headStep`, then substitute. -/
 macro "head_subst" : tactic =>
-  `(tactic| (rename_i h_eq
-             have ⟨Heq1, Heq2⟩ := (Cfg.mk.injEq ..) ▸ h_eq
-             subst_eqs))
+  `(tactic| (
+    rename_i h_eq
+    have ⟨Heq1, Heq2⟩ := (Cfg.mk.injEq ..) ▸ h_eq
+    subst_eqs))
 
 /-- Unfold `isValM`, split into redex/no_redex, and name goals.
-    Goal order after `split` on `if`: goal 1 = true (redex), goal 2 = false (no_redex). -/
+Goal order after `split` on `if`: goal 1 = true (redex), goal 2 = false (no_redex). -/
 macro "head_split_isValM" redex:ident no_redex:ident : tactic =>
-  `(tactic| (unfold Exp.isValM; split
-             on_goal 2 => rename_goal $no_redex
-             on_goal 1 => rename_goal $redex))
+  `(tactic| (
+    unfold Exp.isValM
+    split
+    on_goal 2 => rename_goal $no_redex
+    on_goal 1 => rename_goal $redex))
 
 /-- Unfold `asValM`, split into no_redex/redex, and name goals.
-    Goal order after `split` on `match toVal?`: goal 1 = none (no_redex), goal 2 = some (redex). -/
+Goal order after `split` on `match toVal?`: goal 1 = none (no_redex), goal 2 = some (redex). -/
 macro "head_split_asValM" no_redex:ident redex:ident : tactic =>
-  `(tactic| (unfold Exp.asValM; split
-             on_goal 1 => rename_goal $no_redex
-             on_goal 2 => rename_goal $redex))
+  `(tactic| (
+    unfold Exp.asValM
+    split
+    on_goal 1 => rename_goal $no_redex
+    on_goal 2 => rename_goal $redex))
 
 /-- Split a binary match (e.g. heap lookup) and name the two goals. -/
 macro "head_split2" goal1:ident goal2:ident : tactic =>
-  `(tactic| (split
-             on_goal 1 => rename_goal $goal1
-             on_goal 2 => rename_goal $goal2))
+  `(tactic| (
+    split
+    on_goal 1 => rename_goal $goal1
+    on_goal 2 => rename_goal $goal2))
 
 /-- Split `headStep` into its cases, with named goals for every `isValM`/`asValM`/match branch.
 Goals are `<ctor>.redex`, `<ctor>.no_redex[_i]` (guard failed), `load|store.segfault` (dangling
@@ -201,11 +210,12 @@ macro "head_case" : tactic =>
         on_goal 1 =>
           subst_eqs
           head_split2 rand.tape.empty rand.tape.deterministic
-    case' tape       => head_subst
+    case' tape => head_subst
     case' rand.plain => head_subst
     case' store =>
       head_subst
-      unfold Exp.asValM; split
+      unfold Exp.asValM
+      split
       on_goal 1 => rename_goal store.no_redex
       on_goal 2 => head_split2 store.segfault store.redex
     case' load =>
@@ -222,19 +232,22 @@ macro "head_case" : tactic =>
       head_split_isValM case.left.redex case.left.no_redex
     case' snd =>
       head_subst
-      unfold Exp.isValM; split
+      unfold Exp.isValM
+      split
       on_goal 2 => rename_goal snd.no_redex_1
       on_goal 1 => head_split2 snd.redex snd.no_redex_2
     case' fst =>
       head_subst
-      unfold Exp.isValM; split
+      unfold Exp.isValM
+      split
       on_goal 2 => rename_goal fst.no_redex_1
       on_goal 1 => head_split2 fst.redex fst.no_redex_2
     case' cond.false => head_subst
-    case' cond.true  => head_subst
+    case' cond.true => head_subst
     case' binop =>
       head_subst
-      unfold Exp.isValM; split
+      unfold Exp.isValM
+      split
       on_goal 2 => rename_goal binop.no_redex_1
       on_goal 1 => head_split2 binop.redex binop.no_redex_2
     case' unop =>
@@ -242,7 +255,8 @@ macro "head_case" : tactic =>
       head_split_isValM unop.redex unop.no_redex
     case' scrut =>
       head_subst
-      unfold Exp.isValM; split
+      unfold Exp.isValM
+      split
       on_goal 2 => rename_goal scrut_no_redex
       on_goal 1 =>
         head_split2 scrut_success scrut_failure
@@ -261,12 +275,12 @@ abbrev HeadReducible (e : Exp rT) (σ : State rT) : Prop :=
 /-! ## Mass, and values do not step -/
 
 /-- `isValM` of a probability measure on a value is a probability measure. -/
-theorem isValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {m : Measure T}
+theorem isValM_isProbabilityMeasure {e : Exp α} {m : Measure T}
     (he : e.isValue) [IsProbabilityMeasure m] : IsProbabilityMeasure (e.isValM m) := by
   rw [Exp.isValM, ite_eq_left he]; infer_instance
 
 /-- `asValM f` on a value `v` is a probability measure when `f v` is. -/
-theorem asValM_isProbabilityMeasure [MeasurableSpace T] {e : Exp α} {f : Val α → Measure T}
+theorem asValM_isProbabilityMeasure {e : Exp α} {f : Val α → Measure T}
     {v : Val α} (hv : e.toVal? = some v) [IsProbabilityMeasure (f v)] :
     IsProbabilityMeasure (e.asValM f) := by
   simp [Exp.asValM, hv]; infer_instance
@@ -328,9 +342,11 @@ theorem Discrete.val_head_stuck_R {e : Exp rT} {σ : State rT} {ρ : Cfg rT}
     (h : 0 < headStep ⟨e, σ⟩ {ρ}) : ¬e.isValueR :=
   _root_.ProbLang.val_head_stuck_R fun h0 => h.ne' (by rw [h0]; rfl)
 
+/-- An expression with a `toVal?` value is a value. -/
 theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
   intro h; by_contra hne; rw [Exp.toVal?_eq_none.mpr hne] at h; exact absurd h (by simp)
 
+/-- An expression with a `toVal?` value is a raw value. -/
 theorem Exp.toVal?_isValueR {e : Exp α} (h : e.toVal? = some v) : e.isValueR :=
   (Exp.isValue_iff_isValueR.mp (Exp.toVal?_isValue h)).1
 
@@ -345,6 +361,7 @@ theorem head_ctx_step_val {e : Exp rT} {σ : State rT} {Ki : EctxItem rT} :
 
 /-! ## Measurability of the measure combinators (for any measurable `rT`) -/
 
+/-- `Option.unwrapM f` is measurable when `f` is. -/
 theorem Option.unwrapM.measurable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
     {f : α → Measure β} (hf : Measurable f) :
     Measurable (Option.unwrapM f) := by
@@ -352,7 +369,8 @@ theorem Option.unwrapM.measurable {α β : Type _} [MeasurableSpace α] [Measura
   have hpre : (Option.unwrapM f : Option α → Measure β) ⁻¹' S =
       (if (0 : Measure β) ∈ S then ({none} : Set (Option α)) else ∅)
       ∪ (some '' (f ⁻¹' S)) := by
-    ext o; cases o with
+    ext o
+    cases o with
     | none => by_cases h0 : (0 : Measure β) ∈ S <;> simp [Option.unwrapM, h0]
     | some v => simp [Option.unwrapM]
   rw [hpre]
@@ -362,6 +380,7 @@ theorem Option.unwrapM.measurable {α β : Type _} [MeasurableSpace α] [Measura
     · exact MeasurableSet.empty
   · exact MeasurableSet.image_some (hf hS)
 
+/-- `Option.unwrapM` is measurable jointly in a parameter and the option. -/
 theorem Option.unwrapM.measurable_param
     {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     {o : γ → Option α} (ho : Measurable o)
@@ -369,10 +388,9 @@ theorem Option.unwrapM.measurable_param
     Measurable (fun c : γ => Option.unwrapM (fun a => g (c, a)) (o c)) := by
   suffices h : Measurable (fun q : Option α × γ =>
       match q.1 with | none => (0 : Measure β) | some a => g (q.2, a)) by
-    have hrw : (fun c : γ => Option.unwrapM (fun a => g (c, a)) (o c))
-        = (fun q : Option α × γ =>
-            match q.1 with | none => (0 : Measure β) | some a => g (q.2, a))
-          ∘ (fun c : γ => (o c, c)) := by
+    have hrw : (fun c : γ => Option.unwrapM (fun a => g (c, a)) (o c)) = (fun q : Option α × γ =>
+            match q.1 with | none => (0 : Measure β) | some a => g (q.2, a)) ∘
+          (fun c : γ => (o c, c)) := by
       funext c
       show Option.unwrapM (fun a => g (c, a)) (o c) =
             match o c with | none => 0 | some a => g (c, a)
@@ -382,10 +400,11 @@ theorem Option.unwrapM.measurable_param
     exact h.comp (ho.prodMk measurable_id)
   intro S hS
   have hpre : (fun q : Option α × γ =>
-        match q.1 with | none => (0 : Measure β) | some a => g (q.2, a)) ⁻¹' S
-      = (if (0 : Measure β) ∈ S then ({none} : Set (Option α)) ×ˢ Set.univ else ∅)
+        match q.1 with | none => (0 : Measure β) | some a => g (q.2, a)) ⁻¹' S =
+      (if (0 : Measure β) ∈ S then ({none} : Set (Option α)) ×ˢ Set.univ else ∅)
         ∪ (Prod.map some id) '' ((fun p : α × γ => g (p.2, p.1)) ⁻¹' S) := by
-    ext ⟨o', c⟩; cases o' with
+    ext ⟨o', c⟩
+    cases o' with
     | none => by_cases h0 : (0 : Measure β) ∈ S <;> simp [h0]
     | some a => simp [Set.mem_preimage, Set.mem_image, Prod.map]
   rw [hpre]
@@ -396,17 +415,18 @@ theorem Option.unwrapM.measurable_param
   · exact (MeasurableEmbedding.some_mk.prodMap .id).measurableSet_image'
       (hg.comp (measurable_snd.prodMk measurable_fst) hS)
 
-theorem Exp.isValM.measurable {T : Type _} [MeasurableSpace T] :
+/-- `isValM` is measurable in the expression and the measure. -/
+theorem Exp.isValM.measurable :
     Measurable (fun (p : Exp rT × Measure T) => p.1.isValM p.2) := by
   have hpred : MeasurableSet {p : Exp rT × Measure T | p.1.isValue} := by
     have : {p : Exp rT × Measure T | p.1.isValue} =
-           ({e : Exp rT | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) ×ˢ (Set.univ : Set (Measure T)) :=
-           by
+        ({e : Exp rT | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) ×ˢ (Set.univ : Set (Measure T)) := by
       ext ⟨e, m⟩; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
     rw [this]
     exact ((Exp.isValueR.measurable.setOf).inter Exp.lcb_zero.measurableSet).prod MeasurableSet.univ
   exact Measurable.ite hpred measurable_snd measurable_const
 
+/-- Being a value is a measurable predicate on configurations. -/
 @[fun_prop]
 theorem Cfg.isValue_measurable : Measurable (fun a : Cfg rT => a.expr.isValue) := by
   rw [← measurableSet_setOfPred]
@@ -416,16 +436,19 @@ theorem Cfg.isValue_measurable : Measurable (fun a : Cfg rT => a.expr.isValue) :
   rw [h]
   exact Cfg.measurable_expr ((Exp.isValueR.measurable.setOf).inter Exp.lcb_zero.measurableSet)
 
+/-- The set of configurations holding a value is measurable. -/
 @[measurability]
 theorem Cfg.isValue_measurableSet : MeasurableSet {a : Cfg rT | a.expr.isValue} :=
   Cfg.isValue_measurable.setOf
 
-theorem Exp.isValM.measurable_param {T γ : Type _} [MeasurableSpace T] [MeasurableSpace γ]
+/-- `isValM` is measurable in a parameter. -/
+theorem Exp.isValM.measurable_param {γ : Type _} [MeasurableSpace γ]
     {he : γ → Exp rT} (hhe : Measurable he)
     {hm : γ → Measure T} (hhm : Measurable hm) :
     Measurable (fun c : γ => (he c).isValM (hm c)) :=
   Exp.isValM.measurable.comp (hhe.prodMk hhm)
 
+/-- The Dirac measure on a configuration is measurable in its components. -/
 theorem Cfg.measurable_dirac_mk {γ : Type _} [MeasurableSpace γ]
     {fe : γ → Exp rT} (he : Measurable fe)
     {fs : γ → State rT} (hs : Measurable fs) :
@@ -434,30 +457,30 @@ theorem Cfg.measurable_dirac_mk {γ : Type _} [MeasurableSpace γ]
 
 /-- Parameterized in `γ` rather than jointly in `(e, f)`: the evaluation map
 `(v, f) ↦ f v` is not measurable for the Pi σ-algebra on `Val rT → Measure T`. -/
-theorem Exp.asValM.measurable {T γ : Type _} [MeasurableSpace T] [MeasurableSpace γ]
+theorem Exp.asValM.measurable {γ : Type _} [MeasurableSpace γ]
     {g : γ × Val rT → Measure T} (hg : Measurable g) :
     Measurable (fun (p : Exp rT × γ) => p.1.asValM (fun v => g (p.2, v))) := by
   have htoVal : Measurable (fun (p : Exp rT × γ) => (p.1.toVal?, p.2)) :=
     (Exp.toVal_question.measurable (rT := rT)).comp measurable_fst |>.prodMk measurable_snd
   suffices h : Measurable (fun (q : Option (Val rT) × γ) =>
       match q.1 with | none => (0 : Measure T) | some v => g (q.2, v)) by
-    have hrw : (fun (p : Exp rT × γ) => p.1.asValM (fun v => g (p.2, v)))
-        = (fun (q : Option (Val rT) × γ) =>
-            match q.1 with | none => (0 : Measure T) | some v => g (q.2, v))
-          ∘ (fun (p : Exp rT × γ) => (p.1.toVal?, p.2)) := by
+    have hrw : (fun (p : Exp rT × γ) => p.1.asValM (fun v => g (p.2, v))) =
+        (fun (q : Option (Val rT) × γ) =>
+            match q.1 with | none => (0 : Measure T) | some v => g (q.2, v)) ∘
+          (fun (p : Exp rT × γ) => (p.1.toVal?, p.2)) := by
       funext ⟨e, c⟩
-      show Exp.asValM e (fun v => g (c, v)) =
-            match e.toVal? with | none => 0 | some v => g (c, v)
+      show Exp.asValM e (fun v => g (c, v)) = match e.toVal? with | none => 0 | some v => g (c, v)
       unfold Exp.asValM
       rfl
     rw [hrw]
     exact h.comp htoVal
   intro S hS
   have hpre : (fun (q : Option (Val rT) × γ) =>
-        match q.1 with | none => (0 : Measure T) | some v => g (q.2, v)) ⁻¹' S
-      = (if (0 : Measure T) ∈ S then ({none} : Set (Option (Val rT))) ×ˢ Set.univ else ∅)
+        match q.1 with | none => (0 : Measure T) | some v => g (q.2, v)) ⁻¹' S =
+      (if (0 : Measure T) ∈ S then ({none} : Set (Option (Val rT))) ×ˢ Set.univ else ∅)
         ∪ (Prod.map some id) '' ((fun (p : Val rT × γ) => g (p.2, p.1)) ⁻¹' S) := by
-    ext ⟨o, c⟩; cases o with
+    ext ⟨o, c⟩
+    cases o with
     | none => by_cases h0 : (0 : Measure T) ∈ S <;> simp [h0]
     | some v => simp [Set.mem_preimage, Set.mem_image, Prod.map]
   rw [hpre]
@@ -474,12 +497,12 @@ theorem measurable_map_const_uncurry {α β γ : Type _}
     [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
     (μ : Measure β) [SFinite μ] {h : α × β → γ} (hh : Measurable h) :
     Measurable (fun a : α => μ.map (fun b => h (a, b))) :=
-  @Measure.measurable_map_uncurry α β γ _ _ _ h hh (fun _ => μ) measurable_const
-    (by
-      have : ProbabilityTheory.Kernel.mk (fun _ : α => μ) measurable_const
-          = ProbabilityTheory.Kernel.const α μ := rfl
+  @Measure.measurable_map_uncurry α β γ _ _ _ h hh (fun _ => μ) measurable_const (by
+      have : ProbabilityTheory.Kernel.mk (fun _ : α => μ) measurable_const =
+          ProbabilityTheory.Kernel.const α μ := rfl
       rw [this]; infer_instance)
 
+/-- `Cfg.uniform` is measurable. -/
 theorem Cfg.uniform.measurable :
     Measurable (fun (p : Int × State rT) => Cfg.uniform p.1 p.2) := by
   apply measurable_from_prod_countable_right
@@ -496,6 +519,7 @@ theorem Cfg.uniform.measurable :
       (Cfg.measurable_iff.mpr
         ⟨Exp.lit.measurable.comp (BaseLit.int.measurable.comp measurable_snd), measurable_fst⟩)
 
+/-- `Cfg.uniformReal` is measurable. -/
 theorem Cfg.uniformReal.measurable :
     Measurable (fun σ : State rT => Cfg.uniformReal σ) :=
   measurable_map_const_uncurry (LawfulProbLangℝ.unifUnit (T := rT))
@@ -512,11 +536,11 @@ speed), proved with the `exp_zero_<ctor>_apply` macros of `CoreMeasures/Recurren
 @[simp] def headStep.c_unop (p : State rT × UnOp × Exp rT) : Measure (Cfg rT) :=
   p.2.2.isValM ((p.2.1.eval p.2.2).unwrapM (fun e' => dirac ⟨e', p.1⟩))
 
+/-- Measurability of the `unop` branch of `headStep`. -/
 theorem headStep.c_unop.measurable : Measurable (headStep.c_unop (rT := rT)) := by
   have hoe : Measurable (fun p : State rT × UnOp × Exp rT => p.2.1.eval p.2.2) :=
     Exp.UnOp_eval.measurable.comp measurable_snd
-  have hdir : Measurable
-      (fun q : (State rT × UnOp × Exp rT) × Exp rT =>
+  have hdir : Measurable (fun q : (State rT × UnOp × Exp rT) × Exp rT =>
         (dirac (Cfg.mk q.2 q.1.1) : Measure (Cfg rT))) :=
     Cfg.measurable_dirac_mk measurable_snd (measurable_fst.comp measurable_fst)
   have hu : Measurable (fun p : State rT × UnOp × Exp rT =>
@@ -532,53 +556,47 @@ theorem headStep.c_unop.measurable : Measurable (headStep.c_unop (rT := rT)) := 
                   (dirac ⟨Exp.app (Exp.open' e1' (.fix e1')) p.2.2, p.1⟩)
   | _ => 0
 
+/-- Measurability of the `app` branch of `headStep`. -/
 theorem headStep.c_app.measurable :
     Measurable (headStep.c_app (rT := rT)) := by
   let c_lam_inner : (State rT × Exp rT) × Exp rT → Measure (Cfg rT) :=
     fun q => q.1.2.isValM (dirac ⟨Exp.open' q.2 q.1.2, q.1.1⟩)
   let c_fix_inner : (State rT × Exp rT) × Exp rT → Measure (Cfg rT) :=
     fun q => q.1.2.isValM (dirac ⟨Exp.app (Exp.open' q.2 (.fix q.2)) q.1.2, q.1.1⟩)
-  have hrw : (headStep.c_app (rT := rT))
-      = (fun q : Exp rT × (State rT × Exp rT) =>
+  have hrw : (headStep.c_app (rT := rT)) = (fun q : Exp rT × (State rT × Exp rT) =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
             (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun e1' => c_lam_inner (q.2, e1')) (fun e1' => c_fix_inner (q.2, e1'))
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.c_app _ = _
     unfold headStep.c_app
     cases e1 <;> rfl
   rw [hrw]
-  refine Measurable.comp ?_
-    ((measurable_fst.comp measurable_snd).prodMk
+  refine Measurable.comp ?_ ((measurable_fst.comp measurable_snd).prodMk
       (measurable_fst.prodMk (measurable_snd.comp measurable_snd)))
   have h_lam_inner : Measurable c_lam_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : (State rT × Exp rT) × Exp rT => q.1.2)
+    refine Exp.isValM.measurable_param (he := fun q : (State rT × Exp rT) × Exp rT => q.1.2)
       (hm := fun q : (State rT × Exp rT) × Exp rT =>
                 (dirac (Cfg.mk (Exp.open' q.2 q.1.2) q.1.1) : Measure (Cfg rT)))
       ?_ ?_
     · exact measurable_snd.comp measurable_fst
-    · exact Cfg.measurable_dirac_mk
-        (Exp.open'.measurable.comp
+    · exact Cfg.measurable_dirac_mk (Exp.open'.measurable.comp
           (measurable_snd.prodMk (measurable_snd.comp measurable_fst)))
         (measurable_fst.comp measurable_fst)
   have h_fix_inner : Measurable c_fix_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : (State rT × Exp rT) × Exp rT => q.1.2)
+    refine Exp.isValM.measurable_param (he := fun q : (State rT × Exp rT) × Exp rT => q.1.2)
       (hm := fun q : (State rT × Exp rT) × Exp rT =>
-                (dirac (Cfg.mk
-                  (Exp.app (Exp.open' q.2 (.fix q.2)) q.1.2) q.1.1)
-                  : Measure (Cfg rT)))
+                (dirac (Cfg.mk (Exp.app (Exp.open' q.2 (.fix q.2)) q.1.2) q.1.1) :
+                  Measure (Cfg rT)))
       ?_ ?_
     · exact measurable_snd.comp measurable_fst
     · refine Cfg.measurable_dirac_mk ?_ (measurable_fst.comp measurable_fst)
-      show Measurable
-          (fun q : (State rT × Exp rT) × Exp rT =>
+      show Measurable (fun q : (State rT × Exp rT) × Exp rT =>
             Exp.app (Exp.open' q.2 (.fix q.2)) q.1.2)
       refine Exp.app.measurable.comp (Measurable.prodMk ?_ ?_)
       · exact Exp.open'.measurable.comp
@@ -592,16 +610,16 @@ theorem headStep.c_app.measurable :
     let ℓ := p.1.heap.fresh
     dirac ⟨.lit (.loc ℓ), p.1.update_heap (·.insert ℓ vd)⟩)
 
+/-- Measurability of the `alloc` branch of `headStep`. -/
 theorem headStep.c_alloc.measurable :
     Measurable (headStep.c_alloc (rT := rT)) := by
   have hreshape : Measurable
       (fun p : State rT × Exp rT => (p.2, p.1) : State rT × Exp rT → Exp rT × State rT) :=
     measurable_snd.prodMk measurable_fst
   have hg : Measurable (fun q : State rT × Val rT =>
-      (dirac (Cfg.mk
-        (Exp.lit (.loc q.1.heap.fresh))
-        (q.1.update_heap (·.insert q.1.heap.fresh q.2)))
-        : Measure (Cfg rT))) := by
+      (dirac (Cfg.mk (Exp.lit (.loc q.1.heap.fresh))
+        (q.1.update_heap (·.insert q.1.heap.fresh q.2))) :
+        Measure (Cfg rT))) := by
     refine Cfg.measurable_dirac_mk ?_ ?_
     · show Measurable (fun q : State rT × Val rT =>
           (Exp.lit (.loc q.1.heap.fresh) : Exp rT))
@@ -626,23 +644,22 @@ theorem headStep.c_alloc.measurable :
   | .lit (.bool false) => dirac ⟨p.2.2.2, p.1⟩
   | _ => 0
 
+/-- Measurability of the `cond` branch of `headStep`. -/
 theorem headStep.c_cond.measurable : Measurable (headStep.c_cond (rT := rT)) := by
   let c_lit_inner : (State rT × Exp rT × Exp rT) × BaseLit rT → Measure (Cfg rT) :=
     fun q => match q.2 with
       | .bool true => dirac ⟨q.1.2.1, q.1.1⟩
       | .bool false => dirac ⟨q.1.2.2, q.1.1⟩
       | _ => 0
-  have hrw : (headStep.c_cond (rT := rT))
-      = (fun q : Exp rT × (State rT × Exp rT × Exp rT) =>
-          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
-            (fun _ => 0) (fun _ => 0)
+  have hrw : (headStep.c_cond (rT := rT)) = (fun q : Exp rT × (State rT × Exp rT × Exp rT) =>
+          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner (q.2, l))
             (fun _ => 0) (fun _ => 0)
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT × Exp rT × Exp rT =>
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT × Exp rT × Exp rT =>
             (p.2.1, p.1, p.2.2.1, p.2.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
     show headStep.c_cond _ = _
@@ -653,22 +670,19 @@ theorem headStep.c_cond.measurable : Measurable (headStep.c_cond (rT := rT)) := 
       | _ => rfl
     | _ => rfl
   rw [hrw]
-  refine Measurable.comp ?_
-    ((measurable_fst.comp measurable_snd).prodMk
-      (measurable_fst.prodMk
-        ((measurable_fst.comp measurable_snd).comp measurable_snd |>.prodMk
+  refine Measurable.comp ?_ ((measurable_fst.comp measurable_snd).prodMk
+      (measurable_fst.prodMk ((measurable_fst.comp measurable_snd).comp measurable_snd |>.prodMk
           ((measurable_snd.comp measurable_snd).comp measurable_snd))))
   have hc_lit_inner : Measurable c_lit_inner := by
     let c_bool_inner : (State rT × Exp rT × Exp rT) × Bool → Measure (Cfg rT) :=
       fun r => if r.2 then dirac ⟨r.1.2.1, r.1.1⟩ else dirac ⟨r.1.2.2, r.1.1⟩
     have hrw2 : (fun q : (State rT × Exp rT × Exp rT) × BaseLit rT =>
-          c_lit_inner q)
-        = (fun p : BaseLit rT × (State rT × Exp rT × Exp rT) =>
-            BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
-              (fun _ => 0)
+          c_lit_inner q) =
+        (fun p : BaseLit rT × (State rT × Exp rT × Exp rT) =>
+            BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1 (fun _ => 0)
               (fun b => c_bool_inner (p.2, b))
-              0 (fun _ => 0) (fun _ => 0) (fun _ => 0))
-          ∘ (fun q : (State rT × Exp rT × Exp rT) × BaseLit rT => (q.2, q.1)) := by
+              0 (fun _ => 0) (fun _ => 0) (fun _ => 0)) ∘
+          (fun q : (State rT × Exp rT × Exp rT) × BaseLit rT => (q.2, q.1)) := by
       funext ⟨c, l⟩
       show c_lit_inner _ = _
       cases l with
@@ -680,15 +694,12 @@ theorem headStep.c_cond.measurable : Measurable (headStep.c_cond (rT := rT)) := 
     refine Measurable.comp ?_ (measurable_snd.prodMk measurable_fst)
     have h_bool_inner : Measurable c_bool_inner := by
       show Measurable (fun r : (State rT × Exp rT × Exp rT) × Bool =>
-        if r.2 then (dirac ⟨r.1.2.1, r.1.1⟩ : Measure (Cfg rT))
-                else dirac ⟨r.1.2.2, r.1.1⟩)
+        if r.2 then (dirac ⟨r.1.2.1, r.1.1⟩ : Measure (Cfg rT)) else dirac ⟨r.1.2.2, r.1.1⟩)
       refine Measurable.ite ?_ ?_ ?_
       · exact MeasurableSet.preimage (measurableSet_singleton true) measurable_snd
-      · exact Cfg.measurable_dirac_mk
-          ((measurable_fst.comp measurable_snd).comp measurable_fst)
+      · exact Cfg.measurable_dirac_mk ((measurable_fst.comp measurable_snd).comp measurable_fst)
           (measurable_fst.comp measurable_fst)
-      · exact Cfg.measurable_dirac_mk
-          ((measurable_snd.comp measurable_snd).comp measurable_fst)
+      · exact Cfg.measurable_dirac_mk ((measurable_snd.comp measurable_snd).comp measurable_fst)
           (measurable_fst.comp measurable_fst)
     baseLit_zero_bool_apply c_bool_inner, h_bool_inner
   exp_zero_lit_apply c_lit_inner, hc_lit_inner
@@ -700,14 +711,14 @@ theorem headStep.c_cond.measurable : Measurable (headStep.c_cond (rT := rT)) := 
   | .inr e => e.isValM (dirac ⟨p.2.2.2.app e, p.1⟩)
   | _ => 0
 
+/-- Measurability of the `case` branch of `headStep`. -/
 theorem headStep.c_case.measurable :
     Measurable (headStep.c_case (rT := rT)) := by
   let c_inl_inner : (State rT × Exp rT × Exp rT) × Exp rT → Measure (Cfg rT) :=
     fun q => q.2.isValM (dirac ⟨q.1.2.1.app q.2, q.1.1⟩)
   let c_inr_inner : (State rT × Exp rT × Exp rT) × Exp rT → Measure (Cfg rT) :=
     fun q => q.2.isValM (dirac ⟨q.1.2.2.app q.2, q.1.1⟩)
-  have hrw : (headStep.c_case (rT := rT))
-      = (fun q : Exp rT × State rT × Exp rT × Exp rT =>
+  have hrw : (headStep.c_case (rT := rT)) = (fun q : Exp rT × State rT × Exp rT × Exp rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
             (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ => 0) (fun _ => 0)
@@ -716,19 +727,17 @@ theorem headStep.c_case.measurable :
             (fun e => c_inl_inner (q.2, e))
             (fun e => c_inr_inner (q.2, e))
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
     show headStep.c_case _ = _
     unfold headStep.c_case
     cases ec <;> rfl
   rw [hrw]
-  refine Measurable.comp ?_
-    ((measurable_fst.comp measurable_snd).prodMk
+  refine Measurable.comp ?_ ((measurable_fst.comp measurable_snd).prodMk
       (measurable_fst.prodMk (measurable_snd.comp measurable_snd)))
   have h_inl_inner : Measurable c_inl_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : (State rT × Exp rT × Exp rT) × Exp rT => q.2)
+    refine Exp.isValM.measurable_param (he := fun q : (State rT × Exp rT × Exp rT) × Exp rT => q.2)
       (hm := fun q : (State rT × Exp rT × Exp rT) × Exp rT =>
         (dirac (Cfg.mk (q.1.2.1.app q.2) q.1.1) : Measure (Cfg rT)))
       ?_ ?_
@@ -739,8 +748,7 @@ theorem headStep.c_case.measurable :
         (measurable_fst.comp (measurable_snd.comp measurable_fst)).prodMk measurable_snd
       exact Exp.app.measurable.comp hp
   have h_inr_inner : Measurable c_inr_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : (State rT × Exp rT × Exp rT) × Exp rT => q.2)
+    refine Exp.isValM.measurable_param (he := fun q : (State rT × Exp rT × Exp rT) × Exp rT => q.2)
       (hm := fun q : (State rT × Exp rT × Exp rT) × Exp rT =>
         (dirac (Cfg.mk (q.1.2.2.app q.2) q.1.1) : Measure (Cfg rT)))
       ?_ ?_
@@ -760,31 +768,30 @@ theorem headStep.c_case.measurable :
                       | some v => dirac ⟨Exp.ofVal v, p.1⟩
   | _ => 0
 
+/-- Measurability of the `load` branch of `headStep`. -/
 theorem headStep.c_load.measurable :
     Measurable (headStep.c_load (rT := rT)) := by
   let c_leaf : State rT × Loc → Measure (Cfg rT) :=
     fun q => Option.casesOn (motive := fun _ => Measure (Cfg rT))
       q.1.heap[q.2]? 0 (fun v => dirac ⟨Exp.ofVal v, q.1⟩)
-  let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) :=
-    fun q =>
+  let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (q.1, ℓ)) (fun _ => 0) (fun _ => 0)
-  have hrw : (headStep.c_load (rT := rT))
-      = (fun q : Exp rT × State rT =>
-          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
-            (fun _ => 0) (fun _ => 0)
+  have hrw : (headStep.c_load (rT := rT)) = (fun q : Exp rT × State rT =>
+          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner (q.2, l))
             (fun _ => 0) (fun _ => 0)
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT => (p.2, p.1)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.c_load _ = _
     unfold headStep.c_load
-    cases e <;> (try rfl);
-      (rename_i l; cases l <;> (try rfl))
+    cases e <;> (try rfl)
+    rename_i l
+    cases l <;> (try rfl)
     rename_i ℓ
     show _ = c_leaf (σ, ℓ)
     simp only [c_leaf]
@@ -792,15 +799,13 @@ theorem headStep.c_load.measurable :
   rw [hrw]
   refine Measurable.comp ?_ (measurable_snd.prodMk measurable_fst)
   have hc_leaf : Measurable c_leaf := by
-    have hheap_getElem : Measurable
-        (fun q : State rT × Loc => q.1.heap[q.2]?) := by
+    have hheap_getElem : Measurable (fun q : State rT × Loc => q.1.heap[q.2]?) := by
       have hflat : Measurable (fun p : Loc × State rT => p.2.heap[p.1]?) := by
         apply measurable_from_prod_countable_right
         intro ℓ
         exact (LocHeap.measurable_getElem? ℓ).comp State.measurable_heap
       exact hflat.comp (measurable_snd.prodMk measurable_fst)
-    refine Option.measurable_elim_param_zero
-      (f := fun q : State rT × Loc => q.1.heap[q.2]?)
+    refine Option.measurable_elim_param_zero (f := fun q : State rT × Loc => q.1.heap[q.2]?)
       hheap_getElem
       (some_branch := fun q : (State rT × Loc) × Val rT =>
         (dirac (Cfg.mk (Exp.ofVal q.2) q.1.1) : Measure (Cfg rT))) ?_
@@ -823,6 +828,7 @@ theorem headStep.c_load.measurable :
       | some _ => dirac ⟨.lit .unit, p.1.update_heap (·.insert ℓ v)⟩)
   | _ => 0
 
+/-- Measurability of the `store` branch of `headStep`. -/
 theorem headStep.c_store.measurable :
     Measurable (headStep.c_store (rT := rT)) := by
   let c_leaf_inner_someBranch : (State rT × Loc) × Val rT → Measure (Cfg rT) :=
@@ -832,26 +838,24 @@ theorem headStep.c_store.measurable :
       r.1.1.heap[r.1.2]? 0 (fun _ => c_leaf_inner_someBranch r)
   let c_leaf : (State rT × Exp rT) × Loc → Measure (Cfg rT) :=
     fun r => r.1.2.asValM (fun v => c_leaf_g ((r.1.1, r.2), v))
-  let c_lit_inner : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) :=
-    fun q =>
+  let c_lit_inner : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (q.1, ℓ)) (fun _ => 0) (fun _ => 0)
-  have hrw : (headStep.c_store (rT := rT))
-      = (fun q : Exp rT × State rT × Exp rT =>
-          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
-            (fun _ => 0) (fun _ => 0)
+  have hrw : (headStep.c_store (rT := rT)) = (fun q : Exp rT × State rT × Exp rT =>
+          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner ((q.2.1, q.2.2), l))
             (fun _ => 0) (fun _ => 0)
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.c_store _ = _
     unfold headStep.c_store
     cases e1 <;> (try rfl)
-    rename_i l; cases l <;> (try rfl)
+    rename_i l
+    cases l <;> (try rfl)
     rename_i ℓ
     show _ = c_leaf ((σ, e2), ℓ)
     simp only [c_leaf, c_leaf_g, c_leaf_inner_someBranch]
@@ -860,8 +864,7 @@ theorem headStep.c_store.measurable :
     rename_i v
     cases σ.heap[ℓ]? <;> rfl
   rw [hrw]
-  refine Measurable.comp ?_
-    ((measurable_fst.comp measurable_snd).prodMk
+  refine Measurable.comp ?_ ((measurable_fst.comp measurable_snd).prodMk
       (measurable_fst.prodMk (measurable_snd.comp measurable_snd)))
   have h_someBr : Measurable c_leaf_inner_someBranch := by
     refine Cfg.measurable_dirac_mk measurable_const ?_
@@ -870,8 +873,7 @@ theorem headStep.c_store.measurable :
     refine State.measurable_mk_param ?_ ?_
     · show Measurable (fun r : (State rT × Loc) × Val rT =>
         r.1.1.heap.insert r.1.2 r.2)
-      have hmk : Measurable
-          (fun r : (State rT × Loc) × Val rT =>
+      have hmk : Measurable (fun r : (State rT × Loc) × Val rT =>
             (r.1.1.heap, r.1.2, r.2)) :=
         (State.measurable_heap.comp (measurable_fst.comp measurable_fst)).prodMk
           ((measurable_snd.comp measurable_fst).prodMk measurable_snd)
@@ -914,26 +916,24 @@ theorem headStep.c_store.measurable :
     dirac ⟨.lit (.lbl α), p.1.update_tapes (·.insert α (.empty z))⟩
   | _ => 0
 
+/-- Measurability of the `tape` branch of `headStep`. -/
 theorem headStep.c_tape.measurable :
     Measurable (headStep.c_tape (rT := rT)) := by
   let c_int_inner : State rT × Int → Measure (Cfg rT) :=
     fun q => dirac ⟨.lit (.lbl q.1.tapes.fresh),
       q.1.update_tapes (·.insert q.1.tapes.fresh (.empty q.2))⟩
-  let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) :=
-    fun q =>
+  let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun z => c_int_inner (q.1, z)) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) (fun _ => 0)
-  have hrw : (headStep.c_tape (rT := rT))
-      = (fun q : Exp rT × State rT =>
-          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
-            (fun _ => 0) (fun _ => 0)
+  have hrw : (headStep.c_tape (rT := rT)) = (fun q : Exp rT × State rT =>
+          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner (q.2, l))
             (fun _ => 0) (fun _ => 0)
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT => (p.2, p.1)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.c_tape _ = _
     unfold headStep.c_tape
@@ -958,8 +958,7 @@ theorem headStep.c_tape.measurable :
             (htape_empty.comp measurable_snd))
       exact Measurable.locHeap_insert_param.comp hmk
   have hc_lit : Measurable c_lit_inner := by
-    have hbase : Measurable
-        (fun p : BaseLit rT × State rT =>
+    have hbase : Measurable (fun p : BaseLit rT × State rT =>
           BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
             (fun z => c_int_inner (p.2, z)) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0)
             (fun _ => 0)) := by
@@ -982,6 +981,7 @@ theorem headStep.c_tape.measurable :
       else Cfg.uniform z p.1
   | _, _ => 0
 
+/-- Measurability of the `rand` branch of `headStep`. -/
 theorem headStep.c_rand.measurable :
     Measurable (headStep.c_rand (rT := rT)) := by
   let c_lbl_leaf : State rT × Int × Lbl × Option Tape → Measure (Cfg rT) :=
@@ -995,8 +995,7 @@ theorem headStep.c_rand.measurable :
           | n :: ns' => dirac ⟨.lit (.int n), σ.update_tapes (·.insert α ⟨M, ns'⟩)⟩
         else Cfg.uniform z σ
   have hc_lbl_leaf : Measurable c_lbl_leaf := by
-    have hflat : Measurable
-        (fun p : (Int × Lbl × Option Tape) × State rT =>
+    have hflat : Measurable (fun p : (Int × Lbl × Option Tape) × State rT =>
           c_lbl_leaf (p.2, p.1.1, p.1.2.1, p.1.2.2)) := by
       apply measurable_from_prod_countable_right
       intro ⟨z, α, optTape⟩
@@ -1009,21 +1008,18 @@ theorem headStep.c_rand.measurable :
         · simp only [↓reduceIte]
           match ns with
           | [] =>
-            exact Cfg.uniform.measurable.comp
-              (measurable_const.prodMk measurable_id)
+            exact Cfg.uniform.measurable.comp (measurable_const.prodMk measurable_id)
           | n :: ns' =>
             refine Cfg.measurable_dirac_mk measurable_const ?_
             show Measurable (fun σ : State rT =>
               σ.update_tapes (·.insert α ⟨M, ns'⟩))
             refine State.measurable_mk_param State.measurable_heap ?_
             show Measurable (fun σ : State rT => σ.tapes.insert α ⟨M, ns'⟩)
-            have hpair : Measurable
-                (fun σ : State rT => (σ.tapes, α, (⟨M, ns'⟩ : Tape))) :=
+            have hpair : Measurable (fun σ : State rT => (σ.tapes, α, (⟨M, ns'⟩ : Tape))) :=
               State.measurable_tapes.prodMk (measurable_const.prodMk measurable_const)
             exact Measurable.locHeap_insert_param.comp hpair
         · simp only [hMz, ↓reduceIte]
-          exact Cfg.uniform.measurable.comp
-            (measurable_const.prodMk measurable_id)
+          exact Cfg.uniform.measurable.comp (measurable_const.prodMk measurable_id)
     have hreshape : Measurable (fun q : State rT × Int × Lbl × Option Tape =>
         ((q.2.1, q.2.2.1, q.2.2.2), q.1) :
         State rT × Int × Lbl × Option Tape → (Int × Lbl × Option Tape) × State rT) :=
@@ -1038,39 +1034,31 @@ theorem headStep.c_rand.measurable :
       apply measurable_from_prod_countable_right
       intro α
       exact (LocHeap.measurable_getElem? α).comp State.measurable_tapes
-    have hproj : Measurable
-        (fun q : State rT × Int × Lbl =>
+    have hproj : Measurable (fun q : State rT × Int × Lbl =>
           (q.1, q.2.1, q.2.2, q.1.tapes[q.2.2]?)) :=
       measurable_fst.prodMk ((measurable_fst.comp measurable_snd).prodMk
         ((measurable_snd.comp measurable_snd).prodMk
           (hlookup.comp ((measurable_snd.comp measurable_snd).prodMk measurable_fst))))
     exact hc_lbl_leaf.comp hproj
-  let c_unit_arm : State rT × Int × Unit → Measure (Cfg rT) :=
-    fun ⟨σ, z, _⟩ => Cfg.uniform z σ
-  have hc_unit_arm : Measurable c_unit_arm :=
-    Cfg.uniform.measurable.comp
+  let c_unit_arm : State rT × Int × Unit → Measure (Cfg rT) := fun ⟨σ, z, _⟩ => Cfg.uniform z σ
+  have hc_unit_arm : Measurable c_unit_arm := Cfg.uniform.measurable.comp
       ((measurable_fst.comp measurable_snd).prodMk measurable_fst)
-  let c_l2_dispatch : (State rT × Int) × BaseLit rT → Measure (Cfg rT) :=
-    fun ⟨⟨σ, z⟩, l2⟩ =>
-      BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) l2
-        (fun _ => 0) (fun _ => 0)
+  let c_l2_dispatch : (State rT × Int) × BaseLit rT → Measure (Cfg rT) := fun ⟨⟨σ, z⟩, l2⟩ =>
+      BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) l2 (fun _ => 0) (fun _ => 0)
         (c_unit_arm (σ, z, ()))
         (fun _ => 0)
         (fun α => c_lbl_arm (σ, z, α))
         (fun _ => 0)
   have hc_l2 : Measurable c_l2_dispatch := by
-    have hswap : Measurable
-        (fun q : (State rT × Int) × BaseLit rT => (q.2, q.1)) :=
+    have hswap : Measurable (fun q : (State rT × Int) × BaseLit rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
     have hbase : Measurable (fun p : BaseLit rT × (State rT × Int) =>
-        BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
-          (fun _ => 0) (fun _ => 0)
+        BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1 (fun _ => 0) (fun _ => 0)
           (c_unit_arm (p.2.1, p.2.2, ()))
           (fun _ => 0)
           (fun α => c_lbl_arm (p.2.1, p.2.2, α))
           (fun _ => 0)) := by
-      apply BaseLit.measurable_casesOn_param
-        (c_int := fun _ => 0) (c_bool := fun _ => 0)
+      apply BaseLit.measurable_casesOn_param (c_int := fun _ => 0) (c_bool := fun _ => 0)
         (c_unit := fun q : State rT × Int => c_unit_arm (q.1, q.2, ()))
         (c_loc := fun _ => 0)
         (c_lbl := fun q : (State rT × Int) × Lbl => c_lbl_arm (q.1.1, q.1.2, q.2))
@@ -1079,15 +1067,12 @@ theorem headStep.c_rand.measurable :
         (h_unit := hc_unit_arm.comp
           (measurable_fst.prodMk (measurable_snd.prodMk (measurable_const (a := ())))))
         (h_loc := measurable_const)
-        (h_lbl := hc_lbl_arm.comp
-          ((measurable_fst.comp measurable_fst).prodMk
+        (h_lbl := hc_lbl_arm.comp ((measurable_fst.comp measurable_fst).prodMk
             ((measurable_snd.comp measurable_fst).prodMk measurable_snd)))
         (h_real := measurable_const)
     exact hbase.comp hswap
-  let c_e2_dispatch : (State rT × Int) × Exp rT → Measure (Cfg rT) :=
-    fun ⟨⟨σ, z⟩, e2⟩ =>
-      Exp.casesOn (motive := fun _ => Measure (Cfg rT)) e2
-        (fun _ => 0) (fun _ => 0)
+  let c_e2_dispatch : (State rT × Int) × Exp rT → Measure (Cfg rT) := fun ⟨⟨σ, z⟩, e2⟩ =>
+      Exp.casesOn (motive := fun _ => Measure (Cfg rT)) e2 (fun _ => 0) (fun _ => 0)
         (fun l2 => c_l2_dispatch ((σ, z), l2))
         (fun _ => 0) (fun _ => 0)
         (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
@@ -1098,8 +1083,7 @@ theorem headStep.c_rand.measurable :
     have hswap : Measurable (fun q : (State rT × Int) × Exp rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
     have hbase : Measurable (fun p : Exp rT × (State rT × Int) =>
-        Exp.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
-          (fun _ => 0) (fun _ => 0)
+        Exp.casesOn (motive := fun _ => Measure (Cfg rT)) p.1 (fun _ => 0) (fun _ => 0)
           (fun l => c_l2_dispatch (p.2, l))
           (fun _ => 0) (fun _ => 0)
           (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
@@ -1108,68 +1092,60 @@ theorem headStep.c_rand.measurable :
           (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) := by
       exp_zero_lit_apply (fun q : (State rT × Int) × BaseLit rT => c_l2_dispatch q), hc_l2
     exact hbase.comp hswap
-  let c_l1_dispatch : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) :=
-    fun ⟨⟨σ, e2⟩, l1⟩ =>
+  let c_l1_dispatch : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) := fun ⟨⟨σ, e2⟩, l1⟩ =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) l1
         (fun z => c_e2_dispatch ((σ, z), e2)) (fun _ => 0) 0 (fun _ => 0)
         (fun _ => 0) (fun _ => 0)
   have hc_l1 : Measurable c_l1_dispatch := by
-    have hswap : Measurable
-        (fun q : (State rT × Exp rT) × BaseLit rT => (q.2, q.1)) :=
+    have hswap : Measurable (fun q : (State rT × Exp rT) × BaseLit rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
     have hbase : Measurable (fun p : BaseLit rT × (State rT × Exp rT) =>
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun z => c_e2_dispatch ((p.2.1, z), p.2.2)) (fun _ => 0) 0
           (fun _ => 0) (fun _ => 0) (fun _ => 0)) := by
-      apply BaseLit.measurable_casesOn_param
-        (c_int := fun q : (State rT × Exp rT) × Int =>
+      apply BaseLit.measurable_casesOn_param (c_int := fun q : (State rT × Exp rT) × Int =>
           c_e2_dispatch ((q.1.1, q.2), q.1.2))
         (c_bool := fun _ => 0) (c_unit := fun _ => 0)
         (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0)
-        (h_int := hc_e2.comp
-          (((measurable_fst.comp measurable_fst).prodMk measurable_snd).prodMk
+        (h_int := hc_e2.comp (((measurable_fst.comp measurable_fst).prodMk measurable_snd).prodMk
             (measurable_snd.comp measurable_fst)))
         (h_bool := measurable_const) (h_unit := measurable_const)
         (h_loc := measurable_const) (h_lbl := measurable_const)
         (h_real := measurable_const)
     exact hbase.comp hswap
-  have hrw : (headStep.c_rand (rT := rT))
-      = (fun q : Exp rT × State rT × Exp rT =>
-          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
-            (fun _ => 0) (fun _ => 0)
+  have hrw : (headStep.c_rand (rT := rT)) = (fun q : Exp rT × State rT × Exp rT =>
+          Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l1 => c_l1_dispatch ((q.2.1, q.2.2), l1))
             (fun _ => 0) (fun _ => 0)
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.c_rand _ = _
     unfold headStep.c_rand
-    cases e1 <;> (try rfl);
-      rename_i l1;
-      cases l1 <;> (try rfl);
-      rename_i z;
-      cases e2 <;> (try rfl);
-      rename_i l2;
-      cases l2 <;> (try rfl)
+    cases e1 <;> (try rfl)
+    rename_i l1
+    cases l1 <;> (try rfl)
+    rename_i z
+    cases e2 <;> (try rfl)
+    rename_i l2
+    cases l2 <;> (try rfl)
   rw [hrw]
-  refine Measurable.comp ?_
-    ((measurable_fst.comp measurable_snd).prodMk
+  refine Measurable.comp ?_ ((measurable_fst.comp measurable_snd).prodMk
       (measurable_fst.prodMk (measurable_snd.comp measurable_snd)))
   exp_zero_lit_apply (fun q : (State rT × Exp rT) × BaseLit rT => c_l1_dispatch q), hc_l1
 
 /-- The `headStep` branch for a `scrut`, uncurried over the state and arguments. -/
 @[simp] def headStep.c_scrut (p : State rT × Exp rT × Pat rT) : Measure (Cfg rT) :=
-  p.2.1.isValM
-    (match Pat.tryMatch p.2.2 p.2.1 with
+  p.2.1.isValM (match Pat.tryMatch p.2.2 p.2.1 with
       | some b => dirac ⟨.inl b, p.1⟩
       | none => dirac ⟨.inr (.lit .unit), p.1⟩)
 
+/-- Measurability of the `scrut` branch of `headStep`. -/
 theorem headStep.c_scrut.measurable : Measurable (headStep.c_scrut (rT := rT)) := by
-  have hrw : (headStep.c_scrut (rT := rT))
-      = fun p : State rT × Exp rT × Pat rT =>
+  have hrw : (headStep.c_scrut (rT := rT)) = fun p : State rT × Exp rT × Pat rT =>
         p.2.1.isValM
           (Option.casesOn (motive := fun _ => Measure (Cfg rT)) (Pat.tryMatch p.2.2 p.2.1)
             (Measure.dirac (⟨.inr (.lit .unit), p.1⟩ : Cfg rT))
@@ -1187,16 +1163,15 @@ theorem headStep.c_scrut.measurable : Measurable (headStep.c_scrut (rT := rT)) :
         Measure.dirac (⟨.inr (.lit .unit), p.1⟩ : Cfg rT))
       (some_branch := fun s : (State rT × Exp rT × Pat rT) × Exp rT =>
         Measure.dirac (⟨.inl s.2, s.1.1⟩ : Cfg rT)) ?_ ?_ ?_
-    · have : (fun p : State rT × Exp rT × Pat rT => Pat.tryMatch p.2.2 p.2.1)
-          = (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e)) ∘
+    · have : (fun p : State rT × Exp rT × Pat rT => Pat.tryMatch p.2.2 p.2.1) =
+          (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e)) ∘
             (fun p : State rT × Exp rT × Pat rT => (p.2.2, p.2.1)) := by
         funext _; rfl
       rw [this]
       exact ProbLang.Exp.tryMatch.measurable_joint.comp
         ((measurable_snd.comp measurable_snd).prodMk (measurable_fst.comp measurable_snd))
     · refine Cfg.measurable_dirac_mk measurable_const measurable_fst
-    · refine Cfg.measurable_dirac_mk
-        (Exp.inl.measurable.comp measurable_snd)
+    · refine Cfg.measurable_dirac_mk (Exp.inl.measurable.comp measurable_snd)
         (measurable_fst.comp measurable_fst)
 
 /-- The `headStep` branch for a `fst`, uncurried over the state and arguments. -/
@@ -1205,12 +1180,12 @@ theorem headStep.c_scrut.measurable : Measurable (headStep.c_scrut (rT := rT)) :
   | .pair e1 e2 => e1.isValM (e2.isValM (dirac ⟨e1, p.1⟩))
   | _ => 0
 
+/-- Measurability of the `fst` branch of `headStep`. -/
 theorem headStep.c_fst.measurable :
     Measurable (headStep.c_fst (rT := rT)) := by
   let c_pair_inner : State rT × Exp rT × Exp rT → Measure (Cfg rT) :=
     fun q => q.2.1.isValM (q.2.2.isValM (dirac ⟨q.2.1, q.1⟩))
-  have hrw : (headStep.c_fst (rT := rT))
-      = (fun q : Exp rT × State rT =>
+  have hrw : (headStep.c_fst (rT := rT)) = (fun q : Exp rT × State rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
             (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ => 0) (fun _ => 0)
@@ -1218,8 +1193,8 @@ theorem headStep.c_fst.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT => (p.2, p.1)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.c_fst _ = _
     unfold headStep.c_fst
@@ -1227,14 +1202,12 @@ theorem headStep.c_fst.measurable :
   rw [hrw]
   refine Measurable.comp ?_ (measurable_snd.prodMk measurable_fst)
   have h_pair_inner : Measurable c_pair_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : State rT × Exp rT × Exp rT => q.2.1)
+    refine Exp.isValM.measurable_param (he := fun q : State rT × Exp rT × Exp rT => q.2.1)
       (hm := fun q : State rT × Exp rT × Exp rT =>
         (q.2.2.isValM (dirac ⟨q.2.1, q.1⟩) : Measure (Cfg rT)))
       ?_ ?_
     · exact measurable_fst.comp measurable_snd
-    · refine Exp.isValM.measurable_param
-        (he := fun q : State rT × Exp rT × Exp rT => q.2.2)
+    · refine Exp.isValM.measurable_param (he := fun q : State rT × Exp rT × Exp rT => q.2.2)
         (hm := fun q : State rT × Exp rT × Exp rT =>
           (dirac (Cfg.mk q.2.1 q.1) : Measure (Cfg rT)))
         ?_ ?_
@@ -1248,12 +1221,12 @@ theorem headStep.c_fst.measurable :
   | .pair e1 e2 => e1.isValM (e2.isValM (dirac ⟨e2, p.1⟩))
   | _ => 0
 
+/-- Measurability of the `snd` branch of `headStep`. -/
 theorem headStep.c_snd.measurable :
     Measurable (headStep.c_snd (rT := rT)) := by
   let c_pair_inner : State rT × Exp rT × Exp rT → Measure (Cfg rT) :=
     fun q => q.2.1.isValM (q.2.2.isValM (dirac ⟨q.2.2, q.1⟩))
-  have hrw : (headStep.c_snd (rT := rT))
-      = (fun q : Exp rT × State rT =>
+  have hrw : (headStep.c_snd (rT := rT)) = (fun q : Exp rT × State rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1
             (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ => 0) (fun _ => 0)
@@ -1261,8 +1234,8 @@ theorem headStep.c_snd.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0))
-        ∘ (fun p : State rT × Exp rT => (p.2, p.1)) := by
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+        (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.c_snd _ = _
     unfold headStep.c_snd
@@ -1270,14 +1243,12 @@ theorem headStep.c_snd.measurable :
   rw [hrw]
   refine Measurable.comp ?_ (measurable_snd.prodMk measurable_fst)
   have h_pair_inner : Measurable c_pair_inner := by
-    refine Exp.isValM.measurable_param
-      (he := fun q : State rT × Exp rT × Exp rT => q.2.1)
+    refine Exp.isValM.measurable_param (he := fun q : State rT × Exp rT × Exp rT => q.2.1)
       (hm := fun q : State rT × Exp rT × Exp rT =>
         (q.2.2.isValM (dirac ⟨q.2.2, q.1⟩) : Measure (Cfg rT)))
       ?_ ?_
     · exact measurable_fst.comp measurable_snd
-    · refine Exp.isValM.measurable_param
-        (he := fun q : State rT × Exp rT × Exp rT => q.2.2)
+    · refine Exp.isValM.measurable_param (he := fun q : State rT × Exp rT × Exp rT => q.2.2)
         (hm := fun q : State rT × Exp rT × Exp rT =>
           (dirac (Cfg.mk q.2.2 q.1) : Measure (Cfg rT)))
         ?_ ?_
@@ -1287,15 +1258,14 @@ theorem headStep.c_snd.measurable :
 
 /-- The `headStep` branch for a binary operation, uncurried over the state and arguments. -/
 @[simp] def headStep.c_binop (p : State rT × BinOp × Exp rT × Exp rT) : Measure (Cfg rT) :=
-  p.2.2.1.isValM (p.2.2.2.isValM
-    ((p.2.1.eval p.2.2.1 p.2.2.2).unwrapM (fun e' => dirac ⟨e', p.1⟩)))
+  p.2.2.1.isValM (p.2.2.2.isValM ((p.2.1.eval p.2.2.1 p.2.2.2).unwrapM (fun e' => dirac ⟨e', p.1⟩)))
 
+/-- Measurability of the `binop` branch of `headStep`. -/
 theorem headStep.c_binop.measurable : Measurable (headStep.c_binop (rT := rT)) := by
   have hoe : Measurable
       (fun p : State rT × BinOp × Exp rT × Exp rT => p.2.1.eval p.2.2.1 p.2.2.2) :=
     Exp.BinOp_eval.measurable.comp measurable_snd
-  have hdir : Measurable
-      (fun q : (State rT × BinOp × Exp rT × Exp rT) × Exp rT =>
+  have hdir : Measurable (fun q : (State rT × BinOp × Exp rT × Exp rT) × Exp rT =>
         (dirac (Cfg.mk q.2 q.1.1) : Measure (Cfg rT))) :=
     Cfg.measurable_dirac_mk measurable_snd (measurable_fst.comp measurable_fst)
   have hu : Measurable (fun p : State rT × BinOp × Exp rT × Exp rT =>
@@ -1316,10 +1286,9 @@ theorem headStep.c_binop.measurable : Measurable (headStep.c_binop (rT := rT)) :
 @[fun_prop]
 theorem headStep.measurable :
     Measurable (headStep : Cfg rT → Measure (Cfg rT)) := by
-  suffices hjoint :
-      Measurable (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2)) by
-    have hrw : (headStep : Cfg rT → Measure (Cfg rT))
-        = (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2)) ∘
+  suffices hjoint : Measurable (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2)) by
+    have hrw : (headStep : Cfg rT → Measure (Cfg rT)) =
+        (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2)) ∘
           (fun cfg : Cfg rT => (cfg.expr, cfg.state)) := by
       funext cfg; rfl
     rw [hrw]
@@ -1336,8 +1305,8 @@ theorem headStep.measurable :
   let c_inr   : State rT × Exp rT → Measure (Cfg rT) := fun _ => 0
   let c_fail  : State rT → Measure (Cfg rT) := fun _ => 0
   let c_urand : State rT → Measure (Cfg rT) := fun σ => Cfg.uniformReal σ
-  have hheq : (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2))
-      = fun p : Exp rT × State rT => Exp.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
+  have hheq : (fun p : Exp rT × State rT => headStep (Cfg.mk p.1 p.2)) =
+      fun p : Exp rT × State rT => Exp.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun n => c_bvar (p.2, n)) (fun x => c_fvar (p.2, x))
           (fun l => c_lit (p.2, l))
           (fun e => c_lam (p.2, e)) (fun e => c_fix (p.2, e))
@@ -1362,9 +1331,11 @@ theorem headStep.measurable :
     | app e1 e2 => cases e1 <;> rfl
     | unop op e => rfl
     | binop op e1 e2 => rfl
-    | cond ec et ef => cases ec <;> try rfl
-                       case lit l => cases l <;> try rfl
-                                     case bool b => cases b <;> rfl
+    | cond ec et ef =>
+      cases ec <;> try rfl
+      case lit l =>
+        cases l <;> try rfl
+        case bool b => cases b <;> rfl
     | pair _ _ => rfl
     | fst e => cases e <;> rfl
     | snd e => cases e <;> rfl
@@ -1372,22 +1343,25 @@ theorem headStep.measurable :
     | inr _ => rfl
     | case ec el er => cases ec <;> rfl
     | alloc _ => rfl
-    | load e => cases e <;> try rfl
-                case lit l => cases l <;> rfl
-    | store e1 e2 => cases e1 <;> try rfl
-                     case lit l => cases l <;> rfl
-    | tape e => cases e <;> try rfl
-                case lit l => cases l <;> rfl
-    | rand e1 e2 => cases e1 <;> try rfl
-                    case lit l1 =>
-                      cases l1 <;> try rfl
-                      case int z =>
-                        cases e2 <;> try rfl
-                        case lit l2 => cases l2 <;> rfl
+    | load e =>
+      cases e <;> try rfl
+      case lit l => cases l <;> rfl
+    | store e1 e2 =>
+      cases e1 <;> try rfl
+      case lit l => cases l <;> rfl
+    | tape e =>
+      cases e <;> try rfl
+      case lit l => cases l <;> rfl
+    | rand e1 e2 =>
+      cases e1 <;> try rfl
+      case lit l1 =>
+        cases l1 <;> try rfl
+        case int z =>
+          cases e2 <;> try rfl
+          case lit l2 => cases l2 <;> rfl
     | scrut _ _ => rfl
   rw [hheq]
-  apply Exp.measurable_casesOn_param
-    (c_bvar := c_bvar) (c_fvar := c_fvar) (c_lit := c_lit)
+  apply Exp.measurable_casesOn_param (c_bvar := c_bvar) (c_fvar := c_fvar) (c_lit := c_lit)
     (c_lam := c_lam) (c_fix := c_fix)
     (c_app := headStep.c_app) (c_unop := headStep.c_unop) (c_binop := headStep.c_binop)
     (c_cond := headStep.c_cond) (c_pair := c_pair)
@@ -1431,118 +1405,136 @@ def headStepKernel : Kernel (Cfg rT) (Cfg rT) where
 `unifUnitSupport`, possible only when `unifUnit` has atoms; see `HeadStepSupport.possible`
 (needs `e1 ≠ urand`) versus `HeadStepSupport.ne_zero`. -/
 inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
-| BetaLamS :
-  e2.isValue →
-  e' = Exp.open' e1 e2 →
-  HeadStepSupport ⟨.app (.lam e1) e2, σ⟩ ⟨e', σ⟩
-| BetaFixS :
-  e2.isValue →
-  e' = Exp.app (Exp.open' e1 (.fix e1)) e2 →
-  HeadStepSupport ⟨.app (.fix e1) e2, σ⟩ ⟨e', σ⟩
-| UnOpS :
-  e.isValue →
-  some e' = op.eval e →
-  HeadStepSupport ⟨.unop op e, σ⟩ ⟨e', σ⟩
-| BinOpS :
-  e1.isValue →
-  e2.isValue →
-  some e' = op.eval e1 e2 →
-  HeadStepSupport ⟨.binop op e1 e2, σ⟩ ⟨e', σ⟩
-| IfTrueS :
-  HeadStepSupport ⟨.cond (.lit (.bool true)) et _, σ⟩ ⟨et, σ⟩
-| IfFalseS :
-  HeadStepSupport ⟨.cond (.lit (.bool false)) _ ef, σ⟩ ⟨ef, σ⟩
-| FstS :
-  e1.isValue →
-  e2.isValue →
-  HeadStepSupport ⟨.fst (.pair e1 e2), σ⟩ ⟨e1, σ⟩
-| SndS :
-  e1.isValue →
-  e2.isValue →
-  HeadStepSupport ⟨.snd (.pair e1 e2), σ⟩ ⟨e2, σ⟩
-| CaseLS :
-  e.isValue →
-  HeadStepSupport ⟨.case (.inl e) el er, σ⟩ ⟨el.app e, σ⟩
-| CaseRS :
-  e.isValue →
-  HeadStepSupport ⟨.case (.inr e) el er, σ⟩ ⟨er.app e, σ⟩
-| AllocS :
-  ed.toVal? = some vd →
-  ℓ = σ.heap.fresh →
-  σ' = σ.update_heap (·.insert ℓ vd) →
-  HeadStepSupport ⟨.alloc ed, σ⟩ ⟨.lit (.loc ℓ), σ'⟩
-| LoadS :
-  σ.heap[ℓ]? = some v →
-  e' = Exp.ofVal v →
-  HeadStepSupport ⟨.load (.lit (.loc ℓ)), σ⟩ ⟨e', σ⟩
-| StoreS :
-  e.toVal? = some v →
-  σ.heap[ℓ]?.isSome →
-  σ' = σ.update_heap (·.insert ℓ v) →
-  HeadStepSupport ⟨.store (.lit (.loc ℓ)) e, σ⟩ ⟨.lit .unit, σ'⟩
-/-- No tape, `0 < z`: sample uniformly below `z`. -/
-| RandNoTapeS :
-  0 < z →
-  0 ≤ v →
-  v < z →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int v), σ⟩
-/-- No tape, `z ≤ 0`: return `-1`. -/
-| RandNonposS :
-  ¬ 0 < z →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int (-1)), σ⟩
-| TapeS :
-  ℓ = σ.tapes.fresh →
-  σ' = σ.update_tapes (·.insert ℓ (.empty z)) →
-  HeadStepSupport ⟨.tape (.lit (.int z)), σ⟩ ⟨.lit (.lbl ℓ), σ'⟩
-/-- Non-empty tape with bound `z`: pop the head. -/
-| RandTapeS :
-  σ.tapes[α]? = some ⟨N, nn :: ns⟩ →
-  z = N →
-  v = nn.1 →
-  σ' = σ.update_tapes (·.insert α ⟨N, ns⟩) →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
-/-- Empty tape with bound `z`, `0 < z`: sample uniformly, tape unchanged. -/
-| RandTapeEmptyS :
-  0 < z →
-  σ.tapes[α]? = some ⟨N, []⟩ →
-  z = N →
-  0 ≤ v →
-  v < z →
-  σ' = σ →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
-/-- Tape bound `≠ z`, `0 < z`: ignore the tape, sample uniformly. -/
-| RandTapeOtherS :
-  0 < z →
-  σ.tapes[α]? = some ⟨N, L⟩ →
-  z ≠ N →
-  0 ≤ v →
-  v < z →
-  σ' = σ →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
-/-- Empty tape with bound `z`, `z ≤ 0`: return `-1`. -/
-| RandTapeNonposEmptyS :
-  ¬ 0 < z →
-  σ.tapes[α]? = some ⟨N, []⟩ →
-  z = N →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
-/-- Tape bound `≠ z`, `z ≤ 0`: return `-1`. -/
-| RandTapeNonposOtherS :
-  ¬ 0 < z →
-  σ.tapes[α]? = some ⟨N, L⟩ →
-  z ≠ N →
-  HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
-| ScrutSuccessS :
-  e.isValue →
-  Pat.tryMatch p e = some bindings →
-  HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inl bindings, σ⟩
-| ScrutFailureS :
-  e.isValue →
-  Pat.tryMatch p e = none →
-  HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inr (.lit .unit), σ⟩
-| UrandS :
-  LawfulProbLangℝ.unifUnitSupport r →
-  HeadStepSupport ⟨.urand, σ⟩ ⟨.lit (.real r), σ⟩
+  /-- Beta-reduce a lambda applied to a value. -/
+  | BetaLamS :
+    e2.isValue →
+    e' = Exp.open' e1 e2 →
+    HeadStepSupport ⟨.app (.lam e1) e2, σ⟩ ⟨e', σ⟩
+  /-- Unfold a fixpoint applied to a value. -/
+  | BetaFixS :
+    e2.isValue →
+    e' = Exp.app (Exp.open' e1 (.fix e1)) e2 →
+    HeadStepSupport ⟨.app (.fix e1) e2, σ⟩ ⟨e', σ⟩
+  /-- Evaluate a unary operation on a value. -/
+  | UnOpS :
+    e.isValue →
+    some e' = op.eval e →
+    HeadStepSupport ⟨.unop op e, σ⟩ ⟨e', σ⟩
+  /-- Evaluate a binary operation on two values. -/
+  | BinOpS :
+    e1.isValue →
+    e2.isValue →
+    some e' = op.eval e1 e2 →
+    HeadStepSupport ⟨.binop op e1 e2, σ⟩ ⟨e', σ⟩
+  /-- Conditional on `true` takes the first branch. -/
+  | IfTrueS :
+    HeadStepSupport ⟨.cond (.lit (.bool true)) et _, σ⟩ ⟨et, σ⟩
+  /-- Conditional on `false` takes the second branch. -/
+  | IfFalseS :
+    HeadStepSupport ⟨.cond (.lit (.bool false)) _ ef, σ⟩ ⟨ef, σ⟩
+  /-- First projection of a pair of values. -/
+  | FstS :
+    e1.isValue →
+    e2.isValue →
+    HeadStepSupport ⟨.fst (.pair e1 e2), σ⟩ ⟨e1, σ⟩
+  /-- Second projection of a pair of values. -/
+  | SndS :
+    e1.isValue →
+    e2.isValue →
+    HeadStepSupport ⟨.snd (.pair e1 e2), σ⟩ ⟨e2, σ⟩
+  /-- Case analysis on a left injection of a value. -/
+  | CaseLS :
+    e.isValue →
+    HeadStepSupport ⟨.case (.inl e) el er, σ⟩ ⟨el.app e, σ⟩
+  /-- Case analysis on a right injection of a value. -/
+  | CaseRS :
+    e.isValue →
+    HeadStepSupport ⟨.case (.inr e) el er, σ⟩ ⟨er.app e, σ⟩
+  /-- Allocate a fresh heap location holding a value. -/
+  | AllocS :
+    ed.toVal? = some vd →
+    ℓ = σ.heap.fresh →
+    σ' = σ.update_heap (·.insert ℓ vd) →
+    HeadStepSupport ⟨.alloc ed, σ⟩ ⟨.lit (.loc ℓ), σ'⟩
+  /-- Read an allocated heap location. -/
+  | LoadS :
+    σ.heap[ℓ]? = some v →
+    e' = Exp.ofVal v →
+    HeadStepSupport ⟨.load (.lit (.loc ℓ)), σ⟩ ⟨e', σ⟩
+  /-- Write to an allocated heap location. -/
+  | StoreS :
+    e.toVal? = some v →
+    σ.heap[ℓ]?.isSome →
+    σ' = σ.update_heap (·.insert ℓ v) →
+    HeadStepSupport ⟨.store (.lit (.loc ℓ)) e, σ⟩ ⟨.lit .unit, σ'⟩
+  /-- No tape, `0 < z`: sample uniformly below `z`. -/
+  | RandNoTapeS :
+    0 < z →
+    0 ≤ v →
+    v < z →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int v), σ⟩
+  /-- No tape, `z ≤ 0`: return `-1`. -/
+  | RandNonposS :
+    ¬ 0 < z →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int (-1)), σ⟩
+  /-- Allocate a fresh empty tape with bound `z`. -/
+  | TapeS :
+    ℓ = σ.tapes.fresh →
+    σ' = σ.update_tapes (·.insert ℓ (.empty z)) →
+    HeadStepSupport ⟨.tape (.lit (.int z)), σ⟩ ⟨.lit (.lbl ℓ), σ'⟩
+  /-- Non-empty tape with bound `z`: pop the head. -/
+  | RandTapeS :
+    σ.tapes[α]? = some ⟨N, nn :: ns⟩ →
+    z = N →
+    v = nn.1 →
+    σ' = σ.update_tapes (·.insert α ⟨N, ns⟩) →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+  /-- Empty tape with bound `z`, `0 < z`: sample uniformly, tape unchanged. -/
+  | RandTapeEmptyS :
+    0 < z →
+    σ.tapes[α]? = some ⟨N, []⟩ →
+    z = N →
+    0 ≤ v →
+    v < z →
+    σ' = σ →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+  /-- Tape bound `≠ z`, `0 < z`: ignore the tape, sample uniformly. -/
+  | RandTapeOtherS :
+    0 < z →
+    σ.tapes[α]? = some ⟨N, L⟩ →
+    z ≠ N →
+    0 ≤ v →
+    v < z →
+    σ' = σ →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
+  /-- Empty tape with bound `z`, `z ≤ 0`: return `-1`. -/
+  | RandTapeNonposEmptyS :
+    ¬ 0 < z →
+    σ.tapes[α]? = some ⟨N, []⟩ →
+    z = N →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
+  /-- Tape bound `≠ z`, `z ≤ 0`: return `-1`. -/
+  | RandTapeNonposOtherS :
+    ¬ 0 < z →
+    σ.tapes[α]? = some ⟨N, L⟩ →
+    z ≠ N →
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
+  /-- Pattern matching a value succeeds with the resulting bindings. -/
+  | ScrutSuccessS :
+    e.isValue →
+    Pat.tryMatch p e = some bindings →
+    HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inl bindings, σ⟩
+  /-- Pattern matching a value fails. -/
+  | ScrutFailureS :
+    e.isValue →
+    Pat.tryMatch p e = none →
+    HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inr (.lit .unit), σ⟩
+  /-- Draw a real from the support of `unifUnit`. -/
+  | UrandS :
+    LawfulProbLangℝ.unifUnitSupport r →
+    HeadStepSupport ⟨.urand, σ⟩ ⟨.lit (.real r), σ⟩
 
+/-- A Dirac measure charges a singleton exactly when the points agree. -/
 @[simp]
 theorem dirac_singleton_pos
     {a b : Cfg rT} :
@@ -1553,31 +1545,34 @@ theorem dirac_singleton_pos
     split <;> simp; trivial
   · simp_all [dirac_apply_of_mem (Set.mem_singleton _)]
 
+/-- `isValM` charges a set exactly when the expression is a value and `m` charges it. -/
 @[simp]
-theorem isValM_singleton_pos [MeasurableSpace T] {e : Exp α} {m : Measure T} {s : Set T} :
+theorem isValM_singleton_pos {e : Exp α} {m : Measure T} {s : Set T} :
     0 < (e.isValM m) s ↔ e.isValue ∧ 0 < m s := by
   simp only [Exp.isValM]
   by_cases He : e.isValue
   · rw [ite_eq_left He]; exact ⟨fun h => ⟨He, h⟩, And.right⟩
   · rw [ite_eq_right He]; exact ⟨fun h => absurd h (by simp), fun ⟨hv, _⟩ => absurd hv He⟩
 
+/-- `unwrapM` charges a set exactly when the option holds a value whose measure does. -/
 @[simp]
 theorem unwrapM_singleton_pos {α β : Type _} [MeasurableSpace β]
     {f : α → Measure β} {opt : Option α} {s : Set β} :
     0 < (opt.unwrapM f) s ↔ ∃ a, opt = some a ∧ 0 < (f a) s := by
   cases opt <;> simp [Option.unwrapM]
 
+/-- `asValM` charges a set exactly when the expression has a value whose measure does. -/
 @[simp]
-theorem asValM_singleton_pos [MeasurableSpace T] {e : Exp α} {f : Val α → Measure T} :
+theorem asValM_singleton_pos {e : Exp α} {f : Val α → Measure T} :
     0 < (e.asValM f) s ↔ ∃ v, e.toVal? = some v ∧ 0 < (f v) s := by
   unfold Exp.asValM; cases e.toVal? <;> simp
 
+/-- Inversion of positivity of `Cfg.uniform` on a singleton configuration. -/
 theorem Cfg.uniform_singleton_pos_inv
     {z : Int} {σ : State rT} {ρ : Cfg rT}
     (h : 0 < Cfg.uniform z σ {ρ}) :
-    ρ.state = σ ∧
-    ((0 < z ∧ ∃ v : Int, ρ.expr = .lit (.int v) ∧ 0 ≤ v ∧ v < z) ∨
-     (¬ 0 < z ∧ ρ.expr = .lit (.int (-1)))) := by
+    ρ.state = σ ∧ ((0 < z ∧ ∃ v : Int, ρ.expr = .lit (.int v) ∧ 0 ≤ v ∧ v < z) ∨
+        (¬ 0 < z ∧ ρ.expr = .lit (.int (-1)))) := by
   unfold Cfg.uniform Int.isPos at h
   by_cases hpos : 0 < z
   · simp only [hpos, dite_true] at h
@@ -1598,8 +1593,9 @@ theorem Cfg.uniform_singleton_pos_inv
 
 /-- Decompose `0 < (dirac a) {b}` into Cfg component equalities, then substitute. -/
 macro "cfg_dirac" h:ident : tactic =>
-  `(tactic| (rw [dirac_singleton_pos] at $h:ident
-             have ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp $h:ident))
+  `(tactic| (
+    rw [dirac_singleton_pos] at $h:ident
+    have ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..).mp $h:ident))
 
 /-- Every integer in `[0, z)` is a possible outcome of `Cfg.uniform z σ`. -/
 theorem Cfg.uniform_possible {z v : Int} {σ : State rT}
@@ -1659,10 +1655,12 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | RandTapeS htape hz hv hσ =>
     subst hz hv hσ; simp [headStep, htape]
   | RandTapeEmptyS hpos htape hz hv0 hvz hσ =>
-    subst hσ hz; simp only [headStep, htape, ↓reduceIte]
+    subst hσ hz
+    simp only [headStep, htape, ↓reduceIte]
     exact (Cfg.uniform_possible hpos hv0 hvz).ne_zero
   | RandTapeOtherS hpos htape hzN hv0 hvz hσ =>
-    subst hσ; simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
+    subst hσ
+    simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
     exact (Cfg.uniform_possible hpos hv0 hvz).ne_zero
   | RandTapeNonposEmptyS hpos htape hz =>
     subst hz
@@ -1689,8 +1687,7 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | UnOpS hv heval =>
     exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv, Option.unwrapM, ← heval])
   | BinOpS hv1 hv2 heval =>
-    exact Possible.of_dirac_eq
-      (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
+    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
   | AllocS hvd hl hσ =>
     subst hl hσ; exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
   | LoadS hlook he =>
@@ -1712,10 +1709,12 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   | RandTapeS htape hz hv hσ =>
     subst hz hv hσ; exact Possible.of_dirac_eq (by simp [headStep, htape])
   | RandTapeEmptyS hpos htape hz hv0 hvz hσ =>
-    subst hσ hz; simp only [headStep, htape, ↓reduceIte]
+    subst hσ hz
+    simp only [headStep, htape, ↓reduceIte]
     exact Cfg.uniform_possible hpos hv0 hvz
   | RandTapeOtherS hpos htape hzN hv0 hvz hσ =>
-    subst hσ; simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
+    subst hσ
+    simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
     exact Cfg.uniform_possible hpos hv0 hvz
   | RandTapeNonposEmptyS hpos htape hz =>
     subst hz; exact Possible.of_dirac_eq (by simp [headStep, htape, Cfg.uniform, Int.isPos, hpos])
@@ -1738,26 +1737,59 @@ theorem headStep_support_of_pos
     0 < headStep ⟨e1, σ1⟩ {⟨e2, σ2⟩} → HeadStepSupport ⟨e1, σ1⟩ ⟨e2, σ2⟩ := by
   head_case
   all_goals try (· simp)
-  case cond.true | cond.false => intro h; cfg_dirac h; constructor
-  case beta.lam.redex => intro h; cfg_dirac h; exact .BetaLamS ‹_› rfl
-  case beta.fix.redex => intro h; cfg_dirac h; exact .BetaFixS ‹_› rfl
-  case fst.redex => intro h; cfg_dirac h; exact .FstS ‹_› ‹_›
-  case snd.redex => intro h; cfg_dirac h; exact .SndS ‹_› ‹_›
-  case case.left.redex => intro h; cfg_dirac h; exact .CaseLS ‹_›
-  case case.right.redex => intro h; cfg_dirac h; exact .CaseRS ‹_›
-  case tape => intro h; cfg_dirac h; exact .TapeS rfl rfl
-  case load.redex => intro h; cfg_dirac h; exact .LoadS ‹_› rfl
-  case alloc.redex => intro h; cfg_dirac h; exact .AllocS ‹_› rfl rfl
+  case cond.true | cond.false =>
+    intro h
+    cfg_dirac h
+    constructor
+  case beta.lam.redex =>
+    intro h
+    cfg_dirac h
+    exact .BetaLamS ‹_› rfl
+  case beta.fix.redex =>
+    intro h
+    cfg_dirac h
+    exact .BetaFixS ‹_› rfl
+  case fst.redex =>
+    intro h
+    cfg_dirac h
+    exact .FstS ‹_› ‹_›
+  case snd.redex =>
+    intro h
+    cfg_dirac h
+    exact .SndS ‹_› ‹_›
+  case case.left.redex =>
+    intro h
+    cfg_dirac h
+    exact .CaseLS ‹_›
+  case case.right.redex =>
+    intro h
+    cfg_dirac h
+    exact .CaseRS ‹_›
+  case tape =>
+    intro h
+    cfg_dirac h
+    exact .TapeS rfl rfl
+  case load.redex =>
+    intro h
+    cfg_dirac h
+    exact .LoadS ‹_› rfl
+  case alloc.redex =>
+    intro h
+    cfg_dirac h
+    exact .AllocS ‹_› rfl rfl
   case store.redex =>
-    intro h; cfg_dirac h
+    intro h
+    cfg_dirac h
     exact .StoreS ‹_› (by rw [Option.isSome_iff_exists]; exact ⟨_, ‹_›⟩) rfl
   case rand.tape.deterministic =>
     intro h; cfg_dirac h; exact .RandTapeS ‹_› rfl rfl rfl
   case unop.redex =>
-    intro h; rw [unwrapM_singleton_pos] at h
+    intro h
+    rw [unwrapM_singleton_pos] at h
     obtain ⟨r, hr, h⟩ := h; cfg_dirac h; exact .UnOpS ‹_› hr.symm
   case binop.redex =>
-    intro h; rw [unwrapM_singleton_pos] at h
+    intro h
+    rw [unwrapM_singleton_pos] at h
     obtain ⟨r, hr, h⟩ := h; cfg_dirac h; exact .BinOpS ‹_› ‹_› hr.symm
   case rand.plain =>
     intro h
@@ -1774,8 +1806,14 @@ theorem headStep_support_of_pos
     obtain ⟨rfl, ⟨hpos, v, rfl, hv0, hvz⟩ | ⟨hpos, rfl⟩⟩ := Cfg.uniform_singleton_pos_inv h
     · exact .RandTapeOtherS hpos ‹_› (Ne.symm ‹_›) hv0 hvz rfl
     · exact .RandTapeNonposOtherS hpos ‹_› (Ne.symm ‹_›)
-  case scrut_success => intro h; cfg_dirac h; exact .ScrutSuccessS ‹_› ‹_›
-  case scrut_failure => intro h; cfg_dirac h; exact .ScrutFailureS ‹_› ‹_›
+  case scrut_success =>
+    intro h
+    cfg_dirac h
+    exact .ScrutSuccessS ‹_› ‹_›
+  case scrut_failure =>
+    intro h
+    cfg_dirac h
+    exact .ScrutFailureS ‹_› ‹_›
   case urand =>
     rename_i _ σ' heq
     obtain ⟨rfl, rfl⟩ := (Cfg.mk.injEq ..) ▸ heq
@@ -1784,7 +1822,8 @@ theorem headStep_support_of_pos
       rw [Cfg.measurable_iff]
       exact ⟨Exp.lit.measurable.comp BaseLit.real.measurable, measurable_const⟩
     have hinj : Function.Injective (fun r : rT => (⟨.lit (.real r), σ1⟩ : Cfg rT)) := by
-      intro a b hab; simp only [Cfg.mk.injEq, Exp.lit.injEq, BaseLit.real.injEq, and_true] at hab
+      intro a b hab
+      simp only [Cfg.mk.injEq, Exp.lit.injEq, BaseLit.real.injEq, and_true] at hab
       exact hab
     unfold Cfg.uniformReal at h
     obtain ⟨r, hr, hpos⟩ := map_singleton_pos hg hinj h
@@ -1862,21 +1901,22 @@ theorem headStep_exists_support_of_ne_zero
 
 /-! ## Pure atomicity of `headStep` -/
 
-omit [LawfulProbLangℝ rT] in
-theorem isAtomicSupport_isValM {T : Type _} [MeasurableSpace T] (e : Exp rT) {m : Measure T}
+/-- `isValM` preserves atomic support. -/
+theorem isAtomicSupport_isValM (e : Exp α) {m : Measure T}
     (hm : IsAtomicSupport m) : IsAtomicSupport (e.isValM m) := by
   by_cases hv : e.isValue
   · rw [Exp.isValM_some hv]; exact hm
   · rw [Exp.isValM_none hv]; exact isAtomicSupport_zero
 
-omit [LawfulProbLangℝ rT] in
-theorem isAtomicSupport_asValM {T : Type _} [MeasurableSpace T] (e : Exp rT)
-    {f : Val rT → Measure T} (hf : ∀ v, IsAtomicSupport (f v)) :
+/-- `asValM` preserves atomic support. -/
+theorem isAtomicSupport_asValM (e : Exp α)
+    {f : Val α → Measure T} (hf : ∀ v, IsAtomicSupport (f v)) :
     IsAtomicSupport (e.asValM f) := by
   unfold Exp.asValM
   split <;> first | exact isAtomicSupport_zero | exact hf _
 
-theorem isAtomicSupport_unwrapM {β T : Type _} [MeasurableSpace T] (o : Option β)
+/-- `unwrapM` preserves atomic support. -/
+theorem isAtomicSupport_unwrapM {β : Type _} (o : Option β)
     (f : β → Measure T) (hf : ∀ a, IsAtomicSupport (f a)) :
     IsAtomicSupport (o.unwrapM f) := by
   cases o with
@@ -1884,11 +1924,12 @@ theorem isAtomicSupport_unwrapM {β T : Type _} [MeasurableSpace T] (o : Option 
     simpa only [Option.unwrapM] using (isAtomicSupport_zero : IsAtomicSupport (0 : Measure T))
   | some a => simpa only [Option.unwrapM] using hf a
 
+/-- `Cfg.uniform` has atomic support. -/
 theorem isAtomicSupport_uniform (z : Int) (σ : State rT) :
     IsAtomicSupport (Cfg.uniform z σ) := by
   by_cases hz : 0 < z
-  · have hrw : Cfg.uniform z σ
-        = ((PMF.uniformOfFinset (Finset.Ico (0:Int) z) (Finset.nonempty_Ico.mpr hz)).map
+  · have hrw : Cfg.uniform z σ =
+        ((PMF.uniformOfFinset (Finset.Ico (0:Int) z) (Finset.nonempty_Ico.mpr hz)).map
             (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT))).toMeasure := by
       unfold Cfg.uniform
       simp only [Int.isPos, dite_eq_left hz]
@@ -1918,7 +1959,8 @@ theorem headStep_atomic (e : Exp rT) (σ : State rT) (hne : e ≠ .urand) :
     · exact isAtomicSupport_zero
     · exact isAtomicSupport_dirac _
   case store =>
-    apply isAtomicSupport_asValM; intro _
+    apply isAtomicSupport_asValM
+    intro _
     split
     · exact isAtomicSupport_zero
     · exact isAtomicSupport_dirac _

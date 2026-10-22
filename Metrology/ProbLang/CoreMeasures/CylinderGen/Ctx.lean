@@ -24,14 +24,22 @@ meta section
 /-! ## Reading the inductive type -/
 
 /-- How a field of a constructor enters the shape and the leaves. -/
-inductive Kind | recursive | base | data
+inductive Kind
+  /-- A field of type `T`. -/
+  | recursive
+  /-- A countable field with measurable singletons, part of the shape. -/
+  | base
+  /-- Any other field, a leaf. -/
+  | data
   deriving BEq, Inhabited
 
 instance : ToString Kind := ⟨fun | .recursive => "recursive" | .base => "base" | .data => "data"⟩
 
 /-- A field of a constructor, with its classification. -/
 structure Field where
+  /-- The name of the field. -/
   name : Name
+  /-- The classification of the field. -/
   kind : Kind
   /-- The type, with the parameters of `T` free. -/
   type : Expr
@@ -39,9 +47,11 @@ structure Field where
 
 /-- A constructor of `T`, with its fields. -/
 structure Ctor where
+  /-- The full name of the constructor. -/
   name : Name
   /-- The position among the constructors of `T`. -/
   idx : Nat
+  /-- The explicit fields, in order. -/
   fields : Array Field
   deriving Inhabited
 
@@ -63,7 +73,9 @@ def Ctor.named (c : Ctor) (pre : String) : Name := .mkSimple s!"{pre}_{c.short}"
 
 /-- What the generator knows about `T`, with its parameters and their measurable spaces free. -/
 structure Ctx where
+  /-- The name of the inductive type. -/
   T : Name
+  /-- The universe parameters of `T`. -/
   levelParams : List Name
   /-- The parameters of `T`, as free variables. -/
   params : Array Expr
@@ -122,58 +134,60 @@ def withCtx [Inhabited α] (T : Name) (k : Ctx → MetaM α) : MetaM α := do
 
 /-! ## Constants -/
 
+variable (ctx : Ctx)
+
 /-- The universes of `T`. -/
-def Ctx.levels (ctx : Ctx) : List Level := ctx.levelParams.map .param
+def Ctx.levels : List Level := ctx.levelParams.map .param
 
 /-- The constant `n`, at the universes of `T`, applied to the parameters (and, with `insts`, their
 measurable spaces). -/
-def Ctx.const (ctx : Ctx) (n : Name) (insts := false) : Expr :=
+def Ctx.const (n : Name) (insts := false) : Expr :=
   mkAppN (mkConst n ctx.levels) (if insts then ctx.params ++ ctx.insts else ctx.params)
 
 /-- `T.suffix`, by `const`. -/
-def Ctx.member (ctx : Ctx) (suffix : Name) (insts := false) : Expr :=
+def Ctx.member (suffix : Name) (insts := false) : Expr :=
   ctx.const (ctx.T ++ suffix) insts
 
 /-- The type `T params`. -/
-def Ctx.ty (ctx : Ctx) : Expr := ctx.const ctx.T
+def Ctx.ty : Expr := ctx.const ctx.T
 /-- The type `T.Shape` (not the function `T.shape`). -/
-def Ctx.shape (ctx : Ctx) : Expr := mkConst (ctx.T ++ `Shape)
+def Ctx.shape : Expr := mkConst (ctx.T ++ `Shape)
 /-- The name of the shape constructor `T.Shape.c`. -/
-def Ctx.shapeCtor (ctx : Ctx) (c : Ctor) : Name := (ctx.T ++ `Shape).str c.short
+def Ctx.shapeCtor (c : Ctor) : Name := (ctx.T ++ `Shape).str c.short
 /-- The shape `T.Shape.c args`. -/
-def Ctx.shapeOf (ctx : Ctx) (c : Ctor) (args : Array Expr) : Expr :=
+def Ctx.shapeOf (c : Ctor) (args : Array Expr) : Expr :=
   mkAppN (mkConst (ctx.shapeCtor c)) args
 /-- The type `T.Leaves s` of the leaves of the shape `s`. -/
-def Ctx.leaves (ctx : Ctx) (s : Expr) : Expr := mkApp (ctx.member `Leaves) s
+def Ctx.leaves (s : Expr) : Expr := mkApp (ctx.member `Leaves) s
 /-- The constant `T.measurableEquiv`, applied to the parameters and their instances. -/
-def Ctx.equiv (ctx : Ctx) : Expr := ctx.member `measurableEquiv (insts := true)
+def Ctx.equiv : Expr := ctx.member `measurableEquiv (insts := true)
 /-- `PUnit`, in the universe of the leaves. -/
-def Ctx.punit (ctx : Ctx) : Expr := mkConst ``PUnit [ctx.w.succ]
+def Ctx.punit : Expr := mkConst ``PUnit [ctx.w.succ]
 /-- `PUnit.unit`, in the universe of the leaves. -/
-def Ctx.unit (ctx : Ctx) : Expr := mkConst ``PUnit.unit [ctx.w.succ]
+def Ctx.unit : Expr := mkConst ``PUnit.unit [ctx.w.succ]
 
 /-- `ULift A`, in the universe of `T`. -/
-def Ctx.ulift (ctx : Ctx) (A : Expr) : MetaM Expr :=
+def Ctx.ulift (A : Expr) : MetaM Expr :=
   return mkApp (mkConst ``ULift [ctx.w, ← getDecLevel A]) A
 
 /-- `ULift.up x`, in the universe of `T`. -/
-def Ctx.up (ctx : Ctx) (x : Expr) : MetaM Expr := do
+def Ctx.up (x : Expr) : MetaM Expr := do
   let A ← inferType x
   return mkApp2 (mkConst ``ULift.up [ctx.w, ← getDecLevel A]) A x
 
 /-- The type `Σ s, T.Leaves s` of shapes with their leaves. -/
-def Ctx.sigma (ctx : Ctx) : MetaM Expr := mkAppM ``Sigma #[ctx.member `Leaves]
+def Ctx.sigma : MetaM Expr := mkAppM ``Sigma #[ctx.member `Leaves]
 /-- The pair `⟨s, v⟩ : Σ s, T.Leaves s` of a shape and its leaves. -/
-def Ctx.sigmaMk (ctx : Ctx) (s v : Expr) : MetaM Expr :=
+def Ctx.sigmaMk (s v : Expr) : MetaM Expr :=
   mkAppOptM ``Sigma.mk #[ctx.shape, ctx.member `Leaves, s, v]
 
 /-- The type of a field, with `T` at the recursive fields. -/
-def Ctx.fieldType (ctx : Ctx) (f : Field) : Expr := if f.kind == .recursive then ctx.ty else f.type
+def Ctx.fieldType (f : Field) : Expr := if f.kind == .recursive then ctx.ty else f.type
 
 /-! ## Local variables -/
 
 /-- Runs `k` with the fields of `c` as local variables, with `T` at the recursive fields. -/
-def Ctx.withFields [Inhabited α] (ctx : Ctx) (c : Ctor) (k : Array Expr → MetaM α) : MetaM α :=
+def Ctx.withFields [Inhabited α] (c : Ctor) (k : Array Expr → MetaM α) : MetaM α :=
   withLocalDecls (c.fields.map fun f => decl f.name .default (pure (ctx.fieldType f))) k
 
 /-! ## Recursors -/
@@ -181,7 +195,7 @@ def Ctx.withFields [Inhabited α] (ctx : Ctx) (c : Ctor) (k : Array Expr → Met
 /-- `I.rec` on `major`, where `I` is `T` or `T.Shape`, whose constructors are those of `ctx.ctors`,
 with the arm of `c` built by `arm c xs ihs` from its first `numFields c`
 arguments `xs` (fields) and the rest `ihs` (the motive at the recursive fields). -/
-def Ctx.mkRec (ctx : Ctx) (I : Name) (levels : List Level) (params : Array Expr)
+def Ctx.mkRec (I : Name) (levels : List Level) (params : Array Expr)
     (numFields : Ctor → Nat) (motive major : Expr)
     (arm : Ctor → List Expr → List Expr → MetaM Expr) : MetaM Expr := do
   let u ← lambdaTelescope motive fun _ b => getLevel b
@@ -196,10 +210,16 @@ def Ctx.mkRec (ctx : Ctx) (I : Name) (levels : List Level) (params : Array Expr)
 
 /-- A field of a constructor in an arm of `T.rec`: its value, and the motive there if it is
 recursive. -/
-inductive Slot | base (x : Expr) | data (x : Expr) | recursive (x ih : Expr)
+inductive Slot
+  /-- A base field, with its value. -/
+  | base (x : Expr)
+  /-- A data field, with its value. -/
+  | data (x : Expr)
+  /-- A recursive field, with its value and the motive there. -/
+  | recursive (x ih : Expr)
 
 /-- `T.rec` on `major`, with arm `arm c slots` for constructor `c`. -/
-def Ctx.recurse (ctx : Ctx) (motive major : Expr) (arm : Ctor → Array Slot → MetaM Expr) :
+def Ctx.recurse (motive major : Expr) (arm : Ctor → Array Slot → MetaM Expr) :
     MetaM Expr :=
   ctx.mkRec ctx.T ctx.levels ctx.params (·.fields.size) motive major fun c xs ihs => do
     let mut (ihs, slots) := (ihs, #[])
@@ -215,7 +235,13 @@ def Ctx.recurse (ctx : Ctx) (motive major : Expr) (arm : Ctor → Array Slot →
 /-- A field of a constructor in an arm of `T.Shape.rec`: a base field with its value, a data field
 with its type (`T.Shape` has no data fields), a recursive field with its shape and the motive
 there. -/
-inductive ShapeSlot | base (x : Expr) | leaf (ty : Expr) | recursive (s ih : Expr)
+inductive ShapeSlot
+  /-- A base field, with its value. -/
+  | base (x : Expr)
+  /-- A data field, with its type. -/
+  | leaf (ty : Expr)
+  /-- A recursive field, with its shape and the motive there. -/
+  | recursive (s ih : Expr)
 
 /-- The argument of the shape constructor at this slot. -/
 def ShapeSlot.shapeArg? : ShapeSlot → Option Expr
@@ -223,7 +249,7 @@ def ShapeSlot.shapeArg? : ShapeSlot → Option Expr
   | .leaf _ => none
 
 /-- `T.Shape.rec` on `major`, with arm `arm c slots` for constructor `c`. -/
-def Ctx.recurseShape (ctx : Ctx) (motive major : Expr) (arm : Ctor → Array ShapeSlot → MetaM Expr) :
+def Ctx.recurseShape (motive major : Expr) (arm : Ctor → Array ShapeSlot → MetaM Expr) :
     MetaM Expr :=
   let numFields (c : Ctor) := (c.fields.filter (·.indexed)).size
   ctx.mkRec (ctx.T ++ `Shape) [] #[] numFields motive major fun c xs ihs => do
@@ -245,7 +271,7 @@ def Ctx.recurseShape (ctx : Ctx) (motive major : Expr) (arm : Ctor → Array Sha
 
 /-- The leaves of the values of shape `c slots`: `PUnit` at base fields, the lifted type at data
 fields, and `leaves s ih` at recursive fields. -/
-def Ctx.leavesTy (ctx : Ctx) (slots : Array ShapeSlot)
+def Ctx.leavesTy (slots : Array ShapeSlot)
     (leaves : Expr → Expr → Expr := fun s _ => ctx.leaves s) : MetaM Expr := do
   let tys ← slots.mapM fun
     | .base _ => pure ctx.punit
@@ -262,7 +288,7 @@ def ensureFresh (name : Name) : MetaM Unit := do
 /-- Adds `name`, abstracted over the parameters (implicitly) and, with `insts`, their measurable
 spaces, and then `binders`; with `funProp`, as a `fun_prop` lemma. Its universes are those of `T`,
 then those of the `binders`. -/
-def Ctx.declare (ctx : Ctx) (name : Name) (type value : Expr) (insts := false) (isDef := false)
+def Ctx.declare (name : Name) (type value : Expr) (insts := false) (isDef := false)
     (binders : Array Expr := #[]) (funProp := false) : MetaM Unit := do
   ensureFresh name
   let xs := ctx.params ++ (if insts then ctx.insts else #[]) ++ binders
@@ -280,7 +306,7 @@ def Ctx.declare (ctx : Ctx) (name : Name) (type value : Expr) (insts := false) (
   if funProp then addAttribute `fun_prop name
 
 /-- Adds the instance `name`, abstracted over the parameters and their measurable spaces. -/
-def Ctx.declareInstance (ctx : Ctx) (name : Name) (type value : Expr)
+def Ctx.declareInstance (name : Name) (type value : Expr)
     (binders : Array Expr := #[]) : MetaM Unit := do
   ctx.declare name type value (insts := true) (isDef := true) (binders := binders)
   setReducibilityStatus name .instanceReducible

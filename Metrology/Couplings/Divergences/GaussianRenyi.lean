@@ -112,6 +112,8 @@ end GradedDivergence
 
 namespace Mechanism
 
+open GradedDivergence
+
 /-! ## The Gaussian mechanism -/
 
 /-- The Gaussian mechanism with standard deviation `σ` is `(0, r² / (2 σ²))`-zCDP for inputs at
@@ -120,8 +122,8 @@ theorem zCDP_gaussianMech {σ : ℝ≥0} (hσ : σ ≠ 0) (r : ℝ) :
     (gaussianMech σ).zCDP (fun a a' ↦ |a - a'| ≤ r) 0
       (ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) := by
   intro a a' h
-  refine GradedDivergence.IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, ENNReal.ofReal_le_ofReal ?_⟩)
-    (GradedDivergence.zcdpDivergence_gaussianReal (a := a) (a' := a') (pow_ne_zero 2 hσ))
+  refine IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, ENNReal.ofReal_le_ofReal ?_⟩)
+    (zcdpDivergence_gaussianReal (a := a) (a' := a') (pow_ne_zero 2 hσ))
   push_cast
   gcongr ?_ / _
   exact sq_le_sq' (abs_le.1 h).1 (abs_le.1 h).2

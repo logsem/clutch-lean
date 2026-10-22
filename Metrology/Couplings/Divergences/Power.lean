@@ -81,10 +81,14 @@ theorem ofENNReal_top : ofENNReal ⊤ = ⊤ :=
 
 /-- Power budgets form a monoid, isomorphic to `[1, ⊤]` under multiplication along `c ↦ 1 + c`. -/
 noncomputable instance instAddCommMonoid : AddCommMonoid PowerBudget where
-  add_assoc a b c := toENNReal.injective <| by simp only [toENNReal_add]; ring
+  add_assoc a b c := toENNReal.injective <| by
+    simp only [toENNReal_add]
+    ring
   zero_add a := toENNReal.injective <| by simp
   add_zero a := toENNReal.injective <| by simp
-  add_comm a b := toENNReal.injective <| by simp only [toENNReal_add]; ring
+  add_comm a b := toENNReal.injective <| by
+    simp only [toENNReal_add]
+    ring
   nsmul := nsmulRec
 
 /-- Composing power budgets is monotone. -/
@@ -150,6 +154,7 @@ theorem nsmul_ofReal {c : ℝ} (hc : 0 ≤ c) (k : ℕ) : k • ofReal c = ofRea
 
 /-! ## Log coordinates -/
 
+/-- The log coordinate `log (1 + c)` of a power budget is nonnegative. -/
 theorem log_one_add_nonneg (c : PowerBudget) : 0 ≤ ENNReal.log (1 + toENNReal c) :=
   ENNReal.zero_le_log_iff.2 le_self_add
 
@@ -173,6 +178,7 @@ noncomputable def log : PowerBudget ≃+o ℝ≥0∞ where
       EReal.coe_toENNReal (log_one_add_nonneg b), ENNReal.log_le_log_iff,
       ENNReal.add_le_add_iff_left ENNReal.one_ne_top, toENNReal.le_iff_le]
 
+/-- The log coordinate unfolds to `log (1 + c)`. -/
 theorem log_apply (c : PowerBudget) : log c = (ENNReal.log (1 + toENNReal c)).toENNReal :=
   rfl
 
@@ -181,9 +187,11 @@ theorem log_ofReal {c : ℝ} (hc : 0 ≤ c) : log (ofReal c) = ENNReal.ofReal (R
   rw [log_apply, toENNReal_ofReal, ← ENNReal.ofReal_one, ← ENNReal.ofReal_add zero_le_one hc,
     ENNReal.log_ofReal_of_pos (by positivity), EReal.real_coe_toENNReal]
 
+/-- The log coordinate, read in `EReal`, is `log (1 + c)`. -/
 theorem coe_log (c : PowerBudget) : (log c : EReal) = ENNReal.log (1 + toENNReal c) :=
   EReal.coe_toENNReal (log_one_add_nonneg c)
 
+/-- The exponential of the log coordinate is `1 + c`. -/
 theorem expBudget_log (c : PowerBudget) : expBudget (log c) = 1 + toENNReal c := by
   rw [expBudget, coe_log, ENNReal.exp_log]
 
@@ -196,6 +204,7 @@ variable {α : ℝ} {c : PowerBudget}
 noncomputable def toRenyi (α : ℝ) (c : PowerBudget) : ℝ≥0∞ :=
   (ENNReal.ofReal (α - 1))⁻¹ * log c
 
+/-- The Rényi budget of a power budget is monotone. -/
 theorem toRenyi_mono : Monotone (toRenyi α) := fun _ _ h ↦
   mul_right_mono (OrderHomClass.mono log h)
 
@@ -211,19 +220,21 @@ theorem toRenyi_top : toRenyi α ⊤ = ⊤ := by
 theorem toRenyi_add (a b : PowerBudget) : toRenyi α (a + b) = toRenyi α a + toRenyi α b := by
   simp [toRenyi, mul_add]
 
+/-- Scaling the Rényi budget by `α - 1` gives the log coordinate. -/
 theorem ofReal_mul_toRenyi (hα : 1 < α) (c : PowerBudget) :
     ENNReal.ofReal (α - 1) * toRenyi α c = log c := by
   rw [toRenyi, ← mul_assoc, ENNReal.mul_inv_cancel (by simpa using hα) ENNReal.ofReal_ne_top,
     one_mul]
 
+/-- A finite power budget has a finite Rényi budget. -/
 theorem toRenyi_lt_top (hα : 1 < α) (hc : c < ⊤) : toRenyi α c < ⊤ :=
-  ENNReal.mul_lt_top (ENNReal.inv_lt_top.2 (by simpa using hα))
-    (map_top log ▸ log.strictMono hc)
+  ENNReal.mul_lt_top (ENNReal.inv_lt_top.2 (by simpa using hα)) (map_top log ▸ log.strictMono hc)
 
 /-- At order `2` the Rényi budget is `log (1 + c)` itself. -/
 theorem toRenyi_two (c : PowerBudget) : toRenyi 2 c = log c := by
   norm_num [toRenyi]
 
+/-- Every Rényi budget is the Rényi budget of a power budget. -/
 theorem toRenyi_surjective (hα : 1 < α) : Function.Surjective (toRenyi α) := fun ρ ↦ by
   refine ⟨log.symm (ENNReal.ofReal (α - 1) * ρ), ?_⟩
   rw [toRenyi, OrderAddMonoidIso.apply_symm_apply, ← mul_assoc,
@@ -304,19 +315,19 @@ instance isComposable_power : (powerDivergence.{u} α).IsComposable :=
 
 /-- The zero measure is within every power budget of every measure. -/
 instance isZeroLeft_power : (powerDivergence.{u} α).IsZeroLeft :=
-  GradedDivergence.isZeroLeft_comap
+  isZeroLeft_comap
 
 /-- Power divergences are left continuous (Rocq `GCFamLim_power`). -/
 instance isLeftContinuous_power : (powerDivergence.{u} α).IsLeftContinuous :=
-  GradedDivergence.isLeftContinuous_comap
+  isLeftContinuous_comap
 
 /-- Power divergences are monotone in the right measure. -/
 instance isRightMonotone_power : (powerDivergence.{u} α).IsRightMonotone :=
-  GradedDivergence.isRightMonotone_comap
+  isRightMonotone_comap
 
 /-- Power divergences are antitone in the left measure. -/
 instance isLeftAntitone_power : (powerDivergence.{u} α).IsLeftAntitone :=
-  GradedDivergence.isLeftAntitone_comap
+  isLeftAntitone_comap
 
 /-- Power divergences are budget closed, since every larger Rényi budget is a power budget. -/
 instance isBudgetClosed_power : (powerDivergence.{u} α).IsBudgetClosed where

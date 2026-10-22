@@ -94,13 +94,10 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     -- Use the user's term, not the matched `res.e'`: a recursive call then stays folded
     -- (`geometric ()`) and unifies syntactically with an IH.
     have e' : Q(Exp $α) := focus
-    let Φc : Q(Val $α → IProp $GF) ←
-      withLocalDeclDQ `v q(Val $α) fun v => do
+    let Φc : Q(Val $α → IProp $GF) ← withLocalDeclDQ `v q(Val $α) fun v => do
         let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
-        mkLambdaFVars #[v]
-          q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
-    let pf ← addBIGoal hyps
-      q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
+        mkLambdaFVars #[v] q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
+    let pf ← addBIGoal hyps q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
     -- `mkAppOptM`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
     -- `bi_least_fixpoint` (heartbeat blow-up).
     let bindPf ← mkAppOptM ``ProbLang.TotalEris.ErisWpGS.tglWp_bind
@@ -155,8 +152,7 @@ elab "twp_value" : tactic =>
     let p' : Q(Bool) ← mkFreshExprMVarQ q(Bool)
     let A' : Q(IProp $GF) ← mkFreshExprMVarQ q(IProp $GF)
     let Q' : Q(IProp $GF) ← mkFreshExprMVarQ q(IProp $GF)
-    let useNoFupd : Bool ←
-      if (← ProofModeM.trySynthInstanceQ
+    let useNoFupd : Bool ← if (← ProofModeM.trySynthInstanceQ
             q(ElimModal $c false .out $p' iprop(|={$E}=> $goal) $A' $goal $Q')).isSome then
         pure (← observing? (iSolveSidecondition c)).isSome
       else pure false

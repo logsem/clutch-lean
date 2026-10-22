@@ -21,7 +21,6 @@ The error-graded lifting modality `glm'`: erasable steps and credit bumps, then 
 @[expose] public section
 
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
-open scoped ENNReal
 
 namespace ProbLang
 
@@ -34,32 +33,38 @@ namespace TotalEris
 /-- The predicate `φ` fails with `μ`-probability at most `ε` (Eris `pgl`, probability of good
 lifting). -/
 def Pgl {α : Type _} [MeasurableSpace α] (ε : ENNReal) (φ : α → Prop)
-  (μ : MeasureTheory.Measure α) : Prop := μ {x | ¬ φ x} ≤ ε
+    (μ : MeasureTheory.Measure α) : Prop := μ {x | ¬ φ x} ≤ ε
 
 namespace Pgl
 
 variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+variable {μ : MeasureTheory.Measure α}
 
-theorem mono_grading {ε ε' : ENNReal} {φ : α → Prop} {μ : MeasureTheory.Measure α}
+/-- Raising the failure bound `ε` preserves `Pgl`. -/
+theorem mono_grading {ε ε' : ENNReal} {φ : α → Prop}
     (hε : ε ≤ ε') (h : Pgl ε φ μ) : Pgl ε' φ μ := h.trans hε
 
-theorem mono_pred {ε : ENNReal} {φ ψ : α → Prop} {μ : MeasureTheory.Measure α}
+/-- Weakening the predicate preserves `Pgl`. -/
+theorem mono_pred {ε : ENNReal} {φ ψ : α → Prop}
     (hφψ : ∀ a, φ a → ψ a) (h : Pgl ε φ μ) : Pgl ε ψ μ := by
   refine .trans (MeasureTheory.measure_mono ?_) h
   intro x hx hxφ; exact hx (hφψ x hxφ)
 
+/-- A measure that gives the complement of `φ` zero mass satisfies `Pgl 0 φ`. -/
 theorem zero_of_null {φ : α → Prop} (μ : MeasureTheory.Measure α)
     (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ :=
   Hnull.le
 
-theorem zero_possible [MeasurableSingletonClass α] {μ : MeasureTheory.Measure α}
+/-- A measure supported on points satisfying `φ` satisfies `Pgl 0 φ`. -/
+theorem zero_possible [MeasurableSingletonClass α]
     (h : IsAtomicSupport μ) : Pgl 0 (fun a => Possible a μ) μ := by
   show μ {x | ¬ Possible x μ} ≤ 0
   have hset : {x : α | ¬ Possible x μ} = {x | μ {x} = 0} := by
     ext x; simp [possible_iff_pos, pos_iff_ne_zero]
   rw [hset]; exact h.le
 
-theorem of_concentrated {μ : MeasureTheory.Measure α} {φ : α → Prop}
+/-- A measure concentrated on `{x | φ x}` satisfies `Pgl 0 φ`. -/
+theorem of_concentrated {φ : α → Prop}
     (h : Concentrated μ {x | φ x}) : Pgl 0 φ μ :=
   h.le
 
@@ -83,14 +88,17 @@ variable {GF : BundledGFunctors}
 abbrev execStutter (P : ENNReal → IProp GF) (ε : ENNReal) : IProp GF :=
   iprop(⌜1 ≤ ε⌝ ∨ P ε)
 
+/-- Stuttering at no cost is available for any `ε`. -/
 theorem execStutter_free {P : ENNReal → IProp GF} {ε : ENNReal} :
     P ε ⊢ execStutter P ε :=
   or_intro_r
 
+/-- Stuttering may spend one unit of error credit. -/
 theorem execStutter_spend {P : ENNReal → IProp GF} {ε : ENNReal} (hε : 1 ≤ ε) :
     ⊢ execStutter P ε :=
   (pure_intro hε).trans or_intro_l
 
+/-- `execStutter` is monotone in the credit budget. -/
 theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : ε ≤ ε') :
     ((P ε -∗ Q ε') ∗ execStutter P ε) ⊢ execStutter Q ε' := by
   iintro ⟨HM, HS⟩
@@ -98,11 +106,13 @@ theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : 
   · ileft; ipureintro; exact HVac.trans hε
   · iright; iapply HM $$ HP
 
+/-- `execStutter` is monotone in the continuation predicate. -/
 theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
     ((P ε -∗ Q ε) ∗ execStutter P ε) ⊢ execStutter Q ε :=
   execStutter_mono le_rfl
 
 variable [ErisWpGS (rT := rT) GF]
+variable {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z : Cfg rT → ENNReal → IProp GF}
 
 /-! ## The three step kinds -/
 
@@ -140,10 +150,10 @@ abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     ⌜Pgl ε₁ R μ⌝ ∗
     (∀ σ', ⌜R σ'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (⟨e₁, σ'⟩, ε'')) (X₂ σ')))
 
-theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNReal}
+/-- `glmPrimStep'` is monotone in its continuation, under the wand. -/
+theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
-    iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁)
-      ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
+    iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁) ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
   iintro ⟨HZ, HPrim⟩
   icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists R, ε₁, X₂, r
@@ -156,10 +166,10 @@ theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNRea
   iintro HZ₁
   iapply HZ $$ HZ₁
 
-theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {ε : ENNReal}
+/-- `glmErasable'` is monotone in its continuation, under the wand. -/
+theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
     {Φ Ψ : GlmState rT → IProp GF} :
-    iprop((∀ s, Φ s -∗ Ψ s) ∗ glmErasable' e₁ σ₁ ε Φ)
-      ⊢ glmErasable' e₁ σ₁ ε Ψ := by
+    iprop((∀ s, Φ s -∗ Ψ s) ∗ glmErasable' e₁ σ₁ ε Φ) ⊢ glmErasable' e₁ σ₁ ε Ψ := by
   iintro ⟨HΦΨ, HEras⟩
   icases HEras with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists μ, R, ε₁, X₂, r
@@ -177,10 +187,10 @@ abbrev glmCreditBump' (ρ : Cfg rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∀ ε', ⌜ε < ε'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (ρ, ε'')) ε')
 
-theorem glmCreditBump'_strong_mono {ρ : Cfg rT} {ε : ENNReal}
+/-- `glmCreditBump'` is monotone in its continuation, under the wand. -/
+theorem glmCreditBump'_strong_mono {ρ : Cfg rT}
     {Φ Ψ : GlmState rT → IProp GF} :
-    iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump' ρ ε Φ)
-      ⊢ glmCreditBump' ρ ε Ψ := by
+    iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump' ρ ε Φ) ⊢ glmCreditBump' ρ ε Ψ := by
   iintro ⟨HΦΨ, HBump⟩
   iintro %ε' %Hlt
   imod HBump $$ %ε' %Hlt with HS
@@ -227,19 +237,15 @@ instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
   mono_pred_ne.ne {_ s s'} hd := by
     obtain rfl := eq_of_dist_discrete_leibniz hd; exact .of_eq rfl
 
-theorem glm'_unfold {e : Exp rT} {σ : State rT} {ε : ENNReal}
-    {Z : Cfg rT → ENNReal → IProp GF} :
-    glm' e σ ε Z =
-      glmPre' Z
-        (fun s => glm' s.1.expr s.1.state s.2 Z)
-        ((⟨e, σ⟩, ε) : GlmState rT) :=
+/-- `glm'` unfolds once through `glmPre'`. -/
+theorem glm'_unfold :
+    glm' e σ ε Z = glmPre' Z (fun s => glm' s.1.expr s.1.state s.2 Z) ((⟨e, σ⟩, ε) : GlmState rT) :=
   least_fixpoint_unfold _
 
 /-- Strong induction principle: `glm'` implies any `Ψ` closed under `glmPre'`. -/
-theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT → IProp GF}
+theorem glm'_strong_ind {Ψ : GlmState rT → IProp GF}
     [NonExpansive Ψ] :
-    iprop(□ (∀ s, glmPre' Z
-              (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre' Z) s')) s -∗
+    iprop(□ (∀ s, glmPre' Z (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre' Z) s')) s -∗
               Ψ s)) ⊢
       (∀ s, bi_least_fixpoint (glmPre' Z) s -∗ Ψ s) := by
   iintro #HM
@@ -247,8 +253,9 @@ theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT 
 
 /-! ## Monotonicity -/
 
+/-- `glm'` is monotone in its continuation `Z`, under the wand. -/
 theorem glm'_strong_mono
-    {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
+    {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε Z₂ := by
   iintro ⟨HZ, HG⟩
@@ -279,8 +286,9 @@ theorem glm'_strong_mono
     · iexact HG
   iapply HΨ $$ HZ
 
+/-- `glm'` is monotone in the credit budget. -/
 theorem glm'_mono_grading
-    {e : Exp rT} {σ : State rT} {ε ε' : ENNReal} {Z : Cfg rT → ENNReal → IProp GF}
+    {ε ε' : ENNReal}
     (hε : ε ≤ ε') :
     glm' e σ ε Z ⊢ glm' e σ ε' Z := by
   iintro HG
@@ -303,7 +311,8 @@ theorem glm'_mono_grading
     iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
     iexact HCont
 
-theorem glm'_strong_mono_grading {e : Exp rT} {σ : State rT} {ε ε' : ENNReal}
+/-- `glm'` is monotone in the credit budget, under the wand. -/
+theorem glm'_strong_mono_grading {ε ε' : ENNReal}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} (hε : ε ≤ ε') :
     iprop((∀ ρ ε'', Z₁ ρ ε'' -∗ Z₂ ρ ε'') ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε' Z₂ := by
@@ -312,7 +321,8 @@ theorem glm'_strong_mono_grading {e : Exp rT} {σ : State rT} {ε ε' : ENNReal}
   iapply glm'_strong_mono
   iframe
 
-theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
+/-- `glm'` is monotone in its continuation `Z`. -/
+theorem glm'_mono_pred
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((□ (∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε')) ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε Z₂ := by
@@ -333,8 +343,7 @@ theorem glm'_mono_pred {e : Exp rT} {σ : State rT} {ε : ENNReal}
 
 /-- Bind rule: run `e` under `glm'` with the continuation `Z` composed with the context `K`. -/
 theorem glm'_bind
-    {K : Ectx rT} {e : Exp rT} {σ : State rT} {ε : ENNReal}
-    {Z : Cfg rT → ENNReal → IProp GF} :
+    {K : Ectx rT} :
     glm' e σ ε (fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε') ⊢
       glm' (K.fill e) σ ε Z := by
   iintro HG
@@ -344,8 +353,7 @@ theorem glm'_bind
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e', Kinv (K.fill e') = some e' :=
     Function.partialInv_left (Ectx.fill_injective K)
-  let Z' : Cfg rT → ENNReal → IProp GF :=
-    fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε'
+  let Z' : Cfg rT → ENNReal → IProp GF := fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε'
   let Φ : GlmState rT → IProp GF :=
     fun s => bi_least_fixpoint (glmPre' Z) ((⟨K.fill s.1.expr, s.1.state⟩, s.2) : GlmState rT)
   let : NonExpansive Φ := nonExpansive_of_discrete_leibniz Φ
@@ -377,15 +385,13 @@ theorem glm'_bind
           cases h : Kinv ρ'.expr with
           | none => simp [hX₂'def, h, Option.elim]
           | some e' => simp only [hX₂'def, h, Option.elim]; exact Hbnd ⟨e', ρ'.state⟩
-        have hexp' :
-            ε₁ + (∫⁻ a, X₂' a ∂ primStep ⟨K.fill ρ.expr, ρ.state⟩) ≤ ε' := by
+        have hexp' : ε₁ + (∫⁻ a, X₂' a ∂ primStep ⟨K.fill ρ.expr, ρ.state⟩) ≤ ε' := by
           rw [primStep_fill Hsv]
           refine le_trans ?_ Hexp
           gcongr ε₁ + ?_
           refine (MeasureTheory.lintegral_map_le _ (Ectx.fillCfg.measurable K).aemeasurable).trans
             (Eq.le ?_)
-          exact MeasureTheory.lintegral_congr_ae
-            (Filter.Eventually.of_forall fun a => hX₂'fill a)
+          exact MeasureTheory.lintegral_congr_ae (Filter.Eventually.of_forall fun a => hX₂'fill a)
         have hpgl' : Pgl ε₁ R' (primStep ⟨K.fill ρ.expr, ρ.state⟩) := by
           show primStep ⟨K.fill ρ.expr, ρ.state⟩ {x | ¬ R' x} ≤ ε₁
           have hcompl : MeasurableSet {x : Cfg rT | ¬ R' x} := hR'meas.compl
@@ -410,8 +416,8 @@ theorem glm'_bind
 
 /-! ## Introduction rules for `glm'` -/
 
-theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
-    {Z : Cfg rT → ENNReal → IProp GF} :
+/-- A `glm'` goal follows from a primitive-step obligation. -/
+theorem glm'_prim_step :
     glmPrimStep' e σ ε Z ⊢ glm' e σ ε Z := by
   iintro HPrim
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
@@ -419,8 +425,8 @@ theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
   ileft
   iexact HPrim
 
-theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
-    {Z : Cfg rT → ENNReal → IProp GF} :
+/-- A `glm'` goal follows from an erasable-step obligation. -/
+theorem glm'_erasable_step :
     glmErasable' e σ ε (fun s => glm' s.1.expr s.1.state s.2 Z) ⊢
       glm' e σ ε Z := by
   iintro HES
@@ -430,8 +436,7 @@ theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
   iexact HES
 
 /-- Thin-air credit rule: a client may always assume a strictly larger error budget. -/
-theorem glm'_credit_bump {e : Exp rT} {σ : State rT} {ε : ENNReal}
-    {Z : Cfg rT → ENNReal → IProp GF} :
+theorem glm'_credit_bump :
     glmCreditBump' ⟨e, σ⟩ ε (fun s => glm' s.1.expr s.1.state s.2 Z) ⊢
       glm' e σ ε Z := by
   iintro HBump

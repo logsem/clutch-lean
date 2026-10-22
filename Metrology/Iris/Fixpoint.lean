@@ -2,14 +2,14 @@ module
 
 public import Iris.BI.Lib.Fixpoint
 
-@[expose] public section
-
 /-!
 # Fixpoint and discrete-OFE lemmas
 
 Non-expansiveness of least fixpoints (for `wp` and `specCoupl`) and of functions out of discrete
-COFEs (the `[NonExpansive Ψ]` argument of fixpoint induction).
+OFEs (the `[NonExpansive Ψ]` argument of fixpoint induction).
 -/
+
+@[expose] public section
 
 open Iris Iris.BI OFE
 
@@ -22,12 +22,12 @@ theorem least_fixpoint_ne_outer {PROP : Type _} [BI PROP] {A : Type _} [OFE A]
     wand_ne.ne (intuitionistically_ne.ne (forall_ne fun _ => wand_ne.ne (HF _ _) .rfl))
       (NonExpansive.ne Hx)
 
-/-- Every function out of a discrete Leibniz COFE is non-expansive. -/
-theorem nonExpansive_of_discrete_leibniz {T : Type _} [COFE T] [OFE.Discrete T]
+/-- Every function out of a discrete OFE is non-expansive. -/
+theorem nonExpansive_of_discrete_leibniz {T : Type _} [OFE T] [OFE.Discrete T]
     {P : Type _} [OFE P] (f : T → P) : NonExpansive f :=
   ⟨fun _ _ _ hd => .of_eq (congrArg f (OFE.Discrete.discrete hd))⟩
 
-/-- In a discrete Leibniz COFE, `≡{n}≡` is equality. -/
-theorem eq_of_dist_discrete_leibniz {T : Type _} [COFE T] [OFE.Discrete T]
+/-- In a discrete OFE, `≡{n}≡` is equality. -/
+theorem eq_of_dist_discrete_leibniz {T : Type _} [OFE T] [OFE.Discrete T]
     {n : Nat} {x y : T} (hd : x ≡{n}≡ y) : x = y :=
   OFE.Discrete.discrete hd

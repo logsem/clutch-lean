@@ -116,15 +116,10 @@ def cc (c : B) : IProp GF := iOwn (E := ICC.cc) ICC.γcc (◯ (c : CappedCredit 
 notation "↯c " c:50 => cc c
 notation "●↯c " s:50 => ccAuth s
 
-end Resources
-
 /-! ## Credit rules -/
 
 namespace CappedCredit
 
-variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] {bad : Set B}
-  [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)] {GF : BundledGFunctors}
-  [ICC : CappedCreditGS B bad GF]
 local bi IProp GF
 
 /-! ### Splitting and combining -/
@@ -132,7 +127,7 @@ local bi IProp GF
 /-- Fragments add like the budgets they carry. -/
 theorem frag_add {a b : B} :
     (◯ (a + b : CappedCredit B bad) : Auth (CappedCredit B bad)) =
-      (◯ (a : CappedCredit B bad) : Auth (CappedCredit B bad)) • (◯ (b : CappedCredit B bad)) :=
+      (◯ (a : CappedCredit B bad) : Auth (CappedCredit B bad)) • ◯ (b : CappedCredit B bad) :=
   Auth.frag_op
 
 /-- A credit splits into two credits (Rocq `gccredit_split`). -/
@@ -212,7 +207,8 @@ theorem supply_decrease_of_valid (hcancel : ∀ c ∉ bad, IsAddLeftRegular c) {
 /-- Growing the budget by `c` hands out a credit `c`, as long as the new budget is not bad. -/
 theorem supply_increase {s c : B} (h : s + c ∉ bad) :
     ●↯c s ⊢ |==> (●↯c (s + c) ∗ ↯c c) := by
-  have hup : (● s : Auth (CappedCredit B bad)) ~~> (● (s + c) : Auth (CappedCredit B bad)) • ◯ c :=
+  have hup : (● s : Auth (CappedCredit B bad)) ~~>
+      (● (s + c) : Auth (CappedCredit B bad)) • ◯ c :=
     Auth.auth_update_alloc (alloc_local_update h)
   unfold cc ccAuth
   iintro Hs
@@ -232,6 +228,8 @@ instance timeless_cc (c : B) : BI.Timeless (↯c c : IProp GF) := iOwn_timeless
 instance timeless_ccAuth (s : B) : BI.Timeless (●↯c s : IProp GF) := iOwn_timeless
 
 end CappedCredit
+
+end Resources
 
 /-- Allocating a fresh valid budget `b` yields both the authority and a credit `b`
 (Rocq `gccredit_alloc`). -/

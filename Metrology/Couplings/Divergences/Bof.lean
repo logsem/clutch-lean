@@ -23,8 +23,10 @@ namespace ProbabilityTheory
 noncomputable def bofReal (γ t : ℝ) : ℝ :=
   if γ = 0 then t else (Real.exp (γ * t) - 1) / γ
 
+/-- At `γ = 0` the threshold is the identity. -/
 theorem bofReal_zero_left (t : ℝ) : bofReal 0 t = t := by simp [bofReal]
 
+/-- The threshold sends `0` to `0`. -/
 theorem bofReal_zero_right (γ : ℝ) : bofReal γ 0 = 0 := by simp [bofReal]
 
 /-- The regrading turns sums into Barthe–Olmedo sums `a + b + γ a b`. -/
@@ -37,6 +39,7 @@ theorem bofReal_add (γ s t : ℝ) :
     rw [mul_add, Real.exp_add]
     ring
 
+/-- The threshold is monotone. -/
 theorem bofReal_mono (γ : ℝ) : Monotone (bofReal γ) := fun s t hst ↦ by
   unfold bofReal
   split_ifs with h
@@ -46,6 +49,7 @@ theorem bofReal_mono (γ : ℝ) : Monotone (bofReal γ) := fun s t hst ↦ by
     linarith [Real.exp_le_exp.2 (mul_le_mul_of_nonpos_left hst h.le)]
   · gcongr
 
+/-- The threshold is nonnegative on nonnegative inputs. -/
 theorem bofReal_nonneg (γ : ℝ) {t : ℝ} (ht : 0 ≤ t) : 0 ≤ bofReal γ t :=
   bofReal_zero_right γ ▸ bofReal_mono γ ht
 
@@ -64,6 +68,7 @@ noncomputable def bofThresh (γ : ℝ) (r : ℝ≥0∞) : EReal :=
 @[simp]
 theorem bofThresh_top (γ : ℝ) : bofThresh γ ⊤ = ⊤ := by simp [bofThresh]
 
+/-- Away from `⊤`, the budget threshold is the real threshold. -/
 theorem bofThresh_of_ne_top (γ : ℝ) {r : ℝ≥0∞} (hr : r ≠ ⊤) :
     bofThresh γ r = ((bofReal γ r.toReal : ℝ) : EReal) := by
   simp [bofThresh, hr]
@@ -78,6 +83,7 @@ theorem bofThresh_zero_left (r : ℝ≥0∞) : bofThresh 0 r = r := by
   · simp
   · rw [bofThresh_of_ne_top 0 hr, bofReal_zero_left, EReal.coe_ennreal_toReal hr]
 
+/-- The budget threshold is monotone. -/
 theorem bofThresh_mono (γ : ℝ) : Monotone (bofThresh γ) := fun r r' h ↦ by
   rcases eq_or_ne r' ⊤ with rfl | hr'
   · simp
@@ -85,6 +91,7 @@ theorem bofThresh_mono (γ : ℝ) : Monotone (bofThresh γ) := fun r r' h ↦ by
   rw [bofThresh_of_ne_top γ hr, bofThresh_of_ne_top γ hr', EReal.coe_le_coe_iff]
   exact bofReal_mono γ (ENNReal.toReal_mono hr' h)
 
+/-- The budget threshold is nonnegative. -/
 theorem bofThresh_nonneg (γ : ℝ) (r : ℝ≥0∞) : 0 ≤ bofThresh γ r :=
   bofThresh_zero γ ▸ bofThresh_mono γ (zero_le (a := r))
 
@@ -102,10 +109,11 @@ noncomputable def bofDivergence (f : ℝ → ℝ) (γ : ℝ) : GradedDivergence.
 variable {f : ℝ → ℝ} {γ : ℝ} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
   {μ ν : Measure X} {r : ℝ≥0∞}
 
+/-- The Barthe–Olmedo divergence holds when the `f`-divergence is below the threshold. -/
 theorem bofDivergence_iff : bofDivergence f γ r μ ν ↔ fDiv f μ ν ≤ bofThresh γ r :=
   ⟨fun h ↦ h (), fun h _ ↦ h⟩
 
-/-- For convex `f`, `bofDivergence f γ` is a graded divergence (monotone in the budget). -/
+/-- For convex `f` continuous at `0`, `bofDivergence f γ` is a graded divergence. -/
 theorem isGraded_bofDivergence (hf : ConvexOn ℝ (Ici 0) f)
     (hf_cont : ContinuousWithinAt f (Ici 0) 0) : (bofDivergence.{u} f γ).IsGraded :=
   isGraded_fDivBound (fun _ _ ↦ hf) (fun _ _ ↦ hf_cont) (fun _ _ _ _ _ _ ↦ le_rfl)

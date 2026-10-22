@@ -4,7 +4,12 @@ public meta import Lean.Elab.Command
 public meta import Lean.Elab.Term
 public import Iris.BI.BI
 
-/-! # `local bi PROP`: a default separation-logic proposition type for a section -/
+/-!
+# `local bi PROP`
+
+A default separation-logic proposition type for a section; the entailment notations `⊢` and `⊣⊢`
+are global and fall back to a hole when no `local bi` is in scope.
+-/
 
 open Lean Elab Command Term
 
@@ -13,11 +18,8 @@ namespace Iris
 public section
 
 /-- The proposition type of the current section, as written in `local bi`. -/
-public meta initialize biExt : SimpleScopedEnvExtension Syntax (Option Syntax) ←
-  registerSimpleScopedEnvExtension {
-    addEntry _ s := some s
-    initial := none
-  }
+meta initialize biExt : SimpleScopedEnvExtension Syntax (Option Syntax) ←
+  registerSimpleScopedEnvExtension { addEntry _ s := some s, initial := none }
 
 /-- The proposition type set by `local bi`, or a hole when none is set. -/
 @[expose] elab "bi%" : term => do
@@ -28,8 +30,9 @@ public meta initialize biExt : SimpleScopedEnvExtension Syntax (Option Syntax) �
 /-- `local bi T` makes `T` the proposition type of the entailment notations in this section. -/
 syntax (name := biCmd) Lean.Parser.Term.attrKind &"bi " term : command
 
+/-- Elaborates `local bi T`, checking that `T` has a `BI` instance. -/
 @[command_elab biCmd]
-public meta def elabBiCmd : CommandElab := fun stx => do
+meta def elabBiCmd : CommandElab := fun stx => do
   let `(command| $k:attrKind bi $T:term) := stx | throwUnsupportedSyntax
   unless (← liftMacroM <| toAttributeKind k) == .local do
     throwError "`bi` must be `local`: it sets the proposition type of the current section"

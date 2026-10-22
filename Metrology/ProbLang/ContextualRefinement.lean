@@ -16,7 +16,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 
-open MeasureTheory
+open MeasureTheory Exp Finset
 
 /-! ## Single-frame context items -/
 
@@ -51,9 +51,9 @@ inductive CtxItem (rT : Type _) [LawfulProbLangℝ rT]
   | fold
   | unfold
   | tapp
-  -- `unpack x := e1 in e2` is `app (lam (close e2 x)) e1`;
-  -- `unpackL` holes `e1`, `unpackR` holes `e2`.
+  /-- `unpack x := □ in e2`, i.e. `app (lam (close e2 x)) □`. -/
   | unpackL (x : Var) (e2 : Exp rT)
+  /-- `unpack x := e1 in □`, i.e. `app (lam (close □ x)) e1`. -/
   | unpackR (x : Var) (e1 : Exp rT)
   | allocTape
   | randL (e2 : Exp rT)
@@ -63,8 +63,8 @@ namespace CtxItem
 
 /-- Plugs `e` into the hole of a single-frame context. -/
 def fill : CtxItem rT → Exp rT → Exp rT
-  | .lam x,          e => .lam (Exp.close e x)
-  | .fix f,          e => .fix (Exp.close e f)
+  | .lam x,          e => .lam (close e x)
+  | .fix f,          e => .fix (close e f)
   -- types are erased: `Λ` is a thunk `lam`, type application applies it to `()`; `fold` is the
   -- identity, `unfold` applies `recUnfold`
   | .tlam,           e => .lam e
@@ -90,10 +90,10 @@ def fill : CtxItem rT → Exp rT → Exp rT
   | .storeL e2,      e => .store e e2
   | .storeR e1,      e => .store e1 e
   | .fold,           e => e
-  | .unfold,         e => .app _root_.ProbLang.recUnfold e
+  | .unfold,         e => .app recUnfold e
   | .tapp,           e => .app e (.lit .unit)
-  | .unpackL x e2,   e => .app (.lam (Exp.close e2 x)) e
-  | .unpackR x e1,   e => .app (.lam (Exp.close e x)) e1
+  | .unpackL x e2,   e => .app (.lam (close e2 x)) e
+  | .unpackR x e1,   e => .app (.lam (close e x)) e1
   | .allocTape,      e => .tape e
   | .randL e2,       e => .rand e e2
   | .randR e1,       e => .rand e1 e
@@ -129,8 +129,7 @@ inductive TypedCtxItem : CtxItem rT → Tctx → Ty → Tctx → Ty → Prop
   | lam {Γ x τ τ'} :
       TypedCtxItem (.lam x) (Γ.insert x τ) τ' Γ (.arrow τ τ')
   | fix {Γ f τ τ'} :
-      TypedCtxItem (.fix f) (Γ.insert f (.arrow τ τ')) (.arrow τ τ')
-        Γ (.arrow τ τ')
+      TypedCtxItem (.fix f) (Γ.insert f (.arrow τ τ')) (.arrow τ τ') Γ (.arrow τ τ')
   | appL {Γ e2 τ τ'} :
       Typed Γ e2 τ →
       TypedCtxItem (.appL e2) Γ (.arrow τ τ') Γ τ'
@@ -224,8 +223,7 @@ inductive TypedCtxItem : CtxItem rT → Tctx → Ty → Tctx → Ty → Prop
       TypedCtxItem (.unpackL x e2) Γ (.exists' τ) Γ τ2
   | unpackR {x : Var} {e1 Γ τ τ2} :
       Typed Γ e1 (.exists' τ) →
-      TypedCtxItem (.unpackR x e1)
-        ((Γ.shift).insert x τ) τ2.shift Γ τ2
+      TypedCtxItem (.unpackR x e1) ((Γ.shift).insert x τ) τ2.shift Γ τ2
   | allocTape {Γ} :
       TypedCtxItem .allocTape Γ .int Γ .tape
   | randL_unit {Γ e2} :
@@ -256,11 +254,9 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
     Typed Γ' (k.fill e) τ' := by
   induction hk with
   | @lam _ x =>
-      exact Typed.lam (insert x e.fv)
-        (Typed.rename_lam he)
+      exact Typed.lam (insert x e.fv) (Typed.rename_lam he)
   | @fix _ f =>
-      exact Typed.fix (insert f e.fv)
-        (Typed.rename_fix he)
+      exact Typed.fix (insert f e.fv) (Typed.rename_fix he)
   | appL h2     => exact .app he h2
   | appR h1     => exact .app h1 he
   | unop_int hop       => exact .unop_int he hop
@@ -291,14 +287,13 @@ theorem TypedCtxItem.fill_typed {k : CtxItem rT} {Γ τ Γ' τ'} {e : Exp rT}
   | storeL h2   => exact .store he h2
   | storeR h1   => exact .store h1 he
   | fold        => exact .tfold he
-  | unfold      => exact (.tunfold he : Typed _ (.app _root_.ProbLang.recUnfold _) _)
+  | unfold      => exact (.tunfold he : Typed _ (.app recUnfold _) _)
   | tlam        => exact .tlam he
   | tapp        => exact .tapp he
   | @unpackL x e2 _ _ _ _ h2 =>
       exact Typed.tunpack (insert x e2.fv) he (Typed.rename_unpack h2)
   | @unpackR x _ _ _ _ h1 =>
-      exact Typed.tunpack (insert x e.fv) h1
-        (Typed.rename_unpack he)
+      exact Typed.tunpack (insert x e.fv) h1 (Typed.rename_unpack he)
   | allocTape   => exact .alloc_tape he
   | randL_unit h2 => exact .rand_unit he h2
   | randL_tape h2 => exact .rand he h2
@@ -342,16 +337,20 @@ scoped notation Γ " ⊨ " e " ≤ctx≤ " e' " : " τ => CtxRefines Γ e e' τ
 
 namespace CtxRefines
 
-theorem refl {Γ τ} (e : Exp rT) : CtxRefines Γ e e τ :=
+variable {Γ : Tctx} {τ : Ty}
+
+/-- Contextual refinement is reflexive. -/
+theorem refl (e : Exp rT) : CtxRefines Γ e e τ :=
   fun _ _ _ _ => le_rfl
 
-theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
+/-- Contextual refinement is transitive. -/
+theorem trans {e1 e2 e3 : Exp rT}
     (h12 : CtxRefines Γ e1 e2 τ) (h23 : CtxRefines Γ e2 e3 τ) :
     CtxRefines Γ e1 e3 τ :=
   fun K σ₀ b hK => (h12 K σ₀ b hK).trans (h23 K σ₀ b hK)
 
 /-- Contextual refinement is a congruence (Clutch `ctx_refines_congruence`). -/
-theorem congr {Γ Γ' τ τ'} {e1 e2 : Exp rT} {K : Ctx rT}
+theorem congr {Γ' τ'} {e1 e2 : Exp rT} {K : Ctx rT}
     (hK : TypedCtx K Γ τ Γ' τ')
     (href : CtxRefines Γ e1 e2 τ) :
     CtxRefines Γ' (K.fill e1) (K.fill e2) τ' := by
@@ -373,13 +372,18 @@ scoped notation Γ " ⊨ " e " =ctx= " e' " : " τ => CtxEquiv Γ e e' τ
 
 namespace CtxEquiv
 
-theorem refl {Γ τ} (e : Exp rT) : CtxEquiv Γ e e τ :=
+variable {Γ : Tctx} {τ : Ty}
+
+/-- Contextual equivalence is reflexive. -/
+theorem refl (e : Exp rT) : CtxEquiv Γ e e τ :=
   ⟨.refl e, .refl e⟩
 
-theorem symm {Γ τ} {e1 e2 : Exp rT} (h : CtxEquiv Γ e1 e2 τ) : CtxEquiv Γ e2 e1 τ :=
+/-- Contextual equivalence is symmetric. -/
+theorem symm {e1 e2 : Exp rT} (h : CtxEquiv Γ e1 e2 τ) : CtxEquiv Γ e2 e1 τ :=
   ⟨h.2, h.1⟩
 
-theorem trans {Γ τ} {e1 e2 e3 : Exp rT}
+/-- Contextual equivalence is transitive. -/
+theorem trans {e1 e2 e3 : Exp rT}
     (h12 : CtxEquiv Γ e1 e2 τ) (h23 : CtxEquiv Γ e2 e3 τ) :
     CtxEquiv Γ e1 e3 τ :=
   ⟨h12.1.trans h23.1, h23.2.trans h12.2⟩
@@ -422,47 +426,47 @@ def CtxItem.payloadFv : CtxItem rT → Finset Var
   | _ => ∅
 
 /-- Closing a term at an atom introduces no new free variables. -/
-theorem Exp.closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
-    (hy : y ∈ (Exp.closeRec k x e).fv) : y ∈ e.fv := by
+theorem closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
+    (hy : y ∈ (closeRec k x e).fv) : y ∈ e.fv := by
   induction e generalizing k with
-  | bvar _ => simp [Exp.closeRec, Exp.fv] at hy
+  | bvar _ => simp [closeRec, fv] at hy
   | fvar z =>
-      simp [Exp.closeRec] at hy
+      simp [closeRec] at hy
       by_cases hxz : x = z
-      · rw [ite_eq_left hxz] at hy; simp [Exp.fv] at hy
+      · rw [ite_eq_left hxz] at hy; simp [fv] at hy
       · rw [ite_eq_right hxz] at hy; exact hy
-  | lit _ | fail | urand => simp [Exp.closeRec, Exp.fv] at hy
+  | lit _ | fail | urand => simp [closeRec, fv] at hy
   | lam e ih | fix e ih =>
-      simp only [Exp.closeRec, Exp.fv] at hy ⊢
+      simp only [closeRec, fv] at hy ⊢
       exact ih (k+1) hy
   | unop _ e ih | fst e ih | snd e ih
   | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
-      simp only [Exp.closeRec, Exp.fv] at hy ⊢
+      simp only [closeRec, fv] at hy ⊢
       exact ih k hy
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
   | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
-      simp only [Exp.closeRec, Exp.fv, Finset.mem_union] at hy ⊢
+      simp only [closeRec, fv, mem_union] at hy ⊢
       exact hy.imp (ih1 k) (ih2 k)
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
-      simp only [Exp.closeRec, Exp.fv, Finset.mem_union] at hy ⊢
+      simp only [closeRec, fv, mem_union] at hy ⊢
       exact hy.imp (Or.imp (ih0 k) (ih1 k)) (ih2 k)
 
 /-- Closing a term introduces no new free variables. -/
-theorem Exp.close_fv_subset (e : Exp α) (x : Var) : (Exp.close e x).fv ⊆ e.fv :=
-  fun y hy => Exp.closeRec_fv_subset e x 0 y hy
+theorem close_fv_subset (e : Exp α) (x : Var) : (close e x).fv ⊆ e.fv :=
+  fun y hy => closeRec_fv_subset e x 0 y hy
 
 /-- Filling a frame adds at most the free variables stored in the frame. -/
 theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
     (k.fill body).fv ⊆ k.payloadFv ∪ body.fv := by
   intro y hy
   cases k <;>
-    simp only [CtxItem.fill, CtxItem.payloadFv, Exp.fv,
-      Finset.mem_union, Finset.empty_union, ProbLang.recUnfold] at hy ⊢
+    simp only [CtxItem.fill, CtxItem.payloadFv, fv,
+      mem_union, empty_union, ProbLang.recUnfold] at hy ⊢
   all_goals first
     | tauto
-    | (rename_i x; exact Exp.close_fv_subset _ x hy)
-    | (rename_i x _; exact hy.imp_left fun h => Exp.close_fv_subset _ x h)
-    | (rename_i x _; exact hy.symm.imp_right fun h => Exp.close_fv_subset _ x h)
+    | (rename_i x; exact close_fv_subset _ x hy)
+    | (rename_i x _; exact hy.imp_left fun h => close_fv_subset _ x h)
+    | (rename_i x _; exact hy.symm.imp_right fun h => close_fv_subset _ x h)
 
 /-- The atoms bound by the frames of a context. -/
 def Ctx.binderAtoms (K : Ctx rT) : Finset Var :=
@@ -476,11 +480,11 @@ def Ctx.payloadFv (K : Ctx rT) : Finset Var :=
 theorem Ctx.fv_fill_subset (K : Ctx rT) (e : Exp rT) :
     (K.fill e).fv ⊆ Ctx.payloadFv K ∪ e.fv := by
   induction K with
-  | nil => exact Finset.subset_union_right
+  | nil => exact subset_union_right
   | cons k K ih =>
       rw [Ctx.fill_cons]
       refine (CtxItem.fv_fill_subset k (Ctx.fill K e)).trans ?_
-      simp only [Ctx.payloadFv, List.foldr_cons, Finset.union_assoc]
-      exact Finset.union_subset_union subset_rfl ih
+      simp only [Ctx.payloadFv, List.foldr_cons, union_assoc]
+      exact union_subset_union subset_rfl ih
 
 end ProbLang

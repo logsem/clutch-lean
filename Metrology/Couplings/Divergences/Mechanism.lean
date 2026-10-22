@@ -74,27 +74,38 @@ theorem tCDP_iff :
 
 /-! ## Laws of privacy -/
 
+/-- DP composes along chains of adjacent inputs (group privacy). -/
+theorem DP.trans {adj' : Adjacency X} {ε₁ ε₂ δ₁ δ₂ : ℝ≥0∞} (h₁ : m.DP adj ε₁ δ₁)
+    (h₂ : m.DP adj' ε₂ δ₂) :
+    m.DP (Relation.Comp adj adj') (ε₁ + ε₂) (expBudget ε₁ * δ₂ + δ₁) :=
+  fun _ _ ⟨_, hx, hx'⟩ ↦ dp_trans (h₁ hx) (h₂ hx')
+
+section SubMarkov
+
+variable [IsSubMarkovKernel m]
+
 /-- Privacy at a budget gives privacy at every larger budget. -/
-theorem IsPrivate.mono [LE B] [Top B] [D.IsGraded] [IsSubMarkovKernel m]
+theorem IsPrivate.mono [LE B] [Top B] [D.IsGraded]
     (h : m.IsPrivate D adj b) {b' : B} (hb : b ≤ b') : m.IsPrivate D adj b' :=
   fun _ _ hx ↦ IsGraded.mono hb (h hx)
 
+section Compose
+
+variable [AddZeroClass B] [D.IsReflexive] [D.IsComposable]
+
 /-- Post-processing by a kernel keeps privacy. -/
-theorem IsPrivate.comp [AddZeroClass B] [D.IsReflexive] [D.IsComposable] [IsSubMarkovKernel m]
-    (h : m.IsPrivate D adj b) (k : Kernel Y Z) [IsSubMarkovKernel k] :
+theorem IsPrivate.comp (h : m.IsPrivate D adj b) (k : Kernel Y Z) [IsSubMarkovKernel k] :
     (k ∘ₖ m).IsPrivate D adj b :=
   fun _ _ hx ↦ by simpa only [Kernel.comp_apply] using IsComposable.comp_self k (h hx)
 
 /-- Post-processing by a measurable map keeps privacy. -/
-theorem IsPrivate.map [AddZeroClass B] [D.IsReflexive] [D.IsComposable] [IsSubMarkovKernel m]
-    (h : m.IsPrivate D adj b) {f : Y → Z} (hf : Measurable f := by fun_prop) :
+theorem IsPrivate.map (h : m.IsPrivate D adj b) {f : Y → Z} (hf : Measurable f := by fun_prop) :
     (m.map f).IsPrivate D adj b :=
   fun _ _ hx ↦ by simpa only [Kernel.map_apply _ hf] using IsComposable.map (h hx) hf
 
 /-- Adaptive composition adds budgets: a second mechanism that sees the first output is private
 for each fixed first output. -/
-theorem IsPrivate.compProd [AddZeroClass B] [D.IsReflexive] [D.IsComposable]
-    [IsSubMarkovKernel m] (h : m.IsPrivate D adj b) {k : Kernel (X × Y) Z} [IsSubMarkovKernel k]
+theorem IsPrivate.compProd (h : m.IsPrivate D adj b) {k : Kernel (X × Y) Z} [IsSubMarkovKernel k]
     (hk : ∀ y, (k.sectL y).IsPrivate D adj c) : (m ⊗ₖ k).IsPrivate D adj (b + c) := by
   intro x x' hx
   -- `m ⊗ₖ k = (id × k) ∘ m`: compose, keeping `y` via `map (Prod.mk y)`
@@ -102,53 +113,49 @@ theorem IsPrivate.compProd [AddZeroClass B] [D.IsReflexive] [D.IsComposable]
     compProd_eq_comp_prod, compProd_eq_comp_prod]
   refine IsComposable.comp (h hx) fun y ↦ ?_
   simpa [Kernel.prod_apply, Kernel.id_apply, dirac_prod] using
-    IsComposable.map (f := Prod.mk y) (hk y hx)
+    IsComposable.map (hk y hx)
 
-/-- DP composes along chains of adjacent inputs (group privacy). -/
-theorem DP.trans {adj' : Adjacency X} {ε₁ ε₂ δ₁ δ₂ : ℝ≥0∞} (h₁ : m.DP adj ε₁ δ₁)
-    (h₂ : m.DP adj' ε₂ δ₂) :
-    m.DP (Relation.Comp adj adj') (ε₁ + ε₂) (expBudget ε₁ * δ₂ + δ₁) :=
-  fun _ _ ⟨_, hx, hx'⟩ ↦ dp_trans (h₁ hx) (h₂ hx')
+end Compose
 
 /-! ## Privacy as a lifting of equality -/
 
 /-- A mechanism is private exactly when a sound and complete lifting relates adjacent outputs
 along equality. -/
 theorem isPrivate_iff_rel [Zero B] [Top B] (L : GradedLifting.{u} B) [L.IsSound D]
-    [L.IsComplete D] [IsSubMarkovKernel m] :
+    [L.IsComplete D] :
     m.IsPrivate D adj b ↔ ∀ ⦃x x'⦄, adj x x' → L.Rel b (· = ·) (m x) (m x') :=
   ⟨fun h _ _ hx ↦ IsComplete.complete (h hx), fun h _ _ hx ↦ IsSound.sound (h hx)⟩
 
 /-- A mechanism is private exactly when it relates adjacent outputs in the codensity lifting of
 equality (Thm. 5.2). -/
 theorem isPrivate_iff_codensity_rel [AddZeroClass B] [Preorder B] [CanonicallyOrderedAdd B]
-    [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] [IsSubMarkovKernel m] :
+    [OrderTop B] [D.IsGraded] [D.IsReflexive] [D.IsComposable] :
     m.IsPrivate D adj b ↔ ∀ ⦃x x'⦄, adj x x' → (codensity D).Rel b (· = ·) (m x) (m x') :=
   isPrivate_iff_rel (codensity D)
 
 /-- A mechanism is zCDP exactly when the zCDP lifting relates adjacent outputs along equality. -/
-theorem zCDP_iff_zcdpLifting_rel [IsSubMarkovKernel m] :
+theorem zCDP_iff_zcdpLifting_rel :
     m.zCDP adj ξ ρ ↔ ∀ ⦃x x'⦄, adj x x' → zcdpLifting.Rel (ξ, ρ) (· = ·) (m x) (m x') :=
   isPrivate_iff_rel _
 
 /-- A mechanism is tCDP exactly when the tCDP lifting relates adjacent outputs along equality. -/
-theorem tCDP_iff_tcdpLifting_rel [IsSubMarkovKernel m] :
+theorem tCDP_iff_tcdpLifting_rel :
     m.tCDP adj ω ρ ↔ ∀ ⦃x x'⦄, adj x x' → (tcdpLifting ω).Rel ρ (· = ·) (m x) (m x') :=
   isPrivate_iff_rel _
 
 /-! ## Conversions (Fig. 4) -/
 
-variable {δ : ℝ}
-
 /-- Pure differential privacy gives zero-concentrated differential privacy ([D/z]). -/
-theorem zCDP_of_DP [IsSubMarkovKernel m] (h : m.DP adj ε 0) : m.zCDP adj ε 0 :=
+theorem zCDP_of_DP (h : m.DP adj ε 0) : m.zCDP adj ε 0 :=
   fun _ _ hx ↦ zcdp_of_dp (h hx)
 
 /-- A mechanism private for a Rényi curve below the zCDP line of `(ξ, ρ)` is `(ξ, ρ)`-zCDP. -/
-theorem zCDP_of_renyiCurve_le [IsSubMarkovKernel m] {c : RenyiBudget}
+theorem zCDP_of_renyiCurve_le {c : RenyiBudget}
     (h : m.IsPrivate renyiCurve adj c)
     (hc : ∀ α : Set.Ioi (1 : ℝ), c α ≤ ξ + ENNReal.ofReal α * ρ) : m.zCDP adj ξ ρ :=
   fun _ _ hx ↦ concentratedDivergence_of_renyiCurve_le (h hx) fun α _ ↦ hc α
+
+end SubMarkov
 
 /-- zCDP gives Rényi differential privacy at every order (Def. 2.4). -/
 theorem RDP_of_zCDP (hα : 1 < α) (h : m.zCDP adj ξ ρ) :
@@ -159,6 +166,8 @@ theorem RDP_of_zCDP (hα : 1 < α) (h : m.zCDP adj ξ ρ) :
 theorem RDP_of_tCDP (hα : 1 < α) (hω : α < ω) (h : m.tCDP adj ω ρ) :
     m.RDP adj α (ENNReal.ofReal α * ρ) :=
   fun _ _ hx ↦ renyi_of_tcdp hα hω (h hx)
+
+variable {δ : ℝ}
 
 /-- Rényi differential privacy gives differential privacy at every slack `δ > 0` ([R/D]). -/
 theorem DP_of_RDP [IsFiniteKernel m] (hα : 1 < α) (hδ : 0 < δ) (h : m.RDP adj α ρ) :

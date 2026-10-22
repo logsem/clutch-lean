@@ -32,22 +32,29 @@ noncomputable def hellTerm (α p q : ℝ) : ℝ :=
 /-- The generator vanishes at `1`, which gives reflexivity. -/
 theorem hellFun_one (α : ℝ) : hellFun α 1 = 0 := by simp [hellFun]
 
+section Both1
+
+variable (hα0 : 0 < α) (hα1 : α < 1)
+include hα0 hα1
+
 /-- Weighted AM–GM for two terms. -/
-theorem rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
+theorem rpow_mul_rpow_le {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     p ^ α * q ^ (1 - α) ≤ α * p + (1 - α) * q :=
   Real.geom_mean_le_arith_mean2_weighted hα0.le (by linarith) hp hq (by ring)
 
-theorem hellFun_nonneg (hα0 : 0 < α) (hα1 : α < 1) {t : ℝ} (ht : 0 ≤ t) : 0 ≤ hellFun α t := by
+/-- The generator is nonnegative on `[0, ∞)`. -/
+theorem hellFun_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ hellFun α t := by
   have := rpow_mul_rpow_le hα0 hα1 ht zero_le_one
   simp only [Real.one_rpow, mul_one] at this
   exact div_nonneg (by linarith) (by linarith)
 
-theorem hellTerm_nonneg (hα0 : 0 < α) (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
+/-- The pointwise Hellinger term is nonnegative. -/
+theorem hellTerm_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     0 ≤ hellTerm α p q :=
   div_nonneg (by linarith [rpow_mul_rpow_le hα0 hα1 hp hq]) (by linarith)
 
 /-- The generator is convex on `[0, ∞)`, so `fDiv (hellFun α)` is an `f`-divergence. -/
-theorem convexOn_hellFun (hα0 : 0 < α) (hα1 : α < 1) : ConvexOn ℝ (Ici 0) (hellFun α) := by
+theorem convexOn_hellFun : ConvexOn ℝ (Ici 0) (hellFun α) := by
   have h : ConvexOn ℝ (Ici 0) ((fun t ↦ α * t + (1 - α)) - fun t : ℝ ↦ t ^ α) :=
     ConvexOn.sub ((convexOn_id (convex_Ici 0)).smul hα0.le |>.add_const _)
       (Real.concaveOn_rpow hα0.le hα1.le)
@@ -55,11 +62,15 @@ theorem convexOn_hellFun (hα0 : 0 < α) (hα1 : α < 1) : ConvexOn ℝ (Ici 0) 
   refine this.congr fun t _ ↦ ?_
   simp [hellFun, div_eq_inv_mul]
 
+end Both1
+
+/-- The generator is continuous for `0 ≤ α`. -/
 theorem continuous_hellFun (hα0 : 0 ≤ α) : Continuous (hellFun α) := by
   unfold hellFun
   exact (((continuous_const.mul continuous_id).add continuous_const).sub
     (Real.continuous_rpow_const hα0)).div_const _
 
+/-- The generator has slope `α / (1 - α)` at `∞`. -/
 theorem derivAtTop_hellFun (hα1 : α < 1) :
     derivAtTop (hellFun α) = ((α / (1 - α) : ℝ) : EReal) := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe.2 ?_)
@@ -74,6 +85,7 @@ theorem derivAtTop_hellFun (hα1 : α < 1) :
   rw [hellFun, Real.rpow_sub ht, Real.rpow_one]
   field_simp
 
+/-- The perspective of the generator is the pointwise Hellinger term. -/
 theorem persp_hellFun (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     persp (hellFun α) p q = hellTerm α p q := by
   have hs : 0 < 1 - α := sub_pos.2 hα1
@@ -99,8 +111,13 @@ theorem hellTerm_mul (hα1 : α < 1) {p q k l : ℝ} (hp : 0 ≤ p) (hk : 0 ≤ 
   field_simp
   ring
 
+section Both2
+
+variable (hα0 : 0 < α) (hα1 : α < 1)
+include hα0 hα1
+
 /-- The Hellinger term of sums is at most the sum of the terms (joint convexity). -/
-theorem hellTerm_sum_le (hα0 : 0 < α) (hα1 : α < 1) {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
+theorem hellTerm_sum_le {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
     (ha : ∀ i ∈ s, 0 ≤ a i) (hb : ∀ i ∈ s, 0 ≤ b i) :
     hellTerm α (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, hellTerm α (a i) (b i) := by
   have h := persp_sum_le (convexOn_hellFun hα0 hα1) s ha hb
@@ -111,7 +128,7 @@ theorem hellTerm_sum_le (hα0 : 0 < α) (hα1 : α < 1) {ι : Type*} (s : Finset
 /-! ## Finite spaces: Hellinger divergence as a sum of terms -/
 
 /-- On a finite space the `α`-Hellinger divergence is a real sum of terms. -/
-theorem fDiv_hellFun_eq_sum (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype I]
+theorem fDiv_hellFun_eq_sum {I : Type*} [Fintype I]
     [MeasurableSpace I] [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsFiniteMeasure ρ₁]
     [IsFiniteMeasure ρ₂] :
     fDiv (hellFun α) ρ₁ ρ₂ = ((∑ i, hellTerm α (ρ₁ {i}).toReal (ρ₂ {i}).toReal : ℝ) : EReal) := by
@@ -122,7 +139,7 @@ theorem fDiv_hellFun_eq_sum (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype
 
 /-- The Bhattacharyya mass of two sub-probability measures on a finite space is at most one minus
 `1 - α` times their Hellinger divergence. -/
-theorem sum_rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype I] [MeasurableSpace I]
+theorem sum_rpow_mul_rpow_le {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsSubProbabilityMeasure ρ₁]
     [IsSubProbabilityMeasure ρ₂] :
     ∑ i, (ρ₁ {i}).toReal ^ α * (ρ₂ {i}).toReal ^ (1 - α) ≤
@@ -141,7 +158,7 @@ theorem sum_rpow_mul_rpow_le (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintyp
 
 /-- On a finite space the `α`-Hellinger divergence of sub-probability measures is at most
 `1 / (1 - α)`. -/
-theorem sum_hellTerm_le_inv (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype I] [MeasurableSpace I]
+theorem sum_hellTerm_le_inv {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] (ρ₁ ρ₂ : Measure I) [IsSubProbabilityMeasure ρ₁]
     [IsSubProbabilityMeasure ρ₂] :
     ∑ i, hellTerm α (ρ₁ {i}).toReal (ρ₂ {i}).toReal ≤ (1 - α)⁻¹ := by
@@ -150,6 +167,8 @@ theorem sum_hellTerm_le_inv (hα0 : 0 < α) (hα1 : α < 1) {I : Type*} [Fintype
     Finset.sum_nonneg fun _ _ ↦ by positivity
   rw [← one_div, le_div_iff₀ (sub_pos.2 hα1)]
   linarith
+
+end Both2
 
 /-! ## The Barthe–Olmedo chain -/
 
@@ -163,6 +182,7 @@ noncomputable def hellClamp (α : ℝ) (a : EReal) : ℝ :=
 noncomputable def hellChain (α : ℝ) (a d : EReal) : EReal :=
   ((hellClamp α a + hellClamp α d - (1 - α) * hellClamp α a * hellClamp α d : ℝ) : EReal)
 
+/-- Clamping leaves values in `[0, 1 / (1 - α)]` unchanged. -/
 theorem hellClamp_coe {x : ℝ} (h0 : 0 ≤ x) (h1 : x ≤ (1 - α)⁻¹) : hellClamp α x = x := by
   simp [hellClamp, max_eq_left (EReal.coe_nonneg.2 h0), min_eq_left (EReal.coe_le_coe_iff.2 h1)]
 
@@ -171,20 +191,24 @@ section Clamp
 variable (hα1 : α < 1)
 include hα1
 
+/-- The clamp lands in `[0, 1 / (1 - α)]`. -/
 theorem hellClamp_bounds (a : EReal) :
     0 ≤ min (max a 0) (((1 - α)⁻¹ : ℝ) : EReal) ∧
       min (max a 0) (((1 - α)⁻¹ : ℝ) : EReal) ≤ (((1 - α)⁻¹ : ℝ) : EReal) :=
   ⟨le_min (le_max_right _ _) (EReal.coe_nonneg.2 (inv_nonneg.2 (sub_pos.2 hα1).le)),
     min_le_right _ _⟩
 
+/-- The clamp is monotone. -/
 theorem hellClamp_mono : Monotone (hellClamp α) := fun a b h ↦
   EReal.toReal_le_toReal (min_le_min_right _ (max_le_max_right 0 h))
     (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hellClamp_bounds hα1 a).1)
     (ne_top_of_le_ne_top (EReal.coe_ne_top _) (hellClamp_bounds hα1 b).2)
 
+/-- The clamp is nonnegative. -/
 theorem hellClamp_nonneg (a : EReal) : 0 ≤ hellClamp α a :=
   EReal.toReal_nonneg (hellClamp_bounds hα1 a).1
 
+/-- The clamp times `1 - α` is at most `1`. -/
 theorem mul_hellClamp_le_one (a : EReal) : (1 - α) * hellClamp α a ≤ 1 := by
   have h : hellClamp α a ≤ (1 - α)⁻¹ := (EReal.toReal_le_toReal (hellClamp_bounds hα1 a).2
     (ne_bot_of_le_ne_bot EReal.zero_ne_bot (hellClamp_bounds hα1 a).1)
@@ -207,9 +231,14 @@ end Clamp
 
 /-! ## Chain rule on finite spaces -/
 
+section Both3
+
+variable (hα0 : 0 < α) (hα1 : α < 1)
+include hα0 hα1
+
 /-- Barthe–Olmedo chain rule for `α`-Hellinger between finite spaces when the two kernels lose the
-same mass at every point (Rocq `FdivChain` needs mass `1`). -/
-theorem fDiv_hellFun_comp_le_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {M N : ℕ} [NeZero M]
+same mass at every point (Rocq `FdivChain`). -/
+theorem fDiv_hellFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M]
     (μ₁ μ₂ : Measure (ULift.{u} (Fin M))) [IsSubProbabilityMeasure μ₁]
     [IsSubProbabilityMeasure μ₂] (κ η : Kernel (ULift.{u} (Fin M)) (ULift.{u} (Fin N)))
     [IsSubMarkovKernel κ] [IsSubMarkovKernel η] (hmass : ∀ j, κ j univ = η j univ) :
@@ -269,12 +298,14 @@ theorem fDiv_hellFun_comp_le_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {M N : �
     _ ≤ _ := by nlinarith [mul_le_mul_of_nonneg_right hw hC0]
 
 /-- Between scaled point masses the `α`-Hellinger divergence is the Hellinger term. -/
-theorem fDiv_hellFun_smul_dirac (hα0 : 0 < α) (hα1 : α < 1) {a b : ℝ≥0∞} (ha : a ≠ ⊤)
+theorem fDiv_hellFun_smul_dirac {a b : ℝ≥0∞} (ha : a ≠ ⊤)
     (hb : b ≠ ⊤) :
     fDiv (hellFun α) (a • dirac PUnit.unit.{u + 1}) (b • dirac PUnit.unit) =
       hellTerm α a.toReal b.toReal := by
   rw [fDiv_smul_dirac (convexOn_hellFun hα0 hα1) (continuous_hellFun hα0.le).continuousWithinAt
     ha hb, persp_hellFun hα1 ENNReal.toReal_nonneg ENNReal.toReal_nonneg]
+
+end Both3
 
 end ProbabilityTheory
 
@@ -286,10 +317,11 @@ variable {α : ℝ} {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {μ �
   {r : ℝ≥0∞}
 
 /-- The `α`-Hellinger divergence on sub-probability measures: the Barthe–Olmedo divergence with
-`γ = α - 1` (Rényi of order `α < 1` after regrading). -/
+`γ = α - 1`. -/
 noncomputable def hellingerDivergence (α : ℝ) : GradedDivergence.{u} ℝ≥0∞ :=
   bofDivergence (hellFun α) (α - 1)
 
+/-- The budget bounds the Hellinger generator's `f`-divergence through `bofThresh`. -/
 theorem hellingerDivergence_iff :
     hellingerDivergence α r μ ν ↔ fDiv (hellFun α) μ ν ≤ bofThresh (α - 1) r :=
   bofDivergence_iff
@@ -318,8 +350,8 @@ theorem hellingerDivergence_comp_self (hα0 : 0 < α) (hα1 : α < 1) [IsFiniteM
   bofDivergence_comp_self (convexOn_hellFun hα0 hα1) (continuous_hellFun hα0.le).continuousWithinAt
     (fun _ ↦ hellFun_nonneg hα0 hα1) κ h
 
-/-- Barthe–Olmedo composition for kernels that lose the same mass at every point, with no filling
-(Rocq `FdivChain` needs mass `1`). -/
+/-- Barthe–Olmedo composition for kernels that lose the same mass at every point (Rocq
+`FdivChain`). -/
 theorem hellingerDivergence_comp_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {b c : ℝ≥0∞}
     {μ₁ μ₂ : Measure X} [IsSubProbabilityMeasure μ₁] [IsSubProbabilityMeasure μ₂]
     {κ η : Kernel X Y} [IsSubMarkovKernel κ] [IsSubMarkovKernel η]
@@ -359,10 +391,7 @@ theorem hellingerDivergence_comp_of_mass_eq (hα0 : 0 < α) (hα1 : α < 1) {b c
 
 /-! ## Failure of composition with mass loss -/
 
-/-- `α`-Hellinger does not compose once kernels may lose mass: point masses `δ`, `¼ δ` and
-kernels `δ`, `¼ δ` give squared-Hellinger values `1/4` and `9/16 > 15/32` at `α = 1/2`: each budget
-has threshold `1/4`, so the composed threshold is `θ(b+b) = 1/4 + 1/4 - ½·¼·¼ = 15/32`
-(`bofReal_add`, `γ = -1/2`). -/
+/-- `α`-Hellinger at `α = 1/2` does not compose once kernels may lose mass. -/
 theorem not_isComposable_hellinger_half : ¬ (hellingerDivergence.{u} (1 / 2)).IsComposable := by
   intro h
   have hα0 : (0 : ℝ) < 1 / 2 := by norm_num
