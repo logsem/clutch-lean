@@ -207,8 +207,8 @@ theorem Set.image_univ_some {α : Type _} :
   rw [Set.image_univ, ← Set.compl_range_some, compl_compl]
 
 theorem Set.image_compl_some {α : Type _} (G : Set α) :
-    (some : α → Option α) '' Gᶜ
-      = ({none} : Set (Option α))ᶜ \ (some '' G) := by
+    (some : α → Option α) '' Gᶜ =
+      ({none} : Set (Option α))ᶜ \ (some '' G) := by
   rw [← Set.image_univ_some, Set.compl_eq_univ_sdiff, Set.image_sdiff (Option.some_injective α)]
 
 @[measurability]
@@ -221,8 +221,8 @@ theorem MeasurableSet.singleton_none {α : Type _} [MeasurableSpace α] :
 theorem Option.measurable_getD {α : Type _} [MeasurableSpace α] (d : α) :
     Measurable (fun x : Option α => x.getD d) := by
   intro S hS
-  have heq : (fun x : Option α => x.getD d) ⁻¹' S
-       = (some '' S) ∪ (if d ∈ S then ({none} : Set (Option α)) else ∅) := by
+  have heq : (fun x : Option α => x.getD d) ⁻¹' S =
+       (some '' S) ∪ (if d ∈ S then ({none} : Set (Option α)) else ∅) := by
     ext x; cases x <;> simp [Option.getD]
   rw [heq]
   refine MeasurableSet.union (MeasurableSet.image_some hS) ?_
@@ -247,12 +247,13 @@ theorem Measurable.option_of_cyl_preimages
     Measurable f := by
   refine measurable_comap_iff.mpr fun T hT => ?_
   have hsome_mset := h (some (Sum.inl ⁻¹' T)) (.some (measurable_inl hT))
-  suffices h_union : (Equiv.optionEquivSumPUnit α ∘ f) ⁻¹' T
-                   = f ⁻¹' OptionCyl.flatten (some (Sum.inl ⁻¹' T))
+  suffices h_union : (Equiv.optionEquivSumPUnit α ∘ f) ⁻¹' T =
+                   f ⁻¹' OptionCyl.flatten (some (Sum.inl ⁻¹' T))
                    ∪ (if Sum.inr PUnit.unit ∈ T
                       then f ⁻¹' OptionCyl.flatten (none : OptionCyl α)
                       else ∅) by
-    rw [h_union]; split_ifs
+    rw [h_union]
+    split_ifs
     · exact hsome_mset.union (h none .none)
     · simpa using hsome_mset
   ext x; cases hfx : f x <;> split_ifs <;> simp_all
@@ -312,8 +313,8 @@ theorem cell_dataLeaf_param {γ : Type _} [MeasurableSpace γ]
     (h_c : Measurable (Function.uncurry c))
     (hU : MeasurableSet U) :
     MeasurableSet {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ U} := by
-  have heq : {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ U}
-      = (Prod.map id ctor) '' {p : β × γ | Function.uncurry c p ∈ U} := by
+  have heq : {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ U} =
+      (Prod.map id ctor) '' {p : β × γ | Function.uncurry c p ∈ U} := by
     ext ⟨b, p⟩
     constructor
     · rintro ⟨hs, hp⟩
@@ -335,8 +336,8 @@ theorem measurable_of_cells_param [Countable Sh]
       MeasurableSet {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ U}) :
     Measurable (Function.uncurry g) := by
   intro S hS
-  rw [show (Function.uncurry g ⁻¹' S)
-        = ⋃ s : Sh, {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ S} from by
+  rw [show (Function.uncurry g ⁻¹' S) =
+        ⋃ s : Sh, {q : β × T | shape q.2 = s ∧ Function.uncurry g q ∈ S} from by
     ext q
     simp only [Set.mem_preimage, Set.mem_iUnion, Set.mem_ofPred_eq]
     exact ⟨fun h => ⟨_, rfl, h⟩, fun ⟨_, _, h⟩ => h⟩]
@@ -411,7 +412,8 @@ theorem MeasurableEmbedding.sigmaMk {ι : Type _} {β : ι → Type _}
     exact eq_of_heq (Sigma.mk.inj h).2 ▸ hy
   · show MeasurableSet ((Sigma.mk j) ⁻¹' (Sigma.mk i '' s))
     convert MeasurableSet.empty
-    ext x; simp only [Set.mem_preimage, Set.mem_image, Set.mem_empty_iff_false, iff_false]
+    ext x
+    simp only [Set.mem_preimage, Set.mem_image, Set.mem_empty_iff_false, iff_false]
     rintro ⟨y, _, h⟩
     exact (hj (Sigma.mk.inj h).1.symm).elim
 
@@ -444,9 +446,9 @@ theorem List.measurable_foldl {α β : Type _} [MeasurableSpace α] [MeasurableS
   have hfoldlOfFn :
       Measurable fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2 :=
     measurable_sigmaFin_prod fun n => List.measurable_foldlOfFn hf n
-  have hrw : (fun p : List β × α => p.1.foldl f p.2)
-      = (fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2)
-        ∘ (fun p : List β × α => (List.toSigma p.1, p.2)) := by
+  have hrw : (fun p : List β × α => p.1.foldl f p.2) =
+      (fun q : (Σ k : ℕ, Fin k → β) × α => List.foldlOfFn f q.1.1 q.2 q.1.2) ∘
+        (fun p : List β × α => (List.toSigma p.1, p.2)) := by
     funext p
     show p.1.foldl f p.2 = List.foldlOfFn f (List.toSigma p.1).1 p.2 (List.toSigma p.1).2
     rw [List.foldlOfFn_eq_foldl_ofFn]
@@ -465,15 +467,15 @@ theorem Fin.measurable_snoc {n : ℕ} {β : Type _} [MeasurableSpace β] :
         ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β) = p.1 ⟨i.val, h⟩ := by
       intro p
       simp [Fin.snoc, h, Fin.castLT]
-    rw [show (fun p : (Fin n → β) × β => ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β))
-          = fun p => p.1 ⟨i.val, h⟩ from funext heq]
+    rw [show (fun p : (Fin n → β) × β => ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β)) =
+          fun p => p.1 ⟨i.val, h⟩ from funext heq]
     exact (measurable_pi_apply _).comp measurable_fst
   · push Not at h
     have hi : i = Fin.last n := Fin.ext (le_antisymm (Nat.lt_succ_iff.mp i.isLt) h)
     have heq : ∀ p : (Fin n → β) × β, ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β) = p.2 := by
       intro p; rw [hi, Fin.snoc_last]
-    rw [show (fun p : (Fin n → β) × β => ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β))
-          = fun p => p.2 from funext heq]
+    rw [show (fun p : (Fin n → β) × β => ((@Fin.snoc n (fun _ => β) p.1 p.2) i : β)) =
+          fun p => p.2 from funext heq]
     exact measurable_snd
 
 @[fun_prop]
@@ -487,27 +489,27 @@ theorem measurable_sigma_snoc {β : Type _} [MeasurableSpace β] :
 theorem List.measurable_append_singleton {β : Type _} [MeasurableSpace β] :
     Measurable (fun (p : List β × β) => p.1 ++ [p.2]) := by
   rw [measurable_comap_iff (g := (List.toSigma : List β → Σ k, Fin k → β))]
-  have hrw : (List.toSigma : List β → Σ k, Fin k → β) ∘ (fun p : List β × β => p.1 ++ [p.2])
-      = (fun q : (Σ k, Fin k → β) × β =>
-          (⟨q.1.1 + 1, Fin.snoc q.1.2 q.2⟩ : Σ k, Fin k → β))
-        ∘ (fun p : List β × β => (List.toSigma p.1, p.2)) := by
+  have hrw : (List.toSigma : List β → Σ k, Fin k → β) ∘ (fun p : List β × β => p.1 ++ [p.2]) =
+      (fun q : (Σ k, Fin k → β) × β =>
+          (⟨q.1.1 + 1, Fin.snoc q.1.2 q.2⟩ : Σ k, Fin k → β)) ∘
+        (fun p : List β × β => (List.toSigma p.1, p.2)) := by
     funext p
     obtain ⟨L, x⟩ := p
-    show (@Sigma.mk ℕ (fun k => Fin k → β) (L ++ [x]).length (L ++ [x]).get)
-        = ⟨L.length + 1, @Fin.snoc L.length (fun _ => β) L.get x⟩
+    show (@Sigma.mk ℕ (fun k => Fin k → β) (L ++ [x]).length (L ++ [x]).get) =
+        ⟨L.length + 1, @Fin.snoc L.length (fun _ => β) L.get x⟩
     have hlen : (L ++ [x]).length = L.length + 1 := by simp
     refine Sigma.ext hlen <| (Fin.heq_fun_iff hlen).mpr fun i => ?_
     have hlt : i.val < L.length + 1 := hlen ▸ i.isLt
     show (L ++ [x]).get i = (@Fin.snoc L.length (fun _ => β) L.get x) ⟨i.val, hlt⟩
     by_cases hi : i.val < L.length
-    · have hcast : (⟨i.val, hlt⟩ : Fin (L.length + 1))
-          = ((⟨i.val, hi⟩ : Fin L.length).castSucc) := Fin.ext rfl
+    · have hcast : (⟨i.val, hlt⟩ : Fin (L.length + 1)) =
+          ((⟨i.val, hi⟩ : Fin L.length).castSucc) := Fin.ext rfl
       rw [hcast, Fin.snoc_castSucc]
       simp [hi]
     · push Not at hi
       have hival : i.val = L.length := by omega
-      have hcast : ((⟨i.val, hlt⟩ : Fin (L.length + 1)))
-          = Fin.last L.length := Fin.ext hival
+      have hcast : ((⟨i.val, hlt⟩ : Fin (L.length + 1))) =
+          Fin.last L.length := Fin.ext hival
       rw [hcast, Fin.snoc_last]
       simp [hival]
   rw [hrw]

@@ -74,8 +74,15 @@ def Ctx.addShape (ctx : Ctx) : MetaM Unit := do
   addDecl <| .inductDecl [] 0 [{ name, type := .sort level, ctors := ctors.toList }] false
   compileDecls #[name]
   -- what `inductive` adds (core's `mkAuxConstructions`, with `sizeOf` and injectivity)
-  mkRecOn name; mkCasesOn name; mkCtorIdx name; mkCtorElim name; Lean.mkNoConfusion name
-  mkBelow name; mkBRecOn name; mkSizeOfInstances name; mkInjectiveTheorems name
+  mkRecOn name
+  mkCasesOn name
+  mkCtorIdx name
+  mkCtorElim name
+  Lean.mkNoConfusion name
+  mkBelow name
+  mkBRecOn name
+  mkSizeOfInstances name
+  mkInjectiveTheorems name
   addUncurried name
 
 /-- `T.Leaves s`: the leaves of the values of shape `s`. -/

@@ -25,8 +25,8 @@ theorem erasure_rand_tape_pop_close
     (hS : MeasurableSet S) (h : σ.tapes[α]? = some ⟨z_r, nn :: ns⟩) (hN : 0 < z_r)
     (ih_fill : ErasureIHFill m K S α) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ⟩ := by
   have hrhs : headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ⟩ =
       Measure.dirac ⟨.lit (.int nn),
@@ -39,8 +39,7 @@ theorem erasure_rand_tape_pop_close
       tapePresample_lintegral h
         (fun σ' => ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩)
-        ((Measure.measurable_lintegral (erasure_integrand_measurable hS)).comp
-          hker_rand)]
+        ((Measure.measurable_lintegral (erasure_integrand_measurable hS)).comp hker_rand)]
   have hstep_upd : ∀ n' : { z : Int // 0 ≤ z ∧ z < z_r },
       headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)),
         σ.update_tapes (·.insert α ⟨z_r, (nn :: ns) ++ [↑n']⟩)⟩ =
@@ -57,8 +56,7 @@ theorem erasure_rand_tape_pop_close
     ih_fill (.lit (.int ↑nn)) (σ.update_tapes (·.insert α ⟨z_r, ns⟩))
       ⟨z_r, ns⟩ htape_popped hN using 1
   rw [tapePresample_lintegral htape_popped
-        (fun σ'' => ((execN m ∘ K.fillCfg) ⟨.lit (.int ↑nn), σ''⟩)
-          ((fun x => x.expr) ⁻¹' S))
+        (fun σ'' => ((execN m ∘ K.fillCfg) ⟨.lit (.int ↑nn), σ''⟩) ((fun x => x.expr) ⁻¹' S))
         ((erasure_integrand_measurable hS).comp
           (Cfg.measurable_mk.comp (measurable_const.prodMk measurable_id)))]
   simp_rw [State.update_tapes_twice]
@@ -69,8 +67,8 @@ theorem erasure_rand_presampled_close
     {m : Nat} {K : Ectx rT} {S : Set (Exp rT)} {σ : State rT} {α : Loc} {z_r : Int}
     (hS : MeasurableSet S) (hz : 0 < z_r) (h : σ.tapes[α]? = some ⟨z_r, []⟩) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ⟩ := by
   have hrhs : headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ⟩ =
       Cfg.uniform z_r σ := by simp [headStep, h]
@@ -80,8 +78,7 @@ theorem erasure_rand_presampled_close
   rw [hrhs, tapePresample_lintegral h
         (fun σ' => ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)), σ'⟩)
-        ((Measure.measurable_lintegral (erasure_integrand_measurable hS)).comp
-          hker_rand)]
+        ((Measure.measurable_lintegral (erasure_integrand_measurable hS)).comp hker_rand)]
   have hstep_upd : ∀ n' : { z : Int // 0 ≤ z ∧ z < z_r },
       headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α)),
         σ.update_tapes (·.insert α ⟨z_r, [n']⟩)⟩ =
@@ -129,8 +126,8 @@ theorem execN_tape_presample_expr_eq
         Cfg.measurable_dirac_mk (fe := fun _ => e) measurable_const measurable_id
       rw [Measure.bind_map_comm _ _ _ Cfg.measurable_expr hkdir.aemeasurable]
       -- explicit kernel equality: `simp_rw` leaves metavariables here
-      have hker : (fun σ' : State rT => Measure.map (·.expr) (Measure.dirac (⟨e, σ'⟩ : Cfg rT)))
-          = (fun _ => Measure.dirac e) := by
+      have hker : (fun σ' : State rT => Measure.map (·.expr) (Measure.dirac (⟨e, σ'⟩ : Cfg rT))) =
+          (fun _ => Measure.dirac e) := by
         funext σ'
         rw [Measure.map_dirac (f := fun c : Cfg rT => c.expr) (⟨e, σ'⟩ : Cfg rT)]
       rw [hker, Measure.map_dirac (f := fun c : Cfg rT => c.expr) (⟨e, σ⟩ : Cfg rT)]
@@ -163,13 +160,13 @@ theorem execN_tape_presample_expr_eq
       -- the IH, evaluated on `S` and pushed under `K`
       have ih_pointwise : ∀ (e' : Exp rT) (σ' : State rT) (t' : Tape),
           σ'.tapes[α]? = some t' → 0 < t'.bound →
-          ∫⁻ σ'', (execN m ⟨e', σ''⟩) ((fun x => x.expr) ⁻¹' S) ∂tapePresample σ' α
-            = (execN m ⟨e', σ'⟩) ((fun x => x.expr) ⁻¹' S) := by
+          ∫⁻ σ'', (execN m ⟨e', σ''⟩) ((fun x => x.expr) ⁻¹' S) ∂tapePresample σ' α =
+            (execN m ⟨e', σ'⟩) ((fun x => x.expr) ⁻¹' S) := by
         intro e' σ' t' ht' hN'
-        have hih : ((tapePresample σ' α).bind (fun σ'' => execN m ⟨e', σ''⟩)).map (·.expr)
-                  = (execN m ⟨e', σ'⟩).map (·.expr) := ih ht' hN'
-        have hval : ((tapePresample σ' α).bind (fun σ'' => execN m ⟨e', σ''⟩)).map (·.expr) S
-                  = (execN m ⟨e', σ'⟩).map (·.expr) S := by rw [hih]
+        have hih : ((tapePresample σ' α).bind (fun σ'' => execN m ⟨e', σ''⟩)).map (·.expr) =
+                  (execN m ⟨e', σ'⟩).map (·.expr) := ih ht' hN'
+        have hval : ((tapePresample σ' α).bind (fun σ'' => execN m ⟨e', σ''⟩)).map (·.expr) S =
+                  (execN m ⟨e', σ'⟩).map (·.expr) S := by rw [hih]
         have hk_exec : Measurable (fun σ'' : State rT => execN m (⟨e', σ''⟩ : Cfg rT)) :=
           (execN_measurable m).comp
             (Cfg.measurable_mk.comp (measurable_const.prodMk measurable_id))
@@ -293,8 +290,8 @@ theorem execN_tape_presample_expr_eq
               _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
                     ∂headStep ⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ⟩ := by
                   have htape_upd :
-                      (σ.update_tapes (·.insert α_lbl ⟨z_r, ns⟩)).tapes[α]?
-                        = some t := by
+                      (σ.update_tapes (·.insert α_lbl ⟨z_r, ns⟩)).tapes[α]? =
+                        some t := by
                     rw [State.upd_diff_tape_tot hαeq]; exact h
                   rw [tapePresample_lintegral_update_tapes_ne (Ne.symm hαeq)
                         (fun τ =>
@@ -313,8 +310,8 @@ theorem execN_tape_presample_expr_eq
             obtain rfl : t = ⟨z_r, []⟩ := Option.some.inj (h.symm.trans htapes)
             exact erasure_rand_presampled_close (m := m) (K := K) hS hz h
           · -- a different tape α_lbl ≠ α: the same uniform step from every presampled state
-            have hstep_σ : headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ⟩ : Cfg rT)
-                = Cfg.uniform z_r σ := by simp [headStep, htapes]
+            have hstep_σ : headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ⟩ : Cfg rT) =
+                Cfg.uniform z_r σ := by simp [headStep, htapes]
             refine uniform_close _ z_r hz ?_ hstep_σ
             filter_upwards [tapePresample_tape_ne_ae h (Ne.symm hαeq)] with σ' htape_eq
             simp [headStep, htape_eq.trans htapes]
@@ -322,8 +319,8 @@ theorem execN_tape_presample_expr_eq
           -- bound mismatch: the same uniform step from every presampled state
           have hrand_uniform : ∀ (σ₀ : State rT) {M : Int} {ns : List _},
               σ₀.tapes[α_lbl]? = some ⟨M, ns⟩ → M ≠ z_r →
-              headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ₀⟩ : Cfg rT)
-                = Cfg.uniform z_r σ₀ := by
+              headStep (⟨.rand (.lit (.int z_r)) (.lit (.lbl α_lbl)), σ₀⟩ : Cfg rT) =
+                Cfg.uniform z_r σ₀ := by
             intro σ₀ M ns ht hne
             show (match σ₀.tapes[α_lbl]? with | none => _ | some ⟨M, _⟩ => _) = _
             rw [ht]; simp only; rw [ite_eq_right hne]
@@ -348,10 +345,12 @@ theorem execN_tape_presample_expr_eq
         | @randTapeNonposEmpty z_r α_lbl _ N_b hz htapes hzN =>
           -- α_lbl ≠ α: tape α has bound > 0, this one has bound z ≤ 0
           have hαne : α ≠ α_lbl := by
-            intro heq; subst heq
+            intro heq
+            subst heq
             have ht_eq : t = ⟨N_b, []⟩ := by
               rw [htapes] at h; exact (Option.some.inj h).symm
-            apply hz; rw [hzN]
+            apply hz
+            rw [hzN]
             have : t.bound = N_b := by rw [ht_eq]
             exact this ▸ hN
           subst hzN

@@ -188,7 +188,8 @@ theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
     ⊢ specAuth ⟨e1, σ⟩ -∗ ⤇ e2 ==∗ specAuth ⟨e3, σ⟩ ∗ ⤇ e3 := by
   iintro Ha Hf
   ihave %rfl := specAuth_specFrag_agree $$ Ha Hf
-  unfold specAuth specProgAuth specProgFrag; simp only []
+  unfold specAuth specProgAuth specProgFrag
+  simp only []
   ihave ⟨He, Hh, Ht⟩ := Ha
   have hupd : SpecProg.frag e1 • SpecProg.auth e1 ~~> SpecProg.frag e3 • SpecProg.auth e3 :=
     Auth.auth_update (.option (.exclusive trivial))
@@ -227,8 +228,7 @@ theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val 
 /-- Allocating a fresh spec location. -/
 theorem spec_auth_heap_alloc {e : Exp rT} {σ : State rT} (v : Val rT) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
-      specAuth ⟨e, σ.update_heap
-          (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)⟩ ∗
+      specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)⟩ ∗
         σ.heap.fresh ↦ₛ v := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩
@@ -269,8 +269,7 @@ theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape
 /-- Allocating a fresh spec tape. -/
 theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
-      specAuth ⟨e, σ.update_tapes
-          (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)⟩ ∗
+      specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)⟩ ∗
         σ.tapes.fresh ↪ₛ t := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩
@@ -349,15 +348,15 @@ theorem spec_empty_to_natTape {l : Loc} {z : Int} :
 /-- Reading the head of an integer tape exposes the head of the spec tape, with a way back. -/
 theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
     specNatTape (GF := GF) l z (n :: ns) ⊢
-      iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z })
-              (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
+      iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z }) (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
         l ↪ₛ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₛ ⟨z, xs⟩ -∗ specNatTape l z ns)) := by
   unfold specNatTape
   iintro ⟨%fs, %hmap, Hl⟩
   obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp hmap
   iexists x, xs
-  isplitl [Hl]; · iexact Hl
+  isplitl [Hl]
+  · iexact Hl
   isplitr; · ipureintro; exact hx
   iintro Hl
   iexists xs

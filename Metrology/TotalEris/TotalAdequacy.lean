@@ -46,7 +46,8 @@ theorem measurableSet_ofValSet {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v}) :
     MeasurableSet {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} := by
   have heq : {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} = Exp.ofVal '' {v | φ v} := by
-    ext e; simp only [Set.mem_ofPred_eq, Set.mem_image]
+    ext e
+    simp only [Set.mem_ofPred_eq, Set.mem_image]
     exact ⟨fun ⟨v, he, hv⟩ => ⟨v, hv, he.symm⟩, fun ⟨v, hv, he⟩ => ⟨v, he.symm, hv⟩⟩
   rw [heq]
   exact measurableEmbedding_ofVal.measurableSet_image' hφ
@@ -151,8 +152,8 @@ theorem tgl_lift_prob
       _ ≤ M {a | R a} + ε₁ := add_le_add le_rfl hpgl
       _ = ε₁ + M {a | R a} := add_comm _ _
   -- Split the integral using measurability of `k`; `ε₂` need not be measurable.
-  have h_split : M {a | R a}
-      ≤ (∫⁻ a in {a | R a}, k a ∂M) + (∫⁻ a in {a | R a}, ε₂ a ∂M) := by
+  have h_split : M {a | R a} ≤
+      (∫⁻ a in {a | R a}, k a ∂M) + (∫⁻ a in {a | R a}, ε₂ a ∂M) := by
     have hone : M {a | R a} = ∫⁻ _ in {a | R a}, (1 : ENNReal) ∂M := by
       rw [MeasureTheory.setLIntegral_const, one_mul]
     rw [← MeasureTheory.lintegral_add_left hk, hone]
@@ -285,7 +286,8 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
         imod HOT $$ %ε'' %hε with HS
         iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
       imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
-      imodintro; ipureintro
+      imodintro
+      ipureintro
       exact Tgl.epsilon_limit Hf
     · icases HPS with ⟨HPS | HSS⟩
       · -- The prim-step leaf is `Z ρ` itself; the other branches carry `Ψ ∧ glm`.
@@ -296,7 +298,8 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
           imod HCont $$ %ρ %hR with HS
           iapply Tgl_of_execStutter (P := Z ρ) (fun _ => .rfl) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
-        imodintro; ipureintro
+        imodintro
+        ipureintro
         exact Tgl.dbind_prim_step hφ HRmeas Hred Hsum Hpgl Hf
       · icases HSS with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %_, %Hsum, %Hpgl, HCont⟩
         ihave Hfa : iprop(∀ σ'', ⌜R σ''⌝ -∗
@@ -305,7 +308,8 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
           imod HCont $$ %σ'' %hR with HS
           iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
-        imodintro; ipureintro
+        imodintro
+        ipureintro
         exact Tgl.dbind_erasable Heras hφ HRmeas Hsum Hpgl Hf
   iapply glm'_strong_ind (Z := Z) (Ψ := Ψ) $$ HInd %(⟨⟨e, σ⟩, ε⟩ : GlmState rT) HG
 
@@ -328,13 +332,13 @@ theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF]
         isimp only [tglWpPre_eq_value] at HPre
         imod HPre $$ %σ' %ε' [$Hσ' $Hε'] with ⟨_, _, %hφv⟩
         imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with _
-        imodintro; ipureintro
+        imodintro
+        ipureintro
         exact Tgl.mono_grading zero_le (Tgl.of_limExec_val hφv)
       | none =>
         isimp only [tglWpPre_eq_step htv] at HPre
         imod HPre $$ %σ' %ε' [$Hσ' $Hε'] with HG
-        ihave HG' : iprop(glm' e' σ' ε'
-            (fun ρ ε₂ => iprop(|={∅}=> ⌜Tgl (limExec ρ) φ ε₂⌝))) $$ [HG]
+        ihave HG' : iprop(glm' e' σ' ε' (fun ρ ε₂ => iprop(|={∅}=> ⌜Tgl (limExec ρ) φ ε₂⌝))) $$ [HG]
         · iapply (glm'_strong_mono (Z₁ := fun ρ ε₂ => iprop(|={∅,⊤}=>
               stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ Q ρ.expr))
             (Z₂ := fun ρ ε₂ => iprop(|={∅}=> ⌜Tgl (limExec ρ) φ ε₂⌝)))
@@ -390,7 +394,8 @@ theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
     $$ [$Hwp' $HappAuth $HecAuth] with ⟨-, -, %hφ⟩
   simp only [Nat.repeat]
   imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with _
-  imodintro; ipureintro
+  imodintro
+  ipureintro
   exact hφ
 
 theorem twp_mass_lim_exec [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]

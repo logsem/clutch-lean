@@ -141,7 +141,8 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
       _ ≤ E := hcell
   have hE : E = δ * exp ε ^ (α - 1) := by
     rw [← exp_mul, show ε * (α - 1) = (α - 1) * r + log (1 / δ) by
-      simp only [ε]; field_simp, exp_add, exp_log (by positivity),
+      simp only [ε]
+      field_simp, exp_add, exp_log (by positivity),
       mul_left_comm, mul_one_div_cancel hδ.ne', mul_one]
   rw [hE] at key
   exact (lt_of_mul_lt_mul_right key (by positivity)).not_gt hpδ

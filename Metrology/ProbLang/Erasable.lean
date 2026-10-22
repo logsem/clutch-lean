@@ -136,8 +136,8 @@ theorem ofPexecN (ρ : Cfg rT) (m : Nat) : Rewritable ρ (ProbLang.pexecN m ρ) 
 /-- Resampling the state of `ρ` from an erasable `μ` is a rewriting (`rewritableOfErasable`). -/
 theorem of_erasable {ρ : Cfg rT} {μ : Measure (State rT)} (h : Erasable μ ρ.state) :
     Rewritable ρ (μ.bind (fun σ => Measure.dirac (⟨ρ.expr, σ⟩ : Cfg rT))) := by
-  show limExec ρ
-      = (μ.bind (fun σ => Measure.dirac (⟨ρ.expr, σ⟩ : Cfg rT))).bind limExec
+  show limExec ρ =
+      (μ.bind (fun σ => Measure.dirac (⟨ρ.expr, σ⟩ : Cfg rT))).bind limExec
   rw [Measure.bind_bind
         (Measurable.aemeasurable (by measurability))
         (Measurable.aemeasurable limExec.measurable)]

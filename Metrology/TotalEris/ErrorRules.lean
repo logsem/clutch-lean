@@ -43,7 +43,8 @@ theorem BaseLit.measurable_asReal (default : ℝ≥0∞) (value : rT → ℝ≥0
 theorem measurable_litInt_elim (g : Int → ENNReal) :
     Measurable (fun e : Exp rT => match e with | .lit (.int n) => g n | _ => 0) := by
   convert_to Measurable (Exp.asLit 0 (BaseLit.asInt 0 g))
-  swap; fun_prop
+  swap
+  fun_prop
   ext e
   cases e <;> try rfl
   case lit b => cases b <;> rfl
@@ -51,7 +52,8 @@ theorem measurable_litInt_elim (g : Int → ENNReal) :
 theorem measurable_litReal_elim (g : rT → ENNReal) (hg : Measurable g) :
     Measurable (fun e : Exp rT => match e with | .lit (.real r) => g r | _ => 0) := by
   convert_to Measurable (Exp.asLit 0 (BaseLit.asReal 0 g))
-  swap; fun_prop
+  swap
+  fun_prop
   ext e
   cases e <;> try rfl
   case lit r => cases r <;> rfl
@@ -177,7 +179,9 @@ theorem twp_glm_spend {E : CoPset} {e₁ : Exp rT} {ε₁ : ENNReal}
   ihave ⟨Hε_now, Herr, %hLe⟩ := errInterp_supply_bound $$ [$Hε_now $Herr]
   iapply glm'_prim_step
   iexists (R σ₁), 0, (fun ρ : Cfg rT => (ε_now - ε₁) + f ρ), ((ε_now - ε₁) + 1)
-  specialize Hred σ₁; specialize hRmeas σ₁; specialize hPgl σ₁
+  specialize Hred σ₁
+  specialize hRmeas σ₁
+  specialize hPgl σ₁
   have hbnd : ∀ ρ : Cfg rT, (ε_now - ε₁) + f ρ ≤ (ε_now - ε₁) + 1 :=
     fun ρ => add_le_add_right (Hbd ρ) _
   have hexp : 0 + ∫⁻ ρ, ((ε_now - ε₁) + f ρ) ∂(primStep ⟨e₁, σ₁⟩) ≤ ε_now := by
@@ -218,7 +222,9 @@ theorem twp_rand_exp {E : CoPset} {z : Int} {ε₁ : ENNReal} {ε₂ : ℕ → E
     | .lit (.int n) => if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0
     | _ => 0 with hf
   have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
-    intro ρ; simp only [hf]; split
+    intro ρ
+    simp only [hf]
+    split
     · split <;> first | exact Hbd _ | exact zero_le
     · exact zero_le
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
@@ -286,17 +292,17 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   have Hnv : (pl(urand) : Exp rT).toVal? = none := solve_not_value
   have hhead : ∀ σ₁ : State rT, HeadReducible (pl(urand) : Exp rT) σ₁ :=
     fun σ₁ => show Cfg.uniformReal σ₁ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
-  have hps : ∀ σ₁ : State rT, primStep (⟨pl(urand), σ₁⟩ : Cfg rT)
-      = (LawfulProbLangℝ.unifUnit).map (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
+  have hps : ∀ σ₁ : State rT, primStep (⟨pl(urand), σ₁⟩ : Cfg rT) =
+      (LawfulProbLangℝ.unifUnit).map (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
     fun σ₁ => primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))
   have hg : ∀ σ₁ : State rT, Measurable (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
     fun σ₁ => Cfg.measurable_iff.mpr
       ⟨Exp.lit.measurable.comp BaseLit.real.measurable, measurable_const⟩
   have hgemb : ∀ σ₁ : State rT,
       MeasurableEmbedding (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) := fun σ₁ => by
-    have hcomp : (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT))
-        = Cfg.measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁))
-            ∘ Exp.lit ∘ BaseLit.real := rfl
+    have hcomp : (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) =
+        Cfg.measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘
+            Exp.lit ∘ BaseLit.real := rfl
     rw [hcomp]
     exact Cfg.measurableEquivProd.symm.measurableEmbedding.comp
       ((measurableEmbedding_prod_mk_right σ₁).comp
@@ -307,12 +313,15 @@ theorem twp_urand_exp {E : CoPset} {ε₁ : ENNReal}
   set f : Cfg rT → ENNReal := fun ρ => match ρ.expr with
     | .lit (.real r) => ε₂ r
     | _ => 0 with hf
-  have hrange : ∀ σ₁ : State rT, {ρ : Cfg rT | R σ₁ ρ}
-      = (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) '' LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
-    ext ρ; simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
+  have hrange : ∀ σ₁ : State rT, {ρ : Cfg rT | R σ₁ ρ} =
+      (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) '' LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
+    ext ρ
+    simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
     exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
   have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
-    intro ρ; simp only [hf]; split
+    intro ρ
+    simp only [hf]
+    split
     · exact Hbd _
     · exact zero_le
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
@@ -354,8 +363,7 @@ theorem twp_urand_exp' {E : CoPset} {ε₁ : ENNReal}
   iintro Herr Hcont
   have hint : (∫⁻ r, min (ε₂ r) 1 ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁ :=
     (MeasureTheory.lintegral_mono fun r => min_le_left _ _).trans HInt
-  iapply (twp_urand_exp (hε₂.min measurable_const)
-    (fun r => min_le_right _ _) hint) $$ Herr
+  iapply (twp_urand_exp (hε₂.min measurable_const) (fun r => min_le_right _ _) hint) $$ Herr
   iintro %r ⟨%hrsupp, Hcr⟩
   by_cases h : ε₂ r ≤ 1
   · iapply Hcont $$ %r
@@ -375,10 +383,8 @@ theorem twp_rand_exp' {E : CoPset} {z : Int} {ε₁ : ENNReal}
       tglWp E (pl(rand(#z, #()))) Φ) := by
   iintro Herr Hcont
   have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ENNReal) ≤ ε₁ :=
-    (ENNReal.div_le_div_right
-      (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
-  iapply (twp_rand_exp Hz
-    (fun n => min_le_right _ _) hsum) $$ Herr
+    (ENNReal.div_le_div_right (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
+  iapply (twp_rand_exp Hz (fun n => min_le_right _ _) hsum) $$ Herr
   iintro %n ⟨%Hn, Hcr⟩
   by_cases h : ε₂ n.toNat ≤ 1
   · iapply Hcont $$ %n

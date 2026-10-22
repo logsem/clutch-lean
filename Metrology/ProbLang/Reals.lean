@@ -46,14 +46,14 @@ public noncomputable instance instProbLangℝReal : LawfulProbLangℝ ℝ where
   realLe a b := decide (a ≤ b)
   measurable_realLt := by
     apply measurable_to_bool
-    have h : (Function.uncurry (fun a b : ℝ => decide (a < b)) ⁻¹' {true})
-        = {p : ℝ × ℝ | p.1 < p.2} := by
+    have h : (Function.uncurry (fun a b : ℝ => decide (a < b)) ⁻¹' {true}) =
+        {p : ℝ × ℝ | p.1 < p.2} := by
       ext p; simp [Function.uncurry, decide_eq_true_eq]
     rw [h]; exact measurableSet_lt measurable_fst measurable_snd
   measurable_realLe := by
     apply measurable_to_bool
-    have h : (Function.uncurry (fun a b : ℝ => decide (a ≤ b)) ⁻¹' {true})
-        = {p : ℝ × ℝ | p.1 ≤ p.2} := by
+    have h : (Function.uncurry (fun a b : ℝ => decide (a ≤ b)) ⁻¹' {true}) =
+        {p : ℝ × ℝ | p.1 ≤ p.2} := by
       ext p; simp [Function.uncurry, decide_eq_true_eq]
     rw [h]; exact measurableSet_le measurable_fst measurable_snd
   realAdd a b := a + b
@@ -116,8 +116,8 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   have hlo : (0:ℝ) ≤ 1 - m := by linarith
   have hhi : (1:ℝ) - m ≤ 1 := by linarith
   -- Block `[0, 1-m)`: `frac (m + r) = m + r`, a shift onto `[m, 1)`.
-  have hA : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m)
-      = (fun r : ℝ => m + r) ⁻¹' (S ∩ Ico m 1) := by
+  have hA : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m) =
+      (fun r : ℝ => m + r) ⁻¹' (S ∩ Ico m 1) := by
     ext r
     simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_Ico]
     have hfr : 0 ≤ r → r < 1 - m → Int.fract (m + r) = m + r :=
@@ -128,8 +128,8 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
     · rintro ⟨hSr, hge, hlt⟩
       exact ⟨by rwa [hfr (by linarith) (by linarith)], by linarith, by linarith⟩
   -- Block `[1-m, 1)`: `frac (m + r) = m + r - 1`, a shift onto `[0, m)`.
-  have hB : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)
-      = (fun r : ℝ => (m - 1) + r) ⁻¹' (S ∩ Ico (0:ℝ) m) := by
+  have hB : (fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ) =
+      (fun r : ℝ => (m - 1) + r) ⁻¹' (S ∩ Ico (0:ℝ) m) := by
     ext r
     simp only [Set.mem_inter_iff, Set.mem_preimage, Set.mem_Ico]
     have hshift : Int.fract (m + r) = Int.fract (m + r - 1) := (Int.fract_sub_one (m + r)).symm
@@ -148,20 +148,18 @@ theorem measurePreserving_fracAdd_aux {m : ℝ} (hm0 : 0 ≤ m) (hm1 : m < 1) :
   have hunion2 : Ico (0:ℝ) m ∪ Ico m (1:ℝ) = Ico (0:ℝ) 1 :=
     Set.Ico_union_Ico_eq_Ico hm0 (le_of_lt hm1)
   -- Split both sides along the blocks; translations preserve volume.
-  have hL : volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) 1)
-      = volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m))
-        + volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)) := by
+  have hL : volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) 1) =
+      volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (0:ℝ) (1 - m)) +
+        volume ((fun r : ℝ => Int.fract (m + r)) ⁻¹' S ∩ Ico (1 - m) (1:ℝ)) := by
     rw [← hunion1, Set.inter_union_distrib_left]
     exact measure_union
-      ((Set.Ico_disjoint_Ico_same).mono
-        Set.inter_subset_right Set.inter_subset_right)
+      ((Set.Ico_disjoint_Ico_same).mono Set.inter_subset_right Set.inter_subset_right)
       ((hmeas hS).inter measurableSet_Ico)
-  have hR : volume (S ∩ Ico (0:ℝ) 1)
-      = volume (S ∩ Ico (0:ℝ) m) + volume (S ∩ Ico m (1:ℝ)) := by
+  have hR : volume (S ∩ Ico (0:ℝ) 1) =
+      volume (S ∩ Ico (0:ℝ) m) + volume (S ∩ Ico m (1:ℝ)) := by
     rw [← hunion2, Set.inter_union_distrib_left]
     exact measure_union
-      ((Set.Ico_disjoint_Ico_same).mono
-        Set.inter_subset_right Set.inter_subset_right)
+      ((Set.Ico_disjoint_Ico_same).mono Set.inter_subset_right Set.inter_subset_right)
       (hS.inter measurableSet_Ico)
   rw [hL, hR, hA, hB, measure_preimage_add, measure_preimage_add]
   exact add_comm _ _
@@ -179,8 +177,8 @@ public theorem measurePreserving_fracAdd (m : ℝ) :
     MeasurePreserving
       (fun r : ℝ => ProbLangℝ.realFrac (ProbLangℝ.realAdd m r))
       LawfulProbLangℝ.unifUnit LawfulProbLangℝ.unifUnit := by
-  have hper : (fun r : ℝ => Int.fract (m + r))
-      = fun r : ℝ => Int.fract (Int.fract m + r) :=
+  have hper : (fun r : ℝ => Int.fract (m + r)) =
+      fun r : ℝ => Int.fract (Int.fract m + r) :=
     funext fun r => by rw [add_comm (Int.fract m) r, fract_add_fract_right, add_comm]
   show MeasurePreserving (fun r : ℝ => Int.fract (m + r)) _ _
   rw [hper]

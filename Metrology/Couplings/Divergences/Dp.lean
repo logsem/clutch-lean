@@ -63,8 +63,7 @@ theorem Bound.map (h : Bound c δ μ ν) {f : X → Y} (hf : Measurable f := by 
 theorem setOf_lt_toReal_eq_empty {f : X → ℝ≥0∞} (hf1 : ∀ x, f x ≤ 1) {t : ℝ} (ht : 1 < t) :
     {x | t < (f x).toReal} = ∅ :=
   eq_empty_of_forall_notMem fun x hx ↦
-    (not_le.2 hx) ((toReal_le_of_le_ofReal zero_le_one
-      ((hf1 x).trans ofReal_one.ge)).trans ht.le)
+    (not_le.2 hx) ((toReal_le_of_le_ofReal zero_le_one ((hf1 x).trans ofReal_one.ge)).trans ht.le)
 
 /-- A DP inequality on events transfers to `[0, 1]`-valued test functions (by the layer cake
 formula). -/
@@ -73,8 +72,7 @@ theorem Bound.lintegral_le (h : Bound c δ μ ν) {f : X → ℝ≥0∞} (hf : M
   have hm : Measurable fun x ↦ (f x).toReal := hf.ennreal_toReal
   have hcake (ρ : Measure X) :
       ∫⁻ x, f x ∂ρ = ∫⁻ t in Ioi 0, ρ {x | t < (f x).toReal} := by
-    rw [← lintegral_eq_lintegral_meas_lt ρ (.of_forall fun _ ↦ toReal_nonneg)
-      hm.aemeasurable]
+    rw [← lintegral_eq_lintegral_meas_lt ρ (.of_forall fun _ ↦ toReal_nonneg) hm.aemeasurable]
     simp only [fun x ↦ ofReal_toReal ((hf1 x).trans_lt one_lt_top).ne]
   have hanti : Measurable fun t : ℝ ↦ ν {x | t < (f x).toReal} :=
     Antitone.measurable fun s t hst ↦ measure_mono fun x (hx : t < _) ↦ hst.trans_lt hx

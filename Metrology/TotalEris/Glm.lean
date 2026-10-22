@@ -239,8 +239,8 @@ theorem glm'_unfold {e : Exp rT} {σ : State rT} {ε : ENNReal}
 theorem glm'_strong_ind {Z : Cfg rT → ENNReal → IProp GF} {Ψ : GlmState rT → IProp GF}
     [NonExpansive Ψ] :
     iprop(□ (∀ s, glmPre' Z
-              (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre' Z) s')) s
-              -∗ Ψ s)) ⊢
+              (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre' Z) s')) s -∗
+              Ψ s)) ⊢
       (∀ s, bi_least_fixpoint (glmPre' Z) s -∗ Ψ s) := by
   iintro #HM
   iapply least_fixpoint_ind $$ HM
@@ -363,7 +363,8 @@ theorem glm'_bind
         set X₂' : Cfg rT → ENNReal :=
           fun ρ' => (Kinv ρ'.expr).elim 0 (fun e' => X₂ ⟨e', ρ'.state⟩) with hX₂'def
         have hR'set : {ρ' | R' ρ'} = K.fillCfg '' {ρ'' | R ρ''} := by
-          ext ρ'; simp only [hR'def, Set.mem_ofPred_eq, Set.mem_image]
+          ext ρ'
+          simp only [hR'def, Set.mem_ofPred_eq, Set.mem_image]
           exact ⟨fun ⟨ρ'', heq, hR⟩ => ⟨ρ'', hR, heq.symm⟩,
             fun ⟨ρ'', hR, heq⟩ => ⟨ρ'', heq.symm, hR⟩⟩
         have hR'meas : MeasurableSet {ρ' | R' ρ'} :=
@@ -414,7 +415,8 @@ theorem glm'_prim_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
     glmPrimStep' e σ ε Z ⊢ glm' e σ ε Z := by
   iintro HPrim
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
-  iright; ileft
+  iright
+  ileft
   iexact HPrim
 
 theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
@@ -423,7 +425,8 @@ theorem glm'_erasable_step {e : Exp rT} {σ : State rT} {ε : ENNReal}
       glm' e σ ε Z := by
   iintro HES
   iapply least_fixpoint_unfold_mpr (glmPre' Z)
-  iright; iright
+  iright
+  iright
   iexact HES
 
 /-- Thin-air credit rule: a client may always assume a strictly larger error budget. -/

@@ -65,8 +65,8 @@ instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
 /-- Integrating against the uniform index distribution is the average over `[0, N)`. -/
 theorem lintegral_tapeIndexUniform {N : Int} (hN : 0 < N)
     (ψ : { z : Int // 0 ≤ z ∧ z < N } → ENNReal) :
-    ∫⁻ x, ψ x ∂(tapeIndexUniform N)
-      = ((N.toNat : ENNReal))⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) N, ψ (tapeIdxOf hN n) := by
+    ∫⁻ x, ψ x ∂(tapeIndexUniform N) =
+      ((N.toNat : ENNReal))⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) N, ψ (tapeIdxOf hN n) := by
   have hcard : (Finset.Ico (0 : Int) N).card = N.toNat := by rw [Int.card_Ico]; omega
   rw [tapeIndexUniform_eq_map hN, lintegral_map Measurable.of_discrete Measurable.of_discrete,
       lintegral_countable',
@@ -103,8 +103,7 @@ theorem tapePresample_univ_eq_one {σ : State rT} {α : Loc} {t : Tape}
     (tapePresample σ α) Set.univ = 1 := by
   obtain ⟨N, bs⟩ := t
   simp only [tapePresample, h]
-  rw [Measure.bind_apply MeasurableSet.univ
-        Measurable.of_discrete.aemeasurable]
+  rw [Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
   simp_rw [Measure.dirac_apply' _ MeasurableSet.univ, Set.indicator_univ,
     Pi.one_apply, lintegral_one]
   exact tapeIndexUniform_univ_eq_one hN
@@ -144,8 +143,8 @@ theorem tapePresample.measurable {α : Loc} :
             (fun n => Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))))
         have hconv : (fun σ : State rT =>
             (tapeIndexUniform N).bind
-              (fun n => Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))))
-            = (fun σ : State rT =>
+              (fun n => Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))) =
+            (fun σ : State rT =>
               (tapeIndexUniform N).map
                 (fun n => σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))) := by
           funext σ; exact Measure.bind_dirac_eq_map _ Measurable.of_discrete
@@ -164,8 +163,8 @@ theorem tapePresample.measurable {α : Loc} :
         have hk : Measurable (fun _ : State rT => tapeIndexUniform N) := measurable_const
         have hSF : ProbabilityTheory.IsSFiniteKernel
             (ProbabilityTheory.Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk) := by
-          have : ProbabilityTheory.Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk
-              = ProbabilityTheory.Kernel.const (State rT) (tapeIndexUniform N) := rfl
+          have : ProbabilityTheory.Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk =
+              ProbabilityTheory.Kernel.const (State rT) (tapeIndexUniform N) := rfl
           rw [this]; infer_instance
         exact @Measure.measurable_map_uncurry (State rT) {z : Int // 0 ≤ z ∧ z < N}
           (State rT) _ _ _ _ hh (fun _ => tapeIndexUniform N) hk hSF
@@ -186,8 +185,8 @@ theorem tapePresample_bind_dirac_measurable {α : Loc}
     Measurable (fun ρ : Cfg rT =>
       (tapePresample ρ.state α).bind (fun σ'' => Measure.dirac (g ρ σ''))) := by
   have hconv : (fun ρ : Cfg rT =>
-        (tapePresample ρ.state α).bind (fun σ'' => Measure.dirac (g ρ σ'')))
-      = (fun ρ : Cfg rT => (tapePresample ρ.state α).map (fun σ'' => g ρ σ'')) := by
+        (tapePresample ρ.state α).bind (fun σ'' => Measure.dirac (g ρ σ''))) =
+      (fun ρ : Cfg rT => (tapePresample ρ.state α).map (fun σ'' => g ρ σ'')) := by
     funext ρ
     exact Measure.bind_dirac_eq_map _ (hg.comp (measurable_const.prodMk measurable_id))
   rw [hconv]
@@ -258,8 +257,8 @@ theorem primStep_tape_persists [Countable rT]
     ∀ᵐ ρ ∂(primStep ⟨e, σ⟩),
       ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound := by
   refine MeasureTheory.ae_iff.mpr ?_
-  rw [show {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound}
-        = ⋃ ρ ∈ {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound},
+  rw [show {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound} =
+        ⋃ ρ ∈ {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound},
             ({ρ} : Set (Cfg rT)) from by ext; simp]
   refine (measure_biUnion_null_iff (Set.to_countable _)).mpr ?_
   intro ρ hρ

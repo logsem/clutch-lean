@@ -82,8 +82,8 @@ def lookup : SubstMap rT → Var → Option (Exp rT)
     | none => if x = y then some v else none
 
 @[simp] theorem lookup_insert (vs : SubstMap rT) (x y : Var) (v : Exp rT) :
-    (vs.insert x v).lookup y
-      = match vs.lookup y with
+    (vs.insert x v).lookup y =
+      match vs.lookup y with
         | some w => some w
         | none => if y = x then some v else none := rfl
 
@@ -133,8 +133,8 @@ theorem Exp.subst_isClosed {X : ClosedCtx} {e v : Exp α} {x : Var}
 /-- Substitutions at different variables commute when `v'` has no `x` free. -/
 theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
     (hne : x ≠ y) (hv' : x ∉ v'.fv) :
-    Exp.subst (Exp.subst e x v) y v'
-      = Exp.subst (Exp.subst e y v') x (Exp.subst v y v') := by
+    Exp.subst (Exp.subst e x v) y v' =
+      Exp.subst (Exp.subst e y v') x (Exp.subst v y v') := by
   induction e with
   | fvar z =>
       by_cases h1 : x = z <;> by_cases h2 : y = z
@@ -270,8 +270,8 @@ theorem Exp.substMap_subst_fvar_comm
     (hxNotDom : x ∉ (vs.map (·.1)).toFinset)
     (hyNotDom : y ∉ (vs.map (·.1)).toFinset)
     (hvs : SubstMap.AllClosed vs) :
-    Exp.substMap vs (Exp.subst E x (.fvar y))
-      = Exp.subst (Exp.substMap vs E) x (.fvar y) := by
+    Exp.substMap vs (Exp.subst E x (.fvar y)) =
+      Exp.subst (Exp.substMap vs E) x (.fvar y) := by
   induction vs with
   | nil => rfl
   | cons p rest ih =>
@@ -332,11 +332,11 @@ theorem Exp.substMap_hom₂ (C : Exp rT → Exp rT → Exp rT)
   | cons _ _ ih => simp only [Exp.substMap_cons, ih, hC]
 
 theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
-    (hC : ∀ e0 e1 e2 x v, Exp.subst (C e0 e1 e2) x v
-      = C (Exp.subst e0 x v) (Exp.subst e1 x v) (Exp.subst e2 x v))
+    (hC : ∀ e0 e1 e2 x v, Exp.subst (C e0 e1 e2) x v =
+      C (Exp.subst e0 x v) (Exp.subst e1 x v) (Exp.subst e2 x v))
     (vs : SubstMap rT) (e0 e1 e2 : Exp rT) :
-    (C e0 e1 e2).substMap vs
-      = C (e0.substMap vs) (e1.substMap vs) (e2.substMap vs) := by
+    (C e0 e1 e2).substMap vs =
+      C (e0.substMap vs) (e1.substMap vs) (e2.substMap vs) := by
   induction vs with
   | nil => rfl
   | cons _ _ ih => simp only [Exp.substMap_cons, ih, hC]
@@ -492,13 +492,16 @@ theorem SubstMap.lookup_closed {vs : SubstMap rT} {x : Var} {v : Exp rT}
     simp only [SubstMap.lookup] at hv
     cases hr : SubstMap.lookup rest x with
     | some w' =>
-      rw [hr] at hv; injection hv with hw'v; subst hw'v
+      rw [hr] at hv
+      injection hv with hw'v
+      subst hw'v
       exact ih hr hClosed.2
     | none =>
       rw [hr] at hv
       simp only at hv
       split_ifs at hv with hxy
-      injection hv with hwv; subst hwv
+      injection hv with hwv
+      subst hwv
       exact hClosed.1
 
 /-- Opening a body at a fresh atom `x`, then binding `x ↦ v`, opens the substituted body at `v`. -/
@@ -613,16 +616,16 @@ theorem Exp.substMap_subst_fvar_lookup
     (hvs : SubstMap.AllClosed vs)
     (hyLookup : vs.lookup y = some w)
     (hyFvE : y ∉ E.fv) :
-    Exp.substMap vs (Exp.subst E x (.fvar y))
-      = Exp.subst (Exp.substMap (vs.filter (fun p => !decide (p.1 = y))) E) x w := by
+    Exp.substMap vs (Exp.subst E x (.fvar y)) =
+      Exp.subst (Exp.substMap (vs.filter (fun p => !decide (p.1 = y))) E) x w := by
   have hw_closed : w.isClosed .empty :=
     hvs (y, w) (SubstMap.mem_of_lookup_eq_some hyLookup)
   induction vs with
   | nil => simp [SubstMap.lookup] at hyLookup
   | cons p rest ih =>
     obtain ⟨z, v⟩ := p
-    have hcons1 : Exp.substMap ((z, v) :: rest) (Exp.subst E x (.fvar y))
-        = Exp.subst (Exp.substMap rest (Exp.subst E x (.fvar y))) z v := rfl
+    have hcons1 : Exp.substMap ((z, v) :: rest) (Exp.subst E x (.fvar y)) =
+        Exp.subst (Exp.substMap rest (Exp.subst E x (.fvar y))) z v := rfl
     have hzx : z ≠ x := fun h => hxNotDom (h ▸ by simp)
     have hxNotRest : x ∉ (rest.map (·.1)).toFinset := fun h => hxNotDom (by simp [h])
     obtain ⟨hv_closed, hvs_rest⟩ := SubstMap.AllClosed_cons.mp hvs
@@ -638,8 +641,8 @@ theorem Exp.substMap_subst_fvar_lookup
         rw [hw'eq] at hr
         rw [ih hxNotRest hvs_rest hr]
         have hfilter_cons :
-            ((z, v) :: rest).filter (fun p => !decide (p.1 = y))
-              = rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
+            ((z, v) :: rest).filter (fun p => !decide (p.1 = y)) =
+              rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
         rw [hfilter_cons]
         rw [hzy]
         have hfilter_closed : SubstMap.AllClosed (rest.filter (fun p => !decide (p.1 = y))) :=
@@ -661,8 +664,8 @@ theorem Exp.substMap_subst_fvar_lookup
         simp at hyLookup
         subst hyLookup
         have hfilter_cons :
-            ((z, v) :: rest).filter (fun p => !decide (p.1 = y))
-              = rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
+            ((z, v) :: rest).filter (fun p => !decide (p.1 = y)) =
+              rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
         rw [hfilter_cons]
         have hyNotRest : y ∉ (rest.map (·.1)).toFinset := by
           intro h
@@ -684,8 +687,8 @@ theorem Exp.substMap_subst_fvar_lookup
         rw [hw'eq] at hr
         rw [ih hxNotRest hvs_rest hr]
         have hfilter_cons :
-            ((z, v) :: rest).filter (fun p => !decide (p.1 = y))
-              = (z, v) :: rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
+            ((z, v) :: rest).filter (fun p => !decide (p.1 = y)) =
+              (z, v) :: rest.filter (fun p => !decide (p.1 = y)) := by simp [hzy]
         rw [hfilter_cons]
         rw [Exp.subst_subst_ne (Ne.symm hzx) (Exp.notMem_fv_of_isClosed_empty hv_closed x)
           (Exp.notMem_fv_of_isClosed_empty hw_closed z)]
@@ -708,7 +711,9 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
     simp only [SubstMap.lookup] at hv
     cases hr : SubstMap.lookup rest x with
     | some w' =>
-      rw [hr] at hv; injection hv with hw'v; subst hw'v
+      rw [hr] at hv
+      injection hv with hw'v
+      subst hw'v
       rw [ih hRestClosed hr]
       exact Exp.subst_fresh _ _ _
         (Exp.notMem_fv_of_isClosed_empty (SubstMap.lookup_closed hr hRestClosed) y)
@@ -716,7 +721,9 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
       rw [hr] at hv
       simp only at hv
       split_ifs at hv with hxy
-      injection hv with hwv; subst hwv; subst hxy
+      injection hv with hwv
+      subst hwv
+      subst hxy
       rw [Exp.substMap_fvar_lookup_none hr]
       show (Exp.fvar x).subst x w = w
       simp [Exp.subst]
@@ -891,14 +898,16 @@ theorem HeadStepPred_iff_exists_support (e : Exp rT) (σ : State rT) :
       | caseR hv => exact ⟨_, .CaseRS hv⟩
       | @alloc ed σ hv =>
           have : ed.toVal?.isSome := by
-            rw [Option.isSome_iff_ne_none]; intro h
+            rw [Option.isSome_iff_ne_none]
+            intro h
             exact (Exp.toVal?_eq_none.mp h) hv
           obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp this
           exact ⟨_, .AllocS hv' rfl rfl⟩
       | load hlook => exact ⟨_, .LoadS hlook rfl⟩
       | @store ℓ e σ hv hsome =>
           have : e.toVal?.isSome := by
-            rw [Option.isSome_iff_ne_none]; intro h
+            rw [Option.isSome_iff_ne_none]
+            intro h
             exact (Exp.toVal?_eq_none.mp h) hv
           obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp this
           exact ⟨_, .StoreS hv' hsome rfl⟩
@@ -980,8 +989,8 @@ theorem State.upd_tape_some (σ : State rT) (α : Loc) (t : Tape) :
 /-- Writes to distinct tapes commute. -/
 theorem State.upd_diff_tape_comm {σ : State rT} {α β : Loc} {bs bs' : Tape}
     (hne : α ≠ β) :
-    ((σ.update_tapes (·.insert β bs)).update_tapes (·.insert α bs'))
-      = ((σ.update_tapes (·.insert α bs')).update_tapes (·.insert β bs)) := by
+    ((σ.update_tapes (·.insert β bs)).update_tapes (·.insert α bs')) =
+      ((σ.update_tapes (·.insert α bs')).update_tapes (·.insert β bs)) := by
   unfold State.update_tapes
   congr 2
   apply Std.ExtTreeMap.ext_getElem?
@@ -1055,8 +1064,8 @@ theorem _root_.Std.ExtTreeMap.elem_fresh_ne
 
 theorem State.fresh_loc_upd_swap {σ : State rT} {α : Loc} {bs bs' : Tape} {t : Tape}
     (h : σ.tapes[α]? = some bs) :
-    ((σ.tapes.insert α bs').insert (σ.tapes.insert α bs').fresh t)
-      = ((σ.tapes.insert σ.tapes.fresh t).insert α bs') := by
+    ((σ.tapes.insert α bs').insert (σ.tapes.insert α bs').fresh t) =
+      ((σ.tapes.insert σ.tapes.fresh t).insert α bs') := by
   rw [State.fresh_loc_upd_some h]
   have hne : σ.tapes.fresh ≠ α := Std.ExtTreeMap.elem_fresh_ne h
   apply Std.ExtTreeMap.ext_getElem?
@@ -1123,8 +1132,8 @@ theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT
 theorem Cfg.lintegral_uniform'
     {z : Int} (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
-    ∫⁻ c, φ c ∂(Cfg.uniform z σ)
-      = ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Finset.Ico (0 : Int) z,
+    ∫⁻ c, φ c ∂(Cfg.uniform z σ) =
+      ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Finset.Ico (0 : Int) z,
           φ (⟨.lit (.int n), σ⟩ : Cfg rT) := by
   have hcard : (Finset.Ico (0 : Int) z).card = z.toNat := by rw [Int.card_Ico]; omega
   rw [Cfg.uniform_eq_map_uniformOfFinset Hz σ,
@@ -1231,23 +1240,23 @@ whatever the tape bound. -/
 theorem State.prim_step_empty_tape [Countable rT]
     {K : ProbLang.Ectx rT} {σ : State rT} {α : Loc} {z : Int} {N : Int}
     (hmem : σ.tapes[α]? = some ⟨N, []⟩) :
-    ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit (.lbl α))), σ⟩
-      = ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit .unit)), σ⟩ := by
+    ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit (.lbl α))), σ⟩ =
+      ProbLang.primStep ⟨K.fill (.rand (.lit (.int z)) (.lit .unit)), σ⟩ := by
   have hv_lbl : ¬ (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).isValue := by
     intro h; obtain ⟨hv⟩ := h; cases hv
   have hv_unit : ¬ (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).isValue := by
     intro h; obtain ⟨hv⟩ := h; cases hv
   rw [primStep_fill hv_lbl, primStep_fill hv_unit]
-  suffices h : ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩
-      = ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ by rw [h]
-  have hdecomp_lbl : (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).decomp
-      = ([], .rand (.lit (.int z)) (.lit (.lbl α))) := by
+  suffices h : ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ =
+      ProbLang.primStep ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ by rw [h]
+  have hdecomp_lbl : (Exp.rand (rT := rT) (.lit (.int z)) (.lit (.lbl α))).decomp =
+      ([], .rand (.lit (.int z)) (.lit (.lbl α))) := by
     rw [Exp.decomp_unfold]
     simp only [Exp.decompItem]
     rw [show (Exp.lit (rT := rT) (.lbl α)).toVal? = some (.lbl α) from rfl,
       show (Exp.lit (rT := rT) (.int z)).toVal? = some (.int z) from rfl]
-  have hdecomp_unit : (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).decomp
-      = ([], .rand (.lit (.int z)) (.lit .unit)) := by
+  have hdecomp_unit : (Exp.rand (rT := rT) (.lit (.int z)) (.lit .unit)).decomp =
+      ([], .rand (.lit (.int z)) (.lit .unit)) := by
     rw [Exp.decomp_unfold]
     simp only [Exp.decompItem]
     rw [show (Exp.lit (rT := rT) .unit).toVal? = some .unit from rfl,

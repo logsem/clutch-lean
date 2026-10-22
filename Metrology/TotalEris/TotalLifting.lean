@@ -84,8 +84,8 @@ theorem twp_lift_step_fupd {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp r
     (fun σ₁ ρ => Possible ρ (primStep ⟨e₁, σ₁⟩))
     (fun σ₁ => measurableSet_possible_support)
     (fun σ₁ => by
-      have hset : {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)}
-          = {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
+      have hset : {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)} =
+          {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
       rw [hset]; exact (hatom σ₁).concentrated_atoms)
 
 /-! ## Atomic steps -/
@@ -126,7 +126,7 @@ theorem twp_lift_pure_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp r
     (hstep : ∀ σ₁ e₂ σ₂,
       Possible (⟨e₂, σ₂⟩ : Cfg rT) (primStep ⟨e₁, σ₁⟩) → σ₂ = σ₁) :
     iprop(|={E}=> ∀ e₂ σ, ⌜Possible ⟨e₂, σ⟩ (primStep ⟨e₁, σ⟩)⌝ -∗ tglWp E e₂ Φ)
-    ⊢ tglWp E e₁ Φ := by
+      ⊢ tglWp E e₁ Φ := by
   iintro H
   iapply twp_lift_step_fupd hv hatom
   iintro %σ₁ Hσ

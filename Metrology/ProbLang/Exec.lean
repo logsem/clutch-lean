@@ -444,7 +444,8 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S} (HS : MeasurableSe
         refine Measurable.aemeasurable ?_
         refine Measurable.ite (by measurability) ?_ (by measurability)
         exact (measurable_coe HS).comp (execExactN_measurable _)
-      congr 1; ext k
+      congr 1
+      ext k
       by_cases hk : k < n
       · have hk' : ∀ k, k + 1 < n + 1 ↔ k < n := by omega
         simp only [hk, hk', ↑reduceIte]

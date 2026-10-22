@@ -58,8 +58,8 @@ theorem open_inj (x : Var) (e e' : Exp rT) (hx : x ∉ e.fv) (hx' : x ∉ e'.fv)
 
 theorem swap_open_fvar_close (k n : Nat) (x y : Var) (e : Exp rT)
     (hk : k ≠ n) (hxy : x ≠ y) :
-    closeRec k x (openRec n (fvar y) e)
-      = openRec n (fvar y) (closeRec k x e) := by
+    closeRec k x (openRec n (fvar y) e) =
+      openRec n (fvar y) (closeRec k x e) := by
   induction e generalizing k n <;> grind
 
 /-! ## Free variables under `close`, `open'`, `subst` -/
@@ -92,7 +92,7 @@ theorem fv_subst_subset (e : Exp rT) (x : Var) (v : Exp rT) :
         simp; exact fun h => hxy h.symm
   | _ => simp [subst, fv] at * <;> tauto
 
-@[scoped grind ←]
+@[scoped grind ← ]
 theorem close_var_not_fvar_rec (x) (k) (e : Exp rT) : x ∉ (closeRec k x e).fv := by
   induction e generalizing k <;> grind
 
@@ -176,8 +176,8 @@ theorem beta_lc (L : Finset Var) (e u : Exp rT)
   grind [subst_intro x u e hxfv hu, subst_lc (he x hxL) hu]
 
 private theorem openRec_closeRec_binder {L : Finset Var} {t : Exp rT} {x y : Var} {k : Nat}
-    (ih : ∀ z ∉ L, ∀ k, openRec k (fvar y) (closeRec k x (open' t (fvar z)))
-      = subst (open' t (fvar z)) x (fvar y)) :
+    (ih : ∀ z ∉ L, ∀ k, openRec k (fvar y) (closeRec k x (open' t (fvar z))) =
+      subst (open' t (fvar z)) x (fvar y)) :
     openRec (k+1) (fvar y) (closeRec (k+1) x t) = subst t x (fvar y) := by
   obtain ⟨z, hz⟩ := HasFresh.fresh_exists (L ∪ t.fv ∪ {x, y})
   simp only [Finset.mem_union, Finset.mem_insert, Finset.mem_singleton, not_or] at hz

@@ -256,8 +256,8 @@ theorem fDiv_rpow_mono_left (hα : 1 < α) {μ μ' ν : Measure X} [IsFiniteMeas
 product of perspectives. -/
 theorem persp_rpow_mul_sum {ι : Type*} {s : Finset ι} {c d : ι → ℝ} {a b : ℝ} (hα : 1 < α)
     (ha : 0 ≤ a) (hb : 0 ≤ b) (hc : ∀ i, 0 ≤ c i) (hd : ∀ i, 0 ≤ d i) :
-    ∑ i ∈ s, persp (· ^ α) (a * c i) (b * d i)
-      = persp (· ^ α) a b * ∑ i ∈ s, persp (· ^ α) (c i) (d i) := by
+    ∑ i ∈ s, persp (· ^ α) (a * c i) (b * d i) =
+      persp (· ^ α) a b * ∑ i ∈ s, persp (· ^ α) (c i) (d i) := by
   rw [EReal.mul_finset_sum_of_nonneg _ _ fun i _ ↦ persp_rpow_nonneg (hc i) (hd i)]
   exact Finset.sum_congr rfl fun i _ ↦ persp_rpow_mul hα ha hb (hc i) (hd i)
 

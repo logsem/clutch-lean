@@ -100,7 +100,8 @@ instance : Cslib.HasFresh Var where
   fresh_notMem L := by
     rw [← Finset.forall_mem_not_eq]
     intro b hb
-    rcases b with (_|n); (· simp)
+    rcases b with (_|n)
+    (· simp)
     simp only [Var.internal.injEq]
     refine Nat.ne_of_gt (Order.lt_add_one_iff.mpr ?_)
     apply Finset.le_sup_of_le hb
@@ -567,52 +568,68 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lc
           · rw [open', size_openRec_fvar]; simp only [Exp.size] at hle; omega
           · exact lcb_openRec_fvar x 0 e (by simpa [lcb] using hlc)
       | app e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .app (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | unop op e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .unop op (ih e (by omega) hlc)
       | binop op e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .binop op (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | cond e0 e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .cond (ih e0 (by omega) hlc.1.1) (ih e1 (by omega) hlc.1.2) (ih e2 (by omega) hlc.2)
       | pair e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .pair (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | fst e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .fst (ih e (by omega) hlc)
       | snd e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .snd (ih e (by omega) hlc)
       | inl e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .inl (ih e (by omega) hlc)
       | inr e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .inr (ih e (by omega) hlc)
       | case e0 e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .case (ih e0 (by omega) hlc.1.1) (ih e1 (by omega) hlc.1.2) (ih e2 (by omega) hlc.2)
       | alloc e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .alloc (ih e (by omega) hlc)
       | load e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .load (ih e (by omega) hlc)
       | store e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .store (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | tape e =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .tape (ih e (by omega) hlc)
       | rand e1 e2 =>
-          simp only [lcb, Bool.and_eq_true] at hlc; simp only [Exp.size] at hle
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
           exact .rand (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | scrut e p =>
-          simp only [lcb] at hlc; simp only [Exp.size] at hle
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
           exact .scrut p (ih e (by omega) hlc)
 
 theorem lcb_imp_lc {e : Exp α} (h : lcb 0 e = true) : IsLocallyClosed e :=
@@ -871,7 +888,8 @@ theorem IsVal.check?_some : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
   | .lam h => ⟨.lam h, by simp only [check?, dite_eq_left (Exp.lc_imp_lcb h)]⟩
   | .fix h => ⟨.fix h, by simp only [check?, dite_eq_left (Exp.lc_imp_lcb h)]⟩
   | .pair h1 h2 => by
-      obtain ⟨w1, hw1⟩ := check?_some h1; obtain ⟨w2, hw2⟩ := check?_some h2
+      obtain ⟨w1, hw1⟩ := check?_some h1
+      obtain ⟨w2, hw2⟩ := check?_some h2
       exact ⟨.pair w1 w2, by simp [check?, hw1, hw2]⟩
   | .inl h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inl w, by simp [check?, hw]⟩
   | .inr h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inr w, by simp [check?, hw]⟩
@@ -928,7 +946,8 @@ instance Exp.decIsValue (e : Exp α) : Decidable e.isValue :=
 @[simp] theorem Val.isValue (v : @Val α) : v.fst.isValue := ⟨v.snd⟩
 
 theorem Val.ext {v1 v2 : Val α} (h : v1.fst = v2.fst) : v1 = v2 := by
-  obtain ⟨e1, w1, h1⟩ := v1; obtain ⟨e2, w2, h2⟩ := v2
+  obtain ⟨e1, w1, h1⟩ := v1
+  obtain ⟨e2, w2, h2⟩ := v2
   simp at h; subst h; congr 1; exact IsVal.subsingleton w1 w2
 
 theorem Val.ext_iff {v1 v2 : Val α} : v1 = v2 ↔ v1.fst = v2.fst :=
@@ -1097,7 +1116,7 @@ def State.update_tapes (σ : State α) (f : ExtTreeMap Loc Tape → ExtTreeMap L
 
 theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
     (σ.update_tapes (·.insert l xs)).update_tapes (·.insert l ys) =
-    σ.update_tapes (·.insert l ys) := by
+      σ.update_tapes (·.insert l ys) := by
   unfold State.update_tapes; simp; grind
 
 theorem State.update_tapes_same {σ σ' : State α}

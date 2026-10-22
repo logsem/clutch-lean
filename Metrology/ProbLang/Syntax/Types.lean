@@ -367,14 +367,16 @@ theorem Typed.fvSubset {Γ : Tctx} {e : Exp rT} {τ : Ty}
   | binop_real _ _ _ ih1 ih2 | binop_int _ _ _ ih1 ih2 | binop_bool _ _ _ ih1 ih2
   | unboxed_eq _ _ _ ih1 ih2 | pair _ _ ih1 ih2 | app _ _ ih1 ih2
   | store _ _ ih1 ih2 | rand _ _ ih1 ih2 | rand_unit _ _ ih1 ih2 =>
-    intro x hx; simp only [Exp.fv, Finset.mem_union] at hx
+    intro x hx
+    simp only [Exp.fv, Finset.mem_union] at hx
     exact hx.elim (ih1 x) (ih2 x)
   | unop_int _ _ ih | unop_bool _ _ ih | unop_real _ _ ih
   | fst _ ih | snd _ ih | inl _ ih | inr _ ih | tapp _ ih
   | alloc _ ih | load _ ih | alloc_tape _ ih | scrut _ _ ih =>
     intro x hx; simp [Exp.fv] at hx; exact ih x hx
   | case _ _ _ ih0 ih1 ih2 | cond _ _ _ ih0 ih1 ih2 =>
-    intro x hx; simp only [Exp.fv, Finset.mem_union] at hx
+    intro x hx
+    simp only [Exp.fv, Finset.mem_union] at hx
     exact hx.elim (Or.elim · (ih0 x) (ih1 x)) (ih2 x)
   | lam _ _ ih | fix _ _ ih => exact fun x hx => isSome_of_mem_fv_open ih hx
   | tlam _ ih =>

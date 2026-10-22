@@ -224,7 +224,7 @@ theorem step_alloctape {E : CoPset} (K : Ectx rT) (z : Int) :
 theorem step_rand {E : CoPset} (K : Ectx rT) {z : Int} (l : Loc)
     (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z }) :
     iprop((⤇ (K.fill (pl(rand(#z, #lbl l))))) ∗ (l ↪ₛ ⟨z, n :: ns⟩))
-        ⊢
+      ⊢
       specUpdate rT E iprop((⤇ (K.fill pl(#int n))) ∗ (l ↪ₛ ⟨z, ns⟩)) := by
   iintro ⟨HK, Hl⟩
   unfold specUpdate

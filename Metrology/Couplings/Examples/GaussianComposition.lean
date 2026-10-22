@@ -92,8 +92,7 @@ theorem DP_gaussianMechPow (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (k : ℕ) :
 inputs at distance at most `r`, where `ρₖ = k r² / (2 σ²)`: the privacy loss grows as `√k`. -/
 theorem DP_gaussianMechPow_sqrt (hσ : σ ≠ 0) (r : ℝ) (hδ : 0 < δ) (hδ₁ : δ < 1) (k : ℕ) :
     (gaussianMechPow σ k).DP (fun a a' ↦ |a - a'| ≤ r)
-      (ENNReal.ofReal (k * (r ^ 2 / (2 * σ ^ 2)) +
-        2 * √(k * (r ^ 2 / (2 * σ ^ 2)) * log (1 / δ))))
+      (ENNReal.ofReal (k * (r ^ 2 / (2 * σ ^ 2)) + 2 * √(k * (r ^ 2 / (2 * σ ^ 2)) * log (1 / δ))))
       (ENNReal.ofReal δ) := fun a a' h ↦ by
   have hρ : 0 ≤ k * (r ^ 2 / (2 * (σ : ℝ) ^ 2)) := by positivity
   have hk : (k : ℝ≥0∞) * ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2)) =

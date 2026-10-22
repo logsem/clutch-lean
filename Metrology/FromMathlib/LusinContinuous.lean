@@ -162,8 +162,7 @@ instance [PerfectlyNormalSpace α] [IsFiniteMeasure μ] [BorelSpace α] :
       ∀ ⦃A : Set α⦄, MeasurableSet A → ∀ r, 0 < r →
         ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r := by
     apply MeasurableSpace.induction_on_inter
-      (C := fun A _ ↦ ∀ r, 0 < r →
-        ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r)
+      (C := fun A _ ↦ ∀ r, 0 < r → ∃ F U, IsClosed F ∧ IsOpen U ∧ F ⊆ A ∧ A ⊆ U ∧ μ (U \ F) < r)
     · exact BorelSpace.measurable_eq.trans (borel_eq_generateFrom_isClosed (α := α))
     · exact isPiSystem_isClosed
     · exact fun r hr =>
@@ -459,4 +458,3 @@ theorem Measurable.exists_isCompact_continuousOn (μ : Measure α) [T2Space α]
     Measure.InternallySmoothCompact.internally_smooth_compact
 
 end MeasureTheory
-

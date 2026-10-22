@@ -325,7 +325,7 @@ theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < �
 /-- Amplification, with the amplification step quantified over every positive `ε'`. -/
 theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
     □ (∀ {ε' : ℝ≥0∞}, ⌜0 < ε'⌝ -∗ □ (↯(k * ε') -∗ P) -∗ ↯ε' -∗ P)
-    ⊢ ↯ε -∗ P := by
+      ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
   obtain ⟨n, hn⟩ := err_amp_power hε hk
   iinduction n generalizing %ε %hε %hn Hε with

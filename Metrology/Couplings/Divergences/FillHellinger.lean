@@ -85,8 +85,7 @@ theorem lintegral_add_tsub_mul_ne_zero {m : Measure Ω} {g : Ω → ℝ≥0∞} 
   -- `g > 0` integrates to zero only against the zero measure
   have hm0 : m = 0 := by
     rw [lintegral_eq_zero_iff hg] at hgm
-    exact ae_eq_bot.1 (Filter.eventually_false_iff_eq_bot.1
-      (hgm.mono fun x hx ↦ (hg0 x).ne' hx))
+    exact ae_eq_bot.1 (Filter.eventually_false_iff_eq_bot.1 (hgm.mono fun x hx ↦ (hg0 x).ne' hx))
   simp [hm0] at hm1
 
 /-! ## Test bounds compose -/
@@ -374,8 +373,8 @@ theorem exists_le_lintegral_rnDeriv_rpow_of_hellDualBound (hα0 : 0 < α) (hα1 
       rw [lintegral_sub' (Measure.measurable_rnDeriv m Q).aemeasurable hrnfin hrnc, ← hPu, hdec,
         Measure.add_apply, withDensity_apply _ .univ, Measure.restrict_univ, tsub_add_eq_tsub_tsub,
         ENNReal.add_sub_cancel_left (measure_ne_top _ _)]
-    have hB : ∫⁻ ω, m.rnDeriv Q ω * c ω ^ (α - 1) ∂Q + (1 - m univ) * ENNReal.ofReal t ^ (α - 1)
-        = B := by
+    have hB : ∫⁻ ω, m.rnDeriv Q ω * c ω ^ (α - 1) ∂Q + (1 - m univ) * ENNReal.ofReal t ^ (α - 1) =
+        B := by
       rw [hlost, ← lintegral_mul_const (f := fun ω ↦ c ω - m.rnDeriv Q ω) _
           (hcm.sub (Measure.measurable_rnDeriv m Q)),
         ← lintegral_add_left (f := fun ω ↦ m.rnDeriv Q ω * c ω ^ (α - 1))

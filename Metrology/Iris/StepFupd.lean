@@ -111,14 +111,14 @@ theorem fupd_step_fupdN_plain_forall₃ {A B C : Type _} (Ψ : A → B → C →
 theorem fupd_step_fupdN_plain_forall₄ {A B C D : Type _} (Ψ : A → B → C → D → PROP)
     [∀ a b c d, Plain (Ψ a b c d)] (n : Nat) : iprop%
     (∀ a b c d, |={∅}=> |={∅}[∅]▷=>^[n] Ψ a b c d) ⊢
-    |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c d, Ψ a b c d :=
+      |={∅}=> |={∅}[∅]▷=>^[n] ∀ a b c d, Ψ a b c d :=
   (forall_mono fun a => fupd_step_fupdN_plain_forall₃ (Ψ a) n).trans
     (fupd_step_fupdN_plain_forall _ n)
 
 /-- Pure facts that follow from a guard, for every triple, hold after `n` step-updates. -/
 theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → Prop} {n : Nat} : iprop%
     (∀ a b c, ⌜G a b c⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c⌝) ⊢@{PROP}
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c, G a b c → q a b c⌝ := by
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c, G a b c → q a b c⌝ := by
   classical
   -- Commute the `∀` past the step-updates, then fold it into one pure fact (`hpure`).
   have hpure : (∀ a b c, ⌜G a b c → q a b c⌝) ⊢@{PROP} ⌜∀ a b c, G a b c → q a b c⌝ :=
@@ -137,7 +137,7 @@ theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → 
 /-- The four-variable version of `step_fupdN_pure_imp_forall₃`. -/
 theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C → D → Prop} {n : Nat} :
     iprop% (∀ a b c d, ⌜G a b c d⌝ -∗ |={∅}=> |={∅}[∅]▷=>^[n] ⌜q a b c d⌝) ⊢@{PROP}
-    |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c d, G a b c d → q a b c d⌝ := by
+      |={∅}=> |={∅}[∅]▷=>^[n] ⌜∀ a b c d, G a b c d → q a b c d⌝ := by
   classical
   have hpure : (∀ a b c d, ⌜G a b c d → q a b c d⌝) ⊢@{PROP}
       ⌜∀ a b c d, G a b c d → q a b c d⌝ :=

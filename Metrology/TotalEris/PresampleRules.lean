@@ -82,7 +82,8 @@ open Classical in
 theorem presampleAdvCompX₂_le_one {σ : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)}
     {ε₂ : TapeIdx N → ENNReal} (Hbd : ∀ n, ε₂ n ≤ 1) (σ' : State rT) :
     presampleAdvCompX₂ σ α N bs ε₂ σ' ≤ 1 := by
-  unfold presampleAdvCompX₂; split
+  unfold presampleAdvCompX₂
+  split
   exacts [Hbd _, zero_le]
 
 variable [LawfulProbLangℝ rT]
@@ -126,8 +127,8 @@ theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT} {α : Loc} {N : Int
             ε₂ n = (fun ρ : Cfg rT => match ρ.expr with | .lit (.int m) => F m | _ => 0)
               ⟨.lit (.int (↑n)), σ₁⟩ := fun n => by rw [hF]; simp only [dite_eq_left n.2]
         have hIndic : (fun z : Int => (match (⟨.lit (.int z), σ₁⟩ : Cfg rT).expr with
-              | .lit (.int m) => F m | _ => 0))
-            = ((Finset.Ico (0:Int) N) : Set Int).indicator F := by
+              | .lit (.int m) => F m | _ => 0)) =
+            ((Finset.Ico (0:Int) N) : Set Int).indicator F := by
           funext z
           by_cases hz : z ∈ Finset.Ico (0:Int) N
           · rw [Set.indicator_of_mem hz]
@@ -183,8 +184,8 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
       (ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ' ≤ (ε_now - ε₁) + 1 :=
     fun σ' => add_le_add_right (presampleAdvCompX₂_le_one Hbd σ') _
   have hInt : (0 : ℝ≥0∞) +
-      ∫⁻ σ', ((ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ') ∂(tapePresample σ₁ α)
-        ≤ ε_now := by
+      ∫⁻ σ', ((ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ') ∂(tapePresample σ₁ α) ≤
+        ε_now := by
     have : MeasureTheory.IsProbabilityMeasure (tapePresample σ₁ α) :=
       ⟨tapePresample_univ_eq_one hlookup hN⟩
     rw [zero_add, MeasureTheory.lintegral_add_left measurable_const,
@@ -194,8 +195,7 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT} {α : Loc}
       _ = ε_now := tsub_add_cancel_of_le hLe
   have hPgl : Pgl 0 (fun σ' : State rT => ∃ n : TapeIdx N, σ' = presampleUpdate σ₁ α N bs n)
       (tapePresample σ₁ α) :=
-    le_of_eq (MeasureTheory.ae_iff.mp
-      (tapePresample_ae hlookup hMeas fun n => ⟨n, rfl⟩))
+    le_of_eq (MeasureTheory.ae_iff.mp (tapePresample_ae hlookup hMeas fun n => ⟨n, rfl⟩))
   iapply glm'_erasable_step
   iexists (tapePresample σ₁ α),
     (fun σ' => ∃ n : TapeIdx N, σ' = presampleUpdate σ₁ α N bs n),

@@ -41,7 +41,9 @@ theorem twp_alloc {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
   iintro %e₂ %σ₂ %Hstep
   cases Possible.headStepSupport Hstep with
   | AllocS hvd hl hσ =>
-    rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hl hσ
+    rw [Exp.toVal?_ofVal] at hvd
+    cases hvd
+    subst hl hσ
     imod app_state_heap_alloc v $$ Hσ with ⟨Hσ', Hl⟩
     imodintro
     isimp only [erisWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
@@ -61,7 +63,9 @@ theorem twp_load {E : CoPset} {l : Loc} {v : Val rT} {Φ : Val rT → IProp GF} 
   iintro %e₂ %σ₂ %Hstep
   cases Possible.headStepSupport Hstep with
   | LoadS hlook' hofv =>
-    rw [hlook] at hlook'; cases hlook'; subst hofv
+    rw [hlook] at hlook'
+    cases hlook'
+    subst hofv
     imodintro
     isimp only [erisWpGS_stateInterp_eq, Exp.toVal?_ofVal]
     iframe Hσ
@@ -82,7 +86,9 @@ theorem twp_store {E : CoPset} {l : Loc} {v v' : Val rT} {Φ : Val rT → IProp 
   iintro %e₂ %σ₂ %Hstep
   cases Possible.headStepSupport Hstep with
   | StoreS hvd _ hσ =>
-    rw [Exp.toVal?_ofVal] at hvd; cases hvd; subst hσ
+    rw [Exp.toVal?_ofVal] at hvd
+    cases hvd
+    subst hσ
     imod app_state_update_heap $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
     isimp only [erisWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
@@ -147,7 +153,9 @@ theorem twp_rand_tape {E : CoPset} {l : Loc} {z : Int} {n : { z' : Int // 0 ≤ 
   iintro %e₂ %σ₂ %Hstep
   cases Possible.headStepSupport Hstep with
   | RandTapeS hlook' _ hv hσ =>
-    rw [hlook] at hlook'; cases hlook'; subst hσ hv
+    rw [hlook] at hlook'
+    cases hlook'
+    subst hσ hv
     imod app_state_update_tape $$ Hσ Hl with ⟨Hσ', Hl'⟩
     imodintro
     isimp only [erisWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]

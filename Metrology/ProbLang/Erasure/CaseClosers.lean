@@ -22,8 +22,8 @@ abbrev ErasureIHFill (m : Nat) (K : Ectx rT) (S : Set (Exp rT)) (α : Loc) : Pro
   ∀ (e' : Exp rT) (σ' : State rT) (t' : Tape),
     σ'.tapes[α]? = some t' → 0 < t'.bound →
     ∫⁻ σ'', ((execN m ∘ K.fillCfg) ⟨e', σ''⟩) ((fun x => x.expr) ⁻¹' S)
-        ∂tapePresample σ' α
-      = ((execN m ∘ K.fillCfg) ⟨e', σ'⟩) ((fun x => x.expr) ⁻¹' S)
+        ∂tapePresample σ' α =
+      ((execN m ∘ K.fillCfg) ⟨e', σ'⟩) ((fun x => x.expr) ⁻¹' S)
 
 /-- The map `ρ ↦ (execN m ∘ K.fillCfg) ρ (expr ⁻¹' S)` is measurable, so it can be integrated. -/
 theorem erasure_integrand_measurable {m : Nat} {K : Ectx rT} {S : Set (Exp rT)}
@@ -41,8 +41,8 @@ theorem erasure_det_close
     (e_h e' : Exp rT)
     (hs : ∀ σ' : State rT, headStep (⟨e_h, σ'⟩ : Cfg rT) = Measure.dirac ⟨e', σ'⟩) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by
   simp_rw [hs, lintegral_dirac]
   exact ih_fill _ σ t h hN
@@ -57,8 +57,8 @@ theorem erasure_det_close_ae
         headStep (⟨e_h, σ'⟩ : Cfg rT) = Measure.dirac ⟨e', σ'⟩)
     (hs_σ : headStep (⟨e_h, σ⟩ : Cfg rT) = Measure.dirac ⟨e', σ⟩) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by
   have : IsProbabilityMeasure (tapePresample σ α) :=
     ⟨tapePresample_univ_eq_one h hN⟩
@@ -84,8 +84,8 @@ theorem erasure_uniform_close
         headStep (⟨e_h, σ'⟩ : Cfg rT) = Cfg.uniform z_r σ')
     (hstep_σ : headStep (⟨e_h, σ⟩ : Cfg rT) = Cfg.uniform z_r σ) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by
   have : IsProbabilityMeasure (tapePresample σ α) :=
     ⟨tapePresample_univ_eq_one h hN⟩
@@ -121,8 +121,8 @@ theorem erasure_uniformReal_close
         headStep (⟨e_h, σ'⟩ : Cfg rT) = Cfg.uniformReal σ')
     (hstep_σ : headStep (⟨e_h, σ⟩ : Cfg rT) = Cfg.uniformReal σ) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨e_h, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_h, σ⟩ := by
   have : IsProbabilityMeasure (tapePresample σ α) :=
     ⟨tapePresample_univ_eq_one h hN⟩
@@ -165,8 +165,8 @@ theorem erasure_load_close
     (ih_fill : ErasureIHFill m K S α)
     (hlookup : σ.heap[ℓ]? = some v) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.load (.lit (.loc ℓ)), σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.load (.lit (.loc ℓ)), σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.load (.lit (.loc ℓ)), σ⟩ := by
   have hload : ∀ (σ₀ : State rT), σ₀.heap = σ.heap →
       headStep (⟨.load (.lit (.loc ℓ)), σ₀⟩ : Cfg rT) = Measure.dirac ⟨.ofVal v, σ₀⟩ := by
@@ -194,8 +194,8 @@ theorem erasure_alloc_close
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
     (ih_fill : ErasureIHFill m K S α) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.alloc ed, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.alloc ed, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.alloc ed, σ⟩ := by
   have halloc : ∀ (σ₀ : State rT), σ₀.heap = σ.heap →
       headStep (⟨.alloc ed, σ₀⟩ : Cfg rT) =
@@ -248,8 +248,8 @@ theorem erasure_store_close
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
     (ih_fill : ErasureIHFill m K S α) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ⟩ := by
   have hstore : ∀ (σ₀ : State rT), σ₀.heap = σ.heap →
       headStep (⟨.store (.lit (.loc ℓ)) ev, σ₀⟩ : Cfg rT) =
@@ -263,8 +263,8 @@ theorem erasure_store_close
   have zero_branch : ∀ (_hz : ∀ (σ₀ : State rT), σ₀.heap = σ.heap →
       headStep (⟨.store (.lit (.loc ℓ)) ev, σ₀⟩ : Cfg rT) = 0),
       ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ'⟩ ∂tapePresample σ α
-        = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ'⟩ ∂tapePresample σ α =
+        ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
             ∂headStep ⟨.store (.lit (.loc ℓ)) ev, σ⟩ := fun hz => by
     rw [hz σ rfl, lintegral_zero_measure]
     calc ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
@@ -320,8 +320,8 @@ theorem erasure_tape_close
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound)
     (ih_fill : ErasureIHFill m K S α) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨.tape (.lit (.int z)), σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨.tape (.lit (.int z)), σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.tape (.lit (.int z)), σ⟩ := by
   have hne : σ.tapes.fresh ≠ α := Std.ExtTreeMap.elem_fresh_ne h
   have hfresh_eq : ∀ᵐ σ' ∂(tapePresample σ α), σ'.tapes.fresh = σ.tapes.fresh := by
@@ -344,8 +344,8 @@ theorem erasure_tape_close
     _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨.tape (.lit (.int z)), σ⟩ := by
         have htape_upd :
-            (σ.update_tapes (·.insert σ.tapes.fresh (Tape.empty z))).tapes[α]?
-              = some t := by
+            (σ.update_tapes (·.insert σ.tapes.fresh (Tape.empty z))).tapes[α]? =
+              some t := by
           rw [State.upd_diff_tape_tot (Ne.symm hne)]; exact h
         have hf_int : Measurable (fun τ : State rT =>
             ((execN m ∘ K.fillCfg) ⟨.lit (.lbl σ.tapes.fresh), τ⟩)
@@ -365,16 +365,16 @@ theorem erasure_zero_close
     (h : σ.tapes[α]? = some t)
     (hzero : headStep ⟨e_red, σ⟩ = 0) :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
-              ∂headStep ⟨e_red, σ'⟩ ∂tapePresample σ α
-      = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+              ∂headStep ⟨e_red, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
           ∂headStep ⟨e_red, σ⟩ := by
   have hzero_ae : ∀ᵐ σ' ∂(tapePresample σ α), headStep ⟨e_red, σ'⟩ = 0 := by
     obtain ⟨N, bs⟩ := t
     have hg : Measurable (fun σ' : State rT => headStep (⟨e_red, σ'⟩ : Cfg rT)) :=
       headStep.measurable.comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
     have hPm : MeasurableSet {σ' : State rT | headStep (⟨e_red, σ'⟩ : Cfg rT) = 0} := by
-      have hset : {σ' : State rT | headStep (⟨e_red, σ'⟩ : Cfg rT) = 0}
-          = (fun σ' => (headStep (⟨e_red, σ'⟩ : Cfg rT)) Set.univ) ⁻¹' {0} := by
+      have hset : {σ' : State rT | headStep (⟨e_red, σ'⟩ : Cfg rT) = 0} =
+          (fun σ' => (headStep (⟨e_red, σ'⟩ : Cfg rT)) Set.univ) ⁻¹' {0} := by
         ext σ'; simp [Measure.measure_univ_eq_zero]
       rw [hset]
       exact ((Measure.measurable_coe MeasurableSet.univ).comp hg) (measurableSet_singleton 0)

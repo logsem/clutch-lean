@@ -150,8 +150,8 @@ theorem tapePresample_update_tapes_ne_comm
     congr 1
     funext n'
     rw [show Measure.dirac ((σ.update_tapes (·.insert β v)).update_tapes
-            (·.insert α ⟨N, bs ++ [n']⟩))
-        = (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n']⟩))).map
+            (·.insert α ⟨N, bs ++ [n']⟩)) =
+        (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n']⟩))).map
             (·.update_tapes (·.insert β v)) from by
       rw [Measure.map_dirac]; congr 1; exact State.upd_diff_tape_comm (Ne.symm hne)]
 
@@ -163,8 +163,8 @@ theorem tapePresample_lintegral
     {bs : List { z : Int // 0 ≤ z ∧ z < N }}
     (h : σ.tapes[α]? = some ⟨N, bs⟩) (f : State rT → ENNReal)
     (hf : Measurable f) :
-    ∫⁻ σ', f σ' ∂tapePresample σ α
-      = ∫⁻ n, f (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) ∂tapeIndexUniform N := by
+    ∫⁻ σ', f σ' ∂tapePresample σ α =
+      ∫⁻ n, f (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) ∂tapeIndexUniform N := by
   simp only [tapePresample, h]
   have hker : AEMeasurable (fun n : {z : Int // 0 ≤ z ∧ z < N} =>
       (Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) : Measure (State rT)))
@@ -179,8 +179,8 @@ theorem tapePresample_lintegral_update_heap
     (g : Std.ExtTreeMap Loc (Val rT) compare → Std.ExtTreeMap Loc (Val rT) compare)
     (hg : Measurable g)
     (f : State rT → ENNReal) (hf : Measurable f) :
-    ∫⁻ σ', f (σ'.update_heap g) ∂tapePresample σ α
-      = ∫⁻ τ, f τ ∂tapePresample (σ.update_heap g) α := by
+    ∫⁻ σ', f (σ'.update_heap g) ∂tapePresample σ α =
+      ∫⁻ τ, f τ ∂tapePresample (σ.update_heap g) α := by
   have hmap : Measurable (fun σ' : State rT => σ'.update_heap g) :=
     State.measurable_iff.mpr ⟨hg.comp State.measurable_heap, State.measurable_tapes⟩
   rw [tapePresample_update_heap_comm g hg,
@@ -191,8 +191,8 @@ integrals. -/
 theorem tapePresample_lintegral_update_tapes_ne
     {σ : State rT} {α β : Loc} {v : Tape} (hne : β ≠ α)
     (f : State rT → ENNReal) (hf : Measurable f) :
-    ∫⁻ σ', f (σ'.update_tapes (·.insert β v)) ∂tapePresample σ α
-      = ∫⁻ τ, f τ ∂tapePresample (σ.update_tapes (·.insert β v)) α := by
+    ∫⁻ σ', f (σ'.update_tapes (·.insert β v)) ∂tapePresample σ α =
+      ∫⁻ τ, f τ ∂tapePresample (σ.update_tapes (·.insert β v)) α := by
   have hins : Measurable (fun m : LocHeap Tape => m.insert β v) :=
     (Measurable.locHeap_insert β).comp (measurable_id.prodMk measurable_const)
   have hmap : Measurable (fun σ' : State rT => σ'.update_tapes (·.insert β v)) :=
@@ -206,8 +206,7 @@ theorem tapePresample_lintegral_update_tapes_ne
 literal. -/
 theorem Cfg.uniform_eq_bind {z : Int} {σ : State rT} (hz : 0 < z) :
     Cfg.uniform z σ =
-      ((PMF.uniformOfFinset (Finset.Ico 0 z)
-            (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+      ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
         (fun n => Measure.dirac (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold Cfg.uniform Int.isPos
   rw [dite_eq_left hz, Measure.bind_dirac_eq_map _ Measurable.of_discrete]
@@ -230,21 +229,18 @@ theorem tapePresample_bind_cfgUniform_comm
   by_cases hz : 0 < z
   · have huniform_σ := Cfg.uniform_eq_bind (σ := σ) hz
     have hk_pmf : Measurable (fun σ' : State rT =>
-        ((PMF.uniformOfFinset (Finset.Ico 0 z)
-              (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+        ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
             (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) := by
       have hre : (fun σ' : State rT =>
-          ((PMF.uniformOfFinset (Finset.Ico 0 z)
-                (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
-              (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT)))
-          = (fun σ' : State rT => Cfg.uniform z σ') := by
+          ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+              (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) =
+          (fun σ' : State rT => Cfg.uniform z σ') := by
         funext σ'; exact (Cfg.uniform_eq_bind (σ := σ') hz).symm
       rw [hre]
       exact Cfg.uniform.measurable.comp (measurable_const.prodMk measurable_id)
     have hLHS : (tapePresample σ α).bind (fun σ' => Cfg.uniform z σ') =
         (tapePresample σ α).bind (fun σ' =>
-          ((PMF.uniformOfFinset (Finset.Ico 0 z)
-                (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+          ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
               (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) := by
       congr 1; funext σ'; exact Cfg.uniform_eq_bind (σ := σ') hz
     rw [hLHS, huniform_σ, Measure.bind_bind
@@ -263,13 +259,11 @@ theorem tapePresample_bind_cfgUniform_comm
               (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
                 (fun n => Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) S) =
         ∫⁻ n, (Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT)) S
-          ∂((PMF.uniformOfFinset (Finset.Ico 0 z)
-              (Finset.nonempty_Ico.mpr hz)).toMeasure) := by
+          ∂((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure) := by
       intro σ'
       exact Measure.bind_apply hS Measurable.of_discrete.aemeasurable
     have hRlint : ∀ n : Int,
-        ((tapePresample σ α).bind
-            (fun σ'' => Measure.dirac (⟨.lit (.int n), σ''⟩ : Cfg rT))) S =
+        ((tapePresample σ α).bind (fun σ'' => Measure.dirac (⟨.lit (.int n), σ''⟩ : Cfg rT))) S =
         ∫⁻ σ'', (Measure.dirac (⟨.lit (.int n), σ''⟩ : Cfg rT)) S
           ∂(tapePresample σ α) := by
       intro n
@@ -290,8 +284,7 @@ theorem tapePresample_bind_cfgUniform_comm
       exact ((Measure.measurable_coe hS).comp measurable_dirac).comp hcfgbuild
     exact lintegral_lintegral_swap
       (μ := tapePresample σ α)
-      (ν := ((PMF.uniformOfFinset (Finset.Ico 0 z)
-              (Finset.nonempty_Ico.mpr hz)).toMeasure))
+      (ν := ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure))
       (f := fun σ' n => (Measure.dirac (⟨.lit (.int n), σ'⟩ : Cfg rT)) S)
       hswapmeas.aemeasurable
   · have hCfg' : ∀ σ' : State rT,
@@ -311,8 +304,8 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
     {N : Int} (hN : 0 < N) (σ : State rT)
     (f : Cfg rT → ENNReal) (hf : Measurable f) :
     ∫⁻ (a : { z : Int // 0 ≤ z ∧ z < N }),
-        f ⟨.lit (.int ↑a), σ⟩ ∂tapeIndexUniform N
-      = ∫⁻ (ρ : Cfg rT), f ρ ∂Cfg.uniform N σ := by
+      f ⟨.lit (.int ↑a), σ⟩ ∂tapeIndexUniform N =
+      ∫⁻ (ρ : Cfg rT), f ρ ∂Cfg.uniform N σ := by
   rw [tapeIndexUniform_eq_map hN]
   unfold Cfg.uniform Int.isPos
   have hNonempty : (Finset.Ico 0 N).Nonempty := Finset.nonempty_Ico.mpr hN

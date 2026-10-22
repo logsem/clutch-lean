@@ -41,8 +41,8 @@ theorem State.measurable_tapes : Measurable (fun σ : State α => σ.tapes) :=
   measurable_snd.comp (Measurable.of_comap_le le_rfl)
 
 theorem State.measurable_iff {X : Type _} [MeasurableSpace X] {f : X → State α} :
-    Measurable f
-      ↔ Measurable (fun x => (f x).heap) ∧ Measurable (fun x => (f x).tapes) :=
+    Measurable f ↔
+      Measurable (fun x => (f x).heap) ∧ Measurable (fun x => (f x).tapes) :=
   ⟨fun hf => ⟨State.measurable_heap.comp hf, State.measurable_tapes.comp hf⟩,
    fun ⟨h₁, h₂⟩ => measurable_comap_iff.mpr (h₁.prodMk h₂)⟩
 
@@ -73,8 +73,8 @@ theorem Cfg.measurable_state : Measurable (fun c : Cfg α => c.state) :=
   measurable_snd.comp (Measurable.of_comap_le le_rfl)
 
 theorem Cfg.measurable_iff {X : Type _} [MeasurableSpace X] {f : X → Cfg α} :
-    Measurable f
-      ↔ Measurable (fun x => (f x).expr) ∧ Measurable (fun x => (f x).state) :=
+    Measurable f ↔
+      Measurable (fun x => (f x).expr) ∧ Measurable (fun x => (f x).state) :=
   ⟨fun hf => ⟨Cfg.measurable_expr.comp hf, Cfg.measurable_state.comp hf⟩,
    fun ⟨h₁, h₂⟩ => measurable_comap_iff.mpr (h₁.prodMk h₂)⟩
 

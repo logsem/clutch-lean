@@ -42,10 +42,10 @@ theorem subst.measurable [MeasurableSpace rT] :
     (f := fun (b : Var × Exp rT) (e : Exp rT) => Exp.subst e b.1 b.2)
   case h_fvar =>
     have : Function.uncurry (fun (b : Var × Exp rT) (y : Var) =>
-              if b.1 = y then b.2 else (Exp.fvar y : Exp rT))
-        = (fun (q : (Var × Var) × Exp rT) =>
-              if q.1.1 = q.1.2 then q.2 else Exp.fvar q.1.2)
-            ∘ (fun (p : (Var × Exp rT) × Var) => ((p.1.1, p.2), p.1.2)) := by
+              if b.1 = y then b.2 else (Exp.fvar y : Exp rT)) =
+        (fun (q : (Var × Var) × Exp rT) =>
+              if q.1.1 = q.1.2 then q.2 else Exp.fvar q.1.2) ∘
+            (fun (p : (Var × Exp rT) × Var) => ((p.1.1, p.2), p.1.2)) := by
       funext ⟨⟨x, sub⟩, y⟩; rfl
     rw [this]
     have h1 : Measurable (fun (q : (Var × Var) × Exp rT) =>
@@ -186,8 +186,7 @@ theorem UnOp.eval_op_measurable [LawfulProbLangℝ rT] (op : UnOp) :
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
       (c_real := fun r => some (Exp.lit (.real (ProbLangℝ.realFrac r))))
     exact MeasurableEmbedding.some_mk.measurable.comp
-      (Exp.lit.measurable.comp
-        (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
+      (Exp.lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
 
 /-- `UnOp.eval` is jointly measurable in the operator and the operand. -/
 theorem UnOp_eval.measurable [LawfulProbLangℝ rT] :
@@ -298,10 +297,10 @@ theorem openRec.measurable [MeasurableSpace rT] :
     (t_fix   := fun b => (b.1 + 1, b.2))
   case h_bvar =>
     have hrw : Function.uncurry (fun (b : Nat × Exp rT) (j : Nat) =>
-              if b.1 = j then b.2 else (Exp.bvar j : Exp rT))
-        = (fun (q : (Nat × Nat) × Exp rT) =>
-              if q.1.1 = q.1.2 then q.2 else Exp.bvar q.1.2)
-            ∘ (fun (p : (Nat × Exp rT) × Nat) => ((p.1.1, p.2), p.1.2)) := by
+              if b.1 = j then b.2 else (Exp.bvar j : Exp rT)) =
+        (fun (q : (Nat × Nat) × Exp rT) =>
+              if q.1.1 = q.1.2 then q.2 else Exp.bvar q.1.2) ∘
+            (fun (p : (Nat × Exp rT) × Nat) => ((p.1.1, p.2), p.1.2)) := by
       funext ⟨⟨i, sub⟩, j⟩; rfl
     rw [hrw]
     have h1 : Measurable (fun (q : (Nat × Nat) × Exp rT) =>
@@ -383,8 +382,8 @@ theorem toVal_question.measurable [MeasurableSpace rT] :
         simp [Equiv.optionEquivSumPUnit]
       rw [heqv]
       have hmem_iff :
-          (Sum.inl (Val.mk e (Classical.choice hv) (Classical.choice hv).lc) : Val rT ⊕ PUnit)
-            ∈ Ssum ↔
+          (Sum.inl (Val.mk e (Classical.choice hv) (Classical.choice hv).lc) : Val rT ⊕ PUnit) ∈
+            Ssum ↔
           (Val.mk e (Classical.choice hv) (Classical.choice hv).lc : Val rT) ∈
           (Sum.inl ⁻¹' Ssum : Set (Val rT)) := Iff.rfl
       rw [hmem_iff, ← hUval_eq]
@@ -432,8 +431,8 @@ theorem _root_.Option.measurable_elim_param
       (fun b => some_branch (a, b))) := by
   intro S hS
   have hpre : (fun a => Option.casesOn (motive := fun _ => γ) (f a) (default a)
-        (fun b => some_branch (a, b))) ⁻¹' S
-      = ({a | f a = none} ∩ default ⁻¹' S)
+        (fun b => some_branch (a, b))) ⁻¹' S =
+      ({a | f a = none} ∩ default ⁻¹' S)
       ∪ (fun a => (a, f a)) ⁻¹'
           ((fun q : α × β => (q.1, (some q.2 : Option β))) ''
             ((fun q : α × β => some_branch q) ⁻¹' S)) := by
@@ -471,8 +470,8 @@ theorem _root_.Option.measurable_bind_param
     {f : α → Option β} (hf : Measurable f)
     {some_branch : α × β → Option γ} (hsome : Measurable some_branch) :
     Measurable (fun a => (f a).bind (fun b => some_branch (a, b))) := by
-  have hrw : (fun a => (f a).bind (fun b => some_branch (a, b)))
-      = fun a => Option.casesOn (motive := fun _ => Option γ) (f a)
+  have hrw : (fun a => (f a).bind (fun b => some_branch (a, b))) =
+      fun a => Option.casesOn (motive := fun _ => Option γ) (f a)
           none (fun b => some_branch (a, b)) := by
     funext a; cases f a <;> rfl
   rw [hrw]
@@ -740,8 +739,8 @@ private theorem decompN_measurable [MeasurableSpace rT] : ∀ n,
     show Measurable (fun e : Exp rT => (([], e) : Ectx rT × Exp rT))
     exact measurable_const.prodMk measurable_id
   | succ n ih =>
-    have hrw : (decompN (n+1) : Exp rT → Ectx rT × Exp rT)
-        = fun e => Option.casesOn (motive := fun _ => Ectx rT × Exp rT) e.decompItem
+    have hrw : (decompN (n+1) : Exp rT → Ectx rT × Exp rT) =
+        fun e => Option.casesOn (motive := fun _ => Ectx rT × Exp rT) e.decompItem
             (([], e) : Ectx rT × Exp rT)
             (fun (p : EctxItem rT × Exp rT) =>
               ((decompN n p.2).1 ++ [p.1], (decompN n p.2).2)) := by
@@ -942,8 +941,8 @@ theorem liftRR.measurable [MeasurableSpace rT] (f : rT → rT → rT)
 theorem liftIIorRR.measurable [MeasurableSpace rT]
     (fi : Int → Int → Int) (f : rT → rT → rT) (hf : Measurable (Function.uncurry f)) :
     Measurable (liftIIorRR (rT := rT) fi f) := by
-  have hrw : liftIIorRR (rT := rT) fi f
-      = fun p => Option.casesOn (motive := fun _ => Option (Exp rT)) (liftII fi p)
+  have hrw : liftIIorRR (rT := rT) fi f =
+      fun p => Option.casesOn (motive := fun _ => Option (Exp rT)) (liftII fi p)
           (liftRR f p) (fun x => some x) := by
     funext p
     show (liftII fi p).orElse (fun _ => liftRR f p) = _
@@ -960,8 +959,8 @@ theorem liftIIorRR.measurable [MeasurableSpace rT]
 theorem liftLtLe.measurable [MeasurableSpace rT]
     (fi : Int → Int → Bool) (f : rT → rT → Bool) (hf : Measurable (Function.uncurry f)) :
     Measurable (liftLtLe (rT := rT) fi f) := by
-  have hrw : liftLtLe (rT := rT) fi f
-      = fun p => Option.casesOn (motive := fun _ => Option (Exp rT)) (liftIB fi p)
+  have hrw : liftLtLe (rT := rT) fi f =
+      fun p => Option.casesOn (motive := fun _ => Option (Exp rT)) (liftIB fi p)
           (liftRB f p) (fun x => some x) := by
     funext p
     show (liftIB fi p).orElse (fun _ => liftRB f p) = _
@@ -1010,7 +1009,8 @@ private theorem measurableSet_range_diag {X Y : Type _} [MeasurableSpace X]
     [MeasurableSpace Y] [MeasurableEq X] {ι : X → Y} (hι : MeasurableEmbedding ι) :
     MeasurableSet (Set.range fun x => (ι x, ι x)) := by
   have hrw : Set.range (fun x => (ι x, ι x)) = Prod.map ι ι '' Set.diagonal X := by
-    ext ⟨a, b⟩; constructor
+    ext ⟨a, b⟩
+    constructor
     · rintro ⟨x, hx⟩; exact ⟨(x, x), rfl, hx⟩
     · rintro ⟨⟨x, y⟩, hxy, hx⟩
       obtain rfl : x = y := hxy
@@ -1028,8 +1028,8 @@ instance _root_.ProbLang.BaseLit.instMeasurableEq
   let Pl (l : Loc) : BaseLit rT × BaseLit rT := (.loc l, .loc l)
   let Pll (l : Lbl) : BaseLit rT × BaseLit rT := (.lbl l, .lbl l)
   let Pr (r : rT) : BaseLit rT × BaseLit rT := (.real r, .real r)
-  have hdecomp : Set.diagonal (BaseLit rT)
-      = Set.range Pi ∪ Set.range Pb ∪ {(BaseLit.unit, BaseLit.unit)}
+  have hdecomp : Set.diagonal (BaseLit rT) =
+      Set.range Pi ∪ Set.range Pb ∪ {(BaseLit.unit, BaseLit.unit)}
       ∪ Set.range Pl ∪ Set.range Pll ∪ Set.range Pr := by
     ext ⟨a, b⟩
     simp only [Set.mem_diagonal_iff, Set.mem_union, Set.mem_range, Set.mem_singleton_iff,
@@ -1058,8 +1058,8 @@ private theorem decide_eq_BaseLit_measurable
     [MeasurableEq rT] :
     Measurable (fun p : BaseLit rT × BaseLit rT => decide (p.1 = p.2)) := by
   refine measurable_to_bool ?_
-  have hpre : (fun p : BaseLit rT × BaseLit rT => decide (p.1 = p.2)) ⁻¹' {true}
-      = Set.diagonal (BaseLit rT) := by ext p; simp [Set.diagonal]
+  have hpre : (fun p : BaseLit rT × BaseLit rT => decide (p.1 = p.2)) ⁻¹' {true} =
+      Set.diagonal (BaseLit rT) := by ext p; simp [Set.diagonal]
   rw [hpre]
   exact MeasurableEq.measurableSet_diagonal
 
@@ -1068,7 +1068,8 @@ theorem liftEq_litK.measurable [MeasurableSpace rT]
     Measurable (liftEq_litK (rT := rT)) := by
   have hrw : liftEq_litK (rT := rT) = fun p : Exp rT × BaseLit rT =>
       (Exp.litExtract p.1).bind fun l2 => some (Exp.lit (.bool (decide (p.2 = l2)))) := by
-    funext p; obtain ⟨v2, l1⟩ := p
+    funext p
+    obtain ⟨v2, l1⟩ := p
     cases v2 <;> simp [liftEq_litK, Exp.litExtract, Option.bind]
   rw [hrw]
   refine Option.measurable_bind_param (β := BaseLit rT) (γ := Exp rT)
@@ -1092,7 +1093,8 @@ theorem liftEq_inlK.measurable [MeasurableSpace rT]
             some (Exp.lit (.bool false))))
           (fun e1 => (Exp.litExtract e1).bind fun l2 =>
             some (Exp.lit (.bool (decide (l1 = l2))))) := by
-    funext p; obtain ⟨v1, v2⟩ := p
+    funext p
+    obtain ⟨v1, v2⟩ := p
     cases v1 <;> simp [liftEq_inlK, Exp.litExtract, Exp.inlExtract, Exp.inrExtract, Option.bind];
       cases v2 <;> simp <;>
       rename_i e2 <;> cases e2 <;>
@@ -1150,7 +1152,8 @@ theorem liftEq_inrK.measurable [MeasurableSpace rT]
             some (Exp.lit (.bool false))))
           (fun e1 => (Exp.litExtract e1).bind fun l2 =>
             some (Exp.lit (.bool (decide (l1 = l2))))) := by
-    funext p; obtain ⟨v1, v2⟩ := p
+    funext p
+    obtain ⟨v1, v2⟩ := p
     cases v1 <;> simp [liftEq_inrK, Exp.litExtract, Exp.inlExtract, Exp.inrExtract, Option.bind];
       cases v2 <;> simp <;>
       rename_i e2 <;> cases e2 <;>
@@ -1271,7 +1274,8 @@ private theorem liftII_def_eq (f : Int → Int → Int) (v1 v2 : Exp rT) :
   unfold liftII liftBin
   cases v1 <;> simp [Exp.litExtract, BaseLit.intExtract, Option.bind]
   rename_i l1
-  cases l1 <;> simp; cases v2 <;> simp [BaseLit.intExtract]
+  cases l1 <;> simp
+  cases v2 <;> simp [BaseLit.intExtract]
   rename_i l2
   cases l2 <;> simp
 
@@ -1283,7 +1287,8 @@ private theorem liftBB_def_eq (f : Bool → Bool → Bool) (v1 v2 : Exp rT) :
   unfold liftBB liftBin
   cases v1 <;> simp [Exp.litExtract, BaseLit.boolExtract, Option.bind]
   rename_i l1
-  cases l1 <;> simp; cases v2 <;>
+  cases l1 <;> simp
+  cases v2 <;>
     simp [BaseLit.boolExtract]
   rename_i l2
   cases l2 <;> simp
@@ -1296,7 +1301,8 @@ private theorem liftIB_def_eq (f : Int → Int → Bool) (v1 v2 : Exp rT) :
   unfold liftIB liftBin
   cases v1 <;> simp [Exp.litExtract, BaseLit.intExtract, Option.bind]
   rename_i l1
-  cases l1 <;> simp; cases v2 <;>
+  cases l1 <;> simp
+  cases v2 <;>
     simp [BaseLit.intExtract]
   rename_i l2
   cases l2 <;> simp
@@ -1309,7 +1315,8 @@ private theorem liftRB_def_eq [LawfulProbLangℝ rT] (f : rT → rT → Bool) (v
   unfold liftRB liftBin
   cases v1 <;> simp [Exp.litExtract, BaseLit.realExtract, Option.bind]
   rename_i l1
-  cases l1 <;> simp; cases v2 <;>
+  cases l1 <;> simp
+  cases v2 <;>
     simp [BaseLit.realExtract]
   rename_i l2
   cases l2 <;> simp
@@ -1322,7 +1329,8 @@ private theorem liftRR_def_eq [LawfulProbLangℝ rT] (f : rT → rT → rT) (v1 
   unfold liftRR liftBin
   cases v1 <;> simp [Exp.litExtract, BaseLit.realExtract, Option.bind]
   rename_i l1
-  cases l1 <;> simp; cases v2 <;>
+  cases l1 <;> simp
+  cases v2 <;>
     simp [BaseLit.realExtract]
   rename_i l2
   cases l2 <;> simp
@@ -1429,8 +1437,8 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
     Measurable (fun e : Exp rT => Pat.tryMatch p e) := by
   induction p with
   | wildcard =>
-    have hrw : (fun e : Exp rT => Pat.tryMatch .wildcard e)
-             = (fun e => (some e : Option (Exp rT))) := by
+    have hrw : (fun e : Exp rT => Pat.tryMatch .wildcard e) =
+             (fun e => (some e : Option (Exp rT))) := by
       funext e; rfl
     rw [hrw]
     exact MeasurableEmbedding.some_mk.measurable
@@ -1440,8 +1448,8 @@ theorem tryMatch_fixed.measurable [LawfulProbLangℝ rT] (p : Pat rT) :
       fun e => by cases e <;> rfl
     intro S hS
     have hrw : (fun l' : BaseLit rT =>
-        if (l == l') = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S
-        = (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S then {l} else ∅)
+        if (l == l') = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S =
+        (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S then {l} else ∅)
           ∪ (if (none : Option (Exp rT)) ∈ S then ({l}ᶜ : Set (BaseLit rT)) else ∅) := by
       ext l'
       by_cases hll : l = l'
@@ -1518,8 +1526,8 @@ theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
     MeasurableSet {q : Exp rT × Pat rT | Pat.shape q.2 = sw ∧
       Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U} := by
   have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = sw ∧
-        Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-      = (Prod.map (id : Exp rT → Exp rT) ctorP) ''
+        Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U} =
+      (Prod.map (id : Exp rT → Exp rT) ctorP) ''
         {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧ Pat.tryMatch (ctorP q.2) q.1 ∈ U} := by
     ext ⟨e, p⟩
     constructor
@@ -1532,9 +1540,8 @@ theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
       exact ⟨(hshape _).2 hsh, hp⟩
   rw [hcell]
   refine (MeasurableEmbedding.id.prodMap hP).measurableSet_image' ?_
-  have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
-          Pat.tryMatch (ctorP q.2) q.1 ∈ U}
-      = ((Prod.map ctorE (id : Pat rT → Pat rT)) ''
+  have h_inner_eq : {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧ Pat.tryMatch (ctorP q.2) q.1 ∈ U} =
+      ((Prod.map ctorE (id : Pat rT → Pat rT)) ''
           {q : Exp rT × Pat rT | Pat.shape q.2 = s' ∧
             Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U})
         ∪ ({q : Exp rT × Pat rT | q.1 ∉ Set.range ctorE ∧
@@ -1567,8 +1574,8 @@ theorem tryMatch.measurableSet_wrap [LawfulProbLangℝ rT] {s' sw : Pat.Shape}
     exact ih hU
   · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
     · have hB_eq2 : {q : Exp rT × Pat rT | q.1 ∉ Set.range ctorE ∧
-          Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U}
-          = (((Set.range ctorE)ᶜ ×ˢ (Set.univ : Set (Pat rT)))
+          Pat.shape q.2 = s' ∧ (none : Option (Exp rT)) ∈ U} =
+          (((Set.range ctorE)ᶜ ×ˢ (Set.univ : Set (Pat rT)))
               ∩ {q : Exp rT × Pat rT | Pat.shape q.2 = s'}) := by
         ext ⟨e, p'⟩
         simp [hnoneU]
@@ -1594,8 +1601,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
     | wildcard =>
       intro U hU
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.wildcard ∧
-          Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-          = ((Option.some : Exp rT → Option (Exp rT)) ⁻¹' U) ×ˢ
+          Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U} =
+          ((Option.some : Exp rT → Option (Exp rT)) ⁻¹' U) ×ˢ
             ({Pat.wildcard} : Set (Pat rT)) := by
         ext ⟨e, p⟩
         simp only [Set.mem_ofPred_eq, Function.uncurry, Set.mem_prod, Set.mem_preimage,
@@ -1614,8 +1621,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         (fun _ _ => rfl)
         ?_ hU
       have hrw : Function.uncurry
-            (fun (e : Exp rT) (b : BaseLit rT) => Pat.tryMatch (.lit b) e)
-          = fun q : Exp rT × BaseLit rT =>
+            (fun (e : Exp rT) (b : BaseLit rT) => Pat.tryMatch (.lit b) e) =
+          fun q : Exp rT × BaseLit rT =>
             Exp.casesOn (motive := fun _ => Option (Exp rT)) q.1
               (fun _ => none) (fun _ => none)
               (fun l' => if (q.2 == l') = true then some (Exp.lit BaseLit.unit) else none)
@@ -1644,8 +1651,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       intro S hS
       have hrw' : (fun q : BaseLit rT × BaseLit rT =>
           if (q.1 == q.2) = true then (some (Exp.lit BaseLit.unit) : Option (Exp rT))
-            else none) ⁻¹' S
-          = (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S
+            else none) ⁻¹' S =
+          (if (some (Exp.lit BaseLit.unit) : Option (Exp rT)) ∈ S
               then {q : BaseLit rT × BaseLit rT | q.1 = q.2} else ∅)
             ∪ (if (none : Option (Exp rT)) ∈ S
               then {q : BaseLit rT × BaseLit rT | q.1 = q.2}ᶜ else ∅) := by
@@ -1675,8 +1682,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       -- match on the product of the two sub-cells, by a π-system argument on rectangles
       intro U hU
       have hcell : {q : Exp rT × Pat rT | Pat.shape q.2 = Pat.Shape.pair s1 s2 ∧
-            Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U}
-          = (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) ''
+            Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e) q ∈ U} =
+          (fun (q : Exp rT × Pat rT × Pat rT) => (q.1, Pat.pair q.2.1 q.2.2)) ''
             {q : Exp rT × Pat rT × Pat rT |
               Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
               Pat.tryMatch (Pat.pair q.2.1 q.2.2) q.1 ∈ U} := by
@@ -1702,8 +1709,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         MeasurableEmbedding.id.prodMap Pat.pair.measurableEmbedding
       refine hemb.measurableSet_image' ?_
       have hA_eq : ∀ (e1 e2 : Exp rT) (p1 p2 : Pat rT),
-          Pat.tryMatch (Pat.pair p1 p2) (Exp.pair e1 e2)
-            = (Pat.tryMatch p1 e1).bind (fun b1 =>
+          Pat.tryMatch (Pat.pair p1 p2) (Exp.pair e1 e2) =
+            (Pat.tryMatch p1 e1).bind (fun b1 =>
               (Pat.tryMatch p2 e2).bind (fun b2 => some (Exp.pair b1 b2))) := fun _ _ _ _ => rfl
       have hB_eq : ∀ (e : Exp rT) (p1 p2 : Pat rT),
           (¬ ∃ ee : Exp rT × Exp rT, Function.uncurry Exp.pair ee = e) →
@@ -1715,8 +1722,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           | (rename_i e1 e2; exact absurd ⟨(e1, e2), rfl⟩ h)
       have h_inner_eq : {q : Exp rT × Pat rT × Pat rT |
             Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
-            Pat.tryMatch (Pat.pair q.2.1 q.2.2) q.1 ∈ U}
-          = (((fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
+            Pat.tryMatch (Pat.pair q.2.1 q.2.2) q.1 ∈ U} =
+          (((fun (q : (Exp rT × Exp rT) × (Pat rT × Pat rT)) =>
                 (Exp.pair q.1.1 q.1.2, q.2.1, q.2.2))) ''
               {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
                 Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
@@ -1775,8 +1782,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
         have hconv : {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
                 Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
                 ((Pat.tryMatch q.2.1 q.1.1).bind fun b1 =>
-                  (Pat.tryMatch q.2.2 q.1.2).bind fun b2 => some (Exp.pair b1 b2)) ∈ U}
-            = {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
+                  (Pat.tryMatch q.2.2 q.1.2).bind fun b2 => some (Exp.pair b1 b2)) ∈ U} =
+            {q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
                 Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧
                 (Pat.tryMatch q.2.1 q.1.1, Pat.tryMatch q.2.2 q.1.2) ∈ V} := by
           ext q; simp [hV_def, hqfun]
@@ -1803,8 +1810,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           ext q; simp [hJoint_def]
         · rintro _ ⟨A, hA, B, hB, rfl⟩
           show MeasurableSet (Joint (A ×ˢ B))
-          have heq : Joint (A ×ˢ B)
-              = ((fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) =>
+          have heq : Joint (A ×ˢ B) =
+              ((fun q : (Exp rT × Exp rT) × (Pat rT × Pat rT) =>
                   (q.1.1, q.2.1)) ⁻¹'
                   {x : Exp rT × Pat rT | Pat.shape x.2 = s1 ∧
                     Function.uncurry (fun e p => Pat.tryMatch p e) x ∈ A})
@@ -1819,8 +1826,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
           · exact MeasurableSet.preimage (ih2 hB) (by fun_prop)
         · intro V''' _ IH
           show MeasurableSet (Joint V'''ᶜ)
-          have heq : Joint V'''ᶜ
-              = ({q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
+          have heq : Joint V'''ᶜ =
+              ({q : (Exp rT × Exp rT) × (Pat rT × Pat rT) |
                   Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2}) \ Joint V''' := by
             ext q; simp [hJoint_def]; tauto
           rw [heq]
@@ -1846,8 +1853,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
       · by_cases hnoneU : (none : Option (Exp rT)) ∈ U
         · have hB_eq2 : {q : Exp rT × Pat rT × Pat rT |
                 q.1 ∉ Set.range (Function.uncurry (Exp.pair : Exp rT → Exp rT → Exp rT)) ∧
-                Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧ (none : Option (Exp rT)) ∈ U}
-              = (((Set.range (Function.uncurry (Exp.pair : Exp rT → Exp rT → Exp rT)))ᶜ ×ˢ
+                Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2 ∧ (none : Option (Exp rT)) ∈ U} =
+              (((Set.range (Function.uncurry (Exp.pair : Exp rT → Exp rT → Exp rT)))ᶜ ×ˢ
                   (Set.univ : Set (Pat rT × Pat rT)))
                  ∩ {q : Exp rT × Pat rT × Pat rT |
                     Pat.shape q.2.1 = s1 ∧ Pat.shape q.2.2 = s2}) := by
@@ -1870,8 +1877,8 @@ theorem tryMatch.measurable_joint [LawfulProbLangℝ rT] :
             ext ⟨e, p1, p2⟩; simp [hnoneU]
           rw [hB_eq2]
           exact MeasurableSet.empty
-  rw [show (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e))
-        = (Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e)) ∘ Prod.swap from
+  rw [show (Function.uncurry (fun (p : Pat rT) (e : Exp rT) => Pat.tryMatch p e)) =
+        (Function.uncurry (fun (e : Exp rT) (p : Pat rT) => Pat.tryMatch p e)) ∘ Prod.swap from
       funext fun _ => rfl]
   exact hjoint.comp measurable_swap
 

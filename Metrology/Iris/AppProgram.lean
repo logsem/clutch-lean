@@ -170,8 +170,7 @@ theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
 /-- Allocating a tape `t` yields a fresh tape `σ.tapes.fresh ↪ₐ t`. -/
 theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
     ⊢ appStateAuth σ ==∗
-      appStateAuth (σ.update_tapes
-          (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)) ∗
+      appStateAuth (σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)) ∗
         σ.tapes.fresh ↪ₐ t := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩
@@ -236,8 +235,7 @@ theorem app_empty_to_natTape {l : Loc} {z : Int} :
 /-- An integer tape with head `n` exposes its first entry, and can be rebuilt from the tail. -/
 theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
     appNatTape (GF := GF) l z (n :: ns) ⊢
-      iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z })
-              (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
+      iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z }) (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
         l ↪ₐ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₐ ⟨z, xs⟩ -∗ appNatTape l z ns)) := by
   unfold appNatTape

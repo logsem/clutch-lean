@@ -70,8 +70,7 @@ theorem lift_erasure_erasable_exp_rhs [AddCommMonoid B] [PartialOrder B] [IsOrde
     (hEpsSum : b₁ + s ε₂ ≤ b)
     (hErase₁ : ErasableExpr μ₁ σ₁)
     (hErase₁' : ErasableExpr μ₁' σ₁')
-    (hCont : ∀ σ₂ ρ', R σ₂ ρ' →
-        L.Rel (s (E₂ ρ')) Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
+    (hCont : ∀ σ₂ ρ', R σ₂ ρ' → L.Rel (s (E₂ ρ')) Φexp (asExpr (execN n ⟨e₁, σ₂⟩)) (limExecV ρ')) :
     L.Rel b Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
   have hek : Measurable (fun σ : State rT => execN n (⟨e₁, σ⟩ : Cfg rT)) :=
     (execN_measurable n).comp (Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
@@ -108,8 +107,7 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
     {b : B} {R : Cfg rT → Cfg rT → B} {n m : Nat}
     (hErase₁' : ErasableExpr μ₁' σ₁')
     (hExp : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩)))
-    (hCont : ∀ ρ ρ', R ρ ρ' < ⊤ →
-        L.Rel (R ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
+    (hCont : ∀ ρ ρ', R ρ ρ' < ⊤ → L.Rel (R ρ ρ') Φexp (asExpr (execN n ρ)) (limExecV ρ')) :
     L.Rel b Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
@@ -167,8 +165,7 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Preorder B] [Top B] [Zero B]
     (hErase₁' : ErasableExpr μ₁' σ₁') (hf : Measurable f) (hprog : primStep ⟨e₁, σ₁⟩ = μ₀.map f)
     (hf' : Measurable f') (hspec : μ₁'.bind (fun σ => pexecN m ⟨e₁', σ⟩) = ν₀.map f')
     (hhead : law.head μ₀ ν₀ R b) (hside : law.SideForExec μ₀ ν₀ R f')
-    (hCont : ∀ x y, R x y < ⊤ →
-        L.Rel (R x y) Φexp (asExpr (execN n (f x))) (limExecV (f' y))) :
+    (hCont : ∀ x y, R x y < ⊤ → L.Rel (R x y) Φexp (asExpr (execN n (f x))) (limExecV (f' y))) :
     L.Rel b Φexp
       (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n)))
       (limExecV ⟨e₁', σ₁'⟩) := by
@@ -209,8 +206,7 @@ theorem AddCoupl_erasure_erasable_exp_rhs
     {Φexp : Set (Exp rT × Exp rT)}
     {ε ε₁ ε₂ : ENNReal} {E₂ : Cfg rT → ENNReal} {n m : Nat}
     (hE₂meas : Measurable E₂)
-    (hCoupl : AddCoupl ε₁ R μ₁
-        (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
+    (hCoupl : AddCoupl ε₁ R μ₁ (μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)))
     (hBoundSum : ∫⁻ ρ, E₂ ρ ∂(μ₁'.bind (fun σ₂' => pexecN m ⟨e₁', σ₂'⟩)) ≤ ε₂)
     (hEpsSum : ε₁ + ε₂ ≤ ε)
     (hErase₁ : ErasableExpr μ₁ σ₁)

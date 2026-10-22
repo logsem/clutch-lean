@@ -177,17 +177,14 @@ macro "twp_pure" focus:(ppSpace colGt term:max)? : tactic =>
 /-- `twp_pure_at e₁ ↦ e₂` takes one `PureExec` step from `e₁` to `e₂`, given explicitly, for when
 synthesis cannot see through an opaque definition in `e₁`. -/
 macro "twp_pure_at " e1:term:max " ↦ " e2:term:max : tactic =>
-  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd
-      (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))
+  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))
 
 /-- `twp_pure_at e₁ ↦ e₂ by hφ` supplies the precondition `is_value` cannot close. -/
 macro "twp_pure_at " e1:term:max " ↦ " e2:term:max " by " h:term : tactic =>
-  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd
-      (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
+  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
 
 /-- `twp_pures` takes pure steps until none applies. -/
 macro "twp_pures" : tactic =>
-  `(tactic| ((repeat (twp_pure_core; try simp only [pl_step_simp]));
-             try simp only [pl_step_simp]))
+  `(tactic| ((repeat (twp_pure_core; try simp only [pl_step_simp])); try simp only [pl_step_simp]))
 
 end ProbLang.TotalEris

@@ -66,7 +66,6 @@ lemma PMF_mul_mul_inv_eq_mul_cancel (p q : PMF T) (HA : AbsCts p q) (a : T) :
   · exact fun h => HA a h
   · exact fun ⟨_, h⟩ => PMF.apply_ne_top q a h
 
-
 lemma RenyiDivergenceExpectation_pointwise (a b : ENNReal) {α : ℝ} (h : 1 < α)
     (Hac : b = 0 → a = 0) : a ^ α * b ^ (1 - α) = (a / b) ^ α * b := by
   rcases eq_or_ne b 0 with hb0 | hb0
@@ -109,7 +108,6 @@ theorem RenyiDivergenceExpectation (p q : T → ENNReal) {α : ℝ} (h : 1 < α)
     (∑' x : T, (p x)^α * (q x)^(1 - α)) = ∑' x : T, (p x / q x)^α * (q x) := by
   refine tsum_congr (fun x => ?_)
   exact RenyiDivergenceExpectation_pointwise (p x) (q x) h (H x)
-
 
 lemma ENNReal_rpow_sub_one_mul (a : ENNReal) {α : ℝ}
     (ha_ne_zero : a ≠ 0) (ha_ne_top : a ≠ ⊤) :
@@ -163,12 +161,10 @@ theorem RenyiDivergenceExpectation' (p q : PMF T) {α : ℝ} (h : 1 < α) :
   refine tsum_congr (fun ⟨x', Hx'⟩ => ?_)
   exact RenyiDivergenceExpectation'_pointwise (p x') (q x') h Hx' (PMF.apply_ne_top p x')
 
-
 /-! ## Auxiliary definitions used in the proof of the (ε^2 / 2) bound -/
 section ofDP_bound
 variable (ε : NNReal)
 variable (p q : PMF U)
-
 
 noncomputable def β (x : U) : ENNReal :=
   (ENNReal.ofReal (Real.exp ε) - (p x / q x)) / (ENNReal.ofReal (Real.exp (ε)) - ENNReal.ofReal (Real.exp (- ε)))
@@ -196,7 +192,6 @@ lemma β_ne_top (Hε : 0 < ε) : β ε p q x ≠ ⊤ := by
     · apply Real.exp_nonneg
   · apply ENNReal.sub_eq_top_iff.mp at HK'
     simp at HK'
-
 
 lemma one_sub_β (Hε : 0 < ε) (Hpq : ∀ x, (p x / q x ≤ ENNReal.ofReal (Real.exp ε))) (x : U) : 1 - (β ε p q x : ENNReal) =
     ((p x / q x) - ENNReal.ofReal (Real.exp (-ε)) ) / (ENNReal.ofReal (Real.exp ε) - ENNReal.ofReal (Real.exp (-ε))) := by
@@ -231,11 +226,9 @@ lemma one_sub_β (Hε : 0 < ε) (Hpq : ∀ x, (p x / q x ≤ ENNReal.ofReal (Rea
     rw [<- HD, <- HC]
     apply Hpq
 
-
 lemma sub_one_β_ne_top : (1 - β ε p q x) ≠ ⊤ := by
   apply ENNReal.sub_ne_top
   simp
-
 
 /--
 Value of the random variable A
@@ -252,8 +245,7 @@ noncomputable def A_pmf (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) ≤ p x / 
   ⟨ fun b =>
         match b with
         | false => β ε p q x
-        | true => 1 - β ε p q x,
-    by
+        | true => 1 - β ε p q x, by
        simp only [Summable.hasSum_iff ENNReal.summable, tsum_bool]
        rw [add_comm]
        exact tsub_add_cancel_of_le (β_le_one ε p q Hqp) ⟩
@@ -309,7 +301,6 @@ lemma A_expectation (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε))
     rcases HK with ⟨ h1, h2 ⟩ | ⟨ h, _ ⟩
     · exact absurd (Hac h2) h1
     · exact PMF.apply_ne_top p x h
-
   conv =>
     enter [1, 2, 2]
     rw [mul_comm]
@@ -324,7 +315,6 @@ lemma A_expectation (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε))
     rcases HK with ⟨ h1, h2 ⟩ | ⟨ h, _ ⟩
     · exact h1 (Hac x h2)
     · exact PMF.apply_ne_top p x h
-
   conv =>
     enter [1, 1, 2]
     rw [mul_comm]
@@ -342,8 +332,6 @@ lemma A_expectation (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε))
     apply mul_le_mul'
     · rw [← HC, ← HD]; apply Hpq
     · rfl
-
-
 
 /--
 Jensen's inequality for the random variable A: real reduct
@@ -369,18 +357,15 @@ lemma A_jensen_real (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) ≤ p x / q x)
     cases b <;> simp
   case G4 => simp
   case G5 => apply MeasureTheory.Integrable.of_finite
-
   rw [PMF.integral_eq_tsum _ _ ?G4] at HJensen
   case G4 => simp
   rw [PMF.integral_eq_tsum _ _ ?G5] at HJensen
   case G5 => apply MeasureTheory.Integrable.of_finite
-
   rw [tsum_bool, tsum_bool] at HJensen
   simp only [smul_eq_mul] at HJensen
   convert HJensen using 2
   · rw [tsum_bool]; ring
   · rw [tsum_bool]; ring
-
 
 /--
 Jensen's inequality for the random variable A
@@ -388,14 +373,12 @@ Jensen's inequality for the random variable A
 lemma A_jensen (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) ≤ p x / q x)
     {α : ℝ} (Hα : 1 < α) (x : U) :
     (∑'(b : Bool), A_val ε b * A_pmf ε p q Hqp x b) ^ α ≤ (∑'(b : Bool), (A_val ε b)^α * A_pmf ε p q Hqp x b) := by
-
   have SC1 (b : Bool) : A_val ε b ≠ ⊤ := by cases b <;> simp [A_val]
   have SC2 (b : Bool) : (A_pmf ε p q Hqp x) b ≠ ⊤ := by
     cases b <;> simp only [A_pmf, DFunLike.coe]
     · apply β_ne_top
       apply Hε
     · apply sub_one_β_ne_top
-
   apply (ENNReal.toReal_le_toReal ?G1 ?G2).mp
   case G1 =>
     apply ENNReal.rpow_ne_top_of_nonneg
@@ -470,10 +453,8 @@ lemma B_eval_open (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) ≤ p x / q x)
   intro
   rw [mul_comm]
 
-
 lemma B_eval_false_closed_form (Hε : 0 < ε) (Bval : ENNReal) (HBtop : Bval ≠ ⊤) (HBle : Bval ≤ 1)
-    (Hrel : ENNReal.ofReal (Real.exp (-ε)) * Bval
-          + ENNReal.ofReal (Real.exp ε) * (1 - Bval) = 1) :
+    (Hrel : ENNReal.ofReal (Real.exp (-ε)) * Bval + ENNReal.ofReal (Real.exp ε) * (1 - Bval) = 1) :
     Bval = (ENNReal.ofReal (Real.exp ε) - 1)
          / (ENNReal.ofReal (Real.exp ε) - ENNReal.ofReal (Real.exp (-ε))) := by
   conv =>
@@ -600,10 +581,8 @@ lemma B_eval_false (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) 
     rw [<- PMF.tsum_coe (B ε p q Hqp)]
     rw [tsum_bool]
     rw [add_comm]
-
   suffices (ENNReal.ofReal (Real.exp (- ε)) * B ε p q Hqp false + ENNReal.ofReal (Real.exp ε) * (1 - B ε p q Hqp false) = 1) by
     exact B_eval_false_closed_form (ε := ε) Hε _ (PMF.apply_ne_top _ _) (PMF.coe_le_one _ _) this
-
   suffices ∑'(x : U), (∑'(b : Bool), A_val ε b * A_pmf ε p q Hqp x b) * q x = 1 by
     conv at this =>
       enter [1, 1, x]
@@ -625,7 +604,6 @@ lemma B_eval_false (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) 
       rhs
       rw [<- this]
     congr
-
   conv =>
     enter [1, 1, x]
     rw [A_expectation _ _ _ Hε Hqp Hpq Hac]
@@ -640,8 +618,6 @@ lemma B_eval_false (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) 
   · simp [Function.support]
     intros x _
     rw [PMF_mul_mul_inv_eq_mul_cancel p q Hac x]
-
-
 
 /--
 closed form for B true
@@ -661,7 +637,6 @@ lemma B_eval_true (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) �
   -- Quality of life
   generalize HE1 : (Real.exp ε.toReal) = E1
   generalize HE2 : (Real.exp (-ε.toReal)) = E2
-
   have Hexp_nn : 0 ≤ E2 := by rw [<- HE2]; exact Real.exp_nonneg _
   have Hdiff_ne : ENNReal.ofReal E1 - ENNReal.ofReal E2 ≠ 0 := by
     rw [<- ENNReal.ofReal_sub _ Hexp_nn]
@@ -672,7 +647,6 @@ lemma B_eval_true (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) �
     trivial
   have Hdiff_ne_top : ENNReal.ofReal E1 - ENNReal.ofReal E2 ≠ ⊤ := by
     rw [<- ENNReal.ofReal_sub _ Hexp_nn]; simp
-
   apply (ENNReal.eq_div_iff Hdiff_ne Hdiff_ne_top).mpr
   rw [ENNReal.mul_sub ?G1]
   case G1 =>
@@ -685,7 +659,6 @@ lemma B_eval_true (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) �
     rw [mul_comm]
   rw [mul_assoc, ENNReal.mul_inv_cancel Hdiff_ne Hdiff_ne_top]
   simp
-
   rw [<- ENNReal.ofReal_sub _ ?G1]
   case G1 =>
     rw [<- HE2]
@@ -708,7 +681,6 @@ lemma B_eval_true (Hε : 0 < ε) (Hqp : ∀ x, ENNReal.ofReal (Real.exp (-ε)) �
   exact Real.exp_nonneg _
 
 end ofDP_bound
-
 
 /-
 ## Prove trig inequality B.1
@@ -824,7 +796,6 @@ lemma t_nonneg (Hy : 0 ≤ y) (Hyx : y < x) : 0 ≤ t x y := by
       linarith
     · linarith [Real.cosh_pos (y / 2)]
 
-
 -- Upstream?
 lemma tanh_lt_1 (w : ℝ) : Real.tanh w < 1 := by
   rw [Real.tanh_eq_sinh_div_cosh]
@@ -852,7 +823,6 @@ lemma t_le_one (Hy : 0 ≤ y) (Hyx : y < x) : t x y < 1 := by
     linarith
   · apply tanh_nonneg
     linarith
-
 
 lemma lemma_step_2 (Hy : 0 ≤ y) (Hyx : y < x) (H : t x y ≤ Real.tanh (x * y / 4)) : (1 + t x y) / (1 - t x y) ≤ Real.exp (x * y / 2) := by
   apply div_le_of_le_mul₀
@@ -975,8 +945,6 @@ lemma tanh_lt_id_nonneg {x : ℝ} (Hx : 0 ≤ x) : Real.tanh x ≤ x := by
     trivial
   · trivial
 
-
-
 lemma lemma_step_3_aux_differentiable (x : ℝ) :
     Differentiable ℝ (fun z : ℝ => Real.tanh (x * z / 4) - Real.tanh (x / 2) * Real.tanh (z / 2)) := by
   apply Differentiable.sub
@@ -1007,8 +975,8 @@ lemma lemma_step_3_deriv_nonneg (x z : ℝ) (Hx : x ≤ 2) (Hx' : 0 ≤ x) (Hz0 
     0 ≤ deriv (fun z => Real.tanh (x * z / 4) - Real.tanh (x / 2) * Real.tanh (z / 2)) z := by
   have Hfunc_xz4 : (fun z => Real.tanh (x * z / 4)) = Real.tanh ∘ (fun z => x * z / 4) := by rw [Function.comp_def]
   have Hfunc_z2 : (fun z => Real.tanh (z / 2)) = Real.tanh ∘ (fun z => z / 2) := by rw [Function.comp_def]
-  have Heq : (fun z => Real.tanh (x * z / 4) - Real.tanh (x / 2) * Real.tanh (z / 2))
-      = (fun z => Real.tanh (x * z / 4)) - (fun z => Real.tanh (x / 2) * Real.tanh (z / 2)) := by
+  have Heq : (fun z => Real.tanh (x * z / 4) - Real.tanh (x / 2) * Real.tanh (z / 2)) =
+      (fun z => Real.tanh (x * z / 4)) - (fun z => Real.tanh (x / 2) * Real.tanh (z / 2)) := by
     funext; simp
   rw [Heq]
   rw [deriv_sub ?G1 ?G2]
@@ -1126,7 +1094,6 @@ lemma lemma_step_3 (Hy : 0 ≤ y) (Hyx : y < x) (Hx : x ≤ 2) : Real.tanh (x / 
     (lemma_step_3_aux_differentiable x).differentiableOn
   have Hcts : ContinuousOn f (Set.Icc 0 2) :=
     (lemma_step_3_aux_continuous x).continuousOn
-
   apply Convex.mul_sub_le_image_sub_of_le_deriv (convex_Icc 0 2)
   · trivial
   · trivial
@@ -1138,7 +1105,6 @@ lemma lemma_step_3 (Hy : 0 ≤ y) (Hyx : y < x) (Hx : x ≤ 2) : Real.tanh (x / 
     apply And.intro <;> linarith
   · linarith
 
-
 lemma sinh_inequality (Hy : 0 ≤ y) (Hyx : y < x) (Hx : x ≤ 2) :
     (Real.sinh x - Real.sinh y) / Real.sinh (x - y) ≤ Real.exp (x * y / 2) := by
   -- Temp usage of hypothesis so Lean doesn't freak out
@@ -1148,7 +1114,6 @@ lemma sinh_inequality (Hy : 0 ≤ y) (Hyx : y < x) (Hx : x ≤ 2) :
   apply (lemma_step_2 _ _ Hy Hyx)
   unfold t
   apply lemma_step_3 _ _ Hy Hyx Hx
-
 
 end sinh_inequality
 lemma ofDP_bound_SC0 (ε : NNReal) (Hε : 0 < ε) :
@@ -1163,8 +1128,8 @@ lemma ofDP_bound_SC0 (ε : NNReal) (Hε : 0 < ε) :
 
 lemma ofDP_bound_SC1 (ε : NNReal) (Hε : 0 < ε) (α : ℝ) (Hα : 0 ≤ α) :
     ENNReal.ofReal (Real.exp (-↑ε)) ^ α *
-    ((ENNReal.ofReal (Real.exp ↑ε) - 1) /
-     (ENNReal.ofReal (Real.exp ↑ε) - ENNReal.ofReal (Real.exp (-↑ε)))) ≠ ⊤ := by
+      ((ENNReal.ofReal (Real.exp ↑ε) - 1) /
+       (ENNReal.ofReal (Real.exp ↑ε) - ENNReal.ofReal (Real.exp (-↑ε)))) ≠ ⊤ := by
   apply ENNReal.mul_ne_top
   · exact ENNReal.rpow_ne_top_of_nonneg Hα ENNReal.ofReal_ne_top
   apply lt_top_iff_ne_top.mp
@@ -1174,8 +1139,8 @@ lemma ofDP_bound_SC1 (ε : NNReal) (Hε : 0 < ε) (α : ℝ) (Hα : 0 ≤ α) :
 
 lemma ofDP_bound_SC2 (ε : NNReal) (Hε : 0 < ε) (α : ℝ) (Hα : 0 ≤ α) :
     ENNReal.ofReal (Real.exp ↑ε) ^ α *
-    ((1 - ENNReal.ofReal (Real.exp (-↑ε))) /
-     (ENNReal.ofReal (Real.exp ↑ε) - ENNReal.ofReal (Real.exp (-↑ε)))) ≠ ⊤ := by
+      ((1 - ENNReal.ofReal (Real.exp (-↑ε))) /
+       (ENNReal.ofReal (Real.exp ↑ε) - ENNReal.ofReal (Real.exp (-↑ε)))) ≠ ⊤ := by
   apply ENNReal.mul_ne_top
   · exact ENNReal.rpow_ne_top_of_nonneg Hα ENNReal.ofReal_ne_top
   apply lt_top_iff_ne_top.mp
@@ -1211,8 +1176,8 @@ lemma ofDP_bound_ratio_inv {V : Type*} (p q : PMF V) (ε : ℝ) (x : V)
 
 lemma ofDP_bound_sinh_step (ε α : ℝ) (Hε : 0 < ε) (Hα : 1 < α) (Hεα : ε * α ≤ 2) :
     Real.exp (-ε) ^ α * ((Real.exp ε - 1) / (Real.exp ε - Real.exp (-ε))) +
-    Real.exp ε ^ α * ((1 - Real.exp (-ε)) / (Real.exp ε - Real.exp (-ε))) ≤
-    Real.exp ((α - 1) * (1/2 * ε^2 * α)) := by
+      Real.exp ε ^ α * ((1 - Real.exp (-ε)) / (Real.exp ε - Real.exp (-ε))) ≤
+      Real.exp ((α - 1) * (1/2 * ε^2 * α)) := by
   rw [division_def]
   rw [division_def]
   repeat rw [<- mul_assoc]
@@ -1358,21 +1323,17 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
   have Hq_pre := PMF.tsum_coe q₀
   rw [<- tsum_subtype_eq_of_support_subset K2 ] at Hq_pre
   let U' := { x // DFunLike.coe p₀ x ≠ 0 }
-
   let p : PMF U' :=
-    ⟨ fun u => p₀ u,
-      by
+    ⟨ fun u => p₀ u, by
         rw [<- Hp_pre]
         apply Summable.hasSum
         exact ENNReal.summable ⟩
   let q : PMF U' :=
-    ⟨ fun u => q₀ u,
-      by
+    ⟨ fun u => q₀ u, by
         rw [<- Hq_pre]
         apply Summable.hasSum
         exact ENNReal.summable ⟩
   clear K1 K2
-
   have X : ∑' x, p₀ x ^ α * q₀ x ^ (1 - α) = ∑' x, p x ^ α * q x ^ (1 - α) := by
     have K3 : Function.support (fun (x : U) =>
         DFunLike.coe p₀ x ^ α * DFunLike.coe q₀ x ^ (OfNat.ofNat 1 - α)) ⊆
@@ -1396,7 +1357,6 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
     simp
     apply (ACNeighbour_of_DP _ _ _ H)
     trivial
-
   have Hqp : ∀ (x : U'), ENNReal.ofReal (Real.exp (-↑ε)) ≤ p x / q x := by
     intro x
     apply ofDP_bound_ratio_inv p q ε x
@@ -1408,7 +1368,6 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
       apply (le_trans _ (H' x'))
       dsimp [p, q]
       simp [DFunLike.coe]
-
   have Hpq : ∀ (x : U'), p x / q x ≤ ENNReal.ofReal (Real.exp ↑ε) := by
     intro x
     rcases x with ⟨ x' , _ ⟩
@@ -1438,13 +1397,10 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
       · exact Hpq i
       · linarith
     · simp
-
   have Hε : 0 < ε := by exact pos_iff_ne_zero.mpr Hε'
-
   conv =>
     enter [1, 1, x]
     rw [<- A_expectation ε p q Hε Hqp Hpq Hacpq x]
-
 
   -- Apply Jensen's inequality
   apply (@le_trans _ _ _ (∑' (x : U'), (∑' (b : Bool), (A_val ε b)^α * (A_pmf ε p q Hqp x) b) * q x))
@@ -1481,12 +1437,9 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
     rw [ENNReal.tsum_mul_left]
     rw [<- B_eval_open]
   rw [tsum_bool]
-
   rw [B_eval_false] <;> try trivial
   rw [B_eval_true] <;> try trivial
   simp only [A_val]
-
-
   have SC0 := ofDP_bound_SC0 ε Hε
   have SC1 := ofDP_bound_SC1 ε Hε α (by linarith)
   have SC2 := ofDP_bound_SC2 ε Hε α (by linarith)
@@ -1497,7 +1450,6 @@ lemma ofDP_bound (ε : NNReal) (p₀ q₀ : PMF U)
     · trivial
     · trivial
   case G2 => exact ENNReal.ofReal_ne_top
-
   simp
   rw [ENNReal.toReal_add ?G1 ?G2]
   case G1 => apply SC1

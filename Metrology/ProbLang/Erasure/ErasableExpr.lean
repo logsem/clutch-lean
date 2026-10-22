@@ -83,8 +83,8 @@ theorem dbind [Countable rT]
       Measure.bind_map_comm_of_discrete]
   have hker : (fun σ' : State rT =>
       Measure.map (·.expr : Cfg rT → Exp rT)
-        ((μ₂ σ').bind (fun σ'' => execN m ⟨e, σ''⟩)))
-      = (fun σ' : State rT =>
+        ((μ₂ σ').bind (fun σ'' => execN m ⟨e, σ''⟩))) =
+      (fun σ' : State rT =>
           Measure.map (·.expr) (execN m ⟨e, σ'⟩)) := by
     funext σ'
     have := h₂ σ' e m
@@ -117,8 +117,8 @@ theorem lim_exec
   case measurable =>
     exact (Measure.measurable_coe (hexpr hS)).comp ((execN_measurable n).comp hmk)
   case mono => exact fun n m hnm a => execN_mono hnm ⟨e, a⟩ _
-  suffices hbind : ∀ n, ∫⁻ σ', (execN n ⟨e, σ'⟩) ((·.expr) ⁻¹' S) ∂μ
-      = (execN n ⟨e, σ⟩) ((·.expr) ⁻¹' S) by
+  suffices hbind : ∀ n, ∫⁻ σ', (execN n ⟨e, σ'⟩) ((·.expr) ⁻¹' S) ∂μ =
+      (execN n ⟨e, σ⟩) ((·.expr) ⁻¹' S) by
     simp [hbind]
   intro n
   have hn := h e n
