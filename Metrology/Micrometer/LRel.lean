@@ -32,7 +32,7 @@ open IsCOFE (compl conv_compl)
 structure lrel (rT : Type) (GF : BundledGFunctors) where
   car : Val rT → Val rT → IProp GF
   [persistent : ∀ v1 v2, Persistent (car v1 v2)]
-  closed v1 v2 : car v1 v2 ⊢ ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
+  closed v1 v2 : car v1 v2 ⊢ ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝
 
 attribute [instance] lrel.persistent
 
@@ -91,7 +91,7 @@ noncomputable instance isCOFE_lrel : IsCOFE (lrel rT GF) where
           (toFunChain c) fun k => (c.chain k).persistent v1 v2
       closed v1 v2 :=
         (LimitPreserving.entails (appAt v1 v2)
-            (Function.const _ iprop(⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝))).compl
+            (Function.const _ iprop(⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝))).compl
           (toFunChain c) fun k => (c.chain k).closed v1 v2 }
   conv_compl {_ c} v1 v2 := conv_compl (c := toFunChain c) v1 v2
 
@@ -108,7 +108,7 @@ local bi IProp GF
 
 /-- Two units are closed. -/
 theorem lrel_unit_closed (v1 v2 : Val rT) :
-    ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢ ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ := by
+    ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢ ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝ := by
   iintro %h !%
   exact ⟨h.1 ▸ lit_isClosedEmpty _, h.2 ▸ lit_isClosedEmpty _⟩
 
@@ -226,12 +226,12 @@ theorem lrel_prod_pair {A B : lrel rT GF} {a a' b b' : Val rT} : iprop%
 
 /-- Closed values related by `C A` for some relation `A`. -/
 noncomputable def lrel_exists (C : lrel rT GF → lrel rT GF) : lrel rT GF where
-  car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗ ∃ A : lrel rT GF, C A v1 v2
+  car v1 v2 := iprop% ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝ ∗ ∃ A : lrel rT GF, C A v1 v2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 /-- Relates every pair of closed values. -/
 noncomputable def lrel_true : lrel rT GF where
-  car v1 v2 := iprop% ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝
+  car v1 v2 := iprop% ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝
   closed _ _ := .rfl
 
 /-! ### Recursive relations, as a fixpoint on the COFE -/
@@ -242,7 +242,7 @@ variable (C : lrel rT GF -n> lrel rT GF)
 -- TODO: Tweak the declarations below when fixpoints land
 /-- One unfolding of a recursive relation, with the recursive occurrence guarded by `▷`. -/
 noncomputable def lrelRec1 (r : lrel rT GF) : lrel rT GF where
-  car w1 w2 := iprop% ⌜w1.1.isClosedEmpty ∧ w2.1.isClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
+  car w1 w2 := iprop% ⌜w1.1.IsClosedEmpty ∧ w2.1.IsClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
 /-- `lrelRec1 C` is contractive, since the recursive occurrence sits under `▷`. -/
@@ -381,7 +381,7 @@ variable (L) in
 /-- Closed functions whose applications to `A1`-related arguments refine at `A2`. -/
 noncomputable def lrel_arr (A1 A2 : lrel rT GF) : lrel rT GF where
   car v1 v2 := iprop%
-    ⌜v1.1.isClosedEmpty ∧ v2.1.isClosedEmpty⌝ ∗
+    ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝ ∗
       □ (∀ w1 w2, A1 w1 w2 -∗
         refines L ⊤ (.app v1.1 w1.1) (.app v2.1 w2.1) A2)
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h

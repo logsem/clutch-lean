@@ -359,10 +359,10 @@ theorem wp_rfQuery_prpQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   tp_bind (pl% !#loc ℓm)
   imod step_load $$ [$Hj $Hm] with ⟨Hj, Hm⟩
   tp_bind (store pl(#loc ℓm) (ofVal (assocVal ((n, r[j]) :: m))))
-  imod step_store _ (isVal_ofVal _) (toVal?_ofVal _) $$ [$Hj $Hm] with ⟨Hj, Hm⟩
+  imod step_store _ (toVal?_ofVal _) $$ [$Hj $Hm] with ⟨Hj, Hm⟩
   tp_pures
   tp_bind (store pl(#loc ℓfv) (ofVal (intListVal (r.eraseIdx j))))
-  imod step_store _ (isVal_ofVal _) (toVal?_ofVal _) $$ [$Hj $Hfv] with ⟨Hj, Hfv⟩
+  imod step_store _ (toVal?_ofVal _) $$ [$Hj $Hfv] with ⟨Hj, Hfv⟩
   tp_pures
   -- program side: memoise and return
   wp_pure 1
@@ -427,7 +427,7 @@ theorem wp_prpQuery_rfQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   tp_bind (pl% !#loc ℓ)
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   tp_bind (store pl(#loc ℓ) (ofVal (assocVal ((n, r[j]) :: m))))
-  imod step_store _ (isVal_ofVal _) (toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
+  imod step_store _ (toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   tp_pures
   -- program side: pop the sampled index and memoise it
   wp_pures

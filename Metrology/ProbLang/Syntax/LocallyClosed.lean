@@ -215,14 +215,14 @@ theorem open_close_subst_lc_gen (x : Var) (e v : Exp rT)
   exact subst_rename e hze
 
 /-- `e` is locally closed and has no free variables. -/
-def isClosedEmpty (e : Exp rT) : Prop := IsLocallyClosed e ∧ e.fv = ∅
+def IsClosedEmpty (e : Exp rT) : Prop := IsLocallyClosed e ∧ e.fv = ∅
 
-theorem isClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.isClosedEmpty) :
+theorem IsClosedEmpty.toFvSubsetEmpty {e : Exp rT} (h : e.IsClosedEmpty) :
     e.IsLocallyClosed ∧ e.fv ⊆ (∅ : Finset Var) :=
   ⟨h.1, h.2.subset⟩
 
 /-- Literals are closed. -/
-theorem lit_isClosedEmpty (b : BaseLit rT) : (lit b).isClosedEmpty :=
+theorem lit_isClosedEmpty (b : BaseLit rT) : (lit b).IsClosedEmpty :=
   ⟨.lit b, by simp [fv]⟩
 
 /-! ## Free variables of `open'` -/

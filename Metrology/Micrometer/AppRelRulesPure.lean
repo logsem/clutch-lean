@@ -192,7 +192,7 @@ theorem refines_store_r : iprop%
   iapply refines_step_r
   iintro %K' Hj
   iapply specUpdate_mono
-  ihave HStep := step_store K' v'.2 (toVal?_ofVal v') $$ [$Hj $Hl]
+  ihave HStep := step_store K' (e := v'.1) (toVal?_ofVal v') $$ [$Hj $Hl]
   iframe HStep
   iintro ⟨HKRes, Hl'⟩
   iexists .unit
@@ -254,7 +254,7 @@ end Steps
 variable {v v' : Val rT}
 
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
-theorem refines_arrow_val (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow_val (hv : v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
       refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
   iintro #H
@@ -267,7 +267,7 @@ theorem refines_arrow_val (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : ipro
   iapply H $$ %w1 %w2 HA
 
 /-- `refines_arrow_val` with the argument hypothesis given as a refinement. -/
-theorem refines_arrow (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+theorem refines_arrow (hv : v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty) : iprop%
     □ (∀ (v1 v2 : Val rT), □ refines L ⊤ v1.1 v2.1 A -∗
         refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
       refines L ⊤ v.1 v'.1 (lrel_arr L A A') := by
@@ -347,7 +347,7 @@ theorem refines_ind_amp (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.A
 /-- Amplification for closures: the budget-seeded form of `refines_app_ind_amp_of_bc`, giving a
 refinement at `A → A'` (Rocq `refines_arrow_val_err`). -/
 theorem refines_arrow_val_err (hsplit : PosSplits B) (hslack : HasSlack s)
-    (habs : L.Absorbing (s 1)) (hk : 1 < k) (hv : v.1.isClosedEmpty ∧ v'.1.isClosedEmpty) : iprop%
+    (habs : L.Absorbing (s 1)) (hk : 1 < k) (hv : v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗
         □ (↯b (s ((k : ENNReal) * ε)) -∗
           ∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') -∗

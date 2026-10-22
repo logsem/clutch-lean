@@ -97,7 +97,7 @@ theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
   tp_bind (pl% !#loc resS)
   imod step_load $$ [$Hj $HresS] with ⟨Hj, HresS⟩
   tp_bind (store pl(#loc resS) (ofVal (assocVal ((n, y) :: acc))))
-  imod step_store _ (isVal_ofVal _) (toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
+  imod step_store _ (toVal?_ofVal _) $$ [$Hj $HresS] with ⟨Hj, HresS⟩
   tp_pure
   tp_pure
   wp_bind (pl% !#loc resL)

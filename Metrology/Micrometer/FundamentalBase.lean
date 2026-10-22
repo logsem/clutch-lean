@@ -120,7 +120,7 @@ end Steps
 theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
     (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
     (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
-    (hv : v.1.isClosedEmpty) (hv' : v'.1.isClosedEmpty) :
+    (hv : v.1.IsClosedEmpty) (hv' : v'.1.IsClosedEmpty) :
     substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) = open' (substMap vs.fst e) v.1 ∧
       substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) = open' (substMap vs.snd e') v'.1 :=
   ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_notMem hxdom) hv.1,
@@ -160,7 +160,7 @@ include hvs hdom he_lc he'_lc he_fv he'_fv
 
 /-- Both substituted `lam` terms are closed. -/
 theorem substMap_lam_closed :
-    (lam (substMap vs.fst e)).isClosedEmpty ∧ (lam (substMap vs.snd e')).isClosedEmpty := by
+    (lam (substMap vs.fst e)).IsClosedEmpty ∧ (lam (substMap vs.snd e')).IsClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   obtain ⟨hlam_lc, hlam'_lc⟩ := substMap_lam_lc hvs he_lc he'_lc
   exact ⟨⟨hlam_lc, substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
@@ -168,7 +168,7 @@ theorem substMap_lam_closed :
 
 /-- Both substituted `fix` terms are closed. -/
 theorem substMap_fix_closed :
-    (fix (substMap vs.fst e)).isClosedEmpty ∧ (fix (substMap vs.snd e')).isClosedEmpty := by
+    (fix (substMap vs.fst e)).IsClosedEmpty ∧ (fix (substMap vs.snd e')).IsClosedEmpty := by
   obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
   exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
       substMap_fv_eq_empty hvs.1 he_dom_fst⟩,

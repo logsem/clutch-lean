@@ -161,7 +161,7 @@ theorem step_load {l : Loc} {v : Val rT} :
 
 /-- Spec step: store to a location whose points-to we own, updating it. -/
 theorem step_store {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
-    (_hv : IsVal e) (hnew : e.toVal? = some v_new) :
+    (hnew : e.toVal? = some v_new) :
     iprop((⤇ (K.fill (.store pl(#loc l) e))) ∗ (l ↦ₛ v_old)) ⊢
       specUpdate rT E iprop((⤇ (K.fill pl(#()))) ∗ (l ↦ₛ v_new)) := by
   iintro ⟨HK, Hl⟩

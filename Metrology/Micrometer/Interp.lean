@@ -192,7 +192,7 @@ variable (v v' : Val rT)
 
 /-- `⟦μX.τ⟧` unfolds once, with the recursive occurrence under `▷`. -/
 theorem interp_rec_car :
-    (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+    (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty⌝ ∗
       ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
     { f := fun X => interp L τ (cons X Δ)
@@ -200,7 +200,7 @@ theorem interp_rec_car :
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
 theorem interp_exists_car :
-    (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ ∗
+    (interp L (.exists' τ) Δ).car v v' = iprop(⌜v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty⌝ ∗
       ∃ A, (interp L τ (cons A Δ)).car v v') :=
   rfl
 
@@ -210,7 +210,7 @@ end HeadShape
 
 /-- Related values are closed. -/
 theorem interp_closed (τ : Ty) (v v' : Val rT) :
-    (interp L τ Δ).car v v' ⊢ ⌜v.1.isClosedEmpty ∧ v'.1.isClosedEmpty⌝ :=
+    (interp L τ Δ).car v v' ⊢ ⌜v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty⌝ :=
   (interp L τ Δ).closed v v'
 
 /-! ## Substitution lemmas -/

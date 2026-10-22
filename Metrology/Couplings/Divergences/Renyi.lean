@@ -157,6 +157,18 @@ theorem persp_rpow_zero_left (hα : 0 < α) {q : ℝ} (hq : 0 ≤ q) : persp (·
   · simp
   · simp [persp_rpow_of_pos α hq, zero_rpow hα.ne']
 
+/-- The perspective of `t ↦ t ^ α` at finite masses is `a ^ α * b ^ (1 - α)`. -/
+theorem persp_rpow_toReal (hα : 1 < α) {a b : ℝ≥0∞} (hb : b ≠ ⊤) (hab : b = 0 → a = 0) :
+    persp (· ^ α) a.toReal b.toReal = (((a ^ α * b ^ (1 - α)).toReal : ℝ) : EReal) := by
+  rcases eq_or_ne b 0 with rfl | hb0
+  · simp [hab rfl, persp_rpow_zero_left (zero_lt_one.trans hα) le_rfl,
+      zero_rpow_of_pos (zero_lt_one.trans hα)]
+  have hb' : 0 < b.toReal := toReal_pos hb0 hb
+  rw [persp_rpow_of_pos α hb', EReal.coe_eq_coe_iff, toReal_mul,
+    ← toReal_rpow, ← toReal_rpow,
+    Real.div_rpow toReal_nonneg hb'.le, Real.rpow_sub hb', Real.rpow_one]
+  field_simp
+
 /-- The perspective of `t ↦ t ^ α` is nonnegative. -/
 theorem persp_rpow_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) : 0 ≤ persp (· ^ α) p q :=
   persp_nonneg (fun _ ht ↦ rpow_nonneg ht α) hp hq

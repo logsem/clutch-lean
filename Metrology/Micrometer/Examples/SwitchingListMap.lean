@@ -208,7 +208,7 @@ theorem wp_setMap_r : iprop%
   tp_bind (pl% !#loc ℓ)
   imod step_load $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   tp_bind (store pl(#loc ℓ) (ofVal (assocVal ((k, y) :: m))))
-  imod step_store _ (isVal_ofVal _) (toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
+  imod step_store _ (toVal?_ofVal _) $$ [$Hj $Hl] with ⟨Hj, Hl⟩
   iapply Hcnt $$ Hj Hl
 
 end MapOps

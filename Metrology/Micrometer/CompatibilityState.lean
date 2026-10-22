@@ -150,7 +150,7 @@ theorem refines_store : iprop%
   iintro %K' Hr
   iinv Hinv with ⟨%v1, %v2, >Hv1, >Hv2, -⟩ Hclose
   imodintro
-  ihave HStep := step_store K' w'.2 (toVal?_ofVal w') $$ [$Hr $Hv2]
+  ihave HStep := step_store K' (e := w'.1) (toVal?_ofVal w') $$ [$Hr $Hv2]
   iapply specUpdate_wp
   iapply specUpdate_bind subset_refl
   iframe HStep

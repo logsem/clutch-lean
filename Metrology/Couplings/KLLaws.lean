@@ -3,7 +3,7 @@ module
 public import Metrology.Couplings.Codensity
 public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.Kl
-public import Metrology.Couplings.Divergences.Fill
+public import Metrology.Couplings.Divergences.FillKl
 
 /-! # Markov-tested liftings and equal-mass bind laws for KL and Hellinger
 
@@ -214,48 +214,6 @@ theorem not_absorbing_markovCodensity_kl (hb : b ≠ ⊤) :
 end KL
 
 end GradedDivergence
-
-/-! ## Filling costs nothing at equal mass
-
-The analytic input to `massEq`. -/
-
-section Fill
-
-variable {X : Type*} [MeasurableSpace X]
-
-/-- Adding the same finite mass at `none` to both sides does not raise an `f`-divergence with
-`f 1 = 0`. -/
-theorem fDiv_map_some_add_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
-    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {s : ℝ≥0∞} (hs : s ≠ ⊤) :
-    fDiv f (μ.map some + s • dirac none) (ν.map some + s • dirac none) ≤ fDiv f μ ν := by
-  have : IsFiniteMeasure (s • dirac (none : Option X)) := ⟨by simpa using hs.lt_top⟩
-  rw [fDiv_eq_iSup_partition hf hf_cont]
-  refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
-  have hev (ρ : Measure X) [IsFiniteMeasure ρ] (i : Fin n) :
-      ((ρ.map some + s • dirac none : Measure (Option X)) (k ⁻¹' {i})).toReal =
-        (ρ ((k ∘ some) ⁻¹' {i})).toReal + ((s • dirac none) (k ⁻¹' {i})).toReal := by
-    rw [add_apply, toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
-      map_apply measurable_some (hk (measurableSet_singleton i))]
-    rfl
-  -- per partition cell: split off the none-mass, subadditivity of persp, and the none part
-  -- costs s * f 1 = 0
-  simp_rw [hev]
-  refine (Finset.sum_le_sum fun i _ ↦ persp_add_le hf toReal_nonneg toReal_nonneg
-    toReal_nonneg toReal_nonneg).trans ?_
-  simp only [persp_self, hf1, mul_zero, EReal.coe_zero, add_zero]
-  exact sum_persp_le_fDiv hf hf_cont (hk.comp measurable_some)
-
-/-- Filling the lost mass of two measures of equal mass does not raise an `f`-divergence with
-`f 1 = 0`. -/
-theorem fDiv_withBot_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf1 : f 1 = 0) {μ ν : Measure X}
-    [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν] (h : μ univ = ν univ) :
-    fDiv f μ.withBot ν.withBot ≤ fDiv f μ ν := by
-  rw [withBot, withBot, h]
-  exact fDiv_map_some_add_le hf hf_cont hf1 (sub_ne_top one_ne_top)
-
-end Fill
 
 /-! ## The equal-mass bind law
 

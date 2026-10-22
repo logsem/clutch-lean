@@ -19,18 +19,6 @@ namespace GradedDivergence
 
 variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X} {ε : ℝ≥0} {α : ℝ}
 
-/-- The perspective of `t ↦ t ^ α` at finite masses is `a ^ α * b ^ (1 - α)`. -/
-theorem persp_rpow_toReal (hα : 1 < α) {a b : ℝ≥0∞} (hb : b ≠ ⊤) (hab : b = 0 → a = 0) :
-    persp (· ^ α) a.toReal b.toReal = (((a ^ α * b ^ (1 - α)).toReal : ℝ) : EReal) := by
-  rcases eq_or_ne b 0 with rfl | hb0
-  · simp [hab rfl, persp_rpow_zero_left (zero_lt_one.trans hα) le_rfl,
-      zero_rpow_of_pos (zero_lt_one.trans hα)]
-  have hb' : 0 < b.toReal := toReal_pos hb0 hb
-  rw [persp_rpow_of_pos α hb', EReal.coe_eq_coe_iff, toReal_mul,
-    ← toReal_rpow, ← toReal_rpow,
-    Real.div_rpow toReal_nonneg hb'.le, Real.rpow_sub hb', Real.rpow_one]
-  field_simp
-
 /-- Two-sided pure `ε`-DP bounds the Rényi moment of probability measures on a finite space by
 `e^{(α - 1) α ε² / 2}` (SampCert `ofDP_bound`). -/
 theorem fDiv_rpow_le_of_dp_of_finite {I : Type*} [Fintype I] [MeasurableSpace I]
