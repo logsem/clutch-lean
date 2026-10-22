@@ -17,7 +17,7 @@ public import Mathlib.Analysis.Real.OfDigits
 
 /-! # Approximate couplings
 
-Couplings up to `F`, tested by measurable functions into `[0, 1]` (the older Approxis notion).
+Couplings up to `F`, tested by measurable functions into `[0, 1]`.
 `Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with `codensity tv`/`codensity dp`. -/
 
 @[expose] public section
@@ -28,21 +28,22 @@ def BoundedFunction {α : Type _} (f : α → ENNReal) : Prop :=
 
 /-- A measurable test function into `[0, 1]`. -/
 def CouplingFunction (α : Type _) [MeasurableSpace α] :=
-  { f : α → ENNReal // Measurable f ∧ BoundedFunction f}
-
-theorem CouplingFunction.measurable {α : Type _} [MeasurableSpace α] (f : CouplingFunction α) :
-    Measurable f.1 := f.property.1
-
-theorem CouplingFunction.bounded {α : Type _} [MeasurableSpace α] (f : CouplingFunction α) :
-    ∀ a, f.1 a ≤ 1 := f.property.2
-
-instance CouplingFunction.instCoeFun {α : Type _} [MeasurableSpace α] :
-    CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
-  coe := (·.1)
+  { f : α → ENNReal // Measurable f ∧ BoundedFunction f }
 
 section ApproximateCoupling
 
 variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+
+namespace CouplingFunction
+
+theorem measurable (f : CouplingFunction α) : Measurable f.1 := f.property.1
+
+theorem bounded (f : CouplingFunction α) : ∀ a, f.1 a ≤ 1 := f.property.2
+
+instance instCoeFun : CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where
+  coe := (·.1)
+
+end CouplingFunction
 
 open MeasureTheory
 
@@ -71,25 +72,29 @@ theorem dirac {a : α} {b : β} (HF : ∀ {x}, x ≤ F x) (Φ : Set (α × β)) 
   rw [lintegral_dirac' _ Hf, lintegral_dirac' _ Hg]
   exact Hle H
 
-theorem mono_F {Φ : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
+/-- A coupling up to `F` is a coupling up to any larger `F'`. -/
+theorem mono_F {F' : ENNReal → ENNReal} {Φ : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β}
     (HF : ∀ x, F x ≤ F' x) (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F' Φ μₗ μᵣ :=
   fun f g Hle => (H f g Hle).trans (HF _)
 
+/-- A coupling along a relation is a coupling along any larger relation. -/
 theorem mono_rel {Φ Φ' : Set (α × β)} {μₗ : Measure α} {μᵣ : Measure β} (HS : Φ ⊆ Φ')
     (H : ARCoupling F Φ μₗ μᵣ) : ARCoupling F Φ' μₗ μᵣ :=
   fun f g Hle => H f g fun hab => Hle (HS hab)
 
-theorem zero_left (S : Set (α × β)) (μᵣ : Measure β) :
-    ARCoupling F S 0 μᵣ := by intro _ _ _; simp
+/-- The zero measure on the left is coupled with anything. -/
+theorem zero_left (S : Set (α × β)) (μᵣ : Measure β) : ARCoupling F S 0 μᵣ := by
+  intro _ _ _
+  simp
 
 /-- Any measure couples with the zero measure on the right when its mass is at most `F 0`. -/
 theorem zero_right (S : Set (α × β)) {μₗ : Measure α}
-    (HF : μₗ .univ ≤ F 0) : ARCoupling F S μₗ (0 : Measure β) := by
+    (HF : μₗ .univ ≤ F 0) : ARCoupling F S μₗ 0 := by
   refine fun ⟨f, _, Hfb⟩ g Hle => ?_
-  calc ∫⁻ (x : α), f x ∂μₗ
+  calc ∫⁻ x, f x ∂μₗ
     _ ≤ μₗ .univ := lintegral_le_meas Hfb (by simp)
     _ ≤ F 0 := HF
-    _ ≤ F (∫⁻ (x : β), g x ∂0) := by simp
+    _ ≤ F (∫⁻ x, g x ∂0) := by simp
 
 end ARCoupling
 end ApproximateCoupling

@@ -1,119 +1,77 @@
 module
 
-import all Mathlib.Tactic.DeriveCountable
 public import Metrology.ProbLang.CoreMeasures
 
 @[expose] public section
 
-/-! # Discrete ProbLang: measurable singletons and the `Int` instance
+/-! # Discrete ProbLang: measurable singletons
 
 Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`, so `{ρ}` is
-measurable for every configuration `ρ`; also provides `instProbLangℝInt`, the instance where the
-reals are the integers. -/
+measurable for every configuration `ρ`. -/
 
 noncomputable section ProbLangDiscrete
 
-open Classical MeasureTheory ProbabilityTheory ProbLang
+open Measurable (of_comap_le)
+open MeasurableSet (singleton_none image_some)
+open Std.ExtTreeMap (ext_getElem?)
+
+/-- A type with a measurable injection into a type with measurable singletons has them too. -/
+theorem measurableSingletonClass_of_injective {X Y : Type _} [MeasurableSpace X]
+    [MeasurableSpace Y] [MeasurableSingletonClass Y] {f : X → Y} (hf : Measurable f)
+    (hinj : f.Injective) : MeasurableSingletonClass X where
+  measurableSet_singleton x := by
+    rw [show ({x} : Set X) = f ⁻¹' {f x} by ext; simp [hinj.eq_iff]]
+    exact hf (measurableSet_singleton _)
 
 namespace ProbLang
+
+variable {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α]
 
 /-! ## Measurable singletons of `Option`, `LocHeap`, `State` and `Cfg` -/
 
 /-- `Option α` has measurable singletons if `α` does. -/
-instance _root_.Option.instMeasurableSingletonClass
-    {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
-    MeasurableSingletonClass (Option α) where
+instance _root_.Option.instMeasurableSingletonClass : MeasurableSingletonClass (Option α) where
   measurableSet_singleton
-    | none => MeasurableSet.singleton_none
+    | none => singleton_none
     | some x => by
         rw [show ({some x} : Set (Option α)) = (some : α → Option α) '' {x} by simp]
-        exact MeasurableSet.image_some (MeasurableSet.singleton x)
+        exact image_some (measurableSet_singleton x)
 
-/-- `LocHeap V` has measurable singletons if `V` does. -/
-instance LocHeap.instMeasurableSingletonClass
-    {V : Type _} [MeasurableSpace V] [MeasurableSingletonClass V] :
-    MeasurableSingletonClass (LocHeap V) where
-  measurableSet_singleton m := by
-    -- a heap is determined by its lookup function
-    have hsing : ({m} : Set (LocHeap V))
-                  = (fun (n : LocHeap V) (ℓ : Loc) => n[ℓ]?) ⁻¹' {fun ℓ => m[ℓ]?} := by
-      ext n
-      refine ⟨fun h => h ▸ rfl, fun h => ?_⟩
-      exact Std.ExtTreeMap.ext_getElem? (congrFun h)
-    rw [hsing]
-    exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
+/-- `LocHeap α` has measurable singletons if `α` does. -/
+instance LocHeap.instMeasurableSingletonClass : MeasurableSingletonClass (LocHeap α) :=
+  measurableSingletonClass_of_injective (of_comap_le le_rfl) fun _ _ h => ext_getElem? (congrFun h)
 
 /-- `State α` has measurable singletons if `α` does. -/
-instance State.instMeasurableSingletonClass
-    {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
-    MeasurableSingletonClass (State α) where
-  measurableSet_singleton σ := by
-    -- a state is determined by its heap and tapes
-    have hsing : ({σ} : Set (State α))
-                  = (fun τ : State α => (τ.heap, τ.tapes)) ⁻¹' {(σ.heap, σ.tapes)} := by
-      ext τ
-      refine ⟨fun h => h ▸ rfl, fun h => ?_⟩
-      obtain ⟨hh, ht⟩ := Prod.mk.inj h
-      cases σ; cases τ; congr
-    rw [hsing]
-    exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
+instance State.instMeasurableSingletonClass : MeasurableSingletonClass (State α) :=
+  measurableSingletonClass_of_injective (of_comap_le le_rfl) fun σ τ h => by
+    cases σ
+    cases τ
+    simp_all
 
 /-- `Cfg α` has measurable singletons if `α` does. -/
-instance Cfg.instMeasurableSingletonClass
-    {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
-    MeasurableSingletonClass (Cfg α) where
-  measurableSet_singleton c := by
-    -- a configuration is determined by its expression and state
-    have hsing : ({c} : Set (Cfg α))
-                  = (fun c' : Cfg α => (c'.expr, c'.state)) ⁻¹' {(c.expr, c.state)} := by
-      ext c'
-      refine ⟨fun h => h ▸ rfl, fun h => ?_⟩
-      obtain ⟨he, hs⟩ := Prod.mk.inj h
-      cases c; cases c'; congr
-    rw [hsing]
-    exact (Measurable.of_comap_le le_rfl) (MeasurableSet.singleton _)
-
-end ProbLang
+instance Cfg.instMeasurableSingletonClass : MeasurableSingletonClass (Cfg α) :=
+  measurableSingletonClass_of_injective (of_comap_le le_rfl) fun c c' h => by
+    cases c
+    cases c'
+    simp_all
 
 /-! ## Check: `DiscreteMeasurableSpace` holds for all ProbLang types over countable `rT` -/
 
 section SynthCheck
+
 variable {rT : Type _} [MeasurableSpace rT] [MeasurableSingletonClass rT] [Countable rT]
-example : DiscreteMeasurableSpace (ProbLang.BaseLit rT) := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.Pat rT)     := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.Exp rT)     := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.Val rT)     := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.EctxItem rT) := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.LocHeap (ProbLang.Val rT)) := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.LocHeap ProbLang.Tape) := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.State rT) := inferInstance
-example : DiscreteMeasurableSpace (ProbLang.Cfg rT)   := inferInstance
+
+example : DiscreteMeasurableSpace (BaseLit rT) := inferInstance
+example : DiscreteMeasurableSpace (Pat rT) := inferInstance
+example : DiscreteMeasurableSpace (Exp rT) := inferInstance
+example : DiscreteMeasurableSpace (Val rT) := inferInstance
+example : DiscreteMeasurableSpace (EctxItem rT) := inferInstance
+example : DiscreteMeasurableSpace (LocHeap (Val rT)) := inferInstance
+example : DiscreteMeasurableSpace (LocHeap Tape) := inferInstance
+example : DiscreteMeasurableSpace (State rT) := inferInstance
+example : DiscreteMeasurableSpace (Cfg rT) := inferInstance
+
 end SynthCheck
 
-/-! ## The `LawfulProbLangℝ` instance on `Int` -/
-
-/-- On `Int`, the "reals" are the integers themselves; rationals round down (so `1/2` becomes `0`)
-and `unifUnit` is a fair coin on `{0, 1}` (so `urand` flips a fair coin). -/
-instance instProbLangℝInt : ProbLang.LawfulProbLangℝ Int where
-  instDecidableEq := inferInstance
-  unifUnit := (PMF.uniformOfFinset ({0, 1} : Finset Int) (by decide)).toMeasure
-  unifUnitSupport := ↑({0, 1} : Finset Int)
-  realLt a b := decide (a < b)
-  realLe a b := decide (a ≤ b)
-  realAdd a b := a + b
-  realNeg a := -a
-  realOfInt z := z
-  realOfRat q := q.floor
-  realFrac _ := 0
-  unifUnit_isProbabilityMeasure := PMF.toMeasure.isProbabilityMeasure _
-  unifUnitSupportMeasurable := .of_discrete
-  unifUnitIsConcentrated := by
-    rw [PMF.toMeasure_apply_eq_zero_iff _ (.of_discrete), PMF.support_uniformOfFinset]
-    exact disjoint_compl_right
-  measurable_realLt := .of_discrete
-  measurable_realLe := .of_discrete
-  measurable_realAdd := .of_discrete
-  measurable_realNeg := .of_discrete
-  measurable_realFrac := .of_discrete
-
+end ProbLang
 end ProbLangDiscrete

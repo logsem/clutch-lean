@@ -1,11 +1,8 @@
 module
 
-import all Mathlib.Tactic.DeriveCountable
 public import Metrology.ProbLang.Measure
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.CoreMeasures.Exp
-
-meta import Metrology.Meta
 
 @[expose] public section
 
@@ -17,53 +14,53 @@ and `Exp.ofVal`, and measurable singletons.
 
 noncomputable section ProbLangMeasures
 
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang
+open MeasurableSpace (comap measurableSet_comap measurableSet_iInf measurableSet_top)
+open Set (mem_singleton_iff mem_preimage)
 
 namespace ProbLang
 
-/-- Proofs that `e` is a value carry the discrete σ-algebra. -/
-instance instMeasurableSpaceIsVal {α : Type _} {e : Exp α} : MeasurableSpace (IsVal e) := ⊤
+variable {α : Type _}
 
-/-- The σ-algebra on values: the pullback along `Val.fst`. A `Sigma` instance would be `⊤`
-here (since `IsVal e` is `⊤`), breaking measurability of `Exp.toVal?`; the high priority keeps
-this one. -/
-instance (priority := 10000) instMeasurableSpaceVal {α : Type _} [MeasurableSpace α] :
-    MeasurableSpace (Val α) :=
-  MeasurableSpace.comap Val.fst inferInstance
+/-- Proofs that `e` is a value carry the discrete σ-algebra. -/
+instance instMeasurableSpaceIsVal {e : Exp α} : MeasurableSpace (IsVal e) := ⊤
+
+variable [MeasurableSpace α]
 
 namespace Val
 
-/-- `Val.fst` is measurable, by definition of the σ-algebra. -/
-@[fun_prop]
-theorem fst.measurable {α : Type _} [MeasurableSpace α] :
-    Measurable (Val.fst : Val α → Exp α) :=
-  fun _ hS => MeasurableSpace.measurableSet_comap.mpr ⟨_, hS, rfl⟩
+-- A `Sigma` instance would be `⊤` here (since `IsVal e` is `⊤`), breaking measurability of
+-- `Exp.toVal?`; the high priority keeps this one.
+/-- The σ-algebra on values: the pullback along `Val.fst`. -/
+instance (priority := 10000) instMeasurableSpaceVal : MeasurableSpace (Val α) :=
+  comap fst inferInstance
 
-/-- `Exp.ofVal` is measurable (it is `Val.fst`). -/
+/-- `Val.fst` is measurable. -/
 @[fun_prop]
-theorem _root_.ProbLang.Exp.ofVal.measurable {α : Type _} [MeasurableSpace α] :
-    Measurable (Exp.ofVal : Val α → Exp α) :=
-  Val.fst.measurable
+theorem fst.measurable : Measurable (fst : Val α → Exp α) :=
+  fun _ hS => measurableSet_comap.mpr ⟨_, hS, rfl⟩
 
-/-- `Val.mk` is measurable on `Σ e, IsVal e`, whose σ-algebra is `⊤`. -/
+/-- `Exp.ofVal` is measurable. -/
 @[fun_prop]
-theorem mk.measurable {α : Type _} [MeasurableSpace α] :
-    Measurable (fun (p : Σ e : Exp α, IsVal e) => (Val.mk p.1 p.2 p.2.lc : Val α)) := by
+theorem _root_.ProbLang.Exp.ofVal.measurable : Measurable (Exp.ofVal : Val α → Exp α) :=
+  fst.measurable
+
+/-- `Val.mk` is measurable on `Σ e, IsVal e`. -/
+@[fun_prop]
+theorem mk.measurable : Measurable (fun p : Σ e : Exp α, IsVal e => mk p.1 p.2 p.2.lc) := by
   intro T hT
-  obtain ⟨U, -, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hT
-  exact MeasurableSpace.measurableSet_iInf.mpr fun _ => MeasurableSpace.measurableSet_top
+  obtain ⟨U, -, rfl⟩ := measurableSet_comap.mp hT
+  exact measurableSet_iInf.mpr fun _ => measurableSet_top
 
 /-- `Val α` has measurable singletons if `α` does. -/
-instance instMeasurableSingletonClass
-    {α : Type _} [MeasurableSpace α] [MeasurableSingletonClass α] :
+instance instMeasurableSingletonClass [MeasurableSingletonClass α] :
     MeasurableSingletonClass (Val α) where
   measurableSet_singleton v := by
-    have heq : ({v} : Set (Val α)) = Val.fst ⁻¹' {v.fst} := by
+    have heq : ({v} : Set (Val α)) = fst ⁻¹' {v.fst} := by
       ext v'
-      simp only [Set.mem_singleton_iff, Set.mem_preimage]
-      exact ⟨fun h => by rw [h], Val.ext⟩
+      simp only [mem_singleton_iff, mem_preimage]
+      exact ⟨fun h => by rw [h], ext⟩
     rw [heq]
-    exact Val.fst.measurable (MeasurableSet.singleton v.fst)
+    exact fst.measurable (MeasurableSet.singleton v.fst)
 
 end Val
 end ProbLang

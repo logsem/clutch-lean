@@ -8,8 +8,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Switching lemma programs
 
-Lazy random functions and permutations and the weak PRF/PRP games. Port of clutch's
-`prp_prf_weak.v`, each map one assoc-list value in one cell: same interface, less heap reasoning. -/
+Lazy random functions and permutations and the weak PRF/PRP games, after clutch's
+`prp_prf_weak.v`. -/
 
 namespace ProbLang
 
@@ -70,17 +70,21 @@ def initMap : Exp rT := pl% fun _u, alloc(inl(#()))
 /-- Bind `k` to `v` in the map. -/
 @[pl_fold] def setMap : Exp rT := pl% fun m k v, m ← inr(((k, v), !m))
 
+section Programs
+
+variable (N : Int) (ℓ ℓm ℓfv : Loc)
+
 /-! ## The idealised random function -/
 
 /-- After allocating its map at `ℓ`, `randomFunction N` steps to this closure. -/
-def rfQuery (N : Int) (ℓ : Loc) : Exp rT := pl%
+def rfQuery : Exp rT := pl%
   fun x,
     case! (&getMap #loc ℓ x)
     | inl(_u) => (let y := rand(#N, #()); &setMap #loc ℓ x y; y)
     | inr(y) => y
 
 /-- A lazily sampled random function into `{0, …, N-1}`. -/
-def randomFunction (N : Int) : Exp rT := pl%
+def randomFunction : Exp rT := pl%
   let m := &initMap #();
   fun x,
     case! (&getMap m x)
@@ -91,7 +95,7 @@ def randomFunction (N : Int) : Exp rT := pl%
 
 /-- After allocating its map at `ℓm` and its list of unsampled values at `ℓfv`,
 `randomPermutation N` steps to this closure. -/
-def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
+def prpQuery : Exp rT := pl%
   fun x,
     case! (&getMap #loc ℓm x)
     | inl(_u) =>
@@ -103,7 +107,7 @@ def prpQuery (ℓm ℓfv : Loc) : Exp rT := pl%
     | inr(y) => y
 
 /-- A lazily sampled random permutation of `{0, …, N-1}`. -/
-def randomPermutation (N : Int) : Exp rT := pl%
+def randomPermutation : Exp rT := pl%
   -- `.1`: the expression of the list value
   let fv := alloc({(intListVal ((List.range N.toNat).map Int.ofNat)).1});
   let m := &initMap #();
@@ -120,7 +124,7 @@ def randomPermutation (N : Int) : Exp rT := pl%
 /-! ## The weak PRF/PRP games -/
 
 /-- Query `f` at `i` uniform inputs, recording the (input, output) pairs in `res`. -/
-@[pl_fold] def wLoop (N : Int) : Exp rT := pl%
+@[pl_fold] def wLoop : Exp rT := pl%
   rec loop f res i :=
     if i = #0 then #()
     else
@@ -130,14 +134,14 @@ def randomPermutation (N : Int) : Exp rT := pl%
        loop f res (i - #1))
 
 /-- The weak PRF game against the random function. -/
-def wPRF (N Q : Int) : Exp rT := pl%
+def wPRF (Q : Int) : Exp rT := pl%
   let f := {randomFunction N};
   let res := alloc(inl(#()));
   {wLoop N} f res #Q;
   !res
 
 /-- The weak PRF game against the random permutation. -/
-def wPRP (N Q : Int) : Exp rT := pl%
+def wPRP (Q : Int) : Exp rT := pl%
   let f := {randomPermutation N};
   let res := alloc(inl(#()));
   {wLoop N} f res #Q;
@@ -155,80 +159,73 @@ theorem listRemoveNth_fv : (listRemoveNth : Exp rT).fv = ∅ := rfl
 theorem initMap_fv : (initMap : Exp rT).fv = ∅ := rfl
 theorem getMap_fv : (getMap : Exp rT).fv = ∅ := rfl
 theorem setMap_fv : (setMap : Exp rT).fv = ∅ := rfl
-theorem rfQuery_fv (N : Int) (ℓ : Loc) : (rfQuery N ℓ : Exp rT).fv = ∅ := rfl
-theorem prpQuery_fv (ℓm ℓfv : Loc) : (prpQuery ℓm ℓfv : Exp rT).fv = ∅ := rfl
-theorem randomFunction_fv (N : Int) : (randomFunction N : Exp rT).fv = ∅ := rfl
-theorem wLoop_fv (N : Int) : (wLoop N : Exp rT).fv = ∅ := rfl
+theorem rfQuery_fv : (rfQuery N ℓ : Exp rT).fv = ∅ := rfl
+theorem prpQuery_fv : (prpQuery ℓm ℓfv : Exp rT).fv = ∅ := rfl
+theorem randomFunction_fv : (randomFunction N : Exp rT).fv = ∅ := rfl
+theorem wLoop_fv : (wLoop N : Exp rT).fv = ∅ := rfl
 
-@[pl_step_simp] theorem openRec_findList (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (findList : Exp rT) = findList :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_findList (k : Nat) (x : Var) :
-    Exp.closeRec k x (findList : Exp rT) = findList :=
-  Exp.closeRec_fresh x _ k (by simp [findList_fv])
+section Erasure
 
-@[pl_step_simp] theorem openRec_listLength (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (listLength : Exp rT) = listLength :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_listLength (k : Nat) (x : Var) :
-    Exp.closeRec k x (listLength : Exp rT) = listLength :=
-  Exp.closeRec_fresh x _ k (by simp [listLength_fv])
+open Exp
 
-@[pl_step_simp] theorem openRec_listRemoveNth (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (listRemoveNth : Exp rT) = listRemoveNth :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_listRemoveNth (k : Nat) (x : Var) :
-    Exp.closeRec k x (listRemoveNth : Exp rT) = listRemoveNth :=
-  Exp.closeRec_fresh x _ k (by simp [listRemoveNth_fv])
+variable (k : Nat) (t : Exp rT) (x : Var)
 
-@[pl_step_simp] theorem openRec_initMap (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (initMap : Exp rT) = initMap :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_initMap (k : Nat) (x : Var) :
-    Exp.closeRec k x (initMap : Exp rT) = initMap :=
-  Exp.closeRec_fresh x _ k (by simp [initMap_fv])
+@[pl_step_simp] theorem openRec_findList : openRec k t findList = findList :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_findList : closeRec k x (findList : Exp rT) = findList :=
+  closeRec_fresh x _ k (by simp [findList_fv])
 
-@[pl_step_simp] theorem openRec_getMap (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (getMap : Exp rT) = getMap :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_getMap (k : Nat) (x : Var) :
-    Exp.closeRec k x (getMap : Exp rT) = getMap :=
-  Exp.closeRec_fresh x _ k (by simp [getMap_fv])
+@[pl_step_simp] theorem openRec_listLength : openRec k t listLength = listLength :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_listLength : closeRec k x (listLength : Exp rT) = listLength :=
+  closeRec_fresh x _ k (by simp [listLength_fv])
 
-@[pl_step_simp] theorem openRec_setMap (k : Nat) (t : Exp rT) :
-    Exp.openRec k t (setMap : Exp rT) = setMap :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_setMap (k : Nat) (x : Var) :
-    Exp.closeRec k x (setMap : Exp rT) = setMap :=
-  Exp.closeRec_fresh x _ k (by simp [setMap_fv])
+@[pl_step_simp] theorem openRec_listRemoveNth : openRec k t listRemoveNth = listRemoveNth :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_listRemoveNth :
+    closeRec k x (listRemoveNth : Exp rT) = listRemoveNth :=
+  closeRec_fresh x _ k (by simp [listRemoveNth_fv])
 
-@[pl_step_simp] theorem openRec_rfQuery (k : Nat) (t : Exp rT) (N : Int) (ℓ : Loc) :
-    Exp.openRec k t (rfQuery N ℓ : Exp rT) = rfQuery N ℓ :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_rfQuery (k : Nat) (x : Var) (N : Int) (ℓ : Loc) :
-    Exp.closeRec k x (rfQuery N ℓ : Exp rT) = rfQuery N ℓ :=
-  Exp.closeRec_fresh x _ k (by simp [rfQuery_fv])
+@[pl_step_simp] theorem openRec_initMap : openRec k t initMap = initMap :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_initMap : closeRec k x (initMap : Exp rT) = initMap :=
+  closeRec_fresh x _ k (by simp [initMap_fv])
 
-@[pl_step_simp] theorem openRec_prpQuery (k : Nat) (t : Exp rT) (ℓm ℓfv : Loc) :
-    Exp.openRec k t (prpQuery ℓm ℓfv : Exp rT) = prpQuery ℓm ℓfv :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_prpQuery (k : Nat) (x : Var) (ℓm ℓfv : Loc) :
-    Exp.closeRec k x (prpQuery ℓm ℓfv : Exp rT) = prpQuery ℓm ℓfv :=
-  Exp.closeRec_fresh x _ k (by simp [prpQuery_fv])
+@[pl_step_simp] theorem openRec_getMap : openRec k t getMap = getMap :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_getMap : closeRec k x (getMap : Exp rT) = getMap :=
+  closeRec_fresh x _ k (by simp [getMap_fv])
 
-@[pl_step_simp] theorem openRec_randomFunction (k : Nat) (t : Exp rT) (N : Int) :
-    Exp.openRec k t (randomFunction N : Exp rT) = randomFunction N :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_randomFunction (k : Nat) (x : Var) (N : Int) :
-    Exp.closeRec k x (randomFunction N : Exp rT) = randomFunction N :=
-  Exp.closeRec_fresh x _ k (by simp [randomFunction_fv])
+@[pl_step_simp] theorem openRec_setMap : openRec k t setMap = setMap :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_setMap : closeRec k x (setMap : Exp rT) = setMap :=
+  closeRec_fresh x _ k (by simp [setMap_fv])
 
-@[pl_step_simp] theorem openRec_wLoop (k : Nat) (t : Exp rT) (N : Int) :
-    Exp.openRec k t (wLoop N : Exp rT) = wLoop N :=
-  (Exp.open_lc k t _ (by is_lc)).symm
-@[pl_step_simp] theorem closeRec_wLoop (k : Nat) (x : Var) (N : Int) :
-    Exp.closeRec k x (wLoop N : Exp rT) = wLoop N :=
-  Exp.closeRec_fresh x _ k (by simp [wLoop_fv])
+@[pl_step_simp] theorem openRec_rfQuery : openRec k t (rfQuery N ℓ) = rfQuery N ℓ :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_rfQuery : closeRec k x (rfQuery N ℓ : Exp rT) = rfQuery N ℓ :=
+  closeRec_fresh x _ k (by simp [rfQuery_fv])
+
+@[pl_step_simp] theorem openRec_prpQuery : openRec k t (prpQuery ℓm ℓfv) = prpQuery ℓm ℓfv :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_prpQuery :
+    closeRec k x (prpQuery ℓm ℓfv : Exp rT) = prpQuery ℓm ℓfv :=
+  closeRec_fresh x _ k (by simp [prpQuery_fv])
+
+@[pl_step_simp] theorem openRec_randomFunction :
+    openRec k t (randomFunction N) = randomFunction N :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_randomFunction :
+    closeRec k x (randomFunction N : Exp rT) = randomFunction N :=
+  closeRec_fresh x _ k (by simp [randomFunction_fv])
+
+@[pl_step_simp] theorem openRec_wLoop : openRec k t (wLoop N) = wLoop N :=
+  (open_lc k t _ (by is_lc)).symm
+@[pl_step_simp] theorem closeRec_wLoop : closeRec k x (wLoop N : Exp rT) = wLoop N :=
+  closeRec_fresh x _ k (by simp [wLoop_fv])
+
+end Erasure
+end Programs
 
 end Switching
 end ProbLang
