@@ -63,15 +63,29 @@ holds under the real Sail environment. A concrete physical resumption installs a
 and preserves the remaining machine frame. Actual configured LBU memory operations are proved;
 integer XOR has its actual generated-body rule.
 
-Remaining: compose full OTP instruction steps and raw prefix/suffix runs; prove the actual ABI/source
-specification and compatible-entry witness; close evaluator selection, the assembly-calling game WP,
-its uniform-reference coupling and exact output-distribution theorem. The top security claim remains
-unproved until all those obligations and the final audits pass.
+The twenty full instruction-step lemmas and both raw runs are now proved: thirteen steps reach the
+actual randombytes address, and seven continuation steps read the updated pad, XOR the saved message,
+restore the original frame and return. Scratch writes preserve code, the import slot and the pad;
+the continuation preserves all memory. `Placement` derives the physical layout from RVCompat, and
+`ImageBridge` derives every instruction/slot assertion from the actual relocated source image.
+`entry_runsTo_call` derives the call run from an arbitrary compatible entry;
+`resume_runsTo_return` covers every allowed resumption, including caller-scratch freedom
+and a changed owned byte. Both live in `MetrologyAsm.OTP`, in `Execution.lean`.
+`Frames.lean` proves prefix memory/configuration preservation, continuation configuration
+preservation and restoration of the original callee-saved frame across the complete execution.
+
+Remaining: prove the actual ABI/source specification and compatible-entry witness; close evaluator
+selection, the assembly-calling game WP, its uniform-reference coupling and exact output-distribution
+theorem. The top security claim remains unproved until all those obligations and the final audits pass.
 
 Validation of this foundation checkpoint: complete root build7145 jobs passed; thirteen listed
 foundation theorem closures contain only propext/Classical.choice/Quot.sound. Receipts are
 `audit/OTP-foundations-{build,axioms}.txt`. These are foundation receipts, not a completed OTP claim.
+The later machine-execution checkpoint passes the full root build7156 jobs; all thirty-two listed
+instruction, raw-run, ABI-entry/resumption and frame theorem closures use only the same three axioms.
+Those receipts are `audit/OTP-machine-{build,axioms}.txt`; the two `OTP-machine-*-tcb.json` receipts
+audit the entry and arbitrary-resumption theorem statements, not a game-security statement.
 The source has thirteen steps to the import (including its trampoline), with the saved link at
 text offset40; the seven-step suffix occupies offsets40..64. `Sail/IntegerSteps.lean` supplies
-reusable full-step composition for register and doubleword-store bodies. Next implement the
-OTP-specific step instances and compose those two raw runs, then the ABI/spec/evaluator chain.
+reusable full-step composition for register and doubleword-store bodies. Next close the decoded
+observations, return/call frame facets, canonical response/tree, universal RVSpec and evaluator chain.

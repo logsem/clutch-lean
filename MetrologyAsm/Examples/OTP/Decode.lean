@@ -30,6 +30,10 @@ def otpCases : List (BitVec 32 × instruction) :=
     (0x00ce3e03#32, .LOAD (12#12, .Regidx 28#5, .Regidx 28#5, false, 8)),
     (0x000e0067#32, .JALR (0#12, .Regidx 28#5, .Regidx 0#5))]
 
+/-- The exact compiler-emitted instruction word at a certified text index. -/
+def otpWord (i : Fin 20) : BitVec 32 := (otpCases[i.val]'(by
+  simpa only [otpCases, List.length_cons, List.length_nil] using i.isLt)).1
+
 /-- The actual source assembler emits exactly the words certified against Sail. -/
 theorem otp_source_words : otpImage.instructions.map (·.word) = otpCases.map (·.1) := by
   decide +kernel
@@ -39,6 +43,15 @@ theorem otp_layout :
     (otpImage.entry, otpImage.textLen, otpImage.rodataOff, otpImage.bytes.length,
       otpImage.importSlots) = (0, 80, 80, 88, [("randombytes", 80)]) := by
   rfl
+
+/-- The installed OTP image includes eighty text bytes and one doubleword import slot. -/
+@[simp] theorem otpImage_length : otpImage.bytes.length = 88 := rfl
+
+/-- The compiler and import trampoline contain eighty executable bytes. -/
+@[simp] theorem otpImage_textLen : otpImage.textLen = 80 := rfl
+
+/-- The retained compiler function starts at the image base. -/
+@[simp] theorem otpImage_entry : otpImage.entry = 0 := rfl
 
 /-- Each emitted OTP instruction has its exact official Sail decoding equation. -/
 theorem otp_decoder_correct (entry : BitVec 32 × instruction) (h : entry ∈ otpCases) :

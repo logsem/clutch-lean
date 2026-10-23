@@ -1,0 +1,36 @@
+⚠ [3816/3914] Replayed Metrology.TotalEris.Examples.RandomWalk
+warning: Metrology/TotalEris/Examples/RandomWalk.lean:85:8: declaration uses `sorry`
+⚠ [6989/7151] Replayed Sail.Sail
+warning: Sail/Sail.lean:34:5: Ambiguous namespace `PreSail`: it is interpreted as `_root_.Sail.ConcurrencyInterfaceV1.PreSail` because this `open` occurs inside `namespace Sail.ConcurrencyInterfaceV1`, while `_root_.PreSail` is silently not opened. Specify the namespace unambiguously, e.g. `_root_.Sail.ConcurrencyInterfaceV1.PreSail`. The warning can sometimes also be addressed by moving the `open` outside of the surrounding `namespace`.
+
+Note: This linter can be disabled with `set_option linter.ambiguousOpen false`
+ℹ [7125/7151] Replayed Tests.SailSpike
+info: Tests/SailSpike.lean:16:0: Compiling 20 definitionally equal execution aliases
+info: Tests/SailSpike.lean:72:0: 'evalStep_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Tests/SailSpike.lean:73:0: 'evalSwap_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [7131/7156] Replayed Tests.Keypair
+info: Tests/Keypair.lean:10:0: 'MetrologyAsm.keypair_stackBound' depends on axioms: [propext]
+✔ [7133/7156] Built MetrologyAsm.Examples.Swap.Steps (1.9s)
+✔ [7134/7156] Built MetrologyAsm.Examples.Callback.Steps (3.0s)
+✔ [7135/7156] Built MetrologyAsm.Examples.OTP.Execution (3.0s)
+✔ [7136/7156] Built MetrologyAsm.Examples.Swap.Execution (2.4s)
+✔ [7137/7156] Built MetrologyAsm.Examples.OTP.Frames (4.3s)
+✔ [7138/7156] Built MetrologyAsm.Examples.Callback.Execution (5.7s)
+✔ [7139/7156] Built MetrologyAsm.Examples.Swap.Bridge (7.1s)
+✔ [7140/7156] Built MetrologyAsm.Examples.OTP (3.7s)
+✔ [7141/7156] Built MetrologyAsm.Examples.Swap.Specification (3.9s)
+✔ [7142/7156] Built MetrologyAsm.Examples.Callback.Placement (7.9s)
+✔ [7143/7156] Built MetrologyAsm.Examples.Swap.Evaluation (3.4s)
+✔ [7144/7156] Built MetrologyAsm.Examples.Callback.Frames (3.8s)
+✔ [7145/7156] Built MetrologyAsm.Examples.Callback.Witness (4.4s)
+✔ [7146/7156] Built MetrologyAsm.Examples.Callback.Image (4.6s)
+✔ [7147/7156] Built MetrologyAsm.Examples.Swap.Correctness (4.3s)
+✔ [7148/7156] Built MetrologyAsm.Examples.Callback.Observation (4.0s)
+✔ [7149/7156] Built MetrologyAsm.Examples.Swap (3.8s)
+✔ [7150/7156] Built MetrologyAsm.Examples.Callback.Specification (3.8s)
+✔ [7151/7156] Built MetrologyAsm.Examples.Callback.Evaluation (3.4s)
+✔ [7152/7156] Built MetrologyAsm.Examples.Callback.Correctness (3.8s)
+✔ [7153/7156] Built MetrologyAsm.Examples.Callback (3.6s)
+✔ [7154/7156] Built MetrologyAsm.Examples (3.8s)
+✔ [7155/7156] Built MetrologyAsm (3.7s)
+Build completed successfully (7156 jobs).

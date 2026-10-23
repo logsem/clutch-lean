@@ -8,6 +8,17 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions Sail
 open Sail.ConcurrencyInterfaceV1
 
+/-- A one-byte word assertion is exactly the lookup of that allocated physical byte. -/
+theorem wordAt8_iff (s : Mach) (address : BitVec 64) (value : BitVec 8) :
+    WordAt s address 1 value ↔ s.mem.get? address.toNat = some value := by
+  constructor
+  · intro h
+    simpa using h 0 (by decide)
+  · intro h i hi
+    have hi0 : i = 0 := by omega
+    subst i
+    simpa using h
+
 /-- Installing one owned byte preserves every non-memory field of the Sail state. -/
 def write8State (s : Mach) (address : BitVec 64) (value : BitVec 8) : Mach :=
   { s with mem := s.mem.insert address.toNat value }

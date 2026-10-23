@@ -7,6 +7,23 @@ namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm Sail.ConcurrencyInterfaceV1
 
+/-- Nonempty nonwrapping intervals with no common byte have separated endpoints. -/
+theorem disjointSpans_of_no_overlap (a n b m : Nat) (hn : 0 < n) (hm : 0 < m)
+    (h : ∀ p, inSpan a n p → ¬inSpan b m p) : disjointSpans a n b m := by
+  by_cases hleft : a + n ≤ b
+  · exact Or.inl hleft
+  · apply Or.inr
+    by_contra hright
+    by_cases hab : a ≤ b
+    · exact h b ⟨hab, by omega⟩ ⟨le_rfl, by omega⟩
+    · exact h a ⟨le_rfl, by omega⟩ ⟨by omega, by omega⟩
+
+/-- A relocated callback-address byte is its corresponding little-endian word slice. -/
+theorem bitVec_of_importByte {width : Nat} (word : BitVec width) (i : Nat) :
+    BitVec.ofNat 8 (UInt8.ofNat (word.toNat / 2 ^ (8 * i))).toNat = word.extractLsb' (8 * i) 8 := by
+  apply BitVec.eq_of_toNat_eq
+  simp [BitVec.extractLsb'_toNat, Nat.shiftRight_eq_div_pow]
+
 /-- Configuration preservation composes across successive machine phases. -/
 theorem configurationFrame.trans {s t u : Mach} (hst : configurationFrame s t)
     (htu : configurationFrame t u) : configurationFrame s u := by

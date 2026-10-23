@@ -20,12 +20,6 @@ def importToyPCs (base : BitVec 64) : List (BitVec 64) :=
   [base, importPC base 4, importPC base 8, importPC base 12, importPC base 16,
     importPC base 20, importPC base 24, importPC base 28, importPC base 32, importPC base 36]
 
-/-- Adding two signed displacements composes their modular word additions. -/
-theorem addInt_compose (value : BitVec 64) (a b : Int) :
-    BitVec.addInt (BitVec.addInt value a) b = BitVec.addInt value (a + b) := by
-  unfold BitVec.addInt
-  rw [BitVec.add_assoc, ← BitVec.ofInt_add]
-
 /-- The saved return address is eight bytes above the reserved stack pointer. -/
 theorem importSavedAddress_eq (sp : BitVec 64) :
     BitVec.addInt (importReservedSP sp) 8 = importSavedAddress sp := by

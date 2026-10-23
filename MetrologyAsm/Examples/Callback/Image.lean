@@ -20,12 +20,6 @@ theorem importToy_byte_certificate : ∀ j : Fin 10, ∀ i : Fin 4,
       some (ofNat ((importToyWord j).toNat / 2 ^ (8 * i.val))) := by
   decide +kernel
 
-/-- A relocated callback-address byte is its corresponding little-endian word slice. -/
-theorem bitVec_of_importByte {width : Nat} (word : BitVec width) (i : Nat) :
-    BitVec.ofNat 8 (ofNat (word.toNat / 2 ^ (8 * i))).toNat = word.extractLsb' (8 * i) 8 := by
-  apply eq_of_toNat_eq
-  simp [extractLsb'_toNat, Nat.shiftRight_eq_div_pow]
-
 variable (ι : Placement)
 
 /-- Relocation preserves all forty text bytes and patches the eight-byte callback slot. -/

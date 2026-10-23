@@ -1,0 +1,110 @@
+import MetrologyAsm.Examples.OTP.Prefix
+import MetrologyAsm.Examples.OTP.Continuation
+import MetrologyAsm.Examples.OTP.ImageBridge
+
+/-! # Compiled OTP entry execution derived from the actual ABI and relocated source -/
+
+namespace MetrologyAsm.OTP
+
+open ProbLang ProbLang.Asm Sail
+
+/-- Read the original frame's open register values. -/
+def entryInputs (ι : Placement) (s : Mach) (message : Int) (pad : Loc) : CallInputs :=
+  ⟨ι.codeBase, (s.regs.get? .x2).getD 0, ι.addr pad, BitVec.ofInt 64 message, ι.retAddr,
+    (s.regs.get? .x8).getD 0, (s.regs.get? .x9).getD 0, ι.importAddr "randombytes"⟩
+
+/-- The compiled OTP entry reaches randombytes under the universal ABI facets. -/
+theorem entry_runsTo_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+    (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :
+    RunsTo (codeRange ι otpCode)
+      (fun t => t = (entryInputs ι s message pad).paused s) s := by
+  obtain ⟨sp, hsp, layout⟩ := rawLayout_of_RVCompat ι s message pad heap h
+  have hconfig := h.2.2.2.2.2.2.2.1
+  obtain ⟨savedS0, hs0⟩ := hconfig.present .x8
+  obtain ⟨savedS1, hs1⟩ := hconfig.present .x9
+  let a : CallInputs :=
+    ⟨ι.codeBase, sp, ι.addr pad, BitVec.ofInt 64 message, ι.retAddr,
+      savedS0, savedS1, ι.importAddr "randombytes"⟩
+  have heq : entryInputs ι s message pad = a := by simp [entryInputs, a, hsp, hs0, hs1]
+  rw [heq]
+  have hpc := (codeImage_facts ι s message pad h.2.2.2.1).2.2
+  have hargs := h.2.2.1
+  have hmessage : s.regs.get? .x10 = some (BitVec.ofInt 64 message) :=
+    hargs 0 (.int message) rfl
+  have hpad : s.regs.get? .x11 = some (ι.addr pad) := hargs 1 (.loc pad) rfl
+  have hra : s.regs.get? .x1 = some ι.retAddr := h.2.2.2.2.2.1.1
+  have hout : ¬codeRange ι otpCode (ι.importAddr "randombytes") := by
+    intro hc
+    exact (h.2.2.2.2.1.1 "randombytes" ⟨[.array 8 (.arg 1), .uint 64], .unit⟩
+      (by simp [otpCode, otpSig])).1 (imageByte_of_codeRange ι _ hc)
+  exact a.runsTo_call hconfig layout (ImageAt.of_codeImage ι s message pad h.2.2.2.1)
+    hpc hsp hra hs0 hs1 hmessage hpad (codeRange ι otpCode)
+    (fun _ hi => codeRange_codePC ι layout.codeRam hi) hout
+
+/-- Every permitted callback resumption executes the continuation with its new pad byte. -/
+theorem resume_runsTo_return (ι : Placement) (s t : Mach) (message : Int) (pad : Loc)
+    (heap newHeap : LocHeap BoundaryValue) (response : BoundaryValue)
+    (h : RVCompat ι otpCode (otpArgs message pad) heap s)
+    (hr : RVResume ι otpCode (otpArgs message pad) {pad}
+      ((entryInputs ι s message pad).paused s) response newHeap t) :
+    let a := entryInputs ι s message pad
+    ∃ byte, newHeap[pad]? = some (.int byte) ∧ inRange false 8 byte = true ∧
+      RunsTo (codeRange ι otpCode)
+        (fun u => u = returnState t a.base a.sp a.message a.ret a.savedS0 a.savedS1
+          (BitVec.ofInt 8 byte)) t := by
+  let a := entryInputs ι s message pad
+  obtain ⟨sp, hsp, hlayout⟩ := rawLayout_of_RVCompat ι s message pad heap h
+  have layout : RawLayout a.base a.sp a.pad a.callback a.ret := by
+    simpa [a, entryInputs, hsp] using hlayout
+  obtain ⟨_, _, ra, _, _, _, hra, _, hpc, _, _, _, hcontents, huser, hcallee, _, hmem⟩ := hr
+  have hregisters := a.paused_registers s
+  have hraEq : ra = codePC a.base 10 := Option.some.inj (hra.symm.trans hregisters.2.1)
+  subst ra
+  have htsp : t.regs.get? .x2 = some (reservedSP a.sp) :=
+    (hcallee .x2 (by simp [calleeSaved])).trans hregisters.1
+  have htpad : t.regs.get? .x8 = some a.pad :=
+    (hcallee .x8 (by simp [calleeSaved])).trans hregisters.2.2.1
+  have htmessage : t.regs.get? .x9 = some a.message :=
+    (hcallee .x9 (by simp [calleeSaved])).trans hregisters.2.2.2.1
+  obtain ⟨byte, hbyteHeap, hrange, hword⟩ :=
+    hcontents.2 (padRegion pad) (by simp) 0 (by simp [padRegion])
+  have hheapByte : newHeap[pad]? = some (.int byte) := by simpa [padRegion] using hbyteHeap
+  have hbyte : t.mem.get? a.pad.toNat = some (BitVec.ofInt 8 byte) := by
+    apply (wordAt8_iff _ _ _).mp
+    simpa [a, entryInputs, padRegion] using hword
+  have hretOut : ¬codeRange ι otpCode a.ret :=
+    fun hc => h.2.2.2.2.2.1.2.2.1 (imageByte_of_codeRange ι _ hc)
+  have hpausedImage := a.paused_image (ImageAt.of_codeImage ι s message pad h.2.2.2.1) layout
+  have hresumedImage : ImageAt t a.base a.callback := by
+    apply hpausedImage.of_mem_eq_on_image layout.codeRam
+    intro address ha
+    apply hmem
+    rw [footprintByte_otp]
+    have hsep := layout.codePad
+    change disjointSpans ι.codeBase.toNat 88 (ι.addr pad).toNat 1 at hsep
+    obtain ⟨hl, hu⟩ := ha
+    change ι.codeBase.toNat ≤ address at hl
+    change address < ι.codeBase.toNat + 88 at hu
+    unfold disjointSpans at hsep
+    omega
+  have savedFrame (offset : Nat) (hoff : offset + 8 ≤ 32) (value : BitVec 64)
+      (hsaved : Word64At (a.paused s) (stackAddress a.sp offset) value) :
+      Word64At t (stackAddress a.sp offset) value := by
+    intro i hi
+    rw [hmem]
+    · exact hsaved i hi
+    · rw [footprintByte_otp]
+      have hsep := layout.stack_pad_disjoint hoff
+      change disjointSpans (stackAddress a.sp offset).toNat 8 (ι.addr pad).toNat 1 at hsep
+      unfold disjointSpans at hsep
+      omega
+  have hsaved := a.paused_saved s layout.stackLower
+  refine ⟨byte, hheapByte, hrange, ?_⟩
+  exact runsTo_return huser a.base a.sp a.pad a.callback a.message a.ret a.savedS0 a.savedS1
+    (BitVec.ofInt 8 byte) layout hresumedImage.continuation hpc htsp htpad htmessage hbyte
+    (savedFrame 24 (by decide) _ hsaved.1)
+    (savedFrame 16 (by decide) _ hsaved.2.1)
+    (savedFrame 8 (by decide) _ hsaved.2.2) (codeRange ι otpCode)
+    (fun _ hi => codeRange_codePC ι layout.codeRam hi) hretOut
+
+end MetrologyAsm.OTP

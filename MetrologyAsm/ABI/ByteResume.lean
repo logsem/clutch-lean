@@ -38,6 +38,20 @@ theorem footprintContents_write8State (ι : Placement) (code : Code) (args : Lis
   subst j
   simpa using write8State_get s (ι.addr l) (BitVec.ofInt 8 byte)
 
+/-- Reading an allocated representable unsigned byte recovers the logical integer. -/
+theorem decodeCell_unsigned8 (ι : Placement) (r : Region) (l : Loc) (s : Mach) (byte : Int)
+    (hwidth : r.width = 8) (hsigned : r.signed = false)
+    (hrange : inRange false 8 byte = true)
+    (hbyte : s.mem.get? (ι.addr l).toNat = some (BitVec.ofInt 8 byte)) :
+    decodeCell ι r l s = some (.int byte) := by
+  have hbounds : 0 ≤ byte ∧ byte < 256 := by simpa [inRange] using hrange
+  obtain ⟨base, length, width, signed⟩ := r
+  cases hwidth
+  cases hsigned
+  simp only [decodeCell, Nat.reduceDiv]
+  simp only [runSail, readBytes8_eq hbyte]
+  simp [Int.emod_eq_of_lt hbounds.1 hbounds.2, max_eq_left hbounds.1, hrange]
+
 /-- Resume a unit callback after installing its new owned byte and preserving the physical frame. -/
 theorem rv_resume_unit_byte (ι : Placement) (code : Code) (args : List BoundaryValue)
     (F : Finset Loc) (paused : Mach) (name : String) (sig : CallSig) (ra : BitVec 64)

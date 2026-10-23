@@ -8,6 +8,12 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions
 open Sail
 
+/-- Adding two signed displacements composes their modular word additions. -/
+theorem addInt_compose (value : BitVec 64) (a b : Int) :
+    BitVec.addInt (BitVec.addInt value a) b = BitVec.addInt value (a + b) := by
+  unfold BitVec.addInt
+  rw [BitVec.add_assoc, ← BitVec.ofInt_add]
+
 /-- Reading sp returns its raw architectural register value. -/
 theorem rX_bits_sp {s : Mach} {v : BitVec 64}
     (h : s.regs.get? Register.x2 = some v) :

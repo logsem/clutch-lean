@@ -1,4 +1,4 @@
-import MetrologyAsm.ABI.Interface
+import MetrologyAsm.ABI.Lemmas
 import MetrologyAsm.Examples.Callback.Execution
 
 /-! # Physical placement extracted from the callback ABI facets -/
@@ -163,17 +163,6 @@ theorem importSavedAddress_inStack (sp : BitVec 64) (hb : 16 ≤ sp.toNat) (a : 
   change sp.toNat - 16 ≤ a ∧ a < sp.toNat - 16 + 16
   obtain ⟨hl, hh⟩ := ha
   constructor <;> omega
-
-/-- Nonempty nonwrapping intervals with no common byte have separated endpoints. -/
-theorem disjointSpans_of_no_overlap (a n b m : Nat) (hn : 0 < n) (hm : 0 < m)
-    (h : ∀ p, inSpan a n p → ¬inSpan b m p) : disjointSpans a n b m := by
-  by_cases hleft : a + n ≤ b
-  · exact Or.inl hleft
-  · apply Or.inr
-    by_contra hright
-    by_cases hab : a ≤ b
-    · exact h b ⟨hab, by omega⟩ ⟨le_rfl, by omega⟩
-    · exact h a ⟨le_rfl, by omega⟩ ⟨by omega, by omega⟩
 
 /-- Every actual compatible callback entry supplies the layout required by all ten Sail steps. -/
 theorem ImportToyPlacement.of_RVCompat (ι : Placement) (s : Mach)
