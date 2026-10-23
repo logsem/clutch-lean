@@ -117,7 +117,7 @@ theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
   | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
       simp [subst, ih]
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
       simp [subst, ih1, ih2]
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
       simp [subst, ih0, ih1, ih2]
@@ -360,6 +360,11 @@ theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
 /-- `substMap` goes through `store`. -/
 @[simp] theorem Exp.substMap_store (vs : SubstMap rT) (e1 e2 : Exp rT) :
     (store e1 e2).substMap vs = .store (e1.substMap vs) (e2.substMap vs) :=
+  substMap_hom₂ _ (by intros; simp [subst]) vs e1 e2
+
+/-- `substMap` goes through `allocN`. -/
+@[simp] theorem Exp.substMap_allocN (vs : SubstMap rT) (e1 e2 : Exp rT) :
+    (allocN e1 e2).substMap vs = .allocN (e1.substMap vs) (e2.substMap vs) :=
   substMap_hom₂ _ (by intros; simp [subst]) vs e1 e2
 
 /-- `substMap` goes through `tape`. -/
@@ -748,6 +753,8 @@ inductive DetHeadStepPred : Exp rT → State rT → Prop
   | caseR {e el er σ} : e.isValue →
       DetHeadStepPred (.case (.inr e) el er) σ
   | alloc {ed σ} : ed.isValue → DetHeadStepPred (.alloc ed) σ
+  | allocN {n ev σ} : ev.isValue → 0 < n →
+      DetHeadStepPred (.allocN (.lit (.int n)) ev) σ
   | load {ℓ v σ} : σ.heap[ℓ]? = some v →
       DetHeadStepPred (.load (.lit (.loc ℓ))) σ
   | store {ℓ e σ} : e.isValue → σ.heap[ℓ]?.isSome →
@@ -811,6 +818,13 @@ theorem headStepPred_iff_exists_support (e : Exp rT) (σ : State rT) :
             exact (toVal?_eq_none.mp h) hv
           obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp this
           exact ⟨_, .AllocS hv' rfl rfl⟩
+      | @allocN n ed σ hv hn =>
+          have : ed.toVal?.isSome := by
+            rw [Option.isSome_iff_ne_none]
+            intro h
+            exact (toVal?_eq_none.mp h) hv
+          obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp this
+          exact ⟨_, .AllocNS hv' hn rfl rfl⟩
       | load hlook => exact ⟨_, .LoadS hlook rfl⟩
       | @store ℓ e σ hv hsome =>
           have : e.toVal?.isSome := by
@@ -852,6 +866,8 @@ theorem headStepPred_iff_exists_support (e : Exp rT) (σ : State rT) :
     | CaseRS hv => exact .inl (.caseR hv)
     | AllocS htoval _ _ =>
         exact .inl (.alloc (toVal?_isValue htoval))
+    | AllocNS htoval hn _ _ =>
+        exact .inl (.allocN (toVal?_isValue htoval) hn)
     | LoadS hlook _ => exact .inl (.load hlook)
     | StoreS htoval hsome _ =>
         exact .inl (.store (toVal?_isValue htoval) hsome)
@@ -1000,7 +1016,7 @@ theorem State.head_step_dzero_upd_tapes
     · rw [hopt] at h0
       exact absurd h0 Measure.dirac_ne_zero
     · rfl
-  case alloc.no_redex hned =>
+  case alloc.no_redex hned | allocN.no_redex hned =>
     simp [toVal?_eq_none.mpr hned]
   case load.segfault hheap =>
     have hnotmem : ‹Loc› ∉ (σ.update_tapes (·.insert α bs')).heap := hheap

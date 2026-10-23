@@ -34,6 +34,13 @@ private theorem alloc_decompItem : (Exp.alloc v.1).decompItem = none := by
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
 
+/-- Block allocation of a value has no evaluation-context hole. -/
+private theorem allocN_decompItem : (Exp.allocN pl(#z) v.1).decompItem = none := by
+  have hv : v.1.toVal? = some v := toVal?_ofVal v
+  show (v.1.toVal?.casesOn _ _ : Option _) = none
+  rw [hv]
+  rfl
+
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The step measure is concentrated on value configurations, which also covers `urand`. -/
@@ -93,6 +100,13 @@ theorem alloc : Discrete.Atomic (.alloc v.1) :=
     cases h with
     | AllocS _ _ _ => exact lit.toIsValue
 
+/-- Block allocation of a value is discretely atomic. -/
+@[discrete]
+theorem allocN : Discrete.Atomic (.allocN pl(#z) v.1) :=
+  of_headStepSupport (allocN_decompItem z v) fun _ _ _ h => by
+    cases h with
+    | AllocNS _ _ _ _ => exact lit.toIsValue
+
 /-- `rand` on the empty tape (`#()`) is discretely atomic. -/
 @[discrete]
 theorem rand_unit : Discrete.Atomic (rT := rT) pl(rand(#z, #())) :=
@@ -133,6 +147,11 @@ theorem store : Atomic (.store pl(#loc l) v.1) :=
 theorem alloc : Atomic (.alloc v.1) :=
   (Discrete.Atomic.alloc v).toAtomic
     (by rw [decomp_snd_of_decompItem_none (alloc_decompItem v)]; nofun)
+
+/-- Block allocation of a value is atomic. -/
+theorem allocN : Atomic (.allocN pl(#z) v.1) :=
+  (Discrete.Atomic.allocN z v).toAtomic
+    (by rw [decomp_snd_of_decompItem_none (allocN_decompItem z v)]; nofun)
 
 /-- `rand` on the empty tape (`#()`) is atomic. -/
 theorem rand_unit : Atomic (rT := rT) pl(rand(#z, #())) :=

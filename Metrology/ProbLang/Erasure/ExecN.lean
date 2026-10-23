@@ -240,6 +240,8 @@ theorem execN_tapePresample_expr_eq {e : Exp rT} {t : Tape} (h : σ.tapes[α]? =
         | alloc hv =>
           rename_i ed
           exact erasure_alloc_close hS h hN ih_fill
+        | allocN hv hn =>
+          apply erasure_allocN_close hS h hN ih_fill hn
         | store hv hsome =>
           rename_i ℓ ev
           exact erasure_store_close hS h hN ih_fill

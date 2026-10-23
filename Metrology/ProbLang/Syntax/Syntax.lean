@@ -213,6 +213,8 @@ inductive UnOp
 `inl`/`inr` of literals. -/
 @[uncurriedProjections, constructors]
 inductive BinOp | plus | minus | mult | div | mod | and | or | xor | eq | lt | le | shl | shr
+  /-- Location displacement by an integer. -/
+  | offset
   deriving Inhabited, Countable, Repr, BEq
 
 /-- System F_μ_ref types with tapes, used by the typing judgment and contextual refinement. -/
@@ -279,6 +281,8 @@ inductive Exp (rT : Type _)
   | urand
   /-- Matches `e` against `pat`: `inl bindings` (see `Pat.tryMatch`) or `inr ()`. -/
   | scrut (e : Exp rT) (pat : Pat rT)
+  /-- Allocate a positive number of consecutive cells initialized to a value. -/
+  | allocN (en ev : Exp rT)
   deriving Inhabited, Countable, BEq, Repr
 
 section WithRealParam
@@ -312,6 +316,7 @@ namespace Exp
   | alloc e => alloc (openRec i sub e)
   | load e => load (openRec i sub e)
   | store e1 e2 => store (openRec i sub e1) (openRec i sub e2)
+  | allocN e1 e2 => allocN (openRec i sub e1) (openRec i sub e2)
   | tape e => tape (openRec i sub e)
   | rand e1 e2 => rand (openRec i sub e1) (openRec i sub e2)
   | fail => fail
@@ -341,6 +346,7 @@ namespace Exp
   | alloc e => alloc (closeRec i x e)
   | load e => load (closeRec i x e)
   | store e1 e2 => store (closeRec i x e1) (closeRec i x e2)
+  | allocN e1 e2 => allocN (closeRec i x e1) (closeRec i x e2)
   | tape e => tape (closeRec i x e)
   | rand e1 e2 => rand (closeRec i x e1) (closeRec i x e2)
   | fail => fail
@@ -371,6 +377,7 @@ namespace Exp
   | alloc e => alloc (subst e x sub)
   | load e => load (subst e x sub)
   | store e1 e2 => store (subst e1 x sub) (subst e2 x sub)
+  | allocN e1 e2 => allocN (subst e1 x sub) (subst e2 x sub)
   | tape e => tape (subst e x sub)
   | rand e1 e2 => rand (subst e1 x sub) (subst e2 x sub)
   | fail => fail
@@ -400,6 +407,7 @@ instance : HasSubstitution (Exp rT) Var (Exp rT) where
   | alloc e => fv e
   | load e => fv e
   | store e1 e2 => fv e1 ∪ fv e2
+  | allocN e1 e2 => fv e1 ∪ fv e2
   | tape e => fv e
   | rand e1 e2 => fv e1 ∪ fv e2
   | fail => {}
@@ -467,6 +475,10 @@ inductive IsLocallyClosed : Exp rT → Prop
     IsLocallyClosed e1 →
     IsLocallyClosed e2 →
     IsLocallyClosed (store e1 e2)
+  | allocN {e1 e2} :
+    IsLocallyClosed e1 →
+    IsLocallyClosed e2 →
+    IsLocallyClosed (allocN e1 e2)
   | tape {e} :
     IsLocallyClosed e →
     IsLocallyClosed (tape e)
@@ -498,6 +510,7 @@ attribute [scoped grind .]
   IsLocallyClosed.alloc
   IsLocallyClosed.load
   IsLocallyClosed.store
+  IsLocallyClosed.allocN
   IsLocallyClosed.tape
   IsLocallyClosed.rand
   IsLocallyClosed.fail
@@ -514,6 +527,7 @@ def size : Exp α → Nat
   | binop _ e1 e2 => 1 + e1.size + e2.size
   | pair e1 e2 => 1 + e1.size + e2.size
   | store e1 e2 => 1 + e1.size + e2.size
+  | allocN e1 e2 => 1 + e1.size + e2.size
   | rand e1 e2 => 1 + e1.size + e2.size
   | unop _ e => 1 + e.size
   | fst e => 1 + e.size
@@ -534,7 +548,8 @@ def lcb (k : Nat) : Exp α → Bool
   | .bvar j => decide (j < k)
   | .fvar _ | .lit _ | .fail | .urand => true
   | .lam e | .fix e => lcb (k+1) e
-  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .rand e1 e2 =>
+  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .rand e1 e2
+  | .allocN e1 e2 =>
       lcb k e1 && lcb k e2
   | .cond e0 e1 e2 | .case e0 e1 e2 => lcb k e0 && lcb k e1 && lcb k e2
   | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e | .scrut e _ =>
@@ -640,6 +655,10 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lc
           simp only [lcb, Bool.and_eq_true] at hlc
           simp only [Exp.size] at hle
           exact .store (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
+      | allocN e1 e2 =>
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
+          exact .allocN (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
       | tape e =>
           simp only [lcb] at hlc
           simp only [Exp.size] at hle
@@ -998,6 +1017,10 @@ theorem Exp.load_not_isValue {e : Exp α} : ¬ (Exp.load e).isValue := fun ⟨w�
 /-- A `store` is not a value. -/
 theorem Exp.store_not_isValue :
     ¬ (Exp.store e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
+
+/-- Block allocation is not a value. -/
+theorem Exp.allocN_not_isValue :
+    ¬ (Exp.allocN e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
 /-- A `tape` is not a value. -/
 theorem Exp.tape_not_isValue {e : Exp α} : ¬ (Exp.tape e).isValue := fun ⟨w⟩ => nomatch w
 /-- A `rand` is not a value. -/
@@ -1015,6 +1038,10 @@ theorem Exp.load_toVal?_eq_none {e : Exp α} : (Exp.load e).toVal? = none :=
 /-- `toVal?` of a `store` is `none`. -/
 theorem Exp.store_toVal?_eq_none : (Exp.store e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.store_not_isValue
+
+/-- Block allocation has no value projection. -/
+theorem Exp.allocN_toVal?_eq_none : (Exp.allocN e₁ e₂).toVal? = none :=
+  Exp.toVal?_eq_none.mpr Exp.allocN_not_isValue
 /-- `toVal?` of a `tape` is `none`. -/
 theorem Exp.tape_toVal?_eq_none {e : Exp α} : (Exp.tape e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.tape_not_isValue
@@ -1105,6 +1132,7 @@ def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
   -- A negative shift amount counts as 0.
   | shl,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * 2 ^ z2.toNat)
   | shr,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / 2 ^ z2.toNat)
+  | offset, .lit (.loc l), .lit (.int z) => some (.lit (.loc (l + z)))
   |_,      _,        _        => none
 
 /-! ## States and configurations -/
@@ -1233,6 +1261,8 @@ inductive EctxItem (α : Type _)
   | randL (v2 : Val α)
   | randR (e1 : Exp α)
   | scrut (p : Pat α)
+  | allocNL (v2 : Val α)
+  | allocNR (e1 : Exp α)
   deriving Countable
 
 /-- Plugs `e` into the hole of a frame. -/
@@ -1255,6 +1285,8 @@ inductive EctxItem (α : Type _)
   | .load => .load e
   | .storeL v2 => .store e (.ofVal v2)
   | .storeR e1 => .store e1 e
+  | .allocNL v2 => .allocN e (.ofVal v2)
+  | .allocNR e1 => .allocN e1 e
   | .tape => .tape e
   | .randL v2 => .rand e (.ofVal v2)
   | .randR e1 => .rand e1 e
@@ -1299,6 +1331,9 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   | store e1 e2 =>
     e2.toVal?.casesOn (some (.storeR e1, e2)) fun v2 =>
     e1.toVal?.casesOn (some (.storeL v2, e1)) fun _ => none
+  | allocN e1 e2 =>
+    e2.toVal?.casesOn (some (.allocNR e1, e2)) fun v2 =>
+    e1.toVal?.casesOn (some (.allocNL v2, e1)) fun _ => none
   | rand e1 e2 =>
     e2.toVal?.casesOn (some (.randR e1, e2)) fun v2 =>
     e1.toVal?.casesOn (some (.randL v2, e1)) fun _ => none
@@ -1337,7 +1372,7 @@ theorem EctxItem.fillItem_noVal_inj {Ki1 Ki2 : EctxItem α} {e1 e2 : Exp α}
 theorem EctxItem.decompItem_fillItem (Ki : EctxItem α) {e : Exp α} (hv : ¬e.isValue) :
     (Ki.fillItem e).decompItem = some (Ki, e) := by
   cases Ki with
-  | appL v2 | binopL _ v2 | pairL v2 | storeL v2 | randL v2 =>
+  | appL v2 | binopL _ v2 | pairL v2 | storeL v2 | allocNL v2 | randL v2 =>
     simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv,
          Val.toVal?_fst, Exp.ofVal]
   | _ => simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv]
@@ -1458,6 +1493,14 @@ theorem Ectx.fill_storeL (v2 : Val α) (e : Exp α) :
 /-- Filling a one-frame context with a `store` frame with the location fixed. -/
 theorem Ectx.fill_storeR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.storeR e1] e = .store e1 e := rfl
+
+/-- Filling a block-allocation frame with the initializer fixed. -/
+theorem Ectx.fill_allocNL (v2 : Val α) (e : Exp α) :
+    Ectx.fill [.allocNL v2] e = .allocN e (.ofVal v2) := rfl
+
+/-- Filling a block-allocation frame with the length fixed. -/
+theorem Ectx.fill_allocNR (e1 : Exp α) (e : Exp α) :
+    Ectx.fill [.allocNR e1] e = .allocN e1 e := rfl
 
 /-- Filling a one-frame context with a `tape` frame. -/
 theorem Ectx.fill_tape (e : Exp α) :

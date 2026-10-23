@@ -109,6 +109,8 @@ theorem EctxItem.fillItem.measurableEmbedding (Ki : EctxItem rT) :
   | load => exact Exp.load.measurableEmbedding
   | storeL v2 => exact Exp.store.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
   | storeR e1 => exact Exp.store.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
+  | allocNL v2 => exact Exp.allocN.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | allocNR e1 => exact Exp.allocN.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
   | tape => exact Exp.tape.measurableEmbedding
   | randL v2 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
   | randR e1 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)

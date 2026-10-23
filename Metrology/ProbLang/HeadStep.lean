@@ -129,6 +129,11 @@ def headStep : Cfg rT → Measure (Cfg rT)
     | some bindings => dirac ⟨.inl bindings, σ⟩
     | none => dirac ⟨.inr (.lit .unit), σ⟩
   | ⟨.urand, σ⟩ => Cfg.uniformReal σ
+  | ⟨.allocN (.lit (.int n)) ev, σ⟩ =>
+    ev.asValM fun v =>
+      if 0 < n then
+        dirac ⟨.lit (.loc σ.heap.fresh), σ.update_heap (fun h => LocHeap.allocN h v n.toNat)⟩
+      else 0
   | _ => 0
 
 /-! ## The `head_case` tactic: one named goal per branch of `headStep` -/
@@ -161,7 +166,8 @@ macro "head_case_names" : tactic =>
     on_goal 16 => rename_goal rand.tape
     on_goal 17 => rename_goal scrut
     on_goal 18 => rename_goal urand
-    on_goal 19 => rename_goal default
+    on_goal 19 => rename_goal allocN
+    on_goal 20 => rename_goal default
   ))
 
 /-- Decompose the Cfg equality hypothesis left by `split` on `headStep`, then substitute. -/
@@ -219,6 +225,10 @@ macro "head_case" : tactic =>
     case' load =>
       head_subst
       head_split2 load.segfault load.redex
+    case' allocN =>
+      head_subst
+      head_split_asValM allocN.no_redex allocN.value
+      case' allocN.value => head_split2 allocN.redex allocN.nonpos
     case' alloc =>
       head_subst
       head_split_asValM alloc.no_redex alloc.redex
@@ -315,7 +325,7 @@ theorem head_step_mass :
   all_goals try (· simp)
   case beta.lam.redex | beta.fix.redex | cond.true | cond.false
      | fst.redex | snd.redex | case.left.redex | case.right.redex
-     | alloc.redex | load.redex | store.redex | tape
+     | alloc.redex | allocN.redex | load.redex | store.redex | tape
      | rand.tape.deterministic
      | scrut_success | scrut_failure => intro _; infer_instance
   case unop.redex _ op e _ =>
@@ -568,7 +578,7 @@ theorem headStep.cApp.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cApp _ = _
@@ -599,6 +609,55 @@ theorem headStep.cApp.measurable :
           (measurable_snd.prodMk (Exp.fix.measurable.comp measurable_snd))
       · exact measurable_snd.comp measurable_fst
   exp_zero_app_apply c_lam_inner, h_lam_inner, c_fix_inner, h_fix_inner
+
+/-- The head-step branch for block allocation. -/
+@[simp] def headStep.cAllocN (p : State rT × Exp rT × Exp rT) : Measure (Cfg rT) :=
+  ((Exp.litExtract p.2.1).bind BaseLit.intExtract).unwrapM fun n =>
+    p.2.2.asValM fun v =>
+      if 0 < n then
+        dirac ⟨.lit (.loc p.1.heap.fresh),
+          p.1.update_heap (fun h => LocHeap.allocN h v n.toNat)⟩
+      else 0
+
+/-- Block allocation is measurable in its state and operands. -/
+theorem headStep.cAllocN.measurable :
+    Measurable (headStep.cAllocN (rT := rT)) := by
+  let g : Int × State rT × Val rT → Measure (Cfg rT) := fun q =>
+    if 0 < q.1 then
+      dirac ⟨.lit (.loc q.2.1.heap.fresh),
+        q.2.1.update_heap (fun h => LocHeap.allocN h q.2.2 q.1.toNat)⟩
+    else 0
+  have hg : Measurable g := by
+    apply measurable_from_prod_countable_right
+    intro n
+    dsimp only [g]
+    split_ifs
+    · refine Cfg.measurable_dirac_mk ?_ ?_
+      · exact Exp.lit.measurable.comp (BaseLit.loc.measurable.comp
+          (LocHeap.measurable_fresh.comp (State.measurable_heap.comp measurable_fst)))
+      · refine State.measurable_mk_param ?_ ?_
+        · exact (LocHeap.measurable_allocN n.toNat).comp
+            ((State.measurable_heap.comp measurable_fst).prodMk measurable_snd)
+        · exact State.measurable_tapes.comp measurable_fst
+    · exact measurable_const
+  have hg' : Measurable (fun q : (State rT × Int) × Val rT => g (q.1.2, q.1.1, q.2)) :=
+    hg.comp ((measurable_snd.comp measurable_fst).prodMk
+      ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
+  have he : Measurable (fun p : State rT × Exp rT × Exp rT =>
+      (Exp.litExtract p.2.1).bind BaseLit.intExtract) := by
+    refine Option.measurable_bind_param
+      (f := fun p : State rT × Exp rT × Exp rT => Exp.litExtract p.2.1)
+      (some_branch := fun q : (State rT × Exp rT × Exp rT) × BaseLit rT =>
+        BaseLit.intExtract q.2) ?_ ?_
+    · exact Exp.litExtract.measurable.comp (measurable_fst.comp measurable_snd)
+    · exact BaseLit.intExtract.measurable.comp measurable_snd
+  unfold headStep.cAllocN
+  apply Option.unwrapM.measurable_param he (g := fun q :
+    (State rT × Exp rT × Exp rT) × Int =>
+      q.1.2.2.asValM (fun v => g (q.2, q.1.1, v)))
+  exact (Exp.asValM.measurable hg').comp
+    ((measurable_snd.comp (measurable_snd.comp measurable_fst)).prodMk
+      ((measurable_fst.comp measurable_fst).prodMk measurable_snd))
 
 /-- The `headStep` branch for an `alloc`, uncurried over the state and arguments. -/
 @[simp] def headStep.cAlloc (p : State rT × Exp rT) : Measure (Cfg rT) :=
@@ -652,7 +711,7 @@ theorem headStep.cCond.measurable : Measurable (headStep.cCond (rT := rT)) := by
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT × Exp rT =>
             (p.2.1, p.1, p.2.2.1, p.2.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
@@ -721,7 +780,7 @@ theorem headStep.cCase.measurable :
             (fun e => c_inl_inner (q.2, e))
             (fun e => c_inr_inner (q.2, e))
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
     show headStep.cCase _ = _
@@ -778,7 +837,7 @@ theorem headStep.cLoad.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cLoad _ = _
@@ -842,7 +901,7 @@ theorem headStep.cStore.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cStore _ = _
@@ -926,7 +985,7 @@ theorem headStep.cTape.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cTape _ = _
@@ -994,7 +1053,7 @@ theorem headStep.cFst.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cFst _ = _
@@ -1035,7 +1094,7 @@ theorem headStep.cSnd.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cSnd _ = _
@@ -1154,7 +1213,7 @@ theorem headStep.cRand.measurable :
         (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
         (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
         (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-        (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)
+        (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
   have hc_e2 : Measurable c_e2_dispatch := by
     have hswap : Measurable (fun q : (State rT × Int) × Exp rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
@@ -1165,7 +1224,7 @@ theorem headStep.cRand.measurable :
           (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
           (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
           (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-          (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) := by
+          (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) := by
       exp_zero_lit_apply (fun q : (State rT × Int) × BaseLit rT => c_l2_dispatch q), hc_l2
     exact hbase.comp hswap
   let c_l1_dispatch : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) := fun ⟨⟨σ, e2⟩, l1⟩ =>
@@ -1196,7 +1255,7 @@ theorem headStep.cRand.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cRand _ = _
@@ -1337,7 +1396,8 @@ theorem headStep.measurable :
           (fun e1 e2 => headStep.cRand (p.2, e1, e2))
           (c_fail p.2)
           (c_urand p.2)
-          (fun e pat => headStep.cScrut (p.2, e, pat)) := by
+          (fun e pat => headStep.cScrut (p.2, e, pat))
+          (fun en ev => headStep.cAllocN (p.2, en, ev)) := by
     funext ⟨e, σ⟩
     cases e with
     | bvar | fvar | lit | lam | fix | fail | urand => rfl
@@ -1356,6 +1416,9 @@ theorem headStep.measurable :
     | inr _ => rfl
     | case ec el er => cases ec <;> rfl
     | alloc _ => rfl
+    | allocN en ev =>
+      cases en <;> try rfl
+      case lit l => cases l <;> rfl
     | load e =>
       cases e <;> try rfl
       case lit l => cases l <;> rfl
@@ -1383,6 +1446,7 @@ theorem headStep.measurable :
     (c_alloc := headStep.cAlloc) (c_load := headStep.cLoad) (c_store := headStep.cStore)
     (c_tape := headStep.cTape) (c_rand := headStep.cRand)
     (c_fail := c_fail) (c_urand := c_urand) (c_scrut := headStep.cScrut)
+    (c_allocN := headStep.cAllocN)
   · exact measurable_const
   · exact measurable_const
   · exact measurable_const
@@ -1406,6 +1470,7 @@ theorem headStep.measurable :
   · exact measurable_const
   · exact Cfg.uniformReal.measurable
   · exact headStep.cScrut.measurable
+  · exact headStep.cAllocN.measurable
 
 /-- `headStep` as a kernel. -/
 def headStepKernel : Kernel (Cfg rT) (Cfg rT) where
@@ -1485,6 +1550,13 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
     ℓ = σ.heap.fresh →
     σ' = σ.update_heap (·.insert ℓ vd) →
     HeadStepSupport ⟨.alloc ed, σ⟩ ⟨.lit (.loc ℓ), σ'⟩
+  /-- Allocate a positive number of consecutive heap cells. -/
+  | AllocNS {ev : Exp rT} {v : Val rT} {n : Int} {ℓ : Loc} {σ σ' : State rT} :
+    ev.toVal? = some v →
+    0 < n →
+    ℓ = σ.heap.fresh →
+    σ' = σ.update_heap (fun h => LocHeap.allocN h v n.toNat) →
+    HeadStepSupport ⟨.allocN (.lit (.int n)) ev, σ⟩ ⟨.lit (.loc ℓ), σ'⟩
   /-- Read an allocated heap location. -/
   | LoadS {σ : State rT} {ℓ : Loc} {v : Val rT} {e' : Exp rT} :
     σ.heap[ℓ]? = some v →
@@ -1652,6 +1724,9 @@ theorem HeadStepSupport.ne_zero {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval]
   | AllocS hvd hl hσ =>
     subst hl hσ; simp [headStep, Exp.asValM, hvd]
+  | AllocNS hvd hn hl hσ =>
+    subst hl hσ
+    simp [headStep, Exp.asValM, hvd, hn]
   | LoadS hlook he =>
     subst he; simp [headStep, hlook]
   | StoreS hv hsome hσ =>
@@ -1706,6 +1781,9 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     exact of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
   | AllocS hvd hl hσ =>
     subst hl hσ; exact of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
+  | AllocNS hvd hn hl hσ =>
+    subst hl hσ
+    exact of_dirac_eq (by simp [headStep, Exp.asValM, hvd, hn])
   | LoadS hlook he =>
     subst he; exact of_dirac_eq (by simp [headStep, hlook])
   | StoreS hv hsome hσ =>
@@ -1793,6 +1871,10 @@ theorem headStep_support_of_pos
     intro h
     cfg_dirac h
     exact .AllocS ‹_› rfl rfl
+  case allocN.redex =>
+    intro h
+    cfg_dirac h
+    exact .AllocNS ‹_› ‹_› rfl rfl
   case store.redex =>
     intro h
     cfg_dirac h
@@ -1877,6 +1959,7 @@ theorem headStep_exists_support_of_ne_zero
   case tape => exact ⟨_, .TapeS rfl rfl⟩
   case load.redex => exact ⟨_, .LoadS ‹_› rfl⟩
   case alloc.redex => exact ⟨_, .AllocS ‹_› rfl rfl⟩
+  case allocN.redex => exact ⟨_, .AllocNS ‹_› ‹_› rfl rfl⟩
   case store.redex =>
     exact ⟨_, .StoreS ‹_› (by rw [Option.isSome_iff_exists]; exact ⟨_, ‹_›⟩) rfl⟩
   case rand.tape.deterministic => exact ⟨_, .RandTapeS ‹_› rfl rfl rfl⟩
@@ -1970,6 +2053,10 @@ theorem headStep_atomic (e : Exp rT) (σ : State rT) (hne : e ≠ .urand) :
       (isAtomicSupport_unwrapM _ _ fun _ => isAtomicSupport_dirac _))
   case cond.true | cond.false | tape => exact isAtomicSupport_dirac _
   case alloc => exact isAtomicSupport_asValM _ fun _ => isAtomicSupport_dirac _
+  case allocN =>
+    apply isAtomicSupport_asValM
+    intro _
+    split <;> first | exact isAtomicSupport_dirac _ | exact isAtomicSupport_zero
   case load =>
     split
     · exact isAtomicSupport_zero

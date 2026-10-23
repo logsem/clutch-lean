@@ -103,6 +103,7 @@ syntax:max ident : pl_exp
 syntax:max "(" pl_exp ")" : pl_exp
 syntax:max "(" pl_exp " : " pl_ty ")" : pl_exp
 syntax:65 pl_exp:65 " + " pl_exp:66 : pl_exp
+syntax:65 pl_exp:65 " +ₗ " pl_exp:66 : pl_exp
 syntax:65 pl_exp:65 " - " pl_exp:66 : pl_exp
 syntax:70 pl_exp:70 " * " pl_exp:71 : pl_exp
 syntax:70 pl_exp:70 " / " pl_exp:71 : pl_exp
@@ -133,6 +134,7 @@ syntax:10 "case " pl_exp " | " pl_pat " => " pl_exp:10 (" | " pl_pat " => " pl_e
 -- abstract (where `Pat.tryMatch` is stuck). Use it for library code verified on symbolic data.
 syntax:10 "case! " pl_exp " | " pl_pat " => " pl_exp:10 " | " pl_pat " => " pl_exp:10 : pl_exp
 syntax:100 "alloc(" pl_exp ")" : pl_exp
+syntax:100 "allocN(" pl_exp ", " pl_exp ")" : pl_exp
 syntax:80 "!" pl_exp:80 : pl_exp
 syntax:80 pl_exp:80 " ← " pl_exp:80 : pl_exp
 syntax:100 "tape(" pl_exp ")" : pl_exp
@@ -164,7 +166,7 @@ meta def pl_ty.parenthesizer : CategoryParenthesizer := fun prec => do
 
 /-- Words that cannot name a ProbLang variable. -/
 meta def reservedKeywords : List String :=
-  ["fst", "snd", "inl", "inr", "alloc", "tape", "rand", "fail", "urand", "scrut",
+  ["fst", "snd", "inl", "inr", "alloc", "allocN", "tape", "rand", "fail", "urand", "scrut",
    "if", "then", "else", "let", "fun", "rec", "case"]
 
 /-- Rejects an identifier that is a `reservedKeywords` entry. -/
@@ -322,6 +324,7 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) : TSyntax `pl_ex
       checkNotReserved i
       let atom := env.find? i.getId |>.getD i.getId.toString
       `(Exp.fvar $(← quoteVar atom))
+  | `(pl_exp|$e1 +ₗ $e2) => do `(Exp.binop .offset $(← elabPL env st e1) $(← elabPL env st e2))
   | `(pl_exp|$e1 + $e2) => do `(Exp.binop .plus $(← elabPL env st e1) $(← elabPL env st e2))
   | `(pl_exp|$e1 - $e2) => do `(Exp.binop .minus $(← elabPL env st e1) $(← elabPL env st e2))
   | `(pl_exp|$e1 * $e2) => do `(Exp.binop .mult $(← elabPL env st e1) $(← elabPL env st e2))
@@ -355,6 +358,7 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) : TSyntax `pl_ex
   | `(pl_exp|snd($e)) => do `(Exp.snd $(← elabPL env st e))
   | `(pl_exp|inl($e)) => do `(Exp.inl $(← elabPL env st e))
   | `(pl_exp|inr($e)) => do `(Exp.inr $(← elabPL env st e))
+  | `(pl_exp|allocN($en, $ev)) => do `(Exp.allocN $(← elabPL env st en) $(← elabPL env st ev))
   | `(pl_exp|alloc($e)) => do `(Exp.alloc $(← elabPL env st e))
   | `(pl_exp|! $e) => do `(Exp.load $(← elabPL env st e))
   | `(pl_exp|$e1 ← $e2) => do `(Exp.store $(← elabPL env st e1) $(← elabPL env st e2))
@@ -657,6 +661,7 @@ meta def unexpUrand : Unexpander
 /-- Prints `Exp.binop` as the matching infix operator in `pl(…)`. -/
 @[app_unexpander Exp.binop]
 meta def unexpBinop : Unexpander
+  | `($_ BinOp.offset $e1 $e2) => do `(pl($(← unpackPLExp e1) +ₗ $(← unpackPLExp e2)))
   | `($_ BinOp.plus $e1 $e2) => do `(pl($(← unpackPLExp e1) + $(← unpackPLExp e2)))
   | `($_ BinOp.minus $e1 $e2) => do `(pl($(← unpackPLExp e1) - $(← unpackPLExp e2)))
   | `($_ BinOp.mult $e1 $e2) => do `(pl($(← unpackPLExp e1) * $(← unpackPLExp e2)))
@@ -725,6 +730,12 @@ meta def unexpInr : Unexpander
   | _ => throw ()
 
 /-! ### State / random / scrut -/
+
+/-- Prints block allocation with its length and initializer. -/
+@[app_unexpander Exp.allocN]
+meta def unexpAllocN : Unexpander
+  | `($_ $en $ev) => do `(pl(allocN($(← unpackPLExp en), $(← unpackPLExp ev))))
+  | _ => throw ()
 
 /-- Prints `Exp.alloc` as `pl(alloc(e))`. -/
 @[app_unexpander Exp.alloc]

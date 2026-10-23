@@ -228,7 +228,7 @@ theorem subst_subst_fvar_id {α : Type _} (e w : Exp α) (x y : Var) (hyv : y �
     have hyv' : y ∉ e.fv := fun h => hyv (by simpa [fv] using h)
     simp [subst, ih hyv']
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
     have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [fv]; exact Or.inl h)
     have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [fv]; exact Or.inr h)
     simp [subst, ih1 hyv1, ih2 hyv2]
@@ -297,7 +297,7 @@ theorem closeRec_fv_subset {α : Type _} (e : Exp α) (x : Var) (k : Nat) (y : V
       simp only [closeRec, fv] at hy ⊢
       exact ih k hy
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
       simp only [closeRec, fv, mem_union] at hy ⊢
       exact hy.imp (ih1 k) (ih2 k)
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
@@ -399,6 +399,7 @@ macro_rules
             | apply IsLocallyClosed.inr | apply IsLocallyClosed.case
             | apply IsLocallyClosed.alloc | apply IsLocallyClosed.load
             | apply IsLocallyClosed.store | apply IsLocallyClosed.tape
+            | apply IsLocallyClosed.allocN
             | apply IsLocallyClosed.rand | apply IsLocallyClosed.scrut))
 
 /-- Discharges `IsVal e` and `IsLocallyClosed e` goals, like `is_lc`. -/
@@ -431,6 +432,7 @@ macro_rules
             | apply IsLocallyClosed.inl | apply IsLocallyClosed.inr
             | apply IsLocallyClosed.case | apply IsLocallyClosed.alloc
             | apply IsLocallyClosed.load | apply IsLocallyClosed.store
+            | apply IsLocallyClosed.allocN
             | apply IsLocallyClosed.tape | apply IsLocallyClosed.rand
             | apply IsLocallyClosed.scrut
             | refine ⟨?_, ?_⟩

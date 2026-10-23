@@ -98,7 +98,7 @@ theorem unboxed_type_ref_or_eqtype {τ : Ty} (h : UnboxedType τ) :
 def BinOp.intResTy : BinOp → Option Ty
   | .plus | .minus | .mult | .div | .mod  => some .int
   | .shl  | .shr                          => some .int
-  | .and  | .or    | .xor                 => none
+  | .and  | .or    | .xor | .offset       => none
   | .eq   | .lt    | .le                  => some .bool
 
 /-- Result type of a binary operation on boolean operands. -/
@@ -107,7 +107,7 @@ def BinOp.boolResTy : BinOp → Option Ty
   | .shl  | .shr                          => none
   | .and  | .or    | .xor                 => some .bool
   | .eq                                   => some .bool
-  | .lt   | .le                           => none
+  | .lt   | .le | .offset                 => none
 
 /-- Result type of a unary operation on an integer operand. -/
 def UnOp.intResTy : UnOp → Option Ty
@@ -136,7 +136,7 @@ def BinOp.realResTy : BinOp → Option Ty
   | .plus                                => some .real
   | .minus | .mult | .div | .mod         => none
   | .shl   | .shr                        => none
-  | .and   | .or   | .xor                => none
+  | .and   | .or   | .xor | .offset      => none
   | .eq    | .lt   | .le                 => some .bool
 
 /-! ## Typing contexts -/

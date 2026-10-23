@@ -1,7 +1,7 @@
 module
 
 public import Metrology.ProbLang.Measure
-public import Metrology.ProbLang.Syntax.Syntax
+public import Metrology.ProbLang.Syntax.HeapArray
 
 @[expose] public section
 
@@ -129,6 +129,23 @@ theorem measurable_fresh : Measurable (fun (m : LocHeap V) => m.fresh) := by
     rcases m.maxKey? with _ | _ <;> rfl
   rw [hrw]
   exact (Option.measurable_getD 0 |>.comp measurable_maxKey?).add_const 1
+
+/-- Repeated fresh insertion is measurable in the heap and the value. -/
+@[fun_prop]
+theorem measurable_allocN (n : Nat) :
+    Measurable (fun p : LocHeap V × V => allocN p.1 p.2 n) := by
+  induction n with
+  | zero => exact measurable_fst
+  | succ n ih =>
+    exact ih.comp (((Measurable.locHeap_insert_param (V := V)).comp
+      (measurable_fst.prodMk ((measurable_fresh.comp measurable_fst).prodMk
+        measurable_snd))).prodMk measurable_snd)
+
+/-- Block allocation is measurable jointly in its count, heap and initializer. -/
+@[fun_prop]
+theorem measurable_allocN_param :
+    Measurable (fun p : Nat × LocHeap V × V => allocN p.2.1 p.2.2 p.1) :=
+  measurable_from_prod_countable_right measurable_allocN
 
 end LocHeap
 end ProbLang

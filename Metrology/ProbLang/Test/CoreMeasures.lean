@@ -155,6 +155,7 @@ namespace ProbLang.Exp
   | .alloc e       => tagDepth e + 1
   | .load e        => tagDepth e + 1
   | .store e1 e2   => max (tagDepth e1) (tagDepth e2) + 1
+  | .allocN e1 e2   => max (tagDepth e1) (tagDepth e2) + 1
   | .tape e        => tagDepth e + 1
   | .rand e1 e2    => max (tagDepth e1) (tagDepth e2) + 1
   | .fail          => 0
@@ -181,6 +182,7 @@ namespace ProbLang.Exp
   | .alloc e       => countLeaves e
   | .load e        => countLeaves e
   | .store e1 e2   => countLeaves e1 + countLeaves e2
+  | .allocN e1 e2   => countLeaves e1 + countLeaves e2
   | .tape e        => countLeaves e
   | .rand e1 e2    => countLeaves e1 + countLeaves e2
   | .fail          => 0
@@ -207,6 +209,7 @@ namespace ProbLang.Exp
   | .alloc e       => .alloc (endoMap e)
   | .load e        => .load (endoMap e)
   | .store e1 e2   => .store (endoMap e1) (endoMap e2)
+  | .allocN e1 e2   => .allocN (endoMap e1) (endoMap e2)
   | .tape e        => .tape (endoMap e)
   | .rand e1 e2    => .rand (endoMap e1) (endoMap e2)
   | .fail          => .fail
@@ -233,6 +236,7 @@ namespace ProbLang.Exp
   | acc, .alloc e       => addAcc acc e
   | acc, .load e        => addAcc acc e
   | acc, .store e1 e2   => addAcc acc e1 + addAcc acc e2
+  | acc, .allocN e1 e2   => addAcc acc e1 + addAcc acc e2
   | acc, .tape e        => addAcc acc e
   | acc, .rand e1 e2    => addAcc acc e1 + addAcc acc e2
   | acc, .fail          => acc
@@ -256,6 +260,7 @@ theorem tagDepth.measurable :
     (c_case := fun n1 n2 n3 => max (max n1 n2) n3 + 1)
     (c_alloc := (· + 1)) (c_load := (· + 1)) (c_store := fun n1 n2 => max n1 n2 + 1)
     (c_tape := (· + 1)) (c_rand := fun n1 n2 => max n1 n2 + 1)
+    (c_allocN := fun n1 n2 => max n1 n2 + 1)
     (c_fail := 0)
     (c_urand := 0)
     (c_scrut := fun n _ => n + 1)
@@ -417,7 +422,7 @@ variable {α : Type _}
 /-! ### Smoke tests
 
 `EctxItem` is not recursive, so each test goes through `measurable_casesOn` or
-`measurable_casesOn_param` and exercises all 21 constructor slots. -/
+`measurable_casesOn_param` and exercises all 23 constructor slots. -/
 
 /-- Discrete codomain. -/
 @[simp] def tagDepth : EctxItem α → Nat
@@ -442,6 +447,8 @@ variable {α : Type _}
   | .randL _   => 18
   | .randR _   => 19
   | .scrut _   => 20
+  | .allocNL _ => 21
+  | .allocNR _ => 22
 
 /-- Depends on whether a constructor carries a payload. -/
 @[simp] def countLeaves : EctxItem α → Nat
@@ -466,6 +473,8 @@ variable {α : Type _}
   | .randL _   => 1
   | .randR _   => 1
   | .scrut _   => 1
+  | .allocNL _ => 1
+  | .allocNR _ => 1
 
 /-- Non-discrete codomain; only `appR` transforms its payload. -/
 @[simp] def endoMap : EctxItem α → EctxItem α
@@ -490,6 +499,8 @@ variable {α : Type _}
   | .randL v   => .randL v
   | .randR e   => .randR e
   | .scrut p   => .scrut p
+  | .allocNL v => .allocNL v
+  | .allocNR e => .allocNR e
 
 /-- Threads a parameter through `measurable_casesOn_param`. -/
 @[simp] def addAcc : Nat → EctxItem α → Nat
@@ -508,7 +519,8 @@ theorem tagDepth.measurable :
         (fun _ _ => 3) (fun _ _ => 4) (fun _ _ => 5)
         (fun _ => 6) (fun _ => 7)
         8 9 10 11 (fun _ _ => 12) 13 14
-        (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)) := by
+        (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)
+        (fun _ => 21) (fun _ => 22)) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -519,6 +531,7 @@ theorem tagDepth.measurable :
     (c_case := fun _ => 12) (c_alloc := fun _ => 13) (c_load := fun _ => 14)
     (c_storeL := fun _ => 15) (c_storeR := fun _ => 16) (c_tape := fun _ => 17)
     (c_randL := fun _ => 18) (c_randR := fun _ => 19) (c_scrut := fun _ => 20)
+    (c_allocNL := fun _ => 21) (c_allocNR := fun _ => 22)
   all_goals fun_prop
 
 /-- `countLeaves` is a measurable function. -/
@@ -530,7 +543,8 @@ theorem countLeaves.measurable :
         (fun _ _ => 1) (fun _ _ => 1) (fun _ _ => 1)
         (fun _ => 1) (fun _ => 1)
         0 0 0 0 (fun _ _ => 1) 0 0
-        (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)) := by
+        (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)
+        (fun _ => 1) (fun _ => 1)) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -541,6 +555,7 @@ theorem countLeaves.measurable :
     (c_case := fun _ => 1) (c_alloc := fun _ => 0) (c_load := fun _ => 0)
     (c_storeL := fun _ => 1) (c_storeR := fun _ => 1) (c_tape := fun _ => 0)
     (c_randL := fun _ => 1) (c_randR := fun _ => 1) (c_scrut := fun _ => 1)
+    (c_allocNL := fun _ => 1) (c_allocNR := fun _ => 1)
   all_goals fun_prop
 
 /-- `endoMap` is a measurable function. -/
@@ -554,7 +569,7 @@ theorem endoMap.measurable :
         EctxItem.fst EctxItem.snd EctxItem.inl EctxItem.inr
         EctxItem.case EctxItem.alloc EctxItem.load
         EctxItem.storeL EctxItem.storeR EctxItem.tape
-        EctxItem.randL EctxItem.randR EctxItem.scrut) := by
+        EctxItem.randL EctxItem.randR EctxItem.scrut EctxItem.allocNL EctxItem.allocNR) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -572,6 +587,7 @@ theorem endoMap.measurable :
     (c_tape := fun _ => EctxItem.tape)
     (c_randL := EctxItem.randL) (c_randR := EctxItem.randR)
     (c_scrut := EctxItem.scrut)
+    (c_allocNL := EctxItem.allocNL) (c_allocNR := EctxItem.allocNR)
   all_goals fun_prop
 
 /-- `addAcc` is a measurable function. -/
@@ -583,7 +599,8 @@ theorem addAcc.measurable :
         (fun _ _ => p.2) (fun _ _ => p.2) (fun _ _ => p.2)
         (fun _ => p.2) (fun _ => p.2)
         p.2 p.2 p.2 p.2 (fun _ _ => p.2) p.2 p.2
-        (fun _ => p.2) (fun _ => p.2) p.2 (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)) := by
+        (fun _ => p.2) (fun _ => p.2) p.2 (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)
+        (fun _ => p.2) (fun _ => p.2)) := by
     funext ⟨K, _⟩; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn_param
@@ -598,6 +615,7 @@ theorem addAcc.measurable :
     (c_case := fun q : Nat × Exp α × Exp α => q.1)
     (c_alloc := fun q : Nat => q) (c_load := fun q : Nat => q)
     (c_storeL := fun q : Nat × Val α => q.1) (c_storeR := fun q : Nat × Exp α => q.1)
+    (c_allocNL := fun q : Nat × Val α => q.1) (c_allocNR := fun q : Nat × Exp α => q.1)
     (c_tape := fun q : Nat => q)
     (c_randL := fun q : Nat × Val α => q.1) (c_randR := fun q : Nat × Exp α => q.1)
     (c_scrut := fun q : Nat × Pat α => q.1)
