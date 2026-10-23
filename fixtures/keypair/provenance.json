@@ -1,0 +1,101 @@
+{
+  "status": "Extracted/assembled input only; no RVSpec, shape, functional, stack-safety, or distribution theorem.",
+  "entry": "crypto_box_curve25519xsalsa20poly1305_tweet_keypair",
+  "inputs": {
+    "tweetnacl_c": {
+      "url": "https://tweetnacl.cr.yp.to/20140427/tweetnacl.c",
+      "sha256": "02e65bc3013ff2168983365e55906bc783c4c7e0a60d8100f17bb303a17175c4"
+    },
+    "tweetnacl_assembly": {
+      "survey_path": "notes/asm-experiment/build/tweetnacl/tweetnacl-Os.s",
+      "sha256": "326db09d4d8b768508f3fbd3ebc7bf5bc47e602f641d59aa57f42d9109f02dca"
+    },
+    "memcpy_c": {
+      "url": "https://git.musl-libc.org/cgit/musl/plain/src/string/memcpy.c",
+      "survey_revision": "7813e911 (short revision recorded by original survey)",
+      "sha256": "1664d565f968b053ac33c5ac615c057a255a5821c8fa510fba61d4f63dee08e9"
+    },
+    "memset_c": {
+      "url": "https://git.musl-libc.org/cgit/musl/plain/src/string/memset.c",
+      "survey_revision": "7813e911 (short revision recorded by original survey)",
+      "sha256": "2a74d9e7f988945e0d691d480b78d77a228da0d2be401c1000637cc879b2c0be"
+    }
+  },
+  "compiler": {
+    "zig": "0.13.0",
+    "clang": "18.1.6",
+    "helper_args": [
+      "cc",
+      "-target",
+      "riscv64-linux-musl",
+      "-mcpu=baseline_rv64-c",
+      "-mno-relax",
+      "-fPIC",
+      "-g0",
+      "-fno-asynchronous-unwind-tables",
+      "-fno-stack-protector",
+      "-fno-builtin",
+      "-Os",
+      "-S",
+      "SOURCE.c",
+      "-o",
+      "OUTPUT.s"
+    ]
+  },
+  "extraction": [
+    "Retain .type function through matching .size for the eight reachable functions from the keypair entry.",
+    "Statically include separately compiled memcpy/memset function bodies; alpha-rename every helper .L label with its helper name.",
+    "Retain referenced _9 and _121665 objects.",
+    "Prepend .text/.globl entry and .p2align 2 before functions; use .section .rodata and .p2align 3 before constants.",
+    "Only randombytes remains external. Function instructions are retained; helper metadata outside function blocks is omitted."
+  ],
+  "measurements": {
+    "source_instructions": 847,
+    "emitted_instructions": 882,
+    "syntactic_backedges": 30,
+    "text_bytes": 3528,
+    "rodata_offset": 3528,
+    "entry_offset": 0,
+    "image_bytes": 3696,
+    "import_slots": [
+      [
+        "randombytes",
+        3688
+      ]
+    ],
+    "maximum_static_stack_bytes_excluding_import": 2080,
+    "stack_bound_status": "Measured from frame sizes; unproved execution/stack-safety contract.",
+    "lean_image_sha256": "34f006b0b944ab3dbc653df2654252ac67ac44cc6e1d65c3f8278e3298e70385",
+    "llvm_object_sha256": "ad05b1238d8f45036990e80a2fb2f5b33a74a4af217dad6e1910a6bd3b2d748f"
+  },
+  "notices": {
+    "musl": "LICENSE-musl.txt copied from the already installed Zig 0.13.0 musl distribution; complete notice retained.",
+    "tweetnacl": "AUTHORS-tweetnacl.md copied from the existing Monocypher tests/externals/tweetnacl notice; original official source URL and exact surveyed C hash recorded above."
+  },
+  "files": {
+    "AUTHORS-tweetnacl.md": {
+      "sha256": "cc995592f0ccbda5d042d147af425eba851bd76df4e33d371693efb4ce6d5a4d",
+      "bytes": 656
+    },
+    "LICENSE-musl.txt": {
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+      "bytes": 6204
+    },
+    "helpers/memcpy-Os.s": {
+      "sha256": "559525b19d6a9e70974cea7baea93bc33b8686fc64135aede5995765d5df5b6a",
+      "bytes": 4984
+    },
+    "helpers/memset-Os.s": {
+      "sha256": "caaa9ae32330a7fcdfe3398b9bef3f610f7262dffe66073de0021b1f2602a93f",
+      "bytes": 1734
+    },
+    "keypair-linked.s": {
+      "sha256": "747626b938c4a387551c517ca8ba7a531927b1ac3293ef220aab20b12d3e527c",
+      "bytes": 24595
+    },
+    "metrics.json": {
+      "sha256": "6246b0813e8c4707432e936cbadd664264246b217b0c3e79231a03e6029daf04",
+      "bytes": 9554
+    }
+  }
+}

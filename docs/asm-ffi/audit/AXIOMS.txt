@@ -1,0 +1,7 @@
+'MetrologyAsm.swap_rvspec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.swap_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.wp_swap_spec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.importToy_rvspec' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.importToy_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.wp_importToy' depends on axioms: [propext, Classical.choice, Quot.sound]
+'MetrologyAsm.wp_importToy_spec' depends on axioms: [propext, Classical.choice, Quot.sound]

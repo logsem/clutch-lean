@@ -1,0 +1,473 @@
+{
+  "source_sha256": "326db09d4d8b768508f3fbd3ebc7bf5bc47e602f641d59aa57f42d9109f02dca",
+  "entry": "crypto_box_curve25519xsalsa20poly1305_tweet_keypair",
+  "reachable": [
+    {
+      "function": "crypto_box_curve25519xsalsa20poly1305_tweet_keypair",
+      "instructions": 20,
+      "frame": 32,
+      "calls": [
+        "randombytes",
+        "crypto_scalarmult_curve25519_tweet"
+      ],
+      "backedges": [],
+      "mnemonics": {
+        "addi": 3,
+        "sd": 3,
+        "mv": 5,
+        "li": 2,
+        "call": 2,
+        "auipc": 1,
+        "ld": 3,
+        "ret": 1
+      }
+    },
+    {
+      "function": "crypto_scalarmult_curve25519_tweet",
+      "instructions": 295,
+      "frame": 1552,
+      "calls": [
+        "memcpy",
+        "memset",
+        "memset",
+        "memset",
+        "memcpy",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "M",
+        "inv25519",
+        "M",
+        "pack25519"
+      ],
+      "backedges": [
+        {
+          "instruction": 36,
+          "target": ".LBB13_1",
+          "span": 8,
+          "asm": "bne\ta0, a1, .LBB13_1"
+        },
+        {
+          "instruction": 86,
+          "target": ".LBB13_4",
+          "span": 11,
+          "asm": "bne\ta1, s3, .LBB13_4"
+        },
+        {
+          "instruction": 99,
+          "target": ".LBB13_6",
+          "span": 11,
+          "asm": "bne\ta0, s7, .LBB13_6"
+        },
+        {
+          "instruction": 110,
+          "target": ".LBB13_8",
+          "span": 8,
+          "asm": "bne\ta0, s4, .LBB13_8"
+        },
+        {
+          "instruction": 119,
+          "target": ".LBB13_10",
+          "span": 7,
+          "asm": "bne\ta0, s8, .LBB13_10"
+        },
+        {
+          "instruction": 130,
+          "target": ".LBB13_12",
+          "span": 8,
+          "asm": "bne\ta0, s8, .LBB13_12"
+        },
+        {
+          "instruction": 139,
+          "target": ".LBB13_14",
+          "span": 7,
+          "asm": "bne\ta0, s7, .LBB13_14"
+        },
+        {
+          "instruction": 166,
+          "target": ".LBB13_16",
+          "span": 8,
+          "asm": "bne\ts1, s4, .LBB13_16"
+        },
+        {
+          "instruction": 175,
+          "target": ".LBB13_18",
+          "span": 7,
+          "asm": "bne\ta0, s8, .LBB13_18"
+        },
+        {
+          "instruction": 190,
+          "target": ".LBB13_20",
+          "span": 8,
+          "asm": "bne\ta0, s8, .LBB13_20"
+        },
+        {
+          "instruction": 204,
+          "target": ".LBB13_22",
+          "span": 7,
+          "asm": "bne\ta0, s7, .LBB13_22"
+        },
+        {
+          "instruction": 233,
+          "target": ".LBB13_24",
+          "span": 11,
+          "asm": "bne\ts0, s3, .LBB13_24"
+        },
+        {
+          "instruction": 246,
+          "target": ".LBB13_26",
+          "span": 11,
+          "asm": "bne\ta0, s7, .LBB13_26"
+        },
+        {
+          "instruction": 248,
+          "target": ".LBB13_3",
+          "span": 183,
+          "asm": "bnez\ts6, .LBB13_3"
+        },
+        {
+          "instruction": 267,
+          "target": ".LBB13_29",
+          "span": 14,
+          "asm": "bne\ta1, s7, .LBB13_29"
+        }
+      ],
+      "mnemonics": {
+        "addi": 118,
+        "sd": 36,
+        "mv": 11,
+        "li": 11,
+        "call": 18,
+        "lbu": 5,
+        "andi": 3,
+        "sb": 2,
+        "slli": 3,
+        "or": 1,
+        "bne": 14,
+        "ld": 41,
+        "srli": 2,
+        "add": 5,
+        "srlw": 1,
+        "srai": 1,
+        "xor": 12,
+        "and": 4,
+        "sub": 4,
+        "auipc": 1,
+        "bnez": 1,
+        "ret": 1
+      }
+    },
+    {
+      "function": "memcpy",
+      "instructions": 240,
+      "frame": 0,
+      "calls": [],
+      "backedges": [
+        {
+          "instruction": 15,
+          "target": ".Lmemcpy_BB0_3",
+          "span": 10,
+          "asm": "bne\ta6, a5, .Lmemcpy_BB0_3"
+        },
+        {
+          "instruction": 57,
+          "target": ".Lmemcpy_BB0_11",
+          "span": 24,
+          "asm": "bltu\ta5, a2, .Lmemcpy_BB0_11"
+        },
+        {
+          "instruction": 74,
+          "target": ".Lmemcpy_BB0_15",
+          "span": 12,
+          "asm": "bltu\ta4, a2, .Lmemcpy_BB0_15"
+        },
+        {
+          "instruction": 118,
+          "target": ".Lmemcpy_BB0_21",
+          "span": 24,
+          "asm": "bltu\ta5, a2, .Lmemcpy_BB0_21"
+        },
+        {
+          "instruction": 153,
+          "target": ".Lmemcpy_BB0_24",
+          "span": 24,
+          "asm": "bltu\ta5, a2, .Lmemcpy_BB0_24"
+        }
+      ],
+      "mnemonics": {
+        "andi": 8,
+        "beqz": 9,
+        "addi": 41,
+        "li": 11,
+        "mv": 7,
+        "lbu": 32,
+        "sb": 38,
+        "bne": 2,
+        "j": 4,
+        "bltu": 8,
+        "lw": 20,
+        "beq": 1,
+        "srli": 3,
+        "srliw": 12,
+        "slli": 12,
+        "or": 12,
+        "sw": 19,
+        "ret": 1
+      }
+    },
+    {
+      "function": "memset",
+      "instructions": 67,
+      "frame": 0,
+      "calls": [],
+      "backedges": [
+        {
+          "instruction": 65,
+          "target": ".Lmemset_BB0_8",
+          "span": 6,
+          "asm": "bne\ta4, a2, .Lmemset_BB0_8"
+        }
+      ],
+      "mnemonics": {
+        "beqz": 1,
+        "sb": 8,
+        "add": 6,
+        "li": 5,
+        "bltu": 6,
+        "negw": 1,
+        "andi": 4,
+        "sub": 3,
+        "slli": 3,
+        "lui": 1,
+        "addi": 5,
+        "mulhu": 1,
+        "sw": 14,
+        "srli": 1,
+        "or": 2,
+        "sd": 4,
+        "bne": 1,
+        "ret": 1
+      }
+    },
+    {
+      "function": "M",
+      "instructions": 63,
+      "frame": 304,
+      "calls": [
+        "memset",
+        "memcpy",
+        "car25519",
+        "car25519"
+      ],
+      "backedges": [
+        {
+          "instruction": 33,
+          "target": ".LBB14_2",
+          "span": 8,
+          "asm": "bne\ta2, a4, .LBB14_2"
+        },
+        {
+          "instruction": 36,
+          "target": ".LBB14_1",
+          "span": 18,
+          "asm": "bne\ta0, a6, .LBB14_1"
+        },
+        {
+          "instruction": 46,
+          "target": ".LBB14_5",
+          "span": 7,
+          "asm": "bne\ta0, a1, .LBB14_5"
+        }
+      ],
+      "mnemonics": {
+        "addi": 9,
+        "sd": 9,
+        "mv": 13,
+        "li": 6,
+        "call": 3,
+        "slli": 1,
+        "add": 4,
+        "ld": 12,
+        "mul": 2,
+        "bne": 3,
+        "tail": 1
+      }
+    },
+    {
+      "function": "car25519",
+      "instructions": 32,
+      "frame": 0,
+      "calls": [],
+      "backedges": [
+        {
+          "instruction": 30,
+          "target": ".LBB34_1",
+          "span": 26,
+          "asm": "bnez\tt3, .LBB34_1"
+        }
+      ],
+      "mnemonics": {
+        "li": 2,
+        "lui": 2,
+        "mv": 2,
+        "ld": 3,
+        "add": 4,
+        "sd": 3,
+        "srai": 1,
+        "addi": 5,
+        "mul": 1,
+        "seqz": 1,
+        "and": 3,
+        "slli": 1,
+        "neg": 1,
+        "sub": 1,
+        "bnez": 1,
+        "ret": 1
+      }
+    },
+    {
+      "function": "inv25519",
+      "instructions": 42,
+      "frame": 192,
+      "calls": [
+        "memcpy",
+        "M",
+        "M",
+        "memcpy"
+      ],
+      "backedges": [
+        {
+          "instruction": 28,
+          "target": ".LBB15_1",
+          "span": 12,
+          "asm": "bne\ts0, s1, .LBB15_1"
+        }
+      ],
+      "mnemonics": {
+        "addi": 9,
+        "sd": 7,
+        "mv": 4,
+        "li": 6,
+        "call": 4,
+        "beq": 2,
+        "addiw": 1,
+        "bne": 1,
+        "ld": 7,
+        "ret": 1
+      }
+    },
+    {
+      "function": "pack25519",
+      "instructions": 88,
+      "frame": 288,
+      "calls": [
+        "memcpy",
+        "car25519",
+        "car25519",
+        "car25519"
+      ],
+      "backedges": [
+        {
+          "instruction": 43,
+          "target": ".LBB16_2",
+          "span": 12,
+          "asm": "bne\ta0, t2, .LBB16_2"
+        },
+        {
+          "instruction": 68,
+          "target": ".LBB16_4",
+          "span": 11,
+          "asm": "bne\ta1, t3, .LBB16_4"
+        },
+        {
+          "instruction": 71,
+          "target": ".LBB16_1",
+          "span": 46,
+          "asm": "bnez\ta0, .LBB16_1"
+        },
+        {
+          "instruction": 81,
+          "target": ".LBB16_7",
+          "span": 7,
+          "asm": "bne\ta0, a1, .LBB16_7"
+        }
+      ],
+      "mnemonics": {
+        "addi": 17,
+        "sd": 11,
+        "mv": 10,
+        "lui": 3,
+        "addiw": 3,
+        "li": 3,
+        "call": 4,
+        "ld": 11,
+        "add": 5,
+        "slli": 3,
+        "srai": 2,
+        "and": 3,
+        "bne": 3,
+        "srli": 2,
+        "xor": 3,
+        "andi": 1,
+        "bnez": 1,
+        "sb": 2,
+        "ret": 1
+      }
+    }
+  ],
+  "external": [
+    "randombytes"
+  ],
+  "rodata": [
+    "_121665",
+    "_9"
+  ],
+  "max_stack_without_import": 2080,
+  "source_instructions": 847,
+  "backedges": 30,
+  "mnemonics": {
+    "addi": 207,
+    "sd": 73,
+    "mv": 52,
+    "li": 46,
+    "call": 31,
+    "auipc": 2,
+    "ld": 77,
+    "ret": 7,
+    "lbu": 37,
+    "andi": 16,
+    "sb": 50,
+    "slli": 23,
+    "or": 15,
+    "bne": 24,
+    "srli": 8,
+    "add": 24,
+    "srlw": 1,
+    "srai": 4,
+    "xor": 15,
+    "and": 10,
+    "sub": 8,
+    "bnez": 3,
+    "beqz": 10,
+    "j": 4,
+    "bltu": 14,
+    "lw": 20,
+    "beq": 3,
+    "srliw": 12,
+    "sw": 33,
+    "negw": 1,
+    "lui": 6,
+    "mulhu": 1,
+    "mul": 3,
+    "tail": 1,
+    "seqz": 1,
+    "neg": 1,
+    "addiw": 4
+  }
+}
