@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # A public coin choosing between two mechanisms
 
-Proved differentially private by the DP choice law, paying only the larger branch cost, in
-`Micrometer/Examples/PublicChoice`. -/
+Proved differentially private in `Micrometer/Examples/PublicChoice`. -/
 
 namespace ProbLang
 namespace PublicChoice

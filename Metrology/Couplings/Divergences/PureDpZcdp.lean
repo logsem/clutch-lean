@@ -5,7 +5,7 @@ public import Metrology.ForSampCert.PureDPzCDP
 
 /-! # Pure DP gives zCDP
 
-Two-sided pure DP gives zCDP (Bun–Steinke 2016, Prop. 3.3), via `ForSampCert.ofDP_bound`. -/
+Two-sided pure DP gives zCDP (Bun–Steinke 2016, Prop. 3.3), via `ofDP_bound`. -/
 
 @[expose] public section
 
@@ -13,7 +13,7 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory
 open scoped ENNReal NNReal
-open ENNReal
+open ENNReal Real ForSampCert Finset Std
 
 namespace GradedDivergence
 
@@ -24,24 +24,24 @@ variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X} {ε : ℝ≥0} {α
 theorem fDiv_rpow_le_of_dp_of_finite {I : Type*} [Fintype I] [MeasurableSpace I]
     [MeasurableSingletonClass I] {ρ₁ ρ₂ : Measure I} [IsProbabilityMeasure ρ₁]
     [IsProbabilityMeasure ρ₂] (hα : 1 < α) (h : dp (ε, 0) ρ₁ ρ₂) (h' : dp (ε, 0) ρ₂ ρ₁) :
-    fDiv (· ^ α) ρ₁ ρ₂ ≤ ((Real.exp ((α - 1) * (α * ε ^ 2 / 2)) : ℝ) : EReal) := by
+    fDiv (· ^ α) ρ₁ ρ₂ ≤ ((exp ((α - 1) * (α * ε ^ 2 / 2)) : ℝ) : EReal) := by
   have hratio {ρ ρ' : Measure I} (h : dp (ε, 0) ρ ρ') (i : I) :
-      ρ {i} / ρ' {i} ≤ ENNReal.ofReal (Real.exp ε) := by
+      ρ {i} / ρ' {i} ≤ ENNReal.ofReal (exp ε) := by
     refine div_le_of_le_mul ?_
     simpa [expBudget_of_ne_top coe_ne_top] using
       (dp_iff coe_ne_top).1 h {i} (measurableSet_singleton i)
   have hac (i : I) : ρ₂ {i} = 0 → ρ₁ {i} = 0 :=
-    ForSampCert.ACNeighbour_of_DP ε ρ₁.toPMF ρ₂.toPMF (hratio h) i
-  have hsum := ForSampCert.ofDP_bound ε ρ₁.toPMF ρ₂.toPMF (hratio h) (hratio h') α hα
+    ACNeighbour_of_DP ε ρ₁.toPMF ρ₂.toPMF (hratio h) i
+  have hsum := ofDP_bound ε ρ₁.toPMF ρ₂.toPMF (hratio h) (hratio h') α hα
   simp only [toPMF_apply, tsum_fintype] at hsum
   rw [fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero (zero_lt_one.trans hα)),
-    Finset.sum_congr rfl fun i _ ↦ persp_rpow_toReal hα (by finiteness) (hac i),
+    sum_congr rfl fun i _ ↦ persp_rpow_toReal hα (by finiteness) (hac i),
     ← EReal.coe_finset_sum, EReal.coe_le_coe_iff,
     ← toReal_sum fun i _ ↦ ne_top_of_le_ne_top ofReal_ne_top
-      ((Finset.single_le_sum (fun j _ ↦ zero_le) (Finset.mem_univ i)).trans hsum)]
+      ((single_le_sum (fun j _ ↦ zero_le) (mem_univ i)).trans hsum)]
   calc (∑ i, ρ₁ {i} ^ α * ρ₂ {i} ^ (1 - α)).toReal
-    _ ≤ Real.exp ((α - 1) * (1 / 2 * ε ^ 2 * α)) := toReal_le_of_le_ofReal (Real.exp_pos _).le hsum
-    _ = Real.exp ((α - 1) * (α * ε ^ 2 / 2)) := by ring_nf
+    _ ≤ exp ((α - 1) * (1 / 2 * ε ^ 2 * α)) := toReal_le_of_le_ofReal (exp_pos _).le hsum
+    _ = exp ((α - 1) * (α * ε ^ 2 / 2)) := by ring_nf
 
 /-- Two-sided pure `ε`-DP bounds the Rényi divergence of order `α` by `α ε² / 2`
 (Bun–Steinke 2016, Prop. 3.3). -/
@@ -71,9 +71,9 @@ variable {X : Type*} {Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {m : K
 
 /-- A pure `ε`-DP mechanism for a symmetric adjacency is `(0, ε² / 2)`-zCDP
 (Bun–Steinke 2016, Prop. 3.3). -/
-theorem zCDP_of_DP_of_symm [IsMarkovKernel m] [Std.Symm adj] (h : m.DP adj ε 0) :
+theorem zCDP_of_DP_of_symm [IsMarkovKernel m] [Symm adj] (h : m.DP adj ε 0) :
     m.zCDP adj 0 (ENNReal.ofReal (ε ^ 2 / 2)) :=
-  fun _ _ hx ↦ GradedDivergence.zcdp_of_dp_two_sided (h hx) (h (Std.Symm.symm _ _ hx))
+  fun _ _ hx ↦ GradedDivergence.zcdp_of_dp_two_sided (h hx) (h (Symm.symm _ _ hx))
 
 end ProbabilityTheory.Kernel
 
@@ -83,9 +83,9 @@ namespace Mechanism
 most `r`. -/
 theorem zCDP_laplaceMech {r : ℝ} (hr : 0 ≤ r) (b : ℝ≥0) [Fact (0 < b)] :
     (laplaceMech b).zCDP (fun a a' ↦ |a - a'| ≤ r) 0 (ENNReal.ofReal ((r / b) ^ 2 / 2)) := by
-  have : Std.Symm fun a a' : ℝ ↦ |a - a'| ≤ r := ⟨fun a a' (h : |a - a'| ≤ r) ↦ by
+  have : Symm fun a a' : ℝ ↦ |a - a'| ≤ r := ⟨fun a a' (h : |a - a'| ≤ r) ↦ by
     rwa [abs_sub_comm]⟩
   have h := Kernel.zCDP_of_DP_of_symm (ε := (r / b).toNNReal) (DP_laplaceMech r b)
-  rwa [Real.coe_toNNReal _ (by positivity)] at h
+  rwa [coe_toNNReal _ (by positivity)] at h
 
 end Mechanism

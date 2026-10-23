@@ -3,18 +3,13 @@ module
 public meta import Metrology.ProbLang.CoreMeasures.CylinderGen.Ctx
 public import Metrology.ProbLang.CoreMeasures.Shapes
 
+/-! # The measurability of functions on `T`, fiber by fiber
+
+`fiberProof` proves them measurable from their equations on the constructors. -/
+
 @[expose] public section
 
 open Lean Meta Metrology.Meta
-
-/-!
-# The measurability of functions on `T`, fiber by fiber
-
-`fiberProof` proves a function on `T` measurable from its equations on the constructors: on the
-leaves of each shape `c xs`, the function is its arm for `c` applied to the fields, which are
-measurable in the leaves (`Shapes.measurable_of_fibers`). Every generated lemma about
-functions on `T` is proved this way.
--/
 
 namespace Metrology.CylinderGen
 
@@ -47,10 +42,8 @@ def measurableDown (t ht : Expr) : MetaM (Expr × Expr) := do
 
 /-! ## The function and its arms -/
 
-/-- The equation of a function `f` on a constructor `c`: `eq : ∀ b xs, f b (T.c xs) = arm b args`.
-The `args` are the fields, or for a structural recursion, `f (t_c b)` at the recursive fields, with
-the shift `shift? = (t_c, ht_c)` if any. `hyp?`, if any, proves the arm measurable (as a function of
-the tuple of its arguments); otherwise it is constant. -/
+/-- The equation of a function `f` on constructor `c`, with its arm, the proof `hyp?` that the arm
+is measurable (if not constant), and the shift `shift?` at recursive calls. -/
 structure Arm where
   /-- The arm, applied to the parameter and the arguments. -/
   arm : Expr
@@ -110,12 +103,12 @@ structure Arg where
   measurable : Expr
   deriving Inhabited
 
-/-- `e.symm ⟨s, v⟩`: the value of shape `s` with leaves `v`. -/
+/-- `ctx.equiv.symm ⟨s, v⟩`: the value of shape `s` with leaves `v`. -/
 def Ctx.ofLeaves (s v : Expr) : MetaM Expr := do
   mkAppM ``DFunLike.coe #[← mkAppM ``MeasurableEquiv.symm #[ctx.equiv], ← ctx.sigmaMk s v]
 
-/-- `fun v => f (e.symm ⟨s, v⟩)`, or `fun p => f p.1 (e.symm ⟨s, p.2⟩)` with a parameter: the
-function on the leaves of shape `s`. -/
+/-- `fun v => f (ctx.equiv.symm ⟨s, v⟩)`, or with a parameter
+`fun p => f p.1 (ctx.equiv.symm ⟨s, p.2⟩)`: the function on the leaves of shape `s`. -/
 def Ctx.onLeaves (s : Expr) : MetaM Expr := do
   withLocalDeclD `v (← r.domain (ctx.leaves s)) fun v => do
     let value ← match r.β? with
@@ -125,9 +118,9 @@ def Ctx.onLeaves (s : Expr) : MetaM Expr := do
         pure (mkApp2 r.f (← mkAppM ``Prod.fst #[v]) x)
     mkLambdaFVars #[v] value
 
-/-- The argument of an arm at a recursive field, of value `x := e.symm ⟨s, vi⟩`, where `vi` is
-measurable by `hvi`: for a function by cases, `x` itself; for a structural recursion, `f x`
-(measurable by the motive `ih`), or with a parameter `b`, `f (t_c b) x`. -/
+/-- The argument of an arm at a recursive field of value `x := ctx.equiv.symm ⟨s, vi⟩`, where `vi`
+is measurable by `hvi`: `x` for a function by cases, and `f x` (or `f (shift b) x`) for a structural
+recursion, measurable by the motive `ih`. -/
 def Ctx.recursiveArg (shift? : Option (Expr × Expr)) (b? : Option Arg)
     (s ih vi hvi : Expr) : MetaM Arg := do
   let x ← ctx.ofLeaves s vi

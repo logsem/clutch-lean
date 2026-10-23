@@ -2,9 +2,10 @@ module
 
 public import Metrology.Couplings.Divergences.Conversions
 
-/-! Mechanisms and their privacy (Approximate Span Liftings, §2, Defs. 2.1–2.5).
-Generic `Kernel.IsPrivate` with DP/RDP/zCDP/tCDP as instances, its post-processing and composition
-laws, privacy as a lifting of equality (`isPrivate_iff_rel`), and the Fig. 4 conversions. -/
+/-! # Mechanisms and their privacy
+
+Generic `Kernel.IsPrivate` with DP, RDP, zCDP and tCDP as instances, its laws, and the Fig. 4
+conversions (Approximate Span Liftings, §2). -/
 
 @[expose] public section
 

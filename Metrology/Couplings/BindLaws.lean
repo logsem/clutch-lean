@@ -8,10 +8,8 @@ public import Metrology.Couplings.Divergences.FillKl
 
 /-! # Adaptive bind laws
 
-Bind laws beyond `BindLaw.canonical`: adaptive DP (`dpRhs`, `dpLhs`), DP choice (`dpChoice`) and
-escort-adaptive Rényi (`escort α`), each sound by a codensity lemma (Rocq `instances_dp.v`); the
-escort law regraded to power and χ² liftings (`escortPower α`); and the KL chain rule for filled
-KL (`fillKl`). -/
+Bind laws beyond `BindLaw.canonical`: adaptive DP, DP choice, escort Rényi, escort power and
+filled KL (Rocq `instances_dp.v`). -/
 
 @[expose] public section
 
@@ -309,13 +307,14 @@ noncomputable def escortPower : BindLaw (powerLifting.{u} α) :=
   (escort α).comap toRenyi_mono toRenyi_top
 
 variable {α} in
+/-- The escort power law's head is the escort head read through `toRenyi α`. -/
 @[simp]
 theorem head_escortPower {b : PowerBudget} {R : X → Y → PowerBudget} {μ : Measure X}
     {ν : Measure Y} : (escortPower α).head μ ν R b ↔
       EscortHead α μ ν (fun x y ↦ toRenyi α (R x y)) (toRenyi α b) :=
   Iff.rfl
 
-/-- Escort power heads shift, since `toRenyi α` is additive. -/
+/-- Escort power heads shift, using that `toRenyi α` is additive. -/
 instance headShift_escortPower : (escortPower.{u} α).HeadShift :=
   headShift_comap toRenyi_add fun _ ↦ toRenyi_lt_top hα.out
 
@@ -404,8 +403,8 @@ noncomputable def fillKl : BindLaw (codensity (fill klDivergence.{u})) where
     · simpa [piecewise_eq_of_mem _ _ _ (show u z ∈ A' from hz.2)] using hR z hz.1
   side_supp _ := trivial
 
-/-- Filled-KL heads shift: the extra slack folds into `D` and costs at most itself, since `μ` has
-mass at most one. -/
+/-- Filled-KL heads shift: the extra slack folds into `D` and costs at most itself, using that `μ`
+has mass at most one. -/
 instance headShift_fillKl : (fillKl.{u}).HeadShift where
   shift := by
     rintro _ _ _ _ _ c' _ μ _ _ ⟨Z, _, π₁, π₂, u, v, A, ε₁, D, hu, hv, hD, hA, hπA, hπ₁, hπ₂, hμ,

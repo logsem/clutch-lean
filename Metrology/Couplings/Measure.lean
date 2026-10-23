@@ -67,7 +67,8 @@ theorem bind_mono_right' (μ : Measure X) (f g : X → Measure Y) (Hf : Measurab
   rw [bind_apply HS Hf.aemeasurable, bind_apply HS Hg.aemeasurable]
   exact lintegral_mono fun a => h a S
 
-/-- `bind_map_comm` when every space is discrete, so no measurability side conditions. -/
+/-- Binding commutes with pushforward when every space is discrete, so no measurability side
+conditions. -/
 theorem bind_map_comm_of_discrete [DiscreteMeasurableSpace X] [DiscreteMeasurableSpace Y]
     [DiscreteMeasurableSpace Z] (μ : Measure X) (k : X → Measure Y) (f : Y → Z) :
     (μ.bind k).map f = μ.bind fun a => (k a).map f := by
@@ -240,7 +241,6 @@ theorem inv_mul_le_inv_mul_add {a d : ℕ} (ha : a ≠ 0) {S : ℝ≥0∞} (hS :
 /-- Finite budgets `ENNReal.ofReal x` cancel on the left. -/
 theorem isAddLeftRegular_ofReal (x : ℝ) : IsAddLeftRegular (ofReal x) :=
   (IsAddRegular.of_ne_top ofReal_ne_top).1
-
 
 /-- For `ε > 0` and `k > 1`, some power `kⁿ` lifts `ε` to at least `1`. -/
 theorem exists_pow_mul_ge_one {ε : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hk : 1 < k) :

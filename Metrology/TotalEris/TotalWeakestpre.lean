@@ -8,8 +8,8 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Total weakest precondition
 
-`tglWp` (Eris `tgl_wp`), the total weakest precondition over `glm'`.
-Main results: `tglWp_unfold`, `tglWp_ind`, `tglWp_strong_mono`, `tglWp_bind`.
+`tglWp` (Eris `tgl_wp`), the total weakest precondition over `glm'`, with its unfolding,
+induction, monotonicity and bind rules.
 -/
 
 @[expose] public section
@@ -25,15 +25,16 @@ namespace ErisWpGS
 
 variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
 variable {E : CoPset} {Φ : Val rT → IProp GF} {e : Exp rT} {v : Val rT}
+variable {Ψ : Val rT → IProp GF}
 
-instance : COFE (Exp rT) := COFE.ofDiscrete _
-instance : OFE.Discrete (Exp rT) := ⟨id⟩
+instance : COFE (Exp rT) := ofDiscrete _
+instance : Discrete (Exp rT) := ⟨id⟩
 
 /-- The index of the weakest-precondition fixpoint: a mask and an expression. -/
 abbrev TglWpState (rT : Type _) : Type _ := CoPset × Exp rT
 
-instance : COFE (TglWpState rT) := COFE.ofDiscrete _
-instance : OFE.Discrete (TglWpState rT) := ⟨id⟩
+instance : COFE (TglWpState rT) := ofDiscrete _
+instance : Discrete (TglWpState rT) := ⟨id⟩
 
 /-- One unfolding of `tglWp`: a value satisfies `Φ`; a non-value takes a `glm'` step. -/
 abbrev tglWpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
@@ -48,6 +49,7 @@ abbrev tglWpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
             iprop(|={∅, E}=>
               stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ wp E ρ.expr Φ))))
 
+/-- Monotonicity of `tglWpPre` in its inner predicate. -/
 private theorem tglWpPre_mono {wp₁ wp₂ : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF} :
     □ (∀ e', wp₁ E e' Φ -∗ wp₂ E e' Φ) ⊢ tglWpPre wp₁ E e Φ -∗ tglWpPre wp₂ E e Φ := by
   iintro #Hwand Hs
@@ -67,9 +69,8 @@ private theorem tglWpPre_mono {wp₁ wp₂ : CoPset → Exp rT → (Val rT → I
     iframe Hσ' Hε'
     iapply Hwand $$ HW
 
-/-- `tglWpPre` with the postcondition fixed, as a functional on `TglWpState`.
-`Φ` never changes across recursive calls of `tglWpPre`, so the fixpoint can be taken over (mask,
-expression) alone. -/
+/-- `tglWpPreFixed` is `tglWpPre` with the postcondition `Φ` fixed, so the fixpoint can be taken
+over (mask, expression) alone. -/
 abbrev tglWpPreFixed (Φ : Val rT → IProp GF)
     (wp : TglWpState rT → IProp GF) : TglWpState rT → IProp GF :=
   fun ⟨E, e⟩ => tglWpPre (fun E' e' _ => wp ⟨E', e'⟩) E e Φ
@@ -81,12 +82,11 @@ instance tglWpPreFixed_mono {Φ : Val rT → IProp GF} :
     iintro #Hwand %s Hs
     obtain ⟨E, e⟩ := s
     unfold tglWpPreFixed
-    iapply (tglWpPre_mono (wp₁ := fun E' e' _ => wp1 ⟨E', e'⟩)
-      (wp₂ := fun E' e' _ => wp2 ⟨E', e'⟩)) $$ [] Hs
+    iapply tglWpPre_mono $$ [] Hs
     iintro !> %e'
     iapply Hwand
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
+    obtain rfl := Discrete.discrete hd; exact .of_eq rfl
 
 /-- The total weakest precondition: `e` terminates under mask `E` and satisfies `Φ`. -/
 noncomputable abbrev tglWp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
@@ -207,7 +207,7 @@ theorem tglWp_ind
   let Q' : TglWpState rT → IProp GF := fun s => iprop(⌜s.1 = E⌝ -∗ Q s.2)
   let : NonExpansive Q' := nonExpansive_of_discrete_leibniz Q'
   ihave HQ' : iprop(Q' ⟨E, e⟩) $$ [HW]
-  · iapply (least_fixpoint_iter (F := tglWpPreFixed Φ) (Φ := Q')) $$ [] HW
+  · iapply least_fixpoint_iter $$ [] HW
     iintro !> %s HF
     obtain ⟨E', e'⟩ := s
     iintro %rfl
@@ -222,14 +222,14 @@ theorem tglWp_ind
 /-! ## Derived structural rules -/
 
 /-- Strong monotonicity: the postcondition may be weakened by a mask-updating wand. -/
-theorem tglWp_strong_mono {Φ Ψ : Val rT → IProp GF} :
+theorem tglWp_strong_mono :
     iprop(tglWp E e Φ ∗ (∀ v, Φ v ={E}=∗ Ψ v)) ⊢ tglWp E e Ψ := by
   iintro ⟨HW, Hwand⟩
   let Q : Exp rT → IProp GF := fun e' => iprop(
     ∀ (Ψ' : Val rT → IProp GF), (∀ v, Φ v ={E}=∗ Ψ' v) -∗ tglWp E e' Ψ')
   let : NonExpansive Q := nonExpansive_of_discrete_leibniz Q
   ihave HQe : iprop(Q e) $$ [HW]
-  · iapply (tglWp_ind (E := E) (Φ := Φ) (Q := Q))
+  · iapply (tglWp_ind (Q := Q))
     · iintro !> %e' HF %Ψ' Hwand'
       iapply tglWp_unfold
       iintro %σ %ε ⟨Hσ, Hε⟩
@@ -254,7 +254,7 @@ theorem tglWp_strong_mono {Φ Ψ : Val rT → IProp GF} :
   iapply HQe $$ %Ψ Hwand
 
 /-- `tglWp` is monotone in the postcondition, under the wand. -/
-theorem tglWp_wand {Φ Ψ : Val rT → IProp GF} :
+theorem tglWp_wand :
     iprop(tglWp E e Φ ∗ (∀ v, Φ v -∗ Ψ v)) ⊢ tglWp E e Ψ := by
   iintro ⟨HW, HΦΨ⟩
   iapply tglWp_strong_mono
@@ -263,7 +263,7 @@ theorem tglWp_wand {Φ Ψ : Val rT → IProp GF} :
   iapply HΦΨ $$ HΦv
 
 /-- `tglWp` is monotone in the postcondition, with the wand as a separating conjunct. -/
-theorem tglWp_wand_left {Φ Ψ : Val rT → IProp GF} :
+theorem tglWp_wand_left :
     iprop((∀ v, Φ v -∗ Ψ v) ∗ tglWp E e Φ) ⊢ tglWp E e Ψ := by
   iintro ⟨HΦΨ, HW⟩
   iapply tglWp_wand
@@ -283,7 +283,7 @@ theorem fupd_tglWp :
 theorem tglWp_fupd :
     tglWp E e (fun v => iprop(|={E}=> Φ v)) ⊢ tglWp E e Φ := by
   iintro HW
-  iapply tglWp_strong_mono (Φ := fun v => iprop(|={E}=> Φ v)) (Ψ := Φ)
+  iapply tglWp_strong_mono
   iframe HW
   iintro %v HΦ
   iexact HΦ
@@ -312,13 +312,13 @@ theorem tglWp_frame_wand {R : IProp GF} :
   iintro ⟨HR, HW⟩
   iapply (tglWp_wand (Φ := fun v => iprop(R ∗ (R -∗ Φ v))) (Ψ := Φ))
   isplitl [HR HW]
-  · iapply (tglWp_frame_left (R := R) (Φ := fun v => iprop(R -∗ Φ v)))
+  · iapply tglWp_frame_left
     iframe
   · iintro %v ⟨HRv, HW'⟩
     iapply HW' $$ HRv
 
 /-- `tglWp` is monotone in the postcondition. -/
-theorem tglWp_mono {Φ Ψ : Val rT → IProp GF}
+theorem tglWp_mono
     (HΦ : ∀ v, Φ v ⊢ Ψ v) :
     tglWp E e Φ ⊢ tglWp E e Ψ := by
   iintro HW

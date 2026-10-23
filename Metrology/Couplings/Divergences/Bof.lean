@@ -4,8 +4,7 @@ public import Metrology.Couplings.Divergences.FDivBound
 
 /-! # Barthe–Olmedo divergences
 
-`bofDivergence`: an `f`-divergence below the threshold `θ_γ(r) = (e^{γr} - 1)/γ` of the budget
-(ICALP 2013). Lost mass is not filled in, so it composes only along kernels of equal mass. -/
+`bofDivergence`: an `f`-divergence below the threshold `θ_γ(r) = (e^{γr} - 1)/γ` (ICALP 2013). -/
 
 @[expose] public section
 
@@ -13,6 +12,7 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory Set Filter Topology
 open scoped ENNReal
+open Real
 
 namespace ProbabilityTheory
 
@@ -21,7 +21,7 @@ namespace ProbabilityTheory
 /-- The Barthe–Olmedo threshold `θ_γ(t) = (exp (γ t) - 1) / γ` on reals, the identity at `γ = 0`;
 `bofThresh` lifts it to `ℝ≥0∞` budgets (Rocq `gamma_form_of_additive`). -/
 noncomputable def bofReal (γ t : ℝ) : ℝ :=
-  if γ = 0 then t else (Real.exp (γ * t) - 1) / γ
+  if γ = 0 then t else (exp (γ * t) - 1) / γ
 
 /-- At `γ = 0` the threshold is the identity. -/
 theorem bofReal_zero_left (t : ℝ) : bofReal 0 t = t := by simp [bofReal]
@@ -36,7 +36,7 @@ theorem bofReal_add (γ s t : ℝ) :
   split_ifs with h
   · simp [h]
   · field_simp
-    rw [mul_add, Real.exp_add]
+    rw [mul_add, exp_add]
     ring
 
 /-- The threshold is monotone. -/
@@ -46,7 +46,7 @@ theorem bofReal_mono (γ : ℝ) : Monotone (bofReal γ) := fun s t hst ↦ by
   · exact hst
   rcases lt_or_gt_of_ne h with h | h
   · rw [div_le_div_right_of_neg h]
-    linarith [Real.exp_le_exp.2 (mul_le_mul_of_nonpos_left hst h.le)]
+    linarith [exp_le_exp.2 (mul_le_mul_of_nonpos_left hst h.le)]
   · gcongr
 
 /-- The threshold is nonnegative on nonnegative inputs. -/
@@ -57,7 +57,7 @@ theorem bofReal_nonneg (γ : ℝ) {t : ℝ} (ht : 0 ≤ t) : 0 ≤ bofReal γ t 
 theorem bofReal_le_of_neg {γ : ℝ} (hγ : γ < 0) (t : ℝ) : bofReal γ t ≤ -1 / γ := by
   simp only [bofReal, hγ.ne, ↓reduceIte]
   rw [div_le_div_right_of_neg hγ]
-  linarith [Real.exp_pos (γ * t)]
+  linarith [exp_pos (γ * t)]
 
 /-! ## The threshold on budgets -/
 
@@ -65,6 +65,7 @@ theorem bofReal_le_of_neg {γ : ℝ} (hγ : γ < 0) (t : ℝ) : bofReal γ t ≤
 noncomputable def bofThresh (γ : ℝ) (r : ℝ≥0∞) : EReal :=
   if r = ⊤ then ⊤ else ((bofReal γ r.toReal : ℝ) : EReal)
 
+/-- The threshold sends `⊤` to `⊤`. -/
 @[simp]
 theorem bofThresh_top (γ : ℝ) : bofThresh γ ⊤ = ⊤ := by simp [bofThresh]
 
@@ -73,6 +74,7 @@ theorem bofThresh_of_ne_top (γ : ℝ) {r : ℝ≥0∞} (hr : r ≠ ⊤) :
     bofThresh γ r = ((bofReal γ r.toReal : ℝ) : EReal) := by
   simp [bofThresh, hr]
 
+/-- The threshold sends the budget `0` to `0`. -/
 @[simp]
 theorem bofThresh_zero (γ : ℝ) : bofThresh γ 0 = 0 := by
   simp [bofThresh, bofReal_zero_right]

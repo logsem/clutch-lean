@@ -10,9 +10,7 @@ public import Metrology.ProbLang.CoreMeasures.State
 public import Metrology.ProbLang.CoreMeasures.Cfg
 public import Metrology.ProbLang.CoreMeasures.Recurrences
 
-/-!
-# Measurable structure of ProbLang syntax
+/-! # Measurable structure of ProbLang syntax
 
-Measurable spaces on literals, expressions, values, states and configurations, and measurability
-of substitution, `decomp`, `eval` and `tryMatch` (`Recurrences`).
--/
+Measurable spaces on literals, expressions, values, states and configurations, and measurable
+substitution, `decomp`, `eval` and `tryMatch`. -/

@@ -13,24 +13,27 @@ universe u
 
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology
 open scoped ENNReal
+open Finset Kernel
 
 namespace ProbabilityTheory
 
 open Real
 
-variable {α : ℝ}
+variable {α : ℝ} (hα : 1 < α)
+
+include hα
 
 /-! ## Support: the perspective of `t ↦ t ^ α`
 
 Throughout, `β = α / (α - 1)` and `γ = (α - 1) / α = 1 / β`. -/
 
 /-- The perspective of `t ↦ t ^ α` is positively homogeneous. -/
-theorem persp_rpow_mul_left (hα : 1 < α) {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+theorem persp_rpow_mul_left {s a b : ℝ} (hs : 0 ≤ s) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp (· ^ α) (s * a) (s * b) = s * persp (· ^ α) a b := by
   rw [persp_rpow_mul hα hs hs ha hb, persp_self, one_rpow, mul_one]
 
 /-- The perspective of `t ↦ t ^ α` at `h` and `h ^ (α / (α - 1))` is `1`. -/
-theorem persp_rpow_conj (hα : 1 < α) {h : ℝ} (hh : 0 < h) :
+theorem persp_rpow_conj {h : ℝ} (hh : 0 < h) :
     persp (· ^ α) h (h ^ (α / (α - 1))) = 1 := by
   have hα1 : α - 1 ≠ 0 := sub_ne_zero.2 hα.ne'
   rw [persp_rpow_of_pos α (rpow_pos_of_pos hh _), ← EReal.coe_one, EReal.coe_eq_coe_iff]
@@ -43,14 +46,14 @@ theorem persp_rpow_conj (hα : 1 < α) {h : ℝ} (hh : 0 < h) :
 
 /-- Weighting the cells by `h` on the left and `h ^ (α / (α - 1))` on the right does not
 increase the sum of perspectives. -/
-theorem persp_rpow_sum_le (hα : 1 < α) {ι : Type*} (s : Finset ι) {h p q : ι → ℝ}
+theorem persp_rpow_sum_le {ι : Type*} (s : Finset ι) {h p q : ι → ℝ}
     (hh : ∀ i, 0 ≤ h i) (hp : ∀ i, 0 ≤ p i) (hq : ∀ i, 0 ≤ q i) :
     persp (· ^ α) (∑ i ∈ s, h i * p i) (∑ i ∈ s, h i ^ (α / (α - 1)) * q i) ≤
       ∑ i ∈ s, persp (· ^ α) (p i) (q i) := by
   have hβ : 0 < α / (α - 1) := div_pos (by linarith) (by linarith)
   refine (persp_sum_le (convexOn_rpow hα.le) s (fun i _ ↦ mul_nonneg (hh i) (hp i))
     fun i _ ↦ mul_nonneg (rpow_nonneg (hh i) _) (hq i)).trans
-    (Finset.sum_le_sum fun i _ ↦ ?_)
+    (sum_le_sum fun i _ ↦ ?_)
   rcases (hh i).eq_or_lt with h0 | hpos
   · rw [← h0]
     rw [zero_rpow hβ.ne', zero_mul, zero_mul]
@@ -60,14 +63,14 @@ theorem persp_rpow_sum_le (hα : 1 < α) {ι : Type*} (s : Finset ι) {h p q : �
       persp_rpow_conj hα hpos, one_mul]
 
 /-- Away from the singular case `q = 0 < p`, the perspective of `t ↦ t ^ α` is `q (p / q) ^ α`. -/
-theorem persp_rpow_of_ac (hα : 1 < α) {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
+theorem persp_rpow_of_ac {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
     persp (· ^ α) p q = ((q * (p / q) ^ α : ℝ) : EReal) := by
   rcases hq.eq_or_lt with rfl | hq
   · simp [hpq rfl, persp_rpow_zero_left (zero_lt_one.trans hα) le_rfl]
   · exact persp_rpow_of_pos α hq
 
 /-- Weighting `p` by `(p / q) ^ (α - 1)` gives the summand `q (p / q) ^ α`. -/
-theorem rpow_div_sub_one_mul (hα : 1 < α) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q)
+theorem rpow_div_sub_one_mul {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q)
     (hpq : q = 0 → p = 0) : (p / q) ^ (α - 1) * p = q * (p / q) ^ α := by
   rcases hq.eq_or_lt with rfl | hq
   · simp [hpq rfl]
@@ -77,20 +80,20 @@ theorem rpow_div_sub_one_mul (hα : 1 < α) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 �
 
 /-- Weighting `q` by `(p / q) ^ (α - 1)` at the conjugate exponent gives the summand
 `q (p / q) ^ α`. -/
-theorem rpow_div_sub_one_rpow_mul (hα : 1 < α) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
+theorem rpow_div_sub_one_rpow_mul {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     ((p / q) ^ (α - 1)) ^ (α / (α - 1)) * q = q * (p / q) ^ α := by
   rw [← rpow_mul (div_nonneg hp hq), mul_div_cancel₀ _ (sub_ne_zero.2 hα.ne'), mul_comm]
 
 /-- Scaling `S` by `t` on the left and `t ^ (α / (α - 1))` on the right leaves the perspective
 of `t ↦ t ^ α` at `S`. -/
-theorem persp_rpow_conj_mul_self (hα : 1 < α) {t S : ℝ} (ht : 0 < t) (hS : 0 ≤ S) :
+theorem persp_rpow_conj_mul_self {t S : ℝ} (ht : 0 < t) (hS : 0 ≤ S) :
     persp (· ^ α) (t * S) (t ^ (α / (α - 1)) * S) = S := by
   rw [persp_rpow_mul hα ht.le (rpow_nonneg ht.le _) hS hS, persp_rpow_conj hα ht, one_mul,
     persp_self, one_rpow, mul_one]
 
 /-- Away from the singular case, the `[0, 1]`-valued weighting `h ∝ (p / q) ^ (α - 1)` turns the
 perspective of the weighted sums into the sum of perspectives. -/
-theorem exists_persp_rpow_eq_sum (hα : 1 < α) {ι : Type*} [Fintype ι] {p q : ι → ℝ}
+theorem exists_persp_rpow_eq_sum {ι : Type*} [Fintype ι] {p q : ι → ℝ}
     (hp : ∀ i, 0 ≤ p i) (hq : ∀ i, 0 ≤ q i) (hpq : ∀ i, q i = 0 → p i = 0) :
     ∃ h : ι → ℝ, (∀ i, 0 ≤ h i ∧ h i ≤ 1) ∧
       persp (· ^ α) (∑ i, h i * p i) (∑ i, h i ^ (α / (α - 1)) * q i) =
@@ -98,12 +101,11 @@ theorem exists_persp_rpow_eq_sum (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
   set g : ι → ℝ := fun i ↦ (p i / q i) ^ (α - 1)
   have hg (i : ι) : 0 ≤ g i := rpow_nonneg (div_nonneg (hp i) (hq i)) _
   set T := 1 + ∑ i, g i
-  have hT : 0 < T := add_pos_of_pos_of_nonneg one_pos (Finset.sum_nonneg fun i _ ↦ hg i)
+  have hT : 0 < T := add_pos_of_pos_of_nonneg one_pos (sum_nonneg fun i _ ↦ hg i)
   have hgT (i : ι) : g i ≤ T :=
-    (Finset.single_le_sum (fun j _ ↦ hg j) (Finset.mem_univ i)).trans (le_add_of_nonneg_left
-      zero_le_one)
+    (single_le_sum (fun j _ ↦ hg j) (Finset.mem_univ i)).trans (le_add_of_nonneg_left zero_le_one)
   set S := ∑ i, q i * (p i / q i) ^ α
-  have hS : 0 ≤ S := Finset.sum_nonneg fun i _ ↦
+  have hS : 0 ≤ S := sum_nonneg fun i _ ↦
     mul_nonneg (hq i) (rpow_nonneg (div_nonneg (hp i) (hq i)) _)
   have hgp (i : ι) : g i * p i = q i * (p i / q i) ^ α :=
     rpow_div_sub_one_mul hα (hp i) (hq i) (hpq i)
@@ -113,8 +115,8 @@ theorem exists_persp_rpow_eq_sum (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
   calc persp (· ^ α) (∑ i, g i / T * p i) (∑ i, (g i / T) ^ (α / (α - 1)) * q i)
       = persp (· ^ α) (T⁻¹ * S) (T⁻¹ ^ (α / (α - 1)) * S) := by
         congr 1
-        · simp_rw [S, ← hgp, Finset.mul_sum, div_eq_inv_mul, mul_assoc]
-        · simp_rw [S, ← hgq, Finset.mul_sum, div_eq_inv_mul,
+        · simp_rw [S, ← hgp, mul_sum, div_eq_inv_mul, mul_assoc]
+        · simp_rw [S, ← hgq, mul_sum, div_eq_inv_mul,
             mul_rpow (inv_nonneg.2 hT.le) (hg _), mul_assoc]
     _ = S := persp_rpow_conj_mul_self hα (inv_pos.2 hT) hS
     _ = ∑ i, persp (· ^ α) (p i) (q i) := by
@@ -122,7 +124,7 @@ theorem exists_persp_rpow_eq_sum (hα : 1 < α) {ι : Type*} [Fintype ι] {p q :
 
 /-- Some `[0, 1]`-valued weighting attains the sum of perspectives: `h ∝ (p / q) ^ (α - 1)`, or
 a single cell where `q` vanishes below a positive `p`. -/
-theorem exists_sum_persp_rpow_le (hα : 1 < α) {ι : Type*} [Fintype ι] {p q : ι → ℝ}
+theorem exists_sum_persp_rpow_le {ι : Type*} [Fintype ι] {p q : ι → ℝ}
     (hp : ∀ i, 0 ≤ p i) (hq : ∀ i, 0 ≤ q i) :
     ∃ h : ι → ℝ, (∀ i, 0 ≤ h i ∧ h i ≤ 1) ∧ ∑ i, persp (· ^ α) (p i) (q i) ≤
       persp (· ^ α) (∑ i, h i * p i) (∑ i, h i ^ (α / (α - 1)) * q i) := by
@@ -157,9 +159,9 @@ theorem fDiv_mass_comp_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : �
     (hG : Measurable fun i ↦ ENNReal.ofReal (b (π i)))
     (hF1 : ∀ i, ENNReal.ofReal (a (π i)) ≤ 1) (hG1 : ∀ i, ENNReal.ofReal (b (π i)) ≤ 1)
     (P Q : Measure I) [IsFiniteMeasure P] [IsFiniteMeasure Q] :
-    fDiv (· ^ α) (Kernel.mass.{u} hF ∘ₘ P) (Kernel.mass.{u} hG ∘ₘ Q) =
+    fDiv (· ^ α) (mass.{u} hF ∘ₘ P) (mass.{u} hG ∘ₘ Q) =
       persp (· ^ α) (∑ j, a j * (P (π ⁻¹' {j})).toReal) (∑ j, b j * (Q (π ⁻¹' {j})).toReal) := by
-  rw [Kernel.mass_comp, Kernel.mass_comp]
+  rw [mass_comp, mass_comp]
   rw [fDiv_smul_dirac (convexOn_rpow hα.le)
     (continuousWithinAt_rpow_zero (zero_lt_one.trans hα)) (lintegral_ne_top_of_le_one P hF1)
     (lintegral_ne_top_of_le_one Q hG1)]
@@ -183,14 +185,14 @@ theorem exists_mass_fDiv_eq {I : Type*} [MeasurableSpace I] (hα : 1 < α) {n : 
   have : Measurable w := .of_discrete
   have hF : Measurable fun i ↦ ENNReal.ofReal (s * w (π i)) := by fun_prop
   have hG : Measurable fun i ↦ ENNReal.ofReal (s * w (π i) ^ (α / (α - 1))) := by fun_prop
-  refine ⟨Kernel.mass.{u} hF, Kernel.mass.{u} hG, Kernel.isSubMarkovKernel_mass hF hF1,
-    Kernel.isSubMarkovKernel_mass hG hG1, fun P Q _ _ ↦ ?_⟩
+  refine ⟨mass.{u} hF, mass.{u} hG, isSubMarkovKernel_mass hF hF1,
+    isSubMarkovKernel_mass hG hG1, fun P Q _ _ ↦ ?_⟩
   rw [fDiv_mass_comp_eq hα hπ (fun j ↦ mul_nonneg hs.le (hw j).1)
     (fun j ↦ mul_nonneg hs.le (rpow_nonneg (hw j).1 _)) hF hG hF1 hG1,
     ← persp_rpow_mul_left hα hs.le
-      (Finset.sum_nonneg fun j _ ↦ mul_nonneg (hw j).1 toReal_nonneg)
-      (Finset.sum_nonneg fun j _ ↦ mul_nonneg (rpow_nonneg (hw j).1 _) toReal_nonneg)]
-  simp only [Finset.mul_sum, mul_assoc]
+      (sum_nonneg fun j _ ↦ mul_nonneg (hw j).1 toReal_nonneg)
+      (sum_nonneg fun j _ ↦ mul_nonneg (rpow_nonneg (hw j).1 _) toReal_nonneg)]
+  simp only [mul_sum, mul_assoc]
 
 /-! ## The slack-Hölder bound and Rényi couplings -/
 
@@ -294,7 +296,8 @@ theorem codensity_renyi_of_unitTests
       _ = ((exp ((α - 1) * (R x y).toReal) : ℝ) : EReal) := by
           rw [← EReal.coe_mul, hs_def, ← exp_add, toReal_add hR.ne hc.ne]
           ring_nf
-  rw [← comp_assoc, ← comp_assoc, renyiDivergence_iff_of_ne_top hα1.le hρ.ne, hmass] at key
+  rw [← Measure.comp_assoc, ← Measure.comp_assoc, renyiDivergence_iff_of_ne_top hα1.le hρ.ne,
+    hmass] at key
   set A := persp (· ^ α) (∑ j, w j * ((k ∘ₘ μ) (π ⁻¹' {j})).toReal)
     (∑ j, w j ^ (α / (α - 1)) * ((l ∘ₘ ν) (π ⁻¹' {j})).toReal)
   -- step 2: `s * A ≤ e^{(α-1)ρ}`, so `A ≤ e^{(α-1)(ρ+c)}` since `s = e^{-(α-1)c}`
@@ -324,13 +327,13 @@ theorem codensity_renyi_of_slackHolder (h : SlackHolder α ρ R μ ν) :
   have hα0 : 0 < α := zero_lt_one.trans hα.out
   have hα1 : 0 < α - 1 := sub_pos.2 hα.out
   have hγβ : (α - 1) / α * (α / (α - 1)) = 1 := by field_simp
-  rw [Measure.eq_smul_dirac_punit (k ∘ₘ μ), Measure.eq_smul_dirac_punit (l ∘ₘ ν),
+  rw [eq_smul_dirac_punit (k ∘ₘ μ), eq_smul_dirac_punit (l ∘ₘ ν),
     renyiDivergence_smul_dirac_iff hα.out hρ (measure_ne_top _ _) (measure_ne_top _ _),
     bind_apply .univ k.measurable.aemeasurable, bind_apply .univ l.measurable.aemeasurable]
   have := h (k.measurable_coe .univ) ((l.measurable_coe .univ).pow_const ((α - 1) / α))
     fun x y hR ↦ by
       have := hkl x y hR
-      rwa [Measure.eq_smul_dirac_punit (k x), Measure.eq_smul_dirac_punit (l y),
+      rwa [eq_smul_dirac_punit (k x), eq_smul_dirac_punit (l y),
         renyiDivergence_smul_dirac_iff hα.out hR.ne (measure_ne_top _ _)
           (measure_ne_top _ _)] at this
   simpa only [← rpow_mul, hγβ, rpow_one] using this
@@ -357,12 +360,12 @@ theorem slackHolder_truncated_of_codensity (hρ : ρ ≠ ⊤) (h : (renyiDiverge
     ENNReal.rpow_le_one (hcap a) hβ.le
   have hF : Measurable fun x ↦ t * min (f x) (N + 1) := by fun_prop
   have hG : Measurable fun y ↦ (t * min (g y) (N + 1)) ^ (α / (α - 1)) := by fun_prop
-  have := Kernel.isSubMarkovKernel_mass.{u} hF fun x ↦ hcap (f x)
-  have := Kernel.isSubMarkovKernel_mass.{u} hG fun y ↦ hcapβ (g y)
-  have key := renyiDivergence_comp_of_codensity h (k := Kernel.mass.{u} hF)
-    (l := Kernel.mass.{u} hG) fun x y hR ↦
+  have := isSubMarkovKernel_mass.{u} hF fun x ↦ hcap (f x)
+  have := isSubMarkovKernel_mass.{u} hG fun y ↦ hcapβ (g y)
+  have key := renyiDivergence_comp_of_codensity h (k := mass.{u} hF)
+    (l := mass.{u} hG) fun x y hR ↦
       renyiDivergence_dirac_truncated hα.out hR.ne (hfg x y hR) (hcap _) (hcapβ _)
-  rw [Kernel.mass_comp, Kernel.mass_comp] at key
+  rw [mass_comp, mass_comp] at key
   rw [renyiDivergence_smul_dirac_iff hα.out hρ
     (lintegral_ne_top_of_le_one μ fun x ↦ hcap (f x))
     (lintegral_ne_top_of_le_one ν fun y ↦ hcapβ (g y))] at key

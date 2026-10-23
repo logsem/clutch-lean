@@ -7,9 +7,7 @@ public import Mathlib.MeasureTheory.Function.Floor
 
 /-! # The real-number model `LawfulProbLangℝ ℝ`
 
-`instLawfulProbLangℝReal` takes `unifUnit` to be Lebesgue measure on `[0,1]`; the file also proves
-that `x ↦ frac (m + x)` preserves it (`measurePreserving_fracAdd`), as a continuous
-one-time pad needs. -/
+The instance takes `unifUnit` to be Lebesgue measure on `[0,1]`; `x ↦ frac (m + x)` preserves it. -/
 
 namespace ProbLang
 
@@ -73,14 +71,19 @@ public noncomputable instance instLawfulProbLangℝReal : LawfulProbLangℝ ℝ 
 
 At `rT = ℝ` the `ProbLangℝ` operations are Lean's own; these let `twp_pures` normalise them. -/
 
+/-- At `ℝ`, `realAdd` is ordinary addition. -/
 @[simp] public theorem realAdd_real (a b : ℝ) : realAdd a b = a + b := rfl
 
+/-- At `ℝ`, `realNeg` is ordinary negation. -/
 @[simp] public theorem realNeg_real (a : ℝ) : realNeg a = -a := rfl
 
+/-- At `ℝ`, `realOfInt` is the integer cast. -/
 @[simp] public theorem realOfInt_real (z : ℤ) : realOfInt z = (z : ℝ) := rfl
 
+/-- At `ℝ`, `realOfRat` is the rational cast. -/
 @[simp] public theorem realOfRat_real (q : ℚ) : realOfRat q = (q : ℝ) := rfl
 
+/-- At `ℝ`, `realFrac` is the fractional part. -/
 @[simp] public theorem realFrac_real (r : ℝ) : realFrac r = fract r := rfl
 
 /-- Membership in the support of `unifUnit` at `ℝ` means lying in the open interval `(0, 1)`. -/

@@ -5,14 +5,14 @@ import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.DetStep
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-! # Spec-side stepping rules
 
-Rules `step_pure`, `step_alloc`, `step_load`, `step_store`, `step_alloctape`, `step_rand` advance
-the spec program `⤇ K[e]` under `specUpdate`, using the ghost state of `SpecProgram.lean`. -/
+The rules `step_pure`, `step_alloc`, `step_load`, `step_store`, `step_alloctape` and `step_rand`
+advance the spec program `⤇ K[e]` under `specUpdate`. -/
 
-open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure
+@[expose] public section
+
+open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure DetHeadStep ExtTreeMap State
 
 namespace ProbLang
 
@@ -23,7 +23,7 @@ variable {rT : Type _} [LawfulProbLangℝ rT]
 section Rules
 
 /-! Each rule checks the configuration against `⤇`, updates the ghost state and exhibits the
-deterministic step, at `defaultSpecUpdateGS` (where `specInterp` is `Cfg.specAuth`). -/
+deterministic step. -/
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [SpecGS rT GF]
 variable {E : CoPset} (K : Ectx rT)
@@ -67,15 +67,15 @@ theorem step_alloc {v : Exp rT} (hv : IsVal v) :
   · ipureintro
     refine pexecN_1_of_DetStep ?_
     have hstate_eq : σ.update_heap (·.insert σ.heap.fresh ⟨v, hv, hv.lc⟩) = σ' := by
-      simp [hσ', State.update_heap, ExtTreeMap.insert_eq_PartialMap_insert, hl]
+      simp [hσ', update_heap, insert_eq_PartialMap_insert, hl]
     rw [← hstate_eq]
-    exact ((DetHeadStep.alloc hv σ).toDetStep).fill K
+    exact ((alloc hv σ).toDetStep).fill K
   isplitl [HρFinal]
   · iassumption
   iexists σ.heap.fresh
   isplitl [HKNew] <;> iassumption
 
-/-- Spec step: load from a location whose points-to we own. -/
+/-- Spec step: load from a location whose points-to is owned. -/
 theorem step_load {l : Loc} {v : Val rT} :
     iprop((⤇ (K.fill pl(!#loc l))) ∗ (l ↦ₛ v)) ⊢
       specUpdate rT E iprop((⤇ (K.fill (Exp.ofVal v))) ∗ (l ↦ₛ v)) := by
@@ -90,10 +90,10 @@ theorem step_load {l : Loc} {v : Val rT} :
   iexists ⟨K.fill (Exp.ofVal v), σ⟩, 1
   isplitr
   · ipureintro
-    exact pexecN_1_of_DetStep (((DetHeadStep.load σ hlk).toDetStep).fill K)
+    exact pexecN_1_of_DetStep (((load σ hlk).toDetStep).fill K)
   iframe
 
-/-- Spec step: store to a location whose points-to we own, updating it. -/
+/-- Spec step: store to a location whose points-to is owned, updating it. -/
 theorem step_store {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
     (hnew : e.toVal? = some v_new) :
     iprop((⤇ (K.fill (.store pl(#loc l) e))) ∗ (l ↦ₛ v_old)) ⊢
@@ -106,7 +106,7 @@ theorem step_store {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
   ihave %hlk := spec_auth_lookup_heap $$ Hρ Hl
   set σ' := σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l v_new) with hσ'
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
-  ihave HUpd := spec_auth_update_heap (l := l) $$ HρNew Hl
+  ihave HUpd := spec_auth_update_heap $$ HρNew Hl
   imod HUpd with ⟨HρFinal, Hl⟩
   imodintro
   iexists ⟨K.fill pl(#()), σ'⟩, 1
@@ -114,9 +114,9 @@ theorem step_store {l : Loc} {e : Exp rT} {v_old v_new : Val rT}
   · ipureintro
     refine pexecN_1_of_DetStep ?_
     have hstate_eq : σ.update_heap (·.insert l v_new) = σ' := by
-      simp [hσ', State.update_heap, ExtTreeMap.insert_eq_PartialMap_insert]
+      simp [hσ', update_heap, insert_eq_PartialMap_insert]
     rw [← hstate_eq]
-    exact ((DetHeadStep.store σ hlk hnew).toDetStep).fill K
+    exact ((store σ hlk hnew).toDetStep).fill K
   iframe
 
 /-- Spec step: tape allocation, returning a fresh label with its empty tape. -/
@@ -140,7 +140,7 @@ theorem step_alloctape (z : Int) :
   · ipureintro
     refine pexecN_1_of_DetStep ?_
     have hstate_eq : σ.update_tapes (·.insert σ.tapes.fresh (Tape.empty z)) = σ' := by
-      simp [hσ', State.update_tapes, ExtTreeMap.insert_eq_PartialMap_insert, hl]
+      simp [hσ', update_tapes, insert_eq_PartialMap_insert, hl]
     rw [← hstate_eq]
     exact ((DetHeadStep.tape σ).toDetStep).fill K
   isplitl [HρFinal]
@@ -148,7 +148,7 @@ theorem step_alloctape (z : Int) :
   iexists σ.tapes.fresh
   isplitl [HKNew] <;> iassumption
 
-/-- Spec step: `rand` reads and pops the head of a non-empty tape we own. -/
+/-- Spec step: `rand` reads and pops the head of a non-empty owned tape. -/
 theorem step_rand {z : Int} (l : Loc)
     (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z }) :
     iprop((⤇ (K.fill (pl(rand(#z, #lbl l))))) ∗ (l ↪ₛ ⟨z, n :: ns⟩)) ⊢
@@ -161,7 +161,7 @@ theorem step_rand {z : Int} (l : Loc)
   ihave %hlk := spec_auth_lookup_tape $$ Hρ Hl
   set σ' := σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l ⟨z, ns⟩) with hσ'
   imod specProg_update $$ Hρ HK with ⟨HρNew, HKNew⟩
-  ihave HUpd := spec_auth_update_tape (l := l) $$ HρNew Hl
+  ihave HUpd := spec_auth_update_tape $$ HρNew Hl
   imod HUpd with ⟨HρFinal, Hl⟩
   imodintro
   iexists ⟨K.fill pl(#int n), σ'⟩, 1
@@ -169,9 +169,9 @@ theorem step_rand {z : Int} (l : Loc)
   · ipureintro
     refine pexecN_1_of_DetStep ?_
     have hstate_eq : σ.update_tapes (·.insert l ⟨z, ns⟩) = σ' := by
-      simp [hσ', State.update_tapes, ExtTreeMap.insert_eq_PartialMap_insert]
+      simp [hσ', update_tapes, insert_eq_PartialMap_insert]
     rw [← hstate_eq]
-    exact ((DetHeadStep.rand_tape l n ns hlk).toDetStep).fill K
+    exact ((rand_tape l n ns hlk).toDetStep).fill K
   iframe
 
 end Rules

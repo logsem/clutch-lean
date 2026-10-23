@@ -87,6 +87,12 @@ theorem _root_.GradedDivergence.le_add_relCost_iff {a b : ℝ≥0∞} :
     a ≤ b + relCost S x y ↔ (S x y → a ≤ b) := by
   by_cases hS : S x y <;> simp [hS]
 
+/-- Both components of `relCost` are `0` or `⊤`, so a line through it is `relCost` again. -/
+@[simp]
+theorem _root_.GradedDivergence.relCost_fst_add_mul_snd (c : ℝ≥0∞) :
+    (relCost S x y : ℝ≥0∞ × ℝ≥0∞).1 + c * (relCost S x y : ℝ≥0∞ × ℝ≥0∞).2 = relCost S x y := by
+  by_cases hS : S x y <;> simp [hS]
+
 end relCost
 
 section Classes

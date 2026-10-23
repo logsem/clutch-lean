@@ -9,12 +9,11 @@ public import Iris.Algebra.Numbers
 public import Metrology.Couplings.Measure
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-! # Error credits
 
-The resource `↯ε` (total `●↯ε`) over `ℝ≥0∞` with validity `ε < 1`, as used by TotalEris.
-Provides split/combine/supply rules, `contradict` (`1 ≤ ε` is absurd), and error amplification. -/
+The resource `↯ε` (total `●↯ε`) over `ℝ≥0∞` with validity `ε < 1`. -/
+
+@[expose] public section
 
 noncomputable section
 
@@ -23,13 +22,12 @@ open scoped ENNReal NNReal
 
 /-! ## The camera of error credits -/
 
-/-- Error credits: non-negative extended reals, valid when below `1`. The camera instances are
-scoped: use `open scoped ErrorCredit` to see them on `ℝ≥0∞`. -/
+/-- Error credits are non-negative extended reals, valid when below `1`. -/
 abbrev ErrorCredit : Type _ := ℝ≥0∞
 
 namespace ErrorCredit
 
-scoped instance : COFE ErrorCredit := COFE.ofDiscrete _
+scoped instance : COFE ErrorCredit := ofDiscrete _
 scoped instance : OFE.Discrete ErrorCredit := ⟨id⟩
 scoped instance (x : ErrorCredit) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
@@ -102,7 +100,7 @@ theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 :
 
 namespace ErrorCredit
 
-scoped instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
+scoped instance : IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
@@ -113,15 +111,15 @@ end ErrorCredit
 
 /-- Ghost-state resource for error credits. -/
 class ECPreGS (GF : BundledGFunctors) where
+  /-- The ghost-state slot. -/
   ec : ElemG GF (constOF (Auth ErrorCredit))
 
 attribute [reducible, instance] ECPreGS.ec
 
 /-- `ECPreGS` together with its ghost name. -/
 class ECGS (GF : BundledGFunctors) extends ECPreGS GF where
+  /-- The ghost name. -/
   γec : GName
-
-section Resources
 
 variable {GF : BundledGFunctors} [IEC : ECGS GF]
 
@@ -133,23 +131,22 @@ def ec (ε : ℝ≥0∞) : IProp GF := iOwn (E := IEC.ec) IEC.γec (◯ ε)
 notation "↯ " r:50 => ec r
 notation "●↯ " r:50 => ecAuth r
 
-end Resources
-
 /-! ## Rules for `↯ε` and `●↯ε` -/
 
 namespace ErrorCredit
 
-variable {GF : BundledGFunctors} [IEC : ECGS GF]
 local bi IProp GF
 
+variable {ε₁ ε₂ : ℝ≥0∞}
+
 /-- Equal credit amounts are interchangeable. -/
-theorem ext {ε₁ ε₂} (he : ε₁ = ε₂) : ↯ε₁ ⊢ ↯ε₂ := by simp [he]
+theorem ext (he : ε₁ = ε₂) : ↯ε₁ ⊢ ↯ε₂ := by simp [he]
 
 /-- Equal authoritative totals are interchangeable. -/
-theorem ext_auth {ε₁ ε₂} (he : ε₁ = ε₂) : ●↯ ε₁ ⊢ ●↯ ε₂ := by simp [he]
+theorem ext_auth (he : ε₁ = ε₂) : ●↯ ε₁ ⊢ ●↯ ε₂ := by simp [he]
 
 /-- Credits split additively. -/
-theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
+theorem split : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
   unfold ec
   iintro Hε
   iapply iOwn_op
@@ -157,20 +154,20 @@ theorem split {ε₁ ε₂} : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
   iexact Hε
 
 /-- Take `ε₁` credits out of `ε₂`, keeping the difference. -/
-theorem difference {ε₁ ε₂} (Hwf : ε₁ ≤ ε₂) : ↯ε₂ ⊢ ↯ε₁ ∗ ↯(ε₂ - ε₁) := by
+theorem difference (Hwf : ε₁ ≤ ε₂) : ↯ε₂ ⊢ ↯ε₁ ∗ ↯(ε₂ - ε₁) := by
   iintro H
   iapply split
   iapply ext (add_tsub_cancel_of_le Hwf).symm $$ H
 
 /-- Credits combine additively. -/
-theorem combine {ε₁ ε₂} : ↯ε₁ ∗ ↯ε₂ ⊢ ↯(ε₁ + ε₂) := by
+theorem combine : ↯ε₁ ∗ ↯ε₂ ⊢ ↯(ε₁ + ε₂) := by
   unfold ec
   iintro ⟨H1, H2⟩
   icombine H1 H2 as Hε
   iexact Hε
 
 /-- Credit ownership combines by addition under `icombine`. -/
-instance {ε₁ ε₂} : Iris.ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯ε₂) (↯(ε₁ + ε₂)) where
+instance : ProofMode.CombineSepAs (↯ε₁ : IProp GF) (↯ε₂) (↯(ε₁ + ε₂)) where
   combine_sep_as := combine
 
 /-- Zero credits can always be allocated. -/
@@ -197,7 +194,7 @@ theorem supply_decrease {εₛ ε} : ⊢ ●↯ εₛ -∗ ↯ε -∗ |==> ●�
   simpa [add_zero] using (tsub_add_cancel_of_le hle).symm
 
 /-- Allocating `ε₂` credits increases the authoritative total, while it stays below `1`. -/
-theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
+theorem supply_increase (h : ε₁ + ε₂ < 1) :
     ●↯ ε₁ ⊢ |==> (●↯ (ε₁ + ε₂) ∗ ↯ε₂) := by
   unfold ec ecAuth
   have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
@@ -211,7 +208,7 @@ theorem supply_increase {ε₁ ε₂ : ℝ≥0∞} (h : ε₁ + ε₂ < 1) :
   iexact H
 
 /-- Fewer credits can be obtained from more. -/
-theorem weaken {ε₁ ε₂ : ℝ≥0∞} (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢ ↯ε₂ := by
+theorem weaken (h : ε₂ ≤ ε₁) : ↯ε₁ ⊢ ↯ε₂ := by
   iintro Hε
   rw [← tsub_add_cancel_of_le h]
   ihave ⟨-, H⟩ := split $$ Hε
@@ -242,6 +239,8 @@ the trade reaches `1` credit, which `contradict` refutes. -/
 
 namespace Induction
 
+variable {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF}
+
 /-- For `ε > 0` and `k > 1`, some `n` makes `n(k-1)ε + ε' ≥ 1` (pure arithmetic). -/
 theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : ε ≤ ε') (hk : 1 < k) :
     ∃ n : ℕ, 1 ≤ (n : ℝ≥0∞) * ((k : ℝ≥0∞) - 1) * ε + ε' := by
@@ -259,7 +258,7 @@ theorem err_amp_mult {ε ε' : ℝ≥0∞} {k : ℝ≥0} (hε : 0 < ε) (hle : �
     exact_mod_cast h1
 
 /-- Error amplification: a spending proof that works at `k * ε` credits works at `ε`. -/
-theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k) :
+theorem simple (hε : 0 < ε) (hk : 1 < k) :
     □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε -∗ P := by
   suffices haux : ∀ ε', ε ≤ ε' → □ ((↯(k * ε) -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε' -∗ P by
     iapply haux _ le_rfl
@@ -294,14 +293,14 @@ theorem simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk
     iapply ext hε'' $$ Hε₃
 
 /-- External-entailment form of `simple`. -/
-theorem external_simple {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hk : 1 < k)
+theorem external_simple (hε : 0 < ε) (hk : 1 < k)
     (hamp : (↯(k * ε) -∗ P) ∗ ↯ε ⊢ P) : ↯ε ⊢ P := by
   iapply simple hε hk
   iintro !> H
   iapply hamp $$ H
 
 /-- Amplification by an arbitrary larger credit amount `ε'`. -/
-theorem increasing {ε : ℝ≥0∞} {ε' : ℝ≥0} {P : IProp GF} (hε : 0 < ε) (hε' : ε < ε') :
+theorem increasing {ε' : ℝ≥0} (hε : 0 < ε) (hε' : ε < ε') :
     □ ((↯ε' -∗ P) ∗ ↯ε -∗ P) ⊢ ↯ε -∗ P := by
   iintro #Hamp Hε
   let k' : ℝ≥0∞ := ε' / ε
@@ -339,7 +338,7 @@ theorem amplifying {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF} (hε : 0 < ε)
       %(hn.trans (_root_.le_of_eq (by ring))) Hε
 
 /-- External-entailment form of `amplifying`. -/
-theorem amp_external {ε : ℝ≥0∞} {k : ℝ≥0} {P : IProp GF}
+theorem amp_external
     (hε : 0 < ε) (hk : 1 < k)
     (hamp : ∀ {ε'}, 0 < ε' → □ (↯((k : ℝ≥0∞) * ε') -∗ P) ∗ ↯ε' ⊢ P) :
     ↯ε ⊢ P := by

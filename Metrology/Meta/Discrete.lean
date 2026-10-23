@@ -2,16 +2,15 @@ module
 
 public meta import Lean
 
-@[expose] public section
-
-open Lean Elab Command Term Meta
-
 /-!
 # The `@[discrete]` attribute
 
-A `@[discrete]` declaration (one that assumes atomic-support steps, no `urand`) may only be
-referenced by other `@[discrete]` declarations; other uses get the `linter.discrete` warning.
+A `@[discrete]` declaration may only be used by other `@[discrete]` ones; other uses get a warning.
 -/
+
+@[expose] public section
+
+open Lean Elab Command Term Meta
 
 namespace Metrology.Discrete
 
@@ -39,9 +38,9 @@ meta register_option linter.discrete : Bool := {
   descr    := "if true, warn when a `@[discrete]` declaration is referenced from a \
     non-discrete declaration" }
 
-/-- The fully-qualified names defined by this command: its binder `.const` occurrences.
-Parsing the surface `declId` instead would give unqualified names that miss `discreteExt`. -/
-meta def definedNames (trees : Array Elab.InfoTree) : IO NameSet := do
+/-- The fully-qualified names defined by this command, taken from its binder `.const` occurrences
+rather than the surface `declId`. -/
+meta def definedNames (trees : Array InfoTree) : IO NameSet := do
   let acc : IO.Ref NameSet ← IO.mkRef {}
   for tree in trees do
     tree.visitM' (postNode := fun _ info _ => do

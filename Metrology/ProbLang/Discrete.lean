@@ -6,8 +6,7 @@ public import Metrology.ProbLang.CoreMeasures
 
 /-! # Discrete ProbLang: measurable singletons
 
-Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`, so `{ρ}` is
-measurable for every configuration `ρ`. -/
+Lifts `MeasurableSingletonClass` from `rT` to `Option`, `LocHeap`, `State` and `Cfg`. -/
 
 noncomputable section ProbLangDiscrete
 

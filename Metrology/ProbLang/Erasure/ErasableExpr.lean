@@ -6,8 +6,8 @@ public import Metrology.ProbLang.Erasure.ExecN
 
 /-! # Erasability up to expressions
 
-`ErasableExpr μ σ`: running from `μ` instead of `σ` leaves every `execN` expression distribution
-unchanged. Main results: presampling a tape, once or `n` times, is erasable in this sense. -/
+`ErasableExpr μ σ`: sampling the state from `μ` leaves every `execN` expression distribution
+unchanged. -/
 
 open Measurable (of_discrete)
 
@@ -21,8 +21,8 @@ open Cfg (measurable_expr)
 
 /-! ## `ErasableExpr` -/
 
-/-- Erasability up to the expression projection: sampling the initial state from `μ` instead of
-fixing it to `σ` does not change the expression distribution of `execN m`. -/
+/-- Sampling the initial state from `μ` leaves the expression distribution of `execN m`
+unchanged. -/
 def ErasableExpr (μ : Measure (State rT)) (σ : State rT) : Prop :=
   ∀ e m, asExpr (μ.bind (fun σ' => execN m ⟨e, σ'⟩)) = asExpr (execN m ⟨e, σ⟩)
 
@@ -68,7 +68,7 @@ theorem lim_exec (h : ErasableExpr μ σ) (e : Exp rT) :
   have hmk : Measurable (fun σ' : State rT => (⟨e, σ'⟩ : Cfg rT)) := by fun_prop
   unfold asExpr limExecV asExpr
   -- `limExec` is the sup of `execN n`: swap the sup with the integral, then use `h` at each `n`
-  refine Measure.ext fun S hS => ?_
+  refine ext fun S hS => ?_
   rw [map_apply hexpr hS, map_apply hexpr hS,
     bind_apply (hexpr hS) (show Measurable (fun σ' : State rT => limExec (⟨e, σ'⟩ : Cfg rT)) from
       limExec.measurable.comp hmk).aemeasurable]
@@ -109,12 +109,9 @@ noncomputable def tapePresampleIter (α : Loc) (σ : State rT) : Nat → Measure
   | 0 => dirac σ
   | n + 1 => (tapePresampleIter α σ n).bind (fun σ' => tapePresample σ' α)
 
-section
-
-variable [Countable rT] {σ : State rT} {α : Loc} {t : Tape}
-
 /-- After `n` presamples, tape `α` still exists almost surely, with its original bound. -/
-theorem tapePresampleIter_tape_bound_ae (h : σ.tapes[α]? = some t) (n : Nat) :
+theorem tapePresampleIter_tape_bound_ae [Countable rT] {σ : State rT} {α : Loc} {t : Tape}
+    (h : σ.tapes[α]? = some t) (n : Nat) :
     ∀ᵐ σ' ∂(tapePresampleIter α σ n),
       ∃ t' : Tape, σ'.tapes[α]? = some t' ∧ t'.bound = t.bound := by
   induction n with
@@ -133,7 +130,8 @@ theorem tapePresampleIter_tape_bound_ae (h : σ.tapes[α]? = some t) (n : Nat) :
     exact ⟨⟨Nb, bs ++ [n']⟩, by simp [State.update_tapes], hbound⟩
 
 /-- `n`-fold presampling of a tape leaves every `execN` expression distribution unchanged. -/
-theorem execN_tapePresampleIter_expr_eq {e : Exp rT} {m : Nat} (n : Nat)
+theorem execN_tapePresampleIter_expr_eq [Countable rT] {σ : State rT} {α : Loc} {t : Tape}
+    {e : Exp rT} {m : Nat} (n : Nat)
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
     asExpr ((tapePresampleIter α σ n).bind (fun σ' => execN m ⟨e, σ'⟩)) =
       asExpr (execN m ⟨e, σ⟩) := by
@@ -148,7 +146,7 @@ theorem execN_tapePresampleIter_expr_eq {e : Exp rT} {m : Nat} (n : Nat)
       (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr)) = _
     rw [bind_bind of_discrete.aemeasurable of_discrete.aemeasurable,
       bind_map_comm_of_discrete]
-    refine Measure.ext fun S hS => ?_
+    refine ext fun S hS => ?_
     rw [bind_apply hS of_discrete.aemeasurable]
     calc ∫⁻ σ₁, ((tapePresample σ₁ α).bind (fun σ' => execN m ⟨e, σ'⟩)).map (·.expr) S
             ∂(tapePresampleIter α σ k)
@@ -164,7 +162,5 @@ theorem execN_tapePresampleIter_expr_eq {e : Exp rT} {m : Nat} (n : Nat)
           simp_rw [map_apply of_discrete hS]
       _ = (execN m ⟨e, σ⟩).map (·.expr) S := by
           rw [ih h, map_apply of_discrete hS]
-
-end
 
 end ProbLang

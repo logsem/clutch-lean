@@ -22,6 +22,7 @@ variable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
 
 /-- A measure of total mass at most `1`. -/
 class IsSubProbabilityMeasure (μ : Measure X) : Prop where
+  /-- The total mass is at most `1`. -/
   measure_univ_le_one : μ univ ≤ 1
 
 open IsSubProbabilityMeasure
@@ -122,6 +123,7 @@ variable {X Y Z : Type*} [MeasurableSpace X] [MeasurableSpace Y] [MeasurableSpac
 
 /-- A kernel whose measures all have total mass at most `1`. -/
 class IsSubMarkovKernel (κ : Kernel X Y) : Prop where
+  /-- The measure at each point is sub-probability. -/
   isSubProbabilityMeasure (x : X) : IsSubProbabilityMeasure (κ x)
 
 namespace IsSubMarkovKernel

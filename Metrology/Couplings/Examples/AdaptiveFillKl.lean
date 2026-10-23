@@ -5,9 +5,8 @@ public import Metrology.Couplings.BindLaws
 
 /-! # Adaptive filled-KL example: two-stage randomized response
 
-The two-stage mechanism of `AdaptiveRenyi` in filled KL: the chain-rule law `BindLaw.fillKl` pays
-the second stage's `(log 2) / 3` only after a reported `true`, which has probability `1 / 3`, so
-the budget is `(4/9) log 2` (`fill_kl_adaptive`), below the non-adaptive `(2/3) log 2`. -/
+Two-stage randomized response in filled KL: the chain-rule law `BindLaw.fillKl` gives budget
+`(4/9) log 2` (`fill_kl_adaptive`), below the non-adaptive `(2/3) log 2`. -/
 
 @[expose] public section
 
@@ -17,7 +16,7 @@ open scoped ENNReal
 
 namespace AdaptiveFillKl
 
-open AdaptiveRenyi
+open AdaptiveRenyi BindLaw
 
 /-! ## The budget of each stage -/
 
@@ -61,7 +60,7 @@ theorem budget_adaptive :
 
 /-- The chain-rule head of the two-stage mechanism, at budget `(4 / 9) log 2`. -/
 theorem fillKlHead_randResp :
-    BindLaw.fillKl.head (randResp false) (randResp true)
+    fillKl.head (randResp false) (randResp true)
       (fun x y ↦ if x = y then stageTwoCostKl x else ⊤) (ENNReal.ofReal (4 * Real.log 2 / 9)) :=
   ⟨Bool, inferInstance, randResp false, randResp true, id, id, Set.univ,
     ENNReal.ofReal (Real.log 2 / 3), stageTwoCostKl, measurable_id, measurable_id, .of_discrete,
@@ -72,7 +71,7 @@ theorem fillKlHead_randResp :
 /-- The adaptive mechanism on adjacent inputs is within filled KL `(4/9) log 2`. -/
 theorem fill_kl_adaptive :
     fill klDivergence (ENNReal.ofReal (4 * Real.log 2 / 9)) (adaptive false) (adaptive true) := by
-  refine codensity_sound (BindLaw.fillKl.sound fillKlHead_randResp trivial fun x y hxy ↦ ?_)
+  refine codensity_sound (fillKl.sound fillKlHead_randResp trivial fun x y hxy ↦ ?_)
   obtain rfl : x = y := by_contra fun h ↦ by simp [h] at hxy
   cases x
   -- first report false: nothing new released, budget 0

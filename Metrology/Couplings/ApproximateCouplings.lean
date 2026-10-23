@@ -17,8 +17,8 @@ public import Mathlib.Analysis.Real.OfDigits
 
 /-! # Approximate couplings
 
-Couplings up to `F`, tested by measurable functions into `[0, 1]`.
-`Bridges/AddCoupl.lean` identifies its `+ε` and DP instances with `codensity tv`/`codensity dp`. -/
+Couplings up to `F`, tested by measurable functions into `[0, 1]` (`Bridges/AddCoupl.lean` relates
+them to codensity). -/
 
 @[expose] public section
 
@@ -36,8 +36,10 @@ variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
 
 namespace CouplingFunction
 
+/-- Coupling functions are measurable. -/
 theorem measurable (f : CouplingFunction α) : Measurable f.1 := f.property.1
 
+/-- Coupling functions are bounded by one. -/
 theorem bounded (f : CouplingFunction α) : ∀ a, f.1 a ≤ 1 := f.property.2
 
 instance instCoeFun : CoeFun (CouplingFunction α) (fun _ => α → ENNReal) where

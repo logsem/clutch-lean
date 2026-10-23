@@ -84,7 +84,6 @@ theorem tapePresample_bind_pull_heap [Countable rT]
     funext n'
     rw [dirac_bind (f := _) Measurable.of_discrete,
         dirac_bind (f := _) Measurable.of_discrete]
-    show k (σ.update_tapes _).heap _ = k σ.heap _
     simp [State.update_tapes]
 
 /-- Presampling commutes with any heap update. -/

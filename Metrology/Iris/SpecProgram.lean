@@ -11,37 +11,36 @@ public import Metrology.ProbLang.Discrete
 public import Metrology.Iris.AgreeHeap
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-! # Spec-side ghost state
 
-Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules.
-`AppProgram` reuses the heap and tape cameras for the program side. -/
+Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ` and their update rules. -/
+
+@[expose] public section
 
 section SpecRA
-open Std Iris Iris.Std COFE ProbLang
+open Std Iris Iris.Std COFE OFE Excl AgreeHeap ProbLang
 
 variable {rT : Type _}
 
 /-! ## Cameras and discrete OFE instances -/
 
-instance cofe_exp : COFE (Exp rT) := COFE.ofDiscrete _
-instance discrete_exp : OFE.Discrete (Exp rT) := ⟨id⟩
+instance cofe_exp : COFE (Exp rT) := ofDiscrete _
+instance discrete_exp : Discrete (Exp rT) := ⟨id⟩
 
-instance cofe_tape : COFE Tape := COFE.ofDiscrete _
-instance discrete_tape : OFE.Discrete Tape := ⟨id⟩
+instance cofe_tape : COFE Tape := ofDiscrete _
+instance discrete_tape : Discrete Tape := ⟨id⟩
 
-instance cofe_val : COFE (Val rT) := COFE.ofDiscrete _
-instance discrete_val : OFE.Discrete (Val rT) := ⟨id⟩
+instance cofe_val : COFE (Val rT) := ofDiscrete _
+instance discrete_val : Discrete (Val rT) := ⟨id⟩
 
 /-- Inclusion of exclusive elements forces equality. -/
 theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT}
-    (H : some (Excl.excl e1) ≼ some (Excl.excl e2)) : e1 = e2 := by
+    (H : some (excl e1) ≼ some (excl e2)) : e1 = e2 := by
   have h := Option.inc_iff.mp H
   simp at h
   rcases h with h | h
   · exact h
-  · simpa using Excl.inc_iff.mp h
+  · simpa using inc_iff.mp h
 
 variable [LawfulProbLangℝ rT]
 
@@ -86,26 +85,27 @@ class SpecGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunct
 
 variable {GF : BundledGFunctors} [ISpec : SpecGS rT GF]
 local bi IProp GF
+variable {e : Exp rT} {σ : State rT} {l : Loc}
 
 open ProbLang.Cfg
 
 /-- Authoritative ownership of the spec program. -/
-def specProgAuth (e : Exp rT) : IProp GF := iOwn (E := ISpec.prog) ISpec.γprog (.auth e)
+def specProgAuth (e : Exp rT) := iOwn (E := ISpec.prog) ISpec.γprog (.auth e)
 /-- Ownership of the spec program `e`, written `⤇ e`. -/
-def specProgFrag (e : Exp rT) : IProp GF := iOwn (E := ISpec.prog) ISpec.γprog (.frag e)
+def specProgFrag (e : Exp rT) := iOwn (E := ISpec.prog) ISpec.γprog (.frag e)
 
 /-- Authoritative ownership of the spec heap. -/
-def specHeapAuth (σ : LocHeap (Val rT)) : IProp GF :=
+def specHeapAuth (σ : LocHeap (Val rT)) :=
   iOwn (E := ISpec.heap) ISpec.γheap (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 /-- Spec-heap points-to, written `ℓ ↦ₛ v`. -/
-def specHeapFrag (ℓ : Loc) (v : Val rT) : IProp GF :=
+def specHeapFrag (ℓ : Loc) (v : Val rT) :=
   iOwn (E := ISpec.heap) ISpec.γheap (HeapView.Frag ℓ (.own 1) (toAgree v))
 
 /-- Authoritative ownership of the spec tapes. -/
-def specTapesAuth (σ : LocHeap Tape) : IProp GF :=
+def specTapesAuth (σ : LocHeap Tape) :=
   iOwn (E := ISpec.tapes) ISpec.γtapes (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 /-- Spec-tape points-to, written `ℓ ↪ₛ t`. -/
-def specTapesFrag (ℓ : Loc) (t : Tape) : IProp GF :=
+def specTapesFrag (ℓ : Loc) (t : Tape) :=
   iOwn (E := ISpec.tapes) ISpec.γtapes (HeapView.Frag ℓ (.own 1) (toAgree t))
 
 /-- Authoritative ownership of a whole spec configuration. -/
@@ -147,63 +147,63 @@ theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
   iframe
 
 /-- A points-to `l ↦ₛ v` agrees with the authoritative heap. -/
-theorem spec_auth_lookup_heap {e : Exp rT} {σ : State rT} {l : Loc} {v : Val rT} :
+theorem spec_auth_lookup_heap {v : Val rT} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↦ₛ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨-, Hh, -⟩ Hf
-  iapply AgreeHeap.lookup $$ Hh Hf
+  iapply lookup $$ Hh Hf
 
 /-- Overwriting a spec location updates the authoritative heap and the points-to together. -/
-theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val rT} :
+theorem spec_auth_update_heap {v w : Val rT} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↦ₛ v ==∗
       specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)⟩ ∗
         l ↦ₛ w := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩ Hf
-  imod AgreeHeap.update (E := ISpec.heap) (w := w) $$ [$Hh $Hf] with ⟨Hh, Hf⟩
+  imod update (E := ISpec.heap) (w := w) $$ [$Hh $Hf] with ⟨Hh, Hf⟩
   imodintro
   simp only [State.update_heap]
   iframe
 
 /-- Allocating a fresh spec location. -/
-theorem spec_auth_heap_alloc {e : Exp rT} {σ : State rT} (v : Val rT) :
+theorem spec_auth_heap_alloc (v : Val rT) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
       specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)⟩ ∗
         σ.heap.fresh ↦ₛ v := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩
-  imod AgreeHeap.alloc (E := ISpec.heap) v $$ Hh with ⟨Hh, Hf⟩
+  imod alloc (E := ISpec.heap) v $$ Hh with ⟨Hh, Hf⟩
   imodintro
   simp only [State.update_heap]
   iframe
 
 /-- A tape points-to `l ↪ₛ t` agrees with the authoritative tapes. -/
-theorem spec_auth_lookup_tape {e : Exp rT} {σ : State rT} {l : Loc} {t : Tape} :
+theorem spec_auth_lookup_tape {t : Tape} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↪ₛ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨-, -, Ht⟩ Hf
-  iapply AgreeHeap.lookup $$ Ht Hf
+  iapply lookup $$ Ht Hf
 
 /-- Overwriting a spec tape updates the authoritative tapes and the points-to together. -/
-theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape} :
+theorem spec_auth_update_tape {t s : Tape} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↪ₛ t ==∗
       specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)⟩ ∗
         l ↪ₛ s := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩ Hf
-  imod AgreeHeap.update (E := ISpec.tapes) (w := s) $$ [$Ht $Hf] with ⟨Ht, Hf⟩
+  imod update (E := ISpec.tapes) (w := s) $$ [$Ht $Hf] with ⟨Ht, Hf⟩
   imodintro
   simp only [State.update_tapes]
   iframe
 
 /-- Allocating a fresh spec tape. -/
-theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
+theorem spec_auth_tape_alloc (t : Tape) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
       specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)⟩ ∗
         σ.tapes.fresh ↪ₛ t := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩
-  imod AgreeHeap.alloc (E := ISpec.tapes) t $$ Ht with ⟨Ht, Hf⟩
+  imod alloc (E := ISpec.tapes) t $$ Ht with ⟨Ht, Hf⟩
   imodintro
   simp only [State.update_tapes]
   iframe
@@ -215,11 +215,11 @@ theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
 theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
     (e : Exp rT) (σ : State rT) :
     ⊢@{IProp GF} |==> ∃ IS : SpecGS rT GF,
-      Cfg.specAuth (ISpec := IS) ⟨e, σ⟩ ∗ specProgFrag (ISpec := IS) e := by
+      specAuth (ISpec := IS) ⟨e, σ⟩ ∗ specProgFrag (ISpec := IS) e := by
   imod (iOwn_alloc (E := ISPre.prog) (SpecProg.auth e • SpecProg.frag e)
     (Auth.auth_both_valid_2 trivial .rfl)) with ⟨%γp, Hp⟩
-  imod AgreeHeap.alloc_auth (E := ISPre.heap) σ.heap with ⟨%γH, HH⟩
-  imod AgreeHeap.alloc_auth (E := ISPre.tapes) σ.tapes with ⟨%γT, HT⟩
+  imod alloc_auth (E := ISPre.heap) σ.heap with ⟨%γH, HH⟩
+  imod alloc_auth (E := ISPre.tapes) σ.tapes with ⟨%γT, HT⟩
   imodintro
   let IS : SpecGS rT GF := {
     toSpecPreGS := ISPre
@@ -232,9 +232,7 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
   dsimp only
   iframe
 
-/-! ## Spec tapes over plain integers
-
-Analogue of `appNatTape`. -/
+/-! ## Spec tapes over plain integers -/
 
 /-- Spec-side tape holding the integers `ns`, each below `z`. -/
 noncomputable def specNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
@@ -244,39 +242,39 @@ noncomputable def specNatTape (l : Loc) (z : Int) (ns : List Int) : IProp GF :=
 notation:51 l:51 " ↪ₛN⟨" z:51 "; " ns:51 "⟩" => specNatTape l z ns
 
 /-- An empty integer tape is an empty spec tape. -/
-theorem spec_natTape_to_empty {l : Loc} {z : Int} :
-    specNatTape (GF := GF) l z [] ⊢ l ↪ₛ ⟨z, []⟩ := by
+theorem spec_natTape_to_empty {z : Int} :
+    specNatTape l z [] ⊢ l ↪ₛ ⟨z, []⟩ := by
   unfold specNatTape
-  exact AgreeHeap.natTape_to_empty
+  exact natTape_to_empty
 
 /-- An empty spec tape is an empty integer tape. -/
-theorem spec_empty_to_natTape {l : Loc} {z : Int} :
+theorem spec_empty_to_natTape {z : Int} :
     (l ↪ₛ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢
       specNatTape l z [] := by
   unfold specNatTape
-  exact AgreeHeap.empty_to_natTape
+  exact empty_to_natTape
 
 /-- Reading the head of an integer tape exposes the head of the spec tape, with a way back. -/
-theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
-    specNatTape (GF := GF) l z (n :: ns) ⊢
+theorem spec_read_natTape_head {z : Int} {n : Int} {ns : List Int} :
+    specNatTape l z (n :: ns) ⊢
       iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z }) (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
         l ↪ₛ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₛ ⟨z, xs⟩ -∗ specNatTape l z ns)) := by
   unfold specNatTape
-  exact AgreeHeap.read_natTape_head
+  exact read_natTape_head
 
 /-! ## Exclusivity of points-to assertions -/
 
 /-- Two heap points-to assertions at one location are contradictory. -/
-theorem specHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
+theorem specHeapFrag_valid_2 {v1 v2 : Val rT} :
     ⊢ specHeapFrag l v1 -∗ specHeapFrag l v2 -∗ False := by
   unfold specHeapFrag
-  exact AgreeHeap.frag_valid_2
+  exact frag_valid_2
 
 /-- Two tape points-to assertions at one location are contradictory. -/
-theorem specTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
+theorem specTapesFrag_valid_2 {t1 t2 : Tape} :
     ⊢ specTapesFrag l t1 -∗ specTapesFrag l t2 -∗ False := by
   unfold specTapesFrag
-  exact AgreeHeap.frag_valid_2
+  exact frag_valid_2
 
 end SpecRA

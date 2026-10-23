@@ -8,8 +8,7 @@ public import Iris.Instances.Lib.FUpd
 
 /-! # Pulling `∀` into a fupd of plain propositions
 
-`BIFUpdatePlainly` only gives `fupd_plainly_sForall_2`; the strong form below is not derivable
-from the class, but holds in the `IProp GF` model because `■ P` means `P` at the unit resource.
+A strong form of `fupd_plainly_sForall_2` that holds in the `IProp GF` model.
 -/
 open Iris Iris.Std Iris.BI Iris.ProofMode
 

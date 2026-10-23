@@ -20,8 +20,8 @@ meta import Metrology.Meta
 
 /-! # ProbLang syntax
 
-The reals interface (`ProbLangℝ`, `LawfulProbLangℝ`), expressions (`Exp`, `Ty`, `Pat`), values,
-operator evaluation, states, and evaluation contexts with their decomposition (`Exp.decomp`). -/
+The reals interface, expressions, values, operator evaluation, states, and evaluation contexts
+with their decomposition. -/
 
 @[expose] public section
 
@@ -34,6 +34,7 @@ open Cslib
 def Std.ExtTreeMap.fresh (t : ExtTreeMap Int V) : Int :=
   match t.maxKey? with | none => 1 | some v => v + 1
 
+/-- The fresh key of a map is not in the map. -/
 theorem Std.ExtTreeMap.fresh_get? (t : ExtTreeMap Int V) :
     t[t.fresh]? = none := by
   unfold ExtTreeMap.fresh
@@ -53,9 +54,9 @@ theorem Std.ExtTreeMap.maxKey?_eq_some_iff_getElem? (t : ExtTreeMap Int V) (n : 
   · rcases hk : t[k]? with _ | v
     · simp
     · have hkmem : k ∈ t := mem_iff_isSome_getElem?.mpr (by rw [hk]; rfl)
-      have : k ≤ n := (Std.LawfulOrderOrd.isLE_compare k n).mp (h k hkmem)
+      have : k ≤ n := (LawfulOrderOrd.isLE_compare k n).mp (h k hkmem)
       omega
-  · rw [Std.LawfulOrderOrd.isLE_compare]
+  · rw [LawfulOrderOrd.isLE_compare]
     by_contra hgt
     have hkNone := h k (lt_of_not_ge hgt)
     have hkSome := mem_iff_isSome_getElem?.mp hkmem
@@ -96,7 +97,7 @@ instance : Coe Nat Var := ⟨.internal⟩
 /-- The index of an internal variable (0 for named ones). -/
 def Var.genId : Var → Nat | .named _ => 0 | .internal n => n
 
-instance : Cslib.HasFresh Var where
+instance : HasFresh Var where
   fresh s := .internal <| s.sup (·.genId) + 1
   fresh_notMem L := by
     rw [← Finset.forall_mem_not_eq]
@@ -116,22 +117,25 @@ abbrev Lbl : Type := Int
 
 /-! ## The type of reals -/
 
-/-- The operations ProbLang needs on its type of reals. This class is pure data, so a
-computable type such as `Float` can be an instance and run in the interpreter; the laws
-the semantics needs live in `LawfulProbLangℝ`. -/
+/-- The operations ProbLang needs on its type of reals, kept as pure data so that a computable type
+such as `Float` can be an instance; the laws live in `LawfulProbLangℝ`. -/
 class ProbLangℝ (T : Type _) extends BEq T, Inhabited T where
   -- The operations are plain functions, not `LT`/`LE`/`Add`/`Neg` instances, to avoid
   -- `DecidableEq`/order/algebra diamonds.
+  /-- Strict less-than on reals. -/
   realLt : T → T → Bool
+  /-- Less-than-or-equal on reals. -/
   realLe : T → T → Bool
+  /-- Addition of reals. -/
   realAdd : T → T → T
+  /-- Negation of reals. -/
   realNeg : T → T
+  /-- The real for an integer. -/
   realOfInt : Int → T
   /-- Lets a program generic in the reals write a constant such as `1/2`. -/
   realOfRat : ℚ → T
-  /-- Intended: `realFrac r ∈ [0,1)` with `r - realFrac r` integral. The class demands only
-  measurability; laws that need more (e.g. rotation-invariance of `unifUnit`) are proved
-  per instance. -/
+  /-- The fractional part, intended to land in `[0,1)` with `r - realFrac r` integral (the class
+  demands only measurability, and laws needing more are proved per instance). -/
   realFrac : T → T
 
 /-- A type of reals with a σ-algebra and the laws the semantics needs. -/
@@ -141,20 +145,29 @@ class LawfulProbLangℝ (T : Type _) extends ProbLangℝ T, MeasurableSpace T, L
   instDecidableEq : DecidableEq T
   /-- The uniform distribution on the unit interval, sampled by `urand`. -/
   unifUnit : MeasureTheory.Measure T
+  /-- `unifUnit` is a probability measure. -/
   unifUnit_isProbabilityMeasure : MeasureTheory.IsProbabilityMeasure unifUnit
   /-- A measurable set carrying all of `unifUnit`'s mass (at `ℝ`: `(0, 1)`). -/
   unifUnitSupport : Set T
+  /-- `unifUnitSupport` is measurable. -/
   unifUnitSupportMeasurable : MeasurableSet unifUnitSupport
+  /-- `unifUnitSupport` carries all of `unifUnit`'s mass. -/
   unifUnitIsConcentrated : unifUnit unifUnitSupportᶜ = 0
+  /-- `realLt` is measurable. -/
   measurable_realLt : Measurable (Function.uncurry realLt)
+  /-- `realLe` is measurable. -/
   measurable_realLe : Measurable (Function.uncurry realLe)
+  /-- `realAdd` is measurable. -/
   measurable_realAdd : Measurable (Function.uncurry realAdd)
+  /-- `realNeg` is measurable. -/
   measurable_realNeg : Measurable realNeg
+  /-- `realFrac` is measurable. -/
   measurable_realFrac : Measurable realFrac
 
 attribute [reducible, instance] LawfulProbLangℝ.instDecidableEq
 attribute [instance] LawfulProbLangℝ.unifUnit_isProbabilityMeasure
 
+/-- The support of `unifUnit` is nonempty. -/
 theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [LawfulProbLangℝ T] :
     (LawfulProbLangℝ.unifUnitSupport (T := T)).Nonempty := by
   rw [Set.nonempty_iff_ne_empty]
@@ -523,6 +536,7 @@ def lcb (k : Nat) : Exp α → Bool
   | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e | .scrut e _ =>
       lcb k e
 
+/-- Opening a free variable at `k` lowers the local-closure bound from `k+1` to `k`. -/
 theorem lcb_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
     lcb (k+1) e = true → lcb k (openRec k (fvar x) e) = true := by
   intro k e
@@ -536,6 +550,7 @@ theorem lcb_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
       · simp only [lcb, decide_eq_true_eq]; omega
   | _ => intro h; simp_all [lcb, openRec]
 
+/-- Opening with a free variable does not change the size of a term. -/
 theorem size_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
     (openRec k (fvar x) e).size = e.size := by
   intro k e
@@ -543,6 +558,7 @@ theorem size_openRec_fvar (x : Var) : ∀ (k : Nat) (e : Exp α),
   | bvar j => simp only [openRec]; split <;> rfl
   | _ => simp_all [openRec, Exp.size]
 
+/-- Local-closure check at bound `0` implies local closure, by induction on a size bound. -/
 private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lcb 0 e = true →
     IsLocallyClosed e := by
   intro n
@@ -633,6 +649,7 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lc
           simp only [Exp.size] at hle
           exact .scrut p (ih e (by omega) hlc)
 
+/-- A term passing `lcb 0` is locally closed. -/
 theorem lcb_imp_lc {e : Exp α} (h : lcb 0 e = true) : IsLocallyClosed e :=
   lcb_imp_lc_aux e.size e le_rfl h
 
@@ -648,10 +665,11 @@ theorem lcb_openRec_fvar_rev (x : Var) : ∀ (k : Nat) (e : Exp α),
       · simp only [lcb, decide_eq_true_eq] at h ⊢; omega
   | _ => intro h; simp_all [lcb, openRec]
 
+/-- A locally closed term passes `lcb 0`. -/
 theorem lc_imp_lcb {e : Exp α} (h : IsLocallyClosed e) : lcb 0 e = true := by
   induction h with
   | lam L e' _ ih | fix L e' _ ih =>
-      obtain ⟨x, hx⟩ := Cslib.HasFresh.fresh_exists L
+      obtain ⟨x, hx⟩ := HasFresh.fresh_exists L
       have hx' := ih x hx
       simp only [open'] at hx'
       simpa [lcb] using lcb_openRec_fvar_rev x 0 e' hx'
@@ -677,7 +695,7 @@ instance [DecidableEq α] : DecidableEq (BaseLit α)
   | .real _, .int _ | .real _, .bool _ | .real _, .unit | .real _, .loc _ | .real _, .lbl _ =>
       isFalse (by intro h; cases h)
 
-/-- Matches `p` against `e`. On success returns the bindings: `e` itself at a wildcard, `()` at a
+/-- Matches `p` against `e`, returning on success the bindings: `e` itself at a wildcard, `()` at a
 literal, the pair of sub-bindings at a pair, and the inner bindings under inl/inr. -/
 def Pat.tryMatch : Pat rT → Exp rT → Option (Exp rT)
   | .wildcard, e => some e
@@ -690,6 +708,7 @@ def Pat.tryMatch : Pat rT → Exp rT → Option (Exp rT)
   | .inr p, .inr e => p.tryMatch e
   | _, _ => none
 
+/-- Every literal equals itself under `==`. -/
 theorem BaseLit.beq_self_true [LawfulBEq rT] (l : BaseLit rT) : (l == l) = true := by
   cases l with
   | int z =>
@@ -713,12 +732,14 @@ instance instLawfulBEqBaseLit [LawfulBEq rT] : LawfulBEq (BaseLit rT) where
         | (exact LawfulBEq.eq_of_beq h)
   rfl {l} := BaseLit.beq_self_true l
 
+/-- A literal pattern matches the same literal with unit bindings. -/
 theorem Pat.tryMatch_lit_eq [LawfulBEq rT] (l : BaseLit rT) :
     Pat.tryMatch (.lit l) (.lit l) = some (.lit .unit) := by
   show (if (l == l) = true then some (Exp.lit BaseLit.unit) else none) = _
   refine Option.ite_some_none_eq_some.mpr ⟨?_, rfl⟩
   exact BaseLit.beq_self_true l
 
+/-- A literal pattern does not match a different literal. -/
 theorem Pat.tryMatch_lit_ne {l1 l2 : BaseLit rT} (h : ¬ (l1 == l2) = true) :
     Pat.tryMatch (.lit l1) (.lit l2) = none := by
   show (if (l1 == l2) = true then some (Exp.lit BaseLit.unit) else none) = _
@@ -743,6 +764,7 @@ section NoRealParam
 
 variable {rT : Type _}
 
+/-- A value is locally closed. -/
 theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .lit => .lit _
   | _, .lam h => h
@@ -757,18 +779,17 @@ section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
 
-/-- A value: an expression with a witness that it is a value, and its local closedness.
-A `structure`, not `(e : Exp α) × IsVal e`, so that `Val α` does not reduce to `Sigma`:
-its measurable space (`CoreMeasures/Val.lean`) is the comap of `Val.fst`, not the coarser
-`Sigma.instMeasurableSpace`. -/
+/-- A value: an expression with a witness that it is a value and its local closedness, as a
+`structure` so that its measurable space is the comap of `Val.fst`. -/
 structure Val (α : Type _) where
+  /-- The underlying expression. -/
   fst : Exp α
+  /-- The witness that `fst` is a value. -/
   snd : IsVal fst
   /-- Lets proofs rewrite `open'` on an abstract value to the value itself (`open_lc`). -/
   lc : fst.IsLocallyClosed
 
-/-- The value of a literal. `@[reducible]` because the proof-mode unifier (`iapply`) matches at
-reducible transparency. -/
+/-- The value of a literal, `@[reducible]` so that the proof-mode unifier (`iapply`) matches it. -/
 @[reducible, coe] def Val.ofBaseLit (b : BaseLit rT) : Val rT :=
   ⟨.lit b, .lit, Exp.IsLocallyClosed.lit b⟩
 
@@ -784,21 +805,30 @@ instance : Coe Bool (BaseLit rT) := ⟨.bool⟩
 instance : Coe Unit (BaseLit rT) := ⟨fun _ => .unit⟩
 instance : Coe rT (BaseLit rT) := ⟨.real⟩
 
+/-- The integer value `n`. -/
 abbrev Val.int  (n : Int) : Val rT  := Val.ofBaseLit (.int n)
+/-- The boolean value `b`. -/
 abbrev Val.bool (b : Bool) : Val rT := Val.ofBaseLit (.bool b)
+/-- The unit value. -/
 abbrev Val.unit : Val rT            := Val.ofBaseLit .unit
+/-- The location value `l`. -/
 abbrev Val.loc  (l : Loc) : Val rT  := Val.ofBaseLit (.loc l)
+/-- The tape-label value `l`. -/
 abbrev Val.lbl  (l : Lbl) : Val rT  := Val.ofBaseLit (.lbl l)
+/-- The real value `r`. -/
 abbrev Val.real (r : rT) : Val rT   := Val.ofBaseLit (.real r)
 
+/-- The pair of two values. -/
 @[reducible] def Val.pair (v w : Val rT) : Val rT :=
   ⟨.pair v.1 w.1, .pair v.2 w.2, .pair v.lc w.lc⟩
 
+/-- The left injection of a value. -/
 @[reducible] def Val.inl (v : Val rT) : Val rT := ⟨.inl v.1, .inl v.2, .inl v.lc⟩
 
+/-- The right injection of a value. -/
 @[reducible] def Val.inr (v : Val rT) : Val rT := ⟨.inr v.1, .inr v.2, .inr v.lc⟩
 
-/-- `NONE = inl ()`, `SOME v = inr v`. -/
+/-- The option encoding of a value: `none` maps to `inl ()` and `some v` to `inr v`. -/
 @[reducible] def Val.option : Option (Val rT) → Val rT
   | none => .inl .unit
   | some v => .inr v
@@ -809,8 +839,11 @@ section NoRealParam
 
 variable {rT : Type _}
 
+/-- The underlying expression of `Val.pair v w` is the pair of the underlying expressions. -/
 @[simp] theorem Val.pair_fst (v w : Val rT) : (Val.pair v w).1 = .pair v.1 w.1 := rfl
+/-- The underlying expression of `Val.inl v` is `inl` of the underlying expression. -/
 @[simp] theorem Val.inl_fst (v : Val rT) : (Val.inl v).1 = .inl v.1 := rfl
+/-- The underlying expression of `Val.inr v` is `inr` of the underlying expression. -/
 @[simp] theorem Val.inr_fst (v : Val rT) : (Val.inr v).1 = .inr v.1 := rfl
 
 end NoRealParam
@@ -831,6 +864,7 @@ def check? : (e : Exp rT) → Option (IsVal e)
   | .inr e => do return .inr (← check? e)
   | _ => none
 
+/-- Value witnesses of the same expression are equal. -/
 theorem subsingleton : (w1 w2 : IsVal e) → w1 = w2
   | .lit, .lit => rfl
   | .lam _, .lam _ => rfl
@@ -846,10 +880,13 @@ end IsVal
 /-- Propositional form of `IsVal`. -/
 def Exp.isValue (e : Exp rT) : Prop := Nonempty (IsVal e)
 
+/-- A value witness gives the proposition `isValue`. -/
 theorem IsVal.toIsValue (w : IsVal e) : e.isValue := ⟨w⟩
 
+/-- Extracts a value witness from `isValue`. -/
 noncomputable def IsVal.ofIsValue (h : e.isValue) : IsVal e := h.some
 
+/-- A value witness makes `check?` return some witness. -/
 theorem IsVal.check?_some : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
   | .lit => ⟨.lit, rfl⟩
   | .lam h => ⟨.lam h, by simp only [check?, dite_eq_left (Exp.lc_imp_lcb h)]⟩
@@ -861,14 +898,15 @@ theorem IsVal.check?_some : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
   | .inl h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inl w, by simp [check?, hw]⟩
   | .inr h => by obtain ⟨w, hw⟩ := check?_some h; exact ⟨.inr w, by simp [check?, hw]⟩
 
-/-- Value shape, ignoring local closedness (`R` for raw). With `lcb 0 e` it characterizes
-`isValue` (`isValue_iff_isValueR`), which lets proofs decide value-ness by shape. -/
+/-- Value shape ignoring local closedness (`R` for raw), which with `lcb 0 e` characterizes
+`isValue` (`isValue_iff_isValueR`). -/
 @[simp] def Exp.isValueR : Exp rT → Prop
   | .lit _ | .lam _ | .fix _ => True
   | .pair e1 e2 => e1.isValueR ∧ e2.isValueR
   | .inl e | .inr e => e.isValueR
   | _ => False
 
+/-- An expression is a value iff it has value shape and passes `lcb 0`. -/
 theorem Exp.isValue_iff_isValueR {e : Exp α} :
     e.isValue ↔ e.isValueR ∧ Exp.lcb 0 e = true := by
   constructor
@@ -891,15 +929,19 @@ theorem Exp.isValue_iff_isValueR {e : Exp α} :
     | inr e' ih => exact ⟨.inr (ih hr (by simpa only [lcb] using hl)).some⟩
     | _ => exact absurd hr id
 
+/-- A value has value shape. -/
 theorem Exp.isValueR_of_isValue {e : Exp α} (h : e.isValue) : e.isValueR :=
   (Exp.isValue_iff_isValueR.mp h).1
 
+/-- An expression without value shape is not a value. -/
 theorem Exp.not_isValue_of_not_isValueR {e : Exp α} (h : ¬e.isValueR) : ¬e.isValue :=
   fun hv => h (Exp.isValueR_of_isValue hv)
 
+/-- If `check?` returns `none` then the expression is not a value. -/
 theorem IsVal.not_isValue_of_check?_none {e : Exp α} (h : IsVal.check? e = none) : ¬e.isValue :=
   fun ⟨w⟩ => by obtain ⟨_, hw⟩ := w.check?_some; simp_all
 
+/-- A non-value makes `check?` return `none`. -/
 theorem IsVal.check?_eq_none {e : Exp α} (h : ¬e.isValue) : IsVal.check? e = none := by
   cases hc : IsVal.check? e with
   | none => rfl
@@ -910,8 +952,10 @@ instance Exp.decIsValue (e : Exp α) : Decidable e.isValue :=
   | some w => isTrue ⟨w⟩
   | none => isFalse (IsVal.not_isValue_of_check?_none hc)
 
+/-- The underlying expression of a value is a value. -/
 @[simp] theorem Val.isValue (v : @Val α) : v.fst.isValue := ⟨v.snd⟩
 
+/-- Two values with equal underlying expressions are equal. -/
 theorem Val.ext {v1 v2 : Val α} (h : v1.fst = v2.fst) : v1 = v2 := by
   obtain ⟨e1, w1, h1⟩ := v1
   obtain ⟨e2, w2, h2⟩ := v2
@@ -921,7 +965,7 @@ theorem Val.ext_iff {v1 v2 : Val α} : v1 = v2 ↔ v1.fst = v2.fst :=
   ⟨congrArg _, Val.ext⟩
 
 instance [Countable α] : Countable (Val α) :=
-  Function.Injective.countable (f := Val.fst) fun _ _ => Val.ext
+  Function.Injective.countable fun _ _ => Val.ext
 
 /-- The value an expression denotes, if it is one. -/
 def Exp.toVal? (e : Exp α) : Option (Val α) :=
@@ -929,13 +973,16 @@ def Exp.toVal? (e : Exp α) : Option (Val α) :=
   | some w => some ⟨e, w, w.lc⟩
   | none => none
 
+/-- `toVal?` returns `none` on a non-value. -/
 theorem Exp.toVal?_none_of_not_isValue {e : Exp α} (h : ¬e.isValue) : e.toVal? = none := by
   simp only [toVal?, IsVal.check?_eq_none h]
 
+/-- `toVal?` returns some value on a value. -/
 theorem Exp.toVal?_eq_some_of_isValue {e : Exp α} (h : e.isValue) : ∃ v, e.toVal? = some v := by
   obtain ⟨w, hw⟩ := h.some.check?_some
   exact ⟨⟨e, w, w.lc⟩, by simp only [Exp.toVal?, hw]⟩
 
+/-- `toVal?` returns `none` exactly on non-values. -/
 @[simp] theorem Exp.toVal?_eq_none {e : Exp α} : e.toVal? = none ↔ ¬e.isValue := by
   constructor
   · intro h
@@ -947,25 +994,37 @@ theorem Exp.toVal?_eq_some_of_isValue {e : Exp α} (h : e.isValue) : ∃ v, e.to
 
 Side conditions of the weakest-precondition lifting rules. -/
 
+/-- An `alloc` is not a value. -/
 theorem Exp.alloc_not_isValue {e : Exp α} : ¬ (Exp.alloc e).isValue := fun ⟨w⟩ => nomatch w
+/-- A `load` is not a value. -/
 theorem Exp.load_not_isValue {e : Exp α} : ¬ (Exp.load e).isValue := fun ⟨w⟩ => nomatch w
+/-- A `store` is not a value. -/
 theorem Exp.store_not_isValue {e₁ e₂ : Exp α} :
     ¬ (Exp.store e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
+/-- A `tape` is not a value. -/
 theorem Exp.tape_not_isValue {e : Exp α} : ¬ (Exp.tape e).isValue := fun ⟨w⟩ => nomatch w
+/-- A `rand` is not a value. -/
 theorem Exp.rand_not_isValue {e₁ e₂ : Exp α} :
     ¬ (Exp.rand e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
+/-- `urand` is not a value. -/
 theorem Exp.urand_not_isValue : ¬ (Exp.urand : Exp α).isValue := fun ⟨w⟩ => nomatch w
 
+/-- `toVal?` of an `alloc` is `none`. -/
 theorem Exp.alloc_toVal?_eq_none {e : Exp α} : (Exp.alloc e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.alloc_not_isValue
+/-- `toVal?` of a `load` is `none`. -/
 theorem Exp.load_toVal?_eq_none {e : Exp α} : (Exp.load e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.load_not_isValue
+/-- `toVal?` of a `store` is `none`. -/
 theorem Exp.store_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.store e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.store_not_isValue
+/-- `toVal?` of a `tape` is `none`. -/
 theorem Exp.tape_toVal?_eq_none {e : Exp α} : (Exp.tape e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.tape_not_isValue
+/-- `toVal?` of a `rand` is `none`. -/
 theorem Exp.rand_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.rand e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.rand_not_isValue
+/-- `toVal?` of `urand` is `none`. -/
 theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.urand_not_isValue
 
@@ -977,6 +1036,7 @@ macro "solve_not_value" : term =>
 `delabExpOfVal` delaborator can match it syntactically. -/
 def Exp.ofVal (v : Val α) : Exp α := v.1
 
+/-- `toVal?` recovers a value from its expression `ofVal`. -/
 theorem Exp.toVal?_ofVal (v : Val α) : (Exp.ofVal v).toVal? = some v := by
   obtain ⟨e, w, hlc⟩ := v
   simp only [Exp.ofVal, Exp.toVal?]
@@ -998,8 +1058,10 @@ end NoRealParam
 section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
+/-- `toVal?` recovers a value from its underlying expression. -/
 @[simp] theorem Val.toVal?_fst (v : Val α) : v.fst.toVal? = some v := Exp.toVal?_ofVal v
 
+/-- If `toVal?` returns `v` then `ofVal v` is the expression. -/
 theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v) :
     Exp.ofVal v = e := by
   simp only [toVal?] at h
@@ -1007,6 +1069,7 @@ theorem Exp.ofVal_of_toVal_some {e : Exp α} {v : Val α} (h : e.toVal? = some v
   · simp at h; exact congrArg Val.fst h.symm
   · simp at h
 
+/-- `Exp.ofVal` is injective. -/
 theorem Exp.ofVal_injective : Function.Injective (@Exp.ofVal α) :=
   fun _ _ h => Val.ext h
 
@@ -1058,7 +1121,9 @@ def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
 /-- A random tape: a bound `N` and a queue of presampled values in `[0, N)`; `rand` reads from the
 front, presampling appends at the back. -/
 structure Tape where
+  /-- The upper bound `N` of the tape's values. -/
   bound : Int
+  /-- The queue of presampled values below the bound. -/
   presamples : List { z : Int // 0 ≤ z ∧ z < bound}
   deriving Inhabited, Countable
 
@@ -1067,9 +1132,9 @@ def Tape.empty (z : Int) : Tape := ⟨z, []⟩
 
 instance instCountableExtTreeMapLoc {V : Type _} [Countable V] :
     Countable (ExtTreeMap Loc V compare) :=
-  Function.Injective.countable (f := ExtTreeMap.toList) fun _ _ => ExtTreeMap.toList_inj.mp
+  Function.Injective.countable fun _ _ => ExtTreeMap.toList_inj.mp
 
-/-- Finite maps keyed by `Int` (heap locations and tape labels). Hides the representation from
+/-- Finite maps keyed by `Int` (heap locations and tape labels), hiding the representation from
 typeclass inference. -/
 @[reducible] def LocHeap (V : Type _) : Type _ := ExtTreeMap Loc V compare
 
@@ -1092,7 +1157,9 @@ theorem _root_.Std.ExtTreeMap.insert_eq_PartialMap_insert {V : Type _}
 
 /-- Machine state: the heap and the random tapes. -/
 structure State (α : Type _) where
+  /-- The heap, a map from locations to values. -/
   heap : LocHeap (Val α)
+  /-- The random tapes, a map from labels to tapes. -/
   tapes : LocHeap Tape
   deriving Inhabited, Countable
 
@@ -1105,16 +1172,19 @@ def State.update_heap (σ : State α)
 def State.update_tapes (σ : State α) (f : ExtTreeMap Loc Tape → ExtTreeMap Loc Tape) : State α :=
   ⟨σ.heap, f σ.tapes⟩
 
+/-- Updating the tapes twice at the same label keeps only the last update. -/
 theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
     (σ.update_tapes (·.insert l xs)).update_tapes (·.insert l ys) =
       σ.update_tapes (·.insert l ys) := by
   unfold State.update_tapes; simp; grind
 
+/-- Equal states after inserting at label `l` have equal inserted tapes. -/
 theorem State.update_tapes_same {σ σ' : State α}
     (h : σ.update_tapes (·.insert l xs) = σ'.update_tapes (·.insert l ys)) :
     xs = ys := by
   simpa [State.update_tapes, LocHeap] using congrArg (·.tapes[l]?) h
 
+/-- Re-inserting the tape already at `l` leaves the state unchanged. -/
 theorem State.update_tapes_no_change {σ : State α} (h : σ.tapes[l]? = some ys) :
     σ.update_tapes (·.insert l ys) = σ := by
   unfold State.update_tapes; congr 2; grind
@@ -1134,14 +1204,16 @@ theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 �
 
 /-- A configuration: an expression and a state. -/
 structure Cfg α where
+  /-- The expression. -/
   expr : Exp α
+  /-- The state. -/
   state : State α
   deriving Countable
 
 /-! ## Evaluation contexts -/
 
-/-- One-hole frames. `…L v` has the hole in the left operand with the right already a value;
-`…R e` has the hole in the right operand. Evaluation is right-to-left, as in Clutch/HeapLang. -/
+/-- One-hole frames: `…L v` has the hole in the left operand with the right already a value, and
+`…R e` has it in the right operand, so evaluation runs right-to-left. -/
 @[uncurriedProjections, constructors]
 inductive EctxItem (α : Type _)
   | appL (v2 : Val α)
@@ -1192,14 +1264,13 @@ inductive EctxItem (α : Type _)
   | .randR e1 => .rand e1 e
   | .scrut p => .scrut e p
 
+/-- If a filled frame is locally closed then so is the hole's content. -/
 theorem EctxItem.fillItem_isLocallyClosed {Ki : EctxItem α} {e : Exp α}
     (h : (Ki.fillItem e).IsLocallyClosed) : e.IsLocallyClosed := by
   cases Ki <;> (simp only [fillItem] at h; cases h; assumption)
 
-/-- Splits off the outermost frame whose hole is the next subterm to evaluate, trying the
-right operand first. It is `none` when every operand that is evaluated is already a value (so `e`
-is a head redex, a value, or has no subterm to evaluate). Operands are tested with `toVal?`, so an
-open `lam`/`fix` counts as unevaluated. -/
+/-- Splits off the outermost frame whose hole is the next subterm to evaluate, trying the right
+operand first, and is `none` when every evaluated operand is already a value. -/
 def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   match e with
   | app e1 e2 =>
@@ -1241,23 +1312,28 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
     e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none
   | _ => none
 
+/-- Plugging into a fixed frame is injective. -/
 theorem EctxItem.fillItem_injective : Function.Injective (EctxItem.fillItem K) := by
   cases K <;> simp [Function.Injective, EctxItem.fillItem]
 
+/-- If a filled frame is a value then so is the hole's content. -/
 theorem EctxItem.fillItem_isValue {K : EctxItem α} : (K.fillItem e).isValue → e.isValue := by
   rintro ⟨w⟩
   cases K <;> (simp only [EctxItem.fillItem] at w; cases w) <;> exact ‹IsVal e›.toIsValue
 
+/-- If a filled frame has value shape then so does the hole's content. -/
 theorem EctxItem.fillItem_isValueR {Ki : EctxItem α} {e : Exp α}
     (h : (Ki.fillItem e).isValueR) : e.isValueR := by
   cases Ki <;> simp_all [EctxItem.fillItem, Exp.isValueR, Exp.ofVal]
 
+/-- Two frames filling non-values with equal results are equal. -/
 theorem EctxItem.fillItem_noVal_inj {Ki1 Ki2 : EctxItem α} {e1 e2 : Exp α}
     (hv1 : ¬e1.isValue) (hv2 : ¬e2.isValue)
     (h : Ki1.fillItem e1 = Ki2.fillItem e2) : Ki1 = Ki2 := by
   cases Ki1 <;> cases Ki2 <;> simp_all [EctxItem.fillItem, Exp.ofVal] <;>
     grind [Val.ext_iff, Val.isValue, Exp.isValue_iff_isValueR]
 
+/-- `decompItem` splits a frame filled with a non-value back into the frame and the hole. -/
 theorem EctxItem.decompItem_fillItem (Ki : EctxItem α) {e : Exp α} (hv : ¬e.isValue) :
     (Ki.fillItem e).decompItem = some (Ki, e) := by
   cases Ki with
@@ -1266,6 +1342,7 @@ theorem EctxItem.decompItem_fillItem (Ki : EctxItem α) {e : Exp α} (hv : ¬e.i
          Val.toVal?_fst, Exp.ofVal]
   | _ => simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv]
 
+/-- A split by `decompItem` refills to the original with a non-value in the hole. -/
 theorem Exp.decompItem_fill {e e' : Exp α} {Ki : EctxItem α}
     (h : e.decompItem = some (Ki, e')) : Ki.fillItem e' = e ∧ ¬e'.isValue := by
   simp only [decompItem, toVal?] at h
@@ -1275,6 +1352,7 @@ theorem Exp.decompItem_fill {e e' : Exp α} {Ki : EctxItem α}
     (split at h <;> simp_all <;> (try obtain ⟨rfl, rfl⟩ := h; simp_all)) <;>
     (split at h <;> simp_all <;> (try obtain ⟨rfl, rfl⟩ := h; simp_all))
 
+/-- A frame filled with a non-value is not a value. -/
 theorem EctxItem.fillItem_noVal {Ki : EctxItem α} {e : Exp α} (hv : ¬e.isValue) :
     ¬(Ki.fillItem e).isValue := (hv <| EctxItem.fillItem_isValue ·)
 
@@ -1290,9 +1368,11 @@ def Ectx.comp (K1 K2 : Ectx α) : Ectx α := K2 ++ K1
 /-- Plugs `e` into the context. -/
 def Ectx.fill (K : Ectx α) (e : Exp α) : Exp α := K.foldl (flip EctxItem.fillItem) e
 
+/-- Filling an appended context fills the second context around the first. -/
 theorem Ectx.fill_append (K1 K2 : Ectx α) e : (K1 ++ K2).fill e = K2.fill (K1.fill e) :=
   List.foldl_append
 
+/-- Filling a context extended by one frame applies that frame last. -/
 @[simp] theorem Ectx.fill_snoc (K : Ectx α) (Ki : EctxItem α) (e : Exp α) :
     Ectx.fill (K ++ [Ki]) e = Ki.fillItem (K.fill e) :=
   List.foldl_append
@@ -1303,97 +1383,126 @@ The `refines_bind` / `refines_pure_*` rules match `K.fill _` syntactically, so a
 about a bare redex has to be re-bracketed first. Each lemma below states the relevant
 definitional equality in the reducing direction; use `←` to re-bracket a goal. -/
 
+/-- Filling the empty context gives the expression back. -/
 @[simp] theorem Ectx.fill_nil (e : Exp α) : Ectx.fill ([] : Ectx α) e = e := rfl
 
+/-- An expression is the fill of the empty context. -/
 theorem Ectx.eq_fill_nil (e : Exp α) : e = Ectx.fill ([] : Ectx α) e := rfl
 
+/-- Filling a one-frame context with an `app` frame with the argument value on the right. -/
 theorem Ectx.fill_appL (v2 : Val α) (e : Exp α) :
     Ectx.fill [.appL v2] e = .app e (.ofVal v2) := rfl
 
+/-- Filling a one-frame context with an `app` frame with the function on the left. -/
 theorem Ectx.fill_appR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.appR e1] e = .app e1 e := rfl
 
+/-- Filling a one-frame context with a `unop` frame. -/
 theorem Ectx.fill_unop (op : UnOp) (e : Exp α) :
     Ectx.fill [.unop op] e = .unop op e := rfl
 
+/-- Filling a one-frame context with a `binop` frame with the right operand a value. -/
 theorem Ectx.fill_binopL (op : BinOp) (v2 : Val α) (e : Exp α) :
     Ectx.fill [.binopL op v2] e = .binop op e (.ofVal v2) := rfl
 
+/-- Filling a one-frame context with a `binop` frame with the left operand fixed. -/
 theorem Ectx.fill_binopR (op : BinOp) (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.binopR op e1] e = .binop op e1 e := rfl
 
+/-- Filling a one-frame context with a `cond` frame. -/
 theorem Ectx.fill_condC (e1 e2 : Exp α) (e : Exp α) :
     Ectx.fill [.condC e1 e2] e = .cond e e1 e2 := rfl
 
+/-- Filling a one-frame context with a `pair` frame with the right component a value. -/
 theorem Ectx.fill_pairL (v2 : Val α) (e : Exp α) :
     Ectx.fill [.pairL v2] e = .pair e (.ofVal v2) := rfl
 
+/-- Filling a one-frame context with a `pair` frame with the left component fixed. -/
 theorem Ectx.fill_pairR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.pairR e1] e = .pair e1 e := rfl
 
+/-- Filling a one-frame context with a `fst` frame. -/
 theorem Ectx.fill_fst (e : Exp α) :
     Ectx.fill [.fst] e = .fst e := rfl
 
+/-- Filling a one-frame context with a `snd` frame. -/
 theorem Ectx.fill_snd (e : Exp α) :
     Ectx.fill [.snd] e = .snd e := rfl
 
+/-- Filling a one-frame context with an `inl` frame. -/
 theorem Ectx.fill_inl (e : Exp α) :
     Ectx.fill [.inl] e = .inl e := rfl
 
+/-- Filling a one-frame context with an `inr` frame. -/
 theorem Ectx.fill_inr (e : Exp α) :
     Ectx.fill [.inr] e = .inr e := rfl
 
+/-- Filling a one-frame context with a `case` frame. -/
 theorem Ectx.fill_case (e1 e2 : Exp α) (e : Exp α) :
     Ectx.fill [.case e1 e2] e = .case e e1 e2 := rfl
 
+/-- Filling a one-frame context with an `alloc` frame. -/
 theorem Ectx.fill_alloc (e : Exp α) :
     Ectx.fill [.alloc] e = .alloc e := rfl
 
+/-- Filling a one-frame context with a `load` frame. -/
 theorem Ectx.fill_load (e : Exp α) :
     Ectx.fill [.load] e = .load e := rfl
 
+/-- Filling a one-frame context with a `store` frame with the stored value fixed. -/
 theorem Ectx.fill_storeL (v2 : Val α) (e : Exp α) :
     Ectx.fill [.storeL v2] e = .store e (.ofVal v2) := rfl
 
+/-- Filling a one-frame context with a `store` frame with the location fixed. -/
 theorem Ectx.fill_storeR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.storeR e1] e = .store e1 e := rfl
 
+/-- Filling a one-frame context with a `tape` frame. -/
 theorem Ectx.fill_tape (e : Exp α) :
     Ectx.fill [.tape] e = .tape e := rfl
 
+/-- Filling a one-frame context with a `rand` frame with the second argument a value. -/
 theorem Ectx.fill_randL (v2 : Val α) (e : Exp α) :
     Ectx.fill [.randL v2] e = .rand e (.ofVal v2) := rfl
 
+/-- Filling a one-frame context with a `rand` frame with the first argument fixed. -/
 theorem Ectx.fill_randR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.randR e1] e = .rand e1 e := rfl
 
+/-- Filling a one-frame context with a `scrut` frame. -/
 theorem Ectx.fill_scrut (p : Pat α) (e : Exp α) :
     Ectx.fill [.scrut p] e = .scrut e p := rfl
 
 /-! ### Properties of `Ectx.fill` -/
 
+/-- Filling a composed context fills the two contexts in turn. -/
 theorem Ectx.fill_comp (K1 K2 : Ectx α) (e : Exp α) :
     K1.fill (K2.fill e) = (K1.comp K2).fill e := by
   simp [Ectx.comp, Ectx.fill_append]
 
+/-- Plugging into a fixed context is injective. -/
 theorem Ectx.fill_injective (K : Ectx α) : Function.Injective K.fill := by
   induction K with
   | nil => intro _ _ h; exact h
   | cons Ki K ih => exact fun _ _ h => EctxItem.fillItem_injective (ih h)
 
+/-- A context filled with a non-value is not a value. -/
 theorem Ectx.fill_noVal {K : Ectx α} {e : Exp α} (hv : ¬e.isValue) : ¬(K.fill e).isValue := by
   induction K generalizing e with
   | nil => exact hv
   | cons Ki K ih => exact ih (EctxItem.fillItem_noVal hv)
 
+/-- If a filled context is a value then so is the hole's content. -/
 theorem Ectx.fill_isValue {K : Ectx α} {e : Exp α} (hv : (K.fill e).isValue) : e.isValue :=
   if h : e.isValue then h else absurd hv (Ectx.fill_noVal h)
 
+/-- If a filled context has value shape then so does the hole's content. -/
 theorem Ectx.fill_isValueR {K : Ectx α} {e : Exp α} (h : (K.fill e).isValueR) : e.isValueR := by
   induction K generalizing e with
   | nil => exact h
   | cons Ki K ih => exact EctxItem.fillItem_isValueR (ih h)
 
+/-- If a filled context is locally closed then so is the hole's content. -/
 theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
     (h : (K.fill e).IsLocallyClosed) : e.IsLocallyClosed := by
   induction K generalizing e with
@@ -1402,6 +1511,7 @@ theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
 
 /-! ### Multi-frame decomposition: `Exp.decomp` -/
 
+/-- The hole found by `decompItem` is smaller than the expression. -/
 theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
     e'.size < e.size := by
   simp only [decompItem, toVal?] at h
@@ -1409,9 +1519,8 @@ theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
     (split at h <;> simp_all <;> try omega) <;>
     (split at h <;> simp_all <;> try omega)
 
-/-- Splits an expression into a maximal evaluation context and the redex in its hole. The context
-is innermost frame first (the frame split off first ends up last); `decomp_fill` gives
-`K.fill e' = e`; for a value `K = []` (`decomp_val_empty`). -/
+/-- Splits an expression into a maximal evaluation context, innermost frame first, and the redex in
+its hole. -/
 def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
   match _h : e.decompItem with
   | some (Ki, e') =>
@@ -1421,6 +1530,7 @@ def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
   termination_by e.size
   decreasing_by exact Exp.decompItem_size _h
 
+/-- The one-step unfolding equation for `Exp.decomp`. -/
 theorem Exp.decomp_unfold (e : Exp α) :
     e.decomp =
       match _ : e.decompItem with
@@ -1428,9 +1538,11 @@ theorem Exp.decomp_unfold (e : Exp α) :
       | none => ([], e) :=
   Exp.decomp.eq_1 e
 
+/-- If `decompItem` is `none` then the redex of `decomp` is the expression itself. -/
 theorem Exp.decomp_snd_of_decompItem_none {e : Exp α} (hd : e.decompItem = none) :
     e.decomp.2 = e := by rw [Exp.decomp_unfold, hd]
 
+/-- An empty context from `decomp` means `decompItem` is `none` and the redex is the expression. -/
 theorem Exp.decomp_inv_nil {e e' : Exp α} (h : e.decomp = ([], e')) :
     e.decompItem = none ∧ e = e' := by
   rw [Exp.decomp] at h
@@ -1438,6 +1550,7 @@ theorem Exp.decomp_inv_nil {e e' : Exp α} (h : e.decomp = ([], e')) :
   · simp_all [List.append_eq_nil_iff]
   · exact ⟨by assumption, (Prod.mk.inj h).2⟩
 
+/-- A `decomp` context ending in `Ki` comes from one `decompItem` step and a recursive `decomp`. -/
 theorem Exp.decomp_inv_cons {Ki : EctxItem α} {K : Ectx α} {e e'' : Exp α}
     (h : e.decomp = (K ++ [Ki], e'')) :
     ∃ e', e.decompItem = some (Ki, e') ∧ e'.decomp = (K, e'') := by
@@ -1455,6 +1568,7 @@ theorem Exp.decomp_inv_cons {Ki : EctxItem α} {K : Ectx α} {e e'' : Exp α}
     exact ⟨e', hd, Prod.ext hK' (by simp [he])⟩
   · simp_all [List.append_eq_nil_iff]
 
+/-- Filling the `decomp` context with its redex gives back the expression. -/
 theorem Exp.decomp_fill {K : Ectx α} {e e' : Exp α} (h : e.decomp = (K, e')) :
     K.fill e' = e := by
   induction K using List.reverseRecOn generalizing e e' with
@@ -1464,6 +1578,7 @@ theorem Exp.decomp_fill {K : Ectx α} {e e' : Exp α} (h : e.decomp = (K, e')) :
     rw [Ectx.fill_snoc, ih hK]
     exact (decompItem_fill hKi).1
 
+/-- If the redex from `decomp` is a value then the context is empty. -/
 theorem Exp.decomp_val_empty {K : Ectx α} {e e' : Exp α}
     (hd : e.decomp = (K, e')) (hv : e'.isValue) : K = [] := by
   induction K using List.reverseRecOn generalizing e e' with
@@ -1484,6 +1599,7 @@ theorem Exp.decomp_fill_comp {e e' : Exp α} {K K' : Ectx α}
     rw [Ectx.fill_snoc, decomp_unfold, EctxItem.decompItem_fillItem Ki (Ectx.fill_noVal hv)]
     simp only [ih, List.append_assoc]
 
+/-- Filling a context around a head redex does not change the redex found by `decomp`. -/
 theorem Exp.decomp_snd_fill {K : Ectx α} {e : Exp α} (hv : ¬e.isValue)
     (hd : e.decompItem = none) : (K.fill e).decomp.2 = e := by
   have he : e.decomp = ([], e) := by rw [Exp.decomp_unfold, hd]

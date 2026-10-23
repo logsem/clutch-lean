@@ -18,6 +18,5 @@ public import Metrology.TotalEris.DistSpecReduction
 /-!
 # TotalEris
 
-The total-correctness weakest-precondition calculus for ProbLang: its model, lifting
-lemmas, error-credit rules, adequacy theorems, and `twp_*` proof tactics.
+The total-correctness weakest-precondition calculus for ProbLang, with its rules and tactics.
 -/

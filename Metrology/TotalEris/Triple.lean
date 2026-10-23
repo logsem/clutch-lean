@@ -2,51 +2,20 @@ module
 
 public import Metrology.TotalEris.TotalWeakestpre
 
-@[expose] public section
-
-open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris.ErisWpGS
-open Lean
-
-namespace ProbLang
-namespace TotalEris
-
 /-!
 # Hoare-triple syntax for `tglWp`
 
-A total-correctness triple
-
-```
-[{ P }] e @ E [{ x, RET v; Q }]
-```
-
-means: from `P`, the program `e` terminates at a value of the form `v`, and `Q` holds
-of the result. It abbreviates the continuation-passing entailment
-
-```
-⊢ ∀ Φ, P -∗ (∀ x, Q -∗ Φ v) -∗ tglWp E e Φ
-```
-
-so a triple is proved by `iintro %Φ HP HΦ` and used by `iapply`, which leaves the
-precondition and the continuation as goals.
-
-The mask `@ E` defaults to `⊤`, and the binder group before `RET` is optional. The
-brackets are `[{ … }]` rather than `{{ … }}` because these are total triples: `e` is
-claimed to terminate, not merely to be safe.
-
-Nothing in a triple names the ambient `GF`, so a statement whose surroundings leave it
-open must pin it once, by ascribing the precondition:
-
-```
-[{ (↯ ε : IProp GF) }] pl(&Gauss #()) @ E [{ y, RET .real y; ⌜|y| < t⌝ }]
-```
-
-This is the same pin `⊢@{IProp GF}` performs for a bare-`tglWp` statement, and is
-needed for the same reason: `ECGS`/`ErisWpGS` do not take `GF` as an `outParam`, so
-instance search will not run while it is a metavariable.
-
-The shape is shared with the HeapLang triples of `Iris.BI.WeakestPre`. Both parses are
-attempted and only one elaborates, so the two coexist.
+A total triple `[{ P }] e @ E [{ x, RET v; Q }]` abbreviates
+`⊢ ∀ Φ, P -∗ (∀ x, Q -∗ Φ v) -∗ tglWp E e Φ`.
 -/
+
+@[expose] public section
+
+open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris.ErisWpGS
+open Lean Macro
+
+namespace ProbLang
+namespace TotalEris
 
 /-- The precondition of a total triple. -/
 declare_syntax_cat twpPre
@@ -66,14 +35,17 @@ syntax (name := twpTriple) twpPre twpProg twpPost : term
 /-- The total triple notation with the program logic instance pinned by `⊢@{PROP}`. -/
 syntax (name := twpTriplePinned) "⊢@{" term "} " twpPre twpProg twpPost : term
 
+/-- Reads the precondition of a total triple, defaulting to `emp`. -/
 meta def parseTwpPre : TSyntax `twpPre → MacroM Term
   | `(twpPre| [{ $[$P]? }]) => P.getDM `(iprop(emp))
-  | _ => Macro.throwUnsupported
+  | _ => throwUnsupported
 
+/-- Reads the program and the mask of a total triple, defaulting the mask to `⊤`. -/
 meta def parseTwpProg : TSyntax `twpProg → MacroM (Term × Term)
   | `(twpProg| $e:term $[ @ $E:term]?) => return (e, ← E.getDM `(⊤))
-  | _ => Macro.throwUnsupported
+  | _ => throwUnsupported
 
+/-- Reads the postcondition of a total triple as a continuation entailment. -/
 meta def parseTwpPost : TSyntax `twpPost → MacroM Term
   | `(twpPost| [{ $[$[$xs]* ,]? RET $pat ; $Q }]) => do
     match xs with
@@ -85,19 +57,21 @@ meta def parseTwpPost : TSyntax `twpPost → MacroM Term
         | `(bracketedBinder| $x) => `(bracketedBinder| $x)
       `(iprop(∀ $xs*, $Q -∗ Φ $pat))
     | none => `(iprop($Q -∗ Φ $pat))
-  | _ => Macro.throwUnsupported
+  | _ => throwUnsupported
 
+/-- Expands a total triple into its `tglWp` entailment. -/
 @[macro twpTriple] meta def expandTwpTriple : Macro
   | `($pre:twpPre $prog:twpProg $post:twpPost) => do
     let P ← parseTwpPre pre
     let (e, E) ← parseTwpProg prog
     let k ← parseTwpPost post
     `(⊢ ∀ Φ, $P -∗ $k -∗ tglWp $E $e Φ)
-  | _ => Macro.throwUnsupported
+  | _ => throwUnsupported
 
+/-- Expands a total triple with a pinned program logic instance. -/
 @[macro twpTriplePinned] meta def expandTwpTriplePinned : Macro
   | stx => do
-    let #[_, PROP, _, pre, prog, post] := stx.getArgs | Macro.throwUnsupported
+    let #[_, PROP, _, pre, prog, post] := stx.getArgs | throwUnsupported
     let P ← parseTwpPre ⟨pre⟩
     let (e, E) ← parseTwpProg ⟨prog⟩
     let k ← parseTwpPost ⟨post⟩

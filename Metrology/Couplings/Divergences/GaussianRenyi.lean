@@ -5,13 +5,13 @@ public import Metrology.Couplings.Divergences.Gaussian
 /-! # Rényi divergence of Gaussians, and the Gaussian mechanism is zCDP
 
 The Rényi divergence `α (a - a')² / (2 v)` between `N(a, v)` and `N(a', v)` (Mironov 2017,
-Prop. 7), and from it `zCDP_gaussianMech` (Bun–Steinke 2016, Prop. 1.6), and `k` independent
-Gaussian queries `gaussianMechPow`. -/
+Prop. 7), giving `zCDP_gaussianMech` (Bun–Steinke 2016, Prop. 1.6) and `gaussianMechPow`. -/
 
 @[expose] public section
 
 open MeasureTheory Measure ProbabilityTheory Real
 open scoped ENNReal NNReal
+open Kernel
 
 namespace ProbabilityTheory
 
@@ -34,7 +34,7 @@ theorem toReal_rnDeriv_gaussianReal (hv : v ≠ 0) :
     (fun x ↦ ((gaussianReal a v).rnDeriv (gaussianReal a' v) x).toReal)
       =ᵐ[gaussianReal a' v] fun x ↦ exp ((a - a') / v * x - (a - a') * (a + a') / (2 * v)) := by
   have hac := gaussianReal_absolutelyContinuous a' hv
-  filter_upwards [Measure.rnDeriv_eq_div (gaussianReal_absolutelyContinuous a hv) hac,
+  filter_upwards [rnDeriv_eq_div (gaussianReal_absolutelyContinuous a hv) hac,
     hac (rnDeriv_gaussianReal a v), hac (rnDeriv_gaussianReal a' v)] with x hx ha ha'
   rw [hx, ha, ha', ENNReal.toReal_div, toReal_gaussianPDF, toReal_gaussianPDF,
     gaussianPDFReal_div_gaussianPDFReal hv]
@@ -61,7 +61,7 @@ theorem fDiv_rpow_gaussianReal (hv : v ≠ 0) (α : ℝ) :
     (gaussianReal_absolutelyContinuous a hv).trans (gaussianReal_absolutelyContinuous' a' hv)
   rw [fDiv_of_integrable hint, singularPart_eq_zero_of_ac hac, integral_congr_ae hpow,
     integral_const_mul, hmgf, ← exp_add]
-  simp only [Measure.coe_zero, Pi.zero_apply, EReal.coe_ennreal_zero, mul_zero, add_zero,
+  simp only [coe_zero, Pi.zero_apply, EReal.coe_ennreal_zero, mul_zero, add_zero,
     EReal.coe_eq_coe_iff, exp_eq_exp, t]
   field_simp
   ring
@@ -72,11 +72,13 @@ namespace GradedDivergence
 
 /-! ## Rényi and zCDP closeness of Gaussians -/
 
-variable {a a' α : ℝ} {v : ℝ≥0}
+variable {a a' α : ℝ} {v : ℝ≥0} (hv : v ≠ 0)
+
+include hv
 
 /-- Two Gaussians of equal variance `v` are within Rényi budget `α (a - a')² / (2 v)` at order
 `α` (Mironov 2017, Prop. 7). -/
-theorem renyiDivergence_gaussianReal (hα : 1 ≤ α) (hv : v ≠ 0) :
+theorem renyiDivergence_gaussianReal (hα : 1 ≤ α) :
     renyiDivergence α (ENNReal.ofReal (α * (a - a') ^ 2 / (2 * v))) (gaussianReal a v)
       (gaussianReal a' v) := by
   have hρ : 0 ≤ α * (a - a') ^ 2 / (2 * v) :=
@@ -86,7 +88,7 @@ theorem renyiDivergence_gaussianReal (hα : 1 ≤ α) (hv : v ≠ 0) :
 
 /-- The Rényi divergence of order `α > 1` between two Gaussians of equal variance `v` is
 `α (a - a')² / (2 v)` (Mironov 2017, Prop. 7). -/
-theorem renyiDiv_gaussianReal (hα : 1 < α) (hv : v ≠ 0) :
+theorem renyiDiv_gaussianReal (hα : 1 < α) :
     renyiDiv α (gaussianReal a v) (gaussianReal a' v) =
       ((α * (a - a') ^ 2 / (2 * v) : ℝ) : EReal) := by
   rw [renyiDiv, fDiv_rpow_gaussianReal hv, EReal.toENNReal_of_ne_top (EReal.coe_ne_top _),
@@ -95,16 +97,16 @@ theorem renyiDiv_gaussianReal (hα : 1 < α) (hv : v ≠ 0) :
 
 /-- Two Gaussians of equal variance `v` are `(0, (a - a')² / (2 v))`-zCDP close (Bun–Steinke 2016,
 Prop. 1.6). -/
-theorem zcdpDivergence_gaussianReal (hv : v ≠ 0) :
+theorem zcdpDivergence_gaussianReal :
     zcdpDivergence (0, ENNReal.ofReal ((a - a') ^ 2 / (2 * v))) (gaussianReal a v)
       (gaussianReal a' v) :=
   zcdpDivergence_iff.2 fun α hα ↦ by
     rw [zero_add, ← ENNReal.ofReal_mul (by linarith), ← mul_div_assoc]
-    exact renyiDivergence_gaussianReal hα.le hv
+    exact renyiDivergence_gaussianReal hv hα.le
 
 /-- Two Gaussians of equal variance `v` couple along equal samples in the zCDP lifting at
 `(0, (a - a')² / (2 v))`. -/
-theorem zcdpLifting_rel_gaussianReal (hv : v ≠ 0) :
+theorem zcdpLifting_rel_gaussianReal :
     zcdpLifting.Rel (0, ENNReal.ofReal ((a - a') ^ 2 / (2 * v))) (· = ·) (gaussianReal a v)
       (gaussianReal a' v) :=
   concentratedLifting_complete (zcdpDivergence_gaussianReal hv)
@@ -124,11 +126,10 @@ theorem zCDP_gaussianMech {σ : ℝ≥0} (hσ : σ ≠ 0) (r : ℝ) :
       (ENNReal.ofReal (r ^ 2 / (2 * (σ : ℝ) ^ 2))) := by
   intro a a' h
   refine IsGraded.mono (Prod.mk_le_mk.2 ⟨le_rfl, ENNReal.ofReal_le_ofReal ?_⟩)
-    (zcdpDivergence_gaussianReal (a := a) (a' := a') (pow_ne_zero 2 hσ))
+    (zcdpDivergence_gaussianReal (pow_ne_zero 2 hσ))
   push_cast
   gcongr ?_ / _
   exact sq_le_sq' (abs_le.1 h).1 (abs_le.1 h).2
-
 
 /-! ## `k` independent Gaussian queries -/
 
@@ -136,39 +137,41 @@ theorem zCDP_gaussianMech {σ : ℝ≥0} (hσ : σ ≠ 0) (r : ℝ) :
 noncomputable abbrev consEquiv (k : ℕ) : (Fin (k + 1) → ℝ) ≃ᵐ ℝ × (Fin k → ℝ) :=
   MeasurableEquiv.piFinSuccAbove (fun _ ↦ ℝ) 0
 
+variable (σ : ℝ≥0)
+
 /-- `k` independent queries of the Gaussian mechanism with standard deviation `σ` on the same
 input. -/
-noncomputable def gaussianMechPow (σ : ℝ≥0) : (k : ℕ) → Mechanism ℝ (Fin k → ℝ)
-  | 0 => Kernel.const ℝ (dirac isEmptyElim)
-  | k + 1 => (gaussianMech σ ×ₖ gaussianMechPow σ k).map (consEquiv k).symm
+noncomputable def gaussianMechPow : (k : ℕ) → Mechanism ℝ (Fin k → ℝ)
+  | 0 => const ℝ (dirac isEmptyElim)
+  | k + 1 => (gaussianMech σ ×ₖ gaussianMechPow k).map (consEquiv k).symm
 
 /-- Each of the `k` queries is a probability measure, so their product is one. -/
-instance isMarkovKernel_gaussianMechPow (σ : ℝ≥0) : ∀ k, IsMarkovKernel (gaussianMechPow σ k)
+instance isMarkovKernel_gaussianMechPow : ∀ k, IsMarkovKernel (gaussianMechPow σ k)
   | 0 => by
     rw [gaussianMechPow]
     infer_instance
   | k + 1 => by
-    have := isMarkovKernel_gaussianMechPow σ k
+    have := isMarkovKernel_gaussianMechPow k
     rw [gaussianMechPow]
-    exact Kernel.IsMarkovKernel.map _ (consEquiv k).symm.measurable
+    exact IsMarkovKernel.map _ (consEquiv k).symm.measurable
 
 /-- No queries give the point mass at the empty tuple. -/
-theorem gaussianMechPow_zero_apply (σ : ℝ≥0) (a : ℝ) :
+theorem gaussianMechPow_zero_apply (a : ℝ) :
     gaussianMechPow σ 0 a = dirac isEmptyElim := by
-  rw [gaussianMechPow, Kernel.const_apply]
+  rw [gaussianMechPow, const_apply]
 
 /-- One more query draws a fresh first coordinate. -/
-theorem gaussianMechPow_succ_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
+theorem gaussianMechPow_succ_apply (k : ℕ) (a : ℝ) :
     gaussianMechPow σ (k + 1) a =
       ((gaussianReal a (σ ^ 2)).prod (gaussianMechPow σ k a)).map (consEquiv k).symm := by
-  rw [gaussianMechPow, Kernel.map_apply _ (consEquiv k).symm.measurable, Kernel.prod_apply]
+  rw [gaussianMechPow, map_apply _ (consEquiv k).symm.measurable, prod_apply]
   rfl
 
 /-- The `k` Gaussian queries are independent draws from `N(a, σ²)`. -/
-theorem gaussianMechPow_apply (σ : ℝ≥0) (k : ℕ) (a : ℝ) :
+theorem gaussianMechPow_apply (k : ℕ) (a : ℝ) :
     gaussianMechPow σ k a = Measure.pi fun _ ↦ gaussianReal a (σ ^ 2) := by
   induction k with
-  | zero => exact (gaussianMechPow_zero_apply σ a).trans (Measure.pi_of_empty _ _).symm
+  | zero => exact (gaussianMechPow_zero_apply σ a).trans (pi_of_empty _ _).symm
   | succ k ih =>
     rw [gaussianMechPow_succ_apply, ih]
     exact ((measurePreserving_piFinSuccAbove (fun _ ↦ gaussianReal a (σ ^ 2)) 0).symm _).map_eq

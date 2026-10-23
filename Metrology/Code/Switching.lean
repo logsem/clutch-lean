@@ -8,8 +8,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Switching lemma programs
 
-Lazy random functions and permutations and the weak PRF/PRP games, after clutch's
-`prp_prf_weak.v`. -/
+Lazy random functions, permutations and weak PRF/PRP games, after clutch's `prp_prf_weak.v`. -/
 
 namespace ProbLang
 
@@ -153,15 +152,25 @@ The constants are closed, so `openRec`/`closeRec` fix them. As `pl_step_simp` le
 step tactics erase the wrappers β-substitution leaves around constants under binders, instead of
 every later `whnf` re-evaluating the constant's body. -/
 
+/-- `findList` has no free variables. -/
 theorem findList_fv : (findList : Exp rT).fv = ∅ := rfl
+/-- `listLength` has no free variables. -/
 theorem listLength_fv : (listLength : Exp rT).fv = ∅ := rfl
+/-- `listRemoveNth` has no free variables. -/
 theorem listRemoveNth_fv : (listRemoveNth : Exp rT).fv = ∅ := rfl
+/-- `initMap` has no free variables. -/
 theorem initMap_fv : (initMap : Exp rT).fv = ∅ := rfl
+/-- `getMap` has no free variables. -/
 theorem getMap_fv : (getMap : Exp rT).fv = ∅ := rfl
+/-- `setMap` has no free variables. -/
 theorem setMap_fv : (setMap : Exp rT).fv = ∅ := rfl
+/-- `rfQuery` has no free variables. -/
 theorem rfQuery_fv : (rfQuery N ℓ : Exp rT).fv = ∅ := rfl
+/-- `prpQuery` has no free variables. -/
 theorem prpQuery_fv : (prpQuery ℓm ℓfv : Exp rT).fv = ∅ := rfl
+/-- `randomFunction` has no free variables. -/
 theorem randomFunction_fv : (randomFunction N : Exp rT).fv = ∅ := rfl
+/-- `wLoop` has no free variables. -/
 theorem wLoop_fv : (wLoop N : Exp rT).fv = ∅ := rfl
 
 section Erasure
@@ -170,57 +179,77 @@ open Exp
 
 variable (k : Nat) (t : Exp rT) (x : Var)
 
+/-- Opening a bound variable leaves `findList` unchanged. -/
 @[pl_step_simp] theorem openRec_findList : openRec k t findList = findList :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `findList` unchanged. -/
 @[pl_step_simp] theorem closeRec_findList : closeRec k x (findList : Exp rT) = findList :=
   closeRec_fresh x _ k (by simp [findList_fv])
 
+/-- Opening a bound variable leaves `listLength` unchanged. -/
 @[pl_step_simp] theorem openRec_listLength : openRec k t listLength = listLength :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `listLength` unchanged. -/
 @[pl_step_simp] theorem closeRec_listLength : closeRec k x (listLength : Exp rT) = listLength :=
   closeRec_fresh x _ k (by simp [listLength_fv])
 
+/-- Opening a bound variable leaves `listRemoveNth` unchanged. -/
 @[pl_step_simp] theorem openRec_listRemoveNth : openRec k t listRemoveNth = listRemoveNth :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `listRemoveNth` unchanged. -/
 @[pl_step_simp] theorem closeRec_listRemoveNth :
     closeRec k x (listRemoveNth : Exp rT) = listRemoveNth :=
   closeRec_fresh x _ k (by simp [listRemoveNth_fv])
 
+/-- Opening a bound variable leaves `initMap` unchanged. -/
 @[pl_step_simp] theorem openRec_initMap : openRec k t initMap = initMap :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `initMap` unchanged. -/
 @[pl_step_simp] theorem closeRec_initMap : closeRec k x (initMap : Exp rT) = initMap :=
   closeRec_fresh x _ k (by simp [initMap_fv])
 
+/-- Opening a bound variable leaves `getMap` unchanged. -/
 @[pl_step_simp] theorem openRec_getMap : openRec k t getMap = getMap :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `getMap` unchanged. -/
 @[pl_step_simp] theorem closeRec_getMap : closeRec k x (getMap : Exp rT) = getMap :=
   closeRec_fresh x _ k (by simp [getMap_fv])
 
+/-- Opening a bound variable leaves `setMap` unchanged. -/
 @[pl_step_simp] theorem openRec_setMap : openRec k t setMap = setMap :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `setMap` unchanged. -/
 @[pl_step_simp] theorem closeRec_setMap : closeRec k x (setMap : Exp rT) = setMap :=
   closeRec_fresh x _ k (by simp [setMap_fv])
 
+/-- Opening a bound variable leaves `rfQuery` unchanged. -/
 @[pl_step_simp] theorem openRec_rfQuery : openRec k t (rfQuery N ℓ) = rfQuery N ℓ :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `rfQuery` unchanged. -/
 @[pl_step_simp] theorem closeRec_rfQuery : closeRec k x (rfQuery N ℓ : Exp rT) = rfQuery N ℓ :=
   closeRec_fresh x _ k (by simp [rfQuery_fv])
 
+/-- Opening a bound variable leaves `prpQuery` unchanged. -/
 @[pl_step_simp] theorem openRec_prpQuery : openRec k t (prpQuery ℓm ℓfv) = prpQuery ℓm ℓfv :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `prpQuery` unchanged. -/
 @[pl_step_simp] theorem closeRec_prpQuery :
     closeRec k x (prpQuery ℓm ℓfv : Exp rT) = prpQuery ℓm ℓfv :=
   closeRec_fresh x _ k (by simp [prpQuery_fv])
 
+/-- Opening a bound variable leaves `randomFunction` unchanged. -/
 @[pl_step_simp] theorem openRec_randomFunction :
     openRec k t (randomFunction N) = randomFunction N :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `randomFunction` unchanged. -/
 @[pl_step_simp] theorem closeRec_randomFunction :
     closeRec k x (randomFunction N : Exp rT) = randomFunction N :=
   closeRec_fresh x _ k (by simp [randomFunction_fv])
 
+/-- Opening a bound variable leaves `wLoop` unchanged. -/
 @[pl_step_simp] theorem openRec_wLoop : openRec k t (wLoop N) = wLoop N :=
   (open_lc k t _ (by is_lc)).symm
+/-- Closing a free variable leaves `wLoop` unchanged. -/
 @[pl_step_simp] theorem closeRec_wLoop : closeRec k x (wLoop N : Exp rT) = wLoop N :=
   closeRec_fresh x _ k (by simp [wLoop_fv])
 

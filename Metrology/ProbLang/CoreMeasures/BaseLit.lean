@@ -15,8 +15,7 @@ noncomputable section ProbLangMeasures
 
 /-! # Measurable space on base literals
 
-The cylinder σ-algebra on `BaseLit rT`, derived by `CylinderGen.lean` together with measurable
-constructors and projections and the `measurable_casesOn(_param)` lemmas. -/
+The cylinder σ-algebra on `BaseLit rT`, derived by `CylinderGen.lean`. -/
 
 namespace ProbLang.BaseLit
 

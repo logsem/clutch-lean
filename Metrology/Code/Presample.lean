@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Presample programs: two tape draws in either order
 
-`Micrometer/Examples/Presample` proves `drawAB` refines `drawBA` (`drawAB_refines_drawBA`), hence
-is at most as likely on every event (`drawAB_le_drawBA`). -/
+`Micrometer/Examples/Presample` proves that `drawAB` refines `drawBA`. -/
 
 namespace ProbLang
 namespace Presample

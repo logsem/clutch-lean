@@ -12,8 +12,7 @@ import Metrology.Iris.LocalBI
 /-!
 # Capped credits
 
-Budget credits valid only outside an upward-closed set `bad`: authority `●↯c s`, fragment `↯c c`
-(Rocq `gcappedUR`). Main results: `supply_decrease`, `supply_increase`, `valid`. Not used by wp.
+Budget credits valid only outside an upward-closed set `bad` (Rocq `gcappedUR`).
 -/
 
 @[expose] public section
@@ -46,7 +45,7 @@ instance instDiscrete : OFE.Discrete (CappedCredit B bad) := ⟨id⟩
 
 variable [Fact (IsUpperSet bad)]
 
-/-- Validity is `c ∉ bad`; it passes to pieces since `bad` is an upper set. -/
+/-- Validity is `c ∉ bad`, which every summand inherits from the upper set `bad`. -/
 instance instCMRA : CMRA (CappedCredit B bad) :=
   CMRA.ofDiscreteTotal (fun _ ↦ 0) (· + ·) (· ∉ bad)
     (fun _ _ _ ↦ (add_assoc ..).symm) add_comm zero_add (fun _ ↦ rfl)
@@ -66,7 +65,7 @@ theorem included_iff : c ≼ s ↔ c ≤ s :=
 
 variable [Fact ((0 : B) ∉ bad)]
 
-/-- The unit `0` is valid since it is not bad. -/
+/-- The unit `0` is valid, as it is not bad. -/
 instance instUCMRA : UCMRA (CappedCredit B bad) where
   unit := 0
   unit_valid := Fact.out (p := (0 : B) ∉ bad)
@@ -92,6 +91,7 @@ end CappedCredit
 class CappedCreditPreGS (B : Type) [AddCommMonoid B] [LE B] [CanonicallyOrderedAdd B]
     (bad : outParam (Set B)) [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)]
     (GF : BundledGFunctors) where
+  /-- The ghost-state slot. -/
   cc : ElemG GF (constOF (Auth (CappedCredit B bad)))
 
 attribute [reducible, instance] CappedCreditPreGS.cc
@@ -100,6 +100,7 @@ attribute [reducible, instance] CappedCreditPreGS.cc
 class CappedCreditGS (B : Type) [AddCommMonoid B] [LE B] [CanonicallyOrderedAdd B]
     (bad : outParam (Set B)) [Fact (IsUpperSet bad)] [Fact ((0 : B) ∉ bad)]
     (GF : BundledGFunctors) extends CappedCreditPreGS B bad GF where
+  /-- The ghost name. -/
   γcc : GName
 
 section Resources
@@ -123,23 +124,25 @@ namespace CappedCredit
 
 local bi IProp GF
 
+variable {a b : B} {s c : B}
+
 /-! ### Splitting and combining -/
 
 /-- A credit splits into two credits (Rocq `gccredit_split`). -/
-theorem split {a b : B} : ↯c (a + b) ⊢ ↯c a ∗ ↯c b :=
+theorem split : ↯c (a + b) ⊢ ↯c a ∗ ↯c b :=
   AuthCredit.frag_split
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯c a ∗ ↯c b ⊢ ↯c (a + b) :=
+theorem combine : ↯c a ∗ ↯c b ⊢ ↯c (a + b) :=
   AuthCredit.frag_combine
 
 /-- Proof mode combines credits by adding them. -/
-instance combineSepAs_cc {a b : B} :
+instance combineSepAs_cc :
     ProofMode.CombineSepAs (↯c a : IProp GF) (↯c b) (↯c (a + b)) where
   combine_sep_as := combine
 
 /-- A credit can be weakened to a smaller one. -/
-theorem weaken {a b : B} (hb : b ≤ a) : ↯c a ⊢ ↯c b := by
+theorem weaken (hb : b ≤ a) : ↯c a ⊢ ↯c b := by
   obtain ⟨c, rfl⟩ := exists_add_of_le hb
   exact split.trans BI.sep_elim_left
 
@@ -167,7 +170,7 @@ theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢ False := by
 /-! ### Spending and allocating against the authority -/
 
 /-- A credit never exceeds the authoritative budget (Rocq `gcsupply_bound`). -/
-theorem supply_bound {s c : B} : ⊢ ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
+theorem supply_bound : ⊢ ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
   unfold cc ccAuth
   iintro Hs Hc
   ihave %h := AuthCredit.supply_bound (E := ICC.cc) (γ := ICC.γcc) (s := (s : CappedCredit B bad))
@@ -176,7 +179,7 @@ theorem supply_bound {s c : B} : ⊢ ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ :=
   exact included_iff.mp h
 
 /-- Spending a cancelable credit `c` takes it out of the budget (Rocq `gcsupply_decrease`). -/
-theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
+theorem supply_decrease (hc : IsAddLeftRegular c) :
     ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
   iintro Hs Hc
   ihave %hcs := supply_bound $$ Hs Hc
@@ -189,14 +192,14 @@ theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
   iframe %hr H
 
 /-- When every valid budget cancels, any credit can be spent. -/
-theorem supply_decrease_of_valid (hcancel : ∀ c ∉ bad, IsAddLeftRegular c) {s c : B} :
+theorem supply_decrease_of_valid (hcancel : ∀ c ∉ bad, IsAddLeftRegular c) :
     ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r := by
   iintro Hs Hc
   ihave %hc := valid $$ Hc
   iapply supply_decrease (hcancel c hc) $$ Hs Hc
 
 /-- Growing the budget by `c` hands out a credit `c`, as long as the new budget is not bad. -/
-theorem supply_increase {s c : B} (h : s + c ∉ bad) :
+theorem supply_increase (h : s + c ∉ bad) :
     ●↯c s ⊢ |==> (●↯c (s + c) ∗ ↯c c) := by
   unfold cc ccAuth
   iintro Hs
@@ -205,7 +208,7 @@ theorem supply_increase {s c : B} (h : s + c ∉ bad) :
     (alloc_local_update h) $$ Hs
 
 /-- A credit splits off any smaller credit. -/
-theorem difference [Sub B] [OrderedSub B] {a b : B} (h : b ≤ a) :
+theorem difference [Sub B] [OrderedSub B] (h : b ≤ a) :
     ↯c a ⊢ ↯c b ∗ ↯c (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 

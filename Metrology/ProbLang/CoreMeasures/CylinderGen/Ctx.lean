@@ -8,14 +8,10 @@ public import Metrology.ProbLang.CoreMeasures.Shapes
 
 open Lean Meta Metrology.Meta
 
-/-!
-# The shared context of the `MeasurableSpace` deriving handler
+/-! # The shared context of the `MeasurableSpace` deriving handler
 
-`withCtx T` reads an inductive type `T` into a `Ctx`: its parameters and constructors, with each
-field classified as recursive (of type `T`), base (countable, part of the shape) or data (a leaf).
-`Ctx` also builds the terms the stages of `CylinderGen.lean` share: constants, recursors on `T`
-and `T.Shape`, the leaves of a shape, and declarations.
--/
+`Ctx` reads an inductive type `T` with its classified constructor fields, and builds the terms
+that the stages of `CylinderGen.lean` share. -/
 
 namespace Metrology.CylinderGen
 
@@ -62,14 +58,16 @@ def Field.indexed (f : Field) : Bool := f.kind != .data
 structural recursion (`structural`). -/
 def Field.callsF (structural : Bool) (f : Field) : Bool := structural && f.kind == .recursive
 
+variable (c : Ctor)
+
 /-- Whether the constructor has a recursive field. -/
-def Ctor.isRecursive (c : Ctor) : Bool := c.fields.any (·.kind == .recursive)
+def Ctor.isRecursive : Bool := c.fields.any (·.kind == .recursive)
 
 /-- The name of the constructor, without the namespace of `T`. -/
-def Ctor.short (c : Ctor) : String := c.name.lastComponentAsString
+def Ctor.short : String := c.name.lastComponentAsString
 
 /-- `pre_c`, the name of a hypothesis about `c` in the generated lemmas. -/
-def Ctor.named (c : Ctor) (pre : String) : Name := .mkSimple s!"{pre}_{c.short}"
+def Ctor.named (pre : String) : Name := .mkSimple s!"{pre}_{c.short}"
 
 /-- What the generator knows about `T`, with its parameters and their measurable spaces free. -/
 structure Ctx where
@@ -134,7 +132,7 @@ def withCtx [Inhabited α] (T : Name) (k : Ctx → MetaM α) : MetaM α := do
 
 /-! ## Constants -/
 
-variable (ctx : Ctx)
+variable (ctx : Ctx) (c : Ctor)
 
 /-- The universes of `T`. -/
 def Ctx.levels : List Level := ctx.levelParams.map .param
@@ -144,7 +142,7 @@ measurable spaces). -/
 def Ctx.const (n : Name) (insts := false) : Expr :=
   mkAppN (mkConst n ctx.levels) (if insts then ctx.params ++ ctx.insts else ctx.params)
 
-/-- `T.suffix`, by `const`. -/
+/-- The constant `T.suffix`, built by `Ctx.const` with the parameters of `T`. -/
 def Ctx.member (suffix : Name) (insts := false) : Expr :=
   ctx.const (ctx.T ++ suffix) insts
 
@@ -153,9 +151,9 @@ def Ctx.ty : Expr := ctx.const ctx.T
 /-- The type `T.Shape` (not the function `T.shape`). -/
 def Ctx.shape : Expr := mkConst (ctx.T ++ `Shape)
 /-- The name of the shape constructor `T.Shape.c`. -/
-def Ctx.shapeCtor (c : Ctor) : Name := (ctx.T ++ `Shape).str c.short
+def Ctx.shapeCtor : Name := (ctx.T ++ `Shape).str c.short
 /-- The shape `T.Shape.c args`. -/
-def Ctx.shapeOf (c : Ctor) (args : Array Expr) : Expr :=
+def Ctx.shapeOf (args : Array Expr) : Expr :=
   mkAppN (mkConst (ctx.shapeCtor c)) args
 /-- The type `T.Leaves s` of the leaves of the shape `s`. -/
 def Ctx.leaves (s : Expr) : Expr := mkApp (ctx.member `Leaves) s
@@ -187,7 +185,7 @@ def Ctx.fieldType (f : Field) : Expr := if f.kind == .recursive then ctx.ty else
 /-! ## Local variables -/
 
 /-- Runs `k` with the fields of `c` as local variables, with `T` at the recursive fields. -/
-def Ctx.withFields [Inhabited α] (c : Ctor) (k : Array Expr → MetaM α) : MetaM α :=
+def Ctx.withFields [Inhabited α] (k : Array Expr → MetaM α) : MetaM α :=
   withLocalDecls (c.fields.map fun f => decl f.name .default (pure (ctx.fieldType f))) k
 
 /-! ## Recursors -/
@@ -285,9 +283,8 @@ def Ctx.leavesTy (slots : Array ShapeSlot)
 def ensureFresh (name : Name) : MetaM Unit := do
   if (← getEnv).contains name then throwError "cylinders: `{name}` already exists"
 
-/-- Adds `name`, abstracted over the parameters (implicitly) and, with `insts`, their measurable
-spaces, and then `binders`; with `funProp`, as a `fun_prop` lemma. Its universes are those of `T`,
-then those of the `binders`. -/
+/-- Adds `name`, abstracted over the parameters (and, with `insts`, their measurable spaces) and
+then `binders`, as a `fun_prop` lemma if `funProp`. -/
 def Ctx.declare (name : Name) (type value : Expr) (insts := false) (isDef := false)
     (binders : Array Expr := #[]) (funProp := false) : MetaM Unit := do
   ensureFresh name

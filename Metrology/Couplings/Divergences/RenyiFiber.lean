@@ -4,8 +4,8 @@ public import Metrology.Couplings.Divergences.Conversions
 
 /-! # Rényi and zCDP liftings of equal images
 
-Lifts the relation `f x = g y` by conditioning `μ` on the fibers of `f`. Main results:
-`codensity_renyi_rel_of_map`, `zcdpLifting_rel_of_fiber`. -/
+Lifts the relation `f x = g y` by conditioning `μ` on the fibers of `f`, giving the Rényi and zCDP
+liftings of equal images. -/
 
 @[expose] public section
 
@@ -16,16 +16,13 @@ open scoped ENNReal
 
 namespace GradedDivergence
 
-variable {X Y : Type u} [MeasurableSpace X] {μ : Measure X}
+variable {X Y : Type u} [MeasurableSpace X] {μ : Measure X} {Z : Type u} [MeasurableSpace Z]
+  {f : X → Z} {g : Y → Z}
 
 /-! ## The cost of equal images -/
 
-section Cost
-
-variable {Z : Type*} [MeasurableSpace Z] [MeasurableSingletonClass Z] {f : X → Z} {g : Y → Z}
-
 /-- The cost of equal images is measurable in the left point. -/
-theorem measurable_relCost_fiber (hf : Measurable f) (y : Y) :
+theorem measurable_relCost_fiber [MeasurableSingletonClass Z] (hf : Measurable f) (y : Y) :
     Measurable fun x ↦ (relCost (fun x y ↦ f x = g y) x y : ℝ≥0∞) := by
   have : (fun x ↦ (relCost (fun x y ↦ f x = g y) x y : ℝ≥0∞)) =
       (f ⁻¹' {g y})ᶜ.indicator fun _ ↦ (⊤ : ℝ≥0∞) := by
@@ -35,7 +32,8 @@ theorem measurable_relCost_fiber (hf : Measurable f) (y : Y) :
   exact measurable_const.indicator (hf (measurableSet_singleton _)).compl
 
 /-- Conditioning on the fiber over `g y` stays on equal images, so it pays no cost. -/
-theorem lintegral_expBudget_relCost_cond_le (hf : Measurable f) (y : Y) :
+theorem lintegral_expBudget_relCost_cond_le [MeasurableSingletonClass Z] (hf : Measurable f)
+    (y : Y) :
     ∫⁻ x, expBudget (relCost (fun x y ↦ f x = g y) x y) ∂μ[|f ⁻¹' {g y}] ≤ 1 := by
   have hF : MeasurableSet (f ⁻¹' {g y}) := hf (measurableSet_singleton _)
   rw [ProbabilityTheory.cond, lintegral_smul_measure,
@@ -44,15 +42,13 @@ theorem lintegral_expBudget_relCost_cond_le (hf : Measurable f) (y : Y) :
     one_mul]
   exact ENNReal.inv_mul_le_one _
 
-end Cost
-
 variable [MeasurableSpace Y] {ν : Measure Y}
 
 /-! ## Conditioning on the fibers -/
 
 section FiberCond
 
-variable {Z : Type*} [MeasurableSpace Z] [DiscreteMeasurableSpace Z] {f : X → Z} {g : Y → Z}
+variable [DiscreteMeasurableSpace Z]
 
 /-- Conditioning `μ` on the fibers of `f`. -/
 noncomputable def fiberCond (μ : Measure X) (f : X → Z) : Kernel Z X :=
@@ -95,8 +91,8 @@ end FiberCond
 
 section Fintype
 
-variable {Z : Type u} [MeasurableSpace Z] [Fintype Z] [DiscreteMeasurableSpace Z] {f : X → Z}
-  {g : Y → Z} [IsSubProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
+variable [Fintype Z] [DiscreteMeasurableSpace Z] [IsSubProbabilityMeasure μ]
+  [IsSubProbabilityMeasure ν]
 
 /-- A bound between the images of `μ` and `ν` lifts equal images in the codensity lifting of a
 composable divergence, when no image charged by `μ` is null for `ν`: bind the fibers. -/
@@ -131,7 +127,7 @@ theorem codensity_rel_of_map {B : Type*} [AddCommMonoid B] [PartialOrder B]
   have hK (p : X × Y) : D c (K p) (L p) := by
     by_cases hp : p ∈ (f ⁻¹' {z}) ×ˢ (g ⁻¹' {z})
     · simp only [K, L, Kernel.piecewise_apply, hp, ↓reduceIte, Kernel.comap_apply]
-      exact hkl _ _ ((Set.mem_singleton_iff.1 hp.1).trans (Set.mem_singleton_iff.1 hp.2).symm)
+      exact hkl _ _ ((mem_singleton_iff.1 hp.1).trans (mem_singleton_iff.1 hp.2).symm)
     · simp only [K, Kernel.piecewise_apply, hp, ↓reduceIte]
       exact IsGraded.mono zero_le (IsReflexive.refl _)
   have hπ : ∀ᵐ p ∂π, p ∈ (f ⁻¹' {z}) ×ˢ (g ⁻¹' {z}) := by
@@ -169,8 +165,8 @@ end Fintype
 
 section Zcdp
 
-variable {Z : Type*} [MeasurableSpace Z] [Countable Y] [MeasurableSingletonClass Y] [Countable Z]
-  [MeasurableSingletonClass Z] {f : X → Z} {g : Y → Z} {ε : ℝ≥0∞}
+variable [Countable Y] [MeasurableSingletonClass Y] [Countable Z] [MeasurableSingletonClass Z]
+  {ε : ℝ≥0∞}
 
 /-- Conditioning `μ` on the fiber of `f` over `g y`: the witness kernel for fiber bounds. -/
 noncomputable def fiberKernel (μ : Measure X) (f : X → Z) (g : Y → Z) : Kernel Y X :=
@@ -187,7 +183,7 @@ theorem dp_fiberKernel (hf : Measurable f) (hg : Measurable g) [IsFiniteMeasure 
   calc μ A = ∑' z, μ (f ⁻¹' {z} ∩ A) := by
         rw [← measure_iUnion (fun z z' hz ↦ ((disjoint_singleton.2 hz).preimage f).mono
           inter_subset_left inter_subset_left) fun z ↦ (hF z).inter hA, ← iUnion_inter,
-          ← preimage_iUnion, iUnion_singleton_eq_range, ← Set.univ_inter A]
+          ← preimage_iUnion, iUnion_singleton_eq_range, ← univ_inter A]
         simp
     _ ≤ ∑' z, expBudget ε * (φ z * ν (g ⁻¹' {z})) := by
         refine ENNReal.tsum_le_tsum fun z ↦ ?_

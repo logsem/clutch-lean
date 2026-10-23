@@ -13,6 +13,7 @@ of equal mass (`klDivergence_comp_of_mass_eq`) but not in general (`not_isCompos
 universe u
 
 open MeasureTheory Measure ProbabilityTheory Set Filter Topology InformationTheory
+open Real Finset Kernel
 open scoped ENNReal
 
 namespace ProbabilityTheory
@@ -22,8 +23,8 @@ namespace ProbabilityTheory
 /-- KL has infinite slope at `∞`, so mass singular to `ν` costs `⊤`. -/
 theorem derivAtTop_klFun : derivAtTop klFun = ⊤ := by
   refine Tendsto.limsup_eq (EReal.tendsto_coe_atTop.comp ?_)
-  have h : Tendsto (fun t : ℝ ↦ Real.log t + (1 / t - 1)) atTop atTop :=
-    Real.tendsto_log_atTop.atTop_add
+  have h : Tendsto (fun t : ℝ ↦ log t + (1 / t - 1)) atTop atTop :=
+    tendsto_log_atTop.atTop_add
       (tendsto_const_nhds.div_atTop tendsto_id |>.sub_const 1)
   refine h.congr' ?_
   filter_upwards [eventually_gt_atTop 0] with t ht
@@ -54,8 +55,8 @@ theorem fDiv_klFun_eq_klDiv [IsFiniteMeasure μ] [IsFiniteMeasure ν] :
 /-! ## The pointwise term `klTerm` and its algebra -/
 
 /-- The pointwise generalized KL term `p log (p / q) + q - p`, the real-valued perspective of
-`klFun` used to prove the finite chain rule. -/
-noncomputable def klTerm (p q : ℝ) : ℝ := p * Real.log (p / q) + q - p
+`klFun`. -/
+noncomputable def klTerm (p q : ℝ) : ℝ := p * log (p / q) + q - p
 
 /-- The perspective of `klFun` is the generalized KL term. -/
 theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
@@ -64,7 +65,7 @@ theorem persp_klFun {p q : ℝ} (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
   · simp [hpq rfl, klTerm]
   rw [persp_of_ne_zero hq.ne', klTerm, klFun, EReal.coe_eq_coe_iff]
   have : q * (p / q) = p := mul_div_cancel₀ p hq.ne'
-  linear_combination (Real.log (p / q) - 1) * this
+  linear_combination (log (p / q) - 1) * this
 
 /-- The generalized KL term is nonnegative. -/
 theorem klTerm_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) (hpq : q = 0 → p = 0) :
@@ -86,7 +87,7 @@ theorem klTerm_mul {p q k l : ℝ} (hp : 0 ≤ p) (hk : 0 ≤ k) (hq : 0 ≤ q) 
   have hq : 0 < q := hq.lt_of_ne fun h ↦ hp.ne' (hpq h.symm)
   have hl : 0 < l := hl.lt_of_ne fun h ↦ hk.ne' (hkl h.symm)
   unfold klTerm
-  rw [mul_div_mul_comm, Real.log_mul (div_pos hp hq).ne' (div_pos hk hl).ne']
+  rw [mul_div_mul_comm, log_mul (div_pos hp hq).ne' (div_pos hk hl).ne']
   ring
 
 /-- Log-sum inequality for the generalized KL term. -/
@@ -94,9 +95,9 @@ theorem klTerm_sum_le {ι : Type*} (s : Finset ι) {a b : ι → ℝ} (ha : ∀ 
     (hb : ∀ i ∈ s, 0 ≤ b i) (hab : ∀ i ∈ s, b i = 0 → a i = 0) :
     klTerm (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, klTerm (a i) (b i) := by
   have h := persp_sum_le convexOn_klFun s ha hb
-  rw [persp_klFun (Finset.sum_nonneg hb) fun h0 ↦ Finset.sum_eq_zero fun i hi ↦
-      hab i hi ((Finset.sum_eq_zero_iff_of_nonneg hb).1 h0 i hi),
-    Finset.sum_congr rfl fun i hi ↦ persp_klFun (hb i hi) (hab i hi),
+  rw [persp_klFun (sum_nonneg hb) fun h0 ↦ sum_eq_zero fun i hi ↦
+      hab i hi ((sum_eq_zero_iff_of_nonneg hb).1 h0 i hi),
+    sum_congr rfl fun i hi ↦ persp_klFun (hb i hi) (hab i hi),
     ← EReal.coe_finset_sum, EReal.coe_le_coe_iff] at h
   exact h
 
@@ -108,7 +109,7 @@ theorem fDiv_klFun_eq_sum {I : Type*} [Fintype I] [MeasurableSpace I]
     (h : ∀ i, ρ₂ {i} = 0 → ρ₁ {i} = 0) :
     fDiv klFun ρ₁ ρ₂ = ((∑ i, klTerm (ρ₁ {i}).toReal (ρ₂ {i}).toReal : ℝ) : EReal) := by
   rw [fDiv_eq_sum convexOn_klFun continuous_klFun.continuousWithinAt, EReal.coe_finset_sum]
-  refine Finset.sum_congr rfl fun i _ ↦ persp_klFun ENNReal.toReal_nonneg fun hq ↦ ?_
+  refine sum_congr rfl fun i _ ↦ persp_klFun ENNReal.toReal_nonneg fun hq ↦ ?_
   rw [ENNReal.toReal_eq_zero_iff] at hq ⊢
   exact .inl (h i (hq.resolve_right (measure_ne_top _ _)))
 
@@ -135,12 +136,12 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
     absolutelyContinuous_of_fDiv_ne_top derivAtTop_klFun (ne_top_of_le_ne_top hdt (hd j))
   have hbind (i) : (η ∘ₘ μ₂) {i} = 0 → (κ ∘ₘ μ₁) {i} = 0 := by
     intro h
-    rw [Measure.bind_apply .of_discrete η.measurable.aemeasurable, lintegral_fintype,
-      Finset.sum_eq_zero_iff] at h
-    rw [Measure.bind_apply .of_discrete κ.measurable.aemeasurable, lintegral_fintype,
-      Finset.sum_eq_zero_iff]
+    rw [bind_apply .of_discrete η.measurable.aemeasurable, lintegral_fintype,
+      sum_eq_zero_iff] at h
+    rw [bind_apply .of_discrete κ.measurable.aemeasurable, lintegral_fintype,
+      sum_eq_zero_iff]
     intro j _
-    rcases mul_eq_zero.1 (h j (Finset.mem_univ _)) with h | h
+    rcases mul_eq_zero.1 (h j (mem_univ _)) with h | h
     · rw [hκ j h, zero_mul]
     · rw [hμ h, mul_zero]
   have hdR : d = (d.toReal : EReal) :=
@@ -171,7 +172,7 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
         (∑ j, (μ₂ {j}).toReal * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, klTerm ((μ₁ {j}).toReal * (κ j {i}).toReal)
           ((μ₂ {j}).toReal * (η j {i}).toReal) :=
-        Finset.sum_le_sum fun i _ ↦ klTerm_sum_le _ (fun _ _ ↦ by positivity)
+        sum_le_sum fun i _ ↦ klTerm_sum_le _ (fun _ _ ↦ by positivity)
           (fun _ _ ↦ by positivity) fun j _ h ↦ by
             rcases mul_eq_zero.1 h with h | h
             · rw [hp0 j h, zero_mul]
@@ -182,20 +183,20 @@ theorem fDiv_klFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M] (μ₁ μ₂ : Meas
           ((μ₂ {j}).toReal - (μ₁ {j}).toReal) *
             (∑ i, (η j {i}).toReal - ∑ i, (κ j {i}).toReal)) := by
         rw [Finset.sum_comm]
-        refine Finset.sum_congr rfl fun j _ ↦ ?_
-        rw [Finset.sum_congr rfl fun i _ ↦ klTerm_mul ENNReal.toReal_nonneg
+        refine sum_congr rfl fun j _ ↦ ?_
+        rw [sum_congr rfl fun i _ ↦ klTerm_mul ENNReal.toReal_nonneg
           ENNReal.toReal_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg (hp0 j) (hk0 j i)]
-        simp only [Finset.sum_add_distrib, ← Finset.sum_mul, ← Finset.mul_sum,
-          Finset.sum_sub_distrib]
+        simp only [sum_add_distrib, ← sum_mul, ← mul_sum,
+          sum_sub_distrib]
     -- the cross term vanishes by equal mass; bound the κ-mass by 1
     _ ≤ ∑ j, (klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal + (μ₁ {j}).toReal * d.toReal) := by
-        refine Finset.sum_le_sum fun j _ ↦ ?_
+        refine sum_le_sum fun j _ ↦ ?_
         rw [hmassR j, sub_self, mul_zero, add_zero]
         gcongr
         · exact mul_le_of_le_one_left (hg0 j) ((hmassR j).symm ▸ hm1 j)
         · exact hD j
     _ ≤ ∑ j, klTerm (μ₁ {j}).toReal (μ₂ {j}).toReal + d.toReal := by
-        rw [Finset.sum_add_distrib, ← Finset.sum_mul]
+        rw [sum_add_distrib, ← sum_mul]
         gcongr
         exact mul_le_of_le_one_left (EReal.toReal_nonneg hd₀) hp1
 
@@ -271,30 +272,30 @@ theorem not_isComposable_kl : ¬ klDivergence.{u}.IsComposable := by
   intro h
   set P : Measure PUnit.{u + 1} := dirac PUnit.unit
   have hhalf : IsSubProbabilityMeasure ((1 / 2 : ℝ≥0∞) • P) := ⟨by simp [P]⟩
-  have : IsSubMarkovKernel (Kernel.const PUnit.{u + 1} P) := ⟨fun _ ↦ by simp; infer_instance⟩
-  have : IsSubMarkovKernel (Kernel.const PUnit.{u + 1} ((1 / 2 : ℝ≥0∞) • P)) :=
-    ⟨fun _ ↦ by simp only [Kernel.const_apply]; infer_instance⟩
-  have h12 : klTerm 1 (1 / 2) = Real.log 2 - 1 / 2 := by
+  have : IsSubMarkovKernel (const PUnit.{u + 1} P) := ⟨fun _ ↦ by simp; infer_instance⟩
+  have : IsSubMarkovKernel (const PUnit.{u + 1} ((1 / 2 : ℝ≥0∞) • P)) :=
+    ⟨fun _ ↦ by simp only [const_apply]; infer_instance⟩
+  have h12 : klTerm 1 (1 / 2) = log 2 - 1 / 2 := by
     simp only [klTerm, one_div, div_inv_eq_mul, one_mul]
     ring
-  have h14 : klTerm 1 (1 / 4) = 2 * Real.log 2 - 3 / 4 := by
-    have : Real.log 4 = 2 * Real.log 2 := by
-      rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]; norm_num
+  have h14 : klTerm 1 (1 / 4) = 2 * log 2 - 3 / 4 := by
+    have : log 4 = 2 * log 2 := by
+      rw [show (4 : ℝ) = 2 ^ 2 by norm_num, log_pow]; norm_num
     simp only [klTerm, one_div, div_inv_eq_mul, one_mul, this]
     ring
-  have h0 : 0 ≤ Real.log 2 - 1 / 2 :=
+  have h0 : 0 ≤ log 2 - 1 / 2 :=
     h12 ▸ klTerm_nonneg zero_le_one (by norm_num) fun h ↦ by norm_num at h
-  set b := ENNReal.ofReal (Real.log 2 - 1 / 2)
-  have hb : (b : EReal) = ((Real.log 2 - 1 / 2 : ℝ) : EReal) := by
+  set b := ENNReal.ofReal (log 2 - 1 / 2)
+  have hb : (b : EReal) = ((log 2 - 1 / 2 : ℝ) : EReal) := by
     rw [EReal.coe_ennreal_ofReal, max_eq_left h0]
   have hP : P = (1 : ℝ≥0∞) • P := (one_smul _ _).symm
   have hμ : klDivergence b P ((1 / 2 : ℝ≥0∞) • P) := by
     rw [klDivergence_iff_fDiv, hP, smul_smul, mul_one,
       fDiv_klFun_smul_dirac (by simp) (by simp) (by simp), hb]
     norm_num [h12]
-  have hκ : ∀ x, klDivergence b (Kernel.const PUnit.{u + 1} P x)
-      (Kernel.const PUnit.{u + 1} ((1 / 2 : ℝ≥0∞) • P) x) := fun _ ↦ by
-    simpa only [Kernel.const_apply] using hμ
+  have hκ : ∀ x, klDivergence b (const PUnit.{u + 1} P x)
+      (const PUnit.{u + 1} ((1 / 2 : ℝ≥0∞) • P) x) := fun _ ↦ by
+    simpa only [const_apply] using hμ
   have hc := h.comp hμ hκ
   have e1 : P univ • P = (1 : ℝ≥0∞) • P := by simp [P]
   have e2 : ((1 / 2 : ℝ≥0∞) • P) univ • (1 / 2 : ℝ≥0∞) • P = (1 / 4 : ℝ≥0∞) • P := by

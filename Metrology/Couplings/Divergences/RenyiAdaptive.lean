@@ -5,8 +5,8 @@ public import Metrology.Couplings.Divergences.RenyiStrassen
 
 /-! # Adaptive Rényi composition
 
-Rényi liftings compose when the second budget `ρ₂ x` depends on the first outcome; paying the
-plain average budget is unsound (Rocq `renyi_escort_adaptive.v`, `renyi_expcomp_unsound.v`). -/
+Rényi liftings compose when the second budget depends on the first outcome; paying the plain
+average is unsound (Rocq `renyi_escort_adaptive.v`). -/
 
 @[expose] public section
 
@@ -115,7 +115,7 @@ theorem codensity_renyi_bind_escort [Fact (1 < α)] [IsSubProbabilityMeasure μ]
             simp [E, hS, w]
         _ ≤ 1 := IsSubProbabilityMeasure.lintegral_le_one fun _ ↦ le_rfl
     · rwa [← withDensity_comp hw]
-  refine HasBind.bind (L := codensity _) hE fun x y hxy ↦ ?_
+  refine HasBind.bind hE fun x y hxy ↦ ?_
   by_cases hS : S x y
   · simpa [E, hS] using hκη x y hS
   · simp [E, hS] at hxy

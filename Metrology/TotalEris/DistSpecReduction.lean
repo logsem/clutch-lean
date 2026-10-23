@@ -17,9 +17,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Reduced correctness specifications
 
-`DistSpec` is the correctness specification for CTE samplers; `DistSpec_of_local` reduces it to
-`DistSpecOn` for approximating pairs `(K, G)`, and `DistSpec_of_DistSpec*` to Lusin, lower
-semicontinuous, simple, polynomial and smooth credit functions. -/
+`DistSpec` is the correctness specification for CTE samplers, reduced to simpler credits. -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
   ProbLang.TotalEris.ErisWpGS ErrorCredit

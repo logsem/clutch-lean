@@ -2,12 +2,9 @@ module
 
 public import Metrology.Couplings.Divergences.FDiv
 
-/-!
-# Partition formula and data processing for `f`-divergences
-
+/-! # Partition formula for `f`-divergences
 `fDiv_eq_iSup_partition`: the `f`-divergence is the supremum of its finite-partition sums
-(Approximate Span Liftings, Thm. 4.7); data processing and semicontinuity follow.
--/
+(Approximate Span Liftings, Thm. 4.7). -/
 
 @[expose] public section
 
@@ -134,10 +131,10 @@ theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
   have hμ (A : Set X) (hA : MeasurableSet A) (hAT : A ⊆ T) : (μ A).toReal = ∫ x in A, G x ∂ν := by
     rw [setIntegral_toReal_rnDeriv_eq_withDensity' hA, measureReal_def]
     conv_lhs => rw [← μ.singularPart_add_rnDeriv ν]
-    rw [Measure.add_apply, measure_mono_null hAT hμsT, zero_add]
+    rw [add_apply, measure_mono_null hAT hμsT, zero_add]
   have hμTc : μ Tᶜ = μ.singularPart ν univ := by
     conv_lhs => rw [← μ.singularPart_add_rnDeriv ν]
-    rw [Measure.add_apply, withDensity_absolutelyContinuous _ _ hνT, add_zero,
+    rw [add_apply, withDensity_absolutelyContinuous _ _ hνT, add_zero,
       ← measure_add_measure_compl hT, hμsT, zero_add]
   have hterm (i : Fin (N + 1)) : ((∫ x in C i, H x ∂ν : ℝ) : EReal) ≤
       persp f (μ (C i)).toReal (ν (C i)).toReal := by
@@ -168,10 +165,14 @@ theorem exists_partition_ge_integral_partialSups_add {a c : ℕ → ℝ}
 
 /-! ### The partition formula -/
 
+section
+
+variable (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
+include hf hf_cont
+
 /-- The `f`-divergence is at most the supremum of its partition sums: the maxima of the first `N`
 affine minorants increase to `f`, and each gives a partition sum below the supremum. -/
-theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) :
+theorem fDiv_le_iSup_partition :
     fDiv f μ ν ≤ ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
       ∑ i, persp f (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal := by
   obtain ⟨l, c, hle, hsup⟩ :=
@@ -222,8 +223,7 @@ theorem fDiv_le_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
 
 /-- The `f`-divergence is the supremum of its sums over finite measurable partitions
 (Def. 2.7, Thm. 4.7). -/
-theorem fDiv_eq_iSup_partition (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) :
+theorem fDiv_eq_iSup_partition :
     fDiv f μ ν = ⨆ (n : ℕ) (k : X → Fin n) (_ : Measurable k),
       ∑ i, persp f (μ (k ⁻¹' {i})).toReal (ν (k ⁻¹' {i})).toReal :=
   le_antisymm (fDiv_le_iSup_partition hf hf_cont)
@@ -235,9 +235,8 @@ variable {Y : Type*} [MeasurableSpace Y]
 
 /-- Data processing along a sub-Markov kernel; when the kernel may lose mass, the weight must be
 nonnegative. -/
-theorem fDiv_comp_le_of_isSubMarkovKernel (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    (κ : Kernel X Y) [IsSubMarkovKernel κ] (h : (∀ x, κ x univ = 1) ∨ ∀ t, 0 ≤ t → 0 ≤ f t) :
+theorem fDiv_comp_le_of_isSubMarkovKernel (κ : Kernel X Y) [IsSubMarkovKernel κ]
+    (h : (∀ x, κ x univ = 1) ∨ ∀ t, 0 ≤ t → 0 ≤ f t) :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν := by
   rw [fDiv_eq_iSup_partition hf hf_cont]
   refine iSup_le fun n ↦ iSup_le fun k ↦ iSup_le fun hk ↦ ?_
@@ -247,7 +246,7 @@ theorem fDiv_comp_le_of_isSubMarkovKernel (hf : ConvexOn ℝ (Ici 0) f)
       sum_measure_preimage_singleton _ fun i _ ↦ hA i, Finset.coe_univ, preimage_univ]
   have hint (ρ : Measure X) [IsFiniteMeasure ρ] (i : Fin n) :
       ((κ ∘ₘ ρ) (k ⁻¹' {i})).toReal = ∫ x, (κ x (k ⁻¹' {i})).toReal ∂ρ := by
-    rw [Measure.bind_apply (hA i) κ.aemeasurable,
+    rw [bind_apply (hA i) κ.aemeasurable,
       integral_toReal (κ.measurable_coe (hA i)).aemeasurable (ae_of_all _ fun _ ↦
         measure_lt_top _ _)]
   simp_rw [hint]
@@ -258,29 +257,25 @@ theorem fDiv_comp_le_of_isSubMarkovKernel (hf : ConvexOn ℝ (Ici 0) f)
   exact (IsSubProbabilityMeasure.toReal_mem_Icc _).2
 
 /-- Data processing along a Markov kernel. -/
-theorem fDiv_comp_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    (κ : Kernel X Y) [IsMarkovKernel κ] :
+theorem fDiv_comp_le (κ : Kernel X Y) [IsMarkovKernel κ] :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν :=
   fDiv_comp_le_of_isSubMarkovKernel hf hf_cont κ (.inl fun _ ↦ measure_univ)
 
 /-- Data processing along a sub-Markov kernel, for a nonnegative weight. -/
-theorem fDiv_comp_le_of_nonneg (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) (hf₀ : ∀ t, 0 ≤ t → 0 ≤ f t)
+theorem fDiv_comp_le_of_nonneg (hf₀ : ∀ t, 0 ≤ t → 0 ≤ f t)
     (κ : Kernel X Y) [IsSubMarkovKernel κ] :
     fDiv f (κ ∘ₘ μ) (κ ∘ₘ ν) ≤ fDiv f μ ν :=
   fDiv_comp_le_of_isSubMarkovKernel hf hf_cont κ (.inr hf₀)
 
 /-- Data processing along a measurable map. -/
-theorem fDiv_map_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    {k : X → Y} (hk : Measurable k := by fun_prop) :
+theorem fDiv_map_le {k : X → Y} (hk : Measurable k := by fun_prop) :
     fDiv f (μ.map k) (ν.map k) ≤ fDiv f μ ν := by
   rw [← deterministic_comp_eq_map hk, ← deterministic_comp_eq_map hk]
   exact fDiv_comp_le hf hf_cont _
 
 /-- Lower semicontinuity: along an increasing sequence on the left, the `f`-divergence of the
 supremum is at most the `liminf` of the `f`-divergences. -/
-theorem fDiv_le_liminf_of_monotone (hf : ConvexOn ℝ (Ici 0) f)
-    (hf_cont : ContinuousWithinAt f (Ici 0) 0) {μs : ℕ → Measure X} (hμ : Monotone μs)
+theorem fDiv_le_liminf_of_monotone {μs : ℕ → Measure X} (hμ : Monotone μs)
     [IsFiniteMeasure (⨆ n, μs n)] :
     fDiv f (⨆ n, μs n) ν ≤ liminf (fun n ↦ fDiv f (μs n) ν) atTop := by
   have (n : ℕ) : IsFiniteMeasure (μs n) := isFiniteMeasure_of_le _ (le_iSup μs n)
@@ -311,12 +306,14 @@ theorem fDiv_le_liminf_of_monotone (hf : ConvexOn ℝ (Ici 0) f)
 
 /-- Along an increasing sequence on the left, the `f`-divergence of the supremum is at most the
 supremum of the `f`-divergences. -/
-theorem fDiv_iSup_left_le (hf : ConvexOn ℝ (Ici 0) f) (hf_cont : ContinuousWithinAt f (Ici 0) 0)
-    {μs : ℕ → Measure X} (hμ : Monotone μs) [IsFiniteMeasure (⨆ n, μs n)] :
+theorem fDiv_iSup_left_le {μs : ℕ → Measure X} (hμ : Monotone μs)
+    [IsFiniteMeasure (⨆ n, μs n)] :
     fDiv f (⨆ n, μs n) ν ≤ ⨆ n, fDiv f (μs n) ν :=
   calc fDiv f (⨆ n, μs n) ν
       ≤ liminf (fun n ↦ fDiv f (μs n) ν) atTop := fDiv_le_liminf_of_monotone hf hf_cont hμ
     _ ≤ limsup (fun n ↦ fDiv f (μs n) ν) atTop := liminf_le_limsup
     _ ≤ ⨆ n, fDiv f (μs n) ν := limsup_le_iSup
+
+end
 
 end ProbabilityTheory

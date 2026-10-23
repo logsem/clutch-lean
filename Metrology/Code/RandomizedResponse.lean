@@ -7,8 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response
 
-The one-round program `rr`; the loop `rrLoop`/`rrCount` is in `RandomizedResponseLoop`.
-Privacy proofs: `Micrometer/Examples/RandomizedResponse/` (any lifting in `Basic`, DP in `Dp`). -/
+The one-round program `rr` (the loop is in `RandomizedResponseLoop`; proofs are in
+`Micrometer/Examples/RandomizedResponse/`). -/
 
 namespace ProbLang
 namespace RandomizedResponse

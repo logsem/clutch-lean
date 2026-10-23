@@ -7,8 +7,7 @@ public import Metrology.Meta.CheckDef
 /-!
 # Metaprogramming utilities
 
-Expr builders, `@[constructors]`, `@[uncurriedProjections]`, `#inspect` and `#checkdef`;
-`@[discrete]` (`Meta/Discrete`) is imported separately.
+Expr builders, `@[constructors]`, `@[uncurriedProjections]`, `#inspect` and `#checkdef`.
 -/
 
 @[expose] public section

@@ -47,13 +47,13 @@ open ProbLangℝ LawfulProbLangℝ
 
 variable (m : rT)
 
-/-- The body of `otp_enc m` as a lambda, which `otp_enc m` applies to `urand`. -/
+/-- The body of `otpEnc m` as a lambda, which `otpEnc m` applies to `urand`. -/
 abbrev otpLam : Exp rT := pl% fun k, frac(#m + k)
 
 /-- The encrypted sample refines the ideal sample, given a measure-preserving rotation. -/
 theorem otp_refines
     (hmp : MeasurePreserving (fun r => realFrac (realAdd m r)) unifUnit unifUnit) :
-    ⊢ REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real := by
+    ⊢ REL[codensity tv] (otpEnc m) << otpIdeal : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %_
   rel_pures
@@ -68,7 +68,7 @@ encryption sends `g r` back to `r`. -/
 theorem otp_refines_rev (g : rT → rT)
     (hmp : MeasurePreserving g unifUnit unifUnit)
     (hinv : ∀ r ∈ unifUnitSupport, realFrac (realAdd m (g r)) = r) :
-    ⊢ REL[codensity tv] otp_ideal << otp_enc m : lrel_real := by
+    ⊢ REL[codensity tv] otpIdeal << otpEnc m : lrel_real := by
   rel_couple_urands _ hmp
   iintro %r %hr
   rel_pures
@@ -89,14 +89,14 @@ local bi IProp GF
 variable (m : ℝ)
 
 /-- At `ℝ`, the encrypted sample refines the ideal sample. -/
-theorem otp_refines_real : ⊢ REL[codensity tv] (otp_enc m) << otp_ideal : lrel_real :=
+theorem otp_refines_real : ⊢ REL[codensity tv] (otpEnc m) << otpIdeal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
 /-- The rotation undoing the addition of `m`. -/
 noncomputable def invRot : ℝ → ℝ := fun r => fract (-m + r)
 
 /-- At `ℝ`, the ideal sample refines the encrypted sample. -/
-theorem otp_refines_rev_real : ⊢ REL[codensity tv] otp_ideal << otp_enc m : lrel_real :=
+theorem otp_refines_rev_real : ⊢ REL[codensity tv] otpIdeal << otpEnc m : lrel_real :=
   otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     -- on `(0, 1)`, `fract (m + fract (-m + r)) = fract r = r`
     obtain ⟨hr0, hr1⟩ : r ∈ Ioo 0 1 := hr
@@ -141,13 +141,13 @@ variable (m : ℝ) (σ σ' : State ℝ)
 
 /-- The limit distributions of the encryption and the ideal sample are coupled at budget `0`. -/
 theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_enc m, σ⟩) (limExecV ⟨otp_ideal, σ'⟩) :=
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otpEnc m, σ⟩) (limExecV ⟨otpIdeal, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
     fun _ _ => otp_refines_real m
 
 /-- The reverse coupling of the limit distributions at budget `0`. -/
 theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otp_ideal, σ⟩) (limExecV ⟨otp_enc m, σ'⟩) :=
+    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otpIdeal, σ⟩) (limExecV ⟨otpEnc m, σ'⟩) :=
   refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
     fun _ _ => otp_refines_rev_real m
 
@@ -163,14 +163,14 @@ section Closed
 variable (m : ℝ) (σ : State ℝ)
 
 /-- The encrypted and ideal samples have the same distribution. -/
-theorem otp_distribution_eq (σ' : State ℝ) : limExecV ⟨otp_enc m, σ⟩ = limExecV ⟨otp_ideal, σ'⟩ :=
+theorem otp_distribution_eq (σ' : State ℝ) : limExecV ⟨otpEnc m, σ⟩ = limExecV ⟨otpIdeal, σ'⟩ :=
   tv_eq_of_rel ((otp_adequate_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ σ').mono le_rfl
       adequacyRel_otpφ_subset_eq)
     ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ' σ).mono le_rfl
       adequacyRel_otpφ_subset_eq)
 
 /-- No distinguisher has positive advantage. -/
-theorem otp_advantage_zero : advantage (otp_enc m) otp_ideal = 0 :=
+theorem otp_advantage_zero : advantage (otpEnc m) otpIdeal = 0 :=
   advantage_eq_zero_of_limExecV_eq fun σ => otp_distribution_eq m σ σ
 
 /-! ### Non-vacuity
@@ -178,12 +178,12 @@ theorem otp_advantage_zero : advantage (otp_enc m) otp_ideal = 0 :=
 An equality of measures says nothing if both sides are zero, so we pin down the mass.
 `urand` reaches a value in one step (`Atomic.urand`), hence `execN 2` carries all of it. -/
 
-theorem otp_ideal_mass : limExecV ⟨otp_ideal, σ⟩ univ = 1 := by
+theorem otp_ideal_mass : limExecV ⟨otpIdeal, σ⟩ univ = 1 := by
   have hnv : ¬ (pl(urand) : Exp ℝ).isValue := fun ⟨w⟩ => nomatch w
   have hprim : primStep ⟨pl(urand), σ⟩ = uniformReal σ :=
     primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
       (show uniformReal σ ≠ 0 from IsProbabilityMeasure.ne_zero _))
-  have hstep : execN 2 ⟨otp_ideal, σ⟩ univ = 1 := by
+  have hstep : execN 2 ⟨otpIdeal, σ⟩ univ = 1 := by
     show execN 2 ⟨pl(urand), σ⟩ univ = 1
     have hae : ∀ᵐ ρ' ∂(primStep ⟨pl(urand), σ⟩), execN 1 ρ' univ = 1 := by
       rw [ae_iff]
@@ -198,7 +198,7 @@ theorem otp_ideal_mass : limExecV ⟨otp_ideal, σ⟩ univ = 1 := by
   rw [asExpr, map_apply measurable_expr .univ, limExec_term hstep]
   simpa using hstep
 
-theorem otp_enc_mass : limExecV ⟨otp_enc m, σ⟩ univ = 1 := by
+theorem otp_enc_mass : limExecV ⟨otpEnc m, σ⟩ univ = 1 := by
   rw [otp_distribution_eq m σ σ, otp_ideal_mass]
 
 end Closed
@@ -210,14 +210,14 @@ for every well-typed boolean context. -/
 
 section Typing
 
-theorem otp_ideal_typed : Typed (rT := rT) empty otp_ideal .real := .urand
+theorem otp_ideal_typed : Typed (rT := rT) empty otpIdeal .real := .urand
 
 variable (m : rT)
 
 theorem otpLam_typed : Typed empty (otpLam m) (.arrow .real .real) :=
   Typed.lam ∅ fun _ _ => .unop_real (.binop_real .lit_real (.fvar (by simp [Tctx.insert])) rfl) rfl
 
-theorem otp_enc_typed : Typed empty (otp_enc m) .real := .app (otpLam_typed m) .urand
+theorem otp_enc_typed : Typed empty (otpEnc m) .real := .app (otpLam_typed m) .urand
 
 end Typing
 
@@ -235,9 +235,9 @@ of each outcome. -/
 theorem otp_ctx_refines_real :
     ∀ K σ₀ b,
       TypedCtx K empty .real empty .bool → BindersFresh K ∅ →
-      (∀ x ∈ binderAtoms K, x ∉ (otp_enc m).fv ∧ x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ payloadFv K) →
-      limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) ≤
-      limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
+      (∀ x ∈ binderAtoms K, x ∉ (otpEnc m).fv ∧ x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ payloadFv K) →
+      limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) ≤
+      limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
   refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
     fun _ _ _ => otp_refines_real m
 
@@ -245,19 +245,19 @@ theorem otp_ctx_refines_real :
 theorem otp_ctx_refines_rev_real :
     ∀ K σ₀ b,
       TypedCtx K empty .real empty .bool → BindersFresh K ∅ →
-      (∀ x ∈ binderAtoms K, x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ (otp_enc m).fv ∧ x ∉ payloadFv K) →
-      limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) ≤
-      limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) :=
+      (∀ x ∈ binderAtoms K, x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ (otpEnc m).fv ∧ x ∉ payloadFv K) →
+      limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) ≤
+      limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) :=
   refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ _ => otp_refines_rev_real m
 
 /-- Every well-typed boolean context sees the same distribution on both programs. -/
 theorem otp_ctx_equiv_real
     (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool) (hK : TypedCtx K empty .real empty .bool)
-    (hbf : BindersFresh K ∅) (hfresh : ∀ x ∈ binderAtoms K, x ∉ (otp_enc m).fv ∧
-      x ∉ (otp_ideal (rT := ℝ)).fv ∧ x ∉ payloadFv K) :
-    limExec ⟨K.fill (otp_enc m), σ₀⟩ (finalBool b) =
-    limExec ⟨K.fill otp_ideal, σ₀⟩ (finalBool b) :=
+    (hbf : BindersFresh K ∅) (hfresh : ∀ x ∈ binderAtoms K, x ∉ (otpEnc m).fv ∧
+      x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ payloadFv K) :
+    limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) =
+    limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
   le_antisymm (otp_ctx_refines_real GF m K σ₀ b hK hbf hfresh) <|
     otp_ctx_refines_rev_real GF m K σ₀ b hK hbf fun x hx =>
       have ⟨henc, hideal, hpayload⟩ := hfresh x hx

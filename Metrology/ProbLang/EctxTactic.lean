@@ -11,8 +11,7 @@ public import Qq
 /-!
 # Evaluation-context engine for the `wp_*`, `rel_*` and `twp_*` tactics
 
-Find the context around a redex, refill it, compute the pure reduct; also the `pure_step(s)`
-tactics for plain `PureSteps` goals.
+Finds the context around a redex, refills it, and computes the pure reduct.
 -/
 
 namespace ProbLang

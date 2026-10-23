@@ -5,8 +5,7 @@ public import Metrology.Couplings.Divergences.Tv
 
 /-! # DP bind shapes beyond uniform composition
 
-Adaptive DP composition whose second budget depends on the right outcome, the left outcome, or a
-left choice; these back `BindLaw.dpRhs`/`dpLhs`/`dpChoice` (Rocq `instances_dp.v`). -/
+Adaptive DP composition with budgets depending on an outcome or a choice (Rocq `instances_dp.v`). -/
 
 @[expose] public section
 

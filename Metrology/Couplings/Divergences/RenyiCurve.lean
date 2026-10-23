@@ -98,7 +98,7 @@ theorem absorbing_codensity_renyiCurve_iff {ρ : RenyiBudget} :
     (codensity renyiCurve.{u}).Absorbing ρ ↔ ρ = ⊤ := by
   classical
   refine ⟨fun h ↦ by_contra fun hρ ↦ ?_,
-    fun h ↦ h ▸ IsTopAbsorbing.absorbing_top (L := codensity _)⟩
+    fun h ↦ h ▸ IsTopAbsorbing.absorbing_top⟩
   obtain ⟨α, hα⟩ := ne_iff.1 hρ
   refine not_absorbing_codensity_renyi α.2 (lt_top_iff_ne_top.2 hα) fun R μ ν _ _ ↦ ?_
   simpa using codensity_renyiCurve_iff.1 (h (fun x y ↦ update ⊤ α (R x y)) μ ν) α

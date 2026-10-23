@@ -22,16 +22,21 @@ variable {rT : Type _}
 /-- Indices `z` of a tape of size `N`, with `0 ≤ z < N`. -/
 abbrev TapeIdx (N : Int) := { z : Int // 0 ≤ z ∧ z < N }
 
+/-- The finite set of all indices of a tape of size `N`. -/
 noncomputable def tapeIdxFinset (N : Int) : Finset (TapeIdx N) :=
   (Finset.Ico 0 N).attach.image fun z => ⟨z.1, Finset.mem_Ico.mp z.2⟩
 
+section presample
+variable (σ : State rT) (α : Loc) (N : Int) (bs : List (TapeIdx N))
+
 /-- The state obtained by writing tape index `n` onto the tape at `α`. -/
-abbrev presampleUpdate (σ : State rT) (α : Loc) (N : Int) (bs : List (TapeIdx N))
-    (n : TapeIdx N) : State rT :=
+abbrev presampleUpdate (n : TapeIdx N) : State rT :=
   σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)
 
+variable {σ α N bs}
+
 /-- Distinct samples append distinct tape suffixes, so the presample state-update is injective. -/
-theorem presample_update_injective {σ : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)} :
+theorem presample_update_injective :
     Function.Injective (presampleUpdate σ α N bs) := by
   intro n₁ n₂ heq
   have htape_eq : (σ.tapes.insert α ⟨N, bs ++ [n₁]⟩) = (σ.tapes.insert α ⟨N, bs ++ [n₂]⟩) := by
@@ -45,28 +50,28 @@ theorem presample_update_injective {σ : State rT} {α : Loc} {N : Int} {bs : Li
   simpa using (List.append_cancel_left hbs).symm
 
 /-- The chosen preimage of a presampled state is the presampling index. -/
-theorem presample_choose_eq {σ σ' : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)}
-    {n : TapeIdx N} (h : ∃ m : TapeIdx N, σ' = presampleUpdate σ α N bs m)
+theorem presample_choose_eq {σ' : State rT} {n : TapeIdx N}
+    (h : ∃ m : TapeIdx N, σ' = presampleUpdate σ α N bs m)
     (hn : σ' = presampleUpdate σ α N bs n) : Classical.choose h = n :=
   presample_update_injective ((Classical.choose_spec h).symm.trans hn)
 
+variable (σ α N bs)
+
 open Classical in
 /-- Per-outcome credit for advanced composition: `ε₂ n` on the `n`-update, `0` off-support. -/
-noncomputable def presampleAdvCompX₂ (σ : State rT) (α : Loc) (N : Int) (bs : List (TapeIdx N))
-    (ε₂ : TapeIdx N → ENNReal) (σ' : State rT) : ENNReal :=
-  if h : ∃ n : TapeIdx N, σ' = presampleUpdate σ α N bs n then ε₂ (Classical.choose h) else 0
+noncomputable def presampleAdvCompX₂ (ε₂ : TapeIdx N → ENNReal) (σ' : State rT) : ENNReal :=
+  if h : ∃ n : TapeIdx N, σ' = presampleUpdate σ α N bs n then ε₂ (choose h) else 0
 
 open Classical in
 /-- `presampleAdvCompX₂` is a countable sum of singleton indicators, one per sample. -/
-theorem presampleAdvCompX₂_eq_tsum (σ : State rT) (α : Loc) (N : Int) (bs : List (TapeIdx N))
-    (ε₂ : TapeIdx N → ENNReal) :
+theorem presampleAdvCompX₂_eq_tsum (ε₂ : TapeIdx N → ENNReal) :
     presampleAdvCompX₂ σ α N bs ε₂ = fun σ' => ∑' n : TapeIdx N,
       ({presampleUpdate σ α N bs n} : Set (State rT)).indicator (fun _ => ε₂ n) σ' := by
   funext σ'
   unfold presampleAdvCompX₂
   by_cases h : ∃ n : TapeIdx N, σ' = presampleUpdate σ α N bs n
-  · rw [dite_eq_left h, tsum_eq_single (Classical.choose h) ?_,
-      Set.indicator_of_mem (Set.mem_singleton_iff.mpr (Classical.choose_spec h))]
+  · rw [dite_eq_left h, tsum_eq_single (choose h) ?_,
+      Set.indicator_of_mem (Set.mem_singleton_iff.mpr (choose_spec h))]
     intro n hn
     refine Set.indicator_of_notMem (fun hmem => hn ?_) _
     exact (presample_choose_eq h (Set.mem_singleton_iff.mp hmem)).symm
@@ -76,12 +81,13 @@ theorem presampleAdvCompX₂_eq_tsum (σ : State rT) (α : Loc) (N : Int) (bs : 
 
 open Classical in
 /-- `presampleAdvCompX₂` evaluates to `ε₂ n` on the state updated at `n`. -/
-@[simp] theorem presampleAdvCompX₂_update (σ : State rT) (α : Loc) (N : Int)
-    (bs : List (TapeIdx N)) (ε₂ : TapeIdx N → ENNReal) (n : TapeIdx N) :
+@[simp] theorem presampleAdvCompX₂_update (ε₂ : TapeIdx N → ENNReal) (n : TapeIdx N) :
     presampleAdvCompX₂ σ α N bs ε₂ (presampleUpdate σ α N bs n) = ε₂ n := by
   unfold presampleAdvCompX₂
   rw [dite_eq_left ⟨n, rfl⟩]
   exact congrArg ε₂ (presample_choose_eq _ rfl)
+
+end presample
 
 variable [LawfulProbLangℝ rT]
 variable {α : Loc} {N : Int}
@@ -197,7 +203,7 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT}
   iintro %σ' %⟨n, rfl⟩
   simp only [presampleAdvCompX₂_update]
   imod Hclose with -
-  imod (app_state_update_tape (s := ⟨N, bs ++ [n]⟩)) $$ Hσ Htape with ⟨Hσ', Htape'⟩
+  imod app_state_update_tape $$ Hσ Htape with ⟨Hσ', Htape'⟩
   ihave >Hε_rem := errInterp_supply_decrease $$ [$Hε_now $Herr]
   by_cases hlt : ε_now - ε₁ + ε₂ n < 1
   · imod errInterp_supply_increase hlt $$ Hε_rem with ⟨Hε_new, Hε₂_cr⟩
@@ -213,8 +219,8 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT}
     imodintro
     iapply execStutter_spend hlt
 
-/-- Basic total presample rule: append a freshly sampled `n` to tape `α`, spending no credit.
-The `ε₂ := 0` instance of `twp_presample_adv_comp`. -/
+/-- Basic total presample rule: append a freshly sampled `n` to tape `α`, spending no credit; it is
+the `ε₂ := 0` instance of `twp_presample_adv_comp`. -/
 theorem twp_presample {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
     {t : Tape} (hN : 0 < t.bound) (hv : e.toVal? = none) :
     iprop(α ↪ₐ t ∗

@@ -12,48 +12,59 @@ public import Qq
 /-!
 # `twp_*` tactics
 
-`twp_bind`, `twp_pure`, `twp_pures`, `twp_pure_at` and `twp_value` for `tglWp` goals, on the
-evaluation-context engine of `ProbLang/EctxTactic.lean`.
+The tactics `twp_bind`, `twp_pure`, `twp_pures`, `twp_pure_at` and `twp_value`
+for `tglWp` goals.
 -/
 
 namespace ProbLang.TotalEris
 
 open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
-open Meta Elab Tactic Qq Iris Iris.ProofMode
+open Meta Elab Tactic Qq Iris Iris.ProofMode ErisWpGS
 
 /-! ## Context-lifted pure step -/
 
-section
-variable {rT : Type _} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
-
 /-- A pure step under an evaluation context `K`; the lemma behind `twp_pure`. -/
-public theorem ErisWpGS.twp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
-    [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
+public theorem ErisWpGS.twp_pure_step_ctx {rT : Type _} [LawfulProbLangℝ rT]
+    {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF] (K : Ectx rT) (φ : Prop)
+    {n : ℕ} {e₁ e₂ : Exp rT} [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     tglWp E (K.fill e₂) Φ ⊢ tglWp E (K.fill e₁) Φ := by
   let : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
   exact twp_pure_step_fupd φ Hφ
-
-end
 
 /-! ## Goal parsing -/
 
 /-- The pieces of a `tglWp E e Φ` proof-mode goal, with its typeclass instances. -/
 meta structure TglWpGoal where
+  /-- The universe level of the proof-mode carrier. -/
   {u : Level}
+  /-- The type of the probabilistic language. -/
   {α : Q(Type)}
-  instPL : Q(ProbLang.LawfulProbLangℝ $α)
+  /-- The `LawfulProbLangℝ` instance on `α`. -/
+  instPL : Q(LawfulProbLangℝ $α)
+  /-- The global functors. -/
   {GF : Q(BundledGFunctors.{0, 0, 0})}
+  /-- The `ErisWpGS` instance for `GF`. -/
   instWp : Q(ErisWpGS (rT := $α) $GF)
+  /-- The carrier type of the hypotheses. -/
   {prop : Q(Type u)}
+  /-- The `BI` structure on the carrier. -/
   {bi : Q(BI $prop)}
+  /-- The hypotheses as an expression. -/
   {ehyps : Q($prop)}
+  /-- The proof-mode hypotheses. -/
   hyps : Hyps bi ehyps
+  /-- The mask of the `tglWp`. -/
   E : Q(CoPset)
+  /-- The expression under `tglWp`. -/
   e : Q(Exp $α)
+  /-- The postcondition of the `tglWp`. -/
   Φ : Q(Val $α → IProp $GF)
+  /-- Proof that the universe level is `0`. -/
   hu : QuotedLevelDefEq u 0
+  /-- Proof that the carrier is `IProp GF`. -/
   hprop : $prop =Q IProp $GF
+  /-- Proof that the `BI` is the one of `IProp`. -/
   hbi : $bi =Q UPred.instBIUPred
 
 /-- Run `k` on the main goal, parsed as a `tglWp` goal. -/
@@ -68,13 +79,13 @@ meta def runTacticTglWp {β : Type} (k : MVarId → TglWpGoal → ProofModeM β)
       | throwError "expected the BI of `IProp` to be `UPred.instBIUPred`"
     -- `tglWp` is `@[reducible]`, so a `~q` match would not refine; read the spine.
     let goalE : LeanExpr := (← instantiateMVars goal).consumeMData
-    unless goalE.getAppFn.consumeMData.isConstOf ``ProbLang.TotalEris.ErisWpGS.tglWp do
+    unless goalE.getAppFn.consumeMData.isConstOf ``ErisWpGS.tglWp do
       throwError "the goal {goal} must be a `tglWp`"
     let args := goalE.getAppArgs
     unless args.size == 7 do
       throwError "unexpected `tglWp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
-    have instPL : Q(ProbLang.LawfulProbLangℝ $α) := args[1]!
+    have instPL : Q(LawfulProbLangℝ $α) := args[1]!
     have instWp : Q(ErisWpGS (rT := $α) $GF) := args[3]!
     have E : Q(CoPset) := args[4]!
     have e : Q(Exp $α) := args[5]!
@@ -96,19 +107,19 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     have e' : Q(Exp $α) := focus
     let Φc : Q(Val $α → IProp $GF) ← withLocalDeclDQ `v q(Val $α) fun v => do
         let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
-        mkLambdaFVars #[v] q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
-    let pf ← addBIGoal hyps q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
+        mkLambdaFVars #[v] q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
+    let pf ← addBIGoal hyps q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
     -- `mkAppOptM`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
     -- `bi_least_fixpoint` (heartbeat blow-up).
-    let bindPf ← mkAppOptM ``ProbLang.TotalEris.ErisWpGS.tglWp_bind
+    let bindPf ← mkAppOptM ``ErisWpGS.tglWp_bind
       (#[α, instPL, GF, instWp, K, E, e', Φ].map some)
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
 /-! ## `twp_pure` -/
 
-/-- `twp_pure_core [e]` takes one `PureExec` step, at `e` if given. The side condition is
-tried with `is_value`, else left as a goal. -/
+/-- `twp_pure_core [e]` takes one `PureExec` step, at `e` if given, and leaves the `PureExec`
+side condition as a goal unless `is_value` closes it. -/
 elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
   runTacticTglWp fun mvar { α, GF, instPL, instWp, hyps, E, e, Φ, .. } => do
     let focus? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
@@ -124,10 +135,10 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     -- An `Ectx.fill` redex would hide the next redex from `twp_pures`.
     let inner : Q(Exp $α) ← fillQ K e₂
     let pf ← addBIGoal hyps
-      q(@ProbLang.TotalEris.ErisWpGS.tglWp $α $instPL $GF $instWp $E $inner $Φ)
+      q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $inner $Φ)
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
-    (← Tactic.evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!).forM addMVarGoal
-    let stepPf ← mkAppOptM ``ProbLang.TotalEris.ErisWpGS.twp_pure_step_ctx
+    (← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!).forM addMVarGoal
+    let stepPf ← mkAppOptM ``ErisWpGS.twp_pure_step_ctx
       (#[α, instPL, GF, instWp, K, φ, n, e₁, e₂, step.inst, HΦ, E, Φ].map some)
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
@@ -145,7 +156,7 @@ elab "twp_value" : tactic =>
       | throwTacticEx `twp_value mvar m!"{← ppExpr e} is not a value"
     let hproof : Q(Exp.toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar
       q(Exp.toVal? $e = some $v)
-    (← Tactic.evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
+    (← evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
     have goal : Q(IProp $GF) := Expr.headBeta q($Φ $v)
     -- Iris's `iWpValueHead`: drop the `|={E}=>` only if the postcondition absorbs it.
     let c : Q(Prop) ← mkFreshExprMVarQ q(Prop)
@@ -157,8 +168,8 @@ elab "twp_value" : tactic =>
         pure (← observing? (iSolveSidecondition c)).isSome
       else pure false
     have target : Q(IProp $GF) := if useNoFupd then goal else q(iprop(|={$E}=> $goal))
-    let valLemma := if useNoFupd then ``ProbLang.TotalEris.ErisWpGS.tglWp_value_of_toVal
-      else ``ProbLang.TotalEris.ErisWpGS.tglWp_value_fupd_of_toVal
+    let valLemma := if useNoFupd then ``ErisWpGS.tglWp_value_of_toVal
+      else ``ErisWpGS.tglWp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
     let valPf ← mkAppOptM valLemma (#[α, instPL, GF, instWp, E, e, v, Φ, hproof].map some)
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
@@ -173,11 +184,11 @@ macro "twp_pure" focus:(ppSpace colGt term:max)? : tactic =>
 /-- `twp_pure_at e₁ ↦ e₂` takes one `PureExec` step from `e₁` to `e₂`, given explicitly, for when
 synthesis cannot see through an opaque definition in `e₁`. -/
 macro "twp_pure_at " e1:term:max " ↦ " e2:term:max : tactic =>
-  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))
+  `(tactic| iapply (twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))
 
 /-- `twp_pure_at e₁ ↦ e₂ by hφ` supplies the precondition `is_value` cannot close. -/
 macro "twp_pure_at " e1:term:max " ↦ " e2:term:max " by " h:term : tactic =>
-  `(tactic| iapply (ErisWpGS.twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
+  `(tactic| iapply (twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
 
 /-- `twp_pures` takes pure steps until none applies. -/
 macro "twp_pures" : tactic =>

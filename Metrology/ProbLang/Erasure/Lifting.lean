@@ -7,15 +7,15 @@ public import Metrology.Couplings.Bridges.AddCoupl
 
 /-! # Erasure as a lifting rule
 
-Lifting rules that run from an erasable state distribution (`ErasableExpr`) instead of a state;
-Micrometer uses `lift_erasure_erasable_law`, `lift_erasure_erasable_exp_lhs_kanto_law` and
-`tapePresample_rel_bij`. -/
+Lifting rules for programs run from an erasable state distribution (`ErasableExpr`). -/
 
 namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure
+open ProbabilityTheory
+open Measurable (of_discrete)
 
 section Lifting
 
@@ -99,12 +99,12 @@ theorem lift_erasure_erasable_exp_lhs_kanto [LT B] [Top B] [Zero B] [L.HasBind]
 /-! ## Erasure rules for a bind law -/
 
 /-- The value distributions of the `m`-step runs, as a kernel. -/
-noncomputable def execVKernel (m : Nat) : ProbabilityTheory.Kernel (Cfg rT) (Exp rT) :=
+noncomputable def execVKernel (m : Nat) : Kernel (Cfg rT) (Exp rT) :=
   ⟨fun ρ => asExpr (execN m ρ),
-    (Measure.measurable_map _ Cfg.measurable_expr).comp (execN_measurable m)⟩
+    (measurable_map _ Cfg.measurable_expr).comp (execN_measurable m)⟩
 
 instance execVKernel.isSubMarkovKernel (m : Nat) :
-    ProbabilityTheory.IsSubMarkovKernel (execVKernel (rT := rT) m) :=
+    IsSubMarkovKernel (execVKernel (rT := rT) m) :=
   ⟨fun ρ => asExpr.isSubProbabilityMeasure (execN m ρ)⟩
 
 section Law
@@ -122,7 +122,7 @@ def _root_.GradedLifting.BindLaw.SideForExec (law : L.BindLaw) (μ : Measure X) 
 theorem _root_.GradedLifting.BindLaw.SideForExec.of_forall {law : L.BindLaw} {μ : Measure X}
     {ν : Measure Y} {R : X → Y → B} {f' : Y → Cfg rT}
     (h : ∀ {X' Y' : Type} [MeasurableSpace X'] [MeasurableSpace Y']
-      (k₁ : ProbabilityTheory.Kernel X X') (k₂ : ProbabilityTheory.Kernel Y Y'),
+      (k₁ : Kernel X X') (k₂ : Kernel Y Y'),
         law.side μ ν R k₁ k₂) :
     law.SideForExec μ ν R f' :=
   fun _ _ _ _ => h _ _
@@ -143,8 +143,8 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Zero B] (law : L.BindLaw) {μ�
     (hCont : ∀ x y, R x y < ⊤ → L.Rel (R x y) Φexp (asExpr (execN n (f x))) (limExecV (f' y))) :
     L.Rel b Φexp (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n))) (limExecV ⟨e₁', σ₁'⟩) := by
   rw [asExpr_bind _ _ (execN_measurable n), limExecV_eq_bind_of_erasable hErase₁' e₁' m, hprog,
-    hspec, Measure.bind_map (g := fun ρ => asExpr (execN n ρ)) hf (execVKernel n).measurable,
-    Measure.bind_map (g := limExecV) hf' limExecV.measurable]
+    hspec, bind_map (g := fun ρ => asExpr (execN n ρ)) hf (execVKernel n).measurable,
+    bind_map (g := limExecV) hf' limExecV.measurable]
   exact law.sound (f := (execVKernel n).comap f hf) (g := limExecVKernel.comap f' hf') hhead
     (hside n f hf hf') hCont
 
@@ -161,7 +161,7 @@ theorem lift_erasure_erasable_law [Zero B] (law : L.BindLaw) {ν₀ : Measure Y}
   have hh : Measurable (fun σ : State rT => (⟨e₁, σ⟩ : Cfg rT)) :=
     Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
   rw [asExpr_execN_eq_bind_of_erasable hErase₁ e₁ n, limExecV_eq_bind_of_erasable hErase₁' e₁' m,
-    hspec, Measure.bind_map (g := limExecV) hf' limExecV.measurable]
+    hspec, bind_map (g := limExecV) hf' limExecV.measurable]
   exact law.sound (f := (execVKernel n).comap _ hh) (g := limExecVKernel.comap f' hf') hhead
     (hside n _ hh hf') hCont
 
@@ -189,7 +189,7 @@ theorem addCoupl_erasable_exp_rhs
           (limExecV ρ')) :
     AddCoupl ε Φexp (asExpr (execN n ⟨e₁, σ₁⟩)) (limExecV ⟨e₁', σ₁'⟩) := by
   have := hErase₁.isProbabilityMeasure
-  exact (lift_erasure_erasable_exp_rhs (L := GradedDivergence.tv.codensity)
+  exact (lift_erasure_erasable_exp_rhs
     (s := OrderAddMonoidHom.id _) hE₂meas hCoupl.codensity hBoundSum hEpsSum hErase₁ hErase₁'
     fun σ₂ ρ' hR => (hCont σ₂ ρ' hR).codensity).addCoupl
 
@@ -227,8 +227,8 @@ theorem addCoupl_erasable_exp_lhs [Countable rT]
     fun _ => IsSubProbabilityMeasure.measure_univ_le_one
   rw [← hErase₁'.lim_exec e₁']
   unfold asExpr
-  rw [Measure.bind_map_comm_of_discrete, Measure.bind_map_comm_of_discrete]
-  exact (AddCoupl.bind_adv_lhs Measurable.of_discrete Measurable.of_discrete hE₂meas hmassk
+  rw [bind_map_comm_of_discrete, bind_map_comm_of_discrete]
+  exact (AddCoupl.bind_adv_lhs of_discrete of_discrete hE₂meas hmassk
     hBoundSum hCoupl fun {ρ σ₂'} hR => hCont ρ σ₂' hR).mono_grading hEpsSum
 
 /-- The `tv` instance of `lift_erasure_erasable_exp_lhs_kanto` (Clutch
@@ -255,7 +255,7 @@ theorem tapeIndexUniform_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.I
     L.Rel 0 (fun p q => ∃ n : Int, 0 ≤ n ∧ n < N ∧ p = tapeIdxOf hN n ∧ q = tapeIdxOf hN (f n))
       (tapeIndexUniform N) (tapeIndexUniform N) := by
   have h := rel_graph (L := L) (tapeIndexUniform N) (f := fun x => tapeIdxOf hN (f x.val))
-    Measurable.of_discrete
+    of_discrete
   rw [tapeIndexUniform_map_bijOn hN f hdom hbij] at h
   exact h.mono le_rfl fun p q hp =>
     ⟨p.val, p.2.1, p.2.2, Subtype.ext (tapeIdxOf_val hN p.2.1 p.2.2).symm, hp.symm⟩
@@ -282,8 +282,8 @@ theorem tapePresample_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLa
         τ' = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩))
       (tapePresample σ α) (tapePresample σ' α') := by
   rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
-  refine (tapeIndexUniform_rel_bij hN f hdom hbij).map ?_ Measurable.of_discrete
-    Measurable.of_discrete
+  refine (tapeIndexUniform_rel_bij hN f hdom hbij).map ?_ of_discrete
+    of_discrete
   rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
   exact ⟨n, h0, hn, rfl, rfl⟩
 

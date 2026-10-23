@@ -5,8 +5,7 @@ public import Metrology.Couplings.Divergences.Concentrated
 /-! # Power and χ² divergences
 
 Power budgets (`ℝ≥0∞` with `a + b + a b`), and power/χ² divergences and liftings as Rényi
-regradings along `toRenyi`; main results `powerLifting_bind`, `chi2Lifting_bind` (Rocq `regrade.v`).
--/
+regradings along `toRenyi` (Rocq `regrade.v`). -/
 
 @[expose] public section
 
@@ -19,8 +18,8 @@ namespace GradedDivergence
 
 /-! ## Power budgets -/
 
-/-- Budgets of power divergences: `ℝ≥0∞` with `a ⊕ b = a + b + a b`. Along `c ↦ log (1 + c)` this
-is ordinary addition (`PowerBudget.log`), which is why power divergences are regraded Rényi. -/
+/-- Power budgets are `ℝ≥0∞` with `a ⊕ b = a + b + a b`, which along `c ↦ log (1 + c)` is ordinary
+addition (`PowerBudget.log`). -/
 def PowerBudget : Type :=
   ℝ≥0∞
 
@@ -42,10 +41,12 @@ noncomputable def ofENNReal : ℝ≥0∞ ≃o PowerBudget :=
 noncomputable def toENNReal : PowerBudget ≃o ℝ≥0∞ :=
   OrderIso.refl _
 
+/-- `toENNReal` undoes `ofENNReal`. -/
 @[simp]
 theorem toENNReal_ofENNReal (c : ℝ≥0∞) : toENNReal (ofENNReal c) = c :=
   rfl
 
+/-- `ofENNReal` undoes `toENNReal`. -/
 @[simp]
 theorem ofENNReal_toENNReal (c : PowerBudget) : ofENNReal (toENNReal c) = c :=
   rfl
@@ -58,19 +59,23 @@ noncomputable instance instZero : Zero PowerBudget :=
 noncomputable instance instAdd : Add PowerBudget :=
   ⟨fun a b ↦ ofENNReal (toENNReal a + toENNReal b + toENNReal a * toENNReal b)⟩
 
+/-- `toENNReal` sends the zero budget to `0`. -/
 @[simp]
 theorem toENNReal_zero : toENNReal 0 = 0 :=
   rfl
 
+/-- `toENNReal` turns budget composition into `a + b + a b`. -/
 @[simp]
 theorem toENNReal_add (a b : PowerBudget) :
     toENNReal (a + b) = toENNReal a + toENNReal b + toENNReal a * toENNReal b :=
   rfl
 
+/-- `toENNReal` sends `⊤` to `⊤`. -/
 @[simp]
 theorem toENNReal_top : toENNReal ⊤ = ⊤ :=
   rfl
 
+/-- `ofENNReal` sends `⊤` to `⊤`. -/
 @[simp]
 theorem ofENNReal_top : ofENNReal ⊤ = ⊤ :=
   rfl
@@ -133,6 +138,7 @@ theorem isAddLeftRegular_of_ne_top {c : PowerBudget} (hc : toENNReal c ≠ ⊤) 
 noncomputable def ofReal (c : ℝ) : PowerBudget :=
   ofENNReal (ENNReal.ofReal c)
 
+/-- `toENNReal` of a real budget is `ENNReal.ofReal`. -/
 @[simp]
 theorem toENNReal_ofReal (c : ℝ) : toENNReal (ofReal c) = ENNReal.ofReal c :=
   rfl
@@ -204,10 +210,12 @@ noncomputable def toRenyi (α : ℝ) (c : PowerBudget) : ℝ≥0∞ :=
 theorem toRenyi_mono : Monotone (toRenyi α) := fun _ _ h ↦
   mul_right_mono (OrderHomClass.mono log h)
 
+/-- The Rényi budget of the zero power budget is `0`. -/
 @[simp]
 theorem toRenyi_zero : toRenyi α 0 = 0 := by
   simp [toRenyi]
 
+/-- The Rényi budget of `⊤` is `⊤`. -/
 @[simp]
 theorem toRenyi_top : toRenyi α ⊤ = ⊤ := by
   simp [toRenyi, ENNReal.mul_top]
@@ -305,7 +313,7 @@ instance isGraded_power : (powerDivergence.{u} α).IsGraded :=
 instance isReflexive_power : (powerDivergence.{u} α).IsReflexive :=
   isReflexive_comap zero_le
 
-/-- Power budgets compose as `c₁ + c₂ + c₁ c₂`, since Rényi budgets add. -/
+/-- Power budgets compose as `c₁ + c₂ + c₁ c₂`. -/
 instance isComposable_power : (powerDivergence.{u} α).IsComposable :=
   isComposable_comap fun b c ↦ (toRenyi_add b c).ge
 
@@ -325,7 +333,7 @@ instance isRightMonotone_power : (powerDivergence.{u} α).IsRightMonotone :=
 instance isLeftAntitone_power : (powerDivergence.{u} α).IsLeftAntitone :=
   isLeftAntitone_comap
 
-/-- Power divergences are budget closed, since every larger Rényi budget is a power budget. -/
+/-- Power divergences are budget closed. -/
 instance isBudgetClosed_power : (powerDivergence.{u} α).IsBudgetClosed where
   of_forall_gt h := IsBudgetClosed.of_forall_gt (D := renyiDivergence α) fun _ hρ ↦ by
     obtain ⟨c', hc, rfl⟩ := exists_lt_toRenyi_eq hα.out hρ
@@ -375,13 +383,13 @@ section LiftingInstances
 
 variable (α) [hα : Fact (1 < α)]
 
-/-- Power liftings are lawful, since `toRenyi α` is additive. -/
+/-- Power liftings are lawful. -/
 instance isLawful_powerLifting : (powerLifting.{u} α).IsLawful :=
   isLawful_comap toRenyi_mono toRenyi_add fun _ ↦ toRenyi_lt_top hα.out
 
 /-- Power liftings bind (Rocq `GBL_power`). -/
 instance hasBind_powerLifting : (powerLifting.{u} α).HasBind :=
-  hasBind_comap (L := codensity _) toRenyi_top
+  hasBind_comap toRenyi_top
 
 /-- Power liftings are reflexive (Rocq `GBL_power_head_diag`). -/
 instance isReflexive_powerLifting : (powerLifting.{u} α).IsReflexive :=
@@ -397,11 +405,11 @@ instance isLeftContinuous_powerLifting : (powerLifting.{u} α).IsLeftContinuous 
 
 /-- Power liftings are support local (Rocq `power_head_supp`). -/
 instance isSupportLocal_powerLifting : (powerLifting.{u} α).IsSupportLocal :=
-  isSupportLocal_comap (L := codensity _) toRenyi_top
+  isSupportLocal_comap toRenyi_top
 
 /-- Power liftings relate everything at `⊤`. -/
 instance isTopAbsorbing_powerLifting : (powerLifting.{u} α).IsTopAbsorbing :=
-  isTopAbsorbing_comap (L := codensity _) toRenyi_top
+  isTopAbsorbing_comap toRenyi_top
 
 /-- A power lifting of equality gives the power divergence. -/
 instance isSound_powerLifting : (powerLifting.{u} α).IsSound (powerDivergence α) where
@@ -411,7 +419,7 @@ instance isSound_powerLifting : (powerLifting.{u} α).IsSound (powerDivergence �
 instance isComplete_powerLifting : (powerLifting.{u} α).IsComplete (powerDivergence α) where
   complete h := powerLifting_rel_iff.2 (codensity_complete h)
 
-/-- Power liftings are budget closed, since every larger Rényi budget is a power budget. -/
+/-- Power liftings are budget closed. -/
 instance isBudgetClosed_powerLifting : (powerLifting.{u} α).IsBudgetClosed where
   of_forall_gt h := GradedLifting.IsBudgetClosed.of_forall_gt (L := codensity _) fun _ hρ ↦ by
     obtain ⟨c', hc, rfl⟩ := exists_lt_toRenyi_eq hα.out hρ

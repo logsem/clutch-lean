@@ -5,21 +5,20 @@ public import Metrology.ProbLang.Exec
 public import Iris.Instances.Lib.FUpd
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-!
 # Spec-side update modality
 
-The modality `specUpdate E P`: take some deterministic steps of the right program under `|={E}=>`
-and give `P`. It comes with bind, monotonicity and framing rules; the `step_*` rules in
-`SpecRules.lean` produce it.
+The modality `specUpdate E P` takes some deterministic steps of the right program under `|={E}=>`
+and gives `P`.
 -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure
 
 namespace ProbLang
 
-/-- The abstract interpretation of a spec configuration, extended by `MicrometerWpGS`. -/
+/-- The abstract interpretation of a spec configuration. -/
 class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
   /-- The proposition interpreting a spec configuration. -/
   specInterp : Cfg rT → IProp GF
@@ -37,12 +36,12 @@ local bi IProp GF
 
 variable (rT) in
 /-- Update of the spec side by exactly `n` deterministic steps. -/
-def specUpdateN (n : Nat) (E : CoPset) (P : IProp GF) : IProp GF := iprop%
+def specUpdateN (n : Nat) (E : CoPset) (P : IProp GF) := iprop%
   ∀ (ρ : Cfg rT), specInterp ρ -∗ |={E}=> ∃ ρ', ⌜pexecN n ρ = dirac ρ'⌝ ∗ specInterp ρ' ∗ P
 
 variable (rT) in
 /-- Update of the spec side by some number of deterministic steps. -/
-abbrev specUpdate (E : CoPset) (P : IProp GF) : IProp GF := iprop%
+abbrev specUpdate (E : CoPset) (P : IProp GF) := iprop%
   ∀ (ρ : Cfg rT), specInterp ρ -∗ |={E}=> (∃ ρ' n, ⌜pexecN n ρ = dirac ρ'⌝ ∗ specInterp ρ' ∗ P)
 
 /-- Forgetting the step count turns `specUpdateN` into `specUpdate`. -/

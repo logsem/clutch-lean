@@ -5,7 +5,7 @@ public import Metrology.Couplings.BindLaw
 /-! # The codensity lifting
 
 `codensity D` lifts a graded divergence by testing (Sato–Katsumata, §7); it is the largest lawful,
-binding, sound and complete lifting (`le_codensity`). -/
+binding, sound and complete lifting. -/
 
 @[expose] public section
 
@@ -25,10 +25,8 @@ variable {B : Type v} {D : GradedDivergence.{u} B} {X Y X' Y' : Type u} [Measura
 /-! ## The codensity lifting -/
 
 variable (D) in
-/-- The codensity lifting: every test whose kernels are within the leftover plus a slack `c` at
-each pair stays within the budget plus `c` after binding (Sato–Katsumata, §7). Tests with
-`b + c = ⊤` are left out: they hold anyway under `IsGraded`, and dropping them makes framing free
-and `le_codensity` independent of `IsGraded`. -/
+/-- The codensity lifting: every test with finite `b + c` whose kernels lie within the leftover
+plus slack `c` at each pair keeps the budget plus `c` after binding (Sato–Katsumata, §7). -/
 def codensity [Add B] [LT B] [Top B] : GradedLifting.{u} B :=
   fun b {X Y} _ _ R μ ν ↦ ∀ ⦃I : Type u⦄ [MeasurableSpace I] ⦃c : B⦄, b + c < ⊤ →
     ∀ ⦃k : Kernel X I⦄ ⦃l : Kernel Y I⦄ [IsSubMarkovKernel k] [IsSubMarkovKernel l],
@@ -217,8 +215,8 @@ instance isBudgetClosed_codensity [AddCommSemigroup B] [Preorder B] [Canonically
     obtain ⟨b', hb, rfl⟩ := exists_lt_and_add_eq_of_add_lt hd
     exact IsGraded.of_lt_top fun hbc ↦ h b' hb hbc hkl
 
-/-- The codensity lifting detects mass when `D` does: test with the kernels that send `T` (resp.
-`T'`) to a point and the rest to `0`. -/
+/-- The codensity lifting detects mass when `D` does: test with the kernels that send `T` (and `T'`
+likewise) to a point and the rest to `0`. -/
 instance isMassDetecting_codensity [AddZeroClass B] [Preorder B] [OrderTop B] [D.IsGraded]
     [D.IsReflexive] [D.IsZeroLeft] {s : ℝ≥0∞ →+o B} [D.IsMassDetecting s] :
     (codensity D).IsMassDetecting s where

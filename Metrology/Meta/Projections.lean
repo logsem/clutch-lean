@@ -7,16 +7,9 @@ public import Metrology.Meta.Build
 
 open Lean Meta
 
-/-!
-# Constructors and projections of tuples
+/-! # Constructors and projections of tuples
 
-For each constructor `c` of an inductive type:
-
-* `@[constructors]`: `c.ι`, the constructor `c` as a function of the tuple of its fields;
-* `@[uncurriedProjections]`: `c.π`, its inverse into `Option` of that tuple, with `simp` equations.
-
-Used by `deriving instance MeasurableSpace` (`CylinderGen`, `MeasurableSyntax`).
--/
+The uncurried constructor `c.ι` and its inverse `c.π`, for deriving `MeasurableSpace`. -/
 
 namespace Metrology.Meta
 
@@ -44,9 +37,11 @@ def forEachCtor (decl : Name) (k : ConstructorVal → MetaM Unit) : CoreM Unit :
       if dependent then throwError "constructor `{c.name}` has a field depending on another one"
       k c
 
+variable (c : ConstructorVal)
+
 /-- Runs `k params T tuple` with the parameters of `c` (implicit, as in `c`'s type), the type
 `T params`, and the type `A × B × ...` of the tuple of the fields of `c`. -/
-def withCtorTuple (c : ConstructorVal) (k : Array Expr → Expr → Expr → MetaM α) : MetaM α := do
+def withCtorTuple (k : Array Expr → Expr → Expr → MetaM α) : MetaM α := do
   forallBoundedTelescope c.type c.numParams fun params _ => do
     let T := mkAppN (mkConst c.induct (c.levelParams.map .param)) params
     let tuple ← withCtorArgs c.name params fun args => do
@@ -54,17 +49,17 @@ def withCtorTuple (c : ConstructorVal) (k : Array Expr → Expr → Expr → Met
     k params T tuple
 
 /-- The type of `c.ι`: `params → (A × B × ...) → T params`. -/
-def ctorUncurriedType (c : ConstructorVal) : MetaM Expr :=
+def ctorUncurriedType : MetaM Expr :=
   withCtorTuple c fun params T tuple => do mkForallFVars params (← mkArrow tuple T)
 
 /-- The type of `c.π`: `params → T params → Option (A × B × ...)`. -/
-def ctorProjType (c : ConstructorVal) : MetaM Expr :=
+def ctorProjType : MetaM Expr :=
   withCtorTuple c fun params T tuple => do
     mkForallFVars params (← mkArrow T (← mkAppM ``Option #[tuple]))
 
 /-- `c.ι : params → (A × B × ...) → T params`, the constructor `c` as a function of the tuple of
 its fields. -/
-def mkCtorUncurried (c : ConstructorVal) : MetaM Unit := do
+def mkCtorUncurried : MetaM Unit := do
   let value ← withCtorTuple c fun params _ tuple => do
     let body ← withLocalDeclD `x tuple fun x => do
       let components ← (Array.range c.numFields).mapM (mkNestedProdProj x · c.numFields)
@@ -78,9 +73,9 @@ def mkCtorUncurried (c : ConstructorVal) : MetaM Unit := do
   simpExtension.add (.toUnfold name) .global
 
 /-- `c.π : params → T params → Option (A × B × ...)`, by `casesOn`: `some` of the tuple of the
-fields on `c`, and `none` elsewhere, with a `@[simp]` equation `c.π.eq_d` per constructor `d`.
-Nothing for a constructor without fields. -/
-def mkCtorProj (c : ConstructorVal) : MetaM Unit := do
+fields on `c`, and `none` elsewhere, with a `@[simp]` equation `c.π.eq_d` per constructor `d`,
+and defines nothing for a constructor without fields. -/
+def mkCtorProj : MetaM Unit := do
   if c.numFields == 0 then return
   let info ← getConstInfoInduct c.induct
   let levels := c.levelParams.map .param

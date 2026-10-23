@@ -5,8 +5,7 @@ public import Iris.BI.Lib.Fixpoint
 /-!
 # Fixpoint and discrete-OFE lemmas
 
-Non-expansiveness of least fixpoints (for `wp` and `specCoupl`) and of functions out of discrete
-OFEs (the `[NonExpansive Ψ]` argument of fixpoint induction).
+Non-expansiveness of least fixpoints and of functions out of discrete OFEs.
 -/
 
 @[expose] public section
@@ -23,7 +22,6 @@ theorem least_fixpoint_ne_outer {PROP : Type _} [BI PROP] {A : Type _} [OFE A]
       (NonExpansive.ne Hx)
 
 /-- Every function out of a discrete OFE is non-expansive. -/
-theorem nonExpansive_of_discrete_leibniz {T : Type _} [OFE T] [OFE.Discrete T]
+theorem nonExpansive_of_discrete_leibniz {T : Type _} [OFE T] [Discrete T]
     {P : Type _} [OFE P] (f : T → P) : NonExpansive f :=
-  ⟨fun _ _ _ hd => .of_eq (congrArg f (OFE.Discrete.discrete hd))⟩
-
+  ⟨fun _ _ _ hd => .of_eq (congrArg f (Discrete.discrete hd))⟩

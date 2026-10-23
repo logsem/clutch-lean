@@ -2,12 +2,9 @@ module
 
 public import Metrology.Couplings.Divergence
 
-/-!
-# Filling lost mass
-
+/-! # Filling lost mass
 `withBot` puts the lost mass on a fresh point `none`, `Kernel.dropBot` forgets it, and `fill D` is
-the Rocq `FillDiv`.
--/
+the Rocq `FillDiv`. -/
 
 @[expose] public section
 

@@ -12,7 +12,7 @@ Barthe–Olmedo's `hellingerDivergence α` (ICALP 2013) composes along kernels o
 
 universe u
 
-open MeasureTheory Measure ProbabilityTheory Set Filter Topology
+open MeasureTheory Measure ProbabilityTheory Set Filter Topology Real Finset Kernel
 open scoped ENNReal
 
 namespace ProbabilityTheory
@@ -40,12 +40,12 @@ include hα0 hα1
 /-- Weighted AM–GM for two terms. -/
 theorem rpow_mul_rpow_le {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
     p ^ α * q ^ (1 - α) ≤ α * p + (1 - α) * q :=
-  Real.geom_mean_le_arith_mean2_weighted hα0.le (by linarith) hp hq (by ring)
+  geom_mean_le_arith_mean2_weighted hα0.le (by linarith) hp hq (by ring)
 
 /-- The generator is nonnegative on `[0, ∞)`. -/
 theorem hellFun_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ hellFun α t := by
   have := rpow_mul_rpow_le hα0 hα1 ht zero_le_one
-  simp only [Real.one_rpow, mul_one] at this
+  simp only [one_rpow, mul_one] at this
   exact div_nonneg (by linarith) (by linarith)
 
 /-- The pointwise Hellinger term is nonnegative. -/
@@ -57,7 +57,7 @@ theorem hellTerm_nonneg {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) :
 theorem convexOn_hellFun : ConvexOn ℝ (Ici 0) (hellFun α) := by
   have h : ConvexOn ℝ (Ici 0) ((fun t ↦ α * t + (1 - α)) - fun t : ℝ ↦ t ^ α) :=
     ConvexOn.sub ((convexOn_id (convex_Ici 0)).smul hα0.le |>.add_const _)
-      (Real.concaveOn_rpow hα0.le hα1.le)
+      (concaveOn_rpow hα0.le hα1.le)
   have := h.smul (inv_nonneg.2 (sub_pos.2 hα1).le)
   refine this.congr fun t _ ↦ ?_
   simp [hellFun, div_eq_inv_mul]
@@ -68,7 +68,7 @@ end Both1
 theorem continuous_hellFun (hα0 : 0 ≤ α) : Continuous (hellFun α) := by
   unfold hellFun
   exact (((continuous_const.mul continuous_id).add continuous_const).sub
-    (Real.continuous_rpow_const hα0)).div_const _
+    (continuous_rpow_const hα0)).div_const _
 
 /-- The generator has slope `α / (1 - α)` at `∞`. -/
 theorem derivAtTop_hellFun (hα1 : α < 1) :
@@ -78,11 +78,11 @@ theorem derivAtTop_hellFun (hα1 : α < 1) :
   have h : Tendsto (fun t : ℝ ↦ (α + (1 - α) / t - t ^ (α - 1)) / (1 - α)) atTop
       (𝓝 ((α + 0 - 0) / (1 - α))) := by
     refine ((tendsto_const_nhds.add (tendsto_const_nhds.div_atTop tendsto_id)).sub ?_).div_const _
-    simpa [neg_sub] using tendsto_rpow_neg_atTop (y := 1 - α) hs
+    simpa [neg_sub] using tendsto_rpow_neg_atTop hs
   rw [add_zero, sub_zero] at h
   refine h.congr' ?_
   filter_upwards [eventually_gt_atTop 0] with t ht
-  rw [hellFun, Real.rpow_sub ht, Real.rpow_one]
+  rw [hellFun, rpow_sub ht, rpow_one]
   field_simp
 
 /-- The perspective of the generator is the pointwise Hellinger term. -/
@@ -91,12 +91,12 @@ theorem persp_hellFun (hα1 : α < 1) {p q : ℝ} (hp : 0 ≤ p) (hq : 0 ≤ q) 
   have hs : 0 < 1 - α := sub_pos.2 hα1
   rcases hq.eq_or_lt with rfl | hq
   · rw [persp_zero_right, derivAtTop_hellFun hα1, ← EReal.coe_mul, hellTerm,
-      Real.zero_rpow hs.ne']
+      zero_rpow hs.ne']
     congr 1
     ring
   rw [persp_of_ne_zero hq.ne', hellFun, hellTerm, EReal.coe_eq_coe_iff,
-    Real.div_rpow hp hq.le, Real.rpow_sub hq, Real.rpow_one]
-  have : 0 < q ^ α := Real.rpow_pos_of_pos hq α
+    div_rpow hp hq.le, rpow_sub hq, rpow_one]
+  have : 0 < q ^ α := rpow_pos_of_pos hq α
   field_simp
 
 /-- The Hellinger term of a product splits into weighted terms plus a cross term that vanishes
@@ -107,7 +107,7 @@ theorem hellTerm_mul (hα1 : α < 1) {p q k l : ℝ} (hp : 0 ≤ p) (hk : 0 ≤ 
       (q - p ^ α * q ^ (1 - α)) * (l - k) := by
   have hs : (1 - α) ≠ 0 := (sub_pos.2 hα1).ne'
   unfold hellTerm
-  rw [Real.mul_rpow hp hk, Real.mul_rpow hq hl]
+  rw [mul_rpow hp hk, mul_rpow hq hl]
   field_simp
   ring
 
@@ -121,8 +121,8 @@ theorem hellTerm_sum_le {ι : Type*} (s : Finset ι) {a b : ι → ℝ}
     (ha : ∀ i ∈ s, 0 ≤ a i) (hb : ∀ i ∈ s, 0 ≤ b i) :
     hellTerm α (∑ i ∈ s, a i) (∑ i ∈ s, b i) ≤ ∑ i ∈ s, hellTerm α (a i) (b i) := by
   have h := persp_sum_le (convexOn_hellFun hα0 hα1) s ha hb
-  rwa [persp_hellFun hα1 (Finset.sum_nonneg ha) (Finset.sum_nonneg hb),
-    Finset.sum_congr rfl fun i hi ↦ persp_hellFun hα1 (ha i hi) (hb i hi),
+  rwa [persp_hellFun hα1 (sum_nonneg ha) (sum_nonneg hb),
+    sum_congr rfl fun i hi ↦ persp_hellFun hα1 (ha i hi) (hb i hi),
     ← EReal.coe_finset_sum, EReal.coe_le_coe_iff] at h
 
 /-! ## Finite spaces: Hellinger divergence as a sum of terms -/
@@ -134,7 +134,7 @@ theorem fDiv_hellFun_eq_sum {I : Type*} [Fintype I]
     fDiv (hellFun α) ρ₁ ρ₂ = ((∑ i, hellTerm α (ρ₁ {i}).toReal (ρ₂ {i}).toReal : ℝ) : EReal) := by
   rw [fDiv_eq_sum (convexOn_hellFun hα0 hα1) (continuous_hellFun hα0.le).continuousWithinAt,
     EReal.coe_finset_sum]
-  exact Finset.sum_congr rfl fun i _ ↦
+  exact sum_congr rfl fun i _ ↦
     persp_hellFun hα1 ENNReal.toReal_nonneg ENNReal.toReal_nonneg
 
 /-- The Bhattacharyya mass of two sub-probability measures on a finite space is at most one minus
@@ -152,8 +152,8 @@ theorem sum_rpow_mul_rpow_le {I : Type*} [Fintype I] [MeasurableSpace I]
     simp only [hellTerm]
     field_simp
     ring
-  rw [Finset.sum_congr rfl fun i _ ↦ hwj i, Finset.sum_sub_distrib, Finset.sum_add_distrib,
-    ← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum]
+  rw [sum_congr rfl fun i _ ↦ hwj i, sum_sub_distrib, sum_add_distrib,
+    ← mul_sum, ← mul_sum, ← mul_sum]
   nlinarith
 
 /-- On a finite space the `α`-Hellinger divergence of sub-probability measures is at most
@@ -164,7 +164,7 @@ theorem sum_hellTerm_le_inv {I : Type*} [Fintype I] [MeasurableSpace I]
     ∑ i, hellTerm α (ρ₁ {i}).toReal (ρ₂ {i}).toReal ≤ (1 - α)⁻¹ := by
   have h := sum_rpow_mul_rpow_le hα0 hα1 ρ₁ ρ₂
   have h0 : 0 ≤ ∑ i, (ρ₁ {i}).toReal ^ α * (ρ₂ {i}).toReal ^ (1 - α) :=
-    Finset.sum_nonneg fun _ _ ↦ by positivity
+    sum_nonneg fun _ _ ↦ by positivity
   rw [← one_div, le_div_iff₀ (sub_pos.2 hα1)]
   linarith
 
@@ -248,7 +248,7 @@ theorem fDiv_hellFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M]
   have hC0 : 0 ≤ C := hellClamp_nonneg hα1 _
   have hsum₀ {I : Type u} [Fintype I] [MeasurableSpace I] (ρ₁ ρ₂ : Measure I) :
       0 ≤ ∑ i, hellTerm α (ρ₁ {i}).toReal (ρ₂ {i}).toReal :=
-    Finset.sum_nonneg fun _ _ ↦ hellTerm_nonneg hα0 hα1 ENNReal.toReal_nonneg
+    sum_nonneg fun _ _ ↦ hellTerm_nonneg hα0 hα1 ENNReal.toReal_nonneg
       ENNReal.toReal_nonneg
   have hκ (j) : ∑ i, hellTerm α (κ j {i}).toReal (η j {i}).toReal ≤ C := by
     rw [← hellClamp_coe (hsum₀ _ _) (sum_hellTerm_le_inv hα0 hα1 _ _)]
@@ -274,27 +274,27 @@ theorem fDiv_hellFun_comp_le_of_mass_eq {M N : ℕ} [NeZero M]
   -- because the kernels lose equal mass (`hmass`)
   calc ∑ i, hellTerm α (∑ j, p j * (κ j {i}).toReal) (∑ j, q j * (η j {i}).toReal)
       ≤ ∑ i, ∑ j, hellTerm α (p j * (κ j {i}).toReal) (q j * (η j {i}).toReal) :=
-        Finset.sum_le_sum fun i _ ↦ hellTerm_sum_le hα0 hα1 _ (fun _ _ ↦ by positivity)
+        sum_le_sum fun i _ ↦ hellTerm_sum_le hα0 hα1 _ (fun _ _ ↦ by positivity)
           fun _ _ ↦ by positivity
     _ = ∑ j, ((∑ i, (κ j {i}).toReal) * hellTerm α (p j) (q j) +
           w j * ∑ i, hellTerm α (κ j {i}).toReal (η j {i}).toReal +
           (q j - w j) * (∑ i, (η j {i}).toReal - ∑ i, (κ j {i}).toReal)) := by
         rw [Finset.sum_comm]
-        refine Finset.sum_congr rfl fun j _ ↦ ?_
-        rw [Finset.sum_congr rfl fun i _ ↦ hellTerm_mul hα1 ENNReal.toReal_nonneg
+        refine sum_congr rfl fun j _ ↦ ?_
+        rw [sum_congr rfl fun i _ ↦ hellTerm_mul hα1 ENNReal.toReal_nonneg
           ENNReal.toReal_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg]
-        simp only [Finset.sum_add_distrib, ← Finset.sum_mul, ← Finset.mul_sum,
-          Finset.sum_sub_distrib, w]
+        simp only [sum_add_distrib, ← sum_mul, ← mul_sum,
+          sum_sub_distrib, w]
         rfl
     _ ≤ ∑ j, (hellTerm α (p j) (q j) + w j * C) := by
-        refine Finset.sum_le_sum fun j _ ↦ ?_
+        refine sum_le_sum fun j _ ↦ ?_
         rw [hmassR j, sub_self, mul_zero, add_zero]
         have : 0 ≤ w j := by positivity
         gcongr
         · exact mul_le_of_le_one_left (hg0 j) ((hmassR j).symm ▸ hm1 j)
         · exact hκ j
     _ = ∑ j, hellTerm α (p j) (q j) + (∑ j, w j) * C := by
-        rw [Finset.sum_add_distrib, ← Finset.sum_mul]
+        rw [sum_add_distrib, ← sum_mul]
     _ ≤ _ := by nlinarith [mul_le_mul_of_nonneg_right hw hC0]
 
 /-- Between scaled point masses the `α`-Hellinger divergence is the Hellinger term. -/
@@ -326,20 +326,16 @@ theorem hellingerDivergence_iff :
     hellingerDivergence α r μ ν ↔ fDiv (hellFun α) μ ν ≤ bofThresh (α - 1) r :=
   bofDivergence_iff
 
-section Instances
-
-variable (α) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)]
-
 /-- The `α`-Hellinger divergence is graded. -/
-instance isGraded_hellinger : (hellingerDivergence.{u} α).IsGraded :=
+instance isGraded_hellinger (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
+    (hellingerDivergence.{u} α).IsGraded :=
   isGraded_bofDivergence (convexOn_hellFun hα.out.1 hα.out.2)
     (continuous_hellFun hα.out.1.le).continuousWithinAt
 
 /-- The `α`-Hellinger divergence is reflexive. -/
-instance isReflexive_hellinger : (hellingerDivergence.{u} α).IsReflexive :=
+instance isReflexive_hellinger (α : ℝ) [Fact (α ∈ Ioo (0 : ℝ) 1)] :
+    (hellingerDivergence.{u} α).IsReflexive :=
   isReflexive_bofDivergence (hellFun_one α)
-
-end Instances
 
 /-! ## Composition -/
 
@@ -397,23 +393,23 @@ theorem not_isComposable_hellinger_half : ¬ (hellingerDivergence.{u} (1 / 2)).I
   have hα0 : (0 : ℝ) < 1 / 2 := by norm_num
   have hα1 : (1 / 2 : ℝ) < 1 := by norm_num
   have hsq {x : ℝ} (hx : 0 ≤ x) : (x ^ 2) ^ (1 - 1 / 2 : ℝ) = x := by
-    rw [← Real.rpow_natCast, ← Real.rpow_mul hx]
+    rw [← rpow_natCast, ← rpow_mul hx]
     norm_num
   have h14 : hellTerm (1 / 2) 1 (1 / 4) = 1 / 4 := by
     have := hsq (x := 1 / 2) (by norm_num)
-    rw [hellTerm, Real.one_rpow, one_mul, show (1 / 4 : ℝ) = (1 / 2) ^ 2 by norm_num, this]
+    rw [hellTerm, one_rpow, one_mul, show (1 / 4 : ℝ) = (1 / 2) ^ 2 by norm_num, this]
     norm_num
   have h116 : hellTerm (1 / 2) 1 (1 / 16) = 9 / 16 := by
     have := hsq (x := 1 / 4) (by norm_num)
-    rw [hellTerm, Real.one_rpow, one_mul, show (1 / 16 : ℝ) = (1 / 4) ^ 2 by norm_num, this]
+    rw [hellTerm, one_rpow, one_mul, show (1 / 16 : ℝ) = (1 / 4) ^ 2 by norm_num, this]
     norm_num
   -- the budget whose threshold is `1/4`
-  set t : ℝ := 2 * Real.log (8 / 7)
-  have ht : 0 ≤ t := mul_nonneg zero_le_two (Real.log_nonneg (by norm_num))
+  set t : ℝ := 2 * log (8 / 7)
+  have ht : 0 ≤ t := mul_nonneg zero_le_two (log_nonneg (by norm_num))
   have hθ : bofReal (1 / 2 - 1) t = 1 / 4 := by
-    have : Real.exp ((1 / 2 - 1) * t) = 7 / 8 := by
-      rw [show (1 / 2 - 1) * t = -Real.log (8 / 7) by simp only [t]; ring, Real.exp_neg,
-        Real.exp_log (by norm_num)]
+    have : exp ((1 / 2 - 1) * t) = 7 / 8 := by
+      rw [show (1 / 2 - 1) * t = -log (8 / 7) by simp only [t]; ring, exp_neg,
+        exp_log (by norm_num)]
       norm_num
     simp only [bofReal, show (1 / 2 - 1 : ℝ) ≠ 0 by norm_num, ↓reduceIte, this]
     norm_num
@@ -421,18 +417,18 @@ theorem not_isComposable_hellinger_half : ¬ (hellingerDivergence.{u} (1 / 2)).I
   have hbt : b.toReal = t := ENNReal.toReal_ofReal ht
   set P : Measure PUnit.{u + 1} := dirac PUnit.unit
   have : IsSubProbabilityMeasure ((1 / 4 : ℝ≥0∞) • P) := ⟨by simp [P]⟩
-  have : IsSubMarkovKernel (Kernel.const PUnit.{u + 1} P) := ⟨fun _ ↦ by simp; infer_instance⟩
-  have : IsSubMarkovKernel (Kernel.const PUnit.{u + 1} ((1 / 4 : ℝ≥0∞) • P)) :=
-    ⟨fun _ ↦ by simp only [Kernel.const_apply]; infer_instance⟩
+  have : IsSubMarkovKernel (const PUnit.{u + 1} P) := ⟨fun _ ↦ by simp; infer_instance⟩
+  have : IsSubMarkovKernel (const PUnit.{u + 1} ((1 / 4 : ℝ≥0∞) • P)) :=
+    ⟨fun _ ↦ by simp only [const_apply]; infer_instance⟩
   have hP : P = (1 : ℝ≥0∞) • P := (one_smul _ _).symm
   have hq : ((1 / 4 : ℝ≥0∞)).toReal = 1 / 4 := by norm_num
   have hμ : hellingerDivergence (1 / 2) b P ((1 / 4 : ℝ≥0∞) • P) := by
     rw [hellingerDivergence_iff, hP, smul_smul, mul_one,
       fDiv_hellFun_smul_dirac hα0 hα1 (by simp) (by simp), bofThresh_of_ne_top _ (by simp [b]),
       hbt, hθ, ENNReal.toReal_one, hq, h14]
-  have hκ : ∀ x, hellingerDivergence (1 / 2) b (Kernel.const PUnit.{u + 1} P x)
-      (Kernel.const PUnit.{u + 1} ((1 / 4 : ℝ≥0∞) • P) x) := fun _ ↦ by
-    simpa only [Kernel.const_apply] using hμ
+  have hκ : ∀ x, hellingerDivergence (1 / 2) b (const PUnit.{u + 1} P x)
+      (const PUnit.{u + 1} ((1 / 4 : ℝ≥0∞) • P) x) := fun _ ↦ by
+    simpa only [const_apply] using hμ
   have hc := h.comp hμ hκ
   have e1 : P univ • P = (1 : ℝ≥0∞) • P := by simp [P]
   have e2 : ((1 / 4 : ℝ≥0∞) • P) univ • (1 / 4 : ℝ≥0∞) • P = (1 / 16 : ℝ≥0∞) • P := by

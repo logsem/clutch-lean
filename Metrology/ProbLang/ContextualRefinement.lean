@@ -5,12 +5,9 @@ public import Metrology.ProbLang.Exec
 
 @[expose] public section
 
-/-!
-# Contextual refinement
+/-! # Contextual refinement
 
-Program contexts `Ctx`, their typing `TypedCtx`, and contextual refinement `Γ ⊨ e ≤ctx≤ e' : τ`,
-a congruence. Port of Clutch's `theories/prob_lang/typing/contextual_refinement.v`.
--/
+Program contexts `Ctx`, typing `TypedCtx` and contextual refinement `Γ ⊨ e ≤ctx≤ e' : τ`. -/
 
 namespace ProbLang
 
@@ -20,9 +17,8 @@ open MeasureTheory Exp Finset
 
 /-! ## Single-frame context items -/
 
-/-- One frame of a general program context; unlike `Ectx` the hole may be under a binder
-(`lam`/`fix`/`unpack` close the plugged term at the given atom). Clutch's `letrec f x body` is the
-two frames `fix f :: lam x :: K`. -/
+/-- One frame of a general program context, whose hole may lie under a binder such as `lam`, `fix`
+or `unpack` (Clutch's `letrec` is the two frames `fix f :: lam x`). -/
 inductive CtxItem (rT : Type _) [LawfulProbLangℝ rT]
   | lam (x : Var)
   | fix (f : Var)
@@ -110,8 +106,10 @@ namespace Ctx
 /-- Plugs `e` into the hole of a multi-frame context. -/
 def fill (K : Ctx rT) (e : Exp rT) : Exp rT := K.foldr CtxItem.fill e
 
+/-- Filling the empty context leaves the term unchanged. -/
 @[simp] theorem fill_nil (e : Exp rT) : fill ([] : Ctx rT) e = e := rfl
 
+/-- Filling a cons context fills the inner context first, then applies the frame. -/
 @[simp] theorem fill_cons (k : CtxItem rT) (K : Ctx rT) (e : Exp rT) :
     fill (k :: K) e = k.fill (K.fill e) := rfl
 
@@ -334,9 +332,9 @@ def CtxRefines (Γ : Tctx) (e e' : Exp rT) (τ : Ty) : Prop :=
 @[inherit_doc]
 scoped notation Γ " ⊨ " e " ≤ctx≤ " e' " : " τ => CtxRefines Γ e e' τ
 
-namespace CtxRefines
-
 variable {Γ : Tctx} {τ : Ty}
+
+namespace CtxRefines
 
 /-- Contextual refinement is reflexive. -/
 theorem refl (e : Exp rT) : CtxRefines Γ e e τ :=
@@ -370,8 +368,6 @@ def CtxEquiv (Γ : Tctx) (e1 e2 : Exp rT) (τ : Ty) : Prop :=
 scoped notation Γ " ⊨ " e " =ctx= " e' " : " τ => CtxEquiv Γ e e' τ
 
 namespace CtxEquiv
-
-variable {Γ : Tctx} {τ : Ty}
 
 /-- Contextual equivalence is reflexive. -/
 theorem refl (e : Exp rT) : CtxEquiv Γ e e τ :=
@@ -430,7 +426,7 @@ theorem CtxItem.fv_fill_subset (k : CtxItem rT) (body : Exp rT) :
   intro y hy
   cases k <;>
     simp only [CtxItem.fill, CtxItem.payloadFv, fv,
-      mem_union, empty_union, ProbLang.recUnfold] at hy ⊢
+      mem_union, empty_union, recUnfold] at hy ⊢
   all_goals first
     | tauto
     | (rename_i x; exact close_fv_subset _ x hy)

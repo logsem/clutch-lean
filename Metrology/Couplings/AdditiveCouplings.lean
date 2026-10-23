@@ -4,8 +4,8 @@ public import Metrology.Couplings.ApproximateCouplings
 
 /-! # Additive couplings
 
-Approxis-style couplings: `[0,1]`-tests ordered on `S` have integrals ordered up to `ε`. Main
-results: the bind rules and `limit`; `Bridges/AddCoupl.lean` identifies it with `codensity tv`. -/
+Approxis-style couplings with additive slack `ε`, identified with `codensity tv` in
+`Bridges/AddCoupl.lean`. -/
 
 @[expose] public section
 
@@ -362,7 +362,7 @@ theorem eq_of_eq_zero {μ ν : Measure α}
     (h₁ : AddCoupl 0 {p : α × α | p.1 = p.2} μ ν)
     (h₂ : AddCoupl 0 {p : α × α | p.1 = p.2} ν μ) :
     μ = ν := by
-  refine Measure.ext fun S hS => le_antisymm ?_ ?_
+  refine ext fun S hS => le_antisymm ?_ ?_
   · simpa using eq_elim h₁ hS
   · simpa using eq_elim h₂ hS
 

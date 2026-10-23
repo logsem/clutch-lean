@@ -6,8 +6,7 @@ public import Metrology.Couplings.Divergences.RenyiStrassen
 
 /-! # Conversions between DP and Rényi, zCDP, tCDP
 
-Divergence-level conversions and the `LiftingRelHom`s into `codensity dp` built from them. `[X/Y]`
-names the arrow `X → Y` of ASL Fig. 4 (`D` pure DP, `R` Rényi, `z` zCDP, `t` tCDP). -/
+Divergence conversions and the `LiftingRelHom`s into `codensity dp` (ASL Fig. 4, `[X/Y]`). -/
 
 @[expose] public section
 
@@ -54,9 +53,9 @@ theorem renyi_of_dp (hα : 1 < α) {ε : ℝ≥0∞} [IsSubProbabilityMeasure μ
     have hr : p / q ≤ exp e := (div_le_iff₀ hq).2 (by linarith)
     calc q * (p / q) ^ α = p * (p / q) ^ (α - 1) := by
           rcases hp.eq_or_lt with h0 | h0
-          · simp [← h0, Real.zero_rpow (by linarith : α ≠ 0),
-              Real.zero_rpow (by linarith : α - 1 ≠ 0)]
-          rw [Real.rpow_sub_one (div_pos h0 hq).ne']
+          · simp [← h0, zero_rpow (by linarith : α ≠ 0),
+              zero_rpow (by linarith : α - 1 ≠ 0)]
+          rw [rpow_sub_one (div_pos h0 hq).ne']
           field_simp
       _ ≤ p * exp e ^ (α - 1) := by gcongr
       _ = exp ((α - 1) * e) * p := by rw [← exp_mul, mul_comm e, mul_comm]
@@ -135,7 +134,7 @@ theorem bound_of_fDiv_rpow_le [IsFiniteMeasure μ] [IsFiniteMeasure ν] {r δ : 
   have key : p * exp ε ^ (α - 1) < E := by
     calc p * exp ε ^ (α - 1) < p * (p / q) ^ (α - 1) := by gcongr
       _ = q * (p / q) ^ α := by
-          rw [Real.rpow_sub_one (div_pos (hδ.trans hpδ) hq0).ne']
+          rw [rpow_sub_one (div_pos (hδ.trans hpδ) hq0).ne']
           field_simp
       _ ≤ E := hcell
   have hE : E = δ * exp ε ^ (α - 1) := by
@@ -332,6 +331,7 @@ noncomputable def renyiToDp [hα : Fact (1 < α)] (hδ : 0 < δ) :
   map_rel := codensity_dp_rel_of_imp (D := renyiDivergence α) (fun _ ↦ dp_of_renyi hα.out hδ)
     (by simp)
 
+/-- The grade map of `renyiToDp` sends `ρ` to `ρ + log (1 / δ) / (α - 1)` with slack `δ`. -/
 @[simp]
 theorem renyiToDp_map [Fact (1 < α)] (hδ : 0 < δ) (ρ : ℝ≥0∞) :
     (renyiToDp.{u} (α := α) hδ).map ρ =
@@ -349,6 +349,7 @@ noncomputable def codensityZcdpToDp (hδ : 0 < δ) :
     (fun _ ↦ (dp_of_forall_renyi subset_rfl hδ fun _ hα ↦ renyi_of_zcdp hα ·))
     (by simp)
 
+/-- The grade map of `codensityZcdpToDp` is the zCDP-to-DP budget formula. -/
 @[simp]
 theorem codensityZcdpToDp_map (hδ : 0 < δ) (b : ℝ≥0∞ × ℝ≥0∞) :
     (codensityZcdpToDp.{u} hδ).map b =
@@ -367,6 +368,7 @@ noncomputable def codensityTcdpToDp (hδ : 0 < δ) :
     (fun _ ↦ (dp_of_forall_renyi Ioo_subset_Ioi_self hδ fun _ hα ↦ renyi_of_tcdp hα.1 hα.2 ·))
     (by simp +contextual [ENNReal.mul_top, (zero_lt_one.trans _).ne'])
 
+/-- The grade map of `codensityTcdpToDp` is the tCDP-to-DP budget formula. -/
 @[simp]
 theorem codensityTcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
     (codensityTcdpToDp.{u} (ω := ω) hδ).map ρ =
@@ -379,6 +381,7 @@ theorem codensityTcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
 noncomputable def zcdpToDp (hδ : 0 < δ) : LiftingRelHom zcdpLifting.{u} (codensity dp.{u}) :=
   (codensityZcdpToDp hδ).comp ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl)
 
+/-- The grade map of `zcdpToDp` is the zCDP-to-DP budget formula. -/
 @[simp]
 theorem zcdpToDp_map (hδ : 0 < δ) (b : ℝ≥0∞ × ℝ≥0∞) :
     (zcdpToDp.{u} hδ).map b =
@@ -391,6 +394,7 @@ theorem zcdpToDp_map (hδ : 0 < δ) (b : ℝ≥0∞ × ℝ≥0∞) :
 noncomputable def tcdpToDp (hδ : 0 < δ) : LiftingRelHom (tcdpLifting.{u} ω) (codensity dp.{u}) :=
   (codensityTcdpToDp hδ).comp ((LiftingHom.tcdpToCodensity ω).toLiftingRelHom rfl)
 
+/-- The grade map of `tcdpToDp` is the tCDP-to-DP budget formula. -/
 @[simp]
 theorem tcdpToDp_map (hδ : 0 < δ) (ρ : ℝ≥0∞) :
     (tcdpToDp.{u} (ω := ω) hδ).map ρ =

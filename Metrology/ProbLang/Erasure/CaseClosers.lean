@@ -6,8 +6,7 @@ public import Metrology.ProbLang.Erasure.TapePresample
 
 /-! # Head-step closers for erasure
 
-One lemma per kind of head step closes that case of `execN_tapePresample_expr_eq`, from the
-induction hypothesis `ErasureIHFill`. -/
+One lemma per kind of head step closes that case of `execN_tapePresample_expr_eq`. -/
 
 open Measurable (of_discrete prodMk)
 

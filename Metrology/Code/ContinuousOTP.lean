@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # One-time pad over the unit interval
 
-The continuous analogue of `Code/OTP`; the proof that `otp_enc` and `otp_ideal` refine each other
-is in `Micrometer/Examples/ContinuousOTP`. -/
+The continuous analogue of `Code/OTP`, proved in `Micrometer/Examples/ContinuousOTP`. -/
 
 namespace ProbLang
 namespace ContinuousOTP
@@ -16,11 +15,11 @@ namespace ContinuousOTP
 variable {rT : Type _}
 
 /-- The encryption program: sample a uniform key `k` and output the fractional part of `m + k`. -/
-def otp_enc (m : rT) : Exp rT :=
+def otpEnc (m : rT) : Exp rT :=
   pl% let k := urand; frac(#m + k)
 
 /-- The ideal sampler: draw uniformly from the unit interval. -/
-def otp_ideal : Exp rT := pl% urand
+def otpIdeal : Exp rT := pl% urand
 
 end ContinuousOTP
 end ProbLang

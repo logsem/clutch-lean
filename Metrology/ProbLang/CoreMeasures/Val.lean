@@ -8,8 +8,7 @@ public import Metrology.ProbLang.CoreMeasures.Exp
 
 /-! # Measurable space on values
 
-The σ-algebra on `Val α` (the pullback along `Val.fst`), with measurability of `Val.fst`, `Val.mk`
-and `Exp.ofVal`, and measurable singletons.
+The σ-algebra on `Val α` (the pullback along `Val.fst`) and its basic measurability facts.
 -/
 
 noncomputable section ProbLangMeasures

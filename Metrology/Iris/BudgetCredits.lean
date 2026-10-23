@@ -15,9 +15,7 @@ import Metrology.Iris.LocalBI
 /-!
 # Budget credits
 
-The credit camera Micrometer's wp uses: authority `●↯b s` in the state interpretation, fragments
-`↯b c` held by the user (Rocq `gconeUR`). Main results: `split`/`combine`, `supply_decrease`,
-`supply_increase`, `bc_alloc`.
+The credit camera with authority `●↯b s` and fragments `↯b c` (Rocq `gconeUR`).
 -/
 
 @[expose] public section
@@ -72,6 +70,7 @@ end BudgetCredit
 
 /-- The ghost-state slot for an authoritative budget camera. -/
 class BudgetCreditPreGS (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
+  /-- The ghost-state slot. -/
   bc : ElemG GF (constOF (Auth (BudgetCredit B)))
 
 attribute [reducible, instance] BudgetCreditPreGS.bc
@@ -79,6 +78,7 @@ attribute [reducible, instance] BudgetCreditPreGS.bc
 /-- A budget camera with its ghost name. -/
 class BudgetCreditGS (B : Type) [AddCommMonoid B] (GF : BundledGFunctors)
     extends BudgetCreditPreGS B GF where
+  /-- The ghost name. -/
   γbc : GName
 
 section Resources
@@ -98,6 +98,8 @@ namespace BudgetCredit
 
 local bi IProp GF
 
+variable {a b : B}
+
 /-- Credits are timeless. -/
 instance timeless_bc (c : B) : BI.Timeless (↯b c : IProp GF) := iOwn_timeless
 
@@ -107,20 +109,20 @@ instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_ti
 /-! ### Splitting and combining credits -/
 
 /-- A credit splits into two credits. -/
-theorem split {a b : B} : ↯b (a + b) ⊢ ↯b a ∗ ↯b b :=
+theorem split : ↯b (a + b) ⊢ ↯b a ∗ ↯b b :=
   AuthCredit.frag_split
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯b a ∗ ↯b b ⊢ ↯b (a + b) :=
+theorem combine : ↯b a ∗ ↯b b ⊢ ↯b (a + b) :=
   AuthCredit.frag_combine
 
 /-- Proof mode combines credits by adding them. -/
-instance combineSepAs_bc {a b : B} :
+instance combineSepAs_bc :
     ProofMode.CombineSepAs (↯b a : IProp GF) (↯b b) (↯b (a + b)) where
   combine_sep_as := combine
 
 /-- A credit can be weakened to a smaller one. -/
-theorem weaken [LE B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
+theorem weaken [LE B] [CanonicallyOrderedAdd B] (hb : b ≤ a) :
     ↯b a ⊢ ↯b b := by
   obtain ⟨c, rfl⟩ := exists_add_of_le hb
   exact split.trans BI.sep_elim_left
@@ -164,7 +166,7 @@ theorem supply_increase {s c : B} : ⊢ ●↯b s -∗ |==> (●↯b (s + c) ∗
 
 /-- A credit splits off any smaller credit. -/
 theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSub B]
-    {a b : B} (h : b ≤ a) :
+    (h : b ≤ a) :
     ↯b a ⊢ ↯b b ∗ ↯b (a - b) := by
   simpa only [add_tsub_cancel_of_le h] using split (a := b) (b := a - b)
 

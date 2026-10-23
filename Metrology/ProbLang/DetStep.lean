@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Deterministic steps
 
-`PureStep` (a state-independent Dirac step) with its counted closure `PureExec`, and `DetStep` (a
-Dirac step of one configuration). -/
+Dirac steps: `PureStep` (state-independent) with `PureExec`, and `DetStep` (one configuration). -/
 
 noncomputable section
 open MeasureTheory Measure
@@ -377,21 +376,21 @@ theorem DetHeadStep.tape {z : Int} (σ : State rT) :
       ⟨pl(#lbl σ.tapes.fresh),
        σ.update_tapes (·.insert σ.tapes.fresh (Tape.empty z))⟩ :=
   .of_det _ _
-    (by obtain ⟨_, hd⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩;
-        simp [Exp.decompItem, hd])
+    (by obtain ⟨_, hd⟩ := toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩;
+        simp [decompItem, hd])
     (by simp [headStep])
 
-/-- Tape rand: with `σ.tapes[α] = some ⟨z, n :: ns⟩`, the random sample
-`rand z α` deterministically returns `n` and pops the head. -/
+/-- Tape rand: with `σ.tapes[l] = some ⟨z, n :: ns⟩`, the random sample
+`rand z l` deterministically returns `n` and pops the head. -/
 theorem DetHeadStep.rand_tape {z : Int} (l : Loc)
     (n : { k : Int // 0 ≤ k ∧ k < z }) (ns : List { k : Int // 0 ≤ k ∧ k < z })
     {σ : State rT} (htape : σ.tapes[l]? = some ⟨z, n :: ns⟩) :
     DetHeadStep ⟨pl(rand(#z, #lbl l)), σ⟩
       ⟨pl(#int n), σ.update_tapes (·.insert l ⟨z, ns⟩)⟩ :=
   .of_det _ _
-    (by obtain ⟨_, hd1⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#lbl l) : Exp rT)) ⟨.lit⟩
-        obtain ⟨_, hd2⟩ := Exp.toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩
-        simp [Exp.decompItem, hd1, hd2])
+    (by obtain ⟨_, hd1⟩ := toVal?_eq_some_of_isValue (e := (pl(#lbl l) : Exp rT)) ⟨.lit⟩
+        obtain ⟨_, hd2⟩ := toVal?_eq_some_of_isValue (e := (pl(#int z) : Exp rT)) ⟨.lit⟩
+        simp [decompItem, hd1, hd2])
     (by simp [headStep, htape])
 
 end DetSteps

@@ -3,16 +3,17 @@ module
 public import Iris.BI.Updates
 public import Iris.ProofMode
 
-@[expose] public section
-
 /-! # Step-update lemmas
 
-Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s; the main results
-`step_fupdN_pure_imp_forall₃`/`₄` let adequacy pull a pure fact out of the step-updates. -/
+Lemmas for `|={E}[E]▷=>^[n]` on pure facts and plain `∀`s, used by adequacy. -/
+
+@[expose] public section
 
 open Std Iris.Std Iris.BI Iris.BI.BIBase Iris.ProofMode Iris.Std.LawfulSet
 
 namespace Iris
+
+open BIFUpdate
 
 /-! ## Basic step-update facts -/
 
@@ -23,17 +24,17 @@ variable {PROP : Type _} [BI PROP] [BIFUpdate PROP]
 /-- An update to `n+1` laters is an `n+1`-fold step-update. -/
 theorem fupd_laterN_to_step_fupdN (E : CoPset) (n : Nat) {Q : PROP} : iprop%
     (|={E}=> ▷^[n+1] Q) ⊢ |={E}[E]▷=>^[n+1] Q :=
-  (BIFUpdate.mono (step_fupdN_intro subset_refl)).trans BIFUpdate.trans
+  (mono (step_fupdN_intro subset_refl)).trans BIFUpdate.trans
 
 /-- An except-0 under a step-update can be dropped. -/
 theorem step_fupd_except0 (E1 E2 : CoPset) {P : PROP} : iprop%
     (|={E1}[E2]▷=> ◇ P) ⊢ |={E1}[E2]▷=> P :=
-  BIFUpdate.mono (later_mono fupd_except0)
+  mono (later_mono fupd_except0)
 
 /-- An except-0 under the last step-update can be dropped. -/
 theorem step_fupdN_except0 (E1 E2 : CoPset) {P : PROP} (n : Nat) : iprop%
     (|={E1}[E2]▷=>^[n+1] ◇ P) ⊢ |={E1}[E2]▷=>^[n+1] P :=
-  calc _ ⊢ |={E1}[E2]▷=>^[n] |={E1}[E2]▷=> ◇ P := (step_fupdN_add (n := n) (m := 1)).mp
+  calc _ ⊢ |={E1}[E2]▷=>^[n] |={E1}[E2]▷=> ◇ P := step_fupdN_add.mp
     _ ⊢ |={E1}[E2]▷=>^[n] |={E1}[E2]▷=> P := step_fupdN_mono (step_fupd_except0 E1 E2)
     _ ⊢ |={E1}[E2]▷=>^[n+1] P := (step_fupdN_add (n := n) (m := 1)).mpr
 
@@ -81,10 +82,10 @@ theorem fupd_step_fupdN_plain_forall (Φ : A → PROP) [∀ x, Plain (Φ x)] (n 
   | zero => simp only [Nat.repeat]; exact (fupd_plain_forall subset_refl).mpr
   | succ n =>
     calc _ ⊢ ∀ x, |={∅}=> ▷^[n+1] ◇ Φ x :=
-        forall_mono fun _ => (BIFUpdate.mono step_fupdN_plain).trans BIFUpdate.trans
+        forall_mono fun _ => (mono step_fupdN_plain).trans BIFUpdate.trans
       _ ⊢ |={∅}=> ∀ x, ▷^[n+1] ◇ Φ x := (fupd_plain_forall subset_refl).mpr
-      _ ⊢ |={∅}=> ▷^[n+1] ∀ x, ◇ Φ x := BIFUpdate.mono (laterN_forall (n+1)).mpr
-      _ ⊢ |={∅}=> ▷^[n+1] ◇ ∀ x, Φ x := BIFUpdate.mono (laterN_mono (n+1) except0_forall.mpr)
+      _ ⊢ |={∅}=> ▷^[n+1] ∀ x, ◇ Φ x := mono (laterN_forall (n+1)).mpr
+      _ ⊢ |={∅}=> ▷^[n+1] ◇ ∀ x, Φ x := mono (laterN_mono (n+1) except0_forall.mpr)
       _ ⊢ |={∅}[∅]▷=>^[n+1] ◇ ∀ x, Φ x := fupd_laterN_to_step_fupdN ∅ n
       _ ⊢ |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := step_fupdN_except0 ∅ ∅ n
       _ ⊢ |={∅}=> |={∅}[∅]▷=>^[n+1] ∀ x, Φ x := fupd_intro
@@ -121,7 +122,7 @@ theorem step_fupdN_pure_imp_forall₃ {A B C : Type _} {G q : A → B → C → 
     (forall_mono fun a => (forall_mono fun b => pure_forall.2).trans pure_forall.2).trans
       pure_forall.2
   refine .trans ?_ ((fupd_step_fupdN_plain_forall₃
-    (fun a b c => iprop(⌜G a b c → q a b c⌝)) n).trans (BIFUpdate.mono (step_fupdN_mono hpure)))
+    (fun a b c => iprop(⌜G a b c → q a b c⌝)) n).trans (mono (step_fupdN_mono hpure)))
   iintro H %a %b %c
   by_cases hG : G a b c
   · ispecialize H $$ %a %b %c %hG
@@ -141,7 +142,7 @@ theorem step_fupdN_pure_imp_forall₄ {A B C D : Type _} {G q : A → B → C �
       pure_forall.2).trans pure_forall.2).trans pure_forall.2
   refine .trans ?_ ((fupd_step_fupdN_plain_forall₄
     (fun a b c d => iprop(⌜G a b c d → q a b c d⌝)) n).trans
-    (BIFUpdate.mono (step_fupdN_mono hpure)))
+    (mono (step_fupdN_mono hpure)))
   iintro H %a %b %c %d
   by_cases hG : G a b c d
   · ispecialize H $$ %a %b %c %d %hG

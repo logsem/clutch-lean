@@ -5,12 +5,9 @@ public import Metrology.Couplings.AdditiveCouplings
 
 @[expose] public section
 
-/-!
-# Distinguishing advantage
+/-! # Distinguishing advantage
 
-`advantage X Y` is the worst-case total variation distance between the outputs of `X` and `Y`;
-Clutch's point-mass `|Pr[X = v] − Pr[Y = v]|` vanishes on diffuse outputs, so we use TV instead.
--/
+`advantage X Y` is the worst-case total variation distance between the outputs of `X` and `Y`. -/
 
 namespace ProbLang
 open MeasureTheory

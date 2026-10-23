@@ -10,7 +10,7 @@ import Metrology.Iris.LocalBI
 /-! # Error credit rules -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
-  ProbLang.TotalEris.ErisWpGS
+  ProbLang.TotalEris.ErisWpGS Finset Filter Cfg
 open scoped ENNReal AppGS
 
 namespace ProbLang
@@ -117,12 +117,11 @@ end nv
 /-- If a spec holds at cost `ε i` on a set in `l`, paying `liminf ε` along `l` suffices. -/
 theorem twp_err_liminf {ι : Type _} {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l)
     (Hnv : e.toVal? = none) :
-    iprop(↯(Filter.liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
+    iprop(↯(liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply twp_err_biInf (S := S) Hnv
   iframe Hwp
-  iapply weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
-    fun i hi => biInf_le ε hi)) $$ Herr
+  iapply weaken (le_liminf_of_le (h := mem_of_superset hS fun i hi => biInf_le ε hi)) $$ Herr
 
 /-- Spend `↯ε₁` on a primitive step whose outcomes `ρ` (all in `R`) each receive `↯(f ρ)`, when
 `f` averages to at most `ε₁`. -/
@@ -172,7 +171,7 @@ theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cf
 /-- Spend `↯ε₁` on `rand(#z, #())`, giving outcome `n` the credit `ε₂ n` when the `ε₂` average to
 at most `ε₁`. -/
 theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
-    (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
+    (HSum : (∑ n ∈ range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
         Φ (.int n : Val rT)) -∗
@@ -199,33 +198,33 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
     show (primStep ⟨pl(rand(#z, #())), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
     refine le_of_eq ?_
     rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))]
-    show (Cfg.uniform z σ₁) {ρ : Cfg rT | ¬ R σ₁ ρ} = 0
+    show (uniform z σ₁) {ρ : Cfg rT | ¬ R σ₁ ρ} = 0
     have hg : Measurable (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) := Measurable.of_discrete
     have hRc : MeasurableSet {ρ : Cfg rT | ¬ R σ₁ ρ} := (hrmeas σ₁).compl
-    rw [Cfg.uniform_eq_map_uniformOfFinset Hz σ₁, MeasureTheory.Measure.map_apply hg hRc,
+    rw [uniform_eq_map_uniformOfFinset Hz σ₁, MeasureTheory.Measure.map_apply hg hRc,
       PMF.toMeasure_apply_eq_zero_iff _ (hg hRc), PMF.support_uniformOfFinset,
       Set.disjoint_left]
     intro n hn hcontra
-    rw [Finset.mem_coe, Finset.mem_Ico] at hn
+    rw [mem_coe, mem_Ico] at hn
     exact hcontra ⟨n, hn.1, hn.2, rfl⟩
   have hint : ∀ σ₁ : State rT,
       (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩)) ≤ ε₁ := fun σ₁ => by
-    have hφ : Measurable f := (measurable_litInt_elim _).comp Cfg.measurable_expr
+    have hφ : Measurable f := (measurable_litInt_elim _).comp measurable_expr
     rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))]
-    show (∫⁻ ρ, f ρ ∂(Cfg.uniform z σ₁)) ≤ ε₁
-    rw [Cfg.lintegral_uniform Hz σ₁ hφ, ← ENNReal.div_eq_inv_mul]
+    show (∫⁻ ρ, f ρ ∂(uniform z σ₁)) ≤ ε₁
+    rw [lintegral_uniform Hz σ₁ hφ, ← ENNReal.div_eq_inv_mul]
     convert HSum using 2
-    refine Finset.sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
-      ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)
+    refine sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
+      ?_ ?_ (fun n hn => Int.toNat_of_nonneg (mem_Ico.mp hn).1)
       (fun k _ => Int.toNat_natCast k) ?_
     · intro n hn
-      simp only [Finset.mem_Ico, Finset.mem_range] at hn ⊢
+      simp only [mem_Ico, mem_range] at hn ⊢
       omega
     · intro k hk
-      simp only [Finset.mem_Ico, Finset.mem_range] at hk ⊢
+      simp only [mem_Ico, mem_range] at hk ⊢
       omega
     · intro n hn
-      simp only [Finset.mem_Ico] at hn
+      simp only [mem_Ico] at hn
       show (if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0) = ε₂ n.toNat
       exact dite_eq_left ⟨hn.1, hn.2⟩
   iintro Herr Hcont
@@ -249,19 +248,19 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
       tglWp E pl(urand) Φ) := by
   have Hnv : (pl(urand) : Exp rT).toVal? = none := solve_not_value
   have hhead : ∀ σ₁ : State rT, HeadReducible (pl(urand) : Exp rT) σ₁ :=
-    fun σ₁ => show Cfg.uniformReal σ₁ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
+    fun σ₁ => show uniformReal σ₁ ≠ 0 from MeasureTheory.IsProbabilityMeasure.ne_zero _
   have hps : ∀ σ₁ : State rT, primStep (⟨pl(urand), σ₁⟩ : Cfg rT) =
       (LawfulProbLangℝ.unifUnit).map (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
     fun σ₁ => primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁))
   have hg : ∀ σ₁ : State rT, Measurable (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
-    fun σ₁ => Cfg.measurable_iff.mpr
+    fun σ₁ => measurable_iff.mpr
       ⟨Exp.lit.measurable.comp BaseLit.real.measurable, measurable_const⟩
   have hgemb : ∀ σ₁ : State rT,
       MeasurableEmbedding (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) := fun σ₁ => by
     have hcomp : (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) =
-        Cfg.measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘ Exp.lit ∘ BaseLit.real := rfl
+        measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘ Exp.lit ∘ BaseLit.real := rfl
     rw [hcomp]
-    exact Cfg.measurableEquivProd.symm.measurableEmbedding.comp
+    exact measurableEquivProd.symm.measurableEmbedding.comp
       ((measurableEmbedding_prod_mk_right σ₁).comp
         (Exp.lit.measurableEmbedding.comp BaseLit.real.measurableEmbedding))
   set R : State rT → Cfg rT → Prop :=
@@ -291,7 +290,7 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
       LawfulProbLangℝ.unifUnitIsConcentrated
   have hint : ∀ σ₁ : State rT,
       (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.urand, σ₁⟩)) ≤ ε₁ := fun σ₁ => by
-    have hφ : Measurable f := (measurable_litReal_elim ε₂ hε₂).comp Cfg.measurable_expr
+    have hφ : Measurable f := (measurable_litReal_elim ε₂ hε₂).comp measurable_expr
     rw [hps σ₁, MeasureTheory.lintegral_map hφ (hg σ₁)]
     exact HInt
   iintro Herr Hcont

@@ -4,14 +4,14 @@ public import Metrology.TotalEris.ErisGS
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.TotalEris.TotalLifting
 
-@[expose] public section
-
 /-!
 # Total-correctness primitive WP laws
 -/
 
+@[expose] public section
+
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
-  ProbLang.TotalEris.ErisWpGS
+  ProbLang.TotalEris.ErisWpGS Possible
 open scoped AppGS
 
 namespace ProbLang
@@ -37,7 +37,7 @@ theorem twp_alloc {v : Val rT} :
     (HeadStepSupport.AllocS (Exp.toVal?_ofVal v) rfl rfl).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | AllocS hvd hl hσ =>
     rw [Exp.toVal?_ofVal] at hvd
     cases hvd
@@ -59,7 +59,7 @@ theorem twp_load {v : Val rT} :
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | LoadS hlook' hofv =>
     rw [hlook] at hlook'
     cases hlook'
@@ -82,7 +82,7 @@ theorem twp_store {v v' : Val rT} :
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | StoreS hvd _ hσ =>
     rw [Exp.toVal?_ofVal] at hvd
     cases hvd
@@ -102,10 +102,10 @@ theorem twp_alloctape :
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
   have hred : HeadReducible pl(tape(#z)) σ₁ :=
-    (HeadStepSupport.TapeS (ℓ := σ₁.tapes.fresh) rfl rfl).ne_zero
+    (HeadStepSupport.TapeS rfl rfl).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | TapeS hl hσ =>
     subst hl hσ
     imod app_state_tape_alloc (Tape.empty z) $$ Hσ with ⟨Hσ', Hl⟩
@@ -126,7 +126,7 @@ theorem twp_rand (Hz : 0 < z) :
     (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | RandNoTapeS _ Hv0 Hvz =>
     imodintro
     isimp only [erisWpGS_stateInterp_eq, Exp.toVal?_lit]
@@ -150,7 +150,7 @@ theorem twp_rand_tape {n : { z' : Int // 0 ≤ z' ∧ z' < z }}
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | RandTapeS hlook' _ hv hσ =>
     rw [hlook] at hlook'
     cases hlook'
@@ -180,7 +180,7 @@ theorem twp_rand_tape_empty
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
-  cases Possible.headStepSupport Hstep with
+  cases headStepSupport Hstep with
   | RandTapeS hlook' _ _ _ => rw [hlook] at hlook'; cases hlook'
   | RandTapeEmptyS _ _ _ Hv0 Hvz hσ =>
     subst hσ

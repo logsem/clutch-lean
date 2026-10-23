@@ -8,8 +8,7 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 /-!
 # Typing for ProbLang (System F_μ_ref with tapes)
 
-The judgment `Typed Γ e τ` (locally nameless, cofinite binder rules) over de Bruijn types `Ty`, with
-typing contexts `Tctx`. Results: typed terms are locally closed; `Typed.rename` renames an atom.
+The judgment `Typed Γ e τ` with cofinite binder rules over de Bruijn types and contexts `Tctx`.
 -/
 
 namespace ProbLang
@@ -70,7 +69,7 @@ def Ty.shift (τ : Ty) : Ty := τ.rename (· + 1)
 
 /-! ## Operand classes and operator result types -/
 
-/-- The operand types the `unboxed_eq` typing rule allows for `=` (no `tape`, unlike Clutch). -/
+/-- The operand types the `unboxed_eq` typing rule allows for `=` (excluding `tape`). -/
 inductive UnboxedType : Ty → Prop
   | unit                           : UnboxedType .unit
   | int                            : UnboxedType .int
@@ -165,8 +164,8 @@ end Tctx
 /-- `λ x. x`; wrapping `unfold` in it makes unfolding a recursive type take a real step. -/
 def recUnfold : Exp rT := .lam (.bvar 0)
 
-/-- Matching `p` against a scrutinee of type `τs` yields bindings of type `τb`. `.wildcard`
-binds the whole scrutinee: bindings live outside `Pat`, so there is no `.var` pattern. -/
+/-- Matches `p` against a scrutinee of type `τs`, yielding bindings of type `τb` (`.wildcard` binds
+the whole scrutinee, as bindings live outside `Pat`). -/
 inductive PatTyped : Ty → Pat rT → Ty → Prop
   /-- The wildcard binds the whole scrutinee. -/
   | wildcard {τ} : PatTyped τ .wildcard τ
@@ -348,7 +347,7 @@ theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
 private theorem isSome_of_mem_fv_open {Γ : Tctx} {L : Finset Var} {e : Exp rT} {τ : Ty}
     {x : Var} (ih : ∀ y ∉ L, ∀ z ∈ (open' e (.fvar y)).fv, (Γ.insert y τ z).isSome)
     (hx : x ∈ e.fv) : (Γ x).isSome := by
-  obtain ⟨y, hy⟩ := Cslib.HasFresh.fresh_exists (L ∪ {x})
+  obtain ⟨y, hy⟩ := HasFresh.fresh_exists (L ∪ {x})
   have hyL : y ∉ L := fun h => hy (Finset.mem_union_left _ h)
   have hxy : x ≠ y := fun h => hy (Finset.mem_union_right _ (Finset.mem_singleton.mpr h.symm))
   have hres := ih y hyL x (fv_subset_open e y hx)
@@ -499,7 +498,7 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
   | tapp _ ih => exact .tapp (ih x y τ_x Γ rfl (by simp [hy]))
   | tfold _ ih => exact .tfold (ih x y τ_x Γ rfl (by simp [hy]))
   | tunfold _ ih =>
-      rw [show subst (recUnfold (rT := rT)) x (Exp.fvar y) = recUnfold by
+      rw [show subst recUnfold x (Exp.fvar y) = recUnfold by
         simp [recUnfold, subst]]
       exact .tunfold (ih x y τ_x Γ rfl (by simp [hy]))
   | tpack _ ih => exact .tpack (ih x y τ_x Γ rfl (by simp [hy]))

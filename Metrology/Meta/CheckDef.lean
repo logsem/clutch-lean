@@ -2,13 +2,13 @@ module
 
 public import Lean
 
-@[expose] public section
-
-open Lean Elab Command Term Meta
-
 /-! # `#checkdef`
 
 Prints the type, value and reducibility hint of a definition. -/
+
+@[expose] public section
+
+open Lean Elab Command Term Meta
 
 syntax (name := checkdef) "#checkdef " ident : command
 

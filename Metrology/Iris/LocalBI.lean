@@ -7,8 +7,7 @@ public import Iris.BI.BI
 /-!
 # `local bi PROP`
 
-A default separation-logic proposition type for a section; the entailment notations `⊢` and `⊣⊢`
-are global and fall back to a hole when no `local bi` is in scope.
+A default proposition type for a section, used by the notations `⊢` and `⊣⊢`.
 -/
 
 open Lean Elab Command Term
@@ -28,7 +27,7 @@ meta initialize biExt : SimpleScopedEnvExtension Syntax (Option Syntax) ←
   | some T => elabType T
 
 /-- `local bi T` makes `T` the proposition type of the entailment notations in this section. -/
-syntax (name := biCmd) Lean.Parser.Term.attrKind &"bi " term : command
+syntax (name := biCmd) Parser.Term.attrKind &"bi " term : command
 
 /-- Elaborates `local bi T`, checking that `T` has a `BI` instance. -/
 @[command_elab biCmd]

@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response that leaks its input with probability `1/N`
 
-The program `leakyRR`; its `(ln 3, 1/N)`-DP proof `leakyRR_DP` is in
-`Micrometer/Examples/LeakyRR`. -/
+The program `leakyRR`, proved `(ln 3, 1/N)`-DP in `Micrometer/Examples/LeakyRR`. -/
 
 namespace ProbLang
 namespace LeakyRR

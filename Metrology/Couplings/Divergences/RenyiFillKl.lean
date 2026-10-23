@@ -6,9 +6,7 @@ public import Metrology.Couplings.Divergences.RenyiCodensity
 
 /-! # From Rényi to filled KL
 
-KL is at most every Rényi divergence of order `α > 1`, up to a gap `renyiKlGap` for lost left mass
-(`codensity_fill_kl_rel_of_renyi`). This gives the maps `renyiToFillKl`, `zcdpToFillKl`,
-`powerToFillKl` and `renyiCurveToFillKl`. -/
+KL is at most every Rényi divergence of order `α > 1`, up to the lost-mass gap `renyiKlGap`. -/
 
 @[expose] public section
 
@@ -27,10 +25,12 @@ variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {α : ℝ}
 noncomputable def renyiKlGap (α : ℝ) (m : ℝ≥0∞) : ℝ≥0∞ :=
   ENNReal.ofReal (α / (α - 1) * Real.log (2 - m.toReal))
 
+/-- The mass gap is zero at mass one. -/
 @[simp]
 theorem renyiKlGap_one : renyiKlGap α 1 = 0 := by
   norm_num [renyiKlGap]
 
+/-- The mass gap at zero mass is `α / (α - 1) · log 2`. -/
 @[simp]
 theorem renyiKlGap_zero : renyiKlGap α 0 = ENNReal.ofReal (α / (α - 1) * Real.log 2) := by
   simp [renyiKlGap]
@@ -297,6 +297,7 @@ noncomputable def renyiToFillKl (α : ℝ) [Fact (1 < α)] :
   mono _ _ h := by dsimp only; gcongr
   map_rel := codensity_fill_kl_rel_of_renyi_le
 
+/-- The budget map of `renyiToFillKl` adds the extra gap at order `α`. -/
 @[simp]
 theorem renyiToFillKl_map {α : ℝ} [Fact (1 < α)] (ρ : ℝ≥0∞) :
     (renyiToFillKl.{u} α).map ρ = ρ + renyiKlGap α 0 :=
@@ -314,6 +315,7 @@ noncomputable def zcdpToFillKl :
     exact (codensity_fill_kl_rel_of_renyi_le
       (concentratedLifting_rel_iff.1 h ⟨α, hα⟩ hα)).mono hr.le fun _ _ h ↦ h
 
+/-- The budget map of `zcdpToFillKl` is the infimum over orders `α > 1`. -/
 @[simp]
 theorem zcdpToFillKl_map (b : ℝ≥0∞ × ℝ≥0∞) :
     zcdpToFillKl.{u}.map b = ⨅ α ∈ Ioi (1 : ℝ), b.1 + ENNReal.ofReal α * b.2 + renyiKlGap α 0 :=

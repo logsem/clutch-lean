@@ -10,8 +10,7 @@ import Metrology.Iris.LocalBI
 
 /-! # `Agree`-valued heap views
 
-Heaps of `Agree` values and the `HeapView` ghost-state rules that the spec side and the program
-side instantiate for their heaps and tapes. -/
+Heaps of `Agree` values and the `HeapView` rules shared by the spec and program sides. -/
 
 @[expose] public section
 
@@ -64,8 +63,8 @@ Facts about one `HeapView Loc (Agree V) LocHeap` cell, stated for any ghost slot
 
 namespace AgreeHeap
 
-variable {V : Type _} [OFE V] [OFE.Discrete V] {GF : BundledGFunctors}
-  {E : ElemG GF (constOF (HeapView Loc (Agree V) LocHeap))} {γ : GName}
+variable {V : Type _} [OFE V] {GF : BundledGFunctors}
+  {E : ElemG GF (constOF (HeapView Loc (Agree V) LocHeap))} {γ : GName} {l : Loc}
 
 local bi IProp GF
 
@@ -76,7 +75,7 @@ theorem alloc_auth (σ : LocHeap V) :
   iOwn_alloc _ HeapView.auth_one_valid
 
 /-- Owning a cell against the authority shows the heap holds its value there. -/
-theorem lookup {σ : LocHeap V} {l : Loc} {v : V} :
+theorem lookup [OFE.Discrete V] {σ : LocHeap V} {v : V} :
     ⊢ iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) -∗
       iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v)) -∗ ⌜σ[l]? = some v⌝ := by
   iintro Hh Hf
@@ -87,7 +86,7 @@ theorem lookup {σ : LocHeap V} {l : Loc} {v : V} :
   exact LocHeap.get?_of_asAgree_get? hget hinc
 
 /-- Overwriting a cell updates the authority and the cell together. -/
-theorem update {σ : LocHeap V} {l : Loc} {v w : V} :
+theorem update {σ : LocHeap V} {v w : V} :
     iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) ∗
         iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v)) ⊢
       |==> (iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree (PartialMap.insert σ l w))) ∗
@@ -114,7 +113,7 @@ theorem alloc {σ : LocHeap V} (v : V) :
   iframe
 
 /-- Two full cells at one location are contradictory. -/
-theorem frag_valid_2 {l : Loc} {v₁ v₂ : V} :
+theorem frag_valid_2 [OFE.Discrete V] {v₁ v₂ : V} :
     ⊢ iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v₁)) -∗
       iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v₂)) -∗ False := by
   iintro H1 H2
@@ -124,7 +123,7 @@ theorem frag_valid_2 {l : Loc} {v₁ v₂ : V} :
   exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
 
 /-- An empty integer tape is an empty tape fragment. -/
-theorem natTape_to_empty {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
+theorem natTape_to_empty {F : Loc → Tape → IProp GF} {z : Int} :
     iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
       ⌜fs.map (fun x ↦ x.val) = ([] : List Int)⌝ ∗ F l ⟨z, fs⟩) ⊢ F l ⟨z, []⟩ := by
   iintro ⟨%fs, %hmap, Hl⟩
@@ -132,7 +131,7 @@ theorem natTape_to_empty {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
   iexact Hl
 
 /-- An empty tape fragment is an empty integer tape. -/
-theorem empty_to_natTape {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
+theorem empty_to_natTape {F : Loc → Tape → IProp GF} {z : Int} :
     F l ⟨z, []⟩ ⊢ iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
       ⌜fs.map (fun x ↦ x.val) = ([] : List Int)⌝ ∗ F l ⟨z, fs⟩) := by
   iintro Hl
@@ -143,7 +142,7 @@ theorem empty_to_natTape {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
   iexact Hl
 
 /-- An integer tape with head `n` exposes its first entry, and can be rebuilt from the tail. -/
-theorem read_natTape_head {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} {n : Int}
+theorem read_natTape_head {F : Loc → Tape → IProp GF} {z : Int} {n : Int}
     {ns : List Int} :
     iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
         ⌜fs.map (fun x ↦ x.val) = n :: ns⌝ ∗ F l ⟨z, fs⟩) ⊢

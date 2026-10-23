@@ -15,8 +15,7 @@ noncomputable section ProbLangMeasures
 
 /-! # Measurable space on expressions
 
-The σ-algebra on `Exp`, derived with the `MeasurableSpace` deriving handler (`CylinderGen.lean`);
-it makes every constructor a measurable embedding. -/
+The σ-algebra on `Exp`, from the `MeasurableSpace` deriving handler (`CylinderGen.lean`). -/
 
 namespace ProbLang.Exp
 

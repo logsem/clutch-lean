@@ -7,14 +7,13 @@ public import Metrology.Couplings.LiftingHom
 
 /-! # Additive and DP couplings as codensity liftings
 
-Additive couplings and test-function DP couplings are the codensity liftings of `tv` and `dp`
-(Approximate Span Liftings, §6). -/
+Additive and test-function DP couplings are the codensity liftings of `tv` and `dp` (§6). -/
 
 @[expose] public section
 
 universe u
 
-open MeasureTheory Measure ProbabilityTheory GradedDivergence GradedLifting
+open MeasureTheory Measure ProbabilityTheory GradedDivergence GradedLifting ARCoupling
 open scoped ENNReal
 
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y] {ε δ : ℝ≥0∞} {μ : Measure X}
@@ -75,8 +74,7 @@ theorem expCoupl_add_const [IsSubProbabilityMeasure μ] {c : X → Y → ℝ≥0
     (expCoupl_of_codensity_tv (IsTopAbsorbing.frame (expCoupl_iff_codensity_tv.1 H))
       f g hf hg hf1 hg1 hfg).trans (by gcongr)
 
-/-- A total variation lifting may assume the right sample lies in a set carrying `ν`.
-`IsSupportLocal` restricts only the left side; the right restriction goes through
+/-- A total variation lifting may assume the right sample lies in a set carrying `ν`, via
 `AddCoupl.concentrated_R`. -/
 theorem GradedLifting.Rel.tv_restrict_right [IsSubProbabilityMeasure μ] {S : X → Y → Prop}
     {T : Set Y} (h : (codensity tv).Rel δ S μ ν) (hT : MeasurableSet T) (hν : ν Tᶜ = 0) :
@@ -87,7 +85,7 @@ theorem GradedLifting.Rel.tv_restrict_right [IsSubProbabilityMeasure μ] {S : X 
 
 /-- A test-function DP coupling is a DP codensity lifting. -/
 theorem ARCoupling.DP.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)}
-    (h : ARCoupling.DP ε δ S μ ν) : (codensity dp).Rel (ε, δ) (fun x y ↦ (x, y) ∈ S) μ ν := by
+    (h : DP ε δ S μ ν) : (codensity dp).Rel (ε, δ) (fun x y ↦ (x, y) ∈ S) μ ν := by
   rcases eq_or_ne ε ⊤ with rfl | hε
   · exact codensity_dp_top_left
   exact (codensity_dp_rel_iff hε).2 fun f g hf hg hf1 hg1 hfg ↦
@@ -95,7 +93,7 @@ theorem ARCoupling.DP.codensity [IsSubProbabilityMeasure μ] {S : Set (X × Y)}
 
 /-- At a finite multiplier, a DP codensity lifting is a test-function DP coupling. -/
 theorem GradedLifting.Rel.arCoupling_dp (hε : ε ≠ ⊤) {S : X → Y → Prop}
-    (h : (codensity dp).Rel (ε, δ) S μ ν) : ARCoupling.DP ε δ {p | S p.1 p.2} μ ν :=
+    (h : (codensity dp).Rel (ε, δ) S μ ν) : DP ε δ {p | S p.1 p.2} μ ν :=
   fun f g hfg ↦
     lintegral_le_of_codensity_dp hε h f.measurable g.measurable f.bounded g.bounded fun x y ↦ by
       by_cases hS : S x y
@@ -105,7 +103,7 @@ theorem GradedLifting.Rel.arCoupling_dp (hε : ε ≠ ⊤) {S : X → Y → Prop
 /-- At a finite multiplier, test-function DP couplings are the DP codensity lifting (Rocq
 `gcoupl_DP_eq`). -/
 theorem arCoupling_dp_iff_codensity [IsSubProbabilityMeasure μ] (hε : ε ≠ ⊤) {S : Set (X × Y)} :
-    ARCoupling.DP ε δ S μ ν ↔ (codensity dp).Rel (ε, δ) (fun x y ↦ (x, y) ∈ S) μ ν :=
+    DP ε δ S μ ν ↔ (codensity dp).Rel (ε, δ) (fun x y ↦ (x, y) ∈ S) μ ν :=
   ⟨ARCoupling.DP.codensity, Rel.arCoupling_dp hε⟩
 
 /-- Total variation liftings are DP liftings at multiplier `1`, leftovers included. -/

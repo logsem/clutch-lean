@@ -13,13 +13,12 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Graded lifting modality
 
-The error-graded lifting modality `glm'`: erasable steps and credit bumps, then one prim step into
-`Z`. (`LiveEris/Glm.lean` has the unrelated vector-credit `glm`.)
+The error-graded lifting modality `glm'`: erasable steps and credit bumps, then one prim step.
 -/
 
 @[expose] public section
 
-open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
+open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang Ectx Set
 
 namespace ProbLang
 
@@ -73,9 +72,13 @@ end Pgl
 
 /-- Ghost state for the total Eris weakest precondition: state and error-credit interpretations. -/
 class ErisWpGS (GF : BundledGFunctors) where
+  /-- Whether the model has later credits. -/
   hlc : HasLC
+  /-- The invariant ghost state. -/
   invGS : InvGS_gen hlc GF
+  /-- The interpretation of the program state. -/
   stateInterp : State rT → IProp GF
+  /-- The interpretation of the error-credit budget. -/
   errInterp : ENNReal → IProp GF
 
 attribute [reducible, instance] ErisWpGS.invGS
@@ -118,13 +121,11 @@ variable {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z : Cfg rT → ENNReal →
 /-- A configuration together with its remaining error budget. -/
 abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNReal
 
-instance : COFE (GlmState rT) := COFE.ofDiscrete _
-instance : OFE.Discrete (GlmState rT) := ⟨id⟩
+instance : COFE (GlmState rT) := ofDiscrete _
+instance : Discrete (GlmState rT) := ⟨id⟩
 
-/-- Take a real program step, splitting the budget `ε` over the outcomes.
-`R`: the outcomes kept, failing with probability `≤ ε₁` (`Pgl`); `X₂ ρ`: the budget passed to
-outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`. Eris's `glm` also takes a uniform bound on `X₂`, to make the
-expectation finite; here expectations are `lintegral`s, so it is dropped. -/
+/-- Take a real program step, splitting the budget over the outcomes: kept outcomes fail with
+probability at most `ε₁`, and each outcome gets budget `X₂ ρ`. -/
 abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
   iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal),
@@ -134,9 +135,8 @@ abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     ⌜Pgl ε₁ R (primStep ⟨e₁, σ₁⟩)⌝ ∗
     (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
 
-/-- Advance only the state by an expression-erasable measure `μ`, spending error per outcome.
-`R`, `ε₁`, `X₂` are as in `glmPrimStep'`.
-Total adequacy needs the witness `MeasurableSet {σ' | R σ'}` to split the `μ`-mass on `R`. -/
+/-- Advance only the state by an expression-erasable measure `μ`, with per-outcome credit `X₂` on
+the kept outcomes `R` (as in `glmPrimStep'`). -/
 abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∃ (μ : MeasureTheory.Measure (State rT)) (R : State rT → Prop) (ε₁ : ENNReal)
@@ -232,7 +232,7 @@ instance glmPre'_mono {Z : Cfg rT → ENNReal → IProp GF} :
       iintro %s HΦ
       iapply Hwand $$ HΦ
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
+    obtain rfl := Discrete.discrete hd; exact .of_eq rfl
 
 /-- `glm'` unfolds once through `glmPre'`. -/
 theorem glm'_unfold :
@@ -349,7 +349,7 @@ theorem glm'_bind
   -- `primStep_fill`, pushing `R` and `X₂` forward along `K.fillCfg` (`X₂'` is `0` off its image).
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e', Kinv (K.fill e') = some e' :=
-    Function.partialInv_left (Ectx.fill_injective K)
+    Function.partialInv_left (fill_injective K)
   let Z' : Cfg rT → ENNReal → IProp GF := fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε'
   let Φ : GlmState rT → IProp GF :=
     fun s => bi_least_fixpoint (glmPre' Z) ((⟨K.fill s.1.expr, s.1.state⟩, s.2) : GlmState rT)
@@ -369,19 +369,19 @@ theorem glm'_bind
           fun ρ' => (Kinv ρ'.expr).elim 0 (fun e' => X₂ ⟨e', ρ'.state⟩) with hX₂'def
         have hR'set : {ρ' | R' ρ'} = K.fillCfg '' {ρ'' | R ρ''} := by
           ext ρ'
-          simp only [hR'def, Set.mem_ofPred_eq, Set.mem_image]
+          simp only [hR'def, mem_ofPred_eq, mem_image]
           exact ⟨fun ⟨ρ'', heq, hR⟩ => ⟨ρ'', hR, heq.symm⟩,
             fun ⟨ρ'', hR, heq⟩ => ⟨ρ'', heq.symm, hR⟩⟩
         have hR'meas : MeasurableSet {ρ' | R' ρ'} :=
-          hR'set ▸ Ectx.measurableSet_fillCfg_image K HRmeas
+          hR'set ▸ measurableSet_fillCfg_image K HRmeas
         have hX₂'fill : ∀ a : Cfg rT, X₂' (K.fillCfg a) = X₂ a := fun a => by
-          simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
+          simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
         have hredK : Reducible (K.fill ρ.expr) ρ.state := Hred.fill K
         have hexp' : ε₁ + (∫⁻ a, X₂' a ∂ primStep ⟨K.fill ρ.expr, ρ.state⟩) ≤ ε' := by
           rw [primStep_fill Hsv]
           refine le_trans ?_ Hexp
           gcongr ε₁ + ?_
-          refine (MeasureTheory.lintegral_map_le _ (Ectx.fillCfg.measurable K).aemeasurable).trans
+          refine (MeasureTheory.lintegral_map_le _ (fillCfg.measurable K).aemeasurable).trans
             (Eq.le ?_)
           exact MeasureTheory.lintegral_congr_ae (Filter.Eventually.of_forall fun a => hX₂'fill a)
         have hpgl' : Pgl ε₁ R' (primStep ⟨K.fill ρ.expr, ρ.state⟩) := by
@@ -392,15 +392,15 @@ theorem glm'_bind
           refine (Eq.le ?_).trans Hpgl
           congr 1
           ext a
-          simp only [hR'def, Set.mem_preimage, Set.mem_ofPred_eq, not_exists, not_and]
+          simp only [hR'def, mem_preimage, mem_ofPred_eq, not_exists, not_and]
           refine ⟨fun h hR => h a rfl hR, fun hR ρ₃ hEq hR₃ => ?_⟩
-          exact hR (Ectx.fillCfg_injective K hEq.symm ▸ hR₃)
+          exact hR (fillCfg_injective K hEq.symm ▸ hR₃)
         iexists R', ε₁, X₂'
         iframe %hredK %hR'meas %hexp' %hpgl'
         iintro %ρ' ⟨%ρ'', %rfl, %HR⟩
         imod HCont $$ %ρ'' %HR with HS
         imodintro
-        simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
+        simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
         iexact HS
       · iright; iright; iexact HEras
     · iexact HG

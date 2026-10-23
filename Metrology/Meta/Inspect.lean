@@ -11,7 +11,7 @@ open Lean Elab Command Term Meta
 Prints the raw `Expr` tree of a term. -/
 
 /-- The raw `Expr` tree of a term, with binder annotations (metadata is elided). -/
-meta def inspectFormat : Lean.Expr → Format
+meta def inspectFormat : Expr → Format
   | .bvar i => .text s!"(bvar {i})"
   | .fvar i => .text s!"(fvar {i.name})"
   | .mvar i => .text s!"(mvar {i.name})"

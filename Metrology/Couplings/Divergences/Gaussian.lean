@@ -14,7 +14,8 @@ Main result: `Mechanism.DP_gaussianMech`, following Dwork–Roth Thm. A.1 and Sa
 @[expose] public section
 
 open MeasureTheory ProbabilityTheory Set Filter Topology Real
-open scoped ENNReal NNReal
+open scoped ENNReal
+open NNReal
 
 namespace ProbabilityTheory
 
@@ -23,7 +24,7 @@ namespace ProbabilityTheory
 /-- The Gaussian mass beyond `H > a` is at most `v · pdf(H) / (H - a)`. -/
 theorem gaussianReal_Ioi_le {a H : ℝ} (hH : a < H) {v : ℝ≥0} (hv : v ≠ 0) :
     gaussianReal a v (Ioi H) ≤ ENNReal.ofReal (v * gaussianPDFReal a v H / (H - a)) := by
-  have hv' : (0 : ℝ) < v := NNReal.coe_pos.2 (pos_iff_ne_zero.2 hv)
+  have hv' : (0 : ℝ) < v := coe_pos.2 (pos_iff_ne_zero.2 hv)
   -- `F = -v·pdf` is an antiderivative of `(x - a)·pdf`; on `(H, ∞)` bound `pdf` by
   -- `(x - a)·pdf / (H - a)`
   set F : ℝ → ℝ := fun x ↦ -(v * gaussianPDFReal a v x)
@@ -139,7 +140,7 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
     dp (ENNReal.ofReal ε, ENNReal.ofReal δ) (gaussianReal a (σ ^ 2)) (gaussianReal a' (σ ^ 2)) := by
   have hc0 : 0 < c := lt_of_le_of_lt (by positivity) hc
   have hσ' : (0 : ℝ) < σ := (div_pos (mul_pos hc0 hr) hε).trans_le hcσ
-  have hσ : 0 < σ := NNReal.coe_pos.1 hσ'
+  have hσ : 0 < σ := coe_pos.1 hσ'
   have hv : σ ^ 2 ≠ 0 := pow_ne_zero 2 hσ.ne'
   have hv' : (0 : ℝ) < ((σ ^ 2 : ℝ≥0) : ℝ) := by push_cast; positivity
   set H := (a + a') / 2 + ((σ ^ 2 : ℝ≥0) : ℝ) * ε / r
@@ -152,7 +153,7 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
       have := one_div_le_one_div_of_le (by positivity) (mul_le_mul_of_nonneg_left hc' zero_le_two)
       linarith
     have hval : (H - a) / σ = (a' - a) / (2 * σ) + σ * ε / r := by
-      simp only [H, NNReal.coe_pow]
+      simp only [H, coe_pow]
       field_simp
       ring
     have hlow : -(ε / (2 * (σ * ε / r))) ≤ (a' - a) / (2 * σ) := by
@@ -171,7 +172,7 @@ theorem dp_gaussian_of_le {σ : ℝ≥0} {ε δ r c a a' : ℝ} (hε : 0 < ε)
   have htail : gaussianReal a (σ ^ 2) (Ioi H) ≤ ENNReal.ofReal δ := by
     refine (gaussianReal_Ioi_le hHa hv).trans (ENNReal.ofReal_le_ofReal ?_)
     refine le_of_eq_of_le ?_ (gaussian_tail_le hh hc hδ hcδ)
-    simp only [gaussianPDFReal, NNReal.coe_pow]
+    simp only [gaussianPDFReal, coe_pow]
     rw [sqrt_mul' _ (by positivity), sqrt_sq hσ'.le]
     field_simp
   -- split `S` at `H`: below `H` the density ratio is at most `e^ε`

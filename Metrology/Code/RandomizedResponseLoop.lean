@@ -7,9 +7,8 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Randomized response in a loop
 
-Proved private in any lifting by `rrCount_isPrivate` in
-`Micrometer/Examples/RandomizedResponse/Basic`; DP, zCDP, tCDP, Rényi and χ² instances in its
-sibling files. -/
+Privacy of `rrCount` is proved in `Micrometer/Examples/RandomizedResponse/Basic` and its
+siblings. -/
 
 namespace ProbLang
 namespace RandomizedResponse

@@ -6,9 +6,8 @@ public import Metrology.Couplings.Divergences.Persp
 public import Metrology.Couplings.SubProbability
 
 /-! # Integral `f`-divergences
-
-`fDiv f μ ν` is `∫ f (dμ/dν) dν + f'(∞) μ⊥(X)` (Approximate Span Liftings, Def. 2.7), with its
-basic values and monotonicity. Main result: partition sums are below it (`sum_persp_le_fDiv`). -/
+`fDiv f μ ν` is `∫ f (dμ/dν) dν + f'(∞) μ⊥(X)` (Approximate Span Liftings, Def. 2.7); partition
+sums are below it (`sum_persp_le_fDiv`). -/
 
 @[expose] public section
 

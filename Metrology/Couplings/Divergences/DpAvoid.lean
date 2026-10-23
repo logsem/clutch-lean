@@ -4,8 +4,7 @@ public import Metrology.Couplings.Divergences.Dp
 
 /-! # Avoiding an event in the DP coupling
 
-Coupling a measure with itself along equality outside an event `T` costs `μ T` of DP slack
-(`codensity_dp_avoid`). -/
+Coupling a measure with itself along equality outside `T` costs `μ T` of DP slack. -/
 
 @[expose] public section
 

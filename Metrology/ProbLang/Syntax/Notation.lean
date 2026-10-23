@@ -10,8 +10,7 @@ public meta import Metrology.ProbLang.Syntax.Syntax
 
 /-! # Surface syntax for ProbLang
 
-Parses `pl% …` / `pl(…)` into `Exp` (binders closed to de Bruijn form by `Exp.close`), and prints
-`Exp` back as `pl(…)` with source binder names. -/
+Parses `pl% …` and `pl(…)` into `Exp`, and prints `Exp` back as `pl(…)` with source binder names. -/
 
 namespace ProbLang
 
@@ -277,9 +276,9 @@ meta def mkNamedFix (b : NamedBinder) (body : Term) : TermElabM Term := do
 
 /-- Whether `e` is a dotted constructor such as `.int z`, possibly parenthesized or applied. -/
 meta partial def isDottedLit (e : Syntax) : Bool :=
-  if e.isOfKind ``Lean.Parser.Term.paren then isDottedLit e[1]
-  else if e.isOfKind ``Lean.Parser.Term.app then isDottedLit e[0]
-  else e.isOfKind ``Lean.Parser.Term.dotIdent
+  if e.isOfKind ``Term.paren then isDottedLit e[1]
+  else if e.isOfKind ``Term.app then isDottedLit e[0]
+  else e.isOfKind ``Term.dotIdent
 
 /-- The payload of a literal `#e`: `e` as a `BaseLit` when it elaborates as one, otherwise `e`
 elaborated on its own and coerced (so `#(n + 1)` works for `n : Int`). -/
@@ -1050,6 +1049,6 @@ meta def delabExpFvar : Delab := do
     return ← `(pl($(mkIdent nm):ident))
   let_expr Var.named sLit := v | failure
   let .lit (.strVal s) := sLit | failure
-  `(pl($(Lean.mkIdent (Name.mkSimple s)):ident))
+  `(pl($(mkIdent (Name.mkSimple s)):ident))
 
 end ProbLang

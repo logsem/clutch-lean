@@ -14,6 +14,8 @@ universe u v w
 open MeasureTheory Measure ProbabilityTheory Set Filter Topology
 open scoped ENNReal
 
+variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
+
 namespace GradedDivergence
 
 variable {B : Type v} {K : Type w} {weight : B → K → ℝ → ℝ} {thresh : B → K → EReal}
@@ -196,8 +198,6 @@ theorem persp_dpWeight {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
   rw [persp_of_ne_zero hb.ne', dpWeight, mul_max_of_nonneg _ _ hb.le, mul_zero, mul_sub,
     mul_div_cancel₀ _ hb.ne', mul_comm]
 
-variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
-
 /-- Summing masses of cells in a finite set `P` gives the mass of their union. -/
 theorem sum_toReal_preimage_singleton {n : ℕ} (ρ : Measure X)
     [IsFiniteMeasure ρ] {k : X → Fin n} (hk : Measurable k) (P : Finset (Fin n)) :
@@ -260,8 +260,6 @@ theorem fDiv_dpWeight_le_iff (δ : ℝ≥0∞) :
 end ProbabilityTheory
 
 namespace GradedDivergence
-
-variable {X : Type u} [MeasurableSpace X] {μ ν : Measure X}
 
 /-- `(ε, δ)`-DP is the `f`-divergence bound with weight `dpWeight ε` and threshold `δ`. -/
 theorem dp_iff_fDivBound {ε δ : ℝ≥0∞} (hε : ε ≠ ⊤) [IsFiniteMeasure μ] [IsFiniteMeasure ν] :

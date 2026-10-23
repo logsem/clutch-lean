@@ -5,14 +5,9 @@ public import Metrology.Couplings.Divergences.Fill
 public import Metrology.Couplings.Divergences.Hellinger
 public import Metrology.Couplings.Divergences.Kl
 
-/-!
-# Filled KL
-
-`fill klDivergence` (Rocq `FillDiv` at KL) is equivalent to the Donsker–Varadhan test bound
-`KlDualBound` (`fill_kl_iff`), from which its divergence laws follow. Its codensity lifting has
-every lifting law (`codensity_fill_kl_laws`), and lifts of equality read back as KL bounds
-(`klDiv_le_of_codensity_fill_kl`).
--/
+/-! # Filled KL
+`fill klDivergence` is equivalent to the Donsker–Varadhan test bound `KlDualBound`
+(`fill_kl_iff`), and its codensity lifting has every lifting law (`codensity_fill_kl_laws`). -/
 
 @[expose] public section
 
@@ -58,8 +53,7 @@ theorem klDualBound_of_forall_gt {r : ℝ≥0∞} {m Q : Measure Ω}
         h _ (lt_add_right hr (by exact_mod_cast hε.ne')) hg h0 hb
     _ = _ := by ring
 
-/-- The exponential moment of a bounded test against a probability measure is finite and at
-least `1`. -/
+/-- The exponential moment of a bounded test against a probability measure is at least `1`. -/
 theorem one_le_lintegral_exp {Q : Measure Ω} [IsProbabilityMeasure Q] {h : Ω → ℝ}
     (h0 : ∀ ω, 0 ≤ h ω) : 1 ≤ ∫⁻ ω, ENNReal.ofReal (Real.exp (h ω)) ∂Q := by
   calc (1 : ℝ≥0∞) = ∫⁻ _, 1 ∂Q := by simp
@@ -120,16 +114,16 @@ theorem klDualBound_of_le {m P Q : Measure Ω} [IsProbabilityMeasure P] [IsProba
 
 section Optimal
 
-variable {r : ℝ≥0∞} {m Q : Measure Ω}
+variable {r : ℝ≥0∞} {m Q : Measure Ω} [IsProbabilityMeasure Q]
 
 /-- A finite test bound puts no mass where `Q` has none. -/
-theorem absolutelyContinuous_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeasure m]
+theorem absolutelyContinuous_of_klDualBound [IsFiniteMeasure m]
     (hr : r ≠ ⊤) (h : KlDualBound r m Q) : m ≪ Q := by
   refine AbsolutelyContinuous.mk fun s hs hQs ↦ ?_
   by_contra hne
   have key (n : ℕ) : (n : ℝ≥0∞) * m s ≤ r := by
     have hmeas : Measurable (s.indicator fun _ ↦ (n : ℝ)) := measurable_const.indicator hs
-    have h1 := h hmeas (fun ω ↦ Set.indicator_nonneg (fun _ _ ↦ Nat.cast_nonneg n) ω)
+    have h1 := h hmeas (fun ω ↦ indicator_nonneg (fun _ _ ↦ Nat.cast_nonneg n) ω)
       ⟨n, by rintro _ ⟨ω, rfl⟩; by_cases hω : ω ∈ s <;> simp [hω]⟩
     have hl : (fun ω ↦ ENNReal.ofReal (s.indicator (fun _ ↦ (n : ℝ)) ω)) =
         s.indicator fun _ ↦ (n : ℝ≥0∞) := by
@@ -148,7 +142,7 @@ theorem absolutelyContinuous_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMe
 variable {p : Ω → ℝ}
 
 /-- The test `log (max p t / t)` bounds `∫ p log (max p t / t)` for a density `p` of `m`. -/
-theorem lintegral_mul_log_le [IsProbabilityMeasure Q] (h : KlDualBound r m Q) (hpm : Measurable p)
+theorem lintegral_mul_log_le (h : KlDualBound r m Q) (hpm : Measurable p)
     (hp0 : ∀ ω, 0 ≤ p ω) (hpint : Integrable p Q)
     (hmQ : m = Q.withDensity fun ω ↦ ENNReal.ofReal (p ω)) {t : ℝ} (ht : 0 < t) :
     ∫⁻ ω, ENNReal.ofReal (p ω * Real.log (max (p ω) t / t)) ∂Q ≤
@@ -188,7 +182,7 @@ theorem lintegral_mul_log_le [IsProbabilityMeasure Q] (h : KlDualBound r m Q) (h
           _ = max (p ω) t / t := Real.exp_log (hct ω)
 
 /-- The mass of `max p t` under `Q` is `1`-Lipschitz in `t`. -/
-theorem lipschitzWith_integral_max [IsProbabilityMeasure Q] (hpint : Integrable p Q) :
+theorem lipschitzWith_integral_max (hpint : Integrable p Q) :
     LipschitzWith 1 fun t : ℝ ↦ ∫ ω, max (p ω) t ∂Q := by
   refine LipschitzWith.of_dist_le_mul fun s t ↦ ?_
   have hs : Integrable (fun ω ↦ max (p ω) s) Q := hpint.sup (integrable_const s)
@@ -202,7 +196,7 @@ theorem lipschitzWith_integral_max [IsProbabilityMeasure Q] (hpint : Integrable 
     _ = |s - t| := by simp
 
 /-- A test bound for `m` is met by a probability measure above `m` within that KL budget. -/
-theorem exists_le_klDiv_le_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeasure m]
+theorem exists_le_klDiv_le_of_klDualBound [IsFiniteMeasure m]
     (hm1 : m univ ≤ 1) (h : KlDualBound r m Q) :
     ∃ P, IsProbabilityMeasure P ∧ m ≤ P ∧ klDiv P Q ≤ r := by
   rcases eq_or_ne r ⊤ with rfl | hr
@@ -212,7 +206,7 @@ theorem exists_le_klDiv_le_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeas
   set p : Ω → ℝ := fun ω ↦ (m.rnDeriv Q ω).toReal with hp
   have hpm : Measurable p := (measurable_rnDeriv m Q).ennreal_toReal
   have hp0 (ω : Ω) : 0 ≤ p ω := toReal_nonneg
-  have hpint : Integrable p Q := Measure.integrable_toReal_rnDeriv
+  have hpint : Integrable p Q := integrable_toReal_rnDeriv
   have hmQ : m = Q.withDensity fun ω ↦ ENNReal.ofReal (p ω) := by
     conv_lhs => rw [← withDensity_rnDeriv_eq m Q hac]
     refine withDensity_congr_ae ?_
@@ -316,7 +310,7 @@ theorem exists_le_klDiv_le_of_klDualBound [IsProbabilityMeasure Q] [IsFiniteMeas
     have hcm : Measurable c := hpm.max measurable_const
     set P := Q.withDensity fun ω ↦ ENNReal.ofReal (c ω)
     have hP : IsProbabilityMeasure P := ⟨by
-      rw [withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ,
+      rw [withDensity_apply _ MeasurableSet.univ, restrict_univ,
         ← ofReal_integral_eq_lintegral_ofReal (hcint t) (ae_of_all _ hc0)]
       rw [show (∫ ω, max (p ω) t ∂Q) = F t from rfl, hFt, ofReal_one]⟩
     refine ⟨P, hP, ?_, ?_⟩
@@ -400,7 +394,7 @@ theorem KlDualBound.comp_lintegral {b : ℝ≥0∞} {c : Ω → ℝ≥0∞} {m�
     rw [Real.exp_log (hGpos ω), ofReal_toReal (hGt ω)]
   calc ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ∘ₘ m₁)
       = ∫⁻ ω, ∫⁻ ω', ENNReal.ofReal (h ω') ∂(K ω) ∂m₁ :=
-        Measure.lintegral_bind K.aemeasurable hm.ennreal_ofReal.aemeasurable
+        lintegral_bind K.aemeasurable hm.ennreal_ofReal.aemeasurable
     _ ≤ ∫⁻ ω, (c ω + ENNReal.ofReal (g ω)) ∂m₁ := lintegral_mono fun ω ↦ h₂ ω hm h0 ⟨C, hC⟩
     _ = ∫⁻ ω, c ω ∂m₁ + ∫⁻ ω, ENNReal.ofReal (g ω) ∂m₁ := lintegral_add_left hc _
     _ ≤ ∫⁻ ω, c ω ∂m₁ +
@@ -408,7 +402,7 @@ theorem KlDualBound.comp_lintegral {b : ℝ≥0∞} {c : Ω → ℝ≥0∞} {m�
         add_le_add le_rfl (h₁ hgm hg0 ⟨C, by rintro _ ⟨ω, rfl⟩; exact hgC ω⟩)
     _ = (b + ∫⁻ ω, c ω ∂m₁) + ENNReal.ofReal
           (Real.log (∫⁻ ω', ENNReal.ofReal (Real.exp (h ω')) ∂(L ∘ₘ Q₁)).toReal) := by
-        rw [Measure.lintegral_bind L.aemeasurable hm.exp.ennreal_ofReal.aemeasurable]
+        rw [lintegral_bind L.aemeasurable hm.exp.ennreal_ofReal.aemeasurable]
         simp_rw [hexpg]
         ring
 
@@ -473,7 +467,7 @@ theorem klDiv_le_of_fill [IsProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : fill klDivergence r μ ν) : klDiv μ ν ≤ r := by
   obtain ⟨μ', hle, hμ', hD⟩ := exists_le_klDivergence_of_fill h
   have h1 : μ' univ ≤ 1 := hμ'.measure_univ_le_one
-  obtain rfl : μ = μ' := Measure.eq_of_le_of_measure_univ_eq hle
+  obtain rfl : μ = μ' := eq_of_le_of_measure_univ_eq hle
     (le_antisymm (by simpa using hle univ) (by simpa using h1))
   exact klDivergence_iff.1 hD
 
@@ -495,7 +489,7 @@ instance isComposable_fill_kl : (fill klDivergence.{u}).IsComposable where
     have : IsSubProbabilityMeasure (η ∘ₘ μ₂) := isSubProbabilityMeasure_bind μ₂ _
     rw [fill_kl_iff] at hμ ⊢
     have hK : (κ ∘ₘ μ₁).map some = ((κ.map some) ∘ₖ Kernel.dropBot) ∘ₘ μ₁.map some := by
-      rw [← Measure.comp_assoc, Kernel.dropBot_comp_map_some, Measure.map_comp _ _ measurable_some]
+      rw [← comp_assoc, Kernel.dropBot_comp_map_some, map_comp _ _ measurable_some]
     rw [hK, Kernel.withBot_comp]
     refine KlDualBound.comp hμ fun o ↦ ?_
     cases o with
@@ -504,7 +498,7 @@ instance isComposable_fill_kl : (fill klDivergence.{u}).IsComposable where
     | some x =>
       have h := fill_kl_iff.1 (hκ x)
       simpa [Kernel.comp_apply, Kernel.dropBot, Kernel.map_apply _ measurable_some,
-        Measure.dirac_bind (Kernel.measurable _)] using h
+        dirac_bind (Kernel.measurable _)] using h
 
 /-- Filled KL composes with a measurable cost, paid on average under the left measure (the KL
 chain rule). -/
@@ -516,7 +510,7 @@ theorem fill_kl_comp_lintegral {Z I : Type u} [MeasurableSpace Z] [MeasurableSpa
     fill klDivergence (b + ∫⁻ z, c z ∂π₁) (K ∘ₘ π₁) (L ∘ₘ π₂) := by
   rw [fill_kl_iff] at h ⊢
   have hK' : (K ∘ₘ π₁).map some = ((K.map some) ∘ₖ Kernel.dropBot) ∘ₘ π₁.map some := by
-    rw [← Measure.comp_assoc, Kernel.dropBot_comp_map_some, Measure.map_comp _ _ measurable_some]
+    rw [← comp_assoc, Kernel.dropBot_comp_map_some, map_comp _ _ measurable_some]
   -- the cost on `Option Z` is `c` on `some` and nothing on `none`, which carries no left mass
   have hc' : Measurable fun o : Option Z ↦ o.elim 0 c := measurable_option_elim hc 0
   have hint : ∫⁻ z, c z ∂π₁ = ∫⁻ o, o.elim 0 c ∂(π₁.map some) := by
@@ -530,7 +524,7 @@ theorem fill_kl_comp_lintegral {Z I : Type u} [MeasurableSpace Z] [MeasurableSpa
   | some z =>
     have h := fill_kl_iff.1 (hK z)
     simpa [Kernel.comp_apply, Kernel.dropBot, Kernel.map_apply _ measurable_some,
-      Measure.dirac_bind (Kernel.measurable _)] using h
+      dirac_bind (Kernel.measurable _)] using h
 
 /-- Filled KL passes to the supremum of an increasing sequence on the left (Rocq `FillDiv_lim`). -/
 instance isLeftContinuous_fill_kl : (fill klDivergence.{u}).IsLeftContinuous where
@@ -583,8 +577,7 @@ theorem codensity_fill_kl_rel_eq_iff_of_isProbabilityMeasure [IsProbabilityMeasu
     (codensity (fill klDivergence)).Rel b (· = ·) μ ν ↔ klDivergence b μ ν :=
   codensity_fill_kl_rel_eq_iff.trans fill_kl_iff_of_isProbabilityMeasure
 
-/-- A filled-KL lifting of equality from a terminating program bounds Mathlib's KL divergence
-(compare `klDiv_le_of_markovCodensity`). -/
+/-- A filled-KL lifting of equality from a terminating program bounds Mathlib's KL divergence. -/
 theorem klDiv_le_of_codensity_fill_kl [IsProbabilityMeasure μ] [IsSubProbabilityMeasure ν]
     (h : (codensity (fill klDivergence)).Rel b (· = ·) μ ν) : klDiv μ ν ≤ b :=
   klDiv_le_of_fill (codensity_sound h)
@@ -596,8 +589,6 @@ end GradedDivergence
 /-! ## Filling costs nothing at equal mass
 
 The analytic input to `massEq`. -/
-
-section Fill
 
 variable {X : Type*} [MeasurableSpace X]
 
@@ -632,5 +623,3 @@ theorem fDiv_withBot_le {f : ℝ → ℝ} (hf : ConvexOn ℝ (Ici 0) f)
     fDiv f μ.withBot ν.withBot ≤ fDiv f μ ν := by
   rw [withBot, withBot, h]
   exact fDiv_map_some_add_le hf hf_cont hf1 (sub_ne_top one_ne_top)
-
-end Fill

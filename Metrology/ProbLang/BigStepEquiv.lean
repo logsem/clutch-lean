@@ -63,6 +63,13 @@ theorem Pat.tryMatch_isValue {p : Pat rT} {v b : Exp rT} (hv : v.isValue)
     cases w <;> simp only [Pat.tryMatch, reduceCtorEq] at h
     rename_i w; exact ih w.toIsValue h
 
+/-- Monotone convergence for a countable sum over configurations (via counting measure). -/
+theorem Cfg.tsum_iSup_of_monotone {f : ℕ → Cfg rT → ENNReal}
+    (hf : ∀ a, Monotone (f · a)) (hm : ∀ x, Measurable (f x)) :
+    ∑' a, ⨆ n, f n a = ⨆ n, ∑' a, f n a := by
+  simp_rw [← MeasureTheory.lintegral_count]
+  exact MeasureTheory.lintegral_iSup (fun _ => hm _) (fun _ _ hmn a => hf a hmn)
+
 section Discrete
 
 variable [Countable rT]
@@ -94,13 +101,6 @@ theorem bind_bind_discrete (μ : Measure (Cfg rT)) (f g : Cfg rT → Measure (Cf
 theorem map_bind_discrete (μ : Measure (Cfg rT)) (f : Cfg rT → Cfg rT)
     (g : Cfg rT → Measure (Cfg rT)) : (μ.map f).bind g = μ.bind (g ∘ f) := by
   rw [Measure.bind, Measure.bind, Measure.map_map Measurable.of_discrete Measurable.of_discrete]
-
-/-- Monotone convergence for a countable sum over configurations (via counting measure). -/
-theorem Cfg.tsum_iSup_of_monotone {f : ℕ → Cfg rT → ENNReal}
-    (hf : ∀ a, Monotone (f · a)) (hm : ∀ x, Measurable (f x)) :
-    ∑' a, ⨆ n, f n a = ⨆ n, ∑' a, f n a := by
-  simp_rw [← MeasureTheory.lintegral_count]
-  exact MeasureTheory.lintegral_iSup (fun _ => hm _) (fun _ _ hmn a => hf a hmn)
 
 /-- `bind` is continuous in its measure argument. -/
 theorem iSup_bind_discrete {μ : ℕ → Measure (Cfg rT)} (hμ : Monotone μ)

@@ -5,8 +5,8 @@ public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 
 /-! # Rényi divergence
 
-`renyiDivergence α` bounds the moment `fDiv (·^α)` by `e^{(α-1)ρ}`, i.e. `renyiDiv α ≤ ρ`
-(Def. 2.2); main result: Rényi budgets add (`isComposable_renyi`, Thm. 4.11). -/
+`renyiDivergence α` bounds the moment `fDiv (·^α)` by `e^{(α-1)ρ}` (Def. 2.2); main result: Rényi
+budgets add (`isComposable_renyi`, Thm. 4.11). -/
 
 @[expose] public section
 

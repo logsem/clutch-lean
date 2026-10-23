@@ -7,8 +7,7 @@ import Metrology.ProbLang.Syntax.Notation
 
 /-! # Uniform draw with `0` reported as `1`
 
-The programs `unif` and `skipZero`; `Micrometer/Examples/SkipZero` shows they are
-within `1/N` in tv. -/
+The programs `unif` and `skipZero`, shown within `1/N` in tv in `Micrometer/Examples/SkipZero`. -/
 
 namespace ProbLang
 namespace SkipZero

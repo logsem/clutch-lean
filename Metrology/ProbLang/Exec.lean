@@ -12,11 +12,10 @@ public import Metrology.Couplings.AdditiveCouplings
 
 /-! # Program execution and the output distribution
 
-Bounded execution `execN`, its supremum `limExec`, and the output distribution `limExecV`.
-Main results: the one-step unfolding `limExec_not_final` and the limit rule `limExecV_lift`. -/
+Bounded execution `execN`, its supremum `limExec`, and the output distribution `limExecV`. -/
 
 noncomputable section
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set
+open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set ENNReal
 
 namespace ProbLang
 
@@ -80,7 +79,7 @@ theorem execN_le_succ (n : ℕ) (ρ : Cfg rT) : execN n ρ ≤ execN (n + 1) ρ 
     rw [execN, execN]
     split
     · exact le_rfl
-    · exact Measure.bind_mono_right' _ _ _ (execN_measurable _) (execN_measurable _) ih
+    · exact bind_mono_right' _ _ _ (execN_measurable _) (execN_measurable _) ih
 
 /-- Bounded execution is monotone in the fuel. -/
 theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ execN m ρ := by
@@ -90,7 +89,7 @@ theorem execN_mono {n m : ℕ} (h : n ≤ m) (ρ : Cfg rT) : execN n ρ ≤ exec
 
 /-- Bounded execution is monotone in the fuel, as a `Monotone` statement. -/
 theorem execN_monotone {ρ : Cfg rT} :
-    Monotone fun i => execN (rT := rT) i ρ := fun _ _ h => execN_mono h _
+    Monotone fun i => execN i ρ := fun _ _ h => execN_mono h _
 
 /-- Bounded execution is monotone in the fuel on singletons. -/
 theorem execN_mono_singleton
@@ -208,7 +207,7 @@ theorem limExec_not_final
     limExec ⟨e, σ⟩ = (primStep ⟨e, σ⟩).bind limExec := by
   have hmono : Monotone (fun n => execN n ⟨e, σ⟩) := fun _ _ h => execN_mono h _
   have hstep : Monotone fun n => (primStep ⟨e, σ⟩).bind (execN n) := fun n m h =>
-    Measure.bind_mono_right' _ _ _ (execN_measurable n) (execN_measurable m) fun a => execN_mono h a
+    bind_mono_right' _ _ _ (execN_measurable n) (execN_measurable m) fun a => execN_mono h a
   -- Drop the `n = 0` term, unfold each `execN (n + 1)`, then swap sup and integral setwise.
   rw [limExec, ← hmono.iSup_nat_add 1]
   simp_rw [execN_succ_not_isValue (ρ := ⟨e, σ⟩) Hnv]
@@ -416,28 +415,22 @@ theorem lintegral_limExec
 
 /-! ## Liftings of the limit -/
 
-section Lifting
-
-open GradedLifting
-
-variable {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous]
-
 /-- The limit of the finite executions inherits a lifting from every stage. -/
-theorem limExec_map_lift {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y] {b : B}
+theorem limExec_map_lift {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous]
+    {X Y : Type _} [MeasurableSpace X] [MeasurableSpace Y] {b : B}
     {R : X → Y → B} {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν] {F : Cfg rT → X}
     (hF : Measurable F) (H : ∀ n, L b R ((execN n ρ).map F) ν) :
     L b R ((limExec ρ).map F) ν := by
   -- Pushforward commutes with the monotone sup; left-continuity of `L` does the rest.
   rw [limExec, map_iSup_of_monotone execN_monotone hF]
-  exact IsLeftContinuous.iSup_left (fun _ _ h => map_mono (execN_mono h ρ) hF) H
+  exact GradedLifting.IsLeftContinuous.iSup_left (fun _ _ h => map_mono (execN_mono h ρ) hF) H
 
 /-- `limExec_map_lift` at `F := Cfg.expr`: the form `adequacy` needs. -/
-theorem limExecV_lift {Y : Type _} [MeasurableSpace Y] {b : B} {R : Exp rT → Y → B}
+theorem limExecV_lift {B : Type*} {L : GradedLifting B} [L.IsLeftContinuous] {Y : Type _}
+    [MeasurableSpace Y] {b : B} {R : Exp rT → Y → B}
     {ρ : Cfg rT} {ν : Measure Y} [IsSubProbabilityMeasure ν]
     (H : ∀ n, L b R (asExpr (execN n ρ)) ν) : L b R (limExecV ρ) ν :=
   limExec_map_lift Cfg.measurable_expr H
-
-end Lifting
 
 /-! ## Additive (total-variation) couplings of the limit -/
 
@@ -478,6 +471,7 @@ def execExactN (N : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
   | 0 => if ρ.expr.isValue then dirac ρ else 0
   | N + 1 => if ρ.expr.isValue then 0 else (primStep ρ).bind (execExactN N)
 
+/-- `execExactN n` is measurable. -/
 @[fun_prop]
 theorem execExactN_measurable (n : Nat) : Measurable (execExactN (rT := rT) n) := by
   induction n <;> simp only [execExactN] <;>

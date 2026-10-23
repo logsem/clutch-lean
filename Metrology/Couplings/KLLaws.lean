@@ -21,6 +21,8 @@ open GradedLifting.IsSound (sound)
 open Kernel (id_apply piecewise_apply withBot_apply comp_apply dropBot_comp_withBot)
 open ENNReal (toReal_add toReal_nonneg sub_ne_top one_ne_top)
 
+variable (α : ℝ)
+
 /-! ## The Markov-tested codensity lifting
 
 `codensity klDivergence` is not complete, since KL is not composable (`not_isComposable_kl`).
@@ -182,7 +184,7 @@ theorem markovCodensity_kl_rel_eq_iff :
     klDivergence_comp_of_mass_eq⟩
 
 /-- The Markov-tested `α`-Hellinger lifting of equality is `α`-Hellinger within its budget. -/
-theorem markovCodensity_hellinger_rel_eq_iff (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
+theorem markovCodensity_hellinger_rel_eq_iff [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
     (markovCodensity (hellingerDivergence α)).Rel b (· = ·) μ ν ↔ hellingerDivergence α b μ ν :=
   ⟨sound, markovCodensity_complete (by
     intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ hm hμ hκ
@@ -193,7 +195,7 @@ instance isReflexive_markovCodensity_kl : (markovCodensity klDivergence.{u}).IsR
   refl μ _ := markovCodensity_kl_rel_eq_iff.2 (IsReflexive.refl μ)
 
 /-- Reflexivity of the `α`-Hellinger lifting is completeness at a measure and itself. -/
-instance isReflexive_markovCodensity_hellinger (α : ℝ) [Fact (α ∈ Ioo (0 : ℝ) 1)] :
+instance isReflexive_markovCodensity_hellinger [Fact (α ∈ Ioo (0 : ℝ) 1)] :
     (markovCodensity (hellingerDivergence.{u} α)).IsReflexive where
   refl μ _ := (markovCodensity_hellinger_rel_eq_iff α).2 (IsReflexive.refl μ)
 
@@ -277,12 +279,12 @@ instance headShift_kl : kl.HeadShift :=
   headShift_massEq convexOn_klFun continuous_klFun.continuousWithinAt klFun_one fun _ ↦ klFun_nonneg
 
 /-- The `α`-Hellinger bind law, `massEq` at `hellFun α`. -/
-noncomputable def hellinger (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
+noncomputable def hellinger [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] :
     BindLaw (markovCodensity (hellingerDivergence.{u} α)) :=
   massEq (convexOn_hellFun hα.out.1 hα.out.2) (continuous_hellFun hα.out.1.le).continuousWithinAt
     (hellFun_one α) fun _ ↦ hellFun_nonneg hα.out.1 hα.out.2
 
-instance headShift_hellinger (α : ℝ) [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] : (hellinger α).HeadShift :=
+instance headShift_hellinger [hα : Fact (α ∈ Ioo (0 : ℝ) 1)] : (hellinger α).HeadShift :=
   headShift_massEq (convexOn_hellFun hα.out.1 hα.out.2)
     (continuous_hellFun hα.out.1.le).continuousWithinAt (hellFun_one α) fun _ ↦
       hellFun_nonneg hα.out.1 hα.out.2

@@ -7,14 +7,10 @@ public import Mathlib.Tactic.FunProp
 
 open Lean Elab Meta
 
-/-!
-# Reading the arms of a recursion lemma off a definition
+/-! # Reading the arms of a recursion lemma off a definition
 
-`T.measurable_cases` and `T.measurable_struct_rec` (and their `_param` variants) ask for one arm
-`c_k` per constructor, with `f (T.k xs) = c_k …`. `read_arm` reads an arm off the matching branch
-of `f`'s definition, and `apply_arms` applies such a lemma with every arm read off and proved
-measurable by `fun_prop`.
--/
+`read_arm` reads an arm off a definition, and `apply_arms` applies a recursion lemma with all
+arms read. -/
 
 namespace Metrology.CylinderGen
 
@@ -25,9 +21,8 @@ def unfoldBranch (e : Expr) : MetaM Expr := do
   let some e' ← unfoldDefinition? e.headBeta | throwError "read_arm: cannot unfold {e}"
   whnfCore e'
 
-/-- Proves `∀ xs, f (T.k xs) = ?c a₁ … aₙ` by taking `?c` from the branch of `f` for `k`, with the
-arguments `aᵢ` (fields, and `f` of the recursive fields) abstracted. Fails if the branch does not
-factor that way, such as when it uses a recursive field other than through `f`. -/
+/-- Proves `∀ xs, f (T.k xs) = ?c a₁ … aₙ` by taking `?c` from the branch of `f` for `k`, with
+fields and recursive calls abstracted, and fails if the branch does not factor that way. -/
 elab "read_arm" : tactic => Tactic.liftMetaTactic fun g => do
   let (_, g) ← g.intros
   g.withContext do
@@ -50,9 +45,7 @@ elab "read_arm" : tactic => Tactic.liftMetaTactic fun g => do
     return []
 
 /-- `apply_arms e` applies a `measurable_struct_rec` or `measurable_cases` lemma `e`, reads every
-arm off the definition, and proves the arms measurable with `fun_prop` where it can. The goals left
-are the equations `read_arm` cannot factor, the measurability goals `fun_prop` cannot prove, and the
-shifts `t_c` that unification does not determine. -/
+arm off the definition, and proves the arms measurable with `fun_prop` where it can. -/
 macro "apply_arms " e:term : tactic =>
   `(tactic| focus (apply $e; all_goals try first | read_arm | fun_prop))
 

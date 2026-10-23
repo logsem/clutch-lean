@@ -15,8 +15,7 @@ noncomputable section ProbLangMeasures
 
 /-! # Measurable space on patterns
 
-The σ-algebra on `Pat`, derived with the `MeasurableSpace` deriving handler (`CylinderGen.lean`),
-which also generates `Shape`, `Leaves` and their measurability lemmas. -/
+The σ-algebra on `Pat`, from the `MeasurableSpace` deriving handler (`CylinderGen.lean`). -/
 
 namespace ProbLang.Pat
 

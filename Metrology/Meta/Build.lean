@@ -2,16 +2,15 @@ module
 
 public import Lean
 
-@[expose] public section
-
-open Lean Meta
-
 /-!
 # Building terms
 
-Generic helpers for building terms as `Expr`s (nested tuples, `casesOn` with a constant motive,
-uncurrying, instantiating a lemma at a goal, `hasInstance`), and for declaring them.
+Generic helpers for building terms as `Expr`s and for declaring them.
 -/
+
+@[expose] public section
+
+open Lean Meta
 
 namespace Metrology.Meta
 

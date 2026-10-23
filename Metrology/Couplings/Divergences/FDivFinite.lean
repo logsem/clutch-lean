@@ -3,9 +3,8 @@ module
 public import Metrology.Couplings.Divergences.FDivPartition
 
 /-! # Finite chain rules lift to general spaces
-
-`fDiv_comp_le_of_finite` (Thm. 4.6): a chain rule on finite spaces holds on all spaces, by pushing
-the output to `Fin N` and bucketing inputs by dyadic cells. Also `fDiv_comp_le_of_perspSplit`. -/
+`fDiv_comp_le_of_finite` (Thm. 4.6): a chain rule on finite spaces holds on all spaces, by
+discretising inputs and outputs (also `fDiv_comp_le_of_perspSplit`). -/
 
 @[expose] public section
 
@@ -150,7 +149,7 @@ theorem cellVec_rep_disc :
   simp only [rep, h, ↓reduceDIte, h.choose_spec]
   simp [disc]
 
-/-- `rep` is measurable, since its domain is finite. -/
+/-- `rep` is measurable on the finite domain. -/
 theorem measurable_rep [MeasurableSpace X] : Measurable (rep κ η n) :=
   (measurable_of_countable fun j ↦ rep κ η n ⟨j⟩).comp measurable_down
 
@@ -180,8 +179,6 @@ theorem bind_le_add [MeasurableSpace X] {μ : Measure X} [IsSubProbabilityMeasur
 
 end Cells
 
-section Limits
-
 variable {X : Type u} [MeasurableSpace X] {N : ℕ} {κ η : X → Measure (ULift.{u} (Fin N))}
   [Nonempty X]
 
@@ -197,7 +194,7 @@ theorem tendsto_bind_disc {K : X → Measure (ULift.{u} (Fin N))} [∀ x, IsSubP
     have : Tendsto (fun n : ℕ ↦ ENNReal.ofReal ((2 : ℝ) ^ n)⁻¹) atTop (𝓝 0) := by
       simpa using tendsto_ofReal (tendsto_inv_atTop_zero.comp
         (tendsto_pow_atTop_atTop_of_one_lt one_lt_two))
-    simpa [c] using ENNReal.Tendsto.const_mul this (Or.inr (natCast_ne_top N))
+    simpa [c] using Tendsto.const_mul this (Or.inr (natCast_ne_top N))
   have hKn (n : ℕ) : Measurable (K ∘ rep κ η n ∘ disc κ η n) :=
     hK.comp ((measurable_rep κ η n).comp (measurable_disc κ η hκ hη n))
   have := isSubProbabilityMeasure_bind μ K
@@ -223,11 +220,9 @@ theorem bind_disc_singleton_eq_zero_iff {K : X → Measure (ULift.{u} (Fin N))}
     lintegral_eq_zero_iff (f := fun x ↦ (K ∘ rep κ η n ∘ disc κ η n) x {i})
       ((measurable_coe hi).comp hKn),
     lintegral_eq_zero_iff (f := fun x ↦ K x {i}) ((measurable_coe hi).comp hK)]
-  refine Filter.eventually_congr (.of_forall fun x ↦ ?_)
+  refine eventually_congr (.of_forall fun x ↦ ?_)
   simp only [Pi.zero_apply, Function.comp_apply]
   rw [← cell_eq_zero_iff (measure_le_one {i}), hcell, cell_eq_zero_iff (measure_le_one {i})]
-
-end Limits
 
 end Discretize
 

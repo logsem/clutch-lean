@@ -16,8 +16,7 @@ open Function (uncurry)
 
 /-! # Measure-theory support for ProbLang
 
-Support predicates for measures (`Possible`, `Concentrated`, `IsAtomicSupport`) used by the program
-logics, and measurability of `Option`, `List`, Σ-types and kernels used by `CoreMeasures`. -/
+Support predicates for measures and measurability of `Option`, `List`, Σ-types and kernels. -/
 
 /-! ## `Possible`: a positive-mass point of a measure -/
 
@@ -33,18 +32,22 @@ def Possible (ρ : α) (μ : Measure α) : Prop :=
 
 variable {ρ : α} {μ : Measure α}
 
+/-- A measure above `dirac ρ` makes `ρ` possible. -/
 theorem Possible.of_dirac_le (h : dirac ρ ≤ μ) : Possible ρ μ :=
   ⟨1, one_pos, by rwa [one_smul]⟩
 
+/-- A measure with a possible point is nonzero. -/
 theorem Possible.ne_zero (h : Possible ρ μ) : μ ≠ 0 := by
   obtain ⟨p, hp, hle⟩ := h
   rintro rfl
   have hp0 : p ≤ 0 := by simpa [Measure.smul_apply] using hle univ
   exact not_le.mpr hp hp0
 
+/-- The point `ρ` is possible under `dirac ρ`. -/
 theorem Possible.of_dirac_eq (h : μ = dirac ρ) : Possible ρ μ :=
   Possible.of_dirac_le (h ▸ le_refl _)
 
+/-- Possibility is preserved by pushforward along a measurable map. -/
 theorem Possible.map {β : Type _} [MeasurableSpace β] {g : α → β} (hg : Measurable g) :
     Possible ρ μ → Possible (g ρ) (μ.map g)
   | ⟨p, hp, hle⟩ => ⟨p, hp, by
@@ -57,6 +60,7 @@ theorem Possible.map {β : Type _} [MeasurableSpace β] {g : α → β} (hg : Me
         simpa [dirac_apply' _ (hg hs), indicator_of_mem (show ρ ∈ g ⁻¹' s from hmem)] using hle'
       · rw [indicator_of_notMem hmem]; simp⟩
 
+/-- A point is possible exactly when its singleton has positive mass. -/
 theorem possible_iff_pos [MeasurableSingletonClass α] : Possible ρ μ ↔ 0 < μ {ρ} := by
   have hdir : (dirac ρ) {ρ} = 1 := by
     rw [dirac_apply' _ (measurableSet_singleton ρ)]; simp
@@ -111,12 +115,15 @@ concentrated on the image of its source support (`Concentrated.map`). -/
 def Concentrated (μ : Measure α) (S : Set α) : Prop :=
   μ Sᶜ = 0
 
+/-- Every measure is concentrated on the whole space. -/
 theorem Concentrated.univ {μ : Measure α} : Concentrated μ univ := by simp [Concentrated]
 
+/-- Concentration on `S` gives concentration on any larger set. -/
 theorem Concentrated.mono {μ : Measure α} {S T : Set α} (hST : S ⊆ T) (h : Concentrated μ S) :
     Concentrated μ T :=
   measure_mono_null (compl_subset_compl.mpr hST) h
 
+/-- A pushforward is concentrated on the image of the source support. -/
 theorem Concentrated.map {β : Type _} [MeasurableSpace β] {f : α → β} (hf : Measurable f)
     {ν : Measure α} {T : Set α} (hfT : MeasurableSet (f '' T)) (h : Concentrated ν T) :
     Concentrated (ν.map f) (f '' T) := by
@@ -132,8 +139,10 @@ theorem Concentrated.map {β : Type _} [MeasurableSpace β] {f : α → β} (hf 
 def IsAtomicSupport (μ : Measure α) : Prop :=
   μ {x | μ {x} = 0} = 0
 
+/-- The zero measure is purely atomic. -/
 theorem isAtomicSupport_zero : IsAtomicSupport (0 : Measure α) := by simp [IsAtomicSupport]
 
+/-- The measure of a `PMF` is purely atomic. -/
 theorem PMF.toMeasure_isAtomicSupport [MeasurableSingletonClass α] (p : PMF α) :
     IsAtomicSupport p.toMeasure := by
   unfold IsAtomicSupport
@@ -144,6 +153,7 @@ theorem PMF.toMeasure_isAtomicSupport [MeasurableSingletonClass α] (p : PMF α)
   rw [hset, p.toMeasure_apply_eq_zero_iff p.support_countable.measurableSet.compl]
   exact disjoint_compl_right
 
+/-- A Dirac measure is purely atomic. -/
 theorem isAtomicSupport_dirac [MeasurableSingletonClass α] (a : α) :
     IsAtomicSupport (dirac a) := by
   unfold IsAtomicSupport
@@ -155,6 +165,7 @@ theorem isAtomicSupport_dirac [MeasurableSingletonClass α] (a : α) :
     exact one_ne_zero hx
   · rw [dirac_apply' _ (measurableSet_singleton a).compl, indicator_of_notMem (by simp)]
 
+/-- A purely atomic measure is concentrated on its points of positive mass. -/
 theorem IsAtomicSupport.concentrated_atoms {μ : Measure α} (h : IsAtomicSupport μ) :
     Concentrated μ {x | 0 < μ {x}} := by
   have hset : {x | 0 < μ {x}}ᶜ = {x | μ {x} = 0} := by
@@ -176,6 +187,7 @@ section Option
 
 open Sum (inl inr)
 
+/-- The preimage of `some '' S` under `Option.map f` is `some '' (f ⁻¹' S)`. -/
 @[simp] theorem Option.map_preimage_some {α β : Type _} (f : α → β) (S : Set β) :
     Option.map f ⁻¹' (some '' S) = some '' (f ⁻¹' S) := by
   ext x
@@ -183,6 +195,7 @@ open Sum (inl inr)
 
 variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
 
+/-- `some` is a measurable embedding into `Option α`. -/
 theorem MeasurableEmbedding.some_mk : MeasurableEmbedding (some : α → Option α) := by
   refine ⟨Option.some_injective _, measurable_some, fun s hs =>
     ⟨inl '' s, MeasurableSet.inl_image hs, ?_⟩⟩
@@ -191,17 +204,20 @@ theorem MeasurableEmbedding.some_mk : MeasurableEmbedding (some : α → Option 
 
 open MeasurableEmbedding (some_mk)
 
+/-- The `some`-image of a measurable set is measurable. -/
 @[measurability]
 theorem MeasurableSet.image_some {S : Set α} (hS : MeasurableSet S) :
     MeasurableSet (some '' S) :=
   some_mk.measurableSet_image' hS
 
+/-- The singleton `{none}` is measurable in `Option α`. -/
 @[measurability]
 theorem MeasurableSet.singleton_none : MeasurableSet ({none} : Set (Option α)) := by
   refine ⟨inr '' univ, MeasurableSet.inr_image MeasurableSet.univ, ?_⟩
   ext x
   cases x <;> simp
 
+/-- `Option.getD` with a fixed default is measurable. -/
 @[fun_prop]
 theorem Option.measurable_getD (d : α) : Measurable (fun x : Option α => x.getD d) := by
   intro S hS
@@ -234,6 +250,7 @@ theorem Measurable.option_of_cov {π : β → Option α} {cov : Set β}
   · exact hsome.union hnone
   · simpa using hsome
 
+/-- `Option.map f` is measurable when `f` is. -/
 @[fun_prop]
 theorem Measurable.option_map {f : α → β} (hf : Measurable f) : Measurable (Option.map f) :=
   Measurable.option_of_cov MeasurableSet.singleton_none.compl
@@ -380,16 +397,19 @@ variable [MeasurableSpace X]
 instance List.instMeasurableSpace : MeasurableSpace (List X) :=
   MeasurableSpace.comap List.toSigma inferInstance
 
+/-- `List.toSigma` is measurable. -/
 @[fun_prop]
 theorem List.measurable_toSigma : Measurable (List.toSigma : List X → Σ n, Fin n → X) :=
   fun _ hS => ⟨_, hS, rfl⟩
 
+/-- A map out of a Σ-type is measurable iff it is on each fiber. -/
 theorem measurable_sigma_iff {α : Type _} {β : α → Type _} [∀ a, MeasurableSpace (β a)]
     {γ : Type _} [MeasurableSpace γ] {f : (Σ a, β a) → γ} :
     Measurable f ↔ ∀ a, Measurable (fun b => f ⟨a, b⟩) := by
   refine ⟨fun hf a => hf.comp fun S hS => measurableSet_iInf.mp hS a,
     fun h S hS => measurableSet_iInf.mpr fun a => h a hS⟩
 
+/-- Each fiber inclusion `Sigma.mk i` is a measurable embedding. -/
 theorem MeasurableEmbedding.sigmaMk {ι : Type _} {β : ι → Type _} [∀ i, MeasurableSpace (β i)]
     (i : ι) : MeasurableEmbedding (Sigma.mk i : β i → Σ j, β j) := by
   refine ⟨fun x y h => eq_of_heq (Sigma.mk.inj h).2,
@@ -419,6 +439,7 @@ def List.foldlOfFn (f : α → β → α) : ∀ (n : ℕ), α → (Fin n → β)
   | 0, a, _ => a
   | n+1, a, g => List.foldlOfFn f n (f a (g 0)) (fun i => g i.succ)
 
+/-- `List.foldlOfFn` agrees with `foldl` on `List.ofFn`. -/
 theorem List.foldlOfFn_eq_foldl_ofFn (f : α → β → α) :
     ∀ (n : ℕ) (a : α) (g : Fin n → β), List.foldlOfFn f n a g = (List.ofFn g).foldl f a
   | 0, _, _ => rfl
@@ -427,6 +448,7 @@ theorem List.foldlOfFn_eq_foldl_ofFn (f : α → β → α) :
 
 variable [MeasurableSpace α] [MeasurableSpace β]
 
+/-- `List.foldlOfFn` is measurable in the entries and the initial value. -/
 theorem List.measurable_foldlOfFn
     {f : α → β → α} (hf : Measurable (uncurry f)) :
     ∀ n, Measurable (fun (p : (Fin n → β) × α) => List.foldlOfFn f n p.2 p.1) := by
@@ -481,6 +503,7 @@ theorem List.measurable_foldl {f : α → β → α}
   rw [hrw]
   exact hfoldlOfFn.comp (List.measurable_toSigma.comp measurable_fst |>.prodMk measurable_snd)
 
+/-- Appending an entry with `Fin.snoc` is measurable. -/
 @[fun_prop]
 theorem Fin.measurable_snoc {n : ℕ} :
     Measurable (fun (p : (Fin n → β) × β) => (@snoc n (fun _ => β) p.1 p.2) :
@@ -503,12 +526,14 @@ theorem Fin.measurable_snoc {n : ℕ} :
           fun p => p.2 from funext heq]
     exact measurable_snd
 
+/-- Appending an entry to a Σ-encoded list is measurable. -/
 @[fun_prop]
 theorem measurable_sigma_snoc :
     Measurable (fun (q : (Σ k : ℕ, Fin k → β) × β) =>
       (⟨q.1.1 + 1, snoc q.1.2 q.2⟩ : Σ k : ℕ, Fin k → β)) :=
   measurable_sigmaFin_prod fun k => (sigmaMk (k + 1)).measurable.comp Fin.measurable_snoc
 
+/-- Appending a single element to a list is measurable. -/
 @[fun_prop]
 theorem List.measurable_append_singleton :
     Measurable (fun (p : List β × β) => p.1 ++ [p.2]) := by
@@ -565,6 +590,7 @@ theorem bind_map_comm (μ : Measure α) (k : α → Measure β) (f : β → γ) 
   rw [map_apply hf hS, bind_apply (hf hS) hk, bind_apply hS hkmap]
   simp_rw [map_apply hf hS]
 
+/-- A kernel-wise pushforward along a jointly measurable map is measurable. -/
 theorem measurable_map_uncurry {h : α × β → γ} (hh : Measurable h)
     {k : α → Measure β} (hk : Measurable k) [hSF : IsSFiniteKernel (Kernel.mk k hk)] :
     Measurable (fun a : α => (k a).map (fun b => h (a, b))) := by
@@ -581,6 +607,7 @@ theorem measurable_map_uncurry {h : α × β → γ} (hh : Measurable h)
   simp_rw [hker_eq]
   exact Kernel.measurable_kernel_prodMk_left hT
 
+/-- A monotone sequence of measurable measure-valued maps has a measurable supremum. -/
 theorem measurable_iSup_of_monotone {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))
     (hmono : ∀ a, Monotone (fun i => μ i a)) :
     Measurable (fun a : α => ⨆ i, μ i a) := by

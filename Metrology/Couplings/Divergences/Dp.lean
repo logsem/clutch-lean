@@ -16,8 +16,8 @@ universe u v
 open MeasureTheory Measure ProbabilityTheory GradedLifting Set Filter Topology Real
 open ENNReal
 open IsSubProbabilityMeasure (lintegral_add_const_le lintegral_le_tsub_add measure_le_one)
-open EReal (coe_ennreal_add coe_ennreal_eq_top_iff coe_ennreal_le_coe_ennreal_iff
-  coe_ennreal_nonneg coe_ennreal_toReal)
+open EReal (one_le_exp_iff exp_monotone coe_ennreal_add coe_ennreal_eq_top_iff
+  coe_ennreal_le_coe_ennreal_iff coe_ennreal_nonneg coe_ennreal_toReal)
 open Prod (mk_le_mk)
 open PUnit (unit)
 open Kernel (isSubMarkovKernel_mass mass mass_apply mass_comp measurable)
@@ -154,7 +154,7 @@ noncomputable def expBudget : ℝ≥0∞ :=
 
 /-- The exponentiated privacy budget `exp ε` is at least `1`. -/
 theorem one_le_expBudget : 1 ≤ expBudget ε :=
-  EReal.one_le_exp_iff.2 (coe_ennreal_nonneg ε)
+  one_le_exp_iff.2 (coe_ennreal_nonneg ε)
 
 /-- `e^ε` turns budget addition into multiplication. -/
 theorem expBudget_add : expBudget (ε + ε') = expBudget ε * expBudget ε' := by
@@ -162,6 +162,7 @@ theorem expBudget_add : expBudget (ε + ε') = expBudget ε * expBudget ε' := b
 
 variable {ε ε'}
 
+/-- The budget exponential of `⊤` is `⊤`. -/
 @[simp]
 theorem expBudget_top : expBudget ⊤ = ⊤ := by
   simp [expBudget]
@@ -175,6 +176,7 @@ theorem expBudget_ofReal {x : ℝ} (hx : 0 ≤ x) :
     expBudget (ENNReal.ofReal x) = ENNReal.ofReal (exp x) := by
   rw [expBudget_of_ne_top ofReal_ne_top, toReal_ofReal hx]
 
+/-- The budget exponential of `0` is `1`. -/
 @[simp]
 theorem expBudget_zero : expBudget 0 = 1 := by
   simp [expBudget]
@@ -185,7 +187,7 @@ theorem expBudget_lt_top_iff : expBudget ε < ⊤ ↔ ε < ⊤ := by
 
 /-- The multiplier `e^ε` is monotone in the budget `ε`. -/
 theorem expBudget_mono : Monotone expBudget :=
-  fun _ _ h ↦ EReal.exp_monotone (coe_ennreal_le_coe_ennreal_iff.2 h)
+  fun _ _ h ↦ exp_monotone (coe_ennreal_le_coe_ennreal_iff.2 h)
 
 /-- The multiplier `e^ε` is measurable in the budget `ε`. -/
 @[fun_prop]
@@ -326,6 +328,7 @@ instance isBudgetClosed_dp : dp.{u}.IsBudgetClosed where
 noncomputable def dpSlack : ℝ≥0∞ →+o ℝ≥0∞ × ℝ≥0∞ :=
   OrderAddMonoidHom.inr ℝ≥0∞ ℝ≥0∞
 
+/-- The slack grade of `δ` is `(0, δ)`. -/
 @[simp]
 theorem dpSlack_apply (δ : ℝ≥0∞) : dpSlack δ = (0, δ) :=
   rfl

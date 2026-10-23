@@ -4,8 +4,7 @@ public import Metrology.Couplings.Lifting
 
 /-! # Bind laws
 
-Ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`), and the `canonical`
-and `unit` laws. -/
+Ways to compose a lifted step with lifted continuations (Rocq `bind_law.v`). -/
 
 @[expose] public section
 
@@ -18,8 +17,8 @@ namespace GradedLifting
 /-- One way to compose a step with its continuations: a head premise on the step, a side condition
 on the continuation kernels, and soundness (Rocq `GradedBindLaw`). -/
 structure BindLaw {B : Type v} [Preorder B] [Top B] (L : GradedLifting.{u} B) where
-  /-- `head μ ν R b`: the premise on the step's measures `μ ν`, per-pair leftovers `R` and output
-  budget `b` (budget last, unlike `L b R μ ν`). -/
+  /-- `head μ ν R b`: the premise on the step's measures `μ ν`, per-pair leftovers `R`, and output
+  budget `b` (budget comes last). -/
   head : ∀ {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y],
     Measure X → Measure Y → (X → Y → B) → B → Prop
   /-- The side condition on both step measures, the leftovers and both continuation kernels; it
@@ -108,10 +107,12 @@ def canonical : BindLaw L where
   head_supp hA hμ h := IsSupportLocal.restrict hA hμ h
   side_supp _ := trivial
 
+/-- The canonical law's head is the lifting itself. -/
 @[simp]
 theorem head_canonical : (canonical L).head μ ν R b ↔ L b R μ ν :=
   Iff.rfl
 
+/-- The canonical law has no side condition. -/
 @[simp]
 theorem side_canonical {f : Kernel X X'} {g : Kernel Y Y'} : (canonical L).side μ ν R f g :=
   trivial
@@ -161,6 +162,7 @@ theorem unit_head_dirac {x : X} {y : Y} (hlt : R x y < ⊤) (hle : R x y ≤ b) 
     (unit L).head (dirac x) (dirac y) R b :=
   ⟨x, y, rfl, rfl, hlt, hle⟩
 
+/-- The unit law has no side condition. -/
 @[simp]
 theorem side_unit {f : Kernel X X'} {g : Kernel Y Y'} : (unit L).side μ ν R f g :=
   trivial

@@ -5,7 +5,7 @@ public import Metrology.Couplings.Divergences.GaussianRenyi
 /-! # Gaussian composition
 
 `k` Gaussian queries composed in the zCDP lifting are `(ε, δ)`-DP with `ε` of order `√k`
-(`DP_gaussianMechPow_sqrt`; Approximate Span Liftings, §§4–5). -/
+(`DP_gaussianMechPow_sqrt`). -/
 
 @[expose] public section
 

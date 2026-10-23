@@ -7,22 +7,28 @@ public import Metrology.ProbLang.Metatheory
 
 /-! # Uniform tape presample
 
-`tapePresample σ α` appends a uniform draw to tape `α` (Clutch `erasure.v`), and a prim step keeps
-every allocated tape. Commutation lemmas are in `TapePresample.lean`. -/
+`tapePresample σ α` appends a uniform draw to tape `α` (Clutch `erasure.v`). -/
 
 namespace ProbLang
 
 variable {rT : Type} [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure
+open Set
+open Measurable (of_discrete)
 
 /-! ## The uniform index distribution -/
 
+section
+
+variable {N : Int} (hN : 0 < N)
+
 /-- The totalising map `Int → [0, N)` that sends out-of-range values to `0`. -/
-noncomputable def tapeIdxOf {N : Int} (hN : 0 < N) (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
+noncomputable def tapeIdxOf (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
   if hz : 0 ≤ n ∧ n < N then ⟨n, hz⟩ else ⟨0, ⟨_root_.le_refl _, hN⟩⟩
 
-@[simp] theorem tapeIdxOf_val {N : Int} (hN : 0 < N) {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
+/-- On `[0, N)`, `tapeIdxOf` is the identity. -/
+@[simp] theorem tapeIdxOf_val {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
     (tapeIdxOf hN n).val = n := by
   simp [tapeIdxOf, h0, hn]
 
@@ -33,23 +39,55 @@ noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ 
   else 0
 
 /-- The uniform index distribution is the pushforward of the uniform distribution on `[0, N)`. -/
-theorem tapeIndexUniform_eq_map {N : Int} (hN : 0 < N) :
+theorem tapeIndexUniform_eq_map :
     tapeIndexUniform N = (PMF.uniformOfFinset (Finset.Ico (0 : Int) N)
         (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN) :=
   dite_eq_left hN
 
+include hN in
 /-- The uniform index distribution has total mass one when `0 < N`. -/
-theorem tapeIndexUniform_univ_eq_one {N : Int} (hN : 0 < N) :
-    (tapeIndexUniform N) Set.univ = 1 := by
+theorem tapeIndexUniform_univ_eq_one :
+    (tapeIndexUniform N) univ = 1 := by
   have : IsProbabilityMeasure
       (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure :=
     PMF.toMeasure.isProbabilityMeasure _
-  rw [tapeIndexUniform_eq_map hN, Measure.map_apply Measurable.of_discrete MeasurableSet.univ]
-  simp only [Set.preimage_univ, measure_univ]
+  rw [tapeIndexUniform_eq_map hN, map_apply of_discrete .univ]
+  simp only [preimage_univ, measure_univ]
+
+/-- Integrating against the uniform index distribution is the average over `[0, N)`. -/
+theorem lintegral_tapeIndexUniform
+    (ψ : { z : Int // 0 ≤ z ∧ z < N } → ENNReal) :
+    ∫⁻ x, ψ x ∂(tapeIndexUniform N) =
+      ((N.toNat : ENNReal))⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) N, ψ (tapeIdxOf hN n) := by
+  have hcard : (Finset.Ico (0 : Int) N).card = N.toNat := by rw [Int.card_Ico]; omega
+  rw [tapeIndexUniform_eq_map hN, lintegral_map of_discrete of_discrete,
+      lintegral_countable',
+      tsum_eq_sum (s := Finset.Ico (0 : Int) N) fun n hn => by
+        rw [PMF.toMeasure_apply_singleton _ _ .of_discrete,
+            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
+      Finset.mul_sum]
+  refine Finset.sum_congr rfl fun n hn => ?_
+  rw [PMF.toMeasure_apply_singleton _ _ .of_discrete,
+      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
+
+/-- A bijection of `[0, N)` leaves `tapeIndexUniform N` invariant. -/
+theorem tapeIndexUniform_map_bijOn (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    (tapeIndexUniform N).map (fun x => tapeIdxOf hN (f x.val)) = tapeIndexUniform N := by
+  refine ext_of_lintegral _ fun ψ _ => ?_
+  rw [lintegral_map of_discrete of_discrete, lintegral_tapeIndexUniform hN,
+    lintegral_tapeIndexUniform hN,
+    ← Finset.sum_Ico_comp_of_bijOn hdom hbij (fun m => ψ (tapeIdxOf hN m))]
+  congr 1
+  refine Finset.sum_congr rfl fun n hn => ?_
+  rw [tapeIdxOf_val hN (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2]
+
+end
 
 /-- The uniform index distribution has total mass at most one. -/
 theorem tapeIndexUniform_univ_le_one {N : Int} :
-    (tapeIndexUniform N) Set.univ ≤ 1 := by
+    (tapeIndexUniform N) univ ≤ 1 := by
   by_cases hN : 0 < N
   · exact (tapeIndexUniform_univ_eq_one hN).le
   · simp [tapeIndexUniform, hN]
@@ -64,35 +102,6 @@ instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
     IsSubProbabilityMeasure (tapeIndexUniform N) :=
   ⟨tapeIndexUniform_univ_le_one⟩
 
-/-- Integrating against the uniform index distribution is the average over `[0, N)`. -/
-theorem lintegral_tapeIndexUniform {N : Int} (hN : 0 < N)
-    (ψ : { z : Int // 0 ≤ z ∧ z < N } → ENNReal) :
-    ∫⁻ x, ψ x ∂(tapeIndexUniform N) =
-      ((N.toNat : ENNReal))⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) N, ψ (tapeIdxOf hN n) := by
-  have hcard : (Finset.Ico (0 : Int) N).card = N.toNat := by rw [Int.card_Ico]; omega
-  rw [tapeIndexUniform_eq_map hN, lintegral_map Measurable.of_discrete Measurable.of_discrete,
-      lintegral_countable',
-      tsum_eq_sum (s := Finset.Ico (0 : Int) N) fun n hn => by
-        rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
-      Finset.mul_sum]
-  refine Finset.sum_congr rfl fun n hn => ?_
-  rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
-
-/-- A bijection of `[0, N)` leaves `tapeIndexUniform N` invariant. -/
-theorem tapeIndexUniform_map_bijOn {N : Int} (hN : 0 < N) (f : Int → Int)
-    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
-    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
-    (tapeIndexUniform N).map (fun x => tapeIdxOf hN (f x.val)) = tapeIndexUniform N := by
-  refine Measure.ext_of_lintegral _ fun ψ _ => ?_
-  rw [lintegral_map Measurable.of_discrete Measurable.of_discrete, lintegral_tapeIndexUniform hN,
-    lintegral_tapeIndexUniform hN,
-    ← Finset.sum_Ico_comp_of_bijOn hdom hbij (fun m => ψ (tapeIdxOf hN m))]
-  congr 1
-  refine Finset.sum_congr rfl fun n hn => ?_
-  rw [tapeIdxOf_val hN (Finset.mem_Ico.1 hn).1 (Finset.mem_Ico.1 hn).2]
-
 /-! ## Presampling a tape -/
 
 /-- Sample `n ∈ [0, N)` uniformly and append it to tape `α` (Clutch's `state_step σ α`);
@@ -102,32 +111,36 @@ noncomputable def tapePresample (σ : State rT) (α : Loc) : Measure (State rT) 
   | none => 0
   | some ⟨N, bs⟩ =>
       (tapeIndexUniform N).bind (fun n =>
-        Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))
+        dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))
+
+section
+
+variable {σ : State rT} {α : Loc}
 
 /-- Presampling an allocated tape of positive bound has total mass one. -/
-theorem tapePresample_univ_eq_one {σ : State rT} {α : Loc} {t : Tape}
+theorem tapePresample_univ_eq_one {t : Tape}
     (h : σ.tapes[α]? = some t) (hN : 0 < t.bound) :
-    (tapePresample σ α) Set.univ = 1 := by
+    (tapePresample σ α) univ = 1 := by
   obtain ⟨N, bs⟩ := t
   simp only [tapePresample, h]
-  rw [bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
-  simp_rw [dirac_apply' _ MeasurableSet.univ, Set.indicator_univ,
+  rw [bind_apply .univ of_discrete.aemeasurable]
+  simp_rw [dirac_apply' _ .univ, indicator_univ,
     Pi.one_apply, lintegral_one]
   exact tapeIndexUniform_univ_eq_one hN
 
 /-- Presampling has total mass at most one. -/
-theorem tapePresample_univ_le_one {σ : State rT} {α : Loc} :
-    (tapePresample σ α) Set.univ ≤ 1 := by
+theorem tapePresample_univ_le_one :
+    (tapePresample σ α) univ ≤ 1 := by
   cases hsome : σ.tapes[α]? with
   | none => simp [tapePresample, hsome]
   | some t =>
     obtain ⟨N, bs⟩ := t
     simp only [tapePresample, hsome]
-    rw [bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
+    rw [bind_apply .univ of_discrete.aemeasurable]
     simpa using tapeIndexUniform_univ_le_one
 
 /-- Presampling a fixed tape is measurable in the state. -/
-theorem tapePresample.measurable {α : Loc} :
+theorem tapePresample.measurable :
     Measurable (fun σ : State rT => tapePresample σ α) := by
   -- `tapePresample σ α = leaf (σ, σ.tapes[α]?)`; `Option Tape` is countable, so check each
   -- branch: a map of the constant kernel `tapeIndexUniform N`.
@@ -136,7 +149,7 @@ theorem tapePresample.measurable {α : Loc} :
       | none => 0
       | some ⟨N, bs⟩ =>
         (tapeIndexUniform N).bind
-          (fun n => Measure.dirac (p.1.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))
+          (fun n => dirac (p.1.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))
   have hleaf : Measurable leaf := by
     have hflat : Measurable (fun q : Option Tape × State rT => leaf (q.2, q.1)) := by
       apply measurable_from_prod_countable_right
@@ -148,17 +161,17 @@ theorem tapePresample.measurable {α : Loc} :
         obtain ⟨N, bs⟩ := t
         show Measurable (fun σ : State rT =>
           (tapeIndexUniform N).bind
-            (fun n => Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))))
+            (fun n => dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))))
         have hconv : (fun σ : State rT =>
             (tapeIndexUniform N).bind
-              (fun n => Measure.dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))) =
+              (fun n => dirac (σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)))) =
             (fun σ : State rT =>
               (tapeIndexUniform N).map (fun n => σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩))) := by
-          funext σ; exact bind_dirac_eq_map _ Measurable.of_discrete
+          funext σ; exact bind_dirac_eq_map _ of_discrete
         rw [hconv]
         have hval : Measurable (fun p : State rT × {z : Int // 0 ≤ z ∧ z < N} =>
               (⟨N, bs ++ [p.2]⟩ : Tape)) :=
-          (Measurable.of_discrete (f := fun n : {z : Int // 0 ≤ z ∧ z < N} =>
+          (of_discrete (f := fun n : {z : Int // 0 ≤ z ∧ z < N} =>
             (⟨N, bs ++ [n]⟩ : Tape))).comp measurable_snd
         have hh : Measurable (fun p : State rT × {z : Int // 0 ≤ z ∧ z < N} =>
               p.1.update_tapes (·.insert α ⟨N, bs ++ [p.2]⟩)) :=
@@ -170,7 +183,7 @@ theorem tapePresample.measurable {α : Loc} :
             (ProbabilityTheory.Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk) :=
           inferInstanceAs (ProbabilityTheory.IsSFiniteKernel
               (ProbabilityTheory.Kernel.const (State rT) (tapeIndexUniform N)))
-        exact @Measure.measurable_map_uncurry (State rT) {z : Int // 0 ≤ z ∧ z < N}
+        exact @measurable_map_uncurry (State rT) {z : Int // 0 ≤ z ∧ z < N}
           (State rT) _ _ _ _ hh (fun _ => tapeIndexUniform N) hk hSF
     exact hflat.comp (measurable_snd.prodMk measurable_fst)
   have hproj : Measurable (fun σ : State rT => (σ, σ.tapes[α]?)) :=
@@ -179,26 +192,26 @@ theorem tapePresample.measurable {α : Loc} :
   exact hleaf.comp hproj
 
 /-- Presampling is a sub-probability measure. -/
-instance tapePresample.isSubProbabilityMeasure (σ : State rT) (α : Loc) :
+instance tapePresample.isSubProbabilityMeasure :
     IsSubProbabilityMeasure (tapePresample σ α) :=
   ⟨tapePresample_univ_le_one⟩
 
 /-- Presampling onto a tape is the uniform index distribution pushed onto the extended tape. -/
-theorem tapePresample_eq_map {σ : State rT} {α : Loc} {N : Int}
+theorem tapePresample_eq_map {N : Int}
     {bs : List { z : Int // 0 ≤ z ∧ z < N }} (hσ : σ.tapes[α]? = some ⟨N, bs⟩) :
     tapePresample σ α =
       (tapeIndexUniform N).map (fun n => σ.update_tapes (·.insert α ⟨N, bs ++ [n]⟩)) := by
   simp only [tapePresample, hσ]
-  rw [bind_dirac_eq_map _ Measurable.of_discrete]
+  rw [bind_dirac_eq_map _ of_discrete]
 
 /-- Presampling then a measurable deterministic update is measurable in the configuration. -/
-theorem tapePresample_bind_dirac_measurable {α : Loc}
+theorem tapePresample_bind_dirac_measurable
     {g : Cfg rT → State rT → Cfg rT}
     (hg : Measurable (fun p : Cfg rT × (State rT) => g p.1 p.2)) :
     Measurable (fun ρ : Cfg rT =>
-      (tapePresample ρ.state α).bind (fun σ'' => Measure.dirac (g ρ σ''))) := by
+      (tapePresample ρ.state α).bind (fun σ'' => dirac (g ρ σ''))) := by
   have hconv : (fun ρ : Cfg rT =>
-        (tapePresample ρ.state α).bind (fun σ'' => Measure.dirac (g ρ σ''))) =
+        (tapePresample ρ.state α).bind (fun σ'' => dirac (g ρ σ''))) =
       (fun ρ : Cfg rT => (tapePresample ρ.state α).map (fun σ'' => g ρ σ'')) := by
     funext ρ
     exact bind_dirac_eq_map _ (hg.comp (measurable_const.prodMk measurable_id))
@@ -208,13 +221,13 @@ theorem tapePresample_bind_dirac_measurable {α : Loc}
   have hFin : ProbabilityTheory.IsFiniteKernel
       (ProbabilityTheory.Kernel.mk (fun ρ : Cfg rT => tapePresample ρ.state α) hk) :=
     ⟨1, ENNReal.one_lt_top, fun _ => tapePresample_univ_le_one⟩
-  exact Measure.measurable_map_uncurry hg hk
+  exact measurable_map_uncurry hg hk
 
 /-! ## Tape persistence through a prim step -/
 
 /-- Every possible successor of a prim step keeps tape `α`, with the same bound. -/
 theorem primStep_tape_persists_support
-    {σ : State rT} {αloc : Loc} {e : Exp rT} {t : Tape} {ρ : Cfg rT}
+    {αloc : Loc} {e : Exp rT} {t : Tape} {ρ : Cfg rT}
     (h : σ.tapes[αloc]? = some t)
     (hρ : Possible ρ (primStep ⟨e, σ⟩)) :
     ∃ t' : Tape, ρ.state.tapes[αloc]? = some t' ∧ t'.bound = t.bound := by
@@ -255,18 +268,20 @@ theorem primStep_tape_persists_support
 
 /-- Almost surely, a prim step keeps tape `α` with the same bound (discrete case). -/
 theorem primStep_tape_persists [Countable rT]
-    {σ : State rT} {α : Loc} {e : Exp rT} {t : Tape}
+    {e : Exp rT} {t : Tape}
     (h : σ.tapes[α]? = some t) :
     ∀ᵐ ρ ∂(primStep ⟨e, σ⟩),
       ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound := by
-  refine MeasureTheory.ae_iff.mpr ?_
+  refine ae_iff.mpr ?_
   rw [show {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound} =
         ⋃ ρ ∈ {ρ : Cfg rT | ¬ ∃ t' : Tape, ρ.state.tapes[α]? = some t' ∧ t'.bound = t.bound},
             ({ρ} : Set (Cfg rT)) from by ext; simp]
-  refine (measure_biUnion_null_iff (Set.to_countable _)).mpr ?_
+  refine (measure_biUnion_null_iff (to_countable _)).mpr ?_
   intro ρ hρ
   by_contra hne
   rw [← ne_eq, ← pos_iff_ne_zero] at hne
   exact hρ (primStep_tape_persists_support h (possible_iff_pos.mpr hne))
+
+end
 
 end ProbLang

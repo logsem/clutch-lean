@@ -6,8 +6,7 @@ public import Metrology.ProbLang.Erasure.CaseClosers
 
 /-! # Presampling invariance of `execN`
 
-Main result `execN_tapePresample_expr_eq`: presampling a tape does not change the distribution of
-the final expression of `execN m`; the core of erasure (`ErasableExpr`). -/
+Presampling a tape leaves the final-expression distribution of `execN m` unchanged. -/
 
 open Option (some map_some)
 
@@ -123,7 +122,7 @@ theorem execN_tapePresample_expr_eq {e : Exp rT} {t : Tape} (h : σ.tapes[α]? =
       simp_rw [hstep]
       have hkdir : Measurable (fun σ' : State rT => dirac (⟨e, σ'⟩ : Cfg rT)) :=
         measurable_dirac_mk measurable_const measurable_id
-      rw [Measure.bind_map_comm _ _ _ measurable_expr hkdir.aemeasurable]
+      rw [bind_map_comm _ _ _ measurable_expr hkdir.aemeasurable]
       -- explicit kernel equality: `simp_rw` leaves metavariables here
       have hker : (fun σ' : State rT => map (·.expr) (dirac (⟨e, σ'⟩ : Cfg rT))) =
           (fun _ => dirac e) := by

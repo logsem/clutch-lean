@@ -10,8 +10,7 @@ public import Metrology.ProbLang.Discrete
 
 /-! # Primitive step
 
-The full step `primStep`: decompose into a context and a head redex, head-step, plug back.
-Main results: `primStep_fill`, `head_redex_unique`, `prim_step_iff`, `primStep_atomic`. -/
+The full step `primStep`: decompose into a context and a head redex, head-step, plug back. -/
 
 noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure Set
@@ -212,8 +211,12 @@ theorem reducible_of_headReducible
 
 /-! ## The context lemma: `primStep` under `K.fill` -/
 
+section
+
+variable {K}
+
 /-- Stepping `K[e]` is stepping `e` and wrapping the result in `K`. -/
-theorem primStep_fill {K : Ectx rT}
+theorem primStep_fill
     (hv : ¬e.isValue) :
     primStep ⟨K.fill e, σ⟩ = (primStep ⟨e, σ⟩).map (fun ρ => ⟨K.fill ρ.expr, ρ.state⟩) := by
   simp only [primStep]
@@ -235,7 +238,7 @@ theorem primStep_fillItem
   rw [this, primStep_fill hv]; congr 1
 
 /-- Filling a context preserves the mass of each successor configuration. -/
-theorem primStep_fill_singleton {K : Ectx rT}
+theorem primStep_fill_singleton
     (hv : ¬e1.isValue) :
     primStep ⟨e1, σ1⟩ {⟨e2, σ2⟩} = primStep ⟨K.fill e1, σ1⟩ {⟨K.fill e2, σ2⟩} := by
   rw [primStep_fill hv, map_apply (by measurability) (measurableSet_singleton _)]
@@ -244,7 +247,7 @@ theorem primStep_fill_singleton {K : Ectx rT}
   simp [(fill_injective K).eq_iff]
 
 /-- A reducible `e` stays reducible under any context. -/
-theorem primStep_fill_pos {K : Ectx rT} (h : primStep ⟨e, σ⟩ ≠ 0) : primStep ⟨K.fill e, σ⟩ ≠ 0 := by
+theorem primStep_fill_pos (h : primStep ⟨e, σ⟩ ≠ 0) : primStep ⟨K.fill e, σ⟩ ≠ 0 := by
   by_cases hk : e.isValue
   · exact val_stuck h hk |>.elim
   · rw [primStep_fill hk]
@@ -255,13 +258,15 @@ theorem primStep_fill_pos {K : Ectx rT} (h : primStep ⟨e, σ⟩ ≠ 0) : primS
     simpa using this.symm
 
 /-- A step of `K[e1]` comes from a step of `e1` wrapped in `K`. -/
-theorem primStep_fill_inv {K : Ectx rT}
+theorem primStep_fill_inv
     (hv : ¬e1.isValue) (h : 0 < primStep ⟨K.fill e1, σ1⟩ {⟨e2, σ2⟩}) :
     ∃ e2', e2 = K.fill e2' ∧ 0 < primStep ⟨e1, σ1⟩ {⟨e2', σ2⟩} := by
   rw [primStep_fill hv] at h
   obtain ⟨⟨e2', σ2'⟩, heq, hpos⟩ := map_singleton_pos (by measurability) (fillCfg_injective K) h
   simp only [fillCfg, mk.injEq] at heq
   exact ⟨e2', heq.1.symm, heq.2 ▸ hpos⟩
+
+end
 
 /-! ## Reducibility under contexts -/
 

@@ -9,13 +9,15 @@ public import Metrology.ProbLang.CoreMeasures.State
 
 /-! # σ-algebras on tapes, states and configurations
 
-Tapes are discrete; `State` and `Cfg` are pullbacks of the product σ-algebra of their fields,
-with measurability criteria and constructors (`measurable_iff`, `measurable_mk`) for each. -/
+Tapes are discrete; `State` and `Cfg` carry the pullback of the product σ-algebra of their
+fields. -/
 
 noncomputable section
-open MeasureTheory
+open MeasureTheory Measurable
 
 namespace ProbLang
+
+open Val
 
 /-! ## Tapes -/
 
@@ -36,19 +38,23 @@ instance instMeasurableSpaceState : MeasurableSpace (State α) :=
 
 namespace State
 
+/-- The heap of a state is measurable. -/
 @[fun_prop]
 theorem measurable_heap : Measurable (fun σ : State α => σ.heap) :=
-  measurable_fst.comp (Measurable.of_comap_le le_rfl)
+  measurable_fst.comp (of_comap_le le_rfl)
 
+/-- The tapes of a state are measurable. -/
 @[fun_prop]
 theorem measurable_tapes : Measurable (fun σ : State α => σ.tapes) :=
-  measurable_snd.comp (Measurable.of_comap_le le_rfl)
+  measurable_snd.comp (of_comap_le le_rfl)
 
+/-- A map into states is measurable iff its heaps and tapes are. -/
 theorem measurable_iff {f : X → State α} :
     Measurable f ↔ Measurable (fun x => (f x).heap) ∧ Measurable (fun x => (f x).tapes) :=
   ⟨fun hf => ⟨measurable_heap.comp hf, measurable_tapes.comp hf⟩,
    fun ⟨h₁, h₂⟩ => measurable_comap_iff.mpr (h₁.prodMk h₂)⟩
 
+/-- The state constructor is measurable in its heap and tape parts. -/
 @[fun_prop]
 theorem measurable_mk :
     Measurable (fun (p : LocHeap (Val α) × LocHeap Tape) => mk p.1 p.2) :=
@@ -71,19 +77,23 @@ instance instMeasurableSpaceCfg : MeasurableSpace (Cfg α) :=
 
 namespace Cfg
 
+/-- The expression of a configuration is measurable. -/
 @[fun_prop]
 theorem measurable_expr : Measurable (fun c : Cfg α => c.expr) :=
-  measurable_fst.comp (Measurable.of_comap_le le_rfl)
+  measurable_fst.comp (of_comap_le le_rfl)
 
+/-- The state of a configuration is measurable. -/
 @[fun_prop]
 theorem measurable_state : Measurable (fun c : Cfg α => c.state) :=
-  measurable_snd.comp (Measurable.of_comap_le le_rfl)
+  measurable_snd.comp (of_comap_le le_rfl)
 
+/-- A map into configurations is measurable iff its expressions and states are. -/
 theorem measurable_iff {f : X → Cfg α} :
     Measurable f ↔ Measurable (fun x => (f x).expr) ∧ Measurable (fun x => (f x).state) :=
   ⟨fun hf => ⟨measurable_expr.comp hf, measurable_state.comp hf⟩,
    fun ⟨h₁, h₂⟩ => measurable_comap_iff.mpr (h₁.prodMk h₂)⟩
 
+/-- The configuration constructor is measurable in its expression and state. -/
 @[fun_prop]
 theorem measurable_mk : Measurable (fun (p : Exp α × State α) => mk p.1 p.2) :=
   measurable_iff.mpr ⟨measurable_fst, measurable_snd⟩
@@ -97,13 +107,13 @@ theorem measurableEmbedding_ofVal {rT : Type _} [LawfulProbLangℝ rT] :
     MeasurableEmbedding (Exp.ofVal : Val rT → Exp rT) := by
   refine ⟨fun a b h => Val.ext h, Exp.ofVal.measurable, fun s hs => ?_⟩
   obtain ⟨U, hU, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hs
-  have hrange : Set.range (Val.fst : Val rT → Exp rT) = {e : Exp rT | e.isValue} := by
+  have hrange : Set.range (fst : Val rT → Exp rT) = {e : Exp rT | e.isValue} := by
     ext e
     simp only [Set.mem_range, Set.mem_ofPred_eq]
     constructor
     · rintro ⟨v, rfl⟩; exact Val.isValue v
     · intro h; exact ⟨Val.mk e h.some h.some.lc, rfl⟩
-  show MeasurableSet (Val.fst '' (Val.fst ⁻¹' U))
+  show MeasurableSet (fst '' (fst ⁻¹' U))
   rw [Set.image_preimage_eq_inter_range, hrange]
   have hsplit : {e : Exp rT | e.isValue} = {e | e.isValueR} ∩ {e | Exp.lcb 0 e = true} := by
     ext e; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]

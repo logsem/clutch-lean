@@ -4,7 +4,7 @@ public import Iris.Std.Positives
 
 /-! # Countable pairs
 
-A `Pos.Countable` instance for products, used to index invariant namespaces. -/
+A `Pos.Countable` instance for products, indexing invariant namespaces. -/
 
 @[expose] public section
 

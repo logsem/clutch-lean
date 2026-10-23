@@ -10,6 +10,5 @@ public import Metrology.ProbLang.Erasure.Lifting
 /-!
 # Erasure
 
-Umbrella for Clutch `erasure.v`: presampling a tape (`Presample`, `TapePresample`) is invisible
-to executions (`CaseClosers`, `ExecN`, `ErasableExpr`); `Lifting` turns this into lifting rules.
+Umbrella for Clutch `erasure.v`: presampling a tape is invisible to executions.
 -/

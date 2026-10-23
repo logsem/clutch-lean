@@ -9,24 +9,24 @@ public import Metrology.ProbLang.CtxStep
 
 /-! # Atomic expressions
 
-`Atomic` says a redex's one step lands on a value, so the program logic may open invariants
-around it (`Micrometer.OpenInv.of_atomic`); proved here for the heap, `rand` and `urand` redexes.
-`Discrete.Atomic` is the pointwise form, which says nothing about `urand`. -/
+`Atomic e` says one step of `e` lands on a value; `Discrete.Atomic` is its pointwise form. -/
 
 namespace ProbLang
 
 /-! ## The two notions -/
 
-variable {rT : Type _}
+variable {rT : Type _} (z : Int) (l : Loc) (v : Val rT)
 
-private theorem store_decompItem (l : Loc) (v : Val rT) :
+/-- The decomposition of a store of a value is `none`. -/
+private theorem store_decompItem :
     (Exp.store pl(#loc l) v.1).decompItem = none := by
   have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
   rfl
 
-private theorem alloc_decompItem (v : Val rT) : (Exp.alloc v.1).decompItem = none := by
+/-- The decomposition of an allocation of a value is `none`. -/
+private theorem alloc_decompItem : (Exp.alloc v.1).decompItem = none := by
   have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
@@ -44,8 +44,6 @@ def Discrete.Atomic (e : Exp rT) : Prop :=
   ∀ σ e' σ', 0 < primStep ⟨e, σ⟩ {⟨e', σ'⟩} → e'.isValue
 
 namespace Discrete.Atomic
-
-variable (z : Int) (l : Loc) (v : Val rT)
 
 /-- `Discrete.Atomic` implies `Atomic` for redexes that are not `urand`; the side condition holds
 by computation at concrete redexes. -/
@@ -111,8 +109,6 @@ theorem rand_lbl :
 end Discrete.Atomic
 
 namespace Atomic
-
-variable (z : Int) (l : Loc) (v : Val rT)
 
 /-! ## `Atomic` for the redexes the program logic opens invariants around
 

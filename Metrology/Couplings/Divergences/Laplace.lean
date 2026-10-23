@@ -13,11 +13,11 @@ The Laplace distribution and `(ε, 0)`-DP bounds for Bernoulli and Laplace leave
 
 open MeasureTheory ProbabilityTheory Set unitInterval
 open scoped ENNReal NNReal
+open ENNReal
 
 /-! ## The Laplace distribution -/
 
 namespace ProbabilityTheory
-open ENNReal
 
 variable (a : ℝ) (b : ℝ≥0)
 
@@ -92,7 +92,6 @@ theorem measurable_laplace : Measurable fun a ↦ laplace a b := by
 end ProbabilityTheory
 
 namespace GradedDivergence
-open ENNReal
 
 variable {X : Type*} [MeasurableSpace X]
 

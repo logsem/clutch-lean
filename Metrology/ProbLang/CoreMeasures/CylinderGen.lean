@@ -11,40 +11,16 @@ public import Metrology.ProbLang.CoreMeasures.Shapes
 
 open Lean Elab Command Meta Metrology.Meta
 
-/-!
-# Measurable structure on inductive types
+/-! # Measurable structure on inductive types
 
-`deriving instance MeasurableSpace for T` gives an inductive type `T` a σ-algebra that makes its
-constructors measurable embeddings, and proves measurable the functions on `T` by cases or by
-structural recursion (`T.measurable_cases`, `T.measurable_struct_rec`, `T.measurable_casesOn`).
-It views `T ≃ Σ s : T.Shape, T.Leaves s`: the shape is the constructor tree with its countable
-(*base*) fields, the leaves are the *data* fields. `#cylinder_classify T` shows the field classes.
-
-It declares, in order (one section each):
-
-1. `T.Shape`, with the constructions of an `inductive` and `Countable`, and `T.Leaves s`, with its
-σ-algebra;
-2. `T.toSigma`, `T.ofSigma`, their inverse laws `T.ofSigma_toSigma` and `T.toSigma_ofSigma`,
-`T.equivSigma`, the σ-algebra on `T` (the comap of `toSigma`), `T.measurableEquiv`, and
-`T.shape`, with a `simp` lemma `T.shape_c` per constructor `c`;
-3. for each constructor `c`: `c.measurableEmbedding`, `c.ι.measurable`, `c.measurable`, `c.ι.inj`,
-where `c.ι` and `c.π` (constructor and projection of the tuple of fields) are as declared by
-`@[constructors, uncurriedProjections]`, and declared here unless `T` has them;
-4. `T.measurable_cases` and `T.measurable_struct_rec` (for functions by cases, and by structural
-recursion), their `_param` variants, which thread a parameter, `T.measurable_casesOn(_param)`
-(for functions by `T.casesOn`), and `c.π.measurable`;
-5. `MeasurableSingletonClass T`, when the leaves have measurable singletons.
-
-`T.measurable_struct_rec(_param)` exist when `T` has recursive fields, and `c.π.measurable` when
-`c` has fields. `c.measurable` (for a constructor with fields), `c.π.measurable` and, when `T` has
-several constructors, `T.measurable_casesOn(_param)` are `fun_prop` lemmas.
--/
+`deriving instance MeasurableSpace for T` gives `T` a σ-algebra making its constructors measurable
+embeddings, and its functions by cases or structural recursion measurable. -/
 
 namespace Metrology.CylinderGen
 
 meta section
 
-variable (ctx : Ctx)
+variable (ctx : Ctx) (c : Ctor)
 
 /-! ## 1. Shapes and leaves -/
 
@@ -61,8 +37,8 @@ def addUncurried (I : Name) : MetaM Unit := do
     declareUnlessExists (c.name ++ `ι) (ctorUncurriedType c) (mkCtorUncurried c)
     if c.numFields > 0 then declareUnlessExists (c.name ++ `π) (ctorProjType c) (mkCtorProj c)
 
-/-- `T.Shape`: for each constructor of `T`, a constructor with its base fields, and with shapes for
-its recursive fields. It gets the constructions of an `inductive` declaration, and `ι` and `π`. -/
+/-- The inductive `T.Shape`, with a constructor per constructor of `T`, keeping its base fields and
+shapes of its recursive fields. -/
 def Ctx.addShape : MetaM Unit := do
   let name := ctx.T ++ `Shape
   ensureFresh name
@@ -80,7 +56,7 @@ def Ctx.addShape : MetaM Unit := do
   mkCasesOn name
   mkCtorIdx name
   mkCtorElim name
-  Lean.mkNoConfusion name
+  mkNoConfusion name
   mkBelow name
   mkBRecOn name
   mkSizeOfInstances name
@@ -127,7 +103,7 @@ def Ctx.sigmaRec (motiveAt : Expr → Expr → MetaM Expr)
 
 /-- `⟨c args, (leaves)⟩`, from what each field contributes: its argument of the shape constructor,
 if any (base and recursive fields), and its leaves. -/
-def Ctx.sigmaOf (c : Ctor) (parts : Array (Option Expr × Expr)) : MetaM Expr := do
+def Ctx.sigmaOf (parts : Array (Option Expr × Expr)) : MetaM Expr := do
   let leaves ← mkNestedProdValue (parts.map (·.2)).toList ctx.unit
   ctx.sigmaMk (ctx.shapeOf c (parts.filterMap (·.1))) leaves
 
@@ -235,10 +211,10 @@ def Ctx.addShapeFn : MetaM Unit := do
 /-- The type `A ≃ᵐ B`. -/
 def measurableEquivTy (A B : Expr) : MetaM Expr := mkAppOptM ``MeasurableEquiv #[A, B, none, none]
 
-/-- The splitting of a field into a shape index and leaves: all index (`Shapes.point`) for a base
-field, all leaves (`Shapes.leaf`) for a data field, and `T.measurableEquiv` for a recursive one.
-`instantiateFor` fixes their universes from the goal, so as not to depend on their order. -/
+/-- The splitting of a field into a shape index and leaves: all index for base, all leaves for
+data, `T.measurableEquiv` for recursive. -/
 def Ctx.fieldEquiv (f : Field) : MetaM Expr := do
+  -- `instantiateFor` fixes the universes from the goal, so as not to depend on their order
   match f.kind with
   | .base =>
     let sigma ← mkAppM ``Sigma #[.lam `_ f.type ctx.punit .default]
@@ -248,7 +224,7 @@ def Ctx.fieldEquiv (f : Field) : MetaM Expr := do
 
 /-- Splits the tuple of fields of `c` into a shape index and leaves `A ≃ᵐ Σ κ, …`, and says whether
 some field is indexed (otherwise the splitting is `A ≃ᵐ …`). -/
-def Ctx.splitFields (c : Ctor) : MetaM (Expr × Bool) := do
+def Ctx.splitFields : MetaM (Expr × Bool) := do
   if c.fields.isEmpty then
     return (← instantiateFor ``Shapes.unit (← measurableEquivTy (mkConst ``Unit) ctx.punit), false)
   let pieces ← c.fields.mapM fun f => return (← ctx.fieldEquiv f, f.indexed)
@@ -265,11 +241,9 @@ def reflOn (ι : Expr) (lhs : Expr → MetaM Expr) : MetaM Expr := do
   withLocalDeclD `a (← inferType ι).bindingDomain! fun a => do
     mkLambdaFVars #[a] (← mkEqRefl (← lhs a))
 
-/-- `c.measurableEmbedding`, from the splitting of its fields, and `c.ι.measurable`,
-`c.measurable` and `c.ι.inj`. `c.ι.measurable` is about the `@[constructors]` function `c.ι`;
-`c.measurable` states the same for `fun p => T.c p.1 p.2.1 …`, so that `fun_prop` matches
-applications of `T.c`. -/
-def Ctx.addConstructor (c : Ctor) : MetaM Unit := do
+/-- Declares the measurable embedding `c.measurableEmbedding` of constructor `c`, and its lemmas
+`c.ι.measurable`, `c.measurable` and `c.ι.inj`. -/
+def Ctx.addConstructor : MetaM Unit := do
   let ι := ctx.const (c.name ++ `ι)
   let some_ (a : Expr) := mkAppM ``Option.some #[a]
   let (g, indexed) ← ctx.splitFields c
@@ -327,7 +301,7 @@ def Ctx.measured (param : Bool) : Array Ctor :=
 
 /-- `∀ b xs, f b (T.c xs) = arm b args`, with the parameter `b : β` if `β?`, where `args` are the
 fields, or with `structural`, `f (t b)` at the recursive fields, for the shift `t` if `shift?`. -/
-def Ctx.eqType (c : Ctor) (structural : Bool) (f arm : Expr)
+def Ctx.eqType (structural : Bool) (f arm : Expr)
     (β? shift? : Option Expr) : MetaM Expr :=
   ctx.withArgs β? c fun bs xs => do
     let b := match shift? with | some t => bs.map (mkApp t) | none => bs
@@ -336,11 +310,8 @@ def Ctx.eqType (c : Ctor) (structural : Bool) (f arm : Expr)
     let lhs := mkAppN f (bs.push (mkAppN (ctx.const c.name) xs))
     mkForallFVars (bs ++ xs) (← mkEq lhs (mkAppN arm (bs ++ args)))
 
-/-- `T.measurable_cases` (or with `structural`, `T.measurable_struct_rec`; with `param`, their
-`_param` variants): a function given by its equations on the constructors is measurable if its
-arms are. The arms of `measurable_struct_rec` take the function at the recursive fields, and
-those of `measurable_cases` the fields themselves. With `param`, the function takes a parameter,
-which a recursive call may change by a shift `t_c` (by default `id`). -/
+/-- Declares `T.measurable_cases` or `T.measurable_struct_rec` (with `_param` variants): a function
+given by its equations on the constructors is measurable if its arms are. -/
 def Ctx.addRecursion (structural param : Bool) : MetaM Unit := do
   let name := ctx.T ++ match structural, param with
     | false, false => `measurable_cases
@@ -429,7 +400,7 @@ def Ctx.addCasesOn (param : Bool) : MetaM Unit := do
 /-- `c.π.measurable`: the projection on constructor `c` is `T.casesOn` with arms `some` on `c` and
 `none` elsewhere, as functions of the tuple of the fields, so it is measurable by
 `T.measurable_casesOn`. -/
-def Ctx.addProjection (c : Ctor) : MetaM Unit := do
+def Ctx.addProjection : MetaM Unit := do
   let π := ctx.const (c.name ++ `π)
   let τ ← mkNestedProdType (c.fields.map ctx.fieldType).toList
   let α ← mkAppM ``Option #[τ]
@@ -465,8 +436,8 @@ def Ctx.addSingletons : MetaM Unit := do
 
 /-! ## The deriving handler -/
 
-/-- Generates the declarations of the module docstring for `T`. The `Countable` deriving handler is
-a command, so it runs between two passes, each reading `T` into a `Ctx` of its own local context. -/
+/-- Generates the declarations of `T`, in two passes around the `Countable` deriving handler, which
+is a command. -/
 def generate (T : Name) : CommandElabM Unit := withExporting do
   liftTermElabM <| withCtx T (·.addShape)
   applyDerivingHandlers ``Countable #[T ++ `Shape]

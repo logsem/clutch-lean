@@ -9,8 +9,8 @@ public import Metrology.Couplings.EReal
 
 /-! # Perspective of a convex weight
 
-The perspective `persp f a b = b f (a / b)` (Def. 2.6), with subadditivity, finite and integral
-Jensen, and continuity; it is the per-cell term of `fDiv_eq_iSup_partition`. -/
+The perspective `persp f a b = b f (a / b)` (Def. 2.6), with subadditivity, Jensen and
+continuity. -/
 
 @[expose] public section
 
@@ -31,12 +31,15 @@ noncomputable def derivAtTop (f : ℝ → ℝ) : EReal :=
 noncomputable def persp (f : ℝ → ℝ) (a b : ℝ) : EReal :=
   if b = 0 then a * derivAtTop f else ((b * f (a / b) : ℝ) : EReal)
 
+/-- The perspective at `b = 0` is `a` times the slope at `∞`. -/
 @[simp]
 theorem persp_zero_right (f : ℝ → ℝ) (a : ℝ) : persp f a 0 = a * derivAtTop f := by
   simp [persp]
 
+variable {a b : ℝ}
+
 /-- Away from `b = 0` the perspective is the usual `b f (a / b)`. -/
-theorem persp_of_ne_zero {a b : ℝ} (hb : b ≠ 0) :
+theorem persp_of_ne_zero (hb : b ≠ 0) :
     persp f a b = ((b * f (a / b) : ℝ) : EReal) := by
   simp [persp, hb]
 
@@ -111,7 +114,7 @@ theorem derivAtTop_mul_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {m : ℝ≥0∞} (hm
   | coe l => exact EReal.coe_mul l _ ▸ EReal.coe_ne_bot _
 
 /-- An affine minorant `c t + c'` of `f` bounds its perspective below by `c a + c' b`. -/
-theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) {a b : ℝ} (ha : 0 ≤ a)
+theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t) (ha : 0 ≤ a)
     (hb : 0 ≤ b) : ((c * a + c' * b : ℝ) : EReal) ≤ persp f a b := by
   rcases hb.eq_or_lt with rfl | hb
   · rw [persp_zero_right, mul_zero, add_zero, EReal.coe_mul, mul_comm]
@@ -121,12 +124,12 @@ theorem affine_le_persp {c c' : ℝ} (h : ∀ t, 0 ≤ t → c * t + c' ≤ f t)
     _ ≤ b * f (a / b) := mul_le_mul_of_nonneg_left (h _ (div_nonneg ha hb.le)) hb.le
 
 /-- The perspective of a nonnegative weight is nonnegative. -/
-theorem persp_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
+theorem persp_nonneg (hf : ∀ t, 0 ≤ t → 0 ≤ f t) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     0 ≤ persp f a b := by
   simpa using affine_le_persp (c := 0) (c' := 0) (by simpa using hf) ha hb
 
 /-- The perspective is monotone in the weight. -/
-theorem persp_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) {a b : ℝ} (ha : 0 ≤ a) (hb : 0 ≤ b) :
+theorem persp_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     persp f a b ≤ persp g a b := by
   rcases hb.eq_or_lt with rfl | hb
   · simpa using mul_le_mul_of_nonneg_left (derivAtTop_mono h) (EReal.coe_nonneg.2 ha)
@@ -134,7 +137,7 @@ theorem persp_mono (h : ∀ t, 0 ≤ t → f t ≤ g t) {a b : ℝ} (ha : 0 ≤ 
   exact mul_le_mul_of_nonneg_left (h _ (div_nonneg ha hb.le)) hb.le
 
 /-- The perspective of a convex weight is not `⊥`. -/
-theorem persp_ne_bot (hf : ConvexOn ℝ (Ici 0) f) {a b : ℝ} (ha : 0 ≤ a) : persp f a b ≠ ⊥ := by
+theorem persp_ne_bot (hf : ConvexOn ℝ (Ici 0) f) (ha : 0 ≤ a) : persp f a b ≠ ⊥ := by
   rcases eq_or_ne b 0 with rfl | hb
   · rw [persp_zero_right]
     rcases ha.eq_or_lt with rfl | ha

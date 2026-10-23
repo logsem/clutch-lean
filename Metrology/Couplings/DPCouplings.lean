@@ -4,14 +4,13 @@ public import Metrology.Couplings.ApproximateCouplings
 
 /-! # `(ε, δ)`-DP couplings (Approxis style)
 
-Approximate couplings with error map `x ↦ e^ε x + δ`, and their composition `ARCoupling.DP.bind`;
-`Bridges/AddCoupl.lean` identifies them with `(codensity dp).Rel`. -/
+Approximate couplings with error map `x ↦ e^ε x + δ`, and their composition `ARCoupling.DP.bind`. -/
 
 @[expose] public section
 
 noncomputable section DPCoupling
 
-open MeasureTheory Measure EReal
+open MeasureTheory Measure EReal ARCoupling
 
 /-- The DP error map `x ↦ e^ε x + δ`, where `exp ε` is `EReal.exp ↑ε`. -/
 abbrev DPF (ε δ x : ENNReal) := exp ε * x + δ
@@ -25,26 +24,26 @@ abbrev ARCoupling.DP (S : Set (α × β)) := ARCoupling (DPF ε δ) S
 
 /-- A left measure of mass at most `δ` is DP-coupled to anything along any relation. -/
 theorem ARCoupling.DP.trivial_δ {μₗ : Measure α} {μᵣ : Measure β} {S} (Hδ : μₗ .univ ≤ δ) :
-    ARCoupling.DP ε δ S μₗ μᵣ := by
+    DP ε δ S μₗ μᵣ := by
   refine fun ⟨f, _, Hf⟩ _ _ => ?_
   exact (lintegral_le_meas Hf fun _ => (·.elim trivial)).trans (Hδ.trans le_add_self)
 
 /-- Dirac measures at related points are DP-coupled. -/
 theorem ARCoupling.DP.dirac {a : α} {b : β} (S : Set (α × β)) :
-    S (a, b) → ARCoupling.DP ε δ S (.dirac a) (.dirac b) := by
+    S (a, b) → DP ε δ S (.dirac a) (.dirac b) := by
   refine (ARCoupling.dirac (@fun _ => ?_) _ ·)
   refine .trans ?_ le_self_add
   refine le_mul_of_one_le_left' ?_
-  exact EReal.one_le_exp_iff.mpr <| EReal.coe_ennreal_nonneg ε
+  exact one_le_exp_iff.mpr <| coe_ennreal_nonneg ε
 
-/-- Sequential composition of DP couplings: the ε's and δ's add. `δ'` is finite so it can be
-subtracted inside the left test. -/
+/-- Sequential composition of DP couplings, whose ε's and δ's add, with the finite `δ'` subtracted
+inside the left test. -/
 theorem ARCoupling.DP.bind {ε'} {δ' : NNReal} {f : α → Measure α'} {g : β → Measure β'} {S T}
     {μₗ μᵣ} (Hfm : Measurable f) (Hgm : Measurable g) (Huniv : μₗ .univ ≤ 1) (Hε : ε ≠ ⊤)
     (Hfsprob : ∀ {a}, (f a) Set.univ ≤ 1)
-    (Hcpl : ARCoupling.DP ε δ S μₗ μᵣ)
-    (Hbind : ∀ {a b}, S (a, b) → ARCoupling.DP ε' δ' T (f a) (g b)) :
-    ARCoupling.DP (ε + ε') (δ + δ') T (μₗ.bind f) (μᵣ.bind g) := by
+    (Hcpl : DP ε δ S μₗ μᵣ)
+    (Hbind : ∀ {a b}, S (a, b) → DP ε' δ' T (f a) (g b)) :
+    DP (ε + ε') (δ + δ') T (μₗ.bind f) (μᵣ.bind g) := by
   rintro ⟨f', Hf'm, Hf'b⟩ ⟨g', Hg'm, Hg'b⟩ Hf'g'
   have Hf'le a : ∫⁻ (y : α'), f' y ∂f a - δ' ≤ 1 := by
     refine tsub_le_iff_left.mpr (.trans ?_ le_add_self)
