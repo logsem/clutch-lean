@@ -134,7 +134,7 @@ theorem tglWp_unfold_step
 /-! ## Value rules -/
 
 /-- `tglWp` of a value is an update of the postcondition. -/
-theorem tglWp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
+theorem tglWp_value_fupd :
     iprop(|={E}=> Φ v) ⊢ tglWp E (Exp.ofVal v) Φ := by
   iintro HΦ
   iapply tglWp_unfold
@@ -145,20 +145,18 @@ theorem tglWp_value_fupd {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
   iframe
 
 /-- `tglWp` of a value follows from the postcondition at that value. -/
-theorem tglWp_value {E : CoPset} {v : Val rT} {Φ : Val rT → IProp GF} :
+theorem tglWp_value :
     Φ v ⊢ tglWp E (Exp.ofVal v) Φ :=
   fupd_intro.trans tglWp_value_fupd
 
 /-- `tglWp` of an expression with `toVal? e = some v` follows from `Φ v`. -/
-theorem tglWp_value_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT}
-    {Φ : Val rT → IProp GF} (h : e.toVal? = some v) :
+theorem tglWp_value_of_toVal (h : e.toVal? = some v) :
     Φ v ⊢ tglWp E e Φ := by
   rw [← Exp.ofVal_of_toVal_some h]
   exact tglWp_value
 
 /-- `tglWp` of an expression with `toVal? e = some v` follows from an update of `Φ v`. -/
-theorem tglWp_value_fupd_of_toVal {E : CoPset} {e : Exp rT} {v : Val rT}
-    {Φ : Val rT → IProp GF} (h : e.toVal? = some v) :
+theorem tglWp_value_fupd_of_toVal (h : e.toVal? = some v) :
     iprop(|={E}=> Φ v) ⊢ tglWp E e Φ := by
   rw [← Exp.ofVal_of_toVal_some h]
   exact tglWp_value_fupd
@@ -330,7 +328,7 @@ theorem tglWp_mono
 /-! ## Bind -/
 
 /-- Bind: run `e` in an evaluation context `K`, then continue with `K` filled by its value. -/
-theorem tglWp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} :
+theorem tglWp_bind {K : Ectx rT} :
     tglWp E e (fun v => tglWp E (K.fill (Exp.ofVal v)) Φ) ⊢
       tglWp E (K.fill e) Φ := by
   iintro HW

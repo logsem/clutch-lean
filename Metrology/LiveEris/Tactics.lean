@@ -6,6 +6,7 @@ public import Iris.ProofMode.ProofModeM
 public import Iris.ProofMode.Tactics.Basic
 public import Lean
 public import Qq
+public meta import Metrology.Meta.AppByName
 
 /-!
 # Proof-mode tactics for the LiveEris WP
@@ -258,8 +259,8 @@ elab "live_bind" colGt ppSpace focus:term:max : tactic =>
           q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $body $Φ)
     let pf ← addBIGoal hyps
       q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $e' $Φc)
-    let bindPf ← mkAppOptM ``ProbLang.LiveEris.LiveWpGS.lwp_bind
-      (#[α, instPL, GF, instWp, Q, K, E, e', Φ].map some)
+    let bindPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_bind
+      [(`rT, α), (`GF, GF), (`Q, Q), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instPL, instWp]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -466,8 +467,9 @@ elab "live_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let pf ← addBIGoal hyps
       q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $inner $Φ)
     let HΦ ← pureSideCondition step.φ
-    let stepPf ← mkAppOptM ``ProbLang.LiveEris.LiveWpGS.lwp_pure_step_ctx
-      (#[α, instPL, GF, instWp, K, step.φ, step.n, step.e₁, e₂, step.inst, HΦ, Q, E, Φ].map some)
+    let stepPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_pure_step_ctx
+      [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
+        (`Hφ, HΦ), (`Q, Q), (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -486,9 +488,9 @@ elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
     let HΦ ← pureSideCondition step.φ
     let hn : Q(0 < $(step.n)) ← mkFreshExprSyntheticOpaqueMVar q(0 < $(step.n))
     (← Tactic.evalTacticAt (← `(tactic| decide)) hn.mvarId!).forM addMVarGoal
-    let stepPf ← mkAppOptM ``ProbLang.LiveEris.lwp_pure_step_excused_ctx
-      #[some α, some instPL, none, some GF, none, some K, some step.φ, some step.n, some step.e₁,
-        some e₂, some step.inst, some HΦ, some hn, some Q, some E, some Φ]
+    let stepPf ← mkAppByName ``ProbLang.LiveEris.lwp_pure_step_excused_ctx
+      [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
+        (`Hφ, HΦ), (`hn, hn), (`Q, Q), (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -521,7 +523,9 @@ elab "live_value" : tactic =>
     let valLemma := if useNoFupd then ``ProbLang.LiveEris.LiveWpGS.lwp_value_of_toVal
       else ``ProbLang.LiveEris.LiveWpGS.lwp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
-    let valPf ← mkAppOptM valLemma (#[α, instPL, GF, instWp, Q, E, e, v, Φ, hproof].map some)
+    let valPf ← mkAppByName valLemma
+      [(`rT, α), (`GF, GF), (`Q, Q), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
+      [instPL, instWp]
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/
@@ -543,7 +547,8 @@ macro "pl_closed " c:ident : command => do
   let fv := mkIdent (n.appendAfter "_fv")
   let oR := mkIdent (n.appendAfter "_openRec")
   let cR := mkIdent (n.appendAfter "_closeRec")
-  let c₁ ← `(theorem $lc {rT : Type _} : ($c : Exp rT).IsLocallyClosed := Exp.lcb_imp_lc (by lcb_kernel))
+  let c₁ ← `(theorem $lc {rT : Type _} : ($c : Exp rT).IsLocallyClosed :=
+      Exp.lcb_imp_lc (by lcb_kernel))
   let c₂ ← `(theorem $fv {rT : Type _} : ($c : Exp rT).fv = ∅ := by simp [$c:ident, Exp.fv])
   let c₃ ← `(@[simp] theorem $oR {rT : Type _} (k : ℕ) (t : Exp rT) :
       Exp.openRec k t ($c : Exp rT) = $c := (Exp.open_lc k t $c $lc).symm)

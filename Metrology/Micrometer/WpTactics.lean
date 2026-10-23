@@ -5,6 +5,7 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Iris.SpecRules
 public import Metrology.ProbLang.EctxTactic
 public meta import Metrology.ProbLang.EctxTactic
+public meta import Metrology.Meta.AppByName
 public import Metrology.ProbLang.Syntax.Notation
 public meta import Metrology.ProbLang.Syntax.Notation
 public import Iris.ProofMode.ProofModeM
@@ -205,11 +206,12 @@ meta structure WpGoal where
   hprop : $prop =Q IProp $GF
   hbi : $bi =Q instBIUPred
 
-/-- The leading `wp` arguments `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget`, shared
-by every lemma the tactics apply (as `mkAppOptM` arguments; class instances on `L` follow as
-`none`). -/
-meta def WpGoal.prefix (g : WpGoal) : Array (Option LeanExpr) :=
-  #[g.α, g.instPL, g.B, g.instPO, g.instOT, g.L, g.GF, g.instWp, g.instBudget]
+/-- Applies the lemma `c` to the goal's shared `wp` data and the arguments `args`, by binder name;
+`insts` are further instances to offer. -/
+meta def WpGoal.mkApp (g : WpGoal) (c : Name) (args : List (Name × LeanExpr))
+    (insts : List LeanExpr := []) : MetaM LeanExpr :=
+  mkAppByName c (([(`rT, g.α), (`B, g.B), (`L, g.L), (`GF, g.GF)] : List (Name × LeanExpr)) ++ args)
+    (insts ++ ([g.instPL, g.instPO, g.instOT, g.instWp, g.instBudget] : List LeanExpr))
 
 /-- `g.wpApp` with its expression and postcondition replaced by `e` and `Φ`. -/
 meta def WpGoal.mkWp (g : WpGoal) (e : LeanExpr) (Φ : LeanExpr) : LeanExpr :=
@@ -268,8 +270,8 @@ elab "wp_bind" colGt ppSpace focus:term:max : tactic =>
       mkLambdaFVars #[v] (g.mkWp body g.Φ)
     have newGoal : Q(IProp $GF) := g.mkWp e' Φc
     let pf ← addBIGoal hyps newGoal
-    let bindPf ← mkAppOptM ``MicrometerWpGS.wp_bind
-      (g.prefix.append #[none, none, none, some K, some g.E, some e', some g.Φ])
+    let bindPf ← g.mkApp ``MicrometerWpGS.wp_bind
+      [(`K, K), (`E, g.E), (`e, e'), (`Φ, g.Φ)]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -313,9 +315,9 @@ elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
     let gs ← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!
     gs.forM addMVarGoal
-    let stepPf ← mkAppOptM ``MicrometerWpGS.wp_pure_step_ctx
-      (g.prefix.append #[none, none, none, some K, some φ, some n,
-        some e₁, some e₂, some step.inst, some HΦ, some g.E, some g.Φ])
+    let stepPf ← g.mkApp ``MicrometerWpGS.wp_pure_step_ctx
+      [(`K, K), (`φ, φ), (`n, n), (`e₁, e₁), (`e₂, e₂), (`Hφ, HΦ), (`E, g.E), (`Φ, g.Φ)]
+      [step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -371,8 +373,7 @@ elab "wp_value" : tactic =>
     let valLemma := if useNoFupd then ``MicrometerWpGS.wp_value_of_toVal
       else ``MicrometerWpGS.wp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
-    let valPf ← mkAppOptM valLemma
-      (g.prefix.append #[some E, some e, some v, some g.Φ, some hproof])
+    let valPf ← g.mkApp valLemma [(`E, E), (`e, e), (`v, v), (`Φ, g.Φ), (`h, hproof)]
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Anchored variants: `wp_show`, `wp_value_at`, `wp_alloc_at`, `wp_steps` -/

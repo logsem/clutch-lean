@@ -3,6 +3,7 @@ module
 public import Metrology.TotalEris.TotalLifting
 public import Metrology.ProbLang.EctxTactic
 public meta import Metrology.ProbLang.EctxTactic
+public meta import Metrology.Meta.AppByName
 public import Metrology.ProbLang.Syntax.Notation
 public import Iris.ProofMode.ProofModeM
 public import Iris.ProofMode.Tactics.Basic
@@ -109,10 +110,10 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
         let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
         mkLambdaFVars #[v] q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
     let pf ← addBIGoal hyps q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
-    -- `mkAppOptM`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
+    -- `mkAppByName`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
     -- `bi_least_fixpoint` (heartbeat blow-up).
-    let bindPf ← mkAppOptM ``ErisWpGS.tglWp_bind
-      (#[α, instPL, GF, instWp, K, E, e', Φ].map some)
+    let bindPf ← mkAppByName ``ErisWpGS.tglWp_bind
+      [(`rT, α), (`GF, GF), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instPL, instWp]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -138,8 +139,9 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
       q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $inner $Φ)
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
     (← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!).forM addMVarGoal
-    let stepPf ← mkAppOptM ``ErisWpGS.twp_pure_step_ctx
-      (#[α, instPL, GF, instWp, K, φ, n, e₁, e₂, step.inst, HΦ, E, Φ].map some)
+    let stepPf ← mkAppByName ``ErisWpGS.twp_pure_step_ctx
+      [(`rT, α), (`GF, GF), (`K, K), (`φ, φ), (`n, n), (`e₁, e₁), (`e₂, e₂), (`Hφ, HΦ),
+        (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -171,7 +173,8 @@ elab "twp_value" : tactic =>
     let valLemma := if useNoFupd then ``ErisWpGS.tglWp_value_of_toVal
       else ``ErisWpGS.tglWp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
-    let valPf ← mkAppOptM valLemma (#[α, instPL, GF, instWp, E, e, v, Φ, hproof].map some)
+    let valPf ← mkAppByName valLemma
+      [(`rT, α), (`GF, GF), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)] [instPL, instWp]
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/
