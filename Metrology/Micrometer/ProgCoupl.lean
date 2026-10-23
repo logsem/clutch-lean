@@ -1,6 +1,6 @@
 module
 
-public import Metrology.Micrometer.SpecCoupl
+public import Metrology.Micrometer.ProgramKernel
 import Metrology.Iris.LocalBI
 
 /-! # The program-step modality `progCoupl`
@@ -30,18 +30,9 @@ variable (L) in
 /-- One program step coupled with `n` spec steps from an erasable spec-state distribution by a
 bind law: both runs are images of the law's head measures under `f` and `f'`, and `Z` continues at
 each pair whose leftover is finite (Rocq `prog_coupl`). -/
-abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
-    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
-  (∃ (law : L.BindLaw) (n : Nat) (μ₁' : Measure (State rT)) (μ₀ ν₀ : Measure (Cfg rT))
-      (f f' : Cfg rT → Cfg rT) (R : Cfg rT → Cfg rT → B),
-      ⌜Reducible e₁ σ₁⌝ ∗
-      ⌜Measurable f ∧ primStep ⟨e₁, σ₁⟩ = μ₀.map f⌝ ∗
-      ⌜Measurable f' ∧ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f'⌝ ∗
-      ⌜law.head μ₀ ν₀ R b⌝ ∗
-      ⌜law.SideForExec μ₀ ν₀ R f'⌝ ∗
-      ⌜ErasableExpr μ₁' σ₁'⌝ ∗
-      (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
-        Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')))
+noncomputable abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
+    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF :=
+  progCouplFor primStep L e₁ σ₁ e₁' σ₁' b Z
 
 section Steps
 variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {b : B}
@@ -52,32 +43,18 @@ variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {b : B}
 
 /-- `progCoupl` is non-expansive in its continuation. -/
 theorem progCoupl_ne (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
-    progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ≡{n}≡ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
-  refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ =>
-    exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
-  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
-    sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) ?_
-  exact forall_ne fun _ => forall_ne fun _ =>
-    wand_ne.ne (.of_eq rfl) (ne.ne (HZ _ _ _ _ _))
+    progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ≡{n}≡ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ :=
+  progCouplFor_ne HZ
 
 /-- `progCoupl` is monotone in its continuation. -/
 theorem progCoupl_mono : iprop%
     (∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
-      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
-  iintro ⟨HZ, HCpl⟩
-  icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
-    %Heras, HCont⟩
-  iexists law, n, μ₁', μ₀, ν₀, f, f', R
-  iframe %
-  iintro %ρ %ρ' %hR
-  imod HCont $$ %ρ %ρ' %hR with HZ'
-  imodintro
-  iapply HZ $$ HZ'
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ :=
+  progCouplFor_mono
 
 /-- A `progCoupl` step is only possible from a reducible program configuration. -/
-theorem progCoupl_reducible : progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Reducible e₁ σ₁⌝ := by
-  iintro ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, -⟩
-  ipureintro; exact Hred
+theorem progCoupl_reducible : progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Reducible e₁ σ₁⌝ :=
+  progCouplFor_reducible
 
 /-! ## Introducing `progCoupl` -/
 
@@ -90,14 +67,8 @@ theorem progCoupl_intro_map (law : L.BindLaw) {μ₀ ν₀ : Measure (Cfg rT)} {
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
         Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')) ⊢
-      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
-  -- paired up so that `iframe %` closes the two `⌜Measurable _ ∧ _ = _.map _⌝` conjuncts
-  have hF := (⟨hf, hprog⟩ : _ ∧ _)
-  have hF' := (⟨hf', hspec⟩ : _ ∧ _)
-  iintro H
-  iexists law, n, μ₁', μ₀, ν₀, f, f', R
-  iframe %
-  iexact H
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  progCouplFor_intro_map law Hred hf hprog hf' hspec hhead hside Heras
 
 /-- `progCoupl_intro_map` with `f = f' = id`: the law's head is stated directly on the program
 step and the spec run (Rocq `prog_coupl_intro`). -/
@@ -107,13 +78,8 @@ theorem progCoupl_intro_law (law : L.BindLaw) (Hred : Reducible e₁ σ₁)
     (Heras : ErasableExpr μ₁' σ₁') : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
         Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
-      progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
-  iintro H
-  iapply progCoupl_intro_map law Hred measurable_id map_id.symm
-    measurable_id map_id.symm hhead hside Heras
-  iintro %⟨e₂, σ₂⟩ %⟨e₂', σ₂'⟩ %hR
-  simp only [id]
-  iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  progCouplFor_intro_law law Hred hhead hside Heras
 
 /-! ## Structural rules -/
 
@@ -173,7 +139,7 @@ theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
   obtain ⟨hf, hprog⟩ := Hf
   obtain ⟨hf', hspec⟩ := Hf'
   have hK : Measurable fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT) := by fun_prop
-  iapply progCoupl_intro_map law (Hred.fill K) (hK.comp hf)
+  iapply progCoupl_intro_map law (Reducible.fill (K := K) Hred) (hK.comp hf)
     (by rw [primStep_fill hv, hprog, map_map hK hf]) hf' hspec Hhead Hside Heras
   simp only [Function.comp_apply]
   iexact HCont
@@ -219,24 +185,8 @@ theorem progCoupl_steps_spend_law [Add B] [law.HeadShift]
 `prog_coupl_det_step`). -/
 theorem progCoupl_det_step [Add B] [L.IsLawful] {e₂ : Exp rT} {σ₂ : State rT} (hb : b < (⊤ : B))
     (Hred : Reducible e₁ σ₁) (Hdet : primStep ⟨e₁, σ₁⟩ = dirac ⟨e₂, σ₂⟩) :
-    iprop(|={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z := by
-  classical
-  iintro HZ
-  -- unit law at the Dirac pair `(⟨e₂, σ₂⟩, ⟨e₁', σ₁'⟩)` with leftover `b` there and `⊤` elsewhere
-  let R : Cfg rT → Cfg rT → B := fun ρ ρ' =>
-    if ρ = ⟨e₂, σ₂⟩ ∧ ρ' = ⟨e₁', σ₁'⟩ then b else (⊤ : B)
-  have hR : R ⟨e₂, σ₂⟩ ⟨e₁', σ₁'⟩ = b := ite_eq_left ⟨rfl, rfl⟩
-  have hhead : (BindLaw.unit L).head (primStep ⟨e₁, σ₁⟩)
-      ((dirac σ₁').bind fun σ => pexecN 0 ⟨e₁', σ⟩) R b := by
-    rw [dirac_bind (by fun_prop), pexecN_zero, Hdet]
-    exact unit_head_dirac (hR ▸ hb) hR.le
-  iapply progCoupl_intro_law (.unit L) Hred hhead (.of_forall fun _ _ => trivial) (dret σ₁')
-  iintro %e₃ %σ₃ %e₃' %σ₃' %hlt
-  by_cases hS : e₃ = e₂ ∧ σ₃ = σ₂ ∧ e₃' = e₁' ∧ σ₃' = σ₁'
-  · obtain ⟨rfl, rfl, rfl, rfl⟩ := hS
-    rw [hR]
-    iexact HZ
-  · simp [R, and_assoc, hS] at hlt
+    iprop(|={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
+  progCouplFor_det_step hb Hred Hdet
 
 /-- A program step that leaves the spec in place, by a step of any law with diagonal heads: the
 program step against itself, mapped to the spec configuration (Rocq `prog_coupl_step_l`). -/
