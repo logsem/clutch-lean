@@ -6,22 +6,29 @@ below are relative to that repository root. No sibling checkout is required. Com
 are in `docs/asm-ffi/`. The original proof-development checkpoints/build measurements below are
 historical; the current integration commands and checks are in [README.md](README.md).
 
-The combined Metrology root build passes **7,132 jobs**. Source/runtime pins and fixture checks pass;
+The combined Metrology root build passes **7,169 jobs**. Source/runtime pins and fixture checks pass;
 current theorem axiom and statement-dependency receipts are in `docs/asm-ffi/audit/`.
 See [INTEGRATION.md](INTEGRATION.md) for the migration and validation details.
 
-The subsequent compiled one-byte OTP work is tracked in [OTP-PLAN.md](OTP-PLAN.md). Its actual Sail
-execution, universal ABI specification, compatible-entry witness and unconditional evaluator are
-proved. `MetrologyAsm/Examples/OTP/Game.lean` defines the closed game allocating its private pad and
-proves a zero-cost uniform-ciphertext coupling under the actual guarded FFI WP, with the real
-ProbLang randombytes callback. Explicit-kernel finite termination and the exact output distribution
-remain open; this checkpoint does not yet establish the final execution-distribution security claim.
+The compiled one-byte OTP is complete; see [OTP-PLAN.md](OTP-PLAN.md). Its actual Sail execution,
+universal ABI specification, compatible-entry witness and unconditional evaluator are proved.
+`MetrologyAsm/Examples/OTP/Game.lean` defines the closed game allocating its private pad and proves
+a zero-cost uniform-ciphertext coupling under the actual guarded FFI WP, with the real ProbLang
+randombytes callback. `Finite.lean` calculates a full-mass finite execution under that same FFI
+kernel. `Security.lean` proves total termination, exact probability `1/256` for each byte ciphertext,
+and equal returned-ciphertext distributions for any two valid byte messages and arbitrary initial
+language states. The value marginal hides the private final heap; the joint ciphertext/pad law is
+not a secrecy claim. This is a result about the retained assembly in the pinned Sail model, under
+the documented compiler/extraction scope.
 
 ## 1. Summary
 
 - M0: Lean 4.35 foundations and scoped Sail builds pass; pinned regeneration is byte-identical.
 - M1: **proved**: `MetrologyAsm/Examples/Swap/Correctness.lean:95`, `wp_swap_spec`, has no execution/evaluator premise.
 - M2: **proved**: `MetrologyAsm/Examples/Callback/Correctness.lean:26`, `wp_importToy_spec`, executes a Sail callback round trip.
+- OTP: **proved**: `MetrologyAsm/Examples/OTP/Security.lean`, `otp_game_terminates`,
+  `otp_ciphertext_probability` and `otp_game_perfect_secrecy`; the closed game really allocates its
+  private pad and calls the compiled Sail-backed code with the actual randombytes lambda.
 - M3: callback implementation and byte safety/law exist; keypair correctness and product uniformity do not.
 - M4: complete statement audits: M1 831 definitions/types, 2,023 lines, 41 modules; M2 832/2,031/42.
 - Audited M1/M2/core/callback proof closures contain only `propext`, `Classical.choice`, and `Quot.sound`.

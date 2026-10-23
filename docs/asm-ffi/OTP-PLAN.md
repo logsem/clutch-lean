@@ -1,4 +1,4 @@
-# One-byte assembly OTP implementation plan
+# One-byte assembly OTP implementation plan and completion evidence
 
 Goal: compile a loop-free byte encryption function, prove its actual Sail interaction with the
 ProbLang randombytes callback, and prove perfect secrecy for the resulting closed ProbLang game.
@@ -49,7 +49,7 @@ The main risks are heap-changing resumption and the explicit-kernel probability/
 The existing callback toy has an empty footprint, and current randombytes WP uses the base kernel.
 These are implementation obligations of this example, not reasons to weaken its final claim.
 
-## Current implementation checkpoint
+## Completed proof chain
 
 Proved foundations: the retained RV64IM C/compiler input assembles to20 instruction words/88 image
 bytes; every emitted word has an official Sail decoder equation. Byte XOR is an involution and exact
@@ -82,17 +82,30 @@ compatible profiled machine for every valid input, and `Evaluation.otp_eval` (de
 Every valid unit/byte response has a local concrete heap-changing resumption.
 
 `Dispatch` proves the actual language-level start and replay transitions with arbitrary framed
-heaps. `wp_otp` in `Micrometer.lean` composes those steps with the real randombytes lambda under the shared
-guarded FFI WP. `Coupling` couples the callback draw to an ideal uniform ciphertext with the XOR
+heaps. `wp_otp` in `Micrometer.lean` composes those steps with the real randombytes lambda under
+the shared guarded FFI WP. `Coupling` couples the callback draw to an ideal uniform ciphertext with the XOR
 bijection and transports this ordinary callback proof to the actual FFI kernel. The closed
 `otpGame` in `Game.lean` allocates a fresh private pad initialized to zero, calls the actual assembled
 OTP and returns only its ciphertext; `MetrologyAsm.OTP.wp_otpGame_coupled` proves its guarded
 zero-cost coupling to the ideal uniform-byte program.
 
-Remaining: close explicit-kernel finite execution, total termination and the exact returned-value
-distribution, then derive equality for any two valid messages and run the final integration audits.
-The guarded coupling alone is not being presented as an explicit-kernel adequacy theorem. The top
-execution-distribution security claim remains unproved until those obligations pass.
+`CallbackExec` proves the actual callback's pure prefix, one uniform byte draw, concrete store and
+terminating tail inside the real assembly resumption frame. It composes these with
+`otp_start_step` and `otp_resume_step` into `otp_call_finite`, with a common finite fuel bound for
+all valid message/initial-byte values at a given pad. `Finite.otp_game_finite` then composes actual
+allocation and beta reduction with that call law. The resulting configuration measure records the
+sampled byte in the private heap and the XOR ciphertext in the returned expression.
+
+That finite measure has mass one. `otp_game_limExec` uses `limExecWith_term` to identify the full
+actual-kernel limit with the finite law. `Security.lean` projects away the private state and proves
+`otp_game_uniform`, `otp_ciphertext_probability` and `otp_game_perfect_secrecy`, together with
+`otp_game_terminates`. These are unconditional execution claims apart from valid-byte message and
+ciphertext bounds. They quantify arbitrary initial language states. The exact finite operational
+calculation supplies the execution justification alongside the guarded coupling; no generic FFI
+WP adequacy theorem is assumed or claimed. Only the returned ciphertext is observed, with a fresh
+pad on every game execution; joint ciphertext/private-pad distributions are outside this claim.
+
+## Validation history
 
 Validation of this foundation checkpoint: complete root build7145 jobs passed; thirteen listed
 foundation theorem closures contain only propext/Classical.choice/Quot.sound. Receipts are
@@ -105,26 +118,37 @@ The later evaluator/guarded-game checkpoint passes the full root build7166 jobs;
 specification/evaluator/dispatch/WP/coupling closures use only the standard three axioms. Receipts
 are `audit/OTP-game-{build,axioms}.txt`, `audit/OTP-evaluation-tcb.json` and
 `audit/OTP-game-coupling-tcb.json`. The machine statement receipts are refreshed for the added
-entry-register/layout helper declarations. These receipts do not claim the pending explicit
-execution-distribution theorem.
+entry-register/layout helper declarations. These historical receipts cover the evaluator and guarded coupling; the final execution-law
+receipts are listed below.
 The source has thirteen steps to the import (including its trampoline), with the saved link at
 text offset40; the seven-step suffix occupies offsets40..64. `Sail/IntegerSteps.lean` supplies
-reusable full-step composition for register and doubleword-store bodies. Next calculate a finite
-full-mass execution of the actual allocated game under `primStepWith otpEnv`, identify its
-returned-value marginal and use `limExecWith_term` to close the limit/exact-law claims.
+reusable full-step composition for register and doubleword-store bodies.
 
-## Next proof sequence
+## Completion evidence
 
-1. Add explicit-kernel bounded-execution composition for pure steps and deterministic updates,
-   preserving the existing convention that a returned value needs positive remaining fuel.
-2. Calculate the real one-byte randombytes execution: its pure prefix, one uniform byte draw,
-   store into the owned pad, and terminating zero-length tail. Retain the actual callback lambda.
-3. Lift that callback calculation through the actual `asmResume` context, then compose the
-   proved `otp_start_step` and `otp_resume_step`. Compose allocation and `otpGame_beta` to obtain
-   a finite execution law for the closed allocated game, with a common sufficient fuel bound.
-4. Prove that finite law has total mass one and apply `limExecWith_term`. Project away the private
-   heap, use `byteXor_uniform`, and derive the exact singleton ciphertext probabilities and equality
-   for two valid messages. This is direct finite execution evidence under `primStepWith otpEnv`;
-   do not substitute base-kernel adequacy for a generic FFI adequacy theorem.
-5. Update the report/module guide for the final exact-law claims, run the final root/pin/source
-   checks and axiom/statement audits, and commit the remaining owned paths.
+| Required deliverable | Authoritative artifacts and checks |
+|---|---|
+| Retained compiled source and byte arithmetic | `fixtures/otp/{otp.c,otp.compiler.s,otp.s,provenance.json}`, `Source`, `Decode`, `Byte`; fixture check passes |
+| Actual Sail execution over arbitrary compatible states | `Steps`, `Prefix`, `Continuation`, `Layout`, `ImageBridge`, `Execution`, `Frames` |
+| Boundary, compatible-entry existence and unconditional evaluator | `Responses`, `Observation`, `Specification`, `Witness`, `EvaluationRules`, `Evaluation.otp_eval` |
+| Actual guarded FFI WP and zero-cost uniform reference coupling | `Dispatch`, `Micrometer`, `Coupling`, `Game.wp_otpGame_coupled`; real `RandomBytes.randombytesValue` in `otpEnv` |
+| Finite execution, totality, exact law and message independence | `CallbackExec`, `Finite`, `Security`; actual `execNWith`/`limExecVWith` under `primStepWith otpEnv` |
+| Integration, provenance and proof audit | Root export via `MetrologyAsm.Examples.OTP`, module guide/report, full root build and receipts below |
+
+Final validation: full root build **7169 jobs passed**, strict implicit options remain false, and
+all twenty-six printed final/security/finite/evaluator/coupling/helper axiom closures use exactly
+`propext`, `Classical.choice`, and `Quot.sound`. No OTP proof uses `sorry`, a new axiom or
+`native_decide`. The retained compiler input/quotation hashes and the unchanged Sail/runtime pins
+pass their checks. The pre-existing user notes and local assistant files are untouched.
+
+- `audit/OTP-final-build.txt`: the full root build.
+- `audit/OTP-final-axioms.txt`: all twenty-six checked closures.
+- `audit/OTP-final-finite-tcb.json`: the exact finite actual-game configuration law.
+- `audit/OTP-final-termination-tcb.json`: total termination.
+- `audit/OTP-final-uniform-tcb.json`: exact returned uniform-byte distribution.
+- `audit/OTP-final-exact-law-tcb.json`: the `1/256` ciphertext theorem.
+- `audit/OTP-final-secrecy-tcb.json`: equality of output distributions for two valid messages.
+
+The statement receipts follow declaration types and non-proof bodies, exclude proof bodies, and
+check that all owned definitions have source ranges. They complement the kernel-checked proofs and
+axiom closures. They do not prove C compiler correctness or remove the documented extraction scope.

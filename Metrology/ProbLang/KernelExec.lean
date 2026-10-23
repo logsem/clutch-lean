@@ -29,6 +29,10 @@ def limExecVFor (step : Cfg rT → Measure (Cfg rT)) (ρ : Cfg rT) : Measure (Ex
 
 variable {step : Cfg rT → Measure (Cfg rT)}
 
+/-- A returned value is observed as soon as positive fuel remains. -/
+theorem execNFor_succ_isValue {ρ : Cfg rT} (hv : ρ.expr.isValue) (n : Nat) :
+    execNFor step (n + 1) ρ = dirac ρ := by simp [execNFor, hv]
+
 section MeasurableKernel
 
 variable (hstep : Measurable step)
@@ -41,6 +45,12 @@ theorem execNFor_measurable (n : Nat) : Measurable (execNFor step n) := by
   | zero => simp [execNFor]
   | succ n ih =>
     exact .ite (by measurability) (by measurability) (by measurability)
+
+/-- A known deterministic nonvalue transition consumes exactly one unit of execution fuel. -/
+theorem execNFor_succ_of_step {ρ next : Cfg rT} (hv : ¬ρ.expr.isValue)
+    (hdet : step ρ = dirac next) (n : Nat) :
+    execNFor step (n + 1) ρ = execNFor step n next := by
+  rw [execNFor, ite_eq_right hv, hdet, dirac_bind (execNFor_measurable hstep n)]
 
 /-- Each bounded execution has total mass at most one. -/
 theorem execNFor_univ_le_one (hbound : ∀ ρ, step ρ Set.univ ≤ 1) (n : Nat) (ρ : Cfg rT) :

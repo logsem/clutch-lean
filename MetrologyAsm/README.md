@@ -1,7 +1,9 @@
 # How the assembly proofs fit together
 
-Start with [swap correctness](Examples/Swap/Correctness.lean) or
-[callback correctness](Examples/Callback/Correctness.lean). Each states the final Micrometer result.
+Start with [OTP security](Examples/OTP/Security.lean) for total termination and the exact ciphertext
+law, or [its guarded game coupling](Examples/OTP/Game.lean). The smaller
+[swap](Examples/Swap/Correctness.lean) and [callback](Examples/Callback/Correctness.lean) examples
+state their final Micrometer results.
 Then read the matching `Source.lean` and `Specification.lean` to see the assembly and its plain
 machine contract. The keypair directory contains input and a game skeleton; it has no correctness proof.
 
@@ -14,15 +16,15 @@ machine contract. The keypair directory contains input and a game skeleton; it h
 | `ABI/` | Instantiate the generic FFI machine interface using Sail and the ABI facets | [Interface](ABI/Interface.lean), [Lemmas](ABI/Lemmas.lean), [Resume](ABI/Resume.lean) |
 | `Examples/Swap/` | Complete two-cell swap proof | [Source](Examples/Swap/Source.lean), [Correctness](Examples/Swap/Correctness.lean) |
 | `Examples/Callback/` | Complete assembly → ProbLang callback → assembly round trip | [Source](Examples/Callback/Source.lean), [Correctness](Examples/Callback/Correctness.lean) |
-| `Examples/OTP/` | Compiled byte OTP: actual evaluator and guarded game coupling proved; exact execution law pending | [Game](Examples/OTP/Game.lean), [Evaluation](Examples/OTP/Evaluation.lean), [plan](../docs/asm-ffi/OTP-PLAN.md) |
+| `Examples/OTP/` | Complete compiled byte OTP: actual evaluator, guarded coupling, total termination and perfect secrecy | [Security](Examples/OTP/Security.lean), [Game](Examples/OTP/Game.lean), [plan](../docs/asm-ffi/OTP-PLAN.md) |
 | `Examples/Keypair/` | Linked TweetNaCl source, declared signature and planned game | [Source](Examples/Keypair/Source.lean) |
 | `Examples/Support.lean` | Concrete byte installation, placement and register fixtures shared by example witnesses | [Support](Examples/Support.lean) |
 | `Diagnostics/` | Concrete observations and a small instruction-body experiment | [Spike](Diagnostics/Spike.lean), [InstructionBody](Diagnostics/InstructionBody.lean) |
 
 `Sail/` and `Profile/` together form the machine foundation: basic step-state operations support the
 profile, whose policy then supports configured memory/fetch/instruction rules. `ABI/` builds on that
-foundation. Shared machine/ABI modules do not import example or diagnostic modules. Neither verified
-example imports the other; their concrete witnesses share `Examples/Support.lean`.
+foundation. Shared machine/ABI modules do not import example or diagnostic modules. The three
+verified examples share infrastructure and witness support without importing each other's proofs.
 
 ## From source to the final theorem
 
@@ -41,7 +43,7 @@ flowchart TD
   WP["Metrology/Micrometer/Asm: shared guarded WP bridge"] --> Correctness
 ```
 
-Both verified examples use these filenames:
+The swap and callback examples use these filenames:
 
 1. **`Source.lean`** contains literal GNU assembly, its signature and the first-class code value.
 2. **`Decode.lean`, `Steps.lean`, `Execution.lean`** connect concrete instruction words to the official
@@ -67,8 +69,11 @@ resumptions. `Responses`/`Observation` connect the logical one-byte fragment to 
 `Specification`, `Witness` and `Evaluation` prove the universal contract and unconditional evaluator.
 `Dispatch` proves the real foreign steps, `Micrometer` composes the guarded WP with randombytes,
 and `Coupling`/`Game` prove the zero-cost uniform-reference coupling for a closed game allocating its
-private pad and returning only the ciphertext. The explicit execution-law and total-termination
-proofs remain unfinished; see the implementation plan.
+private pad and returning only the ciphertext. `CallbackExec` calculates the real callback's pure
+prefix, sole random draw, store and terminating tail; `Finite` composes these with allocation and
+the actual foreign steps. `Security` proves termination with probability one, the exact `1/256`
+ciphertext law and equal returned-value distributions for any two valid messages. The private final
+heap is hidden by the output marginal; the joint ciphertext/pad distribution is outside the claim.
 
 ## Imports and commands
 
@@ -80,9 +85,11 @@ Use a focused import:
 import MetrologyAsm.Examples.Swap
 -- or
 import MetrologyAsm.Examples.Callback
+-- or
+import MetrologyAsm.Examples.OTP
 ```
 
-`import MetrologyAsm` exports the examples, including the OTP work currently in progress.
+`import MetrologyAsm` exports all three verified examples, including the completed OTP.
 Diagnostics have explicit imports and are checked by `Tests/SailSpike.lean`. From the repository root:
 
 ```sh
@@ -90,6 +97,7 @@ lake build
 lake build MetrologyAsm.Examples.Swap MetrologyAsm.Examples.Callback
 python3 -I scripts/check-sail-pin.py
 python3 -I fixtures/keypair/generate.py --check
+python3 -I fixtures/otp/generate.py --check
 ```
 
 The generic language/FFI definitions live in `Metrology/ProbLang/Asm/`; the guarded logic bridge lives

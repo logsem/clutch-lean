@@ -25,5 +25,6 @@ lake build MetrologyAsm.Examples.OTP.Decode MetrologyAsm.Examples.OTP.Byte
 The assembler expands the call and its trampoline to twenty 32-bit instructions: 80 text bytes,
 88 total image bytes and one randombytes address slot at offset 80. The function reserves 32 stack
 bytes and saves ra/s0/s1. Decoder certificates connect every emitted word to the official Sail AST.
-These input and arithmetic facts are foundations; the complete execution/security proof is being
-implemented according to `docs/asm-ffi/OTP-PLAN.md`.
+The complete execution/security proof is exported by `MetrologyAsm.Examples.OTP`. Its
+`Security.lean` proves total termination, the exact `1/256` ciphertext law and equality of returned
+distributions for any two valid messages. See `docs/asm-ffi/OTP-PLAN.md` for the full proof chain.

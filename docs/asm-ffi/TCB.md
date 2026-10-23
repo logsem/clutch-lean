@@ -1,5 +1,33 @@
 # WS10 / M4: statement dependency audit
 
+## Completed compiled OTP
+
+The one-byte OTP additionally has complete audits for its actual finite execution, total
+termination, exact uniform output law, singleton ciphertext probabilities and perfect secrecy.
+Its closed game allocates a private pad and invokes the compiled Sail-backed source with the real
+ProbLang randombytes lambda. `wp_otpGame_coupled` separately proves the guarded zero-cost coupling
+under the same explicit FFI kernel. The execution claims follow a direct finite full-mass
+calculation and `limExecWith_term`; no generic FFI WP adequacy theorem is assumed.
+
+All twenty-six final/helper/evaluator/coupling closures contain exactly
+`[propext, Classical.choice, Quot.sound]`; see `audit/OTP-final-axioms.txt`. The complete root build
+passes 7169 jobs; see `audit/OTP-final-build.txt`. All five final statement receipts are complete,
+with no unavailable bodies or missing owned source ranges. Their source hashes and all historical
+receipt source hashes match the current worktree. Counts follow the same statement/non-proof-body
+policy described below; they are not proof LOC or a replacement for checking the proof closures.
+
+The final statements are in `MetrologyAsm.Examples.OTP.Security` (namespace `MetrologyAsm.OTP`),
+with the finite theorem in `MetrologyAsm.Examples.OTP.Finite`. The JSON receipts are
+`audit/OTP-final-{finite,termination,uniform,exact-law,secrecy}-tcb.json`. The earlier guarded-game
+receipt remains `audit/OTP-game-coupling-tcb.json`.
+
+The secrecy statement compares only returned ciphertexts, with a fresh pad on every execution.
+The final private heap is erased by the value marginal. Compiler correctness and the documented
+extraction/runtime scope remain outside these statements. Keypair/M3 correctness remains open;
+the OTP is a separate completed example.
+
+## Original M1/M2 audit
+
 The M1/M2 sources are integrated on Metrology branch `risc`, imported from sibling checkpoint
 `042e17d`. The receipts in `docs/asm-ffi/audit/` are regenerated against this repository.
 Both are complete: no unavailable owned bodies or unresolved source ranges. Axiom closures are

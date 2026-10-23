@@ -33,7 +33,10 @@ These observations are smoke checks. Universal assembly correctness requires the
 separate plain-Lean specification proof.
 
 The completed proofs are `MetrologyAsm/Examples/Swap/Correctness.lean` and
-`MetrologyAsm/Examples/Callback/Correctness.lean`; the original evaluation is in
+`MetrologyAsm/Examples/Callback/Correctness.lean`, plus the compiled byte OTP's guarded game coupling
+in `MetrologyAsm/Examples/OTP/Game.lean` and exact totality/perfect-secrecy results in
+`MetrologyAsm/Examples/OTP/Security.lean`. The OTP game allocates its private pad and runs the real
+randombytes callback through actual Sail-backed dispatch and replay. The original evaluation is in
 [REPORT.md](REPORT.md). The package migration preserves generated sources, theorem statements and
 proof bodies. `runtime/lean-sail` is the pinned local runtime; `sail-import` holds hashes/configuration.
 
