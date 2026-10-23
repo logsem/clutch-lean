@@ -14,6 +14,8 @@ public import Metrology.TotalEris
 public import Metrology.TotalEris.Examples
 public import Metrology.Test.TacticLemmas
 
+/-! # Metrology -/
+
 @[expose] public section
 
 end

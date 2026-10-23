@@ -197,7 +197,6 @@ theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (
     simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
     rel_pures <;> rw [hR] <;> rel_values
 
-
 /-! ## The loop, in any lifting -/
 
 /-- The loop refines itself at equal counts, spending `↯b c` per round, given a refinement of one
@@ -235,8 +234,6 @@ theorem rrCount_refines_of (c : B)
     iunfold lrel_bool at Hw
     icases Hw with ⟨%d, %⟨rfl, rfl⟩⟩
     cases d <;> rel_pures <;> rel_values
-
-
 
 /-! ## Adequacy, in any lifting -/
 

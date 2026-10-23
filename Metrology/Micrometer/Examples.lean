@@ -24,7 +24,8 @@ Start with `RR.Basic`, one proof in any lifting. Lifting-only examples: `Couplin
 
 By divergence (`RR` is `RandomizedResponse`):
 * equality (any lifting): `OTP`, `ContinuousOTP`, `Presample` (one direction)
-* total variation: `SkipZero`, `Retry`, `AbsorbingExit`, `Switching`
+* total variation: `SkipZero`, `Retry`, `AbsorbingExit`, `Switching` (specs in `SwitchingListMap`,
+  `SwitchingPRP`)
 * pure DP: `RR.Dp`, `PublicChoice`, `NoisyCount`, `ContextualDp`
 * approximate DP: `LeakyRR`
 * Rényi at one order: `RR.Renyi`, `RR.Adaptive`, `Couplings.Examples.AdaptiveRenyi`
