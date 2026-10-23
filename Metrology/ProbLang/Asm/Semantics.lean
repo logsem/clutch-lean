@@ -99,13 +99,18 @@ theorem canonicalize_eq_self {tree : Interaction V} (h : M.Canonical c entryArgs
     · simpa only [ite_eq_left hr] using ih r heap' ((h r heap').1 hr)
     · simpa only [ite_eq_right hr] using ((h r heap').2 hr).symm
 
-/-- Every execution follows the tree and its representable callback continuations. -/
-def Follows (ι : Placement) (t : M.Mach) : Interaction V → Prop
-  | .ret value heap => M.runs ι c t (fun t' => M.ExitCompat ι c entryArgs F t t' (.ret value heap))
+/-- Every phase follows the tree while retaining the original call-entry frame. -/
+def FollowsFrom (origin : M.Mach) (ι : Placement) (t : M.Mach) : Interaction V → Prop
+  | .ret value heap =>
+    M.runs ι c t (fun t' => M.ExitCompat ι c entryArgs F origin t' (.ret value heap))
   | .call name args heap next => M.runs ι c t (fun t' =>
-      M.ExitCompat ι c entryArgs F t t' (.call name args heap) ∧
+      M.ExitCompat ι c entryArgs F origin t' (.call name args heap) ∧
       ∀ r h, M.ResponseOK c entryArgs F name r h →
-        ∀ t'', M.Resume ι c entryArgs F t' r h t'' → Follows ι t'' (next r h))
+        ∀ t'', M.Resume ι c entryArgs F t' r h t'' → FollowsFrom origin ι t'' (next r h))
+
+/-- A complete foreign call follows the tree relative to its own entry state. -/
+def Follows (ι : Placement) (t : M.Mach) (tree : Interaction V) : Prop :=
+  M.FollowsFrom c entryArgs F t ι t tree
 
 /-- A plain machine specification quantified over every compatible placement and state. -/
 def Spec (heap : LocHeap V) (tree : Interaction V) : Prop :=
@@ -174,10 +179,11 @@ variable {M : AsmSemantics C V} (law : LawfulAsmSemantics M) {c : C}
 
 include law
 
-/-- Two canonical trees followed from one machine state are equal. -/
-theorem followed_unique {ι : Placement} {t : M.Mach} {T U : Interaction V}
+/-- Two canonical trees followed with one original frame and current state are equal. -/
+theorem followedFrom_unique {ι : Placement} {origin t : M.Mach} {T U : Interaction V}
     (hT : M.Canonical c entryArgs F T) (hU : M.Canonical c entryArgs F U)
-    (fT : M.Follows c entryArgs F ι t T) (fU : M.Follows c entryArgs F ι t U) : T = U := by
+    (fT : M.FollowsFrom c entryArgs F origin ι t T)
+    (fU : M.FollowsFrom c entryArgs F origin ι t U) : T = U := by
   induction T generalizing t U with
   | ret value heap =>
     cases U with
@@ -206,6 +212,12 @@ theorem followed_unique {ι : Placement} {t : M.Mach} {T U : Interaction V}
       · obtain ⟨t'', ht''⟩ := law.resume_nonempty _ _ _ _ _ _ _ _ _ _ _ hs.1 hr
         exact ih r h ((hT r h).1 hr) ((hU r h).1 hr) (hs.2 r h hr t'' ht'') (hs'.2 r h hr t'' ht'')
       · exact ((hT r h).2 hr).trans ((hU r h).2 hr).symm
+
+/-- Two canonical trees followed from one machine state are equal. -/
+theorem followed_unique {ι : Placement} {t : M.Mach} {T U : Interaction V}
+    (hT : M.Canonical c entryArgs F T) (hU : M.Canonical c entryArgs F U)
+    (fT : M.Follows c entryArgs F ι t T) (fU : M.Follows c entryArgs F ι t U) : T = U :=
+  followedFrom_unique law hT hU fT fU
 
 /-- A nonvacuous canonical machine specification determines the evaluator's result. -/
 theorem eval_eq_some {heap : LocHeap V} {T : Interaction V}

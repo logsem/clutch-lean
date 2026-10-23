@@ -109,4 +109,29 @@ theorem reject_duplicate_imports :
 #print axioms echo_eval
 #tcb echo_eval
 
+/-- The fixture pauses with an eight-byte frame and returns after restoring sixteen. -/
+def frameStop (current : Nat) : Stop Unit :=
+  if current = 8 then .call "frame" [] ∅ else .ret () ∅
+
+/-- A two-phase fixture requires its final counter to match the original entry counter. -/
+def frameMachine : AsmSemantics Unit Unit where
+  Mach := Nat
+  runs := fun _ _ current Q => Q (if current = 16 then 8 else 16)
+  Compat := fun _ _ _ _ current => current = 16
+  ExitCompat := fun _ _ _ _ origin current stop =>
+    stop = frameStop current ∧ if current = 8 then origin = 16 else current = origin
+  Resume := fun _ _ _ _ _ _ _ current => current = 8
+  ResponseOK := fun _ _ _ _ _ _ => True
+  invalidResult := ()
+
+/-- The frame fixture invokes one callback before its unit return. -/
+def frameTree : Interaction Unit := .call "frame" [] ∅ fun _ _ => .ret () ∅
+
+/-- Callback resumption retains the original frame anchor through the final return. -/
+theorem frame_follows (ι : Placement) : frameMachine.Follows () [] ∅ ι (16 : Nat) frameTree := by
+  refine ⟨⟨rfl, rfl⟩, ?_⟩
+  intro r heap _ current hcurrent
+  subst current
+  exact ⟨rfl, rfl⟩
+
 end ProbLang.Asm.Test
