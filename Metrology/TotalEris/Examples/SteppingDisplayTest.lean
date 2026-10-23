@@ -30,7 +30,7 @@ elab "show_goal_render" : tactic => do
 
 set_option pp.unicode.fun true
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
 variable (E : CoPset) (Φ : Val rT → IProp GF)
@@ -242,9 +242,10 @@ def randLoop : Exp rT := pl% rec f n := if rand(#2, #()) = #0 then n else f (n +
 
 /--
 info:
-⊢ tglWp E pl(if rand(#2, #()) = #0 then #0 else (rec f n := if rand(#2, #()) = #0 then n else f (n + #1)) (#0 + #1)) Φ
+⊢ tglWp E pl(if rand(#2, #()) = #0 then #0 else
+  (rec f n := if rand(#2, #()) = #0 then n else f (n + #1)) (#0 + #1)) Φ
 -/
-#guard_msgs (info) in
+#guard_msgs (info, whitespace := lax) in
 example : ⊢ tglWp E pl(&randLoop #0) Φ := by
   twp_pures; show_goal_render; exact hstop _
 
@@ -349,9 +350,10 @@ example : ⊢ tglWp E pl(urand + #1) Φ := by
 
 /--
 info:
-⊢ tglWp E pl(if rand(#2, #()) = #0 then #0 else (rec geo n := if rand(#2, #()) = #0 then #0 else geo n + #1) #() + #1) Φ
+⊢ tglWp E pl(if rand(#2, #()) = #0 then #0 else
+  (rec geo n := if rand(#2, #()) = #0 then #0 else geo n + #1) #() + #1) Φ
 -/
-#guard_msgs (info) in
+#guard_msgs (info, whitespace := lax) in
 example : ⊢ tglWp E (Exp.app Examples.geometric (.lit .unit)) Φ := by
   twp_pures; show_goal_render; exact hstop _
 

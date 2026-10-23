@@ -19,7 +19,7 @@ open scoped ENNReal AppGS
 namespace ProbLang
 namespace LiveEris
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
 
 /-- The credit assigned to the outcome of `rand z`: `H n` on the integer `n` in range, else `0`. -/
 def randCredit (z : Int) (H : ℕ → ℝ≥0∞) (ρ : Cfg rT) : ℝ≥0∞ :=
@@ -27,20 +27,22 @@ def randCredit (z : Int) (H : ℕ → ℝ≥0∞) (ρ : Cfg rT) : ℝ≥0∞ :=
   | .lit (.int n) => if 0 ≤ n ∧ n < z then H n.toNat else 0
   | _ => 0
 
-theorem randCredit_measurable (z : Int) (H : ℕ → ℝ≥0∞) : Measurable (randCredit (rT := rT) z H) :=
-  (measurable_litInt_elim _).comp Cfg.measurable_expr
-
-omit [LawfulProbLangℝ rT] in
 theorem randCredit_int {z n : Int} {H : ℕ → ℝ≥0∞} {σ : State rT} (hn : 0 ≤ n ∧ n < z) :
     randCredit z H (⟨pl(#n), σ⟩ : Cfg rT) = H n.toNat := by
   simp [randCredit, hn]
 
-omit [LawfulProbLangℝ rT] in
 theorem randCredit_le_one {z : Int} {H : ℕ → ℝ≥0∞} (hH : ∀ n, H n ≤ 1) (ρ : Cfg rT) :
     randCredit z H ρ ≤ 1 := by
   unfold randCredit; split
   · split <;> first | exact hH _ | exact zero_le
   · exact zero_le
+
+variable [MeasurableSpace rT]
+
+theorem randCredit_measurable (z : Int) (H : ℕ → ℝ≥0∞) : Measurable (randCredit (rT := rT) z H) :=
+  (measurable_litInt_elim _).comp Cfg.measurable_expr
+
+variable [LawfulProbLangℝ rT]
 
 theorem rand_headReducible {z : Int} (Hz : 0 < z) (σ : State rT) :
     HeadReducible (pl(rand(#z, #())) : Exp rT) σ :=

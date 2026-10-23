@@ -89,7 +89,7 @@ open Classical in
 
 end presample
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {α : Loc} {N : Int}
 
 /-- The presample support is a countable set of tape-updated states, hence measurable. -/

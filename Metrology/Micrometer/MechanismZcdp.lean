@@ -36,7 +36,7 @@ namespace ProbLang
 open Iris Iris.BI GradedLifting ProbabilityTheory GradedDivergence Real
 open scoped ENNReal NNReal
 
-variable {rT : Type} [LawfulProbLangℝ rT] {X : Type}
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {X : Type}
   [MeasurableSpace X] (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
   (p : X → Exp rT) (σ : State rT) {hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT)}
   [IsMarkovKernel (progMech p σ hp)] {adj : Adjacency X} (ε : ℝ≥0)

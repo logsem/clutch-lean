@@ -26,7 +26,7 @@ open Meta Elab Tactic Qq Iris Iris.ProofMode ErisWpGS
 /-! ## Context-lifted pure step -/
 
 /-- A pure step under an evaluation context `K`; the lemma behind `twp_pure`. -/
-public theorem ErisWpGS.twp_pure_step_ctx {rT : Type _} [LawfulProbLangℝ rT]
+public theorem ErisWpGS.twp_pure_step_ctx {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
     {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF] (K : Ectx rT) (φ : Prop)
     {n : ℕ} {e₁ e₂ : Exp rT} [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
     tglWp E (K.fill e₂) Φ ⊢ tglWp E (K.fill e₁) Φ := by
@@ -42,7 +42,8 @@ meta structure TglWpGoal where
   /-- The type of the probabilistic language. -/
   {α : Q(Type)}
   /-- The `LawfulProbLangℝ` instance on `α`. -/
-  instPL : Q(LawfulProbLangℝ $α)
+  instMS : Q(MeasurableSpace $α)
+  instPL : Q(@LawfulProbLangℝ $α $instMS)
   /-- The global functors. -/
   {GF : Q(BundledGFunctors.{0, 0, 0})}
   /-- The `ErisWpGS` instance for `GF`. -/
@@ -83,21 +84,22 @@ meta def runTacticTglWp {β : Type} (k : MVarId → TglWpGoal → ProofModeM β)
     unless goalE.getAppFn.consumeMData.isConstOf ``ErisWpGS.tglWp do
       throwError "the goal {goal} must be a `tglWp`"
     let args := goalE.getAppArgs
-    unless args.size == 7 do
+    unless args.size == 8 do
       throwError "unexpected `tglWp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
-    have instPL : Q(LawfulProbLangℝ $α) := args[1]!
-    have instWp : Q(ErisWpGS (rT := $α) $GF) := args[3]!
-    have E : Q(CoPset) := args[4]!
-    have e : Q(Exp $α) := args[5]!
-    have Φ : Q(Val $α → IProp $GF) := args[6]!
-    k mvar { instPL, instWp, hyps, E, e, Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
+    have instMS : Q(MeasurableSpace $α) := args[1]!
+    have instPL : Q(@LawfulProbLangℝ $α $instMS) := args[2]!
+    have instWp : Q(ErisWpGS (rT := $α) $GF) := args[4]!
+    have E : Q(CoPset) := args[5]!
+    have e : Q(Exp $α) := args[6]!
+    have Φ : Q(Val $α → IProp $GF) := args[7]!
+    k mvar { instMS, instPL, instWp, hyps, E, e, Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
 /-! ## `twp_bind` -/
 
 /-- `twp_bind e` rebases `tglWp E (K.fill e) Φ` to `tglWp E e (…)`, finding `K`. -/
 elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
-  runTacticTglWp fun mvar { α, GF, instPL, instWp, hyps, E, e, Φ, .. } => do
+  runTacticTglWp fun mvar { α, GF, instMS, instPL, instWp, hyps, E, e, Φ, .. } => do
     let focus ← elabTermEnsuringTypeQ focus q(Exp $α)
     let some res ← findECtx e (fun e => do guard (← isDefEq e focus))
       | throwTacticEx `twp_bind mvar
@@ -108,12 +110,12 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     have e' : Q(Exp $α) := focus
     let Φc : Q(Val $α → IProp $GF) ← withLocalDeclDQ `v q(Val $α) fun v => do
         let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
-        mkLambdaFVars #[v] q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $body $Φ)
-    let pf ← addBIGoal hyps q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $e' $Φc)
+        mkLambdaFVars #[v] q(@ErisWpGS.tglWp $α $instMS $instPL $GF $instWp $E $body $Φ)
+    let pf ← addBIGoal hyps q(@ErisWpGS.tglWp $α $instMS $instPL $GF $instWp $E $e' $Φc)
     -- `mkAppByName`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
     -- `bi_least_fixpoint` (heartbeat blow-up).
     let bindPf ← mkAppByName ``ErisWpGS.tglWp_bind
-      [(`rT, α), (`GF, GF), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instPL, instWp]
+      [(`rT, α), (`GF, GF), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instMS, instPL, instWp]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -122,9 +124,9 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
 /-- `twp_pure_core [e]` takes one `PureExec` step, at `e` if given, and leaves the `PureExec`
 side condition as a goal unless `is_value` closes it. -/
 elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
-  runTacticTglWp fun mvar { α, GF, instPL, instWp, hyps, E, e, Φ, .. } => do
+  runTacticTglWp fun mvar { α, GF, instMS, instPL, instWp, hyps, E, e, Φ, .. } => do
     let focus? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
-    let some res ← findPureStep instPL e focus?
+    let some res ← findPureStep instMS instPL e focus?
       | throwTacticEx `twp_pure mvar m!"no pure step applies"
     have K : Q(Ectx $α) := res.K
     let step := res.result
@@ -136,12 +138,12 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     -- An `Ectx.fill` redex would hide the next redex from `twp_pures`.
     let inner : Q(Exp $α) ← fillQ K e₂
     let pf ← addBIGoal hyps
-      q(@ErisWpGS.tglWp $α $instPL $GF $instWp $E $inner $Φ)
+      q(@ErisWpGS.tglWp $α $instMS $instPL $GF $instWp $E $inner $Φ)
     let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
     (← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!).forM addMVarGoal
     let stepPf ← mkAppByName ``ErisWpGS.twp_pure_step_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, φ), (`n, n), (`e₁, e₁), (`e₂, e₂), (`Hφ, HΦ),
-        (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
+        (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -149,7 +151,7 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
 
 /-- `twp_value` reduces `tglWp E e Φ` to `Φ v` when `e.toVal? = some v`. -/
 elab "twp_value" : tactic =>
-  runTacticTglWp fun mvar { α, GF, instPL, instWp, hyps, E, e, Φ, .. } => do
+  runTacticTglWp fun mvar { α, GF, instMS, instPL, instWp, hyps, E, e, Φ, .. } => do
     let tv : Q(Option (Val $α)) ← match ← Exp.closedFunVal? α e with
       | some (some v) => have v : Q(Val $α) := v; pure q(some $v)
       | some none => pure q(none)
@@ -174,7 +176,8 @@ elab "twp_value" : tactic =>
       else ``ErisWpGS.tglWp_value_fupd_of_toVal
     let pf ← addBIGoal hyps target
     let valPf ← mkAppByName valLemma
-      [(`rT, α), (`GF, GF), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)] [instPL, instWp]
+      [(`rT, α), (`GF, GF), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
+      [instMS, instPL, instWp]
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/

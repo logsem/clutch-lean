@@ -18,7 +18,7 @@ open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace TotalEris
 namespace ErisWpGS

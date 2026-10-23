@@ -42,13 +42,13 @@ theorem some_excl_inc_excl_exp_eq {e1 e2 : Exp rT}
   · exact h
   · simpa using inc_iff.mp h
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- Ghost state for the spec-side program: an exclusive expression. -/
-abbrev SpecProg (α : Type _) [LawfulProbLangℝ α] :=
+abbrev SpecProg (α : Type _) [MeasurableSpace α] [LawfulProbLangℝ α] :=
   Auth (Option (Excl (Exp α)))
 /-- Heap camera with values in `Agree`. -/
-abbrev SpecHeap (rT : Type _) [LawfulProbLangℝ rT] :=
+abbrev SpecHeap (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT] :=
   HeapView Loc (Agree (Val rT)) LocHeap
 /-- Tape camera with tapes in `Agree`. -/
 abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
@@ -61,7 +61,8 @@ def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
 /-! ## Ghost-state classes -/
 
 /-- Ghost-state resources needed for the spec side. -/
-class SpecPreGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+class SpecPreGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) where
   /-- Ghost cell for the spec program. -/
   prog : ElemG GF (constOF (SpecProg rT))
   /-- Ghost cell for the spec heap. -/
@@ -72,7 +73,8 @@ class SpecPreGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFu
 attribute [reducible, instance] SpecPreGS.prog SpecPreGS.heap SpecPreGS.tapes
 
 /-- `SpecPreGS` together with the ghost names. -/
-class SpecGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors)
+class SpecGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors)
     extends SpecPreGS rT GF where
   /-- Ghost name of the spec program. -/
   γprog : GName

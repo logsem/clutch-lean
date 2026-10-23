@@ -27,7 +27,19 @@ open scoped AppGS ENNReal
 namespace ProbLang
 namespace LiveEris
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT]
+
+open Classical in
+theorem measurable_counter {D : State rT → Prop} (hD : MeasurableSet {σ : State rT | D σ})
+    {F : ℕ → Cfg rT → ℝ≥0∞} (hF : ∀ m, Measurable (F m)) (m : ℕ) :
+    Measurable fun ρ' : Cfg rT => F (if D ρ'.state then m else m + 1) ρ' := by
+  have hfun : (fun ρ' : Cfg rT => F (if D ρ'.state then m else m + 1) ρ') =
+      fun ρ' => if D ρ'.state then F m ρ' else F (m + 1) ρ' := by
+    funext ρ'; split <;> rfl
+  rw [hfun]
+  exact Measurable.ite (hD.preimage Cfg.measurable_state) (hF m) (hF (m + 1))
+
+variable [LawfulProbLangℝ rT]
 
 /-! ## The semantic bound -/
 
@@ -54,16 +66,6 @@ noncomputable def progressBound (D : State rT → Prop) (φ : Val rT → Prop) (
   ⨆ n, progressGood D φ n m ρ
 
 variable {D : State rT → Prop} {φ : Val rT → Prop}
-
-open Classical in
-theorem measurable_counter (hD : MeasurableSet {σ : State rT | D σ}) {F : ℕ → Cfg rT → ℝ≥0∞}
-    (hF : ∀ m, Measurable (F m)) (m : ℕ) :
-    Measurable fun ρ' : Cfg rT => F (if D ρ'.state then m else m + 1) ρ' := by
-  have hfun : (fun ρ' : Cfg rT => F (if D ρ'.state then m else m + 1) ρ') =
-      fun ρ' => if D ρ'.state then F m ρ' else F (m + 1) ρ' := by
-    funext ρ'; split <;> rfl
-  rw [hfun]
-  exact Measurable.ite (hD.preimage Cfg.measurable_state) (hF m) (hF (m + 1))
 
 open Classical in
 theorem progressGood_measurable (hD : MeasurableSet {σ : State rT | D σ})

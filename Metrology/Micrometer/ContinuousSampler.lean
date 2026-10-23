@@ -23,19 +23,22 @@ namespace ProbLang
 open LawfulProbLangℝ
 open Cfg Exp BaseLit BIFUpdate LawfulSet Ectx
 
-variable {rT : Type} [LawfulProbLangℝ rT]
-variable {B : Type} {L : GradedLifting.{0} B}
-
-section Steps
-variable (σ : State rT)
+variable {rT : Type} [MeasurableSpace rT]
 
 /-! ## The real-literal injection
 
 `urand` steps to `Cfg.uniformReal σ`, the pushforward of `unifUnit` along `r ↦ ⟨#r, σ⟩`. -/
 
 /-- Pairing a real literal with the state `σ` is measurable. -/
-theorem Cfg.measurable_realLit : Measurable (fun r : rT => (⟨pl(#real r), σ⟩ : Cfg rT)) :=
+theorem Cfg.measurable_realLit (σ : State rT) :
+    Measurable (fun r : rT => (⟨pl(#real r), σ⟩ : Cfg rT)) :=
   measurable_iff.mpr ⟨lit.measurable.comp real.measurable, measurable_const⟩
+
+variable [LawfulProbLangℝ rT]
+variable {B : Type} {L : GradedLifting.{0} B}
+
+section Steps
+variable (σ : State rT)
 
 /-- Pairing a real literal with the state `σ` is a measurable embedding. -/
 theorem Cfg.measurableEmbedding_realLit :

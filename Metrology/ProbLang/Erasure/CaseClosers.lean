@@ -12,7 +12,7 @@ open Measurable (of_discrete prodMk)
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 open MeasureTheory MeasureTheory.Measure
 open Cfg State Exp BaseLit

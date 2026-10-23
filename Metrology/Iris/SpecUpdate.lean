@@ -19,7 +19,8 @@ open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure
 namespace ProbLang
 
 /-- The abstract interpretation of a spec configuration. -/
-class SpecUpdateGS (rT : Type _) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+class SpecUpdateGS (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) where
   /-- The proposition interpreting a spec configuration. -/
   specInterp : Cfg rT → IProp GF
 
@@ -29,7 +30,7 @@ section SpecUpdate
 
 /-! ## Definitions -/
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF] [iSpec : SpecUpdateGS rT GF]
 variable {n m : Nat} {E E1 E2 : CoPset} {P Q R : IProp GF}
 local bi IProp GF
@@ -186,7 +187,7 @@ theorem specUpdate_frame_l :
 end SpecUpdate
 
 /-- The default `SpecUpdateGS`, interpreting a configuration by `Cfg.specAuth`. -/
-instance defaultSpecUpdateGS {rT : Type _} [LawfulProbLangℝ rT]
+instance defaultSpecUpdateGS {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
     {GF} [SpecGS rT GF] : SpecUpdateGS rT GF where
   specInterp := Cfg.specAuth
 

@@ -63,11 +63,9 @@ theorem Cfg.advLeftover_apply [_root_.Top B] (f : Int → Int) (σ σ' : State r
   simp only [lit.injEq, BaseLit.int.injEq] at he
   simp only [advLeftover, hex, ↓reduceDIte, ← he]
 
-variable [ProbLang.LawfulProbLangℝ rT]
+variable [MeasurableSpace rT]
 
-/-! ## The uniform measure `unifInt` and its exact bijection coupling -/
-
-section UniformInt
+section
 
 open MeasureTheory
 
@@ -77,6 +75,20 @@ noncomputable def unifInt (z : Int) (hz : 0 < z) : Measure Int :=
 
 instance unifInt.isProbabilityMeasure {hz : 0 < z} : IsProbabilityMeasure (unifInt z hz) :=
   PMF.toMeasure.isProbabilityMeasure _
+
+variable (hz : 0 < z) in
+/-- `Cfg.uniform z σ` is `unifInt z` pushed to integer literals. -/
+theorem Cfg.uniform_eq_map (σ : State rT) :
+    uniform z σ = (unifInt z hz).map fun n => (⟨pl(#int n), σ⟩ : Cfg rT) :=
+  uniform_eq_map_uniformOfFinset hz σ
+
+end
+
+/-! ## The uniform measure `unifInt` and its exact bijection coupling -/
+
+section UniformInt
+
+open MeasureTheory
 
 variable (hz : 0 < z)
 
@@ -130,11 +142,6 @@ theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] 
   rw [unifInt_map_bijOn hz f hdom hbij] at h
   exact h.mono le_rfl fun n m ⟨hm, h0, h1⟩ => ⟨h0, h1, hm.symm⟩
 
-/-- `Cfg.uniform z σ` is `unifInt z` pushed to integer literals. -/
-theorem Cfg.uniform_eq_map (σ : State rT) :
-    uniform z σ = (unifInt z hz).map fun n => (⟨pl(#int n), σ⟩ : Cfg rT) :=
-  uniform_eq_map_uniformOfFinset hz σ
-
 end
 
 /-- A lifting of two uniform integer draws pushes forward to the configurations they step to, under
@@ -150,79 +157,11 @@ theorem Cfg.uniform_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLaw
 
 end UniformInt
 
-/-! ## Steps of `rand` -/
-
-/-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_unit (Hz : 0 < z) (σ : State rT) :
-    primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := by
-  have Hwitness : HeadStepSupport ⟨pl(rand(#z, #())), σ⟩ ⟨pl(#0), σ⟩ := .RandNoTapeS Hz le_rfl Hz
-  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
-    (of_headStepSupport Hwitness))]
-  rfl
-
-/-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
-theorem randUnit_uniform_step (Hz : 0 < z) (σ : State rT) :
-    Discrete.Reducible pl(rand(#z, #())) σ ∧ primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ :=
-  ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
-    primStep_rand_unit Hz σ⟩
-
-variable {σ : State rT}
-
-/-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
-theorem primStep_rand_lbl_eq {l : Loc} {ρ : Cfg rT}
-    (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
-    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ =
-      match σ.tapes[l]? with
-      | none => 0
-      | some ⟨M, ns⟩ =>
-        if M = z then
-          match ns with
-          | [] => uniform z σ
-          | n :: ns => dirac ⟨.lit <| .int n,
-            σ.update_tapes fun t => t.insert l ⟨M, ns⟩⟩
-        else uniform z σ := by
-  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
-    (of_headStepSupport Hwit))]
-  rfl
+/-! ## Configuration couplings of `rand` draws along a bijection -/
 
 section
 variable (Hz : 0 < z)
 include Hz
-
-variable {M : Int}
-
-/-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_lbl_wrong (HneM : z ≠ M) (σ : State rT)
-    (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
-    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
-  rw [primStep_rand_lbl_eq (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl), Hlk]
-  simp only [ite_eq_right (Ne.symm HneM)]
-
-/-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_lbl_empty (σ : State rT) (l : Loc)
-    (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
-  rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
-  simp only [↓reduceIte]
-
-variable {l : Loc}
-
-/-- `primStep_rand_lbl_empty` with discrete reducibility. -/
-theorem randLbl_empty_uniform_step {σ : State rT}
-    (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
-    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧ primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
-  ⟨.of_headStepSupport (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl) (by is_lc),
-    primStep_rand_lbl_empty Hz σ l Hlk⟩
-
-/-- `primStep_rand_lbl_wrong` with discrete reducibility. -/
-theorem randLbl_wrong_uniform_step (HneM : z ≠ M) {σ : State rT}
-    {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }} (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
-    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧ primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
-  ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
-    primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
-
-/-! ## Configuration couplings of `rand` draws along a bijection -/
 
 variable (σ σ' : State rT) (f : Int → Int)
 
@@ -398,6 +337,82 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill (HzR : 0 < zR)
   refine (uniform_rel_fill (HzR.trans_le Hle) HzR σ σ' K h ?_).addCoupl
   rintro _ m ⟨h0, h1, hm⟩
   exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
+
+/-! ## Steps of `rand` -/
+
+variable [ProbLang.LawfulProbLangℝ rT]
+
+/-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_unit (Hz : 0 < z) (σ : State rT) :
+    primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := by
+  have Hwitness : HeadStepSupport ⟨pl(rand(#z, #())), σ⟩ ⟨pl(#0), σ⟩ := .RandNoTapeS Hz le_rfl Hz
+  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
+    (of_headStepSupport Hwitness))]
+  rfl
+
+/-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
+theorem randUnit_uniform_step (Hz : 0 < z) (σ : State rT) :
+    Discrete.Reducible pl(rand(#z, #())) σ ∧ primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ :=
+  ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
+    primStep_rand_unit Hz σ⟩
+
+variable {σ : State rT}
+
+/-- The step of `rand z` on a tape label, by the tape's state, given a head-step witness. -/
+theorem primStep_rand_lbl_eq {l : Loc} {ρ : Cfg rT}
+    (Hwit : HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ρ) :
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ =
+      match σ.tapes[l]? with
+      | none => 0
+      | some ⟨M, ns⟩ =>
+        if M = z then
+          match ns with
+          | [] => uniform z σ
+          | n :: ns => dirac ⟨.lit <| .int n,
+            σ.update_tapes fun t => t.insert l ⟨M, ns⟩⟩
+        else uniform z σ := by
+  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
+    (of_headStepSupport Hwit))]
+  rfl
+
+section
+variable (Hz : 0 < z)
+include Hz
+
+variable {M : Int}
+
+/-- `rand z` on a tape of another bound `M` steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_lbl_wrong (HneM : z ≠ M) (σ : State rT)
+    (l : Loc) (fs : List { z' : Int // 0 ≤ z' ∧ z' < M })
+    (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
+  rw [primStep_rand_lbl_eq (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl), Hlk]
+  simp only [ite_eq_right (Ne.symm HneM)]
+
+/-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
+theorem primStep_rand_lbl_empty (σ : State rT) (l : Loc)
+    (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
+    primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
+  rw [primStep_rand_lbl_eq (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl), Hlk]
+  simp only [↓reduceIte]
+
+variable {l : Loc}
+
+/-- `primStep_rand_lbl_empty` with discrete reducibility. -/
+theorem randLbl_empty_uniform_step {σ : State rT}
+    (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
+    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧ primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
+  ⟨.of_headStepSupport (.RandTapeEmptyS Hz Hlk rfl le_rfl Hz rfl) (by is_lc),
+    primStep_rand_lbl_empty Hz σ l Hlk⟩
+
+/-- `primStep_rand_lbl_wrong` with discrete reducibility. -/
+theorem randLbl_wrong_uniform_step (HneM : z ≠ M) {σ : State rT}
+    {fs : List { z' : Int // 0 ≤ z' ∧ z' < M }} (Hlk : σ.tapes[l]? = some ⟨M, fs⟩) :
+    Discrete.Reducible pl(rand(#z, #lbl l)) σ ∧ primStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ :=
+  ⟨.of_headStepSupport (.RandTapeOtherS Hz Hlk HneM le_rfl Hz rfl) (by is_lc),
+    primStep_rand_lbl_wrong Hz HneM σ l fs Hlk⟩
+
+end
 
 /-! ## Couplings of steps under an evaluation context -/
 

@@ -306,7 +306,7 @@ end SimpleLRels
 def logN : Namespace := nroot.@ (1 : Pos)
 
 /-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
-class MicrometerRGS (rT : Type) [LawfulProbLangℝ rT]
+class MicrometerRGS (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   micrometerGS : MicrometerGS rT hlc GF
   naInvG : NaInvG GF
@@ -318,7 +318,8 @@ attribute [reducible, instance] MicrometerRGS.micrometerGS naInvG
 
 section Logic
 open NonAtomicInvariant (own inv)
-variable [LawfulProbLangℝ rT] {hlc : HasLC} [MicrometerRGS rT hlc GF] {B : Type}
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} [MicrometerRGS rT hlc GF]
+    {B : Type}
   [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
 
 /-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/

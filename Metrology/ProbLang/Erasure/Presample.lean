@@ -11,7 +11,7 @@ public import Metrology.ProbLang.Metatheory
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT]
 
 open MeasureTheory MeasureTheory.Measure
 open Set
@@ -27,16 +27,18 @@ variable {N : Int} (hN : 0 < N)
 noncomputable def tapeIdxOf (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
   if hz : 0 ≤ n ∧ n < N then ⟨n, hz⟩ else ⟨0, ⟨_root_.le_refl _, hN⟩⟩
 
-/-- On `[0, N)`, `tapeIdxOf` is the identity. -/
-@[simp] theorem tapeIdxOf_val {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
-    (tapeIdxOf hN n).val = n := by
-  simp [tapeIdxOf, h0, hn]
-
 /-- The uniform distribution on `[0, N)` as a subtype; `0` when `N ≤ 0`. -/
 noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ z < N } :=
   if hN : 0 < N then
     (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN)
   else 0
+
+variable [LawfulProbLangℝ rT]
+
+/-- On `[0, N)`, `tapeIdxOf` is the identity. -/
+@[simp] theorem tapeIdxOf_val {n : Int} (h0 : 0 ≤ n) (hn : n < N) :
+    (tapeIdxOf hN n).val = n := by
+  simp [tapeIdxOf, h0, hn]
 
 /-- The uniform index distribution is the pushforward of the uniform distribution on `[0, N)`. -/
 theorem tapeIndexUniform_eq_map :
@@ -85,6 +87,15 @@ theorem tapeIndexUniform_map_bijOn (f : Int → Int)
 
 end
 
+/-- The uniform index distribution is s-finite. -/
+instance tapeIndexUniform.instSFinite {N : Int} : SFinite (tapeIndexUniform N) := by
+  unfold tapeIndexUniform
+  split <;> infer_instance
+
+section
+
+variable [LawfulProbLangℝ rT]
+
 /-- The uniform index distribution has total mass at most one. -/
 theorem tapeIndexUniform_univ_le_one {N : Int} :
     (tapeIndexUniform N) univ ≤ 1 := by
@@ -92,15 +103,12 @@ theorem tapeIndexUniform_univ_le_one {N : Int} :
   · exact (tapeIndexUniform_univ_eq_one hN).le
   · simp [tapeIndexUniform, hN]
 
-/-- The uniform index distribution is s-finite. -/
-instance tapeIndexUniform.instSFinite {N : Int} : SFinite (tapeIndexUniform N) := by
-  unfold tapeIndexUniform
-  split <;> infer_instance
-
 /-- The uniform index distribution is a sub-probability measure. -/
 instance tapeIndexUniform.isSubProbabilityMeasure (N : Int) :
     IsSubProbabilityMeasure (tapeIndexUniform N) :=
   ⟨tapeIndexUniform_univ_le_one⟩
+
+end
 
 /-! ## Presampling a tape -/
 
@@ -224,6 +232,10 @@ theorem tapePresample_bind_dirac_measurable
   exact measurable_map_uncurry hg hk
 
 /-! ## Tape persistence through a prim step -/
+
+variable [inst : LawfulProbLangℝ rT]
+
+include inst
 
 /-- Every possible successor of a prim step keeps tape `α`, with the same bound. -/
 theorem primStep_tape_persists_support

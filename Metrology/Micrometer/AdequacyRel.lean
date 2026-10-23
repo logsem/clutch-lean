@@ -31,7 +31,7 @@ open Exp (ofVal)
 
 /-- A functor list `GF` with slots for every camera that refinement adequacy allocates, including a
 budget camera over `B`. -/
-class RefinesPreGS (rT : outParam Type) [LawfulProbLangℝ rT]
+class RefinesPreGS (rT : outParam Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
   [app : AppPreGS rT GF]
   [spec : SpecPreGS rT GF]
@@ -49,7 +49,8 @@ end RefinesPreGS
 
 section Spec
 
-variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [SpecGS rT GF]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+    [SpecGS rT GF]
 local bi IProp GF
 
 /-- Spec ownership of `e` is that of `e` in the empty context. -/
@@ -77,7 +78,7 @@ end Spec
 
 section Coupling
 
-variable {rT : Type} [LawfulProbLangℝ rT] {B : Type}
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type}
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed] {GF : BundledGFunctors} [RefinesPreGS rT B GF]
@@ -143,7 +144,7 @@ The side condition of `approximates_div` and of the examples' adequacy. -/
 
 section EqRelations
 
-variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 
 /-- `lrel_int` relates only equal values. -/
@@ -174,7 +175,7 @@ end EqRelations
 
 section Support
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- A value runs to itself. -/
 theorem limExecV_of_isVal {e : Exp rT} (σ : State rT) (hv : IsVal e) :
@@ -187,7 +188,7 @@ end Support
 
 section MicrometerFunctor
 
-variable (rT : Type) [LawfulProbLangℝ rT]
+variable (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable (B : Type) [AddCommMonoid B]
 
 /-- A concrete `RefinesPreGS` functor list, with the budget camera over `B` in slot `7`. -/

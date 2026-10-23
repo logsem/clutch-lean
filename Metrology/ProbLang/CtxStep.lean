@@ -42,6 +42,15 @@ theorem Ectx.fillCfg_injective : Function.Injective K.fillCfg := by
   rintro ⟨e1, σ1⟩ ⟨e2, σ2⟩ h
   simpa [mk.injEq, fill_injective K |>.eq_iff] using h
 
+variable [MeasurableSpace rT]
+
+/-- `K.fillCfg` is measurable. -/
+@[fun_prop]
+theorem Ectx.fillCfg.measurable : Measurable K.fillCfg := by
+  rw [measurable_iff]
+  exact ⟨Exp.Ectx_fill.measurable.comp (measurable_const.prodMk measurable_expr),
+    measurable_state⟩
+
 variable [LawfulProbLangℝ rT] {e e' e1 e2 : Exp rT} {σ σ' σ1 σ2 : State rT}
 
 /-! ## The primitive step -/
@@ -72,13 +81,6 @@ theorem Discrete.Reducible.toReducible
   simp at hρ
 
 /-! ## Measurability of `fillCfg` and `primStep` -/
-
-/-- `K.fillCfg` is measurable. -/
-@[fun_prop]
-theorem Ectx.fillCfg.measurable : Measurable K.fillCfg := by
-  rw [measurable_iff]
-  exact ⟨Exp.Ectx_fill.measurable.comp (measurable_const.prodMk measurable_expr),
-    measurable_state⟩
 
 /-- `Ki.fillItem` is a measurable embedding. -/
 theorem EctxItem.fillItem.measurableEmbedding (Ki : EctxItem rT) :

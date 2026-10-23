@@ -51,7 +51,8 @@ theorem open_close_subst_lc_at (x y : Var) (hKe_lc : Ke.IsLocallyClosed) :
 end Syntax
 
 section CtxLemmas
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+    [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
 

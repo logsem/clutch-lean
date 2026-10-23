@@ -100,12 +100,12 @@ theorem env_ltyped2_allClosed :
     env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ :=
   sep_elim_right.trans sep_elim_left
 
-theorem env_ltyped2_fst_allClosed [LawfulProbLangℝ rT] :
+theorem env_ltyped2_fst_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.fst) fun p hp => (hc p hp).1
 
-theorem env_ltyped2_snd_allClosed [LawfulProbLangℝ rT] :
+theorem env_ltyped2_snd_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.snd) fun p hp => (hc p hp).2
@@ -229,7 +229,8 @@ end env_typed
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+    [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
 

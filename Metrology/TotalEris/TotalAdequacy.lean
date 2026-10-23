@@ -22,7 +22,7 @@ open ENNReal
 namespace ProbLang
 namespace TotalEris
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT]
 variable {GF : BundledGFunctors}
 variable {φ : Val rT → Prop} {ε ε₁ : ENNReal} {σ : State rT} {e : Exp rT} {v : Val rT}
 variable {μ : MeasureTheory.Measure (Cfg rT)}
@@ -31,19 +31,6 @@ local bi IProp GF
 /-- Graded total lift: `μ` puts mass at least `1 - ε` on values satisfying `φ`. -/
 def Tgl (μ : MeasureTheory.Measure (Cfg rT)) (φ : Val rT → Prop) (ε : ENNReal) : Prop :=
   1 - ε ≤ μ {ρ : Cfg rT | ∃ v : Val rT, ρ.expr = Exp.ofVal v ∧ φ v}
-
-/-- A total good lifting gives a good lifting. -/
-theorem Pgl.of_tgl
-    (hS : MeasurableSet {ρ : Cfg rT | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v})
-    (hμ : μ Set.univ ≤ 1) (h : Tgl μ φ ε) :
-    Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) μ := by
-  set S : Set (Cfg rT) := {ρ | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v}
-  show μ Sᶜ ≤ ε
-  have hS_ne_top : μ S ≠ (⊤ : ENNReal) := ne_top_of_le_ne_top one_ne_top
-    ((MeasureTheory.measure_mono (Set.subset_univ _)).trans hμ)
-  refine (ENNReal.add_le_add_iff_left hS_ne_top).mp ?_
-  rw [MeasureTheory.measure_add_measure_compl hS]
-  exact hμ.trans (tsub_le_iff_right.mp h)
 
 namespace Tgl
 
@@ -84,14 +71,6 @@ theorem of_dirac_val
   rw [tsub_zero]
   exact (MeasureTheory.Measure.dirac_apply_of_mem (show (⟨Exp.ofVal v, σ⟩ : Cfg rT) ∈
       {ρ : Cfg rT | ∃ v', ρ.expr = Exp.ofVal v' ∧ φ v'} from ⟨v, rfl, hφ⟩)).symm.le
-
-/-- The limit execution of a value satisfying `φ` satisfies `Tgl` at `0`. -/
-theorem of_limExec_val
-    (hφ : φ v) :
-    Tgl (limExec (⟨Exp.ofVal v, σ⟩ : Cfg rT)) φ 0 := by
-  show Tgl (limExec (⟨v.1, σ⟩ : Cfg rT)) φ 0
-  rw [limExec_of_isVal v.2]
-  exact of_dirac_val hφ
 
 /-- A `Tgl` bound that holds up to every positive slack holds exactly. -/
 theorem epsilon_limit
@@ -141,6 +120,8 @@ theorem tgl_lift_prob
     _ = 1 - ε₁ - (∫⁻ a, ε₂ a ∂M) := by rw [tsub_tsub]
     _ ≤ ∫⁻ a, k a ∂M := tsub_le_iff_right.mpr h_total
 
+variable [LawfulProbLangℝ rT]
+
 /-- Error bounds for a primitive step and its continuation bound the limit mass below by `1 - ε`. -/
 theorem tgl_prim_step
     {ε₂ : Cfg rT → ENNReal}
@@ -177,6 +158,29 @@ theorem tgl_erasable
     Hpgl Hsum Hcont
 
 end Tgl
+
+/-- A total good lifting gives a good lifting. -/
+theorem Pgl.of_tgl
+    (hS : MeasurableSet {ρ : Cfg rT | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v})
+    (hμ : μ Set.univ ≤ 1) (h : Tgl μ φ ε) :
+    Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) μ := by
+  set S : Set (Cfg rT) := {ρ | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v}
+  show μ Sᶜ ≤ ε
+  have hS_ne_top : μ S ≠ (⊤ : ENNReal) := ne_top_of_le_ne_top one_ne_top
+    ((MeasureTheory.measure_mono (Set.subset_univ _)).trans hμ)
+  refine (ENNReal.add_le_add_iff_left hS_ne_top).mp ?_
+  rw [MeasureTheory.measure_add_measure_compl hS]
+  exact hμ.trans (tsub_le_iff_right.mp h)
+
+variable [LawfulProbLangℝ rT]
+
+/-- The limit execution of a value satisfying `φ` satisfies `Tgl` at `0`. -/
+theorem Tgl.of_limExec_val
+    (hφ : φ v) :
+    Tgl (limExec (⟨Exp.ofVal v, σ⟩ : Cfg rT)) φ 0 := by
+  show Tgl (limExec (⟨v.1, σ⟩ : Cfg rT)) φ 0
+  rw [limExec_of_isVal v.2]
+  exact Tgl.of_dirac_val hφ
 
 open Tgl
 

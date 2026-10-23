@@ -16,7 +16,7 @@ open Std Iris Iris.Std Iris.BI COFE ProbLang MeasureTheory.Measure DetHeadStep E
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Spec stepping rules (the `step_*` family) -/
 

@@ -73,7 +73,7 @@ theorem Cfg.exists_of_drawCostReal_lt_top [Preorder B] [OrderTop B] {σ σ' : St
   by_contra hne
   simp only [drawCostReal, hne, dite_false, lt_self_iff_false] at h
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Liftings of `unifUnit` pushed to configurations -/
 

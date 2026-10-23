@@ -10,10 +10,10 @@ noncomputable section
 # The LiveEris weakest precondition
 
 `lwp Q E e Φ` is a guarded fixpoint around a least fixpoint. Each step either continues inside the
-least fixpoint, or crosses a `▷` at a *checkpoint*. A checkpoint is free when the step makes progress
-(`Q` holds of the pre- and post-step states), and excused when the branch holds a full divergence
-credit. A run that never terminates must cross infinitely many checkpoints, so it either makes
-progress infinitely often or was written off for progress.
+least fixpoint, or crosses a `▷` at a *checkpoint*. A checkpoint is free when the step makes
+progress (`Q` holds of the pre- and post-step states), and excused when the branch holds a full
+divergence credit. A run that never terminates must cross infinitely many checkpoints, so it either
+makes progress infinitely often or was written off for progress.
 -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
@@ -23,15 +23,16 @@ namespace ProbLang
 namespace LiveEris
 namespace LiveWpGS
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [LiveWpGS rT Coord GF]
 
-abbrev WpState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := CoPset × Exp rT
+abbrev WpState (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT] : Type _ := CoPset × Exp rT
 
 instance : COFE (WpState rT) := COFE.ofDiscrete _
 instance : OFE.Discrete (WpState rT) := ⟨id⟩
 
-abbrev WpType (rT : Type _) [LawfulProbLangℝ rT] (GF : BundledGFunctors) : Type _ :=
+abbrev WpType (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) : Type _ :=
   CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
 
 /-- A step from state `σ` to `σ₂`, leaving credits `c`, may cross a `▷`: it makes progress, or the

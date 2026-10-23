@@ -16,7 +16,7 @@ namespace ProbLang
 
 open Iris Iris.BI GradedLifting ProbabilityTheory
 
-variable {rT : Type} [LawfulProbLangℝ rT] {X : Type} [MeasurableSpace X]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {X : Type} [MeasurableSpace X]
 
 /-! ## The mechanism of a program family -/
 

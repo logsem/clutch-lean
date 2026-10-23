@@ -28,7 +28,7 @@ theorem rrCoupling_chi2 : RRCoupling chi2Lifting (.ofReal (4 / 3)) := fun b b' �
   chi2Lifting_rel_iff.2 <|
     rrCoupling_of_renyi (chi2Divergence_iff_renyi.1 <| chi2Divergence_rrOut ·) b b'
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- `k` rounds have χ² divergence at most `(7/3)^k - 1`. -/
 theorem rrCount_chi2 (k : ℕ) (σ : State rT) :

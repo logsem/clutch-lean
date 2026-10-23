@@ -17,7 +17,8 @@ open ProbLang.Option (unwrapM)
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT] {e1 e2 : Exp rT} {n : ℕ} (K : Ectx rT)
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] {e1 e2 : Exp rT} {n : ℕ}
+    (K : Ectx rT)
 
 /-! ## Pure steps -/
 

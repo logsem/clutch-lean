@@ -25,7 +25,7 @@ open Ectx (fill_comp fill_nil)
 open Exp (ofVal toVal?_ofVal)
 open BudgetCredit (weaken split amplifying)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Budget predicates -/
 

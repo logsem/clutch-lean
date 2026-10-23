@@ -25,7 +25,7 @@ open RandomizedResponse (rr_refines budget)
 open ENNReal (ofReal)
 open Real (log)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 section Refines
 

@@ -22,7 +22,8 @@ open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode
 
 section
-variable {rT : Type _} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [LiveWpGS rT Coord GF]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+    [LiveWpGS rT Coord GF]
 
 public theorem LiveWpGS.lwp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {Q : State rT → State rT → Prop} {E : CoPset}
@@ -33,7 +34,8 @@ public theorem LiveWpGS.lwp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e
 
 end
 
-public theorem lwp_pure_step_excused_ctx {rT : Type _} [LawfulProbLangℝ rT] {hlc : HasLC}
+public theorem lwp_pure_step_excused_ctx {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    {hlc : HasLC}
     {GF : BundledGFunctors} [LiveGS rT hlc GF] (K : Ectx rT) (φ : Prop) {n : ℕ}
     {e₁ e₂ : Exp rT} [PureExec φ n e₁ e₂] (Hφ : φ) (hn : 0 < n)
     {Q : State rT → State rT → Prop} {E : CoPset} {Φ : Val rT → IProp GF} :
@@ -201,7 +203,8 @@ where
 meta structure LiveWpGoal where
   {u : Level}
   {α : Q(Type)}
-  instPL : Q(ProbLang.LawfulProbLangℝ $α)
+  instMS : Q(MeasurableSpace $α)
+  instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)
   {GF : Q(BundledGFunctors.{0, 0, 0})}
   instWp : Q(LiveWpGS $α Coord $GF)
   {prop : Q(Type u)}
@@ -229,23 +232,24 @@ meta def runTacticLiveWp {β : Type} (k : MVarId → LiveWpGoal → ProofModeM �
     unless goalE.getAppFn.consumeMData.isConstOf ``ProbLang.LiveEris.LiveWpGS.lwp do
       throwError "the goal {goal} must be a LiveEris `lwp`"
     let args := goalE.getAppArgs
-    unless args.size == 8 do
+    unless args.size == 9 do
       throwError "unexpected `lwp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
-    have instPL : Q(ProbLang.LawfulProbLangℝ $α) := args[1]!
-    have instWp : Q(LiveWpGS $α Coord $GF) := args[3]!
-    have Q : Q(State $α → State $α → Prop) := args[4]!
-    have E : Q(CoPset) := args[5]!
-    have e : Q(Exp $α) := args[6]!
-    have Φ : Q(Val $α → IProp $GF) := args[7]!
-    k mvar { instPL, instWp, hyps, Q, E, e, Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
+    have instMS : Q(MeasurableSpace $α) := args[1]!
+    have instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS) := args[2]!
+    have instWp : Q(LiveWpGS $α Coord $GF) := args[4]!
+    have Q : Q(State $α → State $α → Prop) := args[5]!
+    have E : Q(CoPset) := args[6]!
+    have e : Q(Exp $α) := args[7]!
+    have Φ : Q(Val $α → IProp $GF) := args[8]!
+    k mvar { instMS, instPL, instWp, hyps, Q, E, e, Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
 /-! ## `live_bind` — focus on a subexpression by auto-discovering its context -/
 
 /-- `live_bind e` rebases the goal `lwp Q E (K.fill e) Φ` to `lwp Q E e (…)`, with the evaluation
 context `K` discovered automatically. -/
 elab "live_bind" colGt ppSpace focus:term:max : tactic =>
-  runTacticLiveWp fun mvar { α, GF, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
+  runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let focus ← elabTermEnsuringTypeQ focus q(Exp $α)
     let some res ← findECtx e (fun e => do guard (← isDefEq e focus))
       | throwTacticEx `live_bind mvar
@@ -256,11 +260,11 @@ elab "live_bind" colGt ppSpace focus:term:max : tactic =>
       withLocalDeclDQ `v q(Val $α) fun v => do
         let body : Q(Exp $α) ← fill K q(Exp.ofVal $v)
         mkLambdaFVars #[v]
-          q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $body $Φ)
+          q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instMS $instPL $GF $instWp $Q $E $body $Φ)
     let pf ← addBIGoal hyps
-      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $e' $Φc)
+      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instMS $instPL $GF $instWp $Q $E $e' $Φc)
     let bindPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_bind
-      [(`rT, α), (`GF, GF), (`Q, Q), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instPL, instWp]
+      [(`rT, α), (`GF, GF), (`Q, Q), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instMS, instPL, instWp]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
@@ -319,8 +323,9 @@ public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanEx
 /-- `(e₁', e₂syn, names)`: the redex `e₁'` (defeq to `e`, head constant possibly unfolded),
 its reduct `e₂syn` in the form the `PureExec` instance matches syntactically, and the binder
 names to re-attach (β only; `fix` relies on `@[pl_names]`). -/
-public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLangℝ $α))
-    (e : Q(Exp $α)) : MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
+public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)) (e : Q(Exp $α)) :
+    MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
   let beta (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
     (q(Exp.app (Exp.lam $body) $v), q(Exp.open' $body $v),
       ProbLang.collectBinderNames body #[])
@@ -380,7 +385,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     | _              => return none
   | ~q(.binop $op $e1 $e2)                => do
     let r : Q(Option (Exp $α)) ← whnf q(@BinOp.eval $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1 $e2)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $e1 $e2)
     match r with
     -- No simproc reduces boolean results, so `reduce` here to let `cond` fire. A symbolic
     -- bool would reduce to a stuck `Decidable.rec …`; keep it folded for `rcases`.
@@ -394,7 +399,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     | _                             => return none
   | ~q(.unop $op $e1)                     => do
     let r : Q(Option (Exp $α)) ← whnf q(@UnOp.eval $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $e1)
     match r with
     | ~q(some (Exp.lit (.bool $b)))          => do
         let b' : Q(Bool) ← Lean.Meta.reduce b
@@ -405,7 +410,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
     | _                                      => return none
   | ~q(.scrut $v $p)                      => do
     let r : Q(Option (Exp $α)) ← whnf q(@Pat.tryMatch $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $p $v)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $p $v)
     match r with
     | ~q(some $b) => return some (e, q(Exp.inl $b), #[])
     | ~q(none)    => return some (e, q(Exp.inr (.lit .unit)), #[])
@@ -415,7 +420,8 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLan
 
 /-- A pure step `inst : PureExec φ n e₁ e₂syn` found at one redex, with the binder `names` to
 re-attach to the reduct. -/
-public meta structure PureStepAt (α : Q(Type)) (instPL : Q(ProbLang.LawfulProbLangℝ $α)) where
+public meta structure PureStepAt (α : Q(Type)) (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)) where
   e₁ : Q(Exp $α)
   e₂syn : Q(Exp $α)
   names : Array Name
@@ -425,20 +431,21 @@ public meta structure PureStepAt (α : Q(Type)) (instPL : Q(ProbLang.LawfulProbL
 
 /-- Locate a pure step at the redex `focusE?` (or the first redex), returning its context `K`,
 the step, the display form `e₂` of its reduct, and `inner = K.fill e₂` filled at the meta level. -/
-public meta def findPureStep {α : Q(Type)} (instPL : Q(ProbLang.LawfulProbLangℝ $α))
+public meta def findPureStep {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS))
     (e : Q(Exp $α)) (focusE? : Option Q(Exp $α)) (mvar : MVarId) :
-    ProofModeM (Q(Ectx $α) × PureStepAt α instPL × Q(Exp $α) × Q(Exp $α)) := do
+    ProofModeM (Q(Ectx $α) × PureStepAt α instMS instPL × Q(Exp $α) × Q(Exp $α)) := do
   let some res ← findECtx e fun e₁ => do
     if let some focusE := focusE? then guard (← isDefEq e₁ focusE)
-    let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
+    let some (e₁', e₂syn, names) ← pureStepResult instMS instPL e₁ | failure
     let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
     let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
     let some inst ← ProofModeM.trySynthInstanceQ q(ProbLang.PureExec $φ $n $e₁' $e₂syn)
       | failure
-    return ({ e₁ := e₁', e₂syn, names, φ, n, inst } : PureStepAt α instPL)
+    return ({ e₁ := e₁', e₂syn, names, φ, n, inst } : PureStepAt α instMS instPL)
     | throwTacticEx `live_pure mvar m!"no pure step applies"
   let step := res.result
-  let step : PureStepAt α instPL :=
+  let step : PureStepAt α instMS instPL :=
     { e₁ := ← instantiateMVars step.e₁, e₂syn := ← instantiateMVars step.e₂syn,
       names := step.names, φ := ← instantiateMVars step.φ, n := ← instantiateMVars step.n,
       inst := ← instantiateMVars step.inst }
@@ -461,36 +468,36 @@ public meta def pureSideCondition (φ : Q(Prop)) : ProofModeM Q($φ) := do
 discovering the surrounding evaluation context automatically. Leaves the stepped goal
 unreduced; `live_pure` is the cleaning wrapper. -/
 elab "live_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
-  runTacticLiveWp fun mvar { α, GF, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
+  runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let focusE? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
-    let (K, step, e₂, inner) ← findPureStep instPL e focusE? mvar
+    let (K, step, e₂, inner) ← findPureStep instMS instPL e focusE? mvar
     let pf ← addBIGoal hyps
-      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $inner $Φ)
+      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instMS $instPL $GF $instWp $Q $E $inner $Φ)
     let HΦ ← pureSideCondition step.φ
     let stepPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_pure_step_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
-        (`Hφ, HΦ), (`Q, Q), (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
+        (`Hφ, HΦ), (`Q, Q), (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
 /-- `live_pure_excused_core e` takes a pure step at the redex `e` as an excused checkpoint: the
 goal becomes `↻1 ∗ ▷ (↻1 -∗ lwp Q E e' Φ)`. `live_pure_excused` is the cleaning wrapper. -/
 elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
-  runTacticLiveWp fun mvar { α, GF, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
+  runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let focusE? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
-    let (K, step, e₂, inner) ← findPureStep instPL e focusE? mvar
+    let (K, step, e₂, inner) ← findPureStep instMS instPL e focusE? mvar
     let some ilc ← ProofModeM.trySynthInstanceQ q(LCGS $GF)
       | throwTacticEx `live_pure_excused mvar m!"no divergence credits (`LCGS`) in scope"
     have div : Q(IProp $GF) := q(@ProbLang.LiveEris.creditFrag $GF $ilc 0 1)
     have wpInner : Q(IProp $GF) :=
-      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instPL $GF $instWp $Q $E $inner $Φ)
+      q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instMS $instPL $GF $instWp $Q $E $inner $Φ)
     let pf ← addBIGoal hyps q(iprop($div ∗ ▷ ($div -∗ $wpInner)))
     let HΦ ← pureSideCondition step.φ
     let hn : Q(0 < $(step.n)) ← mkFreshExprSyntheticOpaqueMVar q(0 < $(step.n))
     (← Tactic.evalTacticAt (← `(tactic| decide)) hn.mvarId!).forM addMVarGoal
     let stepPf ← mkAppByName ``ProbLang.LiveEris.lwp_pure_step_excused_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
-        (`Hφ, HΦ), (`hn, hn), (`Q, Q), (`E, E), (`Φ, Φ)] [instPL, instWp, step.inst]
+        (`Hφ, HΦ), (`hn, hn), (`Q, Q), (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
     let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
@@ -499,7 +506,7 @@ elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
 /-- `live_value` closes a goal `lwp Q E e Φ` when `e` is a value `v`, reducing it to `Φ v` (or
 `|={E}=> Φ v` when the postcondition cannot absorb an update). -/
 elab "live_value" : tactic =>
-  runTacticLiveWp fun mvar { α, GF, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
+  runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let tv : Q(Option (Val $α)) ← match ← Exp.closedFunVal? α e with
       | some (some v) => have v : Q(Val $α) := v; pure q(some $v)
       | some none => pure q(none)
@@ -525,7 +532,7 @@ elab "live_value" : tactic =>
     let pf ← addBIGoal hyps target
     let valPf ← mkAppByName valLemma
       [(`rT, α), (`GF, GF), (`Q, Q), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
-      [instPL, instWp]
+      [instMS, instPL, instWp]
     mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/

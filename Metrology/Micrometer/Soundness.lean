@@ -39,7 +39,8 @@ def boolEqVal : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
 /-- Related booleans are the same boolean. -/
-theorem lrel_bool_to_boolEqVal [LawfulProbLangℝ rT] [MicrometerRGS rT .hasNoLC GF] :
+theorem lrel_bool_to_boolEqVal [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    [MicrometerRGS rT .hasNoLC GF] :
     ⊢ lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iunfold lrel_bool
   iintro ⟨%b, %h⟩
@@ -60,7 +61,7 @@ theorem adequacyRel_boolEqVal_eq (a a' : Exp rT) (h : adequacyRel boolEqVal a a'
   adequacyRel_eq_subset a a' ⟨v, v', hv, hv', h1.trans h2.symm⟩
 
 section Budget
-variable [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
   [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed] [RefinesPreGS rT B GF]
 
@@ -195,7 +196,7 @@ end RefinesSound
 section RefinesSoundDp
 open MeasureTheory GradedDivergence
 open scoped _root_.ENNReal
-variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
   [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
 

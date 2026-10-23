@@ -16,7 +16,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- Values are inhabited by `()`. -/
 instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩

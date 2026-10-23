@@ -29,7 +29,7 @@ open ENNReal (ofReal)
 open Real (log coe_toNNReal log_nonneg)
 open IsReflexive (refl)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 section Refines
 

@@ -27,7 +27,7 @@ open List (range getD_eq_getElem mem_range mem_map subperm_of_subset perm_middle
   nodup_range nodup_cons mem_cons mem_append_right map_cons cons_append)
 open _root_.Option (map)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Closure values -/
 

@@ -14,7 +14,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE GradedLifting
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}

@@ -14,7 +14,7 @@ namespace ProbLang
 namespace LiveEris
 namespace LiveWpGS
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [LiveWpGS rT Coord GF]
 variable {Q : State rT → State rT → Prop}
 

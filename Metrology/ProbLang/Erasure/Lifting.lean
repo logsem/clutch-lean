@@ -11,7 +11,7 @@ Lifting rules for programs run from an erasable state distribution (`ErasableExp
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT]
 
 open MeasureTheory MeasureTheory.Measure
 open ProbabilityTheory
@@ -23,6 +23,63 @@ open GradedLifting
 
 variable {B : Type*} {L : GradedLifting.{0} B} {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
   {μ₁ μ₁' : Measure (State rT)} {n m : Nat}
+
+/-! ## Presample couplings -/
+
+/-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
+theorem tapeIndexUniform_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [L.IsReflexive] {N : Int} (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    L.Rel 0 (fun p q => ∃ n : Int, 0 ≤ n ∧ n < N ∧ p = tapeIdxOf hN n ∧ q = tapeIdxOf hN (f n))
+      (tapeIndexUniform N) (tapeIndexUniform N) := by
+  have h := rel_graph (L := L) (tapeIndexUniform N) (f := fun x => tapeIdxOf hN (f x.val))
+    of_discrete
+  rw [tapeIndexUniform_map_bijOn hN f hdom hbij] at h
+  exact h.mono le_rfl fun p q hp =>
+    ⟨p.val, p.2.1, p.2.2, Subtype.ext (tapeIdxOf_val hN p.2.1 p.2.2).symm, hp.symm⟩
+
+/-- The `tv` instance of `tapeIndexUniform_rel_bij`. -/
+theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    AddCoupl 0 {p : { z : Int // 0 ≤ z ∧ z < N } × { z : Int // 0 ≤ z ∧ z < N } |
+        ∃ n : Int, 0 ≤ n ∧ n < N ∧ p.1 = tapeIdxOf hN n ∧ p.2 = tapeIdxOf hN (f n)}
+      (tapeIndexUniform N) (tapeIndexUniform N) :=
+  (tapeIndexUniform_rel_bij hN f hdom hbij).addCoupl
+
+/-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`. -/
+theorem tapePresample_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [L.IsReflexive] {σ σ' : State rT} {α α' : Loc} {N : Int}
+    {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
+    (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
+    (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    L.Rel 0 (fun τ τ' => ∃ n : Int, 0 ≤ n ∧ n < N ∧
+        τ = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
+        τ' = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩))
+      (tapePresample σ α) (tapePresample σ' α') := by
+  rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
+  refine (tapeIndexUniform_rel_bij hN f hdom hbij).map ?_ of_discrete
+    of_discrete
+  rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
+  exact ⟨n, h0, hn, rfl, rfl⟩
+
+/-- The `tv` instance of `tapePresample_rel_bij`. -/
+theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
+    {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
+    (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
+    (hN : 0 < N) (f : Int → Int)
+    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
+    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
+    AddCoupl 0 {p : State rT × State rT | ∃ n : Int, 0 ≤ n ∧ n < N ∧
+        p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
+        p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
+      (tapePresample σ α) (tapePresample σ' α') :=
+  (tapePresample_rel_bij hσ hσ' hN f hdom hbij).addCoupl
+variable [LawfulProbLangℝ rT]
+
 
 /-! ## Erasure rules for a graded lifting -/
 
@@ -244,61 +301,6 @@ theorem addCoupl_erasable_exp_lhs_kanto
     (expCoupl_iff_codensity_tv.1 hExp) fun ρ ρ' _ => (hCont ρ ρ').codensity).addCoupl
 
 end Tv
-
-/-! ## Presample couplings -/
-
-/-- Uniform presample coupling on the index type, along a bijection of `[0, N)`. -/
-theorem tapeIndexUniform_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsReflexive] {N : Int} (hN : 0 < N) (f : Int → Int)
-    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
-    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
-    L.Rel 0 (fun p q => ∃ n : Int, 0 ≤ n ∧ n < N ∧ p = tapeIdxOf hN n ∧ q = tapeIdxOf hN (f n))
-      (tapeIndexUniform N) (tapeIndexUniform N) := by
-  have h := rel_graph (L := L) (tapeIndexUniform N) (f := fun x => tapeIdxOf hN (f x.val))
-    of_discrete
-  rw [tapeIndexUniform_map_bijOn hN f hdom hbij] at h
-  exact h.mono le_rfl fun p q hp =>
-    ⟨p.val, p.2.1, p.2.2, Subtype.ext (tapeIdxOf_val hN p.2.1 p.2.2).symm, hp.symm⟩
-
-/-- The `tv` instance of `tapeIndexUniform_rel_bij`. -/
-theorem tapeIndexUniform_addCoupl_bij {N : Int} (hN : 0 < N) (f : Int → Int)
-    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
-    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
-    AddCoupl 0 {p : { z : Int // 0 ≤ z ∧ z < N } × { z : Int // 0 ≤ z ∧ z < N } |
-        ∃ n : Int, 0 ≤ n ∧ n < N ∧ p.1 = tapeIdxOf hN n ∧ p.2 = tapeIdxOf hN (f n)}
-      (tapeIndexUniform N) (tapeIndexUniform N) :=
-  (tapeIndexUniform_rel_bij hN f hdom hbij).addCoupl
-
-/-- Two same-bound tapes presample in lockstep along a bijection `f` on `[0, N)`. -/
-theorem tapePresample_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsReflexive] {σ σ' : State rT} {α α' : Loc} {N : Int}
-    {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
-    (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
-    (hN : 0 < N) (f : Int → Int)
-    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
-    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
-    L.Rel 0 (fun τ τ' => ∃ n : Int, 0 ≤ n ∧ n < N ∧
-        τ = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
-        τ' = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩))
-      (tapePresample σ α) (tapePresample σ' α') := by
-  rw [tapePresample_eq_map hσ, tapePresample_eq_map hσ']
-  refine (tapeIndexUniform_rel_bij hN f hdom hbij).map ?_ of_discrete
-    of_discrete
-  rintro _ _ ⟨n, h0, hn, rfl, rfl⟩
-  exact ⟨n, h0, hn, rfl, rfl⟩
-
-/-- The `tv` instance of `tapePresample_rel_bij`. -/
-theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
-    {bs bs' : List { z : Int // 0 ≤ z ∧ z < N }}
-    (hσ : σ.tapes[α]? = some ⟨N, bs⟩) (hσ' : σ'.tapes[α']? = some ⟨N, bs'⟩)
-    (hN : 0 < N) (f : Int → Int)
-    (hdom : ∀ n : Int, 0 ≤ n → n < N → 0 ≤ f n ∧ f n < N)
-    (hbij : ∀ m : Int, 0 ≤ m → m < N → ∃! n : Int, (0 ≤ n ∧ n < N) ∧ f n = m) :
-    AddCoupl 0 {p : State rT × State rT | ∃ n : Int, 0 ≤ n ∧ n < N ∧
-        p.1 = σ.update_tapes (·.insert α ⟨N, bs ++ [tapeIdxOf hN n]⟩) ∧
-        p.2 = σ'.update_tapes (·.insert α' ⟨N, bs' ++ [tapeIdxOf hN (f n)]⟩)}
-      (tapePresample σ α) (tapePresample σ' α') :=
-  (tapePresample_rel_bij hσ hσ' hN f hdom hbij).addCoupl
 
 end Lifting
 

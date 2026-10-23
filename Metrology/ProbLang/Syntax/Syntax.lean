@@ -141,7 +141,7 @@ class ProbLangℝ (T : Type _) extends BEq T, Inhabited T where
   realFrac : T → T
 
 /-- A type of reals with a σ-algebra and the laws the semantics needs. -/
-class LawfulProbLangℝ (T : Type _) extends ProbLangℝ T, MeasurableSpace T, LawfulBEq T,
+class LawfulProbLangℝ (T : Type _) [MeasurableSpace T] extends ProbLangℝ T, LawfulBEq T,
     MeasurableEq T where
   /-- Decidable equality, kept as data to avoid a diamond with `BEq`. -/
   instDecidableEq : DecidableEq T
@@ -170,7 +170,8 @@ attribute [reducible, instance] LawfulProbLangℝ.instDecidableEq
 attribute [instance] LawfulProbLangℝ.unifUnit_isProbabilityMeasure
 
 /-- The support of `unifUnit` is nonempty. -/
-theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [LawfulProbLangℝ T] :
+theorem LawfulProbLangℝ.unifUnitSupport_nonempty (T : Type _) [MeasurableSpace T]
+    [LawfulProbLangℝ T] :
     (LawfulProbLangℝ.unifUnitSupport (T := T)).Nonempty := by
   rw [Set.nonempty_iff_ne_empty]
   rintro hempty

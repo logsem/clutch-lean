@@ -18,16 +18,20 @@ open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The ghost state of `wp`. -/
-class MicrometerWpGS (GF : BundledGFunctors)
-    extends SpecUpdateGS rT GF where
+class MicrometerWpGS {rT : outParam Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) extends SpecUpdateGS rT GF where
   hlc : HasLC
   invGS : InvGS_gen hlc GF
   stateInterp : State rT → IProp GF
 
-attribute [reducible, instance] MicrometerWpGS.invGS
+/-- `MicrometerWpGS.invGS`, with the measurable space and language read off the instance, not
+searched for first. -/
+@[reducible]
+instance MicrometerWpGS.instInvGS {R : Type} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {GF : BundledGFunctors} [w : MicrometerWpGS (rT := R) GF] : InvGS_gen w.hlc GF := w.invGS
 
 /-! ## Budget -/
 

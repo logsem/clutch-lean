@@ -15,7 +15,7 @@ open scoped ENNReal AppGS
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace TotalEris
 

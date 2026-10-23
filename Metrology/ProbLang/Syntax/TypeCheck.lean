@@ -109,7 +109,7 @@ elab "typecheck" : tactic => do
 
 section Examples
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 example : Typed (rT := rT) Tctx.empty (.lit (.int 42)) .int := typecheck
 example : Typed (rT := rT) Tctx.empty (.pair (.lit (.int 1)) (.lit .unit)) (.prod .int .unit) :=

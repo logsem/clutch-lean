@@ -11,7 +11,7 @@ Program contexts `Ctx`, typing `TypedCtx` and contextual refinement `Γ ⊨ e �
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 open MeasureTheory Exp Finset
 
@@ -19,7 +19,7 @@ open MeasureTheory Exp Finset
 
 /-- One frame of a general program context, whose hole may lie under a binder such as `lam`, `fix`
 or `unpack` (Clutch's `letrec` is the two frames `fix f :: lam x`). -/
-inductive CtxItem (rT : Type _) [LawfulProbLangℝ rT]
+inductive CtxItem (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT]
   | lam (x : Var)
   | fix (f : Var)
   | tlam
@@ -99,7 +99,7 @@ end CtxItem
 /-! ## Multi-frame contexts -/
 
 /-- Frames listed outermost first: `[outer, …, inner].fill e = outer[…inner[e]…]`, as in Clutch. -/
-abbrev Ctx (rT : Type _) [LawfulProbLangℝ rT] := List (CtxItem rT)
+abbrev Ctx (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT] := List (CtxItem rT)
 
 namespace Ctx
 

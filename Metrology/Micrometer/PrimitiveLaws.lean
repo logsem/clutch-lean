@@ -26,7 +26,7 @@ open scoped AppGS
 namespace ProbLang
 open HeadStepSupport
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 open Exp (alloc_toVal?_eq_none load_toVal?_eq_none rand_toVal?_eq_none store_toVal?_eq_none
   tape_toVal?_eq_none toVal?_lit toVal?_ofVal)
@@ -36,13 +36,20 @@ open Cfg (specAuth)
 /-! ## Ghost state -/
 
 /-- The Micrometer ghost-state components, excluding budget (`BudgetGS B GF`) -/
-class MicrometerGS (rT : Type) [LawfulProbLangℝ rT]
+class MicrometerGS (rT : outParam Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   specGS : SpecGS rT GF
   invGS : InvGS_gen hlc GF
 
-attribute [reducible, instance] MicrometerGS.appGS MicrometerGS.specGS MicrometerGS.invGS
+attribute [reducible, instance] MicrometerGS.appGS MicrometerGS.specGS
+
+/-- `MicrometerGS.invGS`, with the measurable space and language read off the instance, not
+searched for first. -/
+@[reducible]
+instance MicrometerGS.instInvGS {R : Type} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS R hlc GF] : InvGS_gen hlc GF :=
+  MicrometerGS.invGS
 
 section MicrometerInstance
 

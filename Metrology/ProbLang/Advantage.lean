@@ -73,7 +73,7 @@ theorem tvDist_le_of_addCoupl_eq
 
 /-! ## Advantage of programs -/
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The largest total variation distance between the outputs of `X` and `Y` over initial states. -/
 noncomputable def advantage (X Y : Exp rT) : ENNReal :=

@@ -103,7 +103,7 @@ end Cfg
 /-! ## Values inside expressions and configurations -/
 
 /-- `Exp.ofVal` is a measurable embedding of values into expressions. -/
-theorem measurableEmbedding_ofVal {rT : Type _} [LawfulProbLangℝ rT] :
+theorem measurableEmbedding_ofVal {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     MeasurableEmbedding (Exp.ofVal : Val rT → Exp rT) := by
   refine ⟨fun a b h => Val.ext h, Exp.ofVal.measurable, fun s hs => ?_⟩
   obtain ⟨U, hU, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hs
@@ -121,7 +121,8 @@ theorem measurableEmbedding_ofVal {rT : Type _} [LawfulProbLangℝ rT] :
   exact hU.inter (Exp.isValueR.measurable.setOf.inter Exp.lcb_zero.measurableSet)
 
 /-- The set of expressions that are values satisfying `φ` is measurable. -/
-theorem measurableSet_ofValSet {rT : Type _} [LawfulProbLangℝ rT] {φ : Val rT → Prop}
+theorem measurableSet_ofValSet {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v}) :
     MeasurableSet {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} := by
   have heq : {e : Exp rT | ∃ v, e = Exp.ofVal v ∧ φ v} = Exp.ofVal '' {v | φ v} := by
@@ -132,7 +133,8 @@ theorem measurableSet_ofValSet {rT : Type _} [LawfulProbLangℝ rT] {φ : Val rT
   exact measurableEmbedding_ofVal.measurableSet_image' hφ
 
 /-- The set of configurations whose expression is a value satisfying `φ` is measurable. -/
-theorem measurableSet_TglCfgSet {rT : Type _} [LawfulProbLangℝ rT] {φ : Val rT → Prop}
+theorem measurableSet_TglCfgSet {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    {φ : Val rT → Prop}
     (hφ : MeasurableSet {v : Val rT | φ v}) :
     MeasurableSet {ρ : Cfg rT | ∃ v, ρ.expr = Exp.ofVal v ∧ φ v} :=
   (measurableSet_ofValSet hφ).preimage Cfg.measurable_expr

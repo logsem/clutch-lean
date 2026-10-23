@@ -32,7 +32,7 @@ namespace ProbLang
 
 open scoped ENNReal
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT]
 
 /-- Read a literal expression through `value`, with a default for non-literals. -/
 def Exp.asLit (default : ℝ≥0∞) (value : BaseLit rT → ℝ≥0∞) : Exp rT → ℝ≥0∞ :=

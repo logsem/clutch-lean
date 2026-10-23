@@ -27,7 +27,7 @@ open ProbLang.Exp (ofVal alloc store toVal?_ofVal)
 open List (length_cons getElem_cons_zero eraseIdx_cons_zero getElem_cons_succ eraseIdx_cons_succ)
 open Nat (cast_succ)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## The meta-level model of maps -/
 

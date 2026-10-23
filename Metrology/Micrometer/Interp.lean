@@ -74,7 +74,8 @@ section interp
 open TyEnv
 open Val (ext ext_iff isUnboxed)
 open CoPset (subseteq_top)
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+    [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF] {n : Nat} {Δ Δ' : TyEnv rT GF}
 local bi IProp GF
@@ -82,7 +83,7 @@ local bi IProp GF
 /-! ## Interpreting types -/
 
 /-- A non-expansive map from type environments to logical relations. -/
-structure NEFun (rT : Type) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+structure NEFun (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
   fn : TyEnv rT GF → lrel rT GF
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 

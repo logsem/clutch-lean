@@ -261,13 +261,14 @@ elab "rel_apply " colGt lem:term : tactic => relApplyCore `rel_apply [.l, .r] le
 
 /-- The reduct of a boolean negation of an opaque bool, kept folded as `decide ¬b = true` (which
 `pl_step_simp` shows as `!b`) rather than `pureStepResult`'s reduced `Decidable.rec` term. -/
-meta def foldSymbolicNot {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)) (e₁ e₂ : Q(Exp $α)) :
+meta def foldSymbolicNot {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@LawfulProbLangℝ $α $instMS)) (e₁ e₂ : Q(Exp $α)) :
     MetaM Q(Exp $α) := do
   let ~q(unop $op $v) := e₁ | return e₂
   let ~q(lit (.bool $b)) := e₂ | return e₂
   if b.isConstOf ``Bool.true || b.isConstOf ``Bool.false then return e₂
   let r : Q(Option (Exp $α)) ← whnf q(@UnOp.eval $α
-    (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $v)
+    (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $v)
   let ~q(some (lit (.bool $b'))) := r | return e₂
   return q(lit (.bool $b'))
 
@@ -275,12 +276,13 @@ meta def foldSymbolicNot {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)) (e�
 meta def relPureCore (side : Side) (focus? : Option Term) : TacticM Unit :=
   runTacticRel (if side.isL then `rel_pure_l else `rel_pure_r) fun mvar g => do
     have α : Q(Type) := g.α
-    let instPL : Q(LawfulProbLangℝ $α) ← synthInstanceQ q(LawfulProbLangℝ $α)
+    let instMS : Q(MeasurableSpace $α) ← synthInstanceQ q(MeasurableSpace $α)
+    let instPL : Q(@LawfulProbLangℝ $α $instMS) ← synthInstanceQ q(@LawfulProbLangℝ $α $instMS)
     let focusE? : Option Q(Exp $α) ← focus?.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
-    let res? : Option (Q(Ectx $α) × PureStepAt α instPL) ← searchSide g side fun K e₁ => do
+    let res? : Option (Q(Ectx $α) × PureStepAt α instMS instPL) ← searchSide g side fun K e₁ => do
       if let some focusE := focusE? then guard (← isDefEq e₁ focusE)
-      let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
-      let e₂syn ← foldSymbolicNot instPL e₁' e₂syn
+      let some (e₁', e₂syn, names) ← pureStepResult instMS instPL e₁ | failure
+      let e₂syn ← foldSymbolicNot instMS instPL e₁' e₂syn
       let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
       let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
       let some inst ← ProofModeM.trySynthInstanceQ q(ProbLang.PureExec $φ $n $e₁' $e₂syn)

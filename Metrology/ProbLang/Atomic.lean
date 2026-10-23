@@ -31,7 +31,7 @@ private theorem alloc_decompItem : (Exp.alloc v.1).decompItem = none := by
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The step measure is concentrated on value configurations: the form the program logic
 consumes (`Micrometer.OpenInv.of_atomic`), which also covers `urand`. -/

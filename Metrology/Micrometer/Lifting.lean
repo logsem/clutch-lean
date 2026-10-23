@@ -13,7 +13,7 @@ presampling both sides at cost `0` (Rocq `approxis/lifting.v`). -/
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace ProbLang.MicrometerWpGS
 

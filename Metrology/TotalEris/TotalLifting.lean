@@ -17,7 +17,7 @@ namespace ProbLang
 namespace TotalEris
 namespace ErisWpGS
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
 variable {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
 

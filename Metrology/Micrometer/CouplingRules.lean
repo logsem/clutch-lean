@@ -22,7 +22,7 @@ open List (map_eq_nil_iff)
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
 variable {B : Type} {L : GradedLifting.{0} B} {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 

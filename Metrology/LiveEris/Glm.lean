@@ -28,7 +28,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace LiveEris
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- `Pgl ε φ μ`: `φ` fails with probability at most `ε` under `μ`. -/
 def Pgl {α : Type _} [MeasurableSpace α] (ε : ℝ≥0∞) (φ : α → Prop)
@@ -66,14 +66,19 @@ end CreditVec
 
 open CreditVec
 
-class LiveWpGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (ι : outParam Type)
+class LiveWpGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (ι : outParam Type)
     (GF : BundledGFunctors) where
   hlc : HasLC
   invGS : InvGS_gen hlc GF
   stateInterp : State rT → IProp GF
   creditInterp : (ι → ℝ≥0∞) → IProp GF
 
-attribute [reducible, instance] LiveWpGS.invGS
+/-- `LiveWpGS.invGS`, with the measurable space and language read off the instance, not searched
+for first. -/
+@[reducible]
+instance LiveWpGS.instInvGS {R : Type _} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {ι : Type} {GF : BundledGFunctors} [w : LiveWpGS R ι GF] : InvGS_gen w.hlc GF := w.invGS
 
 namespace LiveWpGS
 
@@ -95,7 +100,8 @@ theorem execStutter_mono_pred {P Q : (ι → ℝ≥0∞) → IProp GF} {c : ι �
 
 variable [LiveWpGS rT ι GF]
 
-abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] (ι : Type) : Type _ := Cfg rT × (ι → ℝ≥0∞)
+abbrev GlmState (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (ι : Type) : Type _ := Cfg rT × (ι → ℝ≥0∞)
 
 instance : COFE (GlmState rT ι) := COFE.ofDiscrete _
 instance : OFE.Discrete (GlmState rT ι) := ⟨id⟩

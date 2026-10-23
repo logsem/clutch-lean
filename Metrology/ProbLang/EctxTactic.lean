@@ -217,8 +217,9 @@ public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanEx
 
 /-- The redex, its reduct in the syntactic form the `PureExec` instance matches, and the source
 binder names, for a pure step at `e`. -/
-public meta def pureStepResult {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α))
-    (e : Q(Exp $α)) : MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
+public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@LawfulProbLangℝ $α $instMS)) (e : Q(Exp $α)) :
+    MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
   let beta (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
     (q(.app (.lam $body) $v), q(.open' $body $v), collectBinderNames body #[])
   let betaFix (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
@@ -276,7 +277,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)
     | _ => return none
   | ~q(.binop $op $e1 $e2) => do
     let r : Q(Option (Exp $α)) ← whnf q(@BinOp.eval $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1 $e2)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $e1 $e2)
     match r with
     -- No simproc reduces boolean results, so `reduce` here; keep the folded `b` unless it
     -- lands on `true`/`false` (a stuck `Decidable.rec …` defeats `rcases`).
@@ -290,7 +291,7 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)
     | _ => return none
   | ~q(.unop $op $e1) => do
     let r : Q(Option (Exp $α)) ← whnf q(@UnOp.eval $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $op $e1)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $e1)
     match r with
     -- The only bool-valued unop is `neg` on a literal, so `reduce` always lands on `true`/`false`.
     | ~q(some (.lit (.bool $b))) => do
@@ -302,14 +303,15 @@ public meta def pureStepResult {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α)
     | _ => return none
   | ~q(.scrut $v $p) => do
     let r : Q(Option (Exp $α)) ← whnf q(@Pat.tryMatch $α
-      (@LawfulProbLangℝ.toProbLangℝ $α $instPL) $p $v)
+      (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $p $v)
     match r with
     | ~q(some $b) => return some (e, q(.inl $b), #[])
     | ~q(none) => return some (e, q(.inr (.lit .unit)), #[])
     | _ => return none
 
 /-- A `PureExec` step `e₁ ⇝ e₂syn` with its instance, side condition `φ` and step count `n`. -/
-public meta structure PureStepAt (α : Q(Type)) (instPL : Q(LawfulProbLangℝ $α)) where
+public meta structure PureStepAt (α : Q(Type)) (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@LawfulProbLangℝ $α $instMS)) where
   /-- The redex. -/
   e₁ : Q(Exp $α)
   /-- Its reduct, in the syntactic form the instance matches. -/
@@ -324,12 +326,13 @@ public meta structure PureStepAt (α : Q(Type)) (instPL : Q(LawfulProbLangℝ $�
   inst : Q(PureExec $φ $n $e₁ $e₂syn)
 
 /-- The innermost redex of `e` (defeq to `focus?`, if given) with a `PureExec` step. -/
-public meta def findPureStep {α : Q(Type)} (instPL : Q(LawfulProbLangℝ $α))
+public meta def findPureStep {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+    (instPL : Q(@LawfulProbLangℝ $α $instMS))
     (e : Q(Exp $α)) (focus? : Option Q(Exp $α) := none) :
-    ProofModeM (Option (ECtxResultOf α (PureStepAt α instPL))) :=
+    ProofModeM (Option (ECtxResultOf α (PureStepAt α instMS instPL))) :=
   findECtx e fun e₁ => do
     if let some focus := focus? then guard (← isDefEq e₁ focus)
-    let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
+    let some (e₁', e₂syn, names) ← pureStepResult instMS instPL e₁ | failure
     let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
     let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
     let some inst ← ProofModeM.trySynthInstanceQ q(PureExec $φ $n $e₁' $e₂syn)
@@ -360,12 +363,13 @@ elab "pure_step_core" : tactic => do
     unless goalE.isAppOf ``PureSteps do
       throwTacticEx `pure_step mvar m!"goal is not a `PureSteps`"
     let args := goalE.getAppArgs
-    unless args.size == 4 do
+    unless args.size == 5 do
       throwTacticEx `pure_step mvar m!"unexpected `PureSteps` arity"
     have α : Q(Type) := args[0]!
-    have instPL : Q(LawfulProbLangℝ $α) := args[1]!
-    have X : Q(Exp $α) := args[2]!
-    let some res ← findPureStep instPL X
+    have instMS : Q(MeasurableSpace $α) := args[1]!
+    have instPL : Q(@LawfulProbLangℝ $α $instMS) := args[2]!
+    have X : Q(Exp $α) := args[3]!
+    let some res ← findPureStep instMS instPL X
       | throwTacticEx `pure_step mvar m!"no pure step applies"
     have K : Q(Ectx $α) := res.K
     let step := res.result

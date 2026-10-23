@@ -149,8 +149,6 @@ theorem proj_delete (vs : ValSubstMap rT) (x : Var) :
     rw [delete_cons, List.map_cons, List.filter_cons]
     by_cases hzx : z = x <;> simp [hzx, ih]
 
-variable [LawfulProbLangℝ rT]
-
 /-- Projecting commutes with lookup. -/
 theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
     SubstMap.lookup (vs.map fun p => (p.1, (f p.2).1)) x = (vs.lookup x).map fun q => (f q).1
@@ -168,7 +166,7 @@ theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClos
 
 end proj
 
-variable [LawfulProbLangℝ rT] (vs : ValSubstMap rT) (x : Var)
+variable (vs : ValSubstMap rT) (x : Var)
 
 /-- The substitution of left values. -/
 def fst : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)

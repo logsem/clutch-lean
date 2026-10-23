@@ -22,7 +22,7 @@ open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang Ectx Set
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace TotalEris
 
@@ -71,7 +71,8 @@ end Pgl
 /-! ## Ghost state and the stutter -/
 
 /-- Ghost state for the total Eris weakest precondition: state and error-credit interpretations. -/
-class ErisWpGS (GF : BundledGFunctors) where
+class ErisWpGS {rT : outParam (Type _)} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) where
   /-- Whether the model has later credits. -/
   hlc : HasLC
   /-- The invariant ghost state. -/
@@ -81,7 +82,11 @@ class ErisWpGS (GF : BundledGFunctors) where
   /-- The interpretation of the error-credit budget. -/
   errInterp : ENNReal → IProp GF
 
-attribute [reducible, instance] ErisWpGS.invGS
+/-- `ErisWpGS.invGS`, with the measurable space and language read off the instance, not searched
+for first. -/
+@[reducible]
+instance ErisWpGS.instInvGS {R : Type _} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {GF : BundledGFunctors} [w : ErisWpGS (rT := R) GF] : InvGS_gen w.hlc GF := w.invGS
 
 namespace ErisWpGS
 variable {GF : BundledGFunctors}
@@ -119,7 +124,7 @@ variable {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z : Cfg rT → ENNReal →
 /-! ## The three step kinds -/
 
 /-- A configuration together with its remaining error budget. -/
-abbrev GlmState (rT : Type _) [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNReal
+abbrev GlmState (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT] : Type _ := Cfg rT × ENNReal
 
 instance : COFE (GlmState rT) := ofDiscrete _
 instance : Discrete (GlmState rT) := ⟨id⟩

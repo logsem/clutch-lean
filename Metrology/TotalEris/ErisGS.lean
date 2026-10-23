@@ -18,7 +18,8 @@ namespace ProbLang
 namespace TotalEris
 
 /-- Concrete ghost-state class for Eris. -/
-class ErisGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (hlc : outParam HasLC)
+class ErisGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (hlc : outParam HasLC)
     (GF : BundledGFunctors) where
   /-- The program-state ghost state. -/
   appGS : AppGS rT GF
@@ -27,11 +28,17 @@ class ErisGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (hlc : outParam Has
   /-- The invariant ghost state. -/
   invGS : InvGS_gen hlc GF
 
-attribute [reducible, instance] ErisGS.appGS ErisGS.ecGS ErisGS.invGS
+attribute [reducible, instance] ErisGS.appGS ErisGS.ecGS
+
+/-- `ErisGS.invGS`, with the measurable space and language read off the instance, not searched
+for first. -/
+@[reducible]
+instance ErisGS.instInvGS {R : Type _} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {hlc : HasLC} {GF : BundledGFunctors} [ErisGS R hlc GF] : InvGS_gen hlc GF := ErisGS.invGS
 
 section ErisInstance
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 
 /-- The Eris weakest-precondition state interpretation from the ghost-state components. -/

@@ -21,12 +21,13 @@ Ghost state for the program heap and tapes, with lookup, update and alloc rules.
 section AppProgramRA
 open Std Iris Iris.Std COFE ProbLang AgreeHeap
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Ghost-state classes -/
 
 /-- The ghost-state slots for the program heap and tapes. -/
-class AppPreGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+class AppPreGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) where
   /-- The slot for the program heap. -/
   heap : ElemG GF (constOF (SpecHeap rT))
   /-- The slot for the program tapes. -/
@@ -35,7 +36,8 @@ class AppPreGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFun
 attribute [reducible, instance] AppPreGS.heap AppPreGS.tapes
 
 /-- The program ghost state with its ghost names. -/
-class AppGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFunctors) extends
+class AppGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) extends
     AppPreGS rT GF where
   /-- The ghost name of the program heap. -/
   γheap : GName

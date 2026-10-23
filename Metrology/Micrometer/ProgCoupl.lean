@@ -17,7 +17,7 @@ open Set BIFUpdate
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}

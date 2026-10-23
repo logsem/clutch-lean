@@ -25,7 +25,7 @@ open Set (Icc inter_subset_left)
 open OrderAddMonoidHom (coe_id)
 open Exp (lit_isClosedEmpty)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing]
   {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]

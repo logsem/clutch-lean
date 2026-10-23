@@ -36,7 +36,8 @@ Pure-step and value lemmas first, then their variants with the expression anchor
 
 section Wp
 
-variable {rT : Type} [LawfulProbLangℝ rT] {B : Type} [PartialOrder B] [OrderTop B]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type} [PartialOrder B]
+    [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
   [BudgetGS B GF]
 local bi IProp GF
@@ -80,7 +81,7 @@ public theorem wp_expr_eq {e e' : Exp rT} (heq : e = e') : wp L E e' Φ ⊢ wp L
 end Wp
 
 /-- `wp_alloc` with the allocated value anchored by an equality. -/
-public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT]
+public theorem wp_alloc_eq {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
     {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
     {L : GradedLifting.{0} B} {GF : BundledGFunctors} {hlc : HasLC}
     [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
@@ -91,7 +92,7 @@ public theorem wp_alloc_eq {rT : Type} [LawfulProbLangℝ rT]
 
 section Spec
 
-variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} {hlc : HasLC}
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors} {hlc : HasLC}
   [InvGS_gen hlc GF] [SpecGS rT GF] {E : CoPset} {e₁full e₂full e e' : Exp rT}
 local bi IProp GF
 
@@ -185,7 +186,8 @@ macro "pl_step_finish" : tactic =>
 meta structure WpGoal where
   {u : Level}
   {α : Q(Type)}
-  instPL : Q(LawfulProbLangℝ $α)
+  instMS : Q(MeasurableSpace $α)
+  instPL : Q(@LawfulProbLangℝ $α $instMS)
   {B : Q(Type)}
   instPO : Q(PartialOrder $B)
   instOT : Q(OrderTop $B)
@@ -211,7 +213,7 @@ meta structure WpGoal where
 meta def WpGoal.mkApp (g : WpGoal) (c : Name) (args : List (Name × LeanExpr))
     (insts : List LeanExpr := []) : MetaM LeanExpr :=
   mkAppByName c (([(`rT, g.α), (`B, g.B), (`L, g.L), (`GF, g.GF)] : List (Name × LeanExpr)) ++ args)
-    (insts ++ ([g.instPL, g.instPO, g.instOT, g.instWp, g.instBudget] : List LeanExpr))
+    (insts ++ ([g.instMS, g.instPL, g.instPO, g.instOT, g.instWp, g.instBudget] : List LeanExpr))
 
 /-- `g.wpApp` with its expression and postcondition replaced by `e` and `Φ`. -/
 meta def WpGoal.mkWp (g : WpGoal) (e : LeanExpr) (Φ : LeanExpr) : LeanExpr :=
@@ -233,22 +235,23 @@ meta def runTacticWp {β : Type} (k : MVarId → WpGoal → ProofModeM β) : Tac
     unless goalE.getAppFn.consumeMData.isConstOf ``MicrometerWpGS.wp do
       throwError "the goal {goal} must be a `wp`"
     let args := goalE.getAppArgs
-    -- `rT, instPL, B, instPO, instOT, L, GF, instWp, instBudget, E, e, Φ`
-    unless args.size == 12 do
+    -- `rT, instMS, instPL, B, instPO, instOT, L, GF, instWp, instBudget, E, e, Φ`
+    unless args.size == 13 do
       throwError "unexpected `wp` arity ({args.size}) in goal {goal}"
     have α : Q(Type) := args[0]!
-    have instPL : Q(LawfulProbLangℝ $α) := args[1]!
-    have B : Q(Type) := args[2]!
-    have instPO : Q(PartialOrder $B) := args[3]!
-    have instOT : Q(OrderTop $B) := args[4]!
-    have L : Q(GradedLifting.{0} $B) := args[5]!
-    have instWp : Q(MicrometerWpGS (rT := $α) $GF) := args[7]!
-    have instBudget : Q(BudgetGS $B $GF) := args[8]!
-    have E : Q(CoPset) := args[9]!
-    have e : Q(Exp $α) := args[10]!
-    let Φ : LeanExpr := args[11]!
-    k mvar { instPL, instPO, instOT, L, GF, instWp, instBudget, wpApp := goalE, hyps, E, e, Φ,
-             hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
+    have instMS : Q(MeasurableSpace $α) := args[1]!
+    have instPL : Q(@LawfulProbLangℝ $α $instMS) := args[2]!
+    have B : Q(Type) := args[3]!
+    have instPO : Q(PartialOrder $B) := args[4]!
+    have instOT : Q(OrderTop $B) := args[5]!
+    have L : Q(GradedLifting.{0} $B) := args[6]!
+    have instWp : Q(MicrometerWpGS (rT := $α) $GF) := args[8]!
+    have instBudget : Q(BudgetGS $B $GF) := args[9]!
+    have E : Q(CoPset) := args[10]!
+    have e : Q(Exp $α) := args[11]!
+    let Φ : LeanExpr := args[12]!
+    k mvar { instMS, instPL, instPO, instOT, L, GF, instWp, instBudget, wpApp := goalE, hyps, E, e,
+             Φ, hu := ⟨⟩, hprop := ⟨⟩, hbi := ⟨⟩ }
 
 /-! ## `wp_bind` — focus on a subexpression by auto-discovering its context -/
 
@@ -288,16 +291,16 @@ meta def evalWithGoalExp (mk : Term → ProofModeM (TSyntax `tactic)) : TacticM 
 `is_value` and otherwise left as a goal. -/
 elab "wp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
   runTacticWp fun mvar g => do
-    let { α, instPL, GF, hyps, e, .. } := g
+    let { α, instMS, instPL, GF, hyps, e, .. } := g
     let focusE? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
     let some res ← findECtx e fun e₁ => do
       if let some focusE := focusE? then guard (← isDefEq e₁ focusE)
-      let some (e₁', e₂syn, names) ← pureStepResult instPL e₁ | failure
+      let some (e₁', e₂syn, names) ← pureStepResult instMS instPL e₁ | failure
       let φ : Q(Prop) ← mkFreshExprMVarQ q(Prop)
       let n : Q(Nat) ← mkFreshExprMVarQ q(Nat)
       let some inst ← ProofModeM.trySynthInstanceQ q(PureExec $φ $n $e₁' $e₂syn)
         | failure
-      return ({ e₁ := e₁', e₂syn, names, φ, n, inst } : PureStepAt α instPL)
+      return ({ e₁ := e₁', e₂syn, names, φ, n, inst } : PureStepAt α instMS instPL)
       | throwTacticEx `wp_pure mvar m!"no pure step applies"
     have K : Q(Ectx $α) := res.K
     let step := res.result
@@ -449,10 +452,10 @@ meta def findSpecFocus {α : Q(Type)} {β : Type} (tac : Name) (mvar : MVarId) (
 elab "tp_pure_core" : tactic => do
   let tacSeq ← runTacticWp fun mvar g => do
     addMVarGoal mvar
-    let { α, instPL, .. } := g
+    let { α, instMS, instPL, .. } := g
     let (hypName, espec, Kabs?, res) ← findSpecFocus `tp_pure mvar g
       (fun _ => m!"no pure step applies to the spec expression") fun e₁ => do
-        let some (e₁', e₂syn, _) ← pureStepResult instPL e₁ | failure
+        let some (e₁', e₂syn, _) ← pureStepResult instMS instPL e₁ | failure
         return (e₁', e₂syn)
     have Kd : Q(Ectx $α) := res.K
     have K : Q(Ectx $α) := appendAbstractCtx Kd Kabs?

@@ -20,7 +20,7 @@ namespace Examples
 
 noncomputable section
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
 
@@ -39,7 +39,8 @@ end abstractBernoulli
 /-! ## Distribution -/
 section distribution
 
-/-- PMF `γ^n · (1-γ)` of the number of `true` trials before the first `false` in `GeometricTrial`. -/
+/-- PMF `γ^n · (1-γ)` of the number of `true` trials before the first `false` in
+`GeometricTrial`. -/
 def GeometricPMF (γ : ↑unitInterval) (n : ℕ) : ℝ≥0∞ :=
   .ofReal ((γ : ℝ) ^ n * (1 - γ))
 

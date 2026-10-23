@@ -19,7 +19,8 @@ open scoped ENNReal
 namespace ProbLang
 namespace AbsorbingExit
 
-variable {rT : Type} [LawfulProbLangℝ rT] {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+    [MicrometerRGS rT .hasNoLC GF]
 local bi IProp GF
 
 /-- With `↯b (ε, δ)` for `δ ≥ 1`, `0` refines `1` at equal integers. -/

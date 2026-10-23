@@ -26,7 +26,7 @@ theorem rrCoupling_dp : RRCoupling (codensity dp) budget := fun b b' ↦
   codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦
     expBudget_log_three ▸ rrOut_fiber_le_three b b' c
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 section OneRound
 

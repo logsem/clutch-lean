@@ -13,14 +13,14 @@ open MeasureTheory.Measure ErasableExpr BindLaw IsTopAbsorbing BIFUpdate
 
 namespace ProbLang
 
-variable {rT : Type} [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} {GF : BundledGFunctors}
 
 /-! ## The modality -/
 
-abbrev SpecCouplState (rT : Type) [LawfulProbLangℝ rT] (B : Type) :
+abbrev SpecCouplState (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _

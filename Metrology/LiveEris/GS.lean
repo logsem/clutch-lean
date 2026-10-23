@@ -27,17 +27,24 @@ abbrev creditVec (ε δ : ℝ≥0∞) : Coord → ℝ≥0∞
   | .err => ε
   | .tot => ε + δ
 
-class LiveGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (hlc : outParam HasLC)
+class LiveGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (hlc : outParam HasLC)
     (GF : BundledGFunctors) where
   appGS : AppGS rT GF
   lcGS : LCGS GF
   invGS : InvGS_gen hlc GF
 
-attribute [reducible, instance] LiveGS.appGS LiveGS.lcGS LiveGS.invGS
+attribute [reducible, instance] LiveGS.appGS LiveGS.lcGS
+
+/-- `LiveGS.invGS`, with the measurable space and language read off the instance, not searched
+for first. -/
+@[reducible]
+instance LiveGS.instInvGS {R : Type _} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {hlc : HasLC} {GF : BundledGFunctors} [LiveGS R hlc GF] : InvGS_gen hlc GF := LiveGS.invGS
 
 section LiveInstance
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [LiveGS rT hlc GF]
 
 @[reducible]

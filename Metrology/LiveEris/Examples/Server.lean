@@ -41,19 +41,19 @@ def flagServer {rT : Type _} : Exp rT := pl% let f := alloc(#false); &serveFlag 
 /-- Some heap cell holds `true`: the flag is up. -/
 def FlagUp {rT : Type _} (σ : State rT) : Prop := ∃ l : Loc, σ.heap[l]? = some (.bool true)
 
-variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT]
-  [LiveGS rT hlc GF]
-local bi IProp GF
+variable {rT : Type _}
 
-omit [LawfulProbLangℝ rT] in
 theorem ctrUp_store (ℓ : Loc) (n : ℤ) (σ : State rT) (h : σ.heap[ℓ]? = some (.int n)) :
     CtrUp ℓ σ (σ.update_heap (·.insert ℓ (.int (n + 1)))) :=
   ⟨n, h, by simp [State.update_heap]⟩
 
-omit [LawfulProbLangℝ rT] in
 theorem flagUp_store (l : Loc) (σ : State rT) :
     FlagUp (σ.update_heap (·.insert l (.bool true))) :=
   ⟨l, by simp [State.update_heap]⟩
+
+variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+  [LiveGS rT hlc GF]
+local bi IProp GF
 
 noncomputable abbrev ServeStmt (ℓ : Loc) : IProp GF :=
   iprop(∀ (n : ℤ) (Ψ : Val rT → IProp GF),

@@ -14,7 +14,8 @@ open scoped AppGS ENNReal
 namespace ProbLang
 namespace LiveEris
 
-variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT]
+variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT]
+    [LawfulProbLangℝ rT]
   [LiveGS rT hlc GF]
 variable {Q : State rT → State rT → Prop}
 

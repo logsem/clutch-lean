@@ -16,7 +16,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang.MicrometerWpGS G
 
 namespace ProbLang
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
 /-- `wp` of `e` may open invariants around it: a mask-changing update before `e` can be closed after

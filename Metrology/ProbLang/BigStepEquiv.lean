@@ -16,7 +16,57 @@ open MeasureTheory Measure
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
+
+/-- The number of evaluation positions of `e` that still hold a non-value. It drops each
+time one of them is evaluated, which orders the induction in `bigStepF_limExec_le`. -/
+def Exp.pendingArgs : Exp rT → Nat
+  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .rand e1 e2 =>
+    pending e1 + pending e2
+  | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e
+  | .scrut e _ | .cond e _ _ | .case e _ _ => pending e
+  | _ => 0
+where pending (e : Exp rT) : Nat := if e.isValue then 0 else 1
+
+theorem Exp.pendingArgs_fillItem_lt (Ki : EctxItem rT) {e v : Exp rT} (he : ¬e.isValue)
+    (hv : v.isValue) : (Ki.fillItem v).pendingArgs < (Ki.fillItem e).pendingArgs := by
+  cases Ki <;>
+    simp [EctxItem.fillItem, Exp.pendingArgs, Exp.pendingArgs.pending, Exp.ofVal, he, hv]
+
+private theorem Option.casesOn_some_eq_none {α β : Type _} {o : Option α} {b : β}
+    {f : α → Option β} (h : o.casesOn (some b) f = none) : ∃ a, o = some a ∧ f a = none := by
+  cases o <;> simp_all
+
+private theorem Exp.isValue_of_decompItem₁ {β : Type _} {e1 : Exp rT} {b : β}
+    (h : e1.toVal?.casesOn (some b) (fun _ => none) = none) : e1.isValue :=
+  let ⟨_, hv1, _⟩ := Option.casesOn_some_eq_none h
+  Exp.toVal?_isValue hv1
+
+private theorem Exp.isValue_of_decompItem₂ {β : Type _} {e1 e2 : Exp rT} {b : β}
+    {f : Val rT → β}
+    (h : e2.toVal?.casesOn (some b) (fun v2 => e1.toVal?.casesOn (some (f v2)) fun _ => none) =
+      none) : e1.isValue ∧ e2.isValue :=
+  let ⟨_, hv2, h⟩ := Option.casesOn_some_eq_none h
+  ⟨Exp.isValue_of_decompItem₁ h, Exp.toVal?_isValue hv2⟩
+
+variable [MeasurableSpace rT]
+
+/-! ## Evaluators that return values -/
+
+/-- `R` returns a value configuration unchanged. -/
+def RetVal (R : Cfg rT → Measure (Cfg rT)) : Prop :=
+  ∀ e σ, e.isValue → R ⟨e, σ⟩ = dirac ⟨e, σ⟩
+
+/-- `R` only produces value configurations. -/
+def OnlyVal (R : Cfg rT → Measure (Cfg rT)) : Prop :=
+  ∀ ρ, ∀ᵐ c ∂(R ρ), c.expr.isValue
+
+theorem OnlyVal.bind_congr {R : Cfg rT → Measure (Cfg rT)} (hR : OnlyVal R) (ρ : Cfg rT)
+    {f g : Cfg rT → Measure (Cfg rT)} (h : ∀ c : Cfg rT, c.expr.isValue → f c = g c) :
+    (R ρ).bind f = (R ρ).bind g :=
+  bind_congr_right ((hR ρ).mono fun c hc => h c hc)
+
+variable [LawfulProbLangℝ rT]
 
 /-- `bigStepF` read in the Giry monad. -/
 def measureOps : EvalOps rT (Measure (Cfg rT)) where
@@ -70,6 +120,14 @@ theorem Cfg.tsum_iSup_of_monotone {f : ℕ → Cfg rT → ENNReal}
   simp_rw [← MeasureTheory.lintegral_count]
   exact MeasureTheory.lintegral_iSup (fun _ => hm _) (fun _ _ hmn a => hf a hmn)
 
+/-! ## `limExec` on values and head redexes -/
+
+theorem limExec_retVal : RetVal (limExec (rT := rT)) :=
+  fun _ _ ⟨w⟩ => limExec_of_isVal w
+
+theorem limExec_head {e : Exp rT} {σ : State rT} (hdec : e.decompItem = none)
+    (hnv : ¬e.isValue) : limExec ⟨e, σ⟩ = (headStep ⟨e, σ⟩).bind limExec := by
+  rw [limExec_not_final hnv, primStep_eq_headStep hdec]
 section Discrete
 
 variable [Countable rT]
@@ -135,26 +193,10 @@ def bigStep : Cfg rT → Measure (Cfg rT) :=
 theorem bigStep_unfold : bigStep (rT := rT) = bigStepF measureOps bigStep :=
   (OrderHom.map_lfp _).symm
 
-/-! ## Evaluators that return values -/
-
-/-- `R` returns a value configuration unchanged. -/
-def RetVal (R : Cfg rT → Measure (Cfg rT)) : Prop :=
-  ∀ e σ, e.isValue → R ⟨e, σ⟩ = dirac ⟨e, σ⟩
-
-/-- `R` only produces value configurations. -/
-def OnlyVal (R : Cfg rT → Measure (Cfg rT)) : Prop :=
-  ∀ ρ, ∀ᵐ c ∂(R ρ), c.expr.isValue
-
 theorem RetVal.bind_eq {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp rT}
     {σ : State rT} (he : e.isValue) (f : Cfg rT → Measure (Cfg rT)) :
     (R ⟨e, σ⟩).bind f = f ⟨e, σ⟩ := by
   rw [hR e σ he, dirac_bind_discrete]
-
-omit [Countable rT] in
-theorem OnlyVal.bind_congr {R : Cfg rT → Measure (Cfg rT)} (hR : OnlyVal R) (ρ : Cfg rT)
-    {f g : Cfg rT → Measure (Cfg rT)} (h : ∀ c : Cfg rT, c.expr.isValue → f c = g c) :
-    (R ρ).bind f = (R ρ).bind g :=
-  bind_congr_right ((hR ρ).mono fun c hc => h c hc)
 
 /-- Pushing a measure of values through a value-returning `R` changes nothing. -/
 theorem RetVal.map_bind {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {α : Type _}
@@ -190,25 +232,6 @@ theorem bigStepF_val {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp 
     rw [hR.bind_eq w2.toIsValue, hR.bind_eq w1.toIsValue]
   | inl w => simp only [bigStepF, measureOps]; rw [hR.bind_eq w.toIsValue]
   | inr w => simp only [bigStepF, measureOps]; rw [hR.bind_eq w.toIsValue]
-
-omit [LawfulProbLangℝ rT] in
-private theorem Option.casesOn_some_eq_none {α β : Type _} {o : Option α} {b : β}
-    {f : α → Option β} (h : o.casesOn (some b) f = none) : ∃ a, o = some a ∧ f a = none := by
-  cases o <;> simp_all
-
-omit [LawfulProbLangℝ rT] [Countable rT] in
-private theorem Exp.isValue_of_decompItem₁ {β : Type _} {e1 : Exp rT} {b : β}
-    (h : e1.toVal?.casesOn (some b) (fun _ => none) = none) : e1.isValue :=
-  let ⟨_, hv1, _⟩ := Option.casesOn_some_eq_none h
-  Exp.toVal?_isValue hv1
-
-omit [LawfulProbLangℝ rT] [Countable rT] in
-private theorem Exp.isValue_of_decompItem₂ {β : Type _} {e1 e2 : Exp rT} {b : β}
-    {f : Val rT → β}
-    (h : e2.toVal?.casesOn (some b) (fun v2 => e1.toVal?.casesOn (some (f v2)) fun _ => none) =
-      none) : e1.isValue ∧ e2.isValue :=
-  let ⟨_, hv2, h⟩ := Option.casesOn_some_eq_none h
-  ⟨Exp.isValue_of_decompItem₁ h, Exp.toVal?_isValue hv2⟩
 
 /-- On a head redex, one unfolding of the evaluator takes exactly the head step. -/
 theorem bigStepF_head {R : Cfg rT → Measure (Cfg rT)} (hR : RetVal R) {e : Exp rT}
@@ -443,11 +466,7 @@ theorem bigStep_retVal : RetVal (bigStep (rT := rT)) := by
   | inl w ih => rw [bigStep_unfold]; simp only [bigStepF, measureOps]; rw [ih, dirac_bind_discrete]
   | inr w ih => rw [bigStep_unfold]; simp only [bigStepF, measureOps]; rw [ih, dirac_bind_discrete]
 
-/-! ## `limExec` returns values, takes head steps, and composes through contexts -/
-
-omit [Countable rT] in
-theorem limExec_retVal : RetVal (limExec (rT := rT)) :=
-  fun _ _ ⟨w⟩ => limExec_of_isVal w
+/-! ## `limExec` composes through contexts -/
 
 theorem execN_nonvalue (n : ℕ) (ρ : Cfg rT) : execN n ρ {c | ¬c.expr.isValue} = 0 := by
   induction n generalizing ρ with
@@ -462,11 +481,6 @@ theorem execN_nonvalue (n : ℕ) (ρ : Cfg rT) : execN n ρ {c | ¬c.expr.isValu
 theorem limExec_onlyVal : OnlyVal (limExec (rT := rT)) := fun ρ => by
   rw [ae_iff, limExec, iSup_measure_apply execN_monotone MeasurableSet.of_discrete]
   simp [execN_nonvalue]
-
-omit [Countable rT] in
-theorem limExec_head {e : Exp rT} {σ : State rT} (hdec : e.decompItem = none)
-    (hnv : ¬e.isValue) : limExec ⟨e, σ⟩ = (headStep ⟨e, σ⟩).bind limExec := by
-  rw [limExec_not_final hnv, primStep_eq_headStep hdec]
 
 /-- Running `e` to a value and then `Ki[v]` is part of running `Ki[e]`. -/
 theorem limExec_fillItem_ge (Ki : EctxItem rT) (e : Exp rT) (σ : State rT) :
@@ -489,22 +503,6 @@ theorem limExec_fillItem_ge (Ki : EctxItem rT) (e : Exp rT) (σ : State rT) :
   exact iSup_le fun n => hN n e σ
 
 /-! ## `bigStep ≤ limExec` -/
-
-/-- The number of evaluation positions of `e` that still hold a non-value. It drops each
-time one of them is evaluated, which orders the induction in `bigStepF_limExec_le`. -/
-def Exp.pendingArgs : Exp rT → Nat
-  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .rand e1 e2 =>
-    pending e1 + pending e2
-  | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e
-  | .scrut e _ | .cond e _ _ | .case e _ _ => pending e
-  | _ => 0
-where pending (e : Exp rT) : Nat := if e.isValue then 0 else 1
-
-omit [LawfulProbLangℝ rT] [Countable rT] in
-theorem Exp.pendingArgs_fillItem_lt (Ki : EctxItem rT) {e v : Exp rT} (he : ¬e.isValue)
-    (hv : v.isValue) : (Ki.fillItem v).pendingArgs < (Ki.fillItem e).pendingArgs := by
-  cases Ki <;>
-    simp [EctxItem.fillItem, Exp.pendingArgs, Exp.pendingArgs.pending, Exp.ofVal, he, hv]
 
 theorem bigStepF_limExec_le (e : Exp rT) (σ : State rT) :
     bigStepF measureOps limExec ⟨e, σ⟩ ≤ limExec ⟨e, σ⟩ := by

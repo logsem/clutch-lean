@@ -179,7 +179,8 @@ theorem RVal.ofExp_spec {e : Exp rT} (he : e.isValue) :
   | inl _ ih => exact ⟨by simp [RVal.ofExp, RVal.rb, ih.1], ih.2⟩
   | inr _ ih => exact ⟨by simp [RVal.ofExp, RVal.rb, ih.1], ih.2⟩
 
-theorem Pat.tryMatchR_spec [LawfulProbLangℝ rT] (p : Pat rT) {v : RVal rT} (hv : v.WF) :
+theorem Pat.tryMatchR_spec [MeasurableSpace rT] [LawfulProbLangℝ rT] (p : Pat rT) {v : RVal rT}
+    (hv : v.WF) :
     (p.tryMatchR v).map RVal.rb = p.tryMatch v.rb ∧ ∀ b, p.tryMatchR v = some b → b.WF := by
   induction p generalizing v with
   | wildcard => simp_all [Pat.tryMatchR, Pat.tryMatch]
@@ -231,7 +232,18 @@ def EnvCfg.WF : EnvCfg rT → Prop
 
 section BindLemmas
 
-variable {α β : Type _} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+
+theorem map_bind_disc {γ : Type _} [MeasurableSpace γ] [DiscreteMeasurableSpace β]
+    {μ : Measure α} {f : α → Measure β} {g : β → γ} (hf : Measurable f) :
+    (μ.bind f).map g = μ.bind fun a => (f a).map g := by
+  have hg : Measurable g := .of_discrete
+  have hfg : Measurable fun a => (f a).map g := (measurable_map _ hg).comp hf
+  ext s hs
+  rw [map_apply hg hs, bind_apply (hg hs) hf.aemeasurable, bind_apply hs hfg.aemeasurable]
+  simp_rw [map_apply hg hs]
+
+variable [DiscreteMeasurableSpace α]
 
 theorem bind_mono_disc {μ ν : Measure α} {f g : α → Measure β} (hμ : μ ≤ ν)
     (hfg : ∀ a, f a ≤ g a) : μ.bind f ≤ ν.bind g := by
@@ -247,9 +259,6 @@ theorem bind_mono_ae_disc {μ : Measure α} {f g : α → Measure β} (hfg : ∀
     bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono_ae (hfg.mono fun a h => h s)
 
-variable [DiscreteMeasurableSpace β]
-
-omit [DiscreteMeasurableSpace β] in
 /-- `bind` is continuous along monotone sequences in both arguments. -/
 theorem bind_iSup_iSup_le {μ : ℕ → Measure α} (hμ : Monotone μ) {f : ℕ → α → Measure β}
     (hf : Monotone f) : (⨆ n, μ n).bind (fun a => ⨆ n, f n a) ≤ ⨆ n, (μ n).bind (f n) := by
@@ -266,37 +275,84 @@ theorem bind_iSup_iSup_le {μ : ℕ → Measure α} (hμ : Monotone μ) {f : ℕ
   rw [bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono' (hμ (le_max_right _ _)) fun a => hf (le_max_left _ _) a s
 
+variable [DiscreteMeasurableSpace β]
+
 /-- An almost-everywhere property of a `bind`'s continuations holds for the `bind`. -/
 theorem ae_bind_disc {μ : Measure α} {f : α → Measure β} {p : β → Prop}
     (h : ∀ᵐ a ∂μ, ∀ᵐ b ∂(f a), p b) : ∀ᵐ b ∂(μ.bind f), p b := by
   rw [ae_iff, bind_apply MeasurableSet.of_discrete Measurable.of_discrete.aemeasurable]
   exact (lintegral_eq_zero_iff Measurable.of_discrete).mpr (h.mono fun a ha => ae_iff.mp ha)
 
-omit [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β] in
-theorem map_bind_disc {γ : Type _} [MeasurableSpace γ] [DiscreteMeasurableSpace β]
-    {μ : Measure α} {f : α → Measure β} {g : β → γ} (hf : Measurable f) :
-    (μ.bind f).map g = μ.bind fun a => (f a).map g := by
-  have hg : Measurable g := .of_discrete
-  have hfg : Measurable fun a => (f a).map g := (measurable_map _ hg).comp hf
-  ext s hs
-  rw [map_apply hg hs, bind_apply (hg hs) hf.aemeasurable, bind_apply hs hfg.aemeasurable]
-  simp_rw [map_apply hg hs]
-
 end BindLemmas
 
 /-! ## The measure semantics of the machine -/
 
-variable [LawfulProbLangℝ rT]
-
 instance : MeasurableSpace (RCfg rT) := ⊤
 
 instance : DiscreteMeasurableSpace (RCfg rT) := ⟨fun _ => MeasurableSpace.measurableSet_top⟩
+
+theorem RVal.rb_clo_open {env : Env rT} {body : Exp rT} {v : RVal rT} (henv : RVal.WFEnv env) :
+    (body.substEnv 1 (RVal.rbEnv env)).open' v.rb = body.substEnv 0 (RVal.rbEnv (v :: env)) := by
+  simp only [Exp.open', RVal.rbEnv]
+  exact Exp.openRec_substEnv body henv.lc
+
+/-- A well-formed frame reads back to an evaluation-context item. -/
+theorem Frame.exists_item {f : Frame rT} (hf : f.WF) :
+    ∃ Ki : EctxItem rT, ∀ x, f.fill x = Ki.fillItem x := by
+  cases f with
+  | pairR env e1 => exact ⟨.pairR _, fun _ => rfl⟩
+  | pairL v2 => exact ⟨.pairL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
+  | inl => exact ⟨.inl, fun _ => rfl⟩
+  | inr => exact ⟨.inr, fun _ => rfl⟩
+  | appR env e1 => exact ⟨.appR _, fun _ => rfl⟩
+  | appL v2 => exact ⟨.appL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
+  | applyTo v => exact ⟨.appL (RVal.WF.toVal (v := v) hf), fun _ => rfl⟩
+  | unop op => exact ⟨.unop op, fun _ => rfl⟩
+  | binopR op env e1 => exact ⟨.binopR op _, fun _ => rfl⟩
+  | binopL op v2 => exact ⟨.binopL op (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
+  | cond env et ef => exact ⟨.condC _ _, fun _ => rfl⟩
+  | fst => exact ⟨.fst, fun _ => rfl⟩
+  | snd => exact ⟨.snd, fun _ => rfl⟩
+  | case env el er => exact ⟨.case _ _, fun _ => rfl⟩
+  | scrut p => exact ⟨.scrut p, fun _ => rfl⟩
+  | alloc => exact ⟨.alloc, fun _ => rfl⟩
+  | load => exact ⟨.load, fun _ => rfl⟩
+  | storeR env e1 => exact ⟨.storeR _, fun _ => rfl⟩
+  | storeL v2 => exact ⟨.storeL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
+  | tape => exact ⟨.tape, fun _ => rfl⟩
+  | randR env e1 => exact ⟨.randR _, fun _ => rfl⟩
+  | randL v2 => exact ⟨.randL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
+
+theorem dirac_bind_rcfg (r : RCfg rT) (f : RCfg rT → Measure (RCfg rT)) :
+    (dirac r).bind f = f r :=
+  dirac_bind Measurable.of_discrete r
+
+variable [MeasurableSpace rT]
 
 /-- The integer sampled by `Cfg.uniform`. -/
 def intUniform (z : Int) : Measure Int :=
   match ProbLang.Int.isPos z with
   | some ⟨z, h⟩ => (PMF.uniformOfFinset (.Ico 0 z) (Finset.nonempty_Ico.mpr h)).toMeasure
   | none => dirac (-1)
+
+theorem RCfg.measurable_rb : Measurable (RCfg.rb (rT := rT)) := .of_discrete
+
+theorem intUniform_map (z : Int) (σ : State rT) :
+    (intUniform z).map (fun n => (⟨.lit (.int n), σ⟩ : Cfg rT)) = Cfg.uniform z σ := by
+  unfold intUniform Cfg.uniform
+  cases Int.isPos z with
+  | some z' => rfl
+  | none => exact map_dirac' Measurable.of_discrete _
+
+theorem map_iSup_le_of {μ : ℕ → Measure (RCfg rT)} (hμ : Monotone μ) {ν : Measure (Cfg rT)}
+    (h : ∀ n, (μ n).map RCfg.rb ≤ ν) : (⨆ n, μ n).map RCfg.rb ≤ ν := by
+  refine Measure.le_iff.mpr fun s hs => ?_
+  rw [map_apply RCfg.measurable_rb hs,
+    Measure.iSup_apply_of_monotone hμ (RCfg.measurable_rb hs)]
+  exact iSup_le fun n => by
+    rw [← map_apply RCfg.measurable_rb hs]; exact Measure.le_iff.mp (h n) s hs
+
+variable [LawfulProbLangℝ rT]
 
 /-- A machine step read as a measure, with recursive calls handled by `X`. -/
 def Step.interp (X : EnvCfg rT → Measure (RCfg rT)) : Step rT → Measure (RCfg rT)
@@ -355,11 +411,7 @@ theorem envBig_unfold : envBig (rT := rT) = envΦ envBig := by
 theorem envBig_apply (c : EnvCfg rT) : envBig c = (envStep c).interp envBig :=
   congrFun envBig_unfold c
 
-section Discrete
-
-variable [Countable rT]
-
-/-! ## Well-formedness is preserved -/
+/-! ## Results that do not need countability -/
 
 /-- A step whose results and calls are all well formed. -/
 def Step.Good : Step rT → Prop
@@ -369,7 +421,6 @@ def Step.Good : Step rT → Prop
   | .apply f v _ => f.WF ∧ v.WF
   | _ => True
 
-omit [Countable rT] in
 theorem envStep_good {c : EnvCfg rT} (hc : c.WF) : (envStep c).Good := by
   cases c with
   | eval env e σ =>
@@ -396,6 +447,168 @@ theorem envStep_good {c : EnvCfg rT} (hc : c.WF) : (envStep c).Good := by
       | exact (RVal.ofExp_spec (BinOp.eval_isValue ‹_›)).2
       | exact (Pat.tryMatchR_spec _ hv).2 _ ‹_›
       | exact (RVal.ofExp_spec (Val.isValue _)).2
+
+theorem Step.map_interp_uniform (z : Int) (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
+    ((Step.uniform z σ).interp X).map RCfg.rb = Cfg.uniform z σ := by
+  simp only [Step.interp]
+  rw [Measure.map_map RCfg.measurable_rb Measurable.of_discrete, ← intUniform_map]
+  rfl
+
+theorem envBig_eval_bvar {env : Env rT} {j : Nat} {σ : State rT} {u : Exp rT}
+    (hc : (EnvCfg.eval env (.bvar j) σ).WF) (hu : (Exp.bvar j).substEnv 0 (RVal.rbEnv env) = u) :
+    ∃ v : RVal rT, v.WF ∧ v.rb = u ∧ envBig (.eval env (.bvar j) σ) = dirac ⟨v, σ⟩ := by
+  obtain ⟨he, henv⟩ := hc
+  simp only [Exp.lcb, decide_eq_true_eq] at he
+  obtain ⟨v, hj⟩ : ∃ v, env[j]? = some v := ⟨env[j], List.getElem?_eq_getElem he⟩
+  refine ⟨v, henv.getElem? hj, ?_, ?_⟩
+  · simpa [Exp.substEnv, RVal.rbEnv_getElem?, hj] using hu
+  · rw [envBig_apply]; simp [envStep, evalK, stepOps, hj, Step.interp]
+
+/-- Evaluating an expression that reads back to a value returns that value at once. -/
+theorem envBig_eval_val : ∀ {u : Exp rT} (_ : IsVal u) {env : Env rT} {e : Exp rT}
+    {σ : State rT}, (EnvCfg.eval env e σ).WF → e.substEnv 0 (RVal.rbEnv env) = u →
+    ∃ v : RVal rT, v.WF ∧ v.rb = u ∧ envBig (.eval env e σ) = dirac ⟨v, σ⟩ := by
+  intro u w
+  induction w with
+  | @lit b =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | lit b' =>
+      simp only [Exp.substEnv] at hu
+      exact ⟨.lit b', trivial, by simp [RVal.rb, hu], by rw [envBig_apply]; rfl⟩
+    | _ => simp [Exp.substEnv] at hu
+  | lam _ =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | lam body =>
+      exact ⟨.clo env body, ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩,
+        by simpa [RVal.rb, Exp.substEnv] using hu, by rw [envBig_apply]; rfl⟩
+    | _ => simp [Exp.substEnv] at hu
+  | fix _ =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | fix body =>
+      exact ⟨.fixClo env body, ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩,
+        by simpa [RVal.rb, Exp.substEnv] using hu, by rw [envBig_apply]; rfl⟩
+    | _ => simp [Exp.substEnv] at hu
+  | pair _ _ ih1 ih2 =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | pair e1 e2 =>
+      simp only [Exp.substEnv, Exp.pair.injEq] at hu
+      simp only [EnvCfg.WF, Exp.lcb, Bool.and_eq_true] at hc
+      obtain ⟨v2, hv2, hr2, hE2⟩ := ih2 (σ := σ) ⟨hc.1.2, hc.2⟩ hu.2
+      obtain ⟨v1, hv1, hr1, hE1⟩ := ih1 (σ := σ) ⟨hc.1.1, hc.2⟩ hu.1
+      refine ⟨.pair v1 v2, ⟨hv1, hv2⟩, by simp [RVal.rb, hr1, hr2], ?_⟩
+      rw [envBig_apply]
+      simp only [envStep, evalK, stepOps, Step.interp]
+      rw [hE2, dirac_bind_rcfg, envBig_apply]
+      simp only [envStep, resumeK, stepOps, Step.interp]
+      rw [hE1, dirac_bind_rcfg, envBig_apply]
+      rfl
+    | _ => simp [Exp.substEnv] at hu
+  | inl _ ih =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | inl e1 =>
+      simp only [Exp.substEnv, Exp.inl.injEq] at hu
+      obtain ⟨v1, hv1, hr1, hE1⟩ := ih (e := e1) (σ := σ) ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩ hu
+      refine ⟨.inl v1, hv1, by simp [RVal.rb, hr1], ?_⟩
+      rw [envBig_apply]
+      simp only [envStep, evalK, stepOps, Step.interp]
+      rw [hE1, dirac_bind_rcfg, envBig_apply]
+      rfl
+    | _ => simp [Exp.substEnv] at hu
+  | inr _ ih =>
+    intro env e σ hc hu
+    cases e with
+    | bvar j => exact envBig_eval_bvar hc hu
+    | inr e1 =>
+      simp only [Exp.substEnv, Exp.inr.injEq] at hu
+      obtain ⟨v1, hv1, hr1, hE1⟩ := ih (e := e1) (σ := σ) ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩ hu
+      refine ⟨.inr v1, hv1, by simp [RVal.rb, hr1], ?_⟩
+      rw [envBig_apply]
+      simp only [envStep, evalK, stepOps, Step.interp]
+      rw [hE1, dirac_bind_rcfg, envBig_apply]
+      rfl
+    | _ => simp [Exp.substEnv] at hu
+
+/-- Every configuration that reads back to a value returns that value at once. -/
+theorem envBig_val {c : EnvCfg rT} (hc : c.WF) (hv : c.rb.expr.isValue) :
+    (envBig c).map RCfg.rb = dirac c.rb := by
+  cases c with
+  | eval env e σ =>
+    obtain ⟨w⟩ := hv
+    obtain ⟨v, _, hr, hE⟩ := envBig_eval_val w hc rfl
+    rw [hE, map_dirac' RCfg.measurable_rb]
+    simp [RCfg.rb, EnvCfg.rb, hr]
+  | apply f v σ => obtain ⟨w⟩ := hv; cases w
+  | resume f v σ =>
+    obtain ⟨hf, hvw⟩ := hc
+    obtain ⟨w⟩ := hv
+    cases f <;> simp only [EnvCfg.rb, Frame.fill] at w
+    case pairR env e1 =>
+      cases w with
+      | pair w1 _ =>
+        obtain ⟨v1, _, hr1, hE1⟩ := envBig_eval_val w1 (σ := σ) hf rfl
+        rw [envBig_apply]
+        simp only [envStep, resumeK, stepOps, Step.interp]
+        rw [hE1, dirac_bind_rcfg, envBig_apply]
+        simp only [envStep, resumeK, stepOps, Step.interp]
+        rw [map_dirac' RCfg.measurable_rb]
+        simp [RCfg.rb, EnvCfg.rb, Frame.fill, RVal.rb, hr1]
+    case pairL | inl | inr =>
+      rw [envBig_apply]
+      simp only [envStep, resumeK, stepOps, Step.interp]
+      rw [map_dirac' RCfg.measurable_rb]
+      rfl
+    all_goals cases w
+
+/-- The smallest read-back result of the machine over all configurations reading back
+to `ρ`. -/
+def Yb (ρ : Cfg rT) : Measure (Cfg rT) :=
+  ⨅ (c : EnvCfg rT) (_ : c.WF ∧ c.rb = ρ), (envBig c).map RCfg.rb
+
+theorem Yb_le' {c : EnvCfg rT} {ρ : Cfg rT} (hc : c.WF) (hρ : c.rb = ρ) :
+    Yb ρ ≤ (envBig c).map RCfg.rb :=
+  iInf₂_le c ⟨hc, hρ⟩
+
+theorem Yb_le {c : EnvCfg rT} (hc : c.WF) : Yb c.rb ≤ (envBig c).map RCfg.rb :=
+  Yb_le' hc rfl
+
+theorem Yb_retVal : RetVal (Yb (rT := rT)) := by
+  intro e σ he
+  have hspec := RVal.ofExp_spec he
+  apply le_antisymm
+  · have hc : (EnvCfg.eval [RVal.ofExp e] (.bvar 0) σ).WF :=
+      ⟨by simp [Exp.lcb], hspec.2, trivial⟩
+    have hrb : (EnvCfg.eval [RVal.ofExp e] (.bvar 0) σ).rb = ⟨e, σ⟩ := by
+      simp [EnvCfg.rb, Exp.substEnv, RVal.rbEnv, hspec.1]
+    refine (iInf₂_le _ ⟨hc, hrb⟩).trans ?_
+    rw [envBig_val hc (by rw [hrb]; exact he), hrb]
+  · refine le_iInf₂ fun c ⟨hc, hρ⟩ => ?_
+    rw [envBig_val hc (by rw [hρ]; exact he), hρ]
+
+theorem envBig_appL_eq (v w : RVal rT) (σ : State rT) :
+    envBig (.resume (.appL v) w σ) = envBig (.resume (.applyTo v) w σ) := by
+  rw [envBig_apply, envBig_apply (.resume (.applyTo v) w σ)]; rfl
+
+/-- Two ways of evaluating `e` and applying the result to `v` agree. -/
+theorem envBig_appR_eq (env : Env rT) (e : Exp rT) (v : RVal rT) (σ : State rT) :
+    envBig (.resume (.appR env e) v σ) = (Step.evalThen env e σ (.applyTo v)).interp envBig := by
+  rw [envBig_apply]
+  simp only [envStep, resumeK, stepOps, Step.interp, envBig_appL_eq]
+
+section Discrete
+
+variable [Countable rT]
+
+/-! ## Well-formedness is preserved -/
 
 /-- `X` returns well-formed values on well-formed configurations. -/
 def Pres (X : EnvCfg rT → Measure (RCfg rT)) : Prop :=
@@ -436,9 +649,6 @@ theorem envBig_pres : Pres (envBig (rT := rT)) := by
 
 /-! ## Bounding one step by read-back evaluations -/
 
-omit [Countable rT] in
-theorem RCfg.measurable_rb : Measurable (RCfg.rb (rT := rT)) := .of_discrete
-
 /-- What one step becomes after readback, when calls are evaluated by `Z`. -/
 def Step.bnd (Z : Cfg rT → Measure (Cfg rT)) : Step rT → Measure (Cfg rT)
   | .ret v σ => dirac ⟨v.rb, σ⟩
@@ -453,21 +663,6 @@ def Step.bnd (Z : Cfg rT → Measure (Cfg rT)) : Step rT → Measure (Cfg rT)
 theorem bind_map_disc {μ : Measure (RCfg rT)} {g : RCfg rT → Cfg rT}
     {k : Cfg rT → Measure (Cfg rT)} : (μ.map g).bind k = μ.bind (k ∘ g) := by
   rw [Measure.bind, Measure.bind, Measure.map_map Measurable.of_discrete Measurable.of_discrete]
-
-omit [Countable rT] in
-theorem intUniform_map (z : Int) (σ : State rT) :
-    (intUniform z).map (fun n => (⟨.lit (.int n), σ⟩ : Cfg rT)) = Cfg.uniform z σ := by
-  unfold intUniform Cfg.uniform
-  cases Int.isPos z with
-  | some z' => rfl
-  | none => exact map_dirac' Measurable.of_discrete _
-
-omit [Countable rT] in
-theorem Step.map_interp_uniform (z : Int) (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
-    ((Step.uniform z σ).interp X).map RCfg.rb = Cfg.uniform z σ := by
-  simp only [Step.interp]
-  rw [Measure.map_map RCfg.measurable_rb Measurable.of_discrete, ← intUniform_map]
-  rfl
 
 theorem Step.map_interp_uniformReal (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
     ((Step.uniformReal σ).interp X).map RCfg.rb = Cfg.uniformReal σ := by
@@ -513,7 +708,8 @@ theorem Step.bnd_le_map_interp {X : EnvCfg rT → Measure (RCfg rT)}
           bind_mono_disc (hZX _ hs.1) fun _ => le_rfl
       _ = (X (.eval env e σ)).bind ((fun ρ => Z ⟨f.fill ρ.expr, ρ.state⟩) ∘ RCfg.rb) :=
           bind_map_disc
-      _ ≤ _ := bind_mono_ae_disc ((hX _ hs.1).mono fun r hr => hZX (.resume f r.val r.state) ⟨hs.2, hr⟩)
+      _ ≤ _ := bind_mono_ae_disc
+          ((hX _ hs.1).mono fun r hr => hZX (.resume f r.val r.state) ⟨hs.2, hr⟩)
   | apply f v σ => exact hZX _ hs
   | stuck => simp [Step.interp, Step.bnd]
   | uniform z σ => exact (Step.map_interp_uniform z σ X).ge
@@ -543,12 +739,6 @@ theorem RetVal.bind_rb {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {v : RV
     (hv : v.WF) (σ : State rT) (f : Cfg rT → Measure (Cfg rT)) :
     (Z ⟨v.rb, σ⟩).bind f = f ⟨v.rb, σ⟩ :=
   hZ.bind_eq hv.isValue f
-
-omit [LawfulProbLangℝ rT] [Countable rT] in
-theorem RVal.rb_clo_open {env : Env rT} {body : Exp rT} {v : RVal rT} (henv : RVal.WFEnv env) :
-    (body.substEnv 1 (RVal.rbEnv env)).open' v.rb = body.substEnv 0 (RVal.rbEnv (v :: env)) := by
-  simp only [Exp.open', RVal.rbEnv]
-  exact Exp.openRec_substEnv body henv.lc
 
 /-- At a head configuration, one unfolding of `bigStepF` is the machine's step read back. -/
 theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : EnvCfg rT}
@@ -657,34 +847,6 @@ theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : E
 
 /-! ## `envBig ≤ bigStep` after readback -/
 
-omit [LawfulProbLangℝ rT] [Countable rT] in
-/-- A well-formed frame reads back to an evaluation-context item. -/
-theorem Frame.exists_item {f : Frame rT} (hf : f.WF) :
-    ∃ Ki : EctxItem rT, ∀ x, f.fill x = Ki.fillItem x := by
-  cases f with
-  | pairR env e1 => exact ⟨.pairR _, fun _ => rfl⟩
-  | pairL v2 => exact ⟨.pairL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
-  | inl => exact ⟨.inl, fun _ => rfl⟩
-  | inr => exact ⟨.inr, fun _ => rfl⟩
-  | appR env e1 => exact ⟨.appR _, fun _ => rfl⟩
-  | appL v2 => exact ⟨.appL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
-  | applyTo v => exact ⟨.appL (RVal.WF.toVal (v := v) hf), fun _ => rfl⟩
-  | unop op => exact ⟨.unop op, fun _ => rfl⟩
-  | binopR op env e1 => exact ⟨.binopR op _, fun _ => rfl⟩
-  | binopL op v2 => exact ⟨.binopL op (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
-  | cond env et ef => exact ⟨.condC _ _, fun _ => rfl⟩
-  | fst => exact ⟨.fst, fun _ => rfl⟩
-  | snd => exact ⟨.snd, fun _ => rfl⟩
-  | case env el er => exact ⟨.case _ _, fun _ => rfl⟩
-  | scrut p => exact ⟨.scrut p, fun _ => rfl⟩
-  | alloc => exact ⟨.alloc, fun _ => rfl⟩
-  | load => exact ⟨.load, fun _ => rfl⟩
-  | storeR env e1 => exact ⟨.storeR _, fun _ => rfl⟩
-  | storeL v2 => exact ⟨.storeL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
-  | tape => exact ⟨.tape, fun _ => rfl⟩
-  | randR env e1 => exact ⟨.randR _, fun _ => rfl⟩
-  | randL v2 => exact ⟨.randL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
-
 theorem bigStep_frame {f : Frame rT} (hf : f.WF) (e : Exp rT) (σ : State rT) :
     bigStep ⟨f.fill e, σ⟩ = (bigStep ⟨e, σ⟩).bind fun ρ => bigStep ⟨f.fill ρ.expr, ρ.state⟩ := by
   obtain ⟨Ki, hKi⟩ := Frame.exists_item hf
@@ -743,15 +905,6 @@ theorem envStep_bnd_bigStep {c : EnvCfg rT} (hc : c.WF) :
       rw [bnd_evalThen_bigStep (by simpa [Frame.WF] using hv)]
       rfl
 
-omit [Countable rT] in
-theorem map_iSup_le_of {μ : ℕ → Measure (RCfg rT)} (hμ : Monotone μ) {ν : Measure (Cfg rT)}
-    (h : ∀ n, (μ n).map RCfg.rb ≤ ν) : (⨆ n, μ n).map RCfg.rb ≤ ν := by
-  refine Measure.le_iff.mpr fun s hs => ?_
-  rw [map_apply RCfg.measurable_rb hs,
-    Measure.iSup_apply_of_monotone hμ (RCfg.measurable_rb hs)]
-  exact iSup_le fun n => by
-    rw [← map_apply RCfg.measurable_rb hs]; exact Measure.le_iff.mp (h n) s hs
-
 theorem envIter_le (n : ℕ) :
     ∀ c : EnvCfg rT, c.WF → ((envΦ^[n] ⊥) c).map RCfg.rb ≤ bigStep c.rb := by
   induction n with
@@ -769,165 +922,13 @@ theorem envBig_le {c : EnvCfg rT} (hc : c.WF) : (envBig c).map RCfg.rb ≤ bigSt
   rw [envBig, iSup_apply]
   exact map_iSup_le_of (fun _ _ h => envIter_mono h c) fun n => envIter_le n c hc
 
-/-! ## The machine on configurations that read back to values -/
-
-omit [LawfulProbLangℝ rT] [Countable rT] in
-theorem dirac_bind_rcfg (r : RCfg rT) (f : RCfg rT → Measure (RCfg rT)) :
-    (dirac r).bind f = f r :=
-  dirac_bind Measurable.of_discrete r
-
-omit [Countable rT] in
-theorem envBig_eval_bvar {env : Env rT} {j : Nat} {σ : State rT} {u : Exp rT}
-    (hc : (EnvCfg.eval env (.bvar j) σ).WF) (hu : (Exp.bvar j).substEnv 0 (RVal.rbEnv env) = u) :
-    ∃ v : RVal rT, v.WF ∧ v.rb = u ∧ envBig (.eval env (.bvar j) σ) = dirac ⟨v, σ⟩ := by
-  obtain ⟨he, henv⟩ := hc
-  simp only [Exp.lcb, decide_eq_true_eq] at he
-  obtain ⟨v, hj⟩ : ∃ v, env[j]? = some v := ⟨env[j], List.getElem?_eq_getElem he⟩
-  refine ⟨v, henv.getElem? hj, ?_, ?_⟩
-  · simpa [Exp.substEnv, RVal.rbEnv_getElem?, hj] using hu
-  · rw [envBig_apply]; simp [envStep, evalK, stepOps, hj, Step.interp]
-
-omit [Countable rT] in
-/-- Evaluating an expression that reads back to a value returns that value at once. -/
-theorem envBig_eval_val : ∀ {u : Exp rT} (_ : IsVal u) {env : Env rT} {e : Exp rT}
-    {σ : State rT}, (EnvCfg.eval env e σ).WF → e.substEnv 0 (RVal.rbEnv env) = u →
-    ∃ v : RVal rT, v.WF ∧ v.rb = u ∧ envBig (.eval env e σ) = dirac ⟨v, σ⟩ := by
-  intro u w
-  induction w with
-  | @lit b =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | lit b' =>
-      simp only [Exp.substEnv] at hu
-      exact ⟨.lit b', trivial, by simp [RVal.rb, hu], by rw [envBig_apply]; rfl⟩
-    | _ => simp [Exp.substEnv] at hu
-  | lam _ =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | lam body =>
-      exact ⟨.clo env body, ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩,
-        by simpa [RVal.rb, Exp.substEnv] using hu, by rw [envBig_apply]; rfl⟩
-    | _ => simp [Exp.substEnv] at hu
-  | fix _ =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | fix body =>
-      exact ⟨.fixClo env body, ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩,
-        by simpa [RVal.rb, Exp.substEnv] using hu, by rw [envBig_apply]; rfl⟩
-    | _ => simp [Exp.substEnv] at hu
-  | pair _ _ ih1 ih2 =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | pair e1 e2 =>
-      simp only [Exp.substEnv, Exp.pair.injEq] at hu
-      simp only [EnvCfg.WF, Exp.lcb, Bool.and_eq_true] at hc
-      obtain ⟨v2, hv2, hr2, hE2⟩ := ih2 (σ := σ) ⟨hc.1.2, hc.2⟩ hu.2
-      obtain ⟨v1, hv1, hr1, hE1⟩ := ih1 (σ := σ) ⟨hc.1.1, hc.2⟩ hu.1
-      refine ⟨.pair v1 v2, ⟨hv1, hv2⟩, by simp [RVal.rb, hr1, hr2], ?_⟩
-      rw [envBig_apply]
-      simp only [envStep, evalK, stepOps, Step.interp]
-      rw [hE2, dirac_bind_rcfg, envBig_apply]
-      simp only [envStep, resumeK, stepOps, Step.interp]
-      rw [hE1, dirac_bind_rcfg, envBig_apply]
-      rfl
-    | _ => simp [Exp.substEnv] at hu
-  | inl _ ih =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | inl e1 =>
-      simp only [Exp.substEnv, Exp.inl.injEq] at hu
-      obtain ⟨v1, hv1, hr1, hE1⟩ := ih (e := e1) (σ := σ) ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩ hu
-      refine ⟨.inl v1, hv1, by simp [RVal.rb, hr1], ?_⟩
-      rw [envBig_apply]
-      simp only [envStep, evalK, stepOps, Step.interp]
-      rw [hE1, dirac_bind_rcfg, envBig_apply]
-      rfl
-    | _ => simp [Exp.substEnv] at hu
-  | inr _ ih =>
-    intro env e σ hc hu
-    cases e with
-    | bvar j => exact envBig_eval_bvar hc hu
-    | inr e1 =>
-      simp only [Exp.substEnv, Exp.inr.injEq] at hu
-      obtain ⟨v1, hv1, hr1, hE1⟩ := ih (e := e1) (σ := σ) ⟨by simpa [Exp.lcb] using hc.1, hc.2⟩ hu
-      refine ⟨.inr v1, hv1, by simp [RVal.rb, hr1], ?_⟩
-      rw [envBig_apply]
-      simp only [envStep, evalK, stepOps, Step.interp]
-      rw [hE1, dirac_bind_rcfg, envBig_apply]
-      rfl
-    | _ => simp [Exp.substEnv] at hu
-
-omit [Countable rT] in
-/-- Every configuration that reads back to a value returns that value at once. -/
-theorem envBig_val {c : EnvCfg rT} (hc : c.WF) (hv : c.rb.expr.isValue) :
-    (envBig c).map RCfg.rb = dirac c.rb := by
-  cases c with
-  | eval env e σ =>
-    obtain ⟨w⟩ := hv
-    obtain ⟨v, _, hr, hE⟩ := envBig_eval_val w hc rfl
-    rw [hE, map_dirac' RCfg.measurable_rb]
-    simp [RCfg.rb, EnvCfg.rb, hr]
-  | apply f v σ => obtain ⟨w⟩ := hv; cases w
-  | resume f v σ =>
-    obtain ⟨hf, hvw⟩ := hc
-    obtain ⟨w⟩ := hv
-    cases f <;> simp only [EnvCfg.rb, Frame.fill] at w
-    case pairR env e1 =>
-      cases w with
-      | pair w1 _ =>
-        obtain ⟨v1, _, hr1, hE1⟩ := envBig_eval_val w1 (σ := σ) hf rfl
-        rw [envBig_apply]
-        simp only [envStep, resumeK, stepOps, Step.interp]
-        rw [hE1, dirac_bind_rcfg, envBig_apply]
-        simp only [envStep, resumeK, stepOps, Step.interp]
-        rw [map_dirac' RCfg.measurable_rb]
-        simp [RCfg.rb, EnvCfg.rb, Frame.fill, RVal.rb, hr1]
-    case pairL | inl | inr =>
-      rw [envBig_apply]
-      simp only [envStep, resumeK, stepOps, Step.interp]
-      rw [map_dirac' RCfg.measurable_rb]
-      rfl
-    all_goals cases w
-
 /-! ## `bigStep ≤ envBig` after readback -/
-
-/-- The smallest read-back result of the machine over all configurations reading back
-to `ρ`. -/
-def Yb (ρ : Cfg rT) : Measure (Cfg rT) :=
-  ⨅ (c : EnvCfg rT) (_ : c.WF ∧ c.rb = ρ), (envBig c).map RCfg.rb
-
-omit [Countable rT] in
-theorem Yb_le' {c : EnvCfg rT} {ρ : Cfg rT} (hc : c.WF) (hρ : c.rb = ρ) :
-    Yb ρ ≤ (envBig c).map RCfg.rb :=
-  iInf₂_le c ⟨hc, hρ⟩
-
-omit [Countable rT] in
-theorem Yb_le {c : EnvCfg rT} (hc : c.WF) : Yb c.rb ≤ (envBig c).map RCfg.rb :=
-  Yb_le' hc rfl
-
-omit [Countable rT] in
-theorem Yb_retVal : RetVal (Yb (rT := rT)) := by
-  intro e σ he
-  have hspec := RVal.ofExp_spec he
-  apply le_antisymm
-  · have hc : (EnvCfg.eval [RVal.ofExp e] (.bvar 0) σ).WF :=
-      ⟨by simp [Exp.lcb], hspec.2, trivial⟩
-    have hrb : (EnvCfg.eval [RVal.ofExp e] (.bvar 0) σ).rb = ⟨e, σ⟩ := by
-      simp [EnvCfg.rb, Exp.substEnv, RVal.rbEnv, hspec.1]
-    refine (iInf₂_le _ ⟨hc, hrb⟩).trans ?_
-    rw [envBig_val hc (by rw [hrb]; exact he), hrb]
-  · refine le_iInf₂ fun c ⟨hc, hρ⟩ => ?_
-    rw [envBig_val hc (by rw [hρ]; exact he), hρ]
 
 theorem Yb_onlyVal' {c : EnvCfg rT} {ρ : Cfg rT} (hc : c.WF) (hρ : c.rb = ρ) :
     ∀ᵐ ρ' ∂(Yb ρ), ρ'.expr.isValue :=
-  ae_mono (Yb_le' hc hρ) <| (ae_map_iff RCfg.measurable_rb.aemeasurable MeasurableSet.of_discrete).mpr
-    ((envBig_pres c hc).mono fun _ hr => hr.isValue)
+  ae_mono (Yb_le' hc hρ) <|
+    (ae_map_iff RCfg.measurable_rb.aemeasurable MeasurableSet.of_discrete).mpr
+      ((envBig_pres c hc).mono fun _ hr => hr.isValue)
 
 /-- `bigStepF_fillItem` with the only-values hypothesis at the hole alone. -/
 theorem bigStepF_fillItem_loc {R : Cfg rT → Measure (Cfg rT)} (hV : RetVal R) (Ki : EctxItem rT)
@@ -938,18 +939,6 @@ theorem bigStepF_fillItem_loc {R : Cfg rT → Measure (Cfg rT)} (hV : RetVal R) 
     (try rw [hV.bind_eq (Val.isValue _)]) <;>
     refine bind_congr_right (hC.mono fun ⟨v, σ'⟩ hv => ?_) <;> dsimp only <;>
     (try rw [hV.bind_eq (Val.isValue _)]) <;> rw [hV.bind_eq hv]
-
-omit [Countable rT] in
-theorem envBig_appL_eq (v w : RVal rT) (σ : State rT) :
-    envBig (.resume (.appL v) w σ) = envBig (.resume (.applyTo v) w σ) := by
-  rw [envBig_apply, envBig_apply (.resume (.applyTo v) w σ)]; rfl
-
-omit [Countable rT] in
-/-- Two ways of evaluating `e` and applying the result to `v` agree. -/
-theorem envBig_appR_eq (env : Env rT) (e : Exp rT) (v : RVal rT) (σ : State rT) :
-    envBig (.resume (.appR env e) v σ) = (Step.evalThen env e σ (.applyTo v)).interp envBig := by
-  rw [envBig_apply]
-  simp only [envStep, resumeK, stepOps, Step.interp, envBig_appL_eq]
 
 /-- The claim of the lower bound at one configuration. -/
 def ClaimGe (c : EnvCfg rT) : Prop := bigStepF measureOps Yb c.rb ≤ (envBig c).map RCfg.rb

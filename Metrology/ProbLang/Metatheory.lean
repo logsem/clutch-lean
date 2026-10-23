@@ -13,7 +13,7 @@ Port of Clutch `metatheory.v`: closedness, substitution maps, head-step trichoto
 namespace ProbLang
 open Cslib Exp Cfg State MeasureTheory Finset
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _}
 variable {α : Type _}
 
 /-! ## Closed contexts and `isClosed`
@@ -45,7 +45,7 @@ theorem Exp.fv_eq_empty_of_isClosed_empty {e : Exp α} (h : e.isClosed .empty) :
 /-! ## Substitution maps -/
 
 /-- A list of `(variable, value)` pairs to substitute. -/
-abbrev SubstMap (rT : Type _) [LawfulProbLangℝ rT] := List (Var × Exp rT)
+abbrev SubstMap (rT : Type _) := List (Var × Exp rT)
 
 namespace SubstMap
 
@@ -651,6 +651,69 @@ theorem Exp.substMap_fvar_lookup_some (vs : SubstMap rT) (x : Var)
       show (fvar x).subst x w = w
       simp [subst]
 
+variable [MeasurableSpace rT]
+
+/-! ## `Cfg.uniform` -/
+
+/-- A non-positive bound makes `Cfg.uniform` the Dirac at `-1`. -/
+theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
+    uniform z σ = Measure.dirac ⟨.lit (.int (-1)), σ⟩ := by
+  unfold uniform Int.isPos
+  rw [dite_eq_right hz]
+
+/-- `Cfg.uniform` is never the zero measure. -/
+theorem Cfg.uniform_ne_zero
+    (z : Int) (σ : State rT) : uniform z σ ≠ 0 :=
+  IsProbabilityMeasure.ne_zero _
+
+/-- Reindex a sum over `Ico 0 z` along a map that restricts to a bijection on it. -/
+theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
+    {z : Int} {f : Int → Int}
+    (hdom : ∀ n : Int, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
+    (hbij : ∀ m : Int, 0 ≤ m → m < z → ∃! n : Int, (0 ≤ n ∧ n < z) ∧ f n = m)
+    (g : Int → M) :
+    ∑ n ∈ Ico (0 : Int) z, g (f n) = ∑ m ∈ Ico (0 : Int) z, g m := by
+  refine sum_bij (fun n _ => f n) ?_ ?_ ?_ ?_
+  · intro n hn
+    simp only [mem_Ico] at hn ⊢
+    exact hdom n hn.1 hn.2
+  · intro n₁ hn₁ n₂ hn₂ h
+    simp only [mem_Ico] at hn₁ hn₂
+    obtain ⟨n₀, -, huniq⟩ := hbij (f n₁) (hdom n₁ hn₁.1 hn₁.2).1 (hdom n₁ hn₁.1 hn₁.2).2
+    exact (huniq n₁ ⟨hn₁, rfl⟩).trans (huniq n₂ ⟨hn₂, h.symm⟩).symm
+  · intro m hm
+    simp only [mem_Ico] at hm
+    obtain ⟨n₀, ⟨hn₀, hfn₀⟩, -⟩ := hbij m hm.1 hm.2
+    exact ⟨n₀, by simp only [mem_Ico]; exact hn₀, hfn₀⟩
+  · intro n _; rfl
+
+/-- For `0 < z`, `Cfg.uniform` is the uniform measure on `Ico 0 z` as configurations. -/
+theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT) :
+    uniform z σ = (PMF.uniformOfFinset (Ico (0 : Int) z) (nonempty_Ico.mpr hz)).toMeasure.map
+      (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
+  unfold uniform Int.isPos; simp only [dite_eq_left hz]
+
+/-- The integral of a measurable `φ` against `Cfg.uniform z σ` is its average over `Ico 0 z`. -/
+theorem Cfg.lintegral_uniform
+    {z : Int} (Hz : 0 < z) (σ : State rT)
+    {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
+    ∫⁻ c, φ c ∂(uniform z σ) =
+      ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Ico (0 : Int) z,
+          φ (⟨.lit (.int n), σ⟩ : Cfg rT) := by
+  have hcard : (Ico (0 : Int) z).card = z.toNat := by rw [Int.card_Ico]; omega
+  rw [uniform_eq_map_uniformOfFinset Hz σ,
+      lintegral_map hφ Measurable.of_discrete,
+      lintegral_countable',
+      tsum_eq_sum (s := Ico (0 : Int) z) fun n hn => by
+        rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
+            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
+      mul_sum]
+  refine sum_congr rfl fun n hn => ?_
+  rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
+      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
+
+variable [LawfulProbLangℝ rT]
+
 /-! ## Deterministic and probabilistic head steps
 
 Clutch's `metatheory.v` ~1448–1713, minus Laplace/Tick. The export is `det_or_prob_or_zero`. -/
@@ -900,65 +963,6 @@ theorem _root_.Std.ExtTreeMap.elem_fresh_ne
   have hfresh := Std.ExtTreeMap.fresh_get? t
   rw [heq, h] at hfresh
   simp at hfresh
-
-/-! ## `Cfg.uniform` -/
-
-/-- A non-positive bound makes `Cfg.uniform` the Dirac at `-1`. -/
-theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
-    uniform z σ = Measure.dirac ⟨.lit (.int (-1)), σ⟩ := by
-  unfold uniform Int.isPos
-  rw [dite_eq_right hz]
-
-/-- `Cfg.uniform` is never the zero measure. -/
-theorem Cfg.uniform_ne_zero
-    (z : Int) (σ : State rT) : uniform z σ ≠ 0 :=
-  IsProbabilityMeasure.ne_zero _
-
-/-- Reindex a sum over `Ico 0 z` along a map that restricts to a bijection on it. -/
-theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
-    {z : Int} {f : Int → Int}
-    (hdom : ∀ n : Int, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m : Int, 0 ≤ m → m < z → ∃! n : Int, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (g : Int → M) :
-    ∑ n ∈ Ico (0 : Int) z, g (f n) = ∑ m ∈ Ico (0 : Int) z, g m := by
-  refine sum_bij (fun n _ => f n) ?_ ?_ ?_ ?_
-  · intro n hn
-    simp only [mem_Ico] at hn ⊢
-    exact hdom n hn.1 hn.2
-  · intro n₁ hn₁ n₂ hn₂ h
-    simp only [mem_Ico] at hn₁ hn₂
-    obtain ⟨n₀, -, huniq⟩ := hbij (f n₁) (hdom n₁ hn₁.1 hn₁.2).1 (hdom n₁ hn₁.1 hn₁.2).2
-    exact (huniq n₁ ⟨hn₁, rfl⟩).trans (huniq n₂ ⟨hn₂, h.symm⟩).symm
-  · intro m hm
-    simp only [mem_Ico] at hm
-    obtain ⟨n₀, ⟨hn₀, hfn₀⟩, -⟩ := hbij m hm.1 hm.2
-    exact ⟨n₀, by simp only [mem_Ico]; exact hn₀, hfn₀⟩
-  · intro n _; rfl
-
-/-- For `0 < z`, `Cfg.uniform` is the uniform measure on `Ico 0 z` as configurations. -/
-theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT) :
-    uniform z σ = (PMF.uniformOfFinset (Ico (0 : Int) z) (nonempty_Ico.mpr hz)).toMeasure.map
-      (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
-  unfold uniform Int.isPos; simp only [dite_eq_left hz]
-
-/-- The integral of a measurable `φ` against `Cfg.uniform z σ` is its average over `Ico 0 z`. -/
-theorem Cfg.lintegral_uniform
-    {z : Int} (Hz : 0 < z) (σ : State rT)
-    {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
-    ∫⁻ c, φ c ∂(uniform z σ) =
-      ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Ico (0 : Int) z,
-          φ (⟨.lit (.int n), σ⟩ : Cfg rT) := by
-  have hcard : (Ico (0 : Int) z).card = z.toNat := by rw [Int.card_Ico]; omega
-  rw [uniform_eq_map_uniformOfFinset Hz σ,
-      lintegral_map hφ Measurable.of_discrete,
-      lintegral_countable',
-      tsum_eq_sum (s := Ico (0 : Int) z) fun n hn => by
-        rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
-      mul_sum]
-  refine sum_congr rfl fun n hn => ?_
-  rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
 
 /-! ## Tape updates preserve head-step shape -/
 

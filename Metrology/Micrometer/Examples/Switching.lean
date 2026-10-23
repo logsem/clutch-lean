@@ -30,7 +30,7 @@ open List (length_cons length_nil mem_cons nodup_cons)
 open BudgetCredit (weaken split)
 open _root_.Int (toNat_of_nonneg)
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## The error budget -/
 

@@ -38,7 +38,7 @@ variable {rT : Type}
 
 section Abstract
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
@@ -121,7 +121,7 @@ theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e�
 
 section Lawful
 
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 
 theorem lrel_real_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :

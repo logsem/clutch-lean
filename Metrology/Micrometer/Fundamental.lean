@@ -21,7 +21,8 @@ open Cslib Exp RelCtx
 open List (map_cons toFinset_cons)
 
 section Fundamental
-variable {rT : Type} [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
+    [AddCommMonoid B]
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {e : Exp rT} {τ : Ty}
 local bi IProp GF

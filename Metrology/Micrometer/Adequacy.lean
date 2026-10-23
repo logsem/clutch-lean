@@ -39,7 +39,7 @@ theorem adequacyRel_eq_subset (e e' : Exp rT) : adequacyRel (· = ·) e e' → e
   rintro ⟨v, v', hv, hv', rfl⟩
   exact (ofVal_of_toVal_some hv).symm.trans (ofVal_of_toVal_some hv')
 
-variable [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The lifting at budget `b` of the `n`-fuel run of `ρ` against the limit run of `ρ'`, relating
 values by `φ`. -/

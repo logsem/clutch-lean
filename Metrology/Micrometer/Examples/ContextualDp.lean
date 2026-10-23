@@ -16,7 +16,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace RandomizedResponse
 
-variable {rT : Type} [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The context `if [·] then false else true`. -/
 def negCtx : Ctx rT := [.ifL (.lit (.bool false)) (.lit (.bool true))]

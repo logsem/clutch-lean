@@ -34,7 +34,8 @@ def stopOrSpin {rT : Type _} : Exp rT := pl%
 theorem stopOrSpin_lc {rT : Type _} : (stopOrSpin : Exp rT).IsLocallyClosed :=
   Exp.lcb_imp_lc (by rfl)
 
-variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [LawfulProbLangℝ rT]
+variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT]
+    [LawfulProbLangℝ rT]
   [LiveGS rT hlc GF]
 local bi IProp GF
 
@@ -168,7 +169,7 @@ theorem lwp_stopOrSpin (Q : State rT → State rT → Prop) (E : CoPset) :
 
 /-! ## What adequacy gives -/
 
-theorem measurableSet_eq_unit {rT : Type _} [LawfulProbLangℝ rT] :
+theorem measurableSet_eq_unit {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     MeasurableSet {v : Val rT | v = .unit} := by
   have h := (MeasurableSet.singleton (Exp.ofVal (Val.unit : Val rT))).preimage Exp.ofVal.measurable
   convert h using 1

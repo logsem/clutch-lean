@@ -19,7 +19,33 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set ENNReal
 
 namespace ProbLang
 
-variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {rT : Type _} [MeasurableSpace rT]
+
+/-- The expression marginal of a measure on configurations. -/
+def asExpr (μ : Measure (Cfg rT)) : Measure (Exp rT) := μ.map (·.expr)
+
+/-- `asExpr` preserves sub-probability measures. -/
+instance asExpr.isSubProbabilityMeasure (μ : Measure (Cfg rT)) [IsSubProbabilityMeasure μ] :
+    IsSubProbabilityMeasure (asExpr μ) :=
+  isSubProbabilityMeasure_map _ _
+
+/-- `asExpr` of a bind is the bind of `asExpr`. -/
+theorem asExpr_bind {α : Type*} [MeasurableSpace α] (μ : Measure α) (k : α → Measure (Cfg rT))
+    (hk : Measurable k) : asExpr (μ.bind k) = μ.bind fun a => asExpr (k a) :=
+  bind_map_comm _ _ _ Cfg.measurable_expr hk.aemeasurable
+
+/-- A monotone supremum of measures is computed setwise. -/
+theorem iSup_measure_apply {f : ℕ → Measure (Cfg rT)} (hf : Monotone f)
+    {S : Set (Cfg rT)} (HS : MeasurableSet S) :
+    (⨆ i, f i) S = ⨆ i, f i S :=
+  iSup_apply_of_monotone hf HS
+
+/-- `asExpr` is measurable. -/
+theorem asExpr.measurable :
+    Measurable (asExpr : Measure (Cfg rT) → Measure (Exp rT)) :=
+  measurable_map _ Cfg.measurable_expr
+
+variable [LawfulProbLangℝ rT]
 
 /-! ## Bounded execution `execN` -/
 
@@ -102,27 +128,8 @@ theorem execN_mono_singleton
 /-- The output distribution over final configurations: the supremum of `execN` over fuel. -/
 def limExec (ρ : Cfg rT) : Measure (Cfg rT) := ⨆ (i : ℕ), execN i ρ
 
-/-- The expression marginal of a measure on configurations. -/
-def asExpr (μ : Measure (Cfg rT)) : Measure (Exp rT) := μ.map (·.expr)
-
-/-- `asExpr` preserves sub-probability measures. -/
-instance asExpr.isSubProbabilityMeasure (μ : Measure (Cfg rT)) [IsSubProbabilityMeasure μ] :
-    IsSubProbabilityMeasure (asExpr μ) :=
-  isSubProbabilityMeasure_map _ _
-
-/-- `asExpr` of a bind is the bind of `asExpr`. -/
-theorem asExpr_bind {α : Type*} [MeasurableSpace α] (μ : Measure α) (k : α → Measure (Cfg rT))
-    (hk : Measurable k) : asExpr (μ.bind k) = μ.bind fun a => asExpr (k a) :=
-  bind_map_comm _ _ _ Cfg.measurable_expr hk.aemeasurable
-
 /-- The output distribution over values: `limExec` with the final state forgotten. -/
 def limExecV (ρ : Cfg rT) : Measure (Exp rT) := asExpr <| limExec ρ
-
-/-- A monotone supremum of measures is computed setwise. -/
-theorem iSup_measure_apply {f : ℕ → Measure (Cfg rT)} (hf : Monotone f)
-    {S : Set (Cfg rT)} (HS : MeasurableSet S) :
-    (⨆ i, f i) S = ⨆ i, f i S :=
-  iSup_apply_of_monotone hf HS
 
 /-- The probability of an event under `limExec` is the supremum over bounded runs. -/
 theorem limExec_apply (ρ : Cfg rT) {S : Set (Cfg rT)} (HS : MeasurableSet S) :
@@ -132,11 +139,6 @@ theorem limExec_apply (ρ : Cfg rT) {S : Set (Cfg rT)} (HS : MeasurableSet S) :
 /-- The total mass of `limExec` is the supremum over bounded runs. -/
 theorem limExec_univ (ρ : Cfg rT) : (limExec ρ) .univ = ⨆ n, (execN n ρ) .univ :=
   limExec_apply _ .univ
-
-/-- `asExpr` is measurable. -/
-theorem asExpr.measurable :
-    Measurable (asExpr : Measure (Cfg rT) → Measure (Exp rT)) :=
-  measurable_map _ Cfg.measurable_expr
 
 /-- `limExec` is measurable. -/
 @[fun_prop]

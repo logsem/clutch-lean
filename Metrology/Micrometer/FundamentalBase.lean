@@ -22,8 +22,67 @@ variable {rT : Type} {GF : BundledGFunctors}
 
 open Cslib Exp ValSubstMap RelCtx Ectx SubstMap
 
+section Substitution
+variable {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT} {S : Finset Var}
+
+/-- Substituting a fresh variable bound to a value pair commutes with opening, on both sides. -/
+theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
+    (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
+    (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
+    (hv : v.1.IsClosedEmpty) (hv' : v'.1.IsClosedEmpty) :
+    substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) = open' (substMap vs.fst e) v.1 ∧
+      substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) = open' (substMap vs.snd e') v'.1 :=
+  ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_notMem hxdom) hv.1,
+    substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_notMem hxdom) hv'.1⟩
+
+/-- Free variables of both terms lie in the domains of the left and right substitutions. -/
+theorem fv_subset_substMap_dom (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
+    (he : e.fv ⊆ (Γ.map (·.1)).toFinset) (he' : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
+    e.fv ⊆ (vs.fst.map (·.1)).toFinset ∧ e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
+  rw [fst_dom, snd_dom]
+  exact ⟨he.trans hdom, he'.trans hdom⟩
+
+
+/-- Substituting into a `lam` body keeps both sides locally closed. -/
+theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
+    (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
+    (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed) :
+    (lam (substMap vs.fst e)).IsLocallyClosed ∧ (lam (substMap vs.snd e')).IsLocallyClosed :=
+  ⟨lam_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
+    lam_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc⟩
+
+section Closed
+variable (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
+  (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
+  (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
+  (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
+  (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
+include hvs hdom he_lc he'_lc he_fv he'_fv
+
+/-- Both substituted `lam` terms are closed. -/
+theorem substMap_lam_closed :
+    (lam (substMap vs.fst e)).IsClosedEmpty ∧ (lam (substMap vs.snd e')).IsClosedEmpty := by
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
+  obtain ⟨hlam_lc, hlam'_lc⟩ := substMap_lam_lc hvs he_lc he'_lc
+  exact ⟨⟨hlam_lc, substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
+    ⟨hlam'_lc, substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
+
+/-- Both substituted `fix` terms are closed. -/
+theorem substMap_fix_closed :
+    (fix (substMap vs.fst e)).IsClosedEmpty ∧ (fix (substMap vs.snd e')).IsClosedEmpty := by
+  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
+  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
+      substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
+    ⟨fix_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc,
+      substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
+
+end Closed
+
+end Substitution
+
 section Fundamental
-variable [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
+    [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
 variable {Γ : RelCtx rT GF} {vs : ValSubstMap rT} {e e' : Exp rT} {A C : lrel rT GF}
@@ -116,23 +175,6 @@ end Steps
 
 /-! ## Substitution and closedness helpers -/
 
-/-- Substituting a fresh variable bound to a value pair commutes with opening, on both sides. -/
-theorem substMap_open_fresh_pair {x : Var} {v v' : Val rT}
-    (hfst : AllClosed vs.fst) (hsnd : AllClosed vs.snd)
-    (hxe : x ∉ e.fv) (hxe' : x ∉ e'.fv) (hxdom : x ∉ (vs.map (·.1)).toFinset)
-    (hv : v.1.IsClosedEmpty) (hv' : v'.1.IsClosedEmpty) :
-    substMap (fst ((x, (v, v')) :: vs)) (open' e (.fvar x)) = open' (substMap vs.fst e) v.1 ∧
-      substMap (snd ((x, (v, v')) :: vs)) (open' e' (.fvar x)) = open' (substMap vs.snd e') v'.1 :=
-  ⟨substMap_open_fresh hfst hxe (fst_lookup_eq_none_of_notMem hxdom) hv.1,
-    substMap_open_fresh hsnd hxe' (snd_lookup_eq_none_of_notMem hxdom) hv'.1⟩
-
-/-- Free variables of both terms lie in the domains of the left and right substitutions. -/
-theorem fv_subset_substMap_dom (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
-    (he : e.fv ⊆ (Γ.map (·.1)).toFinset) (he' : e'.fv ⊆ (Γ.map (·.1)).toFinset) :
-    e.fv ⊆ (vs.fst.map (·.1)).toFinset ∧ e'.fv ⊆ (vs.snd.map (·.1)).toFinset := by
-  rw [fst_dom, snd_dom]
-  exact ⟨he.trans hdom, he'.trans hdom⟩
-
 /-- A related substitution is closed on both sides. -/
 theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜AllClosed vs.fst ∧ AllClosed vs.snd⌝ := by
@@ -141,41 +183,6 @@ theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
   ihave %hsnd := env_ltyped2_snd_allClosed Γ vs $$ Hvs
   ipureintro
   exact ⟨hfst, hsnd⟩
-
-/-- Substituting into a `lam` body keeps both sides locally closed. -/
-theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
-    (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
-    (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed) :
-    (lam (substMap vs.fst e)).IsLocallyClosed ∧ (lam (substMap vs.snd e')).IsLocallyClosed :=
-  ⟨lam_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
-    lam_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc⟩
-
-section Closed
-variable (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
-  (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset)
-  (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
-  (he'_lc : ∀ x ∉ S, (open' e' (.fvar x)).IsLocallyClosed)
-  (he_fv : e.fv ⊆ (Γ.map (·.1)).toFinset) (he'_fv : e'.fv ⊆ (Γ.map (·.1)).toFinset)
-include hvs hdom he_lc he'_lc he_fv he'_fv
-
-/-- Both substituted `lam` terms are closed. -/
-theorem substMap_lam_closed :
-    (lam (substMap vs.fst e)).IsClosedEmpty ∧ (lam (substMap vs.snd e')).IsClosedEmpty := by
-  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
-  obtain ⟨hlam_lc, hlam'_lc⟩ := substMap_lam_lc hvs he_lc he'_lc
-  exact ⟨⟨hlam_lc, substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
-    ⟨hlam'_lc, substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
-
-/-- Both substituted `fix` terms are closed. -/
-theorem substMap_fix_closed :
-    (fix (substMap vs.fst e)).IsClosedEmpty ∧ (fix (substMap vs.snd e')).IsClosedEmpty := by
-  obtain ⟨he_dom_fst, he_dom_snd⟩ := fv_subset_substMap_dom hdom he_fv he'_fv
-  exact ⟨⟨fix_substMap_isLocallyClosed hvs.1 (fun _ hy => fst_lookup_eq_none_of_notMem hy) he_lc,
-      substMap_fv_eq_empty hvs.1 he_dom_fst⟩,
-    ⟨fix_substMap_isLocallyClosed hvs.2 (fun _ hy => snd_lookup_eq_none_of_notMem hy) he'_lc,
-      substMap_fv_eq_empty hvs.2 he_dom_snd⟩⟩
-
-end Closed
 
 end Fundamental
 
