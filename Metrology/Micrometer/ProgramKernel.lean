@@ -122,4 +122,25 @@ theorem progCouplFor_det_step [Add B] [L.IsLawful] {e₂ : Exp rT} {σ₂ : Stat
     iexact HZ
   · simp [R, _root_.and_assoc, hS] at hlt
 
+/-- A context-compatible kernel transports program couplings through evaluation contexts. -/
+theorem progCouplFor_ctx_bind
+    (step_fill : ∀ (K : Ectx rT) (e : Exp rT) (σ : State rT), ¬e.isValue →
+      step ⟨K.fill e, σ⟩ = (step ⟨e, σ⟩).map K.fillCfg)
+    {K : Ectx rT} (hv : ¬e₁.isValue) :
+    progCouplFor step L e₁ σ₁ e₁' σ₁' b (fun e₂ => Z (K.fill e₂)) ⊢
+      progCouplFor step L (K.fill e₁) σ₁ e₁' σ₁' b Z := by
+  iintro HCpl
+  icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
+    %Heras, HCont⟩
+  obtain ⟨hf, hprog⟩ := Hf
+  obtain ⟨hf', hspec⟩ := Hf'
+  have hK : Measurable K.fillCfg := by fun_prop
+  have HredK : step ⟨K.fill e₁, σ₁⟩ ≠ 0 := by
+    rw [step_fill K e₁ σ₁ hv]
+    exact (map_ne_zero_iff hK.aemeasurable).2 Hred
+  iapply progCouplFor_intro_map law HredK (hK.comp hf)
+    (by rw [step_fill K e₁ σ₁ hv, hprog, map_map hK hf]) hf' hspec Hhead Hside Heras
+  simp only [Function.comp_apply, Ectx.fillCfg]
+  iexact HCont
+
 end ProbLang.MicrometerWpGS
