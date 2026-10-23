@@ -12,6 +12,7 @@ public import Metrology.Micrometer
 public import Metrology.ProbLang
 public import Metrology.TotalEris
 public import Metrology.TotalEris.Examples
+public import Metrology.Test.TacticLemmas
 
 @[expose] public section
 
