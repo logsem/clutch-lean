@@ -6,7 +6,7 @@ public import Mathlib.Order.Defs.Unbundled
 public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
-import Metrology.Iris.BudgetCredits
+public import Metrology.Iris.AuthCredit
 import Metrology.Iris.LocalBI
 
 /-!
