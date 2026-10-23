@@ -147,7 +147,7 @@ scoped notation "↯ " r:50 => creditFrag r 0
 scoped notation "↻ " r:50 => creditFrag 0 r
 
 instance : CMRA.Discrete (Auth LiveCredit) := by infer_instance
-instance : OFE.DiscreteE (◯ r : Auth LiveCredit) := Auth.frag_discrete
+instance {r : LiveCredit} : OFE.DiscreteE (◯ r : Auth LiveCredit) := Auth.frag_discrete
 
 instance creditFrag_timeless (ε δ : ℝ≥0∞) : BI.Timeless (creditFrag ε δ : IProp GF) :=
   iOwn_timeless
@@ -267,7 +267,8 @@ theorem supply_decrease {εₛ δₛ ε δ : ℝ≥0∞} :
 theorem supply_increase {εₛ δₛ ε δ : ℝ≥0∞} (hε : εₛ + ε < 1) (hδ : δₛ + δ < ∞) :
     creditAuth εₛ δₛ ⊢ |==> (creditAuth (εₛ + ε) (δₛ + δ) ∗ creditFrag ε δ) := by
   unfold creditFrag creditAuth
-  have Hupd : (● credits εₛ δₛ) ~~> (● credits (εₛ + ε) (δₛ + δ)) • (◯ credits ε δ : Auth LiveCredit) := by
+  have Hupd :
+      (● credits εₛ δₛ) ~~> (● credits (εₛ + ε) (δₛ + δ)) • (◯ credits ε δ : Auth LiveCredit) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
     rintro ⟨⟨z₁⟩, ⟨z₂⟩⟩ ⟨_, _⟩ h
     change credits εₛ δₛ = credits (0 + z₁) (0 + z₂) at h

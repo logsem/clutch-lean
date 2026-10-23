@@ -24,6 +24,8 @@ open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
 namespace ProbLang.BaseLit
 
+variable {rT : Type _}
+
 /-! ## Smoke tests: each one exercises every constructor slot of a keystone. -/
 
 /-- The index of the constructor. -/
@@ -124,6 +126,8 @@ end BaseLit
 end ProbLang
 
 namespace ProbLang.Exp
+
+variable {rT : Type _}
 
 /-! ### Synthetic smoke-test battery -/
 
@@ -313,6 +317,8 @@ end ProbLang
 
 namespace ProbLang.Pat
 
+variable {rT : Type _}
+
 /-! ### Synthetic smoke-test battery -/
 
 /-- Discrete codomain. -/
@@ -391,6 +397,9 @@ end Pat
 end ProbLang
 
 namespace ProbLang.EctxItem
+
+variable {rT : Type _}
+variable {α : Type _}
 
 /-! ### Smoke tests
 

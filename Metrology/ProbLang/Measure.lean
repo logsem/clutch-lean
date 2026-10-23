@@ -571,7 +571,7 @@ end List
 Pushforward and bind lemmas, and measurability of kernel-valued maps. -/
 
 /-- Counting measure reweighted by the density `f`. -/
-abbrev count (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
+abbrev count {α : Type _} (f : α → ENNReal) [MeasurableSpace α] := Measure.count.withDensity f
 
 namespace MeasureTheory.Measure
 

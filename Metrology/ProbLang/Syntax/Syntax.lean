@@ -30,6 +30,8 @@ open Cslib
 
 /-! ## Library helpers -/
 
+variable {V : Type _}
+
 /-- A key larger than every key in the map. -/
 def Std.ExtTreeMap.fresh (t : ExtTreeMap Int V) : Int :=
   match t.maxKey? with | none => 1 | some v => v + 1
@@ -280,6 +282,7 @@ inductive Exp (rT : Type _)
 section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
+variable {α : Type _}
 
 /-- A type annotation that is erased. -/
 @[reducible] def Exp.annotated (_τ : Ty) (e : Exp rT) : Exp rT := e
@@ -750,19 +753,20 @@ theorem Pat.tryMatch_lit_ne {l1 l2 : BaseLit rT} (h : ¬ (l1 == l2) = true) :
 /-- Witness that an expression is a value; `Type`-valued so that `check?` can return the witness;
 a subsingleton, with `Exp.isValue` its `Prop` form. -/
 inductive IsVal : Exp rT → Type
-  | lit  : IsVal (.lit b)
+  | lit {b : BaseLit rT} : IsVal (.lit b)
   -- A runtime function is closed, so `IsVal e → IsLocallyClosed e` (`IsVal.lc`).
-  | lam  : Exp.IsLocallyClosed (.lam e) → IsVal (.lam e)
-  | fix  : Exp.IsLocallyClosed (.fix e) → IsVal (.fix e)
-  | pair : IsVal e1 → IsVal e2 → IsVal (.pair e1 e2)
-  | inl  : IsVal e → IsVal (.inl e)
-  | inr  : IsVal e → IsVal (.inr e)
+  | lam {e : Exp rT} : Exp.IsLocallyClosed (.lam e) → IsVal (.lam e)
+  | fix {e : Exp rT} : Exp.IsLocallyClosed (.fix e) → IsVal (.fix e)
+  | pair {e1 e2 : Exp rT} : IsVal e1 → IsVal e2 → IsVal (.pair e1 e2)
+  | inl {e : Exp rT} : IsVal e → IsVal (.inl e)
+  | inr {e : Exp rT} : IsVal e → IsVal (.inr e)
 
 end WithRealParam
 
 section NoRealParam
 
 variable {rT : Type _}
+variable {α : Type _}
 
 /-- A value is locally closed. -/
 theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
@@ -778,6 +782,7 @@ end NoRealParam
 section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
+variable {α : Type _}
 
 /-- A value: an expression with a witness that it is a value and its local closedness, as a
 `structure` so that its measurable space is the comap of `Val.fst`. -/
@@ -838,6 +843,7 @@ end WithRealParam
 section NoRealParam
 
 variable {rT : Type _}
+variable {α : Type _}
 
 /-- The underlying expression of `Val.pair v w` is the pair of the underlying expressions. -/
 @[simp] theorem Val.pair_fst (v w : Val rT) : (Val.pair v w).1 = .pair v.1 w.1 := rfl
@@ -851,6 +857,8 @@ end NoRealParam
 section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
+variable {α : Type _}
+variable {e : Exp α}
 
 namespace IsVal
 
@@ -865,7 +873,7 @@ def check? : (e : Exp rT) → Option (IsVal e)
   | _ => none
 
 /-- Value witnesses of the same expression are equal. -/
-theorem subsingleton : (w1 w2 : IsVal e) → w1 = w2
+theorem subsingleton {e : Exp α} : (w1 w2 : IsVal e) → w1 = w2
   | .lit, .lit => rfl
   | .lam _, .lam _ => rfl
   | .fix _, .fix _ => rfl
@@ -887,7 +895,7 @@ theorem IsVal.toIsValue (w : IsVal e) : e.isValue := ⟨w⟩
 noncomputable def IsVal.ofIsValue (h : e.isValue) : IsVal e := h.some
 
 /-- A value witness makes `check?` return some witness. -/
-theorem IsVal.check?_some : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
+theorem IsVal.check?_some {e : Exp α} : (w : IsVal e) → ∃ w', IsVal.check? e = some w'
   | .lit => ⟨.lit, rfl⟩
   | .lam h => ⟨.lam h, by simp only [check?, dite_eq_left (Exp.lc_imp_lcb h)]⟩
   | .fix h => ⟨.fix h, by simp only [check?, dite_eq_left (Exp.lc_imp_lcb h)]⟩
@@ -1049,6 +1057,7 @@ end WithRealParam
 section NoRealParam
 
 variable {rT : Type _}
+variable {α : Type _}
 
 /-- `v.snd`, typed for lemmas keyed on the syntactic `Exp.ofVal` shape. -/
 def Val.isVal_ofVal (v : Val rT) : IsVal (Exp.ofVal v) := v.2
@@ -1058,6 +1067,7 @@ end NoRealParam
 section WithRealParam
 
 variable {rT : Type _} [ProbLangℝ rT]
+variable {α : Type _}
 /-- `toVal?` recovers a value from its underlying expression. -/
 @[simp] theorem Val.toVal?_fst (v : Val α) : v.fst.toVal? = some v := Exp.toVal?_ofVal v
 
@@ -1179,25 +1189,28 @@ theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
   unfold State.update_tapes; simp; grind
 
 /-- Equal states after inserting at label `l` have equal inserted tapes. -/
-theorem State.update_tapes_same {σ σ' : State α}
+theorem State.update_tapes_same {σ σ' : State α} {l : Loc} {xs ys : Tape}
     (h : σ.update_tapes (·.insert l xs) = σ'.update_tapes (·.insert l ys)) :
     xs = ys := by
   simpa [State.update_tapes, LocHeap] using congrArg (·.tapes[l]?) h
 
 /-- Re-inserting the tape already at `l` leaves the state unchanged. -/
-theorem State.update_tapes_no_change {σ : State α} (h : σ.tapes[l]? = some ys) :
+theorem State.update_tapes_no_change {σ : State α} {l : Loc} {ys : Tape}
+    (h : σ.tapes[l]? = some ys) :
     σ.update_tapes (·.insert l ys) = σ := by
   unfold State.update_tapes; congr 2; grind
 
 /-- Injectivity form of `update_tapes_same`: the presampled values appended to tape `l` agree. -/
-theorem State.update_tapes_same' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
+theorem State.update_tapes_same' {n : Int} {l : Loc} {σ σ' : State α}
+    {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }}
     (h : σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) = σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩)) :
     x = y := by
   simpa [Tape.mk.injEq] using State.update_tapes_same h
 
 /-- Presampling different values onto tape `l` gives different states. -/
-theorem State.update_tapes_neq' {σ σ' : State α} {xs : List { z : Int // 0 ≤ z ∧ z < n }}
+theorem State.update_tapes_neq' {n : Int} {l : Loc} {σ σ' : State α}
+    {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }} (hne : x ≠ y) :
     σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
   (hne <| State.update_tapes_same' ·)
@@ -1313,11 +1326,13 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
   | _ => none
 
 /-- Plugging into a fixed frame is injective. -/
-theorem EctxItem.fillItem_injective : Function.Injective (EctxItem.fillItem K) := by
+theorem EctxItem.fillItem_injective {K : EctxItem α} :
+    Function.Injective (EctxItem.fillItem K) := by
   cases K <;> simp [Function.Injective, EctxItem.fillItem]
 
 /-- If a filled frame is a value then so is the hole's content. -/
-theorem EctxItem.fillItem_isValue {K : EctxItem α} : (K.fillItem e).isValue → e.isValue := by
+theorem EctxItem.fillItem_isValue {K : EctxItem α} {e : Exp α} :
+    (K.fillItem e).isValue → e.isValue := by
   rintro ⟨w⟩
   cases K <;> (simp only [EctxItem.fillItem] at w; cases w) <;> exact ‹IsVal e›.toIsValue
 
@@ -1512,7 +1527,7 @@ theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
 /-! ### Multi-frame decomposition: `Exp.decomp` -/
 
 /-- The hole found by `decompItem` is smaller than the expression. -/
-theorem Exp.decompItem_size {e : Exp α} (h : e.decompItem = some (Ki, e')) :
+theorem Exp.decompItem_size {e e' : Exp α} {Ki : EctxItem α} (h : e.decompItem = some (Ki, e')) :
     e'.size < e.size := by
   simp only [decompItem, toVal?] at h
   cases e <;> simp_all <;>

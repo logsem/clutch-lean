@@ -21,6 +21,7 @@ namespace Metrology.CylinderGen
 meta section
 
 variable (ctx : Ctx) (c : Ctor)
+variable {α : Type}
 
 /-! ## 1. Shapes and leaves -/
 

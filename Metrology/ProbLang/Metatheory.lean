@@ -14,6 +14,7 @@ namespace ProbLang
 open Cslib Exp Cfg State MeasureTheory Finset
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
+variable {α : Type _}
 
 /-! ## Closed contexts and `isClosed`
 

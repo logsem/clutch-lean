@@ -77,7 +77,7 @@ theorem ErrorCredit.included_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼ ε₂ �
   exact le_self_add
 
 /-- Step-indexed form of `ErrorCredit.included_iff`. -/
-theorem ErrorCredit.includedN_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼{n} ε₂ ↔ ε₁ ≤ ε₂ :=
+theorem ErrorCredit.includedN_iff {n : Nat} {ε₁ ε₂ : ErrorCredit} : ε₁ ≼{n} ε₂ ↔ ε₁ ≤ ε₂ :=
   ErrorCredit.included_iff
 
 /-- A local update of error credits that moves credits between the two sides. -/
@@ -105,7 +105,7 @@ scoped instance : IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
 
-scoped instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
+scoped instance {r : ErrorCredit} : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
 
 end ErrorCredit
 

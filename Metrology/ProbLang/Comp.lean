@@ -10,6 +10,8 @@ measure (`Comp.interpM`).
 
 namespace ProbLang
 
+universe u
+
 /-- An evaluator step, with recursive calls in `C` and results in `R`. -/
 inductive Comp (rT : Type u) (C R : Type u) where
   | ret (r : R)

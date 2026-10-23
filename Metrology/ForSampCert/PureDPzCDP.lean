@@ -190,7 +190,7 @@ lemma β_le_one {x : U} : β ε p q x ≤ 1 := by
   · apply Hqp
 
 /-- The weight `β` is finite for positive `ε`. -/
-lemma β_ne_top (Hε : 0 < ε) : β ε p q x ≠ ⊤ := by
+lemma β_ne_top {x : U} (Hε : 0 < ε) : β ε p q x ≠ ⊤ := by
   unfold β
   intro HK
   apply div_eq_top.mp at HK
@@ -238,7 +238,7 @@ lemma one_sub_β (Hε : 0 < ε) (Hpq : ∀ x, (p x / q x ≤ ENNReal.ofReal (exp
     apply Hpq
 
 /-- The weight `1 - β` is finite. -/
-lemma sub_one_β_ne_top : (1 - β ε p q x) ≠ ⊤ := by
+lemma sub_one_β_ne_top {x : U} : (1 - β ε p q x) ≠ ⊤ := by
   apply sub_ne_top
   simp
 

@@ -17,7 +17,8 @@ namespace Metrology.Meta
 def argType (x : Expr) : MetaM Expr := return (← inferType x).cleanupAnnotations
 
 /-- Runs `k` with the fields of the constructor `c` (applied to `params`) as local variables. -/
-def withCtorArgs (c : Name) (params : Array Expr) (k : Array Expr → MetaM α) : MetaM α := do
+def withCtorArgs {α : Type} (c : Name) (params : Array Expr) (k : Array Expr → MetaM α) :
+    MetaM α := do
   forallTelescope (← instantiateForall (← getConstInfo c).type params) fun args _ => k args
 
 /-- Runs `k` on every constructor of `decl`, which must be neither nested nor indexed, and whose
@@ -41,7 +42,7 @@ variable (c : ConstructorVal)
 
 /-- Runs `k params T tuple` with the parameters of `c` (implicit, as in `c`'s type), the type
 `T params`, and the type `A × B × ...` of the tuple of the fields of `c`. -/
-def withCtorTuple (k : Array Expr → Expr → Expr → MetaM α) : MetaM α := do
+def withCtorTuple {α : Type} (k : Array Expr → Expr → Expr → MetaM α) : MetaM α := do
   forallBoundedTelescope c.type c.numParams fun params _ => do
     let T := mkAppN (mkConst c.induct (c.levelParams.map .param)) params
     let tuple ← withCtorArgs c.name params fun args => do

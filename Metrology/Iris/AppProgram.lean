@@ -47,6 +47,7 @@ class AppGS (rT : outParam (Type _)) [LawfulProbLangℝ rT] (GF : BundledGFuncto
 section Resources
 
 variable {GF : BundledGFunctors} [IApp : AppGS rT GF]
+variable {σ : State rT} {l : Loc}
 local bi IProp GF
 
 /-- The authoritative program heap. -/

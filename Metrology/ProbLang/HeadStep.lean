@@ -22,6 +22,7 @@ namespace ProbLang
 
 variable {rT : Type _} [LawfulProbLangℝ rT]
 variable {T : Type _} [MeasurableSpace T]
+variable {α β : Type _}
 
 /-! ## Measure combinators and samplers used by `headStep` -/
 
@@ -341,11 +342,11 @@ theorem Discrete.val_head_stuck_R {ρ : Cfg rT}
   _root_.ProbLang.val_head_stuck_R fun h0 => h.ne' (by rw [h0]; rfl)
 
 /-- An expression with a `toVal?` value is a value. -/
-theorem Exp.toVal?_isValue {e : Exp α} : e.toVal? = some v → e.isValue := by
+theorem Exp.toVal?_isValue {e : Exp α} {v : Val α} : e.toVal? = some v → e.isValue := by
   intro h; by_contra hne; rw [Exp.toVal?_eq_none.mpr hne] at h; exact absurd h (by simp)
 
 /-- An expression with a `toVal?` value is a raw value. -/
-theorem Exp.toVal?_isValueR {e : Exp α} (h : e.toVal? = some v) : e.isValueR :=
+theorem Exp.toVal?_isValueR {e : Exp α} {v : Val α} (h : e.toVal? = some v) : e.isValueR :=
   (Exp.isValue_iff_isValueR.mp (Exp.toVal?_isValue h)).1
 
 /-- If `Ki[e]` can head-step, then `e` is value-shaped: `headStep` only fires once every
@@ -1400,91 +1401,92 @@ def headStepKernel : Kernel (Cfg rT) (Cfg rT) where
 `HeadStepSupport.possible`. -/
 inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
   /-- Beta-reduce a lambda applied to a value. -/
-  | BetaLamS :
+  | BetaLamS {e1 e2 e' : Exp rT} {σ : State rT} :
     e2.isValue →
     e' = Exp.open' e1 e2 →
     HeadStepSupport ⟨.app (.lam e1) e2, σ⟩ ⟨e', σ⟩
   /-- Unfold a fixpoint applied to a value. -/
-  | BetaFixS :
+  | BetaFixS {e1 e2 e' : Exp rT} {σ : State rT} :
     e2.isValue →
     e' = Exp.app (Exp.open' e1 (.fix e1)) e2 →
     HeadStepSupport ⟨.app (.fix e1) e2, σ⟩ ⟨e', σ⟩
   /-- Evaluate a unary operation on a value. -/
-  | UnOpS :
+  | UnOpS {op : UnOp} {e e' : Exp rT} {σ : State rT} :
     e.isValue →
     some e' = op.eval e →
     HeadStepSupport ⟨.unop op e, σ⟩ ⟨e', σ⟩
   /-- Evaluate a binary operation on two values. -/
-  | BinOpS :
+  | BinOpS {op : BinOp} {e1 e2 e' : Exp rT} {σ : State rT} :
     e1.isValue →
     e2.isValue →
     some e' = op.eval e1 e2 →
     HeadStepSupport ⟨.binop op e1 e2, σ⟩ ⟨e', σ⟩
   /-- Conditional on `true` takes the first branch. -/
-  | IfTrueS :
+  | IfTrueS {et : Exp rT} {σ : State rT} :
     HeadStepSupport ⟨.cond (.lit (.bool true)) et _, σ⟩ ⟨et, σ⟩
   /-- Conditional on `false` takes the second branch. -/
-  | IfFalseS :
+  | IfFalseS {ef : Exp rT} {σ : State rT} :
     HeadStepSupport ⟨.cond (.lit (.bool false)) _ ef, σ⟩ ⟨ef, σ⟩
   /-- First projection of a pair of values. -/
-  | FstS :
+  | FstS {e1 e2 : Exp rT} {σ : State rT} :
     e1.isValue →
     e2.isValue →
     HeadStepSupport ⟨.fst (.pair e1 e2), σ⟩ ⟨e1, σ⟩
   /-- Second projection of a pair of values. -/
-  | SndS :
+  | SndS {e1 e2 : Exp rT} {σ : State rT} :
     e1.isValue →
     e2.isValue →
     HeadStepSupport ⟨.snd (.pair e1 e2), σ⟩ ⟨e2, σ⟩
   /-- Case analysis on a left injection of a value. -/
-  | CaseLS :
+  | CaseLS {e el er : Exp rT} {σ : State rT} :
     e.isValue →
     HeadStepSupport ⟨.case (.inl e) el er, σ⟩ ⟨el.app e, σ⟩
   /-- Case analysis on a right injection of a value. -/
-  | CaseRS :
+  | CaseRS {e el er : Exp rT} {σ : State rT} :
     e.isValue →
     HeadStepSupport ⟨.case (.inr e) el er, σ⟩ ⟨er.app e, σ⟩
   /-- Allocate a fresh heap location holding a value. -/
-  | AllocS :
+  | AllocS {ed : Exp rT} {vd : Val rT} {ℓ : Loc} {σ σ' : State rT} :
     ed.toVal? = some vd →
     ℓ = σ.heap.fresh →
     σ' = σ.update_heap (·.insert ℓ vd) →
     HeadStepSupport ⟨.alloc ed, σ⟩ ⟨.lit (.loc ℓ), σ'⟩
   /-- Read an allocated heap location. -/
-  | LoadS :
+  | LoadS {σ : State rT} {ℓ : Loc} {v : Val rT} {e' : Exp rT} :
     σ.heap[ℓ]? = some v →
     e' = Exp.ofVal v →
     HeadStepSupport ⟨.load (.lit (.loc ℓ)), σ⟩ ⟨e', σ⟩
   /-- Write to an allocated heap location. -/
-  | StoreS :
+  | StoreS {e : Exp rT} {v : Val rT} {σ σ' : State rT} {ℓ : Loc} :
     e.toVal? = some v →
     σ.heap[ℓ]?.isSome →
     σ' = σ.update_heap (·.insert ℓ v) →
     HeadStepSupport ⟨.store (.lit (.loc ℓ)) e, σ⟩ ⟨.lit .unit, σ'⟩
   /-- No tape, `0 < z`: sample uniformly below `z`. -/
-  | RandNoTapeS :
+  | RandNoTapeS {z v : Int} {σ : State rT} :
     0 < z →
     0 ≤ v →
     v < z →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int v), σ⟩
   /-- No tape, `z ≤ 0`: return `-1`. -/
-  | RandNonposS :
+  | RandNonposS {z : Int} {σ : State rT} :
     ¬ 0 < z →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit .unit), σ⟩ ⟨.lit (.int (-1)), σ⟩
   /-- Allocate a fresh empty tape with bound `z`. -/
-  | TapeS :
+  | TapeS {ℓ : Lbl} {σ σ' : State rT} {z : Int} :
     ℓ = σ.tapes.fresh →
     σ' = σ.update_tapes (·.insert ℓ (.empty z)) →
     HeadStepSupport ⟨.tape (.lit (.int z)), σ⟩ ⟨.lit (.lbl ℓ), σ'⟩
   /-- Non-empty tape with bound `z`: pop the head. -/
-  | RandTapeS :
+  | RandTapeS {α : Lbl} {N z v : Int} {nn : {z : Int // 0 ≤ z ∧ z < N}}
+      {ns : List {z : Int // 0 ≤ z ∧ z < N}} {σ σ' : State rT} :
     σ.tapes[α]? = some ⟨N, nn :: ns⟩ →
     z = N →
     v = nn.1 →
     σ' = σ.update_tapes (·.insert α ⟨N, ns⟩) →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
   /-- Empty tape with bound `z`, `0 < z`: sample uniformly, tape unchanged. -/
-  | RandTapeEmptyS :
+  | RandTapeEmptyS {z N v : Int} {α : Lbl} {σ σ' : State rT} :
     0 < z →
     σ.tapes[α]? = some ⟨N, []⟩ →
     z = N →
@@ -1493,7 +1495,7 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
     σ' = σ →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
   /-- Tape bound `≠ z`, `0 < z`: ignore the tape, sample uniformly. -/
-  | RandTapeOtherS :
+  | RandTapeOtherS {z N v : Int} {L : List {z : Int // 0 ≤ z ∧ z < N}} {α : Lbl} {σ σ' : State rT} :
     0 < z →
     σ.tapes[α]? = some ⟨N, L⟩ →
     z ≠ N →
@@ -1502,29 +1504,30 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
     σ' = σ →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int v), σ'⟩
   /-- Empty tape with bound `z`, `z ≤ 0`: return `-1`. -/
-  | RandTapeNonposEmptyS :
+  | RandTapeNonposEmptyS {z N : Int} {α : Lbl} {σ : State rT} :
     ¬ 0 < z →
     σ.tapes[α]? = some ⟨N, []⟩ →
     z = N →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
   /-- Tape bound `≠ z`, `z ≤ 0`: return `-1`. -/
-  | RandTapeNonposOtherS :
+  | RandTapeNonposOtherS {z N : Int} {L : List {z : Int // 0 ≤ z ∧ z < N}} {α : Lbl} {σ : State rT}
+      :
     ¬ 0 < z →
     σ.tapes[α]? = some ⟨N, L⟩ →
     z ≠ N →
     HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl α)), σ⟩ ⟨.lit (.int (-1)), σ⟩
   /-- Pattern matching a value succeeds with the resulting bindings. -/
-  | ScrutSuccessS :
+  | ScrutSuccessS {e : Exp rT} {p : Pat rT} {bindings : Exp rT} {σ : State rT} :
     e.isValue →
     Pat.tryMatch p e = some bindings →
     HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inl bindings, σ⟩
   /-- Pattern matching a value fails. -/
-  | ScrutFailureS :
+  | ScrutFailureS {e : Exp rT} {p : Pat rT} {σ : State rT} :
     e.isValue →
     Pat.tryMatch p e = none →
     HeadStepSupport ⟨.scrut e p, σ⟩ ⟨.inr (.lit .unit), σ⟩
   /-- Draw a real from the support of `unifUnit`. -/
-  | UrandS :
+  | UrandS {r : rT} {σ : State rT} :
     LawfulProbLangℝ.unifUnitSupport r →
     HeadStepSupport ⟨.urand, σ⟩ ⟨.lit (.real r), σ⟩
 
@@ -1557,7 +1560,7 @@ theorem unwrapM_singleton_pos {α β : Type _} [MeasurableSpace β]
 
 /-- `asValM` charges a set exactly when the expression has a value whose measure does. -/
 @[simp]
-theorem asValM_singleton_pos {e : Exp α} {f : Val α → Measure T} :
+theorem asValM_singleton_pos {e : Exp α} {f : Val α → Measure T} {s : Set T} :
     0 < (e.asValM f) s ↔ ∃ v, e.toVal? = some v ∧ 0 < (f v) s := by
   unfold Exp.asValM; cases e.toVal? <;> simp
 

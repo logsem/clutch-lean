@@ -99,7 +99,7 @@ def classifyField (T : Name) (ty : Expr) : MetaM Kind := do
   return .data
 
 /-- Runs `k` with the parameters of `T` and their measurable spaces in scope. -/
-def withCtx [Inhabited α] (T : Name) (k : Ctx → MetaM α) : MetaM α := do
+def withCtx {α : Type} [Inhabited α] (T : Name) (k : Ctx → MetaM α) : MetaM α := do
   let info ← getConstInfoInduct T
   unless info.all.length == 1 do
     throwError "cylinders: mutual inductive blocks are not supported yet"
@@ -185,7 +185,7 @@ def Ctx.fieldType (f : Field) : Expr := if f.kind == .recursive then ctx.ty else
 /-! ## Local variables -/
 
 /-- Runs `k` with the fields of `c` as local variables, with `T` at the recursive fields. -/
-def Ctx.withFields [Inhabited α] (k : Array Expr → MetaM α) : MetaM α :=
+def Ctx.withFields {α : Type} [Inhabited α] (k : Array Expr → MetaM α) : MetaM α :=
   withLocalDecls (c.fields.map fun f => decl f.name .default (pure (ctx.fieldType f))) k
 
 /-! ## Recursors -/

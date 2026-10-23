@@ -39,6 +39,8 @@ inductive Probe (rT : Type _)
 
 deriving instance MeasurableSpace for Probe
 
+variable {rT : Type _}
+
 /-! ### Functions by structural recursion -/
 
 /-- Test 1: discrete codomain. -/

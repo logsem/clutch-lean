@@ -522,6 +522,8 @@ theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
       exact .rand_unit (ih1 x y τ_x Γ rfl (by simp [hy])) (ih2 x y τ_x Γ rfl (by simp [hy]))
   | scrut _ hp ih => exact .scrut (ih x y τ_x Γ rfl (by simp [hy])) hp
 
+variable {α : Type _}
+
 /-- Renaming the context atom `x` to a fresh `y` preserves typing. -/
 theorem Typed.rename {Γ : Tctx} {e : Exp α} {τ τ_x : Ty}
     (x y : Var) (h : Typed (Γ.insert x τ_x) e τ) (hy : y ∉ e.fv ∪ {x}) :

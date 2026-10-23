@@ -16,6 +16,8 @@ Heaps of `Agree` values and the `HeapView` rules shared by the spec and program 
 
 open Std Iris Iris.Std COFE ProbLang
 
+variable {V : Type _}
+
 /-! ## Heaps of `Agree` values -/
 
 /-- Wraps every heap value in `Agree`. -/
@@ -63,7 +65,7 @@ Facts about one `HeapView Loc (Agree V) LocHeap` cell, stated for any ghost slot
 
 namespace AgreeHeap
 
-variable {V : Type _} [OFE V] {GF : BundledGFunctors}
+variable [OFE V] {GF : BundledGFunctors}
   {E : ElemG GF (constOF (HeapView Loc (Agree V) LocHeap))} {γ : GName} {l : Loc}
 
 local bi IProp GF

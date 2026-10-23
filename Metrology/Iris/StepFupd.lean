@@ -76,7 +76,8 @@ section StepFUpdPlain
 variable {PROP : Type _} [Sbi PROP] [BIFUpdate PROP] [BIFUpdateSbi PROP] [BIAffine PROP]
 
 /-- A plain `∀` commutes with an update followed by `n` step-updates at the empty mask. -/
-theorem fupd_step_fupdN_plain_forall (Φ : A → PROP) [∀ x, Plain (Φ x)] (n : Nat) : iprop%
+theorem fupd_step_fupdN_plain_forall {A : Type _} (Φ : A → PROP) [∀ x, Plain (Φ x)]
+    (n : Nat) : iprop%
     (∀ x, |={∅}=> |={∅}[∅]▷=>^[n] Φ x) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ x, Φ x := by
   cases n with
   | zero => simp only [Nat.repeat]; exact (fupd_plain_forall subset_refl).mpr

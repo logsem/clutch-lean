@@ -212,7 +212,7 @@ theorem open_close_isLocallyClosed {e : Exp rT} (x y : Var) (he : IsLocallyClose
   exact subst_lc he (.fvar y)
 
 /-- `e[x ↦ y][y ↦ w] = e[x ↦ w]` for `y` fresh in `e`. -/
-theorem subst_subst_fvar_id (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
+theorem subst_subst_fvar_id {α : Type _} (e w : Exp α) (x y : Var) (hyv : y ∉ e.fv) :
     subst (subst e x (.fvar y)) y w = subst e x w := by
   induction e with
   | fvar z =>
@@ -278,7 +278,7 @@ end Exp
 /-! ## Free variables of `close` -/
 
 /-- Closing a term at an atom introduces no new free variables. -/
-theorem closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
+theorem closeRec_fv_subset {α : Type _} (e : Exp α) (x : Var) (k : Nat) (y : Var)
     (hy : y ∈ (closeRec k x e).fv) : y ∈ e.fv := by
   induction e generalizing k with
   | bvar _ => simp [closeRec, fv] at hy
@@ -304,7 +304,7 @@ theorem closeRec_fv_subset (e : Exp α) (x : Var) (k : Nat) (y : Var)
       exact hy.imp (Or.imp (ih0 k) (ih1 k)) (ih2 k)
 
 /-- Closing a term introduces no new free variables. -/
-theorem close_fv_subset (e : Exp α) (x : Var) : (close e x).fv ⊆ e.fv :=
+theorem close_fv_subset {α : Type _} (e : Exp α) (x : Var) : (close e x).fv ⊆ e.fv :=
   fun y hy => closeRec_fv_subset e x 0 y hy
 
 /-! ## The `pl_step_simp` cleanup set
@@ -440,6 +440,8 @@ end
 /-! ## `toVal?` on value-shaped expressions -/
 
 namespace Exp
+
+variable {rT : Type _}
 
 -- `rfl` by proof irrelevance on the `Val.lc` field.
 /-- `toVal?` sends a literal to the literal value. -/

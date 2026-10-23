@@ -58,7 +58,7 @@ structure Arm where
 variable (ctx : Ctx)
 
 /-- `xs`, which belong to the constructors `cs` in order, as an array indexed by constructor. -/
-def Ctx.spread (cs : Array Ctor) (xs : Array α) : Array (Option α) :=
+def Ctx.spread {α : Type _} (cs : Array Ctor) (xs : Array α) : Array (Option α) :=
   ctx.ctors.map fun c => (cs.findIdx? (·.idx == c.idx)).bind (xs[·]?)
 
 /-- The arms of the constructors, from their `arms` and equations `eqs`, the hypotheses `hs` of

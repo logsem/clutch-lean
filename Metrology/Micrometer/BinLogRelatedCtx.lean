@@ -17,12 +17,11 @@ and under a resource `P` such as budget credits when `K.IsLinear`. -/
 
 namespace ProbLang
 open Ctx (fill)
-
-variable {rT : Type} {GF : BundledGFunctors}
-
 open GradedLifting Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE
 open ProbLang.MicrometerWpGS
 open Exp Finset RelCtx Ctx Typed TypedCtx
+
+variable {rT : Type} {GF : BundledGFunctors}
 
 /-! ## Closing a binder over a hole -/
 

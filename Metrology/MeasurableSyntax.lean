@@ -11,6 +11,8 @@ import all Metrology.Meta.Build
 
 open Set
 
+variable {α : Type _}
+
 local instance instMeasurableSpaceOption_measurableSyntax [MeasurableSpace α] :
     MeasurableSpace (Option α) :=
   .generateFrom <| {{ none }} ∪ ((some '' ·) '' MeasurableSet)
@@ -48,6 +50,8 @@ class MeasurableSyntax (Syntax : Type _) (Gen : outParam (Type _)) where
   base : Set Gen
   flatten : Gen → Set Syntax
 
+variable {Syntax Gen : Type _} {R Z B : Type _}
+
 def MeasurableSyntax.cylinder [I : MeasurableSyntax Syntax Gen] : Set (Set Syntax) :=
   I.flatten '' I.base
 
@@ -79,14 +83,15 @@ instance [MeasurableSpace R] [MeasurableSpace Z] [MeasurableSpace B] :
   base := LitSyntax.base
   flatten := LitSyntax.flatten
 
--- Does the construction work when we take measurable sets of the intermediate stages (ie. LitSyntax)
+-- Does the construction work when we take measurable sets of the intermediate stages
+-- (ie. LitSyntax)
 -- instead of combining the trees? That would make a lot of the metaprogrammable: we'd require that
 -- every field of every constructor be recursive or measurable.
 -- This way there's only one step to unfold.
 -- Perhaps we can generate the shape inductives then?
 
 @[uncurriedProjections, constructors]
-inductive ExprSyntax R Z B where
+inductive ExprSyntax (R Z B : Type _) where
 | rand
 | lit (l : LitSyntax R Z B)
 | var (x : Ident)
