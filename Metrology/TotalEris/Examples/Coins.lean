@@ -6,9 +6,12 @@ public import Metrology.Code.Coins
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Series
 import Metrology.Iris.LocalBI
 
+/-! # Coin examples -/
+
 @[expose] public section
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris ProbLang.TotalEris.ErisWpGS
+  ErrorCredit
 open scoped ENNReal
 
 namespace ProbLang
@@ -21,12 +24,15 @@ variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
 
+/-- The bound on the cost of `k` heads. -/
 def headsCost (s a : ℝ) (k : ℕ) (b : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((1 + Real.exp s) / 2) ^ k * Real.exp (s * (b - a)))
 
+/-- The postcondition counting heads. -/
 abbrev headsPost (a : ℝ) (b : ℤ) : Val rT → IProp GF :=
   fun v => iprop(∃ m : ℤ, ⌜v = .int m ∧ (b : ℝ) + m < a⌝)
 
+/-- The expected-cost bound on the heads count. -/
 theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) (b : ℤ) :
     iprop(↯(headsCost s a k b)) ⊢
       tglWp E pl(&heads #int (k : ℤ)) (headsPost (rT := rT) a b) := by
@@ -40,7 +46,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
       ipureintro
       exact ⟨rfl, by simpa using hab⟩
     · iexfalso
-      iapply ErrorCredit.contradict ?_ $$ Herr
+      iapply contradict ?_ $$ Herr
       simp only [headsCost, pow_zero, one_mul]
       rw [← ENNReal.ofReal_one]
       exact ENNReal.ofReal_le_ofReal (Real.one_le_exp (mul_nonneg hs (by linarith)))
@@ -70,7 +76,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
     iapply (tglWp_wand (Φ := headsPost a (b + n)))
     isplitl [Hcr]
     · iapply IH
-      iapply ErrorCredit.ext (by simp [F, Int.toNat_of_nonneg Hn₁]) $$ Hcr
+      iapply ext (by simp [F, Int.toNat_of_nonneg Hn₁]) $$ Hcr
     iintro %w ⟨%m, %⟨rfl, Hm⟩⟩
     twp_pures
     twp_value
@@ -80,6 +86,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
     push_cast at Hm ⊢
     linarith
 
+/-- The Chernoff-style bound on the heads count. -/
 theorem twp_heads_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
     iprop(↯(⨅ s ∈ Set.Ici (0 : ℝ), headsCost s a n 0)) ⊢
       tglWp E pl(&heads #int (n : ℤ)) (headsPost (rT := rT) a 0) := by
@@ -89,6 +96,7 @@ theorem twp_heads_chernoff (E : CoPset) (a : ℝ) (n : ℕ) :
   iintro %s %hs Hs
   iapply twp_heads_exp E hs a n 0 $$ Hs
 
+/-- The Hoeffding bound on `headsCost`. -/
 theorem headsCost_hoeffding {n : ℕ} (hn : 0 < n) (t : ℝ) :
     headsCost (4 * t / n) (n / 2 + t) n 0 ≤ ENNReal.ofReal (Real.exp (-2 * t ^ 2 / n)) := by
   refine ENNReal.ofReal_le_ofReal ?_
@@ -115,12 +123,13 @@ theorem headsCost_hoeffding {n : ℕ} (hn : 0 < n) (t : ℝ) :
         field_simp
         ring
 
+/-- The Hoeffding tail bound on the heads count. -/
 theorem twp_heads_hoeffding (E : CoPset) {n : ℕ} (hn : 0 < n) {t : ℝ} (ht : 0 ≤ t) :
     iprop(↯(ENNReal.ofReal (Real.exp (-2 * t ^ 2 / n)))) ⊢
       tglWp E pl(&heads #int (n : ℤ)) (headsPost (rT := rT) (n / 2 + t) 0) := by
   iintro Herr
   iapply twp_heads_chernoff E
-  iapply ErrorCredit.weaken ((biInf_le (fun s => headsCost s (n / 2 + t) n 0)
+  iapply weaken ((biInf_le (fun s => headsCost s (n / 2 + t) n 0)
     (Set.mem_Ici.mpr (by positivity))).trans (headsCost_hoeffding hn t)) $$ Herr
 
 end

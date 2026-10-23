@@ -7,8 +7,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Law-driven `rand` couplings
 
-`wp_couple_rand_rand_law` couples `rand N ~ K[rand N]` by any `HeadShift`, `SideFree` law, leaving
-`R n m` at the draws (`refines` form: tactic `rel_couple_UU_law`); DP choice is an instance. -/
+Couple `rand N ~ K[rand N]` by any `HeadShift`, `SideFree` law, with DP choice as an instance. -/
 
 @[expose] public section
 
@@ -27,8 +26,7 @@ variable {rT : Type} {B : Type}
 
 open Classical in
 /-- The leftover of the draws `rand N ~ K[rand N]` from `σ` and `σ'`: `R n m` at the
-configurations drawn as `n` and `m`, and `⊤` elsewhere (keyed by both draws, unlike
-`Cfg.advLeftover`). -/
+configurations drawn as `n` and `m`, and `⊤` elsewhere. -/
 noncomputable def Cfg.drawCost [_root_.Top B] (σ σ' : State rT) (K : Ectx rT)
     (R : Int → Int → B) (ρ ρ' : Cfg rT) : B :=
   if h : ∃ n m : Int, ρ = ⟨pl(#int n), σ⟩ ∧ ρ' = ⟨K.fill pl(#int m), σ'⟩ then
@@ -63,13 +61,15 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
 
 /-! ## The law-driven rule -/
 
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+local bi IProp GF
+
 section Law
 
-variable [MeasurableSpace rT] [LawfulProbLangℝ rT] [AddCommMonoid B] [PartialOrder B]
+variable [AddCommMonoid B] [PartialOrder B]
     [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
-  {GF : BundledGFunctors} [BudgetCreditGS B GF]
-local bi IProp GF
+  [BudgetCreditGS B GF]
 
 section Wp
 
@@ -168,10 +168,8 @@ continuation, by which side of `P` the draw fell (Rocq `GBL_DP_choice`). -/
 
 section Choice
 
-variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
-  {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
-  {GF : BundledGFunctors} [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
-local bi IProp GF
+variable {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
+  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
 /-- The continuation budget of a choice draw: `(ε₂, δ₂)` on `P`, `(ε₂', δ₂)` off it. -/
 noncomputable def choiceBudget (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞) (r : Int) : ℝ≥0∞ × ℝ≥0∞ := by

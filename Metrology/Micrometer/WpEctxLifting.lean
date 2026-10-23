@@ -5,8 +5,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Head-step lifting rules of `wp`
 
-The step-lifting rules of `WpLifting` restated for `headStep`, mainly `wp_lift_atomic_head_step`
-(Rocq `approxis/ectx_lifting.v`). -/
+The step-lifting rules of `WpLifting` restated for `headStep` (Rocq `approxis/ectx_lifting.v`). -/
 
 @[expose] public section
 
@@ -27,9 +26,7 @@ open SpecUpdateGS
 open Exp (decompItem_none_of_lc_headReducible)
 open Set (univ)
 
-/-- `wp_lift_step_prog_couple` stated with head-step reducibility (Rocq
-`wp_lift_head_step_prog_couple`); the reducibility premise goes unused, since `progCoupl` already
-carries it. -/
+/-- Head-step form of `wp_lift_step_prog_couple` (Rocq `wp_lift_head_step_prog_couple`). -/
 theorem wp_lift_head_step_prog_couple (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗ |={E, ∅}=>
@@ -94,13 +91,13 @@ theorem concentrated_headPad (Hlc : e₁.IsLocallyClosed)
 
 section
 variable (Hv : e₁.toVal? = none)
-include Hv
+  (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
+  (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁))
+include Hv hSmeas hSconc
 
 open scoped Classical in
 /-- Head step, for any `rT`: outcomes range over a measurable set `S σ₁` carrying `headStep`. -/
-theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜HeadReducible e₁ σ₁⌝ ∗ ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗
       |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
@@ -117,9 +114,7 @@ theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
 
 open scoped Classical in
 /-- Atomic head step with a mask change `E1`/`E2`, over a measurable set carrying `headStep`. -/
-theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E1}=> ⌜HeadReducible e₁ σ₁⌝ ∗
       ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E1}[E2]▷=> stateInterp σ₂ ∗
         (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
@@ -137,14 +132,12 @@ theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed :
 
 open scoped Classical in
 /-- Atomic head step over a measurable set carrying `headStep`, from the mask-changing rule. -/
-theorem wp_lift_atomic_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc)
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_atomic_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜HeadReducible e₁ σ₁⌝ ∗
       ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E}=> stateInterp σ₂ ∗
         (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
   iintro H
-  iapply wp_lift_atomic_head_step_fupd_concentrated Hv Hlc hSmeas hSconc
+  iapply wp_lift_atomic_head_step_fupd_concentrated Hv hSmeas hSconc Hlc
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro

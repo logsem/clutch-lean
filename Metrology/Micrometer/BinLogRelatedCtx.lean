@@ -28,6 +28,7 @@ variable {rT : Type} {GF : BundledGFunctors}
 section Syntax
 variable {Ke : Exp rT}
 
+/-- Consing a binding adds its variable to the domain of a relational context. -/
 theorem RelCtx.dom_cons (x : Var) (A : lrel rT GF) (Γrc : RelCtx rT GF) :
     (((x, A) :: Γrc).map (·.1)).toFinset = (Γrc.map (·.1)).toFinset ∪ {x} := by
   simp [union_comm]
@@ -86,9 +87,11 @@ theorem binders_tail {k : CtxItem rT} {K' : Ctx rT} {e e' : Exp rT}
 section Bookkeeping
 variable {Δ : TyEnv rT GF} {Γrc Γrc' : RelCtx rT GF} {x : Var} {A : lrel rT GF} {Ke Ke' : Exp rT}
 
+/-- The empty typing context is related to the empty relational context. -/
 theorem TctxRelated.empty_nil : TctxRelated L Δ .empty ([] : RelCtx rT GF) := by
   intro x; simp [Tctx.empty, lookup]
 
+/-- A relational context related to the empty typing context is empty. -/
 theorem TctxRelated.eq_nil_of_empty (HCtx : TctxRelated L Δ .empty Γrc) : Γrc = [] := by
   cases Γrc with
   | nil => rfl
@@ -168,9 +171,8 @@ variable {e e' : Exp rT}
 variable {τ : Ty}
 variable {K : Ctx rT}
 
-/-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`.
-`Hrel` is valid (⊢) because binder frames use it under □; `Hbinders` and `Ctx.BindersFresh` keep
-the frames' binders fresh for the plugged terms, the frame code and the relational context. -/
+/-- From `e ≤log e'` at `τ` under `Γtc`, `K[e] ≤log K[e']` at `τ'` for a typed context `K`, with
+binder freshness keeping the frames' binders fresh for the plugged terms. -/
 theorem bin_log_related_under_typed_ctx {Γtc' : Tctx} {τ' : Ty} (HK : TypedCtx K Γtc τ Γtc' τ')
     (Hty_e : Typed Γtc e τ) (Hty_e' : Typed Γtc e' τ)
     (Hbinders : ∀ x ∈ binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ payloadFv K)
@@ -313,9 +315,9 @@ spending it once. -/
 local macro "ih_frame" : tactic => `(tactic| ihave H := ih HKtail Hlin.2 Δ Γrc' HCtx $$ HP)
 
 /-- `bin_log_related_under_typed_ctx` for a hypothesis under a resource `P` such as budget
-credits, restricted to linear contexts; no freshness hypotheses are needed since no linear frame
-closes a variable over the hole. -/
-theorem bin_log_related_under_linear_ctx {P : IProp GF} {Γtc' : Tctx} {τ' : Ty}
+credits, restricted to linear contexts, where no linear frame closes a variable over the hole and
+so no freshness hypotheses are needed. -/
+theorem bin_log_related_under_linear_ctx {P} {Γtc' : Tctx} {τ' : Ty}
     (HK : TypedCtx K Γtc τ Γtc' τ') (Hlin : K.IsLinear)
     (Hrel : ∀ (Δ : TyEnv rT GF) (Γrc : RelCtx rT GF), TctxRelated L Δ Γtc Γrc →
       ⊢ P -∗ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :

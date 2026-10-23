@@ -18,11 +18,12 @@ CoPset} {e : ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF}, WP[L] e 
 #check @ProbLang.MicrometerWpGS.wp_bind
 
 /-- info: @ProbLang.MicrometerWpGS.wp_pure_step_ctx : ∀ {rT : Type} [inst : MeasurableSpace rT]
-[inst_1 : ProbLang.LawfulProbLangℝ rT] {B : Type} [inst_2 : PartialOrder B] [inst_3 : OrderTop B] {L
-: GradedLifting B} {GF : Iris.BundledGFunctors} [inst_4 : ProbLang.MicrometerWpGS GF] [inst_5 :
-ProbLang.BudgetGS B GF] [inst_6 : Add B] [L.IsLawful] [L.IsTopAbsorbing] (K : ProbLang.Ectx rT) (φ :
-Prop) {n : ℕ} {e₁ e₂ : ProbLang.Exp rT} [ProbLang.PureExec φ n e₁ e₂], φ → ∀ {E : CoPset} {Φ :
-ProbLang.Val rT → Iris.IProp GF}, WP[L] (K.fill e₂) @ E {{ Φ }} ⊢ WP[L] (K.fill e₁) @ E {{ Φ }} -/
+[inst_1 : ProbLang.LawfulProbLangℝ rT] {GF : Iris.BundledGFunctors} {B : Type} [inst_2 :
+PartialOrder B] [inst_3 : OrderTop B] {L : GradedLifting B} [inst_4 : ProbLang.MicrometerWpGS GF]
+[inst_5 : ProbLang.BudgetGS B GF] {E : CoPset} {Φ : ProbLang.Val rT → Iris.IProp GF} [inst_6 : Add
+B] [L.IsLawful] [L.IsTopAbsorbing] (K : ProbLang.Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : ProbLang.Exp
+rT} [ProbLang.PureExec φ n e₁ e₂], φ → WP[L] (K.fill e₂) @ E {{ Φ }} ⊢ WP[L] (K.fill e₁) @ E {{ Φ }}
+-/
 #guard_msgs (whitespace := lax) in
 #check @ProbLang.MicrometerWpGS.wp_pure_step_ctx
 
@@ -77,8 +78,8 @@ rT} {v : ProbLang.Val rT}, e.toVal? = some v → (|={E}=> Φ v) ⊢ ProbLang.Tot
 
 /-- info: @ProbLang.LiveEris.LiveWpGS.lwp_bind : ∀ {rT : Type} [inst : MeasurableSpace rT] [inst_1 :
 ProbLang.LawfulProbLangℝ rT] {GF : Iris.BundledGFunctors} [inst_2 : ProbLang.LiveEris.LiveWpGS rT
-ProbLang.LiveEris.Coord GF] {Q : ProbLang.State rT → ProbLang.State rT → Prop} {K : ProbLang.Ectx
-rT} {E : CoPset} {e : ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF},
+ProbLang.LiveEris.Coord GF] {Q : ProbLang.State rT → ProbLang.State rT → Prop} {E : CoPset} {e :
+ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF} {K : ProbLang.Ectx rT},
 (ProbLang.LiveEris.LiveWpGS.lwp Q E e fun v ↦ ProbLang.LiveEris.LiveWpGS.lwp Q E (K.fill
 (ProbLang.Exp.ofVal v)) Φ) ⊢ ProbLang.LiveEris.LiveWpGS.lwp Q E (K.fill e) Φ -/
 #guard_msgs (whitespace := lax) in
@@ -97,16 +98,16 @@ ProbLang.LiveEris.LiveWpGS.lwp Q E (K.fill e₂) Φ ⊢ ProbLang.LiveEris.LiveWp
 /-- info: @ProbLang.LiveEris.LiveWpGS.lwp_value_of_toVal : ∀ {rT : Type} [inst : MeasurableSpace rT]
 [inst_1 : ProbLang.LawfulProbLangℝ rT] {GF : Iris.BundledGFunctors} [inst_2 :
 ProbLang.LiveEris.LiveWpGS rT ProbLang.LiveEris.Coord GF] {Q : ProbLang.State rT → ProbLang.State rT
-→ Prop} {E : CoPset} {e : ProbLang.Exp rT} {v : ProbLang.Val rT} {Φ : ProbLang.Val rT → Iris.IProp
-GF}, e.toVal? = some v → Φ v ⊢ ProbLang.LiveEris.LiveWpGS.lwp Q E e Φ -/
+→ Prop} {E : CoPset} {e : ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF} {v : ProbLang.Val
+rT}, e.toVal? = some v → Φ v ⊢ ProbLang.LiveEris.LiveWpGS.lwp Q E e Φ -/
 #guard_msgs (whitespace := lax) in
 #check @ProbLang.LiveEris.LiveWpGS.lwp_value_of_toVal
 
 /-- info: @ProbLang.LiveEris.LiveWpGS.lwp_value_fupd_of_toVal : ∀ {rT : Type} [inst :
 MeasurableSpace rT] [inst_1 : ProbLang.LawfulProbLangℝ rT] {GF : Iris.BundledGFunctors} [inst_2 :
 ProbLang.LiveEris.LiveWpGS rT ProbLang.LiveEris.Coord GF] {Q : ProbLang.State rT → ProbLang.State rT
-→ Prop} {E : CoPset} {e : ProbLang.Exp rT} {v : ProbLang.Val rT} {Φ : ProbLang.Val rT → Iris.IProp
-GF}, e.toVal? = some v → (|={E}=> Φ v) ⊢ ProbLang.LiveEris.LiveWpGS.lwp Q E e Φ -/
+→ Prop} {E : CoPset} {e : ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF} {v : ProbLang.Val
+rT}, e.toVal? = some v → (|={E}=> Φ v) ⊢ ProbLang.LiveEris.LiveWpGS.lwp Q E e Φ -/
 #guard_msgs (whitespace := lax) in
 #check @ProbLang.LiveEris.LiveWpGS.lwp_value_fupd_of_toVal
 

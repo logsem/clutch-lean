@@ -11,8 +11,7 @@ public meta import Metrology.Meta.AppByName
 /-!
 # Proof-mode tactics for the LiveEris WP
 
-`live_bind`, `live_pure`, `live_pures`, `live_pure_excused` and `live_value` discover the
-evaluation context themselves. The context engine is the one of TotalEris's `twp_*` tactics.
+The LiveEris WP tactics, which find their evaluation context through the TotalEris `twp_*` engine.
 -/
 
 namespace ProbLang.LiveEris
@@ -21,19 +20,16 @@ open Lean hiding Expr
 open Lean renaming Expr → LeanExpr
 open Meta Elab Tactic Qq Iris Iris.ProofMode
 
-section
-variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
-    [LiveWpGS rT Coord GF]
-
-public theorem LiveWpGS.lwp_pure_step_ctx (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
+/-- A pure step under the evaluation context `K` is a free step of the weakest precondition. -/
+public theorem LiveWpGS.lwp_pure_step_ctx {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    {GF : BundledGFunctors} [LiveWpGS rT Coord GF] (K : Ectx rT) (φ : Prop) {n : ℕ} {e₁ e₂ : Exp rT}
     [PureExec φ n e₁ e₂] (Hφ : φ) {Q : State rT → State rT → Prop} {E : CoPset}
     {Φ : Val rT → IProp GF} :
     LiveWpGS.lwp Q E (K.fill e₂) Φ ⊢ LiveWpGS.lwp Q E (K.fill e₁) Φ := by
   let : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
   exact LiveWpGS.lwp_pure_step φ Hφ
 
-end
-
+/-- A pure step under the evaluation context `K` may cross an excused checkpoint. -/
 public theorem lwp_pure_step_excused_ctx {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
     {hlc : HasLC}
     {GF : BundledGFunctors} [LiveGS rT hlc GF] (K : Ectx rT) (φ : Prop) {n : ℕ}
@@ -46,10 +42,11 @@ public theorem lwp_pure_step_excused_ctx {rT : Type _} [MeasurableSpace rT] [Law
 
 /-! ## Evaluation-context engine -/
 
-/-- Read a value *structurally* off a quoted expression, accepting abstract `Val` leaves
-(`Exp.ofVal v`, `v.fst`) on which the computational `Exp.toVal?` is stuck. Concrete
-`lam`/`fix` leaves need a closedness check and fall back to the reflective test. -/
-public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) :
+variable {α : Q(Type)}
+
+/-- Read a value structurally off a quoted expression, accepting abstract `Val` leaves that
+`Exp.toVal?` is stuck on. -/
+public meta partial def exprAsVal? (e : Q(Exp $α)) :
     MetaM (Option Q(Val $α)) := do
   let e : Q(Exp $α) ← pure e.consumeMData
   match e with
@@ -87,10 +84,9 @@ public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) :
       | _ => return none
     | none => return none
 
-/-- Peel one evaluation-context frame off `e`, or return `(none, e)`. Mirrors `Exp.decompItem`
-(same frames, right-to-left order) but checks operands with `exprAsVal?`, so it also works
-around abstract `Val` leaves. -/
-public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
+/-- Peel one evaluation-context frame off `e` (mirroring `Exp.decompItem`) with `exprAsVal?`
+checks, or return `(none, e)`. -/
+public meta def extractEctxItem (e : Q(Exp $α)) :
     MetaM (Option Q(EctxItem $α) × Q(Exp $α)) := do
   let e' : Q(Exp $α) ← whnf e.consumeMData
   let e : Q(Exp $α) ← pure e'.consumeMData
@@ -135,14 +131,14 @@ public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
 
 /-- Decompose `e` into frames `[innermost, …, outermost]` and the innermost redex, so that
 `Ectx.fill result.1 result.2 = e`. -/
-public meta partial def extractAllEctxItems {α : Q(Type)} (e : Q(Exp $α))
+public meta partial def extractAllEctxItems (e : Q(Exp $α))
     (acc : List Q(EctxItem $α) := []) : MetaM (List Q(EctxItem $α) × Q(Exp $α)) := do
   match ← extractEctxItem e with
   | (some Ki, e') => extractAllEctxItems e' (Ki :: acc)
   | (none, e) => return (acc, e)
 
 /-- Plug `e` into a single frame `Ki` (mirrors `EctxItem.fillItem`). -/
-public meta def fillItem {α : Q(Type)} (e : Q(Exp $α)) : Q(EctxItem $α) → MetaM Q(Exp $α)
+public meta def fillItem (e : Q(Exp $α)) : Q(EctxItem $α) → MetaM Q(Exp $α)
   | ~q(.appL $v₂)     => return q(.app $e (.ofVal $v₂))
   | ~q(.appR $e₁)     => return q(.app $e₁ $e)
   | ~q(.unop $op)     => return q(.unop $op $e)
@@ -166,12 +162,12 @@ public meta def fillItem {α : Q(Type)} (e : Q(Exp $α)) : Q(EctxItem $α) → M
   | ~q(.scrut $p)     => return q(.scrut $e $p)
 
 /-- Quote a `List` of quoted `EctxItem`s as a quoted `Ectx`. -/
-public meta def quoteList {α : Q(Type)} : List Q(EctxItem $α) → Q(Ectx $α)
+public meta def quoteList : List Q(EctxItem $α) → Q(Ectx $α)
   | [] => q([])
   | x :: xs => q($x :: $(quoteList xs))
 
 /-- `Ectx.fill K e` computed at the meta level, with no residual `Ectx.fill`. -/
-public meta partial def fill {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
+public meta partial def fill (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
   match K with
   | ~q([]) => pure e
   | ~q($Ki :: $K') => do fill K' (← fillItem e Ki)
@@ -179,13 +175,16 @@ public meta partial def fill {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) :
 /-- A decomposition `e = Ectx.fill K e'` together with a result `a` computed at
 the focus `e'`. -/
 public meta structure ECtxResultOf (α : Q(Type)) (β : Type) where
+  /-- The result computed at the focus. -/
   result : β
+  /-- The surrounding evaluation context. -/
   K : Q(Ectx $α)
+  /-- The focus. -/
   e' : Q(Exp $α)
 
 /-- Walk the frame stack of `ogE` from innermost outward, returning the first
 focus `e'` at which `pred e'` succeeds, together with the surrounding context. -/
-public meta partial def findECtx {α : Q(Type)} {β : Type} (ogE : Q(Exp $α))
+public meta partial def findECtx {β : Type} (ogE : Q(Exp $α))
     (pred : Q(Exp $α) → ProofModeM β) : ProofModeM (Option (ECtxResultOf α β)) := do
   let (Kis, inner) ← extractAllEctxItems ogE
   go inner Kis
@@ -201,22 +200,39 @@ where
 
 /-- A proof-mode goal whose conclusion is `LiveWpGS.lwp Q E e Φ`. -/
 meta structure LiveWpGoal where
+  /-- The universe of the proof-mode propositions. -/
   {u : Level}
+  /-- The type of program values. -/
   {α : Q(Type)}
+  /-- The measurable space on the program type. -/
   instMS : Q(MeasurableSpace $α)
+  /-- The probabilistic language on the program type. -/
   instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)
+  /-- The bundled functors. -/
   {GF : Q(BundledGFunctors.{0, 0, 0})}
+  /-- The `LiveWpGS` instance. -/
   instWp : Q(LiveWpGS $α Coord $GF)
+  /-- The type of propositions of the goal. -/
   {prop : Q(Type u)}
+  /-- The BI structure on the propositions. -/
   {bi : Q(BI $prop)}
+  /-- The hypotheses, as an expression. -/
   {ehyps : Q($prop)}
+  /-- The hypotheses of the goal. -/
   hyps : Hyps bi ehyps
+  /-- The progress predicate. -/
   Q : Q(State $α → State $α → Prop)
+  /-- The mask. -/
   E : Q(CoPset)
+  /-- The program expression. -/
   e : Q(Exp $α)
+  /-- The postcondition. -/
   Φ : Q(Val $α → IProp $GF)
+  /-- Proof that the universe is zero. -/
   hu : QuotedLevelDefEq u 0
+  /-- Proof that the propositions are `IProp GF`. -/
   hprop : $prop =Q IProp $GF
+  /-- Proof that the BI structure is the one of `IProp`. -/
   hbi : $bi =Q UPred.instBIUPred
 
 /-- Run `k` against the current goal, requiring it to be `ehyps ⊢ LiveWpGS.lwp Q E e Φ`. -/
@@ -265,16 +281,16 @@ elab "live_bind" colGt ppSpace focus:term:max : tactic =>
       q(@ProbLang.LiveEris.LiveWpGS.lwp $α $instMS $instPL $GF $instWp $Q $E $e' $Φc)
     let bindPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_bind
       [(`rT, α), (`GF, GF), (`Q, Q), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instMS, instPL, instWp]
-    let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
-/-- Clears the stuck `openRec k u v.fst` that a step leaves on an abstract value. -/
+/-- Clears the stuck `openRec k t v.fst` that a step leaves on an abstract value. -/
 @[pl_step_simp] public theorem openRec_val_fst {α : Type _} (k : Nat) (t : Exp α) (v : Val α) :
     Exp.openRec k t v.fst = v.fst := (Exp.open_lc k t v.fst v.lc).symm
 
-/-- Reduce a stepped `Exp`: unfold `open'`/`close`/`ofVal` and normalize Int/Nat/ite/ctor.
-The result is defeq to the input; `mdata` is stripped (see `reattachNames`). -/
-public meta def reduceExp {α : Q(Type)} (e : Q(Exp $α)) : MetaM Q(Exp $α) := do
+/-- Reduce a stepped `Exp` by unfolding `open'`/`close`/`ofVal` and normalizing Int/Nat/ite/ctor,
+keeping the result defeq to the input. -/
+public meta def reduceExp (e : Q(Exp $α)) : MetaM Q(Exp $α) := do
   -- No default simprocs: they over-reduce `Exp.ofVal`/heap forms the heap rules need.
   let mut thms : SimpTheorems := {}
   for d in [``ProbLang.Exp.open', ``ProbLang.Exp.openRec, ``ProbLang.Exp.close,
@@ -291,7 +307,7 @@ public meta def reduceExp {α : Q(Type)} (e : Q(Exp $α)) : MetaM Q(Exp $α) := 
             ``Int.reduceMod, ``Int.reduceNeg, ``Int.reducePow, ``reduceCtorEq] do
     procs ← procs.add p (post := true)
   let ctx ← Simp.mkContext (simpTheorems := #[thms]) (congrTheorems := ← getSimpCongrTheorems)
-  let ⟨res, _⟩ ← Lean.Meta.simp e ctx (simprocs := #[procs])
+  let ⟨res, _⟩ ← Meta.simp e ctx (simprocs := #[procs])
   -- Defeq-only, so `PureExec` still applies to `e₂syn`. The stuck `openRec _ _ v.fst` is
   -- not defeq to `v.fst`; `simp only [pl_step_simp]` in `live_pure` clears it.
   return res.expr
@@ -323,7 +339,7 @@ public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanEx
 /-- `(e₁', e₂syn, names)`: the redex `e₁'` (defeq to `e`, head constant possibly unfolded),
 its reduct `e₂syn` in the form the `PureExec` instance matches syntactically, and the binder
 names to re-attach (β only; `fix` relies on `@[pl_names]`). -/
-public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+public meta def pureStepResult (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)) (e : Q(Exp $α)) :
     MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
   let beta (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
@@ -359,7 +375,7 @@ public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
     -- A concrete but unreduced bool such as `decide (0 = 0)`: fire only if `reduce` lands
     -- on a constructor. A symbolic bool (`ProbLangℝ.realLt y x`) stays put for `rcases`.
     | ~q(Exp.lit (.bool $b))    => do
-        let b' : Q(Bool) ← Lean.Meta.reduce b
+        let b' : Q(Bool) ← Meta.reduce b
         if b'.isConstOf ``Bool.true then
           return some (q(Exp.cond (Exp.lit (.bool $b')) $et $ef), et, #[])
         else if b'.isConstOf ``Bool.false then
@@ -390,7 +406,7 @@ public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
     -- No simproc reduces boolean results, so `reduce` here to let `cond` fire. A symbolic
     -- bool would reduce to a stuck `Decidable.rec …`; keep it folded for `rcases`.
     | ~q(some (Exp.lit (.bool $b))) => do
-        let b' : Q(Bool) ← Lean.Meta.reduce b
+        let b' : Q(Bool) ← Meta.reduce b
         if b'.isConstOf ``Bool.true || b'.isConstOf ``Bool.false then
           return some (e, q(Exp.lit (.bool $b')), #[])
         else
@@ -402,7 +418,7 @@ public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
       (@LawfulProbLangℝ.toProbLangℝ $α $instMS $instPL) $op $e1)
     match r with
     | ~q(some (Exp.lit (.bool $b)))          => do
-        let b' : Q(Bool) ← Lean.Meta.reduce b
+        let b' : Q(Bool) ← Meta.reduce b
         return some (e, q(Exp.lit (.bool $b')), #[])
     -- `Int.reduceNeg` matches `-z`, not `Int.neg z`.
     | ~q(some (Exp.lit (.int (Int.neg $z)))) => return some (e, q(Exp.lit (.int (-$z))), #[])
@@ -422,16 +438,22 @@ public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
 re-attach to the reduct. -/
 public meta structure PureStepAt (α : Q(Type)) (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS)) where
+  /-- The redex. -/
   e₁ : Q(Exp $α)
+  /-- The reduct, in the form the instance matches. -/
   e₂syn : Q(Exp $α)
+  /-- The binder names to re-attach. -/
   names : Array Name
+  /-- The side condition. -/
   φ : Q(Prop)
+  /-- The number of steps. -/
   n : Q(Nat)
+  /-- The `PureExec` instance. -/
   inst : Q(ProbLang.PureExec $φ $n $e₁ $e₂syn)
 
 /-- Locate a pure step at the redex `focusE?` (or the first redex), returning its context `K`,
 the step, the display form `e₂` of its reduct, and `inner = K.fill e₂` filled at the meta level. -/
-public meta def findPureStep {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+public meta def findPureStep (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@ProbLang.LawfulProbLangℝ $α $instMS))
     (e : Q(Exp $α)) (focusE? : Option Q(Exp $α)) (mvar : MVarId) :
     ProofModeM (Q(Ectx $α) × PureStepAt α instMS instPL × Q(Exp $α) × Q(Exp $α)) := do
@@ -464,9 +486,8 @@ public meta def pureSideCondition (φ : Q(Prop)) : ProofModeM Q($φ) := do
 
 /-! ## `live_pure` — take a pure step at a redex, auto-discovering its context -/
 
-/-- `live_pure_core e` takes a single pure (`PureExec`) reduction step at the redex `e`,
-discovering the surrounding evaluation context automatically. Leaves the stepped goal
-unreduced; `live_pure` is the cleaning wrapper. -/
+/-- `live_pure_core e` takes one unreduced pure step at the redex `e`, discovering its evaluation
+context. -/
 elab "live_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
   runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let focusE? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
@@ -477,11 +498,11 @@ elab "live_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let stepPf ← mkAppByName ``ProbLang.LiveEris.LiveWpGS.lwp_pure_step_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
         (`Hφ, HΦ), (`Q, Q), (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
-    let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
-/-- `live_pure_excused_core e` takes a pure step at the redex `e` as an excused checkpoint: the
-goal becomes `↻1 ∗ ▷ (↻1 -∗ lwp Q E e' Φ)`. `live_pure_excused` is the cleaning wrapper. -/
+/-- `live_pure_excused_core e` takes a pure step at `e` as an excused checkpoint, giving
+`↻1 ∗ ▷ (↻1 -∗ lwp Q E e' Φ)`. -/
 elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
   runTacticLiveWp fun mvar { α, GF, instMS, instPL, instWp, hyps, Q, E, e, Φ, .. } => do
     let focusE? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
@@ -498,7 +519,7 @@ elab "live_pure_excused_core" focus:(ppSpace colGt term:max)? : tactic =>
     let stepPf ← mkAppByName ``ProbLang.LiveEris.lwp_pure_step_excused_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, step.φ), (`n, step.n), (`e₁, step.e₁), (`e₂, e₂),
         (`Hφ, HΦ), (`hn, hn), (`Q, Q), (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
-    let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
 /-! ## `live_value` — discharge a value WP -/
@@ -533,7 +554,7 @@ elab "live_value" : tactic =>
     let valPf ← mkAppByName valLemma
       [(`rT, α), (`GF, GF), (`Q, Q), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
       [instMS, instPL, instWp]
-    mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
+    mvar.assign (← mkAppM ``BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/
 

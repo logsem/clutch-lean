@@ -42,7 +42,6 @@ theorem fv_subset_substMap_dom (hdom : (Γ.map (·.1)).toFinset ⊆ (vs.map (·.
   rw [fst_dom, snd_dom]
   exact ⟨he.trans hdom, he'.trans hdom⟩
 
-
 /-- Substituting into a `lam` body keeps both sides locally closed. -/
 theorem substMap_lam_lc (hvs : AllClosed vs.fst ∧ AllClosed vs.snd)
     (he_lc : ∀ x ∉ S, (open' e (.fvar x)).IsLocallyClosed)
@@ -155,11 +154,8 @@ theorem bin_log_related_var (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (x : Var) (τ
   imodintro
   iexact HA
 
-section Steps
-variable [L.IsLawful] [L.IsTopAbsorbing]
-
 /-- Beta reduction on both sides, one step later, as a closed `refines` rule. -/
-theorem refines_beta {v v' : Val rT}
+theorem refines_beta [L.IsLawful] [L.IsTopAbsorbing] {v v' : Val rT}
     (he : (lam e).IsLocallyClosed) (he' : (lam e').IsLocallyClosed) : iprop%
     ▷ refines L ⊤ (open' e v.1) (open' e' v'.1) A ⊢
       refines L ⊤ (.app (.lam e) v.1) (.app (.lam e') v'.1) A := by
@@ -170,8 +166,6 @@ theorem refines_beta {v v' : Val rT}
   iapply refines_pure_r (Hex := pureExec_app_lam) ⟨v'.2.toIsValue, he'⟩
   simp only [fill_nil]
   iexact H
-
-end Steps
 
 /-! ## Substitution and closedness helpers -/
 

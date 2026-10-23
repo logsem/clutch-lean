@@ -9,6 +9,8 @@ import all Metrology.Meta.Build
 
 @[expose] public section
 
+/-! # Measurable syntax -/
+
 open Set
 
 variable {α : Type _}
@@ -23,15 +25,19 @@ variable [MeasurableSpace α]
 
 open MeasurableSpace
 
+/-- The set `{none}` is measurable. -/
 theorem measurableSet_none : MeasurableSet { none (α := α) } :=
   measurableSet_generateFrom (mem_union_left _ rfl)
 
+/-- The image of a measurable set under `some` is measurable. -/
 theorem measurableSet_some {S : Set α} (HS : MeasurableSet S) : MeasurableSet (some '' S) :=
   measurableSet_generateFrom <| mem_union_right _ (mem_image_of_mem _ HS)
 
+/-- The range of `some` is measurable. -/
 theorem measurableSet_range_some : MeasurableSet (range (some (α := α))) :=
   image_univ ▸ measurableSet_some .univ
 
+/-- A set of options is measurable iff its part inside the range of `some` is. -/
 theorem measurableSet_iff_inter_range_some {S : Set (Option α)} :
     MeasurableSet S ↔ MeasurableSet (S ∩ range some) := by
   refine ⟨(MeasurableSet.inter · measurableSet_range_some), fun H => ?_⟩
@@ -43,15 +49,19 @@ theorem measurableSet_iff_inter_range_some {S : Set (Option α)} :
 
 end Option
 
+/-- Identifiers are strings. -/
 abbrev Ident : Type _ := String
 
 /-- The data needed to perform the cylinder construction on syntax. -/
 class MeasurableSyntax (Syntax : Type _) (Gen : outParam (Type _)) where
+  /-- The generators that count as measurable. -/
   base : Set Gen
+  /-- The set of syntax trees that a generator describes. -/
   flatten : Gen → Set Syntax
 
 variable {Syntax Gen : Type _} {R Z B : Type _}
 
+/-- The cylinder sets: the flattenings of the measurable generators. -/
 def MeasurableSyntax.cylinder [I : MeasurableSyntax Syntax Gen] : Set (Set Syntax) :=
   I.flatten '' I.base
 
@@ -59,6 +69,7 @@ instance MeasurableSyntax.instMeasurableSpace [MeasurableSyntax Syntax Gen]
     : MeasurableSpace Syntax :=
   .generateFrom cylinder
 
+/-- Literal syntax, with the type of reals, integers and booleans as parameters. -/
 @[uncurriedProjections, constructors]
 inductive LitSyntax (R Z B : Type _) where
 | real (r : R)
@@ -67,11 +78,13 @@ inductive LitSyntax (R Z B : Type _) where
 
 -- TODO: derive the higher-kinded functor `LitSyntax R Z B → LitSyntax R' Z' B'`.
 
+/-- The set of literals that a literal of sets describes. -/
 def LitSyntax.flatten : LitSyntax (Set R) (Set Z) (Set B) → Set (LitSyntax R Z B)
 | .real S => real.ι '' S
 | .int S => int.ι '' S
 | .bool S => bool.ι '' S
 
+/-- The literals of sets whose underlying set is measurable. -/
 def LitSyntax.base [MeasurableSpace R] [MeasurableSpace Z] [MeasurableSpace B] :
   Set (LitSyntax (Set R) (Set Z) (Set B))
 | .real S => MeasurableSet S
@@ -90,6 +103,7 @@ instance [MeasurableSpace R] [MeasurableSpace Z] [MeasurableSpace B] :
 -- This way there's only one step to unfold.
 -- Perhaps we can generate the shape inductives then?
 
+/-- Expression syntax, with the type of reals, integers and booleans as parameters. -/
 @[uncurriedProjections, constructors]
 inductive ExprSyntax (R Z B : Type _) where
 | rand
@@ -98,6 +112,7 @@ inductive ExprSyntax (R Z B : Type _) where
 | app (rator rand : ExprSyntax R Z B)
 | lam (x : Ident) (body : ExprSyntax R Z B)
 
+/-- The set of expressions that an expression of sets describes. -/
 def ExprSyntax.flatten : ExprSyntax (Set R) (Set Z) (Set B) → Set (ExprSyntax R Z B)
 | rand => rand.ι '' { () }
 | lit l => lit.ι '' (LitSyntax.flatten l)
@@ -105,6 +120,7 @@ def ExprSyntax.flatten : ExprSyntax (Set R) (Set Z) (Set B) → Set (ExprSyntax 
 | app fn arg => app.ι '' prod (flatten fn) (flatten arg)
 | lam x body => lam.ι '' prod { x } (flatten body)
 
+/-- The expressions of sets whose literals are all measurable. -/
 def ExprSyntax.base [MeasurableSpace R] [MeasurableSpace Z] [MeasurableSpace B] :
   Set (ExprSyntax (Set R) (Set Z) (Set B))
 | rand => True

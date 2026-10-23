@@ -30,8 +30,11 @@ open IsCOFE (compl conv_compl)
 
 /-- A value relation: a persistent Iris relation on values that only relates closed values. -/
 structure lrel (rT : Type) (GF : BundledGFunctors) where
+  /-- The underlying binary relation on values. -/
   car : Val rT → Val rT → IProp GF
+  /-- The relation is persistent. -/
   [persistent : ∀ v1 v2, Persistent (car v1 v2)]
+  /-- Related values are closed. -/
   closed v1 v2 : car v1 v2 ⊢ ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝
 
 attribute [instance] lrel.persistent
@@ -58,8 +61,8 @@ instance ofe_lrel : OFE (lrel rT GF) where
       symm h v1 v2 := dist_eqv.symm (h v1 v2)
       trans h1 h2 v1 v2 := dist_eqv.trans (h1 v1 v2) (h2 v1 v2) }
   eq_dist' :=
-    ⟨fun h _ _ _ => h ▸ .rfl, fun h => lrel.ext fun _ _ => OFE.eq_dist.mpr fun _ => h _ _ _⟩
-  dist_lt hd hmn v1 v2 := OFE.dist_lt (hd v1 v2) hmn
+    ⟨fun h _ _ _ => h ▸ .rfl, fun h => ext fun _ _ => eq_dist.mpr fun _ => h _ _ _⟩
+  dist_lt hd hmn v1 v2 := dist_lt (hd v1 v2) hmn
 
 /-- The chain of underlying relations of a chain of `lrel`s, used to take limits pointwise. -/
 noncomputable def lrel.toFunChain (c : Chain (lrel rT GF)) :
@@ -74,10 +77,10 @@ variable (v1 v2 : Val rT)
 abbrev lrel.appAt : (Val rT → Val rT → IProp GF) → IProp GF := (· v1 v2)
 
 /-- Evaluation at a pair of values is nonexpansive. -/
-instance lrel.appAt_ne : OFE.NonExpansive (appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
+instance lrel.appAt_ne : NonExpansive (appAt (GF := GF) v1 v2) := ⟨fun _ _ _ h => h v1 v2⟩
 
 /-- A relation's proposition at a fixed pair of values is nonexpansive in the relation. -/
-instance lrel.car_ne : OFE.NonExpansive (fun A : lrel rT GF => A.car v1 v2) where
+instance lrel.car_ne : NonExpansive (fun A : lrel rT GF => A.car v1 v2) where
   ne {_ _ _} hAB := hAB v1 v2
 
 end
@@ -154,21 +157,26 @@ noncomputable def lrel_real : lrel rT GF where
 
 /-! ### A literal is related to itself -/
 
+/-- The unit value is related to itself at `lrel_unit`. -/
 theorem lrel_unit_lit : ⊢ lrel_unit.car (.unit : Val rT) .unit := by
   unfold lrel_unit; ipureintro; exact ⟨rfl, rfl⟩
 
+/-- An integer literal is related to itself at `lrel_int`. -/
 theorem lrel_int_lit (n : Int) : ⊢ lrel_int.car (.int n : Val rT) (.int n) := by
   unfold lrel_int; iexists n; ipureintro; exact ⟨rfl, rfl⟩
 
+/-- A nonnegative integer literal is related to itself at `lrel_nat`. -/
 theorem lrel_nat_lit {n : Int} (hn : 0 ≤ n) : ⊢ lrel_nat.car (.int n : Val rT) (.int n) := by
   unfold lrel_nat
   iexists n.toNat
   ipureintro
   refine ⟨?_, ?_⟩ <;> rw [Int.toNat_of_nonneg hn]
 
+/-- A boolean literal is related to itself at `lrel_bool`. -/
 theorem lrel_bool_lit (b : Bool) : ⊢ lrel_bool.car (.bool b : Val rT) (.bool b) := by
   unfold lrel_bool; iexists b; ipureintro; exact ⟨rfl, rfl⟩
 
+/-- A real literal is related to itself at `lrel_real`. -/
 theorem lrel_real_lit (r : rT) : ⊢ lrel_real.car (.real r : Val rT) (.real r) := by
   unfold lrel_real; iexists r; ipureintro; exact ⟨rfl, rfl⟩
 
@@ -245,8 +253,8 @@ noncomputable def lrelRec1 (r : lrel rT GF) : lrel rT GF where
   car w1 w2 := iprop% ⌜w1.1.IsClosedEmpty ∧ w2.1.IsClosedEmpty⌝ ∗ ▷ (C r).car w1 w2
   closed _ _ := by iintro ⟨%h, _⟩; ipureintro; exact h
 
-/-- `lrelRec1 C` is contractive, since the recursive occurrence sits under `▷`. -/
-instance lrelRec1_contractive : OFE.Contractive (lrelRec1 C) where
+/-- `lrelRec1 C` is contractive, with the recursive occurrence under `▷`. -/
+instance lrelRec1_contractive : Contractive (lrelRec1 C) where
   distLater_dist {n P Q} hPQ w1 w2 := by
     show iprop(_ ∗ ▷ _) ≡{n}≡ iprop(_ ∗ ▷ _)
     exact sep_ne.ne .rfl <| Contractive.distLater_dist
@@ -274,23 +282,24 @@ theorem lrel_rec_ne {C1 C2 : lrel rT GF -n> lrel rT GF}
     (hC : ∀ A : lrel rT GF, C1 A ≡{n}≡ C2 A) :
     lrel_rec C1 ≡{n}≡ lrel_rec C2 :=
   fixpoint_dist fun r w1 w2 =>
-    sep_ne.ne .rfl (OFE.NonExpansive.ne (hC r w1 w2))
+    sep_ne.ne .rfl (NonExpansive.ne (hC r w1 w2))
 
 /-! ### Nonexpansiveness of the simple constructors -/
 
 -- TODO: Remove these hand-written proofs when nonexp lands
 
-instance lrel_prod_ne_2 : OFE.NonExpansive₂ (lrel_prod (rT := rT) (GF := GF)) where
+instance lrel_prod_ne_2 : NonExpansive₂ (lrel_prod (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     refine exists_ne fun a1 => exists_ne fun a2 => exists_ne fun b1 => exists_ne fun b2 => ?_
     exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne (hA a1 a2) (hB b1 b2)
 
-instance lrel_sum_ne_2 : OFE.NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) where
+instance lrel_sum_ne_2 : NonExpansive₂ (lrel_sum (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     refine exists_ne fun w1 => exists_ne fun w2 => or_ne.ne ?_ ?_
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hA w1 w2)
     · exact sep_ne.ne .rfl <| sep_ne.ne .rfl (hB w1 w2)
 
+/-- `lrel_exists` is non-expansive in its body. -/
 theorem lrel_exists_ne {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     lrel_exists C1 ≡{n}≡ lrel_exists C2 := by
@@ -308,8 +317,11 @@ def logN : Namespace := nroot.@ (1 : Pos)
 /-- Ghost state of the logical relation: Micrometer, non-atomic invariants and their pool name. -/
 class MicrometerRGS (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
+  /-- The Micrometer ghost state. -/
   micrometerGS : MicrometerGS rT hlc GF
+  /-- The non-atomic invariant ghost state. -/
   naInvG : NaInvG GF
+  /-- The name of the non-atomic invariant pool. -/
   nais : NaInvPoolName
 
 open MicrometerRGS (naInvG nais)
@@ -337,11 +349,10 @@ variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} [MicrometerRG
 /-! ## Refinement judgement -/
 
 variable (L) in
-/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`.
-
-The right context `K` is quantified so `refines_bind` can work inside a larger spec context;
-`naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
-threaded positive credit `b` must come back as some positive `b'` (see `approximates_coupling`). -/
+-- The right context `K` is quantified so bind rules can work inside a larger spec context;
+-- `naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
+-- threaded positive credit `b` must come back as some positive `b'`.
+/-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`. -/
 noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
   ∀ (K : Ectx rT) (b : B),
     ⤇ K.fill e' -∗
@@ -427,12 +438,12 @@ theorem refines_ne {E : CoPset} {e e' : Exp rT} {A B : lrel rT GF}
   refine NonExpansive.ne fun v => exists_ne fun v' => exists_ne fun b' => ?_
   exact sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl <| sep_ne.ne .rfl (h v v')
 
-instance lrel_arr_ne_2 : OFE.NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) where
+instance lrel_arr_ne_2 : NonExpansive₂ (lrel_arr L (rT := rT) (GF := GF)) where
   ne {n A1 A2} hA {B1 B2} hB v1 v2 := by
     exact sep_ne.ne .rfl <| intuitionistically_ne.ne <| forall_ne fun w1 => forall_ne fun w2 =>
       wand_ne.ne (hA w1 w2) (refines_ne hB)
 
-instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
+instance lrel_ref_ne : NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
   ne {n A B} hAB v1 v2 := by
     show iprop(∃ _ _, _) ≡{n}≡ iprop(∃ _ _, _)
     refine exists_ne fun l1 => exists_ne fun l2 => ?_
@@ -441,6 +452,7 @@ instance lrel_ref_ne : OFE.NonExpansive (lrel_ref (rT := rT) (GF := GF)) where
     exact exists_ne fun w1 => exists_ne fun w2 => sep_ne.ne .rfl <| sep_ne.ne .rfl (hAB w1 w2)
 
 variable (L) in
+/-- `lrel_forall` is non-expansive in its body. -/
 theorem lrel_forall_ne {C1 C2 : lrel rT GF → lrel rT GF}
     (h : ∀ A, C1 A ≡{n}≡ C2 A) :
     lrel_forall L C1 ≡{n}≡ lrel_forall L C2 := by

@@ -18,7 +18,7 @@ Ghost state for the spec program, heap and tapes, with `⤇`, `↦ₛ`, `↪ₛ`
 @[expose] public section
 
 section SpecRA
-open Std Iris Iris.Std COFE OFE Excl AgreeHeap ProbLang
+open Std Iris Iris.Std COFE OFE Excl AgreeHeap ProbLang PartialMap
 
 variable {rT : Type _}
 
@@ -57,6 +57,8 @@ abbrev SpecTapes := HeapView Loc (Agree Tape) LocHeap
 def SpecProg.auth (e : Exp rT) : SpecProg rT := ● (some <| .excl e)
 /-- Fragment of `SpecProg`: ownership of the spec program `e`. -/
 def SpecProg.frag (e : Exp rT) : SpecProg rT := ◯ (some <| .excl e)
+
+open SpecProg
 
 /-! ## Ghost-state classes -/
 
@@ -140,7 +142,7 @@ theorem specProg_update {e1 e2 e3 : Exp rT} {σ : State rT} :
   unfold specAuth specProgAuth specProgFrag
   dsimp only
   ihave ⟨He, Hh, Ht⟩ := Ha
-  have hupd : SpecProg.frag e1 • SpecProg.auth e1 ~~> SpecProg.frag e3 • SpecProg.auth e3 :=
+  have hupd : frag e1 • auth e1 ~~> frag e3 • auth e3 :=
     Auth.auth_update (.option (.exclusive trivial))
   ihave Hu := iOwn_update_op (E := ISpec.prog) hupd $$ [$Hf $He]
   imod Hu
@@ -158,7 +160,7 @@ theorem spec_auth_lookup_heap {v : Val rT} :
 /-- Overwriting a spec location updates the authoritative heap and the points-to together. -/
 theorem spec_auth_update_heap {v w : Val rT} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↦ₛ v ==∗
-      specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)⟩ ∗
+      specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => insert h l w)⟩ ∗
         l ↦ₛ w := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩ Hf
@@ -170,7 +172,7 @@ theorem spec_auth_update_heap {v w : Val rT} :
 /-- Allocating a fresh spec location. -/
 theorem spec_auth_heap_alloc (v : Val rT) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
-      specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)⟩ ∗
+      specAuth ⟨e, σ.update_heap (fun h : LocHeap (Val rT) => insert h σ.heap.fresh v)⟩ ∗
         σ.heap.fresh ↦ₛ v := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩
@@ -189,7 +191,7 @@ theorem spec_auth_lookup_tape {t : Tape} :
 /-- Overwriting a spec tape updates the authoritative tapes and the points-to together. -/
 theorem spec_auth_update_tape {t s : Tape} :
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↪ₛ t ==∗
-      specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)⟩ ∗
+      specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => insert h l s)⟩ ∗
         l ↪ₛ s := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩ Hf
@@ -201,7 +203,7 @@ theorem spec_auth_update_tape {t s : Tape} :
 /-- Allocating a fresh spec tape. -/
 theorem spec_auth_tape_alloc (t : Tape) :
     ⊢ specAuth ⟨e, σ⟩ ==∗
-      specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)⟩ ∗
+      specAuth ⟨e, σ.update_tapes (fun h : LocHeap Tape => insert h σ.tapes.fresh t)⟩ ∗
         σ.tapes.fresh ↪ₛ t := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩
@@ -216,9 +218,9 @@ theorem spec_auth_tape_alloc (t : Tape) :
 (no heap or tape fragments). -/
 theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
     (e : Exp rT) (σ : State rT) :
-    ⊢@{IProp GF} |==> ∃ IS : SpecGS rT GF,
-      specAuth (ISpec := IS) ⟨e, σ⟩ ∗ specProgFrag (ISpec := IS) e := by
-  imod (iOwn_alloc (E := ISPre.prog) (SpecProg.auth e • SpecProg.frag e)
+    ⊢@{IProp GF} |==> ∃ _ : SpecGS rT GF,
+      specAuth ⟨e, σ⟩ ∗ specProgFrag e := by
+  imod (iOwn_alloc (E := ISPre.prog) (auth e • frag e)
     (Auth.auth_both_valid_2 trivial .rfl)) with ⟨%γp, Hp⟩
   imod alloc_auth (E := ISPre.heap) σ.heap with ⟨%γH, HH⟩
   imod alloc_auth (E := ISPre.tapes) σ.tapes with ⟨%γT, HT⟩

@@ -3,12 +3,11 @@ module
 public import Metrology.Micrometer.Soundness
 public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 
-@[expose] public section
-
 /-! # Randomized response stays private inside a boolean context
 
-`rr_negCtx_le`: `rr_refines` lifts through the linear context `if [·] then false else true` by
-`refines_ctx_dp`; linear because the credit `↯b` is spent once. -/
+`rr_refines` lifts through the linear context `if [·] then false else true` by `refines_ctx_dp`. -/
+
+@[expose] public section
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence
 open scoped ENNReal

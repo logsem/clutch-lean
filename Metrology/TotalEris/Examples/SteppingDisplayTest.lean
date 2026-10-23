@@ -108,10 +108,11 @@ example : ⊢ tglWp E pl(let x := #1; x + #2) Φ := by
 
 /-! ## Recursive constants -/
 
+/-- A recursive countdown constant registered for folding. -/
 @[pl_fold]
 def loopFolded : Exp rT := pl% rec f n := if n = #0 then #0 else f (n - #1)
 
--- Not defeq to any `@[pl_fold]` constant.
+/-- A recursive constant that is not defeq to any `@[pl_fold]` constant. -/
 def loopBare : Exp rT := pl% rec f n := if n = #0 then #7 else f (n - #2)
 
 /-- info: ⊢ tglWp E pl(#0) Φ -/
@@ -237,6 +238,7 @@ example : ⊢ tglWp E pl((#1, #2))
 
 /-! ## `@[pl_names]` sampler stalled at `rand` -/
 
+/-- A recursive sampler that stalls at `rand`. -/
 @[pl_names]
 def randLoop : Exp rT := pl% rec f n := if rand(#2, #()) = #0 then n else f (n + #1)
 

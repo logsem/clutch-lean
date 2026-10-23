@@ -8,17 +8,11 @@ public import Metrology.ProbLang.Syntax.LocallyClosed
 
 /-! # The environment machine agrees with the big-step semantics
 
-`envBig` is the measure semantics of the environment machine `envStep`: the least fixed
-point of reading one step as a measure (`Step.interp`). The main theorem,
-`envBig_map_rb`, says that on a well-formed configuration, reading `envBig`'s results back
-gives `bigStep` of the read-back configuration. For a closed program,
-`envBig_eval_closed` gives `bigStep` of the program itself.
-
-Like `BigStepEquiv.lean`, the proof is discrete-only.
--/
+`envBig` is the measure semantics of the environment machine `envStep`; `envBig_map_rb` says
+that reading its results back gives `bigStep` of the read-back configuration (discrete only). -/
 
 noncomputable section
-open MeasureTheory Measure
+open MeasureTheory Measure Function
 
 namespace ProbLang
 
@@ -247,14 +241,14 @@ variable [DiscreteMeasurableSpace α]
 
 theorem bind_mono_disc {μ ν : Measure α} {f g : α → Measure β} (hμ : μ ≤ ν)
     (hfg : ∀ a, f a ≤ g a) : μ.bind f ≤ ν.bind g := by
-  refine Measure.le_iff.mpr fun s hs => ?_
+  refine le_iff.mpr fun s hs => ?_
   rw [bind_apply hs Measurable.of_discrete.aemeasurable,
     bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono' hμ fun a => hfg a s
 
 theorem bind_mono_ae_disc {μ : Measure α} {f g : α → Measure β} (hfg : ∀ᵐ a ∂μ, f a ≤ g a) :
     μ.bind f ≤ μ.bind g := by
-  refine Measure.le_iff.mpr fun s hs => ?_
+  refine le_iff.mpr fun s hs => ?_
   rw [bind_apply hs Measurable.of_discrete.aemeasurable,
     bind_apply hs Measurable.of_discrete.aemeasurable]
   exact lintegral_mono_ae (hfg.mono fun a h => h s)
@@ -264,10 +258,10 @@ theorem bind_iSup_iSup_le {μ : ℕ → Measure α} (hμ : Monotone μ) {f : ℕ
     (hf : Monotone f) : (⨆ n, μ n).bind (fun a => ⨆ n, f n a) ≤ ⨆ n, (μ n).bind (f n) := by
   have hbind : Monotone fun n => (μ n).bind (f n) :=
     fun _ _ h => bind_mono_disc (hμ h) fun a => hf h a
-  refine Measure.le_iff.mpr fun s hs => ?_
+  refine le_iff.mpr fun s hs => ?_
   rw [bind_apply hs Measurable.of_discrete.aemeasurable,
-    Measure.iSup_apply_of_monotone hbind hs]
-  simp_rw [Measure.iSup_apply_of_monotone (fun _ _ h => hf h _) hs]
+    iSup_apply_of_monotone hbind hs]
+  simp_rw [iSup_apply_of_monotone (fun _ _ h => hf h _) hs]
   rw [lintegral_iSup (fun _ => Measurable.of_discrete) (fun _ _ h a => hf h a s)]
   refine iSup_le fun n => ?_
   rw [lintegral_iSup_of_monotone hμ Measurable.of_discrete]
@@ -346,11 +340,11 @@ theorem intUniform_map (z : Int) (σ : State rT) :
 
 theorem map_iSup_le_of {μ : ℕ → Measure (RCfg rT)} (hμ : Monotone μ) {ν : Measure (Cfg rT)}
     (h : ∀ n, (μ n).map RCfg.rb ≤ ν) : (⨆ n, μ n).map RCfg.rb ≤ ν := by
-  refine Measure.le_iff.mpr fun s hs => ?_
+  refine le_iff.mpr fun s hs => ?_
   rw [map_apply RCfg.measurable_rb hs,
-    Measure.iSup_apply_of_monotone hμ (RCfg.measurable_rb hs)]
+    iSup_apply_of_monotone hμ (RCfg.measurable_rb hs)]
   exact iSup_le fun n => by
-    rw [← map_apply RCfg.measurable_rb hs]; exact Measure.le_iff.mp (h n) s hs
+    rw [← map_apply RCfg.measurable_rb hs]; exact le_iff.mp (h n) s hs
 
 variable [LawfulProbLangℝ rT]
 
@@ -396,16 +390,17 @@ theorem envΦ_iSup_le {X : ℕ → EnvCfg rT → Measure (RCfg rT)} (hX : Monoto
   | eval | apply => simp only [Step.interp, iSup_apply]; exact le_rfl
   | _ => exact le_iSup_of_le 0 le_rfl
 
+/-- `envBig` is a fixed point of `envΦ`. -/
 theorem envBig_unfold : envBig (rT := rT) = envΦ envBig := by
   apply le_antisymm
   · refine iSup_le fun n => ?_
     cases n with
     | zero => exact bot_le
     | succ n =>
-      rw [Function.iterate_succ_apply']
+      rw [iterate_succ_apply']
       exact envΦ_mono (le_iSup (fun n => envΦ^[n] ⊥) n)
   · refine (envΦ_iSup_le envIter_mono).trans (iSup_le fun n => ?_)
-    rw [← Function.iterate_succ_apply' envΦ n]
+    rw [← iterate_succ_apply' envΦ n]
     exact le_iSup (fun n => envΦ^[n] ⊥) (n + 1)
 
 theorem envBig_apply (c : EnvCfg rT) : envBig c = (envStep c).interp envBig :=
@@ -451,7 +446,7 @@ theorem envStep_good {c : EnvCfg rT} (hc : c.WF) : (envStep c).Good := by
 theorem Step.map_interp_uniform (z : Int) (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
     ((Step.uniform z σ).interp X).map RCfg.rb = Cfg.uniform z σ := by
   simp only [Step.interp]
-  rw [Measure.map_map RCfg.measurable_rb Measurable.of_discrete, ← intUniform_map]
+  rw [map_map RCfg.measurable_rb Measurable.of_discrete, ← intUniform_map]
   rfl
 
 theorem envBig_eval_bvar {env : Env rT} {j : Nat} {σ : State rT} {u : Exp rT}
@@ -639,12 +634,12 @@ theorem envIter_pres (n : ℕ) : Pres (envΦ^[n] (⊥ : EnvCfg rT → Measure (R
     intro c _
     simp only [ae_iff]
     rfl
-  | succ n ih => rw [Function.iterate_succ_apply']; exact envΦ_pres ih
+  | succ n ih => rw [iterate_succ_apply']; exact envΦ_pres ih
 
 theorem envBig_pres : Pres (envBig (rT := rT)) := by
   intro c hc
   rw [ae_iff, envBig, iSup_apply,
-    Measure.iSup_apply_of_monotone (fun _ _ h => envIter_mono h c) MeasurableSet.of_discrete]
+    iSup_apply_of_monotone (fun _ _ h => envIter_mono h c) MeasurableSet.of_discrete]
   exact ENNReal.iSup_eq_zero.mpr fun n => ae_iff.mp (envIter_pres n c hc)
 
 /-! ## Bounding one step by read-back evaluations -/
@@ -662,12 +657,12 @@ def Step.bnd (Z : Cfg rT → Measure (Cfg rT)) : Step rT → Measure (Cfg rT)
 
 theorem bind_map_disc {μ : Measure (RCfg rT)} {g : RCfg rT → Cfg rT}
     {k : Cfg rT → Measure (Cfg rT)} : (μ.map g).bind k = μ.bind (k ∘ g) := by
-  rw [Measure.bind, Measure.bind, Measure.map_map Measurable.of_discrete Measurable.of_discrete]
+  rw [Measure.bind, Measure.bind, map_map Measurable.of_discrete Measurable.of_discrete]
 
 theorem Step.map_interp_uniformReal (σ : State rT) (X : EnvCfg rT → Measure (RCfg rT)) :
     ((Step.uniformReal σ).interp X).map RCfg.rb = Cfg.uniformReal σ := by
   simp only [Step.interp]
-  rw [Measure.map_map RCfg.measurable_rb Measurable.of_discrete]
+  rw [map_map RCfg.measurable_rb Measurable.of_discrete]
   rfl
 
 /-- If `X` is bounded by `Z` after readback, so is one interpreted step. -/
@@ -915,9 +910,10 @@ theorem envIter_le (n : ℕ) :
     exact Measure.zero_le _
   | succ n ih =>
     intro c hc
-    rw [Function.iterate_succ_apply', envΦ, ← envStep_bnd_bigStep hc]
+    rw [iterate_succ_apply', envΦ, ← envStep_bnd_bigStep hc]
     exact Step.map_interp_le (envIter_pres n) ih (envStep_good hc)
 
+/-- The read-back of `envBig` is bounded by `bigStep`. -/
 theorem envBig_le {c : EnvCfg rT} (hc : c.WF) : (envBig c).map RCfg.rb ≤ bigStep c.rb := by
   rw [envBig, iSup_apply]
   exact map_iSup_le_of (fun _ _ h => envIter_mono h c) fun n => envIter_le n c hc
@@ -930,7 +926,7 @@ theorem Yb_onlyVal' {c : EnvCfg rT} {ρ : Cfg rT} (hc : c.WF) (hρ : c.rb = ρ) 
     (ae_map_iff RCfg.measurable_rb.aemeasurable MeasurableSet.of_discrete).mpr
       ((envBig_pres c hc).mono fun _ hr => hr.isValue)
 
-/-- `bigStepF_fillItem` with the only-values hypothesis at the hole alone. -/
+/-- The bind step of `bigStepF` at one frame, when the hole's results are values almost surely. -/
 theorem bigStepF_fillItem_loc {R : Cfg rT → Measure (Cfg rT)} (hV : RetVal R) (Ki : EctxItem rT)
     (e : Exp rT) (σ : State rT) (hC : ∀ᵐ c ∂(R ⟨e, σ⟩), c.expr.isValue) :
     bigStepF measureOps R ⟨Ki.fillItem e, σ⟩ =
@@ -1056,14 +1052,16 @@ theorem claimGe_eval {env : Env rT} {e : Exp rT} {σ : State rT}
     exact le_of_eq_of_le (by rfl) (claimGe_chain (by simp_all [EnvCfg.WF]) (by simp_all [Frame.WF])
       fun w σ' hw => claimGe_resume ⟨by simp_all [Frame.WF], hw⟩)
 
-theorem claimGe {c : EnvCfg rT} (hc : c.WF) : ClaimGe c := by
+/-- `ClaimGe` holds on every well-formed configuration. -/
+theorem claim_ge {c : EnvCfg rT} (hc : c.WF) : ClaimGe c := by
   cases c with
   | eval => exact claimGe_eval hc
   | apply => exact claimGe_apply hc
   | resume => exact claimGe_resume hc
 
+/-- `bigStep` is bounded by `Yb`. -/
 theorem bigStep_le_Yb : bigStep (rT := rT) ≤ Yb :=
-  OrderHom.lfp_le _ fun _ => le_iInf₂ fun _ ⟨hc, hρ⟩ => hρ ▸ claimGe hc
+  OrderHom.lfp_le _ fun _ => le_iInf₂ fun _ ⟨hc, hρ⟩ => hρ ▸ claim_ge hc
 
 /-! ## The main theorem -/
 

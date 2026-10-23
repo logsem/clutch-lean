@@ -5,8 +5,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Lifting lemmas for `wp`
 
-Rules that reduce `wp` to "couple one program step against the spec, then continue at each
-related pair"; main result `wp_lift_prim_steps_coupl` (Rocq `approxis/lifting.v`). -/
+Reduce `wp` to one coupled step (Rocq `approxis/lifting.v`); main: `wp_lift_prim_steps_coupl`. -/
 
 @[expose] public section
 
@@ -67,8 +66,12 @@ theorem wp_lift_step_spec_couple [Add B] [L.IsLawful] [L.IsTopAbsorbing] : iprop
   imodintro
   iexact HW'
 
+section Coupling
+variable (Hv : e₁.toVal? = none)
+include Hv
+
 /-- For a non-value, skip both spec phases: a program coupling straight into `wp`. -/
-theorem wp_lift_step_prog_couple (Hv : e₁.toVal? = none) : iprop%
+theorem wp_lift_step_prog_couple : iprop%
     (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗ |={E, ∅}=>
       progCoupl L e₁ σ₁ e₁' σ₁' b₁ fun e₂ σ₂ e₂' σ₂' b₂ => iprop% ▷ |={∅, E}=>
@@ -89,9 +92,9 @@ theorem wp_lift_step_prog_couple (Hv : e₁.toVal? = none) : iprop%
 
 /-! ## Coupling a program step with a spec step -/
 
-/-- Couple one program step against one spec step by a head of `law`; each related pair continues
-with the leftover `R` as budget. The base of the lemmas below. -/
-theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) (Hv : e₁.toVal? = none) : iprop%
+/-- Couple one program step against one spec step by a head of `law`, each related pair continuing
+with the leftover `R` as budget. -/
+theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
       stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
       |={E, ∅}=> ∃ R : Cfg rT → Cfg rT → B,
@@ -112,8 +115,7 @@ theorem wp_lift_prim_steps_coupl_of_head (law : L.BindLaw) (Hv : e₁.toVal? = n
 
 /-- `wp_lift_prim_steps_coupl_of_head` for a law whose heads shift: the head is at `b₁` and `b₂`
 rides along on every leftover (Rocq `wp_couple_spend`). -/
-theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift]
-    (Hv : e₁.toVal? = none) : iprop%
+theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
       stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
       |={E, ∅}=> ∃ (R : Cfg rT → Cfg rT → B) (b₁ b₂ : B),
@@ -127,7 +129,7 @@ theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift]
           stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗
             budgetInterp (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂) ∗ wp L E e₂ Φ)) ⊢ wp L E e₁ Φ := by
   iintro H
-  iapply wp_lift_prim_steps_coupl_of_head law Hv
+  iapply wp_lift_prim_steps_coupl_of_head Hv law
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with
     ⟨%R, %b₁, %b₂, %hb, %hb₂, %Hred, %Hred', %Hhead, %Hside, H⟩
@@ -141,8 +143,7 @@ theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift]
 /-- Couple a program step against a spec step within `b₁`, leaving `b₂` to the continuation out
 of the budget `b` (Rocq `wp_couple`). -/
 theorem wp_lift_prim_steps_coupl [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal]
-    (Hv : e₁.toVal? = none) : iprop%
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
       stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
       |={E, ∅}=> ∃ (S : Cfg rT → Cfg rT → Prop) (b₁ b₂ : B),
@@ -154,7 +155,7 @@ theorem wp_lift_prim_steps_coupl [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.
           stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗ budgetInterp b₂ ∗
             wp L E e₂ Φ)) ⊢ wp L E e₁ Φ := by
   iintro H
-  iapply wp_lift_prim_steps_coupl_of_head (canonical L) Hv
+  iapply wp_lift_prim_steps_coupl_of_head Hv (canonical L)
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with ⟨%S, %b₁, %b₂, %hb, %Hred, %Hred', %Hcpl, H⟩
   have := prim_step_mass Hred
@@ -178,8 +179,7 @@ theorem wp_lift_prim_steps_coupl [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.
 /-- Couple a program step against an erasable presampling of the spec state, leaving the spec
 expression in place. -/
 theorem wp_lift_prim_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal]
-    (Hv : e₁.toVal? = none) : iprop%
+    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] : iprop%
     (∀ σ₁ e₁' σ₁' (b : B),
       stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b -∗
       |={E, ∅}=> ∃ (S : Cfg rT → State rT → Prop) (μ₁' : MeasureTheory.Measure (State rT))
@@ -205,6 +205,8 @@ theorem wp_lift_prim_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B]
   iapply specCoupl_ret
   iexact H
 
+end Coupling
+
 /-! ## Program steps that leave the spec in place
 
 These couple the program step against a Dirac at the spec configuration, at budget `0`.
@@ -218,10 +220,13 @@ variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive
   (Hv : e₁.toVal? = none)
 include Hv
 
+section Concentrated
+variable (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
+  (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁))
+include hSmeas hSconc
+
 /-- A program step concentrated on `S σ₁`, with the spec untouched; the base of this section. -/
-theorem wp_lift_step_later_concentrated
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_step_later_concentrated : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜Reducible e₁ σ₁⌝ ∗ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗
       |={∅}=> ▷ |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
@@ -240,28 +245,8 @@ theorem wp_lift_step_later_concentrated
   imodintro
   iframe
 
-/-- `wp_lift_step_later_concentrated` on the support of a non-`urand` step. -/
-@[discrete]
-theorem wp_lift_step_later
-    (hne : e₁.decomp.2 ≠ .urand := by no_urand) : iprop%
-    (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜Discrete.Reducible e₁ σ₁⌝ ∗ ∀ e₂ σ₂,
-      ⌜0 < primStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={∅}=> ▷ |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢
-    wp L E e₁ Φ := by
-  iintro H
-  iapply wp_lift_step_later_concentrated Hv (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
-    (fun σ₁ => concentrated_primStep_support e₁ σ₁ hne)
-  iintro %σ₁ Hσ
-  imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
-  imodintro
-  isplitr
-  · ipureintro; exact Hred.toReducible
-  iintro %e₂ %σ₂ %Hmem
-  iapply H $$ %e₂ %σ₂ %Hmem
-
 /-- `wp_lift_step_later_concentrated` with the later taken before the continuation. -/
-theorem wp_lift_step_concentrated
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_step_concentrated : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜Reducible e₁ σ₁⌝ ∗ ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗
       |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
@@ -274,9 +259,7 @@ theorem wp_lift_step_concentrated
   iapply H $$ %e₂ %σ₂ %Hmem
 
 /-- An atomic program step concentrated on `S σ₁`: every successor is a value satisfying `Φ`. -/
-theorem wp_lift_atomic_step_fupd_concentrated
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
+theorem wp_lift_atomic_step_fupd_concentrated : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E1}=> ⌜Reducible e₁ σ₁⌝ ∗
       ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E1}[E2]▷=> stateInterp σ₂ ∗
       (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
@@ -304,6 +287,40 @@ theorem wp_lift_atomic_step_fupd_concentrated
     iexfalso
     iexact HΦ
 
+/-- `wp_lift_atomic_step_fupd_concentrated` with a later in place of a step-update. -/
+theorem wp_lift_atomic_step_concentrated : iprop%
+    (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜Reducible e₁ σ₁⌝ ∗
+      ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E}=> stateInterp σ₂ ∗
+      (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
+  iintro H
+  iapply wp_lift_atomic_step_fupd_concentrated Hv hSmeas hSconc
+  iintro %σ₁ Hσ
+  imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
+  imodintro
+  iframe %Hred
+  iintro %e₂ %σ₂ %Hmem !> !>
+  iapply H $$ %e₂ %σ₂ %Hmem
+
+end Concentrated
+
+/-- `wp_lift_step_later_concentrated` on the support of a non-`urand` step. -/
+@[discrete]
+theorem wp_lift_step_later
+    (hne : e₁.decomp.2 ≠ .urand := by no_urand) : iprop%
+    (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜Discrete.Reducible e₁ σ₁⌝ ∗ ∀ e₂ σ₂,
+      ⌜0 < primStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={∅}=> ▷ |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢
+    wp L E e₁ Φ := by
+  iintro H
+  iapply wp_lift_step_later_concentrated Hv (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
+    (fun σ₁ => concentrated_primStep_support e₁ σ₁ hne)
+  iintro %σ₁ Hσ
+  imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
+  imodintro
+  isplitr
+  · ipureintro; exact Hred.toReducible
+  iintro %e₂ %σ₂ %Hmem
+  iapply H $$ %e₂ %σ₂ %Hmem
+
 /-- `wp_lift_atomic_step_fupd_concentrated` on the support of a non-`urand` step. -/
 @[discrete]
 theorem wp_lift_atomic_step_fupd
@@ -321,22 +338,6 @@ theorem wp_lift_atomic_step_fupd
   · ipureintro; exact Hred.toReducible
   iintro %e₂ %σ₂ %Hpstep
   iapply H $$ %e₂ %σ₂ %Hpstep
-
-/-- `wp_lift_atomic_step_fupd_concentrated` with a later instead of a step-update. -/
-theorem wp_lift_atomic_step_concentrated
-    (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
-    (hSconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) (S σ₁)) : iprop%
-    (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜Reducible e₁ σ₁⌝ ∗
-      ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E}=> stateInterp σ₂ ∗
-      (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
-  iintro H
-  iapply wp_lift_atomic_step_fupd_concentrated Hv hSmeas hSconc
-  iintro %σ₁ Hσ
-  imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
-  imodintro
-  iframe %Hred
-  iintro %e₂ %σ₂ %Hmem !> !>
-  iapply H $$ %e₂ %σ₂ %Hmem
 
 /-- `wp_lift_atomic_step_concentrated` on the support of a non-`urand` step. -/
 @[discrete]

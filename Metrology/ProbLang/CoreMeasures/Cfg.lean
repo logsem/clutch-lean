@@ -9,8 +9,7 @@ public import Metrology.ProbLang.CoreMeasures.State
 
 /-! # σ-algebras on tapes, states and configurations
 
-Tapes are discrete; `State` and `Cfg` carry the pullback of the product σ-algebra of their
-fields. -/
+Tapes are discrete; `State` and `Cfg` carry the product σ-algebra of their fields. -/
 
 noncomputable section
 open MeasureTheory Measurable
@@ -105,14 +104,14 @@ end Cfg
 /-- `Exp.ofVal` is a measurable embedding of values into expressions. -/
 theorem measurableEmbedding_ofVal {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     MeasurableEmbedding (Exp.ofVal : Val rT → Exp rT) := by
-  refine ⟨fun a b h => Val.ext h, Exp.ofVal.measurable, fun s hs => ?_⟩
+  refine ⟨fun a b h => ext h, Exp.ofVal.measurable, fun s hs => ?_⟩
   obtain ⟨U, hU, rfl⟩ := MeasurableSpace.measurableSet_comap.mp hs
   have hrange : Set.range (fst : Val rT → Exp rT) = {e : Exp rT | e.isValue} := by
     ext e
     simp only [Set.mem_range, Set.mem_ofPred_eq]
     constructor
-    · rintro ⟨v, rfl⟩; exact Val.isValue v
-    · intro h; exact ⟨Val.mk e h.some h.some.lc, rfl⟩
+    · rintro ⟨v, rfl⟩; exact isValue v
+    · intro h; exact ⟨mk e h.some h.some.lc, rfl⟩
   show MeasurableSet (fst '' (fst ⁻¹' U))
   rw [Set.image_preimage_eq_inter_range, hrange]
   have hsplit : {e : Exp rT | e.isValue} = {e | e.isValueR} ∩ {e | Exp.lcb 0 e = true} := by

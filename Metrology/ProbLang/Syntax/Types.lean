@@ -61,7 +61,7 @@ def Ty.subst (σ : Substitution) : Ty → Ty
   | .forall' τ    => .forall' (τ.subst (up σ))
   | .exists' τ    => .exists' (τ.subst (up σ))
 
-/-- `τ.single τ'` substitutes `τ'` for var 0 in `τ`, i.e. `τ[τ'/0]`. -/
+/-- `τ.single τ'` substitutes `τ'` for variable 0 in `τ`, written `τ[τ'/0]`. -/
 def Ty.single (τ τ' : Ty) : Ty := τ.subst (fun n => match n with | 0 => τ' | k + 1 => .var k)
 
 /-- Shift every type variable up by one. -/
@@ -76,8 +76,7 @@ inductive UnboxedType : Ty → Prop
   | bool                           : UnboxedType .bool
   | ref (τ : Ty)                   : UnboxedType (.ref τ)
 
-/-- Types on which value equality is decidable by structure (literals, products, sums); used by the
-logical relation (`eq_type_sound`), not by `Typed`. -/
+/-- Types on which value equality is decidable by structure (literals, products, sums). -/
 inductive EqType : Ty → Prop
   | unit                           : EqType .unit
   | int                            : EqType .int
@@ -124,7 +123,7 @@ def UnOp.boolResTy : UnOp → Option Ty
   | .toReal => none
   | .frac  => none
 
-/-- Result type of a unary operation on a real operand (the ones `UnOp.eval` implements). -/
+/-- Result type of a unary operation on a real operand. -/
 def UnOp.realResTy : UnOp → Option Ty
   | .neg    => none
   | .minus  => some .real
@@ -301,8 +300,10 @@ the thunk's argument is unused, and typing forces `e` to be locally closed. -/
 
 /-! ## Typed terms are locally closed and have free variables in the context -/
 
+variable {Γ : Tctx} {e : Exp rT} {τ : Ty}
+
 /-- Typed expressions are locally closed. -/
-theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
+theorem Typed.isLocallyClosed
     (h : Typed Γ e τ) : IsLocallyClosed e := by
   induction h with
   | fvar _ => exact .fvar _
@@ -344,7 +345,7 @@ theorem Typed.isLocallyClosed {Γ : Tctx} {e : Exp rT} {τ : Ty}
   | scrut _ _ ih => exact .scrut _ ih
 
 /-- A free variable of a binder body, opened at a fresh atom, lies in the context's domain. -/
-private theorem isSome_of_mem_fv_open {Γ : Tctx} {L : Finset Var} {e : Exp rT} {τ : Ty}
+private theorem isSome_of_mem_fv_open {L : Finset Var}
     {x : Var} (ih : ∀ y ∉ L, ∀ z ∈ (open' e (.fvar y)).fv, (Γ.insert y τ z).isSome)
     (hx : x ∈ e.fv) : (Γ x).isSome := by
   obtain ⟨y, hy⟩ := HasFresh.fresh_exists (L ∪ {x})
@@ -355,7 +356,7 @@ private theorem isSome_of_mem_fv_open {Γ : Tctx} {L : Finset Var} {e : Exp rT} 
   rwa [ite_eq_right hxy] at hres
 
 /-- Every typed expression's free variables lie in the typing context's domain. -/
-theorem Typed.fvSubset {Γ : Tctx} {e : Exp rT} {τ : Ty}
+theorem Typed.fvSubset
     (h : Typed Γ e τ) : ∀ x ∈ e.fv, (Γ x).isSome := by
   induction h with
   | fvar hx =>
@@ -432,7 +433,7 @@ theorem Tctx.shift_insert (Γ : Tctx) (x : Var) (τ : Ty) :
 
 /-- `Typed.rename` for a context presented as `Γ.insert x τ_x`, so induction goes through; binder
 cases swap the fresh atom past `x` and `y` (`Tctx.insert_swap`). -/
-theorem Typed.rename_aux {e : Exp rT} {τ : Ty}
+theorem Typed.rename_aux
     {Γ' : Tctx} (h : Typed Γ' e τ) :
     ∀ (x y : Var) (τ_x : Ty) (Γ : Tctx),
       Γ' = Γ.insert x τ_x → y ∉ e.fv ∪ {x} →

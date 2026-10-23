@@ -11,7 +11,7 @@ public import Metrology.TotalEris.TotalLifting
 @[expose] public section
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
-  ProbLang.TotalEris.ErisWpGS Possible
+  ProbLang.TotalEris.ErisWpGS Possible HeadStepSupport
 open scoped AppGS
 
 namespace ProbLang
@@ -23,7 +23,7 @@ namespace TotalEris
 section Lifting
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-    [ErisGS rT hlc GF]
+  [ErisGS rT hlc GF]
 variable {E : CoPset} {Φ : Val rT → IProp GF} {l : Loc} {z : Int}
 
 /-! ## Heap operations -/
@@ -35,7 +35,7 @@ theorem twp_alloc {v : Val rT} :
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
   have hred : HeadReducible (.alloc (.ofVal v)) σ₁ :=
-    (HeadStepSupport.AllocS (Exp.toVal?_ofVal v) rfl rfl).ne_zero
+    (AllocS (Exp.toVal?_ofVal v) rfl rfl).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
   cases headStepSupport Hstep with
@@ -56,7 +56,7 @@ theorem twp_load {v : Val rT} :
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
-  have hred : HeadReducible pl(!#loc l) σ₁ := (HeadStepSupport.LoadS hlook rfl).ne_zero
+  have hred : HeadReducible pl(!#loc l) σ₁ := (LoadS hlook rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
@@ -78,7 +78,7 @@ theorem twp_store {v v' : Val rT} :
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
   have hred : HeadReducible (.store pl(#loc l) (.ofVal v)) σ₁ :=
-    (HeadStepSupport.StoreS (Exp.toVal?_ofVal v)
+    (StoreS (Exp.toVal?_ofVal v)
       (by rw [hlook]; exact Option.isSome_some) rfl).ne_zero
   imodintro
   iframe %hred
@@ -103,7 +103,7 @@ theorem twp_alloctape :
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
   have hred : HeadReducible pl(tape(#z)) σ₁ :=
-    (HeadStepSupport.TapeS rfl rfl).ne_zero
+    (TapeS rfl rfl).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
   cases headStepSupport Hstep with
@@ -124,7 +124,7 @@ theorem twp_rand (Hz : 0 < z) :
   iapply twp_lift_atomic_head_step solve_not_value (by is_lc)
   iintro %σ₁ Hσ !>
   have hred : HeadReducible pl(rand(#z, #())) σ₁ :=
-    (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
+    (RandNoTapeS Hz (le_refl _) Hz).ne_zero
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
   cases headStepSupport Hstep with
@@ -147,7 +147,7 @@ theorem twp_rand_tape {n : { z' : Int // 0 ≤ z' ∧ z' < z }}
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
   have Hzpos : 0 < z := lt_of_le_of_lt n.2.1 n.2.2
   have hred : HeadReducible pl(rand(#z, #lbl l)) σ₁ :=
-    (HeadStepSupport.RandTapeS hlook rfl rfl rfl).ne_zero
+    (RandTapeS hlook rfl rfl rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep
@@ -177,7 +177,7 @@ theorem twp_rand_tape_empty
   iintro %σ₁ Hσ
   ihave %hlook := app_state_lookup_tape $$ Hσ Hl
   have hred : HeadReducible pl(rand(#z, #lbl l)) σ₁ :=
-    (HeadStepSupport.RandTapeEmptyS Hz hlook rfl (le_refl _) Hz rfl).ne_zero
+    (RandTapeEmptyS Hz hlook rfl (le_refl _) Hz rfl).ne_zero
   imodintro
   iframe %hred
   iintro %e₂ %σ₂ %Hstep

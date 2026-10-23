@@ -120,36 +120,13 @@ end Distribution
 
 /-! ## One round, in any lifting -/
 
-/-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`.
-This is the one fact each divergence file proves. -/
+/-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`. -/
 def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
   ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   [L.IsLawful] [L.IsTopAbsorbing]
-
-section Rel
-
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
-
-/-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
-at `c`. -/
-theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
-    (hc : IsAddLeftRegular c) (hcpl : RRCoupling L c) (b b' : Bool) :
-    ⊢ ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
-  iintro Hb
-  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
-  iframe Hb
-  iintro %r %r' %hR
-  rel_pures
-  -- four branch combinations; in each, hR equates the two returned bits
-  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
-    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
-    rel_pures <;> rw [hR] <;> rel_values
-
-end Rel
 
 /-! ## The same round, against a spec -/
 
@@ -200,12 +177,28 @@ theorem wp_rr_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B
 
 end Wp
 
-/-! ## The loop, in any lifting -/
-
-section Loop
+/-! ## One round, refined against itself -/
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
 local bi IProp GF
+
+/-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
+at `c`. -/
+theorem rr_refines_of [CanonicallyOrderedAdd B] [L.IsSupportLocal] [L.HasBind] (c : B)
+    (hc : IsAddLeftRegular c) (hcpl : RRCoupling L c) (b b' : Bool) :
+    ⊢ ↯b c -∗ REL[L] (rr (rT := rT) b) << (rr b') : lrel_bool := by
+  iintro Hb
+  rel_couple_UU_spend (fun r r' ↦ rrOut b r = rrOut b' r') c hc (hcpl b b')
+  iframe Hb
+  iintro %r %r' %hR
+  rel_pures
+  -- four branch combinations; in each, hR equates the two returned bits
+  by_cases hd : r < 3 <;> by_cases hd' : r' < 3 <;>
+    simp only [rrOut, hd, hd', ↓reduceIte, decide_true, decide_false] at hR ⊢ <;>
+    rel_pures <;> rw [hR] <;> rel_values
+
+
+/-! ## The loop, in any lifting -/
 
 /-- The loop refines itself at equal counts, spending `↯b c` per round, given a refinement of one
 round at `c`. -/
@@ -243,7 +236,7 @@ theorem rrCount_refines_of (c : B)
     icases Hw with ⟨%d, %⟨rfl, rfl⟩⟩
     cases d <;> rel_pures <;> rel_values
 
-end Loop
+
 
 /-! ## Adequacy, in any lifting -/
 

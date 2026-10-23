@@ -7,8 +7,8 @@ import Metrology.Iris.LocalBI
 
 /-! # `OpenInv`: opening invariants around `wp`
 
-`OpenInv L e` says `wp` of `e` may open invariants around it; atomic `e` satisfy it
-(`of_atomic`), and `IsOpenInv` instances make `imod`/`iinv` use it on `wp` goals. -/
+`OpenInv L e` says `wp` of `e` may open invariants around it; atomic `e` satisfy it, and
+`IsOpenInv` instances make `imod`/`iinv` use it on `wp` goals. -/
 
 @[expose] public section
 
@@ -19,8 +19,8 @@ namespace ProbLang
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
-/-- `wp` of `e` may open invariants around it: a mask-changing update before `e` can be closed after
-its single step. Holds for physically atomic `e` (`of_atomic`). -/
+/-- A `wp` of `e` may open invariants around it, so a mask-changing update before `e` can be
+closed after its step (`of_atomic`). -/
 def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
   ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
@@ -124,6 +124,7 @@ theorem wp_atomic (h : OpenInv L e) : iprop%
 
 /-- Registers `OpenInv L e` for instance search. -/
 class IsOpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop where
+  /-- The `OpenInv` property itself. -/
   out : OpenInv L e
 
 section Instances

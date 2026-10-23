@@ -8,8 +8,7 @@ public import Iris.ProofMode.Tactics.Basic
 public import Lean
 public import Qq
 
-/-!
-# Evaluation-context engine for the `wp_*`, `rel_*` and `twp_*` tactics
+/-! # Evaluation-context engine for the `wp_*`, `rel_*` and `twp_*` tactics
 
 Finds the context around a redex, refills it, and computes the pure reduct.
 -/
@@ -24,9 +23,11 @@ open Exp (toVal? closedFunVal? openRec open_lc)
 
 /-! ## Evaluation-context engine -/
 
+variable {α : Q(Type)}
+
 /-- Read a quoted expression as a value, accepting abstract leaves such as `Exp.ofVal v` and
 `v.fst`. -/
-public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := do
+public meta partial def exprAsVal? (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := do
   let e : Q(Exp $α) ← pure e.consumeMData
   match e with
   | ~q(.ofVal $v) => return some v
@@ -51,6 +52,7 @@ public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Opti
       Core.tryCatchRuntimeEx
         (runInBase do
           let tv : Q(Option (Val $α)) ←
+            -- Raised because `whnf` on `toVal?` can be slow on large closures.
             withOptions (fun o => o.set `maxHeartbeats (400000 : Nat)) <|
               withCurrHeartbeats <| whnf q(toVal? $e)
           pure (some tv))
@@ -60,7 +62,7 @@ public meta partial def exprAsVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Opti
     return some v
 
 /-- Peel one evaluation-context frame off `e`, or return `(none, e)`. -/
-public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
+public meta def extractEctxItem (e : Q(Exp $α)) :
     MetaM (Option Q(EctxItem $α) × Q(Exp $α)) := do
   let e' : Q(Exp $α) ← whnf e.consumeMData
   let e : Q(Exp $α) ← pure e'.consumeMData
@@ -104,14 +106,14 @@ public meta def extractEctxItem {α : Q(Type)} (e : Q(Exp $α)) :
 
 /-- Decompose `e` into its frame stack `[innermost, …, outermost]`, in the order of `Ectx.fill`,
 and the innermost non-context sub-expression. -/
-public meta partial def extractAllEctxItems {α : Q(Type)} (e : Q(Exp $α))
+public meta partial def extractAllEctxItems (e : Q(Exp $α))
     (acc : List Q(EctxItem $α) := []) : MetaM (List Q(EctxItem $α) × Q(Exp $α)) := do
   match ← extractEctxItem e with
   | (some Ki, e') => extractAllEctxItems e' (Ki :: acc)
   | (none, e) => return (acc, e)
 
 /-- Plug `e` into a single frame `Ki` (mirrors `EctxItem.fillItem`). -/
-public meta def fillItem {α : Q(Type)} (e : Q(Exp $α)) : Q(EctxItem $α) → MetaM Q(Exp $α)
+public meta def fillItem (e : Q(Exp $α)) : Q(EctxItem $α) → MetaM Q(Exp $α)
   | ~q(.appL $v₂) => return q(.app $e (.ofVal $v₂))
   | ~q(.appR $e₁) => return q(.app $e₁ $e)
   | ~q(.unop $op) => return q(.unop $op $e)
@@ -135,12 +137,12 @@ public meta def fillItem {α : Q(Type)} (e : Q(Exp $α)) : Q(EctxItem $α) → M
   | ~q(.scrut $p) => return q(.scrut $e $p)
 
 /-- Quote a `List` of quoted `EctxItem`s as a quoted `Ectx`. -/
-public meta def quoteList {α : Q(Type)} : List Q(EctxItem $α) → Q(Ectx $α)
+public meta def quoteList : List Q(EctxItem $α) → Q(Ectx $α)
   | [] => q([])
   | x :: xs => q($x :: $(quoteList xs))
 
 /-- Fill `e` into `K` at the meta level, defeq to `Ectx.fill K e`. -/
-public meta partial def fillQ {α : Q(Type)} (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
+public meta partial def fillQ (K : Q(Ectx $α)) (e : Q(Exp $α)) : MetaM Q(Exp $α) :=
   match K with
   | ~q([]) => pure e
   | ~q($Ki :: $K') => do fillQ K' (← fillItem e Ki)
@@ -155,7 +157,7 @@ public meta structure ECtxResultOf (α : Q(Type)) (β : Type) where
   e' : Q(Exp $α)
 
 /-- The innermost focus of `ogE` at which `pred` succeeds. -/
-public meta partial def findECtx {α : Q(Type)} {β : Type} (ogE : Q(Exp $α))
+public meta partial def findECtx {β : Type} (ogE : Q(Exp $α))
     (pred : Q(Exp $α) → ProofModeM β) : ProofModeM (Option (ECtxResultOf α β)) := do
   let (Kis, inner) ← extractAllEctxItems ogE
   go inner Kis
@@ -174,7 +176,7 @@ where
 
 /-- Unfold `open'`, `close` and `ofVal` and normalize `Int`, `Nat`, `ite` and constructors, up to
 defeq. -/
-public meta def reduceExp {α : Q(Type)} (e : Q(Exp $α)) : MetaM Q(Exp $α) := do
+public meta def reduceExp (e : Q(Exp $α)) : MetaM Q(Exp $α) := do
   -- No default simprocs: they over-reduce `Exp.ofVal`/heap forms the heap rules need.
   let mut thms : SimpTheorems := {}
   for d in [``Exp.open', ``Exp.openRec, ``Exp.close, ``Exp.closeRec, ``Exp.ofVal,
@@ -217,7 +219,7 @@ public meta partial def reattachNames (names : Array Name) (i : Nat) (e : LeanEx
 
 /-- The redex, its reduct in the syntactic form the `PureExec` instance matches, and the source
 binder names, for a pure step at `e`. -/
-public meta def pureStepResult {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+public meta def pureStepResult (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@LawfulProbLangℝ $α $instMS)) (e : Q(Exp $α)) :
     MetaM (Option (Q(Exp $α) × Q(Exp $α) × Array Name)) := do
   let beta (body v : Q(Exp $α)) : Q(Exp $α) × Q(Exp $α) × Array Name :=
@@ -326,7 +328,7 @@ public meta structure PureStepAt (α : Q(Type)) (instMS : Q(MeasurableSpace $α)
   inst : Q(PureExec $φ $n $e₁ $e₂syn)
 
 /-- The innermost redex of `e` (defeq to `focus?`, if given) with a `PureExec` step. -/
-public meta def findPureStep {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
+public meta def findPureStep (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@LawfulProbLangℝ $α $instMS))
     (e : Q(Exp $α)) (focus? : Option Q(Exp $α) := none) :
     ProofModeM (Option (ECtxResultOf α (PureStepAt α instMS instPL))) :=
@@ -340,7 +342,7 @@ public meta def findPureStep {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
     return { e₁ := e₁', e₂syn, names, φ, n, inst }
 
 /-- The reduct as shown to the user: normalized, with source binder names restored. -/
-public meta def displayReduct {α : Q(Type)} (e₂syn : Q(Exp $α)) (names : Array Name) :
+public meta def displayReduct (e₂syn : Q(Exp $α)) (names : Array Name) :
     MetaM Q(Exp $α) := do
   let reduced ← reduceExp e₂syn
   if names.isEmpty then return reduced

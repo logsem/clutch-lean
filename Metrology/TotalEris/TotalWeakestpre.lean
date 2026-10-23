@@ -8,8 +8,7 @@ public import Iris.ProofMode.InstancesUpdates
 /-!
 # Total weakest precondition
 
-`tglWp` (Eris `tgl_wp`), the total weakest precondition over `glm'`, with its unfolding,
-induction, monotonicity and bind rules.
+Total weakest precondition: `tglWp` with its unfolding, induction, monotonicity and bind rules.
 -/
 
 @[expose] public section
@@ -333,8 +332,7 @@ theorem tglWp_bind {K : Ectx rT} :
       tglWp E (K.fill e) Φ := by
   iintro HW
   let : NonExpansive (fun e' => tglWp E (K.fill e') Φ) := nonExpansive_of_discrete_leibniz _
-  iapply (tglWp_ind (E := E) (Φ := fun v => tglWp E (K.fill (Exp.ofVal v)) Φ)
-    (Q := fun e' => tglWp E (K.fill e') Φ))
+  iapply (tglWp_ind (Q := fun e' => tglWp E (K.fill e') Φ))
   · iintro !> %e' HF
     cases htv : e'.toVal? with
     | some v =>
@@ -350,7 +348,7 @@ theorem tglWp_bind {K : Ectx rT} :
       ispecialize HF $$ %σ %ε [$Hσ $Hε]
       imod HF
       imodintro
-      iapply (glm'_bind (K := K) (e := e') (σ := σ) (ε := ε) (Z := fun ρ ε₂ => iprop(|={∅, E}=>
+      iapply (glm'_bind (e := e') (σ := σ) (ε := ε) (Z := fun ρ ε₂ => iprop(|={∅, E}=>
                 stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ tglWp E ρ.expr Φ)))
       iexact HF
   · iexact HW

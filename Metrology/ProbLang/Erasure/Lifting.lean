@@ -80,7 +80,6 @@ theorem tapePresample_addCoupl_bij {σ σ' : State rT} {α α' : Loc} {N : Int}
   (tapePresample_rel_bij hσ hσ' hN f hdom hbij).addCoupl
 variable [LawfulProbLangℝ rT]
 
-
 /-! ## Erasure rules for a graded lifting -/
 
 /-- The program side of an erasure rule: running from `σ` is running from a state drawn from an

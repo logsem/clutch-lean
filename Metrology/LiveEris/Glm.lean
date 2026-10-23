@@ -16,17 +16,16 @@ noncomputable section
 /-!
 # Graded lifting modality over credit vectors
 
-`glm` is the one-step lifting modality of LiveEris. It is TotalEris's `glm'` with the scalar error
-budget replaced by a credit vector `ι → ℝ≥0∞`: every coordinate is averaged over the same outcome
-distribution, failure mass is charged to every coordinate, and a branch is vacuous once every
-coordinate reaches 1.
+The one-step graded lifting modality of LiveEris, the credit-vector version of TotalEris's `glm'`.
 -/
 
-open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
+open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang Set
 open scoped ENNReal
 
 namespace ProbLang
 namespace LiveEris
+
+open Ectx
 
 variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
@@ -53,9 +52,11 @@ def expect {α : Type _} [MeasurableSpace α] (μ : MeasureTheory.Measure α)
     (X : α → ι → ℝ≥0∞) : ι → ℝ≥0∞ :=
   fun i => ∫⁻ a, X a i ∂μ
 
+/-- `Saturated` is preserved by pointwise increase. -/
 theorem Saturated.mono {c c' : ι → ℝ≥0∞} (h : c ≤ c') (hs : Saturated c) : Saturated c' :=
   fun i => (hs i).trans (h i)
 
+/-- A strict bump of a larger credit vector is a strict bump of a smaller one. -/
 theorem Bump.of_le {c c' c'' : ι → ℝ≥0∞} (h : c ≤ c') (hb : Bump c' c'') : Bump c c'' :=
   ⟨h.trans hb.1, fun i hi => by
     rcases (le_top : c' i ≤ ∞).lt_or_eq with h' | h'
@@ -66,12 +67,17 @@ end CreditVec
 
 open CreditVec
 
+/-- The ghost state that the LiveEris weakest precondition needs, graded by credit vectors. -/
 class LiveWpGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (ι : outParam Type)
     (GF : BundledGFunctors) where
+  /-- The flavour of later credits in use. -/
   hlc : HasLC
+  /-- The ghost state of the invariants. -/
   invGS : InvGS_gen hlc GF
+  /-- The interpretation of the program state. -/
   stateInterp : State rT → IProp GF
+  /-- The interpretation of a credit vector. -/
   creditInterp : (ι → ℝ≥0∞) → IProp GF
 
 /-- `LiveWpGS.invGS`, with the measurable space and language read off the instance, not searched
@@ -88,29 +94,33 @@ variable {GF : BundledGFunctors}
 abbrev execStutter (P : (ι → ℝ≥0∞) → IProp GF) (c : ι → ℝ≥0∞) : IProp GF :=
   iprop(⌜Saturated c⌝ ∨ P c)
 
+/-- `execStutter` is monotone along a pointwise increase of the credit vector. -/
 theorem execStutter_mono {P Q : (ι → ℝ≥0∞) → IProp GF} {c c' : ι → ℝ≥0∞} (hc : c ≤ c') :
     ((P c -∗ Q c') ∗ execStutter P c) ⊢ execStutter Q c' := by
   iintro ⟨HM, %HVac | HP⟩
   · ileft; ipureintro; exact HVac.mono hc
   · iright; iapply HM $$ HP
 
+/-- `execStutter` is monotone in its predicate at a fixed credit vector. -/
 theorem execStutter_mono_pred {P Q : (ι → ℝ≥0∞) → IProp GF} {c : ι → ℝ≥0∞} :
     ((P c -∗ Q c) ∗ execStutter P c) ⊢ execStutter Q c :=
   execStutter_mono le_rfl
 
 variable [LiveWpGS rT ι GF]
 
+/-- A configuration together with a credit vector. -/
 abbrev GlmState (rT : Type _) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (ι : Type) : Type _ := Cfg rT × (ι → ℝ≥0∞)
 
-instance : COFE (GlmState rT ι) := COFE.ofDiscrete _
-instance : OFE.Discrete (GlmState rT ι) := ⟨id⟩
+instance : COFE (GlmState rT ι) := ofDiscrete _
+instance : Discrete (GlmState rT ι) := ⟨id⟩
 
 /-- **Credit bump**: the client may assume any strict bump of its budget. -/
 abbrev glmCreditBump (ρ : Cfg rT) (c : ι → ℝ≥0∞)
     (Φ : GlmState rT ι → IProp GF) : IProp GF :=
   iprop(∀ c', ⌜Bump c c'⌝ -∗ |={∅}=> execStutter (fun c'' => Φ (ρ, c'')) c')
 
+/-- `glmCreditBump` is monotone in its continuation, under a wand. -/
 theorem glmCreditBump_strong_mono {ρ : Cfg rT} {c : ι → ℝ≥0∞}
     {Φ Ψ : GlmState rT ι → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmCreditBump ρ c Φ) ⊢ glmCreditBump ρ c Ψ := by
@@ -134,8 +144,10 @@ abbrev glmPrimStep (e₁ : Exp rT) (σ₁ : State rT) (c : ι → ℝ≥0∞)
     ⌜Pgl ε₁ R (primStep ⟨e₁, σ₁⟩)⌝ ∗
     (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
 
-theorem glmPrimStep_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {c : ι → ℝ≥0∞}
-    {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+variable {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF}
+
+/-- `glmPrimStep` is monotone in its continuation, under a wand. -/
+theorem glmPrimStep_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {c : ι → ℝ≥0∞} :
     iprop((∀ ρ c', Z₁ ρ c' -∗ Z₂ ρ c') ∗ glmPrimStep e₁ σ₁ c Z₁) ⊢ glmPrimStep e₁ σ₁ c Z₂ := by
   iintro ⟨HZ, %R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
   iexists R, ε₁, X₂, r
@@ -148,6 +160,7 @@ theorem glmPrimStep_strong_mono {e₁ : Exp rT} {σ₁ : State rT} {c : ι → �
   iintro HZ₁
   iapply HZ $$ HZ₁
 
+/-- The one-step functor whose least fixpoint is `glm`. -/
 abbrev glmPre (Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF)
     (Φ : GlmState rT ι → IProp GF) : GlmState rT ι → IProp GF :=
   fun ⟨ρ, c⟩ => iprop(glmCreditBump ρ c Φ ∨ glmPrimStep ρ.expr ρ.state c Z)
@@ -169,10 +182,12 @@ instance glmPre_mono {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} : BIMonoP
       iapply Hwand $$ HΦ
     · iright; iexact HPS
   mono_pred_ne.ne {_ s s'} hd := by
-    obtain rfl := OFE.Discrete.discrete hd; exact .of_eq rfl
+    obtain rfl := Discrete.discrete hd; exact .of_eq rfl
 
-theorem glm_ne {n : Nat} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (HZ : ∀ ρ c', Z₁ ρ c' ≡{n}≡ Z₂ ρ c') :
+variable {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞} {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF}
+
+/-- `glm` is non-expansive in its continuation. -/
+theorem glm_ne {n : Nat} (HZ : ∀ ρ c', Z₁ ρ c' ≡{n}≡ Z₂ ρ c') :
     glm e σ c Z₁ ≡{n}≡ glm e σ c Z₂ := by
   refine least_fixpoint_ne_outer (fun _ s => ?_) (.of_eq rfl)
   refine or_ne.ne (.of_eq rfl) ?_
@@ -182,20 +197,21 @@ theorem glm_ne {n : Nat} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
   exact forall_ne fun _ => wand_ne.ne (.of_eq rfl) <|
     BIFUpdate.ne.ne <| or_ne.ne (.of_eq rfl) (HZ _ _)
 
-theorem glm_unfold {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- `glm` unfolds once through `glmPre`. -/
+theorem glm_unfold :
     glm e σ c Z = glmPre Z (fun s => glm s.1.expr s.1.state s.2 Z) ((⟨e, σ⟩, c) : GlmState rT ι) :=
   least_fixpoint_unfold _
 
-theorem glm_strong_ind {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} {Ψ : GlmState rT ι → IProp GF}
+/-- Strong induction principle for `glm`. -/
+theorem glm_strong_ind {Ψ : GlmState rT ι → IProp GF}
     [NonExpansive Ψ] :
     iprop(□ (∀ s, glmPre Z (fun s' => iprop(Ψ s' ∧ bi_least_fixpoint (glmPre Z) s')) s -∗ Ψ s)) ⊢
       (∀ s, bi_least_fixpoint (glmPre Z) s -∗ Ψ s) := by
   iintro #HM
   iapply least_fixpoint_ind $$ HM
 
-theorem glm_strong_mono {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- `glm` is monotone in its continuation, under a wand. -/
+theorem glm_strong_mono :
     iprop((∀ ρ c', Z₁ ρ c' -∗ Z₂ ρ c') ∗ glm e σ c Z₁) ⊢ glm e σ c Z₂ := by
   iintro ⟨HZ, HG⟩
   let Ψ : GlmState rT ι → IProp GF := fun s => iprop(
@@ -217,8 +233,8 @@ theorem glm_strong_mono {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
     iintro %ρ' %c' HC
     iapply Hwand $$ HC
 
-theorem glm_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
-    {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (hc : c ≤ c') :
+/-- `glm` is monotone in the credit vector. -/
+theorem glm_mono_grading {c' : ι → ℝ≥0∞} (hc : c ≤ c') :
     glm e σ c Z ⊢ glm e σ c' Z := by
   iintro HG
   iapply least_fixpoint_unfold_mpr (glmPre Z)
@@ -232,16 +248,16 @@ theorem glm_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
     iexists R, ε₁, X₂, r
     iframe %Hred %HRmeas %Hbnd %Hexp' %Hpgl HCont
 
-theorem glm_strong_mono_grading {e : Exp rT} {σ : State rT} {c c' : ι → ℝ≥0∞}
-    {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} (hc : c ≤ c') :
+/-- `glm` is monotone in both its continuation and its credit vector. -/
+theorem glm_strong_mono_grading {c' : ι → ℝ≥0∞} (hc : c ≤ c') :
     iprop((∀ ρ c'', Z₁ ρ c'' -∗ Z₂ ρ c'') ∗ glm e σ c Z₁) ⊢ glm e σ c' Z₂ := by
   iintro ⟨HZ, HG⟩
   iapply glm_mono_grading hc
   iapply glm_strong_mono
   iframe
 
-theorem glm_mono_pred {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z₁ Z₂ : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- `glm` is monotone in its continuation, under a persistent wand. -/
+theorem glm_mono_pred :
     iprop((□ (∀ ρ c', Z₁ ρ c' -∗ Z₂ ρ c')) ∗ glm e σ c Z₁) ⊢ glm e σ c Z₂ := by
   iintro ⟨#HZ, HG⟩
   iapply (least_fixpoint_strong_mono (glmPre Z₁) (glmPre Z₂)) $$ [] HG
@@ -255,14 +271,14 @@ theorem glm_mono_pred {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
     iintro %ρ' %c' HC
     iapply HZ $$ HC
 
-theorem glm_bind {K : Ectx rT} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- Bind rule: a step of `e` inside the evaluation context `K` lifts to a step of `K[e]`. -/
+theorem glm_bind {K : Ectx rT} :
     glm e σ c (fun ρ c' => Z ⟨K.fill ρ.expr, ρ.state⟩ c') ⊢ glm (K.fill e) σ c Z := by
   iintro HG
   classical
   let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
   have Kinv_left : ∀ e', Kinv (K.fill e') = some e' :=
-    Function.partialInv_left (Ectx.fill_injective K)
+    Function.partialInv_left (fill_injective K)
   let Z' : Cfg rT → (ι → ℝ≥0∞) → IProp GF := fun ρ c' => Z ⟨K.fill ρ.expr, ρ.state⟩ c'
   let Φ : GlmState rT ι → IProp GF :=
     fun s => bi_least_fixpoint (glmPre Z) ((⟨K.fill s.1.expr, s.1.state⟩, s.2) : GlmState rT ι)
@@ -281,13 +297,14 @@ theorem glm_bind {K : Ectx rT} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0�
         set X₂' : Cfg rT → ι → ℝ≥0∞ :=
           fun ρ' => (Kinv ρ'.expr).elim 0 (fun e' => X₂ ⟨e', ρ'.state⟩) with hX₂'def
         have hR'set : {ρ' | R' ρ'} = K.fillCfg '' {ρ'' | R ρ''} := by
-          ext ρ'; simp only [hR'def, Set.mem_ofPred_eq, Set.mem_image]
+          ext ρ'
+          simp only [hR'def, mem_ofPred_eq, mem_image]
           exact ⟨fun ⟨ρ'', heq, hR⟩ => ⟨ρ'', hR, heq.symm⟩,
             fun ⟨ρ'', hR, heq⟩ => ⟨ρ'', heq.symm, hR⟩⟩
         have hR'meas : MeasurableSet {ρ' | R' ρ'} :=
-          hR'set ▸ Ectx.measurableSet_fillCfg_image K HRmeas
+          hR'set ▸ measurableSet_fillCfg_image K HRmeas
         have hX₂'fill : ∀ a : Cfg rT, X₂' (K.fillCfg a) = X₂ a := fun a => by
-          simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
+          simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
         have hredK : Reducible (K.fill ρ.expr) ρ.state := Hred.fill K
         have hbnd' : ∀ ρ', X₂' ρ' ≤ r := by
           intro ρ'
@@ -299,7 +316,7 @@ theorem glm_bind {K : Ectx rT} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0�
           simp only [Pi.add_apply, expect]
           rw [primStep_fill Hsv]
           gcongr charge ε₁ i + ?_
-          refine (MeasureTheory.lintegral_map_le _ (Ectx.fillCfg.measurable K).aemeasurable).trans
+          refine (MeasureTheory.lintegral_map_le _ (fillCfg.measurable K).aemeasurable).trans
             (Eq.le ?_)
           exact MeasureTheory.lintegral_congr_ae
             (Filter.Eventually.of_forall fun a => congrFun (hX₂'fill a) i)
@@ -310,29 +327,29 @@ theorem glm_bind {K : Ectx rT} {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0�
           refine (Eq.le ?_).trans Hpgl
           congr 1
           ext a
-          simp only [hR'def, Set.mem_preimage, Set.mem_ofPred_eq, not_exists, not_and]
+          simp only [hR'def, mem_preimage, mem_ofPred_eq, not_exists, not_and]
           refine ⟨fun h hR => h a rfl hR, fun hR ρ₃ hEq hR₃ => ?_⟩
-          exact hR (Ectx.fillCfg_injective K hEq.symm ▸ hR₃)
+          exact hR (fillCfg_injective K hEq.symm ▸ hR₃)
         iexists R', ε₁, X₂', r
         iframe %hredK %hR'meas %hbnd' %hexp' %hpgl'
         iintro %ρ' ⟨%ρ'', %rfl, %HR⟩
         imod HCont $$ %ρ'' %HR with HS
         imodintro
-        simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
+        simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
         iexact HS
     · iexact HG
   iexact HΦ
 
-theorem glm_prim_step {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- A primitive step is a `glm`. -/
+theorem glm_prim_step :
     glmPrimStep e σ c Z ⊢ glm e σ c Z := by
   iintro HPS
   iapply least_fixpoint_unfold_mpr (glmPre Z)
   iright
   iexact HPS
 
-theorem glm_credit_bump {e : Exp rT} {σ : State rT} {c : ι → ℝ≥0∞}
-    {Z : Cfg rT → (ι → ℝ≥0∞) → IProp GF} :
+/-- A credit bump is a `glm`. -/
+theorem glm_credit_bump :
     glmCreditBump ⟨e, σ⟩ c (fun s => glm s.1.expr s.1.state s.2 Z) ⊢ glm e σ c Z := by
   iintro HOT
   iapply least_fixpoint_unfold_mpr (glmPre Z)

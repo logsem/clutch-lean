@@ -11,8 +11,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Lists and association-list maps: specifications
 
-`PureSteps` facts for the list recursions of `Metrology/Code/Switching.lean`, and `wp` rules
-(program side `wp_X`, spec side `wp_X_r`) for `initMap`, `getMap`, `setMap`. -/
+`PureSteps` facts for the list recursions of `Code/Switching.lean`, and `wp` rules for the maps. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal

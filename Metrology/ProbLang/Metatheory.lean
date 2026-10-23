@@ -12,6 +12,7 @@ Port of Clutch `metatheory.v`: closedness, substitution maps, head-step trichoto
 
 namespace ProbLang
 open Cslib Exp Cfg State MeasureTheory Finset
+open Std (ExtTreeMap)
 
 variable {rT : Type _}
 variable {α : Type _}
@@ -228,12 +229,14 @@ theorem Exp.substMap_subst_fvar_comm
 The `substMap_hom*` lemmas lift "`subst` commutes with this constructor" along the fold.
 (Clutch gets these by `simpl`, since its `subst_map` is simultaneous.) -/
 
+/-- `substMap` goes through a constant constructor. -/
 theorem Exp.substMap_hom₀ (C : Exp rT) (hC : ∀ x v, subst C x v = C)
     (vs : SubstMap rT) : C.substMap vs = C := by
   induction vs with
   | nil => rfl
   | cons _ _ ih => simp only [substMap_cons, ih, hC]
 
+/-- `substMap` goes through a unary constructor. -/
 theorem Exp.substMap_hom₁ (C : Exp rT → Exp rT)
     (hC : ∀ e x v, subst (C e) x v = C (subst e x v))
     (vs : SubstMap rT) (e : Exp rT) :
@@ -242,6 +245,7 @@ theorem Exp.substMap_hom₁ (C : Exp rT → Exp rT)
   | nil => rfl
   | cons _ _ ih => simp only [substMap_cons, ih, hC]
 
+/-- `substMap` goes through a binary constructor. -/
 theorem Exp.substMap_hom₂ (C : Exp rT → Exp rT → Exp rT)
     (hC : ∀ e1 e2 x v, subst (C e1 e2) x v = C (subst e1 x v) (subst e2 x v))
     (vs : SubstMap rT) (e1 e2 : Exp rT) :
@@ -250,6 +254,7 @@ theorem Exp.substMap_hom₂ (C : Exp rT → Exp rT → Exp rT)
   | nil => rfl
   | cons _ _ ih => simp only [substMap_cons, ih, hC]
 
+/-- `substMap` goes through a ternary constructor. -/
 theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
     (hC : ∀ e0 e1 e2 x v, subst (C e0 e1 e2) x v = C (subst e0 x v) (subst e1 x v) (subst e2 x v))
     (vs : SubstMap rT) (e0 e1 e2 : Exp rT) :
@@ -259,18 +264,22 @@ theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
   | nil => rfl
   | cons _ _ ih => simp only [substMap_cons, ih, hC]
 
+/-- `substMap` goes through `lit`. -/
 @[simp] theorem Exp.substMap_lit (vs : SubstMap rT) (b : BaseLit rT) :
     (lit b).substMap vs = .lit b :=
   substMap_hom₀ _ (by intros; simp [subst]) vs
 
+/-- `substMap` goes through `bvar`. -/
 @[simp] theorem Exp.substMap_bvar (vs : SubstMap rT) (j : Nat) :
     (bvar j).substMap vs = .bvar j :=
   substMap_hom₀ _ (by intros; simp [subst]) vs
 
+/-- `substMap` goes through `fail`. -/
 @[simp] theorem Exp.substMap_fail (vs : SubstMap rT) :
     fail.substMap vs = .fail :=
   substMap_hom₀ _ (by intros; simp [subst]) vs
 
+/-- `substMap` goes through `urand`. -/
 @[simp] theorem Exp.substMap_urand (vs : SubstMap rT) :
     urand.substMap vs = .urand :=
   substMap_hom₀ _ (by intros; simp [subst]) vs
@@ -390,10 +399,10 @@ theorem Exp.substMap_open (vs : SubstMap rT) (u e : Exp rT)
 
 section
 
-variable {vs : SubstMap rT} {e : Exp rT}
+variable {vs : SubstMap rT} {e : Exp rT} {x : Var} {v : Exp rT}
 
 /-- A closed substitution map introduces no new free variables. -/
-theorem Exp.notFv_substMap {x : Var}
+theorem Exp.notFv_substMap
     (hClosed : AllClosed vs) (hx : x ∉ e.fv) :
     x ∉ (substMap vs e).fv := by
   induction vs with
@@ -408,7 +417,7 @@ theorem Exp.notFv_substMap {x : Var}
     · exact notMem_fv_of_isClosed_empty hwClosed x h2
 
 /-- Substituting a variable outside the map's domain leaves it unchanged. -/
-theorem Exp.substMap_fvar_lookup_none {x : Var}
+theorem Exp.substMap_fvar_lookup_none
     (hv : lookup vs x = none) :
     substMap vs (.fvar x) = .fvar x := by
   induction vs with
@@ -426,7 +435,7 @@ theorem Exp.substMap_fvar_lookup_none {x : Var}
       simp [subst, Ne.symm hxy]
 
 /-- A value found by `lookup` in a map with only closed values is closed. -/
-theorem SubstMap.lookup_closed {x : Var} {v : Exp rT}
+theorem SubstMap.lookup_closed
     (hv : lookup vs x = some v) (hClosed : AllClosed vs) :
     v.isClosed .empty := by
   induction vs with
@@ -450,7 +459,7 @@ theorem SubstMap.lookup_closed {x : Var} {v : Exp rT}
       exact hClosed.1
 
 /-- Opening a body at a fresh atom `x`, then binding `x ↦ v`, opens the substituted body at `v`. -/
-theorem Exp.substMap_open_fresh {v : Exp rT} {x : Var}
+theorem Exp.substMap_open_fresh
     (hClosed : AllClosed vs) (hxFv : x ∉ e.fv)
     (hxDom : lookup vs x = none) (hvLC : v.IsLocallyClosed) :
     substMap ((x, v) :: vs) (open' e (.fvar x)) =
@@ -514,7 +523,7 @@ theorem Exp.fv_substMap_sdiff_dom
     intro y hy
     rcases mem_union.mp (fv_subst_subset (substMap rest e) z w hy) with hL | hR
     · obtain ⟨hyRest, hyNeZ⟩ := mem_sdiff.mp hL
-      obtain ⟨hyE, hyDom⟩ := mem_sdiff.mp (ih (e := e) hRestClosed hyRest)
+      obtain ⟨hyE, hyDom⟩ := mem_sdiff.mp (ih hRestClosed hyRest)
       simp only [mem_sdiff, List.map_cons, List.toFinset_cons, mem_insert,
         not_or]
       exact ⟨hyE, fun h => hyNeZ (by simp [h]), hyDom⟩
@@ -655,8 +664,10 @@ variable [MeasurableSpace rT]
 
 /-! ## `Cfg.uniform` -/
 
+variable {z : Int}
+
 /-- A non-positive bound makes `Cfg.uniform` the Dirac at `-1`. -/
-theorem Cfg.uniform_nonpos_eq {z : Int} {σ : State rT} (hz : ¬ 0 < z) :
+theorem Cfg.uniform_nonpos_eq {σ : State rT} (hz : ¬ 0 < z) :
     uniform z σ = Measure.dirac ⟨.lit (.int (-1)), σ⟩ := by
   unfold uniform Int.isPos
   rw [dite_eq_right hz]
@@ -668,7 +679,7 @@ theorem Cfg.uniform_ne_zero
 
 /-- Reindex a sum over `Ico 0 z` along a map that restricts to a bijection on it. -/
 theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
-    {z : Int} {f : Int → Int}
+    {f : Int → Int}
     (hdom : ∀ n : Int, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m : Int, 0 ≤ m → m < z → ∃! n : Int, (0 ≤ n ∧ n < z) ∧ f n = m)
     (g : Int → M) :
@@ -688,14 +699,14 @@ theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
   · intro n _; rfl
 
 /-- For `0 < z`, `Cfg.uniform` is the uniform measure on `Ico 0 z` as configurations. -/
-theorem Cfg.uniform_eq_map_uniformOfFinset {z : Int} (hz : 0 < z) (σ : State rT) :
+theorem Cfg.uniform_eq_map_uniformOfFinset (hz : 0 < z) (σ : State rT) :
     uniform z σ = (PMF.uniformOfFinset (Ico (0 : Int) z) (nonempty_Ico.mpr hz)).toMeasure.map
       (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold uniform Int.isPos; simp only [dite_eq_left hz]
 
 /-- The integral of a measurable `φ` against `Cfg.uniform z σ` is its average over `Ico 0 z`. -/
 theorem Cfg.lintegral_uniform
-    {z : Int} (Hz : 0 < z) (σ : State rT)
+    (Hz : 0 < z) (σ : State rT)
     {φ : Cfg rT → ENNReal} (hφ : Measurable φ) :
     ∫⁻ c, φ c ∂(uniform z σ) =
       ((z.toNat : ENNReal)⁻¹) * ∑ n ∈ Ico (0 : Int) z,
@@ -893,9 +904,9 @@ theorem State.upd_diff_tape_comm {rT : Type _} {σ : State rT} {α β : Loc} {bs
       ((σ.update_tapes (·.insert α bs')).update_tapes (·.insert β bs)) := by
   unfold update_tapes
   congr 2
-  apply Std.ExtTreeMap.ext_getElem?
+  apply ExtTreeMap.ext_getElem?
   intro k
-  simp [Std.ExtTreeMap.getElem?_insert]
+  simp [ExtTreeMap.getElem?_insert]
   by_cases hαk : α = k
   · subst hαk
     simp [Ne.symm hne]
@@ -908,26 +919,26 @@ theorem State.upd_diff_tape_comm {rT : Type _} {σ : State rT} {α β : Loc} {bs
 theorem State.upd_diff_tape_tot {rT : Type _} {σ : State rT} {α β : Loc} {bs : Tape}
     (hne : α ≠ β) :
     (σ.update_tapes (·.insert β bs)).tapes[α]? = σ.tapes[α]? := by
-  simp [update_tapes, Std.ExtTreeMap.getElem?_insert, Ne.symm hne]
+  simp [update_tapes, ExtTreeMap.getElem?_insert, Ne.symm hne]
 
 /-- Inserting at an existing key keeps `fresh`. -/
 theorem _root_.Std.ExtTreeMap.fresh_insert_of_mem
-    {V : Type*} (t : Std.ExtTreeMap Int V compare) {α : Int} {v w : V}
+    {V : Type*} (t : ExtTreeMap Int V compare) {α : Int} {v w : V}
     (h : t[α]? = some v) :
     (t.insert α w).fresh = t.fresh := by
   -- inserting at an existing key does not change `maxKey?`
-  unfold Std.ExtTreeMap.fresh
+  unfold ExtTreeMap.fresh
   have hkeys : (t.insert α w).maxKey? = t.maxKey? := by
-    rw [Std.ExtTreeMap.maxKey?_insert]
-    have hmem : α ∈ t := Std.ExtTreeMap.mem_iff_isSome_getElem?.mpr (by rw [h]; rfl)
-    have hsome : t.maxKey?.isSome := Std.ExtTreeMap.isSome_maxKey?_of_mem hmem
+    rw [ExtTreeMap.maxKey?_insert]
+    have hmem : α ∈ t := ExtTreeMap.mem_iff_isSome_getElem?.mpr (by rw [h]; rfl)
+    have hsome : t.maxKey?.isSome := ExtTreeMap.isSome_maxKey?_of_mem hmem
     obtain ⟨km, hkm⟩ : ∃ km, t.maxKey? = some km := ⟨_, Option.eq_some_of_isSome hsome⟩
     rw [hkm]
     simp only [Option.elim, Option.some.injEq]
     have hle_αkm : (compare α km).isLE := by
-      have hget : t.maxKey?.get (Std.ExtTreeMap.isSome_maxKey?_of_mem hmem) = km :=
+      have hget : t.maxKey?.get (ExtTreeMap.isSome_maxKey?_of_mem hmem) = km :=
         Option.get_of_eq_some _ hkm
-      exact Std.ExtTreeMap.le_maxKey?_of_mem hmem hget
+      exact ExtTreeMap.le_maxKey?_of_mem hmem hget
     have hα_le_km : α ≤ km := by
       simp [compare, compareOfLessAndEq] at hle_αkm
       split at hle_αkm
@@ -953,14 +964,14 @@ theorem _root_.Std.ExtTreeMap.fresh_insert_of_mem
 theorem State.fresh_loc_upd_some {rT : Type _} {σ : State rT} {α : Loc} {bs bs' : Tape}
     (h : σ.tapes[α]? = some bs) :
     (σ.tapes.insert α bs').fresh = σ.tapes.fresh :=
-  Std.ExtTreeMap.fresh_insert_of_mem σ.tapes h
+  ExtTreeMap.fresh_insert_of_mem σ.tapes h
 
 /-- The fresh key is never a key of the map. -/
 theorem _root_.Std.ExtTreeMap.elem_fresh_ne
-    {V : Type*} {t : Std.ExtTreeMap Int V compare} {k : Int} {v : V}
+    {V : Type*} {t : ExtTreeMap Int V compare} {k : Int} {v : V}
     (h : t[k]? = some v) : t.fresh ≠ k := by
   intro heq
-  have hfresh := Std.ExtTreeMap.fresh_get? t
+  have hfresh := ExtTreeMap.fresh_get? t
   rw [heq, h] at hfresh
   simp at hfresh
 
@@ -996,24 +1007,24 @@ theorem State.head_step_dzero_upd_tapes
   case load.segfault hheap =>
     have hnotmem : ‹Loc› ∉ (σ.update_tapes (·.insert α bs')).heap := hheap
     have hnone := Option.not_isSome_iff_eq_none.mp
-      (fun hsome => hnotmem (Std.ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
+      (fun hsome => hnotmem (ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
     rw [hnone]
   case store.no_redex hned =>
     simp [toVal?_eq_none.mpr hned]
   case store.segfault hv hheap =>
     have hnotmem : ‹Loc› ∉ (σ.update_tapes (·.insert α bs')).heap := hheap
     have hnone := Option.not_isSome_iff_eq_none.mp
-      (fun hsome => hnotmem (Std.ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
+      (fun hsome => hnotmem (ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
     rw [hnone]
   case rand.plain h0 =>
     exact absurd h0 (uniform_ne_zero _ _)
   case rand.tape.unalloc hnotin =>
     have hne : α ≠ ‹Lbl› := by
       intro he
-      exact hnotin (he ▸ Std.ExtTreeMap.mem_iff_isSome_getElem?.mpr (by rw [hmem]; rfl))
+      exact hnotin (he ▸ ExtTreeMap.mem_iff_isSome_getElem?.mpr (by rw [hmem]; rfl))
     have hnone : σ.tapes[‹Lbl›]? = none :=
       Option.not_isSome_iff_eq_none.mp
-        (fun hsome => hnotin (Std.ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
+        (fun hsome => hnotin (ExtTreeMap.mem_iff_isSome_getElem?.mpr hsome))
     rw [upd_diff_tape_tot (Ne.symm hne), hnone]
   case rand.tape.mismatch =>
     exact absurd h0 (uniform_ne_zero _ _)

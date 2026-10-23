@@ -9,8 +9,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Randomized response on two bits is zCDP
 
-Each draw spends `(ln 3, 0)` in the zCDP lifting, so the pair is `(ln 9, 0)`-zCDP, and `zcdpToDp`
-gives `(ln 9, δ)`-DP for every `δ > 0`. -/
+Each draw spends `(ln 3, 0)`, so the pair is `(ln 9, 0)`-zCDP and `(ln 9, δ)`-DP for `δ > 0`. -/
 
 open scoped ENNReal
 

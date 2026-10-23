@@ -15,7 +15,7 @@ public import Metrology.Couplings.AdditiveCouplings
 Bounded execution `execN`, its supremum `limExec`, and the output distribution `limExecV`. -/
 
 noncomputable section
-open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set ENNReal
+open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set ENNReal Measurable
 
 namespace ProbLang
 
@@ -61,7 +61,7 @@ def execN (n : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
 theorem execN_measurable (n : Nat) : Measurable (execN (rT := rT) n) := by
   induction n
   · simp [execN]
-  · exact Measurable.ite (by measurability) (by measurability) (by measurability)
+  · exact ite (by measurability) (by measurability) (by measurability)
 
 /-- No fuel gives the zero measure. -/
 @[simp] theorem execN_zero (ρ : Cfg rT) : execN 0 ρ = 0 := rfl
@@ -87,7 +87,7 @@ theorem execN_univ_le_one (n : Nat) (ρ : Cfg rT) : (execN n ρ) univ ≤ 1 := b
     by_cases hv : ρ.expr.isValue
     · simp [hv]
     · simp only [hv, ↓reduceIte]
-      rw [bind_apply (by measurability) (Measurable.aemeasurable (by measurability))]
+      rw [bind_apply (by measurability) (aemeasurable (by measurability))]
       calc ∫⁻ a, (execN k a) univ ∂(primStep ρ)
         _ ≤ ∫⁻ _, 1 ∂(primStep ρ) := lintegral_mono fun a => ih a
         _ = (primStep ρ) univ := by simp
@@ -241,7 +241,7 @@ theorem stepOrFinal_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) :
 @[fun_prop]
 theorem stepOrFinal.measurable :
     Measurable (stepOrFinal : Cfg rT → Measure (Cfg rT)) := by
-  exact Measurable.ite Cfg.isValue_measurableSet measurable_dirac primStep.measurable
+  exact ite Cfg.isValue_measurableSet measurable_dirac primStep.measurable
 
 /-- `limExec` is a fixed point of `stepOrFinal`. -/
 theorem limExec_step (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec := by
@@ -321,7 +321,7 @@ theorem pexecN_plus (n m : Nat) (ρ : Cfg rT) : pexecN (n + m) ρ = (pexecN n ρ
     rw [bind_bind]
     · congr 1
       grind
-    all_goals exact Measurable.aemeasurable (by measurability)
+    all_goals exact aemeasurable (by measurability)
 
 /-- Deterministic multi-step runs compose. -/
 theorem pexecN_det_trans {n m : Nat} {ρ ρ' ρ'' : Cfg rT} (Hn : pexecN n ρ = dirac ρ')
@@ -379,7 +379,7 @@ theorem limExec_pexecN (n : Nat) (ρ : Cfg rT) : limExec ρ = (pexecN n ρ).bind
     conv_lhs => rw [limExec_step]
     rw [bind_bind]
     · exact congrArg _ (funext ih)
-    all_goals exact Measurable.aemeasurable (by measurability)
+    all_goals exact aemeasurable (by measurability)
 
 /-- Running to the limit from a measure of states equals first running `m` steps. -/
 theorem bind_limExec_eq_pexecN (μ : Measure (State rT)) (e : Exp rT) (m : Nat) :
@@ -406,8 +406,8 @@ theorem lintegral_limExec
       simp_rw [MeasureTheory.SimpleFunc.lintegral,
         show ∀ x, (⨆ i, execN i ρ) (⇑g ⁻¹' {x}) = ⨆ n, (execN n ρ) (⇑g ⁻¹' {x})
           from fun x => iSup_measure_apply execN_monotone (hms x),
-        ENNReal.mul_iSup]
-      exact ENNReal.finsetSum_iSup_of_monotone
+        mul_iSup]
+      exact finsetSum_iSup_of_monotone
         (fun x _ _ h => mul_le_mul' le_rfl ((execN_mono h ρ) _))
     rw [hstep]
     refine iSup_mono fun n => ?_
@@ -477,7 +477,7 @@ def execExactN (N : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
 @[fun_prop]
 theorem execExactN_measurable (n : Nat) : Measurable (execExactN (rT := rT) n) := by
   induction n <;> simp only [execExactN] <;>
-    exact Measurable.ite (by measurability) (by measurability) (by measurability)
+    exact ite (by measurability) (by measurability) (by measurability)
 
 /-- `execN n` splits by exact termination time (setwise form of SampCert's `execExactN_sum`). -/
 theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S : Set (Cfg rT)} (HS : MeasurableSet S) :
@@ -498,7 +498,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S : Set (Cfg rT)} (HS
       simp_rw [ih]
       have hmeas : ∀ k, AEMeasurable (fun a => if k < n then (execExactN k a) S else 0)
           (primStep ρ) := fun k =>
-        Measurable.aemeasurable (Measurable.ite (by measurability)
+        aemeasurable (ite (by measurability)
           ((measurable_coe HS).comp (execExactN_measurable _)) (by measurability))
       rw [lintegral_tsum hmeas]
       congr 1
@@ -506,7 +506,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S : Set (Cfg rT)} (HS
       by_cases hk : k < n
       · have hk' : ∀ k, k + 1 < n + 1 ↔ k < n := by omega
         simp only [hk, hk', ↓reduceIte]
-        rw [← bind_apply HS (Measurable.aemeasurable (by measurability))]
+        rw [← bind_apply HS (aemeasurable (by measurability))]
         simp only [execExactN, hv, ↓reduceIte]
       · simp [hk]
 

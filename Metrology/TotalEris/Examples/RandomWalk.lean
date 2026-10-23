@@ -9,9 +9,7 @@ import Metrology.Iris.LocalBI
 /-!
 # Uniform 1D random walk (total correctness)
 
-Stub: `unifRw1d_terminate` is `sorry`. `rand 1` samples `{0}` deterministically, so this program
-only descends; the faithful walk needs `rand 2` and a `twp_presample_rsm` rule (unported `εAmp`,
-`kwf`, error induction).
+Uniform 1D random walk, stubbed because `rand 1` only descends.
 -/
 
 open Iris ProbLang ProbLang.TotalEris ProbLang.TotalEris.ErisWpGS
@@ -36,7 +34,10 @@ def finalPos (p₀ : Nat) : List (Fin 2) → Nat
           if x = 0 then finalPos n xs
           else finalPos (n + 2) xs
 
-theorem finalPos_append (p₀ : Nat) (li : List (Fin 2)) (i : Fin 2) :
+variable (p₀ : Nat) (li : List (Fin 2))
+
+/-- Appending a step to the list moves the final position by that step. -/
+theorem finalPos_append (i : Fin 2) :
     finalPos p₀ (li ++ [i]) =
       match finalPos p₀ li with
       | 0 => 0
@@ -48,35 +49,43 @@ theorem finalPos_append (p₀ : Nat) (li : List (Fin 2)) (i : Fin 2) :
     · simp [finalPos]
     · fin_cases a <;> simpa [finalPos] using IH _
 
-noncomputable def finalPosRsm (p₀ : Nat) (li : List (Fin 2)) : ENNReal :=
+/-- The final position as an extended nonnegative real, the ranking function. -/
+noncomputable def finalPosRsm : ENNReal :=
   (finalPos p₀ li : ENNReal)
 
-def termCond (p₀ : Nat) (li : List (Fin 2)) : Prop := finalPos p₀ li = 0
+/-- The walk has reached the absorbing position `0`. -/
+def termCond : Prop := finalPos p₀ li = 0
 
-theorem termCond_cons_zero (p₀ : Nat) (li : List (Fin 2)) :
+/-- A down step from a positive position preserves the termination condition. -/
+theorem termCond_cons_zero :
     termCond (p₀ + 1) (0 :: li) ↔ termCond p₀ li := by
   simp [termCond, finalPos]
 
-theorem termCond_cons_one (p₀ : Nat) (li : List (Fin 2)) :
+/-- An up step from a positive position shifts the start by two. -/
+theorem termCond_cons_one :
     termCond (p₀ + 1) (1 :: li) ↔ termCond (p₀ + 2) li := by
   simp [termCond, finalPos]
 
-theorem finalPos_dec_aux (p₀ : Nat) (li : List (Fin 2)) :
+/-- Away from termination, a down step strictly decreases the final position. -/
+theorem finalPos_dec_aux :
     ¬ termCond p₀ li → finalPos p₀ (li ++ [0]) < finalPos p₀ li := by
   intro h
   obtain ⟨n, hn⟩ := Nat.exists_eq_succ_of_ne_zero h
   rw [finalPos_append, hn]
   simp
 
-theorem finalPos_dec (li : List (Fin 2)) :
+/-- From position `1`, some step strictly decreases the final position. -/
+theorem finalPos_dec :
     ¬ termCond 1 li → ∃ c : Fin 2, finalPos 1 (li ++ [c]) < finalPos 1 li :=
   fun h => ⟨0, finalPos_dec_aux 1 li h⟩
 
 /-! ## Termination spec -/
 
+/-- The random walk terminates, with its proof stubbed. -/
 theorem unifRw1d_terminate (E : CoPset) :
     ⊢ tglWp (rT := rT) E unifRw1d
       (fun v => iprop(⌜v = .unit⌝)) := by
+  -- Stub: rand 1 only descends; see module docstring.
   sorry
 
 end Examples

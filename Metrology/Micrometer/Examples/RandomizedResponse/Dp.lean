@@ -32,15 +32,13 @@ section OneRound
 
 variable (b b' : Bool) (σ σ' : State rT)
 
-/-! ## One round, by `wp` -/
-
-section Wp
-
-variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+variable {GF : BundledGFunctors} [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
 
+/-! ## One round, by `wp` -/
+
 /-- One round against the spec, spending `(ln 3, 0)`. -/
-theorem wp_rr :
+theorem wp_rr [MicrometerGS rT .hasNoLC GF] :
     ⊢ ⤇ rr b' -∗ ↯b budget -∗
       wp (codensity dp) ⊤ (rr b) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
@@ -49,8 +47,6 @@ theorem wp_rr :
   iframe Hj Hb
   iintro %d Hj
   iapply spec_fill_nil_exists (.bool d) $$ Hj
-
-end Wp
 
 /-- Randomized response is `(ln 3, 0)`-DP for any two private bits, through `wp_rr`. -/
 theorem rr_dp : dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
@@ -63,16 +59,10 @@ theorem rr_event_le (S : Set (Exp rT)) (hS : MeasurableSet S) :
 
 /-! ## One round, by refinement -/
 
-section Refines
-
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
-local bi IProp GF
-
 /-- One round refines itself at equal reports, spending `(ln 3, 0)`. -/
-theorem rr_refines : ⊢ ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
+theorem rr_refines [MicrometerRGS rT .hasNoLC GF] :
+    ⊢ ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
   rr_refines_of budget isAddLeftRegular_budget rrCoupling_dp b b'
-
-end Refines
 
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
 noncomputable abbrev rrMech : Mechanism Bool (Exp rT) :=

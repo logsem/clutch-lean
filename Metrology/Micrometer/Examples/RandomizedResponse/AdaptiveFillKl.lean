@@ -9,8 +9,7 @@ import Metrology.Iris.LocalBI
 /-! # Adaptive randomized response in filled KL, with the chain-rule law
 
 `rrAdaptive_fillKl`: adaptive randomized response is within filled KL `(4/9) log 2`, not
-`(2/3) log 2`, as the chain-rule law `fillKl` pays the second round's cost on average
-under the first round's left outcome (`AdaptiveFillKl`). -/
+`(2/3) log 2`, as the chain-rule law `fillKl` pays the second round's cost on average. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi AdaptiveFillKl
 open scoped ENNReal
@@ -102,8 +101,6 @@ theorem fillKlHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
 
 /-! ## The relational proof -/
 
-section Logic
-
 open Iris Iris.BI Iris.ProofMode
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
@@ -137,12 +134,10 @@ theorem rrAdaptive_refines_fillKl :
       simp only [rr3Out, hd, hd', ↓reduceIte, decide_true, decide_false, Bool.not_false,
         Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values
 
-end Logic
-
 /-! ## Adequacy -/
 
 /-- The adaptive program on `false` and on `true` is within filled KL `(4/9) log 2`, as
-`AdaptiveFillKl.fill_kl_adaptive` computes for the measures. -/
+`fill_kl_adaptive` computes for the measures. -/
 theorem rrAdaptive_fillKl (σ σ' : State rT) :
     klDivergence.fill (ofReal (4 * log 2 / 9))
       (limExecV ⟨rrAdaptive false, σ⟩) (limExecV ⟨rrAdaptive true, σ'⟩) :=

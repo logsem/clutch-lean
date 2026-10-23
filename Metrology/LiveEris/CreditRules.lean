@@ -14,7 +14,8 @@ error credits into divergence credits.
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.LiveEris.LiveWpGS
   ProbLang.LiveEris.CreditVec
-open scoped ENNReal AppGS
+open Filter ProbLang.LiveEris.Credit ENNReal
+open scoped AppGS
 
 namespace ProbLang
 namespace LiveEris
@@ -33,7 +34,8 @@ theorem randCredit_int {z n : Int} {H : ℕ → ℝ≥0∞} {σ : State rT} (hn 
 
 theorem randCredit_le_one {z : Int} {H : ℕ → ℝ≥0∞} (hH : ∀ n, H n ≤ 1) (ρ : Cfg rT) :
     randCredit z H ρ ≤ 1 := by
-  unfold randCredit; split
+  unfold randCredit
+  split
   · split <;> first | exact hH _ | exact zero_le
   · exact zero_le
 
@@ -44,36 +46,12 @@ theorem randCredit_measurable (z : Int) (H : ℕ → ℝ≥0∞) : Measurable (r
 
 variable [LawfulProbLangℝ rT]
 
-theorem rand_headReducible {z : Int} (Hz : 0 < z) (σ : State rT) :
-    HeadReducible (pl(rand(#z, #())) : Exp rT) σ :=
-  (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
-
-theorem lintegral_randCredit_le {z : Int} (Hz : 0 < z) (σ : State rT) {H : ℕ → ℝ≥0∞} {b : ℝ≥0∞}
-    (HSum : (∑ n ∈ Finset.range z.toNat, H n) / z.toNat ≤ b) :
-    (∫⁻ ρ, randCredit z H ρ ∂(primStep ⟨pl(rand(#z, #())), σ⟩)) ≤ b := by
-  rw [primStep_eq_headStep
-    (Exp.decompItem_none_of_lc_headReducible (by is_lc) (rand_headReducible Hz σ))]
-  show (∫⁻ ρ, randCredit z H ρ ∂(Cfg.uniform z σ)) ≤ b
-  rw [Cfg.lintegral_uniform Hz σ (randCredit_measurable z H), ← ENNReal.div_eq_inv_mul]
-  convert HSum using 2
-  refine Finset.sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
-    ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)
-    (fun k _ => Int.toNat_natCast k) ?_
-  · intro n hn
-    simp only [Finset.mem_Ico, Finset.mem_range] at hn ⊢
-    omega
-  · intro k hk
-    simp only [Finset.mem_Ico, Finset.mem_range] at hk ⊢
-    omega
-  · intro n hn
-    simp [randCredit, Finset.mem_Ico.mp hn]
-
 variable {hlc : HasLC} {GF : BundledGFunctors} [LiveGS rT hlc GF]
-variable {Q : State rT → State rT → Prop}
+variable {Q : State rT → State rT → Prop} {E : CoPset} {Φ : Val rT → IProp GF}
 local bi IProp GF
 
 private theorem creditAuth_creditInterp {ε δ : ℝ≥0∞} :
-    creditAuth ε δ ⊢ LiveWpGS.creditInterp (creditVec ε δ) := by
+    creditAuth ε δ ⊢ creditInterp (creditVec ε δ) := by
   iintro Ha
   isimp only [liveWpGS_creditInterp_eq]
   iexists δ
@@ -85,7 +63,7 @@ private theorem creditAuth_creditInterp {ε δ : ℝ≥0∞} :
 
 /-- Spend `ε₁` error and `δ₁` divergence credits on a step, handing each reached outcome `ρ` the
 credits `f ρ` and `g ρ`, whose averages are at most `ε₁` and `δ₁`. -/
-theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞} {Φ : Val rT → IProp GF}
+theorem lwp_credit_spend {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
     {R : State rT → Cfg rT → Prop} {f g : Cfg rT → ℝ≥0∞}
     (hv : e₁.toVal? = none) (Hfm : Measurable f) (Hbdf : ∀ ρ, f ρ ≤ 1) (Hbdg : ∀ ρ, g ρ ≤ 1)
     (Hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁)
@@ -102,9 +80,9 @@ theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
   iintro %σ₁ %c ⟨Hσ, Hc⟩
   isimp only [liveWpGS_creditInterp_eq] at Hc
   icases Hc with ⟨%d, %Hd, Ha⟩
-  ihave %⟨hε, hδ⟩ := Credit.supply_bound $$ Ha Hcr
-  ihave %⟨_, hdfin⟩ := Credit.auth_valid $$ Ha
-  imod Credit.supply_decrease $$ Ha Hcr with Ha
+  ihave %⟨hε, hδ⟩ := supply_bound $$ Ha Hcr
+  ihave %⟨_, hdfin⟩ := auth_valid $$ Ha
+  imod supply_decrease $$ Ha Hcr with Ha
   imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
   imodintro
   iapply glm_prim_step
@@ -149,8 +127,8 @@ theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
   · iright
     ileft
     have hfin : d - δ₁ + g ρ < ∞ :=
-      ENNReal.add_lt_top.mpr ⟨tsub_le_self.trans_lt hdfin, (Hbdg ρ).trans_lt ENNReal.one_lt_top⟩
-    imod Credit.supply_increase hlt hfin $$ Ha with ⟨Ha, Hfrag⟩
+      add_lt_top.mpr ⟨tsub_le_self.trans_lt hdfin, (Hbdg ρ).trans_lt one_lt_top⟩
+    imod supply_increase hlt hfin $$ Ha with ⟨Ha, Hfrag⟩
     imod Hclose with -
     imodintro
     rw [Hstate HRρ]
@@ -165,11 +143,40 @@ theorem lwp_credit_spend {E : CoPset} {e₁ : Exp rT} {ε₁ δ₁ : ℝ≥0∞}
     cases i
     · exact hlt
     · exact hlt.trans le_self_add
+section RandStep
+
+variable {z : Int} (Hz : 0 < z)
+include Hz
+
+theorem rand_headReducible (σ : State rT) :
+    HeadReducible (pl(rand(#z, #())) : Exp rT) σ :=
+  (HeadStepSupport.RandNoTapeS Hz (le_refl _) Hz).ne_zero
+
+theorem lintegral_randCredit_le (σ : State rT) {H : ℕ → ℝ≥0∞} {b : ℝ≥0∞}
+    (HSum : (∑ n ∈ Finset.range z.toNat, H n) / z.toNat ≤ b) :
+    (∫⁻ ρ, randCredit z H ρ ∂(primStep ⟨pl(rand(#z, #())), σ⟩)) ≤ b := by
+  rw [primStep_eq_headStep
+    (Exp.decompItem_none_of_lc_headReducible (by is_lc) (rand_headReducible Hz σ))]
+  show (∫⁻ ρ, randCredit z H ρ ∂(Cfg.uniform z σ)) ≤ b
+  rw [Cfg.lintegral_uniform Hz σ (randCredit_measurable z H), ← ENNReal.div_eq_inv_mul]
+  convert HSum using 2
+  refine Finset.sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
+    ?_ ?_ (fun n hn => Int.toNat_of_nonneg (Finset.mem_Ico.mp hn).1)
+    (fun k _ => Int.toNat_natCast k) ?_
+  · intro n hn
+    simp only [Finset.mem_Ico, Finset.mem_range] at hn ⊢
+    omega
+  · intro k hk
+    simp only [Finset.mem_Ico, Finset.mem_range] at hk ⊢
+    omega
+  · intro n hn
+    simp [randCredit, Finset.mem_Ico.mp hn]
+
 
 /-- `rand z` spends `ε₁` error and `δ₁` divergence credits, handing outcome `n` the credits `F n`
 and `G n`. -/
-theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G : ℕ → ℝ≥0∞}
-    {Φ : Val rT → IProp GF} (Hz : 0 < z) (HF : ∀ n, F n ≤ 1) (HG : ∀ n, G n ≤ 1)
+theorem lwp_rand_credit {ε₁ δ₁ : ℝ≥0∞} {F G : ℕ → ℝ≥0∞}
+    (HF : ∀ n, F n ≤ 1) (HG : ∀ n, G n ≤ 1)
     (HSumF : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁)
     (HSumG : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
     iprop(creditFrag ε₁ δ₁) ⊢
@@ -211,11 +218,11 @@ theorem lwp_rand_credit {E : CoPset} {z : Int} {ε₁ δ₁ : ℝ≥0∞} {F G :
   iapply lwp_value_of_toVal rfl
   iapply Hcont $$ %n
   iframe %hn
-  iapply Credit.frag_ext (randCredit_int hn) (randCredit_int hn) $$ Hcr
+  iapply frag_ext (randCredit_int hn) (randCredit_int hn) $$ Hcr
 
 /-- `rand z` spends error credits only; outcomes with more than one credit are impossible. -/
-theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hz : 0 < z) (HSum : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁) :
+theorem lwp_rand_err {ε₁ : ℝ≥0∞} {F : ℕ → ℝ≥0∞}
+    (HSum : (∑ n ∈ Finset.range z.toNat, F n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(F n.toNat) -∗ Φ (.int n)) -∗
         lwp Q E (pl(rand(#z, #()))) Φ) := by
@@ -228,14 +235,14 @@ theorem lwp_rand_err {E : CoPset} {z : Int} {ε₁ : ℝ≥0∞} {F : ℕ → �
   by_cases h : F n.toNat ≤ 1
   · iapply Hcont $$ %n
     iframe %Hn
-    iapply Credit.frag_ext (min_eq_left h) rfl $$ Hcr
+    iapply frag_ext (min_eq_left h) rfl $$ Hcr
   · push Not at h
     iexfalso
-    iapply Credit.err_contradict (le_min h.le le_rfl) $$ Hcr
+    iapply err_contradict (le_min h.le le_rfl) $$ Hcr
 
 /-- `rand z` spends divergence credits only. -/
-theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hz : 0 < z) (HG : ∀ n, G n ≤ 1)
+theorem lwp_rand_div {δ₁ : ℝ≥0∞} {G : ℕ → ℝ≥0∞}
+    (HG : ∀ n, G n ≤ 1)
     (HSum : (∑ n ∈ Finset.range z.toNat, G n) / z.toNat ≤ δ₁) :
     iprop(↻δ₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↻(G n.toNat) -∗ Φ (.int n)) -∗
@@ -247,11 +254,17 @@ theorem lwp_rand_div {E : CoPset} {z : Int} {δ₁ : ℝ≥0∞} {G : ℕ → �
   iapply Hcont $$ %n
   iframe %Hn Hcr
 
+end RandStep
+
+section NonValue
+
+variable {e : Exp rT} (Hnv : e.toVal? = none)
+include Hnv
+
 /-! ## Thin air -/
 
 /-- Before a step, any held credits may be assumed strictly larger in both coordinates. -/
-theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hnv : e.toVal? = none) :
+theorem lwp_credit_incr {ε δ : ℝ≥0∞} :
     iprop(creditFrag ε δ ∗
       ∀ ε' δ', ⌜ε < ε'⌝ -∗ ⌜δ < δ'⌝ -∗ creditFrag ε' δ' -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
@@ -260,19 +273,19 @@ theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val
   iintro %σ₁ %c ⟨Hσ, Hc⟩
   isimp only [liveWpGS_creditInterp_eq] at Hc
   icases Hc with ⟨%d, %Hd, Ha⟩
-  ihave %⟨hε, hδ⟩ := Credit.supply_bound $$ Ha Hcr
-  ihave %⟨ha, hdfin⟩ := Credit.auth_valid $$ Ha
+  ihave %⟨hε, hδ⟩ := supply_bound $$ Ha Hcr
+  ihave %⟨ha, hdfin⟩ := auth_valid $$ Ha
   imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
   imodintro
   iapply glm_credit_bump
   iintro %c' %Hb
-  have hlt_err : c .err < c' .err := Hb.2 .err (ha.trans ENNReal.one_lt_top)
+  have hlt_err : c .err < c' .err := Hb.2 .err (ha.trans one_lt_top)
   have hlt_tot : c .tot < c' .tot := Hb.2 .tot (by
-    rw [Hd]; exact ENNReal.add_lt_top.mpr ⟨ha.trans ENNReal.one_lt_top, hdfin⟩)
+    rw [Hd]; exact add_lt_top.mpr ⟨ha.trans one_lt_top, hdfin⟩)
   set η : ℝ≥0∞ := min 1 (min (c' .err - c .err) ((c' .tot - c .tot) / 2)) with hη
   have hηpos : 0 < η := lt_min one_pos (lt_min (tsub_pos_of_lt hlt_err)
     (ENNReal.half_pos (tsub_pos_of_lt hlt_tot).ne'))
-  have hηfin : η < ∞ := (min_le_left _ _).trans_lt ENNReal.one_lt_top
+  have hηfin : η < ∞ := (min_le_left _ _).trans_lt one_lt_top
   have hle : creditVec (c .err + η) (d + η) ≤ c' := by
     intro i
     cases i
@@ -287,8 +300,8 @@ theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val
         _ = c' .tot := by rw [ENNReal.add_halves, add_tsub_cancel_of_le hlt_tot.le]
   by_cases hsat : c .err + η < 1
   · iright
-    have hfin : d + η < ∞ := ENNReal.add_lt_top.mpr ⟨hdfin, hηfin⟩
-    imod Credit.supply_increase hsat hfin $$ Ha with ⟨Ha, Hη⟩
+    have hfin : d + η < ∞ := add_lt_top.mpr ⟨hdfin, hηfin⟩
+    imod supply_increase hsat hfin $$ Ha with ⟨Ha, Hη⟩
     icombine Hcr Hη as Hcr
     imod Hclose with -
     ihave HW := Hwp $$ %(ε + η) %(δ + η) %?hε' %?hδ' Hcr
@@ -308,28 +321,28 @@ theorem lwp_credit_incr {E : CoPset} {e : Exp rT} {ε δ : ℝ≥0∞} {Φ : Val
     · exact hsat.trans (hle .err)
     · exact (hsat.trans le_self_add).trans (hle .tot)
 
-theorem lwp_err_incr {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hnv : e.toVal? = none) :
+/-- A client may assume a strictly larger error credit than the one it holds. -/
+theorem lwp_err_incr {ε : ℝ≥0∞} :
     iprop(↯ε ∗ ∀ ε', ⌜ε < ε'⌝ -∗ ↯ε' -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_credit_incr Hnv
   iframe Hcr
   iintro %ε' %δ' %Hε %- Hcr
   iapply Hwp $$ %ε' %Hε
-  iapply Credit.frag_weaken le_rfl zero_le $$ Hcr
+  iapply frag_weaken le_rfl zero_le $$ Hcr
 
-theorem lwp_div_incr {E : CoPset} {e : Exp rT} {δ : ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hnv : e.toVal? = none) :
+/-- A client may assume a strictly larger divergence credit than the one it holds. -/
+theorem lwp_div_incr {δ : ℝ≥0∞} :
     iprop(↻δ ∗ ∀ δ', ⌜δ < δ'⌝ -∗ ↻δ' -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_credit_incr Hnv
   iframe Hcr
   iintro %ε' %δ' %- %Hδ Hcr
   iapply Hwp $$ %δ' %Hδ
-  iapply Credit.frag_weaken zero_le le_rfl $$ Hcr
+  iapply frag_weaken zero_le le_rfl $$ Hcr
 
 /-- A client may assume an arbitrarily small error credit. -/
-theorem lwp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : e.toVal? = none) :
+theorem lwp_err_pos :
     iprop(∀ ε, ⌜0 < ε⌝ -∗ ↯ε -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
@@ -339,7 +352,7 @@ theorem lwp_err_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : 
   iframe
 
 /-- A client may assume an arbitrarily small divergence credit. -/
-theorem lwp_div_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : e.toVal? = none) :
+theorem lwp_div_pos :
     iprop(∀ δ, ⌜0 < δ⌝ -∗ ↻δ -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
@@ -348,9 +361,10 @@ theorem lwp_div_pos {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (Hnv : 
   iapply lwp_div_incr Hnv
   iframe
 
+variable {ι : Type _} {S : Set ι}
+
 /-- If the spec holds at error cost `ε i` for every `i` in a set, it suffices to pay the infimum. -/
-theorem lwp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {S : Set ι}
-    {ε : ι → ℝ≥0∞} (Hnv : e.toVal? = none) :
+theorem lwp_err_biInf {ε : ι → ℝ≥0∞} :
     iprop(↯(⨅ i ∈ S, ε i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply lwp_err_incr Hnv
@@ -359,12 +373,11 @@ theorem lwp_err_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → I
   obtain ⟨i, hi⟩ := iInf_lt_iff.mp Hlt
   obtain ⟨hiS, hlt⟩ := iInf_lt_iff.mp hi
   iapply Hwp $$ %i %hiS
-  iapply Credit.err_weaken hlt.le $$ Hε'
+  iapply err_weaken hlt.le $$ Hε'
 
 /-- If the spec holds at divergence cost `δ i` for every `i` in a set, it suffices to pay the
 infimum. -/
-theorem lwp_div_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {S : Set ι}
-    {δ : ι → ℝ≥0∞} (Hnv : e.toVal? = none) :
+theorem lwp_div_biInf {δ : ι → ℝ≥0∞} :
     iprop(↻(⨅ i ∈ S, δ i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro ⟨Hdiv, Hwp⟩
   iapply lwp_div_incr Hnv
@@ -373,41 +386,40 @@ theorem lwp_div_biInf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → I
   obtain ⟨i, hi⟩ := iInf_lt_iff.mp Hlt
   obtain ⟨hiS, hlt⟩ := iInf_lt_iff.mp hi
   iapply Hwp $$ %i %hiS
-  iapply Credit.div_weaken hlt.le $$ Hδ'
+  iapply div_weaken hlt.le $$ Hδ'
 
-theorem lwp_err_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
-    {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l) (Hnv : e.toVal? = none) :
-    iprop(↯(Filter.liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢
+/-- It suffices to pay the liminf of error costs that hold on a set in the filter. -/
+theorem lwp_err_liminf {l : Filter ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l) :
+    iprop(↯(liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
   iintro ⟨Herr, Hwp⟩
   iapply lwp_err_biInf (S := S) Hnv
   iframe Hwp
-  iapply Credit.err_weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
+  iapply err_weaken (le_liminf_of_le (h := mem_of_superset hS
     fun i hi => biInf_le ε hi)) $$ Herr
 
-theorem lwp_div_liminf {ι : Type _} {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
-    {l : Filter ι} {S : Set ι} {δ : ι → ℝ≥0∞} (hS : S ∈ l) (Hnv : e.toVal? = none) :
-    iprop(↻(Filter.liminf δ l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢
+/-- It suffices to pay the liminf of divergence costs that hold on a set in the filter. -/
+theorem lwp_div_liminf {l : Filter ι} {δ : ι → ℝ≥0∞} (hS : S ∈ l) :
+    iprop(↻(liminf δ l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↻(δ i) -∗ lwp Q E e Φ) ⊢
       lwp Q E e Φ := by
   iintro ⟨Hdiv, Hwp⟩
   iapply lwp_div_biInf (S := S) Hnv
   iframe Hwp
-  iapply Credit.div_weaken (Filter.le_liminf_of_le (h := Filter.mem_of_superset hS
+  iapply div_weaken (le_liminf_of_le (h := mem_of_superset hS
     fun i hi => biInf_le δ hi)) $$ Hdiv
 
 /-! ## Conversion -/
 
 /-- Before a step, error credits may be converted into divergence credits. -/
-theorem lwp_convert {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT → IProp GF}
-    (Hnv : e.toVal? = none) :
+theorem lwp_convert {ε : ℝ≥0∞} :
     iprop(↯ε ∗ (↻ε -∗ lwp Q E e Φ)) ⊢ lwp Q E e Φ := by
   iintro ⟨Hcr, Hwp⟩
   iapply lwp_of_credit_decrease Hnv
   iintro %σ %c ⟨Hσ, Hc⟩
   isimp only [liveWpGS_creditInterp_eq] at Hc
   icases Hc with ⟨%d, %Hd, Ha⟩
-  ihave %⟨hε, _⟩ := Credit.supply_bound $$ Ha Hcr
-  imod Credit.supply_convert $$ Ha Hcr with ⟨Ha, Hdiv⟩
+  ihave %⟨hε, _⟩ := supply_bound $$ Ha Hcr
+  imod supply_convert $$ Ha Hcr with ⟨Ha, Hdiv⟩
   imodintro
   iexists creditVec (c .err - ε) (d + ε)
   isplitr
@@ -421,6 +433,8 @@ theorem lwp_convert {E : CoPset} {e : Exp rT} {ε : ℝ≥0∞} {Φ : Val rT →
   isplitl [Ha]
   · iapply creditAuth_creditInterp $$ Ha
   · iapply Hwp $$ Hdiv
+
+end NonValue
 
 end LiveEris
 end ProbLang

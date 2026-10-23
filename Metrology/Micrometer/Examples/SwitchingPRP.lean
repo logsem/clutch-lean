@@ -10,8 +10,8 @@ import Mathlib.Data.List.GetD
 
 /-! # Specs of the random function and random permutation
 
-Specs for the closures of `Code/Switching` and the fresh-query coupling `wp_rfQuery_prpQuery_fresh`.
-Rocq source: clutch's `is_random_function`/`is_prp` (`theories/approxis/examples/{prf,prp}.v`). -/
+Specs for the closures of `Code/Switching` (clutch's `prf.v`, `prp.v`) and the fresh-query coupling
+`wp_rfQuery_prpQuery_fresh`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -23,8 +23,8 @@ open Exp (ofVal store alloc toVal?_ofVal)
 open _root_.Int (ofNat ofNat_eq_natCast eq_ofNat_of_zero_le)
 open Prod (fst snd)
 open Val (isVal_ofVal)
-open List (range getD_eq_getElem mem_range mem_map subperm_of_subset perm_middle perm_cons_erase
-  nodup_range nodup_cons mem_cons mem_append_right map_cons cons_append)
+open List (Perm range getD_eq_getElem mem_range mem_map subperm_of_subset perm_middle
+  perm_cons_erase nodup_range nodup_cons mem_cons mem_append_right map_cons cons_append)
 open _root_.Option (map)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
@@ -116,7 +116,7 @@ theorem wp_randomPermutation : iprop%
   iexists ℓm, ℓfv
   iframe Hm Hfv
   ipureintro
-  exact ⟨rfl, List.Perm.refl _⟩
+  exact ⟨rfl, Perm.refl _⟩
 
 /-- Creating a random function (spec side). -/
 theorem wp_randomFunction_r : iprop%
@@ -157,11 +157,11 @@ theorem wp_randomPermutation_r : iprop%
   iexists ℓm, ℓfv
   iframe Hm Hfv
   ipureintro
-  exact ⟨rfl, List.Perm.refl _⟩
+  exact ⟨rfl, Perm.refl _⟩
 
 /-! ## Queries at known inputs -/
 
-/-- Query a random function at a previously-queried input (program side). -/
+/-- Query a random function at an input already queried (program side). -/
 theorem wp_rfQuery_prev (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
     (hlk : alookup n m = some y) : iprop%
     (ℓ ↦ assocVal m) ∗ ((ℓ ↦ assocVal m) -∗ Φ (.int y)) ⊢
@@ -177,7 +177,7 @@ theorem wp_rfQuery_prev (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
   wp_value
   iapply HΦ $$ Hl
 
-/-- Query a random function at a previously-queried input (spec side). -/
+/-- Query a random function at an input already queried (spec side). -/
 theorem wp_rfQuery_prev_r (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
     (hlk : alookup n m = some y) : iprop%
     ⤇ K.fill (pl% {rfQuery N ℓ} #int n) ∗ (ℓ ↦ₛ assocVal m) ∗
@@ -193,7 +193,7 @@ theorem wp_rfQuery_prev_r (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
   tp_pures
   iapply Hcnt $$ Hj Hl
 
-/-- Query a random permutation at a previously-queried input (program side). -/
+/-- Query a random permutation at an input already queried (program side). -/
 theorem wp_prpQuery_prev (ℓm ℓfv : Loc) (m : List (Int × Int)) (n y : Int)
     (hlk : alookup n m = some y) : iprop%
     (ℓm ↦ assocVal m) ∗ ((ℓm ↦ assocVal m) -∗ Φ (.int y)) ⊢
@@ -209,7 +209,7 @@ theorem wp_prpQuery_prev (ℓm ℓfv : Loc) (m : List (Int × Int)) (n y : Int)
   wp_value
   iapply HΦ $$ Hl
 
-/-- Query a random permutation at a previously-queried input (spec side). -/
+/-- Query a random permutation at an input already queried (spec side). -/
 theorem wp_prpQuery_prev_r (ℓm ℓfv : Loc) (m : List (Int × Int))
     (n y : Int) (hlk : alookup n m = some y) : iprop%
     ⤇ K.fill (pl% {prpQuery ℓm ℓfv} #int n) ∗ (ℓm ↦ₛ assocVal m) ∗
@@ -270,9 +270,9 @@ theorem prpPerm_fresh_nonempty (hn : 0 ≤ n ∧ n < N)
 
 /-- Memoising a sampled fresh value preserves the permutation invariant. -/
 theorem prpPerm_insert (hy : y ∈ r) : prpPerm N ((n, y) :: m) (r.erase y) := by
-  refine List.Perm.trans ?_ h
+  refine Perm.trans ?_ h
   simp only [map_cons, cons_append]
-  exact perm_middle.symm.trans (List.Perm.append_left _ (perm_cons_erase hy).symm)
+  exact perm_middle.symm.trans (Perm.append_left _ (perm_cons_erase hy).symm)
 
 end Perm
 

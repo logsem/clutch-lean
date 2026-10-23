@@ -18,15 +18,16 @@ namespace TotalEris
 variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] [Countable rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
+variable (E : CoPset) (v : Val rT)
 
-/-- `tglWp_value` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: `tglWp_value` closes a weakest-precondition goal on a value. -/
+example :
     ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
   iapply tglWp_value
   itrivial
 
-/-- `twp_alloc` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: `twp_alloc` allocates a location holding a value. -/
+example :
     ⊢ tglWp E (.alloc (.ofVal v))
       (fun w => iprop(∃ l : Loc,
         ⌜w = .loc l⌝ ∗ appHeapFrag l v)) := by
@@ -34,8 +35,8 @@ example (E : CoPset) (v : Val rT) :
   iintro %l $
   itrivial
 
-/-- `twp_rand_tape` -/
-example (E : CoPset) (l : Loc) (z : Int)
+/-- Smoke test: `twp_rand_tape` samples the head of a non-empty tape. -/
+example (l : Loc) (z : Int)
     (n : { z' : Int // 0 ≤ z' ∧ z' < z })
     (ns : List { z' : Int // 0 ≤ z' ∧ z' < z }) :
     ⊢ l ↪ₐ ⟨z, n :: ns⟩ -∗
@@ -47,8 +48,8 @@ example (E : CoPset) (l : Loc) (z : Int)
   iintro $
   itrivial
 
-/-- `twp_rand_tape_empty` -/
-example (E : CoPset) (l : Loc) (z : Int) (Hz : 0 < z) :
+/-- Smoke test: `twp_rand_tape_empty` samples from an empty tape within bounds. -/
+example (l : Loc) (z : Int) (Hz : 0 < z) :
     ⊢ l ↪ₐ ⟨z, []⟩ -∗
       tglWp E (pl(rand(#z, #lbl l)))
         (fun w : Val rT => iprop(∃ n : Int,
@@ -60,23 +61,23 @@ example (E : CoPset) (l : Loc) (z : Int) (Hz : 0 < z) :
   iframe %Hbnd
   itrivial
 
-/-- `tglWp_mono` -/
-example (E : CoPset) (v : Val rT) :
-    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝))
-      -∗ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
+/-- Smoke test: `tglWp_mono` weakens the postcondition. -/
+example :
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝)) -∗
+      tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) := by
   iintro HW
   iapply tglWp_mono (Φ := fun w => iprop(⌜w = v⌝ ∗ ⌜w = v⌝))
   · intro w; iintro ⟨$, -⟩
   · iexact HW
 
-/-- `tglWp_fupd` -/
-example (E : CoPset) (v : Val rT) :
-    ⊢ tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝))
-      -∗ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) :=
+/-- Smoke test: `tglWp_fupd` removes a leading update modality. -/
+example :
+    ⊢ tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝)) -∗
+      tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) :=
   entails_wand tglWp_fupd
 
-/-- `tglWp_wand` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: `tglWp_wand` weakens the postcondition by an entailment. -/
+example :
     ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜w = v ∨ w = v⌝)) := by
   iintro HW
@@ -85,8 +86,8 @@ example (E : CoPset) (v : Val rT) :
   iintro %w %Hw !%
   exact .inl Hw
 
-/-- `tglWp_strong_mono` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: `tglWp_strong_mono` weakens the postcondition under an update. -/
+example :
     ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(|={E}=> ⌜w = v⌝)) := by
   iintro HW
@@ -94,29 +95,29 @@ example (E : CoPset) (v : Val rT) :
   iframe HW
   iintro %w %Hw !> !> //
 
-/-- `tglWp_bind_value` -/
-example (E : CoPset) (v : Val rT) (K : Ectx rT) :
+/-- Smoke test: `tglWp_bind_value` binds a value under a weakest-precondition goal. -/
+example (K : Ectx rT) :
     ⊢ tglWp E (.ofVal v) (fun w =>
         tglWp E (K.fill (.ofVal w)) (fun w' => iprop(⌜w' = v⌝))) -∗
       tglWp E (K.fill (Exp.ofVal v)) (fun w' => iprop(⌜w' = v⌝)) :=
   entails_wand tglWp_bind_value
 
-/-- `ErrorCredit.Induction.increasing` -/
+/-- Smoke test: `ErrorCredit.Induction.increasing` lets a credit bound grow by induction. -/
 example [ECGS GF] (ε : ENNReal) (ε' : NNReal) (P : IProp GF)
     (hε : 0 < ε) (hε' : ε < ε') :
     ⊢ iprop(□ ((↯(ε' : ENNReal) -∗ P) ∗ ↯ε -∗ P)) -∗
       iprop(↯ε -∗ P) :=
   entails_wand (ErrorCredit.Induction.increasing hε hε')
 
-/-- `tglWp_bind` -/
-example (E : CoPset) (e : Exp rT) (K : Ectx rT) (φ : Val rT → Prop) :
+/-- Smoke test: `tglWp_bind` binds a weakest-precondition goal through an evaluation context. -/
+example (e : Exp rT) (K : Ectx rT) (φ : Val rT → Prop) :
     ⊢ tglWp E e (fun v =>
         tglWp E (K.fill (.ofVal v)) (fun w => iprop(⌜φ w⌝))) -∗
       tglWp E (K.fill e) (fun w => iprop(⌜φ w⌝)) :=
   entails_wand tglWp_bind
 
-/-- `(λ x. !x) (alloc v) ⇓ v` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: allocating a value and then loading it returns that value. -/
+example :
     ⊢ tglWp E
       (pl((fun x, !x) (alloc({Exp.ofVal v}))) : Exp rT)
       (fun w => iprop(⌜w = v⌝)) := by
@@ -128,26 +129,25 @@ example (E : CoPset) (v : Val rT) :
   iframe Hl
   iintro - //
 
-/-- `fupd_tglWp` -/
-example (E : CoPset) (v : Val rT) :
+/-- Smoke test: `fupd_tglWp` removes a leading update modality. -/
+example :
     ⊢ iprop(|={E}=> tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝))) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) :=
   entails_wand fupd_tglWp
 
-/-- `tglWp_frame_left` -/
-example (E : CoPset) (v : Val rT) (R : Prop) (HR : R) :
+/-- Smoke test: `tglWp_frame_left` adds a pure fact to the postcondition. -/
+example (R : Prop) (HR : R) :
     ⊢ tglWp E (.ofVal v) (fun w => iprop(⌜w = v⌝)) -∗
       tglWp E (.ofVal v) (fun w => iprop(⌜R⌝ ∗ ⌜w = v⌝)) := by
   iintro HW
   iapply tglWp_frame_left
   iframe HW %HR
 
-/-- `twp_rand_exp` with `F 0 = 0`, `F 1 = ε` -/
-example (E : CoPset) (ε : ENNReal) :
+/-- Smoke test: `twp_rand_exp` on two outcomes, with cost 0 for 0 and ε for 1. -/
+example (ε : ENNReal) :
     ⊢ ↯ε -∗
       tglWp E (pl(rand(#2, #())))
-        (fun w : Val rT => iprop(∃ n : Int, ⌜0 ≤ n ∧ n < 2 ∧
-          w = .int n⌝)) := by
+        (fun w : Val rT => iprop(∃ n : Int, ⌜0 ≤ n ∧ n < 2 ∧ w = .int n⌝)) := by
   iintro Hcr
   let F : ℕ → ENNReal := fun n => if n = 0 then 0 else ε
   have htoNat : (2 : Int).toNat = 2 := rfl
@@ -162,8 +162,8 @@ example (E : CoPset) (ε : ENNReal) :
   ipureintro
   exact ⟨Hn.1, Hn.2, rfl⟩
 
-/-- `twp_rand_exp` with zero error -/
-example (E : CoPset) (ε : ENNReal) :
+/-- Smoke test: `twp_rand_exp` with zero error gives a deterministic outcome. -/
+example (ε : ENNReal) :
     ⊢ ↯ε -∗
       tglWp E (pl(rand(#1, #())))
         (fun w : Val rT => iprop(⌜w = .int 0⌝)) := by
@@ -178,10 +178,10 @@ example (E : CoPset) (ε : ENNReal) :
 section AdequacySmokeTests
 
 variable {GF : BundledGFunctors}
-  [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
+  [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF] (σ : State rT)
 
-/-- `twp_tgl` -/
-example (v : Val rT) (σ : State rT) (φ : Val rT → Prop) (hφ : φ v)
+/-- Smoke test: `twp_tgl` transfers a value's property to the limit execution. -/
+example (φ : Val rT → Prop) (hφ : φ v)
     (hφm : MeasurableSet {v : Val rT | φ v}) :
     Tgl (limExec ⟨Exp.ofVal v, σ⟩) φ 0 := by
   refine twp_tgl (GF := GF) hφm ?_
@@ -191,8 +191,8 @@ example (v : Val rT) (σ : State rT) (φ : Val rT → Prop) (hφ : φ v)
   ipureintro
   exact hφ
 
-/-- `Tgl.termination_ineq` -/
-example (v : Val rT) (σ : State rT) :
+/-- Smoke test: `Tgl.termination_ineq` gives the termination bound for a value. -/
+example :
     1 ≤ (limExec ⟨Exp.ofVal v, σ⟩) Set.univ := by
   have h : Tgl (limExec ⟨Exp.ofVal v, σ⟩) (fun _ => True) 0 := by
     refine twp_tgl (GF := GF)
@@ -203,8 +203,8 @@ example (v : Val rT) (σ : State rT) :
     itrivial
   simpa using Tgl.termination_ineq h
 
-/-- `twp_tgl_limit` -/
-example (v : Val rT) (σ : State rT) (φ : Val rT → Prop) (hφ : φ v)
+/-- Smoke test: `twp_tgl_limit` transfers a value's property to the limit. -/
+example (φ : Val rT → Prop) (hφ : φ v)
     (hφm : MeasurableSet {v : Val rT | φ v}) :
     Tgl (limExec ⟨Exp.ofVal v, σ⟩) φ 0 := by
   refine twp_tgl_limit (GF := GF) hφm ?_
@@ -214,8 +214,8 @@ example (v : Val rT) (σ : State rT) (φ : Val rT → Prop) (hφ : φ v)
   ipureintro
   exact hφ
 
-/-- `twp_pgl_lim` -/
-example (v : Val rT) (σ : State rT) (φ : Val rT → Prop) (hφ : φ v)
+/-- Smoke test: `twp_pgl_lim` gives a positive lower bound on the limit execution. -/
+example (φ : Val rT → Prop) (hφ : φ v)
     (hφm : MeasurableSet {v : Val rT | φ v}) :
     Pgl 0 (fun ρ => ∃ w, ρ.expr = Exp.ofVal w ∧ φ w)
       (limExec ⟨Exp.ofVal v, σ⟩) := by

@@ -7,12 +7,10 @@ import Metrology.Iris.LocalBI
 
 /-! # Credit-paying couplings of continuous draws
 
-The `urand` counterparts of the `rand` coupling rules: a lifting of two uniform reals within a
-budget (`wp_couple_urand_urand_spend`), a step of any bind law (`wp_couple_urand_urand_law`),
-credits paid in expectation (`wp_couple_urand_urand_adv`, `wp_couple_urand_urand_avoid`), and
-couplings of `urand` with `rand N` along a map pushing `unifUnit` to `unifInt N`
-(`wp_couple_urand_rand`, `wp_couple_rand_urand`; at `ℝ`, `u ↦ ⌊N u⌋`,
-`measurePreserving_floor_mul`). Each has a `refines` form and a `rel_couple_*` tactic. -/
+The `urand` counterparts of the `rand` coupling rules: liftings of two uniform reals within a
+budget, steps of a bind law, credits paid in expectation, and couplings of `urand` with `rand N`
+along a map pushing `unifUnit` to `unifInt N`. Each has a `refines` form and a `rel_couple_*`
+tactic. -/
 
 @[expose] public section
 
@@ -73,13 +71,13 @@ theorem Cfg.exists_of_drawCostReal_lt_top [Preorder B] [OrderTop B] {σ σ' : St
   by_contra hne
   simp only [drawCostReal, hne, dite_false, lt_self_iff_false] at h
 
-variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT] (σ σ' : State rT) (K : Ectx rT)
 
 /-! ## Liftings of `unifUnit` pushed to configurations -/
 
 /-- A lifting of two uniform reals lifts to their configurations, the right one in context `K`. -/
 theorem Cfg.uniformReal_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    {b : B} (σ σ' : State rT) (K : Ectx rT)
+    {b : B}
     {S : rT → rT → Prop} {S' : Cfg rT → Cfg rT → Prop} (h : L.Rel b S unifUnit unifUnit)
     (hS : ∀ x y, S x y → S' ⟨pl(#real x), σ⟩ ⟨K.fill pl(#real y), σ'⟩) :
     L.Rel b S' (uniformReal σ) ((uniformReal σ').map K.fillCfg) := by
@@ -107,7 +105,7 @@ theorem Cfg.uniformReal_lift_adv [AddCommMonoid B] [PartialOrder B] [Canonically
     [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] {s : ℝ≥0∞ →+o B}
     [L.IsExpectationAdditive s] (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) (ε₁ : ℝ≥0∞) (ε₂ : rT → ℝ≥0∞)
-    (hε₂ : Measurable ε₂) (hamort : ∫⁻ y, ε₂ y ∂unifUnit ≤ ε₁) (σ σ' : State rT) (K : Ectx rT) :
+    (hε₂ : Measurable ε₂) (hamort : ∫⁻ y, ε₂ y ∂unifUnit ≤ ε₁) :
     L (s ε₁) (drawCostReal σ σ' K (advCostReal s f ε₂))
       (unifUnit.map fun x ↦ (⟨pl(#real x), σ⟩ : Cfg rT))
       (unifUnit.map fun y ↦ (⟨K.fill pl(#real y), σ'⟩ : Cfg rT)) := by
@@ -133,7 +131,7 @@ variable {N : Int}
 `unifInt N`. -/
 theorem Cfg.uniformReal_rel_uniform [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
-    (hg : MeasurePreserving g unifUnit (unifInt N HN)) (σ σ' : State rT) (K : Ectx rT) :
+    (hg : MeasurePreserving g unifUnit (unifInt N HN)) :
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (g r)), σ'⟩)
       (uniformReal σ) ((uniform N σ').map K.fillCfg) := by
@@ -147,7 +145,7 @@ theorem Cfg.uniformReal_rel_uniform [Zero B] [Add B] [Preorder B] [OrderTop B] [
 /-- Coupling a uniform integer with the uniform real, the integer being `g` of the real. -/
 theorem Cfg.uniform_rel_uniformReal [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
     [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
-    (hg : MeasurePreserving g unifUnit (unifInt N HN)) (σ σ' : State rT) (K : Ectx rT) :
+    (hg : MeasurePreserving g unifUnit (unifInt N HN)) :
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#int (g r)), σ⟩ ∧ c₂ = ⟨K.fill pl(#real r), σ'⟩)
       (uniform N σ) ((uniformReal σ').map K.fillCfg) := by
@@ -166,20 +164,20 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
   have hmeas : Measurable (fun u : ℝ => ⌊(N : ℝ) * u⌋) :=
     measurable_floor.comp (measurable_const_mul _)
   refine ⟨hmeas, ext_of_singleton fun k => ?_⟩
-  have hpre : (fun u : ℝ => ⌊(N : ℝ) * u⌋) ⁻¹' {k} = Set.Ico ((k : ℝ) / N) ((k + 1) / N) := by
+  have hpre : (fun u : ℝ => ⌊(N : ℝ) * u⌋) ⁻¹' {k} = Ico ((k : ℝ) / N) ((k + 1) / N) := by
     ext u
     simp only [mem_preimage, mem_singleton_iff, floor_eq_iff, mem_Ico,
       div_le_iff₀ hNr, lt_div_iff₀ hNr]
     constructor <;> rintro ⟨h1, h2⟩ <;> constructor <;> linarith
   rw [map_apply hmeas (measurableSet_singleton k), hpre, unifInt,
     PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete, PMF.uniformOfFinset_apply]
-  show (volume.restrict (Set.Icc (0 : ℝ) 1)) _ = _
+  show (volume.restrict (Icc (0 : ℝ) 1)) _ = _
   rw [Measure.restrict_apply measurableSet_Ico]
   split_ifs with hk
   · obtain ⟨hk0, hkN⟩ := Finset.mem_Ico.mp hk
     have hk0' : (0 : ℝ) ≤ k := by exact_mod_cast hk0
     have hkN' : (k : ℝ) + 1 ≤ N := by exact_mod_cast (show k + 1 ≤ N by omega)
-    have hsub : Set.Ico ((k : ℝ) / N) ((k + 1) / N) ⊆ Set.Icc 0 1 := fun u ⟨h1, h2⟩ =>
+    have hsub : Ico ((k : ℝ) / N) ((k + 1) / N) ⊆ Icc 0 1 := fun u ⟨h1, h2⟩ =>
       ⟨(div_nonneg hk0' hNr.le).trans h1, h2.le.trans ((div_le_one hNr).mpr hkN')⟩
     rw [inter_eq_left.mpr hsub, volume_Ico, card_Ico, sub_zero, ← sub_div,
       add_sub_cancel_left, ofReal_div_of_pos hNr, ofReal_one, one_div]
@@ -202,11 +200,11 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
 
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
-  {hlc : HasLC} {GF : BundledGFunctors}
+  {hlc : HasLC} {GF : BundledGFunctors} [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing]
 local bi IProp GF
 
 section Wp
-variable [MicrometerGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing]
+variable [MicrometerGS rT hlc GF]
 
 /-- Couple `urand ~ K[urand]` by a step of `law`, spending `↯b c` on its head and handing the
 leftover `R x y` to the draws `x` and `y` (the `urand` form of `wp_couple_rand_rand_law`). -/
@@ -328,7 +326,7 @@ theorem wp_couple_urand_urand_adv (f : rT → rT)
     rw [primStep_urand, primStep_fill urand_not_isValue, primStep_urand, uniformReal, uniformReal,
       map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
         (fillCfg.measurable K) (measurable_realLit σ₁')]
-    exact uniformReal_lift_adv f hmp ε₁ ε₂ hε₂ hamort σ₁ σ₁' K
+    exact uniformReal_lift_adv σ₁ σ₁' K f hmp ε₁ ε₂ hε₂ hamort
   iexists drawCostReal σ₁ σ₁' K (advCostReal s f ε₂), s ε₁, r
   iframe %hb %hredL %hredR %hlift
   iintro %e₂ %σ₂ %e₂' %σ₂' !>
@@ -406,7 +404,7 @@ theorem wp_couple_urand_rand (N : Int) (HN : 0 < N) (g : rT → Int)
   isplitr
   · ipureintro
     rw [primStep_urand σ₁, primStep_fill rand_not_isValue, primStep_rand_unit HN]
-    exact uniformReal_rel_uniform HN g hg σ₁ σ₁' K
+    exact uniformReal_rel_uniform σ₁ σ₁' K HN g hg
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
   cases heq2
@@ -444,7 +442,7 @@ theorem wp_couple_rand_urand (N : Int) (HN : 0 < N) (g : rT → Int)
   isplitr
   · ipureintro
     rw [primStep_rand_unit HN, primStep_fill urand_not_isValue, primStep_urand σ₁']
-    exact uniform_rel_uniformReal HN g hg σ₁ σ₁' K
+    exact uniform_rel_uniformReal σ₁ σ₁' K HN g hg
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
   cases heq2
@@ -468,7 +466,7 @@ Each is proved as in `AppRelRules`: unfold `refines`, merge the spec context `K2
 apply the `wp` rule, then split the context again for the continuation. -/
 
 section Relational
-variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsTopAbsorbing]
+variable [MicrometerRGS rT hlc GF]
   {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF}
 
 /-- Couple `urand ~ urand` by a step of `law`, spending `↯b c` and handing the leftover `R x y`

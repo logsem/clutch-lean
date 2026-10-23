@@ -6,8 +6,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Monadic rules for `refines`
 
-The update, bind and return rules of the refinement judgement (main: `refines_bind`), its rules
-for non-atomic invariants, and functionality/injectivity of the `ref` and `tape` relations. -/
+The update, bind, return and non-atomic invariant rules of `refines` (main: `refines_bind`), and
+functionality/injectivity of the `ref` and `tape` relations. -/
 
 @[expose] public section
 
@@ -21,12 +21,13 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 /-- Values are inhabited by `()`. -/
 instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
 
-section Monadic
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF] {E : CoPset} {A : lrel rT GF}
-  {e1 e2 : Exp rT} {P : IProp GF}
+  [BudgetCreditGS B GF] {E : CoPset}
 local bi IProp GF
+
+section Monadic
+variable {A : lrel rT GF} {e1 e2 : Exp rT} {P : _}
 open BIFUpdate (mono except0)
 open LawfulSet (disjoint_diff_right subset_union_diff)
 open CoPset (mem_full subseteq_top)
@@ -193,16 +194,12 @@ end Monadic
 /-! ## Reference and tape relations are functional and injective -/
 
 section SemtypesProperties
-variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF] {E : CoPset}
-local bi IProp GF
 open LawfulSet (subset_trans)
 open _root_.ProbLang.Val (ext_iff)
 
 /-- If two `logN` invariants have bodies that cannot hold together, they cannot both be opened, so
 their names are equal; `hp` turns that into `l1 = l2`. -/
-theorem fupd_eq_of_inv_excl {P1 P2 : IProp GF} {p1 p2 : Loc × Loc} {l1 l2 : Loc} (HE : ↑logN ⊆ E)
+theorem fupd_eq_of_inv_excl {P1 P2 : _} {p1 p2 : Loc × Loc} {l1 l2 : Loc} (HE : ↑logN ⊆ E)
     (hp : p1 = p2 → l1 = l2) (hfalse : ⊢ P1 -∗ P2 -∗ False) :
     ⊢ inv (logN.@ p1) P1 -∗ inv (logN.@ p2) P2 -∗ |={E}=> ⌜l1 = l2⌝ := by
   by_cases h : l1 = l2

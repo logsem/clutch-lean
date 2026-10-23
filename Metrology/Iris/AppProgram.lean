@@ -19,7 +19,7 @@ Ghost state for the program heap and tapes, with lookup, update and alloc rules.
 @[expose] public section
 
 section AppProgramRA
-open Std Iris Iris.Std COFE ProbLang AgreeHeap
+open Std Iris Iris.Std COFE ProbLang AgreeHeap PartialMap
 
 variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
@@ -53,19 +53,19 @@ variable {σ : State rT} {l : Loc}
 local bi IProp GF
 
 /-- The authoritative program heap. -/
-def appHeapAuth (σ : LocHeap (Val rT)) : IProp GF :=
+def appHeapAuth (σ : LocHeap (Val rT)) :=
   iOwn (E := IApp.heap) IApp.γheap (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 
 /-- Ownership of one heap cell. -/
-def appHeapFrag (ℓ : Loc) (v : Val rT) : IProp GF :=
+def appHeapFrag (ℓ : Loc) (v : Val rT) :=
   iOwn (E := IApp.heap) IApp.γheap (HeapView.Frag ℓ (.own 1) (toAgree v))
 
 /-- The authoritative program tapes. -/
-def appTapesAuth (σ : LocHeap Tape) : IProp GF :=
+def appTapesAuth (σ : LocHeap Tape) :=
   iOwn (E := IApp.tapes) IApp.γtapes (HeapView.Auth (.own 1) (LocHeap.asAgree σ))
 
 /-- Ownership of one tape. -/
-def appTapesFrag (ℓ : Loc) (t : Tape) : IProp GF :=
+def appTapesFrag (ℓ : Loc) (t : Tape) :=
   iOwn (E := IApp.tapes) IApp.γtapes (HeapView.Frag ℓ (.own 1) (toAgree t))
 
 /-- The authoritative program state: heap and tapes. -/
@@ -94,7 +94,7 @@ theorem app_state_lookup_heap {v : Val rT} :
 /-- Writing `w` at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_heap {v w : Val rT} :
     ⊢ appStateAuth σ -∗ l ↦ v ==∗
-      appStateAuth (σ.update_heap (fun h : LocHeap (Val rT) => PartialMap.insert h l w)) ∗
+      appStateAuth (σ.update_heap (fun h : LocHeap (Val rT) => insert h l w)) ∗
         l ↦ w := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩ Hf
@@ -107,7 +107,7 @@ theorem app_state_update_heap {v w : Val rT} :
 theorem app_state_heap_alloc (v : Val rT) :
     ⊢ appStateAuth σ ==∗
       appStateAuth (σ.update_heap
-          (fun h : LocHeap (Val rT) => PartialMap.insert h σ.heap.fresh v)) ∗
+          (fun h : LocHeap (Val rT) => insert h σ.heap.fresh v)) ∗
         σ.heap.fresh ↦ v := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩
@@ -126,7 +126,7 @@ theorem app_state_lookup_tape {t : Tape} :
 /-- Replacing the tape at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_tape {t s : Tape} :
     ⊢ appStateAuth σ -∗ l ↪ₐ t ==∗
-      appStateAuth (σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h l s)) ∗
+      appStateAuth (σ.update_tapes (fun h : LocHeap Tape => insert h l s)) ∗
         l ↪ₐ s := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩ Hf
@@ -138,7 +138,7 @@ theorem app_state_update_tape {t s : Tape} :
 /-- Allocating a tape `t` yields a fresh tape `σ.tapes.fresh ↪ₐ t`. -/
 theorem app_state_tape_alloc (t : Tape) :
     ⊢ appStateAuth σ ==∗
-      appStateAuth (σ.update_tapes (fun h : LocHeap Tape => PartialMap.insert h σ.tapes.fresh t)) ∗
+      appStateAuth (σ.update_tapes (fun h : LocHeap Tape => insert h σ.tapes.fresh t)) ∗
         σ.tapes.fresh ↪ₐ t := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩
@@ -197,7 +197,7 @@ end Resources
 
 /-- Allocating the program ghost state from any initial state `σ`. -/
 theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF] (σ : State rT) :
-    ⊢@{IProp GF} |==> ∃ IA : AppGS rT GF, appStateAuth (IApp := IA) σ := by
+    ⊢@{IProp GF} |==> ∃ _ : AppGS rT GF, appStateAuth σ := by
   imod alloc_auth (E := IAPre.heap) σ.heap with ⟨%γH, HH⟩
   imod alloc_auth (E := IAPre.tapes) σ.tapes with ⟨%γT, HT⟩
   imodintro

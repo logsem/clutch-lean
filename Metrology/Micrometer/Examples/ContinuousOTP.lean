@@ -11,13 +11,11 @@ public import Metrology.ProbLang.Reals
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-! # A continuous one-time pad, adding a uniform key modulo one
 
-The encryption and `urand` have equal distributions (`otp_distribution_eq`), every typed boolean
-context sees them equal (`otp_ctx_equiv_real`), and no distinguisher has advantage
-(`otp_advantage_zero`). -/
+The encryption and `urand` have equal distributions, so no distinguisher has advantage. -/
+
+@[expose] public section
 
 open scoped ENNReal
 
@@ -34,14 +32,14 @@ open Exp (ofVal_of_toVal_some decompItem_none_of_lc_headReducible)
 
 namespace ContinuousOTP
 
-variable {rT : Type}
+variable {rT : Type} {hlc : HasLC} {GF : BundledGFunctors}
+local bi IProp GF
 
 section Abstract
 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
-local bi IProp GF
+variable [MicrometerRGS rT hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
 open ProbLangℝ LawfulProbLangℝ
 
@@ -83,8 +81,7 @@ The measure-preservation hypothesis holds by rotation invariance of `Uniform[0,1
 
 section Real
 
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
-local bi IProp GF
+variable [MicrometerRGS ℝ hlc GF] [BudgetCreditGS ℝ≥0∞ GF]
 
 variable (m : ℝ)
 
@@ -115,15 +112,16 @@ execution distributions, with no Iris in sight. -/
 def otpφ (v v' : Val rT) : Prop :=
   ∃ r : rT, v = .real r ∧ v' = .real r
 
+/-- Related values of `adequacyRel otpφ` force equal programs. -/
 theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
   rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
   exact (ofVal_of_toVal_some hv).symm.trans (ofVal_of_toVal_some hv')
 
 section Lawful
 
-variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
-local bi IProp GF
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
+/-- Related real values satisfy `otpφ`. -/
 theorem lrel_real_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :
     ⊢ lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
   iunfold lrel_real
@@ -134,8 +132,6 @@ theorem lrel_real_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :
 end Lawful
 
 section Adequacy
-
-variable {GF : BundledGFunctors}
 
 variable (m : ℝ) (σ σ' : State ℝ)
 
@@ -175,9 +171,10 @@ theorem otp_advantage_zero : advantage (otpEnc m) otpIdeal = 0 :=
 
 /-! ### Non-vacuity
 
-An equality of measures says nothing if both sides are zero, so we pin down the mass.
+An equality of measures says nothing if both sides are zero, so the mass must be pinned down.
 `urand` reaches a value in one step (`Atomic.urand`), hence `execN 2` carries all of it. -/
 
+/-- The ideal sample has total mass one. -/
 theorem otp_ideal_mass : limExecV ⟨otpIdeal, σ⟩ univ = 1 := by
   have hnv : ¬ (pl(urand) : Exp ℝ).isValue := fun ⟨w⟩ => nomatch w
   have hprim : primStep ⟨pl(urand), σ⟩ = uniformReal σ :=
@@ -198,6 +195,7 @@ theorem otp_ideal_mass : limExecV ⟨otpIdeal, σ⟩ univ = 1 := by
   rw [asExpr, map_apply measurable_expr .univ, limExec_term hstep]
   simpa using hstep
 
+/-- The encrypted sample has total mass one. -/
 theorem otp_enc_mass : limExecV ⟨otpEnc m, σ⟩ univ = 1 := by
   rw [otp_distribution_eq m σ σ, otp_ideal_mass]
 
@@ -210,25 +208,28 @@ for every well-typed boolean context. -/
 
 section Typing
 
+/-- The ideal sample is typed `real`. -/
 theorem otp_ideal_typed : Typed (rT := rT) empty otpIdeal .real := .urand
 
 variable (m : rT)
 
+/-- The body of the encryption is typed `real → real`. -/
 theorem otpLam_typed : Typed empty (otpLam m) (.arrow .real .real) :=
   Typed.lam ∅ fun _ _ => .unop_real (.binop_real .lit_real (.fvar (by simp [Tctx.insert])) rfl) rfl
 
+/-- The encryption is typed `real`. -/
 theorem otp_enc_typed : Typed empty (otpEnc m) .real := .app (otpLam_typed m) .urand
 
 end Typing
 
 section Contextual
 
-/-! `GF` is explicit, as `Σ` in Rocq's `refines_sound`: any ghost-state bundle hosting the
+/-! `GF'` is explicit, as `Σ` in Rocq's `refines_sound`: any ghost-state bundle hosting the
 Micrometer resources works. -/
 
-variable (GF : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ)
+variable (GF' : BundledGFunctors) [RefinesPreGS ℝ ℝ≥0∞ GF'] (m : ℝ)
 
-include GF
+include GF'
 
 /-- Every well-typed boolean context gives the encryption at most the ideal sample's probability
 of each outcome. -/
@@ -238,7 +239,7 @@ theorem otp_ctx_refines_real :
       (∀ x ∈ binderAtoms K, x ∉ (otpEnc m).fv ∧ x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ payloadFv K) →
       limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
+  refines_sound_fresh (GF := GF') (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
     fun _ _ _ => otp_refines_real m
 
 /-- The converse inequality: the ideal sample is at most the encryption. -/
@@ -248,7 +249,7 @@ theorem otp_ctx_refines_rev_real :
       (∀ x ∈ binderAtoms K, x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ (otpEnc m).fv ∧ x ∉ payloadFv K) →
       limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) ≤
       limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) :=
-  refines_sound_fresh (GF := GF) (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
+  refines_sound_fresh (GF := GF') (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
     fun _ _ _ => otp_refines_rev_real m
 
 /-- Every well-typed boolean context sees the same distribution on both programs. -/
@@ -258,8 +259,8 @@ theorem otp_ctx_equiv_real
       x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ payloadFv K) :
     limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) =
     limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
-  le_antisymm (otp_ctx_refines_real GF m K σ₀ b hK hbf hfresh) <|
-    otp_ctx_refines_rev_real GF m K σ₀ b hK hbf fun x hx =>
+  le_antisymm (otp_ctx_refines_real GF' m K σ₀ b hK hbf hfresh) <|
+    otp_ctx_refines_rev_real GF' m K σ₀ b hK hbf fun x hx =>
       have ⟨henc, hideal, hpayload⟩ := hfresh x hx
       ⟨hideal, henc, hpayload⟩
 

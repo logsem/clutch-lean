@@ -17,6 +17,7 @@ public import Mathlib.Probability.Distributions.Uniform
 noncomputable section
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang Set ENNReal
+open Possible (of_dirac_eq)
 
 namespace ProbLang
 
@@ -54,18 +55,18 @@ def Cfg.uniform (z : Int) (σ : State rT) : Measure (Cfg rT) :=
 
 section
 
-variable [LawfulProbLangℝ rT]
+variable [LawfulProbLangℝ rT] {e : Exp α} {m : Measure T}
 
 /-- `isValM` keeps the measure when the expression is a value. -/
-@[simp] theorem Exp.isValM_some {e : Exp α} {m : Measure T} (He : e.isValue) :
+@[simp] theorem Exp.isValM_some (He : e.isValue) :
     e.isValM m = m := ite_eq_left He
 
 /-- `isValM` keeps the measure given an `IsVal` witness. -/
-theorem Exp.isValM_some' {e : Exp α} {m : Measure T} (w : IsVal e) :
+theorem Exp.isValM_some' (w : IsVal e) :
     e.isValM m = m := isValM_some w.toIsValue
 
 /-- `isValM` is the zero measure when the expression is not a value. -/
-@[simp] theorem Exp.isValM_none {e : Exp α} {m : Measure T} (He : ¬ e.isValue) :
+@[simp] theorem Exp.isValM_none (He : ¬ e.isValue) :
     e.isValM m = 0 := ite_eq_right He
 
 /-- Uniform sampler of `⟨.lit (.real r), σ⟩` with `r` drawn from `LawfulProbLangℝ.unifUnit`. -/
@@ -274,12 +275,12 @@ abbrev HeadReducible (e : Exp rT) (σ : State rT) : Prop :=
 /-! ## Mass, and values do not step -/
 
 /-- `isValM` of a probability measure on a value is a probability measure. -/
-theorem isValM_isProbabilityMeasure {e : Exp α} {m : Measure T}
+theorem isValM_isProbabilityMeasure
     (he : e.isValue) [IsProbabilityMeasure m] : IsProbabilityMeasure (e.isValM m) := by
   rw [Exp.isValM, ite_eq_left he]; infer_instance
 
 /-- `asValM f` on a value `v` is a probability measure when `f v` is. -/
-theorem asValM_isProbabilityMeasure {e : Exp α} {f : Val α → Measure T}
+theorem asValM_isProbabilityMeasure {f : Val α → Measure T}
     {v : Val α} (hv : e.toVal? = some v) [IsProbabilityMeasure (f v)] :
     IsProbabilityMeasure (e.asValM f) := by
   simp [Exp.asValM, hv]; infer_instance
@@ -330,7 +331,7 @@ theorem head_step_mass :
   case urand => intro _; exact Cfg.uniformReal_isProbabilityMeasure
 
 /-- Every head step has total mass at most one. -/
-theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) Set.univ ≤ 1 := by
+theorem headStep_univ_le_one (ρ : Cfg rT) : (headStep ρ) univ ≤ 1 := by
   obtain ⟨e, σ⟩ := ρ
   by_cases h : headStep ⟨e, σ⟩ = 0
   · simp [h]
@@ -375,8 +376,8 @@ theorem Exp.isValM.measurable :
     Measurable (fun (p : Exp rT × Measure T) => p.1.isValM p.2) := by
   have hpred : MeasurableSet {p : Exp rT × Measure T | p.1.isValue} := by
     have : {p : Exp rT × Measure T | p.1.isValue} =
-        ({e : Exp rT | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) ×ˢ (Set.univ : Set (Measure T)) := by
-      ext ⟨e, m⟩; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
+        ({e : Exp rT | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) ×ˢ (univ : Set (Measure T)) := by
+      ext ⟨e, m⟩; simp [Exp.isValue_iff_isValueR, mem_inter_iff]
     rw [this]
     exact ((Exp.isValueR.measurable.setOf).inter Exp.lcb_zero.measurableSet).prod MeasurableSet.univ
   exact Measurable.ite hpred measurable_snd measurable_const
@@ -387,7 +388,7 @@ theorem Cfg.isValue_measurable : Measurable (fun a : Cfg rT => a.expr.isValue) :
   rw [← measurableSet_setOfPred]
   have h : {a : Cfg rT | a.expr.isValue} =
       Cfg.expr ⁻¹' ({e : Exp rT | e.isValueR} ∩ {e | Exp.lcb 0 e = true}) := by
-    ext a; simp [Exp.isValue_iff_isValueR, Set.mem_inter_iff]
+    ext a; simp [Exp.isValue_iff_isValueR, mem_inter_iff]
   rw [h]
   exact Cfg.measurable_expr ((Exp.isValueR.measurable.setOf).inter Exp.lcb_zero.measurableSet)
 
@@ -432,12 +433,12 @@ theorem Exp.asValM.measurable {γ : Type _} [MeasurableSpace γ]
   intro S hS
   have hpre : (fun (q : Option (Val rT) × γ) =>
         match q.1 with | none => (0 : Measure T) | some v => g (q.2, v)) ⁻¹' S =
-      (if (0 : Measure T) ∈ S then ({none} : Set (Option (Val rT))) ×ˢ Set.univ else ∅)
+      (if (0 : Measure T) ∈ S then ({none} : Set (Option (Val rT))) ×ˢ univ else ∅)
         ∪ (Prod.map some id) '' ((fun (p : Val rT × γ) => g (p.2, p.1)) ⁻¹' S) := by
     ext ⟨o, c⟩
     cases o with
     | none => by_cases h0 : (0 : Measure T) ∈ S <;> simp [h0]
-    | some v => simp [Set.mem_preimage, Set.mem_image, Prod.map]
+    | some v => simp [mem_preimage, mem_image, Prod.map]
   rw [hpre]
   refine MeasurableSet.union ?_ ?_
   · split_ifs
@@ -488,12 +489,12 @@ theorem Option.unwrapM.measurable_param
   intro S hS
   have hpre : (fun q : Option α × γ =>
         match q.1 with | none => (0 : Measure β) | some a => g (q.2, a)) ⁻¹' S =
-      (if (0 : Measure β) ∈ S then ({none} : Set (Option α)) ×ˢ Set.univ else ∅)
+      (if (0 : Measure β) ∈ S then ({none} : Set (Option α)) ×ˢ univ else ∅)
         ∪ (Prod.map some id) '' ((fun p : α × γ => g (p.2, p.1)) ⁻¹' S) := by
     ext ⟨o', c⟩
     cases o' with
     | none => by_cases h0 : (0 : Measure β) ∈ S <;> simp [h0]
-    | some a => simp [Set.mem_preimage, Set.mem_image, Prod.map]
+    | some a => simp [mem_preimage, mem_image, Prod.map]
   rw [hpre]
   refine MeasurableSet.union ?_ ?_
   · split_ifs
@@ -509,8 +510,8 @@ theorem measurable_map_const_uncurry {α β γ : Type _}
     (μ : Measure β) [SFinite μ] {h : α × β → γ} (hh : Measurable h) :
     Measurable (fun a : α => μ.map (fun b => h (a, b))) :=
   @measurable_map_uncurry α β γ _ _ _ h hh (fun _ => μ) measurable_const (by
-      have : ProbabilityTheory.Kernel.mk (fun _ : α => μ) measurable_const =
-          ProbabilityTheory.Kernel.const α μ := rfl
+      have : Kernel.mk (fun _ : α => μ) measurable_const =
+          Kernel.const α μ := rfl
       rw [this]; infer_instance)
 
 /-- `Cfg.uniform` is measurable. -/
@@ -1264,7 +1265,7 @@ theorem headStep.cScrut.measurable : Measurable (headStep.cScrut (rT := rT)) := 
             (fun p : State rT × Exp rT × Pat rT => (p.2.2, p.2.1)) := by
         funext _; rfl
       rw [this]
-      exact ProbLang.Exp.tryMatch.measurable_joint.comp
+      exact Exp.tryMatch.measurable_joint.comp
         ((measurable_snd.comp measurable_snd).prodMk (measurable_fst.comp measurable_snd))
     · refine Cfg.measurable_dirac_mk measurable_const measurable_fst
     · refine Cfg.measurable_dirac_mk (Exp.inl.measurable.comp measurable_snd)
@@ -1426,8 +1427,8 @@ theorem Cfg.uniform_possible {z v : Int} {σ : State rT}
   refine Possible.map (g := fun x : Int => (⟨.lit (.int x), σ⟩ : Cfg rT)) (ρ := v)
     (by measurability) ?_
   rw [possible_iff_pos, PMF.toMeasure_uniformOfFinset_apply _ _ (measurableSet_singleton v),
-    ENNReal.div_pos_iff]
-  refine ⟨?_, ENNReal.natCast_ne_top _⟩
+    div_pos_iff]
+  refine ⟨?_, natCast_ne_top _⟩
   rw [ne_eq, Nat.cast_eq_zero]
   exact Finset.card_ne_zero.mpr ⟨v, by simp [Finset.mem_filter, Finset.mem_Ico, Hv0, Hvz]⟩
 
@@ -1573,10 +1574,10 @@ theorem dirac_singleton_pos
     {a b : Cfg rT} :
     0 < (dirac a) {b} ↔ a = b := by
   constructor
-  · rw [dirac_apply' a (measurableSet_singleton b), Set.indicator_singleton, Pi.single,
+  · rw [dirac_apply' a (measurableSet_singleton b), indicator_singleton, Pi.single,
         Function.update]
     split <;> simp; trivial
-  · simp_all [dirac_apply_of_mem (Set.mem_singleton _)]
+  · simp_all [dirac_apply_of_mem (mem_singleton _)]
 
 /-- `isValM` charges a set exactly when the expression is a value and `m` charges it. -/
 @[simp]
@@ -1611,11 +1612,11 @@ theorem Cfg.uniform_singleton_pos_inv
   · simp only [hpos, dite_true] at h
     rw [map_apply (by measurability) (measurableSet_singleton ρ),
         PMF.toMeasure_uniformOfFinset_apply _ _ (by measurability),
-        ENNReal.div_pos_iff] at h
+        div_pos_iff] at h
     obtain ⟨hcard, _⟩ := h
     rw [Nat.cast_ne_zero, Finset.card_ne_zero, Finset.filter_nonempty_iff] at hcard
     obtain ⟨a, ha, hfa⟩ := hcard
-    simp only [Set.mem_preimage, Set.mem_singleton_iff] at hfa
+    simp only [mem_preimage, mem_singleton_iff] at hfa
     rw [Finset.mem_Ico] at ha
     subst hfa
     exact ⟨rfl, .inl ⟨hpos, a, rfl, ha.1, ha.2⟩⟩
@@ -1695,37 +1696,37 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
   cases h with
   | UrandS _ => exact absurd rfl hne
   | BetaLamS hv he | BetaFixS hv he =>
-    subst he; exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv])
+    subst he; exact of_dirac_eq (by simp [headStep, Exp.isValM, hv])
   | IfTrueS | IfFalseS =>
-    exact Possible.of_dirac_eq (by simp [headStep])
+    exact of_dirac_eq (by simp [headStep])
   | FstS hv1 hv2 | SndS hv1 hv2 =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2])
   | CaseLS hv | CaseRS hv =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv])
   | UnOpS hv heval =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv, Option.unwrapM, ← heval])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv, Option.unwrapM, ← heval])
   | BinOpS hv1 hv2 heval =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv1, hv2, Option.unwrapM, ← heval])
   | AllocS hvd hl hσ =>
-    subst hl hσ; exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
+    subst hl hσ; exact of_dirac_eq (by simp [headStep, Exp.asValM, hvd])
   | LoadS hlook he =>
-    subst he; exact Possible.of_dirac_eq (by simp [headStep, hlook])
+    subst he; exact of_dirac_eq (by simp [headStep, hlook])
   | StoreS hv hsome hσ =>
     subst hσ
     obtain ⟨vold, hvold⟩ := Option.isSome_iff_exists.mp hsome
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.asValM, hv, hvold])
+    exact of_dirac_eq (by simp [headStep, Exp.asValM, hv, hvold])
   | TapeS hl hσ =>
-    subst hl hσ; exact Possible.of_dirac_eq (by simp [headStep])
+    subst hl hσ; exact of_dirac_eq (by simp [headStep])
   | ScrutSuccessS hv hmatch =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv, hmatch])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv, hmatch])
   | ScrutFailureS hv hmatch =>
-    exact Possible.of_dirac_eq (by simp [headStep, Exp.isValM, hv, hmatch])
+    exact of_dirac_eq (by simp [headStep, Exp.isValM, hv, hmatch])
   | RandNoTapeS hpos hv0 hvz =>
     simp only [headStep]; exact Cfg.uniform_possible hpos hv0 hvz
   | RandNonposS hpos =>
-    exact Possible.of_dirac_eq (by simp [headStep, Cfg.uniform, Int.isPos, hpos])
+    exact of_dirac_eq (by simp [headStep, Cfg.uniform, Int.isPos, hpos])
   | RandTapeS htape hz hv hσ =>
-    subst hz hv hσ; exact Possible.of_dirac_eq (by simp [headStep, htape])
+    subst hz hv hσ; exact of_dirac_eq (by simp [headStep, htape])
   | RandTapeEmptyS hpos htape hz hv0 hvz hσ =>
     subst hσ hz
     simp only [headStep, htape, ↓reduceIte]
@@ -1735,9 +1736,9 @@ theorem HeadStepSupport.possible {e1 e2 : Exp rT} {σ1 σ2 : State rT}
     simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
     exact Cfg.uniform_possible hpos hv0 hvz
   | RandTapeNonposEmptyS hpos htape hz =>
-    subst hz; exact Possible.of_dirac_eq (by simp [headStep, htape, Cfg.uniform, Int.isPos, hpos])
+    subst hz; exact of_dirac_eq (by simp [headStep, htape, Cfg.uniform, Int.isPos, hpos])
   | RandTapeNonposOtherS hpos htape hzN =>
-    refine Possible.of_dirac_eq ?_
+    refine of_dirac_eq ?_
     simp only [headStep, htape, ite_eq_right (Ne.symm hzN)]
     simp [Cfg.uniform, Int.isPos, hpos]
 
@@ -1849,7 +1850,7 @@ theorem headStep_support_of_pos
     refine .UrandS ?_
     by_contra hr_notin
     have hsub : ({r} : Set rT) ⊆ (LawfulProbLangℝ.unifUnitSupport)ᶜ :=
-      Set.singleton_subset_iff.mpr hr_notin
+      singleton_subset_iff.mpr hr_notin
     exact ne_of_gt hpos
       (le_zero_iff.mp ((measure_mono hsub).trans_eq LawfulProbLangℝ.unifUnitIsConcentrated))
 

@@ -5,8 +5,8 @@ import Metrology.Iris.LocalBI
 
 /-! # The program-step modality `progCoupl`
 
-`progCoupl` couples one program step with spec steps through a bind law, in the shape adequacy's
-one-step lemma `lift_erasure_erasable_exp_lhs_kanto_law` consumes. -/
+`progCoupl` couples one program step with spec steps through a bind law, in the shape the
+one-step adequacy lemma consumes. -/
 
 @[expose] public section
 
@@ -17,7 +17,7 @@ open Set BIFUpdate
 
 namespace ProbLang
 
-variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
@@ -180,7 +180,7 @@ theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
 
 /-! ## Steps for a given law -/
 
-/-- One spec step from a reducible configuration, written as a `pexecN 1` run from `δ σ₁'`. -/
+/-- One spec step from a reducible configuration, written as a `pexecN 1` run from `dirac σ₁'`. -/
 theorem dirac_bind_pexecN_one (Hred' : Reducible e₁' σ₁') :
     (dirac σ₁').bind (fun σ => pexecN 1 ⟨e₁', σ⟩) = primStep ⟨e₁', σ₁'⟩ := by
   rw [dirac_bind (by fun_prop), pexecN_one, stepOrFinal_not_isValue (val_stuck Hred')]

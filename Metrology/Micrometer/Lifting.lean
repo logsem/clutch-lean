@@ -75,9 +75,8 @@ theorem wp_lift_prim_steps_coupl_adv (hv : e₁.toVal? = none) : iprop%
 
 /-! ## Absorbing exit and presampling -/
 
-/-- Budget-splitting coupled step whose continuation may exit with an absorbing budget instead of
-proving `wp` (Rocq `wp_lift_step_couple_adv_err_le_1`, whose `1 ≤ ε` exit is
-`L.Absorbing b`). -/
+/-- Budget-splitting coupled step whose continuation may exit with an absorbing budget
+(Rocq `wp_lift_step_couple_adv_err_le_1`). -/
 theorem wp_lift_prim_steps_coupl_adv_absorbing (hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' (b : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
         budgetInterp b -∗ |={E, ∅}=>

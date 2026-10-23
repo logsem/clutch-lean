@@ -25,11 +25,9 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {
   [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
+variable {Δ : TyEnv rT GF}
 
 /-! ## Pattern matching -/
-
-section Patterns
-variable {Δ : TyEnv rT GF}
 
 /-- The literal-pattern case of `pat_match_related`. -/
 theorem pat_match_lit {l l' : BaseLit rT} {v v' : Val rT}
@@ -147,8 +145,6 @@ theorem pat_match_related {τs τb : Ty} {p : Pat rT} (Hpat : PatTyped τs p τb
       · iright
         ipureintro
         simp [tryMatch, hv1, hv2, hn.1, hn.2]
-
-end Patterns
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]

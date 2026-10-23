@@ -127,7 +127,7 @@ variable (hN : 0 < t.bound) (ih_fill : ErasureIHFill m K S α)
 
 include hS hN ih_fill
 
-/-- A head step that samples `Cfg.uniform z_r` commutes with presampling. -/
+/-- A head step that samples `uniform z_r` commutes with presampling. -/
 theorem erasure_uniform_close (e_h : Exp rT) (z_r : Int) (hz : 0 < z_r)
     (hstep_ae : ∀ᵐ σ' ∂(tapePresample σ α), headStep ⟨e_h, σ'⟩ = uniform z_r σ')
     (hstep_σ : headStep ⟨e_h, σ⟩ = uniform z_r σ) :
@@ -158,7 +158,7 @@ theorem erasure_uniform_close (e_h : Exp rT) (z_r : Int) (hz : 0 < z_r)
     _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S) ∂headStep ⟨e_h, σ⟩ := by
       rw [hstep_σ]
 
-/-- A head step that samples `Cfg.uniformReal` commutes with presampling. -/
+/-- A head step that samples `uniformReal` commutes with presampling. -/
 theorem erasure_uniformReal_close (e_h : Exp rT)
     (hstep_ae : ∀ᵐ σ' ∂(tapePresample σ α), headStep ⟨e_h, σ'⟩ = uniformReal σ')
     (hstep_σ : headStep ⟨e_h, σ⟩ = uniformReal σ) :

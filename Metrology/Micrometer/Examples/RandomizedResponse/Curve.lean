@@ -50,7 +50,7 @@ theorem rrCount_curve : (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k
 
 /-! ## Below the zCDP line -/
 
-/-- Every order of the round profile is at most `ln 3`, because `(3^α + 3^{1-α}) / 4 ≤ 3^{α-1}`. -/
+/-- Every order of the round profile is at most `ln 3`. -/
 theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) : rrRenyi α ≤ ofReal (log 3) := by
   have hpos : (0 : ℝ) < 3 ^ α := by positivity
   have ht : (3 : ℝ) ≤ 3 ^ α := by
@@ -66,14 +66,12 @@ theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) : rrRenyi α ≤ ofReal (
     nlinarith
   linarith
 
-/-- One round couples at `(ln 3, 0)` in the zCDP lifting, since the curve lies below the line
-`ln 3`. -/
+/-- One round couples at `(ln 3, 0)` in the zCDP lifting. -/
 theorem rrCoupling_zcdp_of_curve : RRCoupling zcdpLifting budget := fun b b' ↦
   concentratedLifting_rel_of_renyiCurve_le (rrCoupling_curve b b') fun α _ ↦ by
     simpa [rrCurve] using rrRenyi_le_log_three α.2
 
-/-- `k` rounds are `(k ln 3, 0)`-zCDP, since the curve `k ρ_α` lies below the line `k ln 3`
-(Def. 2.4). -/
+/-- `k` rounds are `(k ln 3, 0)`-zCDP (Def. 2.4). -/
 theorem rrCount_zCDP_of_curve : (rrCountMech k σ).zCDP ⊤ (k * ofReal (log 3)) 0 :=
   Kernel.zCDP_of_renyiCurve_le (rrCount_curve k σ) fun α ↦ by
     simpa using mul_le_mul' le_rfl (rrRenyi_le_log_three α.2)

@@ -6,8 +6,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Relational rules: left state steps and coupled draws
 
-Left heap/tape steps, one-sided and coupled draws (`U` unlabelled, `T` tape, left first), under
-`[L.IsReflexive] [L.IsSupportLocal] [L.HasBind]`; main rule `refines_couple_rands_spend`. -/
+Left steps and coupled draws, with main rule `refines_couple_rands_spend`. -/
 
 @[expose] public section
 

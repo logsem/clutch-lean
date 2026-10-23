@@ -14,7 +14,7 @@ import Metrology.Iris.LocalBI
 /-! # Adaptive randomized response, with the escort law
 
 `rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, not
-`log (9/4)`, as the escort law pays the second round's cost on average (`AdaptiveRenyi`). -/
+`log (9/4)`, as the escort law pays the second round's cost on average. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi
 open scoped ENNReal
@@ -98,8 +98,6 @@ theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
 
 /-! ## The relational proof -/
 
-section Logic
-
 open Iris Iris.BI Iris.ProofMode
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
@@ -133,12 +131,10 @@ theorem rrAdaptive_refines :
       simp only [rr3Out, hd, hd', ↓reduceIte, decide_true, decide_false, Bool.not_false,
         Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values
 
-end Logic
-
 /-! ## Adequacy -/
 
 /-- The adaptive program on `false` and on `true` is within Rényi budget `log (19/12)` at
-order `2`, as `AdaptiveRenyi.renyiDivergence_adaptive` computes for the measures. -/
+order `2`, as `renyiDivergence_adaptive` computes for the measures. -/
 theorem rrAdaptive_renyi (σ σ' : State rT) :
     renyiDivergence 2 (ofReal (log (19 / 12)))
       (limExecV ⟨rrAdaptive false, σ⟩) (limExecV ⟨rrAdaptive true, σ'⟩) :=

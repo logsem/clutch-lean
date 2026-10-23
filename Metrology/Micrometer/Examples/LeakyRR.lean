@@ -11,8 +11,8 @@ import Metrology.Iris.LocalBI
 
 /-! # LeakyRR: spending `δ`
 
-Randomized response that leaks its input with probability `1/N` is `(ln 3, 1/N)`-DP (`leakyRR_DP`).
-No factor bounds the leak, so avoiding it costs `↯b (0, 1/N)`; `rr` costs `↯b (ln 3, 0)`. -/
+Randomized response that leaks its input with probability `1/N` is `(ln 3, 1/N)`-DP (`leakyRR_DP`),
+paying `(0, 1/N)` to avoid the leak and `(ln 3, 0)` for `rr`. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open GradedDivergence (dp codensity codensity_dp_avoid)
@@ -26,8 +26,6 @@ open ENNReal (ofReal)
 open Real (log)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-section Refines
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
@@ -48,8 +46,6 @@ theorem leakyRR_refines (N : Int) (hN : 0 < N) (b b' : Bool) :
   -- `hr` rules out the leaking branch on both sides
   rel_pures
   iapply rr_refines b b' $$ Hε
-
-end Refines
 
 variable (N : Int)
 

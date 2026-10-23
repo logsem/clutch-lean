@@ -14,9 +14,7 @@ public import Qq
 
 /-! # Relational tactics
 
-`rel_*` tactics for goals `REL[L] e << e' @ E : A` (after Approxis's `rel_tactics.v`), for any
-lifting `L`. Each finds the focus `K[e₀]` on its side, innermost first, and applies the matching
-rule of `AppRelRulesPure.lean` or `AppRelRules.lean` there. -/
+Tactics `rel_*` for goals `REL[L] e << e' @ E : A`, for any lifting `L`. -/
 
 namespace ProbLang.RelTactics
 open Ectx (fill)
@@ -41,16 +39,25 @@ meta def Side.isL : Side → Bool
 
 /-- A proof-mode goal `hyps ⊢ refines L E e t A`. -/
 meta structure RelGoal where
+  /-- The universe level of the proof-mode propositions. -/
   {u : Level}
+  /-- The type of proof-mode propositions. -/
   {prop : Q(Type u)}
+  /-- The BI structure on `prop`. -/
   {bi : Q(BI $prop)}
+  /-- The expression that the hypotheses `hyps` denote. -/
   {ehyps : Q($prop)}
+  /-- The proof-mode hypotheses. -/
   hyps : Hyps bi ehyps
   /-- The full `refines` application, with `E e t A` as its trailing arguments. -/
   app : LeanExpr
+  /-- The type of the programs' results. -/
   α : Q(Type)
+  /-- The mask of the refinement. -/
   E : LeanExpr
+  /-- The left program. -/
   e : Q(Exp $α)
+  /-- The right program. -/
   t : Q(Exp $α)
 
 /-- The program on `side`. -/
@@ -156,9 +163,8 @@ meta def fillHole? (e : LeanExpr) : MetaM (Option (LeanExpr × LeanExpr)) := do
   unless (e.getArg! 1).getAppFn.isMVar do return none
   return some (e.getArg! 1, e.getArg! 2)
 
-/-- Try `pred K e₀` at each focus `K.fill e₀` of `side`, innermost first, restoring the state
-after each failure; this is the redex search every tactic uses. The context `K` includes any
-abstract tail the side is written with. -/
+/-- Try `pred K e₀` at each focus of `side`, innermost first, restoring the state after each
+failure. -/
 meta partial def searchSide {β : Type} (g : RelGoal) (side : Side)
     (pred : Q(Ectx $(g.α)) → Q(Exp $(g.α)) → ProofModeM β) : ProofModeM (Option β) := do
   let (Kabs?, inner) ← splitAbstractCtx (g.side side)
@@ -213,9 +219,8 @@ meta def applyRule (tac : Name) (mvar : MVarId) (g : RelGoal) (stx : Term)
   synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
   finishRule mvar g val pre
 
-/-- The engine of `rel_apply`: apply the rule `stx` at a redex found on `sides`. Each side of its
-conclusion of the form `Ectx.fill ?K pat` is matched against the foci of that side, innermost
-first. -/
+/-- Apply the rule `stx` at a redex found on `sides`, matching each side's conclusion hole
+innermost first. -/
 meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : TacticM Unit :=
   runTacticRel tac fun mvar g => do
     let val ← elabRule stx
@@ -309,7 +314,7 @@ elab "rel_pure_l_core" focus:(ppSpace colGt term:max)? : tactic => relPureCore .
 /-- `rel_pure_r_core [e]` takes one pure step on the right. -/
 elab "rel_pure_r_core" focus:(ppSpace colGt term:max)? : tactic => relPureCore .r focus
 
-/-- `rel_finish` tidies the goal after a step with `pl_step_simp` (Rocq `rel_finish`). -/
+/-- `rel_finish` tidies the goal after a step with `pl_step_finish` (Rocq `rel_finish`). -/
 macro "rel_finish" : tactic => `(tactic| pl_step_finish)
 
 /-- `rel_pure_l [e]` takes one pure step on the left program, at `e` if given
@@ -502,11 +507,11 @@ macro "rel_store_l" : tactic =>
 macro "rel_store_r" : tactic =>
   `(tactic| (rel_pures_r; rel_apply_r refines_store_r; rel_frame_resource))
 
-/-- `rel_alloctape_l α as H` allocates a tape on the left (Rocq `rel_alloctape_l`). -/
+/-- `rel_alloctape_l l as H` allocates a tape on the left (Rocq `rel_alloctape_l`). -/
 macro "rel_alloctape_l " l:ident " as " H:ident : tactic =>
   `(tactic| (rel_pures_l; rel_apply_l refines_alloctape_nat_l; iintro %$l $H:ident))
 
-/-- `rel_alloctape_r α as H` allocates a tape on the right (Rocq `rel_alloctape_r`). -/
+/-- `rel_alloctape_r l as H` allocates a tape on the right (Rocq `rel_alloctape_r`). -/
 macro "rel_alloctape_r " l:ident " as " H:ident : tactic =>
   `(tactic| (rel_pures_r; rel_apply_r refines_alloctape_r; iintro %$l $H:ident))
 
@@ -583,14 +588,14 @@ macro_rules
     let t ← `(tactic| rel_apply (refines_couple_TT $α $α' $(a[0]!) $(a[1]!) $(a[2]!) ?_))
     `(tactic| ($t; try simp only [id_eq]))
 
-/-- `rel_couple_UU_spend S c hc Hcpl` couples `rand N ~ rand N` along `S`, spending `↯b c`
+/-- `rel_couple_UU_spend S c hc H` couples `rand N ~ rand N` along `S`, spending `↯b c`
 (relational `wp_couple_rand_rand_spend`). -/
 macro "rel_couple_UU_spend " S:term:max ppSpace c:term:max ppSpace hc:term:max ppSpace
     H:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_rands_spend _ _ $S $c $hc $H))
 
-/-- `rel_couple_UU_adv f ε₁ ε₂ hdom hbij hamort hc` couples `rand z ~ rand z` along the bijection
-`f`, paying `s (ε₂ n)` out of `s ε₁`; `0 < z` is left as a goal (relational
+/-- `rel_couple_UU_adv f e₁ e₂ hdom hbij ham hc` couples `rand z ~ rand z` along the bijection
+`f`, paying `s (e₂ n)` out of `s e₁`; `0 < z` is left as a goal (relational
 `wp_couple_rand_rand_adv`). -/
 macro "rel_couple_UU_adv " f:term:max ppSpace e₁:term:max ppSpace e₂:term:max ppSpace
     hdom:term:max ppSpace hbij:term:max ppSpace ham:term:max ppSpace hc:term:max : tactic =>

@@ -13,6 +13,7 @@ import Metrology.Iris.LocalBI
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.TotalEris
   ProbLang.TotalEris.ErisWpGS
 open scoped AppGS ENNReal
+open Finset
 
 namespace ProbLang
 namespace TotalEris
@@ -24,7 +25,7 @@ abbrev TapeIdx (N : Int) := { z : Int // 0 ≤ z ∧ z < N }
 
 /-- The finite set of all indices of a tape of size `N`. -/
 noncomputable def tapeIdxFinset (N : Int) : Finset (TapeIdx N) :=
-  (Finset.Ico 0 N).attach.image fun z => ⟨z.1, Finset.mem_Ico.mp z.2⟩
+  (Ico 0 N).attach.image fun z => ⟨z.1, mem_Ico.mp z.2⟩
 
 section presample
 variable (σ : State rT) (α : Loc) (N : Int) (bs : List (TapeIdx N))
@@ -56,15 +57,16 @@ theorem presample_choose_eq {σ' : State rT} {n : TapeIdx N}
   presample_update_injective ((Classical.choose_spec h).symm.trans hn)
 
 variable (σ α N bs)
+variable (ε₂ : TapeIdx N → ENNReal)
 
 open Classical in
 /-- Per-outcome credit for advanced composition: `ε₂ n` on the `n`-update, `0` off-support. -/
-noncomputable def presampleAdvCompX₂ (ε₂ : TapeIdx N → ENNReal) (σ' : State rT) : ENNReal :=
+noncomputable def presampleAdvCompX₂ (σ' : State rT) : ENNReal :=
   if h : ∃ n : TapeIdx N, σ' = presampleUpdate σ α N bs n then ε₂ (choose h) else 0
 
 open Classical in
 /-- `presampleAdvCompX₂` is a countable sum of singleton indicators, one per sample. -/
-theorem presampleAdvCompX₂_eq_tsum (ε₂ : TapeIdx N → ENNReal) :
+theorem presampleAdvCompX₂_eq_tsum :
     presampleAdvCompX₂ σ α N bs ε₂ = fun σ' => ∑' n : TapeIdx N,
       ({presampleUpdate σ α N bs n} : Set (State rT)).indicator (fun _ => ε₂ n) σ' := by
   funext σ'
@@ -81,7 +83,7 @@ theorem presampleAdvCompX₂_eq_tsum (ε₂ : TapeIdx N → ENNReal) :
 
 open Classical in
 /-- `presampleAdvCompX₂` evaluates to `ε₂ n` on the state updated at `n`. -/
-@[simp] theorem presampleAdvCompX₂_update (ε₂ : TapeIdx N → ENNReal) (n : TapeIdx N) :
+@[simp] theorem presampleAdvCompX₂_update (n : TapeIdx N) :
     presampleAdvCompX₂ σ α N bs ε₂ (presampleUpdate σ α N bs n) = ε₂ n := by
   unfold presampleAdvCompX₂
   rw [dite_eq_left ⟨n, rfl⟩]
@@ -117,30 +119,30 @@ theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT}
     ∫⁻ σ', presampleAdvCompX₂ σ₁ α N bs ε₂ σ' ∂(tapePresample σ₁ α) ≤ ε₁ := by
   classical
   set F : Int → ℝ≥0∞ := fun z => if hz : 0 ≤ z ∧ z < N then ε₂ ⟨z, hz⟩ else 0 with hF
-  have hCard : (Finset.Ico (0:Int) N).card = N.toNat := by rw [Int.card_Ico, sub_zero]
-  have hSumImage : (∑ n ∈ tapeIdxFinset N, ε₂ n) = ∑ z ∈ Finset.Ico (0:Int) N, F z := by
-    rw [tapeIdxFinset, Finset.sum_image fun x _ y _ hxy =>
+  have hCard : (Ico (0:Int) N).card = N.toNat := by rw [Int.card_Ico, sub_zero]
+  have hSumImage : (∑ n ∈ tapeIdxFinset N, ε₂ n) = ∑ z ∈ Ico (0:Int) N, F z := by
+    rw [tapeIdxFinset, sum_image fun x _ y _ hxy =>
           Subtype.ext (by simpa using congrArg Subtype.val hxy),
-        ← Finset.sum_attach (Finset.Ico (0:Int) N) F]
-    exact Finset.sum_congr rfl fun a _ => by simp only [hF, dite_eq_left (Finset.mem_Ico.mp a.2)]
+        ← sum_attach (Ico (0:Int) N) F]
+    exact sum_congr rfl fun a _ => by simp only [hF, dite_eq_left (mem_Ico.mp a.2)]
   calc ∫⁻ σ', presampleAdvCompX₂ σ₁ α N bs ε₂ σ' ∂(tapePresample σ₁ α) =
       ∫⁻ n : TapeIdx N, ε₂ n ∂tapeIndexUniform N := by
         rw [tapePresample_lintegral hlookup _ (measurable_presampleAdvCompX₂ σ₁ α N bs ε₂)]
         simp_rw [presampleAdvCompX₂_update]
-    _ = ∑ z ∈ Finset.Ico (0:Int) N, F z / (N.toNat : ℝ≥0∞) := by
+    _ = ∑ z ∈ Ico (0:Int) N, F z / (N.toNat : ℝ≥0∞) := by
         have hf_eq : ∀ n : TapeIdx N,
             ε₂ n = (fun ρ : Cfg rT => match ρ.expr with | .lit (.int m) => F m | _ => 0)
               ⟨.lit (.int (↑n)), σ₁⟩ := fun n => by rw [hF]; simp only [dite_eq_left n.2]
         have hIndic : (fun z : Int => (match (⟨.lit (.int z), σ₁⟩ : Cfg rT).expr with
               | .lit (.int m) => F m | _ => 0)) =
-            ((Finset.Ico (0:Int) N) : Set Int).indicator F := by
+            ((Ico (0:Int) N) : Set Int).indicator F := by
           funext z
-          by_cases hz : z ∈ Finset.Ico (0:Int) N
+          by_cases hz : z ∈ Ico (0:Int) N
           · rw [Set.indicator_of_mem hz]
           · rw [Set.indicator_of_notMem hz]
             show F z = 0
             simp only [hF]
-            exact dite_eq_right fun h => hz (Finset.mem_Ico.mpr h)
+            exact dite_eq_right fun h => hz (mem_Ico.mpr h)
         simp_rw [hf_eq]
         rw [tapeIndexUniform_lintegral_eq_cfg_uniform hN σ₁
               (fun ρ => match ρ.expr with | .lit (.int m) => F m | _ => 0)
@@ -148,13 +150,13 @@ theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT}
             Cfg.uniform_eq_map_uniformOfFinset hN σ₁, MeasureTheory.lintegral_map
               (f := fun ρ : Cfg rT => match ρ.expr with | .lit (.int m) => F m | _ => 0)
               ((measurable_litInt_elim F).comp Cfg.measurable_expr) .of_discrete,
-            hIndic, MeasureTheory.lintegral_indicator ((Finset.Ico (0:Int) N).measurableSet),
+            hIndic, MeasureTheory.lintegral_indicator ((Ico (0:Int) N).measurableSet),
             MeasureTheory.lintegral_finset]
-        refine Finset.sum_congr rfl fun z hz => ?_
+        refine sum_congr rfl fun z hz => ?_
         rw [PMF.toMeasure_apply_singleton _ _ (measurableSet_singleton z),
             PMF.uniformOfFinset_apply, ite_eq_left hz, hCard, ENNReal.div_eq_inv_mul, mul_comm]
-    _ = (∑ z ∈ Finset.Ico (0:Int) N, F z) / (N.toNat : ℝ≥0∞) := by
-        simp_rw [div_eq_mul_inv]; rw [← Finset.sum_mul]
+    _ = (∑ z ∈ Ico (0:Int) N, F z) / (N.toNat : ℝ≥0∞) := by
+        simp_rw [div_eq_mul_inv]; rw [← sum_mul]
     _ ≤ ε₁ := by rw [← hSumImage]; exact HSum
 
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]

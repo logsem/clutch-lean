@@ -14,7 +14,8 @@ namespace ProbLang
 abbrev ValSubstMap (rT : Type _) := List (Var × (Val rT × Val rT))
 
 namespace ValSubstMap
-variable {rT : Type _}
+
+variable {rT : Type _} {vs : ValSubstMap rT} {y : Var}
 
 /-! ## Lookup -/
 
@@ -27,7 +28,7 @@ def lookup : ValSubstMap rT → Var → Option (Val rT × Val rT)
     | none => if x = y then some p else none
 
 /-- A variable outside the domain has no binding. -/
-theorem lookup_eq_none_of_notMem {y : Var} : ∀ (vs : ValSubstMap rT),
+theorem lookup_eq_none_of_notMem : ∀ (vs : ValSubstMap rT),
     y ∉ (vs.map (·.1)).toFinset → vs.lookup y = none
   | [], _ => rfl
   | (z, _) :: rest, hyNot => by
@@ -36,7 +37,7 @@ theorem lookup_eq_none_of_notMem {y : Var} : ∀ (vs : ValSubstMap rT),
     simp [hyNot.1]
 
 /-- A successful lookup returns a listed entry. -/
-theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
+theorem mem_of_lookup_eq_some {w1 w2 : Val rT}
     (h : vs.lookup y = some (w1, w2)) : (y, (w1, w2)) ∈ vs := by
   induction vs with
   | nil => simp [lookup] at h
@@ -56,13 +57,13 @@ theorem mem_of_lookup_eq_some {vs : ValSubstMap rT} {y : Var} {w1 w2 : Val rT}
         exact List.mem_cons.mpr (.inl rfl)
 
 /-- A variable with a binding occurs in the list. -/
-theorem mem_of_lookup_isSome {vs : ValSubstMap rT} {x : Var}
+theorem mem_of_lookup_isSome {x : Var}
     (h : (vs.lookup x).isSome) : ∃ p ∈ vs, p.1 = x := by
   obtain ⟨⟨w1, w2⟩, hw⟩ := Option.isSome_iff_exists.mp h
   exact ⟨(x, (w1, w2)), mem_of_lookup_eq_some hw, rfl⟩
 
 /-- A listed variable has a binding. -/
-theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
+theorem lookup_isSome_of_mem {x : Var}
     (hmem : ∃ w, (x, w) ∈ vs) : (vs.lookup x).isSome := by
   obtain ⟨w, hmem⟩ := hmem
   induction vs with
@@ -82,7 +83,7 @@ theorem lookup_isSome_of_mem {vs : ValSubstMap rT} {x : Var}
 /-! ## Deleting a variable -/
 
 section delete
-variable (vs : ValSubstMap rT) (x : Var)
+variable (vs) (x : Var)
 
 /-- Remove every entry for `x`. -/
 def delete : ValSubstMap rT :=
@@ -158,7 +159,7 @@ theorem proj_lookup : ∀ (vs : ValSubstMap rT) (x : Var),
     cases lookup rest x <;> simp
 
 /-- Projected values are closed when all the paired values are. -/
-theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
+theorem proj_allClosed (h : ∀ p ∈ vs, (f p.2).1.isClosed .empty) :
     SubstMap.AllClosed (vs.map fun p => (p.1, (f p.2).1)) := by
   intro p hp
   obtain ⟨q, hmem, rfl⟩ := List.mem_map.mp hp
@@ -166,7 +167,7 @@ theorem proj_allClosed {vs : ValSubstMap rT} (h : ∀ p ∈ vs, (f p.2).1.isClos
 
 end proj
 
-variable (vs : ValSubstMap rT) (x : Var)
+variable (vs) (x : Var)
 
 /-- The substitution of left values. -/
 def fst : SubstMap rT := vs.map fun p => (p.1, p.2.1.1)

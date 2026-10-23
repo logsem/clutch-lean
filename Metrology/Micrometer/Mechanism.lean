@@ -6,9 +6,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Programs as mechanisms
 
-A ProbLang program family `p : X → Exp` run from a fixed state is a mechanism (`progMech`).
-Main result: `progMech_isPrivate`, a refinement from `↯b b` on adjacent inputs makes it
-`b`-private. -/
+A program family `p : X → Exp` run from a fixed state is a mechanism (`progMech`); a refinement
+from `↯b b` on adjacent inputs makes it `b`-private (`progMech_isPrivate`). -/
 
 @[expose] public section
 
@@ -17,11 +16,12 @@ namespace ProbLang
 open Iris Iris.BI GradedLifting ProbabilityTheory
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {X : Type} [MeasurableSpace X]
+  {B : Type} [AddCommMonoid B] [PartialOrder B]
+  [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
+  [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
+  (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → Exp rT) (σ : State rT)
 
 /-! ## The mechanism of a program family -/
-
-section
-variable (p : X → Exp rT) (σ : State rT)
 
 /-- The program family `p` run from state `σ`, as a mechanism on its inputs. -/
 noncomputable def progMech
@@ -31,6 +31,7 @@ noncomputable def progMech
 
 variable {hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT)}
 
+/-- Applying `progMech` to an input gives the limit execution of that program. -/
 @[simp]
 theorem progMech_apply (x : X) : progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
   rfl
@@ -39,17 +40,9 @@ theorem progMech_apply (x : X) : progMech p σ hp x = limExecV ⟨p x, σ⟩ :=
 instance isSubMarkovKernel_progMech : IsSubMarkovKernel (progMech p σ hp) where
   isSubProbabilityMeasure _ := limExecV.isSubProbabilityMeasure _
 
-end
-
-variable {B : Type} [AddCommMonoid B] [PartialOrder B]
-  [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful]
-  [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
-
 /-! ## Privacy from refinement -/
 
-section
-variable (GF : BundledGFunctors) [RefinesPreGS rT B GF] (p : X → Exp rT) (σ : State rT)
-  {hp : Measurable fun x ↦ (⟨p x, σ⟩ : Cfg rT)} {adj : Adjacency X} (b : B)
+variable {adj : Adjacency X} (b : B)
   (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
   (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
   (Hlog : ∀ x x', adj x x' → ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
@@ -70,7 +63,5 @@ theorem progMech_rel ⦃x x' : X⦄ (hx : adj x x') :
 theorem progMech_isPrivate {D : GradedDivergence.{0} B} [L.IsSound D] :
     (progMech p σ hp).IsPrivate D adj b :=
   fun _ _ hx ↦ IsSound.sound (progMech_rel GF p σ b A HA Hlog hx)
-
-end
 
 end ProbLang

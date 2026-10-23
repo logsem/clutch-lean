@@ -8,9 +8,7 @@ import Metrology.Iris.LocalBI
 /-! # Adaptive randomized response in χ², with the regraded escort law
 
 `rrAdaptive_chi2`: adaptive randomized response is within χ² budget `7/12`, below the
-non-adaptive `(3/2)(3/2) - 1 = 5/4` (`chi2_adaptive_lt`). χ² is Rényi-2 read along
-`c ↦ log (1 + c)`, so the escort law regrades (`escortPower`) and the Rényi proof of
-`RR.Adaptive` carries over. -/
+non-adaptive `5/4` (`chi2_adaptive_lt`), by regrading the escort law of the Rényi proof. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence PowerBudget AdaptiveRenyi
 open scoped ENNReal
@@ -43,6 +41,7 @@ theorem toRenyi_stageTwoCostChi2 : toRenyi 2 (stageTwoCostChi2 b) = stageTwoCost
 noncomputable def adaptiveCostChi2 : PowerBudget :=
   if rr3Out false n = rr3Out true m then stageTwoCostChi2 (rr3Out false n) else ⊤
 
+/-- Read as Rényi-2, the χ² adaptive cost is the Rényi adaptive cost. -/
 theorem toRenyi_adaptiveCostChi2 : toRenyi 2 (adaptiveCostChi2 n m) = adaptiveCost n m := by
   unfold adaptiveCostChi2 adaptiveCost
   split_ifs <;> simp [toRenyi_stageTwoCostChi2]
@@ -76,8 +75,6 @@ theorem escortHead_rr3_chi2 (K : Ectx rT) (σ σ' : State rT) :
 
 /-! ## The relational proof -/
 
-section Logic
-
 open Iris Iris.BI Iris.ProofMode
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS PowerBudget GF]
@@ -110,8 +107,6 @@ theorem rrAdaptive_refines_chi2 :
     by_cases hd : r < 2 <;> by_cases hd' : r' < 2 <;>
       simp only [rr3Out, hd, hd', ↓reduceIte, decide_true, decide_false, Bool.not_false,
         Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values
-
-end Logic
 
 /-! ## Adequacy -/
 

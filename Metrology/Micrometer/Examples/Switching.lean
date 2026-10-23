@@ -11,8 +11,8 @@ import Metrology.Iris.LocalBI
 
 /-! # The weak PRF/PRP switching lemma (clutch `approxis/examples/prp_prf_weak.v`)
 
-`Q` uniform queries to a lazy random function and to a lazy random permutation over `[0, N)` are
-indistinguishable up to the birthday bound `Q (Q - 1) / (2 N)` (`weak_switching_lemma`). -/
+`Q` queries to a lazy random function and a lazy random permutation over `[0, N)` differ by at most
+`Q (Q - 1) / (2 N)` (`weak_switching_lemma`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped AppGS ENNReal
@@ -37,11 +37,12 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 section
 variable (N : Int)
 
-/-- Total error of `q` coupled rounds from `c` memoised entries: `∑_{i<q} (c + i) / N`, since
-round `i` meets a collision with probability `(c + i) / N`. -/
+/-- Total error of `q` coupled rounds from `c` memoised entries: `∑_{i<q} (c + i) / N`, as round
+`i` meets a collision with probability `(c + i) / N`. -/
 noncomputable def loopErr (c q : Nat) : ENNReal :=
   (∑ i ∈ range q, ((c + i : Nat) : ENNReal)) / (N.toNat : ENNReal)
 
+/-- The loop error grows with the number of rounds. -/
 theorem loopErr_mono (c : Nat) {q q' : Nat} (h : q ≤ q') : loopErr N c q ≤ loopErr N c q' :=
   div_le_div_right (sum_le_sum_of_subset (range_mono h)) _
 
@@ -79,8 +80,8 @@ local bi IProp GF
 
 /-! ### One round: recording the answer -/
 
-/-- The tail of a round: record `(n, y)` in both result lists, then run the next round.
-`hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`. -/
+/-- The tail of a round records `(n, y)` in both result lists, then runs the next round. -/
+-- `hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`.
 theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT} {resL resS : Loc}
     {q : Nat} {n y : Int} {acc : List (Int × Int)} (hloop : loop = wLoop N := by rfl) : iprop%
     ⤇ K.fill (pl% (#loc resS ← inr(((#n, #y), !#loc resS));
@@ -117,12 +118,10 @@ theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
 
 /-! ### The loop, random function against random permutation -/
 
-/-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr`.
-
-Loop invariant: both maps hold the same memo table `m`, `r` lists the values the permutation has
-not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
-nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`), so `q` rounds cost
-`loopErr N |m| q`. -/
+/-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr N m.length q`. -/
+-- Loop invariant: both maps hold the same memo table `m`, `r` lists the values the permutation has
+-- not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
+-- nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`).
 theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc) (q : Nat) (m : List (Int × Int)) (r : List Int)
     (acc : List (Int × Int)) (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map fst).Nodup) (hN : 0 < N) : iprop%
@@ -358,9 +357,11 @@ end Games
 
 section AdequacyCor
 
+variable (N Q : Int) (σ σ' : State rT)
+
 /-- Adequacy of `wp_wPRF_wPRP`: the two games are `Rel`-close up to the birthday bound. -/
-theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (N Q : Int)
-    (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
+    (hN : 0 < N) (hQ : 0 ≤ Q) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
   apply wp_adequacy_budget_lim (GF := GF)
@@ -378,14 +379,14 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   rfl
 
 /-- `wPRF_wPRP_switching` at the canonical functors. -/
-theorem wPRF_wPRP_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRF_wPRP_switching_closed (hN : 0 < N) (hQ : 0 ≤ Q) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
-  wPRF_wPRP_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
+  wPRF_wPRP_switching N Q σ σ' (MicrometerFunctor rT ℝ≥0∞) hN hQ
 
 /-- Adequacy of `wp_wPRP_wPRF`: the two games are `Rel`-close up to the birthday bound. -/
-theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF] (N Q : Int)
-    (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
+    (hN : 0 < N) (hQ : 0 ≤ Q) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
   apply wp_adequacy_budget_lim (GF := GF)
@@ -403,23 +404,22 @@ theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   rfl
 
 /-- `wPRP_wPRF_switching` at the canonical functors. -/
-theorem wPRP_wPRF_switching_closed (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT) :
+theorem wPRP_wPRF_switching_closed (hN : 0 < N) (hQ : 0 ≤ Q) :
     (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
       (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
-  wPRP_wPRF_switching (MicrometerFunctor rT ℝ≥0∞) N Q hN hQ σ σ'
+  wPRP_wPRF_switching N Q σ σ' (MicrometerFunctor rT ℝ≥0∞) hN hQ
 
 /-- The weak PRF/PRP switching lemma: any event's probability changes by at most the
 birthday bound. -/
-theorem weak_switching_lemma (N Q : Int) (hN : 0 < N) (hQ : 0 ≤ Q) (σ σ' : State rT)
-    {S : Set (Exp rT)} (hS : MeasurableSet S) :
+theorem weak_switching_lemma (hN : 0 < N) (hQ : 0 ≤ Q) {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S +
         ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
       limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S +
         ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
   ⟨tv_le_add_of_rel
-    ((wPRF_wPRP_switching_closed N Q hN hQ σ σ').mono le_rfl adequacyRel_eq_subset) hS,
+    ((wPRF_wPRP_switching_closed N Q σ σ' hN hQ).mono le_rfl adequacyRel_eq_subset) hS,
    tv_le_add_of_rel
-    ((wPRP_wPRF_switching_closed N Q hN hQ σ' σ).mono le_rfl adequacyRel_eq_subset) hS⟩
+    ((wPRP_wPRF_switching_closed N Q σ' σ hN hQ).mono le_rfl adequacyRel_eq_subset) hS⟩
 
 end AdequacyCor
 

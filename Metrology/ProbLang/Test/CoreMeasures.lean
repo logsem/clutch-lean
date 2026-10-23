@@ -16,15 +16,15 @@ meta import Metrology.Meta
 /-! # Smoke tests for the `CoreMeasures` σ-algebras
 
 Synthetic functions on `BaseLit`, `Exp`, `Pat` and `EctxItem` whose measurability exercises every
-constructor slot of the generated `casesOn` keystones. -/
+constructor slot. -/
 
 noncomputable section ProbLangMeasures
 
 open Classical MeasureTheory ProbabilityTheory Measure ProbLang
 
-namespace ProbLang.BaseLit
-
 variable {rT : Type _}
+
+namespace ProbLang.BaseLit
 
 /-! ## Smoke tests: each one exercises every constructor slot of a keystone. -/
 
@@ -37,40 +37,11 @@ variable {rT : Type _}
   | .lbl _  => 4
   | .real _ => 5
 
-theorem tagDepth.measurable [MeasurableSpace rT] [Inhabited rT] :
-    Measurable (tagDepth : BaseLit rT → Nat) := by
-  have heq : (tagDepth : BaseLit rT → Nat)
-    = (fun b : BaseLit rT =>
-        BaseLit.casesOn (motive := fun _ => Nat) b
-          (fun _ => 0) (fun _ => 1) 2 (fun _ => 3) (fun _ => 4) (fun _ => 5)) := by
-    funext b; cases b <;> rfl
-  rw [heq]
-  apply measurable_casesOn
-    (c_int := fun _ => 0) (c_bool := fun _ => 1)
-    (c_unit := fun _ => 2) (c_loc := fun _ => 3) (c_lbl := fun _ => 4)
-    (c_real := fun _ => 5)
-  fun_prop
-
 /-- Depends on the `int` and `real` payloads. -/
 @[simp] def countLeaves (g : rT → Int) : BaseLit rT → Int
   | .real r => g r
   | .int n  => n
   | _       => 0
-
-theorem countLeaves.measurable [MeasurableSpace rT] [Inhabited rT] (g : rT → Int)
-    (hg : Measurable g) :
-    Measurable (countLeaves g : BaseLit rT → Int) := by
-  have heq : (countLeaves g : BaseLit rT → Int)
-    = (fun b : BaseLit rT =>
-        BaseLit.casesOn (motive := fun _ => Int) b
-          (fun n => n) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) g) := by
-    funext b; cases b <;> rfl
-  rw [heq]
-  apply measurable_casesOn
-    (c_int := fun n => n) (c_bool := fun _ => 0)
-    (c_unit := fun _ => 0) (c_loc := fun _ => 0) (c_lbl := fun _ => 0)
-    (c_real := g)
-  exact hg
 
 /-- Non-discrete codomain. -/
 @[simp] def endoMap : BaseLit rT → BaseLit rT
@@ -81,10 +52,49 @@ theorem countLeaves.measurable [MeasurableSpace rT] [Inhabited rT] (g : rT → I
   | .lbl l  => .lbl l
   | .real r => .real r
 
-theorem endoMap.measurable [MeasurableSpace rT] [Inhabited rT] :
+/-- Threads an accumulator through `measurable_casesOn_param`. -/
+@[simp] def addAcc : Int → BaseLit rT → Int
+  | acc, .int n  => acc + n
+  | acc, _       => acc
+
+variable [MeasurableSpace rT]
+
+/-- `tagDepth` is a measurable function. -/
+theorem tagDepth.measurable [Inhabited rT] :
+    Measurable (tagDepth : BaseLit rT → Nat) := by
+  have heq : (tagDepth : BaseLit rT → Nat) =
+    (fun b : BaseLit rT =>
+        BaseLit.casesOn (motive := fun _ => Nat) b
+          (fun _ => 0) (fun _ => 1) 2 (fun _ => 3) (fun _ => 4) (fun _ => 5)) := by
+    funext b; cases b <;> rfl
+  rw [heq]
+  apply measurable_casesOn
+    (c_int := fun _ => 0) (c_bool := fun _ => 1)
+    (c_unit := fun _ => 2) (c_loc := fun _ => 3) (c_lbl := fun _ => 4)
+    (c_real := fun _ => 5)
+  fun_prop
+
+/-- `countLeaves` is a measurable function. -/
+theorem countLeaves.measurable (g : rT → Int)
+    (hg : Measurable g) :
+    Measurable (countLeaves g : BaseLit rT → Int) := by
+  have heq : (countLeaves g : BaseLit rT → Int) =
+    (fun b : BaseLit rT =>
+        BaseLit.casesOn (motive := fun _ => Int) b
+          (fun n => n) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) g) := by
+    funext b; cases b <;> rfl
+  rw [heq]
+  apply measurable_casesOn
+    (c_int := fun n => n) (c_bool := fun _ => 0)
+    (c_unit := fun _ => 0) (c_loc := fun _ => 0) (c_lbl := fun _ => 0)
+    (c_real := g)
+  exact hg
+
+/-- `endoMap` is a measurable function. -/
+theorem endoMap.measurable :
     Measurable (endoMap : BaseLit rT → BaseLit rT) := by
-  have heq : (endoMap : BaseLit rT → BaseLit rT)
-    = (fun b : BaseLit rT =>
+  have heq : (endoMap : BaseLit rT → BaseLit rT) =
+    (fun b : BaseLit rT =>
         BaseLit.casesOn (motive := fun _ => BaseLit rT) b
           BaseLit.int BaseLit.bool BaseLit.unit BaseLit.loc BaseLit.lbl BaseLit.real) := by
     funext b; cases b <;> rfl
@@ -95,15 +105,11 @@ theorem endoMap.measurable [MeasurableSpace rT] [Inhabited rT] :
     (c_real := BaseLit.real)
   exact real.measurable
 
-/-- Threads an accumulator through `measurable_casesOn_param`. -/
-@[simp] def addAcc : Int → BaseLit rT → Int
-  | acc, .int n  => acc + n
-  | acc, _       => acc
-
-theorem addAcc.measurable [MeasurableSpace rT] [Inhabited rT] :
+/-- `addAcc` is a measurable function. -/
+theorem addAcc.measurable :
     Measurable (fun p : BaseLit rT × Int => addAcc p.2 p.1) := by
-  have heq : (fun p : BaseLit rT × Int => addAcc p.2 p.1)
-    = (fun p : BaseLit rT × Int =>
+  have heq : (fun p : BaseLit rT × Int => addAcc p.2 p.1) =
+    (fun p : BaseLit rT × Int =>
         BaseLit.casesOn (motive := fun _ => Int) p.1
           (fun z => (fun q : Int × Int => q.1 + q.2) (p.2, z))
           (fun b => (fun q : Int × Bool => q.1) (p.2, b))
@@ -126,8 +132,6 @@ end BaseLit
 end ProbLang
 
 namespace ProbLang.Exp
-
-variable {rT : Type _}
 
 /-! ### Synthetic smoke-test battery -/
 
@@ -157,25 +161,6 @@ variable {rT : Type _}
   | .urand         => 0
   | .scrut e _     => tagDepth e + 1
 
-theorem tagDepth.measurable [MeasurableSpace rT] :
-    Measurable (tagDepth : Exp rT → Nat) := by
-  apply measurable_struct_rec (f := tagDepth)
-    (c_bvar := fun _ => 0) (c_fvar := fun _ => 0) (c_lit := fun _ => 0)
-    (c_lam := (· + 1)) (c_fix := (· + 1))
-    (c_app := fun n1 n2 => max n1 n2 + 1)
-    (c_unop := fun _ n => n + 1)
-    (c_binop := fun _ n1 n2 => max n1 n2 + 1)
-    (c_cond := fun n1 n2 n3 => max (max n1 n2) n3 + 1)
-    (c_pair := fun n1 n2 => max n1 n2 + 1) (c_fst := (· + 1)) (c_snd := (· + 1))
-    (c_inl := (· + 1)) (c_inr := (· + 1))
-    (c_case := fun n1 n2 n3 => max (max n1 n2) n3 + 1)
-    (c_alloc := (· + 1)) (c_load := (· + 1)) (c_store := fun n1 n2 => max n1 n2 + 1)
-    (c_tape := (· + 1)) (c_rand := fun n1 n2 => max n1 n2 + 1)
-    (c_fail := 0)
-    (c_urand := 0)
-    (c_scrut := fun n _ => n + 1)
-  all_goals first | (intros; rfl) | fun_prop
-
 /-- Depends on the data leaves `lit` and `scrut`. -/
 @[simp] def countLeaves : Exp rT → Nat
   | .bvar _        => 0
@@ -201,25 +186,6 @@ theorem tagDepth.measurable [MeasurableSpace rT] :
   | .fail          => 0
   | .urand         => 0
   | .scrut e _     => countLeaves e + 1
-
-theorem countLeaves.measurable [MeasurableSpace rT] :
-    Measurable (countLeaves : Exp rT → Nat) := by
-  apply measurable_struct_rec (f := countLeaves)
-    (c_bvar := fun _ => 0) (c_fvar := fun _ => 0) (c_lit := fun _ => 1)
-    (c_lam := id) (c_fix := id)
-    (c_app := (· + ·))
-    (c_unop := fun _ n => n)
-    (c_binop := fun _ n1 n2 => n1 + n2)
-    (c_cond := fun n1 n2 n3 => n1 + n2 + n3)
-    (c_pair := (· + ·)) (c_fst := id) (c_snd := id)
-    (c_inl := id) (c_inr := id)
-    (c_case := fun n1 n2 n3 => n1 + n2 + n3)
-    (c_alloc := id) (c_load := id) (c_store := (· + ·))
-    (c_tape := id) (c_rand := (· + ·))
-    (c_fail := 0)
-    (c_urand := 0)
-    (c_scrut := fun n _ => n + 1)
-  all_goals first | (intros; rfl) | fun_prop
 
 /-- Non-discrete codomain. -/
 @[simp] def endoMap : Exp rT → Exp rT
@@ -247,25 +213,6 @@ theorem countLeaves.measurable [MeasurableSpace rT] :
   | .urand         => .urand
   | .scrut e p     => .scrut (endoMap e) p
 
-theorem endoMap.measurable [MeasurableSpace rT] :
-    Measurable (endoMap : Exp rT → Exp rT) := by
-  apply measurable_struct_rec (f := endoMap)
-    (c_bvar := Exp.bvar) (c_fvar := Exp.fvar) (c_lit := Exp.lit)
-    (c_lam := fun e => .lam (.lam e)) (c_fix := Exp.fix)
-    (c_app := fun e1 e2 => .app e1 e2)
-    (c_unop := fun u e => .unop u e)
-    (c_binop := fun b e1 e2 => .binop b e1 e2)
-    (c_cond := fun ec et ef => .cond ec et ef)
-    (c_pair := fun e1 e2 => .pair e1 e2) (c_fst := Exp.fst) (c_snd := Exp.snd)
-    (c_inl := Exp.inl) (c_inr := Exp.inr)
-    (c_case := fun ec el er => .case ec el er)
-    (c_alloc := Exp.alloc) (c_load := Exp.load) (c_store := fun e1 e2 => .store e1 e2)
-    (c_tape := Exp.tape) (c_rand := fun e1 e2 => .rand e1 e2)
-    (c_fail := .fail)
-    (c_urand := .urand)
-    (c_scrut := fun e p => .scrut e p)
-  all_goals first | (intros; rfl) | fun_prop
-
 /-- Threads a parameter, used at the `bvar` leaf. -/
 @[simp] def addAcc : Nat → Exp rT → Nat
   | acc, .bvar n        => acc + n
@@ -292,9 +239,72 @@ theorem endoMap.measurable [MeasurableSpace rT] :
   | acc, .urand         => acc
   | acc, .scrut e _     => addAcc acc e
 
-theorem addAcc.measurable [MeasurableSpace rT] :
+variable [MeasurableSpace rT]
+
+/-- `tagDepth` is a measurable function. -/
+theorem tagDepth.measurable :
+    Measurable (tagDepth : Exp rT → Nat) := by
+  apply measurable_struct_rec
+    (c_bvar := fun _ => 0) (c_fvar := fun _ => 0) (c_lit := fun _ => 0)
+    (c_lam := (· + 1)) (c_fix := (· + 1))
+    (c_app := fun n1 n2 => max n1 n2 + 1)
+    (c_unop := fun _ n => n + 1)
+    (c_binop := fun _ n1 n2 => max n1 n2 + 1)
+    (c_cond := fun n1 n2 n3 => max (max n1 n2) n3 + 1)
+    (c_pair := fun n1 n2 => max n1 n2 + 1) (c_fst := (· + 1)) (c_snd := (· + 1))
+    (c_inl := (· + 1)) (c_inr := (· + 1))
+    (c_case := fun n1 n2 n3 => max (max n1 n2) n3 + 1)
+    (c_alloc := (· + 1)) (c_load := (· + 1)) (c_store := fun n1 n2 => max n1 n2 + 1)
+    (c_tape := (· + 1)) (c_rand := fun n1 n2 => max n1 n2 + 1)
+    (c_fail := 0)
+    (c_urand := 0)
+    (c_scrut := fun n _ => n + 1)
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `countLeaves` is a measurable function. -/
+theorem countLeaves.measurable :
+    Measurable (countLeaves : Exp rT → Nat) := by
+  apply measurable_struct_rec
+    (c_bvar := fun _ => 0) (c_fvar := fun _ => 0) (c_lit := fun _ => 1)
+    (c_lam := id) (c_fix := id)
+    (c_app := (· + ·))
+    (c_unop := fun _ n => n)
+    (c_binop := fun _ n1 n2 => n1 + n2)
+    (c_cond := fun n1 n2 n3 => n1 + n2 + n3)
+    (c_pair := (· + ·)) (c_fst := id) (c_snd := id)
+    (c_inl := id) (c_inr := id)
+    (c_case := fun n1 n2 n3 => n1 + n2 + n3)
+    (c_alloc := id) (c_load := id) (c_store := (· + ·))
+    (c_tape := id) (c_rand := (· + ·))
+    (c_fail := 0)
+    (c_urand := 0)
+    (c_scrut := fun n _ => n + 1)
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `endoMap` is a measurable function. -/
+theorem endoMap.measurable :
+    Measurable (endoMap : Exp rT → Exp rT) := by
+  apply measurable_struct_rec
+    (c_bvar := Exp.bvar) (c_fvar := Exp.fvar) (c_lit := Exp.lit)
+    (c_lam := fun e => .lam (.lam e)) (c_fix := Exp.fix)
+    (c_app := fun e1 e2 => .app e1 e2)
+    (c_unop := fun u e => .unop u e)
+    (c_binop := fun b e1 e2 => .binop b e1 e2)
+    (c_cond := fun ec et ef => .cond ec et ef)
+    (c_pair := fun e1 e2 => .pair e1 e2) (c_fst := Exp.fst) (c_snd := Exp.snd)
+    (c_inl := Exp.inl) (c_inr := Exp.inr)
+    (c_case := fun ec el er => .case ec el er)
+    (c_alloc := Exp.alloc) (c_load := Exp.load) (c_store := fun e1 e2 => .store e1 e2)
+    (c_tape := Exp.tape) (c_rand := fun e1 e2 => .rand e1 e2)
+    (c_fail := .fail)
+    (c_urand := .urand)
+    (c_scrut := fun e p => .scrut e p)
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `addAcc` is a measurable function. -/
+theorem addAcc.measurable :
     Measurable (Function.uncurry (addAcc : Nat → Exp rT → Nat)) := by
-  apply measurable_struct_rec_param (f := addAcc)
+  apply measurable_struct_rec_param
     (c_bvar := fun acc n => acc + n) (c_fvar := fun acc _ => acc)
     (c_lit := fun acc _ => acc)
     (c_lam := fun _ n => n) (c_fix := fun _ n => n)
@@ -317,8 +327,6 @@ end ProbLang
 
 namespace ProbLang.Pat
 
-variable {rT : Type _}
-
 /-! ### Synthetic smoke-test battery -/
 
 /-- Discrete codomain. -/
@@ -329,16 +337,6 @@ variable {rT : Type _}
   | .inl p      => tagDepth p + 1
   | .inr p      => tagDepth p + 1
 
-theorem tagDepth.measurable [MeasurableSpace rT] :
-    Measurable (tagDepth : Pat rT → Nat) := by
-  apply measurable_struct_rec (f := tagDepth)
-    (c_wildcard := 0)
-    (c_lit := fun _ => 0)
-    (c_pair := fun n1 n2 => max n1 n2 + 1)
-    (c_inl := (· + 1))
-    (c_inr := (· + 1))
-  all_goals first | (intros; rfl) | fun_prop
-
 /-- Depends on the data leaf `lit`. -/
 @[simp] def countLeaves : Pat rT → Nat
   | .wildcard   => 0
@@ -346,16 +344,6 @@ theorem tagDepth.measurable [MeasurableSpace rT] :
   | .pair p1 p2 => countLeaves p1 + countLeaves p2
   | .inl p      => countLeaves p
   | .inr p      => countLeaves p
-
-theorem countLeaves.measurable [MeasurableSpace rT] :
-    Measurable (countLeaves : Pat rT → Nat) := by
-  apply measurable_struct_rec (f := countLeaves)
-    (c_wildcard := 0)
-    (c_lit := fun _ => 1)
-    (c_pair := (· + ·))
-    (c_inl := id)
-    (c_inr := id)
-  all_goals first | (intros; rfl) | fun_prop
 
 /-- Non-discrete codomain. -/
 @[simp] def endoMap : Pat rT → Pat rT
@@ -365,16 +353,6 @@ theorem countLeaves.measurable [MeasurableSpace rT] :
   | .inl p      => .inl (.inl (endoMap p))
   | .inr p      => .inr (.inr (endoMap p))
 
-theorem endoMap.measurable [MeasurableSpace rT] :
-    Measurable (endoMap : Pat rT → Pat rT) := by
-  apply measurable_struct_rec (f := endoMap)
-    (c_wildcard := .wildcard)
-    (c_lit := Pat.lit)
-    (c_pair := fun p1 p2 => .pair p1 p2)
-    (c_inl := fun p => .inl (.inl p))
-    (c_inr := fun p => .inr (.inr p))
-  all_goals first | (intros; rfl) | fun_prop
-
 /-- Threads a parameter through every recursive call. -/
 @[simp] def addAcc : Nat → Pat rT → Nat
   | acc, .wildcard   => acc
@@ -383,9 +361,45 @@ theorem endoMap.measurable [MeasurableSpace rT] :
   | acc, .inl p      => addAcc acc p
   | acc, .inr p      => addAcc acc p
 
-theorem addAcc.measurable [MeasurableSpace rT] :
+variable [MeasurableSpace rT]
+
+/-- `tagDepth` is a measurable function. -/
+theorem tagDepth.measurable :
+    Measurable (tagDepth : Pat rT → Nat) := by
+  apply measurable_struct_rec
+    (c_wildcard := 0)
+    (c_lit := fun _ => 0)
+    (c_pair := fun n1 n2 => max n1 n2 + 1)
+    (c_inl := (· + 1))
+    (c_inr := (· + 1))
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `countLeaves` is a measurable function. -/
+theorem countLeaves.measurable :
+    Measurable (countLeaves : Pat rT → Nat) := by
+  apply measurable_struct_rec
+    (c_wildcard := 0)
+    (c_lit := fun _ => 1)
+    (c_pair := (· + ·))
+    (c_inl := id)
+    (c_inr := id)
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `endoMap` is a measurable function. -/
+theorem endoMap.measurable :
+    Measurable (endoMap : Pat rT → Pat rT) := by
+  apply measurable_struct_rec
+    (c_wildcard := .wildcard)
+    (c_lit := Pat.lit)
+    (c_pair := fun p1 p2 => .pair p1 p2)
+    (c_inl := fun p => .inl (.inl p))
+    (c_inr := fun p => .inr (.inr p))
+  all_goals first | (intros; rfl) | fun_prop
+
+/-- `addAcc` is a measurable function. -/
+theorem addAcc.measurable :
     Measurable (Function.uncurry (addAcc : Nat → Pat rT → Nat)) := by
-  apply measurable_struct_rec_param (f := addAcc)
+  apply measurable_struct_rec_param
     (c_wildcard := fun acc => acc)
     (c_lit := fun acc _ => acc)
     (c_pair := fun _ n1 n2 => n1 + n2)
@@ -398,7 +412,6 @@ end ProbLang
 
 namespace ProbLang.EctxItem
 
-variable {rT : Type _}
 variable {α : Type _}
 
 /-! ### Smoke tests
@@ -430,27 +443,6 @@ variable {α : Type _}
   | .randR _   => 19
   | .scrut _   => 20
 
-theorem tagDepth.measurable [MeasurableSpace α] :
-    Measurable (tagDepth : EctxItem α → Nat) := by
-  have heq : (tagDepth : EctxItem α → Nat)
-    = (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => Nat) K
-        (fun _ => 0) (fun _ => 1) (fun _ => 2)
-        (fun _ _ => 3) (fun _ _ => 4) (fun _ _ => 5)
-        (fun _ => 6) (fun _ => 7)
-        8 9 10 11 (fun _ _ => 12) 13 14
-        (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)) := by
-    funext K; cases K <;> rfl
-  rw [heq]
-  apply measurable_casesOn
-    (c_appL := fun _ => 0) (c_appR := fun _ => 1) (c_unop := fun _ => 2)
-    (c_binopL := fun _ => 3) (c_binopR := fun _ => 4) (c_condC := fun _ => 5)
-    (c_pairL := fun _ => 6) (c_pairR := fun _ => 7)
-    (c_fst := fun _ => 8) (c_snd := fun _ => 9) (c_inl := fun _ => 10) (c_inr := fun _ => 11)
-    (c_case := fun _ => 12) (c_alloc := fun _ => 13) (c_load := fun _ => 14)
-    (c_storeL := fun _ => 15) (c_storeR := fun _ => 16) (c_tape := fun _ => 17)
-    (c_randL := fun _ => 18) (c_randR := fun _ => 19) (c_scrut := fun _ => 20)
-  all_goals fun_prop
-
 /-- Depends on whether a constructor carries a payload. -/
 @[simp] def countLeaves : EctxItem α → Nat
   | .appL _    => 1
@@ -474,27 +466,6 @@ theorem tagDepth.measurable [MeasurableSpace α] :
   | .randL _   => 1
   | .randR _   => 1
   | .scrut _   => 1
-
-theorem countLeaves.measurable [MeasurableSpace α] :
-    Measurable (countLeaves : EctxItem α → Nat) := by
-  have heq : (countLeaves : EctxItem α → Nat)
-    = (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => Nat) K
-        (fun _ => 1) (fun _ => 1) (fun _ => 1)
-        (fun _ _ => 1) (fun _ _ => 1) (fun _ _ => 1)
-        (fun _ => 1) (fun _ => 1)
-        0 0 0 0 (fun _ _ => 1) 0 0
-        (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)) := by
-    funext K; cases K <;> rfl
-  rw [heq]
-  apply measurable_casesOn
-    (c_appL := fun _ => 1) (c_appR := fun _ => 1) (c_unop := fun _ => 1)
-    (c_binopL := fun _ => 1) (c_binopR := fun _ => 1) (c_condC := fun _ => 1)
-    (c_pairL := fun _ => 1) (c_pairR := fun _ => 1)
-    (c_fst := fun _ => 0) (c_snd := fun _ => 0) (c_inl := fun _ => 0) (c_inr := fun _ => 0)
-    (c_case := fun _ => 1) (c_alloc := fun _ => 0) (c_load := fun _ => 0)
-    (c_storeL := fun _ => 1) (c_storeR := fun _ => 1) (c_tape := fun _ => 0)
-    (c_randL := fun _ => 1) (c_randR := fun _ => 1) (c_scrut := fun _ => 1)
-  all_goals fun_prop
 
 /-- Non-discrete codomain; only `appR` transforms its payload. -/
 @[simp] def endoMap : EctxItem α → EctxItem α
@@ -520,10 +491,63 @@ theorem countLeaves.measurable [MeasurableSpace α] :
   | .randR e   => .randR e
   | .scrut p   => .scrut p
 
-theorem endoMap.measurable [MeasurableSpace α] :
+/-- Threads a parameter through `measurable_casesOn_param`. -/
+@[simp] def addAcc : Nat → EctxItem α → Nat
+  | acc, .appL _    => acc + 1
+  | acc, .appR _    => acc + 1
+  | acc, _          => acc
+
+variable [MeasurableSpace α]
+
+/-- `tagDepth` is a measurable function. -/
+theorem tagDepth.measurable :
+    Measurable (tagDepth : EctxItem α → Nat) := by
+  have heq : (tagDepth : EctxItem α → Nat) =
+    (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => Nat) K
+        (fun _ => 0) (fun _ => 1) (fun _ => 2)
+        (fun _ _ => 3) (fun _ _ => 4) (fun _ _ => 5)
+        (fun _ => 6) (fun _ => 7)
+        8 9 10 11 (fun _ _ => 12) 13 14
+        (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)) := by
+    funext K; cases K <;> rfl
+  rw [heq]
+  apply measurable_casesOn
+    (c_appL := fun _ => 0) (c_appR := fun _ => 1) (c_unop := fun _ => 2)
+    (c_binopL := fun _ => 3) (c_binopR := fun _ => 4) (c_condC := fun _ => 5)
+    (c_pairL := fun _ => 6) (c_pairR := fun _ => 7)
+    (c_fst := fun _ => 8) (c_snd := fun _ => 9) (c_inl := fun _ => 10) (c_inr := fun _ => 11)
+    (c_case := fun _ => 12) (c_alloc := fun _ => 13) (c_load := fun _ => 14)
+    (c_storeL := fun _ => 15) (c_storeR := fun _ => 16) (c_tape := fun _ => 17)
+    (c_randL := fun _ => 18) (c_randR := fun _ => 19) (c_scrut := fun _ => 20)
+  all_goals fun_prop
+
+/-- `countLeaves` is a measurable function. -/
+theorem countLeaves.measurable :
+    Measurable (countLeaves : EctxItem α → Nat) := by
+  have heq : (countLeaves : EctxItem α → Nat) =
+    (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => Nat) K
+        (fun _ => 1) (fun _ => 1) (fun _ => 1)
+        (fun _ _ => 1) (fun _ _ => 1) (fun _ _ => 1)
+        (fun _ => 1) (fun _ => 1)
+        0 0 0 0 (fun _ _ => 1) 0 0
+        (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)) := by
+    funext K; cases K <;> rfl
+  rw [heq]
+  apply measurable_casesOn
+    (c_appL := fun _ => 1) (c_appR := fun _ => 1) (c_unop := fun _ => 1)
+    (c_binopL := fun _ => 1) (c_binopR := fun _ => 1) (c_condC := fun _ => 1)
+    (c_pairL := fun _ => 1) (c_pairR := fun _ => 1)
+    (c_fst := fun _ => 0) (c_snd := fun _ => 0) (c_inl := fun _ => 0) (c_inr := fun _ => 0)
+    (c_case := fun _ => 1) (c_alloc := fun _ => 0) (c_load := fun _ => 0)
+    (c_storeL := fun _ => 1) (c_storeR := fun _ => 1) (c_tape := fun _ => 0)
+    (c_randL := fun _ => 1) (c_randR := fun _ => 1) (c_scrut := fun _ => 1)
+  all_goals fun_prop
+
+/-- `endoMap` is a measurable function. -/
+theorem endoMap.measurable :
     Measurable (endoMap : EctxItem α → EctxItem α) := by
-  have heq : (endoMap : EctxItem α → EctxItem α)
-    = (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => EctxItem α) K
+  have heq : (endoMap : EctxItem α → EctxItem α) =
+    (fun K : EctxItem α => EctxItem.casesOn (motive := fun _ => EctxItem α) K
         EctxItem.appL (fun e => EctxItem.appR (Exp.fst e)) EctxItem.unop
         EctxItem.binopL EctxItem.binopR EctxItem.condC
         EctxItem.pairL EctxItem.pairR
@@ -550,16 +574,11 @@ theorem endoMap.measurable [MeasurableSpace α] :
     (c_scrut := EctxItem.scrut)
   all_goals fun_prop
 
-/-- Threads a parameter through `measurable_casesOn_param`. -/
-@[simp] def addAcc : Nat → EctxItem α → Nat
-  | acc, .appL _    => acc + 1
-  | acc, .appR _    => acc + 1
-  | acc, _          => acc
-
-theorem addAcc.measurable [MeasurableSpace α] :
+/-- `addAcc` is a measurable function. -/
+theorem addAcc.measurable :
     Measurable (fun p : EctxItem α × Nat => addAcc p.2 p.1) := by
-  have heq : (fun p : EctxItem α × Nat => addAcc p.2 p.1)
-    = (fun p : EctxItem α × Nat => EctxItem.casesOn (motive := fun _ => Nat) p.1
+  have heq : (fun p : EctxItem α × Nat => addAcc p.2 p.1) =
+    (fun p : EctxItem α × Nat => EctxItem.casesOn (motive := fun _ => Nat) p.1
         (fun _ => p.2 + 1) (fun _ => p.2 + 1) (fun _ => p.2)
         (fun _ _ => p.2) (fun _ _ => p.2) (fun _ _ => p.2)
         (fun _ => p.2) (fun _ => p.2)

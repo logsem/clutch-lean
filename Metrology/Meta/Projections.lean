@@ -3,13 +3,13 @@ module
 public import Lean
 public import Metrology.Meta.Build
 
-@[expose] public section
-
-open Lean Meta
-
 /-! # Constructors and projections of tuples
 
 The uncurried constructor `c.ι` and its inverse `c.π`, for deriving `MeasurableSpace`. -/
+
+@[expose] public section
+
+open Lean Meta
 
 namespace Metrology.Meta
 

@@ -13,8 +13,7 @@ public import Qq
 /-!
 # `twp_*` tactics
 
-The tactics `twp_bind`, `twp_pure`, `twp_pures`, `twp_pure_at` and `twp_value`
-for `tglWp` goals.
+The `twp_*` tactics for `tglWp` goals.
 -/
 
 namespace ProbLang.TotalEris
@@ -41,8 +40,9 @@ meta structure TglWpGoal where
   {u : Level}
   /-- The type of the probabilistic language. -/
   {α : Q(Type)}
-  /-- The `LawfulProbLangℝ` instance on `α`. -/
+  /-- The `MeasurableSpace` instance on `α`. -/
   instMS : Q(MeasurableSpace $α)
+  /-- The `LawfulProbLangℝ` instance on `α`. -/
   instPL : Q(@LawfulProbLangℝ $α $instMS)
   /-- The global functors. -/
   {GF : Q(BundledGFunctors.{0, 0, 0})}
@@ -116,7 +116,7 @@ elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
     -- `bi_least_fixpoint` (heartbeat blow-up).
     let bindPf ← mkAppByName ``ErisWpGS.tglWp_bind
       [(`rT, α), (`GF, GF), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)] [instMS, instPL, instWp]
-    let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, bindPf]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, bindPf]
     mvar.assign transPf
 
 /-! ## `twp_pure` -/
@@ -144,7 +144,7 @@ elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
     let stepPf ← mkAppByName ``ErisWpGS.twp_pure_step_ctx
       [(`rT, α), (`GF, GF), (`K, K), (`φ, φ), (`n, n), (`e₁, e₁), (`e₂, e₂), (`Hφ, HΦ),
         (`E, E), (`Φ, Φ)] [instMS, instPL, instWp, step.inst]
-    let transPf ← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, stepPf]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, stepPf]
     mvar.assign transPf
 
 /-! ## `twp_value` -/
@@ -178,7 +178,7 @@ elab "twp_value" : tactic =>
     let valPf ← mkAppByName valLemma
       [(`rT, α), (`GF, GF), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
       [instMS, instPL, instWp]
-    mvar.assign (← mkAppM ``Iris.BI.BIBase.Entails.trans #[pf, valPf])
+    mvar.assign (← mkAppM ``BI.BIBase.Entails.trans #[pf, valPf])
 
 /-! ## Composite tactics -/
 

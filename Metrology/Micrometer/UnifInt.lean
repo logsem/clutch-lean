@@ -11,12 +11,9 @@ public import Metrology.Couplings.Bridges.AddCoupl
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-/-!
-# Uniform integer draws and their couplings
+/-! # Uniform integer draws and their couplings
 
-`unifInt z` is the uniform measure on `[0, z)`; the file couples two such draws (along bijections,
-injections, under a context, with outcome-dependent cost) and proves the `primStep` of `rand`.
--/
+`unifInt z` is the uniform measure on `[0, z)`; the file couples two such draws and steps `rand`. -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -25,6 +22,7 @@ open MeasureTheory.Measure (ext_of_lintegral map_map dirac map_id)
 open scoped AppGS
 
 namespace ProbLang
+open MeasureTheory
 open MeasurableSet (of_discrete)
 
 open Cfg Exp Finset Ectx HeadReducible IsLawful View AddCoupl
@@ -43,9 +41,8 @@ variable {rT : Type} {B : Type} {L : GradedLifting.{0} B} {z zL zR : Int}
 
 variable (s : ENNReal → B)
 
-/-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤`
-elsewhere. Unlike `Cfg.drawCost`, which is keyed by both draws, this is keyed by the left draw
-along the bijection `f`. -/
+/-- The leftover cost of a coupled draw: `s (ε₂ n)` at the pair drawn from `n`, and `⊤` elsewhere,
+keyed by the left draw along the bijection `f`. -/
 noncomputable def Cfg.advLeftover [_root_.Top B] (z : Int) (f : Int → Int) (σ σ' : State rT)
     (K : Ectx rT) (ε₂ : Int → ENNReal) : Cfg rT → Cfg rT → B :=
   fun ρ₁ ρ₂ => by
@@ -65,13 +62,9 @@ theorem Cfg.advLeftover_apply [_root_.Top B] (f : Int → Int) (σ σ' : State r
 
 variable [MeasurableSpace rT]
 
-section
-
-open MeasureTheory
-
 /-- The uniform measure on `[0, z)`. -/
 noncomputable def unifInt (z : Int) (hz : 0 < z) : Measure Int :=
-  (PMF.uniformOfFinset (Finset.Ico 0 z) (nonempty_Ico.mpr hz)).toMeasure
+  (PMF.uniformOfFinset (Ico 0 z) (nonempty_Ico.mpr hz)).toMeasure
 
 instance unifInt.isProbabilityMeasure {hz : 0 < z} : IsProbabilityMeasure (unifInt z hz) :=
   PMF.toMeasure.isProbabilityMeasure _
@@ -82,20 +75,16 @@ theorem Cfg.uniform_eq_map (σ : State rT) :
     uniform z σ = (unifInt z hz).map fun n => (⟨pl(#int n), σ⟩ : Cfg rT) :=
   uniform_eq_map_uniformOfFinset hz σ
 
-end
-
 /-! ## The uniform measure `unifInt` and its exact bijection coupling -/
 
 section UniformInt
-
-open MeasureTheory
 
 variable (hz : 0 < z)
 
 /-- Integrals against `unifInt z` are averages over `[0, z)`. -/
 theorem lintegral_unifInt (φ : Int → ENNReal) :
-    ∫⁻ n, φ n ∂unifInt z hz = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, φ n := by
-  have hcard : (Finset.Ico (0 : Int) z).card = z.toNat := by rw [card_Ico]; omega
+    ∫⁻ n, φ n ∂unifInt z hz = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Ico 0 z, φ n := by
+  have hcard : (Ico (0 : Int) z).card = z.toNat := by rw [card_Ico]; omega
   rw [unifInt, lintegral_countable', tsum_eq_sum fun n hn => by
     rw [PMF.toMeasure_apply_singleton _ _ of_discrete,
       PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero], mul_sum]
@@ -105,7 +94,7 @@ theorem lintegral_unifInt (φ : Int → ENNReal) :
 
 /-- `unifInt z` gives each set the share of `[0, z)` it contains. -/
 theorem unifInt_apply (S : Set Int) :
-    unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico 0 z, S.indicator 1 n := by
+    unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Ico 0 z, S.indicator 1 n := by
   rw [← lintegral_unifInt, lintegral_indicator_one of_discrete]
 
 /-- `unifInt N` gives the singleton `{0}` mass `1/N`. -/
@@ -114,17 +103,18 @@ theorem unifInt_singleton_zero {N : Int} (hN : 0 < N) :
   rw [unifInt, PMF.toMeasure_apply_singleton _ _ of_discrete,
     PMF.uniformOfFinset_apply_of_mem _ (mem_Ico.2 ⟨le_rfl, hN⟩), card_Ico, sub_zero]
 
-section
-variable (hz : 0 < z)
-
 /-- `unifInt z` is carried by `[0, z)`. -/
 theorem unifInt_compl_Ico : unifInt z hz (Set.Ico 0 z)ᶜ = 0 := by
   rw [unifInt, PMF.toMeasure_apply_eq_zero_iff _ measurableSet_Ico.compl]
   simp [Set.disjoint_compl_right_iff_subset]
 
+section
+variable (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
+  (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
+include hdom hbij
+
 /-- The uniform measure on `[0, z)` is invariant under a bijection of `[0, z)`. -/
-theorem unifInt_map_bijOn (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
+theorem unifInt_map_bijOn :
     (unifInt z hz).map f = unifInt z hz := by
   refine ext_of_lintegral _ fun ψ hψ => ?_
   rw [lintegral_map hψ of_discrete, lintegral_unifInt, lintegral_unifInt,
@@ -133,8 +123,7 @@ theorem unifInt_map_bijOn (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z →
 variable (L) in
 /-- Exact coupling of two uniform draws on `[0, z)` along a bijection `f`. -/
 theorem unifInt_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] [L.IsReflexive]
-    [L.IsSupportLocal] (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
+    [L.IsSupportLocal] :
     L.Rel 0 (fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) (unifInt z hz) (unifInt z hz) := by
   -- reflexivity pushed along `f` relates `unifInt z` to `f_* unifInt z`, which is `unifInt z`
   have h := (rel_graph (L := L) (unifInt z hz) (f := f) of_discrete).restrict
@@ -164,21 +153,20 @@ variable (Hz : 0 < z)
 include Hz
 
 variable (σ σ' : State rT) (f : Int → Int)
+  (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
+  (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
+include hdom hbij
 
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)`. -/
 theorem Cfg.uniform_rel_bij_fill [Zero B] [Add B] [Preorder B]
-    [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (K : Ectx rT)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
+    [OrderTop B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (K : Ectx rT) :
     L.Rel 0 (CoupledDraw z f σ σ' K) (uniform z σ) ((uniform z σ').map K.fillCfg) :=
   uniform_rel_fill Hz Hz σ σ' K (unifInt_rel_bij L Hz f hdom hbij)
     fun n _ ⟨h0, h1, hm⟩ => ⟨n, h0, h1, rfl, hm ▸ rfl⟩
 
 /-- Exact coupling of `rand z ~ rand z` along a bijection of `[0, z)` (the `tv` instance of
 `unifInt_rel_bij`). -/
-theorem Cfg.uniform_addCoupl_bij
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
+theorem Cfg.uniform_addCoupl_bij :
     AddCoupl 0 {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < z ∧
         p.1 = ⟨pl(#int n), σ⟩ ∧ p.2 = ⟨pl(#int (f n)), σ'⟩}
       (uniform z σ) (uniform z σ') := by
@@ -191,11 +179,9 @@ theorem Cfg.uniform_addCoupl_bij
 
 /-- Exact coupling of `rand z ~ K[rand z]` along a bijection of `[0, z)` (the `tv` instance of
 `Cfg.uniform_rel_bij_fill`). -/
-theorem Cfg.uniform_addCoupl_bij_fill (K : Ectx rT)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) :
+theorem Cfg.uniform_addCoupl_bij_fill (K : Ectx rT) :
     AddCoupl 0 {p | CoupledDraw z f σ σ' K p.1 p.2} (uniform z σ) ((uniform z σ').map K.fillCfg) :=
-  (uniform_rel_bij_fill Hz σ σ' f K hdom hbij).addCoupl
+  (uniform_rel_bij_fill Hz σ σ' f hdom hbij K).addCoupl
 
 end
 
@@ -220,17 +206,17 @@ theorem unifInt_addCoupl_inj (HzL : 0 < zL) (Hle : zL ≤ zR) (f : Int → Int)
   have hcast : (zR.toNat : ENNReal) = (zL.toNat : ENNReal) + ((zR - zL).toNat : ENNReal) := by
     norm_cast
     omega
-  set S : ENNReal := ∑ n ∈ Finset.Ico (0 : Int) zL, ψ (f n)
-  have h1 : ∑ n ∈ Finset.Ico (0 : Int) zL, φ n ≤ S :=
+  set S : ENNReal := ∑ n ∈ Ico (0 : Int) zL, ψ (f n)
+  have h1 : ∑ n ∈ Ico (0 : Int) zL, φ n ≤ S :=
     sum_le_sum fun n hn => Hpt ⟨(mem_Ico.1 hn).1, (mem_Ico.1 hn).2, rfl⟩
-  have h2 : S ≤ ∑ m ∈ Finset.Ico (0 : Int) zR, ψ m := sum_Ico_comp_le_of_injOn hdom hinj ψ
+  have h2 : S ≤ ∑ m ∈ Ico (0 : Int) zR, ψ m := sum_Ico_comp_le_of_injOn hdom hinj ψ
   have h3 : S ≤ (zL.toNat : ENNReal) := sum_Ico_le_toNat fun n => Hψb _
-  calc (zL.toNat : ENNReal)⁻¹ * ∑ n ∈ Finset.Ico (0 : Int) zL, φ n
+  calc (zL.toNat : ENNReal)⁻¹ * ∑ n ∈ Ico (0 : Int) zL, φ n
     _ ≤ (zL.toNat : ENNReal)⁻¹ * S := by gcongr
     _ ≤ (zR.toNat : ENNReal)⁻¹ * S + ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal) := by
       rw [hcast]
       exact inv_mul_le_inv_mul_add (by omega) h3
-    _ ≤ (zR.toNat : ENNReal)⁻¹ * ∑ m ∈ Finset.Ico (0 : Int) zR, ψ m +
+    _ ≤ (zR.toNat : ENNReal)⁻¹ * ∑ m ∈ Ico (0 : Int) zR, ψ m +
         ((zR - zL).toNat : ENNReal) / (zR.toNat : ENNReal) := by gcongr
 
 /-- Uniform coupling along an injection, smaller bound on the right:
@@ -246,8 +232,8 @@ theorem unifInt_addCoupl_rev_inj (HzR : 0 < zR) (Hle : zR ≤ zL) (f : Int → I
   rintro ⟨φ, Hφm, Hφb⟩ ⟨ψ, Hψm, Hψb⟩ Hpt
   show ∫⁻ c, φ c ∂(unifInt zL _) ≤ ∫⁻ c, ψ c ∂(unifInt zR _) + _
   rw [lintegral_unifInt, lintegral_unifInt]
-  set I := Finset.Ico (0 : Int) zR
-  set J := Finset.Ico (0 : Int) zL
+  set I := Ico (0 : Int) zR
+  set J := Ico (0 : Int) zL
   have hinjOn : Set.InjOn f I := fun n hn m hm heq => by
     simp only [I, coe_Ico, Set.mem_Ico] at hn hm
     exact hinj n m hn.1 hn.2 hm.1 hm.2 heq
@@ -340,7 +326,7 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill (HzR : 0 < zR)
 
 /-! ## Steps of `rand` -/
 
-variable [ProbLang.LawfulProbLangℝ rT]
+variable [LawfulProbLangℝ rT]
 
 /-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_unit (Hz : 0 < z) (σ : State rT) :
@@ -445,7 +431,7 @@ theorem Cfg.uniform_lift_adv [AddCommMonoid B] [PartialOrder B]
     (ε₂ : Int → ENNReal) (σ σ' : State rT) (K : Ectx rT)
     (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
-    (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) :
+    (hamort : (∑ n ∈ Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) :
     L (s ε₁) (advLeftover s z f σ σ' K ε₂) (primStep ⟨pl(rand(#z, #())), σ⟩)
       (primStep ⟨K.fill pl(rand(#z, #())), σ'⟩) := by
   classical
@@ -484,7 +470,7 @@ theorem id_dom_range : ∀ n, 0 ≤ n → n < z → 0 ≤ id n ∧ id n < z :=
 
 /-- Avoiding one value `bad` costs an average of at most `1/z`. -/
 theorem avoid_one_amort (bad : Int) :
-    (∑ n ∈ Finset.Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
+    (∑ n ∈ Ico 0 z, if n = bad then (1 : ENNReal) else 0) / z.toNat ≤
       (z.toNat : ENNReal)⁻¹ := by
   rw [← one_div]
   gcongr
@@ -502,7 +488,7 @@ section TimelessTapes
 variable {GF : BundledGFunctors} (l : Loc) (t : Tape) (v : Val rT)
 
 instance heapView_tape_frag_discreteE :
-    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree t)) :=
+    DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree t)) :=
   frag_discrete
 
 instance appTapesFrag_timeless [AppGS rT GF] :
@@ -514,7 +500,7 @@ instance specTapesFrag_timeless :
     Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
 
 instance heapView_heap_frag_discreteE :
-    OFE.DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree v)) :=
+    DiscreteE (HeapView.Frag (H := LocHeap) l (.own 1) (toAgree v)) :=
   frag_discrete
 
 instance appHeapFrag_timeless [AppGS rT GF] :

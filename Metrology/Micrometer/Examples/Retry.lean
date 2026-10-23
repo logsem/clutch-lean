@@ -12,8 +12,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Amplification: flipping a coin until heads returns `0` almost surely
 
-Each flip moves `↯b ε` onto tails as `↯b (2ε)`; amplification (`refines_ind_amp`) turns any
-positive credit into the absorbing `↯b 1`, so `retry` returns `0` with probability `1`. -/
+Amplification (`refines_ind_amp`) turns any positive credit into `↯b 1`, so `retry` returns `0`
+almost surely. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -38,8 +38,6 @@ theorem flipCredit_avg : (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int)
   rw [show Finset.Ico (0 : Int) 2 = {0, 1} by decide]
   simp [flipCredit]
   exact div_le_of_le_mul (mul_comm _ _).le
-
-section Refines
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
@@ -70,8 +68,6 @@ theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : 
     rel_pure_r 2
     rel_fold
     iapply IH $$ Hn
-
-end Refines
 
 /-- On every event, `retry` is at least as likely as the value `0`. -/
 theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :

@@ -7,8 +7,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Adequacy at total variation
 
-The generic adequacy theorems at `codensity tv`, restated as additive couplings `AddCoupl ε` (or as
-`μ S ≤ ν S + ε`), plus a left-step rule against a frozen right state. -/
+Adequacy at `codensity tv`, restated as additive couplings `AddCoupl ε`. -/
 
 @[expose] public section
 
@@ -111,12 +110,10 @@ end
 
 /-! ## Stepping against a frozen right state -/
 
-section
-variable [MicrometerWpGS (rT := rT) GF]
-
 /-- Step the left program against a right state that does not move, for an additive coupling
 with the right Dirac measure. -/
-theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT} {σ₁' : State rT}
+theorem progCoupl_step_l_dret [MicrometerWpGS (rT := rT) GF] {e₁ : Exp rT} {σ₁ : State rT}
+    {e₁' : Exp rT} {σ₁' : State rT}
     {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
     {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF} (Hε : ε₁ + ε₂ ≤ ε)
     (Hred : Reducible e₁ σ₁)
@@ -134,7 +131,5 @@ theorem progCoupl_step_l_dret {e₁ : Exp rT} {σ₁ : State rT} {e₁' : Exp rT
   iintro %e₂ %σ₂ %σ₂' %HR'
   obtain ⟨HR, rfl⟩ := HR'
   iapply H $$ %e₂ %σ₂ %HR
-
-end
 
 end ProbLang

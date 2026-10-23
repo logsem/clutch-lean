@@ -11,8 +11,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Skip-zero sampler within `1/N` of uniform in total variation
 
-`skipZero N` (uniform with `0` reported as `1`) is within `1/N` tv of `unif N`: a `↯b (1/N)`
-credit pays for the one outcome `0` where the draws differ (`unif_refines_skipZero`). -/
+`skipZero N` (uniform with `0` reported as `1`) is within `1/N` tv of `unif N`
+(`unif_refines_skipZero`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -21,8 +21,6 @@ namespace ProbLang
 namespace SkipZero
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-section Refines
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
@@ -41,8 +39,6 @@ theorem unif_refines_skipZero (N : Int) (hN : 0 < N) :
   -- `n ≠ 0`, so `skipZero`'s branch returns `n` too
   rel_pures
   rel_values
-
-end Refines
 
 /-- On every event, `unif N` is at most `1/N` more likely than `skipZero N`: the tv bound,
 read off `unif_refines_skipZero` by adequacy. -/

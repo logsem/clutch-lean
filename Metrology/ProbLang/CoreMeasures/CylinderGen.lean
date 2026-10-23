@@ -13,8 +13,8 @@ open Lean Elab Command Meta Metrology.Meta
 
 /-! # Measurable structure on inductive types
 
-`deriving instance MeasurableSpace for T` gives `T` a σ-algebra making its constructors measurable
-embeddings, and its functions by cases or structural recursion measurable. -/
+`deriving instance MeasurableSpace for T` gives `T` a σ-algebra making its constructors
+measurable embeddings. -/
 
 namespace Metrology.CylinderGen
 

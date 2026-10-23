@@ -53,7 +53,7 @@ theorem zero_of_null {φ : α → Prop} (μ : MeasureTheory.Measure α)
     (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ :=
   Hnull.le
 
-/-- A measure supported on points satisfying `φ` satisfies `Pgl 0 φ`. -/
+/-- A measure whose atoms are all possible satisfies `Pgl 0` of `Possible`. -/
 theorem zero_possible [MeasurableSingletonClass α]
     (h : IsAtomicSupport μ) : Pgl 0 (fun a => Possible a μ) μ := by
   show μ {x | ¬ Possible x μ} ≤ 0
@@ -120,6 +120,7 @@ theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
 
 variable [ErisWpGS (rT := rT) GF]
 variable {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z : Cfg rT → ENNReal → IProp GF}
+variable {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF}
 
 /-! ## The three step kinds -/
 
@@ -153,8 +154,7 @@ abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (∀ σ', ⌜R σ'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (⟨e₁, σ'⟩, ε'')) (X₂ σ')))
 
 /-- `glmPrimStep'` is monotone in its continuation, under the wand. -/
-theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
-    {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
+theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁) ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
   iintro ⟨HZ, HPrim⟩
   icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
@@ -256,8 +256,7 @@ theorem glm'_strong_ind {Ψ : GlmState rT → IProp GF}
 /-! ## Monotonicity -/
 
 /-- `glm'` is monotone in its continuation `Z`, under the wand. -/
-theorem glm'_strong_mono
-    {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
+theorem glm'_strong_mono :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε Z₂ := by
   iintro ⟨HZ, HG⟩
@@ -314,8 +313,7 @@ theorem glm'_mono_grading
     iexact HCont
 
 /-- `glm'` is monotone in the credit budget, under the wand. -/
-theorem glm'_strong_mono_grading {ε ε' : ENNReal}
-    {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} (hε : ε ≤ ε') :
+theorem glm'_strong_mono_grading {ε ε' : ENNReal} (hε : ε ≤ ε') :
     iprop((∀ ρ ε'', Z₁ ρ ε'' -∗ Z₂ ρ ε'') ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε' Z₂ := by
   iintro ⟨HZ, HG⟩
@@ -324,8 +322,7 @@ theorem glm'_strong_mono_grading {ε ε' : ENNReal}
   iframe
 
 /-- `glm'` is monotone in its continuation `Z`. -/
-theorem glm'_mono_pred
-    {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
+theorem glm'_mono_pred :
     iprop((□ (∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε')) ∗ glm' e σ ε Z₁) ⊢
       glm' e σ ε Z₂ := by
   iintro ⟨#HZ, HG⟩

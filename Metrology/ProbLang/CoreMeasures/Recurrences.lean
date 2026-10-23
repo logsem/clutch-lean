@@ -8,8 +8,7 @@ meta import Metrology.ProbLang.CoreMeasures.ArmTactics
 
 @[expose] public section
 
-/-!
-# Measurability of the syntax functions the semantics uses
+/-! # Measurability of the syntax functions the semantics uses
 
 Proves `decomp`, `BinOp.eval` and `Pat.tryMatch` measurable, among other syntax functions.
 -/
@@ -26,21 +25,27 @@ variable {rT : Type _}
 
 /-! ### Constructor extractors -/
 
+section
+
+variable (e : Exp rT)
+
 /-- The literal of `e`, if `e` is one. -/
-def litExtract (e : Exp rT) : Option (BaseLit rT) :=
+def litExtract : Option (BaseLit rT) :=
   match e with | .lit b => some b | _ => none
 
 /-- The components of `e`, if `e` is a pair. -/
-def pairExtract (e : Exp rT) : Option (Exp rT × Exp rT) :=
+def pairExtract : Option (Exp rT × Exp rT) :=
   match e with | .pair e1 e2 => some (e1, e2) | _ => none
 
 /-- The payload of `e`, if `e` is a left injection. -/
-def inlExtract (e : Exp rT) : Option (Exp rT) :=
+def inlExtract : Option (Exp rT) :=
   match e with | .inl e' => some e' | _ => none
 
 /-- The payload of `e`, if `e` is a right injection. -/
-def inrExtract (e : Exp rT) : Option (Exp rT) :=
+def inrExtract : Option (Exp rT) :=
   match e with | .inr e' => some e' | _ => none
+
+end
 
 /-- The integer of `l`, if `l` is one. -/
 def _root_.ProbLang.BaseLit.intExtract (l : BaseLit rT) : Option Int :=

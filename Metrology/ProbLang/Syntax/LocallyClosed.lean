@@ -8,10 +8,12 @@ public meta import Lean.Elab.Tactic.Basic
 /-!
 # Locally-nameless facts for `Exp`
 
-How `open'`, `close`, `subst` and `fv` interact with `IsLocallyClosed`, plus the `is_lc` and
-`is_value` tactics. -/
+How `open'`, `close`, `subst` and `fv` interact with `IsLocallyClosed`, plus the tactics `is_lc`
+and `is_value`. -/
 
 namespace ProbLang
+
+variable {rT : Type _}
 
 open Cslib Exp
 open HasFresh (fresh_exists)
@@ -19,8 +21,6 @@ open Finset (mem_insert mem_insert_of_mem mem_insert_self mem_singleton mem_unio
   mem_union_right)
 
 namespace Exp
-
-variable {rT : Type _}
 
 /-! ## Opening at different indices
 
@@ -69,7 +69,7 @@ theorem swap_open_fvar_close (k n : Nat) (x y : Var) (e : Exp rT) (hk : k ≠ n)
 
 /-! ## Free variables under `close`, `open'`, `subst` -/
 
-/-- Closing a term keeps a variable that was not free out of the free variables. -/
+/-- Closing a term keeps any variable not free in it out of its free variables. -/
 theorem close_preserve_not_fvar {k x y} (e : Exp rT) (h : x ∉ e.fv) :
     x ∉ (closeRec k y e).fv := by
   induction e generalizing k <;> grind
@@ -140,6 +140,7 @@ theorem subst_close (y : Var) (t e : Exp rT) (hxy : x ≠ y) (ht : y ∉ t.fv) :
 theorem subst_open (t u e : Exp rT) (hu : IsLocallyClosed t) :
     subst (open' e u) x t = open' (subst e x t) (subst u x t) := by grind
 
+/-- Opening with the variable `x` commutes with substituting for a different variable `y`. -/
 theorem subst_open_var (y : Var) (u e : Exp rT) (hne : y ≠ x) (hu : IsLocallyClosed u) :
     subst (open' e (fvar x)) y u = open' (subst e y u) (fvar x) := by grind
 
@@ -440,8 +441,6 @@ end
 /-! ## `toVal?` on value-shaped expressions -/
 
 namespace Exp
-
-variable {rT : Type _}
 
 -- `rfl` by proof irrelevance on the `Val.lc` field.
 /-- `toVal?` sends a literal to the literal value. -/

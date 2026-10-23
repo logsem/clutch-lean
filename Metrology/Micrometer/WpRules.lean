@@ -5,8 +5,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Structural rules of `wp`
 
-The usual Iris rules for Micrometer's `wp`: `wp_bind`, absorbing spec updates, framing (also
-across a step), the proof-mode instances, and `wp_of_absorbing` for an absorbing credit. -/
+The usual Iris rules for Micrometer's `wp`: bind, spec updates, framing, proof-mode instances. -/
 
 @[expose] public section
 
@@ -23,6 +22,7 @@ local bi IProp GF
 open BIFUpdate BIUpdateFUpdate
 open Exp (ofVal ofVal_of_toVal_some toVal?_eq_none)
 open LawfulSet (subset_refl empty_subset)
+open BudgetCredit
 
 section Wp
 variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {P R : IProp GF}
@@ -35,8 +35,16 @@ variable (L) in
 noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
   ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
 
+variable (L) in
+/-- The statement of `wp_specUpdate`, proved by Löb induction. -/
+noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
+  ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
+
+section Absorbing
+variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
+
 /-- Bind: a `wp` for `e` whose postcondition is a `wp` for `K[v]` proves the `wp` for `K[e]`. -/
-theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPset} {e : Exp rT}
+theorem wp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} :
     wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
   have Hloeb : ⊢ wpBindStmt L K := by
@@ -78,7 +86,7 @@ theorem wp_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : Ectx rT} {E : CoPse
   iapply Hloeb $$ %E %e %Φ
 
 /-- A spec update before a `wp` can be absorbed into it. -/
-theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
+theorem specUpdate_wp :
     specUpdate rT E (wp L E e Φ) ⊢ wp L E e Φ := by
   unfold specUpdate
   iintro HS
@@ -91,13 +99,8 @@ theorem specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
     imodintro
     iapply specCoupl_steps_det Hstep $$ HW'
 
-variable (L) in
-/-- The statement of `wp_specUpdate`, proved by Löb induction. -/
-noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
-  ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
-
 /-- A spec update in the postcondition can be absorbed into the `wp`. -/
-theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
+theorem wp_specUpdate :
     wp L E e (fun v => specUpdate rT E (Φ v)) ⊢ wp L E e Φ := by
   have Hloeb : ⊢ wpSpecUpdateStmt L (rT := rT) := by
     iapply loeb_wand
@@ -134,6 +137,28 @@ theorem wp_specUpdate [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
       imodintro
       iapply IH $$ %E' %e₃ %Φ' HwpInner
   iapply Hloeb $$ %E %e %Φ
+
+/-- A `wp` eliminates a leading `specUpdate`. -/
+instance elimModal_specUpdate_wp :
+    ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
+  elim_modal _ := by
+    simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
+    iintro ⟨HP, Hcnt⟩
+    iapply specUpdate_wp
+    iintro %ρ Hρ
+    imod HP $$ %ρ Hρ with ⟨%ρ', %n, %Hstep, Hρ', HPv⟩
+    imodintro
+    iexists ρ', n
+    iframe %Hstep Hρ'
+    iapply Hcnt $$ HPv
+
+/-- A `wp` eliminates a leading `specUpdateN`. -/
+instance elimModal_specUpdateN_wp :
+    ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where
+  elim_modal h :=
+    (sep_mono_left specUpdateN_specUpdate).trans ((elimModal_specUpdate_wp (io := io)).elim_modal h)
+
+end Absorbing
 
 /-! ## Framing -/
 
@@ -259,25 +284,6 @@ instance elimModal_fupd_wp :
   elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
     fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
 
-/-- A `wp` eliminates a leading `specUpdate`. -/
-instance elimModal_specUpdate_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
-    ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
-  elim_modal _ := by
-    simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
-    iintro ⟨HP, Hcnt⟩
-    iapply specUpdate_wp
-    iintro %ρ Hρ
-    imod HP $$ %ρ Hρ with ⟨%ρ', %n, %Hstep, Hρ', HPv⟩
-    imodintro
-    iexists ρ', n
-    iframe %Hstep Hρ'
-    iapply Hcnt $$ HPv
-
-/-- A `wp` eliminates a leading `specUpdateN`. -/
-instance elimModal_specUpdateN_wp [Add B] [L.IsLawful] [L.IsTopAbsorbing] :
-    ElimModal True false io false (specUpdateN rT n E P) P (wp L E e Φ) (wp L E e Φ) where
-  elim_modal h :=
-    (sep_mono_left specUpdateN_specUpdate).trans ((elimModal_specUpdate_wp (io := io)).elim_modal h)
 
 end Wp
 
@@ -285,12 +291,9 @@ end Wp
 
 A local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`, so credit rules sit here. -/
 
-section BudgetCredits
-variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
-open BudgetCredit
-
 /-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
-theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
+theorem wp_of_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
+    [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} : ↯b c ⊢ wp L E e Φ := by
   iintro Hc
   iapply wp_unfold
@@ -300,7 +303,6 @@ theorem wp_of_absorbing [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {
   imodintro
   iapply specCoupl_absorbing (hc.mono hle)
 
-end BudgetCredits
 end MicrometerWpGS
 
 end ProbLang

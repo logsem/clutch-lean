@@ -13,15 +13,14 @@ import Metrology.Iris.LocalBI
 /-!
 # Error and divergence credits
 
-The credit resource of LiveEris: a pair of an error credit `↯ε` (the branch may fail once it reaches
-1) and a divergence credit `↻δ` (the branch may idle forever once it reaches 1). The pair is the
-product of two bounded credit algebras, so inclusion and local updates are componentwise.
+The credit resource of LiveEris: an error credit `↯ε` paired with a divergence credit `↻δ`,
+as a product of two bounded credit algebras.
 -/
 
 noncomputable section
 
 open Iris COFE
-open scoped ENNReal
+open ENNReal
 
 namespace ProbLang
 namespace LiveEris
@@ -29,6 +28,7 @@ namespace LiveEris
 /-- A nonnegative credit amount, valid when it is strictly below `b`. -/
 @[ext]
 structure CreditBelow (b : ℝ≥0∞) where
+  /-- The amount of credit. -/
   val : ℝ≥0∞
 
 namespace CreditBelow
@@ -82,7 +82,7 @@ theorem included_iff {x y : CreditBelow b} : x ≼ y ↔ x.val ≤ y.val := by
 theorem includedN_iff {n} {x y : CreditBelow b} : x ≼{n} y ↔ x.val ≤ y.val :=
   included_iff
 
-theorem localUpdate {x₁ x₂ x₁' x₂' : CreditBelow b} (h1 : x₂'.val ≤ x₂.val)
+theorem local_update {x₁ x₂ x₁' x₂' : CreditBelow b} (h1 : x₂'.val ≤ x₂.val)
     (h2 : x₁.val + x₂'.val = x₁'.val + x₂.val) : (x₁, x₂) ~l~> (x₁', x₂') := by
   rintro n (_ | z) <;> simp only [OFE.Dist, CMRA.op?, validN_iff]
   · rintro H rfl
@@ -105,6 +105,7 @@ instance : NeZero (∞ : ℝ≥0∞) := ⟨ENNReal.top_ne_zero⟩
 when finite). -/
 abbrev LiveCredit : Type := CreditBelow 1 × CreditBelow ∞
 
+/-- The credit pair holding `ε` error credit and `δ` divergence credit. -/
 abbrev credits (ε δ : ℝ≥0∞) : LiveCredit := (⟨ε⟩, ⟨δ⟩)
 
 theorem credits_op (ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞) :
@@ -122,20 +123,24 @@ theorem credits_includedN {n} {ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞} :
 
 theorem credits_unit : (UCMRA.unit : LiveCredit) = credits 0 0 := rfl
 
-instance : Iris.IsUnit (◯ credits 0 0 : Auth LiveCredit) :=
-  inferInstanceAs (Iris.IsUnit (UCMRA.unit : Auth LiveCredit))
+instance : IsUnit (◯ credits 0 0 : Auth LiveCredit) :=
+  inferInstanceAs (IsUnit (UCMRA.unit : Auth LiveCredit))
 
+/-- The ghost-state resources needed to allocate LiveEris credits. -/
 class LCPreGS (GF : BundledGFunctors) where
+  /-- The ghost map holding the credit algebra. -/
   lc : ElemG GF (constOF (Auth LiveCredit))
 
 attribute [reducible, instance] LCPreGS.lc
 
+/-- The ghost-state resources of LiveEris credits, with the credit ghost name fixed. -/
 class LCGS (GF : BundledGFunctors) extends LCPreGS GF where
+  /-- The ghost name of the credit resource. -/
   γlc : GName
 
-section Resources
-
 variable {GF : BundledGFunctors} [ILC : LCGS GF]
+
+section Resources
 
 /-- The authoritative credit supply. -/
 def creditAuth (ε δ : ℝ≥0∞) : IProp GF := iOwn (E := ILC.lc) ILC.γlc (● credits ε δ)
@@ -156,31 +161,31 @@ end Resources
 
 namespace Credit
 
-variable {GF : BundledGFunctors} [ILC : LCGS GF]
+variable {ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞}
 local bi IProp GF
 
-theorem frag_ext {ε₁ δ₁ ε₂ δ₂} (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
+theorem frag_ext (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
     creditFrag ε₁ δ₁ ⊢ creditFrag ε₂ δ₂ := by
   simp [hε, hδ]
 
-theorem auth_ext {ε₁ δ₁ ε₂ δ₂} (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
+theorem auth_ext (hε : ε₁ = ε₂) (hδ : δ₁ = δ₂) :
     creditAuth ε₁ δ₁ ⊢ creditAuth ε₂ δ₂ := by
   simp [hε, hδ]
 
-theorem frag_split {ε₁ δ₁ ε₂ δ₂} :
+theorem frag_split :
     creditFrag (ε₁ + ε₂) (δ₁ + δ₂) ⊢ creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ := by
   unfold creditFrag
   rw [← credits_op, Auth.frag_op]
   exact iOwn_op.mp
 
-theorem frag_combine {ε₁ δ₁ ε₂ δ₂} :
+theorem frag_combine :
     creditFrag ε₁ δ₁ ∗ creditFrag ε₂ δ₂ ⊢ creditFrag (ε₁ + ε₂) (δ₁ + δ₂) := by
   unfold creditFrag
   iintro ⟨H1, H2⟩
   icombine H1 H2 as H
   iexact H
 
-instance {ε₁ δ₁ ε₂ δ₂} : Iris.ProofMode.CombineSepAs (creditFrag ε₁ δ₁ : IProp GF)
+instance : ProofMode.CombineSepAs (creditFrag ε₁ δ₁ : IProp GF)
     (creditFrag ε₂ δ₂) (creditFrag (ε₁ + ε₂) (δ₁ + δ₂)) where
   combine_sep_as := frag_combine
 
@@ -200,7 +205,7 @@ theorem div_split {δ₁ δ₂} : ↻(δ₁ + δ₂) ⊢ ↻δ₁ ∗ ↻δ₂ :
 theorem div_combine {δ₁ δ₂} : ↻δ₁ ∗ ↻δ₂ ⊢ ↻(δ₁ + δ₂) :=
   frag_combine.trans (frag_ext (add_zero 0) rfl)
 
-theorem frag_weaken {ε₁ δ₁ ε₂ δ₂ : ℝ≥0∞} (hε : ε₂ ≤ ε₁) (hδ : δ₂ ≤ δ₁) :
+theorem frag_weaken (hε : ε₂ ≤ ε₁) (hδ : δ₂ ≤ δ₁) :
     creditFrag ε₁ δ₁ ⊢ creditFrag ε₂ δ₂ := by
   iintro H
   ihave H := frag_ext (tsub_add_cancel_of_le hε).symm (tsub_add_cancel_of_le hδ).symm $$ H
@@ -259,8 +264,8 @@ theorem supply_decrease {εₛ δₛ ε δ : ℝ≥0∞} :
   unfold creditFrag creditAuth
   ihave Hc := iOwn_op |>.mpr $$ [$Hs $H]
   refine iOwn_update <| Auth.auth_update_dealloc ?_
-  refine LocalUpdate.prod' (CreditBelow.localUpdate zero_le ?_)
-    (CreditBelow.localUpdate zero_le ?_)
+  refine LocalUpdate.prod' (CreditBelow.local_update zero_le ?_)
+    (CreditBelow.local_update zero_le ?_)
   · simpa using (tsub_add_cancel_of_le hε).symm
   · simpa using (tsub_add_cancel_of_le hδ).symm
 

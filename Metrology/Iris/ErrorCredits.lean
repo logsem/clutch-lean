@@ -17,7 +17,7 @@ The resource `↯ε` (total `●↯ε`) over `ℝ≥0∞` with validity `ε < 1`
 
 noncomputable section
 
-open Std Iris COFE
+open Std Iris COFE CMRA
 open scoped ENNReal NNReal
 
 /-! ## The camera of error credits -/
@@ -55,13 +55,13 @@ scoped instance : CMRA.Discrete ErrorCredit where
 
 scoped instance : UCMRA ErrorCredit where
   unit := 0
-  unit_valid := by simp [CMRA.Valid]
-  unit_left_id := by simp [CMRA.op]
+  unit_valid := by simp [Valid]
+  unit_left_id := by simp [op]
   pcore_unit := by simp [CMRA.pcore]
 
 scoped instance {ε : ErrorCredit} : CMRA.Cancelable ε where
   cancelableN {n ε₁ ε₂} := by
-    simp [CMRA.ValidN, CMRA.op, OFE.Dist]
+    simp [CMRA.ValidN, op, OFE.Dist]
     intro h1 h2
     refine (ENNReal.add_right_inj ?_).mp h2
     rintro rfl; simp at h1
@@ -83,7 +83,7 @@ theorem ErrorCredit.includedN_iff {n : Nat} {ε₁ ε₂ : ErrorCredit} : ε₁ 
 /-- A local update of error credits that moves credits between the two sides. -/
 theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
-  rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, CMRA.op]
+  rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, op]
   · rintro H rfl
     symm at h2
     obtain rfl : ε₁' = ε₂' := ENNReal.add_left_inj H.ne_top |>.mp (by grind)
@@ -101,8 +101,8 @@ theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 :
 namespace ErrorCredit
 
 scoped instance : IsUnit (◯ 0 : Auth ErrorCredit) where
-  unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
-  unit_left_id := by simp [CMRA.op]
+  unit_valid := Auth.frag_valid.mpr (by simp [Valid])
+  unit_left_id := by simp [op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
 
 scoped instance {r : ErrorCredit} : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
@@ -150,7 +150,7 @@ theorem split : ↯(ε₁ + ε₂) ⊢ ↯ε₁ ∗ ↯ε₂ := by
   unfold ec
   iintro Hε
   iapply iOwn_op
-  simp [CMRA.op]
+  simp [op]
   iexact Hε
 
 /-- Take `ε₁` credits out of `ε₂`, keeping the difference. -/
@@ -199,7 +199,7 @@ theorem supply_increase (h : ε₁ + ε₂ < 1) :
   unfold ec ecAuth
   have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
-    simp only [CMRA.Valid, CMRA.op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
+    simp only [Valid, op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
     exact fun _ ↦ ⟨h, add_comm _ _⟩
   iintro Hε
   imod (iOwn_update hupd) $$ Hε with H

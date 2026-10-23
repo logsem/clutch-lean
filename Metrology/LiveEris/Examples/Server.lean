@@ -9,41 +9,43 @@ import Metrology.ProbLang.Syntax.Notation
 /-!
 # Servers
 
-Two servers that run forever, each flipping a coin per round and handling a request on heads.
-`serve` counts requests in a heap cell, with progress "the counter went up by one". `flagServer`
-raises a flag and lowers it again, with progress "the flag is up": entering a set of states, which
-is what liveness adequacy needs.
+Two servers that run forever, flipping a coin per round and handling a request on heads: `serve`
+counts requests in a heap cell, and `flagServer` raises and lowers a flag.
 -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.LiveEris ProbLang.LiveEris.LiveWpGS
+open Credit Set
 open scoped ENNReal AppGS
 
 namespace ProbLang.LiveEris.Examples
 
+variable {rT : Type _} (ℓ : Loc)
+
+/-- The counter server: each round flips a coin and bumps the counter at `ℓ` on heads. -/
 @[pl_fold]
-def serve {rT : Type _} (ℓ : Loc) : Exp rT := pl%
+def serve : Exp rT := pl%
   rec serve u :=
     if rand(#2, #()) = #0 then (#loc ℓ ← (!#loc ℓ + #1); serve u) else serve u
 
 /-- The counter at `ℓ` went up by one. -/
-def CtrUp {rT : Type _} (ℓ : Loc) (σ σ' : State rT) : Prop :=
+def CtrUp (σ σ' : State rT) : Prop :=
   ∃ n : ℤ, σ.heap[ℓ]? = some (.int n) ∧ σ'.heap[ℓ]? = some (.int (n + 1))
 
+/-- The flag server loop: each round flips a coin and raises then lowers the flag on heads. -/
 @[pl_fold]
-def serveFlag {rT : Type _} : Exp rT := pl%
+def serveFlag : Exp rT := pl%
   rec serve f :=
     if rand(#2, #()) = #0 then (f ← #true; f ← #false; serve f) else serve f
 
 pl_closed serveFlag
 
-def flagServer {rT : Type _} : Exp rT := pl% let f := alloc(#false); &serveFlag f
+/-- The flag server: allocates a lowered flag and runs `serveFlag` on it. -/
+def flagServer : Exp rT := pl% let f := alloc(#false); &serveFlag f
 
 /-- Some heap cell holds `true`: the flag is up. -/
-def FlagUp {rT : Type _} (σ : State rT) : Prop := ∃ l : Loc, σ.heap[l]? = some (.bool true)
+def FlagUp (σ : State rT) : Prop := ∃ l : Loc, σ.heap[l]? = some (.bool true)
 
-variable {rT : Type _}
-
-theorem ctrUp_store (ℓ : Loc) (n : ℤ) (σ : State rT) (h : σ.heap[ℓ]? = some (.int n)) :
+theorem ctrUp_store (n : ℤ) (σ : State rT) (h : σ.heap[ℓ]? = some (.int n)) :
     CtrUp ℓ σ (σ.update_heap (·.insert ℓ (.int (n + 1)))) :=
   ⟨n, h, by simp [State.update_heap]⟩
 
@@ -55,11 +57,12 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT] [LawfulProbL
   [LiveGS rT hlc GF]
 local bi IProp GF
 
-noncomputable abbrev ServeStmt (ℓ : Loc) : IProp GF :=
+/-- The Löb hypothesis for `serve`: from `ℓ ↦ n` the server makes progress. -/
+noncomputable abbrev ServeStmt :=
   iprop(∀ (n : ℤ) (Ψ : Val rT → IProp GF),
     ℓ ↦ (.int n : Val rT) -∗ lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ)
 
-theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
+theorem lwp_serve_depth (k : ℕ) :
     ⊢ □ ▷ ServeStmt (rT := rT) ℓ -∗ ∀ (n : ℤ) (Ψ : Val rT → IProp GF),
       ℓ ↦ (.int n : Val rT) -∗ ↯((2⁻¹ : ℝ≥0∞) ^ k) -∗
         lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ := by
@@ -67,7 +70,7 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
   | zero =>
     iintro - %_ %_ - He
     iexfalso
-    iapply Credit.err_contradict (by simp) $$ He
+    iapply err_contradict (by simp) $$ He
   | succ k IHk =>
     iintro #IH %n %Ψ Hl He
     live_pure
@@ -96,10 +99,10 @@ theorem lwp_serve_depth (ℓ : Loc) (k : ℕ) :
       live_pure
       live_bind (Exp.app (serve (rT := rT) ℓ) pl(#()))
       iapply IHk $$ IH %n %_ Hl
-      iapply Credit.frag_ext (by simp) rfl $$ He
+      iapply frag_ext (by simp) rfl $$ He
 
 /-- The counter server makes progress: its spec needs no credits. -/
-theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
+theorem lwp_serve (n : ℤ) (Ψ : Val rT → IProp GF) :
     iprop(ℓ ↦ (.int n : Val rT)) ⊢
       lwp (CtrUp ℓ) ⊤ (Exp.app (serve ℓ) pl(#())) Ψ := by
   have H : ⊢ ServeStmt (rT := rT) ℓ := by
@@ -111,7 +114,8 @@ theorem lwp_serve (ℓ : Loc) (n : ℤ) (Ψ : Val rT → IProp GF) :
   iintro Hl
   iapply H $$ %n %Ψ Hl
 
-noncomputable abbrev FlagStmt : IProp GF :=
+/-- The Löb hypothesis for `serveFlag`: from a lowered flag the server reaches a flag-up state. -/
+noncomputable abbrev FlagStmt :=
   iprop(∀ (l : Loc) (Ψ : Val rT → IProp GF),
     l ↦ (.bool false : Val rT) -∗
       lwp (fun _ σ' => FlagUp σ') ⊤ (Exp.app serveFlag pl(#loc l)) Ψ)
@@ -124,7 +128,7 @@ theorem lwp_serveFlag_depth (k : ℕ) :
   | zero =>
     iintro - %_ %_ - He
     iexfalso
-    iapply Credit.err_contradict (by simp) $$ He
+    iapply err_contradict (by simp) $$ He
   | succ k IHk =>
     iintro #IH %l %Ψ Hl He
     live_pure
@@ -153,8 +157,9 @@ theorem lwp_serveFlag_depth (k : ℕ) :
       live_pure
       live_bind (Exp.app (serveFlag (rT := rT)) pl(#loc l))
       iapply IHk $$ IH %l %_ Hl
-      iapply Credit.frag_ext (by simp) rfl $$ He
+      iapply frag_ext (by simp) rfl $$ He
 
+/-- The flag server loop reaches a flag-up state, using no credits. -/
 theorem lwp_serveFlag : ⊢ FlagStmt (rT := rT) := by
   iapply loeb_wand_intuitionistically
   iintro !> #IH %l %Ψ Hl
@@ -162,6 +167,7 @@ theorem lwp_serveFlag : ⊢ FlagStmt (rT := rT) := by
   iintro %k Hk
   iapply lwp_serveFlag_depth k $$ IH %l %Ψ Hl Hk
 
+/-- The flag server reaches a flag-up state, using no credits. -/
 theorem lwp_flagServer (Ψ : Val rT → IProp GF) :
     ⊢ lwp (fun _ σ' => FlagUp σ') ⊤ flagServer Ψ := by
   live_bind (Exp.alloc (Exp.ofVal (.bool false)) : Exp rT)
@@ -178,7 +184,7 @@ theorem measurableSet_flagUp : MeasurableSet {σ : State rT | FlagUp σ} := by
         Exp.ofVal.measurable
       convert h using 1
       ext w
-      simp only [Set.mem_ofPred_eq, Set.mem_preimage, Set.mem_singleton_iff]
+      simp only [mem_ofPred_eq, mem_preimage, mem_singleton_iff]
       exact ⟨fun h => h ▸ rfl, fun h => Val.ext h⟩
     convert MeasurableSet.image_some h using 1
     ext o
@@ -195,7 +201,7 @@ theorem measurableSet_flagUp : MeasurableSet {σ : State rT | FlagUp σ} := by
 theorem flagServer_live (σ : State ℝ) (m : ℕ) :
     1 ≤ progressBound FlagUp (fun _ => False) m ⟨flagServer, σ⟩ := by
   simpa using lwp_adequacy_liveness (GF := liveGF) (Q := fun _ σ' => FlagUp σ') (ε := 0)
-    (δ := 0) (P := FlagUp) measurableSet_flagUp (by simp) (fun _ _ h => h) (by simp)
+    (δ := 0) (P := FlagUp) (by simp) measurableSet_flagUp (fun _ _ h => h) (by simp)
     (fun [LiveGS ℝ .hasNoLC liveGF] => by iintro -; iapply lwp_flagServer) m
 
 end ProbLang.LiveEris.Examples

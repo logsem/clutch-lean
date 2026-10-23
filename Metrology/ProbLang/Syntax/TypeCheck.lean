@@ -9,26 +9,26 @@ public meta import Metrology.ProbLang.Syntax.Types
 # `typecheck`: a bidirectional elaborator for `Typed Γ e τ`
 
 Check mode (`checkMVar`) handles pair, inl, inr; synth mode (`synth`) handles fvar, lit, fst, snd.
-TODO: binop, unop, cond, case, letrec, app, alloc, load, store, tape, rand, scrut, and the
-type-level forms tfold, tunfold, tpack, tunpack, tlam, tapp.
+Other forms are still TODO.
 -/
 
 namespace ProbLang
 
 open Lean Elab Term Tactic Meta
 
+/-- Splits a goal `Typed Γ e τ` into `Γ`, the weak-head normal `e`, and `τ`. -/
 meta def asTypedGoal (goal : Expr) : TermElabM (Expr × Expr × Expr) := do
-  let goal ← Meta.whnf goal
+  let goal ← whnf goal
   unless goal.isAppOf ``Typed && 3 ≤ goal.getAppNumArgs do
     throwError "typecheck: expected type is not `Typed Γ e τ`:{indentExpr goal}"
   let n := goal.getAppNumArgs
-  return (goal.getArg! (n - 3), ← Meta.whnf (goal.getArg! (n - 2)), goal.getArg! (n - 1))
+  return (goal.getArg! (n - 3), ← whnf (goal.getArg! (n - 2)), goal.getArg! (n - 1))
 
 mutual
 
 /-- Returns `τ` and a proof of `Typed Γ e τ`, with `τ` determined by the head of `e`. -/
 meta partial def synth (Γ e : Expr) : TermElabM (Expr × Expr) := do
-  let e ← Meta.whnf e
+  let e ← whnf e
   let rT := (← inferType e).getArg! 0
   match e.getAppFn.constName? with
   | some ``Exp.fvar =>
@@ -63,7 +63,7 @@ meta partial def synth (Γ e : Expr) : TermElabM (Expr × Expr) := do
 /-- Closes `mvar : Typed Γ e τ` with `τ` fixed. -/
 meta partial def checkMVar (mvar : MVarId) : TermElabM Unit := mvar.withContext do
   let (Γ, e, τ) ← asTypedGoal (← mvar.getType)
-  let τ ← Meta.whnf τ
+  let τ ← whnf τ
   match e.getAppFn.constName? with
   | some ``Exp.pair =>
       let some (τ1, τ2) := τ.app2? ``Ty.prod
@@ -90,6 +90,7 @@ meta partial def checkMVar (mvar : MVarId) : TermElabM Unit := mvar.withContext 
   | some c => throwError "typecheck/check: TODO unsupported expression head `{c}`"
   | none   => throwError "typecheck/check: cannot determine head:{indentExpr e}"
 
+/-- Checks `Typed Γ e τ` for a fresh goal and returns its proof. -/
 meta partial def checkSub (Γ e τ : Expr) : TermElabM Expr := do
   let sub ← mkFreshExprMVar (← mkAppM ``Typed #[Γ, e, τ])
   checkMVar sub.mvarId!
@@ -105,7 +106,7 @@ elab "typecheck" : term <= expectedType => do
 
 elab "typecheck" : tactic => do
   let mvar ← getMainGoal
-  Term.TermElabM.run' (checkMVar mvar)
+  TermElabM.run' (checkMVar mvar)
 
 section Examples
 

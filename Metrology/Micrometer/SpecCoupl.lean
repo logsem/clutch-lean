@@ -13,21 +13,22 @@ open MeasureTheory.Measure ErasableExpr BindLaw IsTopAbsorbing BIFUpdate
 
 namespace ProbLang
 
-variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 namespace MicrometerWpGS
 variable {B : Type} {GF : BundledGFunctors}
 
 /-! ## The modality -/
 
+/-- The data of a spec coupling: program state, spec configuration and remaining budget. -/
 abbrev SpecCouplState (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT] (B : Type) :
     Type _ := State rT × Cfg rT × B
 
 instance cofe_specCouplState : COFE (SpecCouplState rT B) := COFE.ofDiscrete _
-instance discrete_specCouplState : OFE.Discrete (SpecCouplState rT B) := ⟨id⟩
+instance discrete_specCouplState : Discrete (SpecCouplState rT B) := ⟨id⟩
 
 theorem specCouplState_ne {Φ : SpecCouplState rT B → IProp GF} : NonExpansive Φ where
-  ne _ _ _ hd := .of_eq (congrArg Φ (OFE.Discrete.discrete_0 hd))
+  ne _ _ _ hd := .of_eq (congrArg Φ (Discrete.discrete_0 hd))
 
 variable [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
@@ -36,14 +37,10 @@ section
 variable (E : CoPset)
 
 variable (L) in
-/-- Coupling case of `specCoupl`
-- Total budget is `b`,
-- Accepts any bind law,
-- Head must hold on an (erased) step on the left and (erased) `n` steps on the right,
-- `Φ` must hold on the continuation, for all cases with finite credit.
--/
+/-- Coupling case of `specCoupl`: a bind law with a budget-`b` head coupling and continuations
+satisfying `Φ`. -/
 abbrev specCouplCouple (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
-    (Φ : SpecCouplState rT B → IProp GF) : IProp GF := iprop%
+    (Φ : SpecCouplState rT B → IProp GF) := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁ μ₁' : Measure (State rT))
       (ν₀ : Measure (Cfg rT)) (f' : Cfg rT → Cfg rT) (R : State rT → Cfg rT → B),
       ⌜Measurable f' ∧ (μ₁'.bind fun σ => pexecN n ⟨e₁', σ⟩) = ν₀.map f'⌝ ∗
@@ -54,19 +51,16 @@ abbrev specCouplCouple (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (
       (∀ σ₂ ρ, ⌜R σ₂ ρ < (⊤ : B)⌝ -∗ |={E}=> Φ (σ₂, f' ρ, R σ₂ ρ)))
 
 variable (L) in
-/-- The body of the `specCoupl` fixpoint. One of
-- Absorbing: the credit is sufficiently high,
-- Done,
-- Coupled: via `specCouplCouple`
--/
+/-- The body of the `specCoupl` fixpoint: absorbing, done, or coupled via `specCouplCouple`. -/
 abbrev specCouplPre (Z : State rT → Cfg rT → B → IProp GF) (Φ : SpecCouplState rT B → IProp GF) :
     SpecCouplState rT B → IProp GF :=
   fun ⟨σ₁, ⟨e₁', σ₁'⟩, b⟩ => iprop%
     ⌜L.Absorbing b⌝ ∨ Z σ₁ ⟨e₁', σ₁'⟩ b ∨ specCouplCouple L E σ₁ e₁' σ₁' b Φ
 
 variable (L) in
+/-- The spec coupling modality: the least fixpoint of `specCouplPre`. -/
 abbrev specCoupl (σ : State rT) (e' : Exp rT) (σ' : State rT) (b : B)
-    (Z : State rT → Cfg rT → B → IProp GF) : IProp GF :=
+    (Z : State rT → Cfg rT → B → IProp GF) :=
   bi_least_fixpoint (specCouplPre L E Z) (σ, ⟨e', σ'⟩, b)
 
 end
@@ -95,15 +89,18 @@ instance specCouplPre_mono : BIMonoPred (specCouplPre L E Z) where
 
 /-! ## Introduction rules -/
 
+/-- A spec coupling holds when the budget is absorbing. -/
 theorem specCoupl_absorbing (hb : L.Absorbing b) : ⊢ specCoupl L E σ e' σ' b Z := by
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   ileft; ipureintro; exact hb
 
+/-- A spec coupling holds when its exit predicate does. -/
 theorem specCoupl_ret : Z σ ⟨e', σ'⟩ b ⊢ specCoupl L E σ e' σ' b Z := by
   iintro HZ
   iapply least_fixpoint_unfold_mpr (specCouplPre L E Z)
   iright; ileft; iexact HZ
 
+/-- A spec coupling holds when its coupling case does. -/
 theorem specCoupl_rec :
     specCouplCouple L E σ e' σ' b (fun s => specCoupl L E s.1 s.2.1.expr s.2.1.state s.2.2 Z) ⊢
       specCoupl L E σ e' σ' b Z := by
@@ -140,6 +137,7 @@ theorem specCoupl_bind {E1 E2 : CoPset} (HE : E1 ⊆ E2) : iprop%
     imodintro
     iapply HCpl_cont $$ HZ
 
+/-- A spec coupling is monotone in its exit predicate. -/
 theorem specCoupl_mono : iprop%
     (∀ σ' ρ' b', Z₁ σ' ρ' b' -∗ Z₂ σ' ρ' b') ∗ specCoupl L E σ e' σ' b Z₁ ⊢
       specCoupl L E σ e' σ' b Z₂ := by
@@ -150,6 +148,7 @@ theorem specCoupl_mono : iprop%
   iapply specCoupl_ret
   iapply HZ $$ Hz1
 
+/-- A spec coupling is non-expansive in its exit predicate. -/
 theorem specCoupl_ne (HZ : ∀ σ ρ b, Z₁ σ ρ b ≡{n}≡ Z₂ σ ρ b) :
     specCoupl L E σ e' σ' b Z₁ ≡{n}≡ specCoupl L E σ e' σ' b Z₂ := by
   unfold specCoupl
@@ -274,7 +273,6 @@ theorem specCoupl_steps
   specCoupl_erasable_steps hb Hcpl (dret σ₁)
 
 end
-
 
 /-! ## Discrete steps -/
 

@@ -9,6 +9,7 @@ public import Metrology.LiveEris.Weakestpre
 open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
 open scoped ENNReal
 open ProbLang.LiveEris.CreditVec
+open Exp
 
 namespace ProbLang
 namespace LiveEris
@@ -16,9 +17,10 @@ namespace LiveWpGS
 
 variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {GF : BundledGFunctors} [LiveWpGS rT Coord GF]
-variable {Q : State rT → State rT → Prop}
+variable {Q : State rT → State rT → Prop} {E : CoPset} {Φ : Val rT → IProp GF}
 
-theorem lwp_lift_step_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
+/-- Lift a step through `glm`, with a continuation that may cross a checkpoint. -/
+theorem lwp_lift_step_glm {e₁ : Exp rT}
     (hv : e₁.toVal? = none) : iprop(
     ∀ σ₁ c, stateInterp σ₁ ∗ creditInterp c -∗
       |={E, ∅}=> glm e₁ σ₁ c (fun ρ c₂ =>
@@ -26,9 +28,8 @@ theorem lwp_lift_step_glm {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT
     ⊢ lwp Q E e₁ Φ := by
   rw [lwp_unfold_step hv]
 
-/-- Lift a step whose outcomes are concentrated on `R`. The credits pass through unchanged, and each
-outcome may continue ordinarily or cross a checkpoint. -/
-theorem lwp_lift_step_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
+/-- Lift a step whose outcomes are concentrated on `R`, with the credits passing through. -/
+theorem lwp_lift_step_gen {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (R : State rT → Cfg rT → Prop)
     (hRmeas : ∀ σ₁, MeasurableSet {ρ | R σ₁ ρ})
     (hconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) {ρ | R σ₁ ρ}) : iprop(
@@ -60,7 +61,8 @@ theorem lwp_lift_step_gen {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT
   iright
   iexact HC
 
-theorem lwp_lift_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
+/-- Lift an atomic step, with the credits passing through unchanged. -/
+theorem lwp_lift_step {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩)) : iprop(
     ∀ σ₁ c, stateInterp σ₁ ∗ creditInterp c -∗ |={E, ∅}=>
       ⌜Reducible e₁ σ₁⌝ ∗
@@ -71,14 +73,14 @@ theorem lwp_lift_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
     (fun σ₁ ρ => Possible ρ (primStep ⟨e₁, σ₁⟩))
     (fun σ₁ => measurableSet_possible_support)
     (fun σ₁ => by
-      have hset : {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)}
-          = {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
+      have hset : {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)} =
+          {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
       rw [hset]; exact (hatom σ₁).concentrated_atoms)
 
 /-- Lift an atomic head step to a value, which may continue ordinarily or cross a checkpoint. -/
-theorem lwp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ : Exp rT}
+theorem lwp_lift_atomic_head_step {e₁ : Exp rT}
     (hv : e₁.toVal? = none) (hlc : e₁.IsLocallyClosed)
-    (hd : e₁.decompItem = none := by simp [Exp.decompItem, Exp.toVal?_lit, Exp.toVal?_ofVal])
+    (hd : e₁.decompItem = none := by simp [decompItem, toVal?_lit, toVal?_ofVal])
     (hne : e₁ ≠ .urand := by nofun) : iprop(
     ∀ σ₁ c, stateInterp σ₁ ∗ creditInterp c -∗ |={E}=>
       ⌜HeadReducible e₁ σ₁⌝ ∗
@@ -121,13 +123,12 @@ theorem lwp_lift_atomic_head_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ 
   | none => iexfalso; iexact HC
 
 /-- Lift a pure deterministic step, which may continue ordinarily or cross a checkpoint. -/
-theorem lwp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp GF}
-    {e₁ e₂ : Exp rT} (h : PureStep e₁ e₂) :
+theorem lwp_lift_pure_det_step_of_pureStep {e₁ e₂ : Exp rT} (h : PureStep e₁ e₂) :
     iprop(∀ σ c, stateInterp σ ∗ creditInterp c -∗ |={E}=>
-      (stateInterp σ ∗ creditInterp c ∗ lwp Q E e₂ Φ) ∨
-      (⌜Checkpoint Q σ σ c⌝ ∗ ▷ |={E}=> stateInterp σ ∗ creditInterp c ∗ lwp Q E e₂ Φ))
-    ⊢ lwp Q E e₁ Φ := by
-  have hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr <| val_stuck <| h.safe default
+        (stateInterp σ ∗ creditInterp c ∗ lwp Q E e₂ Φ) ∨
+        (⌜Checkpoint Q σ σ c⌝ ∗ ▷ |={E}=> stateInterp σ ∗ creditInterp c ∗ lwp Q E e₂ Φ))
+      ⊢ lwp Q E e₁ Φ := by
+  have hv : e₁.toVal? = none := toVal?_eq_none.mpr <| val_stuck <| h.safe default
   have hatom : ∀ σ, IsAtomicSupport (primStep ⟨e₁, σ⟩) :=
     fun σ => by rw [h.det σ]; exact isAtomicSupport_dirac _
   iintro H
@@ -156,7 +157,8 @@ theorem lwp_lift_pure_det_step_of_pureStep {E : CoPset} {Φ : Val rT → IProp G
     imod Hclose with -
     iexact HC
 
-theorem lwp_pure_det_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
+/-- A pure deterministic step is a free step of the weakest precondition. -/
+theorem lwp_pure_det_step {e₁ e₂ : Exp rT}
     (h : PureStep e₁ e₂) : lwp Q E e₂ Φ ⊢ lwp Q E e₁ Φ := by
   iintro HW
   iapply lwp_lift_pure_det_step_of_pureStep h
@@ -164,7 +166,8 @@ theorem lwp_pure_det_step {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : E
   ileft
   iframe
 
-theorem lwp_pure_nsteps {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e₁ e₂ : Exp rT}
+/-- A run of pure deterministic steps is a free step of the weakest precondition. -/
+theorem lwp_pure_nsteps {n : ℕ} {e₁ e₂ : Exp rT}
     (h : nsteps PureStep n e₁ e₂) : lwp Q E e₂ Φ ⊢ lwp Q E e₁ Φ := by
   induction n generalizing e₁ with
   | zero =>
@@ -175,7 +178,8 @@ theorem lwp_pure_nsteps {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e₁ 
     obtain ⟨c, hstep, hrest⟩ := h
     exact (ih hrest).trans (lwp_pure_det_step hstep)
 
-theorem lwp_pure_step {E : CoPset} {Φ : Val rT → IProp GF} {n : ℕ} {e₁ e₂ : Exp rT}
+/-- A pure step given by `PureExec` is a free step of the weakest precondition. -/
+theorem lwp_pure_step {n : ℕ} {e₁ e₂ : Exp rT}
     (φ : Prop) [HEx : PureExec φ n e₁ e₂] (Hφ : φ := by is_value) :
     lwp Q E e₂ Φ ⊢ lwp Q E e₁ Φ :=
   lwp_pure_nsteps (HEx.pure_exec Hφ)

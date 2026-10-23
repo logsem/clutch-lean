@@ -14,7 +14,7 @@ namespace ProbLang
 variable {rT : Type} [MeasurableSpace rT]
 
 open MeasureTheory MeasureTheory.Measure
-open Set
+open Set ProbabilityTheory
 open Measurable (of_discrete)
 
 /-! ## The uniform index distribution -/
@@ -187,10 +187,10 @@ theorem tapePresample.measurable :
             ((Measurable.locHeap_insert α).comp
               ((State.measurable_tapes.comp measurable_fst).prodMk hval))
         have hk : Measurable (fun _ : State rT => tapeIndexUniform N) := measurable_const
-        have hSF : ProbabilityTheory.IsSFiniteKernel
-            (ProbabilityTheory.Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk) :=
-          inferInstanceAs (ProbabilityTheory.IsSFiniteKernel
-              (ProbabilityTheory.Kernel.const (State rT) (tapeIndexUniform N)))
+        have hSF : IsSFiniteKernel
+            (Kernel.mk (fun _ : State rT => tapeIndexUniform N) hk) :=
+          inferInstanceAs (IsSFiniteKernel
+              (Kernel.const (State rT) (tapeIndexUniform N)))
         exact @measurable_map_uncurry (State rT) {z : Int // 0 ≤ z ∧ z < N}
           (State rT) _ _ _ _ hh (fun _ => tapeIndexUniform N) hk hSF
     exact hflat.comp (measurable_snd.prodMk measurable_fst)
@@ -226,8 +226,8 @@ theorem tapePresample_bind_dirac_measurable
   rw [hconv]
   have hk : Measurable (fun ρ : Cfg rT => tapePresample ρ.state α) :=
     tapePresample.measurable.comp Cfg.measurable_state
-  have hFin : ProbabilityTheory.IsFiniteKernel
-      (ProbabilityTheory.Kernel.mk (fun ρ : Cfg rT => tapePresample ρ.state α) hk) :=
+  have hFin : IsFiniteKernel
+      (Kernel.mk (fun ρ : Cfg rT => tapePresample ρ.state α) hk) :=
     ⟨1, ENNReal.one_lt_top, fun _ => tapePresample_univ_le_one⟩
   exact measurable_map_uncurry hg hk
 

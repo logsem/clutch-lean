@@ -17,9 +17,10 @@ namespace TotalEris
 variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] [Countable rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
+variable (E : CoPset)
 
 /-- `twp_bind` discovers the context `K = [.fst]`; `hcont` pins the refocused goal. -/
-example (E : CoPset) (Φ : Val rT → IProp GF)
+example (Φ : Val rT → IProp GF)
     (hcont : ⊢ tglWp E pl(alloc(#1))
       (fun w => tglWp E pl(fst({Exp.ofVal w})) Φ)) :
     ⊢ tglWp E pl(fst(alloc(#1))) Φ := by
@@ -27,20 +28,20 @@ example (E : CoPset) (Φ : Val rT → IProp GF)
   exact hcont
 
 /-- `twp_pure` β-reduces at the top level (`K = []`). -/
-example (E : CoPset) (Φ : Val rT → IProp GF)
+example (Φ : Val rT → IProp GF)
     (hcont : ⊢ tglWp E pl(#1) Φ) :
     ⊢ tglWp E pl((fun x, x) #1) Φ := by
   twp_pure pl((fun x, x) #1)
   exact hcont
 
-example (E : CoPset) :
+example :
     ⊢ tglWp E pl(fst(((fun x, x) #1, #2)))
       (fun w : Val rT => iprop(⌜w = .int 1⌝)) := by
   twp_pures
   twp_value
   itrivial
 
-example (E : CoPset) :
+example :
     ⊢ tglWp E pl(#1 + #2)
       (fun w : Val rT => iprop(⌜w = .int 3⌝)) := by
   twp_pure pl(#1 + #2)

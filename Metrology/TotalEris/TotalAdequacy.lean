@@ -8,8 +8,7 @@ import Metrology.Iris.LocalBI
 /-!
 # Total adequacy
 
-Soundness of total-correctness Eris: a total weakest precondition gives `Tgl`, termination
-with probability at least `1 - ε`, and `Pgl` for the limit execution.
+Soundness of total weakest preconditions: they give `Tgl` and `Pgl` for the limit execution.
 -/
 
 @[expose] public section
@@ -185,7 +184,7 @@ theorem Tgl.of_limExec_val
 open Tgl
 
 /-- `execStutter` of predicates that give `Tgl` gives `Tgl`. -/
-theorem Tgl_of_execStutter [ErisGS rT .hasNoLC GF]
+theorem tgl_of_execStutter [ErisGS rT .hasNoLC GF]
     {P : ENNReal → IProp GF}
     (hP : ∀ ε, P ε ⊢ |={∅}=> ⌜Tgl μ φ ε⌝) :
     execStutter P ε ⊢ |={∅}=> ⌜Tgl μ φ ε⌝ := by
@@ -272,7 +271,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF] :
           |={∅}=> ⌜Tgl (limExec ⟨e', σ'⟩) φ ε''⌝) $$ [HOT]
       · iintro %ε'' %hε
         imod HOT $$ %ε'' %hε with HS
-        iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
+        iapply tgl_of_execStutter (fun _ => and_elim_l) $$ HS
       imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
       imodintro
       ipureintro
@@ -284,7 +283,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF] :
             |={∅}=> ⌜Tgl (limExec ρ) φ (X₂ ρ)⌝) $$ [HCont]
         · iintro %ρ %hR
           imod HCont $$ %ρ %hR with HS
-          iapply Tgl_of_execStutter (fun _ => .rfl) $$ HS
+          iapply tgl_of_execStutter (fun _ => .rfl) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
         imodintro
         ipureintro
@@ -294,7 +293,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF] :
             |={∅}=> ⌜Tgl (limExec ⟨e', σ''⟩) φ (X₂ σ'')⌝) $$ [HCont]
         · iintro %σ'' %hR
           imod HCont $$ %σ'' %hR with HS
-          iapply Tgl_of_execStutter (fun _ => and_elim_l) $$ HS
+          iapply tgl_of_execStutter (fun _ => and_elim_l) $$ HS
         imod iProp_fupd_plainly_forall_pure_impl_no_lc $$ Hfa with %Hf
         imodintro
         ipureintro
@@ -318,7 +317,7 @@ theorem twp_step_fupd_tgl [ErisGS rT .hasNoLC GF] :
         obtain rfl : e' = Exp.ofVal v := (Exp.ofVal_of_toVal_some htv).symm
         isimp only [tglWpPre_eq_value] at HPre
         imod HPre $$ %σ' %ε' [$Hσ' $Hε'] with ⟨_, _, %hφv⟩
-        imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with _
+        imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with _
         imodintro
         ipureintro
         exact mono_grading zero_le (of_limExec_val hφv)
@@ -371,7 +370,7 @@ theorem twp_pgl_lim
     (Hwp : ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε) ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) (limExec ⟨e, σ⟩) :=
-  Tgl.pgl_limExec hφ (twp_tgl hφ Hwp)
+  pgl_limExec hφ (twp_tgl hφ Hwp)
 
 /-- Credits at every `ε' > ε` give `Tgl` at `ε` for the limit execution. -/
 theorem twp_tgl_limit
@@ -392,7 +391,7 @@ theorem twp_pgl_lim_limit
     (Hwp : ∀ ε', ε < ε' → ∀ [ErisGS rT .hasNoLC GF], iprop(↯ε') ⊢
       tglWp ⊤ e (fun v => iprop(⌜φ v⌝))) :
     Pgl ε (fun ρ => ∃ v, ρ.expr = Exp.ofVal v ∧ φ v) (limExec ⟨e, σ⟩) :=
-  Tgl.pgl_limExec hφ (twp_tgl_limit hφ Hwp)
+  pgl_limExec hφ (twp_tgl_limit hφ Hwp)
 
 end
 
@@ -416,7 +415,7 @@ theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
   imod tglWp_value_inv_with_state
     $$ [$Hwp' $HappAuth $HecAuth] with ⟨-, -, %hφ⟩
   simp only [Nat.repeat]
-  imod (BIFUpdate.subset (E1 := ⊤) (E2 := ∅) Std.LawfulSet.empty_subset) with _
+  imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with _
   imodintro
   ipureintro
   exact hφ

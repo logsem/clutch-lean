@@ -7,8 +7,7 @@ public import Metrology.Couplings.Divergences.RenyiFiber
 
 /-! # Randomized response is zCDP
 
-One round couples in `zcdpLifting` at `(ln 3, 0)` (`rrCoupling_zcdp`), so `k` rounds are
-`(k ln 3, 0)`-zCDP (`rrCount_zCDP`). -/
+One round couples at `(ln 3, 0)` (`rrCoupling_zcdp`), so `k` rounds are `(k ln 3, 0)`-zCDP. -/
 
 open GradedLifting GradedDivergence
 open scoped ENNReal

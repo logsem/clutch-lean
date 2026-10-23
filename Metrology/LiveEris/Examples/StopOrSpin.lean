@@ -16,15 +16,17 @@ deterministic infinite loop. It never fails, and runs forever with probability a
 -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.LiveEris ProbLang.LiveEris.LiveWpGS
-open scoped ENNReal
+open Finset Filter Credit ENNReal
 
 namespace ProbLang.LiveEris.Examples
 
+/-- The loop that spins forever without doing anything. -/
 @[pl_fold]
 def spin {rT : Type _} : Exp rT := pl% rec spin u := spin u
 
 pl_closed spin
 
+/-- A loop that stops with probability 1/2, retries with probability 1/4, and otherwise spins. -/
 @[pl_fold]
 def stopOrSpin {rT : Type _} : Exp rT := pl%
   rec loop u :=
@@ -39,6 +41,7 @@ variable {rT : Type _} {hlc : HasLC} {GF : BundledGFunctors} [MeasurableSpace rT
   [LiveGS rT hlc GF]
 local bi IProp GF
 
+/-- Spinning forever is justified by a unit of divergence credit. -/
 theorem lwp_spin (Q : State rT → State rT → Prop) (E : CoPset) (Φ : Val rT → IProp GF) :
     iprop(↻1) ⊢ lwp Q E (Exp.app spin pl(#())) Φ := by
   have H : ⊢ iprop(∀ Ψ : Val rT → IProp GF,
@@ -56,46 +59,46 @@ theorem lwp_spin (Q : State rT → State rT → Prop) (E : CoPset) (Φ : Val rT 
   iapply H $$ %Φ Hd
 
 theorem avg_two {a b c : ℝ≥0∞} (h : a + b ≤ 2 * c) :
-    (∑ n ∈ Finset.range (2 : ℤ).toNat, (if n = 0 then a else b)) / ((2 : ℤ).toNat : ℝ≥0∞) ≤ c := by
-  simp only [show (2 : ℤ).toNat = 2 from rfl, Finset.sum_range_succ, Finset.sum_range_zero,
+    (∑ n ∈ range (2 : ℤ).toNat, (if n = 0 then a else b)) / ((2 : ℤ).toNat : ℝ≥0∞) ≤ c := by
+  simp only [show (2 : ℤ).toNat = 2 from rfl, sum_range_succ, sum_range_zero,
     zero_add, Nat.one_ne_zero, ↓reduceIte, Nat.cast_ofNat]
-  exact ENNReal.div_le_of_le_mul (by rw [mul_comm]; exact h)
+  exact div_le_of_le_mul (by rw [mul_comm]; exact h)
 
 theorem two_mul_half_pow (j : ℕ) : (2 : ℝ≥0∞) * 2⁻¹ ^ (j + 1) = 2⁻¹ ^ j := by
-  rw [pow_succ, mul_comm, mul_assoc, ENNReal.inv_mul_cancel two_ne_zero ENNReal.ofNat_ne_top,
+  rw [pow_succ, mul_comm, mul_assoc, ENNReal.inv_mul_cancel two_ne_zero ofNat_ne_top,
     mul_one]
 
 theorem half_pow_le_one (j : ℕ) : (2⁻¹ : ℝ≥0∞) ^ j ≤ 1 :=
   pow_le_one₀ zero_le (ENNReal.inv_le_one.2 one_le_two)
 
-theorem liminf_half_pow : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ k) Filter.atTop = 0 :=
+theorem liminf_half_pow : liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ k) atTop = 0 :=
   (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one (by norm_num)).liminf_eq
 
 theorem two_third_le_one : (2 : ℝ≥0∞) * 3⁻¹ ≤ 1 := by
   calc (2 : ℝ≥0∞) * 3⁻¹ ≤ 3 * 3⁻¹ := by gcongr; norm_num
-    _ = 1 := ENNReal.mul_inv_cancel (by norm_num) ENNReal.ofNat_ne_top
+    _ = 1 := ENNReal.mul_inv_cancel (by norm_num) ofNat_ne_top
 
 theorem third_le_one : (3⁻¹ : ℝ≥0∞) ≤ 1 := ENNReal.inv_le_one.2 (by norm_num)
 
 theorem third_add_one : (3⁻¹ : ℝ≥0∞) + 1 ≤ 2 * (2 * 3⁻¹) := by
-  have h3 : (3 : ℝ≥0∞) * 3⁻¹ = 1 := ENNReal.mul_inv_cancel (by norm_num) ENNReal.ofNat_ne_top
+  have h3 : (3 : ℝ≥0∞) * 3⁻¹ = 1 := ENNReal.mul_inv_cancel (by norm_num) ofNat_ne_top
   apply le_of_eq
   calc (3⁻¹ : ℝ≥0∞) + 1 = 3⁻¹ + 3 * 3⁻¹ := by rw [h3]
     _ = 2 * (2 * 3⁻¹) := by ring
 
 /-- An `lwp` provable with `↯(ε k)` for every `k` needs no error credits when `ε` has liminf `0`. -/
 theorem lwp_of_err_liminf_zero {Q : State rT → State rT → Prop} {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} {ε : ℕ → ℝ≥0∞} (hlim : Filter.liminf ε Filter.atTop = 0)
+    {Φ : Val rT → IProp GF} {ε : ℕ → ℝ≥0∞} (hlim : liminf ε atTop = 0)
     (Hnv : e.toVal? = none) :
     iprop(∀ k, ↯(ε k) -∗ lwp Q E e Φ) ⊢ lwp Q E e Φ := by
   iintro Hwp
   iapply fupd_lwp
   imod Credit.zero with H0
   imodintro
-  ihave ⟨He, -⟩ := Credit.frag_sep.1 $$ H0
-  iapply lwp_err_liminf Filter.univ_mem Hnv
+  ihave ⟨He, -⟩ := frag_sep.1 $$ H0
+  iapply lwp_err_liminf Hnv univ_mem
   isplitl [He]
-  · iapply Credit.frag_ext hlim.symm rfl $$ He
+  · iapply frag_ext hlim.symm rfl $$ He
   · iintro %k - Hk
     iapply Hwp $$ Hk
 
@@ -106,11 +109,11 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
   | zero =>
     iintro ⟨He, -⟩
     iexfalso
-    iapply Credit.err_contradict (by simp) $$ He
+    iapply err_contradict (by simp) $$ He
   | succ k IH =>
     rw [show 2 * (k + 1) = 2 * k + 1 + 1 by ring]
     iintro ⟨He, Hd⟩
-    ihave Hcr := Credit.frag_sep.2 $$ [$He $Hd]
+    ihave Hcr := frag_sep.2 $$ [$He $Hd]
     live_pure
     live_pure
     live_bind (pl(rand(#2, #())) : Exp rT)
@@ -126,7 +129,7 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
       live_value
       ipureintro; rfl
     · live_pures
-      ihave Hcr := Credit.frag_ext (ε₂ := (2⁻¹ : ℝ≥0∞) ^ (2 * k + 1)) (δ₂ := 2 * 3⁻¹)
+      ihave Hcr := frag_ext (ε₂ := (2⁻¹ : ℝ≥0∞) ^ (2 * k + 1)) (δ₂ := 2 * 3⁻¹)
         (by simp) (by simp) $$ Hcr
       live_bind (pl(rand(#2, #())) : Exp rT)
       iapply (lwp_rand_credit (F := fun n => if n = 0 then (2⁻¹ : ℝ≥0∞) ^ (2 * k) else 0)
@@ -143,8 +146,8 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
         iapply lwp_wand
         isplitl [Hcr]
         · iapply IH
-          iapply Credit.frag_sep.1
-          iapply Credit.frag_ext (by simp) (by simp) $$ Hcr
+          iapply frag_sep.1
+          iapply frag_ext (by simp) (by simp) $$ Hcr
         · iintro %v %rfl
           live_value
           ipureintro; rfl
@@ -152,12 +155,13 @@ theorem lwp_stopOrSpin_depth (Q : State rT → State rT → Prop) (E : CoPset) (
         live_pure
         live_bind (Exp.app (spin (rT := rT)) pl(#()))
         iapply lwp_spin
-        iapply Credit.frag_ext (by simp) (by simp) $$ Hcr
+        iapply frag_ext (by simp) (by simp) $$ Hcr
 
+/-- Stop-or-spin returns `()` given `↻(1/3)` of divergence credit. -/
 theorem lwp_stopOrSpin (Q : State rT → State rT → Prop) (E : CoPset) :
     iprop(↻(3⁻¹)) ⊢
       lwp Q E (Exp.app stopOrSpin pl(#())) (fun v => iprop(⌜v = .unit⌝)) := by
-  have hlim : Filter.liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ (2 * k)) Filter.atTop = 0 := by
+  have hlim : liminf (fun k : ℕ => (2⁻¹ : ℝ≥0∞) ^ (2 * k)) atTop = 0 := by
     simp_rw [pow_mul]
     exact (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
       (pow_lt_one₀ zero_le (by norm_num) two_ne_zero)).liminf_eq
@@ -193,7 +197,7 @@ theorem stopOrSpin_safe (σ : State ℝ) :
 theorem stopOrSpin_terminates (σ : State ℝ) :
     2 / 3 ≤ limExec ⟨Exp.app stopOrSpin pl(#()), σ⟩ (goodVal (· = .unit)) := by
   have h := lwp_adequacy_liveness (GF := liveGF) (σ := σ) (Q := fun _ _ => False) (ε := 0)
-    (δ := 3⁻¹) (P := fun _ => False) (by simp) measurableSet_eq_unit (fun _ _ h => h) (by simp)
+    (δ := 3⁻¹) (P := fun _ => False) measurableSet_eq_unit (by simp) (fun _ _ h => h) (by simp)
     (fun [LiveGS ℝ .hasNoLC liveGF] => sep_elim_right.trans (lwp_stopOrSpin _ ⊤)) 1
   rw [zero_add, one_sub_third] at h
   exact limExec_good_ge measurableSet_eq_unit h

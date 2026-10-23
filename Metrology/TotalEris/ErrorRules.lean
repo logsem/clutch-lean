@@ -233,7 +233,7 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
   obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
   have hfe : f (⟨pl(#n), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
     simp only [hf]; exact dite_eq_left ⟨Hn₁, Hn₂⟩
-  iapply (ErisWpGS.tglWp_value_of_toVal rfl)
+  iapply (tglWp_value_of_toVal rfl)
   have hn : 0 ≤ n ∧ n < z := ⟨Hn₁, Hn₂⟩
   iapply Hcont $$ %n
   iframe %hn
@@ -298,7 +298,7 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨r, rfl, hrsupp⟩ := HRρ
   have hfe : f (⟨pl(#r), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
-  iapply (ErisWpGS.tglWp_value_of_toVal rfl)
+  iapply (tglWp_value_of_toVal rfl)
   iapply Hcont $$ %r
   iframe %hrsupp
   iapply (ext hfe) $$ Hcr

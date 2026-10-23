@@ -37,10 +37,12 @@ def cons (X : lrel rT GF) (Δ : TyEnv rT GF) : TyEnv rT GF
   | 0 => X
   | n + 1 => Δ n
 
+/-- Extending with `n`-close relations gives `n`-close environments. -/
 theorem cons_ne_head {Y : lrel rT GF} (h : X ≡{n}≡ Y) : cons X Δ ≡{n}≡ cons Y Δ
   | 0 => h
   | _ + 1 => .rfl
 
+/-- Extending `n`-close environments with the same relation gives `n`-close environments. -/
 theorem cons_ne_tail (h : Δ ≡{n}≡ Δ') : cons X Δ ≡{n}≡ cons X Δ'
   | 0 => .rfl
   | m + 1 => h m
@@ -49,6 +51,7 @@ theorem cons_ne_tail (h : Δ ≡{n}≡ Δ') : cons X Δ ≡{n}≡ cons X Δ'
 @[reducible] def comp (Δ : TyEnv rT GF) (ξ : Nat → Nat) : TyEnv rT GF :=
   fun n => Δ (ξ n)
 
+/-- Extending then renaming agrees with renaming under a binder, then extending. -/
 theorem comp_upren (X : lrel rT GF) (Δ : TyEnv rT GF) (ξ : Nat → Nat) :
     cons X (comp Δ ξ) = comp (cons X Δ) (Renaming.under ξ) := by
   funext n; cases n <;> rfl
@@ -57,10 +60,9 @@ end TyEnv
 
 end TyEnvSetup
 
-/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`).
-
-The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
-`unboxed_type_lit_shape` instead. -/
+-- The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
+-- `unboxed_type_lit_shape` instead.
+/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`). -/
 @[simp] def Exp.isUnboxedV : Exp rT → Prop
   | .lit _ => True
   | .inl (.lit _) => True
@@ -84,7 +86,9 @@ local bi IProp GF
 
 /-- A non-expansive map from type environments to logical relations. -/
 structure NEFun (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT] (GF : BundledGFunctors) where
+  /-- The underlying map. -/
   fn : TyEnv rT GF → lrel rT GF
+  /-- The map is non-expansive. -/
   ne : ∀ {n : Nat} {Δ Δ' : TyEnv rT GF}, Δ ≡{n}≡ Δ' → fn Δ ≡{n}≡ fn Δ'
 
 namespace NEFun
@@ -167,19 +171,27 @@ theorem interp_ne_env (τ : Ty) (h : Δ ≡{n}≡ Δ') :
 section HeadShape
 variable (Δ : TyEnv rT GF)
 
+/-- The `unit` type is interpreted as `lrel_unit`. -/
 @[simp] theorem interp_unit : interp L .unit Δ = lrel_unit := rfl
+/-- The `int` type is interpreted as `lrel_int`. -/
 @[simp] theorem interp_int : interp L .int Δ = lrel_int := rfl
+/-- The `bool` type is interpreted as `lrel_bool`. -/
 @[simp] theorem interp_bool : interp L .bool Δ = lrel_bool := rfl
+/-- The `real` type is interpreted as `lrel_real`. -/
 @[simp] theorem interp_real : interp L .real Δ = lrel_real := rfl
+/-- The `tape` type is interpreted as `lrel_tape`. -/
 @[simp] theorem interp_tape : interp L .tape Δ = lrel_tape := rfl
 
 section
 variable (τ1 τ2 : Ty)
 
+/-- Products are interpreted as `lrel_prod`. -/
 theorem interp_prod : interp L (.prod τ1 τ2) Δ = lrel_prod (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
+/-- Sums are interpreted as `lrel_sum`. -/
 theorem interp_sum : interp L (.sum τ1 τ2) Δ = lrel_sum (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
+/-- Arrows are interpreted as `lrel_arr`. -/
 theorem interp_arrow : interp L (.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 end
@@ -187,6 +199,7 @@ end
 section
 variable (τ : Ty)
 
+/-- References are interpreted as `lrel_ref`. -/
 theorem interp_ref : interp L (.ref τ) Δ = lrel_ref (interp L τ Δ) := rfl
 
 variable (v v' : Val rT)
@@ -254,6 +267,7 @@ variable (L) in
 @[reducible] noncomputable def semSubst (σ : Nat → Ty) (Δ : TyEnv rT GF) : TyEnv rT GF :=
   fun n => interp L (σ n) Δ
 
+/-- Extending a semantic substitution matches substituting under a binder. -/
 theorem semSubst_up (σ : Nat → Ty) (X : lrel rT GF) (Δ : TyEnv rT GF) :
     ∀ n, semSubst L (up σ) (cons X Δ) n = cons X (semSubst L σ Δ) n
   | 0 => rfl

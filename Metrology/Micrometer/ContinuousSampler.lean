@@ -8,8 +8,7 @@ public import Metrology.Micrometer.AppRelRules
 
 /-! # Continuous sampler rules
 
-Program rules for `urand` (`wp_urand`) and its coupling along a measure-preserving map
-(`wp_couple_urand_urand`, `refines_couple_urands_lr`). -/
+Rules for `urand` and its coupling along a measure-preserving map. -/
 
 @[expose] public section
 
@@ -27,7 +26,7 @@ variable {rT : Type} [MeasurableSpace rT]
 
 /-! ## The real-literal injection
 
-`urand` steps to `Cfg.uniformReal σ`, the pushforward of `unifUnit` along `r ↦ ⟨#r, σ⟩`. -/
+`urand` steps to `uniformReal σ`, the pushforward of `unifUnit` along `r ↦ ⟨#r, σ⟩`. -/
 
 /-- Pairing a real literal with the state `σ` is measurable. -/
 theorem Cfg.measurable_realLit (σ : State rT) :
@@ -69,7 +68,7 @@ theorem headReducible_urand : HeadReducible pl(urand) σ :=
 theorem reducible_urand : Reducible pl(urand) σ :=
   reducible_of_headReducible (by is_lc) (headReducible_urand σ)
 
-/-- One primitive step of `urand` is `Cfg.uniformReal σ`. -/
+/-- One primitive step of `urand` is `uniformReal σ`. -/
 theorem primStep_urand : primStep ⟨pl(urand), σ⟩ = uniformReal σ :=
   primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc) (headReducible_urand σ))
 
@@ -86,8 +85,7 @@ end Steps
 
 /-! ## Relational coupling of two continuous samplers
 
-Unlike the discrete `unifInt_rel_bij`, a bijection is not enough here:
-`f` must be measure-preserving for `unifUnit`. -/
+A bijection is not enough for continuous samplers: `f` must be measure-preserving for `unifUnit`. -/
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f`, for any lawful
 reflexive `L`. -/
@@ -104,7 +102,7 @@ theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
     (measurable_realLit σ')
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
-of `Cfg.uniformReal_rel_bij`). -/
+of `uniformReal_rel_bij`). -/
 theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) :
     AddCoupl 0 {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
@@ -117,11 +115,11 @@ theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
 section Rules
 variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {hlc : HasLC}
   {GF : BundledGFunctors}
+  [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 local bi IProp GF
 
 section Unary
-variable [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-  [L.IsTopAbsorbing] [L.HasBind]
+variable [MicrometerGS rT hlc GF] [BudgetGS B GF]
 
 /-- A program `urand` returns some `r` in the support of `unifUnit`, after a `▷`. -/
 theorem wp_urand {E : CoPset} {Φ : Val rT → _} : iprop%
@@ -181,8 +179,7 @@ end Unary
 /-! ## The relational rule -/
 
 section Relational
-variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
+variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
 /-- Relational form of `wp_couple_urand_urand`: couple the two `urand`s along a measure-preserving
 `f`. -/

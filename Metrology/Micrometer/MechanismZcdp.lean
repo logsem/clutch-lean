@@ -6,11 +6,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Pure DP programs are zCDP
 
-A terminating program family that refines in both directions from `↯b (ε, 0)` in `codensity dp`
-is `(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`, Bun–Steinke 2016, Prop. 3.3), so it is
-`(ε² / 2 + 2 √(ε² / 2 · log (1 / δ)), δ)`-DP (`progMech_DP_of_dp_sqrt`). The zCDP form is the one
-that composes: `k` such mechanisms are `k ε² / 2`-zCDP, so DP in `ε √k`. Termination is a
-hypothesis, since pure DP of sub-probability outputs bounds no normalized Rényi divergence. -/
+A terminating program family refining in both directions from `↯b (ε, 0)` in `codensity dp` is
+`(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`), hence DP in `ε √k` after `k` compositions. -/
 
 @[expose] public section
 
@@ -34,7 +31,6 @@ end ProbabilityTheory.Kernel
 namespace ProbLang
 
 open Iris Iris.BI GradedLifting ProbabilityTheory GradedDivergence Real
-open scoped ENNReal NNReal
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {X : Type}
   [MeasurableSpace X] (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]

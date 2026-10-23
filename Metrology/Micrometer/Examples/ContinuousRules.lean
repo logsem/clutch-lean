@@ -5,14 +5,11 @@ public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
 /-! # Sanity uses of the coupling rules for continuous draws
 
-One short use of each rule of `ContinuousCouplings` and of the `rand` tactics `rel_couple_UU_adv`,
-`rel_couple_UU_avoid` and `rel_couple_UU_dpChoice`, showing each statement applies as stated. At
-`ℝ`, avoiding a point costs nothing (`urand_avoid_zero_real`), and `urand` couples with `rand N`
-along `u ↦ ⌊N u⌋` (`wp_urand_floor_real`). -/
+One short use of each rule of `ContinuousCouplings` and of the `rand` tactics. -/
+
+@[expose] public section
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal

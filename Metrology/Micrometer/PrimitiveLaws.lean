@@ -12,7 +12,7 @@ import Metrology.Iris.LocalBI
 /-! # Primitive Laws
 
 The ghost-state bundle `MicrometerGS` and its `MicrometerWpGS` instance, then the `wp` rules for
-single heap, tape and `rand` steps: program side, and spec side (`_r`). -/
+heap, tape and `rand` steps on the program side and the spec side (`_r`). -/
 
 @[expose] public section
 
@@ -38,8 +38,11 @@ open Cfg (specAuth)
 /-- The Micrometer ghost-state components, excluding budget (`BudgetGS B GF`) -/
 class MicrometerGS (rT : outParam Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (hlc : outParam HasLC) (GF : BundledGFunctors) where
+  /-- The program-side ghost state. -/
   appGS : AppGS rT GF
+  /-- The spec-side ghost state. -/
   specGS : SpecGS rT GF
+  /-- The invariant ghost state. -/
   invGS : InvGS_gen hlc GF
 
 attribute [reducible, instance] MicrometerGS.appGS MicrometerGS.specGS
@@ -64,9 +67,13 @@ noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) 
   invGS := inferInstance
   stateInterp σ := appStateAuth σ
 
-@[simp] theorem micrometerWpGS_stateInterp_eq : (stateInterp : _ → IProp GF) = appStateAuth := rfl
+/-- The `wp` state interpretation is the program-side state authority. -/
+@[simp]
+theorem micrometerWpGS_stateInterp_eq : (stateInterp : _ → IProp GF) = appStateAuth := rfl
 
-@[simp] theorem micrometerWpGS_specInterp_eq : (specInterp : _ → IProp GF) = specAuth := rfl
+/-- The `wp` spec interpretation is the spec-side authority. -/
+@[simp]
+theorem micrometerWpGS_specInterp_eq : (specInterp : _ → IProp GF) = specAuth := rfl
 
 end MicrometerInstance
 
@@ -109,7 +116,7 @@ theorem wp_alloc : iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (
   iapply wp_lift_atomic_head_step alloc_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.AllocS (toVal?_ofVal v) rfl rfl).pos⟩
+  · ipureintro; exact ⟨_, (AllocS (toVal?_ofVal v) rfl rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -131,7 +138,7 @@ theorem wp_load : iprop% appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp 
   ihave %hlook := app_state_lookup_heap $$ Hσ Hl
   imodintro
   isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.LoadS hlook rfl).pos⟩
+  · ipureintro; exact ⟨_, (LoadS hlook rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -154,7 +161,7 @@ theorem wp_store {v v' : Val rT} : iprop%
   imodintro
   isplitr
   · ipureintro
-    exact ⟨_, (HeadStepSupport.StoreS (toVal?_ofVal v)
+    exact ⟨_, (StoreS (toVal?_ofVal v)
         (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
@@ -178,7 +185,7 @@ theorem wp_alloctape : iprop%
   iapply wp_lift_atomic_head_step tape_toVal?_eq_none (by is_lc)
   iintro %σ₁ Hσ !>
   isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.TapeS rfl rfl).pos⟩
+  · ipureintro; exact ⟨_, (TapeS rfl rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -189,41 +196,6 @@ theorem wp_alloctape : iprop%
     simp only [micrometerWpGS_stateInterp_eq, insert_eq_PartialMap_insert, toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ %σ₁.tapes.fresh Hl
-
-/-- An unlabeled `rand z` with `0 < z` returns some `n` in `[0, z)`. -/
-theorem wp_rand (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢ wp L E pl(rand(#z, #())) Φ := by
-  iintro HΦ
-  iapply wp_lift_atomic_head_step rand_toVal?_eq_none (by is_lc)
-  iintro %σ₁ Hσ !>
-  isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.RandNoTapeS Hz le_rfl Hz).pos⟩
-  iintro !> %e₂ %σ₂ %hstep
-  replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
-  cases hstep with
-  | RandNoTapeS _ hv0 hvz =>
-    imodintro
-    simp only [micrometerWpGS_stateInterp_eq, toVal?_lit]
-    iframe Hσ
-    iapply HΦ $$ %_ %⟨hv0, hvz⟩
-  | RandNonposS hnz => exact absurd Hz hnz
-
-/-- An unlabeled `rand z` with `z ≤ 0` returns `-1`. -/
-theorem wp_rand_nonpos (Hz : ¬ 0 < z) : Φ (.int (-1)) ⊢ wp L E pl(rand(#z, #())) Φ := by
-  iintro HΦ
-  iapply wp_lift_atomic_head_step rand_toVal?_eq_none (by is_lc)
-  iintro %σ₁ Hσ !>
-  isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.RandNonposS Hz).pos⟩
-  iintro !> %e₂ %σ₂ %hstep
-  replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
-  cases hstep with
-  | RandNoTapeS hpos _ _ => exact absurd hpos Hz
-  | RandNonposS _ =>
-    imodintro
-    simp only [micrometerWpGS_stateInterp_eq, toVal?_lit]
-    iframe Hσ
-    iexact HΦ
 
 variable {ns : List Int}
 
@@ -239,7 +211,7 @@ theorem wp_rand_tape {n : Int} : iprop%
   have hz : 0 < z := by have := x.2; omega
   imodintro
   isplitr
-  · ipureintro; exact ⟨_, (HeadStepSupport.RandTapeS hlook rfl rfl rfl).pos⟩
+  · ipureintro; exact ⟨_, (RandTapeS hlook rfl rfl rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -259,8 +231,30 @@ theorem wp_rand_tape {n : Int} : iprop%
     rw [hlook] at hlook'; cases hlook'; exact absurd rfl hne
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd hz hnz
 
+section
+variable (Hz : 0 < z)
+include Hz
+
+/-- An unlabeled `rand z` with `0 < z` returns some `n` in `[0, z)`. -/
+theorem wp_rand : iprop%
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢ wp L E pl(rand(#z, #())) Φ := by
+  iintro HΦ
+  iapply wp_lift_atomic_head_step rand_toVal?_eq_none (by is_lc)
+  iintro %σ₁ Hσ !>
+  isplitr
+  · ipureintro; exact ⟨_, (RandNoTapeS Hz le_rfl Hz).pos⟩
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
+  | RandNoTapeS _ hv0 hvz =>
+    imodintro
+    simp only [micrometerWpGS_stateInterp_eq, toVal?_lit]
+    iframe Hσ
+    iapply HΦ $$ %_ %⟨hv0, hvz⟩
+  | RandNonposS hnz => exact absurd Hz hnz
+
 /-- A labeled `rand z` on an empty tape with bound `z` draws a fresh `n` in `[0, z)`. -/
-theorem wp_rand_tape_empty (Hz : 0 < z) : iprop%
+theorem wp_rand_tape_empty : iprop%
     appNatTape l z [] ∗ (∀ n, appNatTape l z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
       wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -271,7 +265,7 @@ theorem wp_rand_tape_empty (Hz : 0 < z) : iprop%
   imodintro
   isplitr
   · ipureintro
-    exact ⟨_, (HeadStepSupport.RandTapeEmptyS Hz hlook rfl le_rfl Hz rfl).pos⟩
+    exact ⟨_, (RandTapeEmptyS Hz hlook rfl le_rfl Hz rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -289,7 +283,7 @@ theorem wp_rand_tape_empty (Hz : 0 < z) : iprop%
   | RandTapeNonposEmptyS hnz _ _ | RandTapeNonposOtherS hnz _ _ => exact absurd Hz hnz
 
 /-- A labeled `rand z` on a tape with another bound draws a fresh `n` and keeps the tape. -/
-theorem wp_rand_tape_wrong_bound {M : Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop%
+theorem wp_rand_tape_wrong_bound {M : Int} (HneM : z ≠ M) : iprop%
     appNatTape l M ns ∗ (∀ n, appNatTape l M ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ Φ (.int n)) ⊢
       wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -301,7 +295,7 @@ theorem wp_rand_tape_wrong_bound {M : Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop
   imodintro
   isplitr
   · ipureintro
-    exact ⟨_, (HeadStepSupport.RandTapeOtherS Hz hlook HneM le_rfl Hz rfl).pos⟩
+    exact ⟨_, (RandTapeOtherS Hz hlook HneM le_rfl Hz rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -319,10 +313,33 @@ theorem wp_rand_tape_wrong_bound {M : Int} (Hz : 0 < z) (HneM : z ≠ M) : iprop
     · iunfold appNatTape; iexists fs; iframe %hmap HlBack
     iapply HΦ $$ HlNat %⟨hv0, hvz⟩
 
+end
+
 variable {N : Int}
 
+section
+variable (Hz : ¬ 0 < z)
+include Hz
+
+/-- An unlabeled `rand z` with `z ≤ 0` returns `-1`. -/
+theorem wp_rand_nonpos : Φ (.int (-1)) ⊢ wp L E pl(rand(#z, #())) Φ := by
+  iintro HΦ
+  iapply wp_lift_atomic_head_step rand_toVal?_eq_none (by is_lc)
+  iintro %σ₁ Hσ !>
+  isplitr
+  · ipureintro; exact ⟨_, (RandNonposS Hz).pos⟩
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
+  | RandNoTapeS hpos _ _ => exact absurd hpos Hz
+  | RandNonposS _ =>
+    imodintro
+    simp only [micrometerWpGS_stateInterp_eq, toVal?_lit]
+    iframe Hσ
+    iexact HΦ
+
 /-- A labeled `rand z` with `z ≤ 0` on an empty tape returns `-1`. -/
-theorem wp_rand_lbl_nonpos (Hz : ¬ 0 < z) : iprop%
+theorem wp_rand_lbl_nonpos : iprop%
     appTapesFrag l ⟨N, []⟩ ∗ (appTapesFrag l ⟨N, []⟩ -∗ Φ (.int (-1))) ⊢
       wp L E pl(rand(#z, #lbl l)) Φ := by
   iintro ⟨Hl, HΦ⟩
@@ -344,6 +361,8 @@ theorem wp_rand_lbl_nonpos (Hz : ¬ 0 < z) : iprop%
     iframe Hσ
     iapply HΦ $$ Hl
 
+end
+
 /-! ## Spec-side `_r` laws
 
 Random spec steps go through `wp_rand_step_r` (one spec coupling round); deterministic ones
@@ -353,7 +372,7 @@ Random spec steps go through `wp_rand_step_r` (one spec coupling round); determi
 
 /-- A spec-side `rand` steps to some `#n` with `Q n` and keeps the state, in every spec state
 where the resource `R` gives `C`. -/
-theorem wp_rand_step_r {x : BaseLit rT} {R : IProp GF} {C : State rT → Prop}
+theorem wp_rand_step_r {x : BaseLit rT} {R : _} {C : State rT → Prop}
     (Q : Int → Prop)
     (hC : ∀ e' σ, ⊢ specAuth ⟨e', σ⟩ -∗ R -∗ ⌜C σ⌝)
     (hwit : ∀ σ, C σ → ∃ ρ, HeadStepSupport ⟨pl(rand(#z, #x)), σ⟩ ρ)
@@ -382,8 +401,12 @@ theorem wp_rand_step_r {x : BaseLit rT} {R : IProp GF} {C : State rT → Prop}
   iframe Hσ Hs' Hb
   iapply Hwp $$ %n %hn HR Hj'
 
+section
+variable (Hz : 0 < z)
+include Hz
+
 /-- A spec-side unlabeled `rand z` with `0 < z` steps to some `#n` with `n` in `[0, z)`. -/
-theorem wp_rand_r (Hz : 0 < z) : iprop%
+theorem wp_rand_r : iprop%
     ⤇ K.fill pl(rand(#z, #())) ∗
       (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ ⤇ K.fill pl(#int n) -∗ wp L E e Φ) ⊢
       wp L E e Φ := by
@@ -399,26 +422,6 @@ theorem wp_rand_r (Hz : 0 < z) : iprop%
   · iempintro
   iintro %n %hn - Hj'
   iapply Hwp $$ %n %hn Hj'
-
-/-- A spec-side unlabeled `rand z` with `z ≤ 0` steps to `#(-1)`. -/
-theorem wp_rand_nonpos_r (Hz : ¬ 0 < z) : iprop%
-    ⤇ K.fill pl(rand(#z, #())) ∗ (⤇ K.fill pl(#(-1)) -∗ wp L E e Φ) ⊢ wp L E e Φ := by
-  iintro ⟨Hj, Hwp⟩
-  iapply wp_rand_step_r K (· = -1) (R := emp) (C := fun _ => True)
-    (fun _ _ => by iintro - - !%; trivial) (fun _ _ => ⟨_, .RandNonposS Hz⟩)
-    fun _ _ _ _ h => by
-      cases h with
-      | RandNoTapeS hpos _ _ => exact absurd hpos Hz
-      | RandNonposS _ => exact ⟨rfl, _, rfl, rfl⟩
-  iframe Hj
-  isplitr
-  · iempintro
-  iintro %_ %rfl - Hj'
-  iapply Hwp $$ Hj'
-
-section
-variable (Hz : 0 < z)
-include Hz
 
 /-- A spec-side labeled `rand z` on an empty tape with bound `z` draws a fresh `n` in `[0, z)`. -/
 theorem wp_rand_tape_empty_r : iprop%
@@ -478,8 +481,28 @@ theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (HneM : z ≠ M) : iprop%
 
 end
 
+section
+variable (Hz : ¬ 0 < z)
+include Hz
+
+/-- A spec-side unlabeled `rand z` with `z ≤ 0` steps to `#(-1)`. -/
+theorem wp_rand_nonpos_r : iprop%
+    ⤇ K.fill pl(rand(#z, #())) ∗ (⤇ K.fill pl(#(-1)) -∗ wp L E e Φ) ⊢ wp L E e Φ := by
+  iintro ⟨Hj, Hwp⟩
+  iapply wp_rand_step_r K (· = -1) (R := emp) (C := fun _ => True)
+    (fun _ _ => by iintro - - !%; trivial) (fun _ _ => ⟨_, .RandNonposS Hz⟩)
+    fun _ _ _ _ h => by
+      cases h with
+      | RandNoTapeS hpos _ _ => exact absurd hpos Hz
+      | RandNonposS _ => exact ⟨rfl, _, rfl, rfl⟩
+  iframe Hj
+  isplitr
+  · iempintro
+  iintro %_ %rfl - Hj'
+  iapply Hwp $$ Hj'
+
 /-- A spec-side labeled `rand z` with `z ≤ 0` on an empty tape steps to `#(-1)`. -/
-theorem wp_rand_lbl_nonpos_r (Hz : ¬ 0 < z) : iprop%
+theorem wp_rand_lbl_nonpos_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specTapesFrag l ⟨N, []⟩ ∗
       (specTapesFrag l ⟨N, []⟩ -∗ ⤇ K.fill pl(#(-1)) -∗ wp L E e Φ) ⊢
       wp L E e Φ := by
@@ -494,6 +517,8 @@ theorem wp_rand_lbl_nonpos_r (Hz : ¬ 0 < z) : iprop%
   iframe Hj Hl
   iintro %_ %rfl Hl Hj'
   iapply Hwp $$ Hl Hj'
+
+end
 
 end HeadSteps
 

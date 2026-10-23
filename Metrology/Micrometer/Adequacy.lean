@@ -8,8 +8,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Adequacy of the Micrometer logic
 
-A `wp` proof from `↯b b` relates the two limit outputs at budget `b` (`wp_adequacy`) and bounds
-their divergence (`wp_adequacy_div`), via `execCoupl` at every fuel `n`, one later per step. -/
+A `wp` proof from `↯b b` relates the two limit outputs at budget `b` (`wp_adequacy`). -/
 
 @[expose] public section
 
@@ -131,11 +130,15 @@ end Termination
 Each `specCoupl` round is closed by `lift_erasure_erasable_law` and each `progCoupl` step by
 `lift_erasure_erasable_exp_lhs_kanto_law`. -/
 
-section Adequacy
+section Logic
 
 variable [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors}
 local bi IProp GF
+
+section Adequacy
+
+variable [MicrometerGS rT .hasNoLC GF]
 
 section
 variable (P : State rT → Prop) (n m : Nat) (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT)
@@ -297,8 +300,7 @@ section Lawful
 
 variable [CanonicallyOrderedAdd B] [Nontrivial B] [L.IsLawful]
 
-/-- At a value the two runs are Dirac masses related by `φ` at any leftover; stated at fuel `n + 1`
-because `execN 0` is the zero measure. -/
+/-- At a value, the two runs are Dirac masses related by `φ` at any leftover, at fuel `n + 1`. -/
 theorem wp_adequacy_val_fupd (e e' : Exp rT) (σ σ' : State rT) (n : Nat)
     (φ : Val rT → Val rT → Prop) (v : Val rT) (b : B) (He : e.toVal? = some v) :
     appStateAuth σ ∗ specAuth ⟨e', σ'⟩ ∗ budgetInterp b ∗
@@ -393,10 +395,8 @@ end Adequacy
 
 section Budget
 
-variable [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [AppPreGS rT GF] [SpecPreGS rT GF]
-  [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF] (e e' : Exp rT) (σ σ' : State rT)
-local bi IProp GF
+variable [AppPreGS rT GF] [SpecPreGS rT GF] [IBCPre : BudgetCreditPreGS B GF] [InvGpreS GF]
+  (e e' : Exp rT) (σ σ' : State rT)
 
 /-- Allocates the ghost state and turns an `n`-step adequacy entailment into `execCoupl`. -/
 theorem execCoupl_of_step_fupdN (n : Nat) (φ : Val rT → Val rT → Prop) (b : B)
@@ -511,5 +511,7 @@ end Limit
 end Lawful
 
 end Budget
+
+end Logic
 
 end ProbLang

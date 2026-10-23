@@ -20,13 +20,13 @@ meta import Metrology.Meta
 
 /-! # ProbLang syntax
 
-The reals interface, expressions, values, operator evaluation, states, and evaluation contexts
-with their decomposition. -/
+The reals interface, expressions, values, operator evaluation, states and evaluation contexts. -/
 
 @[expose] public section
 
 open Std
 open Cslib
+open Function
 
 /-! ## Library helpers -/
 
@@ -82,6 +82,8 @@ instance instCountableString : Countable String where
     exact fun _ _ h => String.toList_inj.mp (hf h)
 
 namespace ProbLang
+
+variable {rT : Type _} {α : Type _}
 
 /-! ## Variables and locations -/
 
@@ -213,8 +215,7 @@ inductive UnOp
 inductive BinOp | plus | minus | mult | div | mod | and | or | xor | eq | lt | le | shl | shr
   deriving Inhabited, Countable, Repr, BEq
 
-/-- System F_μ_ref types with tapes, used only by `Typed` (Types.lean) and contextual refinement;
-`pl_ty(…)` covers only the monomorphic part. -/
+/-- System F_μ_ref types with tapes, used by the typing judgment and contextual refinement. -/
 @[uncurriedProjections, constructors]
 inductive Ty
   | int | bool | unit
@@ -282,8 +283,7 @@ inductive Exp (rT : Type _)
 
 section WithRealParam
 
-variable {rT : Type _} [ProbLangℝ rT]
-variable {α : Type _}
+variable [ProbLangℝ rT]
 
 /-- A type annotation that is erased. -/
 @[reducible] def Exp.annotated (_τ : Ty) (e : Exp rT) : Exp rT := e
@@ -657,6 +657,7 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lc
 theorem lcb_imp_lc {e : Exp α} (h : lcb 0 e = true) : IsLocallyClosed e :=
   lcb_imp_lc_aux e.size e le_rfl h
 
+/-- If opening a term at `k` with a free variable passes `lcb k`, the term passes `lcb (k+1)`. -/
 theorem lcb_openRec_fvar_rev (x : Var) : ∀ (k : Nat) (e : Exp α),
     lcb k (openRec k (fvar x) e) = true → lcb (k+1) e = true := by
   intro k e
@@ -764,11 +765,6 @@ inductive IsVal : Exp rT → Type
 
 end WithRealParam
 
-section NoRealParam
-
-variable {rT : Type _}
-variable {α : Type _}
-
 /-- A value is locally closed. -/
 theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .lit => .lit _
@@ -778,12 +774,9 @@ theorem IsVal.lc : {e : Exp rT} → IsVal e → Exp.IsLocallyClosed e
   | _, .inl w => .inl w.lc
   | _, .inr w => .inr w.lc
 
-end NoRealParam
-
 section WithRealParam
 
-variable {rT : Type _} [ProbLangℝ rT]
-variable {α : Type _}
+variable [ProbLangℝ rT]
 
 /-- A value: an expression with a witness that it is a value and its local closedness, as a
 `structure` so that its measurable space is the comap of `Val.fst`. -/
@@ -792,7 +785,7 @@ structure Val (α : Type _) where
   fst : Exp α
   /-- The witness that `fst` is a value. -/
   snd : IsVal fst
-  /-- Lets proofs rewrite `open'` on an abstract value to the value itself (`open_lc`). -/
+  /-- The witness that `fst` is locally closed, so `open'` leaves it unchanged. -/
   lc : fst.IsLocallyClosed
 
 /-- The value of a literal, `@[reducible]` so that the proof-mode unifier (`iapply`) matches it. -/
@@ -841,11 +834,6 @@ abbrev Val.real (r : rT) : Val rT   := Val.ofBaseLit (.real r)
 
 end WithRealParam
 
-section NoRealParam
-
-variable {rT : Type _}
-variable {α : Type _}
-
 /-- The underlying expression of `Val.pair v w` is the pair of the underlying expressions. -/
 @[simp] theorem Val.pair_fst (v w : Val rT) : (Val.pair v w).1 = .pair v.1 w.1 := rfl
 /-- The underlying expression of `Val.inl v` is `inl` of the underlying expression. -/
@@ -853,12 +841,9 @@ variable {α : Type _}
 /-- The underlying expression of `Val.inr v` is `inr` of the underlying expression. -/
 @[simp] theorem Val.inr_fst (v : Val rT) : (Val.inr v).1 = .inr v.1 := rfl
 
-end NoRealParam
-
 section WithRealParam
 
-variable {rT : Type _} [ProbLangℝ rT]
-variable {α : Type _}
+variable [ProbLangℝ rT]
 variable {e : Exp α}
 
 namespace IsVal
@@ -970,6 +955,7 @@ theorem Val.ext {v1 v2 : Val α} (h : v1.fst = v2.fst) : v1 = v2 := by
   obtain ⟨e2, w2, h2⟩ := v2
   simp at h; subst h; congr 1; exact IsVal.subsingleton w1 w2
 
+/-- Two values are equal exactly when their underlying expressions are. -/
 theorem Val.ext_iff {v1 v2 : Val α} : v1 = v2 ↔ v1.fst = v2.fst :=
   ⟨congrArg _, Val.ext⟩
 
@@ -1003,17 +989,19 @@ theorem Exp.toVal?_eq_some_of_isValue {e : Exp α} (h : e.isValue) : ∃ v, e.to
 
 Side conditions of the weakest-precondition lifting rules. -/
 
+variable {e₁ e₂ : Exp α}
+
 /-- An `alloc` is not a value. -/
 theorem Exp.alloc_not_isValue {e : Exp α} : ¬ (Exp.alloc e).isValue := fun ⟨w⟩ => nomatch w
 /-- A `load` is not a value. -/
 theorem Exp.load_not_isValue {e : Exp α} : ¬ (Exp.load e).isValue := fun ⟨w⟩ => nomatch w
 /-- A `store` is not a value. -/
-theorem Exp.store_not_isValue {e₁ e₂ : Exp α} :
+theorem Exp.store_not_isValue :
     ¬ (Exp.store e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
 /-- A `tape` is not a value. -/
 theorem Exp.tape_not_isValue {e : Exp α} : ¬ (Exp.tape e).isValue := fun ⟨w⟩ => nomatch w
 /-- A `rand` is not a value. -/
-theorem Exp.rand_not_isValue {e₁ e₂ : Exp α} :
+theorem Exp.rand_not_isValue :
     ¬ (Exp.rand e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
 /-- `urand` is not a value. -/
 theorem Exp.urand_not_isValue : ¬ (Exp.urand : Exp α).isValue := fun ⟨w⟩ => nomatch w
@@ -1025,13 +1013,13 @@ theorem Exp.alloc_toVal?_eq_none {e : Exp α} : (Exp.alloc e).toVal? = none :=
 theorem Exp.load_toVal?_eq_none {e : Exp α} : (Exp.load e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.load_not_isValue
 /-- `toVal?` of a `store` is `none`. -/
-theorem Exp.store_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.store e₁ e₂).toVal? = none :=
+theorem Exp.store_toVal?_eq_none : (Exp.store e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.store_not_isValue
 /-- `toVal?` of a `tape` is `none`. -/
 theorem Exp.tape_toVal?_eq_none {e : Exp α} : (Exp.tape e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.tape_not_isValue
 /-- `toVal?` of a `rand` is `none`. -/
-theorem Exp.rand_toVal?_eq_none {e₁ e₂ : Exp α} : (Exp.rand e₁ e₂).toVal? = none :=
+theorem Exp.rand_toVal?_eq_none : (Exp.rand e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.rand_not_isValue
 /-- `toVal?` of `urand` is `none`. -/
 theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
@@ -1041,8 +1029,8 @@ theorem Exp.urand_toVal?_eq_none : (Exp.urand : Exp α).toVal? = none :=
 macro "solve_not_value" : term =>
   `(Exp.toVal?_eq_none.mpr fun ⟨w⟩ => nomatch w)
 
-/-- Same as `Val.fst`, under its own head symbol so that frame lemmas (`fillItem`) and the
-`delabExpOfVal` delaborator can match it syntactically. -/
+/-- Same as `Val.fst`, under its own head symbol so that frame lemmas and delaborators can match it
+syntactically. -/
 def Exp.ofVal (v : Val α) : Exp α := v.1
 
 /-- `toVal?` recovers a value from its expression `ofVal`. -/
@@ -1055,20 +1043,12 @@ theorem Exp.toVal?_ofVal (v : Val α) : (Exp.ofVal v).toVal? = some v := by
 
 end WithRealParam
 
-section NoRealParam
-
-variable {rT : Type _}
-variable {α : Type _}
-
 /-- `v.snd`, typed for lemmas keyed on the syntactic `Exp.ofVal` shape. -/
 def Val.isVal_ofVal (v : Val rT) : IsVal (Exp.ofVal v) := v.2
 
-end NoRealParam
-
 section WithRealParam
 
-variable {rT : Type _} [ProbLangℝ rT]
-variable {α : Type _}
+variable [ProbLangℝ rT]
 /-- `toVal?` recovers a value from its underlying expression. -/
 @[simp] theorem Val.toVal?_fst (v : Val α) : v.fst.toVal? = some v := Exp.toVal?_ofVal v
 
@@ -1189,20 +1169,22 @@ theorem State.update_tapes_twice (σ : State α) (l : Loc) (ys xs : Tape) :
       σ.update_tapes (·.insert l ys) := by
   unfold State.update_tapes; simp; grind
 
+variable {l : Loc}
+
 /-- Equal states after inserting at label `l` have equal inserted tapes. -/
-theorem State.update_tapes_same {σ σ' : State α} {l : Loc} {xs ys : Tape}
+theorem State.update_tapes_same {σ σ' : State α} {xs ys : Tape}
     (h : σ.update_tapes (·.insert l xs) = σ'.update_tapes (·.insert l ys)) :
     xs = ys := by
   simpa [State.update_tapes, LocHeap] using congrArg (·.tapes[l]?) h
 
 /-- Re-inserting the tape already at `l` leaves the state unchanged. -/
-theorem State.update_tapes_no_change {σ : State α} {l : Loc} {ys : Tape}
+theorem State.update_tapes_no_change {σ : State α} {ys : Tape}
     (h : σ.tapes[l]? = some ys) :
     σ.update_tapes (·.insert l ys) = σ := by
   unfold State.update_tapes; congr 2; grind
 
 /-- Injectivity form of `update_tapes_same`: the presampled values appended to tape `l` agree. -/
-theorem State.update_tapes_same' {n : Int} {l : Loc} {σ σ' : State α}
+theorem State.update_tapes_same' {n : Int} {σ σ' : State α}
     {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }}
     (h : σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) = σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩)) :
@@ -1210,7 +1192,7 @@ theorem State.update_tapes_same' {n : Int} {l : Loc} {σ σ' : State α}
   simpa [Tape.mk.injEq] using State.update_tapes_same h
 
 /-- Presampling different values onto tape `l` gives different states. -/
-theorem State.update_tapes_neq' {n : Int} {l : Loc} {σ σ' : State α}
+theorem State.update_tapes_neq' {n : Int} {σ σ' : State α}
     {xs : List { z : Int // 0 ≤ z ∧ z < n }}
     {x y : { z : Int // 0 ≤ z ∧ z < n }} (hne : x ≠ y) :
     σ.update_tapes (·.insert l ⟨n, xs ++ [x]⟩) ≠ σ'.update_tapes (·.insert l ⟨n, xs ++ [y]⟩) :=
@@ -1278,8 +1260,10 @@ inductive EctxItem (α : Type _)
   | .randR e1 => .rand e1 e
   | .scrut p => .scrut e p
 
+variable {Ki : EctxItem α} {e e' : Exp α}
+
 /-- If a filled frame is locally closed then so is the hole's content. -/
-theorem EctxItem.fillItem_isLocallyClosed {Ki : EctxItem α} {e : Exp α}
+theorem EctxItem.fillItem_isLocallyClosed {e : Exp α}
     (h : (Ki.fillItem e).IsLocallyClosed) : e.IsLocallyClosed := by
   cases Ki <;> (simp only [fillItem] at h; cases h; assumption)
 
@@ -1338,7 +1322,7 @@ theorem EctxItem.fillItem_isValue {K : EctxItem α} {e : Exp α} :
   cases K <;> (simp only [EctxItem.fillItem] at w; cases w) <;> exact ‹IsVal e›.toIsValue
 
 /-- If a filled frame has value shape then so does the hole's content. -/
-theorem EctxItem.fillItem_isValueR {Ki : EctxItem α} {e : Exp α}
+theorem EctxItem.fillItem_isValueR {e : Exp α}
     (h : (Ki.fillItem e).isValueR) : e.isValueR := by
   cases Ki <;> simp_all [EctxItem.fillItem, Exp.isValueR, Exp.ofVal]
 
@@ -1359,7 +1343,7 @@ theorem EctxItem.decompItem_fillItem (Ki : EctxItem α) {e : Exp α} (hv : ¬e.i
   | _ => simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv]
 
 /-- A split by `decompItem` refills to the original with a non-value in the hole. -/
-theorem Exp.decompItem_fill {e e' : Exp α} {Ki : EctxItem α}
+theorem Exp.decompItem_fill
     (h : e.decompItem = some (Ki, e')) : Ki.fillItem e' = e ∧ ¬e'.isValue := by
   simp only [decompItem, toVal?] at h
   have aux : ∀ x : Exp α, IsVal.check? x = none → ¬x.isValue :=
@@ -1369,11 +1353,13 @@ theorem Exp.decompItem_fill {e e' : Exp α} {Ki : EctxItem α}
     (split at h <;> simp_all <;> (try obtain ⟨rfl, rfl⟩ := h; simp_all))
 
 /-- A frame filled with a non-value is not a value. -/
-theorem EctxItem.fillItem_noVal {Ki : EctxItem α} {e : Exp α} (hv : ¬e.isValue) :
+theorem EctxItem.fillItem_noVal {e : Exp α} (hv : ¬e.isValue) :
     ¬(Ki.fillItem e).isValue := (hv <| EctxItem.fillItem_isValue ·)
 
 /-- Evaluation contexts: a list of frames, innermost first. -/
 abbrev Ectx α := List (EctxItem α)
+
+variable {K : Ectx α}
 
 /-- The empty context. -/
 def Ectx.empty : Ectx α := []
@@ -1503,23 +1489,23 @@ theorem Ectx.fill_injective (K : Ectx α) : Function.Injective K.fill := by
   | cons Ki K ih => exact fun _ _ h => EctxItem.fillItem_injective (ih h)
 
 /-- A context filled with a non-value is not a value. -/
-theorem Ectx.fill_noVal {K : Ectx α} {e : Exp α} (hv : ¬e.isValue) : ¬(K.fill e).isValue := by
+theorem Ectx.fill_noVal {e : Exp α} (hv : ¬e.isValue) : ¬(K.fill e).isValue := by
   induction K generalizing e with
   | nil => exact hv
   | cons Ki K ih => exact ih (EctxItem.fillItem_noVal hv)
 
 /-- If a filled context is a value then so is the hole's content. -/
-theorem Ectx.fill_isValue {K : Ectx α} {e : Exp α} (hv : (K.fill e).isValue) : e.isValue :=
+theorem Ectx.fill_isValue {e : Exp α} (hv : (K.fill e).isValue) : e.isValue :=
   if h : e.isValue then h else absurd hv (Ectx.fill_noVal h)
 
 /-- If a filled context has value shape then so does the hole's content. -/
-theorem Ectx.fill_isValueR {K : Ectx α} {e : Exp α} (h : (K.fill e).isValueR) : e.isValueR := by
+theorem Ectx.fill_isValueR {e : Exp α} (h : (K.fill e).isValueR) : e.isValueR := by
   induction K generalizing e with
   | nil => exact h
   | cons Ki K ih => exact EctxItem.fillItem_isValueR (ih h)
 
 /-- If a filled context is locally closed then so is the hole's content. -/
-theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
+theorem Ectx.fill_isLocallyClosed {e : Exp α}
     (h : (K.fill e).IsLocallyClosed) : e.IsLocallyClosed := by
   induction K generalizing e with
   | nil => exact h
@@ -1528,7 +1514,7 @@ theorem Ectx.fill_isLocallyClosed {K : Ectx α} {e : Exp α}
 /-! ### Multi-frame decomposition: `Exp.decomp` -/
 
 /-- The hole found by `decompItem` is smaller than the expression. -/
-theorem Exp.decompItem_size {e e' : Exp α} {Ki : EctxItem α} (h : e.decompItem = some (Ki, e')) :
+theorem Exp.decompItem_size (h : e.decompItem = some (Ki, e')) :
     e'.size < e.size := by
   simp only [decompItem, toVal?] at h
   cases e <;> simp_all <;>
@@ -1559,7 +1545,7 @@ theorem Exp.decomp_snd_of_decompItem_none {e : Exp α} (hd : e.decompItem = none
     e.decomp.2 = e := by rw [Exp.decomp_unfold, hd]
 
 /-- An empty context from `decomp` means `decompItem` is `none` and the redex is the expression. -/
-theorem Exp.decomp_inv_nil {e e' : Exp α} (h : e.decomp = ([], e')) :
+theorem Exp.decomp_inv_nil (h : e.decomp = ([], e')) :
     e.decompItem = none ∧ e = e' := by
   rw [Exp.decomp] at h
   split at h
@@ -1567,7 +1553,7 @@ theorem Exp.decomp_inv_nil {e e' : Exp α} (h : e.decomp = ([], e')) :
   · exact ⟨by assumption, (Prod.mk.inj h).2⟩
 
 /-- A `decomp` context ending in `Ki` comes from one `decompItem` step and a recursive `decomp`. -/
-theorem Exp.decomp_inv_cons {Ki : EctxItem α} {K : Ectx α} {e e'' : Exp α}
+theorem Exp.decomp_inv_cons {e e'' : Exp α}
     (h : e.decomp = (K ++ [Ki], e'')) :
     ∃ e', e.decompItem = some (Ki, e') ∧ e'.decomp = (K, e'') := by
   rw [decomp_unfold] at h
@@ -1585,7 +1571,7 @@ theorem Exp.decomp_inv_cons {Ki : EctxItem α} {K : Ectx α} {e e'' : Exp α}
   · simp_all [List.append_eq_nil_iff]
 
 /-- Filling the `decomp` context with its redex gives back the expression. -/
-theorem Exp.decomp_fill {K : Ectx α} {e e' : Exp α} (h : e.decomp = (K, e')) :
+theorem Exp.decomp_fill (h : e.decomp = (K, e')) :
     K.fill e' = e := by
   induction K using List.reverseRecOn generalizing e e' with
   | nil => exact (decomp_inv_nil h).2.symm
@@ -1595,7 +1581,7 @@ theorem Exp.decomp_fill {K : Ectx α} {e e' : Exp α} (h : e.decomp = (K, e')) :
     exact (decompItem_fill hKi).1
 
 /-- If the redex from `decomp` is a value then the context is empty. -/
-theorem Exp.decomp_val_empty {K : Ectx α} {e e' : Exp α}
+theorem Exp.decomp_val_empty
     (hd : e.decomp = (K, e')) (hv : e'.isValue) : K = [] := by
   induction K using List.reverseRecOn generalizing e e' with
   | nil => rfl
@@ -1606,7 +1592,7 @@ theorem Exp.decomp_val_empty {K : Ectx α} {e e' : Exp α}
     exact absurd hv (decompItem_fill hKi).2
 
 /-- Decomposing `K[e]` for a non-value `e` is `e`'s decomposition with `K` appended outside. -/
-theorem Exp.decomp_fill_comp {e e' : Exp α} {K K' : Ectx α}
+theorem Exp.decomp_fill_comp {K K' : Ectx α}
     (hv : ¬e.isValue) (hd : e.decomp = (K', e')) :
     (K.fill e).decomp = (K' ++ K, e') := by
   induction K using List.reverseRecOn with
@@ -1616,7 +1602,7 @@ theorem Exp.decomp_fill_comp {e e' : Exp α} {K K' : Ectx α}
     simp only [ih, List.append_assoc]
 
 /-- Filling a context around a head redex does not change the redex found by `decomp`. -/
-theorem Exp.decomp_snd_fill {K : Ectx α} {e : Exp α} (hv : ¬e.isValue)
+theorem Exp.decomp_snd_fill {e : Exp α} (hv : ¬e.isValue)
     (hd : e.decompItem = none) : (K.fill e).decomp.2 = e := by
   have he : e.decomp = ([], e) := by rw [Exp.decomp_unfold, hd]
   rw [Exp.decomp_fill_comp hv he]

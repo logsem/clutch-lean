@@ -12,10 +12,8 @@ import Metrology.Iris.LocalBI
 
 /-! # The DP choice law: a public coin picks one of two mechanisms
 
-`choice_refines` proves `choice b ≲ choice b'` from the budget `(ln 3, 0)` via the DP choice law
-(which charges the larger branch cost); `choice_DP` turns it into `(ln 3, 0)`-DP of `choice`.
-Refining both ways makes `choice` also `(0, (ln 3)² / 2)`-zCDP once it terminates almost surely
-(`choice_zCDP`). -/
+`choice_refines` proves `choice b ≲ choice b'` from the budget `(ln 3, 0)` via the DP choice law,
+giving `(ln 3, 0)`-DP (`choice_DP`) and, refining both ways, zCDP (`choice_zCDP`). -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting ProbabilityTheory
 open GradedDivergence (dp codensity)
@@ -30,8 +28,6 @@ open Real (log coe_toNNReal log_nonneg)
 open IsReflexive (refl)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-section Refines
 
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
@@ -58,8 +54,6 @@ theorem choice_refines (b b' : Bool) :
       iapply rr_refines b b' $$ Hr
     · rel_pures
       rel_values
-
-end Refines
 
 section Mech
 

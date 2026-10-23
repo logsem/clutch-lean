@@ -19,9 +19,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 /-!
 # Pure DP gives zCDP
 
-SampCert's proof that a two-sided pure `ε`-DP bound between PMFs gives the Rényi bound
-`D_α(p ‖ q) ≤ α ε² / 2` (Bun–Steinke 2016, Prop. 3.3), stated on the Rényi series
-`∑ p^α q^(1-α) ≤ exp ((α - 1) (ε² α / 2))`.
+SampCert's proof that a pure `ε`-DP bound between PMFs gives the Rényi bound
+`D_α(p ‖ q) ≤ α ε² / 2` (Bun–Steinke 2016, Prop. 3.3).
 -/
 
 @[expose] public section
@@ -70,8 +69,12 @@ lemma PMF_mul_mul_inv_eq_mul_cancel (p q : PMF T) (HA : AbsCts p q) (a : T) :
   · exact fun h => HA a h
   · exact fun ⟨_, h⟩ => apply_ne_top q a h
 
+section RenyiExpectation
+
+variable {α : ℝ}
+
 /-- Pointwise form of the Rényi series term as a conditional expectation term. -/
-lemma RenyiDivergenceExpectation_pointwise (a b : ENNReal) {α : ℝ} (h : 1 < α)
+lemma RenyiDivergenceExpectation_pointwise (a b : ENNReal) (h : 1 < α)
     (Hac : b = 0 → a = 0) : a ^ α * b ^ (1 - α) = (a / b) ^ α * b := by
   rcases eq_or_ne b 0 with hb0 | hb0
   · -- b = 0: a = 0 by AbsCts, so both sides vanish.
@@ -107,20 +110,20 @@ lemma RenyiDivergenceExpectation_pointwise (a b : ENNReal) {α : ℝ} (h : 1 < �
       ← div_rpow_of_nonneg _ _ (by linarith : (0 : ℝ) ≤ α), ENNReal.rpow_one]
 
 /-- The Rényi series as an expectation conditioned on `q`. -/
-theorem RenyiDivergenceExpectation (p q : T → ENNReal) {α : ℝ} (h : 1 < α) (H : AbsCts p q) :
+theorem RenyiDivergenceExpectation (p q : T → ENNReal) (h : 1 < α) (H : AbsCts p q) :
     (∑' x : T, (p x)^α * (q x)^(1 - α)) = ∑' x : T, (p x / q x)^α * (q x) := by
   refine tsum_congr (fun x => ?_)
   exact RenyiDivergenceExpectation_pointwise (p x) (q x) h (H x)
 
 /-- A real power `a ^ (α - 1)` times `a` is `a ^ α` for finite nonzero `a`. -/
-lemma ENNReal_rpow_sub_one_mul (a : ENNReal) {α : ℝ}
+lemma ENNReal_rpow_sub_one_mul (a : ENNReal)
     (ha_ne_zero : a ≠ 0) (ha_ne_top : a ≠ ⊤) :
     a ^ (α - 1) * a = a ^ α := by
   conv_rhs => rw [show α = (α - 1) + 1 from by ring]
   rw [ENNReal.rpow_add _ _ ha_ne_zero ha_ne_top, ENNReal.rpow_one]
 
 /-- Pointwise form of the Rényi series term conditioned on the first argument. -/
-lemma RenyiDivergenceExpectation'_pointwise (a b : ENNReal) {α : ℝ} (h : 1 < α)
+lemma RenyiDivergenceExpectation'_pointwise (a b : ENNReal) (h : 1 < α)
     (Ha_ne_zero : a ≠ 0) (Ha_ne_top : a ≠ ⊤) :
     a ^ α * b ^ (1 - α) = (a / b) ^ (α - 1) * a := by
   rcases eq_or_ne b 0 with hb0 | hb0
@@ -147,7 +150,7 @@ lemma RenyiDivergenceExpectation'_pointwise (a b : ENNReal) {α : ℝ} (h : 1 < 
   rw [← ENNReal.rpow_neg]; congr 1; ring
 
 /-- The Rényi series as an expectation conditioned on `p`. -/
-theorem RenyiDivergenceExpectation' (p q : PMF T) {α : ℝ} (h : 1 < α) :
+theorem RenyiDivergenceExpectation' (p q : PMF T) (h : 1 < α) :
     (∑' x : T, (p x)^α * (q x)^(1 - α)) = ∑' x : T, (p x / q x)^(α - 1) * (p x) := by
   have K1 : support (fun x : T => (p x / q x)^(α - 1) * p x) ⊆ { t : T | p t ≠ 0 } := by
     intro a Ha hpa
@@ -164,6 +167,8 @@ theorem RenyiDivergenceExpectation' (p q : PMF T) {α : ℝ} (h : 1 < α) :
   rw [← tsum_subtype_eq_of_support_subset K2]
   refine tsum_congr (fun ⟨x', Hx'⟩ => ?_)
   exact RenyiDivergenceExpectation'_pointwise (p x') (q x') h Hx' (apply_ne_top p x')
+
+end RenyiExpectation
 
 /-! ## Auxiliary definitions used in the proof of the (ε^2 / 2) bound -/
 section ofDP_bound

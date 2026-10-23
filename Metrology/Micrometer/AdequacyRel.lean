@@ -12,8 +12,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Relational adequacy
 
-A closed refinement proved for every ghost-state instance relates the two limit outputs at budget
-`b` (`approximates_coupling`) and bounds their divergence at equal results (`approximates_div`). -/
+A closed refinement relates the two limit outputs at budget `b` and bounds their divergence. -/
 
 @[expose] public section
 
@@ -33,10 +32,15 @@ open Exp (ofVal)
 budget camera over `B`. -/
 class RefinesPreGS (rT : outParam Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (B : Type) [AddCommMonoid B] (GF : BundledGFunctors) where
+  /-- The program heap and tape ghost state. -/
   [app : AppPreGS rT GF]
+  /-- The spec thread, heap and tape ghost state. -/
   [spec : SpecPreGS rT GF]
+  /-- The budget credit camera over `B`. -/
   [bc : BudgetCreditPreGS B GF]
+  /-- The invariant and credit ghost state. -/
   [inv : InvGpreS GF]
+  /-- The non-atomic invariant ghost state. -/
   [nainv : NaInvG GF]
 
 namespace RefinesPreGS
@@ -45,13 +49,16 @@ attribute [reducible, instance] app spec bc inv nainv
 
 end RefinesPreGS
 
+section Closed
+
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+local bi IProp GF
+
 /-! ## Spec ownership in the empty context -/
 
 section Spec
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
-    [SpecGS rT GF]
-local bi IProp GF
+variable [SpecGS rT GF]
 
 /-- Spec ownership of `e` is that of `e` in the empty context. -/
 theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fill ([] : Ectx rT) e) :=
@@ -60,7 +67,8 @@ theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fi
 variable (v : Val rT)
 
 /-- Spec ownership of a value in the empty context is that of the value. -/
-theorem spec_fill_nil_eq_ofVal : (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
+theorem spec_fill_nil_eq_ofVal :
+    (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
   rfl
 
 /-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
@@ -78,12 +86,10 @@ end Spec
 
 section Coupling
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type}
-variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] [Nontrivial B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
+variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
+  [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
   [L.IsBudgetClosed] {GF : BundledGFunctors} [RefinesPreGS rT B GF]
   (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
-local bi IProp GF
 
 variable (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
 
@@ -144,8 +150,7 @@ The side condition of `approximates_div` and of the examples' adequacy. -/
 
 section EqRelations
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
-local bi IProp GF
+variable {hlc : HasLC}
 
 /-- `lrel_int` relates only equal values. -/
 theorem lrel_int_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
@@ -173,16 +178,12 @@ end EqRelations
 
 /-! ## Support for the examples -/
 
-section Support
-
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
 /-- A value runs to itself. -/
 theorem limExecV_of_isVal {e : Exp rT} (σ : State rT) (hv : IsVal e) :
     limExecV ⟨e, σ⟩ = dirac e := by
   rw [limExecV, limExec_of_isVal hv, asExpr, map_dirac' Cfg.measurable_expr]
 
-end Support
+end Closed
 
 /-! ## A concrete functor list -/
 

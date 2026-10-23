@@ -5,9 +5,12 @@ public import Metrology.Code.RandomWalk
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
 
+/-! # Biased random walk example -/
+
 @[expose] public section
 
 open Iris Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris ProbLang.TotalEris.ErisWpGS
+  ErrorCredit
 open scoped ENNReal
 
 namespace ProbLang
@@ -20,12 +23,15 @@ variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
 local bi IProp GF
 
+/-- The cost of the biased walk from `x`. -/
 def walkCost (u m : ℕ) (a x : ℤ) : ℝ≥0∞ :=
   ENNReal.ofReal (((u : ℝ) / (m - u)) ^ (a - x).toNat)
 
+/-- Integer literal equality reduces to `==` on the integers. -/
 theorem walk_beq_int_lit {n m : ℤ} : ((BaseLit.int n : BaseLit rT) == BaseLit.int m) = (n == m) :=
   rfl
 
+/-- The average cost over the first step is at most the cost at `x`. -/
 theorem walkCost_avg {u m : ℕ} (hum : u < m) {a x : ℤ} (hxa : x < a) :
     (∑ r ∈ Finset.range m, walkCost u m a (if r < u then x + 1 else x - 1)) /
       (m : ℝ≥0∞) ≤ walkCost u m a x := by
@@ -53,6 +59,7 @@ theorem walkCost_avg {u m : ℕ} (hum : u < m) {a x : ℤ} (hxa : x < a) :
   have hρ : ((m : ℝ) - u) * ρ = u := by rw [hρdef]; field_simp
   linear_combination (ρ ^ (e + 1) - ρ ^ e) * hρ
 
+/-- The biased walk returns `false` under the walk cost. -/
 theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ) (x : ℤ)
     (hx : x ≤ a) :
     iprop(↯(walkCost u m a x)) ⊢
@@ -63,7 +70,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     iintro Herr
     by_cases hxa : x = a
     · iexfalso
-      iapply ErrorCredit.contradict (by simp [walkCost, hxa]) $$ Herr
+      iapply contradict (by simp [walkCost, hxa]) $$ Herr
     twp_pures
     rw [walk_beq_int_lit, beq_eq_false_iff_ne.mpr hxa]
     twp_pures
@@ -74,7 +81,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
     iintro Herr
     by_cases hxa : x = a
     · iexfalso
-      iapply ErrorCredit.contradict (by simp [walkCost, hxa]) $$ Herr
+      iapply contradict (by simp [walkCost, hxa]) $$ Herr
     twp_pures
     rw [walk_beq_int_lit, beq_eq_false_iff_ne.mpr hxa]
     twp_pures
@@ -96,30 +103,29 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
       twp_pure
       rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
       simp only [Exp.ofVal]
-      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ)))
-        pl(#(x + 1)))
+      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ))) pl(#(x + 1)))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH (x + 1) (by omega)
-      iapply ErrorCredit.ext (by simp [F, show r.toNat < u by omega]) $$ Hcr
+      iapply ext (by simp [F, show r.toNat < u by omega]) $$ Hcr
     · rw [decide_eq_false hru]
       twp_pure
       twp_pure
       twp_pure
       rw [show ((k + 1 : ℕ) : ℤ) - 1 = (k : ℤ) by omega]
       simp only [Exp.ofVal]
-      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ)))
-        pl(#(x - 1)))
+      twp_bind (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (k : ℤ))) pl(#(x - 1)))
       iapply (tglWp_mono fun _ => tglWp_value)
       iapply IH (x - 1) (by omega)
-      iapply ErrorCredit.ext (by simp [F, show ¬r.toNat < u by omega]) $$ Hcr
+      iapply ext (by simp [F, show ¬r.toNat < u by omega]) $$ Hcr
 
+/-- The biased walk from `0` returns `false` under the cost `(u/(m-u))^a`. -/
 theorem twp_biasedWalk_zero (E : CoPset) {u m : ℕ} (hum : u < m) (a n : ℕ) :
     iprop(↯(ENNReal.ofReal (((u : ℝ) / (m - u)) ^ a))) ⊢
       tglWp E (Exp.app (Exp.app (biasedWalk (rT := rT) u m a) pl(#int (n : ℤ)))
         pl(#0)) (fun v : Val rT => iprop(⌜v.1 = .lit (.bool false)⌝)) := by
   iintro Herr
   iapply twp_biasedWalk E hum a n 0 (by omega)
-  iapply ErrorCredit.ext (by simp [walkCost]) $$ Herr
+  iapply ext (by simp [walkCost]) $$ Herr
 
 end
 end Examples

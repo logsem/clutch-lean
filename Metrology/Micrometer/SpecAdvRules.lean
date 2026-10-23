@@ -11,8 +11,7 @@ set_option linter.discrete false
 
 /-! # Spec-side advanced composition
 
-A spec draw `rand N` alone splits one credit `↯b (s ε₁)` into per-outcome credits `↯b (s (ε₂ n))`
-(Eris `wp_couple_rand_adv_comp`, spec side). -/
+A spec draw `rand N` splits one credit `↯b (s ε₁)` by outcome (Eris `wp_couple_rand_adv_comp`). -/
 
 open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open scoped ENNReal AppGS
@@ -29,14 +28,13 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type}
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
 
-section Wp
-
-variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetCreditGS B GF]
+variable {GF : BundledGFunctors} [BudgetCreditGS B GF]
 local bi IProp GF
 
 /-- A spec draw `K[rand N]` turns `↯b (s ε₁)` into `↯b (s (ε₂ n))` at the outcome `n`, where `ε₁`
 bounds the average of `ε₂`. -/
-theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
+theorem wp_rand_r_adv {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞)
+    (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
     (K : Ectx rT) {E : CoPset} {e : Exp rT} {Φ : Val rT → _} : iprop%
     ⤇ K.fill pl(rand(#N, #())) ∗ ↯b (s ε₁) ∗
@@ -102,15 +100,9 @@ theorem wp_rand_r_adv (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int �
   iframe Hσ Hs' Hb
   iapply Hcnt $$ %n %⟨h0, hN⟩ Hfrag Hj'
 
-end Wp
-
-section Rel
-
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
-
 /-- `wp_rand_r_adv` for refinements: the spec draws alone, splitting `↯b (s ε₁)` by outcome. -/
-theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT GF} (N : Int)
+theorem refines_randU_r_adv [MicrometerRGS rT .hasNoLC GF] {E : CoPset} {K : Ectx rT} {e : Exp rT}
+    {A : lrel rT GF} (N : Int)
     (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
     ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#n)) A) ⊢
@@ -123,7 +115,5 @@ theorem refines_randU_r_adv {E : CoPset} {K : Ectx rT} {e : Exp rT} {A : lrel rT
   iintro %n %hn Hn HKRes
   isimp only [← fill_comp K' K] at HKRes
   iapply Hlog $$ %n %hn Hn %K' %b HKRes Hna Herr Hpos
-
-end Rel
 
 end ProbLang

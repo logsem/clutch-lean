@@ -17,7 +17,7 @@ open Classical MeasureTheory ProbabilityTheory Measure Set
 
 namespace ProbLang
 
-open Ectx EctxItem Cfg
+open Ectx EctxItem Cfg Exp
 open List (eq_nil_or_concat' foldl foldl_nil reverseRecOn append_nil append_assoc)
 
 variable {rT : Type _} (K : Ectx rT)
@@ -208,7 +208,7 @@ theorem reducible_of_headReducible
     (he : e.IsLocallyClosed)
     (h : HeadReducible e σ) : Reducible e σ := by
   unfold Reducible
-  rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible he h)]
+  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible he h)]
   exact h
 
 /-! ## The context lemma: `primStep` under `K.fill` -/
@@ -349,7 +349,7 @@ theorem prim_step_iff (he1 : e1.IsLocallyClosed) :
   rw [possible_iff_pos] at hhs ⊢
   have hred : HeadReducible e1' σ1 := fun h0 => by simp [h0] at hhs
   rw [← primStep_fill_singleton (val_head_stuck hred),
-    primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (fill_isLocallyClosed he1) hred)]
+    primStep_eq_headStep (decompItem_none_of_lc_headReducible (fill_isLocallyClosed he1) hred)]
   exact hhs
 
 /-! ## Atomicity and the discrete bridge -/
@@ -455,7 +455,7 @@ theorem HeadStepSupport.of_primStep_fill
   obtain ⟨e', rfl, hstep'⟩ := primStep_fill_inv hv hstep
   refine ⟨e', rfl, Possible.headStepSupport (possible_iff_pos.mpr ?_)⟩
   rwa [primStep_eq_headStep
-    (Exp.decompItem_none_of_lc_headReducible hlc (HeadReducible.of_headStepSupport hwit hu))]
+    (decompItem_none_of_lc_headReducible hlc (HeadReducible.of_headStepSupport hwit hu))]
     at hstep'
 
 /-- A head step of `e` in the support makes `K[e]` discretely reducible. -/

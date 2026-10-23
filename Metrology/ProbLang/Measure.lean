@@ -14,6 +14,8 @@ noncomputable section
 open Classical MeasureTheory ProbabilityTheory Measure Set
 open Function (uncurry)
 
+variable {α : Type _} [MeasurableSpace α]
+
 /-! # Measure-theory support for ProbLang
 
 Support predicates for measures and measurability of `Option`, `List`, Σ-types and kernels. -/
@@ -23,8 +25,6 @@ Support predicates for measures and measurability of `Option`, `List`, Σ-types 
 section Possible
 
 open Pi (one_apply)
-
-variable {α : Type _} [MeasurableSpace α]
 
 /-- `ρ` has positive mass under `μ` (equivalent to `0 < μ {ρ}`, `possible_iff_pos`). -/
 def Possible (ρ : α) (μ : Measure α) : Prop :=
@@ -103,8 +103,6 @@ end Possible
 namespace ProbLang
 
 section Concentrated
-
-variable {α : Type _} [MeasurableSpace α]
 
 /-! ### `Concentrated`: the unary support-lifting
 

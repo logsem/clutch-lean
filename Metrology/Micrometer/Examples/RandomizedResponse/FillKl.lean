@@ -8,13 +8,7 @@ public import Metrology.Couplings.Divergences.RenyiFillKl
 
 /-! # Randomized response in filled KL
 
-One round is within KL `(log 3) / 2` (`klDivergence_rrOut`), so it couples at that budget in
-`codensity (fill klDivergence)`, and `k` rounds are `k (log 3) / 2`-private in filled KL.
-
-The same coupling can be read off the Rényi and zCDP ones, since the draw is a probability measure:
-`k ρ_α` for every order `α > 1` (`rrCount_fillKl_of_renyi`) and `k ln 3` (`rrCount_fillKl_of_zcdp`).
-Both are weaker than `rrCount_fillKl`: `ρ_α` decreases to the KL cost `(log 3) / 2` as `α → 1`, and
-the zCDP line pays the DP cost `ln 3`, twice the KL cost. -/
+One round is within KL `(log 3) / 2`, so `k` rounds are `k (log 3) / 2`-private in filled KL. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence
 open scoped ENNReal

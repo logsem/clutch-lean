@@ -10,8 +10,7 @@ open Lean Meta Metrology.Meta
 
 /-! # The shared context of the `MeasurableSpace` deriving handler
 
-`Ctx` reads an inductive type `T` with its classified constructor fields, and builds the terms
-that the stages of `CylinderGen.lean` share. -/
+`Ctx` reads an inductive type `T` and its classified constructor fields for the shared stages. -/
 
 namespace Metrology.CylinderGen
 

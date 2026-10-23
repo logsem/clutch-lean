@@ -27,14 +27,20 @@ abbrev creditVec (ε δ : ℝ≥0∞) : Coord → ℝ≥0∞
   | .err => ε
   | .tot => ε + δ
 
+/-- The ghost state of LiveEris: application, credit and invariant ghost state over one `GF`. -/
 class LiveGS (rT : outParam (Type _)) [MeasurableSpace rT] [LawfulProbLangℝ rT]
     (hlc : outParam HasLC)
     (GF : BundledGFunctors) where
+  /-- The ghost state of the application language. -/
   appGS : AppGS rT GF
+  /-- The ghost state of the credits. -/
   lcGS : LCGS GF
+  /-- The ghost state of the invariants. -/
   invGS : InvGS_gen hlc GF
 
-attribute [reducible, instance] LiveGS.appGS LiveGS.lcGS
+open LiveGS
+
+attribute [reducible, instance] appGS lcGS
 
 /-- `LiveGS.invGS`, with the measurable space and language read off the instance, not searched
 for first. -/
@@ -54,15 +60,18 @@ noncomputable instance liveWpGS_of_components : LiveWpGS rT Coord GF where
   stateInterp σ := appStateAuth σ
   creditInterp c := iprop(∃ δ, ⌜c .tot = c .err + δ⌝ ∗ creditAuth (c .err) δ)
 
+/-- The state interpretation of `liveWpGS_of_components` is the application state authority. -/
 @[simp] theorem liveWpGS_stateInterp_eq :
     (LiveWpGS.stateInterp : State rT → IProp GF) = appStateAuth := rfl
 
+/-- The credit interpretation of `liveWpGS_of_components` is the credit authority. -/
 @[simp] theorem liveWpGS_creditInterp_eq :
     (LiveWpGS.creditInterp : (Coord → ℝ≥0∞) → IProp GF) =
       fun c => iprop(∃ δ, ⌜c .tot = c .err + δ⌝ ∗ creditAuth (c .err) δ) := rfl
 
 end LiveInstance
 
+/-- The concrete bundled functors that carry LiveEris ghost state. -/
 noncomputable def liveGF : BundledGFunctors := fun
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩

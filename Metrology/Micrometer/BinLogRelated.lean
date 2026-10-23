@@ -27,7 +27,7 @@ abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
 
-/-- The relation of the deepest entry for `x` in the list, as in `ValSubstMap.lookup`; callers
+/-- The relation of the deepest entry for `x` in the list, as in `lookup`; callers
 only cons fresh variables, so the order never matters. -/
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
   | [], _ => none
@@ -38,6 +38,7 @@ def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
 
 variable {Γ : RelCtx rT GF}
 
+/-- A pair in the list makes its variable resolve. -/
 theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup p.1).isSome := by
   induction Γ with
   | nil => cases h
@@ -50,6 +51,7 @@ theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup
 
 variable {y : Var}
 
+/-- A variable that resolves lies in the domain of the context. -/
 theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
   | nil => simp [lookup] at h
@@ -60,11 +62,13 @@ theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).
     | some _ => simp [ih (by rw [hr]; rfl)]
     | none => rw [hr] at h; split_ifs at h <;> simp_all
 
+/-- Lookup in a cons unfolds into the lookup in the tail, falling back to the head. -/
 theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
-    RelCtx.lookup ((y, A) :: Γ) z = match Γ.lookup z with
+    lookup ((y, A) :: Γ) z = match Γ.lookup z with
       | some B => some B
       | none => if z = y then some A else none := rfl
 
+/-- A variable outside the domain of the context does not resolve. -/
 theorem lookup_eq_none_of_notMem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
   | none => rfl
@@ -72,19 +76,18 @@ theorem lookup_eq_none_of_notMem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : �
 
 end RelCtx
 
-/-! ## Related closing substitutions -/
-
-section env_typed
 local bi IProp GF
 
 open RelCtx ValSubstMap
+
+/-! ## Related closing substitutions -/
 
 section
 variable (Γ : RelCtx rT GF) (vs : ValSubstMap rT)
 
 /-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations; the
 closedness conjunct also covers shadowed entries, as `SubstMap.AllClosed` needs. -/
-noncomputable def env_ltyped2 : IProp GF := iprop%
+noncomputable def env_ltyped2 := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
   (∀ x A v1 v2, ⌜Γ.lookup x = some A⌝ -∗ ⌜vs.lookup x = some (v1, v2)⌝ -∗ A v1 v2)
@@ -93,23 +96,28 @@ instance env_ltyped2_persistent : Persistent (env_ltyped2 Γ vs) := by
   unfold env_ltyped2
   infer_instance
 
+/-- Related substitutions have the same domain as the context. -/
 theorem env_ltyped2_domEq : env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
   sep_elim_left
 
+/-- Related substitutions consist of closed values. -/
 theorem env_ltyped2_allClosed :
     env_ltyped2 Γ vs ⊢ ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ :=
   sep_elim_right.trans sep_elim_left
 
+/-- The left projection of a related substitution is closed. -/
 theorem env_ltyped2_fst_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.fst) fun p hp => (hc p hp).1
 
+/-- The right projection of a related substitution is closed. -/
 theorem env_ltyped2_snd_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.snd) fun p hp => (hc p hp).2
 
+/-- The domain of the context lies in the domain of a related substitution. -/
 theorem env_ltyped2_domSubset :
     env_ltyped2 Γ vs ⊢ ⌜(Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset⌝ := by
   iintro Hvs
@@ -122,6 +130,7 @@ theorem env_ltyped2_domSubset :
 
 variable (x : Var) (A : lrel rT GF)
 
+/-- A variable in the context is bound by a substitution to values related at its relation. -/
 theorem env_ltyped2_lookup (hΓ : Γ.lookup x = some A) :
     env_ltyped2 Γ vs ⊢ ∃ v1 v2, ⌜vs.lookup x = some (v1, v2)⌝ ∗ A v1 v2 := by
   unfold env_ltyped2
@@ -202,6 +211,7 @@ theorem env_ltyped2_drop_head (y : Var) (A : lrel rT GF)
 
 end
 
+/-- The empty substitution is related at the empty context. -/
 theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   unfold env_ltyped2
   isplitr
@@ -211,6 +221,7 @@ theorem env_ltyped2_empty : ⊢ env_ltyped2 ([] : RelCtx rT GF) [] := by
   iintro %x %A %v1 %v2 %hΓ
   simp [RelCtx.lookup] at hΓ
 
+/-- A substitution related at the empty context is empty. -/
 theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
     env_ltyped2 ([] : RelCtx rT GF) vs ⊢ ⌜vs = []⌝ := by
   unfold env_ltyped2
@@ -224,28 +235,22 @@ theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
       cases ValSubstMap.lookup rest p.1 <;> simp
     simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
 
-end env_typed
-
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
     [PartialOrder B]
   [OrderTop B] {L : GradedLifting.{0} B} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
-local bi IProp GF
-
-open RelCtx ValSubstMap
-
 variable (L) in
 /-- The semantic typing judgement: related substitutions give related expressions. -/
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
-    (A : lrel rT GF) : IProp GF := iprop%
+    (A : lrel rT GF) := iprop%
   ∀ vs, env_ltyped2 Γ vs -∗ refines L E (substMap vs.fst e) (substMap vs.snd e') A
 
 variable (L) in
 /-- The semantic typing judgement at a syntactic type. -/
 noncomputable abbrev bin_log_related_ty (E : CoPset) (Δ : TyEnv rT GF) (Γ : RelCtx rT GF)
-    (e e' : Exp rT) (τ : Ty) : IProp GF :=
+    (e e' : Exp rT) (τ : Ty) :=
   bin_log_related L E Γ e e' (interp L τ Δ)
 
 /-- `E; Δ; Γ ⊨[L] e ≤log≤ e' : τ` is `bin_log_related_ty L E Δ Γ e e' τ`. -/

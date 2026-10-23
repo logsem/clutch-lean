@@ -5,8 +5,7 @@ import Metrology.Iris.LocalBI
 
 /-! # Micrometer weakest precondition
 
-`wp L E e Φ` is the guarded fixpoint of `wpPre`: a spec phase, then a value or one coupled
-program step, a later and another spec phase. Main result: `wp_strong_mono`. -/
+`wp L E e Φ` is the guarded fixpoint of `wpPre` (main result `wp_strong_mono`). -/
 
 @[expose] public section
 
@@ -37,7 +36,7 @@ variable (L) in
 /-- One unfolding of `wp`: open the invariants, run a spec phase, then either finish at a value or
 take one coupled program step followed by a later and another spec phase (Rocq `wp_pre`). -/
 abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
-    (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) : IProp GF := iprop%
+    (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) := iprop%
   ∀ σ₁ e₁' σ₁' (b₁ : B),
     stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b₁ -∗
     |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ fun σ₂ ρ' b₂ =>
@@ -73,12 +72,12 @@ instance wpPre_contractive : Contractive (wpPre L (rT := rT) (GF := GF)) where
 
 variable (L) in
 /-- The Micrometer weakest precondition under the lifting `L`, the fixpoint of `wpPre`. -/
-noncomputable def wp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) : IProp GF :=
+noncomputable def wp (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) :=
   fixpoint (wpPre L) E e Φ
 
 /-- `wp` is its own one-step unfolding. -/
 theorem wp_unfold : wp L E e Φ = wpPre L (wp L) E e Φ :=
-  congrFun (congrFun (congrFun (fixpoint_unfold ⟨wpPre L, OFE.ne_of_contractive _⟩) E) e) Φ
+  congrFun (congrFun (congrFun (fixpoint_unfold ⟨wpPre L, ne_of_contractive _⟩) E) e) Φ
 
 /-- The forward direction of `wp_unfold`. -/
 theorem wp_unfold_mp : wp L E e Φ ⊢ wpPre L (wp L) E e Φ :=
@@ -134,6 +133,7 @@ theorem wp_value_fupd : (|={E}=> Φ v) ⊢ wp L E (.ofVal v) Φ := by
   imodintro
   iframe
 
+/-- A value satisfies the weakest precondition when it satisfies the postcondition. -/
 theorem wp_value : Φ v ⊢ wp L E (.ofVal v) Φ :=
   fupd_intro.trans wp_value_fupd
 
@@ -164,7 +164,7 @@ variable (L) in
 /-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
 verbatim. -/
 noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
-    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) : IProp GF :=
+    (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) :=
   iprop% ▷ specCoupl L ∅ σ₃ e₃' σ₃' b₃ fun σ₄ ρ'' b₄ => iprop(|={∅, E}=>
     stateInterp σ₄ ∗ specInterp ρ'' ∗ budgetInterp b₄ ∗ wp L E e₃ Φ)
 
@@ -194,7 +194,7 @@ theorem wpProgBody_wand {E' : CoPset} {e₃ e₄ : Exp rT}
 /-! ## Monotonicity and updates -/
 
 /-- The postcondition update `wp_strong_mono` asks for, framing the interpretations. -/
-abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) : IProp GF := iprop%
+abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) := iprop%
   □ ∀ σ ρ v (b : B),
     stateInterp (rT := rT) σ ∗ specInterp (rT := rT) ρ ∗ budgetInterp b ∗
       Φ v ={E2}=∗
@@ -246,6 +246,7 @@ theorem wp_strong_mono (HE : E1 ⊆ E2) : iprop%
       iapply IH $$ %E1' %E2' %e₃ %Φ' %Ψ' %HE' HwpInner HΦ'
   iapply Hloeb $$ %E1 %E2 %e %Φ %Ψ %HE HW HΦ
 
+/-- The weakest precondition is monotone in its postcondition, under a persistent wand. -/
 theorem wp_wand : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ := by
   iintro ⟨HW, #HΦ⟩
   iapply wp_strong_mono subset_refl
@@ -254,6 +255,7 @@ theorem wp_wand : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E 
   iframe
   iapply HΦ $$ [$]
 
+/-- A fancy update in the postcondition can be absorbed. -/
 theorem wp_fupd : wp L E e (fun v => iprop(|={E}=> Φ v)) ⊢ wp L E e Φ := by
   iintro HW
   iapply wp_strong_mono subset_refl
@@ -262,6 +264,7 @@ theorem wp_fupd : wp L E e (fun v => iprop(|={E}=> Φ v)) ⊢ wp L E e Φ := by
   imod HΦ
   iframe
 
+/-- A fancy update before a weakest precondition can be absorbed. -/
 theorem fupd_wp : (|={E}=> wp L E e Φ) ⊢ wp L E e Φ := by
   iintro HF
   iapply wp_unfold
@@ -271,6 +274,7 @@ theorem fupd_wp : (|={E}=> wp L E e Φ) ⊢ wp L E e Φ := by
 
 /-! ## Derived monotonicity -/
 
+/-- The weakest precondition is monotone in its postcondition. -/
 theorem wp_mono (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ := by
   iintro HW
   iapply wp_wand
@@ -278,6 +282,7 @@ theorem wp_mono (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ := by
   iintro !> %v HΦv
   iapply HΦ $$ HΦv
 
+/-- The weakest precondition is monotone in its mask. -/
 theorem wp_mask_mono (HE : E1 ⊆ E2) : wp L E1 e Φ ⊢ wp L E2 e Φ := by
   iintro HW
   iapply wp_strong_mono HE

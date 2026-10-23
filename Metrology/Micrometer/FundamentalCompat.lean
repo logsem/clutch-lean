@@ -7,8 +7,8 @@ import Metrology.Iris.LocalBI
 /-!
 # Compatibility lemmas for open terms
 
-One lemma per typing rule, stated for `bin_log_related_ty`: functions and recursion, products, sums,
-conditionals, and polymorphic and recursive types. The fundamental theorem inducts over them.
+One lemma per typing rule, stated for `bin_log_related_ty`, covering functions and recursion,
+products, sums, conditionals, and polymorphic and recursive types.
 -/
 
 @[expose] public section
@@ -274,7 +274,7 @@ theorem bin_log_related_pack :
   iexact Hv
 
 /-- `unpack e1 as x in e2`, encoded as `(λx. e2) e1`, as an entailment from the relation of `e1`;
-the result type `τ2.shift` cannot mention the unpacked variable. -/
+the body type `τ2.shift` cannot mention the unpacked variable. -/
 theorem bin_log_related_unpack_wand
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)

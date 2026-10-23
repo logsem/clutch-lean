@@ -13,6 +13,9 @@ public import Metrology.ProbLang.CtxStep
 
 namespace ProbLang
 
+open Exp (toVal?_ofVal decomp_snd_of_decompItem_none)
+open IsVal (lit)
+
 /-! ## The two notions -/
 
 variable {rT : Type _} (z : Int) (l : Loc) (v : Val rT)
@@ -20,21 +23,20 @@ variable {rT : Type _} (z : Int) (l : Loc) (v : Val rT)
 /-- The decomposition of a store of a value is `none`. -/
 private theorem store_decompItem :
     (Exp.store pl(#loc l) v.1).decompItem = none := by
-  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
+  have hv : v.1.toVal? = some v := toVal?_ofVal v
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
   rfl
 
 /-- The decomposition of an allocation of a value is `none`. -/
 private theorem alloc_decompItem : (Exp.alloc v.1).decompItem = none := by
-  have hv : v.1.toVal? = some v := Exp.toVal?_ofVal v
+  have hv : v.1.toVal? = some v := toVal?_ofVal v
   show (v.1.toVal?.casesOn _ _ : Option _) = none
   rw [hv]
 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
-/-- The step measure is concentrated on value configurations: the form the program logic
-consumes (`Micrometer.OpenInv.of_atomic`), which also covers `urand`. -/
+/-- The step measure is concentrated on value configurations, which also covers `urand`. -/
 def Atomic (e : Exp rT) : Prop :=
   ∀ σ, Concentrated (primStep ⟨e, σ⟩) { ρ | ρ.1.isValue }
 
@@ -82,29 +84,29 @@ theorem store :
     Discrete.Atomic (.store pl(#loc l) v.1) :=
   of_headStepSupport (store_decompItem l v) fun _ _ _ h => by
     cases h with
-    | StoreS _ _ _ => exact IsVal.lit.toIsValue
+    | StoreS _ _ _ => exact lit.toIsValue
 
 /-- An allocation of a value is discretely atomic. -/
 @[discrete]
 theorem alloc : Discrete.Atomic (.alloc v.1) :=
   of_headStepSupport (alloc_decompItem v) fun _ _ _ h => by
     cases h with
-    | AllocS _ _ _ => exact IsVal.lit.toIsValue
+    | AllocS _ _ _ => exact lit.toIsValue
 
 /-- `rand` on the empty tape (`#()`) is discretely atomic. -/
 @[discrete]
 theorem rand_unit : Discrete.Atomic (rT := rT) pl(rand(#z, #())) :=
   of_headStepSupport rfl fun _ _ _ h => by
     cases h with
-    | RandNoTapeS _ _ _ => exact IsVal.lit.toIsValue
-    | RandNonposS _ => exact IsVal.lit.toIsValue
+    | RandNoTapeS _ _ _ => exact lit.toIsValue
+    | RandNonposS _ => exact lit.toIsValue
 
 /-- `rand` on a labelled tape is discretely atomic. -/
 @[discrete]
 theorem rand_lbl :
     Discrete.Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
   of_headStepSupport rfl fun _ _ _ h => by
-    cases h <;> exact IsVal.lit.toIsValue
+    cases h <;> exact lit.toIsValue
 
 end Discrete.Atomic
 
@@ -120,26 +122,26 @@ set_option linter.discrete false
 
 /-- A load is atomic. -/
 theorem load : Atomic (rT := rT) pl(!#loc l) :=
-  (Discrete.Atomic.load l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
+  (Discrete.Atomic.load l).toAtomic (by rw [decomp_snd_of_decompItem_none rfl]; nofun)
 
 /-- A store of a value is atomic. -/
 theorem store : Atomic (.store pl(#loc l) v.1) :=
   (Discrete.Atomic.store l v).toAtomic
-    (by rw [Exp.decomp_snd_of_decompItem_none (store_decompItem l v)]; nofun)
+    (by rw [decomp_snd_of_decompItem_none (store_decompItem l v)]; nofun)
 
 /-- An allocation of a value is atomic. -/
 theorem alloc : Atomic (.alloc v.1) :=
   (Discrete.Atomic.alloc v).toAtomic
-    (by rw [Exp.decomp_snd_of_decompItem_none (alloc_decompItem v)]; nofun)
+    (by rw [decomp_snd_of_decompItem_none (alloc_decompItem v)]; nofun)
 
 /-- `rand` on the empty tape (`#()`) is atomic. -/
 theorem rand_unit : Atomic (rT := rT) pl(rand(#z, #())) :=
-  (Discrete.Atomic.rand_unit z).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
+  (Discrete.Atomic.rand_unit z).toAtomic (by rw [decomp_snd_of_decompItem_none rfl]; nofun)
 
 /-- `rand` on a labelled tape is atomic. -/
 theorem rand_lbl :
     Atomic (rT := rT) pl(rand(#z, #lbl l)) :=
-  (Discrete.Atomic.rand_lbl z l).toAtomic (by rw [Exp.decomp_snd_of_decompItem_none rfl]; nofun)
+  (Discrete.Atomic.rand_lbl z l).toAtomic (by rw [decomp_snd_of_decompItem_none rfl]; nofun)
 
 end
 
@@ -156,7 +158,7 @@ theorem «urand» : Atomic (rT := rT) .urand := by
   ext r
   simp only [Set.mem_preimage, Set.mem_compl_iff, Set.mem_ofPred_eq, Set.mem_empty_iff_false,
     iff_false, not_not]
-  exact IsVal.lit.toIsValue
+  exact lit.toIsValue
 
 end Atomic
 

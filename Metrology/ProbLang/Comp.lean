@@ -4,8 +4,7 @@ module
 
 /-! # Evaluator computations as data
 
-The interpreter runs a `Comp` in `IO` (`Interp.drive`) and the proofs read the same tree as a
-measure (`Comp.interpM`).
+The interpreter runs a `Comp` in `IO` (`Interp.drive`).
 -/
 
 namespace ProbLang

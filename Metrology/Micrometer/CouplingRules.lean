@@ -4,15 +4,14 @@ public import Metrology.Micrometer.UnifInt
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
 
+/-! # Coupling rules for `rand`
+
+The `wp` rules that couple a program draw with a spec draw or tape. -/
+
 @[expose] public section
 
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
-
-/-! # Coupling rules for `rand`
-
-The `wp` rules that couple a program draw with a spec draw or tape: free rules along a bijection
-(`wp_couple_rand_core`), and credit-paying rules from any lifting (`wp_couple_rand_rand_lift`). -/
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -22,7 +21,7 @@ open List (map_eq_nil_iff)
 
 namespace ProbLang
 
-variable {rT : Type} [MeasurableSpace rT] [ProbLang.LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {B : Type} {L : GradedLifting.{0} B} {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 
@@ -112,7 +111,7 @@ variable (z : Int) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ 
 include hdom hbij Hz
 
 /-- Core rule: if the resource `A` shows that `eL` (program side) and `eR` (spec side) each step to
-`Cfg.uniform z`, couple the two draws along the bijection `f` at budget `0` and return `A`. -/
+`uniform z`, couple the two draws along the bijection `f` at budget `0` and return `A`. -/
 theorem wp_couple_rand_core {eL eR : Exp rT} (A : _) [Timeless A]
     (HvL : eL.toVal? = none) (HvR : ¬ eR.isValue)
     (HstepL : ∀ σ, ⊢ appStateAuth σ -∗ A -∗
@@ -135,7 +134,7 @@ theorem wp_couple_rand_core {eL eR : Exp rT} (A : _) [Timeless A]
   have hcpl : L.Rel 0 (CoupledDraw z f σ₁ σ₁' K)
       (primStep ⟨eL, σ₁⟩) (primStep ⟨K.fill eR, σ₁'⟩) := by
     rw [hL.2, primStep_fill HvR, hR.2]
-    exact uniform_rel_bij_fill Hz σ₁ σ₁' f K hdom hbij
+    exact uniform_rel_bij_fill Hz σ₁ σ₁' f hdom hbij K
   imod subset empty_subset with Hclose
   imodintro
   iexists CoupledDraw z f σ₁ σ₁' K, 0, b
