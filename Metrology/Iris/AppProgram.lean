@@ -5,7 +5,6 @@ public import Iris
 public import Iris.Algebra.HeapView
 public import Iris.Instances.IProp.Instance
 public import Iris.Std.HeapInstances
-public import Metrology.Iris.Algebra
 public import Metrology.Iris.SpecProgram
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.Syntax.Notation
@@ -84,11 +83,7 @@ theorem app_state_lookup_heap {σ : State rT} {l : Loc} {v : Val rT} :
     ⊢ appStateAuth σ -∗ l ↦ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, -⟩ Hf
-  icombine Hh Hf gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  ipureintro
-  obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  exact LocHeap.get?_of_asAgree_get? hlookup hinc
+  iapply AgreeHeap.lookup $$ Hh Hf
 
 /-- Writing `w` at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
@@ -97,15 +92,9 @@ theorem app_state_update_heap {σ : State rT} {l : Loc} {v w : Val rT} :
         l ↦ w := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩ Hf
-  have hupd : HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap) •
-        HeapView.Frag l (.own 1) (toAgree v) ~~>
-      HeapView.Auth (.own 1) (PartialMap.insert (LocHeap.asAgree σ.heap) l (toAgree w)) •
-        HeapView.Frag l (.own 1) (toAgree w) :=
-    HeapView.update_replace fun _ ↦ by simp
-  imod (iOwn_update_op hupd) $$ [$Hh $Hf] with Hu
+  imod AgreeHeap.update (E := IApp.heap) (w := w) $$ [$Hh $Hf] with ⟨Hh, Hf⟩
   imodintro
-  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_heap, LocHeap.asAgree_insert]
+  simp only [State.update_heap]
   iframe
 
 /-- Allocating `v` yields a fresh heap cell `σ.heap.fresh ↦ v`. -/
@@ -116,15 +105,9 @@ theorem app_state_heap_alloc {σ : State rT} (v : Val rT) :
         σ.heap.fresh ↦ v := by
   unfold appStateAuth appHeapAuth appHeapFrag
   iintro ⟨Hh, Ht⟩
-  have hupd : HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap) ~~>
-      HeapView.Auth (.own 1) (PartialMap.insert (LocHeap.asAgree σ.heap) σ.heap.fresh (toAgree v)) •
-        HeapView.Frag σ.heap.fresh (.own 1) (toAgree v) :=
-    HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.heap) DFrac.valid_own_one
-      fun _ ↦ by simp
-  imod (iOwn_update hupd) $$ Hh with Hu
+  imod AgreeHeap.alloc (E := IApp.heap) v $$ Hh with ⟨Hh, Hf⟩
   imodintro
-  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_heap, LocHeap.asAgree_insert]
+  simp only [State.update_heap]
   iframe
 
 /-- Owning `l ↪ₐ t` against the authoritative state shows the tape at `l` is `t`. -/
@@ -132,11 +115,7 @@ theorem app_state_lookup_tape {σ : State rT} {l : Loc} {t : Tape} :
     ⊢ appStateAuth σ -∗ l ↪ₐ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨-, Ht⟩ Hf
-  icombine Ht Hf gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  ipureintro
-  obtain ⟨_, _, _, hlookup, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  exact LocHeap.get?_of_asAgree_get? hlookup hinc
+  iapply AgreeHeap.lookup $$ Ht Hf
 
 /-- Replacing the tape at `l` updates the authoritative state and the points-to. -/
 theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
@@ -145,15 +124,9 @@ theorem app_state_update_tape {σ : State rT} {l : Loc} {t s : Tape} :
         l ↪ₐ s := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩ Hf
-  have hupd : HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes) •
-        HeapView.Frag l (.own 1) (toAgree t) ~~>
-      HeapView.Auth (.own 1) (PartialMap.insert (LocHeap.asAgree σ.tapes) l (toAgree s)) •
-        HeapView.Frag l (.own 1) (toAgree s) :=
-    HeapView.update_replace fun _ ↦ by simp
-  imod (iOwn_update_op hupd) $$ [$Ht $Hf] with Hu
+  imod AgreeHeap.update (E := IApp.tapes) (w := s) $$ [$Ht $Hf] with ⟨Ht, Hf⟩
   imodintro
-  ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_tapes, LocHeap.asAgree_insert]
+  simp only [State.update_tapes]
   iframe
 
 /-- Allocating a tape `t` yields a fresh tape `σ.tapes.fresh ↪ₐ t`. -/
@@ -163,16 +136,9 @@ theorem app_state_tape_alloc {σ : State rT} (t : Tape) :
         σ.tapes.fresh ↪ₐ t := by
   unfold appStateAuth appTapesAuth appTapesFrag
   iintro ⟨Hh, Ht⟩
-  have hupd : HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes) ~~>
-      HeapView.Auth (.own 1)
-          (PartialMap.insert (LocHeap.asAgree σ.tapes) σ.tapes.fresh (toAgree t)) •
-        HeapView.Frag σ.tapes.fresh (.own 1) (toAgree t) :=
-    HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.tapes) DFrac.valid_own_one
-      fun _ ↦ by simp
-  imod (iOwn_update hupd) $$ Ht with Hu
+  imod AgreeHeap.alloc (E := IApp.tapes) t $$ Ht with ⟨Ht, Hf⟩
   imodintro
-  ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_tapes, LocHeap.asAgree_insert]
+  simp only [State.update_tapes]
   iframe
 
 /-! ## `natTape`: tapes as plain integer lists -/
@@ -190,19 +156,13 @@ end AppGS
 theorem app_natTape_to_empty {l : Loc} {z : Int} :
     appNatTape l z [] ⊢ l ↪ₐ ⟨z, []⟩ := by
   unfold appNatTape
-  iintro ⟨%fs, %hmap, Hl⟩
-  obtain rfl := List.map_eq_nil_iff.mp hmap
-  iexact Hl
+  exact AgreeHeap.natTape_to_empty
 
 /-- An empty `↪ₐ` tape is an empty integer tape. -/
 theorem app_empty_to_natTape {l : Loc} {z : Int} :
     l ↪ₐ ⟨z, []⟩ ⊢ appNatTape l z [] := by
   unfold appNatTape
-  iintro Hl
-  iexists []
-  isplitr
-  · ipureintro; rfl
-  iexact Hl
+  exact AgreeHeap.empty_to_natTape
 
 /-- An integer tape with head `n` exposes its first entry, and can be rebuilt from the tail. -/
 theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
@@ -211,13 +171,7 @@ theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
         l ↪ₐ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₐ ⟨z, xs⟩ -∗ appNatTape l z ns)) := by
   unfold appNatTape
-  iintro ⟨%fs, %hmap, Hl⟩
-  obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp hmap
-  iexists x, xs
-  iframe %hx Hl
-  iintro Hl
-  iexists xs
-  iframe %hxs Hl
+  exact AgreeHeap.read_natTape_head
 
 /-! ## Two full fragments at one location are inconsistent -/
 
@@ -225,31 +179,21 @@ theorem app_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
 theorem appHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
     ⊢ appHeapFrag l v1 -∗ appHeapFrag l v2 -∗ False := by
   unfold appHeapFrag
-  iintro H1 H2
-  icombine H1 H2 gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  exfalso
-  exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
+  exact AgreeHeap.frag_valid_2
 
 /-- Two full tapes at one location are contradictory. -/
 theorem appTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
     ⊢ appTapesFrag l t1 -∗ appTapesFrag l t2 -∗ False := by
   unfold appTapesFrag
-  iintro H1 H2
-  icombine H1 H2 gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  exfalso
-  exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
+  exact AgreeHeap.frag_valid_2
 
 end Resources
 
 /-- Allocating the program ghost state from any initial state `σ`. -/
 theorem app_ra_init {GF : BundledGFunctors} [IAPre : AppPreGS rT GF] (σ : State rT) :
     ⊢@{IProp GF} |==> ∃ IA : AppGS rT GF, appStateAuth (IApp := IA) σ := by
-  imod (iOwn_alloc (E := IAPre.heap) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap))
-    HeapView.auth_one_valid) with ⟨%γH, HH⟩
-  imod (iOwn_alloc (E := IAPre.tapes) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes))
-    HeapView.auth_one_valid) with ⟨%γT, HT⟩
+  imod AgreeHeap.alloc_auth (E := IAPre.heap) σ.heap with ⟨%γH, HH⟩
+  imod AgreeHeap.alloc_auth (E := IAPre.tapes) σ.tapes with ⟨%γT, HT⟩
   imodintro
   iexists { toAppPreGS := IAPre, γheap := γH, γtapes := γT }
   unfold appStateAuth appHeapAuth appTapesAuth

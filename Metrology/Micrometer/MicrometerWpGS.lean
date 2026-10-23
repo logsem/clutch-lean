@@ -5,7 +5,6 @@ public import Metrology.Iris.BudgetCredits
 public import Metrology.Iris.Fixpoint
 public import Metrology.ProbLang.Syntax.LocallyClosed
 public import Metrology.ProbLang.Exec
-public import Metrology.ProbLang.Erasable
 public import Metrology.ProbLang.Erasure
 public import Iris.BI.Lib.Fixpoint
 public import Iris.ProofMode.Classes

@@ -60,7 +60,7 @@ theorem twp_heads_exp (E : CoPset) {s : ℝ} (hs : 0 ≤ s) (a : ℝ) (k : ℕ) 
       push_cast
       rw [show s * ((b : ℝ) + 1 - a) = s * (b - a) + s by ring, Real.exp_add]
       ring_nf
-    iapply (twp_rand_exp' (z := 2) (ε₂ := F) (Hz := by decide) (HSum := HSum)) $$ Herr
+    iapply (twp_rand_exp (z := 2) (ε₂ := F) (Hz := by decide) (HSum := HSum)) $$ Herr
     iintro %n ⟨%⟨Hn₁, Hn₂⟩, Hcr⟩
     simp only [Exp.ofVal]
     twp_pure

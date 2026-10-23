@@ -1,11 +1,11 @@
 module
 
 public import Mathlib.Basic.ENNReal.Basic
+public import Mathlib.Basic.ENNReal.Operations
 public import Iris
 public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
 public import Iris.ProofMode.InstancesUpdates
-public import Metrology.Iris.Algebra
 import Metrology.Iris.LocalBI
 
 @[expose] public section

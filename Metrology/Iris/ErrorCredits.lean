@@ -6,7 +6,6 @@ public import Iris.Algebra.View
 public import Iris.Instances.IProp.Instance
 public import Iris.Algebra.Auth
 public import Iris.Algebra.Numbers
-public import Metrology.Iris.Algebra
 public import Metrology.Couplings.Measure
 import Metrology.Iris.LocalBI
 
@@ -24,15 +23,18 @@ open scoped ENNReal NNReal
 
 /-! ## The camera of error credits -/
 
-/-- Error credits: non-negative extended reals, valid when below `1`. -/
+/-- Error credits: non-negative extended reals, valid when below `1`. The camera instances are
+scoped: use `open scoped ErrorCredit` to see them on `ℝ≥0∞`. -/
 abbrev ErrorCredit : Type _ := ℝ≥0∞
 
-instance : COFE ErrorCredit := COFE.ofDiscrete _
-instance : OFE.Discrete ErrorCredit := ⟨id⟩
-instance (x : ErrorCredit) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
+namespace ErrorCredit
+
+scoped instance : COFE ErrorCredit := COFE.ofDiscrete _
+scoped instance : OFE.Discrete ErrorCredit := ⟨id⟩
+scoped instance (x : ErrorCredit) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
 /-- Error credits compose by addition. -/
-instance : CMRA ErrorCredit where
+scoped instance : CMRA ErrorCredit where
   pcore _ := some 0
   op := (· + ·)
   ValidN _ ε := ε < 1
@@ -50,14 +52,25 @@ instance : CMRA ErrorCredit where
   pcore_op_mono {_ _} := by rintro ⟨rfl⟩ _; exists 0; simp
   extend _ h := ⟨_, _, OFE.discrete h, .rfl, .rfl⟩
 
-instance : CMRA.Discrete ErrorCredit where
+scoped instance : CMRA.Discrete ErrorCredit where
   discrete_valid := id
 
-instance : UCMRA ErrorCredit where
+scoped instance : UCMRA ErrorCredit where
   unit := 0
   unit_valid := by simp [CMRA.Valid]
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore]
+
+scoped instance {ε : ErrorCredit} : CMRA.Cancelable ε where
+  cancelableN {n ε₁ ε₂} := by
+    simp [CMRA.ValidN, CMRA.op, OFE.Dist]
+    intro h1 h2
+    refine (ENNReal.add_right_inj ?_).mp h2
+    rintro rfl; simp at h1
+
+end ErrorCredit
+
+open scoped ErrorCredit
 
 /-- Inclusion of error credits is `≤`. -/
 theorem ErrorCredit.included_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼ ε₂ ↔ ε₁ ≤ ε₂ := by
@@ -68,13 +81,6 @@ theorem ErrorCredit.included_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼ ε₂ �
 /-- Step-indexed form of `ErrorCredit.included_iff`. -/
 theorem ErrorCredit.includedN_iff {ε₁ ε₂ : ErrorCredit} : ε₁ ≼{n} ε₂ ↔ ε₁ ≤ ε₂ :=
   ErrorCredit.included_iff
-
-instance {ε : ErrorCredit} : CMRA.Cancelable ε where
-  cancelableN {n ε₁ ε₂} := by
-    simp [CMRA.ValidN, CMRA.op, OFE.Dist]
-    intro h1 h2
-    refine (ENNReal.add_right_inj ?_).mp h2
-    rintro rfl; simp at h1
 
 /-- A local update of error credits that moves credits between the two sides. -/
 theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
@@ -94,12 +100,16 @@ theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 :
 
 /-! ## Ghost state and notation -/
 
-instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
+namespace ErrorCredit
+
+scoped instance : Iris.IsUnit (◯ 0 : Auth ErrorCredit) where
   unit_valid := Auth.frag_valid.mpr (by simp [CMRA.Valid])
   unit_left_id := by simp [CMRA.op]
   pcore_unit := by simp [CMRA.pcore, CMRA.core]
 
-instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
+scoped instance : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
+
+end ErrorCredit
 
 /-- Ghost-state resource for error credits. -/
 class ECPreGS (GF : BundledGFunctors) where

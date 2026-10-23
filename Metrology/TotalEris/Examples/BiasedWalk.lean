@@ -84,7 +84,7 @@ theorem twp_biasedWalk (E : CoPset) {u m : ℕ} (hum : u < m) (a : ℤ) (n : ℕ
         walkCost u m a x := by
       rw [Int.toNat_natCast]
       exact walkCost_avg hum (lt_of_le_of_ne hx hxa)
-    iapply (twp_rand_exp' (z := m) (ε₂ := F) (Hz := by omega) (HSum := HSum)) $$ Herr
+    iapply (twp_rand_exp (z := m) (ε₂ := F) (Hz := by omega) (HSum := HSum)) $$ Herr
     iintro %r ⟨%⟨Hr₁, Hr₂⟩, Hcr⟩
     simp only [Exp.ofVal]
     twp_pure

@@ -266,7 +266,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
       exact Tgl.epsilon_limit Hf
     · icases HPS with ⟨HPS | HSS⟩
       · -- The prim-step leaf is `Z ρ` itself; the other branches carry `Ψ ∧ glm`.
-        icases HPS with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %_, %Hsum, %Hpgl, HCont⟩
+        icases HPS with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hsum, %Hpgl, HCont⟩
         ihave Hfa : iprop(∀ ρ, ⌜R ρ⌝ -∗
             |={∅}=> ⌜Tgl (limExec ρ) φ (X₂ ρ)⌝) $$ [HCont]
         · iintro %ρ %hR
@@ -276,7 +276,7 @@ theorem glm_implies_tgl [ErisGS rT .hasNoLC GF]
         imodintro
         ipureintro
         exact Tgl.dbind_prim_step hφ HRmeas Hred Hsum Hpgl Hf
-      · icases HSS with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %_, %Hsum, %Hpgl, HCont⟩
+      · icases HSS with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hsum, %Hpgl, HCont⟩
         ihave Hfa : iprop(∀ σ'', ⌜R σ''⌝ -∗
             |={∅}=> ⌜Tgl (limExec ⟨e', σ''⟩) φ (X₂ σ'')⌝) $$ [HCont]
         · iintro %σ'' %hR

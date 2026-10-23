@@ -42,7 +42,7 @@ theorem geo_nonneg_pos_err (E : CoPset) (ε : ENNReal) (hε : 0 < ε) :
   have hsum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤ ε := by
     rw [ENNReal.div_le_iff' (by simp) (by simp), htoNat, hF, hsplit, add_mul]
     exact le_add_right le_rfl
-  iapply twp_rand_exp' (by decide) hsum $$ Herr
+  iapply twp_rand_exp (by decide) hsum $$ Herr
   iintro %n ⟨%⟨hn₀, hn₂⟩, Hcr⟩
   simp only [Exp.ofVal]
   interval_cases n
@@ -86,7 +86,7 @@ theorem geo_nonneg_depth (E : CoPset) (k : ℕ) :
     have hsum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤
         (2⁻¹ : ENNReal) ^ (k + 1) := by
       simp [F, Finset.sum_range_succ, pow_succ, div_eq_mul_inv]
-    iapply twp_rand_exp' (by decide) hsum $$ Herr
+    iapply twp_rand_exp (by decide) hsum $$ Herr
     iintro %n ⟨%⟨hn₀, hn₂⟩, Hcr⟩
     simp only [Exp.ofVal]
     interval_cases n

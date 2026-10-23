@@ -6,6 +6,7 @@ public import Mathlib.Order.Defs.Unbundled
 public import Iris.ProofMode
 public import Iris.Algebra.Auth
 public import Iris.Instances.IProp.Instance
+import Metrology.Iris.BudgetCredits
 import Metrology.Iris.LocalBI
 
 /-!
@@ -124,23 +125,13 @@ local bi IProp GF
 
 /-! ### Splitting and combining -/
 
-/-- Fragments add like the budgets they carry. -/
-theorem frag_add {a b : B} :
-    (◯ (a + b : CappedCredit B bad) : Auth (CappedCredit B bad)) =
-      (◯ (a : CappedCredit B bad) : Auth (CappedCredit B bad)) • ◯ (b : CappedCredit B bad) :=
-  Auth.frag_op
-
 /-- A credit splits into two credits (Rocq `gccredit_split`). -/
-theorem split {a b : B} : ↯c (a + b) ⊢ ↯c a ∗ ↯c b := by
-  unfold cc
-  rw [frag_add]
-  exact iOwn_op.1
+theorem split {a b : B} : ↯c (a + b) ⊢ ↯c a ∗ ↯c b :=
+  AuthCredit.frag_split
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯c a ∗ ↯c b ⊢ ↯c (a + b) := by
-  unfold cc
-  rw [frag_add]
-  exact iOwn_op.2
+theorem combine {a b : B} : ↯c a ∗ ↯c b ⊢ ↯c (a + b) :=
+  AuthCredit.frag_combine
 
 /-- Proof mode combines credits by adding them. -/
 instance combineSepAs_cc {a b : B} :
@@ -154,7 +145,7 @@ theorem weaken {a b : B} (hb : b ≤ a) : ↯c a ⊢ ↯c b := by
 
 /-- The zero credit is free. -/
 theorem zero : ⊢ |==> ↯c (0 : B) :=
-  iOwn_unit (ε := UCMRA.unit)
+  AuthCredit.frag_unit
 
 /-! ### Validity -/
 
@@ -179,10 +170,10 @@ theorem contradict {c : B} (h : c ∈ bad) : ↯c c ⊢ False := by
 theorem supply_bound {s c : B} : ⊢ ●↯c s -∗ ↯c c -∗ ⌜c ≤ s⌝ := by
   unfold cc ccAuth
   iintro Hs Hc
-  icombine Hs Hc gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
+  ihave %h := AuthCredit.supply_bound (E := ICC.cc) (γ := ICC.γcc) (s := (s : CappedCredit B bad))
+    (c := (c : CappedCredit B bad)) $$ Hs Hc
   ipureintro
-  exact included_iff.mp (Auth.auth_both_valid_discrete.mp hv).1
+  exact included_iff.mp h
 
 /-- Spending a cancelable credit `c` takes it out of the budget (Rocq `gcsupply_decrease`). -/
 theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
@@ -191,8 +182,8 @@ theorem supply_decrease {s c : B} (hc : IsAddLeftRegular c) :
   ihave %hcs := supply_bound $$ Hs Hc
   obtain ⟨r, hr⟩ := exists_add_of_le hcs
   unfold cc ccAuth
-  imod (iOwn_update_op (Auth.auth_update_dealloc
-    (spend_local_update (s := (s : CappedCredit B bad)) hc hr))) $$ [$Hs $Hc] with H
+  imod AuthCredit.supply_decrease (E := ICC.cc) (γ := ICC.γcc)
+    (spend_local_update (s := (s : CappedCredit B bad)) hc hr) $$ [$Hs $Hc] with H
   imodintro
   iexists r
   iframe %hr H
@@ -207,14 +198,11 @@ theorem supply_decrease_of_valid (hcancel : ∀ c ∉ bad, IsAddLeftRegular c) {
 /-- Growing the budget by `c` hands out a credit `c`, as long as the new budget is not bad. -/
 theorem supply_increase {s c : B} (h : s + c ∉ bad) :
     ●↯c s ⊢ |==> (●↯c (s + c) ∗ ↯c c) := by
-  have hup : (● s : Auth (CappedCredit B bad)) ~~>
-      (● (s + c) : Auth (CappedCredit B bad)) • ◯ c :=
-    Auth.auth_update_alloc (alloc_local_update h)
   unfold cc ccAuth
   iintro Hs
-  imod (iOwn_update hup) $$ Hs with H
-  imodintro
-  iapply iOwn_op $$ H
+  iapply AuthCredit.supply_increase (E := ICC.cc) (γ := ICC.γcc) (s := (s : CappedCredit B bad))
+    (s' := ((s + c : B) : CappedCredit B bad)) (c := (c : CappedCredit B bad))
+    (alloc_local_update h) $$ Hs
 
 /-- A credit splits off any smaller credit. -/
 theorem difference [Sub B] [OrderedSub B] {a b : B} (h : b ≤ a) :
@@ -240,8 +228,7 @@ theorem cc_alloc {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrder
       ccAuth (ICC := { toCappedCreditPreGS := ICC, γcc := γ }) b ∗
       cc (ICC := { toCappedCreditPreGS := ICC, γcc := γ }) b := by
   unfold cc ccAuth
-  imod (iOwn_alloc (E := ICC.cc) ((● (b : CappedCredit B bad)) • (◯ (b : CappedCredit B bad)))
-    (Auth.auth_both_valid_2 hb .rfl)) with ⟨%γ, H⟩
+  imod AuthCredit.alloc (E := ICC.cc) (b := (b : CappedCredit B bad)) hb with ⟨%γ, H⟩
   imodintro
   iexists γ
-  iapply iOwn_op $$ H
+  iexact H

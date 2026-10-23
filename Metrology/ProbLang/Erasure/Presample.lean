@@ -1,6 +1,6 @@
 module
 
-public import Metrology.ProbLang.Erasable
+public import Metrology.ProbLang.Exec
 public import Metrology.ProbLang.Metatheory
 
 @[expose] public section

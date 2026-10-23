@@ -166,7 +166,7 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
   iintro Hε
   twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (measurable_bneHalfCredit F) ?hint) $$ Hε
+  iapply (twp_urand_exp (measurable_bneHalfCredit F) ?hint) $$ Hε
   case hint => rw [BNEHalfCredit_lintegral]
   iintro %r ⟨%Hrm, Hcr⟩
   have Hr := mem_unifUnitSupport_real_le Hrm
@@ -217,7 +217,7 @@ theorem twp_BNEHalf (E : CoPset) (F : Bool → ℝ≥0∞) :
 
 `LeHalf` applied to a `urand` sample is an unbiased coin: `urand ≤ ½` has
 probability exactly ½. `FairCoinCredit` is the pointwise credit fed to
-`twp_urand_exp'`, and `FairCoinCreditV` its expectation. -/
+`twp_urand_exp`, and `FairCoinCreditV` its expectation. -/
 
 section fairCoin
 
@@ -272,7 +272,7 @@ theorem twp_FairCoin (E : CoPset) (F : Bool → ℝ≥0∞) :
   iintro Hε
   twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (measurable_fairCoinCredit F) ?hint) $$ Hε
+  iapply (twp_urand_exp (measurable_fairCoinCredit F) ?hint) $$ Hε
   case hint => rw [FairCoinCredit_lintegral]
   iintro %r ⟨%Hrm, Hcr⟩
   twp_pure

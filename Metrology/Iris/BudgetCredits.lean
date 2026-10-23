@@ -67,6 +67,66 @@ theorem alloc_local_update : (s, 0) ~l~> (s + c, c) :=
 
 end BudgetCredit
 
+/-! ## Authoritative credit ghost state over any discrete camera
+
+The `●`/`◯` rules shared by budget credits `↯b` and capped credits `↯c` (`CappedCredits`). -/
+
+namespace AuthCredit
+
+variable {A : Type} [UCMRA A] {GF : BundledGFunctors} {E : ElemG GF (constOF (Auth A))}
+  {γ : GName}
+
+local bi IProp GF
+
+/-- A fragment of a sum splits into the two fragments. -/
+theorem frag_split {a b : A} :
+    iOwn (E := E) γ (◯ (a • b)) ⊢ iOwn (E := E) γ (◯ a) ∗ iOwn (E := E) γ (◯ b) := by
+  rw [Auth.frag_op]
+  exact iOwn_op.1
+
+/-- Two fragments combine into the fragment of their sum. -/
+theorem frag_combine {a b : A} :
+    iOwn (E := E) γ (◯ a) ∗ iOwn (E := E) γ (◯ b) ⊢ iOwn (E := E) γ (◯ (a • b)) := by
+  rw [Auth.frag_op]
+  exact iOwn_op.2
+
+/-- The unit fragment is free. -/
+theorem frag_unit : ⊢ |==> iOwn (E := E) γ (◯ (UCMRA.unit : A)) :=
+  iOwn_unit (ε := UCMRA.unit)
+
+/-- A fragment is included in the authority. -/
+theorem supply_bound [CMRA.Discrete A] {s c : A} :
+    ⊢ iOwn (E := E) γ (● s) -∗ iOwn (E := E) γ (◯ c) -∗ ⌜c ≼ s⌝ := by
+  iintro Hs Hc
+  icombine Hs Hc gives Hv
+  ihave %hv := internalCmraValid_discrete $$ Hv
+  ipureintro
+  exact (Auth.auth_both_valid_discrete.mp hv).1
+
+/-- A local update that removes a fragment from the authority. -/
+theorem supply_decrease {s c r : A} (h : (s, c) ~l~> (r, UCMRA.unit)) :
+    iOwn (E := E) γ (● s) ∗ iOwn (E := E) γ (◯ c) ⊢ |==> iOwn (E := E) γ (● r) :=
+  iOwn_update_op (Auth.auth_update_dealloc h)
+
+/-- A local update that hands out a fragment from the authority. -/
+theorem supply_increase {s s' c : A} (h : (s, UCMRA.unit) ~l~> (s', c)) :
+    iOwn (E := E) γ (● s) ⊢ |==> (iOwn (E := E) γ (● s') ∗ iOwn (E := E) γ (◯ c)) := by
+  have hup : (● s : Auth A) ~~> (● s' : Auth A) • ◯ c := Auth.auth_update_alloc h
+  iintro Hs
+  imod (iOwn_update hup) $$ Hs with H
+  imodintro
+  iapply iOwn_op $$ H
+
+/-- Allocate an authority and a matching fragment for a valid element. -/
+theorem alloc {b : A} (hb : ✓ b) :
+    ⊢@{IProp GF} |==> ∃ γ : GName, iOwn (E := E) γ (● b) ∗ iOwn (E := E) γ (◯ b) := by
+  imod (iOwn_alloc (E := E) ((● b) • (◯ b)) (Auth.auth_both_valid_2 hb .rfl)) with ⟨%γ, H⟩
+  imodintro
+  iexists γ
+  iapply iOwn_op $$ H
+
+end AuthCredit
+
 /-! ## Ghost state and the resources `●↯b`, `↯b` -/
 
 /-- The ghost-state slot for an authoritative budget camera. -/
@@ -105,23 +165,13 @@ instance timeless_bcAuth (s : B) : BI.Timeless (●↯b s : IProp GF) := iOwn_ti
 
 /-! ### Splitting and combining credits -/
 
-/-- Fragments add like the budgets they carry. -/
-theorem frag_add {a b : B} :
-    (◯ (a + b : BudgetCredit B) : Auth (BudgetCredit B)) =
-      (◯ (a : BudgetCredit B) : Auth (BudgetCredit B)) • ◯ (b : BudgetCredit B) :=
-  Auth.frag_op
-
 /-- A credit splits into two credits. -/
-theorem split {a b : B} : ↯b (a + b) ⊢ ↯b a ∗ ↯b b := by
-  unfold bc
-  rw [frag_add]
-  exact iOwn_op.1
+theorem split {a b : B} : ↯b (a + b) ⊢ ↯b a ∗ ↯b b :=
+  AuthCredit.frag_split
 
 /-- Two credits combine into one. -/
-theorem combine {a b : B} : ↯b a ∗ ↯b b ⊢ ↯b (a + b) := by
-  unfold bc
-  rw [frag_add]
-  exact iOwn_op.2
+theorem combine {a b : B} : ↯b a ∗ ↯b b ⊢ ↯b (a + b) :=
+  AuthCredit.frag_combine
 
 /-- Proof mode combines credits by adding them. -/
 instance combineSepAs_bc {a b : B} :
@@ -136,7 +186,7 @@ theorem weaken [LE B] [CanonicallyOrderedAdd B] {a b : B} (hb : b ≤ a) :
 
 /-- The zero credit is free. -/
 theorem zero : ⊢ |==> ↯b (0 : B) :=
-  iOwn_unit (ε := UCMRA.unit)
+  AuthCredit.frag_unit
 
 /-! ### Authority and credits -/
 
@@ -145,10 +195,10 @@ theorem supply_bound [LE B] [CanonicallyOrderedAdd B] {s c : B} :
     ⊢ ●↯b s -∗ ↯b c -∗ ⌜c ≤ s⌝ := by
   unfold bc bcAuth
   iintro Hs Hc
-  icombine Hs Hc gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
+  ihave %h := AuthCredit.supply_bound (E := IBC.bc) (γ := IBC.γbc) (s := (s : BudgetCredit B))
+    (c := (c : BudgetCredit B)) $$ Hs Hc
   ipureintro
-  exact included_iff.mp (Auth.auth_both_valid_discrete.mp hv).1
+  exact included_iff.mp h
 
 /-- Spending a cancelable credit `c` takes it out of the budget. -/
 theorem supply_decrease [LE B] [CanonicallyOrderedAdd B] {s c : B}
@@ -158,20 +208,18 @@ theorem supply_decrease [LE B] [CanonicallyOrderedAdd B] {s c : B}
   ihave %hcs := supply_bound $$ Hs Hc
   obtain ⟨r, hr⟩ := exists_add_of_le hcs
   unfold bc bcAuth
-  imod (iOwn_update_op (Auth.auth_update_dealloc (spend_local_update hc hr))) $$ [$Hs $Hc] with H
+  imod AuthCredit.supply_decrease (E := IBC.bc) (γ := IBC.γbc) (spend_local_update hc hr)
+    $$ [$Hs $Hc] with H
   imodintro
   iexists r
   iframe %hr H
 
 /-- Growing the budget by `c` hands out a credit `c`. -/
 theorem supply_increase {s c : B} : ⊢ ●↯b s -∗ |==> (●↯b (s + c) ∗ ↯b c) := by
-  have hup : (● s : Auth (BudgetCredit B)) ~~> (● (s + c) : Auth (BudgetCredit B)) • ◯ c :=
-    Auth.auth_update_alloc alloc_local_update
   unfold bc bcAuth
   iintro Hs
-  imod (iOwn_update hup) $$ Hs with H
-  imodintro
-  iapply iOwn_op $$ H
+  iapply AuthCredit.supply_increase (E := IBC.bc) (γ := IBC.γbc) (s := (s : BudgetCredit B))
+    (s' := ((s + c : B) : BudgetCredit B)) (c := (c : BudgetCredit B)) alloc_local_update $$ Hs
 
 /-- A credit splits off any smaller credit. -/
 theorem difference [PartialOrder B] [CanonicallyOrderedAdd B] [Sub B] [OrderedSub B]
@@ -211,8 +259,7 @@ theorem bc_alloc {B : Type} [AddCommMonoid B] {GF : BundledGFunctors}
       bcAuth (IBC := { toBudgetCreditPreGS := IBC, γbc := γ }) b ∗
       bc (IBC := { toBudgetCreditPreGS := IBC, γbc := γ }) b := by
   unfold bc bcAuth
-  imod (iOwn_alloc (E := IBC.bc) ((● (b : BudgetCredit B)) • (◯ (b : BudgetCredit B)))
-    (Auth.auth_both_valid_2 trivial .rfl)) with ⟨%γ, H⟩
+  imod AuthCredit.alloc (E := IBC.bc) (b := (b : BudgetCredit B)) trivial with ⟨%γ, H⟩
   imodintro
   iexists γ
-  iapply iOwn_op $$ H
+  iexact H

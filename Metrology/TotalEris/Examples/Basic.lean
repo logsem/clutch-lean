@@ -142,7 +142,7 @@ example (E : CoPset) (v : Val rT) (R : Prop) (HR : R) :
   iapply tglWp_frame_left
   iframe HW %HR
 
-/-- `twp_rand_exp'` with `F 0 = 0`, `F 1 = ε` -/
+/-- `twp_rand_exp` with `F 0 = 0`, `F 1 = ε` -/
 example (E : CoPset) (ε : ENNReal) :
     ⊢ ↯ε -∗
       tglWp E (pl(rand(#2, #())))
@@ -156,7 +156,7 @@ example (E : CoPset) (ε : ENNReal) :
   have HSum : (∑ n ∈ Finset.range (2 : Int).toNat, F n) / ((2 : Int).toNat : ENNReal) ≤ ε := by
     rw [ENNReal.div_le_iff' (by simp) (by simp), htoNat, hF, hsplit, add_mul, one_mul]
     exact le_self_add
-  iapply (twp_rand_exp' (Hz := by decide) (HSum := HSum)) $$ Hcr
+  iapply (twp_rand_exp (Hz := by decide) (HSum := HSum)) $$ Hcr
   iintro %n ⟨%Hn, -⟩
   iexists n
   ipureintro
@@ -168,7 +168,7 @@ example (E : CoPset) (ε : ENNReal) :
       tglWp E (pl(rand(#1, #())))
         (fun w : Val rT => iprop(⌜w = .int 0⌝)) := by
   iintro Hε
-  iapply (twp_rand_exp (Hz := by decide) (Hbd := fun _ => zero_le) (HSum := by simp)) $$ Hε
+  iapply (twp_rand_exp (ε₂ := fun _ => 0) (Hz := by decide) (HSum := by simp)) $$ Hε
   iintro %n ⟨%⟨Hn₁, Hn₂⟩, -⟩
   interval_cases n
   itrivial

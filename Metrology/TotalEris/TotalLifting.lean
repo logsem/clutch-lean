@@ -56,14 +56,13 @@ theorem twp_lift_step_fupd_gen
   specialize hRmeas σ₁
   -- No failure mass (`R` is concentrated); every outcome keeps the full budget `ε₁`, whose
   -- expectation is `≤ ε₁` since `primStep` has mass `≤ 1`.
-  have hbnd : ∀ ρ : Cfg rT, (fun _ => ε₁) ρ ≤ ε₁ := fun _ => le_rfl
   have hpgl : Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩) := Pgl.of_concentrated (hconc σ₁)
   have hexp : 0 + ∫⁻ ρ, (fun _ => ε₁) ρ ∂primStep ⟨e₁, σ₁⟩ ≤ ε₁ := by
     rw [zero_add, MeasureTheory.lintegral_const]
     calc ε₁ * primStep ⟨e₁, σ₁⟩ .univ ≤ ε₁ * 1 := by gcongr; exact primStep_univ_le_one _
       _ = ε₁ := mul_one ε₁
-  iexists (R σ₁), 0, (fun _ => ε₁), ε₁
-  iframe %Hred %hRmeas %hbnd %hexp %hpgl
+  iexists (R σ₁), 0, (fun _ => ε₁)
+  iframe %Hred %hRmeas %hexp %hpgl
   iintro %ρ %HR
   imod HCont $$ %ρ.expr %ρ.state %HR with HC
   imodintro

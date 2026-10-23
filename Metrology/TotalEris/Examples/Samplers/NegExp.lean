@@ -183,7 +183,7 @@ theorem twp_NegExp (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, M
   twp_pure
   twp_bind pl(urand)
   icombine Hε_spec Hε_term as Hε
-  iapply (twp_urand_exp'
+  iapply (twp_urand_exp
     (ε₂ := fun x => RealDecrTrialCreditV (NegExpContAmp F x L c) 0 x)
     (measurable_negExpContAmp F hFm L _) ?hint) $$ Hε
   case hint =>

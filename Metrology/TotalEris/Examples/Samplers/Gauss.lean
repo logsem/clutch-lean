@@ -677,7 +677,7 @@ theorem twp_G2 (E : CoPset) (F : ℕ → ℝ → ℝ≥0∞) (hFm : ∀ a, Measu
   obtain rfl : wk = _ := hk
   twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (ε₂ := G2CreditAmp F c k)
+  iapply (twp_urand_exp (ε₂ := G2CreditAmp F c k)
     (measurable_g2CreditAmp F hFm c k) ?hint) $$ Hck
   case hint => exact le_rfl
   iintro %x ⟨%hxm, Hcx⟩

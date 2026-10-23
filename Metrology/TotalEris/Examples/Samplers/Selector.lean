@@ -394,7 +394,7 @@ theorem twp_C (E : CoPset) (F : ℕ → ℝ≥0∞) (m : ℕ) :
   twp_bind pl(rand(#int (m : ℤ) + #2, #()))
   twp_pures
   twp_bind (Exp.rand (pl(#int ((m : ℤ) + 2))) pl(#()))
-  iapply (twp_rand_exp' (ε₂ := CCredit F) (Hz := by omega) (HSum := cCredit_sum_div_le F m)) $$ Hε
+  iapply (twp_rand_exp (ε₂ := CCredit F) (Hz := by omega) (HSum := cCredit_sum_div_le F m)) $$ Hε
   iintro %n ⟨%hn, Hcr⟩
   iapply (ErisWpGS.tglWp_value_of_toVal (v := (.int n : Val ℝ)) rfl)
   simp only [Exp.ofVal]
@@ -450,7 +450,7 @@ theorem twp_Bii (E : CoPset) (F : Bool → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 
   iintro %⟨w, _⟩ ⟨%n, %rfl, %hmem, Hcn⟩
   twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (ε₂ := BiiCredit F x n) (measurable_biiCredit F x n) ?hint) $$ Hcn
+  iapply (twp_urand_exp (ε₂ := BiiCredit F x n) (measurable_biiCredit F x n) ?hint) $$ Hcn
   case hint => exact le_rfl
   iintro %r ⟨%-, Hcr⟩
   twp_pure
@@ -501,7 +501,7 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
   iterate 5 twp_pure
   twp_bind pl(urand)
   icombine Hε_spec Hε_term as Hε
-  iapply (twp_urand_exp' (ε₂ := SCreditAmp F k x N y ((kf : ℝ≥0∞) * ε_term))
+  iapply (twp_urand_exp (ε₂ := SCreditAmp F k x N y ((kf : ℝ≥0∞) * ε_term))
     (measurable_sCreditAmp F k x N y _) ?hint) $$ Hε
   case hint =>
     have hy1 : y ≤ 1 := by linarith
@@ -559,7 +559,7 @@ theorem twp_S (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x y : ℝ) (N : �
   iintro Hε_spec
   iterate 5 twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (ε₂ := SCredit F k x N y) (measurable_sCreditAmp F k x N y 0)
+  iapply (twp_urand_exp (ε₂ := SCredit F k x N y) (measurable_sCreditAmp F k x N y 0)
     (le_of_eq (by rw [SCredit, SCreditAmp_lintegral_eq F k x N y 0 hx0 hx1 hy0 hy1, mul_zero, add_zero]))) $$ Hε_spec
   iintro %z ⟨%hzm, Hcz⟩
   have hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp hzm
@@ -603,7 +603,7 @@ theorem twp_S0 (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx0 : 
   twp_pure
   twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' (ε₂ := SCredit F k x 0 x) (measurable_sCreditAmp F k x 0 x 0)
+  iapply (twp_urand_exp (ε₂ := SCredit F k x 0 x) (measurable_sCreditAmp F k x 0 x 0)
     (le_of_eq (by rw [SCredit, SCreditAmp_lintegral_eq F k x 0 x 0 hx0 hx1 hx0 hx1, mul_zero, add_zero]))) $$ Hε
   iintro %z ⟨%hzm, Hcz⟩
   have hz01 : 0 < z ∧ z < 1 := mem_unifUnitSupport_real.mp hzm

@@ -11,6 +11,7 @@ public import Iris.Algebra.Auth
 /-! # Eris ghost state definitions -/
 
 open Iris Auth
+open scoped ErrorCredit
 
 namespace ProbLang
 

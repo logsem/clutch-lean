@@ -83,14 +83,6 @@ open Classical in
   rw [dite_eq_left ⟨n, rfl⟩]
   exact congrArg ε₂ (presample_choose_eq _ rfl)
 
-/-- `presampleAdvCompX₂` is bounded by `1` when `ε₂` is. -/
-theorem presampleAdvCompX₂_le_one {σ : State rT} {α : Loc} {N : Int} {bs : List (TapeIdx N)}
-    {ε₂ : TapeIdx N → ENNReal} (Hbd : ∀ n, ε₂ n ≤ 1) (σ' : State rT) :
-    presampleAdvCompX₂ σ α N bs ε₂ σ' ≤ 1 := by
-  unfold presampleAdvCompX₂
-  split
-  exacts [Hbd _, zero_le]
-
 variable [LawfulProbLangℝ rT]
 variable {α : Loc} {N : Int}
 
@@ -167,7 +159,6 @@ per-outcome credit `↯(ε₂ n)` whose `Ico`-average is `≤ ε₁`. -/
 theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} {t : Tape} (hN : 0 < t.bound)
     {ε₁ : ENNReal} {ε₂ : TapeIdx t.bound → ENNReal}
-    (Hbd : ∀ n, ε₂ n ≤ 1)
     (HSum : (∑ n ∈ tapeIdxFinset t.bound, ε₂ n) / t.bound.toNat ≤ ε₁)
     (hv : e.toVal? = none) :
     iprop(↯ε₁ ∗ α ↪ₐ t ∗
@@ -186,9 +177,6 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT}
   have hErase := ErasableExpr.tapePresample hlookup hN
   have hMeas : MeasurableSet {σ' : State rT | ∃ n : TapeIdx N, σ' = presampleUpdate σ₁ α N bs n} :=
     measurableSet_presample_support
-  have hBnd : ∀ σ' : State rT,
-      (ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ' ≤ (ε_now - ε₁) + 1 :=
-    fun σ' => add_le_add_right (presampleAdvCompX₂_le_one Hbd σ') _
   have hInt : (0 : ℝ≥0∞) +
       ∫⁻ σ', ((ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ') ∂(tapePresample σ₁ α) ≤ ε_now := by
     have : MeasureTheory.IsProbabilityMeasure (tapePresample σ₁ α) :=
@@ -204,9 +192,8 @@ theorem twp_presample_adv_comp {E : CoPset} {e : Exp rT}
   iapply glm'_erasable_step
   iexists (tapePresample σ₁ α),
     (fun σ' => ∃ n : TapeIdx N, σ' = presampleUpdate σ₁ α N bs n),
-    0, (fun σ' => (ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ'),
-    ((ε_now - ε₁) + 1)
-  iframe %hErase %hMeas %hBnd %hInt %hPgl
+    0, (fun σ' => (ε_now - ε₁) + presampleAdvCompX₂ σ₁ α N bs ε₂ σ')
+  iframe %hErase %hMeas %hInt %hPgl
   iintro %σ' %⟨n, rfl⟩
   simp only [presampleAdvCompX₂_update]
   imod Hclose with -
@@ -238,7 +225,7 @@ theorem twp_presample {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF}
   iapply fupd_tglWp
   imod ErrorCredit.zero with Herr
   imodintro
-  iapply (twp_presample_adv_comp hN (fun _ => zero_le) (by simp) hv)
+  iapply (twp_presample_adv_comp (ε₂ := fun _ => 0) hN (by simp) hv)
   iframe
   iintro %n ⟨-, Htape'⟩
   iapply Hcont $$ %n Htape'

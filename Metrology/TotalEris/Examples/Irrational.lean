@@ -49,7 +49,7 @@ theorem twp_urand_irrational (E : CoPset) :
   iintro %Φ - HΦ
   iapply twp_err_pos solve_not_value
   iintro %ε %Hε Herr
-  iapply (twp_urand_exp measurable_irratErr irratErr_le_one ?Gexp) $$ Herr
+  iapply (twp_urand_exp measurable_irratErr ?Gexp) $$ Herr
   case Gexp => simp [lintegral_irratErr_eq_zero]
   iintro %r ⟨%-, Hcr⟩
   by_cases h : Irrational r

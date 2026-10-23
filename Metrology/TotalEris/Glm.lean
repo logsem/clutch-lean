@@ -2,7 +2,6 @@ module
 
 public import Metrology.Iris.ErrorCredits
 public import Metrology.ProbLang.Exec
-public import Metrology.ProbLang.Erasable
 public import Metrology.ProbLang.Erasure
 public import Metrology.ProbLang.CtxStep
 public import Metrology.ProbLang.Metatheory
@@ -124,28 +123,26 @@ instance : OFE.Discrete (GlmState rT) := ⟨id⟩
 
 /-- Take a real program step, splitting the budget `ε` over the outcomes.
 `R`: the outcomes kept, failing with probability `≤ ε₁` (`Pgl`); `X₂ ρ`: the budget passed to
-outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`; `r`: a uniform bound on `X₂`, mirroring Eris's `glm` (where it
-makes the expectation finite); here expectations are `lintegral`s, so it is unused. -/
+outcome `ρ`, with `ε₁ + E[X₂] ≤ ε`. Eris's `glm` also takes a uniform bound on `X₂`, to make the
+expectation finite; here expectations are `lintegral`s, so it is dropped. -/
 abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
-  iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal) (r : ENNReal),
+  iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal),
     ⌜Reducible e₁ σ₁⌝ ∗
     ⌜MeasurableSet {ρ | R ρ}⌝ ∗
-    ⌜∀ ρ, X₂ ρ ≤ r⌝ ∗
     ⌜ε₁ + (∫⁻ ρ, X₂ ρ ∂(primStep ⟨e₁, σ₁⟩)) ≤ ε⌝ ∗
     ⌜Pgl ε₁ R (primStep ⟨e₁, σ₁⟩)⌝ ∗
     (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
 
 /-- Advance only the state by an expression-erasable measure `μ`, spending error per outcome.
-`R`, `ε₁`, `X₂`, `r` are as in `glmPrimStep'`.
+`R`, `ε₁`, `X₂` are as in `glmPrimStep'`.
 Total adequacy needs the witness `MeasurableSet {σ' | R σ'}` to split the `μ`-mass on `R`. -/
 abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
     (Φ : GlmState rT → IProp GF) : IProp GF :=
   iprop(∃ (μ : MeasureTheory.Measure (State rT)) (R : State rT → Prop) (ε₁ : ENNReal)
-      (X₂ : State rT → ENNReal) (r : ENNReal),
+      (X₂ : State rT → ENNReal),
     ⌜ErasableExpr μ σ₁⌝ ∗
     ⌜MeasurableSet {σ' | R σ'}⌝ ∗
-    ⌜∀ σ', X₂ σ' ≤ r⌝ ∗
     ⌜ε₁ + (∫⁻ σ', X₂ σ' ∂μ) ≤ ε⌝ ∗
     ⌜Pgl ε₁ R μ⌝ ∗
     (∀ σ', ⌜R σ'⌝ -∗ |={∅}=> execStutter (fun ε'' => Φ (⟨e₁, σ'⟩, ε'')) (X₂ σ')))
@@ -155,9 +152,9 @@ theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
     {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF} :
     iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁) ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
   iintro ⟨HZ, HPrim⟩
-  icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
-  iexists R, ε₁, X₂, r
-  iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
+  icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
+  iexists R, ε₁, X₂
+  iframe %Hred %HRmeas %Hexp %Hpgl
   iintro %ρ HR
   imod HCont $$ %ρ HR with HS
   imodintro
@@ -171,9 +168,9 @@ theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
     {Φ Ψ : GlmState rT → IProp GF} :
     iprop((∀ s, Φ s -∗ Ψ s) ∗ glmErasable' e₁ σ₁ ε Φ) ⊢ glmErasable' e₁ σ₁ ε Ψ := by
   iintro ⟨HΦΨ, HEras⟩
-  icases HEras with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
-  iexists μ, R, ε₁, X₂, r
-  iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
+  icases HEras with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hexp, %Hpgl, HCont⟩
+  iexists μ, R, ε₁, X₂
+  iframe %Heras %HRmeas %Hexp %Hpgl
   iintro %σ' %HR
   imod HCont $$ %σ' %HR with HS
   imodintro
@@ -299,16 +296,16 @@ theorem glm'_mono_grading
     iintro %ε'' %Hlt
     iapply HBump $$ %ε'' %(hε.trans_lt Hlt)
   · iright; ileft
-    icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+    icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
     replace Hexp := Hexp.trans hε
-    iexists R, ε₁, X₂, r
-    iframe %Hred %HRmeas %Hbnd %Hexp %Hpgl
+    iexists R, ε₁, X₂
+    iframe %Hred %HRmeas %Hexp %Hpgl
     iexact HCont
   · iright; iright
-    icases HEras with ⟨%μ, %R, %ε₁, %X₂, %r, %Heras, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+    icases HEras with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hexp, %Hpgl, HCont⟩
     replace Hexp := Hexp.trans hε
-    iexists μ, R, ε₁, X₂, r
-    iframe %Heras %HRmeas %Hbnd %Hexp %Hpgl
+    iexists μ, R, ε₁, X₂
+    iframe %Heras %HRmeas %Hexp %Hpgl
     iexact HCont
 
 /-- `glm'` is monotone in the credit budget, under the wand. -/
@@ -365,7 +362,7 @@ theorem glm'_bind
       icases HF with ⟨HBump | HPrim | HEras⟩
       · ileft; iexact HBump
       · iright; ileft
-        icases HPrim with ⟨%R, %ε₁, %X₂, %r, %Hred, %HRmeas, %Hbnd, %Hexp, %Hpgl, HCont⟩
+        icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
         have Hsv : ¬ ρ.expr.isValue := val_stuck Hred
         set R' : Cfg rT → Prop := fun ρ' => ∃ ρ'', ρ' = K.fillCfg ρ'' ∧ R ρ'' with hR'def
         set X₂' : Cfg rT → ENNReal :=
@@ -380,11 +377,6 @@ theorem glm'_bind
         have hX₂'fill : ∀ a : Cfg rT, X₂' (K.fillCfg a) = X₂ a := fun a => by
           simp only [hX₂'def, Ectx.fillCfg, Kinv_left, Option.elim]
         have hredK : Reducible (K.fill ρ.expr) ρ.state := Hred.fill K
-        have hbnd' : ∀ ρ', X₂' ρ' ≤ r := by
-          intro ρ'
-          cases h : Kinv ρ'.expr with
-          | none => simp [hX₂'def, h, Option.elim]
-          | some e' => simp only [hX₂'def, h, Option.elim]; exact Hbnd ⟨e', ρ'.state⟩
         have hexp' : ε₁ + (∫⁻ a, X₂' a ∂ primStep ⟨K.fill ρ.expr, ρ.state⟩) ≤ ε' := by
           rw [primStep_fill Hsv]
           refine le_trans ?_ Hexp
@@ -403,8 +395,8 @@ theorem glm'_bind
           simp only [hR'def, Set.mem_preimage, Set.mem_ofPred_eq, not_exists, not_and]
           refine ⟨fun h hR => h a rfl hR, fun hR ρ₃ hEq hR₃ => ?_⟩
           exact hR (Ectx.fillCfg_injective K hEq.symm ▸ hR₃)
-        iexists R', ε₁, X₂', r
-        iframe %hredK %hR'meas %hbnd' %hexp' %hpgl'
+        iexists R', ε₁, X₂'
+        iframe %hredK %hR'meas %hexp' %hpgl'
         iintro %ρ' ⟨%ρ'', %rfl, %HR⟩
         imod HCont $$ %ρ'' %HR with HS
         imodintro

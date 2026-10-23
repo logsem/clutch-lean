@@ -320,7 +320,7 @@ theorem twp_DecrTrial_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (B : ℝ) (hB0 
   iterate 3 twp_pure
   twp_bind pl(urand)
   icombine Hε_spec Hε_term as Hε
-  iapply (twp_urand_exp'
+  iapply (twp_urand_exp
     (ε₂ := RealDecrTrialCreditAmp F N x ((k : ℝ≥0∞) * ε_term)) ?hmeas ?hint) $$ Hε
   case hmeas => exact measurable_realDecrTrialCreditAmp F N x _
   case hint =>
@@ -375,7 +375,7 @@ theorem twp_DecrTrial (E : CoPset) (F : ℕ → ℝ≥0∞) (N : ℕ) (x : ℝ) 
   iintro Hε_spec
   iterate 3 twp_pure
   twp_bind pl(urand)
-  iapply (twp_urand_exp' ?hmeas ?hint) $$ Hε_spec
+  iapply (twp_urand_exp ?hmeas ?hint) $$ Hε_spec
   case hmeas => exact measurable_realDecrTrialCredit F N x
   case hint => exact le_of_eq (RealDecrTrialCredit_lintegral Hx)
   iintro %y ⟨%hym, Hcy⟩

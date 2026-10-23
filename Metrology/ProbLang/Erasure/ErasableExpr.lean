@@ -21,18 +21,14 @@ open Cfg (measurable_expr)
 
 /-! ## `ErasableExpr` -/
 
-/-- Erasability up to the expression projection, the analogue of `Erasable`. -/
+/-- Erasability up to the expression projection: sampling the initial state from `μ` instead of
+fixing it to `σ` does not change the expression distribution of `execN m`. -/
 def ErasableExpr (μ : Measure (State rT)) (σ : State rT) : Prop :=
   ∀ e m, asExpr (μ.bind (fun σ' => execN m ⟨e, σ'⟩)) = asExpr (execN m ⟨e, σ⟩)
 
 namespace ErasableExpr
 
 variable {μ : Measure (State rT)} {σ : State rT}
-
-/-- Erasability implies erasability up to the expression projection. -/
-theorem of_erasable (h : Erasable μ σ) : ErasableExpr μ σ := by
-  intro e m
-  rw [h e m]
 
 /-- An expression-erasable distribution has mass 1. -/
 theorem mass (h : ErasableExpr μ σ) : μ univ = 1 := by
@@ -95,8 +91,9 @@ theorem lim_exec (h : ErasableExpr μ σ) (e : Exp rT) :
 end ErasableExpr
 
 /-- A Dirac state distribution is erasable. -/
-theorem ErasableExpr.dret (σ : State rT) : ErasableExpr (dirac σ) σ :=
-  .of_erasable (Erasable.dret σ)
+theorem ErasableExpr.dret (σ : State rT) : ErasableExpr (dirac σ) σ := by
+  intro e m
+  rw [dirac_bind (by measurability)]
 
 /-- Presampling a tape leaves the limit expression distribution unchanged (Clutch
 `lim_exec_eq_erasure`). -/

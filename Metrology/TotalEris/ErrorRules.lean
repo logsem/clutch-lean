@@ -128,7 +128,6 @@ theorem twp_err_liminf {ι : Type _} {l : Filter ι} {S : Set ι} {ε : ι → �
 `f` averages to at most `ε₁`. -/
 theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cfg rT → ℝ≥0∞}
     (hv : e₁.toVal? = none)
-    (Hbd : ∀ ρ, f ρ ≤ 1)
     (Hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁)
     (Hred : ∀ σ₁, Reducible e₁ σ₁)
     (hRmeas : ∀ σ₁, MeasurableSet {ρ : Cfg rT | R σ₁ ρ})
@@ -144,18 +143,16 @@ theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cf
   imodintro
   ihave ⟨Hε_now, Herr, %hLe⟩ := errInterp_supply_bound $$ [$Hε_now $Herr]
   iapply glm'_prim_step
-  iexists (R σ₁), 0, (fun ρ : Cfg rT => (ε_now - ε₁) + f ρ), ((ε_now - ε₁) + 1)
+  iexists (R σ₁), 0, (fun ρ : Cfg rT => (ε_now - ε₁) + f ρ)
   specialize Hred σ₁
   specialize hRmeas σ₁
   specialize hPgl σ₁
-  have hbnd : ∀ ρ : Cfg rT, (ε_now - ε₁) + f ρ ≤ (ε_now - ε₁) + 1 :=
-    fun ρ => add_le_add_right (Hbd ρ) _
   have hexp : 0 + ∫⁻ ρ, ((ε_now - ε₁) + f ρ) ∂(primStep ⟨e₁, σ₁⟩) ≤ ε_now := by
     rw [zero_add, MeasureTheory.lintegral_add_left measurable_const,
         MeasureTheory.lintegral_const]
     calc _ ≤ (ε_now - ε₁) * 1 + ε₁ := by gcongr; exacts [primStep_univ_le_one _, HInt σ₁]
       _ = ε_now := by rw [mul_one]; exact tsub_add_cancel_of_le hLe
-  iframe %Hred %hRmeas %hbnd %hexp %hPgl
+  iframe %Hred %hRmeas %hexp %hPgl
   iintro %ρ %HRρ
   imod errInterp_supply_decrease $$ [$Hε_now $Herr] with Hε_minus
   imodintro
@@ -172,9 +169,9 @@ theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cf
     iframe Hσ Hε_new
     iapply Hcont $$ %σ₁ %ρ %HRρ Hcr
 
-/-- Spend `↯ε₁` on `rand(#z, #())`, giving outcome `n` the credit `ε₂ n` when the `ε₂` are at most
-`1` and average to at most `ε₁`. -/
-theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : ∀ n, ε₂ n ≤ 1)
+/-- Spend `↯ε₁` on `rand(#z, #())`, giving outcome `n` the credit `ε₂ n` when the `ε₂` average to
+at most `ε₁`. -/
+theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
     (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
@@ -188,12 +185,6 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : 
   set f : Cfg rT → ℝ≥0∞ := fun ρ => match ρ.expr with
     | .lit (.int n) => if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0
     | _ => 0 with hf
-  have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
-    intro ρ
-    simp only [hf]
-    split
-    · split <;> first | exact Hbd _ | exact zero_le
-    · exact zero_le
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨n, _, _, rfl⟩; rfl
   have hred : ∀ σ₁, Reducible (pl(rand(#int z, #()))) σ₁ :=
@@ -238,7 +229,7 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : 
       show (if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0) = ε₂ n.toNat
       exact dite_eq_left ⟨hn.1, hn.2⟩
   iintro Herr Hcont
-  iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
+  iapply (twp_glm_spend Hnv hstate hred hrmeas hpgl hint) $$ Herr
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
   have hfe : f (⟨pl(#n), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
@@ -249,9 +240,9 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z) (Hbd : 
   iframe %hn
   iapply (ext hfe) $$ Hcr
 
-/-- Spend `↯ε₁` on `urand`, giving outcome `r` the credit `ε₂ r` when the `ε₂` are at most `1`
-and integrate to at most `ε₁`. -/
-theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂) (Hbd : ∀ r, ε₂ r ≤ 1)
+/-- Spend `↯ε₁` on `urand`, giving outcome `r` the credit `ε₂ r` when the `ε₂` integrate to at most
+`ε₁`. -/
+theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
     (HInt : (∫⁻ r, ε₂ r ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁) :
     iprop(↯ε₁) ⊢
       iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
@@ -285,12 +276,6 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂) (H
     ext ρ
     simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
     exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
-  have hbd : ∀ ρ : Cfg rT, f ρ ≤ 1 := by
-    intro ρ
-    simp only [hf]
-    split
-    · exact Hbd _
-    · exact zero_le
   have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
     rintro σ₁ ρ ⟨r, rfl, _⟩; rfl
   have hred : ∀ σ₁, Reducible (pl(urand) : Exp rT) σ₁ :=
@@ -310,7 +295,7 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂) (H
     rw [hps σ₁, MeasureTheory.lintegral_map hφ (hg σ₁)]
     exact HInt
   iintro Herr Hcont
-  iapply (twp_glm_spend Hnv hbd hstate hred hrmeas hpgl hint) $$ Herr
+  iapply (twp_glm_spend Hnv hstate hred hrmeas hpgl hint) $$ Herr
   iintro %σ₁ %ρ %HRρ Hcr
   obtain ⟨r, rfl, hrsupp⟩ := HRρ
   have hfe : f (⟨pl(#r), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
@@ -318,45 +303,6 @@ theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂) (H
   iapply Hcont $$ %r
   iframe %hrsupp
   iapply (ext hfe) $$ Hcr
-
-/-- `twp_urand_exp` without the bound, via the clamped credit `min (ε₂ r) 1`. -/
-theorem twp_urand_exp' {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
-    (HInt : (∫⁻ r, ε₂ r ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁) :
-    iprop(↯ε₁) ⊢
-      iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
-      tglWp E pl(urand) Φ) := by
-  iintro Herr Hcont
-  have hint : (∫⁻ r, min (ε₂ r) 1 ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁ :=
-    (MeasureTheory.lintegral_mono fun r => min_le_left _ _).trans HInt
-  iapply (twp_urand_exp (hε₂.min measurable_const) (fun r => min_le_right _ _) hint) $$ Herr
-  iintro %r ⟨%hrsupp, Hcr⟩
-  by_cases h : ε₂ r ≤ 1
-  · iapply Hcont $$ %r
-    iframe %hrsupp
-    iapply (ext (show min (ε₂ r) 1 = ε₂ r from min_eq_left h)) $$ Hcr
-  · push Not at h
-    iexfalso
-    iapply (contradict (le_min h.le (le_refl 1))) $$ Hcr
-
-/-- `twp_rand_exp` without the bound, via the clamped credit `min (ε₂ n) 1`. -/
-theorem twp_rand_exp' {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
-    (HSum : (∑ n ∈ Finset.range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
-    iprop(↯ε₁) ⊢
-      iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
-        Φ (.int n : Val rT)) -∗
-      tglWp E (pl(rand(#z, #()))) Φ) := by
-  iintro Herr Hcont
-  have hsum : (∑ n ∈ Finset.range z.toNat, min (ε₂ n) 1) / (z.toNat : ℝ≥0∞) ≤ ε₁ :=
-    (ENNReal.div_le_div_right (Finset.sum_le_sum fun n _ => min_le_left _ _) _).trans HSum
-  iapply (twp_rand_exp Hz (fun n => min_le_right _ _) hsum) $$ Herr
-  iintro %n ⟨%Hn, Hcr⟩
-  by_cases h : ε₂ n.toNat ≤ 1
-  · iapply Hcont $$ %n
-    iframe %Hn
-    iapply (ext (show min (ε₂ n.toNat) 1 = ε₂ n.toNat from min_eq_left h)) $$ Hcr
-  · push Not at h
-    iexfalso
-    iapply (contradict (le_min h.le (le_refl 1))) $$ Hcr
 
 end TotalEris
 end ProbLang

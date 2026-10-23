@@ -5,7 +5,6 @@ public import Iris
 public import Iris.Algebra.HeapView
 public import Iris.Instances.IProp.Instance
 public import Iris.Std.HeapInstances
-public import Metrology.Iris.Algebra
 public import Metrology.ProbLang.Syntax.Syntax
 public import Metrology.ProbLang.Syntax.Notation
 public import Metrology.ProbLang.Discrete
@@ -99,6 +98,117 @@ theorem LocHeap.get?_of_asAgree_get? [OFE V] {h : LocHeap V} {l : Loc} {v : V} {
   obtain ⟨w, hw, rfl⟩ := Option.map_eq_some_iff.mp hget
   rw [hw, Agree.toAgree_included.mp hinc]
 
+/-! ## Heap-view facts shared by the spec and program sides
+
+Facts about one `HeapView Loc (Agree V) LocHeap` cell, stated for any ghost slot `E` and name `γ`;
+`SpecProgram` and `AppProgram` instantiate them for their heaps and tapes. -/
+
+namespace AgreeHeap
+
+variable {V : Type _} [OFE V] [OFE.Discrete V] {GF : BundledGFunctors}
+  {E : ElemG GF (constOF (HeapView Loc (Agree V) LocHeap))} {γ : GName}
+
+local bi IProp GF
+
+/-- Allocating the authority for a plain heap `σ`. -/
+theorem alloc_auth (σ : LocHeap V) :
+    ⊢@{IProp GF} |==> ∃ γ : GName,
+      iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) :=
+  iOwn_alloc _ HeapView.auth_one_valid
+
+/-- Owning a cell against the authority shows the heap holds its value there. -/
+theorem lookup {σ : LocHeap V} {l : Loc} {v : V} :
+    ⊢ iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) -∗
+      iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v)) -∗ ⌜σ[l]? = some v⌝ := by
+  iintro Hh Hf
+  icombine Hh Hf gives Hv
+  ihave %hv := internalCmraValid_discrete $$ Hv
+  ipureintro
+  obtain ⟨_, _, _, hget, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
+  exact LocHeap.get?_of_asAgree_get? hget hinc
+
+/-- Overwriting a cell updates the authority and the cell together. -/
+theorem update {σ : LocHeap V} {l : Loc} {v w : V} :
+    iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) ∗
+        iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v)) ⊢
+      |==> (iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree (PartialMap.insert σ l w))) ∗
+        iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree w))) := by
+  iintro H
+  imod iOwn_update_op (HeapView.update_replace (Agree.toAgree_valid (a := w))) $$ H with Hu
+  imodintro
+  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
+  simp only [LocHeap.asAgree_insert]
+  iframe
+
+/-- Allocating a value yields a cell at the fresh location. -/
+theorem alloc {σ : LocHeap V} (v : V) :
+    iOwn (E := E) γ (HeapView.Auth (.own 1) (LocHeap.asAgree σ)) ⊢
+      |==> (iOwn (E := E) γ
+          (HeapView.Auth (.own 1) (LocHeap.asAgree (PartialMap.insert σ σ.fresh v))) ∗
+        iOwn (E := E) γ (HeapView.Frag σ.fresh (.own 1) (toAgree v))) := by
+  iintro Hh
+  imod iOwn_update (HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ)
+    DFrac.valid_own_one (Agree.toAgree_valid (a := v))) $$ Hh with Hu
+  imodintro
+  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
+  simp only [LocHeap.asAgree_insert]
+  iframe
+
+/-- Two full cells at one location are contradictory. -/
+theorem frag_valid_2 {l : Loc} {v₁ v₂ : V} :
+    ⊢ iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v₁)) -∗
+      iOwn (E := E) γ (HeapView.Frag l (.own 1) (toAgree v₂)) -∗ False := by
+  iintro H1 H2
+  icombine H1 H2 gives Hv
+  ihave %hv := internalCmraValid_discrete $$ Hv
+  exfalso
+  exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
+
+/-- An empty integer tape is an empty tape fragment. -/
+theorem natTape_to_empty {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
+    iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
+      ⌜fs.map (fun x ↦ x.val) = ([] : List Int)⌝ ∗ F l ⟨z, fs⟩) ⊢ F l ⟨z, []⟩ := by
+  iintro ⟨%fs, %hmap, Hl⟩
+  obtain rfl := List.map_eq_nil_iff.mp hmap
+  iexact Hl
+
+/-- An empty tape fragment is an empty integer tape. -/
+theorem empty_to_natTape {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} :
+    F l ⟨z, []⟩ ⊢ iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
+      ⌜fs.map (fun x ↦ x.val) = ([] : List Int)⌝ ∗ F l ⟨z, fs⟩) := by
+  iintro Hl
+  iexists []
+  isplitr
+  · ipureintro
+    rfl
+  iexact Hl
+
+/-- An integer tape with head `n` exposes its first entry, and can be rebuilt from the tail. -/
+theorem read_natTape_head {F : Loc → Tape → IProp GF} {l : Loc} {z : Int} {n : Int}
+    {ns : List Int} :
+    iprop(∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
+        ⌜fs.map (fun x ↦ x.val) = n :: ns⌝ ∗ F l ⟨z, fs⟩) ⊢
+      iprop(∃ (x : { z' : Int // 0 ≤ z' ∧ z' < z }) (xs : List { z' : Int // 0 ≤ z' ∧ z' < z }),
+        F l ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
+        (F l ⟨z, xs⟩ -∗ ∃ fs : List { z' : Int // 0 ≤ z' ∧ z' < z },
+          ⌜fs.map (fun x ↦ x.val) = ns⌝ ∗ F l ⟨z, fs⟩)) := by
+  iintro ⟨%fs, %hmap, Hl⟩
+  obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp hmap
+  iexists x, xs
+  isplitl [Hl]
+  · iexact Hl
+  isplitr
+  · ipureintro
+    exact hx
+  iintro Hl
+  iexists xs
+  isplitr
+  · ipureintro
+    exact hxs
+  iexact Hl
+
+end AgreeHeap
+
 /-! ## Ghost-state classes -/
 
 /-- Ghost-state resources needed for the spec side. -/
@@ -191,11 +301,7 @@ theorem spec_auth_lookup_heap {e : Exp rT} {σ : State rT} {l : Loc} {v : Val rT
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↦ₛ v -∗ ⌜σ.heap[l]? = some v⌝ := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨-, Hh, -⟩ Hf
-  icombine Hh Hf gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  ipureintro
-  obtain ⟨_, _, _, hget, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  exact LocHeap.get?_of_asAgree_get? hget hinc
+  iapply AgreeHeap.lookup $$ Hh Hf
 
 /-- Overwriting a spec location updates the authoritative heap and the points-to together. -/
 theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val rT} :
@@ -204,12 +310,9 @@ theorem spec_auth_update_heap {e : Exp rT} {σ : State rT} {l : Loc} {v w : Val 
         l ↦ₛ w := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩ Hf
-  ihave Hu := iOwn_update_op (E := ISpec.heap)
-    (HeapView.update_replace (Agree.toAgree_valid (a := w))) $$ [$Hh $Hf]
-  imod Hu
+  imod AgreeHeap.update (E := ISpec.heap) (w := w) $$ [$Hh $Hf] with ⟨Hh, Hf⟩
   imodintro
-  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_heap, LocHeap.asAgree_insert]
+  simp only [State.update_heap]
   iframe
 
 /-- Allocating a fresh spec location. -/
@@ -219,12 +322,9 @@ theorem spec_auth_heap_alloc {e : Exp rT} {σ : State rT} (v : Val rT) :
         σ.heap.fresh ↦ₛ v := by
   unfold specAuth specHeapAuth specHeapFrag
   iintro ⟨He, Hh, Ht⟩
-  ihave Hu := iOwn_update (HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.heap)
-    DFrac.valid_own_one (Agree.toAgree_valid (a := v))) $$ Hh
-  imod Hu
+  imod AgreeHeap.alloc (E := ISpec.heap) v $$ Hh with ⟨Hh, Hf⟩
   imodintro
-  ihave ⟨Hh, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_heap, LocHeap.asAgree_insert]
+  simp only [State.update_heap]
   iframe
 
 /-- A tape points-to `l ↪ₛ t` agrees with the authoritative tapes. -/
@@ -232,11 +332,7 @@ theorem spec_auth_lookup_tape {e : Exp rT} {σ : State rT} {l : Loc} {t : Tape} 
     ⊢ specAuth ⟨e, σ⟩ -∗ l ↪ₛ t -∗ ⌜σ.tapes[l]? = some t⌝ := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨-, -, Ht⟩ Hf
-  icombine Ht Hf gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  ipureintro
-  obtain ⟨_, _, _, hget, _, hinc⟩ := HeapView.auth_op_frag_valid_total_discrete_iff hv
-  exact LocHeap.get?_of_asAgree_get? hget hinc
+  iapply AgreeHeap.lookup $$ Ht Hf
 
 /-- Overwriting a spec tape updates the authoritative tapes and the points-to together. -/
 theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape} :
@@ -245,12 +341,9 @@ theorem spec_auth_update_tape {e : Exp rT} {σ : State rT} {l : Loc} {t s : Tape
         l ↪ₛ s := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩ Hf
-  ihave Hu := iOwn_update_op (E := ISpec.tapes)
-    (HeapView.update_replace (Agree.toAgree_valid (a := s))) $$ [$Ht $Hf]
-  imod Hu
+  imod AgreeHeap.update (E := ISpec.tapes) (w := s) $$ [$Ht $Hf] with ⟨Ht, Hf⟩
   imodintro
-  ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_tapes, LocHeap.asAgree_insert]
+  simp only [State.update_tapes]
   iframe
 
 /-- Allocating a fresh spec tape. -/
@@ -260,12 +353,9 @@ theorem spec_auth_tape_alloc {e : Exp rT} {σ : State rT} (t : Tape) :
         σ.tapes.fresh ↪ₛ t := by
   unfold specAuth specTapesAuth specTapesFrag
   iintro ⟨He, Hh, Ht⟩
-  ihave Hu := iOwn_update (HeapView.update_one_alloc (LocHeap.asAgree_get?_fresh σ.tapes)
-    DFrac.valid_own_one (Agree.toAgree_valid (a := t))) $$ Ht
-  imod Hu
+  imod AgreeHeap.alloc (E := ISpec.tapes) t $$ Ht with ⟨Ht, Hf⟩
   imodintro
-  ihave ⟨Ht, Hf⟩ := iOwn_op $$ Hu
-  simp only [State.update_tapes, LocHeap.asAgree_insert]
+  simp only [State.update_tapes]
   iframe
 
 /-! ## Allocation -/
@@ -278,10 +368,8 @@ theorem spec_ra_init {GF : BundledGFunctors} [ISPre : SpecPreGS rT GF]
       Cfg.specAuth (ISpec := IS) ⟨e, σ⟩ ∗ specProgFrag (ISpec := IS) e := by
   imod (iOwn_alloc (E := ISPre.prog) (SpecProg.auth e • SpecProg.frag e)
     (Auth.auth_both_valid_2 trivial .rfl)) with ⟨%γp, Hp⟩
-  imod (iOwn_alloc (E := ISPre.heap) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.heap))
-    HeapView.auth_one_valid) with ⟨%γH, HH⟩
-  imod (iOwn_alloc (E := ISPre.tapes) (HeapView.Auth (.own 1) (LocHeap.asAgree σ.tapes))
-    HeapView.auth_one_valid) with ⟨%γT, HT⟩
+  imod AgreeHeap.alloc_auth (E := ISPre.heap) σ.heap with ⟨%γH, HH⟩
+  imod AgreeHeap.alloc_auth (E := ISPre.tapes) σ.tapes with ⟨%γT, HT⟩
   imodintro
   let IS : SpecGS rT GF := {
     toSpecPreGS := ISPre
@@ -309,21 +397,14 @@ notation:51 l:51 " ↪ₛN⟨" z:51 "; " ns:51 "⟩" => specNatTape l z ns
 theorem spec_natTape_to_empty {l : Loc} {z : Int} :
     specNatTape (GF := GF) l z [] ⊢ l ↪ₛ ⟨z, []⟩ := by
   unfold specNatTape
-  iintro ⟨%fs, %hmap, Hl⟩
-  obtain rfl := List.map_eq_nil_iff.mp hmap
-  iexact Hl
+  exact AgreeHeap.natTape_to_empty
 
 /-- An empty spec tape is an empty integer tape. -/
 theorem spec_empty_to_natTape {l : Loc} {z : Int} :
     (l ↪ₛ ⟨z, ([] : List { z' : Int // 0 ≤ z' ∧ z' < z })⟩) ⊢
       specNatTape l z [] := by
   unfold specNatTape
-  iintro Hl
-  iexists []
-  isplitr
-  · ipureintro
-    rfl
-  iexact Hl
+  exact AgreeHeap.empty_to_natTape
 
 /-- Reading the head of an integer tape exposes the head of the spec tape, with a way back. -/
 theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
@@ -332,20 +413,7 @@ theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
         l ↪ₛ ⟨z, x :: xs⟩ ∗ ⌜x.val = n⌝ ∗
         (l ↪ₛ ⟨z, xs⟩ -∗ specNatTape l z ns)) := by
   unfold specNatTape
-  iintro ⟨%fs, %hmap, Hl⟩
-  obtain ⟨x, xs, rfl, hx, hxs⟩ := List.map_eq_cons_iff.mp hmap
-  iexists x, xs
-  isplitl [Hl]
-  · iexact Hl
-  isplitr
-  · ipureintro
-    exact hx
-  iintro Hl
-  iexists xs
-  isplitr
-  · ipureintro
-    exact hxs
-  iexact Hl
+  exact AgreeHeap.read_natTape_head
 
 /-! ## Exclusivity of points-to assertions -/
 
@@ -353,20 +421,12 @@ theorem spec_read_natTape_head {l : Loc} {z : Int} {n : Int} {ns : List Int} :
 theorem specHeapFrag_valid_2 {l : Loc} {v1 v2 : Val rT} :
     ⊢ specHeapFrag l v1 -∗ specHeapFrag l v2 -∗ False := by
   unfold specHeapFrag
-  iintro H1 H2
-  icombine H1 H2 gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  exfalso
-  exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
+  exact AgreeHeap.frag_valid_2
 
 /-- Two tape points-to assertions at one location are contradictory. -/
 theorem specTapesFrag_valid_2 {l : Loc} {t1 t2 : Tape} :
     ⊢ specTapesFrag l t1 -∗ specTapesFrag l t2 -∗ False := by
   unfold specTapesFrag
-  iintro H1 H2
-  icombine H1 H2 gives Hv
-  ihave %hv := internalCmraValid_discrete $$ Hv
-  exfalso
-  exact absurd (DFrac.valid_own_op (HeapView.frag_op_valid_iff.mp hv).1) (lt_irrefl _)
+  exact AgreeHeap.frag_valid_2
 
 end SpecRA
