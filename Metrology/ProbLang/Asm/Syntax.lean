@@ -44,13 +44,17 @@ inductive ArgKind where
 
 /-- The register arguments and result of an imported function. -/
 structure CallSig where
+  /-- The argument kinds in register order. -/
   args : List ArgKind
+  /-- The result representation in the return register. -/
   result : ArgKind
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
 /-- The boundary signature and stack requirement of an assembly fragment. -/
 structure Sig extends CallSig where
+  /-- The number of scratch bytes owned below the entry stack pointer. -/
   stackBound : Nat := 0
+  /-- The named callback signatures. -/
   imports : List (String × CallSig) := []
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
@@ -73,7 +77,9 @@ inductive Operand where
 
 /-- A RISC-V instruction in GNU assembler notation. -/
 structure Instr where
+  /-- The GNU instruction name. -/
   mnemonic : String
+  /-- The instruction operands in source order. -/
   operands : List Operand
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
@@ -102,14 +108,40 @@ inductive Line where
 
 /-- Parsed assembly with a named entry point. -/
 structure AsmProg where
+  /-- The parsed source lines. -/
   lines : List Line
+  /-- The symbol at which execution starts. -/
   entry : String
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
 /-- A first-class assembly value and its boundary signature. -/
 structure Code where
+  /-- The parsed assembly fragment. -/
   prog : AsmProg
+  /-- The boundary and stack contract. -/
   sig : Sig
+  deriving DecidableEq, Repr, Countable, Inhabited
+
+/-- A scalar value representable at the assembly boundary. -/
+inductive BoundaryValue where
+  | int (value : Int)
+  | loc (location : Int)
+  | unit
+  deriving DecidableEq, BEq, Repr, Countable, Inhabited
+
+/-- A finite snapshot of integer-valued logical cells. -/
+abbrev HeapSnapshot := List (Int × Int)
+
+/-- The first-order archive needed to replay a paused assembly call. -/
+structure Replay where
+  /-- The original code value. -/
+  code : Code
+  /-- The original boundary arguments. -/
+  args : List BoundaryValue
+  /-- The entry fragment. -/
+  entry : HeapSnapshot
+  /-- Completed callbacks and their returned fragments. -/
+  responses : List (BoundaryValue × HeapSnapshot) := []
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
 end ProbLang.Asm

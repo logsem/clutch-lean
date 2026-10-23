@@ -36,6 +36,24 @@ instance _root_.Option.instMeasurableSingletonClass : MeasurableSingletonClass (
         rw [show ({some x} : Set (Option α)) = (some : α → Option α) '' {x} by simp]
         exact image_some (measurableSet_singleton x)
 
+/-- Lists inherit measurable singletons from their element type. -/
+instance _root_.List.instMeasurableSingletonClass {α : Type _} [MeasurableSpace α]
+    [MeasurableSingletonClass α] :
+    MeasurableSingletonClass (List α) := by
+  have hinj : Function.Injective (List.toSigma : List α → Σ n, Fin n → α) := by
+    intro xs ys h
+    have h' := congrArg (fun s : Σ n, Fin n → α => List.ofFn s.2) h
+    simpa [List.toSigma] using h'
+  constructor
+  intro xs
+  have hs : MeasurableSet ({List.toSigma xs} : Set (Σ n, Fin n → α)) := by
+    simpa only [Set.image_singleton, List.toSigma] using
+      (MeasurableEmbedding.sigmaMk (β := fun n => Fin n → α) xs.length).measurableSet_image'
+        (measurableSet_singleton xs.get)
+  convert List.measurable_toSigma hs using 1
+  ext ys
+  exact hinj.eq_iff.symm
+
 /-- `LocHeap α` has measurable singletons if `α` does. -/
 instance LocHeap.instMeasurableSingletonClass : MeasurableSingletonClass (LocHeap α) :=
   measurableSingletonClass_of_injective (of_comap_le le_rfl) fun _ _ h => ext_getElem? (congrFun h)

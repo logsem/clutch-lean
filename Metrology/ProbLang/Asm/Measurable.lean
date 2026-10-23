@@ -2,12 +2,7 @@ module
 
 public import Metrology.ProbLang.Asm.Step
 
-/-! # Measurability of the explicit foreign-call kernels
-
-The machine sees only countable boundary data. Heap capture reads finitely many measurable
-lookups; foreign results overwrite only those locations. No regularity assumption on an
-explicit machine or its import implementations is needed.
--/
+/-! # Measurability of the explicit foreign-call kernels -/
 
 @[expose] public section
 noncomputable section
@@ -16,25 +11,8 @@ namespace ProbLang.Asm
 
 open MeasureTheory MeasureTheory.Measure ProbabilityTheory
 
-instance : MeasurableSpace BoundaryValue := ⊤
+/-- Foreign actions have the discrete measurable space. -/
 instance : MeasurableSpace Action := ⊤
-
-/-- The list space used for snapshots has measurable singletons. -/
-instance {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α] :
-    MeasurableSingletonClass (List α) := by
-  have hinj : Function.Injective (List.toSigma : List α → Σ n, Fin n → α) := by
-    intro xs ys h
-    have h' := congrArg (fun s : Σ n, Fin n → α => List.ofFn s.2) h
-    simpa [List.toSigma] using h'
-  constructor
-  intro xs
-  have hs : MeasurableSet ({List.toSigma xs} : Set (Σ n, Fin n → α)) := by
-    simpa only [Set.image_singleton, List.toSigma] using
-      (MeasurableEmbedding.sigmaMk (β := fun n => Fin n → α) xs.length).measurableSet_image'
-        (measurableSet_singleton xs.get)
-  convert List.measurable_toSigma hs using 1
-  ext ys
-  exact hinj.eq_iff.symm
 
 variable {rT : Type} [MeasurableSpace rT]
 
@@ -55,8 +33,7 @@ private theorem measurable_scalarLit : Measurable (scalarLit (rT := rT)) := by
 private def scalarExp (e : Exp rT) : Option BoundaryValue := (Exp.lit.π e).bind scalarLit
 
 private theorem measurable_scalarExp : Measurable (scalarExp (rT := rT)) :=
-  Option.measurable_bind_param Exp.lit.π.measurable
-    (measurable_scalarLit.comp measurable_snd)
+  Option.measurable_bind_param Exp.lit.π.measurable (measurable_scalarLit.comp measurable_snd)
 
 /-- Boundary decoding ignores all non-boundary values, including real literals. -/
 @[fun_prop] theorem measurable_ofVal :
@@ -70,8 +47,7 @@ private theorem measurable_scalarExp : Measurable (scalarExp (rT := rT)) :=
 
 @[fun_prop] theorem measurable_intValue :
     Measurable (intValue : Val rT → Option Int) := by
-  have h := Option.measurable_bind_param
-    (f := fun v : Val rT => Exp.litExtract v.fst)
+  have h := Option.measurable_bind_param (f := fun v : Val rT => Exp.litExtract v.fst)
     (Exp.litExtract.measurable.comp Val.fst.measurable)
     (some_branch := fun p : Val rT × BaseLit rT => BaseLit.intExtract p.2)
     (BaseLit.intExtract.measurable.comp measurable_snd)
@@ -89,11 +65,11 @@ private theorem measurable_mapM {α β γ : Type} [MeasurableSpace α] [Measurab
   | cons x xs ih =>
     simp only [List.mapM_cons]
     exact Option.measurable_bind_param (hf x)
-      (some_branch := fun p : α × γ => (xs.mapM (fun b => f b p.1)).bind (fun bs => some (p.2 :: bs)))
+      (some_branch := fun p : α × γ =>
+        (xs.mapM (fun b => f b p.1)).bind (fun bs => some (p.2 :: bs)))
       (Option.measurable_bind_param (ih.comp measurable_fst)
         (some_branch := fun p : (α × γ) × List γ => some (p.1.2 :: p.2))
-        (measurable_some.comp ((measurable_of_countable
-          (fun p : γ × List γ => p.1 :: p.2)).comp
+        (measurable_some.comp ((measurable_of_countable (fun p : γ × List γ => p.1 :: p.2)).comp
           ((measurable_snd.comp measurable_fst).prodMk measurable_snd))))
 
 /-- Capturing a fixed finite footprint is measurable in the heap. -/
@@ -177,8 +153,7 @@ private def codeExp (e : Exp rT) : Option Code :=
   (Exp.lit.π e).bind BaseLit.code.π
 
 private theorem measurable_codeExp : Measurable (codeExp (rT := rT)) :=
-  Option.measurable_bind_param Exp.lit.π.measurable
-    (BaseLit.code.π.measurable.comp measurable_snd)
+  Option.measurable_bind_param Exp.lit.π.measurable (BaseLit.code.π.measurable.comp measurable_snd)
 
 /-- Calling a fixed code value depends measurably on its tuple and the current state. -/
 @[fun_prop] theorem measurable_callStep_code (env : FfiEnv rT) (c : Code) :
@@ -260,8 +235,7 @@ private theorem measurable_asmRedex (env : FfiEnv rT) :
     Measurable (fun p : Exp rT × Exp rT × State rT =>
       p.1.isValM (p.2.1.isValM (callStep env p.1 p.2.1 p.2.2))) :=
   Exp.isValM.measurable_param measurable_fst
-    (Exp.isValM.measurable_param (measurable_fst.comp measurable_snd)
-      (measurable_callStep env))
+    (Exp.isValM.measurable_param (measurable_fst.comp measurable_snd) (measurable_callStep env))
 
 private theorem measurable_resumeRedex (env : FfiEnv rT) :
     Measurable (fun p : Replay × Exp rT × State rT =>
@@ -270,41 +244,11 @@ private theorem measurable_resumeRedex (env : FfiEnv rT) :
   intro archive
   exact Exp.asValM.measurable ((measurable_resumeStep env archive).comp measurable_swap)
 
-variable [LawfulProbLangℝ rT]
-
-/-- The explicit foreign-call head kernel is measurable. -/
-@[fun_prop] theorem measurable_headStepWith (env : FfiEnv rT) :
-    Measurable (headStepWith env : Cfg rT → Measure (Cfg rT)) := by
-  have hr := Option.measurable_elim_param
-    (f := fun cfg : Cfg rT => Exp.asmResume.π cfg.expr)
-    (Exp.asmResume.π.measurable.comp Cfg.measurable_expr)
-    (default := headStep) headStep.measurable
-    (some_branch := fun p : Cfg rT × (Replay × Exp rT) =>
-      p.2.2.asValM (fun value => resumeStep env p.2.1 value p.1.state))
-    ((measurable_resumeRedex env).comp
-      ((measurable_fst.comp measurable_snd).prodMk
-        ((measurable_snd.comp measurable_snd).prodMk
-          (Cfg.measurable_state.comp measurable_fst))))
-  have ha := Option.measurable_elim_param
-    (f := fun cfg : Cfg rT => Exp.asm.π cfg.expr)
-    (Exp.asm.π.measurable.comp Cfg.measurable_expr) hr
-    (some_branch := fun p : Cfg rT × (Exp rT × Exp rT) =>
-      p.2.1.isValM (p.2.2.isValM (callStep env p.2.1 p.2.2 p.1.state)))
-    ((measurable_asmRedex env).comp
-      ((measurable_fst.comp measurable_snd).prodMk
-        ((measurable_snd.comp measurable_snd).prodMk
-          (Cfg.measurable_state.comp measurable_fst))))
-  convert ha using 1
-  funext ⟨e, σ⟩
-  cases e <;> rfl
-
-omit [LawfulProbLangℝ rT] in
 /-- A foreign action produces at most one unit of probability mass. -/
 theorem actionStep_univ_le_one (env : FfiEnv rT) (F : Finset Loc) (σ : State rT)
     (action : Action) : actionStep env F σ action Set.univ ≤ 1 := by
   cases action <;> simp [actionStep]
 
-omit [LawfulProbLangℝ rT] in
 /-- Invalid calls fail deterministically; machine actions have mass at most one. -/
 theorem callStep_univ_le_one (env : FfiEnv rT) (code args : Exp rT) (σ : State rT) :
     callStep env code args σ Set.univ ≤ 1 := by
@@ -318,7 +262,6 @@ theorem callStep_univ_le_one (env : FfiEnv rT) (code args : Exp rT) (σ : State 
     · simp
     · exact actionStep_univ_le_one _ _ _ _
 
-omit [LawfulProbLangℝ rT] in
 /-- Resuming an archive produces at most one unit of probability mass. -/
 theorem resumeStep_univ_le_one (env : FfiEnv rT) (archive : Replay)
     (reply : Val rT) (σ : State rT) : resumeStep env archive reply σ Set.univ ≤ 1 := by
@@ -326,6 +269,28 @@ theorem resumeStep_univ_le_one (env : FfiEnv rT) (archive : Replay)
   split
   · exact actionStep_univ_le_one _ _ _ _
   · simp
+
+variable [LawfulProbLangℝ rT]
+
+/-- The explicit foreign-call head kernel is measurable. -/
+@[fun_prop] theorem measurable_headStepWith (env : FfiEnv rT) :
+    Measurable (headStepWith env : Cfg rT → Measure (Cfg rT)) := by
+  have hr := Option.measurable_elim_param (f := fun cfg : Cfg rT => Exp.asmResume.π cfg.expr)
+    (Exp.asmResume.π.measurable.comp Cfg.measurable_expr)
+    (default := headStep) headStep.measurable
+    (some_branch := fun p : Cfg rT × (Replay × Exp rT) =>
+      p.2.2.asValM (fun value => resumeStep env p.2.1 value p.1.state))
+    ((measurable_resumeRedex env).comp ((measurable_fst.comp measurable_snd).prodMk
+        ((measurable_snd.comp measurable_snd).prodMk (Cfg.measurable_state.comp measurable_fst))))
+  have ha := Option.measurable_elim_param (f := fun cfg : Cfg rT => Exp.asm.π cfg.expr)
+    (Exp.asm.π.measurable.comp Cfg.measurable_expr) hr
+    (some_branch := fun p : Cfg rT × (Exp rT × Exp rT) =>
+      p.2.1.isValM (p.2.2.isValM (callStep env p.2.1 p.2.2 p.1.state)))
+    ((measurable_asmRedex env).comp ((measurable_fst.comp measurable_snd).prodMk
+        ((measurable_snd.comp measurable_snd).prodMk (Cfg.measurable_state.comp measurable_fst))))
+  convert ha using 1
+  funext ⟨e, σ⟩
+  cases e <;> rfl
 
 /-- The explicit foreign-call head kernel is a subprobability kernel. -/
 theorem headStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :

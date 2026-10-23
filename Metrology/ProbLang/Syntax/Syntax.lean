@@ -2,6 +2,7 @@ module
 
 public meta import Metrology.Meta.Discrete
 public import Std
+public import Metrology.ProbLang.Asm.Syntax
 public import Std.Data.ExtTreeMap.Lemmas
 public import Iris.Std.HeapInstances
 public import Mathlib.Basic.Countable.Basic
@@ -65,21 +66,6 @@ theorem Std.ExtTreeMap.maxKey?_eq_some_iff_getElem? (t : ExtTreeMap Int V) (n : 
     rcases hk : t[k]? with _ | v
     · rw [hk] at hkSome; simp at hkSome
     · rw [hk] at hkNone; simp at hkNone
-
--- TODO: PR back to mathlib
-instance instCountableChar : Countable Char where
-  exists_injective_nat' := by
-    exists (·.1.toNat)
-    rintro ⟨v1, _⟩ ⟨v2, _⟩
-    simp only [Char.mk.injEq]
-    exact UInt32.toNat_inj.mp
-
--- TODO: PR back to mathlib
-instance instCountableString : Countable String where
-  exists_injective_nat' := by
-    have ⟨f, hf⟩ : Countable (List Char) := by infer_instance
-    exists (fun s => f s.toList)
-    exact fun _ _ h => String.toList_inj.mp (hf h)
 
 namespace ProbLang
 
@@ -194,6 +180,8 @@ inductive BaseLit (rT : Type _)
   | loc (loc : Loc)
   | lbl (lbl : Lbl)
   | real (r : rT)
+  /-- Parsed machine code with its boundary signature. -/
+  | code (value : Asm.Code)
   deriving Countable, BEq, Repr
 
 /-- Unary operators. -/
@@ -283,6 +271,10 @@ inductive Exp (rT : Type _)
   | scrut (e : Exp rT) (pat : Pat rT)
   /-- Allocate a positive number of consecutive cells initialized to a value. -/
   | allocN (en ev : Exp rT)
+  /-- Call a first-class assembly value with a scalar tuple. -/
+  | asm (code args : Exp rT)
+  /-- Resume a paused foreign call after evaluating its callback. -/
+  | asmResume (archive : Asm.Replay) (reply : Exp rT)
   deriving Inhabited, Countable, BEq, Repr
 
 section WithRealParam
@@ -322,6 +314,8 @@ namespace Exp
   | fail => fail
   | urand => urand
   | scrut e p => scrut (openRec i sub e) p
+  | asm ec ea => asm (openRec i sub ec) (openRec i sub ea)
+  | asmResume archive e => asmResume archive (openRec i sub e)
 
 /-- Instantiates the outermost bound variable with `sub`. -/
 @[simp, scoped grind =] def open' (e sub : Exp rT) : Exp rT := openRec 0 sub e
@@ -352,6 +346,8 @@ namespace Exp
   | fail => fail
   | urand => urand
   | scrut e p => scrut (closeRec i x e) p
+  | asm ec ea => asm (closeRec i x ec) (closeRec i x ea)
+  | asmResume archive e => asmResume archive (closeRec i x e)
 
 /-- Abstracts the free variable `x` as the outermost bound variable. -/
 @[simp, scoped grind =] def close (e : Exp rT) (x : Var) : Exp rT := closeRec 0 x e
@@ -383,6 +379,8 @@ namespace Exp
   | fail => fail
   | urand => urand
   | scrut e p => scrut (subst e x sub) p
+  | asm ec ea => asm (subst ec x sub) (subst ea x sub)
+  | asmResume archive e => asmResume archive (subst e x sub)
 
 instance : HasSubstitution (Exp rT) Var (Exp rT) where
   subst := Exp.subst
@@ -413,6 +411,8 @@ instance : HasSubstitution (Exp rT) Var (Exp rT) where
   | fail => {}
   | urand => {}
   | scrut e _ => fv e
+  | asm ec ea => fv ec ∪ fv ea
+  | asmResume _ e => fv e
 
 /-! ### Local closedness -/
 
@@ -493,9 +493,12 @@ inductive IsLocallyClosed : Exp rT → Prop
   | scrut {e} (p : Pat rT) :
     IsLocallyClosed e →
     IsLocallyClosed (scrut e p)
+  | asm {ec ea} :
+    IsLocallyClosed ec → IsLocallyClosed ea → IsLocallyClosed (asm ec ea)
+  | asmResume (archive : Asm.Replay) {e} :
+    IsLocallyClosed e → IsLocallyClosed (asmResume archive e)
 
-attribute [scoped grind .]
-  IsLocallyClosed.fvar
+attribute [scoped grind .] IsLocallyClosed.fvar
   IsLocallyClosed.lit
   IsLocallyClosed.app
   IsLocallyClosed.unop
@@ -516,6 +519,8 @@ attribute [scoped grind .]
   IsLocallyClosed.fail
   IsLocallyClosed.urand
   IsLocallyClosed.scrut
+  IsLocallyClosed.asm
+  IsLocallyClosed.asmResume
 
 /-- Number of nodes; the termination measure for `Exp.decomp`. -/
 @[simp]
@@ -540,6 +545,8 @@ def size : Exp α → Nat
   | .cond e0 e1 e2 => 1 + e0.size + e1.size + e2.size
   | .case e0 e1 e2 => 1 + e0.size + e1.size + e2.size
   | scrut e _ => 1 + e.size
+  | asm ec ea => 1 + ec.size + ea.size
+  | asmResume _ e => 1 + e.size
   | fail => 1
   | urand => 1
 
@@ -549,10 +556,10 @@ def lcb (k : Nat) : Exp α → Bool
   | .fvar _ | .lit _ | .fail | .urand => true
   | .lam e | .fix e => lcb (k+1) e
   | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .rand e1 e2
-  | .allocN e1 e2 =>
-      lcb k e1 && lcb k e2
+  | .allocN e1 e2 | .asm e1 e2 => lcb k e1 && lcb k e2
   | .cond e0 e1 e2 | .case e0 e1 e2 => lcb k e0 && lcb k e1 && lcb k e2
-  | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e | .scrut e _ =>
+  | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e
+  | .scrut e _ | .asmResume _ e =>
       lcb k e
 
 /-- Opening a free variable at `k` lowers the local-closure bound from `k+1` to `k`. -/
@@ -659,6 +666,14 @@ private theorem lcb_imp_lc_aux : ∀ (n : Nat) (e : Exp α), e.size ≤ n → lc
           simp only [lcb, Bool.and_eq_true] at hlc
           simp only [Exp.size] at hle
           exact .allocN (ih e1 (by omega) hlc.1) (ih e2 (by omega) hlc.2)
+      | asm ec ea =>
+          simp only [lcb, Bool.and_eq_true] at hlc
+          simp only [Exp.size] at hle
+          exact .asm (ih ec (by omega) hlc.1) (ih ea (by omega) hlc.2)
+      | asmResume archive e =>
+          simp only [lcb] at hlc
+          simp only [Exp.size] at hle
+          exact .asmResume archive (ih e (by omega) hlc)
       | tape e =>
           simp only [lcb] at hlc
           simp only [Exp.size] at hle
@@ -711,12 +726,16 @@ instance [DecidableEq α] : DecidableEq (BaseLit α)
   | .loc l1, .loc l2 => decidable_of_iff (l1 = l2) (by simp)
   | .lbl l1, .lbl l2 => decidable_of_iff (l1 = l2) (by simp)
   | .real r1, .real r2 => decidable_of_iff (r1 = r2) (by simp)
+  | .code c1, .code c2 => decidable_of_iff (c1 = c2) (by simp)
   | .int _, .bool _ | .int _, .unit | .int _, .loc _ | .int _, .lbl _ | .int _, .real _
   | .bool _, .int _ | .bool _, .unit | .bool _, .loc _ | .bool _, .lbl _ | .bool _, .real _
   | .unit, .int _ | .unit, .bool _ | .unit, .loc _ | .unit, .lbl _ | .unit, .real _
   | .loc _, .int _ | .loc _, .bool _ | .loc _, .unit | .loc _, .lbl _ | .loc _, .real _
   | .lbl _, .int _ | .lbl _, .bool _ | .lbl _, .unit | .lbl _, .loc _ | .lbl _, .real _
-  | .real _, .int _ | .real _, .bool _ | .real _, .unit | .real _, .loc _ | .real _, .lbl _ =>
+  | .real _, .int _ | .real _, .bool _ | .real _, .unit | .real _, .loc _ | .real _, .lbl _
+  | .code _, .int _ | .code _, .bool _ | .code _, .unit | .code _, .loc _ | .code _, .lbl _
+  | .code _, .real _ | .int _, .code _ | .bool _, .code _ | .unit, .code _
+  | .loc _, .code _ | .lbl _, .code _ | .real _, .code _ =>
       isFalse (by intro h; cases h)
 
 /-- Matches `p` against `e`, returning on success the bindings: `e` itself at a wildcard, `()` at a
@@ -747,11 +766,11 @@ theorem BaseLit.beq_self_true [LawfulBEq rT] (l : BaseLit rT) : (l == l) = true 
   | real r =>
     show (r == r) = true
     exact BEq.refl r
+  | code c => exact BEq.refl c
 
 instance instLawfulBEqBaseLit [LawfulBEq rT] : LawfulBEq (BaseLit rT) where
   eq_of_beq {l1 l2} h := by
-    cases l1 <;> cases l2 <;> simp_all <;>
-      first
+    cases l1 <;> cases l2 <;> simp_all <;> first
         | (exact (decide_eq_true_eq.mp h))
         | (exact LawfulBEq.eq_of_beq h)
   rfl {l} := BaseLit.beq_self_true l
@@ -1021,6 +1040,13 @@ theorem Exp.store_not_isValue :
 /-- Block allocation is not a value. -/
 theorem Exp.allocN_not_isValue :
     ¬ (Exp.allocN e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
+/-- An assembly call is not a value. -/
+theorem Exp.asm_not_isValue : ¬ (Exp.asm e₁ e₂).isValue := fun ⟨w⟩ => nomatch w
+
+/-- A paused assembly call is not a value. -/
+theorem Exp.asmResume_not_isValue {archive : Asm.Replay} {e : Exp α} :
+    ¬ (Exp.asmResume archive e).isValue := fun ⟨w⟩ => nomatch w
+
 /-- A `tape` is not a value. -/
 theorem Exp.tape_not_isValue {e : Exp α} : ¬ (Exp.tape e).isValue := fun ⟨w⟩ => nomatch w
 /-- A `rand` is not a value. -/
@@ -1042,6 +1068,14 @@ theorem Exp.store_toVal?_eq_none : (Exp.store e₁ e₂).toVal? = none :=
 /-- Block allocation has no value projection. -/
 theorem Exp.allocN_toVal?_eq_none : (Exp.allocN e₁ e₂).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.allocN_not_isValue
+/-- An assembly call has no value projection. -/
+theorem Exp.asm_toVal?_eq_none : (Exp.asm e₁ e₂).toVal? = none :=
+  Exp.toVal?_eq_none.mpr Exp.asm_not_isValue
+
+/-- A paused assembly call has no value projection. -/
+theorem Exp.asmResume_toVal?_eq_none {archive : Asm.Replay} {e : Exp α} :
+    (Exp.asmResume archive e).toVal? = none := Exp.toVal?_eq_none.mpr Exp.asmResume_not_isValue
+
 /-- `toVal?` of a `tape` is `none`. -/
 theorem Exp.tape_toVal?_eq_none {e : Exp α} : (Exp.tape e).toVal? = none :=
   Exp.toVal?_eq_none.mpr Exp.tape_not_isValue
@@ -1263,6 +1297,9 @@ inductive EctxItem (α : Type _)
   | scrut (p : Pat α)
   | allocNL (v2 : Val α)
   | allocNR (e1 : Exp α)
+  | asmL (args : Val α)
+  | asmR (code : Exp α)
+  | asmResume (archive : Asm.Replay)
   deriving Countable
 
 /-- Plugs `e` into the hole of a frame. -/
@@ -1291,6 +1328,9 @@ inductive EctxItem (α : Type _)
   | .randL v2 => .rand e (.ofVal v2)
   | .randR e1 => .rand e1 e
   | .scrut p => .scrut e p
+  | .asmL args => .asm e (.ofVal args)
+  | .asmR code => .asm code e
+  | .asmResume archive => .asmResume archive e
 
 variable {Ki : EctxItem α} {e e' : Exp α}
 
@@ -1343,6 +1383,11 @@ def Exp.decompItem (e : Exp α) : Option (EctxItem α × Exp α) :=
     e1.toVal?.casesOn (some (.tape, e1)) fun _ => none
   | scrut e1 p =>
     e1.toVal?.casesOn (some (.scrut p, e1)) fun _ => none
+  | asm ec ea =>
+    ea.toVal?.casesOn (some (.asmR ec, ea)) fun args =>
+    ec.toVal?.casesOn (some (.asmL args, ec)) fun _ => none
+  | asmResume archive e =>
+    e.toVal?.casesOn (some (.asmResume archive, e)) fun _ => none
   | _ => none
 
 /-- Plugging into a fixed frame is injective. -/
@@ -1372,7 +1417,7 @@ theorem EctxItem.fillItem_noVal_inj {Ki1 Ki2 : EctxItem α} {e1 e2 : Exp α}
 theorem EctxItem.decompItem_fillItem (Ki : EctxItem α) {e : Exp α} (hv : ¬e.isValue) :
     (Ki.fillItem e).decompItem = some (Ki, e) := by
   cases Ki with
-  | appL v2 | binopL _ v2 | pairL v2 | storeL v2 | allocNL v2 | randL v2 =>
+  | appL v2 | binopL _ v2 | pairL v2 | storeL v2 | allocNL v2 | randL v2 | asmL v2 =>
     simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv,
          Val.toVal?_fst, Exp.ofVal]
   | _ => simp [EctxItem.fillItem, Exp.decompItem, Exp.toVal?_none_of_not_isValue hv]
@@ -1514,6 +1559,18 @@ theorem Ectx.fill_randL (v2 : Val α) (e : Exp α) :
 theorem Ectx.fill_randR (e1 : Exp α) (e : Exp α) :
     Ectx.fill [.randR e1] e = .rand e1 e := rfl
 
+/-- Fill the code operand of an assembly call. -/
+theorem Ectx.fill_asmL (args : Val α) (e : Exp α) :
+    Ectx.fill [.asmL args] e = .asm e (.ofVal args) := rfl
+
+/-- Fill the argument tuple of an assembly call. -/
+theorem Ectx.fill_asmR (code : Exp α) (e : Exp α) :
+    Ectx.fill [.asmR code] e = .asm code e := rfl
+
+/-- Fill a paused call's callback expression. -/
+theorem Ectx.fill_asmResume (archive : Asm.Replay) (e : Exp α) :
+    Ectx.fill [.asmResume archive] e = .asmResume archive e := rfl
+
 /-- Filling a one-frame context with a `scrut` frame. -/
 theorem Ectx.fill_scrut (p : Pat α) (e : Exp α) :
     Ectx.fill [.scrut p] e = .scrut e p := rfl
@@ -1560,8 +1617,7 @@ theorem Ectx.fill_isLocallyClosed {e : Exp α}
 theorem Exp.decompItem_size (h : e.decompItem = some (Ki, e')) :
     e'.size < e.size := by
   simp only [decompItem, toVal?] at h
-  cases e <;> simp_all <;>
-    (split at h <;> simp_all <;> try omega) <;>
+  cases e <;> simp_all <;> (split at h <;> simp_all <;> try omega) <;>
     split at h <;> simp_all <;> omega
 
 /-- Splits an expression into a maximal evaluation context, innermost frame first, and the redex in
@@ -1577,8 +1633,7 @@ def Exp.decomp (e : Exp α) : Ectx α × Exp α :=
 
 /-- The one-step unfolding equation for `Exp.decomp`. -/
 theorem Exp.decomp_unfold (e : Exp α) :
-    e.decomp =
-      match _ : e.decompItem with
+    e.decomp = match _ : e.decompItem with
       | some (Ki, e') => let (K, e'') := e'.decomp; (K ++ [Ki], e'')
       | none => ([], e) :=
   Exp.decomp.eq_1 e

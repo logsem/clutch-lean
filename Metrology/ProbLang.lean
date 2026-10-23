@@ -2,6 +2,7 @@ module
 
 public meta import Metrology.Meta.Discrete
 public import Metrology.ProbLang.Advantage
+public import Metrology.ProbLang.Asm
 public import Metrology.ProbLang.BigStep
 public import Metrology.ProbLang.BigStepEquiv
 public import Metrology.ProbLang.Comp

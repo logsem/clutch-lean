@@ -15,6 +15,7 @@ public import Metrology.Micrometer.Lifting
 
 -- primitive and coupling rules
 public import Metrology.Micrometer.PrimitiveLaws
+public import Metrology.Micrometer.Asm
 public import Metrology.Micrometer.UnifInt
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.CouplingRulesLaw
