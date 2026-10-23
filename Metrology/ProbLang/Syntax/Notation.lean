@@ -135,6 +135,7 @@ syntax:10 "case " pl_exp " | " pl_pat " => " pl_exp:10 (" | " pl_pat " => " pl_e
 syntax:10 "case! " pl_exp " | " pl_pat " => " pl_exp:10 " | " pl_pat " => " pl_exp:10 : pl_exp
 syntax:100 "alloc(" pl_exp ")" : pl_exp
 syntax:100 "allocN(" pl_exp ", " pl_exp ")" : pl_exp
+syntax:100 "asm(" pl_exp ", " pl_exp ")" : pl_exp
 syntax:80 "!" pl_exp:80 : pl_exp
 syntax:80 pl_exp:80 " ← " pl_exp:80 : pl_exp
 syntax:100 "tape(" pl_exp ")" : pl_exp
@@ -166,7 +167,7 @@ meta def pl_ty.parenthesizer : CategoryParenthesizer := fun prec => do
 
 /-- Words that cannot name a ProbLang variable. -/
 meta def reservedKeywords : List String :=
-  ["fst", "snd", "inl", "inr", "alloc", "allocN", "tape", "rand", "fail", "urand", "scrut",
+  ["fst", "snd", "inl", "inr", "alloc", "allocN", "asm", "tape", "rand", "fail", "urand", "scrut",
    "if", "then", "else", "let", "fun", "rec", "case"]
 
 /-- Rejects an identifier that is a `reservedKeywords` entry. -/
@@ -358,6 +359,7 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) : TSyntax `pl_ex
   | `(pl_exp|snd($e)) => do `(Exp.snd $(← elabPL env st e))
   | `(pl_exp|inl($e)) => do `(Exp.inl $(← elabPL env st e))
   | `(pl_exp|inr($e)) => do `(Exp.inr $(← elabPL env st e))
+  | `(pl_exp|asm($ec, $ea)) => do `(Exp.asm $(← elabPL env st ec) $(← elabPL env st ea))
   | `(pl_exp|allocN($en, $ev)) => do `(Exp.allocN $(← elabPL env st en) $(← elabPL env st ev))
   | `(pl_exp|alloc($e)) => do `(Exp.alloc $(← elabPL env st e))
   | `(pl_exp|! $e) => do `(Exp.load $(← elabPL env st e))
@@ -730,6 +732,12 @@ meta def unexpInr : Unexpander
   | _ => throw ()
 
 /-! ### State / random / scrut -/
+
+/-- Prints an assembly call with its code operand and argument tuple. -/
+@[app_unexpander Exp.asm]
+meta def unexpAsm : Unexpander
+  | `($_ $ec $ea) => do `(pl(asm($(← unpackPLExp ec), $(← unpackPLExp ea))))
+  | _ => throw ()
 
 /-- Prints block allocation with its length and initializer. -/
 @[app_unexpander Exp.allocN]

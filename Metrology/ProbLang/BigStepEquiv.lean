@@ -25,10 +25,11 @@ variable {rT : Type _}
 /-- The number of evaluation positions of `e` still holding a non-value, which drops each time one
 is evaluated and orders the induction in `bigStepF_limExec_le`. -/
 def Exp.pendingArgs : Exp rT → Nat
-  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .allocN e1 e2 | .rand e1 e2 =>
+  | .app e1 e2 | .binop _ e1 e2 | .pair e1 e2 | .store e1 e2 | .allocN e1 e2 | .rand e1 e2
+  | .asm e1 e2 =>
     pending e1 + pending e2
   | .unop _ e | .fst e | .snd e | .inl e | .inr e | .alloc e | .load e | .tape e
-  | .scrut e _ | .cond e _ _ | .case e _ _ => pending e
+  | .scrut e _ | .cond e _ _ | .case e _ _ | .asmResume _ e => pending e
   | _ => 0
 where pending (e : Exp rT) : Nat := if e.isValue then 0 else 1
 
@@ -300,6 +301,23 @@ theorem bigStepF_head
     | some r =>
       simp only [Option.unwrapM, dirac_bind_discrete]
       exact (hR _ _ (BinOp.eval_isValue hop)).symm
+  | asm ec ea =>
+    simp only [decompItem] at hdec
+    obtain ⟨v2, hv2, hdec'⟩ := Option.casesOn_some_eq_none hdec
+    obtain ⟨v1, hv1, -⟩ := Option.casesOn_some_eq_none hdec'
+    have h1 := toVal?_isValue hv1
+    have h2 := toVal?_isValue hv2
+    simp only [bigStepF, measureOps]
+    rw [hR.bind_eq h2]
+    dsimp only
+    rw [hR.bind_eq h1]
+    simp [headStep]
+  | asmResume archive e =>
+    simp only [decompItem] at hdec
+    obtain ⟨v, hv, -⟩ := Option.casesOn_some_eq_none hdec
+    simp only [bigStepF, measureOps]
+    rw [hR.bind_eq (toVal?_isValue hv)]
+    simp [headStep]
   | allocN e1 e2 =>
     simp only [decompItem] at hdec
     obtain ⟨v2, hv2, hdec'⟩ := Option.casesOn_some_eq_none hdec

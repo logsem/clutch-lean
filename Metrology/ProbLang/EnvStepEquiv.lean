@@ -210,13 +210,13 @@ theorem Pat.tryMatchR_spec [MeasurableSpace rT] [LawfulProbLangℝ rT] (p : Pat 
 /-- Well-formed frames: each subterm still to be evaluated is scoped by its environment. -/
 def Frame.WF : Frame rT → Prop
   | .pairR env e1 | .appR env e1 | .binopR _ env e1 | .storeR env e1 | .randR env e1
-  | .allocNR env e1 =>
+  | .allocNR env e1 | .asmR env e1 =>
     Exp.lcb env.length e1 = true ∧ RVal.WFEnv env
   | .pairL v2 | .appL v2 | .applyTo v2 | .binopL _ v2 | .storeL v2 | .randL v2
-  | .allocNL v2 => v2.WF
+  | .allocNL v2 | .asmL v2 => v2.WF
   | .cond env e1 e2 | .case env e1 e2 =>
     Exp.lcb env.length e1 = true ∧ Exp.lcb env.length e2 = true ∧ RVal.WFEnv env
-  | .inl | .inr | .unop _ | .fst | .snd | .scrut _ | .alloc | .load | .tape => True
+  | .inl | .inr | .unop _ | .fst | .snd | .scrut _ | .alloc | .load | .tape | .asmResume _ => True
 
 /-- Well-formed configurations. -/
 def EnvCfg.WF : EnvCfg rT → Prop
@@ -315,6 +315,9 @@ theorem Frame.exists_item {f : Frame rT} (hf : f.WF) :
   | load => exact ⟨.load, fun _ => rfl⟩
   | storeR env e1 => exact ⟨.storeR _, fun _ => rfl⟩
   | allocNR env e1 => exact ⟨.allocNR _, fun _ => rfl⟩
+  | asmR env ec => exact ⟨.asmR _, fun _ => rfl⟩
+  | asmL args => exact ⟨.asmL (RVal.WF.toVal (v := args) hf), fun _ => rfl⟩
+  | asmResume a => exact ⟨.asmResume a, fun _ => rfl⟩
   | storeL v2 => exact ⟨.storeL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
   | allocNL v2 => exact ⟨.allocNL (RVal.WF.toVal (v := v2) hf), fun _ => rfl⟩
   | tape => exact ⟨.tape, fun _ => rfl⟩
@@ -731,7 +734,7 @@ def EnvCfg.IsHead : EnvCfg rT → Prop
   | .resume f _ _ =>
     match f with
     | .pairR .. | .appR .. | .binopR .. | .storeR .. | .randR .. | .appL _ | .applyTo _
-    | .allocNR ..
+    | .allocNR .. | .asmR ..
     | .case .. => False
     | _ => True
 
@@ -775,7 +778,7 @@ theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : E
     obtain ⟨hf, hv⟩ := hc
     cases f <;> simp only [EnvCfg.IsHead] at hhead <;>
       simp only [EnvCfg.rb, Frame.fill, bigStepF, measureOps, envStep, resumeK, stepOps] <;>
-      (try rw [hZ.bind_rb hf]) <;> rw [hZ.bind_rb hv] <;> dsimp only
+      (try rw [hZ.bind_rb hf]) <;> rw [hZ.bind_rb hv] <;> (try dsimp only)
     case unop op =>
       cases h : op.eval v.rb with
       | none => simp [Step.bnd]
@@ -799,6 +802,8 @@ theorem bigStepF_eq_bnd {Z : Cfg rT → Measure (Cfg rT)} (hZ : RetVal Z) {c : E
             simp [RVal.rb, h, Step.bnd, (RVal.ofExp_spec (Val.isValue w)).1, Exp.ofVal]
         | _ => simp [RVal.rb, Step.bnd]
       | _ => simp [RVal.rb, Step.bnd]
+    case asmL args => rfl
+    case asmResume a => rfl
     case allocNL v2 =>
       cases v with
       | lit b =>
@@ -1006,7 +1011,7 @@ theorem claimGe_apply {f v : RVal rT} {σ : State rT} (hc : (EnvCfg.apply f v σ
 theorem claimGe_resume_value {f : Frame rT} {v : RVal rT} {σ : State rT}
     (hc : (EnvCfg.resume f v σ).WF)
     (hf : ∀ env e, f ≠ .pairR env e ∧ f ≠ .appR env e ∧ (∀ op, f ≠ .binopR op env e) ∧
-      f ≠ .storeR env e ∧ f ≠ .randR env e ∧ f ≠ .allocNR env e) :
+      f ≠ .storeR env e ∧ f ≠ .randR env e ∧ f ≠ .allocNR env e ∧ f ≠ .asmR env e) :
     ClaimGe (.resume f v σ) := by
   obtain ⟨hfw, hv⟩ := hc
   cases f
@@ -1038,7 +1043,8 @@ theorem claimGe_resume_value {f : Frame rT} {v : RVal rT} {σ : State rT}
   case binopR op env e => exact absurd rfl ((hf env e).2.2.1 op)
   case storeR env e => exact absurd rfl (hf env e).2.2.2.1
   case randR env e => exact absurd rfl (hf env e).2.2.2.2.1
-  case allocNR env e => exact absurd rfl (hf env e).2.2.2.2.2
+  case allocNR env e => exact absurd rfl (hf env e).2.2.2.2.2.1
+  case asmR env e => exact absurd rfl (hf env e).2.2.2.2.2.2
   all_goals exact claimGe_head ⟨hfw, hv⟩ trivial
 
 theorem claimGe_resume {f : Frame rT} {v : RVal rT} {σ : State rT}
@@ -1046,7 +1052,7 @@ theorem claimGe_resume {f : Frame rT} {v : RVal rT} {σ : State rT}
   obtain ⟨hfw, hv⟩ := hc
   cases f
   case pairR env e1 | appR env e1 | binopR op env e1 | storeR env e1 | randR env e1
-    | allocNR env e1 =>
+    | allocNR env e1 | asmR env e1 =>
     unfold ClaimGe
     rw [envBig_apply]
     simp only [envStep, resumeK, stepOps]

@@ -131,6 +131,11 @@ def bigStepF (m : EvalOps rT M) (eval : Cfg rT → M) : Cfg rT → M
       | some _ => m.ret ⟨.lit .unit, σ.update_heap fun t => t.insert ℓ v⟩
       | none => m.stuck "store: dangling location"
     | _, _ => m.stuck "store: not a location"
+  | ⟨.asm ec ea, σ⟩ =>
+    m.bind (eval ⟨ea, σ⟩) fun ⟨_, σ⟩ =>
+    m.bind (eval ⟨ec, σ⟩) fun _ => m.stuck "asm: requires a foreign environment"
+  | ⟨.asmResume _ e, σ⟩ =>
+    m.bind (eval ⟨e, σ⟩) fun _ => m.stuck "asmResume: requires a foreign environment"
   -- Sampling.
   | ⟨.tape e, σ⟩ =>
     m.bind (eval ⟨e, σ⟩) fun ⟨v, σ⟩ =>

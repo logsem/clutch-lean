@@ -36,6 +36,7 @@ namespace ProbLang.BaseLit
   | .loc _  => 3
   | .lbl _  => 4
   | .real _ => 5
+  | .code _ => 6
 
 /-- Depends on the `int` and `real` payloads. -/
 @[simp] def countLeaves (g : rT → Int) : BaseLit rT → Int
@@ -51,6 +52,7 @@ namespace ProbLang.BaseLit
   | .loc l  => .loc l
   | .lbl l  => .lbl l
   | .real r => .real r
+  | .code c => .code c
 
 /-- Threads an accumulator through `measurable_casesOn_param`. -/
 @[simp] def addAcc : Int → BaseLit rT → Int
@@ -65,13 +67,13 @@ theorem tagDepth.measurable [Inhabited rT] :
   have heq : (tagDepth : BaseLit rT → Nat) =
     (fun b : BaseLit rT =>
         BaseLit.casesOn (motive := fun _ => Nat) b
-          (fun _ => 0) (fun _ => 1) 2 (fun _ => 3) (fun _ => 4) (fun _ => 5)) := by
+          (fun _ => 0) (fun _ => 1) 2 (fun _ => 3) (fun _ => 4) (fun _ => 5) (fun _ => 6)) := by
     funext b; cases b <;> rfl
   rw [heq]
   apply measurable_casesOn
     (c_int := fun _ => 0) (c_bool := fun _ => 1)
     (c_unit := fun _ => 2) (c_loc := fun _ => 3) (c_lbl := fun _ => 4)
-    (c_real := fun _ => 5)
+    (c_real := fun _ => 5) (c_code := fun _ => 6)
   fun_prop
 
 /-- `countLeaves` is a measurable function. -/
@@ -81,13 +83,13 @@ theorem countLeaves.measurable (g : rT → Int)
   have heq : (countLeaves g : BaseLit rT → Int) =
     (fun b : BaseLit rT =>
         BaseLit.casesOn (motive := fun _ => Int) b
-          (fun n => n) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) g) := by
+          (fun n => n) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) g (fun _ => 0)) := by
     funext b; cases b <;> rfl
   rw [heq]
   apply measurable_casesOn
     (c_int := fun n => n) (c_bool := fun _ => 0)
     (c_unit := fun _ => 0) (c_loc := fun _ => 0) (c_lbl := fun _ => 0)
-    (c_real := g)
+    (c_real := g) (c_code := fun _ => 0)
   exact hg
 
 /-- `endoMap` is a measurable function. -/
@@ -96,13 +98,14 @@ theorem endoMap.measurable :
   have heq : (endoMap : BaseLit rT → BaseLit rT) =
     (fun b : BaseLit rT =>
         BaseLit.casesOn (motive := fun _ => BaseLit rT) b
-          BaseLit.int BaseLit.bool BaseLit.unit BaseLit.loc BaseLit.lbl BaseLit.real) := by
+          BaseLit.int BaseLit.bool BaseLit.unit BaseLit.loc BaseLit.lbl BaseLit.real
+          BaseLit.code) := by
     funext b; cases b <;> rfl
   rw [heq]
   apply measurable_casesOn
     (c_int := BaseLit.int) (c_bool := BaseLit.bool)
     (c_unit := fun _ => BaseLit.unit) (c_loc := BaseLit.loc) (c_lbl := BaseLit.lbl)
-    (c_real := BaseLit.real)
+    (c_real := BaseLit.real) (c_code := BaseLit.code)
   exact real.measurable
 
 /-- `addAcc` is a measurable function. -/
@@ -116,7 +119,8 @@ theorem addAcc.measurable :
           ((fun q : Int => q) p.2)
           (fun l => (fun q : Int × Loc => q.1) (p.2, l))
           (fun l => (fun q : Int × Lbl => q.1) (p.2, l))
-          (fun r => (fun q : Int × rT => q.1) (p.2, r))) := by
+          (fun r => (fun q : Int × rT => q.1) (p.2, r))
+          (fun c => (fun q : Int × Asm.Code => q.1) (p.2, c))) := by
     funext p; obtain ⟨b, x⟩ := p; cases b <;> rfl
   rw [heq]
   apply measurable_casesOn_param
@@ -126,6 +130,7 @@ theorem addAcc.measurable :
     (c_loc := fun q : Int × Loc => q.1)
     (c_lbl := fun q : Int × Lbl => q.1)
     (c_real := fun q : Int × rT => q.1)
+    (c_code := fun q : Int × Asm.Code => q.1)
   all_goals fun_prop
 
 end BaseLit
@@ -156,11 +161,13 @@ namespace ProbLang.Exp
   | .load e        => tagDepth e + 1
   | .store e1 e2   => max (tagDepth e1) (tagDepth e2) + 1
   | .allocN e1 e2   => max (tagDepth e1) (tagDepth e2) + 1
+  | .asm e1 e2   => max (tagDepth e1) (tagDepth e2) + 1
   | .tape e        => tagDepth e + 1
   | .rand e1 e2    => max (tagDepth e1) (tagDepth e2) + 1
   | .fail          => 0
   | .urand         => 0
   | .scrut e _     => tagDepth e + 1
+  | .asmResume _ e => tagDepth e + 1
 
 /-- Depends on the data leaves `lit` and `scrut`. -/
 @[simp] def countLeaves : Exp rT → Nat
@@ -183,11 +190,13 @@ namespace ProbLang.Exp
   | .load e        => countLeaves e
   | .store e1 e2   => countLeaves e1 + countLeaves e2
   | .allocN e1 e2   => countLeaves e1 + countLeaves e2
+  | .asm e1 e2   => countLeaves e1 + countLeaves e2
   | .tape e        => countLeaves e
   | .rand e1 e2    => countLeaves e1 + countLeaves e2
   | .fail          => 0
   | .urand         => 0
   | .scrut e _     => countLeaves e + 1
+  | .asmResume _ e => countLeaves e + 1
 
 /-- Non-discrete codomain. -/
 @[simp] def endoMap : Exp rT → Exp rT
@@ -210,11 +219,13 @@ namespace ProbLang.Exp
   | .load e        => .load (endoMap e)
   | .store e1 e2   => .store (endoMap e1) (endoMap e2)
   | .allocN e1 e2   => .allocN (endoMap e1) (endoMap e2)
+  | .asm e1 e2   => .asm (endoMap e1) (endoMap e2)
   | .tape e        => .tape (endoMap e)
   | .rand e1 e2    => .rand (endoMap e1) (endoMap e2)
   | .fail          => .fail
   | .urand         => .urand
   | .scrut e p     => .scrut (endoMap e) p
+  | .asmResume a e => .asmResume a (endoMap e)
 
 /-- Threads a parameter, used at the `bvar` leaf. -/
 @[simp] def addAcc : Nat → Exp rT → Nat
@@ -237,11 +248,13 @@ namespace ProbLang.Exp
   | acc, .load e        => addAcc acc e
   | acc, .store e1 e2   => addAcc acc e1 + addAcc acc e2
   | acc, .allocN e1 e2   => addAcc acc e1 + addAcc acc e2
+  | acc, .asm e1 e2   => addAcc acc e1 + addAcc acc e2
   | acc, .tape e        => addAcc acc e
   | acc, .rand e1 e2    => addAcc acc e1 + addAcc acc e2
   | acc, .fail          => acc
   | acc, .urand         => acc
   | acc, .scrut e _     => addAcc acc e
+  | acc, .asmResume _ e => addAcc acc e
 
 variable [MeasurableSpace rT]
 
@@ -261,9 +274,11 @@ theorem tagDepth.measurable :
     (c_alloc := (· + 1)) (c_load := (· + 1)) (c_store := fun n1 n2 => max n1 n2 + 1)
     (c_tape := (· + 1)) (c_rand := fun n1 n2 => max n1 n2 + 1)
     (c_allocN := fun n1 n2 => max n1 n2 + 1)
+    (c_asm := fun n1 n2 => max n1 n2 + 1)
     (c_fail := 0)
     (c_urand := 0)
     (c_scrut := fun n _ => n + 1)
+    (c_asmResume := fun _ n => n + 1)
   all_goals first | (intros; rfl) | fun_prop
 
 /-- `countLeaves` is a measurable function. -/
@@ -284,6 +299,7 @@ theorem countLeaves.measurable :
     (c_fail := 0)
     (c_urand := 0)
     (c_scrut := fun n _ => n + 1)
+    (c_asmResume := fun _ n => n + 1)
   all_goals first | (intros; rfl) | fun_prop
 
 /-- `endoMap` is a measurable function. -/
@@ -304,6 +320,7 @@ theorem endoMap.measurable :
     (c_fail := .fail)
     (c_urand := .urand)
     (c_scrut := fun e p => .scrut e p)
+    (c_asmResume := fun a e => .asmResume a e)
   all_goals first | (intros; rfl) | fun_prop
 
 /-- `addAcc` is a measurable function. -/
@@ -325,6 +342,7 @@ theorem addAcc.measurable :
     (c_fail := fun acc => acc)
     (c_urand := fun acc => acc)
     (c_scrut := fun _ n _ => n)
+    (c_asmResume := fun _ _ n => n)
   all_goals first | (intros; rfl) | fun_prop
 
 end Exp
@@ -422,7 +440,7 @@ variable {α : Type _}
 /-! ### Smoke tests
 
 `EctxItem` is not recursive, so each test goes through `measurable_casesOn` or
-`measurable_casesOn_param` and exercises all 23 constructor slots. -/
+`measurable_casesOn_param` and exercises all 26 constructor slots. -/
 
 /-- Discrete codomain. -/
 @[simp] def tagDepth : EctxItem α → Nat
@@ -449,6 +467,9 @@ variable {α : Type _}
   | .scrut _   => 20
   | .allocNL _ => 21
   | .allocNR _ => 22
+  | .asmL _ => 23
+  | .asmR _ => 24
+  | .asmResume _ => 25
 
 /-- Depends on whether a constructor carries a payload. -/
 @[simp] def countLeaves : EctxItem α → Nat
@@ -475,6 +496,9 @@ variable {α : Type _}
   | .scrut _   => 1
   | .allocNL _ => 1
   | .allocNR _ => 1
+  | .asmL _ => 1
+  | .asmR _ => 1
+  | .asmResume _ => 1
 
 /-- Non-discrete codomain; only `appR` transforms its payload. -/
 @[simp] def endoMap : EctxItem α → EctxItem α
@@ -501,6 +525,9 @@ variable {α : Type _}
   | .scrut p   => .scrut p
   | .allocNL v => .allocNL v
   | .allocNR e => .allocNR e
+  | .asmL args => .asmL args
+  | .asmR ec => .asmR ec
+  | .asmResume a => .asmResume a
 
 /-- Threads a parameter through `measurable_casesOn_param`. -/
 @[simp] def addAcc : Nat → EctxItem α → Nat
@@ -520,7 +547,8 @@ theorem tagDepth.measurable :
         (fun _ => 6) (fun _ => 7)
         8 9 10 11 (fun _ _ => 12) 13 14
         (fun _ => 15) (fun _ => 16) 17 (fun _ => 18) (fun _ => 19) (fun _ => 20)
-        (fun _ => 21) (fun _ => 22)) := by
+        (fun _ => 21) (fun _ => 22)
+        (fun _ => 23) (fun _ => 24) (fun _ => 25)) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -532,6 +560,7 @@ theorem tagDepth.measurable :
     (c_storeL := fun _ => 15) (c_storeR := fun _ => 16) (c_tape := fun _ => 17)
     (c_randL := fun _ => 18) (c_randR := fun _ => 19) (c_scrut := fun _ => 20)
     (c_allocNL := fun _ => 21) (c_allocNR := fun _ => 22)
+    (c_asmL := fun _ => 23) (c_asmR := fun _ => 24) (c_asmResume := fun _ => 25)
   all_goals fun_prop
 
 /-- `countLeaves` is a measurable function. -/
@@ -544,7 +573,8 @@ theorem countLeaves.measurable :
         (fun _ => 1) (fun _ => 1)
         0 0 0 0 (fun _ _ => 1) 0 0
         (fun _ => 1) (fun _ => 1) 0 (fun _ => 1) (fun _ => 1) (fun _ => 1)
-        (fun _ => 1) (fun _ => 1)) := by
+        (fun _ => 1) (fun _ => 1)
+        (fun _ => 1) (fun _ => 1) (fun _ => 1)) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -556,6 +586,7 @@ theorem countLeaves.measurable :
     (c_storeL := fun _ => 1) (c_storeR := fun _ => 1) (c_tape := fun _ => 0)
     (c_randL := fun _ => 1) (c_randR := fun _ => 1) (c_scrut := fun _ => 1)
     (c_allocNL := fun _ => 1) (c_allocNR := fun _ => 1)
+    (c_asmL := fun _ => 1) (c_asmR := fun _ => 1) (c_asmResume := fun _ => 1)
   all_goals fun_prop
 
 /-- `endoMap` is a measurable function. -/
@@ -569,7 +600,8 @@ theorem endoMap.measurable :
         EctxItem.fst EctxItem.snd EctxItem.inl EctxItem.inr
         EctxItem.case EctxItem.alloc EctxItem.load
         EctxItem.storeL EctxItem.storeR EctxItem.tape
-        EctxItem.randL EctxItem.randR EctxItem.scrut EctxItem.allocNL EctxItem.allocNR) := by
+        EctxItem.randL EctxItem.randR EctxItem.scrut EctxItem.allocNL EctxItem.allocNR
+        EctxItem.asmL EctxItem.asmR EctxItem.asmResume) := by
     funext K; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn
@@ -588,6 +620,7 @@ theorem endoMap.measurable :
     (c_randL := EctxItem.randL) (c_randR := EctxItem.randR)
     (c_scrut := EctxItem.scrut)
     (c_allocNL := EctxItem.allocNL) (c_allocNR := EctxItem.allocNR)
+    (c_asmL := EctxItem.asmL) (c_asmR := EctxItem.asmR) (c_asmResume := EctxItem.asmResume)
   all_goals fun_prop
 
 /-- `addAcc` is a measurable function. -/
@@ -600,7 +633,8 @@ theorem addAcc.measurable :
         (fun _ => p.2) (fun _ => p.2)
         p.2 p.2 p.2 p.2 (fun _ _ => p.2) p.2 p.2
         (fun _ => p.2) (fun _ => p.2) p.2 (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)
-        (fun _ => p.2) (fun _ => p.2)) := by
+        (fun _ => p.2) (fun _ => p.2)
+        (fun _ => p.2) (fun _ => p.2) (fun _ => p.2)) := by
     funext ⟨K, _⟩; cases K <;> rfl
   rw [heq]
   apply measurable_casesOn_param
@@ -619,6 +653,8 @@ theorem addAcc.measurable :
     (c_tape := fun q : Nat => q)
     (c_randL := fun q : Nat × Val α => q.1) (c_randR := fun q : Nat × Exp α => q.1)
     (c_scrut := fun q : Nat × Pat α => q.1)
+    (c_asmL := fun q : Nat × Val α => q.1) (c_asmR := fun q : Nat × Exp α => q.1)
+    (c_asmResume := fun q : Nat × Asm.Replay => q.1)
   all_goals fun_prop
 
 end EctxItem

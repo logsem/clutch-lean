@@ -114,10 +114,10 @@ theorem Exp.subst_subst {e v v' : Exp α} {x : Var} {y : Var}
       · simp [subst, h1, h2]
   | bvar _ | lit _ | fail | urand => rfl
   | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
+  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih | asmResume _ e ih =>
       simp [subst, ih]
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 | asm e1 e2 ih1 ih2 =>
       simp [subst, ih1, ih2]
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
       simp [subst, ih0, ih1, ih2]
@@ -366,6 +366,16 @@ theorem Exp.substMap_hom₃ (C : Exp rT → Exp rT → Exp rT → Exp rT)
 @[simp] theorem Exp.substMap_allocN (vs : SubstMap rT) (e1 e2 : Exp rT) :
     (allocN e1 e2).substMap vs = .allocN (e1.substMap vs) (e2.substMap vs) :=
   substMap_hom₂ _ (by intros; simp [subst]) vs e1 e2
+
+/-- Substitution distributes over assembly calls. -/
+@[simp] theorem Exp.substMap_asm (vs : SubstMap rT) (ec ea : Exp rT) :
+    (asm ec ea).substMap vs = .asm (ec.substMap vs) (ea.substMap vs) :=
+  substMap_hom₂ _ (by intros; simp [subst]) vs ec ea
+
+/-- Substitution distributes over callback results in replay expressions. -/
+@[simp] theorem Exp.substMap_asmResume (vs : SubstMap rT) (a : Asm.Replay) (e : Exp rT) :
+    (asmResume a e).substMap vs = .asmResume a (e.substMap vs) :=
+  substMap_hom₁ _ (by intros; simp [subst]) vs e
 
 /-- `substMap` goes through `tape`. -/
 @[simp] theorem Exp.substMap_tape (vs : SubstMap rT) (e : Exp rT) :

@@ -224,11 +224,11 @@ theorem subst_subst_fvar_id {α : Type _} (e w : Exp α) (x y : Var) (hyv : y �
       simp [subst, h1, hyz]
   | bvar _ | lit _ | fail | urand => rfl
   | lam e ih | fix e ih | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
+  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih | asmResume _ e ih =>
     have hyv' : y ∉ e.fv := fun h => hyv (by simpa [fv] using h)
     simp [subst, ih hyv']
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 | asm e1 e2 ih1 ih2 =>
     have hyv1 : y ∉ e1.fv := fun h => hyv (by simp [fv]; exact Or.inl h)
     have hyv2 : y ∉ e2.fv := fun h => hyv (by simp [fv]; exact Or.inr h)
     simp [subst, ih1 hyv1, ih2 hyv2]
@@ -293,11 +293,11 @@ theorem closeRec_fv_subset {α : Type _} (e : Exp α) (x : Var) (k : Nat) (y : V
       simp only [closeRec, fv] at hy ⊢
       exact ih (k+1) hy
   | unop _ e ih | fst e ih | snd e ih
-  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih =>
+  | inl e ih | inr e ih | alloc e ih | load e ih | tape e ih | scrut e _ ih | asmResume _ e ih =>
       simp only [closeRec, fv] at hy ⊢
       exact ih k hy
   | app e1 e2 ih1 ih2 | binop _ e1 e2 ih1 ih2 | pair e1 e2 ih1 ih2
-  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 =>
+  | store e1 e2 ih1 ih2 | allocN e1 e2 ih1 ih2 | rand e1 e2 ih1 ih2 | asm e1 e2 ih1 ih2 =>
       simp only [closeRec, fv, mem_union] at hy ⊢
       exact hy.imp (ih1 k) (ih2 k)
   | cond e0 e1 e2 ih0 ih1 ih2 | case e0 e1 e2 ih0 ih1 ih2 =>
@@ -399,6 +399,7 @@ macro_rules
             | apply IsLocallyClosed.inr | apply IsLocallyClosed.case
             | apply IsLocallyClosed.alloc | apply IsLocallyClosed.load
             | apply IsLocallyClosed.store | apply IsLocallyClosed.tape
+            | apply IsLocallyClosed.asm | apply IsLocallyClosed.asmResume
             | apply IsLocallyClosed.allocN
             | apply IsLocallyClosed.rand | apply IsLocallyClosed.scrut))
 
@@ -432,6 +433,7 @@ macro_rules
             | apply IsLocallyClosed.inl | apply IsLocallyClosed.inr
             | apply IsLocallyClosed.case | apply IsLocallyClosed.alloc
             | apply IsLocallyClosed.load | apply IsLocallyClosed.store
+            | apply IsLocallyClosed.asm | apply IsLocallyClosed.asmResume
             | apply IsLocallyClosed.allocN
             | apply IsLocallyClosed.tape | apply IsLocallyClosed.rand
             | apply IsLocallyClosed.scrut
