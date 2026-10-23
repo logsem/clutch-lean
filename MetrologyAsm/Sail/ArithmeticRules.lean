@@ -1,7 +1,7 @@
 import MetrologyAsm.Sail.InstructionRules
 import MetrologyAsm.Sail.RegisterRules
 
-/-! # Sail arithmetic and linking rules for an imported call -/
+/-! # Sail integer arithmetic and linking instruction rules -/
 
 namespace MetrologyAsm
 
@@ -67,5 +67,13 @@ theorem execute_JALR_of_registers {s t : Mach} (h : UserConfig s)
   have hjump := (runSail_eq_some_iff _ _ _ _).mp (jump_to_eq h _ hbits.1 hbits.2)
   simp [execute_JALR, help, get_next_pc, readReg_eq hnext, hread, hjump, hwrite,
     bind, EStateM.bind, pure, EStateM.pure]
+
+/-- The generated XOR body composes its actual register reads and destination write. -/
+theorem execute_XOR_of_registers {s t : Mach} (rs1 rs2 rd : regidx) (left right : BitVec 64)
+    (hleft : rX_bits rs1 s = .ok left s) (hright : rX_bits rs2 s = .ok right s)
+    (hwrite : wX_bits rd (left ^^^ right) s = .ok () t) :
+    execute_RTYPE rs2 rs1 rd .XOR s = .ok (.Retire_Success ()) t := by
+  simp [execute_RTYPE, hleft, hright, hwrite,
+    bind, EStateM.bind, pure, EStateM.pure, RETIRE_SUCCESS]
 
 end MetrologyAsm

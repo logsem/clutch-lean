@@ -11,6 +11,8 @@ public import Metrology.ProbLang.Asm.Capture
 public import Metrology.ProbLang.Asm.Fragments
 public import Metrology.ProbLang.Asm.Step
 public import Metrology.ProbLang.Asm.Measurable
+public import Metrology.ProbLang.Asm.Exec
+public import Metrology.ProbLang.Asm.Ordinary
 
 /-! # Assembly foreign-function interface foundations -/
 

@@ -1,0 +1,17 @@
+⚠ [3880/3914] Replayed Metrology.TotalEris.Examples.RandomWalk
+warning: Metrology/TotalEris/Examples/RandomWalk.lean:85:8: declaration uses `sorry`
+⚠ [6989/7119] Replayed Sail.Sail
+warning: Sail/Sail.lean:34:5: Ambiguous namespace `PreSail`: it is interpreted as `_root_.Sail.ConcurrencyInterfaceV1.PreSail` because this `open` occurs inside `namespace Sail.ConcurrencyInterfaceV1`, while `_root_.PreSail` is silently not opened. Specify the namespace unambiguously, e.g. `_root_.Sail.ConcurrencyInterfaceV1.PreSail`. The warning can sometimes also be addressed by moving the `open` outside of the surrounding `namespace`.
+
+Note: This linter can be disabled with `set_option linter.ambiguousOpen false`
+ℹ [7134/7145] Replayed Tests.SailSpike
+info: Tests/SailSpike.lean:16:0: Compiling 20 definitionally equal execution aliases
+info: Tests/SailSpike.lean:72:0: 'evalStep_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Tests/SailSpike.lean:73:0: 'evalSwap_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [7139/7145] Replayed Tests.Keypair
+info: Tests/Keypair.lean:10:0: 'MetrologyAsm.keypair_stackBound' depends on axioms: [propext]
+✔ [7141/7145] Built MetrologyAsm.Sail.IntegerSteps (1.7s)
+✔ [7142/7145] Built MetrologyAsm.Examples.OTP (3.7s)
+✔ [7143/7145] Built MetrologyAsm.Examples (3.7s)
+✔ [7144/7145] Built MetrologyAsm (3.7s)
+Build completed successfully (7145 jobs).

@@ -1,0 +1,77 @@
+# One-byte assembly OTP implementation plan
+
+Goal: compile a loop-free byte encryption function, prove its actual Sail interaction with the
+ProbLang randombytes callback, and prove perfect secrecy for the resulting closed ProbLang game.
+The message is an integer in [0,256); a fresh private one-byte array holds the pad. Only the returned
+ciphertext is observable. The pad is freshly sampled for each execution.
+
+The C interface is `uint64_t encrypt_byte(uint64_t message, uint8_t *pad)`, under message < 256.
+It calls `randombytes(pad,1)` and returns `message ^ pad[0]`. The assembly quotation must preserve
+the retained compiler output. The supported machine is the existing pinned RV64IM user profile;
+these claims are about the extracted Lean model, within the documented compiler/backend scope.
+
+## Required deliverables
+
+1. **Source and arithmetic.** Retain C, GNU assembly, compiler command/version and hashes under
+   `fixtures/otp/`. Quote the function under `MetrologyAsm/Examples/OTP/Source.lean`, certify emitted
+   words/layout against the Sail decoder, and prove XOR is an involutive byte permutation.
+2. **Actual Sail execution.** Add reusable byte-load/XOR and needed register/instruction rules.
+   Prove the call prefix and resumed suffix over arbitrary compatible raw states and placements,
+   including saved message/pointer/return address, stack, caller scratch freedom and physical frames.
+3. **Boundary and evaluation.** Prove the universal RVSpec for the real randombytes call with one
+   owned byte, every valid callback response/heap and arbitrary permitted resumption. Prove local
+   heap-changing resumption existence, a genuine compatible-entry witness, canonical interaction
+   and unconditional unique evaluation. No machine/spec/evaluator premises may remain at the top.
+4. **Micrometer.** Prove ordinary sampler/heap transitions under the explicit FFI kernel, then use
+   the existing guarded wpFor to prove actual assembly/callback correctness and a zero-cost coupling
+   to the uniform-byte reference program. The randombytes implementation is the real ProbLang lambda.
+   A base-kernel-only sampler theorem or abstract foreign machine does not satisfy this requirement.
+5. **Distribution and finite adequacy.** Define/use the actual explicit-kernel bounded/limit execution
+   semantics and justify the finite execution/coupling argument. Prove total termination and the exact
+   returned-ciphertext law: for every valid byte m,c, Pr[game(m)=c]=1/256. Derive equality of ciphertext
+   distributions for arbitrary valid m0,m1. The game really allocates its private pad and invokes the
+   assembled Sail-backed code. Conditional evaluator assumptions and a standalone XOR lemma are not
+   substitutes for this final theorem.
+6. **Integration and audit.** Export the example, update the module guide/report, run meaningful input
+   checks and the full root build, print axioms for all final claims and regenerate statement-dependency
+   receipts. No new sorry, axiom or native_decide proof; preserve strict implicit settings and upstream
+   model/runtime pins. Commit explicit owned paths; never stage notes or pre-existing user files.
+
+## Implementation sequence
+
+- Establish the compiled source and byte-XOR measure/coupling lemmas.
+- Extend machine rules and the one-byte ABI installation/decoding/resumption bridge.
+- Compose the full source-to-RVSpec-to-evaluator chain with entry nonvacuity.
+- Extend explicit-kernel sampling/resource WP rules and compose the real callback/game.
+- Close the finite-kernel execution and security theorem, then run completion audits.
+
+The main risks are heap-changing resumption and the explicit-kernel probability/adequacy bridge.
+The existing callback toy has an empty footprint, and current randombytes WP uses the base kernel.
+These are implementation obligations of this example, not reasons to weaken its final claim.
+
+## Current implementation checkpoint
+
+Proved foundations: the retained RV64IM C/compiler input assembles to20 instruction words/88 image
+bytes; every emitted word has an official Sail decoder equation. Byte XOR is an involution and exact
+uniform-measure permutation, with its zero-cost coupling and a bridge to the machine's64-bit XOR.
+Explicit-kernel bounded/limit semantics have measurability, mass, monotonicity and finite termination
+lemmas, and specialize exactly to the original base semantics.
+
+Every enabled base transition is preserved by the FFI kernel. The guarded WP transport theorem
+therefore reuses existing sampler/heap proofs, and the actual randombytes lambda's one-byte WP now
+holds under the real Sail environment. A concrete physical resumption installs any valid owned byte
+and preserves the remaining machine frame. Actual configured LBU memory operations are proved;
+integer XOR has its actual generated-body rule.
+
+Remaining: compose full OTP instruction steps and raw prefix/suffix runs; prove the actual ABI/source
+specification and compatible-entry witness; close evaluator selection, the assembly-calling game WP,
+its uniform-reference coupling and exact output-distribution theorem. The top security claim remains
+unproved until all those obligations and the final audits pass.
+
+Validation of this foundation checkpoint: complete root build7145 jobs passed; thirteen listed
+foundation theorem closures contain only propext/Classical.choice/Quot.sound. Receipts are
+`audit/OTP-foundations-{build,axioms}.txt`. These are foundation receipts, not a completed OTP claim.
+The source has thirteen steps to the import (including its trampoline), with the saved link at
+text offset40; the seven-step suffix occupies offsets40..64. `Sail/IntegerSteps.lean` supplies
+reusable full-step composition for register and doubleword-store bodies. Next implement the
+OTP-specific step instances and compose those two raw runs, then the ABI/spec/evaluator chain.

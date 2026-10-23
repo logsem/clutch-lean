@@ -14,6 +14,7 @@ machine contract. The keypair directory contains input and a game skeleton; it h
 | `ABI/` | Instantiate the generic FFI machine interface using Sail and the ABI facets | [Interface](ABI/Interface.lean), [Lemmas](ABI/Lemmas.lean), [Resume](ABI/Resume.lean) |
 | `Examples/Swap/` | Complete two-cell swap proof | [Source](Examples/Swap/Source.lean), [Correctness](Examples/Swap/Correctness.lean) |
 | `Examples/Callback/` | Complete assembly → ProbLang callback → assembly round trip | [Source](Examples/Callback/Source.lean), [Correctness](Examples/Callback/Correctness.lean) |
+| `Examples/OTP/` | One-byte OTP implementation in progress | [Source](Examples/OTP/Source.lean), [plan](../docs/asm-ffi/OTP-PLAN.md) |
 | `Examples/Keypair/` | Linked TweetNaCl source, declared signature and planned game | [Source](Examples/Keypair/Source.lean) |
 | `Examples/Support.lean` | Concrete byte installation, placement and register fixtures shared by example witnesses | [Support](Examples/Support.lean) |
 | `Diagnostics/` | Concrete observations and a small instruction-body experiment | [Spike](Diagnostics/Spike.lean), [InstructionBody](Diagnostics/InstructionBody.lean) |
@@ -70,7 +71,7 @@ import MetrologyAsm.Examples.Swap
 import MetrologyAsm.Examples.Callback
 ```
 
-`import MetrologyAsm` exports all three examples. Diagnostics have explicit imports and are checked
+`import MetrologyAsm` exports the examples, including the OTP foundations currently in progress. Diagnostics have explicit imports and are checked
 by `Tests/SailSpike.lean`. From the repository root:
 
 ```sh
