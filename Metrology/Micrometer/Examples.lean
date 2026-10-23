@@ -15,6 +15,7 @@ public import Metrology.Micrometer.Examples.NoisyCount
 public import Metrology.Micrometer.Examples.ContextualDp
 public import Metrology.Micrometer.Examples.GaussianZcdp
 public import Metrology.Micrometer.Examples.Switching
+public import Metrology.Micrometer.Examples.RandomBytes
 public import Metrology.Couplings.Examples
 
 /-! # Examples, by divergence, by program-logic rule, and by exit

@@ -5,6 +5,7 @@ defaultTargets = ["Metrology", "ProbLangSampleWidget"]
 [leanOptions]
 pp.unicode.fun = true
 autoImplicit = false
+relaxedAutoImplicit = false
 
 [[require]]
 name = "mathlib"

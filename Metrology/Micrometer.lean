@@ -53,7 +53,9 @@ public import Metrology.Micrometer.Mechanism
 public import Metrology.Micrometer.MechanismZcdp
 
 -- examples and tests
+public import Metrology.Micrometer.AsmImports
 public import Metrology.Micrometer.Examples
+public import Metrology.Micrometer.Test.RandomBytes
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 
