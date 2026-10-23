@@ -484,8 +484,7 @@ theorem fillItem.measurable :
     (c_asmL := fun p => asm p.1 (ofVal p.2))
     (c_asmR := fun p => asm p.2 p.1)
     (c_asmResume := fun p => asmResume p.2 p.1)
-    (h_asmL := asm.measurable.comp
-      (measurable_fst.prodMk (Val.fst.measurable.comp measurable_snd)))
+    (h_asmL := asm.measurable.comp (measurable_fst.prodMk (Val.fst.measurable.comp measurable_snd)))
     (h_asmR := asm.measurable.comp (measurable_snd.prodMk measurable_fst))
     (h_asmResume := asmResume.measurable.comp (measurable_snd.prodMk measurable_fst))
     (c_tape := fun p => tape p)
@@ -1223,7 +1222,6 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
       (c_int := fun _ => none) (c_bool := fun b => some (lit (.bool ¬b)))
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
       (c_real := fun _ => none) (c_code := fun _ => none)
-
     exact measurable_const
   | minus =>
     refine measurable_of_lit_only none
