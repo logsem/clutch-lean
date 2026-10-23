@@ -5,7 +5,6 @@ public import Metrology.Couplings
 public import Metrology.ForSampCert
 public import Metrology.FromMathlib.LusinContinuous
 public import Metrology.Iris
-public import Metrology.LiveEris
 public import Metrology.MeasurableSyntax
 public import Metrology.Meta
 public import Metrology.Micrometer
