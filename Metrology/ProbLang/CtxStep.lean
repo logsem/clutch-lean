@@ -115,6 +115,10 @@ theorem EctxItem.fillItem.measurableEmbedding (Ki : EctxItem rT) :
   | randL v2 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
   | randR e1 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
   | scrut p => exact Exp.scrut.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | asmL args => exact Exp.asm.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | asmR code => exact Exp.asm.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
+  | asmResume archive =>
+    exact Exp.asmResume.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
 
 /-- `K.fill` is a measurable embedding. -/
 theorem Ectx.fill.measurableEmbedding : MeasurableEmbedding K.fill := by

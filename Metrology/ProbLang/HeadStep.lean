@@ -578,7 +578,8 @@ theorem headStep.cApp.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cApp _ = _
@@ -711,7 +712,8 @@ theorem headStep.cCond.measurable : Measurable (headStep.cCond (rT := rT)) := by
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT × Exp rT =>
             (p.2.1, p.1, p.2.2.1, p.2.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
@@ -734,7 +736,8 @@ theorem headStep.cCond.measurable : Measurable (headStep.cCond (rT := rT)) := by
         (fun p : BaseLit rT × (State rT × Exp rT × Exp rT) =>
             BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1 (fun _ => 0)
               (fun b => c_bool_inner (p.2, b))
-              0 (fun _ => 0) (fun _ => 0) (fun _ => 0)) ∘
+              0 (fun _ => 0) (fun _ => 0) (fun _ => 0)
+              (fun _ => 0)) ∘
           (fun q : (State rT × Exp rT × Exp rT) × BaseLit rT => (q.2, q.1)) := by
       funext ⟨c, l⟩
       show c_lit_inner _ = _
@@ -780,7 +783,8 @@ theorem headStep.cCase.measurable :
             (fun e => c_inl_inner (q.2, e))
             (fun e => c_inr_inner (q.2, e))
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, ec, et, ef⟩
     show headStep.cCase _ = _
@@ -830,6 +834,7 @@ theorem headStep.cLoad.measurable :
   let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (q.1, ℓ)) (fun _ => 0) (fun _ => 0)
+        (fun _ => 0)
   have hrw : headStep.cLoad = (fun q : Exp rT × State rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner (q.2, l))
@@ -837,7 +842,8 @@ theorem headStep.cLoad.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cLoad _ = _
@@ -867,7 +873,8 @@ theorem headStep.cLoad.measurable :
   have hc_lit : Measurable c_lit_inner := by
     have hbase : Measurable (fun p : BaseLit rT × State rT =>
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
-          (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)) := by
+          (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)
+          (fun _ => 0)) := by
       baseLit_zero_loc_apply c_leaf, hc_leaf
     exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
   exp_zero_lit_apply c_lit_inner, hc_lit
@@ -894,6 +901,7 @@ theorem headStep.cStore.measurable :
   let c_lit_inner : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (q.1, ℓ)) (fun _ => 0) (fun _ => 0)
+        (fun _ => 0)
   have hrw : headStep.cStore = (fun q : Exp rT × State rT × Exp rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner ((q.2.1, q.2.2), l))
@@ -901,7 +909,8 @@ theorem headStep.cStore.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cStore _ = _
@@ -956,7 +965,8 @@ theorem headStep.cStore.measurable :
   have hc_lit : Measurable c_lit_inner := by
     have hbase : Measurable (fun p : BaseLit rT × (State rT × Exp rT) =>
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
-          (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)) := by
+          (fun _ => 0) (fun _ => 0) 0 (fun ℓ => c_leaf (p.2, ℓ)) (fun _ => 0) (fun _ => 0)
+          (fun _ => 0)) := by
       baseLit_zero_loc_apply c_leaf, h_leaf
     exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
   exp_zero_lit_apply c_lit_inner, hc_lit
@@ -978,6 +988,7 @@ theorem headStep.cTape.measurable :
   let c_lit_inner : State rT × BaseLit rT → Measure (Cfg rT) := fun q =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) q.2
         (fun z => c_int_inner (q.1, z)) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0) (fun _ => 0)
+        (fun _ => 0)
   have hrw : headStep.cTape = (fun q : Exp rT × State rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
             (fun l => c_lit_inner (q.2, l))
@@ -985,7 +996,8 @@ theorem headStep.cTape.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cTape _ = _
@@ -1014,6 +1026,7 @@ theorem headStep.cTape.measurable :
     have hbase : Measurable (fun p : BaseLit rT × State rT =>
           BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
             (fun z => c_int_inner (p.2, z)) (fun _ => 0) 0 (fun _ => 0) (fun _ => 0)
+            (fun _ => 0)
             (fun _ => 0)) := by
       baseLit_zero_int_apply c_int_inner, hc_int
     exact (hbase.comp (measurable_snd.prodMk measurable_fst) :)
@@ -1053,7 +1066,8 @@ theorem headStep.cFst.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cFst _ = _
@@ -1094,7 +1108,8 @@ theorem headStep.cSnd.measurable :
             (fun e1 e2 => c_pair_inner (q.2, e1, e2))
             (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT => (p.2, p.1)) := by
     funext ⟨σ, e⟩
     show headStep.cSnd _ = _
@@ -1184,6 +1199,7 @@ theorem headStep.cRand.measurable :
         (fun _ => 0)
         (fun α => c_lbl_arm (σ, z, α))
         (fun _ => 0)
+        (fun _ => 0)
   have hc_l2 : Measurable c_l2_dispatch := by
     have hswap : Measurable (fun q : (State rT × Int) × BaseLit rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
@@ -1192,19 +1208,20 @@ theorem headStep.cRand.measurable :
           (c_unit_arm (p.2.1, p.2.2, ()))
           (fun _ => 0)
           (fun α => c_lbl_arm (p.2.1, p.2.2, α))
+          (fun _ => 0)
           (fun _ => 0)) := by
       apply BaseLit.measurable_casesOn_param (c_int := fun _ => 0) (c_bool := fun _ => 0)
         (c_unit := fun q : State rT × Int => c_unit_arm (q.1, q.2, ()))
         (c_loc := fun _ => 0)
         (c_lbl := fun q : (State rT × Int) × Lbl => c_lbl_arm (q.1.1, q.1.2, q.2))
-        (c_real := fun _ => 0)
+        (c_real := fun _ => 0) (c_code := fun _ => 0)
         (h_int := measurable_const) (h_bool := measurable_const)
         (h_unit := hc_unit_arm.comp
           (measurable_fst.prodMk (measurable_snd.prodMk (measurable_const (a := ())))))
         (h_loc := measurable_const)
         (h_lbl := hc_lbl_arm.comp ((measurable_fst.comp measurable_fst).prodMk
             ((measurable_snd.comp measurable_fst).prodMk measurable_snd)))
-        (h_real := measurable_const)
+        (h_real := measurable_const) (h_code := measurable_const)
     exact hbase.comp hswap
   let c_e2_dispatch : (State rT × Int) × Exp rT → Measure (Cfg rT) := fun ⟨⟨σ, z⟩, e2⟩ =>
       Exp.casesOn (motive := fun _ => Measure (Cfg rT)) e2 (fun _ => 0) (fun _ => 0)
@@ -1214,6 +1231,7 @@ theorem headStep.cRand.measurable :
         (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
         (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
         (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+        (fun _ _ => 0) (fun _ _ => 0)
   have hc_e2 : Measurable c_e2_dispatch := by
     have hswap : Measurable (fun q : (State rT × Int) × Exp rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
@@ -1224,29 +1242,32 @@ theorem headStep.cRand.measurable :
           (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
           (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
           (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-          (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) := by
+          (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+          (fun _ _ => 0) (fun _ _ => 0)) := by
       exp_zero_lit_apply (fun q : (State rT × Int) × BaseLit rT => c_l2_dispatch q), hc_l2
     exact hbase.comp hswap
   let c_l1_dispatch : (State rT × Exp rT) × BaseLit rT → Measure (Cfg rT) := fun ⟨⟨σ, e2⟩, l1⟩ =>
       BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) l1
         (fun z => c_e2_dispatch ((σ, z), e2)) (fun _ => 0) 0 (fun _ => 0)
         (fun _ => 0) (fun _ => 0)
+        (fun _ => 0)
   have hc_l1 : Measurable c_l1_dispatch := by
     have hswap : Measurable (fun q : (State rT × Exp rT) × BaseLit rT => (q.2, q.1)) :=
       measurable_snd.prodMk measurable_fst
     have hbase : Measurable (fun p : BaseLit rT × (State rT × Exp rT) =>
         BaseLit.casesOn (motive := fun _ => Measure (Cfg rT)) p.1
           (fun z => c_e2_dispatch ((p.2.1, z), p.2.2)) (fun _ => 0) 0
-          (fun _ => 0) (fun _ => 0) (fun _ => 0)) := by
+          (fun _ => 0) (fun _ => 0) (fun _ => 0)
+          (fun _ => 0)) := by
       apply BaseLit.measurable_casesOn_param (c_int := fun q : (State rT × Exp rT) × Int =>
           c_e2_dispatch ((q.1.1, q.2), q.1.2))
         (c_bool := fun _ => 0) (c_unit := fun _ => 0)
-        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0)
+        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0) (c_code := fun _ => 0)
         (h_int := hc_e2.comp (((measurable_fst.comp measurable_fst).prodMk measurable_snd).prodMk
             (measurable_snd.comp measurable_fst)))
         (h_bool := measurable_const) (h_unit := measurable_const)
         (h_loc := measurable_const) (h_lbl := measurable_const)
-        (h_real := measurable_const)
+        (h_real := measurable_const) (h_code := measurable_const)
     exact hbase.comp hswap
   have hrw : headStep.cRand = (fun q : Exp rT × State rT × Exp rT =>
           Exp.casesOn (motive := fun _ => Measure (Cfg rT)) q.1 (fun _ => 0) (fun _ => 0)
@@ -1255,7 +1276,8 @@ theorem headStep.cRand.measurable :
             (fun _ _ => 0) (fun _ _ => 0) (fun _ _ _ => 0) (fun _ _ _ => 0)
             (fun _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0) (fun _ => 0)
             (fun _ _ _ => 0) (fun _ => 0) (fun _ => 0) (fun _ _ => 0)
-            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)) ∘
+            (fun _ => 0) (fun _ _ => 0) 0 0 (fun _ _ => 0) (fun _ _ => 0)
+            (fun _ _ => 0) (fun _ _ => 0)) ∘
         (fun p : State rT × Exp rT × Exp rT => (p.2.1, p.1, p.2.2)) := by
     funext ⟨σ, e1, e2⟩
     show headStep.cRand _ = _
@@ -1397,10 +1419,11 @@ theorem headStep.measurable :
           (c_fail p.2)
           (c_urand p.2)
           (fun e pat => headStep.cScrut (p.2, e, pat))
-          (fun en ev => headStep.cAllocN (p.2, en, ev)) := by
+          (fun en ev => headStep.cAllocN (p.2, en, ev))
+          (fun _ _ => 0) (fun _ _ => 0) := by
     funext ⟨e, σ⟩
     cases e with
-    | bvar | fvar | lit | lam | fix | fail | urand => rfl
+    | bvar | fvar | lit | lam | fix | fail | urand | asm | asmResume => rfl
     | app e1 e2 => cases e1 <;> rfl
     | unop op e => rfl
     | binop op e1 e2 => rfl
@@ -1447,6 +1470,8 @@ theorem headStep.measurable :
     (c_tape := headStep.cTape) (c_rand := headStep.cRand)
     (c_fail := c_fail) (c_urand := c_urand) (c_scrut := headStep.cScrut)
     (c_allocN := headStep.cAllocN)
+    (c_asm := fun _ => 0) (c_asmResume := fun _ => 0)
+    (h_asm := measurable_const) (h_asmResume := measurable_const)
   · exact measurable_const
   · exact measurable_const
   · exact measurable_const
