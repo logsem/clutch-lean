@@ -414,7 +414,7 @@ theorem twp_tgl_value [AppPreGS rT GF] [ECPreGS GF] [InvGpreS GF]
   ihave Hwp' := Hwp $$ HecFrag
   imod tglWp_value_inv_with_state
     $$ [$Hwp' $HappAuth $HecAuth] with ⟨-, -, %hφ⟩
-  simp only [Nat.repeat]
+  simp only [step_fupdN]
   imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with _
   imodintro
   ipureintro

@@ -126,7 +126,7 @@ theorem DistSpecOn_of_DistSpec
   unfold DistSpecOn
   iintro %Φ Hε HΦ
   iapply h (K.piecewise G 1) (hG.piecewise hK measurable_const) $$ %Φ [Hε]
-  · iapply weaken (by rw [MeasureTheory.lintegral_piecewise hK]; simp) $$ Hε
+  · iapply weaken (by rw [MeasureTheory.lintegral_piecewise hK.nullMeasurableSet]; simp) $$ Hε
   · iintro %r H
     by_cases hr : r ∈ K
     · isimp only [Set.piecewise_eq_of_mem _ _ _ hr] at H

@@ -151,6 +151,16 @@ theorem PMF.toMeasure_isAtomicSupport [MeasurableSingletonClass α] (p : PMF α)
   rw [hset, p.toMeasure_apply_eq_zero_iff p.support_countable.measurableSet.compl]
   exact disjoint_compl_right
 
+/-- A measure carried by a countable set is purely atomic. -/
+theorem isAtomicSupport_of_countable {μ : Measure α} {S : Set α} (hS : S.Countable)
+    (hμ : μ Sᶜ = 0) : IsAtomicSupport μ := by
+  refine measure_mono_null (t := Sᶜ ∪ ⋃ x ∈ S ∩ {x | μ {x} = 0}, {x}) (fun x hx => ?_) ?_
+  · by_cases h : x ∈ S
+    · exact .inr (mem_biUnion ⟨h, hx⟩ rfl)
+    · exact .inl h
+  · exact measure_union_null hμ <| (measure_biUnion_null_iff (hS.mono inter_subset_left)).mpr
+      fun _ hx => hx.2
+
 /-- A Dirac measure is purely atomic. -/
 theorem isAtomicSupport_dirac [MeasurableSingletonClass α] (a : α) :
     IsAtomicSupport (dirac a) := by
@@ -575,11 +585,6 @@ namespace MeasureTheory.Measure
 
 variable {α β γ : Type _} [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
 
-/-- Binding after a pushforward binds the composite kernel. -/
-theorem bind_map {μ : Measure α} {f : α → β} {g : β → Measure γ}
-    (hf : Measurable f) (hg : Measurable g) : (μ.map f).bind g = μ.bind (g ∘ f) := by
-  rw [Measure.bind, Measure.bind, map_map hg hf]
-
 /-- Pushing a bind forward pushes each kernel measure forward. -/
 theorem bind_map_comm (μ : Measure α) (k : α → Measure β) (f : β → γ) (hf : Measurable f)
     (hk : AEMeasurable k μ) : (μ.bind k).map f = μ.bind (fun a => (k a).map f) := by
@@ -604,6 +609,25 @@ theorem measurable_map_uncurry {h : α × β → γ} (hh : Measurable h)
   have hker_eq : ∀ a, k a = (Kernel.mk k hk) a := fun _ => by rw [Kernel.coe_mk]
   simp_rw [hker_eq]
   exact Kernel.measurable_kernel_prodMk_left hT
+
+section UniformOfFinset
+
+variable [MeasurableSingletonClass α] {s : Finset α}
+
+/-- The uniform measure on a nonempty finset is a probability measure. -/
+theorem isProbabilityMeasure_uniformOfFinset (hs : s.Nonempty) :
+    IsProbabilityMeasure (uniformOfFinset s) := by
+  constructor
+  rw [uniformOfFinset_apply]
+  simp [ENNReal.div_self, hs.card_ne_zero]
+
+/-- The uniform measure on a finset vanishes exactly on the sets disjoint from it. -/
+theorem uniformOfFinset_apply_eq_zero_iff {t : Set α} :
+    uniformOfFinset s t = 0 ↔ Disjoint (s : Set α) t := by
+  simp [uniformOfFinset_apply, ENNReal.div_eq_zero_iff, Finset.filter_eq_empty_iff,
+    Set.disjoint_left]
+
+end UniformOfFinset
 
 /-- A monotone sequence of measurable measure-valued maps has a measurable supremum. -/
 theorem measurable_iSup_of_monotone {μ : ℕ → α → Measure β} (hμ : ∀ i, Measurable (μ i))

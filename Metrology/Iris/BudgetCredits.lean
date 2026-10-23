@@ -36,7 +36,7 @@ instance instCOFE : COFE (BudgetCredit B) := COFE.ofDiscrete _
 instance instDiscrete : OFE.Discrete (BudgetCredit B) := ⟨id⟩
 instance instCMRA : CMRA (BudgetCredit B) := CommMonoidLike.instCMRA
 instance instUCMRA : UCMRA (BudgetCredit B) := CommMonoidLike.instUCMRA
-instance instCMRADiscrete : CMRA.Discrete (BudgetCredit B) := CommMonoidLike.instDiscrete
+instance instORADiscrete : ORA.Discrete (BudgetCredit B) := CommMonoidLike.instDiscrete
 
 instance instLE [LE B] : LE (BudgetCredit B) := inferInstanceAs (LE B)
 instance instCanonicallyOrderedAdd [LE B] [CanonicallyOrderedAdd B] :

@@ -26,7 +26,6 @@ open SpecUpdateGS BIFUpdate
 open LawfulSet (empty_subset subset_refl)
 open BindLaw
 open IsTopAbsorbing (frame absorbing_top)
-open Nat («repeat»)
 
 /-! ## Unfolding `wp` -/
 
@@ -411,7 +410,7 @@ theorem wp_pure_step_fupd (Hφ : φ) :
     exact .rfl
   | succ n IH =>
     obtain ⟨c, Hstep, Hrest⟩ := Hsteps
-    simp only [«repeat»]
+    simp only [step_fupdN]
     iintro H
     iapply wp_lift_pure_det_step Hstep
     imod H
@@ -428,7 +427,7 @@ theorem wp_pure_step_later (Hφ : φ) : ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ �
   | zero => exact .rfl
   | succ n ih =>
     refine (later_mono ih).trans ?_
-    simp only [«repeat»]
+    simp only [step_fupdN]
     iintro H !> !> !>
     iexact H
 

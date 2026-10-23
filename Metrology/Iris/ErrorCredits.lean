@@ -17,7 +17,7 @@ The resource `↯ε` (total `●↯ε`) over `ℝ≥0∞` with validity `ε < 1`
 
 noncomputable section
 
-open Std Iris COFE CMRA
+open Std Iris COFE ORA
 open scoped ENNReal NNReal
 
 /-! ## The camera of error credits -/
@@ -32,39 +32,30 @@ scoped instance : OFE.Discrete ErrorCredit := ⟨id⟩
 scoped instance (x : ErrorCredit) : OFE.DiscreteE x := ⟨OFE.Discrete.discrete_0⟩
 
 /-- Error credits compose by addition. -/
-scoped instance : CMRA ErrorCredit where
-  pcore _ := some 0
-  op := (· + ·)
-  ValidN _ ε := ε < 1
-  Valid ε := ε < 1
-  op_ne.ne _ _ _ h := by rw [h]
-  pcore_ne _ := by rintro ⟨rfl⟩; exists 0
-  validN_ne {_ _ _} := by rintro ⟨rfl⟩; exact id
-  valid_iff_validN := .symm <| forall_const Nat
-  validN_succ := (·)
-  validN_op_left {n x y} H := lt_of_add_lt_of_nonneg_left H zero_le
-  assoc {_ _ _} := (add_assoc ..).symm
-  comm {_ _} := (add_comm ..).symm
-  pcore_op_left {_ _} := by rintro ⟨rfl⟩; simp
-  pcore_idem := by simp
-  pcore_op_mono {_ _} := by rintro ⟨rfl⟩ _; exists 0; simp
-  extend _ h := ⟨_, _, OFE.discrete h, .rfl, .rfl⟩
+scoped instance : CMRA ErrorCredit :=
+  CMRA.ofDiscreteTotal (fun _ => 0) (· + ·) (· < 1) (fun _ _ _ => (add_assoc ..).symm) add_comm
+    (fun _ => zero_add _) (fun _ => rfl) (fun _ _ h => lt_of_add_lt_of_nonneg_left h zero_le)
+    (fun _ _ => ⟨0, (add_zero _).symm⟩)
 
-scoped instance : CMRA.Discrete ErrorCredit where
+scoped instance : ORA.Discrete ErrorCredit where
   discrete_valid := id
 
-scoped instance : UCMRA ErrorCredit where
+scoped instance : UCMRA ErrorCredit := UORA.ofUCMRAData {
   unit := 0
-  unit_valid := by simp [Valid]
-  unit_left_id := by simp [op]
-  pcore_unit := by simp [CMRA.pcore]
+  unit_valid := zero_lt_one
+  unit_left_id := zero_add _
+  pcore_unit := rfl }
 
-scoped instance {ε : ErrorCredit} : CMRA.Cancelable ε where
-  cancelableN {n ε₁ ε₂} := by
-    simp [CMRA.ValidN, op, OFE.Dist]
-    intro h1 h2
-    refine (ENNReal.add_right_inj ?_).mp h2
-    rintro rfl; simp at h1
+theorem op_eq {ε₁ ε₂ : ErrorCredit} : Op.op ε₁ ε₂ = ε₁ + ε₂ := rfl
+
+theorem valid_iff {ε : ErrorCredit} : ✓ ε ↔ ε < 1 := .rfl
+
+theorem validN_iff {n : Nat} {ε : ErrorCredit} : ✓{n} ε ↔ ε < 1 := .rfl
+
+theorem unit_eq : (unit : ErrorCredit) = 0 := rfl
+
+scoped instance {ε : ErrorCredit} : Cancelable ε where
+  cancelableN h1 h2 := (ENNReal.add_right_inj (le_self_add.trans_lt h1).ne_top).mp h2
 
 end ErrorCredit
 
@@ -83,7 +74,7 @@ theorem ErrorCredit.includedN_iff {n : Nat} {ε₁ ε₂ : ErrorCredit} : ε₁ 
 /-- A local update of error credits that moves credits between the two sides. -/
 theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 : ε₂' ≤ ε₂)
     (h2 : ε₁ + ε₂' = ε₁' + ε₂) : (ε₁, ε₂) ~l~> (ε₁', ε₂') := by
-  rintro n (_|ε) <;> simp only [OFE.Dist, CMRA.op?, CMRA.ValidN, op]
+  rintro n (_|ε) <;> simp only [OFE.Dist, op?, validN_iff, op_eq]
   · rintro H rfl
     symm at h2
     obtain rfl : ε₁' = ε₂' := ENNReal.add_left_inj H.ne_top |>.mp (by grind)
@@ -101,9 +92,9 @@ theorem ErrorCredit.local_update {ε₁ ε₂ ε₁' ε₂' : ErrorCredit} (h1 :
 namespace ErrorCredit
 
 scoped instance : IsUnit (◯ 0 : Auth ErrorCredit) where
-  unit_valid := Auth.frag_valid.mpr (by simp [Valid])
-  unit_left_id := by simp [op]
-  pcore_unit := by simp [CMRA.pcore, CMRA.core]
+  unit_valid := Auth.frag_valid.mpr zero_lt_one
+  unit_left_id := unit_left_id
+  pcore_unit := pcore_unit
 
 scoped instance {r : ErrorCredit} : OFE.DiscreteE (◯ r : Auth ErrorCredit) := Auth.frag_discrete
 
@@ -189,7 +180,7 @@ theorem supply_decrease {εₛ ε} : ⊢ ●↯ εₛ -∗ ↯ε -∗ |==> ●�
   unfold ec ecAuth
   ihave Hc := iOwn_op |>.mpr $$ [$Hs $Hε]
   refine iOwn_update <| Auth.auth_update_dealloc ?_
-  simp only [UCMRA.unit]
+  simp only [unit_eq]
   refine local_update zero_le ?_
   simpa [add_zero] using (tsub_add_cancel_of_le hle).symm
 
@@ -199,7 +190,7 @@ theorem supply_increase (h : ε₁ + ε₂ < 1) :
   unfold ec ecAuth
   have hupd : (● ε₁) ~~> (● ε₁ + ε₂) • (◯ ε₂ : Auth ℝ≥0∞) := by
     refine Auth.auth_update_alloc <| (local_update_unital_discrete ..).mpr ?_
-    simp only [Valid, op, UCMRA.unit, zero_add, forall_apply_eq_imp_iff]
+    simp only [valid_iff, op_eq, unit_eq, zero_add, forall_apply_eq_imp_iff]
     exact fun _ ↦ ⟨h, add_comm _ _⟩
   iintro Hε
   imod (iOwn_update hupd) $$ Hε with H

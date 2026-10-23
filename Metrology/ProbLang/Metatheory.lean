@@ -700,7 +700,7 @@ theorem _root_.Finset.sum_Ico_comp_of_bijOn {M : Type _} [AddCommMonoid M]
 
 /-- For `0 < z`, `Cfg.uniform` is the uniform measure on `Ico 0 z` as configurations. -/
 theorem Cfg.uniform_eq_map_uniformOfFinset (hz : 0 < z) (σ : State rT) :
-    uniform z σ = (PMF.uniformOfFinset (Ico (0 : Int) z) (nonempty_Ico.mpr hz)).toMeasure.map
+    uniform z σ = (Measure.uniformOfFinset (Ico (0 : Int) z)).map
       (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold uniform Int.isPos; simp only [dite_eq_left hz]
 
@@ -716,12 +716,10 @@ theorem Cfg.lintegral_uniform
       lintegral_map hφ Measurable.of_discrete,
       lintegral_countable',
       tsum_eq_sum (s := Ico (0 : Int) z) fun n hn => by
-        rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
+        rw [Measure.uniformOfFinset_apply_singleton_of_notMem hn, mul_zero],
       mul_sum]
   refine sum_congr rfl fun n hn => ?_
-  rw [PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
+  rw [Measure.uniformOfFinset_apply_singleton_of_mem hn, hcard, mul_comm]
 
 variable [LawfulProbLangℝ rT]
 

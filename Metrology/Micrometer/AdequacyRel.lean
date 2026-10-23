@@ -194,16 +194,16 @@ variable (B : Type) [AddCommMonoid B]
 
 /-- A concrete `RefinesPreGS` functor list, with the budget camera over `B` in slot `7`. -/
 noncomputable def MicrometerFunctor : BundledGFunctors := fun
-  | 0 => ⟨InvMapF, by infer_instance⟩
-  | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
-  | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩
-  | 3 => ⟨AuthURF (constOF Credit), by infer_instance⟩
-  | 4 => ⟨constOF (SpecHeap rT), by infer_instance⟩
-  | 5 => ⟨constOF SpecTapes, by infer_instance⟩
-  | 6 => ⟨constOF (SpecProg rT), by infer_instance⟩
-  | 7 => ⟨constOF (Auth (BudgetCredit B)), by infer_instance⟩
-  | 8 => ⟨NaInvF, by infer_instance⟩
-  | _ => ⟨constOF Unit, by infer_instance⟩
+  | 0 => ⟨InvMapF⟩
+  | 1 => ⟨constOF (DisjointLeibnizSet CoPset)⟩
+  | 2 => ⟨constOF (DisjointLeibnizSet PosSet)⟩
+  | 3 => ⟨AuthURF (constOF Credit)⟩
+  | 4 => ⟨constOF (SpecHeap rT)⟩
+  | 5 => ⟨constOF SpecTapes⟩
+  | 6 => ⟨constOF (SpecProg rT)⟩
+  | 7 => ⟨constOF (Auth (BudgetCredit B))⟩
+  | 8 => ⟨NaInvF⟩
+  | _ => ⟨constOF Unit⟩
 
 /-! ### `RefinesPreGS` instances for `MicrometerFunctor` -/
 

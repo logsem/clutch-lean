@@ -1396,7 +1396,7 @@ theorem tryMatch.measurable_joint :
         (c_tape := fun _ => none) (c_rand := fun _ => none) (c_fail := fun _ => none)
         (c_urand := fun _ => none)
         (c_scrut := fun _ => none)
-      all_goals first | exact measurable_const | skip
+      all_goals try exact measurable_const
       intro S hS
       have hrw' : (fun q : BaseLit rT × BaseLit rT =>
           if (q.1 == q.2) = true then (some (lit BaseLit.unit) : Option (Exp rT)) else none) ⁻¹' S =

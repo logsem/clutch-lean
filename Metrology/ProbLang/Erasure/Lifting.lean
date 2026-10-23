@@ -199,8 +199,9 @@ theorem lift_erasure_erasable_exp_lhs_kanto_law [Zero B] (law : L.BindLaw) {μ�
     (hCont : ∀ x y, R x y < ⊤ → L.Rel (R x y) Φexp (asExpr (execN n (f x))) (limExecV (f' y))) :
     L.Rel b Φexp (asExpr ((primStep ⟨e₁, σ₁⟩).bind (execN n))) (limExecV ⟨e₁', σ₁'⟩) := by
   rw [asExpr_bind _ _ (execN_measurable n), limExecV_eq_bind_of_erasable hErase₁' e₁' m, hprog,
-    hspec, bind_map (g := fun ρ => asExpr (execN n ρ)) hf (execVKernel n).measurable,
-    bind_map (g := limExecV) hf' limExecV.measurable]
+    hspec, bind_map (g := fun ρ => asExpr (execN n ρ)) hf.aemeasurable
+      (execVKernel n).measurable.aemeasurable,
+    bind_map (g := limExecV) hf'.aemeasurable limExecV.measurable.aemeasurable]
   exact law.sound (f := (execVKernel n).comap f hf) (g := limExecVKernel.comap f' hf') hhead
     (hside n f hf hf') hCont
 
@@ -217,7 +218,7 @@ theorem lift_erasure_erasable_law [Zero B] (law : L.BindLaw) {ν₀ : Measure Y}
   have hh : Measurable (fun σ : State rT => (⟨e₁, σ⟩ : Cfg rT)) :=
     Cfg.measurable_iff.mpr ⟨measurable_const, measurable_id⟩
   rw [asExpr_execN_eq_bind_of_erasable hErase₁ e₁ n, limExecV_eq_bind_of_erasable hErase₁' e₁' m,
-    hspec, bind_map (g := limExecV) hf' limExecV.measurable]
+    hspec, bind_map (g := limExecV) hf'.aemeasurable limExecV.measurable.aemeasurable]
   exact law.sound (f := (execVKernel n).comap _ hh) (g := limExecVKernel.comap f' hf') hhead
     (hside n _ hh hf') hCont
 

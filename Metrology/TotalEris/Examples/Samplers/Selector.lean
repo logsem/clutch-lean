@@ -307,7 +307,7 @@ theorem SCreditAmp_lintegral_eq (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (N 
       simp only [Bool.false_eq_true, ite_false, ite_true]
       ring
   rw [hfun,
-    lintegral_piecewise measurableSet_Ioi, Set.compl_Ioi,
+    lintegral_piecewise measurableSet_Ioi.nullMeasurableSet, Set.compl_Ioi,
     setLIntegral_const, restrict_apply measurableSet_Ioi, Ioi_inter_unit hy0, Real.volume_Ioc,
     restrict_restrict measurableSet_Iic, Iic_inter_unit hy1,
     lintegral_add_left ((measurable_sCreditV F k x (N + 1)).const_mul _),
@@ -511,10 +511,9 @@ theorem twp_S_tail (E : CoPset) (F : ℕ → ℝ≥0∞) (k : ℕ) (x : ℝ) (hx
       rw [← mul_assoc, hkf,
           ← ENNReal.ofReal_mul hB0.le, mul_one_div, div_self (ne_of_gt hB0),
           ENNReal.ofReal_one, one_mul]
-    calc ∫⁻ r, SCreditAmp F k x N y (↑kf * ε_term) r ∂(LawfulProbLangℝ.unifUnit (T := ℝ))
-        ≤ SCreditV F k x y N + ENNReal.ofReal B * (↑kf * ε_term) :=
-          SCreditAmp_lintegral_le F k x N y (↑kf * ε_term) hx0 hx1 hy0 hy1 B hyB
-      _ = SCreditV F k x y N + ε_term := by rw [hBkf]
+    have h := SCreditAmp_lintegral_le F k x N y (↑kf * ε_term) hx0 hx1 hy0 hy1 B hyB
+    rw [hBkf] at h
+    exact h
   iintro %z ⟨%hzm, Hcz⟩
   have hzr := mem_unifUnitSupport_real_le hzm
   twp_pures

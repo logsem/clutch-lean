@@ -202,8 +202,7 @@ theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
     have hg : Measurable (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) := Measurable.of_discrete
     have hRc : MeasurableSet {ρ : Cfg rT | ¬ R σ₁ ρ} := (hrmeas σ₁).compl
     rw [uniform_eq_map_uniformOfFinset Hz σ₁, MeasureTheory.Measure.map_apply hg hRc,
-      PMF.toMeasure_apply_eq_zero_iff _ (hg hRc), PMF.support_uniformOfFinset,
-      Set.disjoint_left]
+      MeasureTheory.Measure.uniformOfFinset_apply_eq_zero_iff, Set.disjoint_left]
     intro n hn hcontra
     rw [mem_coe, mem_Ico] at hn
     exact hcontra ⟨n, hn.1, hn.2, rfl⟩

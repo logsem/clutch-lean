@@ -55,8 +55,7 @@ noncomputable abbrev draw : Measure Int :=
 
 /-- Each of the four draws has mass `1/4`. -/
 theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹ := by
-  rw [draw, unifInt, PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete,
-    PMF.uniformOfFinset_apply_of_mem _ (mem_Ico.2 ⟨h0, h4⟩)]
+  rw [draw, unifInt, Measure.uniformOfFinset_apply_singleton_of_mem (mem_Ico.2 ⟨h0, h4⟩)]
   rfl
 
 /-- One round reports its bit with probability `3/4`. -/

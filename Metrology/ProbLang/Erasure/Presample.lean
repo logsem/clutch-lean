@@ -30,7 +30,7 @@ noncomputable def tapeIdxOf (n : Int) : { z : Int // 0 ≤ z ∧ z < N } :=
 /-- The uniform distribution on `[0, N)` as a subtype; `0` when `N ≤ 0`. -/
 noncomputable def tapeIndexUniform (N : Int) : Measure { z : Int // 0 ≤ z ∧ z < N } :=
   if hN : 0 < N then
-    (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN)
+    (uniformOfFinset (Finset.Ico 0 N)).map (tapeIdxOf hN)
   else 0
 
 variable [LawfulProbLangℝ rT]
@@ -42,17 +42,14 @@ variable [LawfulProbLangℝ rT]
 
 /-- The uniform index distribution is the pushforward of the uniform distribution on `[0, N)`. -/
 theorem tapeIndexUniform_eq_map :
-    tapeIndexUniform N = (PMF.uniformOfFinset (Finset.Ico (0 : Int) N)
-        (Finset.nonempty_Ico.mpr hN)).toMeasure.map (tapeIdxOf hN) :=
+    tapeIndexUniform N = (uniformOfFinset (Finset.Ico (0 : Int) N)).map (tapeIdxOf hN) :=
   dite_eq_left hN
 
 include hN in
 /-- The uniform index distribution has total mass one when `0 < N`. -/
 theorem tapeIndexUniform_univ_eq_one :
     (tapeIndexUniform N) univ = 1 := by
-  have : IsProbabilityMeasure
-      (PMF.uniformOfFinset (Finset.Ico 0 N) (Finset.nonempty_Ico.mpr hN)).toMeasure :=
-    PMF.toMeasure.isProbabilityMeasure _
+  have := isProbabilityMeasure_uniformOfFinset (Finset.nonempty_Ico.mpr hN)
   rw [tapeIndexUniform_eq_map hN, map_apply of_discrete .univ]
   simp only [preimage_univ, measure_univ]
 
@@ -65,12 +62,10 @@ theorem lintegral_tapeIndexUniform
   rw [tapeIndexUniform_eq_map hN, lintegral_map of_discrete of_discrete,
       lintegral_countable',
       tsum_eq_sum (s := Finset.Ico (0 : Int) N) fun n hn => by
-        rw [PMF.toMeasure_apply_singleton _ _ .of_discrete,
-            PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero],
+        rw [uniformOfFinset_apply_singleton_of_notMem hn, mul_zero],
       Finset.mul_sum]
   refine Finset.sum_congr rfl fun n hn => ?_
-  rw [PMF.toMeasure_apply_singleton _ _ .of_discrete,
-      PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
+  rw [uniformOfFinset_apply_singleton_of_mem hn, hcard, mul_comm]
 
 /-- A bijection of `[0, N)` leaves `tapeIndexUniform N` invariant. -/
 theorem tapeIndexUniform_map_bijOn (f : Int → Int)

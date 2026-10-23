@@ -170,7 +170,7 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
       div_le_iff₀ hNr, lt_div_iff₀ hNr]
     constructor <;> rintro ⟨h1, h2⟩ <;> constructor <;> linarith
   rw [map_apply hmeas (measurableSet_singleton k), hpre, unifInt,
-    PMF.toMeasure_apply_singleton _ _ MeasurableSet.of_discrete, PMF.uniformOfFinset_apply]
+    Measure.uniformOfFinset_apply_singleton]
   show (volume.restrict (Icc (0 : ℝ) 1)) _ = _
   rw [Measure.restrict_apply measurableSet_Ico]
   split_ifs with hk

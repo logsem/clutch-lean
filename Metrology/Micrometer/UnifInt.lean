@@ -63,11 +63,11 @@ theorem Cfg.advLeftover_apply [_root_.Top B] (f : Int → Int) (σ σ' : State r
 variable [MeasurableSpace rT]
 
 /-- The uniform measure on `[0, z)`. -/
-noncomputable def unifInt (z : Int) (hz : 0 < z) : Measure Int :=
-  (PMF.uniformOfFinset (Ico 0 z) (nonempty_Ico.mpr hz)).toMeasure
+noncomputable def unifInt (z : Int) (_hz : 0 < z) : Measure Int :=
+  Measure.uniformOfFinset (Ico 0 z)
 
 instance unifInt.isProbabilityMeasure {hz : 0 < z} : IsProbabilityMeasure (unifInt z hz) :=
-  PMF.toMeasure.isProbabilityMeasure _
+  Measure.isProbabilityMeasure_uniformOfFinset (nonempty_Ico.mpr hz)
 
 variable (hz : 0 < z) in
 /-- `Cfg.uniform z σ` is `unifInt z` pushed to integer literals. -/
@@ -86,11 +86,9 @@ theorem lintegral_unifInt (φ : Int → ENNReal) :
     ∫⁻ n, φ n ∂unifInt z hz = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Ico 0 z, φ n := by
   have hcard : (Ico (0 : Int) z).card = z.toNat := by rw [card_Ico]; omega
   rw [unifInt, lintegral_countable', tsum_eq_sum fun n hn => by
-    rw [PMF.toMeasure_apply_singleton _ _ of_discrete,
-      PMF.uniformOfFinset_apply_of_notMem _ hn, mul_zero], mul_sum]
+    rw [Measure.uniformOfFinset_apply_singleton_of_notMem hn, mul_zero], mul_sum]
   refine sum_congr rfl fun n hn => ?_
-  rw [PMF.toMeasure_apply_singleton _ _ of_discrete,
-    PMF.uniformOfFinset_apply_of_mem _ hn, hcard, mul_comm]
+  rw [Measure.uniformOfFinset_apply_singleton_of_mem hn, hcard, mul_comm]
 
 /-- `unifInt z` gives each set the share of `[0, z)` it contains. -/
 theorem unifInt_apply (S : Set Int) :
@@ -100,12 +98,12 @@ theorem unifInt_apply (S : Set Int) :
 /-- `unifInt N` gives the singleton `{0}` mass `1/N`. -/
 theorem unifInt_singleton_zero {N : Int} (hN : 0 < N) :
     unifInt N hN {0} = (N.toNat : ENNReal)⁻¹ := by
-  rw [unifInt, PMF.toMeasure_apply_singleton _ _ of_discrete,
-    PMF.uniformOfFinset_apply_of_mem _ (mem_Ico.2 ⟨le_rfl, hN⟩), card_Ico, sub_zero]
+  rw [unifInt, Measure.uniformOfFinset_apply_singleton_of_mem (mem_Ico.2 ⟨le_rfl, hN⟩), card_Ico,
+    sub_zero]
 
 /-- `unifInt z` is carried by `[0, z)`. -/
 theorem unifInt_compl_Ico : unifInt z hz (Set.Ico 0 z)ᶜ = 0 := by
-  rw [unifInt, PMF.toMeasure_apply_eq_zero_iff _ measurableSet_Ico.compl]
+  rw [unifInt, Measure.uniformOfFinset_apply_eq_zero_iff]
   simp [Set.disjoint_compl_right_iff_subset]
 
 section

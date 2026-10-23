@@ -48,9 +48,7 @@ def Int.isPos (z : Int) : Option { z : Int // 0 < z } :=
 /-- Uniform sampler of `⟨.lit (.int n), σ⟩` for `0 ≤ n < z`; the constant `-1` when `z ≤ 0`. -/
 def Cfg.uniform (z : Int) (σ : State rT) : Measure (Cfg rT) :=
   match z.isPos with
-  | some ⟨z, Hz⟩ =>
-    PMF.uniformOfFinset (.Ico 0 z) (Finset.nonempty_Ico.mpr Hz)
-      |>.toMeasure.map (⟨.lit <| .int ·, σ⟩)
+  | some ⟨z, _⟩ => (uniformOfFinset (.Ico 0 z)).map (⟨.lit <| .int ·, σ⟩)
   | none => dirac ⟨.lit (.int (-1)), σ⟩
 
 section
@@ -296,7 +294,9 @@ instance Cfg.uniform_isProbabilityMeasure {z : Int} :
     IsProbabilityMeasure (Cfg.uniform z σ) := by
   unfold Cfg.uniform Int.isPos
   by_cases hpos : 0 < z
-  · simp only [hpos, dite_true]; infer_instance
+  · simp only [hpos, dite_true]
+    have := isProbabilityMeasure_uniformOfFinset (Finset.nonempty_Ico.mpr hpos)
+    infer_instance
   · simp only [hpos, dite_false]; infer_instance
 
 variable [LawfulProbLangℝ rT]
@@ -524,9 +524,7 @@ theorem Cfg.uniform.measurable :
   cases hzp : z.isPos with
   | none => exact Cfg.measurable_dirac_mk measurable_const measurable_id
   | some w =>
-    obtain ⟨w, hw⟩ := w
-    exact measurable_map_const_uncurry
-      (PMF.uniformOfFinset (Finset.Ico 0 w) (Finset.nonempty_Ico.mpr hw)).toMeasure
+    exact measurable_map_const_uncurry (uniformOfFinset (Finset.Ico 0 w.1))
       (h := fun p : State rT × Int => Cfg.mk (.lit (.int p.2)) p.1)
       (Cfg.measurable_iff.mpr
         ⟨Exp.lit.measurable.comp (BaseLit.int.measurable.comp measurable_snd), measurable_fst⟩)
@@ -1426,8 +1424,7 @@ theorem Cfg.uniform_possible {z v : Int} {σ : State rT}
   simp only [Hz, dite_true]
   refine Possible.map (g := fun x : Int => (⟨.lit (.int x), σ⟩ : Cfg rT)) (ρ := v)
     (by measurability) ?_
-  rw [possible_iff_pos, PMF.toMeasure_uniformOfFinset_apply _ _ (measurableSet_singleton v),
-    div_pos_iff]
+  rw [possible_iff_pos, Measure.uniformOfFinset_apply, div_pos_iff]
   refine ⟨?_, natCast_ne_top _⟩
   rw [ne_eq, Nat.cast_eq_zero]
   exact Finset.card_ne_zero.mpr ⟨v, by simp [Finset.mem_filter, Finset.mem_Ico, Hv0, Hvz]⟩
@@ -1611,7 +1608,7 @@ theorem Cfg.uniform_singleton_pos_inv
   by_cases hpos : 0 < z
   · simp only [hpos, dite_true] at h
     rw [map_apply (by measurability) (measurableSet_singleton ρ),
-        PMF.toMeasure_uniformOfFinset_apply _ _ (by measurability),
+        Measure.uniformOfFinset_apply,
         div_pos_iff] at h
     obtain ⟨hcard, _⟩ := h
     rw [Nat.cast_ne_zero, Finset.card_ne_zero, Finset.filter_nonempty_iff] at hcard
@@ -1947,13 +1944,13 @@ theorem isAtomicSupport_unwrapM {β : Type _} (o : Option β)
 theorem isAtomicSupport_uniform (z : Int) (σ : State rT) :
     IsAtomicSupport (Cfg.uniform z σ) := by
   by_cases hz : 0 < z
-  · have hrw : Cfg.uniform z σ =
-        ((PMF.uniformOfFinset (Finset.Ico (0:Int) z) (Finset.nonempty_Ico.mpr hz)).map
-            (fun n : Int => (⟨.lit (.int n), σ⟩ : Cfg rT))).toMeasure := by
-      unfold Cfg.uniform
-      simp only [Int.isPos, dite_eq_left hz]
-      rw [PMF.toMeasure_map _ _ Measurable.of_discrete]
-    rw [hrw]; exact PMF.toMeasure_isAtomicSupport _
+  · refine isAtomicSupport_of_countable
+      ((finite_Ico 0 z).image fun n => (⟨.lit (.int n), σ⟩ : Cfg rT)).countable ?_
+    unfold Cfg.uniform
+    simp only [Int.isPos, dite_eq_left hz]
+    rw [map_apply (by measurability) ((finite_Ico 0 z).image _).measurableSet.compl,
+      uniformOfFinset_apply_eq_zero_iff, Finset.coe_Ico]
+    exact disjoint_left.mpr fun n hn hn' => hn' ⟨n, hn, rfl⟩
   · have hrw : Cfg.uniform z σ = dirac (⟨.lit (.int (-1)), σ⟩ : Cfg rT) := by
       unfold Cfg.uniform; simp only [Int.isPos, dite_eq_right hz]
     rw [hrw]; exact isAtomicSupport_dirac _

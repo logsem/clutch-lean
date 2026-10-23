@@ -326,7 +326,7 @@ variable [MeasurableSpace rT]
 /-- The integer sampled by `Cfg.uniform`. -/
 def intUniform (z : Int) : Measure Int :=
   match ProbLang.Int.isPos z with
-  | some ⟨z, h⟩ => (PMF.uniformOfFinset (.Ico 0 z) (Finset.nonempty_Ico.mpr h)).toMeasure
+  | some ⟨z, _⟩ => uniformOfFinset (.Ico 0 z)
   | none => dirac (-1)
 
 theorem RCfg.measurable_rb : Measurable (RCfg.rb (rT := rT)) := .of_discrete

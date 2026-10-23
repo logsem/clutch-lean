@@ -1519,7 +1519,7 @@ theorem Exp.decompItem_size (h : e.decompItem = some (Ki, e')) :
   simp only [decompItem, toVal?] at h
   cases e <;> simp_all <;>
     (split at h <;> simp_all <;> try omega) <;>
-    (split at h <;> simp_all <;> try omega)
+    split at h <;> simp_all <;> omega
 
 /-- Splits an expression into a maximal evaluation context, innermost frame first, and the redex in
 its hole. -/

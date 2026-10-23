@@ -61,7 +61,7 @@ def execN (n : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
 theorem execN_measurable (n : Nat) : Measurable (execN (rT := rT) n) := by
   induction n
   · simp [execN]
-  · exact ite (by measurability) (by measurability) (by measurability)
+  · exact .ite (by measurability) (by measurability) (by measurability)
 
 /-- No fuel gives the zero measure. -/
 @[simp] theorem execN_zero (ρ : Cfg rT) : execN 0 ρ = 0 := rfl
@@ -241,7 +241,7 @@ theorem stepOrFinal_not_isValue {ρ : Cfg rT} (hv : ¬ ρ.expr.isValue) :
 @[fun_prop]
 theorem stepOrFinal.measurable :
     Measurable (stepOrFinal : Cfg rT → Measure (Cfg rT)) := by
-  exact ite Cfg.isValue_measurableSet measurable_dirac primStep.measurable
+  exact .ite Cfg.isValue_measurableSet measurable_dirac primStep.measurable
 
 /-- `limExec` is a fixed point of `stepOrFinal`. -/
 theorem limExec_step (ρ : Cfg rT) : limExec ρ = (stepOrFinal ρ).bind limExec := by
@@ -477,7 +477,7 @@ def execExactN (N : Nat) (ρ : Cfg rT) : Measure (Cfg rT) :=
 @[fun_prop]
 theorem execExactN_measurable (n : Nat) : Measurable (execExactN (rT := rT) n) := by
   induction n <;> simp only [execExactN] <;>
-    exact ite (by measurability) (by measurability) (by measurability)
+    exact .ite (by measurability) (by measurability) (by measurability)
 
 /-- `execN n` splits by exact termination time (setwise form of SampCert's `execExactN_sum`). -/
 theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S : Set (Cfg rT)} (HS : MeasurableSet S) :
@@ -498,7 +498,7 @@ theorem execExactN_sum_continuous {n : Nat} {ρ : Cfg rT} {S : Set (Cfg rT)} (HS
       simp_rw [ih]
       have hmeas : ∀ k, AEMeasurable (fun a => if k < n then (execExactN k a) S else 0)
           (primStep ρ) := fun k =>
-        aemeasurable (ite (by measurability)
+        aemeasurable (.ite (by measurability)
           ((measurable_coe HS).comp (execExactN_measurable _)) (by measurability))
       rw [lintegral_tsum hmeas]
       congr 1

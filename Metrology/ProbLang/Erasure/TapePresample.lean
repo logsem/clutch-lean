@@ -58,8 +58,7 @@ theorem tapePresample_bound_ae {σ : State rT} {α : Loc} {N : Int}
 literal. -/
 theorem Cfg.uniform_eq_bind {z : Int} {σ : State rT} (hz : 0 < z) :
     Cfg.uniform z σ =
-      ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
-        (fun n => dirac (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
+      (uniformOfFinset (Finset.Ico 0 z)).bind (fun n => dirac (⟨.lit (.int n), σ⟩ : Cfg rT)) := by
   unfold Cfg.uniform Int.isPos
   rw [dite_eq_left hz, bind_dirac_eq_map _ of_discrete]
 
@@ -78,18 +77,17 @@ theorem tapePresample_bind_cfgUniform_comm
   by_cases hz : 0 < z
   · have huniform_σ := Cfg.uniform_eq_bind (σ := σ) hz
     have hk_pmf : Measurable (fun σ' : State rT =>
-        ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+        (uniformOfFinset (Finset.Ico 0 z)).bind
             (fun n => dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) := by
       have hre : (fun σ' : State rT =>
-          ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
-              (fun n => dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) =
+          (uniformOfFinset (Finset.Ico 0 z)).bind (fun n => dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) =
           (fun σ' : State rT => Cfg.uniform z σ') := by
         funext σ'; exact (Cfg.uniform_eq_bind hz).symm
       rw [hre]
       exact Cfg.uniform.measurable.comp (measurable_const.prodMk measurable_id)
     have hLHS : (tapePresample σ α).bind (fun σ' => Cfg.uniform z σ') =
         (tapePresample σ α).bind (fun σ' =>
-          ((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+          (uniformOfFinset (Finset.Ico 0 z)).bind
               (fun n => dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) := by
       congr 1; funext σ'; exact Cfg.uniform_eq_bind hz
     rw [hLHS, huniform_σ, bind_bind of_discrete.aemeasurable hk2.aemeasurable]
@@ -101,10 +99,10 @@ theorem tapePresample_bind_cfgUniform_comm
     rw [bind_apply hS hk_pmf.aemeasurable,
         bind_apply hS of_discrete.aemeasurable]
     have hLlint : ∀ σ' : State rT,
-        ((((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure).bind
+        (((uniformOfFinset (Finset.Ico 0 z)).bind
                 (fun n => dirac (⟨.lit (.int n), σ'⟩ : Cfg rT))) S) =
         ∫⁻ n, (dirac (⟨.lit (.int n), σ'⟩ : Cfg rT)) S
-          ∂((PMF.uniformOfFinset (Finset.Ico 0 z) (Finset.nonempty_Ico.mpr hz)).toMeasure) := by
+          ∂(uniformOfFinset (Finset.Ico 0 z)) := by
       intro σ'
       exact bind_apply hS of_discrete.aemeasurable
     have hRlint : ∀ n : Int,
@@ -145,7 +143,6 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
       ∫⁻ (ρ : Cfg rT), f ρ ∂Cfg.uniform N σ := by
   rw [tapeIndexUniform_eq_map hN]
   unfold Cfg.uniform Int.isPos
-  have hNonempty : (Finset.Ico 0 N).Nonempty := Finset.nonempty_Ico.mpr hN
   rw [dite_eq_left hN]
   have hm_sub : Measurable (tapeIdxOf hN) := of_discrete
   have hm_cfg : Measurable (fun x : Int => (⟨Exp.lit (BaseLit.int x), σ⟩ : Cfg rT)) :=
@@ -155,15 +152,12 @@ theorem tapeIndexUniform_lintegral_eq_cfg_uniform
   rw [lintegral_map hm_f_sub hm_sub, lintegral_map hf hm_cfg]
   apply lintegral_congr_ae
   rw [Filter.eventuallyEq_iff_exists_mem]
-  use (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).support
+  use Finset.Ico 0 N
   constructor
-  · rw [mem_ae_iff, (PMF.uniformOfFinset (Finset.Ico 0 N) hNonempty).toMeasure_apply_eq_zero_iff
-      MeasurableSet.of_discrete]
+  · rw [mem_ae_iff, uniformOfFinset_apply_eq_zero_iff]
     exact disjoint_compl_right
   · intro a ha
-    have hmem : a ∈ Finset.Ico 0 N := by
-      rwa [PMF.mem_support_uniformOfFinset_iff] at ha
-    have hab : 0 ≤ a ∧ a < N := Finset.mem_Ico.mp hmem
+    have hab : 0 ≤ a ∧ a < N := Finset.mem_Ico.mp ha
     simp [tapeIdxOf_val hN hab.1 hab.2]
 
 /-! ## Facts that use the language's operations -/

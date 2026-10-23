@@ -153,8 +153,8 @@ theorem presampleAdvCompX₂_lintegral_le {σ₁ : State rT}
             hIndic, MeasureTheory.lintegral_indicator ((Ico (0:Int) N).measurableSet),
             MeasureTheory.lintegral_finset]
         refine sum_congr rfl fun z hz => ?_
-        rw [PMF.toMeasure_apply_singleton _ _ (measurableSet_singleton z),
-            PMF.uniformOfFinset_apply, ite_eq_left hz, hCard, ENNReal.div_eq_inv_mul, mul_comm]
+        rw [MeasureTheory.Measure.uniformOfFinset_apply_singleton, ite_eq_left hz, hCard,
+            ENNReal.div_eq_inv_mul, mul_comm]
     _ = (∑ z ∈ Ico (0:Int) N, F z) / (N.toNat : ℝ≥0∞) := by
         simp_rw [div_eq_mul_inv]; rw [← sum_mul]
     _ ≤ ε₁ := by rw [← hSumImage]; exact HSum

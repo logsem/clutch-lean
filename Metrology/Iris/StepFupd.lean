@@ -80,7 +80,7 @@ variable (n : Nat)
 theorem fupd_step_fupdN_plain_forall {A : Type _} (Φ : A → PROP) [∀ x, Plain (Φ x)] : iprop%
     (∀ x, |={∅}=> |={∅}[∅]▷=>^[n] Φ x) ⊢ |={∅}=> |={∅}[∅]▷=>^[n] ∀ x, Φ x := by
   cases n with
-  | zero => simp only [Nat.repeat]; exact (fupd_plain_forall subset_refl).mpr
+  | zero => simp only [step_fupdN]; exact (fupd_plain_forall subset_refl).mpr
   | succ n =>
     calc _ ⊢ ∀ x, |={∅}=> ▷^[n+1] ◇ Φ x :=
         forall_mono fun _ => (mono step_fupdN_plain).trans trans

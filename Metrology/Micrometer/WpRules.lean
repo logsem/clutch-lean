@@ -142,7 +142,7 @@ theorem wp_specUpdate :
 instance elimModal_specUpdate_wp :
     ElimModal True false io false (specUpdate rT E P) P (wp L E e Φ) (wp L E e Φ) where
   elim_modal _ := by
-    simp only [Bool.false_eq_true, ↓reduceIte, intuitionisticallyIf]
+    simp only [intuitionisticallyIf]
     iintro ⟨HP, Hcnt⟩
     iapply specUpdate_wp
     iintro %ρ Hρ

@@ -142,14 +142,15 @@ theorem execN_tapePresample_expr_eq {e : Exp rT} {t : Tape} (h : σ.tapes[α]? =
       have hprim : ∀ σ' : State rT,
           primStep ⟨e, σ'⟩ = (headStep ⟨e_red, σ'⟩).map K.fillCfg := by
         intro σ'; simp only [primStep, e_red, K]
-      have hg_exec : Measurable (execN m ∘ K.fillCfg) :=
+      have hg_exec : Measurable fun ρ => execN m (K.fillCfg ρ) :=
         (execN_measurable m).comp (fillCfg.measurable K)
       have hker_hs : Measurable (fun σ' : State rT => headStep ⟨e_red, σ'⟩) :=
         headStep.measurable.comp (measurable_iff.mpr ⟨measurable_const, measurable_id⟩)
       have hbind_ker : Measurable (fun σ' : State rT =>
-          (headStep ⟨e_red, σ'⟩).bind (execN m ∘ K.fillCfg)) :=
+          (headStep ⟨e_red, σ'⟩).bind fun ρ => execN m (K.fillCfg ρ)) :=
         (measurable_join.comp (measurable_map _ hg_exec)).comp hker_hs
-      simp_rw [hprim, bind_map (fillCfg.measurable K) (execN_measurable m)]
+      simp_rw [hprim,
+        bind_map (fillCfg.measurable K).aemeasurable (execN_measurable m).aemeasurable]
       refine ext fun S hS => ?_
       rw [map_apply measurable_expr hS,
           map_apply measurable_expr hS,

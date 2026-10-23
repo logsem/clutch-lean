@@ -49,10 +49,11 @@ variable [Fact (IsUpperSet bad)]
 instance instCMRA : CMRA (CappedCredit B bad) :=
   CMRA.ofDiscreteTotal (fun _ ↦ 0) (· + ·) (· ∉ bad)
     (fun _ _ _ ↦ (add_assoc ..).symm) add_comm zero_add (fun _ ↦ rfl)
-    (fun _ _ _ ↦ ⟨0, (zero_add 0).symm⟩)
-    fun x _ ↦ notMem_of_le (bad := bad) (le_self_add (a := (x : B)))
+    (fun x _ ↦ notMem_of_le (bad := bad) (le_self_add (a := (x : B))))
+    fun _ _ ↦ ⟨0, (zero_add 0).symm⟩
 
-instance instCMRADiscrete : CMRA.Discrete (CappedCredit B bad) := ⟨id⟩
+instance instORADiscrete : ORA.Discrete (CappedCredit B bad) where
+  discrete_valid := id
 
 variable {s c r : CappedCredit B bad}
 
@@ -66,11 +67,11 @@ theorem included_iff : c ≼ s ↔ c ≤ s :=
 variable [Fact ((0 : B) ∉ bad)]
 
 /-- The unit `0` is valid, as it is not bad. -/
-instance instUCMRA : UCMRA (CappedCredit B bad) where
+instance instUCMRA : UCMRA (CappedCredit B bad) := UORA.ofUCMRAData {
   unit := 0
   unit_valid := Fact.out (p := (0 : B) ∉ bad)
   unit_left_id := zero_add _
-  pcore_unit := rfl
+  pcore_unit := rfl }
 
 /-- Spending a cancelable `c` out of `s = c + r` leaves `r` (Rocq `gcapped_spend_local_update`). -/
 theorem spend_local_update (hc : IsAddLeftRegular c) (h : s = c + r) : (s, c) ~l~> (r, 0) :=

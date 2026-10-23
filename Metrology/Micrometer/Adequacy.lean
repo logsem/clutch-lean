@@ -110,7 +110,7 @@ theorem execCoupl_prog_of_term {μ₀ : Measure (Cfg rT)} {f : Cfg rT → Cfg rT
     exact IsSubProbabilityMeasure.measure_univ_le_one⟩
   simp only [execCoupl, execN_succ_not_isValue (ρ := ⟨e₁, σ₁⟩) (toVal?_eq_none.mp hnone) m]
     at hterm ⊢
-  rw [hprog, Measure.bind_map hf (execN_measurable m)] at hterm
+  rw [hprog, Measure.bind_map hf.aemeasurable (execN_measurable m).aemeasurable] at hterm
   have (ρ : Cfg rT) : IsSubProbabilityMeasure ((execN m ∘ f) ρ) :=
     execN.isSubProbabilityMeasure m (f ρ)
   have hAc := ae_iff.1 (ae_measure_univ_eq_one_of_bind ((execN_measurable m).comp hf) hterm)
@@ -351,7 +351,7 @@ theorem wp_adequacy_step_fupdN [L.IsZeroLeft] :
       iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ Hspec
       -- the ▷ after the program step is spent as one step of |={∅}[∅]▷=>^[n+1]; fuel m+1 here is
       -- fuel m at the continuation (wp_adequacy_prog_coupl)
-      simp only [Nat.repeat]
+      simp only [step_fupdN]
       iintro !> !> !>
       iapply wp_adequacy_spec_coupl $$ Hspec
       iintro %σ₄ %e₄' %σ₄' %b₄ HZ
@@ -378,7 +378,7 @@ theorem wp_adequacy_step_fupdN_term [L.IsSupportLocal] (hterm : execN n ⟨e, σ
       iintro %σ₂ %e₂' %σ₂' %b₂ %hterm₂ Hprog
       iapply wp_adequacy_prog_coupl_term (hnone := hnone) (hterm := hterm₂) $$ Hprog
       iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ %hterm₃ Hspec
-      simp only [Nat.repeat]
+      simp only [step_fupdN]
       iintro !> !> !>
       iapply wp_adequacy_spec_coupl_term (hterm := hterm₃) $$ Hspec
       iintro %σ₄ %e₄' %σ₄' %b₄ %hterm₄ HZ
