@@ -13,6 +13,25 @@ def entryInputs (ι : Placement) (s : Mach) (message : Int) (pad : Loc) : CallIn
   ⟨ι.codeBase, (s.regs.get? .x2).getD 0, ι.addr pad, BitVec.ofInt 64 message, ι.retAddr,
     (s.regs.get? .x8).getD 0, (s.regs.get? .x9).getD 0, ι.importAddr "randombytes"⟩
 
+/-- The complete register profile makes the recovered original frame registers genuine bindings. -/
+theorem entryInputs_registers (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+    (h : UserConfig s) :
+    let a := entryInputs ι s message pad
+    s.regs.get? .x2 = some a.sp ∧ s.regs.get? .x8 = some a.savedS0 ∧
+      s.regs.get? .x9 = some a.savedS1 := by
+  obtain ⟨sp, hsp⟩ := h.present .x2
+  obtain ⟨s0, hs0⟩ := h.present .x8
+  obtain ⟨s1, hs1⟩ := h.present .x9
+  simp [entryInputs, hsp, hs0, hs1]
+
+/-- Recovering the original stack binding retains the layout derived from all ABI facets. -/
+theorem entryInputs_layout (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+    (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :
+    let a := entryInputs ι s message pad
+    RawLayout a.base a.sp a.pad a.callback a.ret := by
+  obtain ⟨sp, hsp, layout⟩ := rawLayout_of_RVCompat ι s message pad heap h
+  simpa [entryInputs, hsp] using layout
+
 /-- The compiled OTP entry reaches randombytes under the universal ABI facets. -/
 theorem entry_runsTo_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
     (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :

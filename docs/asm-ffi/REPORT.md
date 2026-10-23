@@ -10,6 +10,13 @@ The combined Metrology root build passes **7,132 jobs**. Source/runtime pins and
 current theorem axiom and statement-dependency receipts are in `docs/asm-ffi/audit/`.
 See [INTEGRATION.md](INTEGRATION.md) for the migration and validation details.
 
+The subsequent compiled one-byte OTP work is tracked in [OTP-PLAN.md](OTP-PLAN.md). Its actual Sail
+execution, universal ABI specification, compatible-entry witness and unconditional evaluator are
+proved. `MetrologyAsm/Examples/OTP/Game.lean` defines the closed game allocating its private pad and
+proves a zero-cost uniform-ciphertext coupling under the actual guarded FFI WP, with the real
+ProbLang randombytes callback. Explicit-kernel finite termination and the exact output distribution
+remain open; this checkpoint does not yet establish the final execution-distribution security claim.
+
 ## 1. Summary
 
 - M0: Lean 4.35 foundations and scoped Sail builds pass; pinned regeneration is byte-identical.

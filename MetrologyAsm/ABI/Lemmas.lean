@@ -7,6 +7,49 @@ namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm Sail.ConcurrencyInterfaceV1
 
+/-- Decoded footprint and import-argument reads determine an external call observation. -/
+theorem observe_call_of_reads (ι : Placement) (code : Code) (args : List BoundaryValue)
+    (F : Finset Loc) (s : Mach) (name : String) (sig : CallSig)
+    (values : List BoundaryValue) (heap : LocHeap BoundaryValue)
+    (hpc : pc s = some (ι.importAddr name)) (hne : ι.retAddr ≠ ι.importAddr name)
+    (hheap : decodeF ι code args F s = some heap) (himports : code.sig.imports = [(name, sig)])
+    (hvalues : sig.args.zipIdx.mapM (fun entry => (argumentRegister s entry.2).bind
+      (fun word => decodeValue ι code args entry.1 word)) = some values) :
+    observe ι code args F s = some (.call name values heap) := by
+  simp [observe, hpc, hheap, Ne.symm hne, himports, hvalues]
+
+/-- Decoded footprint and result-register reads determine a return observation. -/
+theorem observe_ret_of_reads (ι : Placement) (code : Code) (args : List BoundaryValue)
+    (F : Finset Loc) (s : Mach) (word : BitVec 64) (value : BoundaryValue)
+    (heap : LocHeap BoundaryValue) (hpc : pc s = some ι.retAddr)
+    (hheap : decodeF ι code args F s = some heap) (hword : argumentRegister s 0 = some word)
+    (hvalue : decodeValue ι code args code.sig.result word = some value) :
+    observe ι code args F s = some (.ret value heap) := by
+  simp [observe, hpc, hheap, hword, hvalue]
+
+/-- An observed call in a one-import image identifies the actual external program counter. -/
+theorem observe_call_pc_of_single_import (ι : Placement) (code : Code)
+    (args : List BoundaryValue) (F : Finset Loc) (s : Mach) (name : String) (sig : CallSig)
+    (values : List BoundaryValue) (heap : LocHeap BoundaryValue)
+    (himports : code.sig.imports = [(name, sig)])
+    (h : observe ι code args F s = some (.call name values heap)) :
+    pc s = some (ι.importAddr name) := by
+  cases hp : pc s with
+  | none => simp [observe, hp] at h
+  | some p =>
+    cases hf : decodeF ι code args F s with
+    | none => simp [observe, hp, hf] at h
+    | some fragment =>
+      by_cases hr : p = ι.retAddr
+      · cases hw : argumentRegister s 0 with
+        | none => simp [observe, hp, hf, hr, hw] at h
+        | some word =>
+          cases hv : decodeValue ι code args code.sig.result word <;>
+            simp [observe, hp, hf, hr, hw, hv] at h
+      · by_cases hc : p = ι.importAddr name
+        · simp only [hc]
+        · simp [observe, hp, hf, hr, himports, hc] at h
+
 /-- Nonempty nonwrapping intervals with no common byte have separated endpoints. -/
 theorem disjointSpans_of_no_overlap (a n b m : Nat) (hn : 0 < n) (hm : 0 < m)
     (h : ∀ p, inSpan a n p → ¬inSpan b m p) : disjointSpans a n b m := by

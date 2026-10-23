@@ -14,7 +14,7 @@ machine contract. The keypair directory contains input and a game skeleton; it h
 | `ABI/` | Instantiate the generic FFI machine interface using Sail and the ABI facets | [Interface](ABI/Interface.lean), [Lemmas](ABI/Lemmas.lean), [Resume](ABI/Resume.lean) |
 | `Examples/Swap/` | Complete two-cell swap proof | [Source](Examples/Swap/Source.lean), [Correctness](Examples/Swap/Correctness.lean) |
 | `Examples/Callback/` | Complete assembly → ProbLang callback → assembly round trip | [Source](Examples/Callback/Source.lean), [Correctness](Examples/Callback/Correctness.lean) |
-| `Examples/OTP/` | One-byte OTP: compiled Sail execution proved; security proof in progress | [Source](Examples/OTP/Source.lean), [Execution](Examples/OTP/Execution.lean), [plan](../docs/asm-ffi/OTP-PLAN.md) |
+| `Examples/OTP/` | Compiled byte OTP: actual evaluator and guarded game coupling proved; exact execution law pending | [Game](Examples/OTP/Game.lean), [Evaluation](Examples/OTP/Evaluation.lean), [plan](../docs/asm-ffi/OTP-PLAN.md) |
 | `Examples/Keypair/` | Linked TweetNaCl source, declared signature and planned game | [Source](Examples/Keypair/Source.lean) |
 | `Examples/Support.lean` | Concrete byte installation, placement and register fixtures shared by example witnesses | [Support](Examples/Support.lean) |
 | `Diagnostics/` | Concrete observations and a small instruction-body experiment | [Spike](Diagnostics/Spike.lean), [InstructionBody](Diagnostics/InstructionBody.lean) |
@@ -63,8 +63,12 @@ The OTP work is in `MetrologyAsm.OTP`. Read `Source` and `Decode` for the retain
 and certified words, `Steps` for each actual Sail instruction, `Prefix` and `Continuation` for the
 thirteen-step call and seven-step return, and `Placement`/`ImageBridge` for the ABI and relocation
 bridges. `Execution` derives the raw runs from compatible entries and arbitrary allowed callback
-resumptions. The canonical interaction, universal RVSpec, entry witness, evaluator, game WP and
-final ciphertext-distribution theorem are still required; see the linked implementation plan.
+resumptions. `Responses`/`Observation` connect the logical one-byte fragment to the actual stops;
+`Specification`, `Witness` and `Evaluation` prove the universal contract and unconditional evaluator.
+`Dispatch` proves the real foreign steps, `Micrometer` composes the guarded WP with randombytes,
+and `Coupling`/`Game` prove the zero-cost uniform-reference coupling for a closed game allocating its
+private pad and returning only the ciphertext. The explicit execution-law and total-termination
+proofs remain unfinished; see the implementation plan.
 
 ## Imports and commands
 

@@ -36,6 +36,19 @@ theorem witnessImageBytes_get (bytes : List UInt8) (base : Nat)
       simpa [witnessImageBytes, Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert,
         hne, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail
 
+/-- Installing consecutive image bytes preserves every memory address outside their interval. -/
+theorem witnessImageBytes_get_outside (bytes : List UInt8) (base : Nat)
+    (mem : Std.ExtHashMap Nat (BitVec 8)) (address : Nat)
+    (hout : address < base ∨ base + bytes.length ≤ address) :
+    (witnessImageBytes bytes base mem).get? address = mem.get? address := by
+  induction bytes generalizing base with
+  | nil => rfl
+  | cons byte bytes ih =>
+    have hne : base ≠ address := by simp only [List.length_cons] at hout; omega
+    rw [witnessImageBytes]
+    simpa [Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert, hne] using
+      ih (base + 1) (by simp only [List.length_cons] at hout; omega)
+
 /-- A concrete aligned placement for two distinct logical cells. -/
 def witnessPlacement (l : Loc) : Placement where
   addr k := if k = l then 0x80001000#64 else 0x80001008#64
