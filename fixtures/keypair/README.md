@@ -11,13 +11,13 @@ with their helper name to avoid collisions; other retained function instructions
 Functions receive four-byte alignment and constants eight-byte alignment.
 
 The source is canonical here. generate.py escapes it into a multiline riscv_asm! quotation
-in MetrologyAsm/Keypair.lean, with one physical Lean line per GNU line. It reads local data
+in MetrologyAsm/Examples/Keypair/Source.lean, with one physical Lean line per GNU line. It reads local data
 only and invokes no compiler, downloaded script, build system, network client, or shell.
 
 From the sibling package root:
 
     python3 -I fixtures/keypair/generate.py --check
-    lake build MetrologyAsm.Keypair
+    lake build MetrologyAsm.Examples.Keypair.Source
     lake env lean Tests/Keypair.lean
 
 To regenerate only the quotation/module after a deliberate fixture edit:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quote the committed GNU fixture into Keypair.lean; run with python3 -I."""
+"""Quote the committed GNU fixture into its Lean module; run with python3 -I."""
 
 import hashlib
 import json
@@ -8,7 +8,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-TARGET = ROOT / "MetrologyAsm/Keypair.lean"
+TARGET = ROOT / "MetrologyAsm/Examples/Keypair/Source.lean"
 
 HEADER = '''import Metrology.ProbLang.Asm.Notation
 import Metrology.ProbLang.Asm.Assembler
@@ -92,7 +92,7 @@ def main() -> None:
         print("keypair fixture hashes and generated quotation match")
     else:
         TARGET.write_text(text)
-        print("wrote MetrologyAsm/Keypair.lean from the committed linked source")
+        print("wrote MetrologyAsm/Examples/Keypair/Source.lean from the committed linked source")
 
 
 if __name__ == "__main__":

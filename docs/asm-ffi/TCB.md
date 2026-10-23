@@ -51,7 +51,7 @@ are separately identified in WS9 and REPORT-KEYPAIR.md, not presented as a keypa
 | `Metrology.ProbLang.Asm.Assembler` | Assembler/source | 72/325 | 72/325 |
 | `Metrology.ProbLang.Asm.Boundary` | FFI semantics | 58/126 | 58/126 |
 | `Metrology.ProbLang.Asm.Capture` | FFI semantics | 1/6 | 1/6 |
-| `Metrology.ProbLang.Asm.Examples` | Assembler/source | 3/14 | — |
+| `MetrologyAsm.Examples.Swap.Source` | Assembler/source | 3/14 | — |
 | `Metrology.ProbLang.Asm.Execution` | FFI semantics | 33/85 | 33/85 |
 | `Metrology.ProbLang.Asm.Parser` | Assembler/source | 2/5 | 2/5 |
 | `Metrology.ProbLang.Asm.Semantics` | FFI semantics | 41/70 | 41/70 |
@@ -71,12 +71,12 @@ are separately identified in WS9 and REPORT-KEYPAIR.md, not presented as a keypa
 | `Metrology.ProbLang.HeadStep` | Shared language/logic | 23/82 | 23/82 |
 | `Metrology.ProbLang.Syntax.HeapArray` | Shared language/logic | 3/4 | 3/4 |
 | `Metrology.ProbLang.Syntax.Syntax` | Shared language/logic | 219/551 | 219/551 |
-| `MetrologyAsm.Config` | RV adapter/facets | 6/58 | 6/58 |
-| `MetrologyAsm.ImportMicrometer` | Callback/statement | — | 3/9 |
-| `MetrologyAsm.ImportToy` | Assembler/source | — | 2/16 |
-| `MetrologyAsm.MemoryRules` | RV adapter/facets | 1/3 | 1/3 |
-| `MetrologyAsm.RV` | RV adapter/facets | 43/207 | 43/207 |
-| `MetrologyAsm.Sail` | RV adapter/facets | 9/22 | 9/22 |
+| `MetrologyAsm.Profile.Config` | RV adapter/facets | 6/58 | 6/58 |
+| `MetrologyAsm.Examples.Callback.Micrometer` | Callback/statement | — | 3/9 |
+| `MetrologyAsm.Examples.Callback.Source` | Assembler/source | — | 2/16 |
+| `MetrologyAsm.Sail.MemoryRules` | RV adapter/facets | 1/3 | 1/3 |
+| `MetrologyAsm.ABI.Interface` | RV adapter/facets | 43/207 | 43/207 |
+| `MetrologyAsm.Sail.Execution` | RV adapter/facets | 9/22 | 9/22 |
 | `RiscvZkvm.Sail.RiscvExtras` | Platform hooks | 7/7 | 7/7 |
 
 The FFI plus RV class is 208 definitions/types and 615 referenced lines in nine modules for either
@@ -106,8 +106,8 @@ zero lines. A CI baseline for module-set/axiom changes is a useful next hardenin
 Reproduce from the root (Python reads run isolated):
 
 ```
-python3 -I scripts/audit-asm-tcb.py MetrologyAsm.SwapMicrometer MetrologyAsm.wp_swap_spec \
+python3 -I scripts/audit-asm-tcb.py MetrologyAsm.Examples.Swap.Correctness MetrologyAsm.wp_swap_spec \
   --project . --output /tmp/swap-tcb.json
-python3 -I scripts/audit-asm-tcb.py MetrologyAsm.ImportCorrectness MetrologyAsm.wp_importToy_spec \
+python3 -I scripts/audit-asm-tcb.py MetrologyAsm.Examples.Callback.Correctness MetrologyAsm.wp_importToy_spec \
   --project . --output /tmp/import-tcb.json
 ```

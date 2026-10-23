@@ -4,7 +4,7 @@ The M3 shape theorem and its ProbLang uniformity theorem are **not proved**. The
 static libc-helper linkage, parser/elaborator tests, and a small actual-Sail MUL-body proof were run.
 They establish an executable input and a measured proof frontier, rather than a crypto correctness claim.
 This report records the measured assembly input and proof frontier on 2026-10-23.
-The durable input is now in `fixtures/keypair/` and `MetrologyAsm/Keypair.lean`.
+The durable input is now in `fixtures/keypair/` and `MetrologyAsm/Examples/Keypair/Source.lean`.
 
 ## The statement that still needs a proof
 
@@ -193,14 +193,14 @@ missing actual `try_step` simulation for this User-mode boundary.
 The committed input is in `fixtures/keypair/`: linked GNU source, separately compiled helper
 assembly, source hashes/compiler arguments in `provenance.json`, original static `metrics.json`,
 and the complete available notices. `generate.py` preserves the source characters in the multiline
-`riscv_asm!` quotation in `MetrologyAsm/Keypair.lean`. The module declares the signature, measured
+`riscv_asm!` quotation in `MetrologyAsm/Examples/Keypair/Source.lean`. The module declares the signature, measured
 stack bound and planned two-`allocN` game; it supplies no RVSpec or game proof.
 
 From the Metrology repository root:
 
 ```
 python3 -I fixtures/keypair/generate.py --check
-lake build MetrologyAsm.Keypair
+lake build MetrologyAsm.Examples.Keypair.Source
 lake env lean Tests/Keypair.lean
 ```
 

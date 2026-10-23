@@ -2,11 +2,12 @@
 
 Sail-backed assembly FFI examples integrated into Metrology, on Lean 4.35.0.
 All source paths and commands below are relative to the Metrology repository root.
-There is no sibling-package dependency. The original Lean module names are preserved.
+There is no sibling-package dependency. Declaration names are preserved; modules are grouped by machine infrastructure, ABI and example.
+Start with [the module guide](../../MetrologyAsm/README.md) for the proof chains and import paths.
 
-- `MetrologyAsm/Sail.lean`: official `try_step` wrapper and terminating execution to the
+- `MetrologyAsm/Sail/Execution.lean`: official `try_step` wrapper and terminating execution to the
   first program counter outside the image.
-- `MetrologyAsm/Initial.lean`: concrete user-mode configuration for instruction spikes.
+- `MetrologyAsm/Profile/Initial.lean`: concrete user-mode configuration for instruction spikes.
 - `RiscvZkvm/Sail/`: pinned official Sail extraction; see `docs/asm-ffi/PROVENANCE.md` for platform
   hook instantiation and the runtime parser compatibility shim.
 - `sail-import/PROVENANCE.toml`: upstream extraction/compiler/configuration pins.
@@ -31,8 +32,8 @@ wrapper by kernel `rfl`; guarded compiler observations check the concrete output
 These observations are smoke checks. Universal assembly correctness requires the
 separate plain-Lean specification proof.
 
-The completed proofs are `MetrologyAsm/SwapMicrometer.lean` and
-`MetrologyAsm/ImportCorrectness.lean`; the original evaluation is in
+The completed proofs are `MetrologyAsm/Examples/Swap/Correctness.lean` and
+`MetrologyAsm/Examples/Callback/Correctness.lean`; the original evaluation is in
 [REPORT.md](REPORT.md). The package migration preserves generated sources, theorem statements and
 proof bodies. `runtime/lean-sail` is the pinned local runtime; `sail-import` holds hashes/configuration.
 

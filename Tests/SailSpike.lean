@@ -1,4 +1,5 @@
-import MetrologyAsm.Spike
+import MetrologyAsm.Diagnostics.Spike
+import MetrologyAsm.Diagnostics.InstructionBody
 import Lean
 
 /-! # Sail execution smoke checks

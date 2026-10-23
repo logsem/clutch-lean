@@ -3,12 +3,13 @@
 ## Assembly FFI examples
 
 The Sail-backed assembly examples are part of this repository and its default Lake build.
+[The module guide](MetrologyAsm/README.md) explains the directory layout and proof dependencies.
 
-- [Swap assembly](Metrology/ProbLang/Asm/Examples.lean) and
-  [final Micrometer swap theorem](MetrologyAsm/SwapMicrometer.lean).
-- [Callback assembly](MetrologyAsm/ImportToy.lean) and
-  [final Micrometer callback theorem](MetrologyAsm/ImportCorrectness.lean).
-- [Linked keypair input and game skeleton](MetrologyAsm/Keypair.lean), with
+- [Swap assembly](MetrologyAsm/Examples/Swap/Source.lean) and
+  [final Micrometer swap theorem](MetrologyAsm/Examples/Swap/Correctness.lean).
+- [Callback assembly](MetrologyAsm/Examples/Callback/Source.lean) and
+  [final Micrometer callback theorem](MetrologyAsm/Examples/Callback/Correctness.lean).
+- [Linked keypair input and game skeleton](MetrologyAsm/Examples/Keypair/Source.lean), with
   [reproducible assembly fixtures](fixtures/keypair/README.md). Keypair correctness is unproved.
 - [Evaluation report](docs/asm-ffi/REPORT.md) and [Sail provenance](docs/asm-ffi/PROVENANCE.md),
   with [statement dependency audits](docs/asm-ffi/TCB.md).

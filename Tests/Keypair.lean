@@ -1,4 +1,4 @@
-import MetrologyAsm.Keypair
+import MetrologyAsm.Examples.Keypair.Source
 
 /-! # Executable layout regression for the retained linked keypair input -/
 

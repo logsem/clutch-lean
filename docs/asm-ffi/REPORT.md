@@ -6,15 +6,15 @@ below are relative to that repository root. No sibling checkout is required. Com
 are in `docs/asm-ffi/`. The original proof-development checkpoints/build measurements below are
 historical; the current integration commands and checks are in [README.md](README.md).
 
-The combined Metrology root build passes **7,126 jobs**. Source/runtime pins and fixture checks pass;
+The combined Metrology root build passes **7,132 jobs**. Source/runtime pins and fixture checks pass;
 current theorem axiom and statement-dependency receipts are in `docs/asm-ffi/audit/`.
 See [INTEGRATION.md](INTEGRATION.md) for the migration and validation details.
 
 ## 1. Summary
 
 - M0: Lean 4.35 foundations and scoped Sail builds pass; pinned regeneration is byte-identical.
-- M1: **proved**: `MetrologyAsm/SwapMicrometer.lean:95`, `wp_swap_spec`, has no execution/evaluator premise.
-- M2: **proved**: `MetrologyAsm/ImportCorrectness.lean:26`, `wp_importToy_spec`, executes a Sail callback round trip.
+- M1: **proved**: `MetrologyAsm/Examples/Swap/Correctness.lean:95`, `wp_swap_spec`, has no execution/evaluator premise.
+- M2: **proved**: `MetrologyAsm/Examples/Callback/Correctness.lean:26`, `wp_importToy_spec`, executes a Sail callback round trip.
 - M3: callback implementation and byte safety/law exist; keypair correctness and product uniformity do not.
 - M4: complete statement audits: M1 831 definitions/types, 2,023 lines, 41 modules; M2 832/2,031/42.
 - Audited M1/M2/core/callback proof closures contain only `propext`, `Classical.choice`, and `Quot.sound`.
@@ -23,11 +23,11 @@ See [INTEGRATION.md](INTEGRATION.md) for the migration and validation details.
 ## 2. Key prototype question: interaction trees over Sail and the review surface
 
 The generated architecture is not given an FFI instruction or an interaction-tree monad.
-`MetrologyAsm/Sail.lean:19–38` runs the original `try_step 0 false` and inductively executes while PC
-lies inside the assembled text. On the first PC outside that text, `RV.lean:200` decodes either a return
+`MetrologyAsm/Sail/Execution.lean:19–38` runs the original `try_step 0 false` and inductively executes while PC
+lies inside the assembled text. On the first PC outside that text, `MetrologyAsm/ABI/Interface.lean:200` decodes either a return
 address or an imported function address. Other exits cannot satisfy the observation contract.
 Imports are implemented in ProbLang; Sail never executes their external addresses. `RVResume`
-(`RV.lean:231`) relates a paused state to a resumed state with the reply register, return PC, footprint
+(`MetrologyAsm/ABI/Interface.lean:231`) relates a paused state to a resumed state with the reply register, return PC, footprint
 bytes, profile and frame requirements. It is not an added Sail transition or hook.
 
 The inductively defined interaction tree specifies these stopping runs. `FollowsFrom` retains
@@ -48,7 +48,7 @@ l ↦ old(l) ∗ k ↦ old(k)
 
 The pure hypotheses are `env.machine = rv`, distinct logical cells, and signed-64 representability of
 the two values. Compatibility quantifies physical code/data bases, initial frame contents, unused
-registers and unrelated permitted CSR values. `SwapWitness.lean:290` proves compatible entries exist;
+registers and unrelated permitted CSR values. `MetrologyAsm/Examples/Swap/Witness.lean:238` proves compatible entries exist;
 this is not merely a specification over an empty set of machines or one initialized test state.
 
 The generic one-import fixture (`Metrology/Micrometer/AsmImports.lean:258`) exchanges one logical
@@ -56,9 +56,9 @@ byte cell from 11 to 22 and returns seven. It is an abstract machine fixture usi
 The separate **actual Sail** toy preserves ra on a 16-byte stack frame, calls `cb`, and returns its
 signed-64 reply. It has no arguments and an empty logical footprint, so it does not exercise a Sail
 callback exchanging an array. Raw seven-step entry and arbitrary-resumed-state three-step return,
-image/layout bridges, and universal `importToy_rvspec` are proved. `ImportWitness.lean:170`
-supplies a compatible entry; `ImportEvaluation.lean:12` closes unique evaluator selection.
-`ImportCorrectness.lean:26`, `wp_importToy_spec`, proves return of seven under the shared WP with
+image/layout bridges, and universal `importToy_rvspec` are proved. `MetrologyAsm/Examples/Callback/Witness.lean:170`
+supplies a compatible entry; `MetrologyAsm/Examples/Callback/Evaluation.lean:12` closes unique evaluator selection.
+`MetrologyAsm/Examples/Callback/Correctness.lean:26`, `wp_importToy_spec`, proves return of seven under the shared WP with
 no remaining evaluator, transition, specification or continuation premise. Every valid signed-64
 response and arbitrary allowed resumption is covered by the plain specification, restoring the
 original ABI frame. The particular ProbLang callback returns seven. Both final top theorems are
@@ -74,12 +74,12 @@ exported by `MetrologyAsm.lean`; the primary default build passed 3,605 jobs.
    `some (false,s')` from `try_step` and rejects errors/waiting results. `RunsTo.agree/unique` prove
    common/unique terminal states for terminating runs. No nondeterministic successor relation is assumed.
 
-2. **Initial user configuration.** `Config.lean:41–70` defines an open `UserConfig` with every register
+2. **Initial user configuration.** `MetrologyAsm/Profile/Config.lean:41–70` defines an open `UserConfig` with every register
    present, active hart, User privilege, RV64 I/M/U/S bits, C disabled, SXL/UXL=64, MPRV=0, bare satp,
    disabled pointer masking/CFI, mie=0, and inhibited retirement counting. The first PMP TOR entry
    grants rwx below 4 GiB. A first PMA main-memory region covers `[0x80000000,0x100000000)` and traps
    misaligned loads/stores. Trap vectors are direct and separated from code/return/import stops by F12.
-   Other policy-allowed values remain open. `ConfigWitness.lean` constructs a 176-register witness;
+   Other policy-allowed values remain open. `MetrologyAsm/Profile/Witness.lean` constructs a 176-register witness;
    `UserRules`, `GuardRules`, `FetchRules`, and `MemoryRules` discharge actual generated checks.
    This answers the scoped RV64IM question; no RV64GC/FP profile theorem is supplied.
 
@@ -283,7 +283,7 @@ arithmetic helper remains explicit. No full field arithmetic or curve proof is c
 The ProbLang `randombytesValue` exists (`Examples/RandomBytes.lean:33`), with actual primitive uniform
 byte law and singleton mass `1/256`, and owned-array byte-safety WP. The WP uses base `primStep`;
 transport to `primStepWith env`, the full array product law, arbitrary callback-tree WP/adequacy,
-and the keypair shape/functional theorem remain open. The committed `MetrologyAsm/Keypair.lean` retains the literal linked source, declared signature
+and the keypair shape/functional theorem remain open. The committed `MetrologyAsm/Examples/Keypair/Source.lean` retains the literal linked source, declared signature
 and two-allocation game returning `(sk, pk)`; `fixtures/keypair/` contains helpers, hashes, metrics,
 notices and a quotation generator. `Tests/Keypair.lean` checks image metadata by execution,
 not a kernel execution theorem. Full assembly/image hashes, exact signatures,
@@ -354,11 +354,11 @@ estimates have not been calibrated against measured human labor.
 
 1. `Metrology/ProbLang/Asm/Semantics.lean:36,103,125,164` — the interface, original-entry recursion,
    nonvacuous evaluator and law assumptions; inspect `OneCall.lean` alongside its local uniqueness rule.
-2. `MetrologyAsm/RV.lean:120–256` — code range, ABI/profile/frame facets, deterministic observation and
+2. `MetrologyAsm/ABI/Interface.lean:120–256` — code range, ABI/profile/frame facets, deterministic observation and
    resumption; `Sail.lean:19–38` is the short actual-model execution adapter.
-3. `MetrologyAsm/SwapMicrometer.lean:95` — the final ordinary two-cell M1 WP; follow its evaluator,
+3. `MetrologyAsm/Examples/Swap/Correctness.lean:95` — the final ordinary two-cell M1 WP; follow its evaluator,
    witness and plain specification rather than the concrete smoke fixture.
 4. `Metrology/Micrometer/Asm.lean:28,67` — the actual guarded finite-fragment exchange and shared-WP
    bridge, including the distinction between exact evaluation and globally lawful semantics.
-5. `MetrologyAsm/ImportCorrectness.lean:26` — the unconditional actual-Sail callback WP; follow
-   `ImportEvaluation.lean` and `ImportSpecification.lean` for evaluator selection and arbitrary resumes.
+5. `MetrologyAsm/Examples/Callback/Correctness.lean:26` — the unconditional actual-Sail callback WP; follow
+   `MetrologyAsm/Examples/Callback/Evaluation.lean` and `MetrologyAsm/Examples/Callback/Specification.lean` for evaluator selection and arbitrary resumes.
