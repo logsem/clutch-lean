@@ -53,7 +53,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix="asm-tcb-") as directory:
         source = pathlib.Path(directory) / "Audit.lean"
         while True:
-            source.write_text("module\n\n" + "".join(f"import all {module}\n" for module in sorted(imports))
+            # Legacy import mode exposes private data and accepts both module formats.
+            source.write_text("".join(f"import {module}\n" for module in sorted(imports))
                               + f"import Metrology.Meta.TCB\n#tcb {args.theorem}\n")
             output = run(["lake", "env", "lean", str(source)], project)
             receipts = re.findall(r"TCBJSON (\{[^\n]*\})", output)

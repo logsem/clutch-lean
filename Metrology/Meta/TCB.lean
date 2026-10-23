@@ -10,6 +10,11 @@ open Lean Elab Command
 
 namespace Metrology.TCB
 
+/-- Project modules and handwritten Sail platform hooks belong to the audited boundary. -/
+def ownedModule (name : Name) : Bool :=
+  (`Metrology).isPrefixOf name || (`MetrologyAsm).isPrefixOf name ||
+    name == `RiscvZkvm.Sail.RiscvExtras || name == `RiscvZkvm.Sail.RuntimeCompat
+
 /-- The constants reachable through declaration types and non-theorem bodies. -/
 partial def dependencies (env : Environment) (pending : List Name)
     (seen : NameSet := {}) : NameSet :=
@@ -43,7 +48,7 @@ elab "#tcb " decl:ident : command => do
     let moduleName := match env.getModuleIdxFor? n with
       | some i => env.header.moduleNames[i.toNat]!
       | none => env.mainModule
-    if (`Metrology).isPrefixOf moduleName || (`MetrologyAsm).isPrefixOf moduleName then
+    if ownedModule moduleName then
       if let some ci := env.find? n then
         let isProof ← liftTermElabM <| Meta.isProp ci.type
         if !isProof then
