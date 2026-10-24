@@ -36,14 +36,13 @@ theorem importReturnState_configurationFrame (s : Mach) (base sp ra : BitVec 64)
 
 /-- Saving ra changes no byte outside the original call's scratch stack. -/
 theorem importCallState_memoryFrame (ι : Placement) (s : Mach) (sp : BitVec 64)
-    (hsp : s.regs.get? .x2 = some sp) (hlower : 16 ≤ sp.toNat)
-    (hsaved : (importSavedAddress sp).toNat = sp.toNat - 8) :
+    (hsp : s.regs.get? .x2 = some sp) (hlower : 16 ≤ sp.toNat) :
     memoryFrame ι importToyCode [] s
       (importCallState s ι.codeBase sp ι.retAddr (ι.importAddr "cb")) := by
   refine ⟨sp, hsp, ?_⟩
   intro a _ hstack
   apply importCallState_mem_outside
-  rw [hsaved]
+  rw [importSavedAddress_toNat sp hlower]
   change ¬ inSpan (sp.toNat - 16) 16 a at hstack
   unfold inSpan at hstack
   omega

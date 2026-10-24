@@ -24,6 +24,11 @@ theorem relocatedBytes_otp :
       (range 8).map (fun i => ofNat ((ι.importAddr "randombytes").toNat / 2 ^ (8 * i))) :=
   rfl
 
+/-- The installed relocated image has its certified eighty-eight-byte extent. -/
+theorem relocatedBytes_otp_length (ι : Placement) : (relocatedBytes ι otpImage).length = 88 := by
+  rw [relocatedBytes_otp]
+  simp
+
 /-- Every relocated executable byte equals its retained compiler-output byte. -/
 theorem relocatedBytes_otp_text (i : Nat) (hi : i < 80) :
     (relocatedBytes ι otpImage)[i]? = otpImage.bytes[i]? := by

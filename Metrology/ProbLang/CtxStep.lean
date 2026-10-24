@@ -406,6 +406,16 @@ theorem primStep_atomic (e : Exp rT) (σ : State rT)
   rw [hpre]
   exact headStep_atomic e.decomp.2 σ hne
 
+/-- Away from `urand`, a step is carried by its support of positive-mass points. -/
+theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
+    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
+  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
+    ext ρ
+    simp [pos_iff_ne_zero]
+  show primStep ⟨e, σ⟩ _ = 0
+  rw [heq]
+  exact primStep_atomic e σ hne
+
 /-- Discharges `e.decomp.2 ≠ .urand` at a concrete redex by computing `decompItem`. -/
 macro "no_urand" : tactic =>
   `(tactic| first

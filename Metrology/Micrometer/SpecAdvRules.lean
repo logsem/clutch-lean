@@ -59,7 +59,7 @@ theorem wp_rand_r_adv {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 <
   have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
   have hcpl : L b R (dirac σ₁) ((dirac σ₁').bind fun σ ↦
         pexecN 1 ⟨K.fill pl(rand(#N, #())), σ⟩) := by
-    rw [dirac_bind_pexecN_one hredR, primStep_fill rand_not_isValue, primStep_rand_unit HN,
+    rw [dirac_bind_pexecN_one hredR, primStep_fill rand_not_isValue, primStep_rand_unit N,
       uniform_eq_map HN, map_map (by fun_prop) of_discrete, ← map_id (μ := dirac σ₁)]
     -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
     -- frame the remainder r, push to configurations

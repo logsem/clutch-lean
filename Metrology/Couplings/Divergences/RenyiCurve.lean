@@ -30,6 +30,13 @@ abbrev RenyiBudget :=
 noncomputable def renyiCurve : GradedDivergence.{u} RenyiBudget :=
   pi fun α ↦ renyiDivergence α
 
+/-- The leftover of a relation as a Rényi budget, evaluated at an order, is the scalar leftover. -/
+@[simp]
+theorem relCost_renyiBudget_apply {X Y : Type u} (S : X → Y → Prop) (x : X) (y : Y)
+    (α : Ioi (1 : ℝ)) :
+    (relCost S x y : RenyiBudget) α = relCost S x y := by
+  by_cases h : S x y <;> simp [h]
+
 variable {X Y : Type u} [MeasurableSpace X] [MeasurableSpace Y]
 
 /-- A Rényi curve bound is a Rényi bound at every order. -/

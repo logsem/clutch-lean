@@ -145,7 +145,7 @@ theorem wp_couple_rand_rand_law [AddCommMonoid B] [PartialOrder B] [CanonicallyO
       wp L E pl(rand(#N, #())) Φ := by
   refine wp_couple_prim_law law (fun _ _ ↦ BaseLit.int.inj) rand_toVal?_eq_none
     reducible_rand_unit reducible_rand_unit R c hc K (fun σ σ' ↦ ?_) E Φ
-  rw [primStep_rand_unit HN, primStep_fill rand_not_isValue, primStep_rand_unit HN,
+  rw [primStep_rand_unit N, primStep_fill rand_not_isValue, primStep_rand_unit N,
     uniform_eq_map HN, uniform_eq_map HN,
     MeasureTheory.Measure.map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
       (fillCfg.measurable K) Measurable.of_discrete]

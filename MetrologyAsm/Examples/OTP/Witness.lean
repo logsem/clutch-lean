@@ -25,11 +25,6 @@ noncomputable def otpWitnessState : Mach :=
     mem := witnessImageBytes (relocatedBytes (otpWitnessPlacement pad) otpImage) 0x80000000
       (witnessRegisters.mem.insert 0x80001000 (BitVec.ofInt 8 byte)) }
 
-/-- The installed relocated image has its certified eighty-eight-byte extent. -/
-theorem relocatedBytes_otp_length (ι : Placement) : (relocatedBytes ι otpImage).length = 88 := by
-  rw [relocatedBytes_otp]
-  simp
-
 set_option maxRecDepth 100000 in
 /-- Installing the arguments and bytes preserves the complete open user-mode profile. -/
 theorem otpWitnessState_config :

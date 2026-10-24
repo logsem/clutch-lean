@@ -38,6 +38,55 @@ def userRamRegion : PMA_Region :=
 def InUserRam (address : BitVec 64) (width : Nat) : Prop :=
   0x80000000 ≤ address.toNat ∧ address.toNat + width ≤ 0x100000000
 
+/-- The address of an uncompressed instruction relative to the image base. -/
+def pcAt (base : BitVec 64) (i : Nat) : BitVec 64 :=
+  BitVec.addInt base (4 * (i : Int))
+
+/-- The first instruction is at the image base. -/
+@[simp] theorem pcAt_zero (base : BitVec 64) : pcAt base 0 = base := by
+  simp [pcAt, BitVec.addInt]
+
+/-- Advancing an instruction address selects the next image word. -/
+theorem pcAt_next (base : BitVec 64) (i : Nat) :
+    BitVec.addInt (pcAt base i) 4 = pcAt base (i + 1) := by
+  change (base + BitVec.ofInt 64 (4 * (i : Int))) + BitVec.ofInt 64 4 = _
+  rw [BitVec.add_assoc, ← BitVec.ofInt_add]
+  unfold pcAt BitVec.addInt
+  congr 2
+
+section Image
+
+variable {base : BitVec 64} {n : Nat} (hram : InUserRam base (4 * n))
+
+include hram
+
+/-- Instruction addresses in a mapped image of `n` words do not wrap. -/
+theorem pcAt_toNat {i : Nat} (hi : i ≤ n) : (pcAt base i).toNat = base.toNat + 4 * i := by
+  have hsmall : 4 * i < 2 ^ 64 := by
+    obtain ⟨_, hend⟩ := hram
+    omega
+  have hsum : base.toNat + 4 * i < 2 ^ 64 := by
+    obtain ⟨_, hend⟩ := hram
+    omega
+  simp only [pcAt, BitVec.addInt, BitVec.toNat_add]
+  have hcast : BitVec.ofInt 64 (4 * (i : Int)) = BitVec.ofNat 64 (4 * i) := by
+    rw [show (4 * (i : Int)) = ((4 * i : Nat) : Int) by omega, BitVec.ofInt_natCast]
+  rw [hcast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsmall, Nat.mod_eq_of_lt hsum]
+
+/-- Each instruction of a mapped image is mapped. -/
+theorem pcAt_inUserRam {i : Nat} (hi : i < n) : InUserRam (pcAt base i) 4 := by
+  rw [InUserRam, pcAt_toNat hram (Nat.le_of_lt hi)]
+  obtain ⟨hstart, hend⟩ := hram
+  constructor <;> omega
+
+/-- Each instruction of a four-byte-aligned mapped image is aligned. -/
+theorem pcAt_aligned (halign : base.toNat % 4 = 0) {i : Nat} (hi : i < n) :
+    (pcAt base i).toNat % 4 = 0 := by
+  rw [pcAt_toNat hram (Nat.le_of_lt hi)]
+  omega
+
+end Image
+
 /-- Register constraints for user-mode execution; unlisted registers are unconstrained. -/
 def userRegPolicy : (r : Register) → RegisterType r → Prop
   | .hart_state, v => v = .HART_ACTIVE ()

@@ -17,6 +17,13 @@ def commitState (s : Mach) (pc : BitVec 64) : Mach :=
 def storeBodyState (s : Mach) (pc address value : BitVec 64) : Mach :=
   write64State (sequentialState (counterState s) pc) address value
 
+/-- A register value read from the original state survives the sequential-step preparation. -/
+theorem sequentialState_get?_of_get? {s : Mach} {r : Register} {v : RegisterType r}
+    (pc : BitVec 64) (hr : s.regs.get? r = some v) (hn : r ≠ nextPC := by decide)
+    (hm : r ≠ minstret_increment := by decide) :
+    (sequentialState (counterState s) pc).regs.get? r = some v := by
+  simp [sequentialState, counterState, get?_insert, hr, Ne.symm hn, Ne.symm hm]
+
 /-- A successful user fetch, decode, and body compose through the complete Sail step wrapper. -/
 theorem rvStep_user_of_execute {s t : Mach} (h : UserConfig s)
     (pc : BitVec 64) (word : BitVec 32) (inst : instruction) (next : BitVec 64)
@@ -40,10 +47,88 @@ theorem rvStep_user_of_execute {s t : Mach} (h : UserConfig s)
   exact rvStep_of_retired s t .User word next h.privilege h.active h.count_disabled
     hrun ht.active hnext hflag
 
+/-- A fetched aligned doubleword load into `rd` follows the complete Sail wrapper. -/
+theorem rvStep_ld_of_mem {s t : Mach} (h : UserConfig s) (pc address value : BitVec 64)
+    (word : BitVec 32) (rs1 rd : regidx)
+    (hpc : s.regs.get? PC = some pc) (halign : address.toNat % 8 = 0)
+    (hbase : rX_bits rs1 (sequentialState (counterState s) pc) =
+      .ok address (sequentialState (counterState s) pc))
+    (hwrite : wX_bits rd value (sequentialState (counterState s) pc) = .ok () t)
+    (hdecode : ext_decode word = guardedDecode (.LOAD (0#12, rs1, rd, false, 8)))
+    (hfetch : runSail (fetch ()) (counterState s) = some (.F_Base word, counterState s))
+    (hread : mem_read (.Load .Data) .PBMT_PMA (.Physaddr address) 8 false false false
+      (sequentialState (counterState s) pc) =
+      .ok (.Ok value) (sequentialState (counterState s) pc))
+    (ht : UserConfig t) (hnext : t.regs.get? nextPC = some (BitVec.addInt pc 4))
+    (hflag : t.regs.get? minstret_increment = some false) :
+    rvStep s = some (commitState t (BitVec.addInt pc 4)) := by
+  have hc := h.counterState
+  have hs := hc.sequentialState pc
+  have hbody : execute_LOAD 0#12 rs1 rd false 8 (sequentialState (counterState s) pc) =
+      .ok (.Retire_Success ()) t := by
+    apply hs.execute_LOAD64_of_mem 0#12 rs1 rd address value
+    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
+    · exact hbase
+    · simpa [sign_extend, Sail.BitVec.signExtend] using hread
+    · exact hwrite
+  apply rvStep_user_of_execute h pc word (.LOAD (0#12, rs1, rd, false, 8))
+    (BitVec.addInt pc 4) hpc hfetch
+  · exact decode_of_guarded hc _ _ hdecode
+  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
+  · exact ht
+  · exact hnext
+  · exact hflag
+
+/-- A fetched aligned doubleword store follows the complete Sail wrapper. -/
+theorem rvStep_sd_of_mem {s : Mach} (h : UserConfig s) (pc address value : BitVec 64)
+    (word : BitVec 32) (rs2 rs1 : regidx)
+    (hpc : s.regs.get? PC = some pc) (halign : address.toNat % 8 = 0)
+    (hbase : rX_bits rs1 (sequentialState (counterState s) pc) =
+      .ok address (sequentialState (counterState s) pc))
+    (hvalue : rX_bits rs2 (sequentialState (counterState s) pc) =
+      .ok value (sequentialState (counterState s) pc))
+    (hdecode : ext_decode word = guardedDecode (.STORE (0#12, rs2, rs1, 8)))
+    (hfetch : runSail (fetch ()) (counterState s) = some (.F_Base word, counterState s))
+    (hea : mem_write_ea (.Physaddr address) 8 (.Store .Data) .PBMT_PMA false false false
+      (sequentialState (counterState s) pc) =
+      .ok (.Ok ()) (sequentialState (counterState s) pc))
+    (hwrite : mem_write_value (.Physaddr address) 8 value (.Store .Data) .PBMT_PMA
+      false false false (sequentialState (counterState s) pc) =
+      .ok (.Ok true) (storeBodyState s pc address value)) :
+    rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) := by
+  have hc := h.counterState
+  have hs := hc.sequentialState pc
+  have hbody : execute_STORE 0#12 rs2 rs1 8 (sequentialState (counterState s) pc) =
+      .ok (.Retire_Success ()) (storeBodyState s pc address value) := by
+    apply hs.execute_STORE64_of_mem 0#12 rs2 rs1 address value
+    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
+    · exact hbase
+    · exact hvalue
+    · simpa [sign_extend, Sail.BitVec.signExtend] using hea
+    · simpa [sign_extend, Sail.BitVec.signExtend] using hwrite
+  apply rvStep_user_of_execute h pc word (.STORE (0#12, rs2, rs1, 8))
+    (BitVec.addInt pc 4) hpc hfetch
+  · exact decode_of_guarded hc _ _ hdecode
+  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
+  · exact hs.write64State address value
+  · simp [storeBodyState, sequentialState]
+  · simp [storeBodyState, sequentialState, counterState, get?_insert]
+
 /-- The exact state returned by a user return instruction before committing its program counter. -/
 def retBodyState (s : Mach) (pc ra : BitVec 64) : Mach :=
   let prepared := sequentialState (counterState s) pc
   { prepared with regs := prepared.regs.insert nextPC ra }
+
+/-- The call sets its target and saves the next instruction address in ra. -/
+def linkBodyState (s : Mach) (pc target : BitVec 64) : Mach :=
+  let prepared := sequentialState (counterState s) pc
+  { prepared with
+    regs := (prepared.regs.insert nextPC target).insert x1 (BitVec.addInt pc 4) }
+
+/-- The import trampoline sets its target without changing the saved link register. -/
+def jumpBodyState (s : Mach) (pc target : BitVec 64) : Mach :=
+  let prepared := sequentialState (counterState s) pc
+  { prepared with regs := prepared.regs.insert nextPC target }
 
 /-- A fetched exchange return executes the full generated step and jumps to ra. -/
 theorem rvStep_ret_of_fetch {s : Mach} (h : UserConfig s) (pc ra : BitVec 64)

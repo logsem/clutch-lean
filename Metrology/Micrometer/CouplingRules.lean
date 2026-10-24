@@ -373,7 +373,7 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR) (S 
   refine wp_couple_prim_lift (ℓ := BaseLit.int) (ℓ' := BaseLit.int) rand_toVal?_eq_none
     (fun σ ↦ (randUnit_uniform_step HzL σ).1.toReducible)
     (fun σ ↦ (randUnit_uniform_step HzR σ).1.toReducible) S c hc K (fun σ σ' ↦ ?_) E Φ
-  rw [primStep_rand_unit HzL, primStep_fill rand_not_isValue, primStep_rand_unit HzR]
+  rw [primStep_rand_unit zL, primStep_fill rand_not_isValue, primStep_rand_unit zR]
   exact uniform_rel_fill HzL HzR σ σ' K Hcpl fun n m h ↦ ⟨n, m, h, rfl, rfl⟩
 
 /-- Specialization of `wp_couple_rand_rand_lift` to equal bounds `N` (clutch-dp's

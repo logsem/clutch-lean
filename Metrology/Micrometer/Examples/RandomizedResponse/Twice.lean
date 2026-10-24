@@ -39,14 +39,14 @@ local bi IProp GF
 /-- `wp_rr_of` at the zCDP coupling `rrCoupling_zcdp`: one round against the spec in context `K`,
 spending `(ln 3, 0)`. -/
 theorem wp_rr_step (b b' : Bool) (Φ : Val rT → _) :
-    ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#bool c) -∗ Φ (.bool c)) ⊢
+    ⤇ K.fill (rr b') ∗ ↯b rrBudget ∗ (∀ c, ⤇ K.fill pl(#bool c) -∗ Φ (.bool c)) ⊢
       wp zcdpLifting ⊤ (rr b) Φ :=
-  wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp K b b' Φ
+  wp_rr_of rrBudget rrBudget_isAddLeftRegular rrCoupling_zcdp K b b' Φ
 
 /-- The two-bit program against the spec in context `K`, spending `(ln 3, 0)` per bit: both
 sides report the same pair. -/
 theorem wp_rr2_fill (Φ : Val rT → _) :
-    ⤇ K.fill (rr2 b₁' b₂') ∗ ↯b (budget + budget) ∗
+    ⤇ K.fill (rr2 b₁' b₂') ∗ ↯b (rrBudget + rrBudget) ∗
       (∀ c₁ c₂, ⤇ K.fill (ofVal (.pair (.bool c₁) (.bool c₂))) -∗
         Φ (.pair (.bool c₁) (.bool c₂))) ⊢
       wp zcdpLifting ⊤ (rr2 b₁ b₂) Φ := by
@@ -76,7 +76,7 @@ theorem wp_rr2_fill (Φ : Val rT → _) :
 
 /-- The two-bit program against itself, spending `(ln 3, 0)` per bit. -/
 theorem wp_rr2 :
-    ⊢ ⤇ rr2 b₁' b₂' -∗ ↯b (budget + budget) -∗
+    ⊢ ⤇ rr2 b₁' b₂' -∗ ↯b (rrBudget + rrBudget) -∗
       wp zcdpLifting ⊤ (rr2 b₁ b₂) (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
@@ -94,7 +94,7 @@ end Logic
 noncomputable abbrev budget2 : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 9), 0)
 
 /-- Two rounds at `(ln 3, 0)` cost `(ln 9, 0)`. -/
-theorem budget_add_budget : budget + budget = budget2 := by
+theorem budget_add_budget : rrBudget + rrBudget = budget2 := by
   have h3 : 0 ≤ log 3 := log_nonneg (by norm_num)
   rw [mk_add_mk, add_zero, ← ofReal_add h3 h3, ← log_mul (by norm_num) (by norm_num)]
   norm_num
@@ -107,21 +107,21 @@ local bi IProp GF
 /-- The two-bit program refines itself at equal pairs of reports, spending `(ln 3, 0)` per
 bit. -/
 theorem rr2_refines :
-    ⊢ ↯b (budget + budget) -∗
+    ⊢ ↯b (rrBudget + rrBudget) -∗
       REL[zcdpLifting] (rr2 (rT := rT) b₁ b₂) << (rr2 b₁' b₂') : lrel_prod lrel_bool lrel_bool := by
   iintro Hb
   icases split $$ Hb with ⟨Hb₁, Hb₂⟩
   simp only [rr2]
   rel_bind (rr b₁) (rr b₁')
   isplitl [Hb₁]
-  · iapply rr_refines_of _ isAddLeftRegular_budget rrCoupling_zcdp b₁ b₁' $$ Hb₁
+  · iapply rr_refines_of _ rrBudget_isAddLeftRegular rrCoupling_zcdp b₁ b₁' $$ Hb₁
   iintro %v %v' Hv
   iunfold lrel_bool at Hv
   icases Hv with ⟨%c₁, %⟨rfl, rfl⟩⟩
   rel_pures
   rel_bind (rr b₂) (rr b₂')
   isplitl [Hb₂]
-  · iapply rr_refines_of _ isAddLeftRegular_budget rrCoupling_zcdp b₂ b₂' $$ Hb₂
+  · iapply rr_refines_of _ rrBudget_isAddLeftRegular rrCoupling_zcdp b₂ b₂' $$ Hb₂
   iintro %w %w' Hw
   iunfold lrel_bool at Hw
   icases Hw with ⟨%c₂, %⟨rfl, rfl⟩⟩

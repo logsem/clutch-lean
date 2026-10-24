@@ -22,7 +22,7 @@ open scoped ENNReal
 namespace ProbLang
 namespace PublicChoice
 
-open RandomizedResponse (budget rr_refines)
+open RandomizedResponse (rrBudget rr_refines)
 open ENNReal (ofReal)
 open Real (log coe_toNNReal log_nonneg)
 open IsReflexive (refl)
@@ -34,9 +34,9 @@ local bi IProp GF
 
 /-- `choice b` refines `choice b'` at equal reports, spending `(ln 3, 0)` by the choice law. -/
 theorem choice_refines (b b' : Bool) :
-    ⊢ ↯b budget -∗ REL[codensity dp] (choice (rT := rT) b) << choice b' : lrel_bool := by
+    ⊢ ↯b rrBudget -∗ REL[codensity dp] (choice (rT := rT) b) << choice b' : lrel_bool := by
   -- put `budget` in the choice law's shape `(max (ε₁+ε₂) (ε₁'+ε₂'), δ₁+δ₁'+δ₂)`
-  rw [show budget = (max (0 + ofReal (log 3)) (0 + 0), 0 + 0 + 0) by simp]
+  rw [show rrBudget = (max (0 + ofReal (log 3)) (0 + 0), 0 + 0 + 0) by simp]
   iintro Hb
   -- identity coupling; `P = T = {0}` are the draws that run `rr` and get `ε₂ = ln 3`, the rest
   -- get `ε₂' = 0` (the two `e ▸ h` proofs keep `{0}` in `{0}` and its complement out)
@@ -67,7 +67,7 @@ noncomputable abbrev choiceMech : Mechanism Bool (Exp rT) :=
 
 /-- The public choice is `(ln 3, 0)`-DP for any two bits (Def. 2.1). -/
 theorem choice_DP : (choiceMech σ).DP ⊤ (ofReal (log 3)) 0 :=
-  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ budget
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) choice σ rrBudget
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ choice_refines b b'
 
 variable [IsMarkovKernel (choiceMech σ)]

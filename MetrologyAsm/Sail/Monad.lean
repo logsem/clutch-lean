@@ -8,6 +8,12 @@ open Sail
 
 variable {α β : Type}
 
+/-- `simp` with the given lemmas plus the unfolding of Sail's state, exception and lift monads. -/
+macro "sail_simp " "[" args:Lean.Parser.Tactic.simpLemma,* "]" : tactic =>
+  `(tactic| simp [$args,*, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
+    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift,
+    ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map])
+
 /-- A successful raw Sail computation is exactly a successful observed computation. -/
 theorem runSail_eq_some_iff (m : SailM α) (s t : Mach) (a : α) :
     runSail m s = some (a, t) ↔ m s = .ok a t := by

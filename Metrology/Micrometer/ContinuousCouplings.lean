@@ -263,7 +263,7 @@ theorem wp_couple_urand_rand (N : Int) (HN : 0 < N) (g : rT → Int)
   iapply wp_couple_prim_lift_zero (ℓ := BaseLit.real) (ℓ' := BaseLit.int)
     (S := fun x n ↦ x ∈ unifUnitSupport ∧ n = g x) urand_toVal?_eq_none reducible_urand
     reducible_rand_unit K (fun σ σ' ↦ ?_) E Φ
-  · rw [primStep_urand, primStep_fill rand_not_isValue, primStep_rand_unit HN]
+  · rw [primStep_urand, primStep_fill rand_not_isValue, primStep_rand_unit N]
     exact (uniformReal_rel_uniform σ σ' K HN g hg).mono le_rfl
       fun _ _ ⟨r, hr, h1, h2⟩ ↦ ⟨r, g r, ⟨hr, rfl⟩, h1, h2⟩
   · iframe Hj
@@ -282,7 +282,7 @@ theorem wp_couple_rand_urand (N : Int) (HN : 0 < N) (g : rT → Int)
   iapply wp_couple_prim_lift_zero (ℓ := BaseLit.int) (ℓ' := BaseLit.real)
     (S := fun n x ↦ x ∈ unifUnitSupport ∧ n = g x)
     rand_toVal?_eq_none reducible_rand_unit reducible_urand K (fun σ σ' ↦ ?_) E Φ
-  · rw [primStep_rand_unit HN, primStep_fill urand_not_isValue, primStep_urand]
+  · rw [primStep_rand_unit N, primStep_fill urand_not_isValue, primStep_urand]
     exact (uniform_rel_uniformReal σ σ' K HN g hg).mono le_rfl
       fun _ _ ⟨r, hr, h1, h2⟩ ↦ ⟨g r, r, ⟨hr, rfl⟩, h1, h2⟩
   · iframe Hj

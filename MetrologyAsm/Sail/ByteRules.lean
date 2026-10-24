@@ -81,12 +81,9 @@ theorem checked_mem_read8_of_guards {s : Mach} {address : BitVec 64} {value : Bi
     (hbyte : s.mem.get? address.toNat = some value) :
     checked_mem_read access .PBMT_PMA priv (.Physaddr address) 1 false false false false s =
       .ok (.Ok (value, ())) s := by
-  simp [checked_mem_read, SailME.run, PreSail.PreSailME.run, hcheck, hsplit,
-    read_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
-    untilFuelM.go, bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk,
-    ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift,
-    monadLift, liftM, Functor.map, assert, PreSail.assert, bits_of_physaddr,
-    BitVec.addInt, hpmp, hmmio, read_ram8_eq hbyte, BitVec.updateSubrange,
+  sail_simp [checked_mem_read, hcheck, hsplit, read_kind_of_flags, misaligned_order,
+    sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, assert, PreSail.assert,
+    bits_of_physaddr, BitVec.addInt, hpmp, hmmio, read_ram8_eq hbyte, BitVec.updateSubrange,
     BitVec.updateSubrange']
 
 namespace UserConfig
@@ -99,7 +96,7 @@ theorem mem_read8 {address : BitVec 64} {value : BitVec 8}
     (hram : InUserRam address 1) (hbyte : s.mem.get? address.toNat = some value) :
     mem_read (.Load .Data) .PBMT_PMA (.Physaddr address) 1 false false false s =
       .ok (.Ok value) s := by
-  have halign := is_aligned_vaddr_of_mod_eq_zero (a := address) (width := 1) (by omega)
+  have halign := is_aligned_vaddr_one address
   have hpmp := (runSail_eq_some_iff _ _ _ _).mp
     (h.pmpCheck_user hram (by decide) (.Load .Data) (Or.inr (Or.inl rfl)))
   apply h.mem_read_of_checked
@@ -116,13 +113,10 @@ theorem vmem_read_addr8_of_mem (address : BitVec 64) (value : BitVec 8)
   have hmode := (runSail_eq_some_iff _ _ _ _).mp h.translationMode_user
   have htranslate := (runSail_eq_some_iff _ _ _ _).mp
     (h.translateAddr_user address (.Load .Data) rfl)
-  have halign := is_aligned_vaddr_of_mod_eq_zero (a := address) (width := 1) (by omega)
-  simp [vmem_read_addr, SailME.run, PreSail.PreSailME.run, halign,
-    RiscvZkvm.Sail.Functions.not, split_on_page_boundary8_eq s address, bits_of_virtaddr,
-    readReg_eq hm, readReg_eq h.privilege, heff, hmode, translate_and_read_value,
-    htranslate, hread, sys_misaligned_order_decreasing, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map,
+  have halign := is_aligned_vaddr_one address
+  sail_simp [vmem_read_addr, halign, RiscvZkvm.Sail.Functions.not,
+    split_on_page_boundary8_eq s address, bits_of_virtaddr, readReg_eq hm, readReg_eq h.privilege,
+    heff, hmode, translate_and_read_value, htranslate, hread, sys_misaligned_order_decreasing,
     BitVec.updateSubrange, BitVec.updateSubrange']
 
 /-- A byte load through a register uses that register's actual virtual address. -/
@@ -134,10 +128,7 @@ theorem vmem_read8_of_mem (rs : regidx) (base offset : BitVec 64) (value : BitVe
   have htransform := (runSail_eq_some_iff _ _ _ _).mp
     (h.transform_effective_address_user (.Virtaddr (base + offset)) (.Load .Data))
   have haddr := h.vmem_read_addr8_of_mem (base + offset) value hread
-  simp [vmem_read, get_transformed_data_addr, ext_data_get_addr, hbase, htransform,
-    haddr, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+  sail_simp [vmem_read, get_transformed_data_addr, ext_data_get_addr, hbase, htransform, haddr]
 
 /-- An unsigned-byte load retires with its zero-extended byte written to the destination. -/
 theorem execute_LBU {t : Mach} (imm : BitVec 12) (rs rd : regidx)

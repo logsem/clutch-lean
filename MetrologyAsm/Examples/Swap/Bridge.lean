@@ -79,20 +79,13 @@ theorem SwapImage.of_codeImage (args : List BoundaryValue) (s : Mach)
   subst image
   have hram20 : InUserRam ι.codeBase 20 := codeImage_exchange_ram ι args s
     ⟨exchangeImage, assemble_exchange, hram, halign, hentry, hpc, hbytes, hdisjoint⟩
-  have h4 : (addInt ι.codeBase 4).toNat = ι.codeBase.toNat + 4 :=
-    pcAt_toNat hram20 (i := 1) (by decide)
-  have h8 : (addInt ι.codeBase 8).toNat = ι.codeBase.toNat + 8 :=
-    pcAt_toNat hram20 (i := 2) (by decide)
-  have h12 : (addInt ι.codeBase 12).toNat = ι.codeBase.toNat + 12 :=
-    pcAt_toNat hram20 (i := 3) (by decide)
-  have h16 : (addInt ι.codeBase 16).toNat = ι.codeBase.toNat + 16 :=
-    pcAt_toNat hram20 (i := 4) (by decide)
   have hbytes' : ∀ i byte, exchangeImage.bytes[i]? = some byte →
       s.mem.get? (ι.codeBase.toNat + i) = some (BitVec.ofNat 8 byte.toNat) := by
     simpa only [relocatedBytes, exchangeImage_slots, List.foldl_nil] using hbytes
   constructor <;> intro i hi <;>
     obtain rfl | rfl | rfl | rfl : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
-  all_goals try simp only [h4, h8, h12, h16, Nat.add_assoc, Nat.reduceAdd, Nat.add_zero]
+  all_goals try simp (disch := decide) only [pcAt_toNat (n := 5) hram20, Nat.add_assoc,
+    Nat.add_zero]
   all_goals first
     | exact hbytes' 0 0x03 rfl
     | exact hbytes' 1 0x36 rfl
@@ -151,11 +144,10 @@ theorem SwapPlacement.of_RVCompat (s : Mach) (l k : Loc)
     (h : RVCompat ι swapCode [.loc l, .loc k] heap s) :
     SwapPlacement ι.codeBase (ι.addr l) (ι.addr k) ι.retAddr := by
   obtain ⟨hfoot, _, _, himage, _, hret, _, _⟩ := h
-  have hregions := swap_callRegions l k
-  have hleft : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  have hright : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
+  have hleft : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] :=
+    swap_callRegions_mem.2 (.inl rfl)
+  have hright : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] :=
+    swap_callRegions_mem.2 (.inr rfl)
   have hl := hfoot.1 _ hleft
   have hk := hfoot.1 _ hright
   have hneq : Region.mk l 1 64 true ≠ Region.mk k 1 64 true := by
@@ -187,11 +179,10 @@ theorem swap_words_of_contents (s : Mach) (l k : Loc) (old : Loc → Int)
     (h : footprintContents ι swapCode [.loc l, .loc k] (integerHeap {l, k} old) s) :
     Word64At s (ι.addr l) (BitVec.ofInt 64 (old l)) ∧
       Word64At s (ι.addr k) (BitVec.ofInt 64 (old k)) := by
-  have hregions := swap_callRegions l k
-  have hl : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  have hk : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
+  have hl : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] :=
+    swap_callRegions_mem.2 (.inl rfl)
+  have hk : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] :=
+    swap_callRegions_mem.2 (.inr rfl)
   obtain ⟨zl, hzl, _, hwl⟩ := h.2 _ hl 0 (by simp)
   obtain ⟨zk, hzk, _, hwk⟩ := h.2 _ hk 0 (by simp)
   have hel : zl = old l := by simpa using hzl.symm

@@ -168,6 +168,14 @@ theorem lrel_bool_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
   ipureintro
   rfl
 
+/-- `lrel_real` relates only equal values. -/
+theorem lrel_real_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_real.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_real
+  iintro ⟨%r, %⟨rfl, rfl⟩⟩
+  ipureintro
+  rfl
+
 /-- A product of relations between equal values relates only equal values. -/
 theorem lrel_prod_car_eq [MicrometerRGS rT hlc GF] {A A' : lrel rT GF}
     (hA : ∀ v v', ⊢ A.car v v' -∗ ⌜v = v'⌝)

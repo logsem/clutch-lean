@@ -22,7 +22,7 @@ open Real (log)
 /-! ## The one-round coupling -/
 
 /-- One round couples at `(ln 3, 0)`: each report is at most three times likelier under one bit. -/
-theorem rrCoupling_dp : RRCoupling (codensity dp) budget := fun b b' ↦
+theorem rrCoupling_dp : RRCoupling (codensity dp) rrBudget := fun b b' ↦
   codensity_dp_of_fiber .of_discrete .of_discrete fun c ↦
     expBudget_log_three ▸ rrOut_fiber_le_three b b' c
 
@@ -39,11 +39,11 @@ local bi IProp GF
 
 /-- One round against the spec, spending `(ln 3, 0)`. -/
 theorem wp_rr [MicrometerGS rT .hasNoLC GF] :
-    ⊢ ⤇ rr b' -∗ ↯b budget -∗
+    ⊢ ⤇ rr b' -∗ ↯b rrBudget -∗
       wp (codensity dp) ⊤ (rr b) (fun v => iprop(∃ v', ⤇ Exp.ofVal v' ∗ ⌜v = v'⌝)) := by
   rw [spec_eq_fill_nil]
   iintro Hj Hb
-  iapply wp_rr_of budget isAddLeftRegular_budget rrCoupling_dp
+  iapply wp_rr_of rrBudget rrBudget_isAddLeftRegular rrCoupling_dp
   iframe Hj Hb
   iintro %d Hj
   iapply spec_fill_nil_exists (.bool d) $$ Hj
@@ -52,16 +52,16 @@ theorem wp_rr [MicrometerGS rT .hasNoLC GF] :
 
 /-- One round refines itself at equal reports, spending `(ln 3, 0)`. -/
 theorem rr_refines [MicrometerRGS rT .hasNoLC GF] :
-    ⊢ ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
-  rr_refines_of budget isAddLeftRegular_budget rrCoupling_dp b b'
+    ⊢ ↯b rrBudget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
+  rr_refines_of rrBudget rrBudget_isAddLeftRegular rrCoupling_dp b b'
 
 end OneRound
 
 /-! ## One round, by adequacy -/
 
 /-- Randomized response is `(ln 3, 0)`-DP for any two private bits. -/
-theorem rr_dp : dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
-  wp_adequacy_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
+theorem rr_dp : dp rrBudget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
+  wp_adequacy_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ _ σ σ' rrBudget fun _ _ ↦ wp_rr b b'
 
 /-- Every event is at most three times as likely under one private bit as under the other. -/
 theorem rr_event_le (S : Set (Exp rT)) (hS : MeasurableSet S) :
@@ -74,13 +74,13 @@ noncomputable abbrev rrMech : Mechanism Bool (Exp rT) :=
 
 /-- Randomized response is `(ln 3, 0)`-DP as a mechanism (Def. 2.1). -/
 theorem rr_DP : (rrMech σ).DP ⊤ (ofReal (log 3)) 0 :=
-  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) rr σ budget
+  progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) rr σ rrBudget
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ rr_refines b b'
 
 /-! ## `k` rounds -/
 
 /-- `k` rounds are `(k ln 3, 0)`-DP (Def. 2.1). -/
 theorem rrCount_DP (k : ℕ) (σ : State rT) : (rrCountMech k σ).DP ⊤ (k * ofReal (log 3)) 0 := by
-  simpa [nsmul_eq_mul] using rrCount_isPrivate budget isAddLeftRegular_budget rrCoupling_dp k σ
+  simpa [nsmul_eq_mul] using rrCount_isPrivate rrBudget rrBudget_isAddLeftRegular rrCoupling_dp k σ
 
 end ProbLang.RandomizedResponse

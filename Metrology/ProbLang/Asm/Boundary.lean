@@ -224,6 +224,12 @@ def overwrite (F : Finset Loc) (heap fragment : LocHeap V) : LocHeap V :=
   rw [overwrite, getElem?_union, restrict_get, getElem?_filter']
   by_cases hl : l ∈ F <;> cases heap[l]? <;> simp_all
 
+/-- Overwriting the empty footprint leaves the heap unchanged. -/
+theorem overwrite_empty (heap fragment : LocHeap V) : overwrite ∅ heap fragment = heap := by
+  apply ext_getElem?
+  intro l
+  simp
+
 /-- The updated heap exposes precisely the new fragment when restricted. -/
 @[simp] theorem restrict_overwrite (F : Finset Loc) (heap fragment : LocHeap V) :
     restrict F (overwrite F heap fragment) = restrict F fragment := by

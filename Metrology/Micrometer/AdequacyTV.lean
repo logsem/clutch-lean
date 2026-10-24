@@ -104,6 +104,16 @@ theorem refines_coupling_tv
     AddCoupl 0 {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (refines_coupling A φ e e' σ σ' HA Hlog).addCoupl
 
+/-- A refinement at `codensity tv` with equal results from credit `ε` bounds every measurable
+event's left probability by its right probability plus `ε` (`approximates_div`). -/
+theorem limExecV_le_add_of_refines_tv (ε : ℝ≥0∞)
+    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
+    (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS ℝ≥0∞ GF),
+      ⊢ ↯b ε -∗ refines (codensity tv) ⊤ e e' (A IR IBC))
+    {S : Set (Exp rT)} (hS : MeasurableSet S) :
+    limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
+  tv_iff.1 (approximates_div (GF := GF) (L := codensity tv) A e e' σ σ' ε HA Hlog) S hS
+
 end
 
 /-! ## Stepping against a frozen right state -/

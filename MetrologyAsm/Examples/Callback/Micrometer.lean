@@ -39,12 +39,6 @@ abbrev importToyExpression : Exp rT :=
 abbrev importToyPaused : Exp rT :=
   .asmResume importToyArchive (.app importToyCallback.fst (.lit .unit))
 
-private theorem overwrite_empty {V : Type} (heap fragment : LocHeap V) :
-    overwrite ∅ heap fragment = heap := by
-  apply Std.ExtTreeMap.ext_getElem?
-  intro l
-  simp
-
 private theorem snapshot_empty : snapshot ∅ = some [] := rfl
 
 private theorem restore_empty : HeapSnapshot.restore [] = ∅ := rfl

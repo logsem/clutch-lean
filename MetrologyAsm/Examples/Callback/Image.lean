@@ -43,7 +43,7 @@ theorem relocatedBytes_importToy_slot (i : Nat) (hi : i < 8) :
 theorem ImportToyImageAt.of_codeImage (s : Mach)
     (h : codeImage ι importToyCode [] s) : ImportToyImageAt s ι.codeBase (ι.importAddr "cb") := by
   obtain ⟨image, hi, hram, _, _, _, hbytes, _⟩ := h
-  have heq : image = importToyImage := Except.ok.inj (hi.symm.trans assemble_importToyImage)
+  have heq := eq_importToyImage_of_assemble hi
   subst image
   have hram48 : InUserRam ι.codeBase 48 := by
     simpa only [importToyImage_length] using hram

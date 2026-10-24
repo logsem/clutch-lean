@@ -43,26 +43,13 @@ theorem rvStep_ld_a2_of_mem
     (hread : mem_read (.Load .Data) .PBMT_PMA (.Physaddr address) 8 false false false
       (sequentialState (counterState s) pc) =
       .ok (.Ok value) (sequentialState (counterState s) pc)) :
-    rvStep s = some (commitState (loadA2BodyState s pc value) (BitVec.addInt pc 4)) := by
-  have hc := h.counterState
-  have hs := hc.sequentialState pc
-  have haddress' : (sequentialState (counterState s) pc).regs.get? Register.x10 = some address := by
-    simp [sequentialState, counterState, get?_insert, haddress]
-  have hbody : execute_LOAD 0#12 (.Regidx 10#5) (.Regidx 12#5) false 8
-      (sequentialState (counterState s) pc) = .ok (.Retire_Success ())
-      (loadA2BodyState s pc value) := by
-    apply hs.execute_LOAD64_of_mem 0#12 (.Regidx 10#5) (.Regidx 12#5) address value
-    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
-    · exact rX_bits_a0 haddress'
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hread
-    · exact wX_bits_a2 _ _
-  apply rvStep_user_of_execute h pc 0x00053603#32
-    (.LOAD (0#12, .Regidx 10#5, .Regidx 12#5, false, 8)) (BitVec.addInt pc 4) hpc hfetch
-  · exact decode_of_guarded hc _ _ decode_swap_ld_a2
-  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
-  · exact hs.insert .x12 value trivial
-  · simp [loadA2BodyState, sequentialState, get?_insert]
-  · simp [loadA2BodyState, sequentialState, counterState, get?_insert]
+    rvStep s = some (commitState (loadA2BodyState s pc value) (BitVec.addInt pc 4)) :=
+  rvStep_ld_of_mem h pc address value 0x00053603#32 (.Regidx 10#5) (.Regidx 12#5) hpc
+    halign (rX_bits_a0 (sequentialState_get?_of_get? pc haddress))
+    (wX_bits_a2 _ _) decode_swap_ld_a2 hfetch hread
+    ((h.counterState.sequentialState pc).insert .x12 value trivial)
+    (by simp [loadA2BodyState, sequentialState, get?_insert])
+    (by simp [loadA2BodyState, sequentialState, counterState, get?_insert])
 
 /-- The exchange store from a3 follows the complete Sail wrapper after successful RAM operations. -/
 theorem rvStep_sd_a3_of_mem
@@ -75,29 +62,10 @@ theorem rvStep_sd_a3_of_mem
     (hwrite : mem_write_value (.Physaddr address) 8 value (.Store .Data) .PBMT_PMA
       false false false (sequentialState (counterState s) pc) =
       .ok (.Ok true) (storeBodyState s pc address value)) :
-    rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) := by
-  have hc := h.counterState
-  have hs := hc.sequentialState pc
-  have haddress' : (sequentialState (counterState s) pc).regs.get? Register.x10 = some address := by
-    simp [sequentialState, counterState, get?_insert, haddress]
-  have hvalue' : (sequentialState (counterState s) pc).regs.get? Register.x13 = some value := by
-    simp [sequentialState, counterState, get?_insert, hvalue]
-  have hbody : execute_STORE 0#12 (.Regidx 13#5) (.Regidx 10#5) 8
-      (sequentialState (counterState s) pc) = .ok (.Retire_Success ())
-      (storeBodyState s pc address value) := by
-    apply hs.execute_STORE64_of_mem 0#12 (.Regidx 13#5) (.Regidx 10#5) address value
-    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
-    · exact rX_bits_a0 haddress'
-    · exact rX_bits_a3 hvalue'
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hea
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hwrite
-  apply rvStep_user_of_execute h pc 0x00d53023#32
-    (.STORE (0#12, .Regidx 13#5, .Regidx 10#5, 8)) (BitVec.addInt pc 4) hpc hfetch
-  · exact decode_of_guarded hc _ _ decode_swap_sd_a3
-  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
-  · exact hs.write64State address value
-  · simp [storeBodyState, sequentialState]
-  · simp [storeBodyState, sequentialState, counterState, get?_insert]
+    rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) :=
+  rvStep_sd_of_mem h pc address value 0x00d53023#32 (.Regidx 13#5) (.Regidx 10#5) hpc halign
+    (rX_bits_a0 (sequentialState_get?_of_get? pc haddress))
+    (rX_bits_a3 (sequentialState_get?_of_get? pc hvalue)) decode_swap_sd_a3 hfetch hea hwrite
 
 /-- The exchange load into a3 follows the complete Sail wrapper after successful RAM fetch/read. -/
 theorem rvStep_ld_a3_of_mem
@@ -106,26 +74,13 @@ theorem rvStep_ld_a3_of_mem
     (hread : mem_read (.Load .Data) .PBMT_PMA (.Physaddr address) 8 false false false
       (sequentialState (counterState s) pc) =
       .ok (.Ok value) (sequentialState (counterState s) pc)) :
-    rvStep s = some (commitState (loadA3BodyState s pc value) (BitVec.addInt pc 4)) := by
-  have hc := h.counterState
-  have hs := hc.sequentialState pc
-  have haddress' : (sequentialState (counterState s) pc).regs.get? Register.x11 = some address := by
-    simp [sequentialState, counterState, get?_insert, haddress]
-  have hbody : execute_LOAD 0#12 (.Regidx 11#5) (.Regidx 13#5) false 8
-      (sequentialState (counterState s) pc) = .ok (.Retire_Success ())
-      (loadA3BodyState s pc value) := by
-    apply hs.execute_LOAD64_of_mem 0#12 (.Regidx 11#5) (.Regidx 13#5) address value
-    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
-    · exact rX_bits_a1 haddress'
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hread
-    · exact wX_bits_a3 _ _
-  apply rvStep_user_of_execute h pc 0x0005b683#32
-    (.LOAD (0#12, .Regidx 11#5, .Regidx 13#5, false, 8)) (BitVec.addInt pc 4) hpc hfetch
-  · exact decode_of_guarded hc _ _ decode_swap_ld_a3
-  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
-  · exact hs.insert .x13 value trivial
-  · simp [loadA3BodyState, sequentialState, get?_insert]
-  · simp [loadA3BodyState, sequentialState, counterState, get?_insert]
+    rvStep s = some (commitState (loadA3BodyState s pc value) (BitVec.addInt pc 4)) :=
+  rvStep_ld_of_mem h pc address value 0x0005b683#32 (.Regidx 11#5) (.Regidx 13#5) hpc
+    halign (rX_bits_a1 (sequentialState_get?_of_get? pc haddress))
+    (wX_bits_a3 _ _) decode_swap_ld_a3 hfetch hread
+    ((h.counterState.sequentialState pc).insert .x13 value trivial)
+    (by simp [loadA3BodyState, sequentialState, get?_insert])
+    (by simp [loadA3BodyState, sequentialState, counterState, get?_insert])
 
 /-- The exchange store from a2 follows the complete Sail wrapper after successful RAM operations. -/
 theorem rvStep_sd_a2_of_mem
@@ -138,29 +93,10 @@ theorem rvStep_sd_a2_of_mem
     (hwrite : mem_write_value (.Physaddr address) 8 value (.Store .Data) .PBMT_PMA
       false false false (sequentialState (counterState s) pc) =
       .ok (.Ok true) (storeBodyState s pc address value)) :
-    rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) := by
-  have hc := h.counterState
-  have hs := hc.sequentialState pc
-  have haddress' : (sequentialState (counterState s) pc).regs.get? Register.x11 = some address := by
-    simp [sequentialState, counterState, get?_insert, haddress]
-  have hvalue' : (sequentialState (counterState s) pc).regs.get? Register.x12 = some value := by
-    simp [sequentialState, counterState, get?_insert, hvalue]
-  have hbody : execute_STORE 0#12 (.Regidx 12#5) (.Regidx 11#5) 8
-      (sequentialState (counterState s) pc) = .ok (.Retire_Success ())
-      (storeBodyState s pc address value) := by
-    apply hs.execute_STORE64_of_mem 0#12 (.Regidx 12#5) (.Regidx 11#5) address value
-    · simpa [sign_extend, Sail.BitVec.signExtend] using halign
-    · exact rX_bits_a1 haddress'
-    · exact rX_bits_a2 hvalue'
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hea
-    · simpa [sign_extend, Sail.BitVec.signExtend] using hwrite
-  apply rvStep_user_of_execute h pc 0x00c5b023#32
-    (.STORE (0#12, .Regidx 12#5, .Regidx 11#5, 8)) (BitVec.addInt pc 4) hpc hfetch
-  · exact decode_of_guarded hc _ _ decode_swap_sd_a2
-  · exact (runSail_eq_some_iff _ _ _ _).mpr hbody
-  · exact hs.write64State address value
-  · simp [storeBodyState, sequentialState]
-  · simp [storeBodyState, sequentialState, counterState, get?_insert]
+    rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) :=
+  rvStep_sd_of_mem h pc address value 0x00c5b023#32 (.Regidx 12#5) (.Regidx 11#5) hpc halign
+    (rX_bits_a1 (sequentialState_get?_of_get? pc haddress))
+    (rX_bits_a2 (sequentialState_get?_of_get? pc hvalue)) decode_swap_sd_a2 hfetch hea hwrite
 
 end Aligned
 

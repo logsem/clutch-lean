@@ -57,12 +57,6 @@ theorem swapWitnessState_regs (l k : Loc) (old : Loc → Int) :
     (swapWitnessState l k old).regs = witnessRegisters.regs := by
   simp [swapWitnessState, swapWitnessCodeState]
 
-/-- Membership in the exchange's call regions names its two signed doubleword regions. -/
-theorem swap_callRegions_mem {l k : Loc} {r : Region} :
-    r ∈ callRegions swapCode [.loc l, .loc k] ↔ r = ⟨l, 1, 64, true⟩ ∨ r = ⟨k, 1, 64, true⟩ := by
-  rw [swap_callRegions]
-  simp
-
 variable (l k : Loc) (old : Loc → Int)
 
 /-- The witness's allocated words encode the two original logical integers. -/

@@ -111,11 +111,7 @@ theorem pmpCheck_user
   have hmatch := pmpMatchAddr_userRam hram hwidth s
   have hrwx : pmpCheckRWX 0x0f#8 access s = .ok true s := by
     rcases haccess with rfl | rfl | rfl <;> rfl
-  simp [runSail, pmpCheck, sys_pmp_count,
-    SailME.run, PreSail.PreSailME.run, SailME.throw, PreSail.PreSailME.throw,
-    bind, EStateM.bind, pure, ExceptT.run, ExceptT.mk,
-    ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
-    MonadLift.monadLift, monadLift, liftM, Functor.map, forIn, forIn',
+  sail_simp [runSail, pmpCheck, sys_pmp_count, SailME.throw, PreSail.PreSailME.throw, forIn, forIn',
     IntRange.forIn']
   rw [IntRange.forIn'.loop]
   simp [hmem, readReg_eq hcfg, hp', haddr, hmatch, hrwx, zeros,
@@ -159,11 +155,9 @@ theorem pmaCheck_user
   simp only [userRamRegion] at hmatch
   have halign' : is_aligned_paddr (.Physaddr a) width = true := halign
   rcases haccess with rfl | rfl | rfl
-  all_goals simp [runSail, pmaCheck, readReg_eq hregions, hmatch, override_PMA, userRamRegion,
+  all_goals sail_simp [runSail, pmaCheck, readReg_eq hregions, hmatch, override_PMA, userRamRegion,
     RiscvZkvm.Sail.Functions.not, mag_pma_check, is_mag_applicable_access, halign', assert,
-    PreSail.assert, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map, pure,
-    EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift,
-    ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+    PreSail.assert]
 
 /-- PMA-priority checks preserve configured state and accept aligned ordinary user accesses. -/
 theorem check_pma_with_pmp_priority_user

@@ -27,7 +27,6 @@ theorem importToy_rvspec : RVSpec importToyCode [] ∅ importToyTree := by
   have hprefixFrame := importCallState_configurationFrame origin ι.codeBase sp
     ι.retAddr (ι.importAddr "cb")
   have hprefixMemory := importCallState_memoryFrame ι origin sp hsp hlower
-    (importSavedAddress_toNat sp hlower)
   rw [importToy_footprint, importToyTree_eq]
   apply hprefix.mono
   intro paused hpaused

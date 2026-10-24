@@ -9,6 +9,11 @@ open RiscvZkvm.Sail.Functions Sail Register Std.ExtDHashMap
 /-- An instruction's byte offset in the callback source. -/
 def importPC (base : BitVec 64) (offset : Int) : BitVec 64 := BitVec.addInt base offset
 
+/-- A zero image displacement leaves the image base unchanged. -/
+@[simp]
+theorem importPC_zero (base : BitVec 64) : importPC base 0 = base := by
+  simp [importPC, BitVec.addInt]
+
 /-- The scratch stack pointer after reserving sixteen bytes. -/
 def importReservedSP (sp : BitVec 64) : BitVec 64 := BitVec.addInt sp (-16)
 

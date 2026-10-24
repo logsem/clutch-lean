@@ -310,7 +310,7 @@ theorem primStep_eq_uniform_of_headStep {e : Exp rT} (h : headStep ⟨e, σ⟩ =
   rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible hlc (h ▸ uniform_ne_zero z σ)), h]
 
 /-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
-theorem primStep_rand_unit (_Hz : 0 < z) (σ : State rT) :
+theorem primStep_rand_unit (z : Int) (σ : State rT) :
     primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := by
   have h : headStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := rfl
   exact primStep_eq_uniform_of_headStep h
@@ -324,7 +324,7 @@ theorem reducible_rand_unit (σ : State rT) : Reducible pl(rand(#z, #())) σ :=
 theorem randUnit_uniform_step (Hz : 0 < z) (σ : State rT) :
     Discrete.Reducible pl(rand(#z, #())) σ ∧ primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ :=
   ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
-    primStep_rand_unit Hz σ⟩
+    primStep_rand_unit z σ⟩
 
 variable {l : Loc} {M : Int}
 
@@ -420,7 +420,7 @@ theorem Cfg.uniform_lift_adv [AddCommMonoid B] [PartialOrder B]
       sum_congr rfl fun n hn => hcf n (mem_Ico.1 hn).1 (mem_Ico.1 hn).2, ← div_eq_inv_mul]
   have h := IsExpectationAdditive.add_right (s := s) (c := c) .of_discrete
     (unifInt_rel_bij L Hz f hdom hbij)
-  rw [primStep_rand_unit Hz, primStep_fill rand_not_isValue, primStep_rand_unit Hz,
+  rw [primStep_rand_unit z, primStep_fill rand_not_isValue, primStep_rand_unit z,
     uniform_eq_map Hz σ, uniform_eq_map Hz σ',
     map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
       (fillCfg.measurable K) .of_discrete]

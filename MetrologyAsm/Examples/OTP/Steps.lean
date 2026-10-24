@@ -8,24 +8,6 @@ namespace MetrologyAsm.OTP
 open RiscvZkvm.Sail.Functions Sail
 open Std.ExtDHashMap (get?_insert)
 
-/-- The call sets its target and saves the next instruction address in ra. -/
-def linkBodyState (s : Mach) (pc target : BitVec 64) : Mach :=
-  let prepared := sequentialState (counterState s) pc
-  { prepared with
-    regs := (prepared.regs.insert .nextPC target).insert .x1 (BitVec.addInt pc 4) }
-
-/-- The import trampoline sets its target without changing the saved link register. -/
-def jumpBodyState (s : Mach) (pc target : BitVec 64) : Mach :=
-  let prepared := sequentialState (counterState s) pc
-  { prepared with regs := prepared.regs.insert .nextPC target }
-
-/-- A register value read from the original state survives the sequential-step preparation. -/
-private theorem get?_prepared {s : Mach} {r : Register} {v : RegisterType r} (pc : BitVec 64)
-    (hr : s.regs.get? r = some v) (hn : r ≠ .nextPC := by decide)
-    (hm : r ≠ .minstret_increment := by decide) :
-    (sequentialState (counterState s) pc).regs.get? r = some v := by
-  simp [sequentialState, counterState, get?_insert, hr, Ne.symm hn, Ne.symm hm]
-
 /-- The prepared state holds the address of the following instruction in the next-pc register. -/
 private theorem nextPC_sequentialState (s : Mach) (pc : BitVec 64) :
     (sequentialState s pc).regs.get? .nextPC = some (BitVec.addInt pc 4) := by
@@ -155,7 +137,7 @@ private theorem step_auipc_zero (word : BitVec 32) (rd : BitVec 5) (dst : Regist
     (hdst : RegOk dst (cast hty.symm pc) := by otp_reg_ok) :
     rvStep s = some (commitState (writeBody s pc dst hty pc) (BitVec.addInt pc 4)) := by
   refine step_reg h pc word _ dst (cast hty.symm pc) hpc hcode halign hword ?_ hinst hdst
-  apply execute_AUIPC_of_registers 0#20 _ pc (get?_prepared pc hpc)
+  apply execute_AUIPC_of_registers 0#20 _ pc (sequentialState_get?_of_get? pc hpc)
   simpa [sign_extend, Sail.BitVec.signExtend, registerBodyState] using hwrite pc
 
 /-- An aligned JALR takes one full machine step to its target. -/
@@ -193,7 +175,7 @@ theorem step_reserve (sp : BitVec 64)
     rvStep s = some (commitState (registerBodyState s pc .x2 (sp + sign_extend 0xfe0#12))
       (BitVec.addInt pc 4)) :=
   step_addi h pc 0xfe010113#32 0xfe0#12 2#5 2#5 .x2 rfl sp _ hpc hcode halign hword
-    (rX_bits_sp (get?_prepared pc hinput)) (wX_bits_sp _) rfl
+    (rX_bits_sp (sequentialState_get?_of_get? pc hinput)) (wX_bits_sp _) rfl
 
 /-- Preserve the pad pointer in the callee-saved s0 register. -/
 theorem step_capture_pad (pad : BitVec 64)
@@ -202,7 +184,7 @@ theorem step_capture_pad (pad : BitVec 64)
     (hword : Word32At s pc 0x00058413#32) :
     rvStep s = some (commitState (registerBodyState s pc .x8 pad) (BitVec.addInt pc 4)) :=
   step_mv h pc 0x00058413#32 11#5 8#5 .x8 rfl pad hpc hcode halign hword
-    (rX_bits_a1 (get?_prepared pc hinput)) (wX_bits_s0 _)
+    (rX_bits_a1 (sequentialState_get?_of_get? pc hinput)) (wX_bits_s0 _)
 
 /-- Preserve the message in the callee-saved s1 register. -/
 theorem step_capture_message (message : BitVec 64)
@@ -211,7 +193,7 @@ theorem step_capture_message (message : BitVec 64)
     (hword : Word32At s pc 0x00050493#32) :
     rvStep s = some (commitState (registerBodyState s pc .x9 message) (BitVec.addInt pc 4)) :=
   step_mv h pc 0x00050493#32 10#5 9#5 .x9 rfl message hpc hcode halign hword
-    (rX_bits_a0 (get?_prepared pc hinput)) (wX_bits_s1 _)
+    (rX_bits_a0 (sequentialState_get?_of_get? pc hinput)) (wX_bits_s1 _)
 
 /-- Set the randombytes length argument to one. -/
 theorem step_length
@@ -229,7 +211,7 @@ theorem step_argument (pad : BitVec 64)
     (hword : Word32At s pc 0x00040513#32) :
     rvStep s = some (commitState (registerBodyState s pc .x10 pad) (BitVec.addInt pc 4)) :=
   step_mv h pc 0x00040513#32 8#5 10#5 .x10 rfl pad hpc hcode halign hword
-    (rX_bits_s0 (get?_prepared pc hinput)) (wX_bits_a0 _)
+    (rX_bits_s0 (sequentialState_get?_of_get? pc hinput)) (wX_bits_a0 _)
 
 /-- Release the compiler-declared stack frame. -/
 theorem step_release (sp : BitVec 64)
@@ -239,7 +221,7 @@ theorem step_release (sp : BitVec 64)
     rvStep s = some (commitState (registerBodyState s pc .x2 (sp + sign_extend 0x020#12))
       (BitVec.addInt pc 4)) :=
   step_addi h pc 0x02010113#32 0x020#12 2#5 2#5 .x2 rfl sp _ hpc hcode halign hword
-    (rX_bits_sp (get?_prepared pc hinput)) (wX_bits_sp _) rfl
+    (rX_bits_sp (sequentialState_get?_of_get? pc hinput)) (wX_bits_sp _) rfl
 
 /-- Save the original return address in its saved stack slot. -/
 theorem step_save_ra (sp value : BitVec 64)
@@ -252,7 +234,8 @@ theorem step_save_ra (sp value : BitVec 64)
     rvStep s = some (commitState
       (storeBodyState s pc (sp + sign_extend 24#12) value) (BitVec.addInt pc 4)) :=
   step_store_slot h pc 0x00113c23#32 24#12 1#5 sp value hpc hcode halign hword hram
-    hdataAlign (rX_bits_sp (get?_prepared pc hsp)) (rX_bits_ra (get?_prepared pc hvalue))
+    hdataAlign (rX_bits_sp (sequentialState_get?_of_get? pc hsp))
+    (rX_bits_ra (sequentialState_get?_of_get? pc hvalue))
 
 /-- Save the original s0 register in its saved stack slot. -/
 theorem step_save_s0 (sp value : BitVec 64)
@@ -265,7 +248,8 @@ theorem step_save_s0 (sp value : BitVec 64)
     rvStep s = some (commitState
       (storeBodyState s pc (sp + sign_extend 16#12) value) (BitVec.addInt pc 4)) :=
   step_store_slot h pc 0x00813823#32 16#12 8#5 sp value hpc hcode halign hword hram
-    hdataAlign (rX_bits_sp (get?_prepared pc hsp)) (rX_bits_s0 (get?_prepared pc hvalue))
+    hdataAlign (rX_bits_sp (sequentialState_get?_of_get? pc hsp))
+    (rX_bits_s0 (sequentialState_get?_of_get? pc hvalue))
 
 /-- Save the original s1 register in its saved stack slot. -/
 theorem step_save_s1 (sp value : BitVec 64)
@@ -278,7 +262,8 @@ theorem step_save_s1 (sp value : BitVec 64)
     rvStep s = some (commitState
       (storeBodyState s pc (sp + sign_extend 8#12) value) (BitVec.addInt pc 4)) :=
   step_store_slot h pc 0x00913423#32 8#12 9#5 sp value hpc hcode halign hword hram
-    hdataAlign (rX_bits_sp (get?_prepared pc hsp)) (rX_bits_s1 (get?_prepared pc hvalue))
+    hdataAlign (rX_bits_sp (sequentialState_get?_of_get? pc hsp))
+    (rX_bits_s1 (sequentialState_get?_of_get? pc hvalue))
 
 /-- Restore the original return address from its saved stack slot. -/
 theorem step_restore_ra (sp value : BitVec 64)
@@ -290,7 +275,7 @@ theorem step_restore_ra (sp value : BitVec 64)
     (hdata : Word64At s (sp + sign_extend 24#12) value) :
     rvStep s = some (commitState (registerBodyState s pc .x1 value) (BitVec.addInt pc 4)) :=
   step_load_slot h pc 0x01813083#32 24#12 2#5 1#5 .x1 rfl sp value hpc hcode halign hword hram
-    hdataAlign hdata (rX_bits_sp (get?_prepared pc hsp)) (wX_bits_ra _)
+    hdataAlign hdata (rX_bits_sp (sequentialState_get?_of_get? pc hsp)) (wX_bits_ra _)
 
 /-- Restore the original s0 register from its saved stack slot. -/
 theorem step_restore_s0 (sp value : BitVec 64)
@@ -302,7 +287,7 @@ theorem step_restore_s0 (sp value : BitVec 64)
     (hdata : Word64At s (sp + sign_extend 16#12) value) :
     rvStep s = some (commitState (registerBodyState s pc .x8 value) (BitVec.addInt pc 4)) :=
   step_load_slot h pc 0x01013403#32 16#12 2#5 8#5 .x8 rfl sp value hpc hcode halign hword hram
-    hdataAlign hdata (rX_bits_sp (get?_prepared pc hsp)) (wX_bits_s0 _)
+    hdataAlign hdata (rX_bits_sp (sequentialState_get?_of_get? pc hsp)) (wX_bits_s0 _)
 
 /-- Restore the original s1 register from its saved stack slot. -/
 theorem step_restore_s1 (sp value : BitVec 64)
@@ -314,7 +299,7 @@ theorem step_restore_s1 (sp value : BitVec 64)
     (hdata : Word64At s (sp + sign_extend 8#12) value) :
     rvStep s = some (commitState (registerBodyState s pc .x9 value) (BitVec.addInt pc 4)) :=
   step_load_slot h pc 0x00813483#32 8#12 2#5 9#5 .x9 rfl sp value hpc hcode halign hword hram
-    hdataAlign hdata (rX_bits_sp (get?_prepared pc hsp)) (wX_bits_s1 _)
+    hdataAlign hdata (rX_bits_sp (sequentialState_get?_of_get? pc hsp)) (wX_bits_s1 _)
 
 /-- The compiled unsigned load reads the callback's actual pad byte through s0. -/
 theorem step_load_pad (pad : BitVec 64) (byte : BitVec 8)
@@ -327,7 +312,7 @@ theorem step_load_pad (pad : BitVec 64) (byte : BitVec 8)
   step_reg h pc 0x00044503#32 (.LOAD (0#12, .Regidx 8#5, .Regidx 10#5, true, 1)) .x10
     (byte.setWidth 64) hpc hcode halign hword
     ((h.counterState.sequentialState pc).execute_LBU 0#12 (.Regidx 8#5) (.Regidx 10#5) pad byte
-      (rX_bits_s0 (get?_prepared pc hpad))
+      (rX_bits_s0 (sequentialState_get?_of_get? pc hpad))
       (by simpa [sign_extend, Sail.BitVec.signExtend] using hram)
       (by simpa [sign_extend, Sail.BitVec.signExtend, sequentialState, counterState] using hbyte)
       (wX_bits_a0 _ _))
@@ -343,7 +328,8 @@ theorem step_xor (pad message : BitVec 64)
   step_reg h pc 0x00954533#32 (.RTYPE (.Regidx 9#5, .Regidx 10#5, .Regidx 10#5, .XOR)) .x10
     (pad ^^^ message) hpc hcode halign hword
     (execute_XOR_of_registers (.Regidx 10#5) (.Regidx 9#5) (.Regidx 10#5) pad message
-      (rX_bits_a0 (get?_prepared pc hpad)) (rX_bits_s1 (get?_prepared pc hmessage))
+      (rX_bits_a0 (sequentialState_get?_of_get? pc hpad))
+      (rX_bits_s1 (sequentialState_get?_of_get? pc hmessage))
       (wX_bits_a0 _ _))
 
 /-- The zero-upper-immediate AUIPC records its current code address in ra. -/
@@ -370,7 +356,7 @@ theorem step_stub_load (base target : BitVec 64)
     (hdata : Word64At s (base + sign_extend 12#12) target) :
     rvStep s = some (commitState (registerBodyState s pc .x28 target) (BitVec.addInt pc 4)) :=
   step_load_slot h pc 0x00ce3e03#32 12#12 28#5 28#5 .x28 rfl base target hpc hcode halign hword hram
-    hdataAlign hdata (rX_bits_t3 (get?_prepared pc hreg)) (wX_bits_t3 _)
+    hdataAlign hdata (rX_bits_t3 (sequentialState_get?_of_get? pc hreg)) (wX_bits_t3 _)
 
 /-- The compiled call jumps to its trampoline and saves the continuation in ra. -/
 theorem step_call_link (base : BitVec 64)
@@ -384,7 +370,7 @@ theorem step_call_link (base : BitVec 64)
     exact clear_lowbit_self _ (aligned4_access htarget).1
   have hs := h.counterState.sequentialState pc
   exact step_jalr h pc 0x024080e7#32 36#12 1#5 1#5 base _ _ hpc hcode halign hword
-    (rX_bits_ra (get?_prepared pc hra)) hm htarget (wX_bits_ra _ _)
+    (rX_bits_ra (sequentialState_get?_of_get? pc hra)) hm htarget (wX_bits_ra _ _)
     ((hs.insert .nextPC _ trivial).insert .x1 _ trivial)
     (by simp [linkBodyState, get?_insert])
     (by simp [linkBodyState, sequentialState, counterState, get?_insert])
@@ -400,7 +386,8 @@ theorem step_stub_jump (target : BitVec 64)
       clear_lowbit_self target (aligned4_access htarget).1
   have hs := h.counterState.sequentialState pc
   exact step_jalr h pc 0x000e0067#32 0#12 28#5 0#5 target _ _ hpc hcode halign hword
-    (rX_bits_t3 (get?_prepared pc hreg)) hm htarget rfl (hs.insert .nextPC target trivial)
+    (rX_bits_t3 (sequentialState_get?_of_get? pc hreg))
+    hm htarget rfl (hs.insert .nextPC target trivial)
     (by simp [jumpBodyState])
     (by simp [jumpBodyState, sequentialState, counterState, get?_insert])
 

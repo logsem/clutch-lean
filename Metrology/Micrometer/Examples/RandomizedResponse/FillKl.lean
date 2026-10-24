@@ -21,7 +21,7 @@ open EReal (coe_ennreal_ofReal coe_le_coe_iff)
 
 /-- The reports on different bits are `(3/4, 1/4)` and `(1/4, 3/4)`, at KL `(log 3) / 2`. -/
 theorem klDivergence_rrOut (b : Bool) :
-    klDivergence (ofReal (log 3 / 2)) (draw.map (rrOut b)) (draw.map (rrOut !b)) := by
+    klDivergence (ofReal (log 3 / 2)) (rrDraw.map (rrOut b)) (rrDraw.map (rrOut !b)) := by
   have hl : log (1 / 3) = - log 3 := by rw [one_div, log_inv]
   rw [klDivergence_iff_fDiv, fDiv_klFun_eq_sum _ _ fun c ↦ by
       rw [map_rrOut_singleton, map_rrOut_singleton]; split_ifs <;> norm_num,

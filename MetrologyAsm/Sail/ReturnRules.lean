@@ -15,13 +15,9 @@ theorem jump_to_eq {s : Mach} (h : UserConfig s) (ra : BitVec 64)
     runSail (jump_to ra) s =
       some (.Retire_Success (), { s with regs := s.regs.insert nextPC ra }) := by
   have hzca := (runSail_eq_some_iff _ _ _ _).mp h.disabled_Zca
-  simp [runSail, jump_to, ext_control_check_pc, halign0, halign1, hzca,
-    SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map,
-    Sail.assert, PreSail.assert, bit_to_bool, bool_bit_backwards,
-    RiscvZkvm.Sail.Functions.not, set_next_pc, writeReg_eq,
-    redirect_callback, RETIRE_SUCCESS]
+  sail_simp [runSail, jump_to, ext_control_check_pc, halign0, halign1, hzca, Sail.assert,
+    PreSail.assert, bit_to_bool, bool_bit_backwards, RiscvZkvm.Sail.Functions.not, set_next_pc,
+    writeReg_eq, redirect_callback, RETIRE_SUCCESS]
 
 /-- Clearing an already clear low address bit preserves the address. -/
 theorem clear_lowbit_self (v : BitVec 64) (h : BitVec.access v 0 = 0#1) :

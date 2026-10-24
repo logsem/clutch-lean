@@ -8,18 +8,17 @@ namespace MetrologyAsm.OTP
 open ProbLang ProbLang.Asm Sail
 
 /-- The address of an instruction indexed by its uncompressed word position. -/
-def codePC (base : BitVec 64) (index : Nat) : BitVec 64 :=
-  BitVec.addInt base (4 * (index : Int))
+abbrev codePC (base : BitVec 64) (index : Nat) : BitVec 64 :=
+  pcAt base index
 
 /-- The first instruction is at the image base. -/
-@[simp] theorem codePC_zero (base : BitVec 64) : codePC base 0 = base := by
-  simp [codePC, BitVec.addInt]
+theorem codePC_zero (base : BitVec 64) : codePC base 0 = base :=
+  pcAt_zero base
 
 /-- Advancing by one instruction chooses the next word index. -/
 theorem codePC_next (base : BitVec 64) (index : Nat) :
-    BitVec.addInt (codePC base index) 4 = codePC base (index + 1) := by
-  simp only [codePC, addInt_compose]
-  congr 1
+    BitVec.addInt (codePC base index) 4 = codePC base (index + 1) :=
+  pcAt_next base index
 
 section CodeImage
 
@@ -29,28 +28,18 @@ include hram
 
 /-- Image word addresses do not wrap within the eighty-eight-byte mapped image. -/
 theorem codePC_toNat {index : Nat} (hi : index ≤ 22) :
-    (codePC base index).toNat = base.toNat + 4 * index := by
-  have hsmall : 4 * index < 2 ^ 64 := by omega
-  have hsum : base.toNat + 4 * index < 2 ^ 64 := by
-    obtain ⟨_, hend⟩ := hram
-    omega
-  simp only [codePC, BitVec.addInt, BitVec.toNat_add]
-  have hcast : BitVec.ofInt 64 (4 * (index : Int)) = BitVec.ofNat 64 (4 * index) := by
-    rw [show (4 * (index : Int)) = ((4 * index : Nat) : Int) by omega, BitVec.ofInt_natCast]
-  rw [hcast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsmall, Nat.mod_eq_of_lt hsum]
+    (codePC base index).toNat = base.toNat + 4 * index :=
+  pcAt_toNat (n := 22) hram hi
 
 /-- Every emitted instruction word is mapped into configured RAM. -/
 theorem codePC_inUserRam {index : Nat} (hi : index < 20) :
-    InUserRam (codePC base index) 4 := by
-  rw [InUserRam, codePC_toNat hram (by omega)]
-  obtain ⟨hl, hu⟩ := hram
-  constructor <;> omega
+    InUserRam (codePC base index) 4 :=
+  pcAt_inUserRam (n := 22) hram (by omega)
 
 /-- Every emitted word has the required four-byte instruction alignment. -/
 theorem codePC_aligned (halign : base.toNat % 8 = 0) {index : Nat} (hi : index < 20) :
-    (codePC base index).toNat % 4 = 0 := by
-  rw [codePC_toNat hram (by omega)]
-  omega
+    (codePC base index).toNat % 4 = 0 :=
+  pcAt_aligned (n := 22) hram (by omega) (by omega)
 
 /-- The relocated eight-byte import slot is mapped within the complete image. -/
 theorem slot_inUserRam : InUserRam (codePC base 20) 8 := by

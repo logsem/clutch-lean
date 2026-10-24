@@ -36,6 +36,13 @@ theorem swap_callRegions :
     callRegions swapCode [.loc l₁, .loc l₂] = [⟨l₁, 1, 64, true⟩, ⟨l₂, 1, 64, true⟩] := by
   rfl
 
+/-- Membership in the exchange's call regions names its two signed doubleword regions. -/
+theorem swap_callRegions_mem {l₁ l₂ : Loc} {r : Region} :
+    r ∈ callRegions swapCode [.loc l₁, .loc l₂] ↔
+      r = ⟨l₁, 1, 64, true⟩ ∨ r = ⟨l₂, 1, 64, true⟩ := by
+  rw [swap_callRegions]
+  simp
+
 /-- The raw two-pointer tuple owns exactly the two supplied locations. -/
 theorem swap_callFootprint :
     callFootprint swapCode [.loc l₁, .loc l₂] = {l₁, l₂} := by
@@ -70,8 +77,7 @@ theorem swap_footprintContents (ι : Placement) (s : Mach) (l₁ l₂ : Loc)
     footprintContents ι swapCode [.loc l₁, .loc l₂] (integerHeap {l₁, l₂} old) s := by
   refine ⟨swap_validFragment l₁ l₂ old hne h₁ h₂, ?_⟩
   intro r hr i hi
-  rw [swap_callRegions] at hr
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+  rw [swap_callRegions_mem] at hr
   rcases hr with rfl | rfl <;> obtain rfl : i = 0 := by simpa using hi
   · exact ⟨old l₁, by simp, h₁, by simpa using hw₁⟩
   · exact ⟨old l₂, by simp, h₂, by simpa using hw₂⟩

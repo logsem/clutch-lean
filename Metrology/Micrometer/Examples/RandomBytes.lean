@@ -51,7 +51,7 @@ theorem fill_nonpos_steps (l : Loc) {n : Int} (hn : n ≤ 0) :
 theorem byte_draw (σ : State rT) :
     primStep ⟨pl(rand(#256, #())), σ⟩ =
       (unifInt 256 (by norm_num)).map (fun b => (⟨pl(#int b), σ⟩ : Cfg rT)) :=
-  (primStep_rand_unit (z := 256) (by norm_num) σ).trans
+  (primStep_rand_unit 256 σ).trans
     (Cfg.uniform_eq_map (z := 256) (by norm_num) σ)
 
 /-- Every byte has probability one over 256 under the fresh byte-draw law. -/

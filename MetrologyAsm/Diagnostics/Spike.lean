@@ -4,6 +4,11 @@ import MetrologyAsm.Profile.Initial
 
 namespace MetrologyAsm
 
+/-- Put one little-endian word into Sail memory. -/
+def writeWord (s : Mach) (a : Nat) (w : BitVec 32) : Mach :=
+  (List.range 4).foldl (fun s i =>
+    { s with mem := s.mem.insert (a + i) (BitVec.ofNat 8 (w.toNat / 2 ^ (8 * i))) }) s
+
 /-- A concrete ADDI image placed in ordinary user-accessible memory. -/
 noncomputable def addiInitial : Option Mach :=
   userInitial.map fun s => writeWord s 0x80000000 0x00700513#32

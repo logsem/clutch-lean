@@ -15,13 +15,14 @@ open scoped ENNReal
 namespace ProbLang.RandomizedResponse
 
 /-- One round couples at `(ln 3, 0)`: each report is at most three times likelier under one bit. -/
-theorem rrCoupling_zcdp : RRCoupling zcdpLifting budget := fun b b' ↦
+theorem rrCoupling_zcdp : RRCoupling zcdpLifting rrBudget := fun b b' ↦
   zcdpLifting_rel_of_fiber .of_discrete .of_discrete fun c ↦
     expBudget_log_three ▸ rrOut_fiber_le_three b b' c
 
 /-- `k` rounds are `(k ln 3, 0)`-zCDP (Def. 2.4). -/
 theorem rrCount_zCDP {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] (k : ℕ)
     (σ : State rT) : (rrCountMech k σ).zCDP ⊤ (k * ENNReal.ofReal (Real.log 3)) 0 := by
-  simpa [nsmul_eq_mul] using rrCount_isPrivate budget isAddLeftRegular_budget rrCoupling_zcdp k σ
+  simpa [nsmul_eq_mul] using
+    rrCount_isPrivate rrBudget rrBudget_isAddLeftRegular rrCoupling_zcdp k σ
 
 end ProbLang.RandomizedResponse

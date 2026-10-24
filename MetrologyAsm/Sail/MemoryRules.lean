@@ -162,14 +162,10 @@ theorem checked_mem_read64_of_guards {a value : BitVec 64}
     (hword : Word64At s a value) :
     checked_mem_read access .PBMT_PMA priv (.Physaddr a) 8 false false false false s =
       .ok (.Ok (value, ())) s := by
-  simp [checked_mem_read, SailME.run, PreSail.PreSailME.run, hcheck, hsplit,
-    read_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
-    untilFuelM.go,
-    bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk,
-    ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift,
-    monadLift, liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr,
-    Sail.BitVec.addInt, hpmp, hmmio, read_ram64_eq hword, Sail.BitVec.updateSubrange,
-    Sail.BitVec.updateSubrange']
+  sail_simp [checked_mem_read, hcheck, hsplit, read_kind_of_flags, misaligned_order,
+    sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, Sail.assert, PreSail.assert,
+    bits_of_physaddr, Sail.BitVec.addInt, hpmp, hmmio, read_ram64_eq hword,
+    Sail.BitVec.updateSubrange, Sail.BitVec.updateSubrange']
 
 /-- Successful physical access guards reduce an instruction-word read to its allocated RAM bytes. -/
 theorem checked_mem_read32_of_guards {a : BitVec 64} {value : BitVec 32}
@@ -183,14 +179,10 @@ theorem checked_mem_read32_of_guards {a : BitVec 64} {value : BitVec 32}
     (hword : Word32At s a value) :
     checked_mem_read access .PBMT_PMA priv (.Physaddr a) 4 false false false false s =
       .ok (.Ok (value, ())) s := by
-  simp [checked_mem_read, SailME.run, PreSail.PreSailME.run, hcheck, hsplit,
-    read_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
-    untilFuelM.go,
-    bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk,
-    ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift,
-    monadLift, liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr,
-    Sail.BitVec.addInt, hpmp, hmmio, read_ram32_eq hword, Sail.BitVec.updateSubrange,
-    Sail.BitVec.updateSubrange']
+  sail_simp [checked_mem_read, hcheck, hsplit, read_kind_of_flags, misaligned_order,
+    sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, Sail.assert, PreSail.assert,
+    bits_of_physaddr, Sail.BitVec.addInt, hpmp, hmmio, read_ram32_eq hword,
+    Sail.BitVec.updateSubrange, Sail.BitVec.updateSubrange']
 
 /-- Successful physical access guards reduce a doubleword store to eight RAM byte writes. -/
 theorem checked_mem_write64_of_guards (a value : BitVec 64)
@@ -204,11 +196,8 @@ theorem checked_mem_write64_of_guards (a value : BitVec 64)
     checked_mem_write (.Physaddr a) 8 value access .PBMT_PMA priv () false false false s =
       .ok (.Ok true) (write64State s a value) := by
   have hdata := extractLsb_63_zero_eq value
-  simp [checked_mem_write, SailME.run, PreSail.PreSailME.run, hcheck, hsplit,
-    write_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
-    untilFuelM.go, bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run,
-    ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
-    MonadLift.monadLift, monadLift, liftM, Functor.map, Sail.assert, PreSail.assert,
+  sail_simp [checked_mem_write, hcheck, hsplit, write_kind_of_flags, misaligned_order,
+    sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, Sail.assert, PreSail.assert,
     bits_of_physaddr, Sail.BitVec.addInt, hpmp, hmmio, hdata, write_ram64_eq]
 
 /-- Dropping memory metadata preserves a successful checked read. -/
@@ -424,14 +413,10 @@ theorem vmem_read_addr64_of_mem
   have heff := (runSail_eq_some_iff _ _ _ _).mp (h.effectivePrivilege_user (.Load .Data) hm)
   have hmode := (runSail_eq_some_iff _ _ _ _).mp h.translationMode_user
   have htranslate := (runSail_eq_some_iff _ _ _ _).mp (h.translateAddr_user a (.Load .Data) rfl)
-  simp [vmem_read_addr, SailME.run, PreSail.PreSailME.run,
-    is_aligned_vaddr_of_mod_eq_zero halign, RiscvZkvm.Sail.Functions.not,
-    split_on_page_boundary64_eq s a halign, bits_of_virtaddr, readReg_eq hm,
-    readReg_eq h.privilege, heff, hmode, translate_and_read_value, htranslate, hread,
-    sys_misaligned_order_decreasing, bind, EStateM.bind, EStateM.map, pure, EStateM.pure,
-    ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure,
-    MonadLift.monadLift, monadLift, liftM, Functor.map, Sail.BitVec.updateSubrange,
-    Sail.BitVec.updateSubrange']
+  sail_simp [vmem_read_addr, is_aligned_vaddr_of_mod_eq_zero halign, RiscvZkvm.Sail.Functions.not,
+    split_on_page_boundary64_eq s a halign, bits_of_virtaddr, readReg_eq hm, readReg_eq h.privilege,
+    heff, hmode, translate_and_read_value, htranslate, hread, sys_misaligned_order_decreasing,
+    Sail.BitVec.updateSubrange, Sail.BitVec.updateSubrange']
 
 /-- An aligned virtual doubleword store uses successful physical user RAM write operations. -/
 theorem vmem_write_addr64_of_mem {t : Mach}
@@ -447,14 +432,10 @@ theorem vmem_write_addr64_of_mem {t : Mach}
   have hmode := (runSail_eq_some_iff _ _ _ _).mp h.translationMode_user
   have htranslate := (runSail_eq_some_iff _ _ _ _).mp (h.translateAddr_user a (.Store .Data) rfl)
   have hdata := extractLsb_63_zero_eq value
-  simp [vmem_write_addr, SailME.run, PreSail.PreSailME.run,
-    is_aligned_vaddr_of_mod_eq_zero halign, RiscvZkvm.Sail.Functions.not,
-    split_on_page_boundary64_eq s a halign, bits_of_virtaddr, readReg_eq hm,
-    readReg_eq h.privilege, heff, hmode, htranslate, hea, hwrite, hdata,
-    is_store_conditional, sys_misaligned_order_decreasing, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map,
-    Sail.assert, PreSail.assert]
+  sail_simp [vmem_write_addr, is_aligned_vaddr_of_mod_eq_zero halign, RiscvZkvm.Sail.Functions.not,
+    split_on_page_boundary64_eq s a halign, bits_of_virtaddr, readReg_eq hm, readReg_eq h.privilege,
+    heff, hmode, htranslate, hea, hwrite, hdata, is_store_conditional,
+    sys_misaligned_order_decreasing, Sail.assert, PreSail.assert]
 
 /-- User-mode store address checks succeed under aligned PMA and PMP success. -/
 theorem mem_write_ea64_of_guards
@@ -466,12 +447,9 @@ theorem mem_write_ea64_of_guards
   obtain ⟨m, hm, _⟩ := h.regs .mstatus
   have heff := (runSail_eq_some_iff _ _ _ _).mp (h.effectivePrivilege_user (.Store .Data) hm)
   have hsplit := split_misaligned_of_aligned (s := s) info (is_aligned_vaddr_of_mod_eq_zero halign)
-  simp [mem_write_ea, SailME.run, PreSail.PreSailME.run, readReg_eq hm,
-    readReg_eq h.privilege, heff, hcheck, hsplit, write_kind_of_flags, misaligned_order,
-    sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, bind, EStateM.bind,
-    EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind,
-    ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift,
-    liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr, Sail.BitVec.addInt, hpmp]
+  sail_simp [mem_write_ea, readReg_eq hm, readReg_eq h.privilege, heff, hcheck, hsplit,
+    write_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
+    untilFuelM.go, Sail.assert, PreSail.assert, bits_of_physaddr, Sail.BitVec.addInt, hpmp]
 
 /-- A configured virtual load uses the pointer register and its physical RAM read. -/
 theorem vmem_read64_of_mem (rs : regidx)
@@ -483,10 +461,7 @@ theorem vmem_read64_of_mem (rs : regidx)
   have htransform := (runSail_eq_some_iff _ _ _ _).mp
     (h.transform_effective_address_user (.Virtaddr (base + offset)) (.Load .Data))
   have haddr := h.vmem_read_addr64_of_mem (base + offset) value halign hread
-  simp [vmem_read, get_transformed_data_addr, ext_data_get_addr, hbase, htransform,
-    haddr, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+  sail_simp [vmem_read, get_transformed_data_addr, ext_data_get_addr, hbase, htransform, haddr]
 
 /-- A configured virtual store uses the pointer register and its physical RAM operations. -/
 theorem vmem_write64_of_mem {t : Mach} (rs : regidx)
@@ -500,10 +475,7 @@ theorem vmem_write64_of_mem {t : Mach} (rs : regidx)
   have htransform := (runSail_eq_some_iff _ _ _ _).mp
     (h.transform_effective_address_user (.Virtaddr (base + offset)) (.Store .Data))
   have haddr := h.vmem_write_addr64_of_mem (base + offset) value halign hea hwrite
-  simp [vmem_write, get_transformed_data_addr, ext_data_get_addr, hbase, htransform,
-    haddr, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+  sail_simp [vmem_write, get_transformed_data_addr, ext_data_get_addr, hbase, htransform, haddr]
 
 /-- A generated doubleword load retires using its pointer register, RAM read, and register write. -/
 theorem execute_LOAD64_of_mem {t : Mach}

@@ -1,7 +1,7 @@
 module
 
 public import Metrology.Code.SkipZero
-public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.AdequacyTV
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
@@ -45,9 +45,9 @@ read off `unif_refines_skipZero` by adequacy. -/
 theorem unif_le_skipZero (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Exp rT)}
     (hS : MeasurableSet S) :
     limExecV ⟨unif N, σ⟩ S ≤ limExecV ⟨skipZero N, σ'⟩ S + (N.toNat : ℝ≥0∞)⁻¹ :=
-  tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞)
-    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq)
-    fun _ _ ↦ unif_refines_skipZero N hN) S hS
+  limExecV_le_add_of_refines_tv (GF := MicrometerFunctor rT ℝ≥0∞)
+    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ _ _ ↦ lrel_int_car_eq)
+    (fun _ _ ↦ unif_refines_skipZero N hN) hS
 
 end SkipZero
 end ProbLang

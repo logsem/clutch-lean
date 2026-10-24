@@ -1,5 +1,5 @@
 import MetrologyAsm.Profile.Config
-import Std.Tactic.BVDecide
+import MetrologyAsm.Sail.RegisterRules
 
 /-! # Sail reductions for the user-mode profile -/
 
@@ -9,18 +9,6 @@ open RiscvZkvm.Sail.Functions
 open Sail
 
 namespace UserConfig
-
-/-- Restoring an extracted supervisor shadow-stack bit leaves its register unchanged. -/
-theorem update_senvcfg_sse_self (v : BitVec 64) :
-    _update_SEnvcfg_SSE v (_get_SEnvcfg_SSE v) = v := by
-  unfold _update_SEnvcfg_SSE _get_SEnvcfg_SSE Sail.BitVec.updateSubrange
-    Sail.BitVec.updateSubrange' Sail.BitVec.extractLsb
-  bv_decide
-
-/-- Extracting all bits of an address preserves that address. -/
-theorem extract_full_address (v : BitVec 64) : Sail.BitVec.extractLsb v 63 0 = v := by
-  unfold Sail.BitVec.extractLsb
-  bv_normalize
 
 variable {s : Mach} (h : UserConfig s)
 

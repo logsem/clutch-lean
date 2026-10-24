@@ -39,11 +39,6 @@ theorem importPC_aligned {base : BitVec 64} (hram : InUserRam base 48)
     (hoAlign : offset % 4 = 0) : (importPC base (offset : Int)).toNat % 4 = 0 := by
   rw [importPC_toNat hram hoff, Nat.add_mod, halign, hoAlign]
 
-/-- A zero image displacement leaves the image base unchanged. -/
-@[simp]
-theorem importPC_zero (base : BitVec 64) : importPC base 0 = base := by
-  simp [importPC, addInt]
-
 /-- Every callback instruction is indexed by one of the first ten word offsets. -/
 theorem mem_importToyPCs_iff (base p : BitVec 64) :
     p ∈ importToyPCs base ↔ ∃ i : Nat, i < 10 ∧ p = importPC base ((4 * i : Nat) : Int) := by

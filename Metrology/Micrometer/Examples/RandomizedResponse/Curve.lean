@@ -14,8 +14,8 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-open ENNReal (ofReal ofReal_ne_top ofReal_le_ofReal)
-open Real (log rpow_le_rpow_of_exponent_le log_rpow log_le_log rpow_sub rpow_sub_one rpow_one)
+open ENNReal (ofReal ofReal_ne_top)
+open Real (log)
 
 /-! ## One round at every order -/
 
@@ -29,12 +29,7 @@ theorem isAddLeftRegular_rrCurve : IsAddLeftRegular rrCurve := fun _ _ h ↦
 /-- One round couples at the curve: the coupling holds at each order `α` separately. -/
 theorem rrCoupling_curve : RRCoupling (codensity renyiCurve) rrCurve := fun b b' ↦
   codensity_renyiCurve_iff.2 fun α ↦ by
-    -- relCost into RenyiBudget, evaluated at α, is the scalar relCost (0 on the relation, ⊤ off it)
-    have hcost : (fun r r' ↦ (relCost (fun r r' ↦ rrOut b r = rrOut b' r') r r' : RenyiBudget) α) =
-        relCost fun r r' ↦ rrOut b r = rrOut b' r' := by
-      ext r r'
-      by_cases h : rrOut b r = rrOut b' r' <;> simp [h]
-    rw [hcost]
+    simp only [relCost_renyiBudget_apply]
     exact rrCoupling_renyi b b'
 
 /-! ## `k` rounds -/
@@ -50,19 +45,8 @@ theorem rrCount_curve : (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k
 
 /-! ## Below the zCDP line -/
 
-/-- Every Rényi order `α > 1` of the round profile is at most `ln 3`. -/
-theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) : rrRenyi α ≤ ofReal (log 3) := by
-  have ht : (3 : ℝ) ≤ 3 ^ α := by
-    simpa using rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 3) hα.le
-  refine ofReal_le_ofReal ((div_le_iff₀ (by linarith)).2 ?_)
-  rw [mul_comm, ← log_rpow (by norm_num)]
-  refine log_le_log (by positivity) ?_
-  rw [rpow_sub (by norm_num), rpow_sub_one (by norm_num), rpow_one]
-  -- with `t = 3^α ≥ 3`, `3 / t ≤ 1`
-  linarith [(div_le_one (by positivity : (0 : ℝ) < 3 ^ α)).2 ht]
-
 /-- One round couples at `(ln 3, 0)` in the zCDP lifting. -/
-theorem rrCoupling_zcdp_of_curve : RRCoupling zcdpLifting budget := fun b b' ↦
+theorem rrCoupling_zcdp_of_curve : RRCoupling zcdpLifting rrBudget := fun b b' ↦
   concentratedLifting_rel_of_renyiCurve_le (rrCoupling_curve b b') fun α _ ↦ by
     simpa [rrCurve] using rrRenyi_le_log_three α.2
 

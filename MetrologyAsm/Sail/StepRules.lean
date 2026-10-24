@@ -43,12 +43,10 @@ theorem run_hart_active_of_execute (s t : Mach) (priv : Privilege) (pc : BitVec 
   have hdecode' := (runSail_eq_some_iff _ _ _ _).mp hdecode
   have hexec' := (runSail_eq_some_iff _ _ _ _).mp hexec
   dsimp [sequentialState] at hexec'
-  simp [runSail, run_hart_active, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind,
-    EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map,
-    readReg_eq hpriv, hpending', hfetch', ext_fetch_hook, hdecode', is_landing_pad_expected,
-    readReg_eq help, landing_pad_bits_backwards, get_config_print_instr, readReg_eq hpc,
-    writeReg_eq, hexec', zero_extend, Sail.BitVec.zeroExtend]
+  sail_simp [runSail, run_hart_active, readReg_eq hpriv, hpending', hfetch', ext_fetch_hook,
+    hdecode', is_landing_pad_expected, readReg_eq help, landing_pad_bits_backwards,
+    get_config_print_instr, readReg_eq hpc, writeReg_eq, hexec', zero_extend,
+    Sail.BitVec.zeroExtend]
 
 /-- Retirement of one active-hart step yields the retired state with the next program counter
 committed. -/

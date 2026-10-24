@@ -13,8 +13,7 @@ non-adaptive `5/4` (`chi2_adaptive_lt`), by regrading the escort law of the Rén
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence PowerBudget AdaptiveRenyi
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 open BindLaw (escortPower head_escortPower)
 open Cfg (drawCost)
@@ -122,5 +121,4 @@ theorem chi2_adaptive_lt : (ofReal (7 / 12) : PowerBudget) < ofReal (1 / 2) + of
   simp only [toENNReal_ofReal]
   exact (ENNReal.ofReal_lt_ofReal_iff (by norm_num)).2 (by norm_num)
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

@@ -43,11 +43,6 @@ noncomputable def zeroState : Mach := fillRegisters defaultRegister
 noncomputable def modelInitial : Option Mach :=
   (runSail (sail_model_init ()) zeroState).map Prod.snd
 
-/-- Put one little-endian word into Sail memory. -/
-def writeWord (s : Mach) (a : Nat) (w : BitVec 32) : Mach :=
-  (List.range 4).foldl (fun s i =>
-    { s with mem := s.mem.insert (a + i) (BitVec.ofNat 8 (w.toNat / 2 ^ (8 * i))) }) s
-
 /-- A user-mode RV64IM state with bare address translation and a permissive PMP region. -/
 noncomputable def userInitial : Option Mach := modelInitial.map fun s =>
   let regs := s.regs.insert cur_privilege Privilege.User

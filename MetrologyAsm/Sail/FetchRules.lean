@@ -40,10 +40,7 @@ theorem fetch_bytes32_of_mem_read
     runSail (fetch_bytes pc pc 4) s = some (.FetchBytes_Success word, s) := by
   have htranslate := (runSail_eq_some_iff _ _ _ _).mp
     (h.translateAddr_user pc (.InstructionFetch ()) rfl)
-  simp [runSail, fetch_bytes, ext_fetch_check_pc, htranslate, hmem,
-    SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+  sail_simp [runSail, fetch_bytes, ext_fetch_check_pc, htranslate, hmem]
 
 /-- Four-byte aligned ordinary instructions follow the generated single-word fetch path. -/
 theorem fetch32_of_fetch_bytes
@@ -57,11 +54,8 @@ theorem fetch32_of_fetch_bytes
   have hbytes := (runSail_eq_some_iff _ _ _ _).mp hfetch
   have hziccif : currentlyEnabled .Ext_Ziccif s = .ok true s := by
     simp [currentlyEnabled, hartSupports, pure, EStateM.pure]
-  simp [runSail, fetch, get_config_rvfi, readReg_eq hpc, ext_fetch_check_pc,
-    halign0, halign1, hzca, halign, hziccif, hbytes, hbase,
-    SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
-    pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
-    ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
+  sail_simp [runSail, fetch, get_config_rvfi, readReg_eq hpc, ext_fetch_check_pc, halign0, halign1,
+    hzca, halign, hziccif, hbytes, hbase]
 
 /-- PMA and PMP success suffice to fetch an allocated aligned ordinary user instruction. -/
 theorem fetch32_of_guards

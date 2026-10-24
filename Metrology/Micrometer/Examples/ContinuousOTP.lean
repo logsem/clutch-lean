@@ -105,34 +105,16 @@ end Real
 `refines_coupling` turns each refinement into a statement about the limiting
 execution distributions, with no Iris in sight. -/
 
-/-- The two programs return the same real. -/
-def otpφ (v v' : Val rT) : Prop :=
-  ∃ r : rT, v = .real r ∧ v' = .real r
-
-/-- Related values of `adequacyRel otpφ` force equal programs. -/
-theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
-  rintro ⟨v, v', hv, hv', r, rfl, rfl⟩
-  exact (ofVal_of_toVal_some hv).symm.trans (ofVal_of_toVal_some hv')
-
-/-- Related real values satisfy `otpφ`. -/
-theorem lrel_real_to_otpφ [MeasurableSpace rT] [LawfulProbLangℝ rT] [MicrometerRGS rT hlc GF]
-    (v v' : Val rT) :
-    ⊢ lrel_real.car v v' -∗ ⌜otpφ v v'⌝ := by
-  iunfold lrel_real
-  iintro ⟨%r, %hv, %hv'⟩
-  ipureintro
-  exact ⟨r, hv, hv'⟩
-
 /-- The limit distributions of the encryption and the ideal sample are coupled at budget `0`. -/
 theorem otp_adequate_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otpEnc m, σ⟩) (limExecV ⟨otpIdeal, σ'⟩) :=
-  refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
+    (codensity tv).Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpEnc m, σ⟩) (limExecV ⟨otpIdeal, σ'⟩) :=
+  refines_coupling (GF := GF) (fun _ _ => lrel_real) (· = ·) _ _ σ σ' (fun _ _ => lrel_real_car_eq)
     fun _ _ => otp_refines_real m
 
 /-- The reverse coupling of the limit distributions at budget `0`. -/
 theorem otp_adequate_rev_real [RefinesPreGS ℝ ℝ≥0∞ GF] (m : ℝ) (σ σ' : State ℝ) :
-    (codensity tv).Rel 0 (adequacyRel otpφ) (limExecV ⟨otpIdeal, σ⟩) (limExecV ⟨otpEnc m, σ'⟩) :=
-  refines_coupling (GF := GF) (fun _ _ => lrel_real) otpφ _ _ σ σ' (fun _ _ => lrel_real_to_otpφ)
+    (codensity tv).Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpIdeal, σ⟩) (limExecV ⟨otpEnc m, σ'⟩) :=
+  refines_coupling (GF := GF) (fun _ _ => lrel_real) (· = ·) _ _ σ σ' (fun _ _ => lrel_real_car_eq)
     fun _ _ => otp_refines_rev_real m
 
 /-! ## Closed statement
@@ -147,9 +129,9 @@ variable (m : ℝ) (σ : State ℝ)
 /-- The encrypted and ideal samples have the same distribution. -/
 theorem otp_distribution_eq (σ' : State ℝ) : limExecV ⟨otpEnc m, σ⟩ = limExecV ⟨otpIdeal, σ'⟩ :=
   tv_eq_of_rel ((otp_adequate_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ σ').mono le_rfl
-      adequacyRel_otpφ_subset_eq)
+      adequacyRel_eq_subset)
     ((otp_adequate_rev_real (GF := MicrometerFunctor ℝ ℝ≥0∞) m σ' σ).mono le_rfl
-      adequacyRel_otpφ_subset_eq)
+      adequacyRel_eq_subset)
 
 /-- No distinguisher has positive advantage. -/
 theorem otp_advantage_zero : advantage (otpEnc m) otpIdeal = 0 :=

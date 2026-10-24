@@ -27,7 +27,7 @@ theorem swap_rvspec (l k : Loc) (old : Loc → Int) (hne : l ≠ k)
     intro p hp
     obtain ⟨i, hi, rfl⟩ := (mem_swapPCs_iff ι.codeBase p).mp hp
     apply (codeRange_exchange ι _).mpr
-    rw [inSpan, pcAt_toNat hram hi]
+    rw [inSpan, pcAt_toNat (n := 5) hram (Nat.le_of_lt hi)]
     constructor <;> omega
   have hout : ¬ codeRange ι swapCode ι.retAddr := by
     intro hp

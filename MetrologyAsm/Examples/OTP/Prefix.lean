@@ -368,7 +368,7 @@ theorem runsTo_call {s : Mach} (h : UserConfig s)
   have hra9 : (a.callUpper s).regs.get? .x1 = some (codePC a.base 8) := by
     simp [callUpper]
   have htarget : BitVec.addInt (codePC a.base 8) 36 = codePC a.base 17 := by
-    rw [codePC, addInt_compose]
+    rw [codePC, pcAt, addInt_compose]
     rfl
   have step10 : rvStep (a.callUpper s) = some (a.callLink s) := by
     simpa only [callLink, htarget] using
@@ -387,7 +387,7 @@ theorem runsTo_call {s : Mach} (h : UserConfig s)
     simp [stubUpper]
   have hslot : codePC a.base 17 + sign_extend 12#12 = codePC a.base 20 := by
     change BitVec.addInt (codePC a.base 17) 12 = codePC a.base 20
-    rw [codePC, addInt_compose]
+    rw [codePC, pcAt, addInt_compose]
     rfl
   have step12 : rvStep (a.stubUpper s) = some (a.stubLoad s) := by
     simpa only [stubLoad, registerState, codePC_next] using

@@ -14,35 +14,6 @@ theorem addInt_compose (value : BitVec 64) (a b : Int) :
   unfold BitVec.addInt
   rw [BitVec.add_assoc, ← BitVec.ofInt_add]
 
-/-- Reading sp returns its raw architectural register value. -/
-theorem rX_bits_sp {s : Mach} {v : BitVec 64}
-    (h : s.regs.get? x2 = some v) :
-    rX_bits (.Regidx 2#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
-
-/-- Reading the import trampoline temporary returns its raw register value. -/
-theorem rX_bits_t3 {s : Mach} {v : BitVec 64}
-    (h : s.regs.get? x28 = some v) :
-    rX_bits (.Regidx 28#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
-
-/-- Writing sp changes only its raw architectural register. -/
-theorem wX_bits_sp (s : Mach) (v : BitVec 64) :
-    wX_bits (.Regidx 2#5) v s = .ok () { s with regs := s.regs.insert x2 v } := by
-  rfl
-
-/-- Writing ra changes only its raw architectural register. -/
-theorem wX_bits_ra (s : Mach) (v : BitVec 64) :
-    wX_bits (.Regidx 1#5) v s = .ok () { s with regs := s.regs.insert x1 v } := by
-  rfl
-
-/-- Writing the trampoline temporary changes only that raw architectural register. -/
-theorem wX_bits_t3 (s : Mach) (v : BitVec 64) :
-    wX_bits (.Regidx 28#5) v s = .ok () { s with regs := s.regs.insert x28 v } := by
-  rfl
-
 /-- The generated ADDI body composes a register read, signed addition, and register write. -/
 theorem execute_ADDI_of_registers {s t : Mach} (imm : BitVec 12) (rs rd : regidx)
     (value : BitVec 64) (hread : rX_bits rs s = .ok value s)
