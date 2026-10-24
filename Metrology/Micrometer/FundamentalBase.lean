@@ -166,14 +166,14 @@ theorem refines_beta [L.IsLawful] [L.IsTopAbsorbing] {v v' : Val rT}
   simp only [fill_nil]
   iexact H
 
+end Fundamental
+
 /-! ## Substitution and closedness helpers -/
 
 /-- A related substitution is closed on both sides. -/
 theorem env_ltyped2_allClosed_pair (Γ : RelCtx rT GF) (vs : ValSubstMap rT) :
     env_ltyped2 Γ vs ⊢ ⌜AllClosed vs.fst ∧ AllClosed vs.snd⌝ :=
   (and_intro (env_ltyped2_fst_allClosed Γ vs) (env_ltyped2_snd_allClosed Γ vs)).trans pure_and.2
-
-end Fundamental
 
 /-- There is a variable outside `S`, the free variables of `e` and `e'`, and the domain of `vs`. -/
 theorem exists_fresh_var (S : Finset Var) (e e' : Exp rT) (vs : ValSubstMap rT) :

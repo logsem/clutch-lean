@@ -302,7 +302,7 @@ theorem Cfg.uniform_addCoupl_rev_inj (HzR : 0 < zR) (Hle : zR ≤ zL)
 
 /-! ## Steps of `rand` -/
 
-variable [LawfulProbLangℝ rT]
+variable [LawfulProbLangℝ rT] {σ : State rT}
 
 /-- If the head step of a locally closed `e` is `Cfg.uniform z σ`, so is its program step. -/
 theorem primStep_eq_uniform_of_headStep {e : Exp rT} (h : headStep ⟨e, σ⟩ = uniform z σ)
@@ -322,7 +322,7 @@ theorem randUnit_uniform_step (Hz : 0 < z) (σ : State rT) :
   ⟨.of_headStepSupport (.RandNoTapeS Hz le_rfl Hz) (by is_lc),
     primStep_rand_unit Hz σ⟩
 
-variable {σ : State rT} {l : Loc} {M : Int}
+variable {l : Loc} {M : Int}
 
 /-- The head step of `rand z` on a tape label, by the tape's state. -/
 theorem headStep_rand_lbl :

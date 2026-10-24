@@ -21,7 +21,7 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang.MicrometerWpGS
 
 namespace ProbLang
 
-variable {rT : Type} {GF : BundledGFunctors}
+variable {rT : Type} {GF : BundledGFunctors} {n : Nat}
 
 open Exp
 open IsCOFE (compl conv_compl)
@@ -282,8 +282,6 @@ theorem lrel_rec_unfold : lrel_rec C = lrelRec1 C (lrel_rec C) :=
   fixpoint_unfold (lrelRec1Hom C)
 
 end Rec
-
-variable {n : Nat}
 
 /-- Recursive relations are `n`-close when their bodies are `n`-close pointwise. -/
 theorem lrel_rec_ne {C1 C2 : lrel rT GF -n> lrel rT GF}
