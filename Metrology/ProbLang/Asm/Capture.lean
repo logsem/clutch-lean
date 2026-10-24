@@ -8,7 +8,7 @@ public import Metrology.ProbLang.Asm.Boundary
 
 namespace ProbLang.Asm
 
-variable {rT : Type}
+variable {rT : Type} (F : Finset Loc)
 
 private theorem mapM_congrOn {α β : Type} (xs : List α) (f g : α → Option β)
     (h : ∀ x ∈ xs, f x = g x) : xs.mapM f = xs.mapM g := by
@@ -19,14 +19,14 @@ private theorem mapM_congrOn {α β : Type} (xs : List α) (f g : α → Option 
     simp only [List.mapM_cons, h.1, ih h.2]
 
 /-- Read the current integer contents of a finite footprint. -/
-def capture (F : Finset Loc) (heap : LocHeap (Val rT)) : Option HeapSnapshot :=
+def capture (heap : LocHeap (Val rT)) : Option HeapSnapshot :=
   (footprintLocations F).mapM fun l => do
     let v ← heap[l]?
     let z ← intValue v
     pure (l, z)
 
 /-- Capturing a footprint depends only on its selected heap locations. -/
-theorem capture_congr (F : Finset Loc) (heap heap' : LocHeap (Val rT))
+theorem capture_congr (heap heap' : LocHeap (Val rT))
     (h : ∀ l ∈ F, heap[l]? = heap'[l]?) : capture F heap = capture F heap' := by
   unfold capture
   apply mapM_congrOn
@@ -34,7 +34,7 @@ theorem capture_congr (F : Finset Loc) (heap heap' : LocHeap (Val rT))
   rw [h l ((mem_footprintLocations F l).mp hl)]
 
 /-- Known integer cells produce the corresponding finite snapshot. -/
-theorem capture_eq_snapshot (F : Finset Loc) (values : Loc → Int) (heap : LocHeap (Val rT))
+theorem capture_eq_snapshot (values : Loc → Int) (heap : LocHeap (Val rT))
     (h : ∀ l ∈ F, heap[l]? = some (.int (values l))) :
     capture F heap = some ((footprintLocations F).map (fun l => (l, values l))) := by
   unfold capture
@@ -47,7 +47,7 @@ theorem capture_eq_snapshot (F : Finset Loc) (values : Loc → Int) (heap : LocH
     _ = _ := List.mapM_pure
 
 /-- Reading a footprint ignores all surrounding heap cells. -/
-theorem capture_local (F : Finset Loc) (heap : LocHeap (Val rT)) :
+theorem capture_local (heap : LocHeap (Val rT)) :
     capture F heap = capture F (restrict F heap) := by
   apply capture_congr
   intro l hl

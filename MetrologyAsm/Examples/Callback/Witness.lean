@@ -1,42 +1,25 @@
+import MetrologyAsm.Examples.Callback.Boundary
 import MetrologyAsm.Examples.Callback.Placement
 import MetrologyAsm.Examples.Support
 
 /-! # A genuine compatible entry state for the callback source -/
 
-set_option maxRecDepth 100000
-
 namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
-open Sail.ConcurrencyInterfaceV1
+open Sail.ConcurrencyInterfaceV1 Std.ExtDHashMap
 
-/-- The callback witness uses distinct aligned code, callback, return, trap, and stack addresses. -/
+/-- The placement of the callback witness. -/
 def importWitnessPlacement : Placement := witnessPlacement 0
 
-/-- Install the actual relocated callback image into the complete profiled register state. -/
+set_option maxRecDepth 100000 in
+/-- The initial machine state with the relocated callback image written into memory. -/
 noncomputable def importWitnessState : Mach :=
   { witnessRegisters with
     mem := witnessImageBytes (relocatedBytes importWitnessPlacement importToyImage)
       0x80000000 witnessRegisters.mem }
 
-/-- The callback source has no logical pointer regions. -/
-@[simp]
-theorem importToy_callRegions : callRegions importToyCode [] = [] := by rfl
-
-/-- The callback source owns no logical heap cells. -/
-@[simp]
-theorem importToy_callFootprint : callFootprint importToyCode [] = ∅ := by rfl
-
-/-- The no-argument callback source accepts exactly the empty logical fragment. -/
-theorem importToy_empty_valid : validFragment importToyCode [] ∅ := by
-  refine ⟨by decide +kernel, ?_, ?_⟩
-  · rw [importToy_callFootprint]
-    symm
-    apply Std.ExtTreeMap.ext_getElem?
-    intro l
-    simp
-  · rfl
-
+set_option maxRecDepth 100000 in
 /-- Installing the relocated image preserves the formal user-mode register profile. -/
 theorem importWitnessState_config : UserConfig importWitnessState :=
   witnessRegisters_config.of_regs_eq rfl
@@ -49,7 +32,7 @@ theorem importWitness_footprintPlacement :
 /-- The concrete callback entry realizes its valid empty logical heap. -/
 theorem importWitness_footprintContents :
     footprintContents importWitnessPlacement importToyCode [] ∅ importWitnessState := by
-  refine ⟨importToy_empty_valid, ?_⟩
+  refine ⟨importToy_valid_empty, ?_⟩
   simp
 
 /-- No argument registers are constrained by the no-argument callback source. -/
@@ -71,7 +54,7 @@ theorem importWitness_codeImage :
   · rw [importToyImage_entry, importToyImage_textLen]
     decide +kernel
   · simp [pc, importWitnessState, importWitnessPlacement, witnessPlacement,
-      witnessRegisters, importToyImage_entry, Std.ExtDHashMap.get?_insert]
+      witnessRegisters, importToyImage_entry, get?_insert]
   · intro i byte hi
     exact witnessImageBytes_get _ _ _ _ _ hi
   · simp
@@ -114,7 +97,7 @@ theorem importWitness_returnPlacement :
     returnPlacement importWitnessPlacement importToyCode [] importWitnessState := by
   refine ⟨?_, ?_, ?_, importWitness_not_footprintByte _, ?_⟩
   · simp [importWitnessState, importWitnessPlacement, witnessPlacement,
-      witnessRegisters, Std.ExtDHashMap.get?_insert]
+      witnessRegisters, get?_insert]
   · change (0x80002000#64).toNat % 4 = 0
     decide +kernel
   · exact importWitness_not_imageByte _ (by decide +kernel)
@@ -126,7 +109,7 @@ theorem importWitness_returnPlacement :
 theorem importWitness_stackPlacement :
     stackPlacement importWitnessPlacement importToyCode [] importWitnessState := by
   refine ⟨0x80004000#64, ?_, by decide +kernel, ?_, ?_, ?_⟩
-  · simp [importWitnessState, witnessRegisters, Std.ExtDHashMap.get?_insert]
+  · simp [importWitnessState, witnessRegisters, get?_insert]
   · change 16 ≤ (0x80004000#64).toNat
     decide +kernel
   · change InUserRam 0x80003ff0#64 16
@@ -146,7 +129,7 @@ theorem importWitness_machineConfiguration :
     machineConfiguration importWitnessPlacement importToyCode importWitnessState := by
   refine ⟨importWitnessState_config, ?_⟩
   have hmt : importWitnessState.regs.get? Register.mtvec = some 0x80003000#64 := by
-    simp [importWitnessState, witnessRegisters, Std.ExtDHashMap.get?_insert]
+    simp [importWitnessState, witnessRegisters, get?_insert]
   have hst : importWitnessState.regs.get? Register.stvec = some 0x80003000#64 := by
     simp [importWitnessState, witnessRegisters]
   intro value hv
@@ -161,8 +144,8 @@ theorem importWitness_machineConfiguration :
 
 /-- Every ABI entry facet is realized by actual profiled registers and relocated source bytes. -/
 theorem importWitness_compatible :
-    RVCompat importWitnessPlacement importToyCode [] ∅ importWitnessState := by
-  exact ⟨importWitness_footprintPlacement, importWitness_footprintContents,
+    RVCompat importWitnessPlacement importToyCode [] ∅ importWitnessState :=
+  ⟨importWitness_footprintPlacement, importWitness_footprintContents,
     importWitness_argumentBindings, importWitness_codeImage, importWitness_importPlacement,
     importWitness_returnPlacement, importWitness_stackPlacement, importWitness_machineConfiguration⟩
 

@@ -99,7 +99,7 @@ theorem swapWitness_not_imageByte (address : Nat) (hout : 0x80000000 + 24 ≤ ad
   omega
 
 /-- Every address beyond the complete assembled image is outside executable text. -/
-theorem swapWitness_not_codeRange (address : BitVec 64) (hout : 0x80000000 + 24 ≤ address.toNat) :
+theorem swapWitness_not_codeRange (address : BitVec 64) (hout : 0x80000000 + 20 ≤ address.toNat) :
     ¬ codeRange (witnessPlacement l) swapCode address := by
   rintro ⟨image, himage, hspan⟩
   cases swapWitness_image_of_assemble himage
@@ -201,8 +201,7 @@ theorem swapWitness_codeImage :
   · change (0x80000000#64).toNat % 8 = 0
     decide +kernel
   · decide +kernel
-  · simp [pc, witnessRegisters,
-      witnessPlacement, get?_insert, swapWitnessImage_entry]
+  · simp [pc, witnessRegisters, witnessPlacement, get?_insert, swapWitnessImage_entry]
   · intro i byte hi
     change swapWitnessImage.bytes[i]? = some byte at hi
     exact swapWitness_codeByte l k old i byte hi
@@ -212,8 +211,7 @@ theorem swapWitness_codeImage :
       simp [witnessPlacement, Ne.symm hne, swapWitnessImage_length, disjointSpans]
 
 /-- Every address above both allocated words is outside the complete footprint. -/
-theorem swapWitness_not_footprintByte (address : Nat)
-    (hout : 0x80001010 ≤ address) :
+theorem swapWitness_not_footprintByte (address : Nat) (hout : 0x80001010 ≤ address) :
     ¬ footprintByte (witnessPlacement l) swapCode [.loc l, .loc k] address := by
   rintro ⟨r, hr, hspan⟩
   rw [swap_callRegions_mem] at hr

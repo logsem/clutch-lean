@@ -6,6 +6,7 @@ import MetrologyAsm.Sail.ByteRules
 namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions Sail
+open Std.ExtDHashMap
 
 /-- Prepare sequential execution and record one typed architectural register write. -/
 def registerBodyState (s : Mach) (pc : BitVec 64) (destination : Register)
@@ -34,18 +35,18 @@ theorem rvStep_register_instruction {s : Mach} (h : UserConfig s)
     rvStep s =
       some (commitState (registerBodyState s pc destination value) (BitVec.addInt pc 4)) := by
   have hpc' : (counterState s).regs.get? .PC = some pc := by
-    simp [counterState, Std.ExtDHashMap.get?_insert, hpc]
+    simp [counterState, get?_insert, hpc]
   have hfetch := h.counterState.fetch32 pc word hpc' hram halign hbase hword
   apply rvStep_user_of_execute h pc word inst (BitVec.addInt pc 4) hpc hfetch
     (decode_of_guarded h.counterState word inst hdecode)
   · rw [runSail_eq_some_iff]
     exact hbody
   · exact h.registerBodyState pc destination value hpolicy
-  · simp [registerBodyState, sequentialState, Std.ExtDHashMap.get?_insert, hnext]
-  · simp [registerBodyState, sequentialState, counterState, Std.ExtDHashMap.get?_insert,
+  · simp [registerBodyState, sequentialState, get?_insert, hnext]
+  · simp [registerBodyState, sequentialState, counterState, get?_insert,
       hcount]
 
-/-- Fetch, decode and a successful doubleword store compose into the complete architectural step. -/
+/-- Fetch, decode and a successful doubleword store body compose into the full step. -/
 theorem rvStep_memory_instruction {s : Mach} (h : UserConfig s)
     (pc : BitVec 64) (word : BitVec 32) (inst : instruction) (address value : BitVec 64)
     (hpc : s.regs.get? .PC = some pc) (hram : InUserRam pc 4) (halign : pc.toNat % 4 = 0)
@@ -55,7 +56,7 @@ theorem rvStep_memory_instruction {s : Mach} (h : UserConfig s)
       .ok (.Retire_Success ()) (storeBodyState s pc address value)) :
     rvStep s = some (commitState (storeBodyState s pc address value) (BitVec.addInt pc 4)) := by
   have hpc' : (counterState s).regs.get? .PC = some pc := by
-    simp [counterState, Std.ExtDHashMap.get?_insert, hpc]
+    simp [counterState, get?_insert, hpc]
   have hfetch := h.counterState.fetch32 pc word hpc' hram halign hbase hword
   apply rvStep_user_of_execute h pc word inst (BitVec.addInt pc 4) hpc hfetch
     (decode_of_guarded h.counterState word inst hdecode)
@@ -63,6 +64,6 @@ theorem rvStep_memory_instruction {s : Mach} (h : UserConfig s)
     exact hbody
   · exact (h.counterState.sequentialState pc).write64State address value
   · simp [storeBodyState, sequentialState]
-  · simp [storeBodyState, sequentialState, counterState, Std.ExtDHashMap.get?_insert]
+  · simp [storeBodyState, sequentialState, counterState, get?_insert]
 
 end MetrologyAsm

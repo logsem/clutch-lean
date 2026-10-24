@@ -9,7 +9,7 @@ import Metrology.Iris.LocalBI
 
 @[expose] public section
 
-open Iris Iris.Std Iris.BI Iris.ProofMode GradedLifting
+open Iris Iris.Std Iris.ProofMode
 
 namespace ProbLang
 

@@ -16,7 +16,7 @@ namespace ProbLang.RandomizedResponse
 
 open Real (rpow_two rpow_neg_one)
 
-/-- One round has second moment `(3² + 3⁻¹) / 4 = 7/3`, so χ² `4/3`. -/
+/-- One round has second moment `(3² + 3⁻¹) / 4 = 7/3`, and χ² `4/3`. -/
 theorem chi2Divergence_rrOut (b : Bool) :
     chi2Divergence (.ofReal (4 / 3)) (draw.map (rrOut b)) (draw.map (rrOut !b)) :=
   (powerDivergence_ofReal_iff one_lt_two (by norm_num)).2 <| by

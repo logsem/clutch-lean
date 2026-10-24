@@ -10,20 +10,17 @@ open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
 /-- The source calls the import and returns its reply for every compatible entry and resumption. -/
 theorem importToy_rvspec : RVSpec importToyCode [] ∅ importToyTree := by
   intro ι origin hcompat
-  change Mach at origin
   have hlayout := ImportToyPlacement.of_RVCompat ι origin ∅ hcompat
   obtain ⟨sp, hsp, layout⟩ := hlayout
   obtain ⟨hplacement, _, _, himage, himports, hreturn, hstack, hconfig⟩ := hcompat
   have hrawImage := ImportToyImageAt.of_codeImage ι origin himage
   have hcode := importToy_code_contains ι origin himage
   have hlower := importToy_stack_lower ι origin sp hstack hsp
-  have houtCallback : ¬ codeRange ι importToyCode (ι.importAddr "cb") := by
-    intro hp
-    exact (himports.1 "cb" ⟨[], .int 64⟩ (by simp [importToyCode])).1
-      (imageByte_of_codeRange_importToy ι _ hp)
-  have houtReturn : ¬ codeRange ι importToyCode ι.retAddr := by
-    intro hp
-    exact hreturn.2.2.1 (imageByte_of_codeRange_importToy ι _ hp)
+  have hout : ∀ p : BitVec 64, ¬ imageByte ι importToyCode p.toNat →
+      ¬ codeRange ι importToyCode p :=
+    fun p hp h => hp (imageByte_of_codeRange_importToy ι p h)
+  have houtCallback := hout _ (himports.1 "cb" _ importToyCode_mem_imports).1
+  have houtReturn := hout _ hreturn.2.2.1
   have hprefix := importToy_runsTo_call hconfig.1 ι.codeBase sp ι.retAddr (ι.importAddr "cb")
     layout hrawImage (codeImage_importToy_pc ι origin himage) hsp hreturn.1
     (codeRange ι importToyCode) hcode houtCallback
@@ -39,7 +36,7 @@ theorem importToy_rvspec : RVSpec importToyCode [] ∅ importToyTree := by
   · refine ⟨?_, hprefixMemory, hprefixFrame, ?_, hplacement, rfl, ?_⟩
     · apply observe_importToy_call
       · exact importCallState_pc origin _ _ _ _
-      · exact hreturn.2.2.2.2 "cb" ⟨[], .int 64⟩ (by simp [importToyCode])
+      · exact hreturn.2.2.2.2 "cb" _ importToyCode_mem_imports
     · exact machineConfiguration.of_configurationFrame ι importToyCode hconfig
         (hconfig.1.importCallState _ _ _ _) hprefixFrame
     · refine ⟨importPC ι.codeBase 16, importCallState_ra origin _ _ _ _, ?_⟩

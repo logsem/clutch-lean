@@ -7,29 +7,27 @@ import Metrology.Iris.LocalBI
 
 /-! # Credit-paying couplings of continuous draws
 
-The `urand` counterparts of the `rand` coupling rules: liftings of two uniform reals within a
-budget, steps of a bind law, credits paid in expectation, and couplings of `urand` with `rand N`
-along a map pushing `unifUnit` to `unifInt N`. Each has a `refines` form and a `rel_couple_*`
-tactic. -/
+The `urand` counterparts of the `rand` coupling rules, and couplings of `urand` with `rand N`
+along a map pushing `unifUnit` to `unifInt N`. -/
 
 @[expose] public section
 
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting
-open MeasureTheory (Measure MeasurePreserving volume lintegral_indicator_one measure_mono_null)
+open Iris hiding wp_bind
+open Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting
+open MeasureTheory (Measure MeasurePreserving)
 open scoped AppGS ENNReal
 
 namespace ProbLang
 
 open LawfulProbLangℝ
 open Cfg Ectx Exp BudgetCredit BIFUpdate LawfulSet IsLawful IsTopAbsorbing Set Real
-open MeasureTheory.Measure (map_map ext_of_singleton map_apply)
+open MeasureTheory.Measure (map_map ext_of_singleton map_apply uniformOfFinset_apply_singleton)
 open _root_.Int (cast_pos measurable_floor floor_eq_iff card_Ico toNat_of_nonneg lt_or_le)
-open _root_.Measurable (of_discrete)
 open ENNReal (ofReal_div_of_pos ofReal_one ofReal_natCast)
+open _root_.Measurable (of_discrete)
 
 variable {rT : Type} {B : Type} {L : GradedLifting.{0} B}
 
@@ -71,18 +69,7 @@ theorem Cfg.exists_of_drawCostReal_lt_top [Preorder B] [OrderTop B] {σ σ' : St
   by_contra hne
   simp only [drawCostReal, hne, dite_false, lt_self_iff_false] at h
 
-variable [MeasurableSpace rT] [LawfulProbLangℝ rT] (σ σ' : State rT) (K : Ectx rT)
-
-/-! ## Liftings of `unifUnit` pushed to configurations -/
-
-/-- A lifting of two uniform reals lifts to their configurations, the right one in context `K`. -/
-theorem Cfg.uniformReal_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    {b : B}
-    {S : rT → rT → Prop} {S' : Cfg rT → Cfg rT → Prop} (h : L.Rel b S unifUnit unifUnit)
-    (hS : ∀ x y, S x y → S' ⟨pl(#real x), σ⟩ ⟨K.fill pl(#real y), σ'⟩) :
-    L.Rel b S' (uniformReal σ) ((uniformReal σ').map K.fillCfg) := by
-  rw [uniformReal, uniformReal, map_map (fillCfg.measurable K) (measurable_realLit σ')]
-  exact h.map hS (measurable_realLit σ) ((fillCfg.measurable K).comp (measurable_realLit σ'))
+variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 open Classical in
 /-- The leftover of an expectation-paid coupling along `f`: `s (ε₂ y)` when `y = f x` for `x` in
@@ -92,12 +79,26 @@ noncomputable def advCostReal [_root_.Top B] (s : ℝ≥0∞ → B) (f : rT → 
   if x ∈ unifUnitSupport ∧ f x = y then s (ε₂ y) else ⊤
 
 /-- A finite `advCostReal` forces the coupled pair. -/
-theorem advCostReal_spec [Preorder B] [OrderTop B] {s : ℝ≥0∞ → B} {f : rT → rT} {ε₂ : rT → ℝ≥0∞}
-    {x y : rT} (h : advCostReal s f ε₂ x y < (⊤ : B)) :
+theorem advCostReal_of_lt_top [Preorder B] [OrderTop B] {s : ℝ≥0∞ → B} {f : rT → rT}
+    {ε₂ : rT → ℝ≥0∞} {x y : rT} (h : advCostReal s f ε₂ x y < (⊤ : B)) :
     (x ∈ unifUnitSupport ∧ f x = y) ∧ advCostReal s f ε₂ x y = s (ε₂ y) := by
   by_cases hS : x ∈ unifUnitSupport ∧ f x = y
   · exact ⟨hS, ite_eq_left hS⟩
   · simp [advCostReal, hS] at h
+
+/-! ## Liftings of `unifUnit` pushed to configurations -/
+
+section Draws
+
+variable (σ σ' : State rT) (K : Ectx rT)
+
+/-- A lifting of two uniform reals lifts to their configurations, the right one in context `K`. -/
+theorem Cfg.uniformReal_rel_fill [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful] {b : B}
+    {S : rT → rT → Prop} {S' : Cfg rT → Cfg rT → Prop} (h : L.Rel b S unifUnit unifUnit)
+    (hS : ∀ x y, S x y → S' ⟨pl(#real x), σ⟩ ⟨K.fill pl(#real y), σ'⟩) :
+    L.Rel b S' (uniformReal σ) ((uniformReal σ').map K.fillCfg) := by
+  rw [uniformReal, uniformReal, map_map (fillCfg.measurable K) (measurable_realLit σ')]
+  exact h.map hS (measurable_realLit σ) ((fillCfg.measurable K).comp (measurable_realLit σ'))
 
 /-- Coupling `urand ~ K[urand]` along a measure-preserving `f`, paying `s (ε₂ y)` at the right
 draw `y` out of `s ε₁`, where `ε₁` bounds the mean of `ε₂`. -/
@@ -107,15 +108,16 @@ theorem Cfg.uniformReal_lift_adv [AddCommMonoid B] [PartialOrder B] [Canonically
     (hmp : MeasurePreserving f unifUnit unifUnit) (ε₁ : ℝ≥0∞) (ε₂ : rT → ℝ≥0∞)
     (hε₂ : Measurable ε₂) (hamort : ∫⁻ y, ε₂ y ∂unifUnit ≤ ε₁) :
     L (s ε₁) (drawCostReal σ σ' K (advCostReal s f ε₂))
-      (unifUnit.map fun x ↦ (⟨pl(#real x), σ⟩ : Cfg rT))
-      (unifUnit.map fun y ↦ (⟨K.fill pl(#real y), σ'⟩ : Cfg rT)) := by
+      (uniformReal σ) ((uniformReal σ').map K.fillCfg) := by
   classical
+  rw [uniformReal, uniformReal, map_map (fillCfg.measurable K) (measurable_realLit σ')]
   have h0 := (rel_graph (L := L) unifUnit hmp.measurable).restrict unifUnitSupportMeasurable
     unifUnitIsConcentrated
   rw [hmp.map_eq] at h0
   have h1 := IsExpectationAdditive.add_right (s := s) hε₂ h0
   refine map (measurable_realLit σ) ((fillCfg.measurable K).comp (measurable_realLit σ'))
     (mono h1 (by rw [zero_add]; exact OrderHomClass.mono s hamort) fun x y => ?_)
+  dsimp only [Function.comp_apply, fillCfg]
   rw [drawCostReal_apply]
   by_cases hS : f x = y ∧ x ∈ unifUnitSupport
   · rw [relCost_of (S := fun x y ↦ f x = y ∧ x ∈ unifUnitSupport) hS, zero_add, advCostReal,
@@ -125,12 +127,10 @@ theorem Cfg.uniformReal_lift_adv [AddCommMonoid B] [PartialOrder B] [Canonically
 
 /-! ## `urand` against `rand N` along a map -/
 
-variable {N : Int}
-
 /-- Coupling the uniform real with a uniform integer along `g`, which pushes `unifUnit` to
 `unifInt N`. -/
-theorem Cfg.uniformReal_rel_uniform [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
+theorem Cfg.uniformReal_rel_uniform {N : Int} [Zero B] [Add B] [Preorder B] [OrderTop B]
+    [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
     (hg : MeasurePreserving g unifUnit (unifInt N HN)) :
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨K.fill pl(#int (g r)), σ'⟩)
@@ -143,8 +143,8 @@ theorem Cfg.uniformReal_rel_uniform [Zero B] [Add B] [Preorder B] [OrderTop B] [
     ((fillCfg.measurable K).comp of_discrete)
 
 /-- Coupling a uniform integer with the uniform real, the integer being `g` of the real. -/
-theorem Cfg.uniform_rel_uniformReal [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
-    [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
+theorem Cfg.uniform_rel_uniformReal {N : Int} [Zero B] [Add B] [Preorder B] [OrderTop B]
+    [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (HN : 0 < N) (g : rT → Int)
     (hg : MeasurePreserving g unifUnit (unifInt N HN)) :
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#int (g r)), σ⟩ ∧ c₂ = ⟨K.fill pl(#real r), σ'⟩)
@@ -155,6 +155,8 @@ theorem Cfg.uniform_rel_uniformReal [Zero B] [Add B] [Preorder B] [OrderTop B] [
     map_map (fillCfg.measurable K) (measurable_realLit σ')]
   exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (of_discrete.comp hg.measurable)
     ((fillCfg.measurable K).comp (measurable_realLit σ'))
+
+end Draws
 
 /-- At `ℝ`, `u ↦ ⌊N u⌋` pushes the uniform measure on `[0, 1]` to the uniform measure on
 `{0, …, N-1}`. -/
@@ -170,8 +172,8 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
       div_le_iff₀ hNr, lt_div_iff₀ hNr]
     constructor <;> rintro ⟨h1, h2⟩ <;> constructor <;> linarith
   rw [map_apply hmeas (measurableSet_singleton k), hpre, unifInt,
-    Measure.uniformOfFinset_apply_singleton]
-  show (volume.restrict (Icc (0 : ℝ) 1)) _ = _
+    uniformOfFinset_apply_singleton]
+  show (MeasureTheory.volume.restrict (Icc (0 : ℝ) 1)) _ = _
   rw [Measure.restrict_apply measurableSet_Ico]
   split_ifs with hk
   · obtain ⟨hk0, hkN⟩ := Finset.mem_Ico.mp hk
@@ -185,7 +187,7 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
     rw [← ofReal_natCast]
     congr 1
     exact_mod_cast (toNat_of_nonneg HN.le).symm
-  · refine measure_mono_null (t := {(1 : ℝ)}) ?_ (volume_singleton)
+  · refine MeasureTheory.measure_mono_null (t := {(1 : ℝ)}) ?_ (volume_singleton)
     rintro u ⟨⟨h1, h2⟩, h3, h4⟩
     rw [div_le_iff₀ hNr] at h1
     rw [lt_div_iff₀ hNr] at h2
@@ -194,7 +196,7 @@ theorem measurePreserving_floor_mul (N : Int) (HN : 0 < N) :
     · have : (k : ℝ) + 1 ≤ 0 := by exact_mod_cast (show k + 1 ≤ 0 by omega)
       nlinarith
     · have : (N : ℝ) ≤ k := by exact_mod_cast (show N ≤ k by omega)
-      exact _root_.le_antisymm h4 (by nlinarith)
+      exact le_antisymm h4 (by nlinarith)
 
 /-! ## Program rules -/
 
@@ -241,7 +243,7 @@ theorem wp_couple_urand_urand_law (law : L.BindLaw) [law.HeadShift] [law.SideFre
     ((reducible_urand σ₁').fill K) hheadStep
     (.of_forall fun k₁ k₂ ↦ BindLaw.SideFree.side _ _ _ k₁ k₂)
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
-  obtain ⟨x, y, h1, h2⟩ := exists_of_drawCostReal_lt_top (_root_.lt_of_le_of_lt le_self_add hR)
+  obtain ⟨x, y, h1, h2⟩ := exists_of_drawCostReal_lt_top (le_self_add.trans_lt hR)
   obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h1
   obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h2
   rw [drawCostReal_apply] at hR ⊢
@@ -254,7 +256,7 @@ theorem wp_couple_urand_urand_law (law : L.BindLaw) [law.HeadShift] [law.SideFre
   rw [add_comm (R x y)]
   iframe Hσ Hs' Hb
   iapply wp_value_of_toVal rfl
-  iapply Hcnt $$ %x %y %(_root_.lt_of_le_of_lt le_self_add hR) Hfrag Hj'
+  iapply Hcnt $$ %x %y %(le_self_add.trans_lt hR) Hfrag Hj'
 
 section Bind
 variable [L.IsSupportLocal] [L.HasBind]
@@ -297,13 +299,10 @@ theorem wp_couple_urand_urand_spend (S : rT → rT → Prop) (c : B) (hc : IsAdd
 section Reflexive
 variable [L.IsReflexive]
 
-variable {s : ℝ≥0∞ →+o B}
-variable [L.IsExpectationAdditive s]
-
 /-- Couple `urand ~ K[urand]` along a measure-preserving `f`, turning `↯b (s ε₁)` into
 `↯b (s (ε₂ (f x)))` at the draw `x`, where `ε₁` bounds the mean of `ε₂` (the `urand` form of
 `wp_couple_rand_rand_adv`). -/
-theorem wp_couple_urand_urand_adv (f : rT → rT)
+theorem wp_couple_urand_urand_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s] (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) (ε₁ : ℝ≥0∞) (ε₂ : rT → ℝ≥0∞)
     (hε₂ : Measurable ε₂) (hamort : ∫⁻ y, ε₂ y ∂unifUnit ≤ ε₁) (hc : IsAddLeftRegular (s ε₁))
     (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
@@ -323,9 +322,7 @@ theorem wp_couple_urand_urand_adv (f : rT → rT)
   imodintro
   have hlift : L (s ε₁) (drawCostReal σ₁ σ₁' K (advCostReal s f ε₂))
       (primStep ⟨pl(urand), σ₁⟩) (primStep ⟨K.fill pl(urand), σ₁'⟩) := by
-    rw [primStep_urand, primStep_fill urand_not_isValue, primStep_urand, uniformReal, uniformReal,
-      map_map (g := fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT))
-        (fillCfg.measurable K) (measurable_realLit σ₁')]
+    rw [primStep_urand, primStep_fill urand_not_isValue, primStep_urand]
     exact uniformReal_lift_adv σ₁ σ₁' K f hmp ε₁ ε₂ hε₂ hamort
   iexists drawCostReal σ₁ σ₁' K (advCostReal s f ε₂), s ε₁, r
   iframe %hb %hredL %hredR %hlift
@@ -344,7 +341,7 @@ theorem wp_couple_urand_urand_adv (f : rT → rT)
   obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h1
   obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp h2
   rw [drawCostReal_apply] at habs hlt ⊢
-  obtain ⟨⟨hx, rfl⟩, hcost⟩ := advCostReal_spec hlt
+  obtain ⟨⟨hx, rfl⟩, hcost⟩ := advCostReal_of_lt_top hlt
   rw [hcost] at habs ⊢
   have hna : ¬ L.Absorbing (s (ε₂ (f x))) := fun h => habs (h.mono le_self_add)
   imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
@@ -360,16 +357,16 @@ theorem wp_couple_urand_urand_adv (f : rT → rT)
 /-- Couple `urand ~ K[urand]` identically, avoiding the measurable set `Bad` for
 `↯b (s (unifUnit Bad))` when `s 1` is absorbing (the `urand` form of
 `wp_couple_rand_rand_avoid`). -/
-theorem wp_couple_urand_urand_avoid (Bad : Set rT) (hBad : MeasurableSet Bad)
-    (habs : L.Absorbing (s 1)) (hc : IsAddLeftRegular (s (unifUnit Bad))) (K : Ectx rT)
-    (E : CoPset) (Φ : Val rT → _) : iprop%
+theorem wp_couple_urand_urand_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
+    (Bad : Set rT) (hBad : MeasurableSet Bad) (habs : L.Absorbing (s 1))
+    (hc : IsAddLeftRegular (s (unifUnit Bad))) (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(urand) ∗ ↯b (s (unifUnit Bad)) ∗
       (∀ x, ⌜x ∈ unifUnitSupport ∧ x ∉ Bad⌝ -∗ ⤇ K.fill pl(#real x) -∗ Φ (.real x)) ⊢
       wp L E pl(urand) Φ := by
   iintro ⟨Hj, Herr, Hcnt⟩
   iapply wp_couple_urand_urand_adv id (MeasurePreserving.id _) (unifUnit Bad)
     (Bad.indicator 1) (measurable_one.indicator hBad)
-    (by rw [lintegral_indicator_one hBad]) hc K E Φ
+    (by rw [MeasureTheory.lintegral_indicator_one hBad]) hc K E Φ
   iframe Hj Herr
   iintro %x %hx %hna - Hj'
   by_cases hb : x ∈ Bad
@@ -395,16 +392,13 @@ theorem wp_couple_urand_rand (N : Int) (HN : 0 < N) (g : rT → Int)
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#real r), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#int (g r)), σ₁'⟩
   iexists R, 0, b
-  isplitr
-  · ipureintro; rw [zero_add]
-  isplitr
-  · ipureintro; exact reducible_urand σ₁
-  isplitr
-  · ipureintro; exact ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
-  isplitr
-  · ipureintro
+  have hb : 0 + b ≤ b := (zero_add b).le
+  have hredL := reducible_urand σ₁
+  have hredR := ((randUnit_uniform_step HN σ₁').1.toReducible).fill K
+  have hcpl : L.Rel 0 R (primStep ⟨pl(urand), σ₁⟩) (primStep ⟨K.fill pl(rand(#N, #())), σ₁'⟩) := by
     rw [primStep_urand σ₁, primStep_fill rand_not_isValue, primStep_rand_unit HN]
     exact uniformReal_rel_uniform σ₁ σ₁' K HN g hg
+  iframe %hb %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
   cases heq2
@@ -433,16 +427,13 @@ theorem wp_couple_rand_urand (N : Int) (HN : 0 < N) (g : rT → Int)
   let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
     c₁ = ⟨pl(#int (g r)), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#real r), σ₁'⟩
   iexists R, 0, b
-  isplitr
-  · ipureintro; rw [zero_add]
-  isplitr
-  · ipureintro; exact (randUnit_uniform_step HN σ₁).1.toReducible
-  isplitr
-  · ipureintro; exact (reducible_urand σ₁').fill K
-  isplitr
-  · ipureintro
+  have hb : 0 + b ≤ b := (zero_add b).le
+  have hredL := (randUnit_uniform_step HN σ₁).1.toReducible
+  have hredR := (reducible_urand σ₁').fill K
+  have hcpl : L.Rel 0 R (primStep ⟨pl(rand(#N, #())), σ₁⟩) (primStep ⟨K.fill pl(urand), σ₁'⟩) := by
     rw [primStep_rand_unit HN, primStep_fill urand_not_isValue, primStep_urand σ₁']
     exact uniform_rel_uniformReal σ₁ σ₁' K HN g hg
+  iframe %hb %hredL %hredR %hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
   cases heq1
   cases heq2
@@ -482,7 +473,7 @@ theorem refines_couple_urands_law (law : L.BindLaw) [law.HeadShift] [law.SideFre
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_urand_urand_law law R c hc (K2.comp K') (hhead _) ⊤ _
   iframe Hj Hc
   iintro %x %y %hR Hr HKres
@@ -503,7 +494,7 @@ theorem refines_couple_urands_spend (S : rT → rT → Prop) (c : B) (hc : IsAdd
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_urand_urand_spend S c hc Hcpl (K2.comp K') ⊤ _
   iframe Hj Hc
   iintro %x %y %hS HKres
@@ -526,7 +517,7 @@ theorem refines_couple_urands_adv {s : ℝ≥0∞ →+o B} [L.IsExpectationAddit
   unfold refines
   iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_urand_urand_adv f hmp ε₁ ε₂ hε₂ hamort hc (K2.comp K') ⊤ _
   iframe Hj Hε
   iintro %x %hx - Hec HKres
@@ -545,7 +536,7 @@ theorem refines_couple_urands_avoid {s : ℝ≥0∞ →+o B} [L.IsExpectationAdd
   unfold refines
   iintro ⟨Hε, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_urand_urand_avoid Bad hBad habs hc (K2.comp K') ⊤ _
   iframe Hj Hε
   iintro %x %hx HKres
@@ -563,7 +554,7 @@ theorem refines_couple_urand_rand (N : Int) (HN : 0 < N) (g : rT → Int)
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_urand_rand N HN g hg (K2.comp K') ⊤ _
   iframe Hj
   iintro %x %hx HKres
@@ -581,7 +572,7 @@ theorem refines_couple_rand_urand (N : Int) (HN : 0 < N) (g : rT → Int)
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_urand N HN g hg (K2.comp K') ⊤ _
   iframe Hj
   iintro %x %hx HKres

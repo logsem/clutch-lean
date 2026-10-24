@@ -159,6 +159,11 @@ theorem wp_strong_mono (HE : E1 ⊆ E2) : iprop%
 theorem wp_wand : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ :=
   wpFor_wand
 
+/-- The weakest precondition is monotone in its postcondition, under a persistent wand on the
+right. -/
+theorem wp_wand_r : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ :=
+  wpFor_wand_r
+
 /-- A fancy update in the postcondition can be absorbed. -/
 theorem wp_fupd : wp L E e (fun v => iprop(|={E}=> Φ v)) ⊢ wp L E e Φ :=
   wpFor_fupd
@@ -177,6 +182,7 @@ theorem wp_mono (HΦ : ∀ v, Φ v ⊢ Ψ v) : wp L E e Φ ⊢ wp L E e Ψ :=
 theorem wp_mask_mono (HE : E1 ⊆ E2) : wp L E1 e Φ ⊢ wp L E2 e Φ :=
   wpFor_mask_mono HE
 
+/-- The weakest precondition is monotone in its postcondition, under a persistent left wand. -/
 theorem wp_wand_l : iprop% □ (∀ v, Φ v -∗ Ψ v) ∗ wp L E e Φ ⊢ wp L E e Ψ :=
   wpFor_wand_l
 
@@ -185,6 +191,7 @@ theorem wp_wand_l : iprop% □ (∀ v, Φ v -∗ Ψ v) ∗ wp L E e Φ ⊢ wp L 
 theorem wp_ne_aux (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp L E e Ψ :=
   wpFor_ne_aux HΦ
 
+/-- `wp` is non-expansive in the postcondition. -/
 instance wp_ne : NonExpansive (wp L (GF := GF) E e) :=
   wpFor_ne
 

@@ -9,6 +9,7 @@ import all Mathlib.Tactic.DeriveCountable
 
 @[expose] public section
 
+/-- Characters are countable through their code points. -/
 instance instCountableChar : Countable Char where
   exists_injective_nat' := by
     exists (·.1.toNat)
@@ -16,6 +17,7 @@ instance instCountableChar : Countable Char where
     simp only [Char.mk.injEq]
     exact UInt32.toNat_inj.mp
 
+/-- Strings are countable through their character lists. -/
 instance instCountableString : Countable String where
   exists_injective_nat' := by
     have ⟨f, hf⟩ : Countable (List Char) := by infer_instance

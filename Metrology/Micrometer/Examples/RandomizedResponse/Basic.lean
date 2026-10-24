@@ -65,19 +65,19 @@ theorem map_rrOut_singleton : draw.map (rrOut b) {c} = if b = c then 3 / 4 else 
   cases b <;> cases c <;> norm_num [rrOut, indicator, filter_insert, filter_singleton,
     div_eq_inv_mul, mul_comm]
 
-/-- Some draw reports `c`: draws `0` and `3` report different bits. -/
+/-- Some draw reports `c`. -/
 theorem exists_rrOut_eq : ∃ k : Int, 0 ≤ k ∧ k < 4 ∧ rrOut b k = c := by
   by_cases h : rrOut b 0 = c
   · exact ⟨0, by norm_num, by norm_num, h⟩
   · exact ⟨3, by norm_num, by norm_num, by revert h; decide +revert⟩
 
-/-- Some draw does not report `c`: draws `0` and `3` report different bits. -/
+/-- Some draw does not report `c`. -/
 theorem exists_rrOut_ne : ∃ k : Int, 0 ≤ k ∧ k < 4 ∧ rrOut b k ≠ c := by
   by_cases h : rrOut b 0 = c
   · exact ⟨3, by norm_num, by norm_num, by revert h; decide +revert⟩
   · exact ⟨0, by norm_num, by norm_num, h⟩
 
-/-- One fiber of the reported bit misses a draw, so it has mass at most `3/4`. -/
+/-- One fiber of the reported bit has mass at most `3/4`. -/
 theorem rrOut_fiber_le : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
   obtain ⟨k, hk0, hk4, hk⟩ := exists_rrOut_ne b c
   calc _ ≤ draw {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
@@ -127,10 +127,12 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## The same round, against a spec -/
 
+variable {GF : BundledGFunctors} [BudgetCreditGS B GF]
+local bi IProp GF
+
 section Wp
 
-variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+variable [MicrometerGS rT .hasNoLC GF]
 
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → _) :
@@ -172,8 +174,7 @@ end Wp
 
 /-! ## One round, refined against itself -/
 
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+variable [MicrometerRGS rT .hasNoLC GF]
 
 /-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
 at `c`. -/
@@ -272,7 +273,7 @@ theorem expBudget_log_three : expBudget (ofReal (log 3)) = 3 := by
 /-- The privacy budget `(ln 3, 0)`, shared by the dp and zCDP liftings. -/
 noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 3), 0)
 
-/-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
+/-- The budget `(ln 3, 0)` is finite. -/
 theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
 
 end ProbLang.RandomizedResponse

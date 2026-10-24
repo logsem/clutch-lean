@@ -28,25 +28,27 @@ inductive Action where
       (archive : Replay)
   deriving Countable
 
+variable {rT : Type}
+
 /-- Encode boundary arguments as a right-nested ProbLang tuple ending in unit. -/
-def argumentTuple {rT : Type} : List BoundaryValue → Exp rT
+def argumentTuple : List BoundaryValue → Exp rT
   | [] => .lit .unit
   | value :: rest => .pair value.toVal.fst (argumentTuple rest)
 
 /-- The value represented by a boundary argument tuple. -/
-def argumentValues {rT : Type} : List BoundaryValue → Val rT
+def argumentValues : List BoundaryValue → Val rT
   | [] => .unit
   | value :: rest => .pair value.toVal (argumentValues rest)
 
 /-- Argument tuple expressions are the expressions of their tuple values. -/
-theorem argumentTuple_eq {rT : Type} (args : List BoundaryValue) :
+theorem argumentTuple_eq (args : List BoundaryValue) :
     argumentTuple args = (argumentValues (rT := rT) args).fst := by
   induction args with
   | nil => rfl
   | cons value rest ih => exact congrArg (Exp.pair value.toVal.fst) ih
 
 /-- Decode a tuple with exactly the requested number of scalar arguments. -/
-def readTuple {rT : Type} : Nat → Exp rT → Option (List BoundaryValue)
+def readTuple : Nat → Exp rT → Option (List BoundaryValue)
   | 0, .lit .unit => some []
   | n + 1, .pair (.lit (.int z)) rest => (readTuple n rest).map (.int z :: ·)
   | n + 1, .pair (.lit (.loc l)) rest => (readTuple n rest).map (.loc l :: ·)
@@ -54,7 +56,7 @@ def readTuple {rT : Type} : Nat → Exp rT → Option (List BoundaryValue)
   | _, _ => none
 
 /-- Tuple encoding preserves boundary arguments and their arity. -/
-@[simp] theorem readTuple_argumentTuple {rT : Type} (args : List BoundaryValue) :
+@[simp] theorem readTuple_argumentTuple (args : List BoundaryValue) :
     readTuple args.length (argumentTuple (rT := rT) args) = some args := by
   induction args with
   | nil => rfl

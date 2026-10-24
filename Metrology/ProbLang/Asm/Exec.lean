@@ -40,7 +40,9 @@ theorem execNWith_pure_steps (env : FfiEnv rT) {e₁ e₂ : Exp rT} {k : Nat}
     execNWith env (k + fuel) ⟨e₁, σ⟩ = execNWith env fuel ⟨e₂, σ⟩ := by
   show execNFor (primStepWith env) (k + fuel) ⟨e₁, σ⟩ = execNFor (primStepWith env) fuel ⟨e₂, σ⟩
   induction k generalizing e₁ with
-  | zero => cases h; simp only [Nat.zero_add]
+  | zero =>
+    cases h
+    simp only [Nat.zero_add]
   | succ k ih =>
     obtain ⟨e, hpure, hrest⟩ := h
     rw [Nat.succ_add, execNFor_succ_of_step (measurable_primStepWith env)

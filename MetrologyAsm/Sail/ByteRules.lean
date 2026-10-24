@@ -7,9 +7,14 @@ namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions Sail
 open Sail.ConcurrencyInterfaceV1
+open Std.ExtHashMap
+
+section Byte
+
+variable (s : Mach) (address : BitVec 64) (value : BitVec 8)
 
 /-- A one-byte word assertion is exactly the lookup of that allocated physical byte. -/
-theorem wordAt8_iff (s : Mach) (address : BitVec 64) (value : BitVec 8) :
+theorem wordAt8_iff :
     WordAt s address 1 value ↔ s.mem.get? address.toNat = some value := by
   constructor
   · intro h
@@ -19,19 +24,21 @@ theorem wordAt8_iff (s : Mach) (address : BitVec 64) (value : BitVec 8) :
     subst i
     simpa using h
 
-/-- Installing one owned byte preserves every non-memory field of the Sail state. -/
-def write8State (s : Mach) (address : BitVec 64) (value : BitVec 8) : Mach :=
+/-- The state with one physical memory byte replaced. -/
+def write8State : Mach :=
   { s with mem := s.mem.insert address.toNat value }
 
 /-- Installing a byte realizes its exact physical memory lookup. -/
-@[simp] theorem write8State_get (s : Mach) (address : BitVec 64) (value : BitVec 8) :
+@[simp] theorem write8State_get :
     (write8State s address value).mem.get? address.toNat = some value := by
-  simp [write8State, Std.ExtHashMap.get?_eq_getElem?]
+  simp [write8State, get?_eq_getElem?]
 
 /-- Installing a byte preserves every physical memory address outside its cell. -/
-theorem write8State_get_other (s : Mach) (address : BitVec 64) (value : BitVec 8) (a : Nat)
+theorem write8State_get_other (a : Nat)
     (ha : address.toNat ≠ a) : (write8State s address value).mem.get? a = s.mem.get? a := by
-  simp [write8State, Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert, ha]
+  simp [write8State, get?_eq_getElem?, getElem?_insert, ha]
+
+end Byte
 
 /-- One-byte installation preserves the complete user-mode register profile. -/
 theorem UserConfig.write8State {s : Mach} (h : UserConfig s)
@@ -43,9 +50,9 @@ theorem UserConfig.write8State {s : Mach} (h : UserConfig s)
 theorem readBytes8_eq {s : Mach} {address : Nat} {value : BitVec 8}
     (h : s.mem.get? address = some value) :
     (PreSail.readBytes 1 address : SailM (BitVec 8 × Option Bool)) s = .ok (value, none) s := by
-  simp [PreSail.readBytes, PreSail.readByte, Std.ExtHashMap.get?_eq_getElem?] at h ⊢
+  simp [PreSail.readBytes, PreSail.readByte, get?_eq_getElem?] at h ⊢
   simp [h, bind, EStateM.bind, Functor.map, EStateM.map, pure, EStateM.pure, EStateM.get,
-    get, MonadState.get, getThe, MonadStateOf.get]
+    MonadState.get, getThe, MonadStateOf.get]
 
 /-- A plain one-byte RAM read returns the allocated byte unchanged. -/
 theorem read_ram8_eq {s : Mach} {address : BitVec 64} {value : BitVec 8}
@@ -57,7 +64,7 @@ theorem read_ram8_eq {s : Mach} {address : BitVec 64} {value : BitVec 8}
 /-- A single byte never crosses a virtual page boundary. -/
 theorem split_on_page_boundary8_eq (s : Mach) (address : BitVec 64) :
     split_on_page_boundary address 1 s = .ok (1, 0) s := by
-  have hlast : Sail.BitVec.subInt (Sail.BitVec.addInt address 1) 1 = address := by
+  have hlast : BitVec.subInt (BitVec.addInt address 1) 1 = address := by
     change address + 1#64 - 1#64 = address
     exact BitVec.add_sub_cancel _ _
   simp [split_on_page_boundary, hlast, pure, EStateM.pure]
@@ -78,9 +85,9 @@ theorem checked_mem_read8_of_guards {s : Mach} {address : BitVec 64} {value : Bi
     read_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
     untilFuelM.go, bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk,
     ExceptT.bind, ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift,
-    monadLift, liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr,
-    Sail.BitVec.addInt, hpmp, hmmio, read_ram8_eq hbyte, Sail.BitVec.updateSubrange,
-    Sail.BitVec.updateSubrange']
+    monadLift, liftM, Functor.map, assert, PreSail.assert, bits_of_physaddr,
+    BitVec.addInt, hpmp, hmmio, read_ram8_eq hbyte, BitVec.updateSubrange,
+    BitVec.updateSubrange']
 
 namespace UserConfig
 
@@ -116,7 +123,7 @@ theorem vmem_read_addr8_of_mem (address : BitVec 64) (value : BitVec 8)
     htranslate, hread, sys_misaligned_order_decreasing, bind, EStateM.bind, EStateM.map,
     pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
     ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map,
-    Sail.BitVec.updateSubrange, Sail.BitVec.updateSubrange']
+    BitVec.updateSubrange, BitVec.updateSubrange']
 
 /-- A byte load through a register uses that register's actual virtual address. -/
 theorem vmem_read8_of_mem (rs : regidx) (base offset : BitVec 64) (value : BitVec 8)
@@ -143,7 +150,7 @@ theorem execute_LBU {t : Mach} (imm : BitVec 12) (rs rd : regidx)
   have hread := h.vmem_read8_of_mem rs base _ value hbase (h.mem_read8 hram hbyte)
   simp [execute_LOAD, RiscvZkvm.Sail.Functions.xlen_bytes, hread, extend_value,
     zero_extend, Sail.BitVec.zeroExtend, hwrite, bind, EStateM.bind, pure, EStateM.pure,
-    Sail.assert, PreSail.assert, RETIRE_SUCCESS]
+    assert, PreSail.assert, RETIRE_SUCCESS]
 
 end UserConfig
 

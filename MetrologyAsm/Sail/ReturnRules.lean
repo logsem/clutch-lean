@@ -6,13 +6,14 @@ namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions
 open Sail
+open Register (nextPC x1)
 
 /-- A jump to an aligned address under UserConfig retires successfully and sets the next program
 counter. -/
 theorem jump_to_eq {s : Mach} (h : UserConfig s) (ra : BitVec 64)
     (halign0 : BitVec.access ra 0 = 0#1) (halign1 : BitVec.access ra 1 = 0#1) :
     runSail (jump_to ra) s =
-      some (.Retire_Success (), { s with regs := s.regs.insert Register.nextPC ra }) := by
+      some (.Retire_Success (), { s with regs := s.regs.insert nextPC ra }) := by
   have hzca := (runSail_eq_some_iff _ _ _ _).mp h.disabled_Zca
   simp [runSail, jump_to, ext_control_check_pc, halign0, halign1, hzca,
     SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map,
@@ -43,11 +44,11 @@ theorem clear_lowbit_self (v : BitVec 64) (h : BitVec.access v 0 = 0#1) :
 
 /-- The exchange return reads ra and changes only the next program counter. -/
 theorem execute_ret_eq {s : Mach} (h : UserConfig s) (ra next : BitVec 64)
-    (hra : s.regs.get? Register.x1 = some ra)
-    (hnext : s.regs.get? Register.nextPC = some next)
+    (hra : s.regs.get? x1 = some ra)
+    (hnext : s.regs.get? nextPC = some next)
     (halign0 : BitVec.access ra 0 = 0#1) (halign1 : BitVec.access ra 1 = 0#1) :
     runSail (execute_JALR 0#12 (.Regidx 1#5) (.Regidx 0#5)) s =
-      some (.Retire_Success (), { s with regs := s.regs.insert Register.nextPC ra }) := by
+      some (.Retire_Success (), { s with regs := s.regs.insert nextPC ra }) := by
   have help := (runSail_eq_some_iff _ _ _ _).mp (h.update_elp_state_eq (.Regidx 1#5))
   have hjump := (runSail_eq_some_iff _ _ _ _).mp (jump_to_eq h ra halign0 halign1)
   have hmask := clear_lowbit_self ra halign0

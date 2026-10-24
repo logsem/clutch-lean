@@ -42,7 +42,7 @@ theorem flipCredit_avg : (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int)
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
 
-/-- The value `0` refines `retry`, with no budget: the spec terminates almost surely. -/
+/-- The value `0` refines `retry`, with no budget. -/
 theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
   -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
   -- tails doubles the credit (`flipCredit`); the step map is the identity

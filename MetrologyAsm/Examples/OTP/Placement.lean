@@ -8,31 +8,37 @@ namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Sail
 
+/-- Any successful assembly of the OTP source is the OTP image. -/
+theorem assemble_otp_eq {image : Image} (hi : assemble otpAsm = .ok image) : image = otpImage :=
+  Except.ok.inj (hi.symm.trans assemble_otpImage)
+
+section
+
+variable (ι : Placement)
+
 /-- The physical OTP footprint occupies exactly its single owned byte. -/
-theorem footprintByte_otp (ι : Placement) (message : Int) (pad : Loc) (address : Nat) :
+theorem footprintByte_otp (message : Int) (pad : Loc) (address : Nat) :
     footprintByte ι otpCode (otpArgs message pad) address ↔ address = (ι.addr pad).toNat :=
   footprintByte_single_byte ι otpCode (otpArgs message pad) pad rfl address
 
 /-- The emitted text occupies precisely eighty executable bytes. -/
-theorem codeRange_otp (ι : Placement) (p : BitVec 64) :
+theorem codeRange_otp (p : BitVec 64) :
     codeRange ι otpCode p ↔ inSpan ι.codeBase.toNat 80 p.toNat := by
   constructor
   · rintro ⟨image, hi, hp⟩
-    have heq : image = otpImage := Except.ok.inj (hi.symm.trans assemble_otpImage)
-    simpa [heq] using hp
+    simpa [assemble_otp_eq hi] using hp
   · exact fun hp => ⟨otpImage, assemble_otpImage, hp⟩
 
 /-- The complete installed image also contains the eight-byte read-only import slot. -/
-theorem imageByte_otp (ι : Placement) (address : Nat) :
+theorem imageByte_otp (address : Nat) :
     imageByte ι otpCode address ↔ inSpan ι.codeBase.toNat 88 address := by
   constructor
   · rintro ⟨image, hi, hp⟩
-    have heq : image = otpImage := Except.ok.inj (hi.symm.trans assemble_otpImage)
-    simpa [heq] using hp
+    simpa [assemble_otp_eq hi] using hp
   · exact fun hp => ⟨otpImage, assemble_otpImage, hp⟩
 
 /-- Every executable OTP address belongs to the complete installed image. -/
-theorem imageByte_of_codeRange (ι : Placement) (p : BitVec 64)
+theorem imageByte_of_codeRange (p : BitVec 64)
     (h : codeRange ι otpCode p) : imageByte ι otpCode p.toNat := by
   apply (imageByte_otp ι _).mpr
   have hp := (codeRange_otp ι p).mp h
@@ -40,24 +46,23 @@ theorem imageByte_of_codeRange (ι : Placement) (p : BitVec 64)
   omega
 
 /-- Each compiled instruction starts within the ABI's executable interval. -/
-theorem codeRange_codePC (ι : Placement) (hram : InUserRam ι.codeBase 88)
+theorem codeRange_codePC (hram : InUserRam ι.codeBase 88)
     {index : Nat} (hi : index < 20) : codeRange ι otpCode (codePC ι.codeBase index) := by
   rw [codeRange_otp, inSpan, codePC_toNat hram (by omega)]
   constructor <;> omega
 
 /-- The actual code-image facet fixes the image extent, alignment and entry PC. -/
-theorem codeImage_facts (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+theorem codeImage_facts (s : Mach) (message : Int) (pad : Loc)
     (h : codeImage ι otpCode (otpArgs message pad) s) :
     InUserRam ι.codeBase 88 ∧ ι.codeBase.toNat % 8 = 0 ∧ pc s = some ι.codeBase := by
   obtain ⟨image, hi, hram, halign, _, hpc, _⟩ := h
-  have heq : image = otpImage := Except.ok.inj (hi.symm.trans assemble_otpImage)
-  subst image
+  obtain rfl := assemble_otp_eq hi
   refine ⟨hram, halign, ?_⟩
   simpa only [show otpImage.entry = 0 from rfl, Nat.add_zero, BitVec.ofNat_toNat,
     BitVec.setWidth_eq] using hpc
 
 /-- Every compatible OTP entry supplies the raw layout needed by all twenty Sail steps. -/
-theorem rawLayout_of_RVCompat (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+theorem rawLayout_of_RVCompat (s : Mach) (message : Int) (pad : Loc)
     (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :
     ∃ sp, s.regs.get? .x2 = some sp ∧
       RawLayout ι.codeBase sp (ι.addr pad) (ι.importAddr "randombytes") ι.retAddr := by
@@ -71,8 +76,7 @@ theorem rawLayout_of_RVCompat (ι : Placement) (s : Mach) (message : Int) (pad :
       (hplace.1 (padRegion pad) (by simp)).2.2.1
   have hcodePad : disjointSpans ι.codeBase.toNat 88 (ι.addr pad).toNat 1 := by
     obtain ⟨image, hi, _, _, _, _, _, hsep⟩ := hcode
-    have heq : image = otpImage := Except.ok.inj (hi.symm.trans assemble_otpImage)
-    subst image
+    obtain rfl := assemble_otp_eq hi
     simpa only [otpImage_length, padRegion, Nat.reduceDiv, Nat.mul_one] using
       hsep (padRegion pad) (by simp)
   have hcodeStack : disjointSpans ι.codeBase.toNat 88 (sp.toNat - 32) 32 := by
@@ -91,5 +95,7 @@ theorem rawLayout_of_RVCompat (ι : Placement) (s : Mach) (message : Int) (pad :
       otpSig])).2.2
   exact ⟨sp, hsp, hram, halign, hspBound, hspAlign, hstackRam, hpadRam,
     hcodeStack, hcodePad, hstackPad, hcallbackAlign, hreturn.2.1⟩
+
+end
 
 end MetrologyAsm.OTP

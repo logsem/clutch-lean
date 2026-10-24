@@ -29,7 +29,7 @@ variable [AppPreGS rT GF] [SpecPreGS rT GF] [BudgetCreditPreGS ℝ≥0∞ GF] [I
   (e e' : Exp rT) (σ σ' : State rT)
 
 section
-variable (ε : ℝ≥0∞) (φ : Val rT → Val rT → Prop)
+variable (φ : Val rT → Val rT → Prop) (ε : ℝ≥0∞)
 
 /-- A `wp` proof at `codensity tv` with credit `ε` gives an additive coupling of the limit
 executions (`wp_adequacy`). -/

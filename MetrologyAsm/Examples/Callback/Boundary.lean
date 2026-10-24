@@ -20,8 +20,24 @@ theorem restrict_empty_heap {V : Type} (heap : LocHeap V) : restrict ∅ heap = 
   intro l
   simp [restrict_get]
 
+/-- The callback fragment is a valid fragment with no regions. -/
+theorem importToy_valid_empty : validFragment importToyCode [] ∅ := by
+  exact ⟨rfl, rfl, rfl⟩
+
+/-- The finite interaction calls the external function and returns its representable reply. -/
+noncomputable def importToyTree : Interaction BoundaryValue :=
+  rv.canonicalize importToyCode [] ∅ (.call "cb" [] ∅ fun r heap => .ret r heap)
+
+/-- The canonical callback interaction is canonical for the callback fragment. -/
+theorem importToyTree_canonical : rv.Canonical importToyCode [] ∅ importToyTree :=
+  rv.canonicalize_canonical importToyCode [] ∅ _
+
+section
+
+variable (r : BoundaryValue) (heap : LocHeap BoundaryValue)
+
 /-- Embedding boundary scalars preserves whether the logical heap is empty. -/
-theorem valueHeap_eq_empty_iff (heap : LocHeap BoundaryValue) :
+theorem valueHeap_eq_empty_iff :
     valueHeap (rT := Empty) heap = ∅ ↔ heap = ∅ := by
   constructor
   · intro h
@@ -37,12 +53,8 @@ theorem valueHeap_eq_empty_iff (heap : LocHeap BoundaryValue) :
     intro l
     simp [valueHeap]
 
-/-- The callback fragment is a valid fragment with no regions. -/
-theorem importToy_valid_empty : validFragment importToyCode [] ∅ := by
-  exact ⟨rfl, rfl, rfl⟩
-
 /-- A callback response consists exactly of a signed doubleword and the empty heap. -/
-theorem importToy_response_iff (r : BoundaryValue) (heap : LocHeap BoundaryValue) :
+theorem importToy_response_iff :
     rv.ResponseOK importToyCode [] ∅ "cb" r heap ↔
       ∃ z, r = .int z ∧ heap = ∅ ∧ inRange true 64 z = true := by
   change boundaryResponseOK importToyCode [] ∅ "cb" r heap ↔ _
@@ -50,30 +62,22 @@ theorem importToy_response_iff (r : BoundaryValue) (heap : LocHeap BoundaryValue
     footprint, regions, restrict_empty_heap, valueHeap_eq_empty_iff, check, checkResult,
     ArgKind.check, intFits, intValue, BoundaryValue.toVal, ArgKind.validResult]
 
-/-- The finite interaction calls the external function and returns its representable reply. -/
-noncomputable def importToyTree : Interaction BoundaryValue :=
-  rv.canonicalize importToyCode [] ∅ (.call "cb" [] ∅ fun r heap => .ret r heap)
-
-/-- Continuation: return a valid response, otherwise the invalid tree. -/
-noncomputable def importToyNext (r : BoundaryValue) (heap : LocHeap BoundaryValue) :
-    Interaction BoundaryValue :=
+/-- The continuation returns a valid response and otherwise the invalid tree. -/
+noncomputable def importToyNext : Interaction BoundaryValue :=
   open Classical in
   if rv.ResponseOK importToyCode [] ∅ "cb" r heap then .ret r heap else rv.invalidTree
 
-/-- The canonical callback interaction is canonical for the callback fragment. -/
-theorem importToyTree_canonical : rv.Canonical importToyCode [] ∅ importToyTree :=
-  rv.canonicalize_canonical importToyCode [] ∅ _
+/-- Every valid callback response selects its corresponding return node. -/
+theorem importToyNext_valid (hr : rv.ResponseOK importToyCode [] ∅ "cb" r heap) :
+    importToyNext r heap = .ret r heap := by
+  classical
+  exact ite_eq_left hr
+
+end
 
 /-- The canonical callback interaction has its explicit first call and continuation. -/
 theorem importToyTree_eq : importToyTree = .call "cb" [] ∅ importToyNext := by
   classical
   rfl
-
-/-- Every valid callback response selects its corresponding return node. -/
-theorem importToyNext_valid (r : BoundaryValue) (heap : LocHeap BoundaryValue)
-    (hr : rv.ResponseOK importToyCode [] ∅ "cb" r heap) :
-    importToyNext r heap = .ret r heap := by
-  classical
-  exact ite_eq_left hr
 
 end MetrologyAsm

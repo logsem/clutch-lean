@@ -6,29 +6,7 @@ import Metrology.ProbLang.Asm.Specification
 
 namespace MetrologyAsm.OTP
 
-open ProbLang ProbLang.Asm
-
-/-- Restriction retains the OTP's singleton integer fragment. -/
-@[simp] theorem restrict_padHeap (pad : Loc) (byte : Int) :
-    restrict {pad} (padHeap pad byte) = padHeap pad byte := by simp [padHeap]
-
-/-- The one-cell snapshot restores exactly the corresponding logical byte heap. -/
-@[simp] theorem restore_padSnapshot (pad : Loc) (byte : Int) :
-    HeapSnapshot.restore [(pad, byte)] = padHeap pad byte := by
-  simp [padHeap, integerHeap, integerSnapshot, footprintLocations, HeapSnapshot.restore]
-
-/-- Archiving the owned logical byte produces its sole location/value pair. -/
-theorem snapshot_padHeap (pad : Loc) (byte : Int) :
-    snapshot (padHeap pad byte) = some [(pad, byte)] := by
-  have hp := Iris.Std.LawfulFiniteMap.toList_ofList
-    (M := LocHeap) (l := [(pad, BoundaryValue.int byte)]) (by simp [Iris.Std.NoDupKeys])
-  have hlist : Iris.Std.FiniteMap.toList
-      (Iris.Std.PartialMap.ofList [(pad, BoundaryValue.int byte)] : LocHeap BoundaryValue) =
-        [(pad, BoundaryValue.int byte)] := List.perm_singleton.mp hp
-  change (Iris.Std.PartialMap.ofList [(pad, BoundaryValue.int byte)] :
-    LocHeap BoundaryValue).toList = [(pad, BoundaryValue.int byte)] at hlist
-  simp [padHeap, integerHeap, integerSnapshot, footprintLocations, HeapSnapshot.restore,
-    snapshot, hlist]
+open ProbLang ProbLang.Asm ProbLang.RandomBytes MeasureTheory.Measure
 
 /-- The replay archive records the original message, private pad location and initialized byte. -/
 def otpArchive (message : Int) (pad : Loc) (initial : Int) : Replay :=
@@ -41,18 +19,18 @@ abbrev otpExpression {rT : Type} (message : Int) (pad : Loc) : Exp rT :=
 /-- The paused language expression invokes the real randombytes lambda inside its replay frame. -/
 abbrev otpPaused {rT : Type} (message : Int) (pad : Loc) (initial : Int) : Exp rT :=
   .asmResume (otpArchive message pad initial)
-    (.app RandomBytes.randombytesValue.fst (argumentTuple [.loc pad, .int 1]))
+    (.app randombytesValue.fst (argumentTuple [.loc pad, .int 1]))
 
 /-- The imported tuple is exactly the actual randombytes lambda's ordinary ProbLang call. -/
 theorem otp_callback_expression {rT : Type} (pad : Loc) :
-    (.app RandomBytes.randombytesValue.fst (argumentTuple [.loc pad, .int 1]) : Exp rT) =
-      (pl% &RandomBytes.randombytes (#loc pad, (#int 1, #()))) := rfl
+    (.app randombytesValue.fst (argumentTuple [.loc pad, .int 1]) : Exp rT) =
+      (pl% &randombytes (#loc pad, (#int 1, #()))) := rfl
 
 /-- The actual callback argument tuple and its owned byte pass the randombytes signature check. -/
 theorem randombytes_boundary_check (pad : Loc) (byte : Int) (hb : inRange false 8 byte = true) :
     check ⟨[.array 8 (.arg 1), .uint 64], .unit⟩ (boundaryArgs [.loc pad, .int 1])
-      (valueHeap (rT := Empty) (padHeap pad byte)) = true := by
-  have hbounds : 0 ≤ byte ∧ byte < 256 := by simpa [inRange] using hb
+      (valueHeap (padHeap pad byte)) = true := by
+  have hbounds := inRange_eight_iff.mp hb
   simp [check, boundaryArgs, BoundaryValue.toVal, ArgKind.validResult, ArgKind.check,
     ArgKind.region, locValue, Len.resolve, intValue, intFits, Region.check, inRange, regions,
     Region.compatible, Region.cells, padHeap, hbounds, BEq.beq, instBEqRegion.beq]
@@ -63,18 +41,15 @@ theorem otp_start_action (message : Int) (pad : Loc) (initial : Int)
     start rv otpCode (otpArgs message pad) (padHeap pad initial) =
       .call "randombytes" [.loc pad, .int 1] (padHeap pad initial)
         (otpArchive message pad initial) := by
-  classical
-  have hm64 : inRange false 64 message = true := by simp [inRange]; omega
-  have hvalid := otp_validFragment message pad initial hm64 hi
+  have hvalid := otp_validFragment message pad initial (inRange_word_of_byte hm) hi
   have hcall : validFragment otpCode (otpArgs message pad) (padHeap pad initial) ∧
       ∃ sig, ("randombytes", sig) ∈ otpCode.sig.imports ∧
-        check sig (boundaryArgs [.loc pad, .int 1])
-          (valueHeap (rT := Empty) (padHeap pad initial)) = true :=
+        check sig (boundaryArgs [.loc pad, .int 1]) (valueHeap (padHeap pad initial)) = true :=
     ⟨hvalid, ⟨[.array 8 (.arg 1), .uint 64], .unit⟩, by simp [otpCode, otpSig],
       randombytes_boundary_check pad initial hi⟩
   have hcheck : (otpCode.sig.valid && check otpCode.sig.toCallSig
       (boundaryArgs (otpArgs message pad))
-      (valueHeap (rT := Empty) (padHeap pad initial))) = true := by
+      (valueHeap (padHeap pad initial))) = true := by
     simpa only [Bool.and_eq_true] using And.intro hvalid.1 hvalid.2.2
   simp only [start, otp_footprint, restrict_padHeap, hcheck, ite_true, snapshot_padHeap,
     otp_eval message pad initial hm hi, otpTree_eq, rootAction, ite_eq_left hcall]
@@ -85,18 +60,14 @@ private theorem check_uint64 (sig : CallSig) (args : List (Val Empty)) (value : 
     (h : inRange false 64 value = true) :
     checkResult sig args (.uint 64) (BoundaryValue.int value).toVal = true := h
 
-/-- The final ciphertext and sampled byte satisfy the actual return signature checks. -/
+/-- The OTP heap fragment and ciphertext pass the validity and return checks. -/
 theorem otp_output_check (message : Int) (pad : Loc) (byte : Int)
     (hm : 0 ≤ message ∧ message < 256) (hb : inRange false 8 byte = true) :
     validFragment otpCode (otpArgs message pad) (padHeap pad byte) ∧
       checkResult otpCode.sig.toCallSig (boundaryArgs (otpArgs message pad)) otpCode.sig.result
         (BoundaryValue.int (byteXor message byte)).toVal = true := by
-  have hm64 : inRange false 64 message = true := by simp [inRange]; omega
-  refine ⟨otp_validFragment message pad byte hm64 hb, ?_⟩
-  have hc := byteXor_range message byte
-  apply check_uint64
-  simp [inRange]
-  omega
+  exact ⟨otp_validFragment message pad byte (inRange_word_of_byte hm) hb,
+    check_uint64 _ _ _ (inRange_word_of_byte (byteXor_range message byte))⟩
 
 /-- Actual replay returns the ciphertext computed from the callback's new byte. -/
 theorem otp_resume_action (message : Int) (pad : Loc) (initial byte : Int)
@@ -104,11 +75,9 @@ theorem otp_resume_action (message : Int) (pad : Loc) (initial byte : Int)
     (hi : inRange false 8 initial = true) (hb : inRange false 8 byte = true) :
     resume rv (otpArchive message pad initial) .unit (padHeap pad byte) =
       .ret (.int (byteXor message byte)) (padHeap pad byte) := by
-  classical
-  have hm64 : inRange false 64 message = true := by simp [inRange]; omega
   have hr : rv.ResponseOK otpCode (otpArgs message pad) {pad} "randombytes" .unit
       (padHeap pad byte) := (otp_response_iff message pad .unit (padHeap pad byte)).mpr
-    ⟨rfl, byte, rfl, hm64, hb⟩
+    ⟨rfl, byte, rfl, inRange_word_of_byte hm, hb⟩
   simp only [resume, otpArchive, otp_footprint, restrict_padHeap, restore_padSnapshot,
     otp_eval message pad initial hm hi, List.map_nil, Interaction.replay, otpTree_eq,
     hr, ite_true, snapshot_padHeap, otpNext_valid message pad .unit _ hr, padValue_padHeap,
@@ -140,7 +109,7 @@ theorem otp_start_step (σ : State rT) (message : Int) (pad : Loc) (initial : In
     (hm : 0 ≤ message ∧ message < 256) (hi : inRange false 8 initial = true)
     (hlookup : σ.heap[pad]? = some (.int initial)) :
     primStepWith otpEnv ⟨otpExpression message pad, σ⟩ =
-      MeasureTheory.Measure.dirac ⟨otpPaused message pad initial, σ⟩ := by
+      dirac ⟨otpPaused message pad initial, σ⟩ := by
   rw [primStepWith_asm]
   simp only [callStep, show otpCode.sig.args.length = (otpArgs message pad).length from rfl,
     readTuple_argumentTuple, otp_footprint, capture_pad _ _ _ hlookup, restore_padSnapshot]
@@ -155,7 +124,7 @@ theorem otp_resume_step (σ : State rT) (message : Int) (pad : Loc) (initial byt
     (hi : inRange false 8 initial = true) (hb : inRange false 8 byte = true)
     (hlookup : σ.heap[pad]? = some (.int byte)) :
     primStepWith otpEnv ⟨.asmResume (otpArchive message pad initial) (.lit .unit), σ⟩ =
-      MeasureTheory.Measure.dirac ⟨.lit (.int (byteXor message byte)), σ⟩ := by
+      dirac ⟨.lit (.int (byteXor message byte)), σ⟩ := by
   have hd : (Exp.asmResume (otpArchive message pad initial) (.lit .unit) : Exp rT).decomp =
       ([], .asmResume (otpArchive message pad initial) (.lit .unit)) := by
     rw [Exp.decomp_unfold]
@@ -167,6 +136,6 @@ theorem otp_resume_step (σ : State rT) (message : Int) (pad : Loc) (initial byt
     (padHeap pad byte))).map (Ectx.fillCfg []) = _
   rw [otp_resume_action message pad initial byte hm hi hb]
   simp only [actionStep, BoundaryValue.toVal, exchange_pad_unchanged σ pad byte hlookup,
-    Ectx.fillCfg_empty, MeasureTheory.Measure.map_id]
+    Ectx.fillCfg_empty, map_id]
 
 end MetrologyAsm.OTP

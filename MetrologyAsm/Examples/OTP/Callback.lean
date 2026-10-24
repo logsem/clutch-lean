@@ -8,10 +8,10 @@ import Metrology.Iris.LocalBI
 
 namespace MetrologyAsm.OTP
 
-open Iris Iris.BI ProbLang ProbLang.Asm MicrometerWpGS GradedLifting
+open Iris Iris.BI ProbLang ProbLang.Asm ProbLang.RandomBytes MicrometerWpGS GradedLifting
 
 /-- The OTP program executes actual Sail and supplies the ordinary randombytes lambda. -/
-noncomputable def otpEnv {rT : Type} : FfiEnv rT := ⟨rv, fun _ => RandomBytes.randombytesValue⟩
+noncomputable def otpEnv {rT : Type} : FfiEnv rT := ⟨rv, fun _ => randombytesValue⟩
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
@@ -23,9 +23,9 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 local bi IProp GF
 
 /-- The actual callback fills its owned pad byte under the same kernel as the assembly call. -/
-theorem otp_randombytes_wp (l : Loc) (v : Val rT) (Φ : Val rT → IProp GF) : iprop%
-    appArrayFrag l v 1 ∗ (RandomBytes.byteArray l 1 -∗ Φ .unit) ⊢
-      wpFor (primStepWith otpEnv) L E (pl% &RandomBytes.randombytes (#loc l, (#int 1, #()))) Φ :=
-  (RandomBytes.wp_randombytes 1 l v Φ).trans (wp_ffi_of_wp otpEnv)
+theorem otp_randombytes_wp (l : Loc) (v : Val rT) (Φ : Val rT → _) : iprop%
+    appArrayFrag l v 1 ∗ (byteArray l 1 -∗ Φ .unit) ⊢
+      wpFor (primStepWith otpEnv) L E (pl% &randombytes (#loc l, (#int 1, #()))) Φ :=
+  (wp_randombytes 1 l v Φ).trans (wp_ffi_of_wp otpEnv)
 
 end MetrologyAsm.OTP

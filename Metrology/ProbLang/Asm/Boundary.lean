@@ -76,7 +76,7 @@ theorem snapshot_eq_some_iff {heap : LocHeap BoundaryValue} {saved : HeapSnapsho
     rcases x with ⟨l, v⟩
     cases v <;> cases saved <;>
       simp [List.mapM_cons, Option.bind_eq_some_iff, ih, Prod.ext_iff, and_comm]
-    all_goals try (intro _; exact ⟨fun h => ⟨h.1.symm, h.2.symm⟩, fun h => ⟨h.1.symm, h.2.symm⟩⟩)
+    exact fun _ => and_congr eq_comm eq_comm
 
 /-- Restoring a successful snapshot recovers the original boundary heap. -/
 theorem restore_snapshot {heap : LocHeap BoundaryValue} {saved : HeapSnapshot}

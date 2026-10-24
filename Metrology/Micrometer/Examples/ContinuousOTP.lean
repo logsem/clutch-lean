@@ -27,7 +27,7 @@ open Set (univ Ioo)
 open Cfg (uniformReal uniformReal_isProbabilityMeasure measurable_expr)
 open Measure (bind_apply map_apply)
 open Tctx (empty)
-open Ctx (BindersFresh binderAtoms payloadFv)
+open Ctx (BindersFresh)
 open Exp (ofVal_of_toVal_some decompItem_none_of_lc_headReducible)
 
 namespace ContinuousOTP
@@ -86,9 +86,12 @@ variable (m : ℝ)
 theorem otp_refines_real : ⊢ REL[codensity tv] (otpEnc m) << otpIdeal : lrel_real :=
   otp_refines m (measurePreserving_fracAdd m)
 
+/-- The rotation undoing the addition of `m`. -/
+noncomputable def invRot : ℝ → ℝ := fun r => fract (-m + r)
+
 /-- At `ℝ`, the ideal sample refines the encrypted sample. -/
 theorem otp_refines_rev_real : ⊢ REL[codensity tv] otpIdeal << otpEnc m : lrel_real :=
-  otp_refines_rev m (fun r => fract (-m + r)) (measurePreserving_fracAdd (-m)) fun r hr => by
+  otp_refines_rev m (invRot m) (measurePreserving_fracAdd (-m)) fun r hr => by
     -- on `(0, 1)`, `fract (m + fract (-m + r)) = fract r = r`
     obtain ⟨hr0, hr1⟩ : r ∈ Ioo 0 1 := hr
     show fract (m + fract (-m + r)) = r
@@ -220,33 +223,27 @@ include GF'
 /-- Every well-typed boolean context gives the encryption at most the ideal sample's probability
 of each outcome. -/
 theorem otp_ctx_refines_real (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool)
-    (hK : TypedCtx K empty .real empty .bool) (hbf : BindersFresh K ∅)
-    (hfresh : ∀ x ∈ binderAtoms K, x ∉ (otpEnc m).fv ∧ x ∉ (otpIdeal (rT := ℝ)).fv ∧
-      x ∉ payloadFv K) :
+    (hK : TypedCtx K empty .real empty .bool) (hbf : BindersFresh K ∅) :
     limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) ≤
     limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
   refines_sound_fresh (GF := GF') (.id ℝ≥0∞) _ _ .real (otp_enc_typed m) otp_ideal_typed
-    (fun _ _ _ => otp_refines_real m) K σ₀ b hK hbf hfresh
+    (fun _ _ _ => otp_refines_real m) K σ₀ b hK hbf
 
 /-- The converse inequality: the ideal sample is at most the encryption. -/
 theorem otp_ctx_refines_rev_real (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool)
-    (hK : TypedCtx K empty .real empty .bool) (hbf : BindersFresh K ∅)
-    (hfresh : ∀ x ∈ binderAtoms K, x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ (otpEnc m).fv ∧
-      x ∉ payloadFv K) :
+    (hK : TypedCtx K empty .real empty .bool) (hbf : BindersFresh K ∅) :
     limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) ≤
     limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) :=
   refines_sound_fresh (GF := GF') (.id ℝ≥0∞) _ _ .real otp_ideal_typed (otp_enc_typed m)
-    (fun _ _ _ => otp_refines_rev_real m) K σ₀ b hK hbf hfresh
+    (fun _ _ _ => otp_refines_rev_real m) K σ₀ b hK hbf
 
 /-- Every well-typed boolean context sees the same distribution on both programs. -/
-theorem otp_ctx_equiv_real
-    (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool) (hK : TypedCtx K empty .real empty .bool)
-    (hbf : BindersFresh K ∅) (hfresh : ∀ x ∈ binderAtoms K, x ∉ (otpEnc m).fv ∧
-      x ∉ (otpIdeal (rT := ℝ)).fv ∧ x ∉ payloadFv K) :
+theorem otp_ctx_equiv_real (K : Ctx ℝ) (σ₀ : State ℝ) (b : Bool)
+    (hK : TypedCtx K empty .real empty .bool) (hbf : BindersFresh K ∅) :
     limExec ⟨K.fill (otpEnc m), σ₀⟩ (finalBool b) =
     limExec ⟨K.fill otpIdeal, σ₀⟩ (finalBool b) :=
-  le_antisymm (otp_ctx_refines_real GF' m K σ₀ b hK hbf hfresh) <|
-    otp_ctx_refines_rev_real GF' m K σ₀ b hK hbf fun x hx => and_left_comm.1 (hfresh x hx)
+  le_antisymm (otp_ctx_refines_real GF' m K σ₀ b hK hbf)
+    (otp_ctx_refines_rev_real GF' m K σ₀ b hK hbf)
 
 end Contextual
 

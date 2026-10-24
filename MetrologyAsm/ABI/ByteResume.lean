@@ -45,7 +45,7 @@ theorem decodeCell_unsigned8 (ι : Placement) (r : Region) (l : Loc) (s : Mach) 
   simp only [runSail, readBytes8_eq hbyte]
   simp [Int.emod_eq_of_lt hbounds.1 hbounds.2, max_eq_left hbounds.1, hrange]
 
-/-- Resuming a unit import after writing one owned byte satisfies `rv.Resume`. -/
+/-- Resuming a unit import after writing one owned byte satisfies `RVResume`. -/
 theorem rv_resume_unit_byte (ι : Placement) (code : Code) (args : List BoundaryValue)
     (F : Finset Loc) (paused : Mach) (name : String) (sig : CallSig) (ra : BitVec 64)
     (l : Loc) (heap : LocHeap BoundaryValue) (byte : Int)

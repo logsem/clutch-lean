@@ -7,10 +7,10 @@ namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm MeasureTheory MeasureTheory.Measure
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] (σ : State rT) (message : Int)
 
 /-- The actual game's first transition allocates a fresh pad initialized to zero. -/
-theorem otp_game_alloc_step (σ : State rT) (message : Int) :
+theorem otp_game_alloc_step :
     primStepWith otpEnv ⟨otpGame message, σ⟩ =
       dirac ⟨.app (.lam (otpGameBody message)) (.lit (.loc σ.heap.fresh)),
         storedState σ σ.heap.fresh 0⟩ := by
@@ -24,11 +24,11 @@ theorem otp_game_alloc_step (σ : State rT) (message : Int) :
   rfl
 
 /-- Some finite fuel makes the actual game execution a uniform byte draw mapped to finals. -/
-theorem otp_game_finite (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ message < 256) :
+theorem otp_game_finite (hm : 0 ≤ message ∧ message < 256) :
     ∃ fuel : Nat, execNWith otpEnv fuel ⟨otpGame message, σ⟩ =
       (unifInt 256 (by norm_num)).map (fun byte =>
-        (⟨.lit (.int (byteXor message byte)),
-          storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩ : Cfg rT)) := by
+        ⟨.lit (.int (byteXor message byte)),
+          storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩) := by
   obtain ⟨fuel, hcall⟩ := otp_call_finite (rT := rT) σ.heap.fresh
   refine ⟨fuel + 2, ?_⟩
   calc
@@ -44,8 +44,7 @@ theorem otp_game_finite (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ 
       (storedState_lookup σ σ.heap.fresh 0)
 
 /-- The actual game has a finite execution bound with total termination probability one. -/
-theorem otp_game_finite_terminates (σ : State rT) (message : Int)
-    (hm : 0 ≤ message ∧ message < 256) :
+theorem otp_game_finite_terminates (hm : 0 ≤ message ∧ message < 256) :
     ∃ fuel : Nat, execNWith otpEnv fuel ⟨otpGame message, σ⟩ Set.univ = 1 := by
   obtain ⟨fuel, hfinite⟩ := otp_game_finite σ message hm
   refine ⟨fuel, ?_⟩
@@ -53,10 +52,10 @@ theorem otp_game_finite_terminates (σ : State rT) (message : Int)
   simp
 
 /-- The complete actual game distribution is already attained by its finite execution law. -/
-theorem otp_game_limExec (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ message < 256) :
+theorem otp_game_limExec (hm : 0 ≤ message ∧ message < 256) :
     limExecWith otpEnv ⟨otpGame message, σ⟩ = (unifInt 256 (by norm_num)).map (fun byte =>
-      (⟨.lit (.int (byteXor message byte)),
-        storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩ : Cfg rT)) := by
+      ⟨.lit (.int (byteXor message byte)),
+        storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩) := by
   obtain ⟨fuel, hfinite⟩ := otp_game_finite σ message hm
   have hterm : execNWith otpEnv fuel ⟨otpGame message, σ⟩ Set.univ = 1 := by
     rw [hfinite]

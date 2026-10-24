@@ -7,13 +7,17 @@ namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Sail
 
+section
+
+variable (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+
 /-- The original one-cell pointer decodes to its logical pad location. -/
-theorem decodePointer_pad (ι : Placement) (message : Int) (pad : Loc) :
+theorem decodePointer_pad :
     decodePointer ι otpCode (otpArgs message pad) (ι.addr pad) = some (.loc pad) := by
   simp [decodePointer, footprintLocations, pointerWord, padRegion]
 
 /-- The allocated byte determines exactly the owned singleton fragment. -/
-theorem decodeF_padHeap (ι : Placement) (s : Mach) (message : Int) (pad : Loc) (byte : Int)
+theorem decodeF_padHeap (byte : Int)
     (hrange : inRange false 8 byte = true)
     (hbyte : s.mem.get? (ι.addr pad).toNat = some (BitVec.ofInt 8 byte)) :
     decodeF ι otpCode (otpArgs message pad) {pad} s = some (padHeap pad byte) := by
@@ -26,8 +30,8 @@ theorem decodeF_padHeap (ι : Placement) (s : Mach) (message : Int) (pad : Loc) 
   · exact decodeCell_unsigned8 ι (padRegion pad) pad s byte rfl rfl hrange hbyte
 
 /-- A compatible singleton byte heap is represented by that byte at its physical pad address. -/
-theorem byte_of_footprintContents (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
-    (byte : Int) (h : footprintContents ι otpCode (otpArgs message pad) (padHeap pad byte) s) :
+theorem byte_of_footprintContents (byte : Int)
+    (h : footprintContents ι otpCode (otpArgs message pad) (padHeap pad byte) s) :
     s.mem.get? (ι.addr pad).toNat = some (BitVec.ofInt 8 byte) := by
   obtain ⟨value, hv, _, hw⟩ := h.2 (padRegion pad) (by simp) 0 (by simp [padRegion])
   have heq : value = byte := by simpa [padRegion] using hv.symm
@@ -36,11 +40,11 @@ theorem byte_of_footprintContents (ι : Placement) (s : Mach) (message : Int) (p
   simpa [padRegion] using hw
 
 /-- The constant callback length has its declared unsigned scalar decoding. -/
-theorem decodeValue_one (ι : Placement) (message : Int) (pad : Loc) :
+theorem decodeValue_one :
     decodeValue ι otpCode (otpArgs message pad) (.uint 64) 1#64 = some (.int 1) := rfl
 
 /-- The actual external address, registers and byte memory decode to the declared callback call. -/
-theorem observe_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc) (byte : Int)
+theorem observe_call (byte : Int)
     (hpc : pc s = some (ι.importAddr "randombytes"))
     (hne : ι.retAddr ≠ ι.importAddr "randombytes")
     (ha0 : s.regs.get? .x10 = some (ι.addr pad)) (ha1 : s.regs.get? .x11 = some 1#64)
@@ -59,7 +63,7 @@ theorem observe_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc) (by
   simp [argumentRegister, ha0, ha1, hpointer, decodeValue_one]
 
 /-- A representable unsigned result decodes exactly at the original caller's return address. -/
-theorem observe_ret (ι : Placement) (s : Mach) (message : Int) (pad : Loc) (byte result : Int)
+theorem observe_ret (byte result : Int)
     (hpc : pc s = some ι.retAddr)
     (ha0 : s.regs.get? .x10 = some (BitVec.ofInt 64 result))
     (hrange : inRange false 8 byte = true) (hresult : inRange false 64 result = true)
@@ -76,6 +80,8 @@ theorem observe_ret (ι : Placement) (s : Mach) (message : Int) (pad : Loc) (byt
   apply observe_ret_of_reads ι otpCode (otpArgs message pad) {pad} s
     (BitVec.ofInt 64 result) (.int result) (padHeap pad byte) hpc hheap ha0
   simp only [hresultKind, decodeValue, BitVec.setWidth_eq, hvalue, hresult, ite_true]
+
+end
 
 /-- The machine's unsigned byte extension is the byte's unsigned doubleword encoding. -/
 theorem byte_setWidth64 (byte : Int) (hrange : inRange false 8 byte = true) :

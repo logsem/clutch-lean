@@ -32,8 +32,8 @@ theorem enabled_S :
   obtain ⟨misa, hmisa, hp⟩ := h.regs .misa
   simp only [userRegPolicy] at hp
   obtain ⟨_, _, _, _, hS, _⟩ := hp
-  simp [runSail, currentlyEnabled, hartSupports, bind, EStateM.bind, readReg_eq hmisa,
-    pure, EStateM.pure, hS]
+  simp only [runSail, currentlyEnabled, bind, EStateM.bind, readReg_eq hmisa, pure, EStateM.pure,
+    hartSupports, hS, BEq.rfl, Bool.and_self]
   all_goals rfl
 
 /-- The configured misa register has the compressed bit clear. -/
@@ -45,16 +45,19 @@ theorem misa_C : ∃ misa, s.regs.get? Register.misa = some misa ∧ _get_Misa_C
 theorem disabled_C :
     runSail (currentlyEnabled .Ext_C) s = some (false, s) := by
   obtain ⟨misa, hmisa, hC⟩ := h.misa_C
-  simp [runSail, currentlyEnabled, hartSupports, bind, EStateM.bind, readReg_eq hmisa,
-    pure, EStateM.pure, hC]
+  simp only [runSail, currentlyEnabled, bind, EStateM.bind, readReg_eq hmisa, pure, EStateM.pure,
+    hartSupports, Bool.false_and, Bool.false_or, Bool.and_self, Bool.true_or, Bool.and_true,
+    Bool.true_and, hC, BitVec.reduceBEq, Bool.and_false]
   all_goals rfl
 
 /-- The compressed base extension is disabled in the user-mode profile. -/
 theorem disabled_Zca :
     runSail (currentlyEnabled .Ext_Zca) s = some (false, s) := by
   obtain ⟨misa, hmisa, hC⟩ := h.misa_C
-  simp [runSail, currentlyEnabled, hartSupports, bind, EStateM.bind, readReg_eq hmisa,
-    pure, EStateM.pure, hC]
+  simp only [runSail, currentlyEnabled, bind, EStateM.bind, readReg_eq hmisa, pure, EStateM.pure,
+    hartSupports, Bool.false_and, Bool.false_or, Bool.and_self, Bool.true_or, Bool.and_true,
+    Bool.true_and, hC, BitVec.reduceBEq, Bool.and_false, Option.some.injEq, Prod.mk.injEq,
+    and_true]
   all_goals rfl
 
 /-- With MPRV clear, the effective privilege of every access is User. -/
@@ -87,8 +90,8 @@ theorem architecture_user :
 theorem in32BitMode_false :
     runSail (in32BitMode ()) s = some (false, s) := by
   have harch := (runSail_eq_some_iff _ _ _ _).mp h.architecture_user
-  simp [runSail, in32BitMode, readReg_eq h.privilege, harch,
-    bind, EStateM.bind, pure, EStateM.pure]
+  simp only [runSail, in32BitMode, bind, EStateM.bind, readReg_eq h.privilege, harch, pure,
+    EStateM.pure, Option.some.injEq, Prod.mk.injEq, and_true]
   rfl
 
 /-- User addresses use bare physical translation. -/

@@ -1,21 +1,20 @@
 module
 
-public import Metrology.Micrometer.AppWeakestpre
+public import Metrology.Micrometer.ProgCoupl
 public import Metrology.Couplings.BindLaws
 import Metrology.Iris.LocalBI
 
-@[expose] public section
-
-/-! # Smoke tests: program steps under non-canonical DP bind laws
+/-! # Program steps under the DP bind laws
 
 Instantiates the generic `progCoupl_steps_law` / `progCoupl_steps_spend_law` with
 `BindLaw.dpRhs` and `BindLaw.dpChoice`. -/
+
+@[expose] public section
 
 open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence ProbLang.MicrometerWpGS
 open scoped ENNReal
 
 namespace ProbLang
-namespace BindLawTest
 
 open BindLaw (dpRhs dpChoice)
 
@@ -26,7 +25,6 @@ local bi IProp GF
 variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
   {Z : Exp rT → State rT → Exp rT → State rT → ℝ≥0∞ × ℝ≥0∞ → IProp GF}
 
-open Classical in
 /-- A program step coupled with a spec step by right-keyed adaptive DP composition: the head DP
 lifting of `S` costs `(ε₁, δ₁)`, and each related pair continues at `(ε₂, D ρ')`, paid as
 `(ε₁ + ε₂, δ₁ + e^{ε₁} E[D])` (Rocq `GBL_DP_rhs`). -/
@@ -36,6 +34,7 @@ theorem progCoupl_dpRhs {ε₁ ε₂ δ₁ : ℝ≥0∞} {D : Cfg rT → ℝ≥0
     (∀ e₂ σ₂ e₂' σ₂', ⌜S ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩⌝ -∗ |={∅}=> Z e₂ σ₂ e₂' σ₂' (ε₂, D ⟨e₂', σ₂'⟩)) ⊢
       progCoupl (codensity dp) e₁ σ₁ e₁' σ₁'
         (ε₁ + ε₂, δ₁ + expBudget ε₁ * ∫⁻ ρ, D ρ ∂primStep ⟨e₁', σ₁'⟩) Z := by
+  classical
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   let R : Cfg rT → Cfg rT → ℝ≥0∞ × ℝ≥0∞ := fun ρ ρ' => if S ρ ρ' then (ε₂, D ρ') else ⊤
@@ -77,10 +76,6 @@ theorem progCoupl_dpChoice_spend {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ :
   by_cases hS : S₁ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ ∨ S₂ ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩
   · simp only [R, hS, ↓reduceIte]
     iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hS
-  · simp only [R, hS, ↓reduceIte] at hR
-    -- unrelated pairs carry budget `⊤`, which `hR` rules out
-    have htop : (⊤ : ℝ≥0∞ × ℝ≥0∞) + c = (⊤ : ℝ≥0∞ × ℝ≥0∞) := Prod.ext (top_add c.1) (top_add c.2)
-    exact absurd htop hR.ne
+  · simp [R, hS, Prod.lt_iff] at hR  -- unrelated pairs carry budget `⊤`, which `hR` rules out
 
-end BindLawTest
 end ProbLang

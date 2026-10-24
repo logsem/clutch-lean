@@ -6,10 +6,11 @@ import MetrologyAsm.Examples.Support
 namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Sail
+open Std.ExtDHashMap (get?_insert)
 
 variable (message : Int) (pad : Loc) (byte : Int)
 
-/-- Distinct mapped code, pad, return, trap, stack and callback addresses. -/
+/-- The placement maps distinct code, pad, return, trap, stack and callback addresses. -/
 abbrev otpWitnessPlacement : Placement := witnessPlacement pad
 
 /-- The sole logical pad location has the designated aligned physical byte address. -/
@@ -17,7 +18,7 @@ abbrev otpWitnessPlacement : Placement := witnessPlacement pad
     (otpWitnessPlacement pad).addr pad = 0x80001000#64 := by
   simp [witnessPlacement]
 
-/-- Install the argument registers, private pad byte and actual relocated compiler image. -/
+/-- The state installs the argument registers, private pad byte and relocated compiler image. -/
 noncomputable def otpWitnessState : Mach :=
   { witnessRegisters with
     regs := (witnessRegisters.regs.insert .x10 (BitVec.ofInt 64 message)).insert .x11 0x80001000#64
@@ -86,7 +87,7 @@ theorem otpWitness_argumentBindings :
   cases i with
   | zero =>
     cases hv
-    simp [argumentRegister, argumentWord, otpWitnessState, Std.ExtDHashMap.get?_insert]
+    simp [argumentRegister, argumentWord, otpWitnessState, get?_insert]
   | succ i =>
     cases i with
     | zero =>
@@ -108,7 +109,7 @@ theorem otpWitness_codeImage :
   · rw [otpImage_entry, otpImage_textLen]
     decide +kernel
   · simp [pc, otpWitnessState, witnessPlacement, witnessRegisters,
-      otpImage_entry, Std.ExtDHashMap.get?_insert]
+      otpImage_entry, get?_insert]
   · intro i value hi
     exact witnessImageBytes_get _ _ _ _ _ hi
   · intro r hr
@@ -167,7 +168,7 @@ theorem otpWitness_returnPlacement :
   refine ⟨?_, ?_, otpWitness_not_imageByte pad _ ?_,
     otpWitness_not_footprintByte message pad _ ?_, ?_⟩
   · simp [otpWitnessState, witnessPlacement, witnessRegisters,
-      Std.ExtDHashMap.get?_insert]
+      get?_insert]
   · change (0x80002000#64).toNat % 4 = 0
     decide +kernel
   · change 0x80000000 + 88 ≤ 0x80002000
@@ -183,7 +184,7 @@ theorem otpWitness_stackPlacement :
     stackPlacement (otpWitnessPlacement pad) otpCode (otpArgs message pad)
       (otpWitnessState message pad byte) := by
   refine ⟨0x80004000#64, ?_, by decide +kernel, ?_, ?_, ?_⟩
-  · simp [otpWitnessState, witnessRegisters, Std.ExtDHashMap.get?_insert]
+  · simp [otpWitnessState, witnessRegisters, get?_insert]
   · change 32 ≤ (0x80004000#64).toNat
     decide +kernel
   · change InUserRam 0x80003fe0#64 32
@@ -204,9 +205,9 @@ theorem otpWitness_machineConfiguration :
     machineConfiguration (otpWitnessPlacement pad) otpCode (otpWitnessState message pad byte) := by
   refine ⟨otpWitnessState_config message pad byte, ?_⟩
   have hmt : (otpWitnessState message pad byte).regs.get? .mtvec = some 0x80003000#64 := by
-    simp [otpWitnessState, witnessRegisters, Std.ExtDHashMap.get?_insert]
+    simp [otpWitnessState, witnessRegisters, get?_insert]
   have hst : (otpWitnessState message pad byte).regs.get? .stvec = some 0x80003000#64 := by
-    simp [otpWitnessState, witnessRegisters, Std.ExtDHashMap.get?_insert]
+    simp [otpWitnessState, witnessRegisters, get?_insert]
   intro value hv
   simp only [hmt, hst, List.mem_cons, List.not_mem_nil, or_false, or_self] at hv
   subst value

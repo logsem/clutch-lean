@@ -8,24 +8,21 @@ namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Std.ExtTreeMap
 
-/-- The actual signature check requires a uint64 message and exactly one allocated byte cell. -/
+/-- The signature check requires a uint64 message and a byte integer at the pad location. -/
 theorem otp_check_iff (message : Int) (pad : Loc) (heap : LocHeap BoundaryValue) :
     check otpCode.sig.toCallSig (boundaryArgs (otpArgs message pad))
       (valueHeap (rT := Empty) heap) = true ↔
       inRange false 64 message = true ∧
         ∃ byte, heap[pad]? = some (.int byte) ∧ inRange false 8 byte = true := by
-  cases hc : heap[pad]? with
-  | none =>
-    simp [check, otpCode, otpSig, otpArgs, boundaryArgs, regions, ArgKind.check, ArgKind.region,
+  rcases hc : heap[pad]? with _ | value
+  · simp [check, otpCode, otpSig, otpArgs, boundaryArgs, regions, ArgKind.check, ArgKind.region,
       locValue, BoundaryValue.toVal, Len.resolve, Region.check, intFits, intValue,
       Region.compatible, Region.cells, ArgKind.validResult, valueHeap, hc,
       BEq.beq, instBEqRegion.beq]
-  | some value =>
-    cases value <;>
-      simp [check, otpCode, otpSig, otpArgs, boundaryArgs, regions, ArgKind.check, ArgKind.region,
-        locValue, BoundaryValue.toVal, Len.resolve, Region.check, intFits, intValue,
-        Region.compatible, Region.cells, ArgKind.validResult, valueHeap, hc,
-        BEq.beq, instBEqRegion.beq]
+  · cases value <;> simp [check, otpCode, otpSig, otpArgs, boundaryArgs, regions, ArgKind.check,
+      ArgKind.region, locValue, BoundaryValue.toVal, Len.resolve, Region.check, intFits, intValue,
+      Region.compatible, Region.cells, ArgKind.validResult, valueHeap, hc, BEq.beq,
+      instBEqRegion.beq]
 
 /-- A heap restricted to the single pad cell is determined by the integer stored there. -/
 theorem heap_eq_padHeap (pad : Loc) (heap : LocHeap BoundaryValue) (byte : Int)
@@ -75,7 +72,7 @@ theorem otp_response_iff (message : Int) (pad : Loc) (r : BoundaryValue)
       simpa [otpCode, otpSig] using hsig
     subst sig
     have hr : r = .unit := by
-      change ArgKind.check (rT := Empty) [] ∅ r.toVal .unit = true at hresult
+      change ArgKind.check [] ∅ r.toVal .unit = true at hresult
       cases r <;> simp [ArgKind.check, BoundaryValue.toVal] at hresult ⊢
     obtain ⟨hm, byte, hb, hrange⟩ := (otp_check_iff message pad heap).mp hcheck
     exact ⟨hr, byte, heap_eq_padHeap pad heap byte (restrict_of_valueHeap _ _ hrestrict) hb,
@@ -98,7 +95,7 @@ def padValue (pad : Loc) (heap : LocHeap BoundaryValue) : Int :=
 @[simp] theorem padValue_padHeap (pad : Loc) (byte : Int) :
     padValue pad (padHeap pad byte) = byte := by simp [padValue]
 
-/-- The compiled function calls randombytes and returns XOR of its fresh byte with the message. -/
+/-- The canonical tree with footprint `{pad}`: a randombytes call, then XOR with the message. -/
 noncomputable def otpTree (message : Int) (pad : Loc) (initial : Int) : Interaction BoundaryValue :=
   rv.canonicalize otpCode (otpArgs message pad) {pad}
     (.call "randombytes" [.loc pad, .int 1] (padHeap pad initial) fun _ heap =>
@@ -109,7 +106,9 @@ noncomputable def otpNext (message : Int) (pad : Loc) (r : BoundaryValue)
     (heap : LocHeap BoundaryValue) : Interaction BoundaryValue :=
   open Classical in
   if rv.ResponseOK otpCode (otpArgs message pad) {pad} "randombytes" r heap then
-    .ret (.int (byteXor message (padValue pad heap))) heap else rv.invalidTree
+    .ret (.int (byteXor message (padValue pad heap))) heap
+  else
+    rv.invalidTree
 
 /-- The OTP interaction fixes every invalid callback branch. -/
 theorem otpTree_canonical (message : Int) (pad : Loc) (initial : Int) :
@@ -121,7 +120,7 @@ theorem otpTree_eq (message : Int) (pad : Loc) (initial : Int) :
     otpTree message pad initial =
       .call "randombytes" [.loc pad, .int 1] (padHeap pad initial) (otpNext message pad) := rfl
 
-/-- Every valid heap-changing response selects the expected return node. -/
+/-- Every valid randombytes response selects the expected return node. -/
 theorem otpNext_valid (message : Int) (pad : Loc) (r : BoundaryValue)
     (heap : LocHeap BoundaryValue)
     (hr : rv.ResponseOK otpCode (otpArgs message pad) {pad} "randombytes" r heap) :

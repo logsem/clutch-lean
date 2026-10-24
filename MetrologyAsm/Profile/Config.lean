@@ -6,6 +6,7 @@ namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions
 open Sail
+open Register
 
 /-- The main-memory region available to prototype code and logical heap embeddings. -/
 def userRamRegion : PMA_Region :=
@@ -81,19 +82,19 @@ theorem present (r : Register) : ∃ v, s.regs.get? r = some v := by
   exact ⟨v, hv⟩
 
 /-- Configured code executes at user privilege. -/
-theorem privilege : s.regs.get? Register.cur_privilege = some .User := by
+theorem privilege : s.regs.get? cur_privilege = some .User := by
   obtain ⟨v, hv, hp⟩ := h.regs .cur_privilege
   simp only [userRegPolicy] at hp
   simpa [hp] using hv
 
 /-- Configured code starts in the active hart state. -/
 theorem active :
-    s.regs.get? Register.hart_state = some (.HART_ACTIVE ()) := by
+    s.regs.get? hart_state = some (.HART_ACTIVE ()) := by
   obtain ⟨v, hv, hp⟩ := h.regs .hart_state
   simp only [userRegPolicy] at hp
   simpa [hp] using hv
 
-/-- The retirement counter stays disabled for every configured user instruction. -/
+/-- The retirement counter is not incremented at user privilege in a configured state. -/
 theorem count_disabled :
     runSail (should_inc_minstret .User) s = some (false, s) := by
   obtain ⟨inh, hinh, hp⟩ := h.regs .mcountinhibit

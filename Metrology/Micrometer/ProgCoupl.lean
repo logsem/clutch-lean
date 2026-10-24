@@ -26,11 +26,11 @@ local bi IProp GF
 /-! ## The `progCoupl` modality -/
 
 variable (L) in
-/-- One program step coupled with `n` spec steps from an erasable spec-state distribution by a
-bind law: both runs are images of the law's head measures under `f` and `f'`, and `Z` continues at
-each pair whose leftover is finite (Rocq `prog_coupl`). -/
+/-- One program step coupled with some number of spec steps from an erasable spec-state
+distribution by a bind law: both runs are images of the law's head measures under `f` and `f'`,
+and `Z` continues at each pair whose leftover is finite (Rocq `prog_coupl`). -/
 noncomputable abbrev progCoupl (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
-    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF :=
+    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) :=
   progCouplFor primStep L e₁ σ₁ e₁' σ₁' b Z
 
 section Steps

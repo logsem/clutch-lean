@@ -52,14 +52,12 @@ theorem RunsTo.agree {code : BitVec 64 → Prop} {P Q : Mach → Prop} {s : Mach
     cases hQ with
     | leave _ _ hQ => exact ⟨_, hP, hQ⟩
     | step hp' hc' _ _ =>
-      have heq := Option.some.inj (hp.symm.trans hp')
-      cases heq
+      cases Option.some.inj (hp.symm.trans hp')
       exact False.elim (hc hc')
   | step hp hc hs _ ih =>
     cases hQ with
     | leave hp' hc' _ =>
-      have heq := Option.some.inj (hp.symm.trans hp')
-      cases heq
+      cases Option.some.inj (hp.symm.trans hp')
       exact False.elim (hc' hc)
     | step _ _ hs' hQ =>
       have heq := Option.some.inj (hs.symm.trans hs')

@@ -14,10 +14,10 @@ open Sail.ConcurrencyInterfaceV1
 def WordAt (s : Mach) (a : BitVec 64) (width : Nat) (value : BitVec (8 * width)) : Prop :=
   ∀ i < width, s.mem.get? (a.toNat + i) = some (value.extractLsb' (8 * i) 8)
 
-/-- `WordAt` at width 8 (doubleword). -/
+/-- Bytewise assertion that an address holds the eight little-endian bytes of a doubleword. -/
 abbrev Word64At (s : Mach) (a : BitVec 64) (value : BitVec 64) : Prop := WordAt s a 8 value
 
-/-- `WordAt` at width 4 (instruction word). -/
+/-- Bytewise assertion that an address holds the four little-endian bytes of an instruction word. -/
 abbrev Word32At (s : Mach) (a : BitVec 64) (value : BitVec 32) : Prop := WordAt s a 4 value
 
 /-- Writing a doubleword inserts its eight bytes and preserves every other state field. -/
@@ -81,14 +81,14 @@ section
 variable {s : Mach}
 
 /-- Reading an allocated byte preserves the Sail state. -/
-theorem readByte_eq {s : Mach} {a : Nat} {value : BitVec 8}
+theorem readByte_eq {a : Nat} {value : BitVec 8}
     (h : s.mem.get? a = some value) : (PreSail.readByte a : SailM (BitVec 8)) s = .ok value s := by
   have h' : s.mem[a]? = some value := h
   simp [PreSail.readByte, h', bind, EStateM.bind, pure, EStateM.pure, EStateM.get,
     get, MonadState.get, getThe, MonadStateOf.get]
 
 /-- Reading eight allocated little-endian bytes returns their doubleword without state changes. -/
-theorem readBytes64_eq {s : Mach} {a : BitVec 64} {value : BitVec 64}
+theorem readBytes64_eq {a : BitVec 64} {value : BitVec 64}
     (h : Word64At s a value) :
     (PreSail.readBytes 8 a.toNat : SailM (BitVec 64 × Option Bool)) s = .ok (value, none) s := by
   have h0 : s.mem[a.toNat]? = some (value.extractLsb' 0 8) := by simpa using h 0 (by decide)
@@ -103,11 +103,11 @@ theorem readBytes64_eq {s : Mach} {a : BitVec 64} {value : BitVec 64}
     EStateM.get, get, MonadState.get, getThe, MonadStateOf.get, Nat.add_assoc,
     Nat.reduceAdd, Std.ExtHashMap.get?_eq_getElem?, h0, h1, h2, h3, h4, h5, h6, h7]
   congr 2
-  clear h h0 h1 h2 h3 h4 h5 h6 h7 s a
+  clear h h0 h1 h2 h3 h4 h5 h6 h7 a
   bv_normalize
 
 /-- Reading four allocated little-endian bytes returns their word without state changes. -/
-theorem readBytes32_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
+theorem readBytes32_eq {a : BitVec 64} {value : BitVec 32}
     (h : Word32At s a value) :
     (PreSail.readBytes 4 a.toNat : SailM (BitVec 32 × Option Bool)) s = .ok (value, none) s := by
   have h0 : s.mem[a.toNat]? = some (value.extractLsb' 0 8) := by simpa using h 0 (by decide)
@@ -118,11 +118,11 @@ theorem readBytes32_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
     EStateM.get, get, MonadState.get, getThe, MonadStateOf.get, Nat.add_assoc,
     Nat.reduceAdd, Std.ExtHashMap.get?_eq_getElem?, h0, h1, h2, h3]
   congr 2
-  clear h h0 h1 h2 h3 s a
+  clear h h0 h1 h2 h3 a
   bv_normalize
 
 /-- Writing a doubleword preserves every disjoint bytewise word assertion. -/
-theorem WordAt.write64State {s : Mach} {a b : BitVec 64} {width : Nat}
+theorem WordAt.write64State {a b : BitVec 64} {width : Nat}
     {value : BitVec (8 * width)} (h : WordAt s b width value) (data : BitVec 64)
     (hdisjoint : a.toNat + 8 ≤ b.toNat ∨ b.toNat + width ≤ a.toNat) :
     WordAt (write64State s a data) b width value := by
@@ -131,27 +131,27 @@ theorem WordAt.write64State {s : Mach} {a b : BitVec 64} {width : Nat}
   exact h i hi
 
 /-- Plain physical RAM reads return the allocated doubleword unchanged. -/
-theorem read_ram64_eq {s : Mach} {a value : BitVec 64} (h : Word64At s a value) :
+theorem read_ram64_eq {a value : BitVec 64} (h : Word64At s a value) :
     read_ram .Read_plain (.Physaddr a) 8 false s = .ok (value, ()) s := by
   simp [RiscvZkvm.Sail.Functions.read_ram, PreSail.sail_mem_read, bind, EStateM.bind,
     pure, EStateM.pure, readBytes64_eq h]
 
 /-- Plain physical RAM reads return an allocated instruction word unchanged. -/
-theorem read_ram32_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
+theorem read_ram32_eq {a : BitVec 64} {value : BitVec 32}
     (h : Word32At s a value) :
     read_ram .Read_plain (.Physaddr a) 4 false s = .ok (value, ()) s := by
   simp [RiscvZkvm.Sail.Functions.read_ram, PreSail.sail_mem_read, bind, EStateM.bind,
     pure, EStateM.pure, readBytes32_eq h]
 
 /-- Physical instruction reads return the allocated word unchanged. -/
-theorem read_ram32_fetch_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
+theorem read_ram32_fetch_eq {a : BitVec 64} {value : BitVec 32}
     (h : Word32At s a value) :
     read_ram .Read_ifetch (.Physaddr a) 4 false s = .ok (value, ()) s := by
   simp [RiscvZkvm.Sail.Functions.read_ram, PreSail.sail_mem_read, bind, EStateM.bind,
     pure, EStateM.pure, readBytes32_eq h]
 
 /-- Successful physical access guards reduce a doubleword read to its allocated RAM bytes. -/
-theorem checked_mem_read64_of_guards {s : Mach} {a value : BitVec 64}
+theorem checked_mem_read64_of_guards {a value : BitVec 64}
     (access : MemoryAccessType mem_payload) (priv : Privilege) (info : Phys_Mem_Access_Info)
     (hcheck : check_pma_with_pmp_priority access .PBMT_PMA priv (.Physaddr a) 8 false s =
       .ok (.Ok info) s)
@@ -172,7 +172,7 @@ theorem checked_mem_read64_of_guards {s : Mach} {a value : BitVec 64}
     Sail.BitVec.updateSubrange']
 
 /-- Successful physical access guards reduce an instruction-word read to its allocated RAM bytes. -/
-theorem checked_mem_read32_of_guards {s : Mach} {a : BitVec 64} {value : BitVec 32}
+theorem checked_mem_read32_of_guards {a : BitVec 64} {value : BitVec 32}
     (access : MemoryAccessType mem_payload) (priv : Privilege) (info : Phys_Mem_Access_Info)
     (hcheck : check_pma_with_pmp_priority access .PBMT_PMA priv (.Physaddr a) 4 false s =
       .ok (.Ok info) s)
@@ -193,7 +193,7 @@ theorem checked_mem_read32_of_guards {s : Mach} {a : BitVec 64} {value : BitVec 
     Sail.BitVec.updateSubrange']
 
 /-- Successful physical access guards reduce a doubleword store to eight RAM byte writes. -/
-theorem checked_mem_write64_of_guards {s : Mach} (a value : BitVec 64)
+theorem checked_mem_write64_of_guards (a value : BitVec 64)
     (access : MemoryAccessType mem_payload) (priv : Privilege) (info : Phys_Mem_Access_Info)
     (hcheck : check_pma_with_pmp_priority access .PBMT_PMA priv (.Physaddr a) 8 false s =
       .ok (.Ok info) s)
@@ -212,7 +212,7 @@ theorem checked_mem_write64_of_guards {s : Mach} (a value : BitVec 64)
     bits_of_physaddr, Sail.BitVec.addInt, hpmp, hmmio, hdata, write_ram64_eq]
 
 /-- Dropping memory metadata preserves a successful checked read. -/
-theorem mem_read_priv_of_checked {s : Mach} {width : Nat} {value : BitVec (8 * width)}
+theorem mem_read_priv_of_checked {width : Nat} {value : BitVec (8 * width)}
     (access : MemoryAccessType mem_payload) (pbmt : page_based_mem_type) (priv : Privilege)
     (a : physaddr)
     (hread : checked_mem_read access pbmt priv a width false false false false s =
@@ -222,7 +222,7 @@ theorem mem_read_priv_of_checked {s : Mach} {width : Nat} {value : BitVec (8 * w
     MemoryOpResult_drop_meta]
 
 /-- The user RAM region lies above the platform interrupt-controller window. -/
-theorem within_clint_userRam {s : Mach} {a : BitVec 64} {width : Nat}
+theorem within_clint_userRam {a : BitVec 64} {width : Nat}
     (h : InUserRam a width) : within_clint (.Physaddr a) width s = .ok false s := by
   have hb : plat_clint_base = 33554432#64 := rfl
   have hs : plat_clint_size = 786432#64 := rfl
@@ -233,7 +233,7 @@ theorem within_clint_userRam {s : Mach} {a : BitVec 64} {width : Nat}
     RiscvZkvm.Sail.Functions.not, pure, EStateM.pure]
 
 /-- The user RAM region lies above the platform signal window. -/
-theorem within_sig_userRam {s : Mach} {a : BitVec 64} {width : Nat}
+theorem within_sig_userRam {a : BitVec 64} {width : Nat}
     (h : InUserRam a width) : within_sig (.Physaddr a) width s = .ok false s := by
   have hb : plat_sig_base = 201326592#64 := rfl
   have hs : plat_sig_size = 32#64 := rfl
@@ -244,7 +244,7 @@ theorem within_sig_userRam {s : Mach} {a : BitVec 64} {width : Nat}
     RiscvZkvm.Sail.Functions.not, pure, EStateM.pure]
 
 /-- An aligned access remains one physical access of its original width. -/
-theorem split_misaligned_of_aligned {s : Mach} {a : BitVec 64} {width : Nat}
+theorem split_misaligned_of_aligned {a : BitVec 64} {width : Nat}
     (info : Phys_Mem_Access_Info)
     (halign : is_aligned_vaddr (.Virtaddr a) width = true) :
     split_misaligned (.Physaddr a) width info.granule_size_exp info.splittable s =
@@ -371,8 +371,7 @@ theorem mem_read_of_checked {width : Nat}
   obtain ⟨m, hm, _⟩ := h.regs .mstatus
   have heff := (runSail_eq_some_iff _ _ _ _).mp (h.effectivePrivilege_user access hm)
   have hplain := mem_read_priv_of_checked access .PBMT_PMA .User a hread
-  simp [mem_read, bind, EStateM.bind, readReg_eq hm, readReg_eq h.privilege, heff,
-    hplain]
+  simp [mem_read, bind, EStateM.bind, readReg_eq hm, readReg_eq h.privilege, heff, hplain]
 
 /-- Configured physical writes lift successful checked user-mode writes. -/
 theorem mem_write_value_of_checked {t : Mach} {width : Nat}
@@ -472,8 +471,7 @@ theorem mem_write_ea64_of_guards
     sys_misaligned_order_decreasing, untilFuelM, untilFuelM.go, bind, EStateM.bind,
     EStateM.map, pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind,
     ExceptT.bindCont, ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift,
-    liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr, Sail.BitVec.addInt,
-    hpmp]
+    liftM, Functor.map, Sail.assert, PreSail.assert, bits_of_physaddr, Sail.BitVec.addInt, hpmp]
 
 /-- A configured virtual load uses the pointer register and its physical RAM read. -/
 theorem vmem_read64_of_mem (rs : regidx)

@@ -30,7 +30,7 @@ open Set (univ)
 theorem wp_lift_head_step_prog_couple (Hv : e₁.toVal? = none) : iprop%
     (∀ σ₁ e₁' σ₁' b₁, stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗ |={E, ∅}=>
-      ⌜HeadReducible e₁ σ₁⌝ ∗
+      ⌜∃ ρ : Cfg rT, 0 < headStep ⟨e₁, σ₁⟩ {ρ}⌝ ∗
       progCoupl L e₁ σ₁ e₁' σ₁' b₁ fun e₂ σ₂ e₂' σ₂' b₂ => iprop% ▷ |={∅, E}=>
         stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗ budgetInterp b₂ ∗
           wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by

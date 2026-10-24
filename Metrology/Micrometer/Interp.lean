@@ -60,6 +60,7 @@ end TyEnv
 
 end TyEnvSetup
 
+-- `UnboxedType` has no sums; the sum cases are kept to match Rocq's `val_is_unboxed`.
 /-- Unboxed expressions are literals or sum injections of literals (Rocq `val_is_unboxed`). -/
 @[simp] def Exp.isUnboxedV : Exp rT → Prop
   | .lit _ => True
@@ -101,12 +102,12 @@ namespace NEFun
 /-- Apply a binary relation constructor pointwise. -/
 @[reducible] noncomputable def map2 (F : lrel rT GF → lrel rT GF → lrel rT GF)
     [NonExpansive₂ F] (A B : NEFun rT GF) : NEFun rT GF :=
-  ⟨fun Δ => F (A.fn Δ) (B.fn Δ), fun h => NonExpansive₂.ne (A.ne h) (B.ne h)⟩
+  { fn := fun Δ => F (A.fn Δ) (B.fn Δ), ne := fun h => NonExpansive₂.ne (A.ne h) (B.ne h) }
 
 /-- Apply a unary relation constructor pointwise. -/
 @[reducible] noncomputable def map1 (F : lrel rT GF → lrel rT GF)
     [NonExpansive F] (A : NEFun rT GF) : NEFun rT GF :=
-  ⟨fun Δ => F (A.fn Δ), fun h => NonExpansive.ne (A.ne h)⟩
+  { fn := fun Δ => F (A.fn Δ), ne := fun h => NonExpansive.ne (A.ne h) }
 
 section
 variable (A : NEFun rT GF)
@@ -203,7 +204,8 @@ theorem interp_rec_car :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty⌝ ∗
       ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
-    ⟨fun X => interp L τ (cons X Δ), ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩⟩)
+    { f := fun X => interp L τ (cons X Δ),
+      ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩ })
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/
 theorem interp_exists_car :

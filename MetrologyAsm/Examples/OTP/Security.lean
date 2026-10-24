@@ -1,9 +1,9 @@
 import MetrologyAsm.Examples.OTP.Finite
 
-/-! # Total termination, exact ciphertext law and perfect secrecy of the actual assembly OTP game
+/-! # Termination, ciphertext law and perfect secrecy of the actual assembly OTP game
 
-Only the returned ciphertext is observed. The allocated private pad remains in the final heap,
-which is erased by the value marginal; the joint ciphertext/pad distribution is not the claim. -/
+Only the returned ciphertext is observed, so the law is of the value marginal; the joint
+ciphertext/pad distribution is not the claim. The private pad in the final heap is erased. -/
 
 namespace MetrologyAsm.OTP
 
@@ -11,9 +11,12 @@ open ProbLang ProbLang.Asm MeasureTheory MeasureTheory.Measure
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
-/-- The ideal output law is an ordinary uniformly sampled byte represented as an integer literal. -/
+/-- The uniform law on byte values. -/
+private noncomputable abbrev byteUnif : Measure Int := unifInt 256 (by norm_num)
+
+/-- The ideal output law is a uniformly sampled byte represented as an integer literal. -/
 noncomputable def idealByteLaw : Measure (Exp rT) :=
-  (unifInt 256 (by norm_num)).map (fun byte => .lit (.int byte))
+  byteUnif.map (fun byte => .lit (.int byte))
 
 /-- The actual allocated Sail-backed game terminates with total probability one. -/
 theorem otp_game_terminates (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ message < 256) :
@@ -28,14 +31,12 @@ theorem otp_game_uniform (σ : State rT) (message : Int) (hm : 0 ≤ message ∧
   rw [otp_game_limExec σ message hm]
   unfold asExpr
   rw [map_map Cfg.measurable_expr (by measurability)]
-  change (unifInt 256 (by norm_num)).map
-    (fun byte => (Exp.lit (.int (byteXor message byte)) : Exp rT)) = idealByteLaw
+  change byteUnif.map (fun byte => Exp.lit (.int (byteXor message byte))) = idealByteLaw
   calc
-    _ = ((unifInt 256 (by norm_num)).map (byteXor message)).map
-        (fun byte => (Exp.lit (.int byte) : Exp rT)) :=
+    _ = (byteUnif.map (byteXor message)).map (fun byte => (Exp.lit (.int byte) : Exp rT)) :=
       (map_map (by measurability) (by measurability)).symm
-    _ = _ := congrArg (fun μ : Measure Int => μ.map
-      (fun byte => (Exp.lit (.int byte) : Exp rT))) (byteXor_uniform message)
+    _ = _ := congrArg (fun μ : Measure Int => μ.map (fun byte => (Exp.lit (.int byte) : Exp rT)))
+      (byteXor_uniform message)
 
 /-- Each valid ciphertext byte has exact probability one over 256 under actual game execution. -/
 theorem otp_ciphertext_probability (σ : State rT) (message ciphertext : Int)

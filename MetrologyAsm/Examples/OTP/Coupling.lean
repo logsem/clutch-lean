@@ -5,13 +5,14 @@ import Metrology.Micrometer.CouplingRules
 
 namespace MetrologyAsm.OTP
 
-open Iris Iris.BI Iris.ProofMode GradedLifting ProbLang ProbLang.Asm MicrometerWpGS
+open Iris Iris.BI Iris.ProofMode GradedLifting ProbLang ProbLang.Asm ProbLang.RandomBytes
+  MicrometerWpGS
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive]
-  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {Φ : Val rT → IProp GF}
+  [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {E : CoPset} {Φ : Val rT → _}
 
 local bi IProp GF
 
@@ -20,9 +21,9 @@ theorem wp_randombytes_masked (message : Int) (pad : Loc) (initial : Int) : ipro
     appHeapFrag pad (.int initial) ∗ ⤇ (pl% rand(#256, #())) ∗
       (∀ byte : Int, ⌜0 ≤ byte ∧ byte < 256⌝ -∗ ⤇ (pl% #int (byteXor message byte)) -∗
         appHeapFrag pad (.int byte) -∗ Φ .unit) ⊢
-      wp L E (pl% &RandomBytes.randombytes (#loc pad, (#int 1, #()))) Φ := by
+      wp L E (pl% &randombytes (#loc pad, (#int 1, #()))) Φ := by
   iintro ⟨Hpad, Hj, HΦ⟩
-  wp_steps RandomBytes.randombytes_steps pad 1
+  wp_steps randombytes_steps pad 1
   wp_pures
   wp_bind (pl% rand(#256, #()))
   iapply wp_couple_rand_rand 256 (byteXor message)
@@ -38,8 +39,8 @@ theorem wp_randombytes_masked (message : Int) (pad : Loc) (initial : Int) : ipro
   iframe Hpad
   iintro Hpad
   wp_pure 3
-  wp_show (pl% &RandomBytes.fill #loc (pad + 1) #0)
-  wp_steps RandomBytes.fill_nonpos_steps (pad + 1) (by omega)
+  wp_show (pl% &fill #loc (pad + 1) #0)
+  wp_steps fill_nonpos_steps (pad + 1) (by omega)
   wp_value
   iapply HΦ $$ %byte %hb Hj Hpad
 
@@ -48,8 +49,7 @@ theorem wp_randombytes_masked_ffi (message : Int) (pad : Loc) (initial : Int) : 
     appHeapFrag pad (.int initial) ∗ ⤇ (pl% rand(#256, #())) ∗
       (∀ byte : Int, ⌜0 ≤ byte ∧ byte < 256⌝ -∗ ⤇ (pl% #int (byteXor message byte)) -∗
         appHeapFrag pad (.int byte) -∗ Φ .unit) ⊢
-      wpFor (primStepWith otpEnv) L E
-        (pl% &RandomBytes.randombytes (#loc pad, (#int 1, #()))) Φ :=
+      wpFor (primStepWith otpEnv) L E (pl% &randombytes (#loc pad, (#int 1, #()))) Φ :=
   (wp_randombytes_masked message pad initial).trans (wp_ffi_of_wp otpEnv)
 
 /-- The actual Sail OTP and heap-changing callback couple to a uniform ciphertext at zero cost. -/
@@ -68,7 +68,7 @@ theorem wp_otp_coupled (message : Int) (pad : Loc) (initial : Int)
   iapply wp_randombytes_masked_ffi message pad initial
   iframe Hpad Hj
   iintro %byte %hb Hj Hpad
-  have hbyte : inRange false 8 byte = true := by simpa [inRange] using hb
+  have hbyte : inRange false 8 byte = true := inRange_eight_iff.mpr hb
   iapply wp_otp_resume message pad initial byte hm hi hbyte
   iframe Hpad
   iintro !> Hpad

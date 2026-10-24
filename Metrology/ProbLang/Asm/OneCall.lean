@@ -10,7 +10,7 @@ namespace ProbLang.Asm.AsmSemantics
 
 variable {C V : Type} (M : AsmSemantics C V) (c : C) (entryArgs : List V) (F : Finset Loc)
 
-/-- Trees followed with one entry frame and current state agree when one is a return. -/
+/-- Two trees that both follow from the same state agree when one of them returns. -/
 theorem followsFrom_ret_unique
     (hagree : ∀ ι t P Q, M.runs ι c t P → M.runs ι c t Q → ∃ t', P t' ∧ Q t')
     (hdet : ∀ ι origin paused s u, M.ExitCompat ι c entryArgs F origin paused s →

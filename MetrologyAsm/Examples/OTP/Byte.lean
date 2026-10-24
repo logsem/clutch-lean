@@ -4,7 +4,7 @@ import Metrology.Micrometer.UnifInt
 
 namespace MetrologyAsm.OTP
 
-open MeasureTheory GradedLifting
+open MeasureTheory GradedLifting ProbLang
 
 /-- XOR two integers as bytes and expose the unsigned result as a logical integer. -/
 def byteXor (message key : Int) : Int :=
@@ -13,14 +13,10 @@ def byteXor (message key : Int) : Int :=
 /-- The XOR result is always a representable unsigned byte. -/
 theorem byteXor_range (message key : Int) :
     0 ≤ byteXor message key ∧ byteXor message key < 256 := by
-  constructor
-  · exact Int.natCast_nonneg _
-  · have h := ((BitVec.ofInt 8 message) ^^^ (BitVec.ofInt 8 key)).isLt
-    norm_num at h
-    change (((BitVec.ofInt 8 message) ^^^ (BitVec.ofInt 8 key)).toNat : Int) < 256
-    exact_mod_cast h
+  have h := ((BitVec.ofInt 8 message) ^^^ (BitVec.ofInt 8 key)).isLt
+  exact ⟨Int.natCast_nonneg _, by simp only [byteXor]; omega⟩
 
-/-- Applying the same byte mask twice recovers a representable byte. -/
+/-- Applying the same byte mask twice recovers the original key. -/
 theorem byteXor_involutive (message key : Int) (hk : 0 ≤ key ∧ key < 256) :
     byteXor message (byteXor message key) = key := by
   simp only [byteXor, BitVec.ofInt_natCast, BitVec.ofNat_toNat]
@@ -55,23 +51,18 @@ theorem byteXor_bij (message output : Int) (h0 : 0 ≤ output) (h256 : output < 
 
 /-- XOR masking preserves the exact uniform byte measure. -/
 theorem byteXor_uniform (message : Int) :
-    (ProbLang.unifInt 256 (by norm_num)).map (byteXor message) =
-      ProbLang.unifInt 256 (by norm_num) := by
-  apply ProbLang.unifInt_map_bijOn (by norm_num) (byteXor message)
-  · intro key _ _
-    exact byteXor_range _ _
+    (unifInt 256 (by norm_num)).map (byteXor message) = unifInt 256 (by norm_num) := by
+  apply unifInt_map_bijOn (by norm_num) (byteXor message)
+  · exact fun _ _ _ => byteXor_range _ _
   · exact byteXor_bij message
 
-variable {B : Type} [Zero B] [Add B] [Preorder B] [OrderTop B]
-  {L : GradedLifting.{0} B} [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal]
-
 /-- Couple a uniform key with an ideal uniform ciphertext at zero cost. -/
-theorem byteXor_coupling (message : Int) :
+theorem byteXor_coupling {B : Type} [Zero B] [Add B] [Preorder B] [OrderTop B]
+    {L : GradedLifting.{0} B} [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (message : Int) :
     L.Rel 0 (fun key ciphertext => 0 ≤ key ∧ key < 256 ∧ ciphertext = byteXor message key)
-      (ProbLang.unifInt 256 (by norm_num)) (ProbLang.unifInt 256 (by norm_num)) := by
-  apply ProbLang.unifInt_rel_bij L (by norm_num) (byteXor message)
-  · intro key _ _
-    exact byteXor_range _ _
+      (unifInt 256 (by norm_num)) (unifInt 256 (by norm_num)) := by
+  apply unifInt_rel_bij L (by norm_num) (byteXor message)
+  · exact fun _ _ _ => byteXor_range _ _
   · exact byteXor_bij message
 
 end MetrologyAsm.OTP

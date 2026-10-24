@@ -9,7 +9,8 @@ import Metrology.Iris.LocalBI
 
 namespace ProbLang.AsmImports
 
-open Asm
+open Iris Iris.Std Iris.ProofMode MicrometerWpGS BIFUpdate Asm
+open LawfulSet (empty_subset)
 open AsmSemantics (canonicalize eval_eq_some)
 open HeapSnapshot (restore)
 open Interaction (replay)
@@ -47,12 +48,8 @@ def machine : AsmSemantics Code BoundaryValue where
 
 /-- The toy machine has deterministic stops and accepts every representable resumption. -/
 theorem machine_lawful : LawfulAsmSemantics machine where
-  runs_agree := by
-    intro ι c t Q R hQ hR
-    exact ⟨t, hQ, hR⟩
-  exit_det := by
-    intro ι c entryArgs F t t' s₁ s₂ h₁ h₂
-    exact h₁.trans h₂.symm
+  runs_agree _ _ t _ _ hQ hR := ⟨t, hQ, hR⟩
+  exit_det _ _ _ _ _ _ _ _ h₁ h₂ := h₁.trans h₂.symm
   resume_nonempty := by
     intro ι c entryArgs F t t' name vs h r h' hs hr
     cases t' with
@@ -64,10 +61,10 @@ noncomputable def tree : Interaction BoundaryValue :=
   machine.canonicalize code args {1} (.call "echo" [] (heap 22) fun r h => .ret r h)
 
 /-- The toy signature owns exactly its one argument cell. -/
-@[simp] theorem footprint_eq : callFootprint code args = {1} := by decide +kernel
+@[simp] theorem footprint_eq : callFootprint code args = {1} := rfl
 
 /-- The toy machine follows the canonical call and its checked resumption branches. -/
-theorem follows (ι : Placement) : machine.Follows code args {1} ι none tree := by
+theorem machine_follows (ι : Placement) : machine.Follows code args {1} ι none tree := by
   change (Stop.call "echo" [] (heap 22) = stop none) ∧ _
   refine ⟨rfl, ?_⟩
   intro r h hr t ht
@@ -77,18 +74,18 @@ theorem follows (ι : Placement) : machine.Follows code args {1} ι none tree :=
   rfl
 
 /-- Every entry fragment has the toy's same nonvacuous canonical interaction. -/
-theorem eval (entry : LocHeap BoundaryValue) :
+theorem machine_eval (entry : LocHeap BoundaryValue) :
     machine.eval code args {1} entry = some tree := by
   apply eval_eq_some machine_lawful
   refine ⟨⟨⟨fun _ => 0, 0, fun _ => 0, 0⟩, none, rfl⟩, ?_, ?_⟩
   · exact machine.canonicalize_canonical code args {1} _
   · intro ι t ht
     cases ht
-    exact follows ι
+    exact machine_follows ι
 
 /-- Both boundary checks preserve the toy's integer fragment. -/
 theorem valid_heap (z : Int) (hz : 0 ≤ z ∧ z < 256) : validFragment code args (heap z) := by
-  refine ⟨by decide +kernel, ?_, ?_⟩
+  refine ⟨rfl, ?_, ?_⟩
   · simp [heap]
   · simp [check, code, args, boundaryArgs, BoundaryValue.toVal, ArgKind.validResult,
       ArgKind.check, ArgKind.region, locValue, Len.resolve, Region.check, intFits,
@@ -98,13 +95,10 @@ theorem valid_heap (z : Int) (hz : 0 ≤ z ∧ z < 256) : validFragment code arg
 
 /-- The toy fragment has the canonical singleton archive. -/
 theorem snapshot_heap (z : Int) : snapshot (heap z) = some [(1, z)] := by
-  have hp := Iris.Std.LawfulFiniteMap.toList_ofList
-    (M := LocHeap) (l := [(1, BoundaryValue.int z)]) (by simp [Iris.Std.NoDupKeys])
-  have hlist : Iris.Std.FiniteMap.toList
-      (Iris.Std.PartialMap.ofList [(1, BoundaryValue.int z)] : LocHeap BoundaryValue) =
-        [(1, BoundaryValue.int z)] := List.perm_singleton.mp hp
-  change (Iris.Std.PartialMap.ofList [(1, BoundaryValue.int z)] :
-    LocHeap BoundaryValue).toList = [(1, BoundaryValue.int z)] at hlist
+  have hp := LawfulFiniteMap.toList_ofList
+    (M := LocHeap) (l := [(1, BoundaryValue.int z)]) (by simp [NoDupKeys])
+  have hlist : (PartialMap.ofList [(1, BoundaryValue.int z)] : LocHeap BoundaryValue).toList =
+      [(1, BoundaryValue.int z)] := List.perm_singleton.mp hp
   simp [heap, integerHeap, integerSnapshot, footprintLocations, restore,
     snapshot, hlist]
 
@@ -117,16 +111,14 @@ def archive : Replay := ⟨code, args, [(1, 11)], []⟩
 /-- Starting the call exposes its updated cell and records the original entry fragment. -/
 theorem start_eq :
     start machine code args (heap 11) = .call "echo" [] (heap 22) archive := by
-  classical
   have hi := valid_heap 11 (by omega)
   have hc : validFragment code args (heap 22) ∧ ∃ sig, ("echo", sig) ∈ code.sig.imports ∧
         check sig (boundaryArgs []) (valueHeap (rT := Empty) (heap 22)) = true := by
-    refine ⟨valid_heap 22 (by omega), ⟨[], .int 64⟩, by simp [code], ?_⟩
-    decide +kernel
+    refine ⟨valid_heap 22 (by omega), ⟨[], .int 64⟩, by simp [code], rfl⟩
   have hcheck : (code.sig.valid && check code.sig.toCallSig (boundaryArgs args)
       (valueHeap (rT := Empty) (heap 11))) = true := by
     simpa only [Bool.and_eq_true] using And.intro hi.1 hi.2.2
-  simp only [start, footprint_eq, restrict_heap, hcheck, ite_true, snapshot_heap, eval,
+  simp only [start, footprint_eq, restrict_heap, hcheck, ite_true, snapshot_heap, machine_eval,
     tree, canonicalize, rootAction, ite_eq_left hc]
   rfl
 
@@ -137,8 +129,8 @@ theorem response_ok : machine.ResponseOK code args {1} "echo" (.int 7) (heap 22)
   · apply Std.ExtTreeMap.ext_getElem?
     intro l
     by_cases hl : l ∈ ({1} : Finset Loc) <;> simp [restrict_get, heap, hl]
-  · decide +kernel
-  · decide +kernel
+  · rfl
+  · rfl
 
 /-- Replaying the recorded response selects its exact return subtree. -/
 theorem replay_response : tree.replay [(.int 7, heap 22)] = some (.ret (.int 7) (heap 22)) := by
@@ -146,11 +138,10 @@ theorem replay_response : tree.replay [(.int 7, heap 22)] = some (.ret (.int 7) 
 
 /-- Resumption replays the archived call and returns the callback's current heap. -/
 theorem resume_eq : resume machine archive (.int 7) (heap 22) = .ret (.int 7) (heap 22) := by
-  classical
   have ho : validFragment code args (heap 22) ∧
       checkResult code.sig.toCallSig (boundaryArgs args) code.sig.result
-        (BoundaryValue.int 7).toVal = true := ⟨valid_heap 22 (by omega), by decide +kernel⟩
-  simp only [resume, archive, footprint_eq, restrict_heap, eval, List.map_nil,
+        (BoundaryValue.int 7).toVal = true := ⟨valid_heap 22 (by omega), rfl⟩
+  simp only [resume, archive, footprint_eq, restrict_heap, machine_eval, List.map_nil,
     replay, tree, canonicalize, response_ok, ite_true,
     snapshot_heap, rootAction]
   exact ite_eq_left ho
@@ -171,7 +162,7 @@ abbrev expression : Exp rT := .asm (.lit (.code code)) (argumentTuple args)
 /-- The dispatcher evaluates the callback inside its actual resumption context. -/
 abbrev paused : Exp rT := .asmResume archive (.app callback.fst (.lit .unit))
 
-section StateSteps
+section Steps
 
 variable (σ : State rT)
 
@@ -181,14 +172,13 @@ abbrev updated : State rT := σ.writeFragment [(1, .int 22)]
 /-- Capturing the toy cell records its known integer value. -/
 theorem capture_cell (z : Int) (h : σ.heap[(1 : Loc)]? = some (.int z)) :
     capture {1} σ.heap = some [(1, z)] := by
-  have hc := capture_eq_snapshot {1} (fun _ => z) σ.heap (by simpa using h)
-  simpa [footprintLocations] using hc
+  simpa [footprintLocations] using capture_eq_snapshot {1} (fun _ => z) σ.heap (by simpa using h)
 
 /-- Writing the toy cell is exactly the boundary's footprint replacement. -/
 theorem updated_eq :
     updated σ = σ.update_heap (fun h => overwrite {1} h (valueHeap (heap 22))) := by
-  have hw := write_integerValues σ {1} (fun _ => 22)
-  simpa [updated, integerValues, footprintLocations, heap] using hw
+  simpa [updated, integerValues, footprintLocations, heap] using
+    write_integerValues σ {1} (fun _ => 22)
 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
@@ -199,8 +189,7 @@ theorem start_step (h : σ.heap[(1 : Loc)]? = some (.int 11)) :
   simp only [callStep, show code.sig.args.length = args.length from rfl,
     readTuple_argumentTuple, footprint_eq, capture_cell σ 11 h]
   change actionStep env {1} σ (start machine code args (restore [(1, 11)])) = _
-  rw [show restore [(1, 11)] = heap 11 from restore_snapshot (snapshot_heap 11)]
-  rw [start_eq]
+  rw [show restore [(1, 11)] = heap 11 from restore_snapshot (snapshot_heap 11), start_eq]
   simp only [actionStep, env, paused, callback, argumentTuple, updated_eq]
 
 /-- The callback's ordinary beta reduction returns seven under the explicit environment. -/
@@ -227,16 +216,12 @@ theorem resume_step (h : σ.heap[(1 : Loc)]? = some (.int 22)) :
   simp only [resumeStep, BoundaryValue.ofVal, archive, footprint_eq, capture_cell σ 22 h]
   change (actionStep env {1} σ
     (resume machine archive (.int 7) (restore [(1, 22)]))).map (Ectx.fillCfg []) = _
-  rw [show restore [(1, 22)] = heap 22 from restore_snapshot (snapshot_heap 22)]
-  rw [resume_eq]
+  rw [show restore [(1, 22)] = heap 22 from restore_snapshot (snapshot_heap 22), resume_eq]
   simp only [actionStep, updated_eq, BoundaryValue.toVal, fillCfg_empty, map_id]
 
-end StateSteps
+end Steps
 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-open Iris Iris.Std Iris.BI Iris.ProofMode GradedLifting MicrometerWpGS BIFUpdate
-open LawfulSet (empty_subset)
 
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors}
@@ -269,7 +254,7 @@ theorem wp_one_import : iprop%
   imod app_state_update_fragment [(1, .int 11)] [(1, .int 22)] rfl (by simp)
     $$ Hσ Hcell with ⟨Hσ', Hcell⟩
   imodintro
-  iexists (⟨paused, updated σ⟩ : Cfg rT)
+  iexists ⟨paused, updated σ⟩
   iframe %hdet
   iintro !>
   imod Hclose

@@ -18,7 +18,7 @@ local bi IProp GF
 /-- Weakest precondition of the assembled callback under later credits. -/
 theorem wp_importToy : iprop%
     ▷ ▷ ▷ Φ (.int 7) ⊢ wpFor (primStepWith importToyEnv) L E importToyExpression Φ := by
-  apply wp_importToy_of_eval (next := importToyNext)
+  apply wp_importToy_of_eval
   · simpa only [importToyTree_eq] using importToy_eval
   · exact importToyNext_valid _ _ importToy_response_ok
 

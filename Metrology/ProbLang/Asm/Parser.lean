@@ -20,48 +20,11 @@ def abiNames : List String :=
     "a3", "a4", "a5", "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9",
     "s10", "s11", "t3", "t4", "t5", "t6"]
 
-/-- Parse a numeric or ABI register name. -/
-def parseReg (s : String) : Option Reg := do
-  let n ← if s == "fp" then some 8 else if s.startsWith "x" then
-    (s.drop 1).toString.toNat? else List.idxOf? s abiNames
-  if h : n < 32 then some ⟨n, h⟩ else none
-
 /-- Read one hexadecimal digit. -/
 def hexDigit (c : Char) : Option Nat :=
   if c.isDigit then some (c.toNat - '0'.toNat)
   else if 'a' ≤ c ∧ c ≤ 'f' then some (c.toNat - 'a'.toNat + 10)
   else if 'A' ≤ c ∧ c ≤ 'F' then some (c.toNat - 'A'.toNat + 10) else none
-
-/-- Parse a signed decimal or hexadecimal assembly integer. -/
-def parseInt (s : String) : Option Int := do
-  let neg := s.startsWith "-"
-  let t := if neg then (s.drop 1).toString else s
-  let n ← if t.startsWith "0x" then
-    (t.drop 2).toString.toList.foldlM (fun n c => do pure (16 * n + (← hexDigit c))) 0
-    else t.toNat?
-  pure (if neg then -(n : Int) else (n : Int))
-
-/-- Read an immediate or symbolic relocation. -/
-def parseImm (s : String) : Except String Imm := do
-  if let some n := parseInt s then return .int n
-  for (pre, ctor) in [("%pcrel_hi(", pcrelHi), ("%pcrel_lo(", pcrelLo),
-      ("%hi(", hi), ("%lo(", lo)] do
-    if s.startsWith pre && s.endsWith ")" then
-      return ctor (((s.drop pre.length).toString.dropEnd 1).toString)
-  if s.isEmpty then throw "empty immediate"
-  return .symbol s
-
-/-- Read a register, immediate, or memory operand. -/
-def parseOperand (s : String) : Except String Operand := do
-  let s := s.trimAscii.toString
-  if let some r := parseReg s then return .reg r
-  let parts := s.splitOn "("
-  if parts.length ≥ 2 && s.endsWith ")" then
-    let base := ((parts.getLast!).dropEnd 1).toString
-    if let some r := parseReg base then
-      let offset := "(".intercalate parts.dropLast
-      return .mem (← parseImm offset.trimAscii.toString) r
-  return .imm (← parseImm s)
 
 /-- Decode escaped assembler string bytes with a bounded scan. -/
 def quotedBytes : Nat → List Char → Except String (List Int)
@@ -91,11 +54,54 @@ def quotedBytes : Nat → List Char → Except String (List Int)
     if c.toNat ≥ 128 then throw "non-ASCII source character; use escaped bytes"
     return (c.toNat : Int) :: (← quotedBytes fuel cs)
 
+section
+
+variable (s : String)
+
+/-- Parse a numeric or ABI register name. -/
+def parseReg : Option Reg := do
+  let n ← if s == "fp" then some 8 else if s.startsWith "x" then
+    (s.drop 1).toString.toNat? else List.idxOf? s abiNames
+  if h : n < 32 then some ⟨n, h⟩ else none
+
+/-- Parse a signed decimal or hexadecimal assembly integer. -/
+def parseInt : Option Int := do
+  let neg := s.startsWith "-"
+  let t := if neg then (s.drop 1).toString else s
+  let n ← if t.startsWith "0x" then
+    (t.drop 2).toString.toList.foldlM (fun n c => do pure (16 * n + (← hexDigit c))) 0
+    else t.toNat?
+  pure (if neg then -(n : Int) else (n : Int))
+
+/-- Read an immediate or symbolic relocation. -/
+def parseImm : Except String Imm := do
+  if let some n := parseInt s then return .int n
+  for (pre, ctor) in [("%pcrel_hi(", pcrelHi), ("%pcrel_lo(", pcrelLo),
+      ("%hi(", hi), ("%lo(", lo)] do
+    if s.startsWith pre && s.endsWith ")" then
+      return ctor (((s.drop pre.length).toString.dropEnd 1).toString)
+  if s.isEmpty then throw "empty immediate"
+  return .symbol s
+
+/-- Read a register, immediate, or memory operand. -/
+def parseOperand : Except String Operand := do
+  let s := s.trimAscii.toString
+  if let some r := parseReg s then return .reg r
+  let parts := s.splitOn "("
+  if parts.length ≥ 2 && s.endsWith ")" then
+    let base := ((parts.getLast!).dropEnd 1).toString
+    if let some r := parseReg base then
+      let offset := "(".intercalate parts.dropLast
+      return .mem (← parseImm offset.trimAscii.toString) r
+  return .imm (← parseImm s)
+
 /-- Parse a quoted assembler byte string. -/
-def parseQuoted (s : String) : Except String (List Int) := do
+def parseQuoted : Except String (List Int) := do
   if !(s.startsWith "\"" && s.endsWith "\"") then throw "expected quoted string"
   let chars := ((s.drop 1).toString.dropEnd 1).toString.toList
   quotedBytes (chars.length + 1) chars
+
+end
 
 /-- Read a supported GNU assembler directive. -/
 def parseDirective (name args : String) : Except String Directive := do

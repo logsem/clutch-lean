@@ -32,9 +32,13 @@ private def cellInt? (σ : State Float) (l : Loc) : Option Int := do
 /-- The value of the sentinel cells around the output block. -/
 private def sentinel : Int := -777
 
-/-- The array lengths, repetitions per length and nonpositive lengths that the smoke test runs. -/
+/-- The array lengths that the smoke test runs. -/
 private def lengths : List Nat := [0, 1, 4, 32]
+
+/-- The number of repetitions per array length. -/
 private def repetitions : Nat := 10
+
+/-- The nonpositive lengths that the smoke test runs on an empty heap. -/
 private def nonpositive : List Int := [0, -1, -100]
 
 /-- Check every output byte and both surrounding sentinel cells. -/
@@ -51,7 +55,7 @@ private def checkFilled (e : Exp Float) (σ : State Float) (n : Nat) : Bool :=
 
 /-- Allocate a byte block between two sentinel cells and invoke the tuple callback. -/
 private def fillProgram (n : Nat) : Exp Float := pl%
-  let ptr := allocN(#int (n + 2), #(-777));
+  let ptr := allocN(#int (n + 2), #int sentinel);
   let answer := {ofVal randombytesValue} ((ptr +ₗ #1), (#int n, #()));
   (ptr, answer)
 

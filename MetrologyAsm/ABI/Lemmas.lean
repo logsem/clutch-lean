@@ -108,7 +108,10 @@ theorem decodeCell_signed64 (ι : Placement) (r : Region) (l : Loc) (s : Mach) (
 
 private theorem mapM_eq_some_map {α β : Type} (xs : List α) (f : α → Option β)
     (g : α → β) (h : ∀ x ∈ xs, f x = some (g x)) : xs.mapM f = some (xs.map g) := by
-  induction xs <;> simp_all
+  induction xs with
+  | nil => rfl
+  | cons x xs ih =>
+    simp [List.mapM_cons, h x (by simp), ih fun y hy => h y (by simp [hy])]
 
 /-- Pointwise successful Sail cell reads reconstruct exactly the finite logical integer fragment. -/
 theorem decodeF_integerHeap (ι : Placement) (code : Code) (args : List BoundaryValue)

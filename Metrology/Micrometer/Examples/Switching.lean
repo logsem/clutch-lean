@@ -23,9 +23,9 @@ namespace Switching
 open ProbLang.Exp (ofVal alloc store toVal?_ofVal)
 open ProbLang.Val (isVal_ofVal)
 open Finset (range sum_le_sum_of_subset range_mono sum_range_succ' sum_congr sum_range_id)
-open Nat (cast_sum cast_succ cast_zero le_succ div_mul_le_self)
-open Prod (fst)
+open Nat (cast_succ cast_zero le_succ cast_le div_mul_le_self)
 open ENNReal (div_le_div_right le_div_iff_mul_le)
+open Prod (fst)
 open List (length_cons length_nil mem_cons nodup_cons)
 open BudgetCredit (weaken split)
 open _root_.Int (toNat_of_nonneg)
@@ -40,11 +40,11 @@ variable (N : Int)
 /-- Total error of `q` coupled rounds from `c` memoised entries: `∑_{i<q} (c + i) / N`, as round
 `i` meets a collision with probability `(c + i) / N`. -/
 noncomputable def loopErr (c q : Nat) : ENNReal :=
-  (∑ i ∈ range q, ((c + i : Nat) : ENNReal)) / (N.toNat : ENNReal)
+  ((∑ i ∈ range q, (c + i) : Nat) : ENNReal) / (N.toNat : ENNReal)
 
 /-- The loop error grows with the number of rounds. -/
 theorem loopErr_mono (c : Nat) {q q' : Nat} (h : q ≤ q') : loopErr N c q ≤ loopErr N c q' :=
-  div_le_div_right (sum_le_sum_of_subset (range_mono h)) _
+  div_le_div_right (cast_le.2 (sum_le_sum_of_subset (range_mono h))) _
 
 /-- The first round costs `c / N` and the remaining rounds start from `c + 1` entries. -/
 theorem loopErr_succ (c q : Nat) :
@@ -52,18 +52,20 @@ theorem loopErr_succ (c q : Nat) :
   simp only [loopErr, sum_range_succ', ← ENNReal.add_div]
   rw [add_comm]
   congr 2
-  exact sum_congr rfl fun i _ => by rw [← add_assoc, add_right_comm]
+  push_cast
+  rw [add_zero]
+  congr 1
+  exact sum_congr rfl fun i _ => by ring
 
 /-- The loop error is at most the birthday bound `q (q - 1) / (2 N)`. -/
 theorem loopErr_zero_le_birthday (q : Nat) :
     loopErr N 0 q ≤ ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
-  simp only [loopErr, Nat.zero_add]
-  rw [← cast_sum, sum_range_id]
+  simp only [loopErr, Nat.zero_add, sum_range_id]
   calc ((q * (q - 1) / 2 : ℕ) : ENNReal) / (N.toNat : ENNReal)
-      ≤ (((q * (q - 1) : ℕ) : ENNReal) / 2) / (N.toNat : ENNReal) := by
-        gcongr
-        rw [le_div_iff_mul_le (.inl (by norm_num)) (.inl (by norm_num))]
-        exact_mod_cast div_mul_le_self _ 2
+    _ ≤ (((q * (q - 1) : ℕ) : ENNReal) / 2) / (N.toNat : ENNReal) := by
+      gcongr
+      rw [le_div_iff_mul_le (.inl (by norm_num)) (.inl (by norm_num))]
+      exact_mod_cast div_mul_le_self _ 2
     _ = ((q * (q - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) := by
       rw [div_eq_mul_inv, div_eq_mul_inv, div_eq_mul_inv,
         ENNReal.mul_inv (.inl (by norm_num)) (.inl (by norm_num)), mul_assoc]
@@ -81,7 +83,6 @@ local bi IProp GF
 /-! ### One round: recording the answer -/
 
 /-- The tail of a round records `(n, y)` in both result lists, then runs the next round. -/
--- `hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`.
 theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT} {resL resS : Loc}
     {q : Nat} {n y : Int} {acc : List (Int × Int)} (hloop : loop = wLoop N := by rfl) : iprop%
     ⤇ K.fill (pl% (#loc resS ← inr(((#n, #y), !#loc resS));
@@ -93,6 +94,7 @@ theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
       WP[codensity tv] (pl% {wLoop N} {ofVal fL} #loc resL #int q) @ E {{ Φ }}) ⊢
     WP[codensity tv] (pl% (#loc resL ← inr(((#n, #y), !#loc resL));
       {loop} {fL.fst} #loc resL (#int (↑(q + 1)) - #1))) @ E {{ Φ }} := by
+  -- `hloop` matches the goal's unfolded `loop` against `wLoop N` by `rfl`, so callers just `iapply`
   subst hloop
   iintro ⟨Hj, HresL, HresS, Hcnt⟩
   tp_bind (pl% !#loc resS)
@@ -119,9 +121,6 @@ theorem wp_wLoop_record {K : Ectx rT} {N : Int} {loop : Exp rT} {fL fS : Val rT}
 /-! ### The loop, random function against random permutation -/
 
 /-- `q` coupled rounds of the loop on `rfQuery` against `prpQuery` cost `loopErr N m.length q`. -/
--- Loop invariant: both maps hold the same memo table `m`, `r` lists the values the permutation has
--- not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input costs
--- nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`).
 theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc) (q : Nat) (m : List (Int × Int)) (r : List Int)
     (acc : List (Int × Int)) (hperm : prpPerm N m r) (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N)
     (hnodup : (m.map fst).Nodup) (hN : 0 < N) : iprop%
@@ -134,6 +133,9 @@ theorem wp_wLoop (ℓ ℓm ℓfv resL resS : Loc) (q : Nat) (m : List (Int × In
         (resL ↦ assocVal acc') -∗ (resS ↦ₛ assocVal acc') -∗
         Φ .unit) ⊢
       WP[codensity tv] (pl% {wLoop N} {ofVal (rfQueryV N ℓ)} #loc resL #int q) @ E {{ Φ }} := by
+  -- Loop invariant: both maps hold the same memo table `m`, `r` lists the values the permutation
+  -- has not yet used (`prpPerm`), and the keys of `m` are distinct and in `[0, N)`. A cached input
+  -- costs nothing; a fresh one costs `|m| / N` (`wp_rfQuery_prpQuery_fresh`).
   induction q generalizing m r acc with
   | zero =>
     iintro ⟨Hj, Herr, Hl, Hm, Hfv, HresL, HresS, Hcnt⟩
@@ -359,17 +361,23 @@ section AdequacyCor
 
 variable (N Q : Int) (σ σ' : State rT)
 
-/-- Adequacy of `wp_wPRF_wPRP`: the two games are `Rel`-close up to the birthday bound. -/
-theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
-    (hN : 0 < N) (hQ : 0 ≤ Q) :
-    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) := by
+/-- The birthday bound `Q (Q - 1) / (2 N)` on the switching error. -/
+noncomputable abbrev birthday : ENNReal :=
+  ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal))
+
+/-- Adequacy: a `wp` refinement with error `b` makes the two games `Rel`-close at `b`. -/
+theorem switching_of_wp {e e' : Exp rT} (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
+    (b : ENNReal)
+    (hwp : ∀ [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF] (ε' : ENNReal)
+      (Φ : Val rT → IProp GF), b ≤ ε' →
+      (iprop% ⤇ Ectx.fill [] e' ∗ ↯b ε' ∗ (∀ v : Val rT, ⤇ Ectx.fill [] (ofVal v) -∗ Φ v) ⊢
+        WP[codensity tv] (e) @ ⊤ {{ Φ }})) :
+    (codensity tv).Rel b (adequacyRel (· = ·)) (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) := by
   apply wp_adequacy_budget_lim (GF := GF)
   intro _ _ ε' hε'
   iintro Hj Herr
-  iapply wp_wPRF_wPRP ([] : Ectx rT) N Q hN hQ ε'
-    ((loopErr_zero_le_birthday N Q.toNat).trans hε'.le)
-  rw [← spec_eq_fill_nil (wPRP N Q)]
+  iapply hwp ε' _ hε'.le
+  rw [← spec_eq_fill_nil e']
   iframe Hj Herr
   iintro %v Hj
   iexists v
@@ -377,45 +385,42 @@ theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ 
   iframe Hj
   ipureintro
   rfl
+
+/-- The games `wPRF` and `wPRP` are `Rel`-close up to the birthday bound (adequacy of
+`wp_wPRF_wPRP`). -/
+theorem wPRF_wPRP_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
+    (hN : 0 < N) (hQ : 0 ≤ Q) :
+    (codensity tv).Rel (birthday N Q)
+      (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
+  switching_of_wp σ σ' GF _ fun ε' _ hε' ↦
+    wp_wPRF_wPRP ([] : Ectx rT) N Q hN hQ ε' ((loopErr_zero_le_birthday N Q.toNat).trans hε')
 
 /-- `wPRF_wPRP_switching` at the canonical functors. -/
 theorem wPRF_wPRP_switching_closed (hN : 0 < N) (hQ : 0 ≤ Q) :
-    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (birthday N Q)
       (adequacyRel (· = ·)) (limExecV ⟨wPRF N Q, σ⟩) (limExecV ⟨wPRP N Q, σ'⟩) :=
   wPRF_wPRP_switching N Q σ σ' (MicrometerFunctor rT ℝ≥0∞) hN hQ
 
-/-- Adequacy of `wp_wPRP_wPRF`: the two games are `Rel`-close up to the birthday bound. -/
+/-- The games `wPRP` and `wPRF` are `Rel`-close up to the birthday bound (adequacy of
+`wp_wPRP_wPRF`). -/
 theorem wPRP_wPRF_switching (GF : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF]
     (hN : 0 < N) (hQ : 0 ≤ Q) :
-    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
-      (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) := by
-  apply wp_adequacy_budget_lim (GF := GF)
-  intro _ _ ε' hε'
-  iintro Hj Herr
-  iapply wp_wPRP_wPRF ([] : Ectx rT) N Q hN hQ ε'
-    ((loopErr_zero_le_birthday N Q.toNat).trans hε'.le)
-  rw [← spec_eq_fill_nil (wPRF N Q)]
-  iframe Hj Herr
-  iintro %v Hj
-  iexists v
-  rw [← spec_eq_fill_nil (ofVal v)]
-  iframe Hj
-  ipureintro
-  rfl
+    (codensity tv).Rel (birthday N Q)
+      (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
+  switching_of_wp σ σ' GF _ fun ε' _ hε' ↦
+    wp_wPRP_wPRF ([] : Ectx rT) N Q hN hQ ε' ((loopErr_zero_le_birthday N Q.toNat).trans hε')
 
 /-- `wPRP_wPRF_switching` at the canonical functors. -/
 theorem wPRP_wPRF_switching_closed (hN : 0 < N) (hQ : 0 ≤ Q) :
-    (codensity tv).Rel (((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)))
+    (codensity tv).Rel (birthday N Q)
       (adequacyRel (· = ·)) (limExecV ⟨wPRP N Q, σ⟩) (limExecV ⟨wPRF N Q, σ'⟩) :=
   wPRP_wPRF_switching N Q σ σ' (MicrometerFunctor rT ℝ≥0∞) hN hQ
 
 /-- The weak PRF/PRP switching lemma: any event's probability changes by at most the
 birthday bound. -/
 theorem weak_switching_lemma (hN : 0 < N) (hQ : 0 ≤ Q) {S : Set (Exp rT)} (hS : MeasurableSet S) :
-    limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S +
-        ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) ∧
-      limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S +
-        ((Q.toNat * (Q.toNat - 1) : ℕ) : ENNReal) / (2 * (N.toNat : ENNReal)) :=
+    limExecV ⟨wPRF N Q, σ⟩ S ≤ limExecV ⟨wPRP N Q, σ'⟩ S + birthday N Q ∧
+      limExecV ⟨wPRP N Q, σ'⟩ S ≤ limExecV ⟨wPRF N Q, σ⟩ S + birthday N Q :=
   ⟨tv_le_add_of_rel
     ((wPRF_wPRP_switching_closed N Q σ σ' hN hQ).mono le_rfl adequacyRel_eq_subset) hS,
    tv_le_add_of_rel

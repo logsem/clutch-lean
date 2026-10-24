@@ -9,13 +9,14 @@ noncomputable section
 
 namespace ProbLang.Asm
 
-open MeasureTheory MeasureTheory.Measure ProbabilityTheory
+open MeasureTheory MeasureTheory.Measure ProbabilityTheory Set
 
 /-- Foreign actions have the discrete measurable space. -/
 instance : MeasurableSpace Action := ⊤
 
 variable {rT : Type} [MeasurableSpace rT]
 
+/-- The boundary scalar denoted by a base literal, if it is one. -/
 private def scalarLit : BaseLit rT → Option BoundaryValue
   | .int z => some (.int z)
   | .loc l => some (.loc l)
@@ -23,13 +24,14 @@ private def scalarLit : BaseLit rT → Option BoundaryValue
   | _ => none
 
 private theorem measurable_scalarLit : Measurable (scalarLit (rT := rT)) := by
-  convert BaseLit.measurable_casesOn (rT := rT) (α := Option BoundaryValue)
+  convert BaseLit.measurable_casesOn (α := Option BoundaryValue)
     (fun z => some (.int z)) (fun _ => none) (fun _ => some .unit)
     (fun l => some (.loc l)) (fun _ => none) (fun _ : rT => none)
     (fun _ => none) measurable_const using 1
   funext l
   cases l <;> rfl
 
+/-- The boundary scalar denoted by an expression, if it is a scalar literal. -/
 private def scalarExp (e : Exp rT) : Option BoundaryValue := (Exp.lit.π e).bind scalarLit
 
 private theorem measurable_scalarExp : Measurable (scalarExp (rT := rT)) :=
@@ -146,6 +148,7 @@ private theorem measurable_mapM {α β γ : Type} [MeasurableSpace α] [Measurab
     rename_i lit
     cases lit <;> rfl
 
+/-- The machine code denoted by an expression, if it is a code literal. -/
 private def codeExp (e : Exp rT) : Option Code :=
   (Exp.lit.π e).bind BaseLit.code.π
 
@@ -243,12 +246,12 @@ private theorem measurable_resumeRedex (env : FfiEnv rT) :
 
 /-- A foreign action produces at most one unit of probability mass. -/
 theorem actionStep_univ_le_one (env : FfiEnv rT) (F : Finset Loc) (σ : State rT)
-    (action : Action) : actionStep env F σ action Set.univ ≤ 1 := by
+    (action : Action) : actionStep env F σ action univ ≤ 1 := by
   cases action <;> simp [actionStep]
 
-/-- Invalid calls fail deterministically; machine actions have mass at most one. -/
+/-- A foreign call produces at most one unit of probability mass. -/
 theorem callStep_univ_le_one (env : FfiEnv rT) (code args : Exp rT) (σ : State rT) :
-    callStep env code args σ Set.univ ≤ 1 := by
+    callStep env code args σ univ ≤ 1 := by
   cases code <;> try simp [callStep]
   rename_i lit
   cases lit <;> try simp
@@ -261,7 +264,7 @@ theorem callStep_univ_le_one (env : FfiEnv rT) (code args : Exp rT) (σ : State 
 
 /-- Resuming an archive produces at most one unit of probability mass. -/
 theorem resumeStep_univ_le_one (env : FfiEnv rT) (archive : Replay)
-    (reply : Val rT) (σ : State rT) : resumeStep env archive reply σ Set.univ ≤ 1 := by
+    (reply : Val rT) (σ : State rT) : resumeStep env archive reply σ univ ≤ 1 := by
   dsimp only [resumeStep]
   split
   · exact actionStep_univ_le_one _ _ _ _
@@ -291,7 +294,7 @@ variable [LawfulProbLangℝ rT]
 
 /-- The explicit foreign-call head kernel is a subprobability kernel. -/
 theorem headStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
-    headStepWith env cfg Set.univ ≤ 1 := by
+    headStepWith env cfg univ ≤ 1 := by
   rcases cfg with ⟨e, σ⟩
   cases e <;> try exact headStep_univ_le_one _
   case asm code args =>
@@ -322,7 +325,7 @@ theorem headStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
 
 /-- Replugging a foreign head step preserves its subprobability bound. -/
 theorem primStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
-    primStepWith env cfg Set.univ ≤ 1 := by
+    primStepWith env cfg univ ≤ 1 := by
   have hfill : Measurable cfg.expr.decomp.1.fillCfg := by fun_prop
   rw [primStepWith, map_apply hfill MeasurableSet.univ]
   simpa using headStepWith_univ_le_one env ⟨cfg.expr.decomp.2, cfg.state⟩

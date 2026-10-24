@@ -6,9 +6,6 @@ import Metrology.Iris.LocalBI
 
 @[expose] public section
 
--- these rules use the @[discrete] lifting lemmas without being discrete themselves
-set_option linter.discrete false
-
 /-! # Spec-side advanced composition
 
 A spec draw `rand N` splits one credit `↯b (s ε₁)` by outcome (Eris `wp_couple_rand_adv_comp`). -/
@@ -30,6 +27,9 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type}
 
 variable {GF : BundledGFunctors} [BudgetCreditGS B GF]
 local bi IProp GF
+
+-- uses the `@[discrete]` lemma `Discrete.Reducible.toReducible` without being discrete
+set_option linter.discrete false
 
 /-- A spec draw `K[rand N]` turns `↯b (s ε₁)` into `↯b (s (ε₂ n))` at the outcome `n`, where `ε₁`
 bounds the average of `ε₂`. -/
@@ -63,8 +63,7 @@ theorem wp_rand_r_adv {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 <
       uniform_eq_map HN, map_map (by fun_prop) of_discrete, ← map_id (μ := dirac σ₁)]
     -- δσ₁ ~ unifInt N at 0 (rel_dirac_left), add s(ε₂ m) in expectation (≤ s ε₁ by hamort),
     -- frame the remainder r, push to configurations
-    have h₀ := IsTopAbsorbing.frame (c := r) <| IsExpectationAdditive.add_right (s := s)
-      (c := ε₂) of_discrete <|
+    have h₀ := frame (c := r) <| IsExpectationAdditive.add_right (s := s) (c := ε₂) of_discrete <|
         rel_dirac_left (L := L) (unifInt N HN) MeasurableSet.of_discrete (unifInt_compl_Ico HN) σ₁
     refine map measurable_id of_discrete (mono h₀ ?_ ?_)
     · refine le_trans ?_ hr.ge
@@ -100,10 +99,11 @@ theorem wp_rand_r_adv {hlc : HasLC} [MicrometerGS rT hlc GF] (N : Int) (HN : 0 <
   iframe Hσ Hs' Hb
   iapply Hcnt $$ %n %⟨h0, hN⟩ Hfrag Hj'
 
+set_option linter.discrete true
+
 /-- `wp_rand_r_adv` for refinements: the spec draws alone, splitting `↯b (s ε₁)` by outcome. -/
 theorem refines_randU_r_adv [MicrometerRGS rT .hasNoLC GF] {E : CoPset} {K : Ectx rT} {e : Exp rT}
-    {A : lrel rT GF} (N : Int)
-    (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
+    {A : lrel rT GF} (N : Int) (HN : 0 < N) (ε₁ : ℝ≥0∞) (ε₂ : Int → ℝ≥0∞)
     (hamort : (∑ n ∈ Finset.Ico 0 N, ε₂ n) / N.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%
     ↯b (s ε₁) ∗ (∀ n, ⌜0 ≤ n ∧ n < N⌝ -∗ ↯b (s (ε₂ n)) -∗ refines L E e (K.fill pl(#n)) A) ⊢
       refines L E e (K.fill pl(rand(#N, #()))) A := by

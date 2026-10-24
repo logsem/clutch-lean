@@ -59,7 +59,7 @@ def witnessPlacement (l : Loc) : Placement where
 /-- The witness's active register state keeps the formal profile and installs the ABI bindings. -/
 noncomputable def witnessRegisters : Mach :=
   let s := profileWitness
-  let regs := s.regs.insert Register.PC 0x80000000#64
+  let regs := s.regs.insert .PC 0x80000000#64
   let regs := regs.insert .x1 0x80002000#64
   let regs := regs.insert .x2 0x80004000#64
   let regs := regs.insert .x10 0x80001000#64

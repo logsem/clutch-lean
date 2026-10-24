@@ -40,7 +40,7 @@ variable {gauss : Val ℝ} {v : ℝ≥0}
 noncomputable abbrev cost (v : ℝ≥0) (a a' : ℝ) : ℝ≥0∞ := ofReal ((a - a') ^ 2 / (2 * v))
 
 /-- The budget of `k + 1` releases is one release's budget plus that of `k`. -/
-private theorem budget_succ (k : ℕ) (ρ : ℝ≥0∞) :
+theorem budget_succ (k : ℕ) (ρ : ℝ≥0∞) :
     ((0 : ℝ≥0∞), ((k + 1 : ℕ) : ℝ≥0∞) * ρ) = (0, ρ) + (0, k * ρ) := by
   simp [add_one_mul, add_comm]
 
@@ -126,7 +126,7 @@ end Logic
 
 /-- `k` releases at inputs `a` and `a'` couple along equal outputs in the zCDP lifting at
 `(0, k (a - a')² / (2 v))`, conditional on the sampler spec `hgauss`. -/
-theorem release_coupling (GF : BundledGFunctors) [AppPreGS ℝ GF] [SpecPreGS ℝ GF]
+theorem release_coupling_of (GF : BundledGFunctors) [AppPreGS ℝ GF] [SpecPreGS ℝ GF]
     [BudgetCreditPreGS (ℝ≥0∞ × ℝ≥0∞) GF] [InvGpreS GF] (hv : v ≠ 0)
     (hgauss : ∀ (_ : MicrometerGS ℝ .hasNoLC GF) (_ : BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF),
       GaussSpec (GF := GF) zcdpLifting gauss v)
@@ -136,6 +136,7 @@ theorem release_coupling (GF : BundledGFunctors) [AppPreGS ℝ GF] [SpecPreGS �
   (wp_adequacy _ _ σ σ' _ (· = ·) fun _ _ ↦
     wp_release hv (hgauss _ _) a a' k).mono le_rfl adequacyRel_eq_subset
 
+-- The ghost state functors used to close the proofs.
 local notation "GF₀" => MicrometerFunctor ℝ (ℝ≥0∞ × ℝ≥0∞)
 
 section Closed
@@ -153,7 +154,7 @@ the sampler spec `hgauss`. -/
 theorem release_zcdp :
     zcdpDivergence (0, k * cost v a a') (limExecV ⟨release gauss a k, σ⟩)
       (limExecV ⟨release gauss a' k, σ'⟩) :=
-  IsSound.sound (release_coupling GF₀ hv hgauss a a' k σ σ')
+  IsSound.sound (release_coupling_of GF₀ hv hgauss a a' k σ σ')
 
 /-! ## From zCDP to DP -/
 
@@ -165,7 +166,7 @@ theorem release_dp (hδ : 0 < δ) :
     dp (⨅ α ∈ Set.Ioi (1 : ℝ), ofReal α * (k * cost v a a') +
         ofReal (log (1 / δ) / (α - 1)), ofReal δ)
       (limExecV ⟨release gauss a k, σ⟩) (limExecV ⟨release gauss a' k, σ'⟩) := by
-  have h := codensity_sound <| (zcdpToDp hδ).map_rel (release_coupling GF₀ hv hgauss a a' k σ σ')
+  have h := codensity_sound <| (zcdpToDp hδ).map_rel (release_coupling_of GF₀ hv hgauss a a' k σ σ')
   simpa only [zcdpToDp_map, zero_add] using h
 
 /-- `k` releases are `(ρₖ + 2 √(ρₖ log (1 / δ)), δ)`-DP for inputs at distance at most `r`, where
@@ -184,7 +185,7 @@ theorem release_dp_sqrt {r : ℝ} (h : |a - a'| ≤ r)
   -- bound the cost by r²/2v, read the zCDP coupling as a codensity one, then apply the closed-form
   -- zCDP→DP conversion
   have hz := ((LiftingHom.concentratedToCodensity _).toLiftingRelHom rfl).map_rel
-    ((release_coupling GF₀ hv hgauss a a' k σ σ').mono
+    ((release_coupling_of GF₀ hv hgauss a a' k σ σ').mono
       (b' := (0, k * ofReal (r ^ 2 / (2 * v)))) (Prod.mk_le_mk.2 ⟨le_rfl, by gcongr⟩)
       fun _ _ ↦ id)
   have := codensity_sound (codensity_dp_rel_of_zcdp hδ hδ₁ hz)

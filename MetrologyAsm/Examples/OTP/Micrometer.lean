@@ -7,7 +7,6 @@ namespace MetrologyAsm.OTP
 
 open Iris Iris.Std Iris.BI Iris.ProofMode GradedLifting ProbLang ProbLang.Asm MicrometerWpGS
   BIFUpdate
-open LawfulSet (empty_subset)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
@@ -17,8 +16,12 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 local bi IProp GF
 
+section
+
+variable (message : Int) (pad : Loc) (initial : Int)
+
 /-- Starting the actual compiled OTP preserves pad ownership and enters the real callback. -/
-theorem wp_otp_start (message : Int) (pad : Loc) (initial : Int)
+theorem wp_otp_start
     (hm : 0 ≤ message ∧ message < 256) (hi : inRange false 8 initial = true) : iprop%
     appHeapFrag pad (.int initial) ∗
       ▷ (appHeapFrag pad (.int initial) -∗
@@ -29,9 +32,9 @@ theorem wp_otp_start (message : Int) (pad : Loc) (initial : Int)
   iintro %σ Hσ
   ihave %hlookup := app_state_lookup_heap $$ Hσ Hpad
   have hdet := otp_start_step σ message pad initial hm hi hlookup
-  imod subset empty_subset with Hclose
+  imod subset LawfulSet.empty_subset with Hclose
   imodintro
-  iexists (⟨otpPaused message pad initial, σ⟩ : Cfg rT)
+  iexists ⟨otpPaused message pad initial, σ⟩
   iframe %hdet
   iintro !>
   imod Hclose
@@ -40,7 +43,7 @@ theorem wp_otp_start (message : Int) (pad : Loc) (initial : Int)
   iapply HΦ $$ Hpad
 
 /-- Returning through the actual replay frame preserves ownership of the callback's sampled byte. -/
-theorem wp_otp_resume (message : Int) (pad : Loc) (initial byte : Int)
+theorem wp_otp_resume (byte : Int)
     (hm : 0 ≤ message ∧ message < 256)
     (hi : inRange false 8 initial = true) (hb : inRange false 8 byte = true) : iprop%
     appHeapFrag pad (.int byte) ∗
@@ -51,13 +54,12 @@ theorem wp_otp_resume (message : Int) (pad : Loc) (initial byte : Int)
   iapply wpFor_lift_atomic_step Exp.asmResume_toVal?_eq_none
   iintro %σ Hσ
   ihave %hlookup := app_state_lookup_heap $$ Hσ Hpad
-  have hdet : primStepWith otpEnv
-      ⟨.asmResume (otpArchive message pad initial) (.lit .unit), σ⟩ =
+  have hdet : primStepWith otpEnv ⟨.asmResume (otpArchive message pad initial) (.lit .unit), σ⟩ =
       MeasureTheory.Measure.dirac ⟨Exp.ofVal (.int (byteXor message byte)), σ⟩ := by
     simpa only [Exp.ofVal] using otp_resume_step σ message pad initial byte hm hi hb hlookup
-  imod subset empty_subset with Hclose
+  imod subset LawfulSet.empty_subset with Hclose
   imodintro
-  iexists (.int (byteXor message byte) : Val rT), σ
+  iexists .int (byteXor message byte), σ
   iframe %hdet
   iintro !>
   imod Hclose
@@ -66,7 +68,7 @@ theorem wp_otp_resume (message : Int) (pad : Loc) (initial byte : Int)
   iapply HΦ $$ Hpad
 
 /-- The guarded context rule runs the callback inside the actual assembly resumption frame. -/
-theorem wp_otp_callback_bind (message : Int) (pad : Loc) (initial : Int) : iprop%
+theorem wp_otp_callback_bind : iprop%
     wpFor (primStepWith otpEnv) L E
       (.app RandomBytes.randombytesValue.fst (argumentTuple [.loc pad, .int 1]))
       (fun v => wpFor (primStepWith otpEnv) L E
@@ -81,7 +83,7 @@ theorem wp_otp_callback_bind (message : Int) (pad : Loc) (initial : Int) : iprop
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
 
 /-- The actual assembled Sail OTP runs randombytes and returns XOR of its sampled pad byte. -/
-theorem wp_otp (message : Int) (pad : Loc) (initial : Int)
+theorem wp_otp
     (hm : 0 ≤ message ∧ message < 256) (hi : inRange false 8 initial = true) : iprop%
     appHeapFrag pad (.int initial) ∗
       (∀ byte : Int, ⌜0 ≤ byte ∧ byte < 256⌝ -∗
@@ -107,5 +109,7 @@ theorem wp_otp (message : Int) (pad : Loc) (initial : Int)
   · ipureintro
     exact hb
   · iexact Hpad
+
+end
 
 end MetrologyAsm.OTP

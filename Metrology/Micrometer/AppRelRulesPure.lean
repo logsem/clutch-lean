@@ -29,37 +29,27 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## Budget predicates -/
 
-section Predicates
-variable (B : Type) [AddCommMonoid B] [PartialOrder B]
+/-- Every positive budget splits into two positive budgets. -/
+abbrev PosSplits (B : Type) [AddCommMonoid B] [PartialOrder B] : Prop :=
+  ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
 
-/-- Every positive budget splits into two positive budgets (true for tv, where halving works). -/
-abbrev PosSplits : Prop := ∀ b : B, 0 < b → ∃ b₁ b₂, 0 < b₁ ∧ 0 < b₂ ∧ b₁ + b₂ ≤ b
-
-variable {B}
-
-/-- Every positive budget is above some positive seed `s ε` (true for tv at `s = id`); unrelated to
-the divergence class `GradedDivergence.HasSlack`. -/
-abbrev HasSlack (s : ENNReal →+o B) : Prop := ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
-
-end Predicates
+/-- Every positive budget is above `s ε` for some positive `ε`. -/
+abbrev SeedsBelow {B : Type} [AddCommMonoid B] [PartialOrder B] (s : ENNReal →+o B) : Prop :=
+  ∀ b : B, 0 < b → ∃ ε, 0 < ε ∧ s ε ≤ b
 
 section AppRelRules
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF] {E : CoPset} {K : Ectx rT} {A A' : lrel rT GF}
+  [BudgetCreditGS B GF] {E : CoPset} {K : Ectx rT} {A A' : lrel rT GF} {v v' : Val rT}
 local bi IProp GF
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing] {e e' e1 e2 e2' t : Exp rT} {K' : Ectx rT} {l : Loc}
-  {v v' : Val rT}
 
 /-! ## Pure steps and the left `wp` -/
 
-variable {φ : Prop}
-variable {n : ℕ}
-
 /-- A pure step on the left, which earns a `▷`. -/
-theorem refines_pure_l [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
+theorem refines_pure_l {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
     ▷^[n] refines L E (K.fill e') t A ⊢ refines L E (K.fill e) t A := by
   have HexK : PureExec φ n (K.fill e) (K.fill e') := PureExec.fill K
   iunfold refines
@@ -69,7 +59,7 @@ theorem refines_pure_l [Hex : PureExec φ n e e'] (Hφ : φ) : iprop%
   iapply H $$ HK Hna Herr Hpos
 
 /-- A pure step on the right; spec steps earn no `▷`. -/
-theorem refines_pure_r [Hex : PureExec φ n e e'] (Hφ : φ) :
+theorem refines_pure_r {φ : Prop} {n : ℕ} [Hex : PureExec φ n e e'] (Hφ : φ) :
     refines L E t (K.fill e') A ⊢ refines L E t (K.fill e) A := by
   iunfold refines
   iintro H %K' %b Hj Hna Herr Hpos
@@ -251,8 +241,6 @@ end Steps
 
 /-! ## Value rules -/
 
-variable {v v' : Val rT}
-
 /-- Closures are related at `A → A'` when their applications to `A`-related values refine. -/
 theorem refines_arrow_val (hv : v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty) : iprop%
     □ (∀ v1 v2, A v1 v2 -∗ refines L ⊤ (.app v.1 v1.1) (.app v'.1 v2.1) A') ⊢
@@ -287,18 +275,8 @@ at `s = dpSlack`); the unseeded forms draw it from the threaded budget, which ne
 section Credits
 variable [CanonicallyOrderedAdd B] {e e' : Exp rT}
 
-/-- Splits the threaded credit into two positive parts and hands one to the proof as `↯b b`; the
-only way to reach the credit threaded through `refines` (`ec` is Rocq's "error credit"). -/
-theorem refines_get_ec (hsplit : PosSplits B) : iprop%
-    (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
-  unfold refines
-  iintro Hcnt %K %b Hj Hna Herr %Hpos
-  obtain ⟨b₁, b₂, hb₁, hb₂, hle⟩ := hsplit b Hpos
-  ihave ⟨Herr1, Herr2⟩ := (weaken hle).trans split $$ Herr
-  iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
-
 section Absorbing
-variable [L.IsLawful] {s : ENNReal →+o B} {ε : ENNReal} {k : NNReal} {v v' : Val rT}
+variable [L.IsLawful] {s : ENNReal →+o B} {ε : ENNReal} {k : NNReal}
 
 /-- An absorbing credit `↯b c` discharges any refinement. -/
 theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) : ↯b c ⊢ refines L E e e' A := by
@@ -307,7 +285,7 @@ theorem refines_of_absorbing {c : B} (hc : L.Absorbing c) : ↯b c ⊢ refines L
   iapply wp_of_absorbing hc $$ Hc
 
 /-- A seed credit `↯b (s ε)` amplifies by `k` up to the absorbing `↯b (s 1)` (Rocq
-`refines_ind_amp`, seed made explicit). -/
+`refines_ind_amp`). -/
 theorem refines_ind_amp_of_bc (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk : 1 < k) : iprop%
     □ (∀ ε', ⌜0 < ε'⌝ -∗ □ (↯b (s ((k : ENNReal) * ε')) -∗ refines L E e e' A) -∗
         ↯b (s ε') -∗ refines L E e e' A) ⊢
@@ -330,23 +308,49 @@ theorem refines_app_ind_amp_of_bc (hε : 0 < ε) (habs : L.Absorbing (s 1)) (hk 
   iintro !> Hc %w1 %w2 -
   iapply refines_of_absorbing habs $$ Hc
 
+end Absorbing
+
+section Seeded
+variable (hsplit : PosSplits B)
+include hsplit
+
+/-- Split a positive credit `↯b b` off the budget threaded through `refines` (Rocq
+`refines_get_ec`). -/
+theorem refines_get_ec : iprop%
+    (∀ b : B, ↯b b -∗ ⌜0 < b⌝ -∗ refines L E e e' A) ⊢ refines L E e e' A := by
+  unfold refines
+  iintro Hcnt %K %b Hj Hna Herr %Hpos
+  obtain ⟨b₁, b₂, hb₁, hb₂, hle⟩ := hsplit b Hpos
+  ihave ⟨Herr1, Herr2⟩ := (weaken hle).trans split $$ Herr
+  iapply Hcnt $$ %b₁ Herr1 %hb₁ %K %b₂ Hj Hna Herr2 %hb₂
+
+/-- A seed credit `↯b (s ε)` for some positive `ε` can be drawn from the threaded budget. -/
+theorem refines_get_seed {s : ENNReal →+o B} (hslack : SeedsBelow s) :
+    iprop% (∀ ε, ⌜0 < ε⌝ -∗ ↯b (s ε) -∗ refines L E e e' A) ⊢ refines L E e e' A := by
+  iintro H
+  iapply refines_get_ec hsplit
+  iintro %b Herr %hpos
+  obtain ⟨ε, hε, hle⟩ := hslack b hpos
+  iapply H $$ %ε %hε
+  iapply weaken hle $$ Herr
+
+variable [L.IsLawful] {s : ENNReal →+o B} {k : NNReal}
+
 /-- Amplification rule for `refines`: seed a credit `↯b (s ε)` from the threaded budget and amplify
 it by `k` (Rocq `refines_ind_amp`). -/
-theorem refines_ind_amp (hsplit : PosSplits B) (hslack : HasSlack s) (habs : L.Absorbing (s 1))
+theorem refines_ind_amp (hslack : SeedsBelow s) (habs : L.Absorbing (s 1))
     (hk : 1 < k) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗ □ (↯b (s ((k : ENNReal) * ε)) -∗ refines L E e e' A) -∗ ↯b (s ε) -∗
         refines L E e e' A) ⊢
       refines L E e e' A := by
   iintro #Hamp
-  iapply refines_get_ec hsplit
-  iintro %b Herr %hpos
-  obtain ⟨ε, hε, hle⟩ := hslack b hpos
-  iapply refines_ind_amp_of_bc hε habs hk $$ Hamp
-  iapply weaken hle $$ Herr
+  iapply refines_get_seed hsplit hslack
+  iintro %ε %hε Herr
+  iapply refines_ind_amp_of_bc hε habs hk $$ Hamp Herr
 
 /-- Amplification for closures: the budget-seeded form of `refines_app_ind_amp_of_bc`, giving a
 refinement at `A → A'` (Rocq `refines_arrow_val_err`). -/
-theorem refines_arrow_val_err (hsplit : PosSplits B) (hslack : HasSlack s)
+theorem refines_arrow_val_err (hslack : SeedsBelow s)
     (habs : L.Absorbing (s 1)) (hk : 1 < k) (hv : v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty) : iprop%
     □ (∀ ε, ⌜0 < ε⌝ -∗
         □ (↯b (s ((k : ENNReal) * ε)) -∗
@@ -356,13 +360,11 @@ theorem refines_arrow_val_err (hsplit : PosSplits B) (hslack : HasSlack s)
   iintro #Hamp
   iapply refines_arrow_val hv
   iintro !> %v1 %v2 HA
-  iapply refines_get_ec hsplit
-  iintro %b Herr %hpos
-  obtain ⟨ε, hε, hle⟩ := hslack b hpos
-  ihave Herr := weaken hle $$ Herr
+  iapply refines_get_seed hsplit hslack
+  iintro %ε %hε Herr
   iapply refines_app_ind_amp_of_bc hε habs hk $$ Hamp Herr %v1 %v2 HA
 
-end Absorbing
+end Seeded
 
 end Credits
 end AppRelRules

@@ -12,7 +12,8 @@ import Metrology.Iris.LocalBI
 /-! # Presampling with tapes: the order of two labelled draws does not matter
 
 Main result: `drawAB_refines_drawBA`, drawing from tape `α` then `β` refines the reverse order,
-with `drawAB_le_drawBA` by adequacy at `codensity tv`. -/
+with `drawAB_le_drawBA` by adequacy at `codensity tv`. `drawTape_refines_draw` shows a tape draw
+refines a plain draw. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -39,7 +40,7 @@ theorem drawTape_refines_draw : ⊢ REL[L] (drawTape (rT := rT) N) << draw N : l
   iintro %n Hα %_
   rel_values
 
-/-- Drawing from `α` then `β` refines drawing from `β` then `α` at budget `0`. -/
+/-- Drawing from `α` then `β` refines drawing from `β` then `α`. -/
 theorem drawAB_refines_drawBA :
     ⊢ REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
   rel_alloctape_l α as Hα

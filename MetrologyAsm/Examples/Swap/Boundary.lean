@@ -8,21 +8,10 @@ namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm
 
-/-- The raw two-pointer tuple has the exchange's two signed regions. -/
-theorem swap_callRegions (l₁ l₂ : Loc) :
-    callRegions swapCode [.loc l₁, .loc l₂] = [⟨l₁, 1, 64, true⟩, ⟨l₂, 1, 64, true⟩] := by
-  rfl
-
 /-- One signed doubleword region owns exactly its base location. -/
 @[simp]
 theorem signed64_cells (l : Loc) : (Region.mk l 1 64 true).cells = {l} := by
   simp [Region.cells]
-
-/-- The raw two-pointer tuple owns exactly the two supplied locations. -/
-theorem swap_callFootprint (l₁ l₂ : Loc) :
-    callFootprint swapCode [.loc l₁, .loc l₂] = {l₁, l₂} := by
-  simp [callFootprint, footprint, swapCode, swapSig, regions, boundaryArgs,
-    ArgKind.region, locValue, BoundaryValue.toVal, Region.cells]
 
 /-- The exchange signature has no ambiguous imports and a supported unit result. -/
 theorem swap_signature_valid : swapCode.sig.valid = true := by
@@ -38,22 +27,39 @@ theorem signed64_beq_self (l : Loc) :
     (Region.mk l 1 64 true == Region.mk l 1 64 true) = true := by
   simp [BEq.beq, instBEqRegion.beq]
 
+section
+
+variable (l₁ l₂ : Loc)
+
+/-- The raw two-pointer tuple has the exchange's two signed regions. -/
+theorem swap_callRegions :
+    callRegions swapCode [.loc l₁, .loc l₂] = [⟨l₁, 1, 64, true⟩, ⟨l₂, 1, 64, true⟩] := by
+  rfl
+
+/-- The raw two-pointer tuple owns exactly the two supplied locations. -/
+theorem swap_callFootprint :
+    callFootprint swapCode [.loc l₁, .loc l₂] = {l₁, l₂} := by
+  simp [callFootprint, footprint, swapCode, swapSig, regions, boundaryArgs,
+    ArgKind.region, locValue, BoundaryValue.toVal, Region.cells]
+
 /-- The two representable integer cells pass the exchange's scalar boundary checks. -/
-theorem swap_boundary_check (l₁ l₂ : Loc) (old : Loc → Int) (hne : l₁ ≠ l₂)
+theorem swap_boundary_check (old : Loc → Int) (hne : l₁ ≠ l₂)
     (h₁ : inRange true 64 (old l₁) = true) (h₂ : inRange true 64 (old l₂) = true) :
     check swapCode.sig.toCallSig (boundaryArgs [.loc l₁, .loc l₂])
-      (valueHeap (rT := Empty) (integerHeap {l₁, l₂} old)) = true := by
+      (valueHeap (integerHeap {l₁, l₂} old)) = true := by
   simp [check, swapCode, swapSig, boundaryArgs, regions, ArgKind.check, ArgKind.region,
     locValue, BoundaryValue.toVal, Region.check, intFits, intValue,
     Region.compatible, Region.cells, ArgKind.validResult, signed64_beq_self,
     h₁, h₂, hne, Ne.symm hne]
 
 /-- The finite signed integer fragment is a valid exchange-call heap. -/
-theorem swap_validFragment (l₁ l₂ : Loc) (old : Loc → Int) (hne : l₁ ≠ l₂)
+theorem swap_validFragment (old : Loc → Int) (hne : l₁ ≠ l₂)
     (h₁ : inRange true 64 (old l₁) = true) (h₂ : inRange true 64 (old l₂) = true) :
     validFragment swapCode [.loc l₁, .loc l₂] (integerHeap {l₁, l₂} old) := by
   refine ⟨swap_signature_valid, ?_, swap_boundary_check l₁ l₂ old hne h₁ h₂⟩
   rw [swap_callFootprint, restrict_integerHeap]
+
+end
 
 /-- Allocated signed words realize the exchange's complete logical footprint. -/
 theorem swap_footprintContents (ι : Placement) (s : Mach) (l₁ l₂ : Loc)

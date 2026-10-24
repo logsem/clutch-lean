@@ -11,13 +11,6 @@ open ProbLang ProbLang.Asm Sail
 def codePC (base : BitVec 64) (index : Nat) : BitVec 64 :=
   BitVec.addInt base (4 * (index : Int))
 
-/-- The stack pointer after reserving the compiler's thirty-two-byte frame. -/
-def reservedSP (sp : BitVec 64) : BitVec 64 := BitVec.addInt sp (-32)
-
-/-- A byte offset within the reserved scratch frame. -/
-def stackAddress (sp : BitVec 64) (offset : Nat) : BitVec 64 :=
-  BitVec.addInt (reservedSP sp) (offset : Int)
-
 /-- The first instruction is at the image base. -/
 @[simp] theorem codePC_zero (base : BitVec 64) : codePC base 0 = base := by
   simp [codePC, BitVec.addInt]
@@ -28,9 +21,15 @@ theorem codePC_next (base : BitVec 64) (index : Nat) :
   simp only [codePC, addInt_compose]
   congr 1
 
+section CodeImage
+
+variable {base : BitVec 64} (hram : InUserRam base 88)
+
+include hram
+
 /-- Image word addresses do not wrap within the eighty-eight-byte mapped image. -/
-theorem codePC_toNat {base : BitVec 64} (hram : InUserRam base 88)
-    {index : Nat} (hi : index ≤ 22) : (codePC base index).toNat = base.toNat + 4 * index := by
+theorem codePC_toNat {index : Nat} (hi : index ≤ 22) :
+    (codePC base index).toNat = base.toNat + 4 * index := by
   have hsmall : 4 * index < 2 ^ 64 := by omega
   have hsum : base.toNat + 4 * index < 2 ^ 64 := by
     obtain ⟨_, hend⟩ := hram
@@ -41,34 +40,44 @@ theorem codePC_toNat {base : BitVec 64} (hram : InUserRam base 88)
   rw [hcast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsmall, Nat.mod_eq_of_lt hsum]
 
 /-- Every emitted instruction word is mapped into configured RAM. -/
-theorem codePC_inUserRam {base : BitVec 64} (hram : InUserRam base 88)
-    {index : Nat} (hi : index < 20) : InUserRam (codePC base index) 4 := by
+theorem codePC_inUserRam {index : Nat} (hi : index < 20) :
+    InUserRam (codePC base index) 4 := by
   rw [InUserRam, codePC_toNat hram (by omega)]
   obtain ⟨hl, hu⟩ := hram
   constructor <;> omega
 
 /-- Every emitted word has the required four-byte instruction alignment. -/
-theorem codePC_aligned {base : BitVec 64} (hram : InUserRam base 88)
-    (halign : base.toNat % 8 = 0) {index : Nat} (hi : index < 20) :
+theorem codePC_aligned (halign : base.toNat % 8 = 0) {index : Nat} (hi : index < 20) :
     (codePC base index).toNat % 4 = 0 := by
   rw [codePC_toNat hram (by omega)]
   omega
 
 /-- The relocated eight-byte import slot is mapped within the complete image. -/
-theorem slot_inUserRam {base : BitVec 64} (hram : InUserRam base 88) :
-    InUserRam (codePC base 20) 8 := by
+theorem slot_inUserRam : InUserRam (codePC base 20) 8 := by
   rw [InUserRam, codePC_toNat hram (by decide)]
   obtain ⟨hl, hu⟩ := hram
   constructor <;> omega
 
 /-- The relocated import slot retains the image's eight-byte alignment. -/
-theorem slot_aligned {base : BitVec 64} (hram : InUserRam base 88)
-    (halign : base.toNat % 8 = 0) : (codePC base 20).toNat % 8 = 0 := by
+theorem slot_aligned (halign : base.toNat % 8 = 0) : (codePC base 20).toNat % 8 = 0 := by
   rw [codePC_toNat hram (by decide)]
   omega
 
+end CodeImage
+
+section Stack
+
+variable (sp : BitVec 64)
+
+/-- The stack pointer after reserving the compiler's thirty-two-byte frame. -/
+def reservedSP : BitVec 64 := BitVec.addInt sp (-32)
+
+/-- A byte offset within the reserved scratch frame. -/
+def stackAddress (offset : Nat) : BitVec 64 :=
+  BitVec.addInt (reservedSP sp) (offset : Int)
+
 /-- Reserving the scratch frame does not wrap a sufficiently large original stack pointer. -/
-theorem reservedSP_toNat (sp : BitVec 64) (hsp : 32 ≤ sp.toNat) :
+theorem reservedSP_toNat (hsp : 32 ≤ sp.toNat) :
     (reservedSP sp).toNat = sp.toNat - 32 := by
   have hsub : reservedSP sp = sp - 32#64 := by
     unfold reservedSP BitVec.addInt
@@ -82,7 +91,7 @@ theorem reservedSP_toNat (sp : BitVec 64) (hsp : 32 ≤ sp.toNat) :
   rfl
 
 /-- Releasing the frame recovers the original stack pointer exactly. -/
-theorem reservedSP_cancel (sp : BitVec 64) : BitVec.addInt (reservedSP sp) 32 = sp := by
+theorem reservedSP_cancel : BitVec.addInt (reservedSP sp) 32 = sp := by
   rw [reservedSP, addInt_compose]
   simp [BitVec.addInt]
 
@@ -94,7 +103,7 @@ private theorem addNat_toNat (word : BitVec 64) (offset : Nat)
   rw [Nat.mod_eq_of_lt hsmall, Nat.mod_eq_of_lt hsum]
 
 /-- Scratch-slot offsets have their nonwrapping natural addresses. -/
-theorem stackAddress_toNat (sp : BitVec 64) (hsp : 32 ≤ sp.toNat)
+theorem stackAddress_toNat (hsp : 32 ≤ sp.toNat)
     {offset : Nat} (hoff : offset ≤ 32) :
     (stackAddress sp offset).toNat = sp.toNat - 32 + offset := by
   have hsmall : offset < 2 ^ 64 := by omega
@@ -104,11 +113,21 @@ theorem stackAddress_toNat (sp : BitVec 64) (hsp : 32 ≤ sp.toNat)
     have := sp.isLt
     omega
   calc
-    (stackAddress sp offset).toNat = (reservedSP sp).toNat + offset :=
-      addNat_toNat _ _ hsmall hsum
+    (stackAddress sp offset).toNat = (reservedSP sp).toNat + offset := addNat_toNat _ _ hsmall hsum
     _ = sp.toNat - 32 + offset := congrArg (· + offset) hbase
 
-/-- Raw address obligations for the compiler image, owned byte and scratch frame. -/
+/-- Distinct aligned scratch slots do not overlap. -/
+theorem stackAddress_disjoint (hsp : 32 ≤ sp.toNat)
+    {first second : Nat} (hf : first + 8 ≤ 32) (hs : second + 8 ≤ 32)
+    (halignf : first % 8 = 0) (haligns : second % 8 = 0) (hne : first ≠ second) :
+    disjointSpans (stackAddress sp first).toNat 8 (stackAddress sp second).toNat 8 := by
+  rw [stackAddress_toNat sp hsp (by omega), stackAddress_toNat sp hsp (by omega)]
+  unfold disjointSpans
+  omega
+
+end Stack
+
+/-- Raw address facts that a compiled OTP run needs for its image, pad byte and scratch frame. -/
 structure RawLayout (base sp pad callback ret : BitVec 64) : Prop where
   /-- The entire code and relocation image is mapped into user RAM. -/
   codeRam : InUserRam base 88
@@ -133,9 +152,15 @@ structure RawLayout (base sp pad callback ret : BitVec 64) : Prop where
   /-- The original return target is instruction aligned. -/
   returnAlign : ret.toNat % 4 = 0
 
+section RawLayoutFacts
+
+variable {base sp pad callback ret : BitVec 64} (h : RawLayout base sp pad callback ret)
+  {offset : Nat}
+
+include h
+
 /-- Each complete doubleword slot in the scratch frame is mapped. -/
-theorem RawLayout.stack_inUserRam {base sp pad callback ret : BitVec 64}
-    (h : RawLayout base sp pad callback ret) {offset : Nat} (hoff : offset + 8 ≤ 32) :
+theorem RawLayout.stack_inUserRam (hoff : offset + 8 ≤ 32) :
     InUserRam (stackAddress sp offset) 8 := by
   rw [InUserRam, stackAddress_toNat sp h.stackLower (by omega)]
   have hstack := h.stackRam
@@ -144,19 +169,16 @@ theorem RawLayout.stack_inUserRam {base sp pad callback ret : BitVec 64}
   constructor <;> omega
 
 /-- Eight-byte-aligned offsets remain aligned in the sixteen-byte-aligned scratch frame. -/
-theorem RawLayout.stack_aligned {base sp pad callback ret : BitVec 64}
-    (h : RawLayout base sp pad callback ret) {offset : Nat}
-    (hoff : offset ≤ 32) (halign : offset % 8 = 0) :
+theorem RawLayout.stack_aligned (hoff : offset ≤ 32) (halign : offset % 8 = 0) :
     (stackAddress sp offset).toNat % 8 = 0 := by
   rw [stackAddress_toNat sp h.stackLower hoff]
   have := h.stackAlign
   have := h.stackLower
   omega
 
-/-- A scratch write preserves every instruction word in the code image. -/
-theorem RawLayout.stack_code_disjoint {base sp pad callback ret : BitVec 64}
-    (h : RawLayout base sp pad callback ret) {offset index : Nat}
-    (hoff : offset + 8 ≤ 32) (hi : index < 20) :
+/-- A scratch write preserves the instruction word at one code index. -/
+theorem RawLayout.stack_code_disjoint {index : Nat} (hoff : offset + 8 ≤ 32)
+    (hi : index < 20) :
     disjointSpans (stackAddress sp offset).toNat 8 (codePC base index).toNat 4 := by
   rw [stackAddress_toNat sp h.stackLower (by omega), codePC_toNat h.codeRam (by omega)]
   have := h.codeStack
@@ -164,8 +186,7 @@ theorem RawLayout.stack_code_disjoint {base sp pad callback ret : BitVec 64}
   omega
 
 /-- A scratch write preserves the relocated import slot. -/
-theorem RawLayout.stack_slot_disjoint {base sp pad callback ret : BitVec 64}
-    (h : RawLayout base sp pad callback ret) {offset : Nat} (hoff : offset + 8 ≤ 32) :
+theorem RawLayout.stack_slot_disjoint (hoff : offset + 8 ≤ 32) :
     disjointSpans (stackAddress sp offset).toNat 8 (codePC base 20).toNat 8 := by
   rw [stackAddress_toNat sp h.stackLower (by omega), codePC_toNat h.codeRam (by decide)]
   have := h.codeStack
@@ -173,21 +194,13 @@ theorem RawLayout.stack_slot_disjoint {base sp pad callback ret : BitVec 64}
   omega
 
 /-- A scratch write leaves the private pad byte outside its modified interval. -/
-theorem RawLayout.stack_pad_disjoint {base sp pad callback ret : BitVec 64}
-    (h : RawLayout base sp pad callback ret) {offset : Nat} (hoff : offset + 8 ≤ 32) :
+theorem RawLayout.stack_pad_disjoint (hoff : offset + 8 ≤ 32) :
     disjointSpans (stackAddress sp offset).toNat 8 pad.toNat 1 := by
   rw [stackAddress_toNat sp h.stackLower (by omega)]
   have := h.stackPad
   unfold disjointSpans at *
   omega
 
-/-- Distinct aligned scratch slots do not overlap. -/
-theorem stackAddress_disjoint (sp : BitVec 64) (hsp : 32 ≤ sp.toNat)
-    {first second : Nat} (hf : first + 8 ≤ 32) (hs : second + 8 ≤ 32)
-    (halignf : first % 8 = 0) (haligns : second % 8 = 0) (hne : first ≠ second) :
-    disjointSpans (stackAddress sp first).toNat 8 (stackAddress sp second).toNat 8 := by
-  rw [stackAddress_toNat sp hsp (by omega), stackAddress_toNat sp hsp (by omega)]
-  unfold disjointSpans
-  omega
+end RawLayoutFacts
 
 end MetrologyAsm.OTP

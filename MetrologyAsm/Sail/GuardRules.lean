@@ -7,40 +7,55 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions Sail
 open Sail.BitVec (toNatInt extractLsb access zeroExtend)
 
-section AddressGuards
-
 variable {a : BitVec 64} {width : Nat}
+
+/-- The three access kinds that ordinary user code performs on RAM. -/
+abbrev OrdinaryAccess (access : MemoryAccessType mem_payload) : Prop :=
+  access = .InstructionFetch () ∨ access = .Load .Data ∨ access = .Store .Data
+
+section AddressGuards
 
 /-- Natural alignment is exactly the alignment predicate used by generated Sail. -/
 theorem is_aligned_vaddr_of_mod_eq_zero
     (h : a.toNat % width = 0) : is_aligned_vaddr (.Virtaddr a) width = true := by
   simp [is_aligned_vaddr, toNatInt, ← Int.ofNat_tmod, h]
 
-/-- The configured RAM interval contains every nonwrapping access described by `InUserRam`. -/
-theorem range_subset_userRam (h : InUserRam a width) :
-    range_subset a (to_bits width) 0x80000000#64 0x80000000#64 = true := by
+/-- A single byte is always naturally aligned. -/
+theorem is_aligned_vaddr_one (x : BitVec 64) : is_aligned_vaddr (.Virtaddr x) 1 = true :=
+  is_aligned_vaddr_of_mod_eq_zero (Nat.mod_one _)
+
+section InRam
+
+variable (h : InUserRam a width)
+
+include h
+
+/-- The 64-bit encoding of the width of a user-RAM access is the width itself. -/
+theorem to_bits_toNat_of_inUserRam :
+    (to_bits (l := 64) width).toNat = width := by
   have hw : width < 2 ^ 64 := by rcases h with ⟨hl, hu⟩; omega
-  have hw' : (to_bits (l := 64) width).toNat = width := by
-    simp [to_bits, get_slice_int, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hw]
+  simp [to_bits, get_slice_int, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hw]
+
+/-- The configured RAM interval contains every nonwrapping access described by `InUserRam`. -/
+theorem range_subset_userRam :
+    range_subset a (to_bits width) 0x80000000#64 0x80000000#64 = true := by
+  have hw' := to_bits_toNat_of_inUserRam h
   simp [range_subset, zopz0zIzJ_u, toNatInt,
     BitVec.toNat_sub, BitVec.toNat_add, hw']
   rcases h with ⟨hl, hu⟩
   omega
 
 /-- The first configured PMA region is selected for an access within user RAM. -/
-theorem matching_pma_region_userRam
-    (h : InUserRam a width) (rest : List PMA_Region) :
+theorem matching_pma_region_userRam (rest : List PMA_Region) :
     matching_pma_region (userRamRegion :: rest) (.Physaddr a) width = some userRamRegion := by
   simp [matching_pma_region, matching_pma_region_bits_range, bits_of_physaddr,
     zero_extend, zeroExtend, userRamRegion, range_subset_userRam h]
 
 /-- The first configured TOR entry completely matches every nonempty user-RAM access. -/
-theorem pmpMatchAddr_userRam (h : InUserRam a width)
+theorem pmpMatchAddr_userRam
     (hwidth : 0 < width) (s : Mach) :
     pmpMatchAddr (.Physaddr a) (to_bits width) 0x0f#8 0x40000000#64 0#64 s = .ok .PMP_Match s := by
-  have hw : width < 2 ^ 64 := by rcases h with ⟨hl, hu⟩; omega
-  have hw' : (to_bits (l := 64) width).toNat = width := by
-    simp [to_bits, get_slice_int, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hw]
+  have hw' := to_bits_toNat_of_inUserRam h
   rcases h with ⟨hl, hu⟩
   have hzero : ¬ (a.toNat : Int) + width ≤ 0 := by omega
   have hbelow : ¬ 4294967296 ≤ a.toNat := by omega
@@ -48,6 +63,8 @@ theorem pmpMatchAddr_userRam (h : InUserRam a width)
   simp [pmpMatchAddr, _get_Pmpcfg_ent_A, extractLsb,
     pmpAddrMatchType_encdec_backwards, zopz0zKzJ_u, pmpRangeMatch, toNatInt,
     hw', hzero, hbelow, hupper, pure, EStateM.pure]
+
+end InRam
 
 end AddressGuards
 
@@ -69,7 +86,7 @@ theorem pmpReadAddrReg_zero :
 
 section AccessGuards
 
-variable {a : BitVec 64} {width : Nat} (hram : InUserRam a width)
+variable (hram : InUserRam a width)
 
 include hram
 
@@ -82,7 +99,7 @@ include hwidth
 /-- The first PMP TOR entry permits every nonempty ordinary user-RAM access. -/
 theorem pmpCheck_user
     (access : MemoryAccessType mem_payload)
-    (haccess : access = .InstructionFetch () ∨ access = .Load .Data ∨ access = .Store .Data) :
+    (haccess : OrdinaryAccess access) :
     runSail (pmpCheck (.Physaddr a) width access .User) s = some (none, s) := by
   obtain ⟨cfg, hcfg, hp⟩ := h.regs .pmpcfg_n
   simp only [userRegPolicy] at hp
@@ -132,7 +149,7 @@ include halign
 /-- Configured, aligned ordinary accesses pass the generated PMA check without state changes. -/
 theorem pmaCheck_user
     (access : MemoryAccessType mem_payload)
-    (haccess : access = .InstructionFetch () ∨ access = .Load .Data ∨ access = .Store .Data) :
+    (haccess : OrdinaryAccess access) :
     runSail (pmaCheck (.Physaddr a) width access .PBMT_PMA false) s =
       some (.Ok { splittable := .CannotSplit, granule_size_exp := 0 }, s) := by
   obtain ⟨regions, hregions, hp⟩ := h.regs .pma_regions
@@ -143,7 +160,7 @@ theorem pmaCheck_user
   have halign' : is_aligned_paddr (.Physaddr a) width = true := halign
   rcases haccess with rfl | rfl | rfl
   all_goals simp [runSail, pmaCheck, readReg_eq hregions, hmatch, override_PMA, userRamRegion,
-    RiscvZkvm.Sail.Functions.not, mag_pma_check, is_mag_applicable_access, halign', Sail.assert,
+    RiscvZkvm.Sail.Functions.not, mag_pma_check, is_mag_applicable_access, halign', assert,
     PreSail.assert, SailME.run, PreSail.PreSailME.run, bind, EStateM.bind, EStateM.map, pure,
     EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont, ExceptT.lift,
     ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
@@ -151,7 +168,7 @@ theorem pmaCheck_user
 /-- PMA-priority checks preserve configured state and accept aligned ordinary user accesses. -/
 theorem check_pma_with_pmp_priority_user
     (access : MemoryAccessType mem_payload)
-    (haccess : access = .InstructionFetch () ∨ access = .Load .Data ∨ access = .Store .Data) :
+    (haccess : OrdinaryAccess access) :
     runSail (check_pma_with_pmp_priority access .PBMT_PMA .User (.Physaddr a) width false) s =
       some (.Ok { splittable := .CannotSplit, granule_size_exp := 0 }, s) := by
   have hpma := (runSail_eq_some_iff _ _ _ _).mp (h.pmaCheck_user hram halign access haccess)

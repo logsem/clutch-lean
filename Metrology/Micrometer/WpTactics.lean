@@ -133,6 +133,10 @@ public meta def eraseOpenCloseLeaf? (e : LeanExpr) : MetaM (Option Simp.Step) :=
 
 public section
 
+/-- Shows a folded boolean negation as `!b`. -/
+@[pl_step_simp] theorem decide_not_eq_true (b : Bool) : decide (¬b = true) = !b := by
+  cases b <;> rfl
+
 attribute [pl_step_simp] decide_not Bool.decide_eq_true
 
 /-- Compares integer literals by their integers. -/

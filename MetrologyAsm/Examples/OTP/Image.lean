@@ -12,37 +12,6 @@ structure ImageAt (s : Mach) (base callback : BitVec 64) : Prop where
   /-- The relocation slot contains the concrete callback entry. -/
   slot : Word64At s (codePC base 20) callback
 
-/-- Equal memory retains every instruction and import-address byte. -/
-theorem ImageAt.of_mem_eq {s t : Mach} {base callback : BitVec 64}
-    (h : ImageAt s base callback) (hm : t.mem = s.mem) : ImageAt t base callback :=
-  ⟨fun i => (h.words i).of_mem_eq hm, h.slot.of_mem_eq hm⟩
-
-/-- Pointwise preservation of the installed image suffices even when private pad memory changes. -/
-theorem ImageAt.of_mem_eq_on_image {s t : Mach} {base callback : BitVec 64}
-    (h : ImageAt s base callback) (hram : InUserRam base 88)
-    (hm : ∀ address, inSpan base.toNat 88 address → t.mem.get? address = s.mem.get? address) :
-    ImageAt t base callback := by
-  constructor
-  · intro j i hi
-    rw [hm]
-    · exact h.words j i hi
-    · have hj := j.isLt
-      rw [codePC_toNat hram (by omega)]
-      constructor <;> omega
-  · intro i hi
-    rw [hm]
-    · exact h.slot i hi
-    · rw [codePC_toNat hram (by decide)]
-      constructor <;> omega
-
-/-- A scratch-frame write preserves the complete executable and relocated image. -/
-theorem ImageAt.write64State {s : Mach} {base sp pad callback ret : BitVec 64}
-    (h : ImageAt s base callback) (layout : RawLayout base sp pad callback ret)
-    (value : BitVec 64) {offset : Nat} (hoff : offset + 8 ≤ 32) :
-    ImageAt (write64State s (stackAddress sp offset) value) base callback :=
-  ⟨fun i => (h.words i).write64State value (layout.stack_code_disjoint hoff i.isLt),
-    h.slot.write64State value (layout.stack_slot_disjoint hoff)⟩
-
 /-- The seven source words executed after the randombytes callback returns. -/
 structure ContinuationAt (s : Mach) (base : BitVec 64) : Prop where
   /-- Read the freshly sampled pad byte. -/
@@ -60,12 +29,47 @@ structure ContinuationAt (s : Mach) (base : BitVec 64) : Prop where
   /-- Return to the caller. -/
   ret : Word32At s (codePC base 16) 0x00008067#32
 
+section
+
+variable {s : Mach} {base callback : BitVec 64} (h : ImageAt s base callback)
+
+include h
+
+/-- Equal memory retains every instruction and import-address byte. -/
+theorem ImageAt.of_mem_eq {t : Mach} (hm : t.mem = s.mem) : ImageAt t base callback :=
+  ⟨fun i => (h.words i).of_mem_eq hm, h.slot.of_mem_eq hm⟩
+
+/-- Pointwise preservation of the installed image suffices even when private pad memory changes. -/
+theorem ImageAt.of_mem_eq_on_image {t : Mach} (hram : InUserRam base 88)
+    (hm : ∀ address, inSpan base.toNat 88 address → t.mem.get? address = s.mem.get? address) :
+    ImageAt t base callback := by
+  constructor
+  · intro j i hi
+    rw [hm]
+    · exact h.words j i hi
+    · have hj := j.isLt
+      rw [codePC_toNat hram (by omega)]
+      constructor <;> omega
+  · intro i hi
+    rw [hm]
+    · exact h.slot i hi
+    · rw [codePC_toNat hram (by decide)]
+      constructor <;> omega
+
+/-- A scratch-frame write preserves the complete executable and relocated image. -/
+theorem ImageAt.write64State {sp pad ret : BitVec 64} (layout : RawLayout base sp pad callback ret)
+    (value : BitVec 64) {offset : Nat} (hoff : offset + 8 ≤ 32) :
+    ImageAt (write64State s (stackAddress sp offset) value) base callback :=
+  ⟨fun i => (h.words i).write64State value (layout.stack_code_disjoint hoff i.isLt),
+    h.slot.write64State value (layout.stack_slot_disjoint hoff)⟩
+
 /-- The complete compiler image contains its post-callback continuation. -/
-theorem ImageAt.continuation {s : Mach} {base callback : BitVec 64}
-    (h : ImageAt s base callback) : ContinuationAt s base :=
+theorem ImageAt.continuation : ContinuationAt s base :=
   ⟨h.words ⟨10, by decide⟩, h.words ⟨11, by decide⟩, h.words ⟨12, by decide⟩,
     h.words ⟨13, by decide⟩, h.words ⟨14, by decide⟩, h.words ⟨15, by decide⟩,
     h.words ⟨16, by decide⟩⟩
+
+end
 
 /-- Equal memory retains the seven continuation instruction words. -/
 theorem ContinuationAt.of_mem_eq {s t : Mach} {base : BitVec 64}

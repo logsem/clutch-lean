@@ -70,8 +70,8 @@ def byteArray [AppGS rT GF] (l : Loc) : Nat → IProp GF
   | n + 1 => iprop(∃ b : Int, ⌜0 ≤ b ∧ b < 256⌝ ∗
       appHeapFrag l (.int b) ∗ byteArray (l + 1) n)
 
--- These rules use the base kernel; porting them to the FFI kernel remains a separate obligation.
-
+/- TODO: These rules use the base kernel; porting them to the FFI kernel remains a separate
+obligation. -/
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B]
   [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B}
   [MicrometerGS rT hlc GF] [BudgetGS B GF] [L.IsLawful] [L.IsReflexive]

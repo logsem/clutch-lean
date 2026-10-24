@@ -22,7 +22,7 @@ open Real (log rpow_le_rpow_of_exponent_le log_rpow log_le_log rpow_sub rpow_sub
 /-- The Rényi profile `α ↦ ρ_α` of one round, as a budget curve. -/
 noncomputable def rrCurve : RenyiBudget := fun α ↦ rrRenyi α
 
-/-- The curve is finite at every order, so it cancels pointwise. -/
+/-- The curve is finite at every order. -/
 theorem isAddLeftRegular_rrCurve : IsAddLeftRegular rrCurve := fun _ _ h ↦
   funext fun α ↦ (IsAddRegular.of_ne_top ofReal_ne_top).1 (congrFun h α)
 
@@ -50,7 +50,7 @@ theorem rrCount_curve : (rrCountMech k σ).IsPrivate renyiCurve ⊤ fun α ↦ k
 
 /-! ## Below the zCDP line -/
 
-/-- Every order of the round profile is at most `ln 3`. -/
+/-- Every Rényi order `α > 1` of the round profile is at most `ln 3`. -/
 theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) : rrRenyi α ≤ ofReal (log 3) := by
   have ht : (3 : ℝ) ≤ 3 ^ α := by
     simpa using rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 3) hα.le

@@ -25,6 +25,7 @@ open Iris Iris.BI Iris.ProofMode MicrometerWpGS GradedLifting GradedDivergence
 namespace OTP
 
 open _root_.Int (emod_nonneg emod_lt_of_pos emod_eq_of_lt emod_sub_emod add_emod_emod)
+open Exp (ofVal_of_toVal_some)
 
 variable {rT : Type}
 
@@ -63,6 +64,17 @@ theorem addMod_addMod_neg (hn0 : 0 ≤ n) (hnN : n < N) :
 
 end AddMod
 
+/-! ## The output relation -/
+
+/-- The two programs return the same integer. -/
+def otpφ (v v' : Val rT) : Prop :=
+  ∃ n : Int, v = .int n ∧ v' = .int n
+
+/-- Outputs related by `otpφ` are equal. -/
+theorem adequacyRel_otpφ_subset_eq (e₁ e₂ : Exp rT) : adequacyRel otpφ e₁ e₂ → e₁ = e₂ := by
+  rintro ⟨v, v', hv, hv', n, rfl, rfl⟩
+  exact (ofVal_of_toVal_some hv).symm.trans (ofVal_of_toVal_some hv')
+
 /-! ## The refinement in the logic
 
 `rel_couple_UU` couples the two draws along `addMod`, at no cost. -/
@@ -70,15 +82,27 @@ end AddMod
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {GF : BundledGFunctors}
 local bi IProp GF
 
+/-- Integer-related values are related by `otpφ`. -/
+theorem lrel_int_to_otpφ [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_int.car v v' -∗ ⌜otpφ v v'⌝ := by
+  iunfold lrel_int
+  iintro ⟨%n, %hv, %hv'⟩
+  ipureintro
+  exact ⟨n, hv, hv'⟩
+
 section Refines
 
 variable [MicrometerRGS rT hlc GF]
 
+variable (m N : Int) (hN : 0 < N)
+
+include hN
+
 /-- The encryption refines the ideal sampler in any lawful lifting. -/
 theorem otp_refines_gen {B : Type} [AddCommMonoid B] [PartialOrder B]
     [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B} [BudgetCreditGS B GF]
-    [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
-    (m N : Int) (hN : 0 < N) : ⊢ REL[L] (otpEnc (rT := rT) m N) << otpIdeal N : lrel_int := by
+    [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] :
+    ⊢ REL[L] (otpEnc (rT := rT) m N) << otpIdeal N : lrel_int := by
   rel_couple_UU (addMod m N) (addMod_dom m N hN) (addMod_bij m N hN)
   iintro %n %_
   rel_pures
@@ -89,7 +113,7 @@ theorem otp_refines_gen {B : Type} [AddCommMonoid B] [PartialOrder B]
 theorem otp_refines_rev_gen {B : Type} [AddCommMonoid B]
     [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B] {L : GradedLifting.{0} B}
     [BudgetCreditGS B GF] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
-    [L.HasBind] (m N : Int) (hN : 0 < N) :
+    [L.HasBind] :
     ⊢ REL[L] (otpIdeal (rT := rT) N) << otpEnc m N : lrel_int := by
   rel_couple_UU (addMod (-m) N) (addMod_dom (-m) N hN) (addMod_bij (-m) N hN)
   iintro %n ⟨%hn0, %hnN⟩
@@ -98,12 +122,12 @@ theorem otp_refines_rev_gen {B : Type} [AddCommMonoid B]
   rel_values
 
 /-- The encryption refines the ideal sampler in codensity tv. -/
-theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
+theorem otp_refines [BudgetCreditGS ℝ≥0∞ GF] :
     ⊢ REL[codensity tv] (otpEnc (rT := rT) m N) << otpIdeal N : lrel_int :=
   otp_refines_gen m N hN
 
 /-- The ideal sampler refines the encryption in codensity tv. -/
-theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] (m N : Int) (hN : 0 < N) :
+theorem otp_refines_rev [BudgetCreditGS ℝ≥0∞ GF] :
     ⊢ REL[codensity tv] (otpIdeal (rT := rT) N) << otpEnc m N : lrel_int :=
   otp_refines_rev_gen m N hN
 
@@ -119,54 +143,47 @@ section Generic
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.HasBind] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.IsZeroLeft] [L.IsLeftContinuous] [L.IsBudgetClosed]
+  (m N : Int) (hN : 0 < N) (σ σ' : State rT)
+
+include hN
 
 /-- The encryption and the ideal sampler are coupled at budget `0` in any lifting. -/
-theorem otp_adequate_gen (GF' : BundledGFunctors) [RefinesPreGS rT B GF'] (m N : Int)
-    (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_gen (GF' : BundledGFunctors) [RefinesPreGS rT B GF'] :
     L.Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpEnc m N, σ⟩) (limExecV ⟨otpIdeal N, σ'⟩) :=
   refines_coupling (GF := GF') (fun _ _ => lrel_int) _ _ _ σ σ' (fun _ _ => lrel_int_car_eq)
     fun _ _ => otp_refines_gen m N hN
 
 /-- The ideal sampler and the encryption are coupled at budget `0` in any lifting. -/
-theorem otp_adequate_rev_gen (GF' : BundledGFunctors) [RefinesPreGS rT B GF'] (m N : Int)
-    (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_rev_gen (GF' : BundledGFunctors) [RefinesPreGS rT B GF'] :
     L.Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpIdeal N, σ⟩) (limExecV ⟨otpEnc m N, σ'⟩) :=
   refines_coupling (GF := GF') (fun _ _ => lrel_int) _ _ _ σ σ' (fun _ _ => lrel_int_car_eq)
     fun _ _ => otp_refines_rev_gen m N hN
 
 /-- The encryption and the ideal sampler are coupled at budget `0` in the codensity tv lifting. -/
-theorem otp_adequate (GF' : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF'] (m N : Int)
-    (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate (GF' : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF'] :
     (codensity tv).Rel 0 (adequacyRel (· = ·))
       (limExecV ⟨otpEnc m N, σ⟩) (limExecV ⟨otpIdeal N, σ'⟩) :=
-  otp_adequate_gen GF' m N hN σ σ'
+  otp_adequate_gen m N hN σ σ' GF'
 
 /-- The ideal sampler and the encryption are coupled at budget `0` in the codensity tv lifting. -/
-theorem otp_adequate_rev (GF' : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF'] (m N : Int)
-    (hN : 0 < N) (σ σ' : State rT) :
+theorem otp_adequate_rev (GF' : BundledGFunctors) [RefinesPreGS rT ℝ≥0∞ GF'] :
     (codensity tv).Rel 0 (adequacyRel (· = ·))
       (limExecV ⟨otpIdeal N, σ⟩) (limExecV ⟨otpEnc m N, σ'⟩) :=
-  otp_adequate_rev_gen GF' m N hN σ σ'
+  otp_adequate_rev_gen m N hN σ σ' GF'
 
 /-! ### Closed statements at the concrete model `MicrometerFunctor rT` -/
-
-section Closed
-
-variable (m N : Int) (hN : 0 < N) (σ σ' : State rT)
-
-include hN
 
 /-- The encryption and the ideal sampler are coupled at budget `0` in any lifting, with the ghost
 state `MicrometerFunctor rT B`. -/
 theorem otp_adequate_closed_gen :
     L.Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpEnc m N, σ⟩) (limExecV ⟨otpIdeal N, σ'⟩) :=
-  otp_adequate_gen (MicrometerFunctor rT B) m N hN σ σ'
+  otp_adequate_gen m N hN σ σ' (MicrometerFunctor rT B)
 
 /-- The ideal sampler and the encryption are coupled at budget `0` in any lifting, with the ghost
 state `MicrometerFunctor rT B`. -/
 theorem otp_adequate_rev_closed_gen :
     L.Rel 0 (adequacyRel (· = ·)) (limExecV ⟨otpIdeal N, σ⟩) (limExecV ⟨otpEnc m N, σ'⟩) :=
-  otp_adequate_rev_gen (MicrometerFunctor rT B) m N hN σ σ'
+  otp_adequate_rev_gen m N hN σ σ' (MicrometerFunctor rT B)
 
 /-- The encryption and the ideal program are at divergence zero. -/
 theorem otp_div_gen {D : GradedDivergence.{0} B} [L.IsSound D] :
@@ -192,8 +209,6 @@ theorem otp_adequate_rev_closed :
 /-- The encryption and the ideal sampler are `(0, 0)`-differentially private. -/
 theorem otp_dp : dp.{0} (0, 0) (limExecV ⟨otpEnc m N, σ⟩) (limExecV ⟨otpIdeal N, σ'⟩) :=
   otp_div_gen (L := codensity dp) m N hN σ σ'
-
-end Closed
 
 end Generic
 

@@ -188,9 +188,14 @@ end
 
 `f` is a bijection of `{0, …, z-1}`; the right draw returns `f n` when the left returns `n`. -/
 
+section
+variable (α α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
+  (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m)
+  (Hz : 0 < z)
+include hdom hbij Hz
+
 /-- Couple two unlabelled draws `rand z ~ rand z` along the bijection `f`. -/
-theorem refines_couple_rands_lr (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
+theorem refines_couple_rands_lr : iprop%
     (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
       refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #()))) A := by
   unfold refines
@@ -205,8 +210,7 @@ theorem refines_couple_rands_lr (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n <
   iapply Hcnt $$ %n %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple a left tape draw with a right unlabelled draw along `f`. -/
-theorem refines_couple_TU (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
+theorem refines_couple_TU : iprop%
     ▷ appNatTape α z [] ∗ (∀ n, appNatTape α z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
         refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
       refines L E (K.fill pl(rand(#z, #lbl α))) (K'.fill pl(rand(#z, #()))) A := by
@@ -222,8 +226,7 @@ theorem refines_couple_TU (α : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n �
   iapply Hcnt $$ %n HαNew %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple a left unlabelled draw with a right tape draw along `f`. -/
-theorem refines_couple_UT (α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
+theorem refines_couple_UT : iprop%
     ▷ specNatTape α' z [] ∗ (∀ n, specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
         refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
       refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #lbl α'))) A := by
@@ -239,9 +242,7 @@ theorem refines_couple_UT (α' : Loc) (f : Int → Int) (hdom : ∀ n, 0 ≤ n �
   iapply Hcnt $$ %n Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
 /-- Couple two tape draws along `f`. -/
-theorem refines_couple_TT (α α' : Loc) (f : Int → Int)
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
+theorem refines_couple_TT : iprop%
     ▷ appNatTape α z [] ∗ ▷ specNatTape α' z [] ∗
       (∀ n, appNatTape α z [] -∗ specNatTape α' z [] -∗ ⌜0 ≤ n ∧ n < z⌝ -∗
         refines L E (K.fill pl(#n)) (K'.fill pl(#int (f n))) A) ⊢
@@ -257,12 +258,8 @@ theorem refines_couple_TT (α α' : Loc) (f : Int → Int)
   rw [show ofVal (.int n) = pl(#n) from rfl]
   iapply Hcnt $$ %n HαNew Hα'New %Hn %K2 %b HKres Hna Herr Hpos
 
-variable (f : Int → Int)
-
 /-- Append coupled samples `n` and `f n` to a left and a right tape, without any program step. -/
-theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int}
-    (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
-    (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z) : iprop%
+theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int} : iprop%
     appNatTape α z ns ∗ specNatTape αₛ z nsₛ ∗
       (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ appNatTape α z (ns ++ [n]) -∗ specNatTape αₛ z (nsₛ ++ [f n]) -∗
         refines L E e e' A) ⊢
@@ -274,12 +271,14 @@ theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int}
   iintro %n %hn HA HS
   iapply Hcnt $$ %n %hn HA HS %K %b Hj Hna Herr Hpos
 
+end
+
 /-! ## Couplings that redistribute credit -/
 
 variable {s : ENNReal →+o B} [L.IsExpectationAdditive s]
 
 /-- Couple two unlabelled draws along `f`, redistributing the credit `s ε₁` as `s (ε₂ n)`. -/
-theorem refines_couple_rands_lr_adv
+theorem refines_couple_rands_lr_adv (f : Int → Int)
     (ε₁ : ENNReal) (ε₂ : Int → ENNReal) (hdom : ∀ n, 0 ≤ n → n < z → 0 ≤ f n ∧ f n < z)
     (hbij : ∀ m, 0 ≤ m → m < z → ∃! n, (0 ≤ n ∧ n < z) ∧ f n = m) (Hz : 0 < z)
     (hamort : (∑ n ∈ Finset.Ico 0 z, ε₂ n) / z.toNat ≤ ε₁) (hc : IsAddLeftRegular (s ε₁)) : iprop%

@@ -6,7 +6,7 @@ import MetrologyAsm.ABI.Interface
 
 namespace MetrologyAsm
 
-open ProbLang ProbLang.Asm
+open ProbLang ProbLang.Asm List
 open UInt8 (ofNat)
 
 /-- The emitted word at a certified callback-instruction index. -/
@@ -23,21 +23,21 @@ variable (ι : Placement)
 /-- Relocation preserves all forty text bytes and patches the eight-byte callback slot. -/
 theorem relocatedBytes_importToy :
     relocatedBytes ι importToyImage = importToyImage.bytes.take 40 ++
-      (List.range 8).map (fun i => ofNat ((ι.importAddr "cb").toNat / 2 ^ (8 * i))) := by
+      (range 8).map (fun i => ofNat ((ι.importAddr "cb").toNat / 2 ^ (8 * i))) := by
   rfl
 
 /-- Relocation leaves every executable byte equal to its emitted source byte. -/
 theorem relocatedBytes_importToy_text (i : Nat) (hi : i < 40) :
     (relocatedBytes ι importToyImage)[i]? = importToyImage.bytes[i]? := by
-  rw [relocatedBytes_importToy, List.getElem?_append_left (by simpa using hi)]
-  exact List.getElem?_take_of_lt hi
+  rw [relocatedBytes_importToy, getElem?_append_left (by simpa using hi)]
+  exact getElem?_take_of_lt hi
 
-/-- The relocated slot exposes the corresponding byte of the callback's open address. -/
+/-- The relocated slot exposes the corresponding byte of the import address. -/
 theorem relocatedBytes_importToy_slot (i : Nat) (hi : i < 8) :
     (relocatedBytes ι importToyImage)[40 + i]? =
       some (ofNat ((ι.importAddr "cb").toNat / 2 ^ (8 * i))) := by
-  rw [relocatedBytes_importToy, List.getElem?_append_right (by simp)]
-  simp [List.getElem?_range hi]
+  rw [relocatedBytes_importToy, getElem?_append_right (by simp)]
+  simp [getElem?_range hi]
 
 /-- A machine with the relocated callback image installed satisfies `ImportToyImageAt`. -/
 theorem ImportToyImageAt.of_codeImage (s : Mach)

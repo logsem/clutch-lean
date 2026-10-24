@@ -236,7 +236,7 @@ end Wp
 
 /-! ## Budget credits -/
 
--- A local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`, so this sits outside `Wp`.
+-- Outside `Wp`: the local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`.
 /-- An absorbing credit proves any `wp`. -/
 theorem wp_of_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
     [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}

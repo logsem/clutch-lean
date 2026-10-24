@@ -25,7 +25,7 @@ open Cfg (drawCost drawCost_apply)
 
 /-! ## The second round: one `rr3` draw at `(log 2) / 3` -/
 
-/-- A draw from `[0, 3)` read by `h` charges each report. -/
+/-- A draw from `[0, 3)` read by `h` gives every report positive mass. -/
 theorem map_unifInt_three_ne_zero {h : Int → Bool} {d : Bool} (h0 : h 0 = d) (h1 : h 1 = d)
     (h2 : h 2 = !d) (c : Bool) : (unifInt 3 (by norm_num)).map h {c} ≠ 0 := by
   rw [map_unifInt_three h0 h1 h2, randResp_singleton]

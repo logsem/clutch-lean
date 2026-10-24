@@ -58,7 +58,7 @@ theorem wp_swap_of_eval (env : FfiEnv rT) (henv : env.machine = rv)
   have hinput := swap_validFragment l k old hne hl hk
   have houtput : validFragment swapCode [.loc l, .loc k] (integerHeap {l, k} (swapValues old l k)) ∧
       checkResult swapCode.sig.toCallSig (boundaryArgs [.loc l, .loc k])
-        swapCode.sig.result (BoundaryValue.unit.toVal : Val Empty) = true := by
+        swapCode.sig.result BoundaryValue.unit.toVal = true := by
     refine ⟨swap_validFragment l k (swapValues old l k) hne ?_ ?_, rfl⟩
     · simpa [swapValues] using hk
     · simpa [swapValues, hne.symm] using hl

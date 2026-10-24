@@ -7,7 +7,7 @@ import MetrologyAsm.Examples.Swap.Source
 
 namespace MetrologyAsm
 
-open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
+open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions Sail.BitVec
 
 /-- The exact image emitted by the checked assembler for the exchange source. -/
 def exchangeImage : Image := (assemble swapAsm).toOption.get (by decide +kernel)
@@ -32,8 +32,12 @@ theorem image_eq_exchangeImage {image : Image} (hi : assemble swapCode.prog = .o
 /-- The exchange does not contain external import slots. -/
 @[simp] theorem exchangeImage_slots : exchangeImage.importSlots = [] := by rfl
 
+section
+
+variable (ι : Placement)
+
 /-- The exchange code interval is precisely its assembled twenty-byte text region. -/
-theorem codeRange_exchange (ι : Placement) (p : BitVec 64) :
+theorem codeRange_exchange (p : BitVec 64) :
     codeRange ι swapCode p ↔ inSpan ι.codeBase.toNat 20 p.toNat := by
   constructor
   · rintro ⟨image, hi, hp⟩
@@ -43,7 +47,7 @@ theorem codeRange_exchange (ι : Placement) (p : BitVec 64) :
     exact ⟨exchangeImage, assemble_exchange, hp⟩
 
 /-- Every exchange code byte is also an image byte. -/
-theorem imageByte_of_codeRange_exchange (ι : Placement) (p : BitVec 64)
+theorem imageByte_of_codeRange_exchange (p : BitVec 64)
     (hp : codeRange ι swapCode p) : imageByte ι swapCode p.toNat := by
   refine ⟨exchangeImage, assemble_exchange, ?_⟩
   have h := (codeRange_exchange ι p).mp hp
@@ -51,7 +55,7 @@ theorem imageByte_of_codeRange_exchange (ι : Placement) (p : BitVec 64)
   omega
 
 /-- The installed exchange image puts the entry counter exactly at the open code base. -/
-theorem codeImage_exchange_pc (ι : Placement) (args : List BoundaryValue) (s : Mach)
+theorem codeImage_exchange_pc (args : List BoundaryValue) (s : Mach)
     (h : codeImage ι swapCode args s) : pc s = some ι.codeBase := by
   obtain ⟨image, hi, _, _, _, hpc, _⟩ := h
   have heq := image_eq_exchangeImage hi
@@ -59,7 +63,7 @@ theorem codeImage_exchange_pc (ι : Placement) (args : List BoundaryValue) (s : 
   simpa only [exchangeImage_entry, Nat.add_zero, BitVec.ofNat_toNat, BitVec.setWidth_eq] using hpc
 
 /-- The installed exchange image maps the complete executable interval into user RAM. -/
-theorem codeImage_exchange_ram (ι : Placement) (args : List BoundaryValue) (s : Mach)
+theorem codeImage_exchange_ram (args : List BoundaryValue) (s : Mach)
     (h : codeImage ι swapCode args s) : InUserRam ι.codeBase 20 := by
   obtain ⟨image, hi, hram, _⟩ := h
   have heq := image_eq_exchangeImage hi
@@ -68,20 +72,20 @@ theorem codeImage_exchange_ram (ι : Placement) (args : List BoundaryValue) (s :
   omega
 
 /-- Installing the checked source image supplies every instruction word used by Sail. -/
-theorem SwapImage.of_codeImage (ι : Placement) (args : List BoundaryValue) (s : Mach)
+theorem SwapImage.of_codeImage (args : List BoundaryValue) (s : Mach)
     (h : codeImage ι swapCode args s) : SwapImage s ι.codeBase := by
   obtain ⟨image, hi, hram, halign, hentry, hpc, hbytes, hdisjoint⟩ := h
   have heq := image_eq_exchangeImage hi
   subst image
   have hram20 : InUserRam ι.codeBase 20 := codeImage_exchange_ram ι args s
     ⟨exchangeImage, assemble_exchange, hram, halign, hentry, hpc, hbytes, hdisjoint⟩
-  have h4 : (Sail.BitVec.addInt ι.codeBase 4).toNat = ι.codeBase.toNat + 4 :=
+  have h4 : (addInt ι.codeBase 4).toNat = ι.codeBase.toNat + 4 :=
     pcAt_toNat hram20 (i := 1) (by decide)
-  have h8 : (Sail.BitVec.addInt ι.codeBase 8).toNat = ι.codeBase.toNat + 8 :=
+  have h8 : (addInt ι.codeBase 8).toNat = ι.codeBase.toNat + 8 :=
     pcAt_toNat hram20 (i := 2) (by decide)
-  have h12 : (Sail.BitVec.addInt ι.codeBase 12).toNat = ι.codeBase.toNat + 12 :=
+  have h12 : (addInt ι.codeBase 12).toNat = ι.codeBase.toNat + 12 :=
     pcAt_toNat hram20 (i := 3) (by decide)
-  have h16 : (Sail.BitVec.addInt ι.codeBase 16).toNat = ι.codeBase.toNat + 16 :=
+  have h16 : (addInt ι.codeBase 16).toNat = ι.codeBase.toNat + 16 :=
     pcAt_toNat hram20 (i := 4) (by decide)
   have hbytes' : ∀ i byte, exchangeImage.bytes[i]? = some byte →
       s.mem.get? (ι.codeBase.toNat + i) = some (BitVec.ofNat 8 byte.toNat) := by
@@ -112,7 +116,7 @@ theorem SwapImage.of_codeImage (ι : Placement) (args : List BoundaryValue) (s :
     | exact hbytes' 19 0x00 rfl
 
 /-- The two signed words decode to their exact finite logical fragment. -/
-theorem decodeF_exchange (ι : Placement) (s : Mach) (l k : Loc) (values : Loc → Int)
+theorem decodeF_exchange (s : Mach) (l k : Loc) (values : Loc → Int)
     (hne : l ≠ k) (hl : inRange true 64 (values l) = true)
     (hk : inRange true 64 (values k) = true)
     (hwordl : Word64At s (ι.addr l) (BitVec.ofInt 64 (values l)))
@@ -133,13 +137,92 @@ theorem decodeF_exchange (ι : Placement) (s : Mach) (l k : Loc) (values : Loc �
     · exact decodeCell_signed64 ι _ k s (values k) rfl rfl hk hwordk
 
 /-- A unit-returning fragment has its decoded return observation at the return address. -/
-theorem observe_ret_unit (ι : Placement) (code : Code) (args : List BoundaryValue)
+theorem observe_ret_unit (code : Code) (args : List BoundaryValue)
     (F : Finset Loc) (s : Mach) (heap : LocHeap BoundaryValue) (word : BitVec 64)
     (hresult : code.sig.result = .unit) (hpc : pc s = some ι.retAddr)
     (hheap : decodeF ι code args F s = some heap)
     (hword : argumentRegister s 0 = some word) :
     observe ι code args F s = some (.ret .unit heap) := by
   simp [observe, hpc, hheap, hword, hresult, decodeValue]
+
+/-- Compatible exchange facets imply all placement conditions used by actual Sail execution. -/
+theorem SwapPlacement.of_RVCompat (s : Mach) (l k : Loc)
+    (heap : LocHeap BoundaryValue) (hne : l ≠ k)
+    (h : RVCompat ι swapCode [.loc l, .loc k] heap s) :
+    SwapPlacement ι.codeBase (ι.addr l) (ι.addr k) ι.retAddr := by
+  obtain ⟨hfoot, _, _, himage, _, hret, _, _⟩ := h
+  have hregions := swap_callRegions l k
+  have hleft : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
+    simp [hregions]
+  have hright : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
+    simp [hregions]
+  have hl := hfoot.1 _ hleft
+  have hk := hfoot.1 _ hright
+  have hneq : Region.mk l 1 64 true ≠ Region.mk k 1 64 true := by
+    intro heq
+    exact hne (congrArg Region.base heq)
+  have hsep := hfoot.2 _ hleft _ hright hneq
+  obtain ⟨image, hi, hram, halign, _, _, _, hseparate⟩ := himage
+  have heq := image_eq_exchangeImage hi
+  subst image
+  have hca := hseparate _ hleft
+  have hcb := hseparate _ hright
+  apply SwapPlacement.of_bounds
+  · simp only [exchangeImage_length, InUserRam] at hram ⊢
+    omega
+  · omega
+  · simpa using hl.2.2.1
+  · simpa using hk.2.2.1
+  · exact hl.1
+  · exact hk.1
+  · exact hret.2.1
+  · simpa [disjointSpans] using hsep
+  · simp only [exchangeImage_length, disjointSpans, Nat.reduceDiv, Nat.one_mul] at hca
+    omega
+  · simp only [exchangeImage_length, disjointSpans, Nat.reduceDiv, Nat.one_mul] at hcb
+    omega
+
+/-- The logical entry contents supply the two input words for the actual Sail loads. -/
+theorem swap_words_of_contents (s : Mach) (l k : Loc) (old : Loc → Int)
+    (h : footprintContents ι swapCode [.loc l, .loc k] (integerHeap {l, k} old) s) :
+    Word64At s (ι.addr l) (BitVec.ofInt 64 (old l)) ∧
+      Word64At s (ι.addr k) (BitVec.ofInt 64 (old k)) := by
+  have hregions := swap_callRegions l k
+  have hl : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
+    simp [hregions]
+  have hk : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
+    simp [hregions]
+  obtain ⟨zl, hzl, _, hwl⟩ := h.2 _ hl 0 (by simp)
+  obtain ⟨zk, hzk, _, hwk⟩ := h.2 _ hk 0 (by simp)
+  have hel : zl = old l := by simpa using hzl.symm
+  have hek : zk = old k := by simpa using hzk.symm
+  subst zl
+  subst zk
+  exact ⟨by simpa using hwl, by simpa using hwk⟩
+
+/-- The exchange's two concrete writes preserve the full foreign-call memory frame. -/
+theorem swapFinalState_memoryFrame (s : Mach) (l k : Loc)
+    (x y : BitVec 64) (hstack : stackPlacement ι swapCode [.loc l, .loc k] s) :
+    memoryFrame ι swapCode [.loc l, .loc k] s
+      (swapFinalState s ι.codeBase (ι.addr l) (ι.addr k) x y ι.retAddr) := by
+  obtain ⟨sp, hsp, _⟩ := hstack
+  refine ⟨sp, hsp, ?_⟩
+  intro a ha _
+  have key : ∀ m, m = l ∨ m = k → ¬ inSpan (ι.addr m).toNat 8 a := by
+    rintro m hm hb
+    refine ha ⟨⟨m, 1, 64, true⟩, ?_, by simpa using hb⟩
+    rcases hm with rfl | rfl <;>
+      simp [callRegions, regions, swapCode, swapSig, boundaryArgs, ArgKind.region,
+        locValue, BoundaryValue.toVal]
+  apply swapFinalState_mem_outside
+  · have hnot := key l (Or.inl rfl)
+    unfold inSpan at hnot
+    omega
+  · have hnot := key k (Or.inr rfl)
+    unfold inSpan at hnot
+    omega
+
+end
 
 section Frame
 
@@ -179,82 +262,5 @@ theorem swapFinalState_machineConfiguration (ι : Placement) (code : Code)
   simpa only [hmtvec, hstvec] using h.2
 
 end Frame
-
-/-- Compatible exchange facets imply all placement conditions used by actual Sail execution. -/
-theorem SwapPlacement.of_RVCompat (ι : Placement) (s : Mach) (l k : Loc)
-    (heap : LocHeap BoundaryValue) (hne : l ≠ k)
-    (h : RVCompat ι swapCode [.loc l, .loc k] heap s) :
-    SwapPlacement ι.codeBase (ι.addr l) (ι.addr k) ι.retAddr := by
-  obtain ⟨hfoot, _, _, himage, _, hret, _, _⟩ := h
-  have hregions := swap_callRegions l k
-  have hleft : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  have hright : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  have hl := hfoot.1 _ hleft
-  have hk := hfoot.1 _ hright
-  have hneq : Region.mk l 1 64 true ≠ Region.mk k 1 64 true := by
-    intro heq
-    exact hne (congrArg Region.base heq)
-  have hsep := hfoot.2 _ hleft _ hright hneq
-  obtain ⟨image, hi, hram, halign, _, _, _, hseparate⟩ := himage
-  have heq := image_eq_exchangeImage hi
-  subst image
-  have hca := hseparate _ hleft
-  have hcb := hseparate _ hright
-  apply SwapPlacement.of_bounds
-  · simp only [exchangeImage_length, InUserRam] at hram ⊢
-    omega
-  · omega
-  · simpa using hl.2.2.1
-  · simpa using hk.2.2.1
-  · exact hl.1
-  · exact hk.1
-  · exact hret.2.1
-  · simpa [disjointSpans] using hsep
-  · simp only [exchangeImage_length, disjointSpans, Nat.reduceDiv, Nat.one_mul] at hca
-    omega
-  · simp only [exchangeImage_length, disjointSpans, Nat.reduceDiv, Nat.one_mul] at hcb
-    omega
-
-/-- The logical entry contents supply the two input words for the actual Sail loads. -/
-theorem swap_words_of_contents (ι : Placement) (s : Mach) (l k : Loc) (old : Loc → Int)
-    (h : footprintContents ι swapCode [.loc l, .loc k] (integerHeap {l, k} old) s) :
-    Word64At s (ι.addr l) (BitVec.ofInt 64 (old l)) ∧
-      Word64At s (ι.addr k) (BitVec.ofInt 64 (old k)) := by
-  have hregions := swap_callRegions l k
-  have hl : Region.mk l 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  have hk : Region.mk k 1 64 true ∈ callRegions swapCode [.loc l, .loc k] := by
-    simp [hregions]
-  obtain ⟨zl, hzl, _, hwl⟩ := h.2 _ hl 0 (by simp)
-  obtain ⟨zk, hzk, _, hwk⟩ := h.2 _ hk 0 (by simp)
-  have hel : zl = old l := by simpa using hzl.symm
-  have hek : zk = old k := by simpa using hzk.symm
-  subst zl
-  subst zk
-  exact ⟨by simpa using hwl, by simpa using hwk⟩
-
-/-- The exchange's two concrete writes preserve the full foreign-call memory frame. -/
-theorem swapFinalState_memoryFrame (ι : Placement) (s : Mach) (l k : Loc)
-    (x y : BitVec 64) (hstack : stackPlacement ι swapCode [.loc l, .loc k] s) :
-    memoryFrame ι swapCode [.loc l, .loc k] s
-      (swapFinalState s ι.codeBase (ι.addr l) (ι.addr k) x y ι.retAddr) := by
-  obtain ⟨sp, hsp, _⟩ := hstack
-  refine ⟨sp, hsp, ?_⟩
-  intro a ha _
-  have key : ∀ m, m = l ∨ m = k → ¬ inSpan (ι.addr m).toNat 8 a := by
-    rintro m hm hb
-    refine ha ⟨⟨m, 1, 64, true⟩, ?_, by simpa using hb⟩
-    rcases hm with rfl | rfl <;>
-      simp [callRegions, regions, swapCode, swapSig, boundaryArgs, ArgKind.region,
-        locValue, BoundaryValue.toVal]
-  apply swapFinalState_mem_outside
-  · have hnot := key l (Or.inl rfl)
-    unfold inSpan at hnot
-    omega
-  · have hnot := key k (Or.inr rfl)
-    unfold inSpan at hnot
-    omega
 
 end MetrologyAsm

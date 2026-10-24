@@ -35,7 +35,7 @@ encrypt_byte:                           # @encrypt_byte
 \t.size\tencrypt_byte, .Lfunc_end0-encrypt_byte
 "
 
-/-- Encrypt a byte message using a fresh byte written by the imported randombytes callback. -/
+/-- The ABI signature of `encrypt_byte`. -/
 def otpSig : Sig := {
     args := [.uint 64, .array 8 (.const 1)]
     result := .uint 64
@@ -50,7 +50,7 @@ def otpImage : Image :=
   (assemble otpAsm).toOption.getD ⟨[], 0, 0, 0, [], [], []⟩
 
 /-- The retained OTP source assembles successfully. -/
-theorem assemble_otpImage : assemble otpAsm = .ok otpImage := by
+theorem assemble_otpImage : assemble otpAsm = .ok otpImage :=
   rfl
 
 end MetrologyAsm.OTP

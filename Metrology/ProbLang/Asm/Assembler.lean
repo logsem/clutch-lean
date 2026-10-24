@@ -18,7 +18,7 @@ structure EncodedInstr where
   word : BitVec 32
   deriving Repr
 
-/-- A position-independent machine-code image with a separate read-only data region. -/
+/-- A relocatable machine-code image with a separate read-only data region. -/
 structure Image where
   /-- The complete little-endian image. -/
   bytes : List UInt8
@@ -37,10 +37,6 @@ structure Image where
   deriving Repr
 
 namespace Encode
-
-/-- Resolve a symbol to its image offset. -/
-def lookupLabel (labels : List (String × Nat)) (name : String) : Except String Nat :=
-  optionExcept (labels.lookup name) s!"undefined symbol '{name}'"
 
 /-- The low bits of a signed integer. -/
 def bits (value : Int) (width : Nat) : Nat :=
@@ -149,8 +145,16 @@ def sections (lines : List Line) : List Line × List Line := Id.run do
       if sec == .text then text := text ++ [line] else data := data ++ [line]
   return (text, data)
 
+section Encoders
+
+variable (lines : List Line) (labels : List (String × Nat)) (pc : Nat) (name : String)
+
+/-- Resolve a symbol to its image offset. -/
+def lookupLabel : Except String Nat :=
+  optionExcept (labels.lookup name) s!"undefined symbol '{name}'"
+
 /-- Resolve a low relocation through its matching high-relocation anchor. -/
-def pcrelTarget (lines : List Line) (labels : List (String × Nat)) (anchor : String) :
+def pcrelTarget (anchor : String) :
     Except String Int := do
   let anchorOff ← lookupLabel labels anchor
   let mut offset := 0
@@ -162,7 +166,7 @@ def pcrelTarget (lines : List Line) (labels : List (String × Nat)) (anchor : St
   throw s!"PC-relative low relocation '{anchor}' has no matching auipc"
 
 /-- Resolve an immediate at an instruction offset. -/
-def resolve (lines : List Line) (labels : List (String × Nat)) (pc : Nat) :
+def resolve :
     Imm → Except String Int
   | .int z => .ok z
   | .symbol name z => return (← lookupLabel labels name) + z
@@ -181,14 +185,14 @@ def reg (n : Nat) (h : n < 32 := by decide) : Operand := .reg ⟨n, h⟩
 def imm (z : Int) : Operand := .imm (.int z)
 
 /-- The `auipc` and follow-up pair reaching a symbol PC-relatively through `temp`. -/
-def pcrelPair (labels : List (String × Nat)) (pc : Nat) (target : String)
+def pcrelPair (target : String)
     (temp : Operand) (second : Int → Instr) : Except String (List Instr) := do
   let d : Int := (← lookupLabel labels target) - pc
   let _ ← signed 32 d
   return [ins "auipc" [temp, imm (hi d)], second (lo d)]
 
 /-- Expand supported pseudo-instructions into base instructions. -/
-def expand (i : Instr) (labels : List (String × Nat)) (pc : Nat) :
+def expand (i : Instr) :
     Except String (List Instr) := do
   let ⟨name, args⟩ := i
   match name, args with
@@ -248,13 +252,12 @@ def loadTable : List (String × Nat) :=
 def storeTable : List (String × Nat) := [("sb", 0), ("sh", 1), ("sw", 2), ("sd", 3)]
 
 /-- Encode a register-register instruction. -/
-def encodeR (name : String) (rd rs rt : Reg) : Except String Nat := do
+def encodeR (rd rs rt : Reg) : Except String Nat := do
   let some (f, f7) := rTable.lookup name | throw s!"unknown R instruction '{name}'"
   return rword (if name.endsWith "w" then 0x3b else 0x33) rd.val f rs.val rt.val f7
 
 /-- Encode a register-register-immediate instruction: branch, `jalr` or arithmetic. -/
-def encodeI (lines : List Line) (labels : List (String × Nat)) (pc : Nat)
-    (name : String) (rd rs : Reg) (value : Imm) : Except String Nat := do
+def encodeI (rd rs : Reg) (value : Imm) : Except String Nat := do
   let z ← resolve lines labels pc value
   if let some f := branchTable.lookup name then
     let d ← signed 13 (z - pc)
@@ -271,14 +274,14 @@ def encodeI (lines : List Line) (labels : List (String × Nat)) (pc : Nat)
   return iword opcode rd.val f rs.val (z + extra)
 
 /-- Encode a load, store or memory-form `jalr`. -/
-def encodeMem (name : String) (rd rs : Reg) (z : Int) : Except String Nat :=
+def encodeMem (rd rs : Reg) (z : Int) : Except String Nat :=
   if name == "jalr" then pure (iword 0x67 rd.val 0 rs.val z)
   else if let some f := loadTable.lookup name then pure (iword 0x03 rd.val f rs.val z)
   else if let some f := storeTable.lookup name then pure (sword 0x23 f rs.val rd.val z)
   else throw s!"unknown memory instruction '{name}'"
 
 /-- Encode an upper-immediate or `jal` instruction. -/
-def encodeU (name : String) (rd : Reg) (z : Int) (pc : Nat) : Except String Nat := do
+def encodeU (rd : Reg) (z : Int) : Except String Nat := do
   if name == "lui" || name == "auipc" then
     if z < -0x80000 || z ≥ 0x100000 then throw "upper immediate out of range"
     return (if name == "lui" then 0x37 else 0x17) + rd.val * 2^7 + bits z 20 * 2^12
@@ -289,24 +292,26 @@ def encodeU (name : String) (rd : Reg) (z : Int) (pc : Nat) : Except String Nat 
   else throw s!"unknown upper/jump instruction '{name}'"
 
 /-- Encode one expanded instruction with checked immediate ranges. -/
-def encode (lines : List Line) (labels : List (String × Nat)) (pc : Nat)
-    (i : Instr) : Except String (BitVec 32) := do
+def encode (i : Instr) : Except String (BitVec 32) := do
   let ⟨name, args⟩ := i
   let word ← match args with
   | [.reg rd, .reg rs, .reg rt] => encodeR name rd rs rt
   | [.reg rd, .reg rs, .imm value] => encodeI lines labels pc name rd rs value
   | [.reg rd, .mem value rs] => encodeMem name rd rs (← signed 12 (← resolve lines labels pc value))
-  | [.reg rd, .imm value] => encodeU name rd (← resolve lines labels pc value) pc
+  | [.reg rd, .imm value] => encodeU pc name rd (← resolve lines labels pc value)
   | _ => throw s!"unsupported instruction '{name}' or operand form"
   return BitVec.ofNat 32 word
+
+end Encoders
 
 end Encode
 
 open Encode
+open List (range replicate)
 
 /-- Encode an integer as little-endian bytes. -/
 def bytesOf (width : Nat) (z : Int) : List UInt8 :=
-  (List.range width).map fun i => UInt8.ofNat ((bits z (8 * width) / 2^(8 * i)) % 256)
+  (range width).map fun i => UInt8.ofNat ((bits z (8 * width) / 2^(8 * i)) % 256)
 
 /-- Encode consecutive instructions starting at `offset`. -/
 def encodeRun (text : List Line) (labels : List (String × Nat)) (offset : Nat)
@@ -321,8 +326,7 @@ def encodeRun (text : List Line) (labels : List (String × Nat)) (offset : Nat)
     pc := pc + 4
   return (bytes, instructions)
 
-/-- Emit bytes and instruction words for a laid-out section; `text` is the executable section
-that resolves PC-relative low relocations, and `executable` pads alignment with nops. -/
+/-- Emit the bytes and instruction words of one laid-out section. -/
 def emit (lines text : List Line) (labels : List (String × Nat)) (start : Nat)
     (executable : Bool) : Except String (List UInt8 × List EncodedInstr) := do
   let mut offset := start
@@ -332,7 +336,7 @@ def emit (lines text : List Line) (labels : List (String × Nat)) (start : Nat)
     match line with
     | .instr i =>
       if !executable then throw "instructions in rodata"
-      let (b, is) ← encodeRun text labels offset (← expand i labels offset)
+      let (b, is) ← encodeRun text labels offset (← expand labels offset i)
       bytes := bytes ++ b
       instructions := instructions ++ is
       offset := offset + b.length
@@ -344,17 +348,17 @@ def emit (lines text : List Line) (labels : List (String × Nat)) (start : Nat)
       bytes := bytes ++ data
       offset := offset + data.length
     | .directive (.zero count) =>
-      bytes := bytes ++ List.replicate count 0
+      bytes := bytes ++ replicate count 0
       offset := offset + count
     | .directive (.align power) =>
       let pad := align offset power - offset
       if executable then
         if pad % 4 != 0 then throw "unaligned instruction padding"
         let (b, is) ← encodeRun text labels offset
-          (List.replicate (pad / 4) (ins "addi" [reg 0, reg 0, imm 0]))
+          (replicate (pad / 4) (ins "addi" [reg 0, reg 0, imm 0]))
         bytes := bytes ++ b
         instructions := instructions ++ is
-      else bytes := bytes ++ List.replicate pad 0
+      else bytes := bytes ++ replicate pad 0
       offset := offset + pad
     | _ => pure ()
   return (bytes, instructions)
@@ -394,7 +398,7 @@ def assemble (prog : AsmProg) : Except String Image := do
   let entry ← lookupLabel textLabels prog.entry
   let (textBytes, instructions) ← emit text text labels 0 true
   let (dataBytes, _) ← emit data text labels rodataOff false
-  return ⟨textBytes ++ List.replicate (rodataOff - textLen) 0 ++ dataBytes,
+  return ⟨textBytes ++ replicate (rodataOff - textLen) 0 ++ dataBytes,
     textLen, rodataOff, entry,
     ← imports.mapM (fun name => return (name, ← lookupLabel labels (importSlotName name))),
     instructions, labels⟩

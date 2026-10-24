@@ -115,7 +115,7 @@ theorem canonicalize_eq_self {tree : Interaction V} (h : M.Canonical c entryArgs
     · simpa only [ite_eq_left hr] using ih r heap' ((h r heap').1 hr)
     · simpa only [ite_eq_right hr] using ((h r heap').2 hr).symm
 
-/-- Every phase follows the tree while retaining the original call-entry frame. -/
+/-- The machine follows the interaction tree from state `t`, keeping the original entry frame. -/
 def FollowsFrom (origin : M.Mach) (ι : Placement) (t : M.Mach) : Interaction V → Prop
   | .ret value heap =>
     M.runs ι c t (fun t' => M.ExitCompat ι c entryArgs F origin t' (.ret value heap))
@@ -153,7 +153,7 @@ theorem eval_eq_some_of_unique {heap : LocHeap V} {tree : Interaction V}
   congr 1
   exact unique.unique unique.exists.choose_spec h
 
-/-- A total return specification needs only stop determinism to determine evaluation. -/
+/-- A total return specification determines evaluation, given run agreement and stop determinism. -/
 theorem eval_ret_eq_some (heap output : LocHeap V) (value : V)
     (hagree : ∀ ι t P Q, M.runs ι c t P → M.runs ι c t Q → ∃ t', P t' ∧ Q t')
     (hdet : ∀ ι t t' s u, M.ExitCompat ι c entryArgs F t t' s →

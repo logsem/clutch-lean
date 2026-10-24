@@ -5,7 +5,7 @@ import MetrologyAsm.Examples.OTP.State
 
 namespace MetrologyAsm.OTP
 
-open Sail
+open Sail Std.ExtDHashMap RiscvZkvm.Sail.Functions
 
 /-- Load the callback's byte without relying on any resumed caller-scratch value. -/
 def resumeLoad (s : Mach) (base : BitVec 64) (byte : BitVec 8) : Mach :=
@@ -32,62 +32,88 @@ def resumeRelease (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
     (byte : BitVec 8) : Mach :=
   registerState (resumeS1 s base message ret savedS0 savedS1 byte) base 15 .x2 sp
 
+section Return
+
+variable (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64) (byte : BitVec 8)
+
 /-- The exact final machine of the compiled OTP continuation. -/
-def returnState (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) : Mach :=
+def returnState : Mach :=
   commitState (jumpBodyState (resumeRelease s base sp message ret savedS0 savedS1 byte)
     (codePC base 16) ret) ret
 
 /-- The continuation reads memory but never writes it. -/
-theorem returnState_mem (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) : (returnState s base sp message ret savedS0 savedS1 byte).mem = s.mem := rfl
+theorem returnState_mem : (returnState s base sp message ret savedS0 savedS1 byte).mem = s.mem :=
+  rfl
 
 /-- The actual committed return target is the original caller's address. -/
-theorem returnState_pc (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) :
+theorem returnState_pc :
     (returnState s base sp message ret savedS0 savedS1 byte).regs.get? .PC = some ret := by
   simp [returnState, commitState]
 
 /-- The returned value and restored registers have their ABI values. -/
-theorem returnState_registers (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) :
+theorem returnState_registers :
     let t := returnState s base sp message ret savedS0 savedS1 byte
     t.regs.get? .x2 = some sp ∧ t.regs.get? .x1 = some ret ∧
       t.regs.get? .x8 = some savedS0 ∧ t.regs.get? .x9 = some savedS1 ∧
       t.regs.get? .x10 = some (byte.setWidth 64 ^^^ message) := by
   simp [returnState, resumeRelease, resumeS1, resumeS0, resumeRA, resumeXor, registerState,
-    registerBodyState, jumpBodyState, commitState, sequentialState, counterState,
-    Std.ExtDHashMap.get?_insert]
+    registerBodyState, jumpBodyState, commitState, sequentialState, counterState, get?_insert]
 
 /-- Every register outside the continuation's explicit writes and bookkeeping is unchanged. -/
-theorem returnState_reg_other (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) (r : Register)
+theorem returnState_reg_other (r : Register)
     (hout : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x8, .x9, .x10]) :
     (returnState s base sp message ret savedS0 savedS1 byte).regs.get? r = s.regs.get? r := by
   simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hout
   obtain ⟨hpc, hn, hc, h1, h2, h8, h9, h10⟩ := hout
   simp [returnState, resumeRelease, resumeS1, resumeS0, resumeRA, resumeXor, resumeLoad,
     registerState, registerBodyState, jumpBodyState, commitState, sequentialState, counterState,
-    Std.ExtDHashMap.get?_insert, Ne.symm hpc, Ne.symm hn, Ne.symm hc, Ne.symm h1, Ne.symm h2,
-    Ne.symm h8, Ne.symm h9, Ne.symm h10]
+    get?_insert, Ne.symm hpc, Ne.symm hn, Ne.symm hc, Ne.symm h1, Ne.symm h2, Ne.symm h8,
+    Ne.symm h9, Ne.symm h10]
 
 /-- The platform state outside registers and memory is preserved by the continuation. -/
-theorem returnState_fields (s : Mach) (base sp message ret savedS0 savedS1 : BitVec 64)
-    (byte : BitVec 8) :
+theorem returnState_fields :
     let t := returnState s base sp message ret savedS0 savedS1 byte
     t.choiceState = s.choiceState ∧ t.tags = s.tags ∧ t.cycleCount = s.cycleCount ∧
       t.sailOutput = s.sailOutput := ⟨rfl, rfl, rfl, rfl⟩
 
-/-- The compiled continuation preserves the user execution profile. -/
-theorem _root_.MetrologyAsm.UserConfig.otpReturnState {s : Mach} (h : UserConfig s)
+end Return
+
+/-- A register write and sequential commit sets the program counter to the next instruction. -/
+theorem registerState_pc (s : Mach) (base : BitVec 64) (index : Nat) (destination : Register)
+    (value : RegisterType destination) :
+    (registerState s base index destination value).regs.get? .PC = some (codePC base (index + 1)) :=
+  by simp [registerState, commitState]
+
+/-- A register write and sequential commit leaves every other register unchanged. -/
+theorem registerState_get_ne (s : Mach) (base : BitVec 64) (index : Nat) (destination r : Register)
+    (value : RegisterType destination)
+    (hr : r ∉ [destination, Register.PC, .nextPC, .minstret_increment]) :
+    (registerState s base index destination value).regs.get? r = s.regs.get? r := by
+  simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hr
+  obtain ⟨hd, hpc, hn, hc⟩ := hr
+  simp [registerState, registerBodyState, commitState, sequentialState, counterState, get?_insert,
+    Ne.symm hd, Ne.symm hpc, Ne.symm hn, Ne.symm hc]
+
+/-- Each register-writing step of the continuation retains the configured user profile. -/
+theorem _root_.MetrologyAsm.UserConfig.otp_resume {s : Mach} (h : UserConfig s)
     (base sp message ret savedS0 savedS1 : BitVec 64) (byte : BitVec 8) :
-    UserConfig (returnState s base sp message ret savedS0 savedS1 byte) := by
+    UserConfig (resumeLoad s base byte) ∧ UserConfig (resumeXor s base message byte) ∧
+      UserConfig (resumeRA s base message ret byte) ∧
+      UserConfig (resumeS0 s base message ret savedS0 byte) ∧
+      UserConfig (resumeS1 s base message ret savedS0 savedS1 byte) ∧
+      UserConfig (resumeRelease s base sp message ret savedS0 savedS1 byte) := by
   have h1 := h.otpRegisterState base 10 .x10 (byte.setWidth 64) trivial
   have h2 := h1.otpRegisterState base 11 .x10 (byte.setWidth 64 ^^^ message) trivial
   have h3 := h2.otpRegisterState base 12 .x1 ret trivial
   have h4 := h3.otpRegisterState base 13 .x8 savedS0 trivial
   have h5 := h4.otpRegisterState base 14 .x9 savedS1 trivial
-  have h6 := h5.otpRegisterState base 15 .x2 sp trivial
+  exact ⟨h1, h2, h3, h4, h5, h5.otpRegisterState base 15 .x2 sp trivial⟩
+
+/-- The compiled continuation preserves the user execution profile. -/
+theorem _root_.MetrologyAsm.UserConfig.otpReturnState {s : Mach} (h : UserConfig s)
+    (base sp message ret savedS0 savedS1 : BitVec 64) (byte : BitVec 8) :
+    UserConfig (returnState s base sp message ret savedS0 savedS1 byte) := by
+  have h6 := (h.otp_resume base sp message ret savedS0 savedS1 byte).2.2.2.2.2
   exact ((h6.counterState.sequentialState _).insert .nextPC ret trivial).insert .PC ret trivial
 
 /-- Seven actual Sail steps load the sampled byte, encrypt, restore the ABI and return. -/
@@ -103,30 +129,13 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
     (hsavedS1 : Word64At s (stackAddress sp 8) savedS1)
     (code : BitVec 64 → Prop) (hcode : ∀ i < 20, code (codePC base i)) (hout : ¬code ret) :
     RunsTo code (fun t => t = returnState s base sp message ret savedS0 savedS1 byte) s := by
-  have hc1 : UserConfig (resumeLoad s base byte) :=
-    h.otpRegisterState base 10 .x10 (byte.setWidth 64) trivial
-  have hc2 : UserConfig (resumeXor s base message byte) :=
-    hc1.otpRegisterState base 11 .x10 (byte.setWidth 64 ^^^ message) trivial
-  have hc3 : UserConfig (resumeRA s base message ret byte) :=
-    hc2.otpRegisterState base 12 .x1 ret trivial
-  have hc4 : UserConfig (resumeS0 s base message ret savedS0 byte) :=
-    hc3.otpRegisterState base 13 .x8 savedS0 trivial
-  have hc5 : UserConfig (resumeS1 s base message ret savedS0 savedS1 byte) :=
-    hc4.otpRegisterState base 14 .x9 savedS1 trivial
-  have hc6 : UserConfig (resumeRelease s base sp message ret savedS0 savedS1 byte) :=
-    hc5.otpRegisterState base 15 .x2 sp trivial
-  have hp1 : (resumeLoad s base byte).regs.get? .PC = some (codePC base 11) := by
-    simp [resumeLoad, registerState, commitState]
-  have hp2 : (resumeXor s base message byte).regs.get? .PC = some (codePC base 12) := by
-    simp [resumeXor, registerState, commitState]
-  have hp3 : (resumeRA s base message ret byte).regs.get? .PC = some (codePC base 13) := by
-    simp [resumeRA, registerState, commitState]
-  have hp4 : (resumeS0 s base message ret savedS0 byte).regs.get? .PC =
-      some (codePC base 14) := by simp [resumeS0, registerState, commitState]
-  have hp5 : (resumeS1 s base message ret savedS0 savedS1 byte).regs.get? .PC =
-      some (codePC base 15) := by simp [resumeS1, registerState, commitState]
-  have hp6 : (resumeRelease s base sp message ret savedS0 savedS1 byte).regs.get? .PC =
-      some (codePC base 16) := by simp [resumeRelease, registerState, commitState]
+  obtain ⟨hc1, hc2, hc3, hc4, hc5, hc6⟩ := h.otp_resume base sp message ret savedS0 savedS1 byte
+  have hp1 := registerState_pc s base 10 .x10 (byte.setWidth 64)
+  have hp2 := registerState_pc (resumeLoad s base byte) base 11 .x10 (byte.setWidth 64 ^^^ message)
+  have hp3 := registerState_pc (resumeXor s base message byte) base 12 .x1 ret
+  have hp4 := registerState_pc (resumeRA s base message ret byte) base 13 .x8 savedS0
+  have hp5 := registerState_pc (resumeS0 s base message ret savedS0 byte) base 14 .x9 savedS1
+  have hp6 := registerState_pc (resumeS1 s base message ret savedS0 savedS1 byte) base 15 .x2 sp
   have hstep1 : rvStep s = some (resumeLoad s base byte) := by
     simpa only [resumeLoad, registerState, codePC_next] using
       step_load_pad h (codePC base 10) pad byte hpc hpad
@@ -134,26 +143,22 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
         (codePC_aligned layout.codeRam layout.codeAlign (by decide))
         image.loadPad layout.padRam hbyte
   have ha1 : (resumeLoad s base byte).regs.get? .x10 = some (byte.setWidth 64) := by
-    simp [resumeLoad, registerState, registerBodyState, commitState,
-      Std.ExtDHashMap.get?_insert]
-  have hm1 : (resumeLoad s base byte).regs.get? .x9 = some message := by
-    simp [resumeLoad, registerState, registerBodyState, commitState, sequentialState,
-      counterState, Std.ExtDHashMap.get?_insert, hmessage]
+    simp [resumeLoad, registerState, registerBodyState, commitState, get?_insert]
+  have hm1 : (resumeLoad s base byte).regs.get? .x9 = some message :=
+    (registerState_get_ne s base 10 .x10 .x9 _ (by decide)).trans hmessage
   have hstep2 : rvStep (resumeLoad s base byte) = some (resumeXor s base message byte) := by
     simpa only [resumeXor, registerState, codePC_next] using
       step_xor hc1 (codePC base 11) (byte.setWidth 64) message hp1 ha1 hm1
         (codePC_inUserRam layout.codeRam (by decide))
         (codePC_aligned layout.codeRam layout.codeAlign (by decide))
         (image.xor.of_mem_eq rfl)
-  have hs2 : (resumeXor s base message byte).regs.get? .x2 = some (reservedSP sp) := by
-    simp [resumeXor, resumeLoad, registerState, registerBodyState, commitState, sequentialState,
-      counterState, Std.ExtDHashMap.get?_insert, hsp]
-  have h24 : reservedSP sp + RiscvZkvm.Sail.Functions.sign_extend (m := 64) 24#12 =
-      stackAddress sp 24 := rfl
-  have h16 : reservedSP sp + RiscvZkvm.Sail.Functions.sign_extend (m := 64) 16#12 =
-      stackAddress sp 16 := rfl
-  have h8 : reservedSP sp + RiscvZkvm.Sail.Functions.sign_extend (m := 64) 8#12 =
-      stackAddress sp 8 := rfl
+  have hs1 : (resumeLoad s base byte).regs.get? .x2 = some (reservedSP sp) :=
+    (registerState_get_ne s base 10 .x10 .x2 _ (by decide)).trans hsp
+  have hs2 : (resumeXor s base message byte).regs.get? .x2 = some (reservedSP sp) :=
+    (registerState_get_ne _ base 11 .x10 .x2 _ (by decide)).trans hs1
+  have h24 : reservedSP sp + sign_extend 24#12 = stackAddress sp 24 := rfl
+  have h16 : reservedSP sp + sign_extend 16#12 = stackAddress sp 16 := rfl
+  have h8 : reservedSP sp + sign_extend 8#12 = stackAddress sp 8 := rfl
   have hstep3 : rvStep (resumeXor s base message byte) =
       some (resumeRA s base message ret byte) := by
     simpa only [resumeRA, registerState, codePC_next] using
@@ -164,9 +169,8 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
         (by rw [h24]; exact layout.stack_inUserRam (by decide))
         (by rw [h24]; exact layout.stack_aligned (by decide) (by decide))
         (by rw [h24]; exact hsavedRA.of_mem_eq rfl)
-  have hs3 : (resumeRA s base message ret byte).regs.get? .x2 = some (reservedSP sp) := by
-    simpa [resumeRA, registerState, registerBodyState, commitState, sequentialState,
-      counterState, Std.ExtDHashMap.get?_insert] using hs2
+  have hs3 : (resumeRA s base message ret byte).regs.get? .x2 = some (reservedSP sp) :=
+    (registerState_get_ne _ base 12 .x1 .x2 _ (by decide)).trans hs2
   have hstep4 : rvStep (resumeRA s base message ret byte) =
       some (resumeS0 s base message ret savedS0 byte) := by
     simpa only [resumeS0, registerState, codePC_next] using
@@ -177,10 +181,8 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
         (by rw [h16]; exact layout.stack_inUserRam (by decide))
         (by rw [h16]; exact layout.stack_aligned (by decide) (by decide))
         (by rw [h16]; exact hsavedS0.of_mem_eq rfl)
-  have hs4 : (resumeS0 s base message ret savedS0 byte).regs.get? .x2 =
-      some (reservedSP sp) := by
-    simpa [resumeS0, registerState, registerBodyState, commitState, sequentialState,
-      counterState, Std.ExtDHashMap.get?_insert] using hs3
+  have hs4 : (resumeS0 s base message ret savedS0 byte).regs.get? .x2 = some (reservedSP sp) :=
+    (registerState_get_ne _ base 13 .x8 .x2 _ (by decide)).trans hs3
   have hstep5 : rvStep (resumeS0 s base message ret savedS0 byte) =
       some (resumeS1 s base message ret savedS0 savedS1 byte) := by
     simpa only [resumeS1, registerState, codePC_next] using
@@ -192,11 +194,9 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
         (by rw [h8]; exact layout.stack_aligned (by decide) (by decide))
         (by rw [h8]; exact hsavedS1.of_mem_eq rfl)
   have hs5 : (resumeS1 s base message ret savedS0 savedS1 byte).regs.get? .x2 =
-      some (reservedSP sp) := by
-    simpa [resumeS1, registerState, registerBodyState, commitState, sequentialState,
-      counterState, Std.ExtDHashMap.get?_insert] using hs4
-  have hrelease : reservedSP sp + RiscvZkvm.Sail.Functions.sign_extend (m := 64) 32#12 =
-      sp := reservedSP_cancel sp
+      some (reservedSP sp) :=
+    (registerState_get_ne _ base 14 .x9 .x2 _ (by decide)).trans hs4
+  have hrelease : reservedSP sp + sign_extend 32#12 = sp := reservedSP_cancel sp
   have hstep6 : rvStep (resumeS1 s base message ret savedS0 savedS1 byte) =
       some (resumeRelease s base sp message ret savedS0 savedS1 byte) := by
     simpa only [resumeRelease, registerState, codePC_next, hrelease] using
@@ -207,11 +207,10 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
   have hr6 : (resumeRelease s base sp message ret savedS0 savedS1 byte).regs.get? .x1 =
       some ret := by
     simp [resumeRelease, resumeS1, resumeS0, resumeRA, registerState, registerBodyState,
-      commitState, sequentialState, counterState, Std.ExtDHashMap.get?_insert]
+      commitState, sequentialState, counterState, get?_insert]
   have hstep7 : rvStep (resumeRelease s base sp message ret savedS0 savedS1 byte) =
       some (returnState s base sp message ret savedS0 savedS1 byte) :=
-    step_return hc6 (codePC base 16) ret hp6 hr6
-      (codePC_inUserRam layout.codeRam (by decide))
+    step_return hc6 (codePC base 16) ret hp6 hr6 (codePC_inUserRam layout.codeRam (by decide))
       (codePC_aligned layout.codeRam layout.codeAlign (by decide)) layout.returnAlign
       (image.ret.of_mem_eq rfl)
   refine .step hpc (hcode 10 (by decide)) hstep1 ?_
@@ -221,6 +220,6 @@ theorem runsTo_return {s : Mach} (h : UserConfig s)
   refine .step hp4 (hcode 14 (by decide)) hstep5 ?_
   refine .step hp5 (hcode 15 (by decide)) hstep6 ?_
   refine .step hp6 (hcode 16 (by decide)) hstep7 ?_
-  exact .leave (returnState_pc _ _ _ _ _ _ _ _) hout rfl
+  exact .leave (returnState_pc ..) hout rfl
 
 end MetrologyAsm.OTP

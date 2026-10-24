@@ -7,15 +7,19 @@ import MetrologyAsm.Examples.OTP.ImageBridge
 namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Sail
+open _root_.BitVec (ofInt)
 
-/-- Read the original frame's open register values. -/
-def entryInputs (ι : Placement) (s : Mach) (message : Int) (pad : Loc) : CallInputs :=
-  ⟨ι.codeBase, (s.regs.get? .x2).getD 0, ι.addr pad, BitVec.ofInt 64 message, ι.retAddr,
+section
+
+variable (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+
+/-- Collect the call inputs from the frame registers and the placement. -/
+def entryInputs : CallInputs :=
+  ⟨ι.codeBase, (s.regs.get? .x2).getD 0, ι.addr pad, ofInt 64 message, ι.retAddr,
     (s.regs.get? .x8).getD 0, (s.regs.get? .x9).getD 0, ι.importAddr "randombytes"⟩
 
 /-- The complete register profile makes the recovered original frame registers genuine bindings. -/
-theorem entryInputs_registers (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
-    (h : UserConfig s) :
+theorem entryInputs_registers (h : UserConfig s) :
     let a := entryInputs ι s message pad
     s.regs.get? .x2 = some a.sp ∧ s.regs.get? .x8 = some a.savedS0 ∧
       s.regs.get? .x9 = some a.savedS1 := by
@@ -25,7 +29,7 @@ theorem entryInputs_registers (ι : Placement) (s : Mach) (message : Int) (pad :
   simp [entryInputs, hsp, hs0, hs1]
 
 /-- Recovering the original stack binding retains the layout derived from all ABI facets. -/
-theorem entryInputs_layout (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+theorem entryInputs_layout
     (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :
     let a := entryInputs ι s message pad
     RawLayout a.base a.sp a.pad a.callback a.ret := by
@@ -33,7 +37,7 @@ theorem entryInputs_layout (ι : Placement) (s : Mach) (message : Int) (pad : Lo
   simpa [entryInputs, hsp] using layout
 
 /-- The compiled OTP entry reaches randombytes under the universal ABI facets. -/
-theorem entry_runsTo_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc)
+theorem entry_runsTo_call
     (heap : LocHeap BoundaryValue) (h : RVCompat ι otpCode (otpArgs message pad) heap s) :
     RunsTo (codeRange ι otpCode) (fun t => t = (entryInputs ι s message pad).paused s) s := by
   have hconfig := h.2.2.2.2.2.2.2.1
@@ -41,7 +45,7 @@ theorem entry_runsTo_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc
   have layout := entryInputs_layout ι s message pad heap h
   have hpc := (codeImage_facts ι s message pad h.2.2.2.1).2.2
   have hargs := h.2.2.1
-  have hmessage : s.regs.get? .x10 = some (BitVec.ofInt 64 message) := hargs 0 (.int message) rfl
+  have hmessage : s.regs.get? .x10 = some (ofInt 64 message) := hargs 0 (.int message) rfl
   have hpad : s.regs.get? .x11 = some (ι.addr pad) := hargs 1 (.loc pad) rfl
   have hra : s.regs.get? .x1 = some ι.retAddr := h.2.2.2.2.2.1.1
   have hout : ¬codeRange ι otpCode (ι.importAddr "randombytes") := by
@@ -53,6 +57,8 @@ theorem entry_runsTo_call (ι : Placement) (s : Mach) (message : Int) (pad : Loc
     (codeRange ι otpCode)
     (fun _ hi => codeRange_codePC ι layout.codeRam hi) hout
 
+end
+
 /-- Every permitted callback resumption executes the continuation with its new pad byte. -/
 theorem resume_runsTo_return (ι : Placement) (s t : Mach) (message : Int) (pad : Loc)
     (heap newHeap : LocHeap BoundaryValue) (response : BoundaryValue)
@@ -63,7 +69,7 @@ theorem resume_runsTo_return (ι : Placement) (s t : Mach) (message : Int) (pad 
     ∃ byte, newHeap[pad]? = some (.int byte) ∧ inRange false 8 byte = true ∧
       RunsTo (codeRange ι otpCode)
         (fun u => u = returnState t a.base a.sp a.message a.ret a.savedS0 a.savedS1
-          (BitVec.ofInt 8 byte)) t := by
+          (ofInt 8 byte)) t := by
   let a := entryInputs ι s message pad
   have layout : RawLayout a.base a.sp a.pad a.callback a.ret :=
     entryInputs_layout ι s message pad heap h
@@ -80,7 +86,7 @@ theorem resume_runsTo_return (ι : Placement) (s t : Mach) (message : Int) (pad 
   obtain ⟨byte, hbyteHeap, hrange, hword⟩ :=
     hcontents.2 (padRegion pad) (by simp) 0 (by simp [padRegion])
   have hheapByte : newHeap[pad]? = some (.int byte) := by simpa [padRegion] using hbyteHeap
-  have hbyte : t.mem.get? a.pad.toNat = some (BitVec.ofInt 8 byte) := by
+  have hbyte : t.mem.get? a.pad.toNat = some (ofInt 8 byte) := by
     apply (wordAt8_iff _ _ _).mp
     simpa [a, entryInputs, padRegion] using hword
   have hretOut : ¬codeRange ι otpCode a.ret :=
@@ -107,7 +113,7 @@ theorem resume_runsTo_return (ι : Placement) (s t : Mach) (message : Int) (pad 
   have hsaved := a.paused_saved s layout.stackLower
   refine ⟨byte, hheapByte, hrange, ?_⟩
   exact runsTo_return huser a.base a.sp a.pad a.callback a.message a.ret a.savedS0 a.savedS1
-    (BitVec.ofInt 8 byte) layout hresumedImage.continuation hpc htsp htpad htmessage hbyte
+    (ofInt 8 byte) layout hresumedImage.continuation hpc htsp htpad htmessage hbyte
     (savedFrame 24 (by decide) _ hsaved.1)
     (savedFrame 16 (by decide) _ hsaved.2.1)
     (savedFrame 8 (by decide) _ hsaved.2.2) (codeRange ι otpCode)

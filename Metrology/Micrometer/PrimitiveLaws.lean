@@ -476,7 +476,7 @@ theorem wp_rand_tape_empty_r : iprop%
   ihave HαNat := spec_empty_to_natTape $$ HαB
   iapply Hwp $$ HαNat Hj' %hn
 
-/-- Rocq form of `wp_rand_tape_empty_r`. -/
+/-- Spec-side labeled `rand z` on an empty tape, tape and spec resources returned as one `∗`. -/
 theorem wp_rand_empty_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z [] ∗
       (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
@@ -568,7 +568,7 @@ theorem wp_alloc_tape_r : iprop%
   iapply Hwp $$ %l Hj' HlNat
 
 /-- A spec-side labeled `rand z` on a tape with bound `z` pops the tape's head. -/
-theorem wp_rand_tape_r {n : Int} : iprop%
+theorem wp_rand_tape_r {n : Int} {ns : List Int} : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z (n :: ns) ∗
       (⤇ K.fill pl(#int n) -∗ specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
       wp L E e Φ := by

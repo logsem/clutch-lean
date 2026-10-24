@@ -84,7 +84,7 @@ theorem unifInt_apply (S : Set Int) :
     unifInt z hz S = (z.toNat : ENNReal)⁻¹ * ∑ n ∈ Ico 0 z, S.indicator 1 n := by
   rw [← lintegral_unifInt, lintegral_indicator_one .of_discrete]
 
-/-- `unifInt z` gives the singleton `{0}` mass `1/N`. -/
+/-- `unifInt z` gives the singleton `{0}` mass `1/z`. -/
 theorem unifInt_singleton_zero : unifInt z hz {0} = (z.toNat : ENNReal)⁻¹ := by
   rw [unifInt, Measure.uniformOfFinset_apply_singleton_of_mem (mem_Ico.2 ⟨le_rfl, hz⟩), card_Ico,
     sub_zero]
@@ -156,7 +156,7 @@ theorem Cfg.uniform_addCoupl_bij_fill (K : Ectx rT) :
     AddCoupl 0 {p | CoupledDraw z f σ σ' K p.1 p.2} (uniform z σ) ((uniform z σ').map K.fillCfg) :=
   (uniform_rel_bij_fill Hz σ σ' f hdom hbij K).addCoupl
 
-/-- `Cfg.uniform_addCoupl_bij_fill` with the empty context. -/
+/-- Exact coupling of `rand z ~ rand z` along a bijection of `[0, z)`. -/
 theorem Cfg.uniform_addCoupl_bij :
     AddCoupl 0 {p : Cfg rT × Cfg rT | ∃ n, 0 ≤ n ∧ n < z ∧
         p.1 = ⟨pl(#int n), σ⟩ ∧ p.2 = ⟨pl(#int (f n)), σ'⟩}
@@ -278,7 +278,7 @@ theorem Cfg.uniform_addCoupl_rev_inj_fill (HzR : 0 < zR)
   rintro _ m ⟨h0, h1, hm⟩
   exact ⟨m, h0, h1, hm ▸ rfl, rfl⟩
 
-/-- `Cfg.uniform_addCoupl_inj_fill` with the empty context. -/
+/-- Coupling of `rand zL ~ rand zR` along an injection, smaller bound on the left. -/
 theorem Cfg.uniform_addCoupl_inj (HzL : 0 < zL) (Hle : zL ≤ zR)
     (σ σ' : State rT) (f : Int → Int) (hdom : ∀ n, 0 ≤ n → n < zL → 0 ≤ f n ∧ f n < zR)
     (hinj : ∀ n₁ n₂, 0 ≤ n₁ → n₁ < zL → 0 ≤ n₂ → n₂ < zL → f n₁ = f n₂ → n₁ = n₂) :
@@ -289,7 +289,7 @@ theorem Cfg.uniform_addCoupl_inj (HzL : 0 < zL) (Hle : zL ≤ zR)
   have h := uniform_addCoupl_inj_fill HzL Hle σ σ' f [] hdom hinj
   rwa [Ectx.fillCfg_empty, Measure.map_id] at h
 
-/-- `Cfg.uniform_addCoupl_rev_inj_fill` with the empty context. -/
+/-- Coupling of `rand zL ~ rand zR` along an injection, smaller bound on the right. -/
 theorem Cfg.uniform_addCoupl_rev_inj (HzR : 0 < zR) (Hle : zR ≤ zL)
     (σ σ' : State rT) (f : Int → Int) (hdom : ∀ m, 0 ≤ m → m < zR → 0 ≤ f m ∧ f m < zL)
     (hinj : ∀ m₁ m₂, 0 ≤ m₁ → m₁ < zR → 0 ≤ m₂ → m₂ < zR → f m₁ = f m₂ → m₁ = m₂) :
@@ -304,12 +304,16 @@ theorem Cfg.uniform_addCoupl_rev_inj (HzR : 0 < zR) (Hle : zR ≤ zL)
 
 variable [LawfulProbLangℝ rT]
 
+/-- If the head step of a locally closed `e` is `Cfg.uniform z σ`, so is its program step. -/
+theorem primStep_eq_uniform_of_headStep {e : Exp rT} (h : headStep ⟨e, σ⟩ = uniform z σ)
+    (hlc : e.IsLocallyClosed := by is_lc) : primStep ⟨e, σ⟩ = uniform z σ := by
+  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible hlc (h ▸ uniform_ne_zero z σ)), h]
+
 /-- `rand z` on the unit label steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_unit (_Hz : 0 < z) (σ : State rT) :
     primStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := by
   have h : headStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := rfl
-  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
-    (h ▸ uniform_ne_zero z σ)), h]
+  exact primStep_eq_uniform_of_headStep h
 
 /-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
 @[discrete]
@@ -340,8 +344,7 @@ theorem primStep_rand_lbl_wrong (HneM : z ≠ M) {fs : List { z' : Int // 0 ≤ 
   have h : headStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
     rw [headStep_rand_lbl, Hlk]
     simp only [ite_eq_right (Ne.symm HneM)]
-  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
-    (h ▸ uniform_ne_zero z σ)), h]
+  exact primStep_eq_uniform_of_headStep h
 
 /-- `rand z` on an empty tape of bound `z` steps to `Cfg.uniform z σ`. -/
 theorem primStep_rand_lbl_empty (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
@@ -349,8 +352,7 @@ theorem primStep_rand_lbl_empty (Hlk : σ.tapes[l]? = some ⟨z, []⟩) :
   have h : headStep ⟨pl(rand(#z, #lbl l)), σ⟩ = uniform z σ := by
     rw [headStep_rand_lbl, Hlk]
     simp only [↓reduceIte]
-  rw [primStep_eq_headStep (decompItem_none_of_lc_headReducible (by is_lc)
-    (h ▸ uniform_ne_zero z σ)), h]
+  exact primStep_eq_uniform_of_headStep h
 
 /-- `primStep_rand_lbl_empty` with discrete reducibility. -/
 @[discrete]
@@ -421,8 +423,8 @@ theorem Cfg.uniform_lift_adv [AddCommMonoid B] [PartialOrder B]
   refine map .of_discrete .of_discrete (mono h hint fun n m => ?_)
   by_cases hnm : 0 ≤ n ∧ n < z ∧ m = f n
   · obtain ⟨h0, h1, rfl⟩ := hnm
-    simp only [relCost_of (S := fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) ⟨h0, h1, rfl⟩, zero_add,
-      hcf n h0 h1]
+    simp only [relCost_of (S := fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) ⟨h0, h1, rfl⟩,
+      zero_add, hcf n h0 h1]
     exact (advLeftover_apply s f σ σ' K ε₂ h0 h1).le
   · simp only [relCost_of_not (S := fun n m ↦ 0 ≤ n ∧ n < z ∧ m = f n) hnm]
     exact le_top.trans le_self_add
@@ -451,26 +453,32 @@ section TimelessTapes
 
 variable {GF : BundledGFunctors} {l : Loc} {t : Tape} {v : Val rT}
 
+/-- Fragments of application tapes are timeless. -/
 instance appTapesFrag_timeless [AppGS rT GF] :
     Timeless (l ↪ₐ t : IProp GF) := iOwn_timeless
 
 variable [SpecGS rT GF]
 
+/-- Fragments of spec tapes are timeless. -/
 instance specTapesFrag_timeless :
     Timeless (l ↪ₛ t : IProp GF) := iOwn_timeless
 
+/-- Fragments of the application heap are timeless. -/
 instance appHeapFrag_timeless [AppGS rT GF] :
     Timeless (l ↦ v : IProp GF) := iOwn_timeless
 
+/-- Fragments of the spec heap are timeless. -/
 instance specHeapFrag_timeless : Timeless (l ↦ₛ v : IProp GF) := iOwn_timeless
 
 variable {ns : List Int}
 
+/-- Application natural-number tapes are timeless. -/
 instance appNatTape_timeless [AppGS rT GF] :
     Timeless (appNatTape l z ns : IProp GF) := by
   unfold appNatTape
   infer_instance
 
+/-- Spec natural-number tapes are timeless. -/
 instance specNatTape_timeless :
     Timeless (specNatTape l z ns : IProp GF) := by
   unfold specNatTape

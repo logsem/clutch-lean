@@ -9,7 +9,8 @@ public import Metrology.Couplings.Divergences.Dp
 
 /-! # Contextual soundness
 
-A refinement under `↯b β` bounds every linear boolean context by `β`, or by `0` with no credits. -/
+A refinement under budget credits couples every linear boolean context along equal booleans,
+so it bounds the contexts' outputs by the budget; without credits, it bounds them by mass. -/
 
 @[expose] public section
 
@@ -17,49 +18,40 @@ namespace ProbLang
 
 open GradedLifting Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE
 open ProbLang.MicrometerWpGS
+open IsMassDetecting (measure_le measure_le_add)
 open Val (fst)
 open Exp (ofVal_of_toVal_some)
 open Tctx (empty)
 open TctxRelated (empty_nil)
-open IsMassDetecting (measure_le measure_le_add)
-open Ctx (BindersFresh binderAtoms payloadFv)
+open Ctx (BindersFresh)
 
 open MeasureTheory
-open scoped _root_.ENNReal
+open scoped ENNReal
 variable {rT : Type} {GF : BundledGFunctors}
 local bi IProp GF
 
-section RefinesSound
-
 /-! ## Pure facts: equal booleans and boolean results -/
 
-variable (v v' : Val rT)
-
 /-- Two values are the same boolean. -/
-def boolEqVal : Prop :=
+def boolEqVal (v v' : Val rT) : Prop :=
   ∃ b : Bool, v = .bool b ∧ v' = .bool b
 
 /-- Related booleans are the same boolean. -/
-theorem lrel_bool_to_boolEqVal [MeasurableSpace rT] [LawfulProbLangℝ rT]
-    [MicrometerRGS rT .hasNoLC GF] :
+theorem lrel_bool_to_boolEqVal (v v' : Val rT) :
     ⊢ lrel_bool.car v v' -∗ ⌜boolEqVal v v'⌝ := by
   iunfold lrel_bool
   iintro ⟨%b, %h⟩
   exact pure_intro ⟨b, h⟩
 
-/-- Results related along equal booleans end in `b` together. -/
-theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
-    (ha : a ∈ ({pl(#b)} : Set _)) : a' ∈ ({pl(#b)} : Set _) := by
-  obtain ⟨v, v', hv, hv', b'', hvb1, hvb2⟩ := h
-  have hv1 : v.1 = pl(#b'') := congrArg fst hvb1
-  rw [show v.1 = pl(#b) from (ofVal_of_toVal_some hv).trans ha] at hv1
-  obtain rfl : b'' = b := by simpa using hv1.symm
-  exact (ofVal_of_toVal_some hv').symm.trans (congrArg fst hvb2)
-
 /-- Results related along equal booleans are equal. -/
 theorem adequacyRel_boolEqVal_eq (a a' : Exp rT) (h : adequacyRel boolEqVal a a') : a = a' :=
   let ⟨v, v', hv, hv', _, h1, h2⟩ := h
   adequacyRel_eq_subset a a' ⟨v, v', hv, hv', h1.trans h2.symm⟩
+
+/-- Results related along equal booleans end in `b` together. -/
+theorem adequacyRel_boolEqVal_mem {b : Bool} (a a' : Exp rT) (h : adequacyRel boolEqVal a a')
+    (ha : a ∈ ({pl(#b)} : Set _)) : a' ∈ ({pl(#b)} : Set _) :=
+  adequacyRel_boolEqVal_eq a a' h ▸ ha
 
 section Budget
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {B : Type} [AddCommMonoid B] [PartialOrder B]
@@ -129,12 +121,12 @@ theorem refines_ctx_div {D : GradedDivergence.{0} B} [L.IsSound D] (β : B) (e e
     adequacyRel_boolEqVal_eq)
 
 section
-variable (s : ENNReal →+o B) [L.IsMassDetecting s]
+variable (s : ℝ≥0∞ →+o B) [L.IsMassDetecting s]
 include s
 
 /-- A refinement from `↯b (s δ)` bounds the chance that a linear boolean context returns `b`
 by that of the other side plus `δ`. -/
-theorem refines_ctx_mass (δ : ENNReal) (e e' : Exp rT) (τ : Ty)
+theorem refines_ctx_mass (δ : ℝ≥0∞) (e e' : Exp rT) (τ : Ty)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       Δ, ⊢ ↯b (s δ) -∗ refines L ⊤ e e' (interp L τ Δ))
     (K : Ctx rT) (b : Bool) (HK : TypedCtx K empty τ empty .bool)
@@ -153,10 +145,9 @@ theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e 
     (Hty_e' : Typed Γtc e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF) Δ Γrc,
       TctxRelated L Δ Γtc Γrc → ⊢ bin_log_related_ty L ⊤ Δ Γrc e e' τ) :
-    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ empty .bool →
-      BindersFresh K ∅ → (∀ x ∈ binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ payloadFv K) →
+    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K Γtc τ empty .bool → BindersFresh K ∅ →
       limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
-  intro K σ₀ b Htyped HfreshK Hbinders
+  intro K σ₀ b Htyped HfreshK
   -- A budget-0 coupling through the unrestricted context lemma, then mass detection at `δ = 0`.
   rw [limExec_finalBool, limExec_finalBool]
   have hCpl : L.Rel 0 (adequacyRel boolEqVal) (limExecV ⟨K.fill e, σ₀⟩)
@@ -166,18 +157,18 @@ theorem refines_sound_open_fresh (Γtc : Tctx) (e e' : Exp rT) (τ : Ty) (Hty_e 
     · intro IR IBC
       have HrelClosed : ⊢
           bin_log_related_ty L ⊤ (default : TyEnv rT GF) [] (K.fill e) (K.fill e') .bool :=
-        bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' Hbinders (Hlog IR IBC) _ _
+        bin_log_related_under_typed_ctx Htyped Hty_e Hty_e' (Hlog IR IBC) _ _
           empty_nil HfreshK
       exact HrelClosed.trans bin_log_related_nil_elim
-  exact measure_le (s := s) (.singleton _) (.singleton _) hCpl adequacyRel_boolEqVal_mem
+  exact measure_le (s := s) (.singleton _) (.singleton _) hCpl
+    adequacyRel_boolEqVal_mem
 
 /-- `refines_sound_open_fresh` for closed programs. -/
 theorem refines_sound_fresh (e e' : Exp rT) (τ : Ty) (Hty_e : Typed empty e τ)
     (Hty_e' : Typed empty e' τ)
     (Hlog : ∀ (_IR : MicrometerRGS rT .hasNoLC GF) (_IBC : BudgetCreditGS B GF)
       Δ, ⊢ refines L ⊤ e e' (interp L τ Δ)) :
-    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K empty τ empty .bool →
-      BindersFresh K ∅ → (∀ x ∈ binderAtoms K, x ∉ e.fv ∧ x ∉ e'.fv ∧ x ∉ payloadFv K) →
+    ∀ (K : Ctx rT) (σ₀ : State rT) (b : Bool), TypedCtx K empty τ empty .bool → BindersFresh K ∅ →
       limExec ⟨K.fill e, σ₀⟩ (finalBool b) ≤ limExec ⟨K.fill e', σ₀⟩ (finalBool b) := by
   apply refines_sound_open_fresh L s (GF := GF) empty e e' τ Hty_e Hty_e'
   intro IR IBC Δ Γrc HCtx
@@ -190,8 +181,6 @@ end
 end Bind
 
 end Budget
-
-end RefinesSound
 
 /-! ## Differential privacy -/
 

@@ -1,3 +1,4 @@
+import MetrologyAsm.Sail.Execution
 import RiscvZkvm.Sail.DecodeExt
 
 /-! # Decoder effects and the standard return encoding -/
@@ -21,7 +22,7 @@ theorem decode_ret :
 
 /-- A successful extension query makes a checked decoder return its instruction unchanged. -/
 theorem guardedDecode_result (i : instruction)
-    (s : SequentialState RegisterType trivialChoiceSource) (enabled : Bool)
+    (s : Mach) (enabled : Bool)
     (h : currentlyEnabled extension.Ext_Zicfilp s = .ok enabled s) :
     guardedDecode i s = .ok i s := by
   simp only [guardedDecode, Bind.bind, EStateM.bind, h]

@@ -125,6 +125,7 @@ meta partial def unVal? (e : LeanExpr) : Option LeanExpr :=
     else none
   else none
 where
+  /-- Embed a value as an expression, unfolding literals. -/
   ofV (α v : LeanExpr) : LeanExpr :=
     let e := mkApp2 (.const ``Exp.ofVal []) α v
     (unVal? e).getD e
@@ -273,8 +274,8 @@ elab "rel_apply " colGt lem:term : tactic => relApplyCore `rel_apply [.l, .r] le
 
 /-! ## Pure steps (`refines_pure_l/_r`) -/
 
-/-- The reduct of a boolean negation of an opaque bool, kept folded as `decide ¬b = true` (which
-`pl_step_simp` shows as `!b`) rather than `pureStepResult`'s reduced `Decidable.rec` term. -/
+/-- The reduct of a boolean negation of an opaque bool, kept folded as `decide ¬b = true` (shown
+as `!b` by `pl_step_simp`). -/
 meta def foldSymbolicNot {α : Q(Type)} (instMS : Q(MeasurableSpace $α))
     (instPL : Q(@LawfulProbLangℝ $α $instMS)) (e₁ e₂ : Q(Exp $α)) :
     MetaM Q(Exp $α) := do
@@ -360,13 +361,12 @@ meta def asVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := d
   match e0 with
   | ~q(ofVal $v) => return some v
   | ~q(Val.fst $v) => return some v
-  | _ => exprAsVal? e
+  | _ => exprAsVal? (α := α) e
 
 /-- Both programs of the goal as values. -/
 meta def bothVals? (tac : Name) (g : RelGoal) : MetaM (Q(Val $(g.α)) × Q(Val $(g.α))) := do
-  have α : Q(Type) := g.α
-  let some v₁ ← asVal? (α := α) g.e | throwError "{tac}: {← ppExpr g.e} is not a value"
-  let some v₂ ← asVal? (α := α) g.t | throwError "{tac}: {← ppExpr g.t} is not a value"
+  let some v₁ ← asVal? g.e | throwError "{tac}: {← ppExpr g.e} is not a value"
+  let some v₂ ← asVal? g.t | throwError "{tac}: {← ppExpr g.t} is not a value"
   return (v₁, v₂)
 
 /-- `rel_values_core` reduces `REL v << v' @ E : A` to `|={⊤}=> A v v'` (at `E = ⊤`) or to

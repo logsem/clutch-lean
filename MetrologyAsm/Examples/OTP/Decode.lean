@@ -44,7 +44,7 @@ theorem otp_layout :
       otpImage.importSlots) = (0, 80, 80, 88, [("randombytes", 80)]) := by
   rfl
 
-/-- The installed OTP image includes eighty text bytes and one doubleword import slot. -/
+/-- The OTP image is 88 bytes long. -/
 @[simp] theorem otpImage_length : otpImage.bytes.length = 88 := rfl
 
 /-- The compiler and import trampoline contain eighty executable bytes. -/
@@ -57,8 +57,8 @@ theorem otp_layout :
 theorem otp_decoder_correct (entry : BitVec 32 × instruction) (h : entry ∈ otpCases) :
     ext_decode entry.1 = guardedDecode entry.2 := by
   simp only [otpCases, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
-    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl | rfl | rfl | rfl | rfl | rfl
   all_goals
     unfold ext_decode encdec_backwards guardedDecode
     apply congrArg (Bind.bind (currentlyEnabled extension.Ext_Zicfilp))

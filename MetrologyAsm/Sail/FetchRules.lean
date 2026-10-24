@@ -10,9 +10,31 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions
 open Sail
 
+/-- A four-byte aligned address has its two low bits clear. -/
+theorem aligned4_access {a : BitVec 64} (halign : a.toNat % 4 = 0) :
+    BitVec.access a 0 = 0#1 ∧ BitVec.access a 1 = 0#1 := by
+  have hlow : a.extractLsb' 0 2 = 0#2 := by
+    apply _root_.BitVec.eq_of_toNat_eq
+    simpa [_root_.BitVec.extractLsb'_toNat] using halign
+  have hzero : a.getLsbD 0 = false := by
+    have hb := congrArg (fun v : BitVec 2 => v.getLsbD 0) hlow
+    simpa using hb
+  have hone : a.getLsbD 1 = false := by
+    have hb := congrArg (fun v : BitVec 2 => v.getLsbD 1) hlow
+    simpa using hb
+  change _root_.BitVec.ofBool (a.getLsbD 0) = 0#1 ∧ _root_.BitVec.ofBool (a.getLsbD 1) = 0#1
+  simp [-_root_.BitVec.getLsbD_eq_getElem, hzero, hone]
+
+variable {s : Mach} (h : UserConfig s)
+
+include h
+
+section Fetch
+
+variable (pc : BitVec 64) (word : BitVec 32)
+
 /-- A successful physical instruction read lifts through bare translation and fetch checks. -/
-theorem fetch_bytes32_of_mem_read {s : Mach} (h : UserConfig s)
-    (pc : BitVec 64) (word : BitVec 32)
+theorem fetch_bytes32_of_mem_read
     (hmem : mem_read (.InstructionFetch ()) .PBMT_PMA (.Physaddr pc) 4 false false false s =
       .ok (.Ok word) s) :
     runSail (fetch_bytes pc pc 4) s = some (.FetchBytes_Success word, s) := by
@@ -24,8 +46,7 @@ theorem fetch_bytes32_of_mem_read {s : Mach} (h : UserConfig s)
     ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
 
 /-- Four-byte aligned ordinary instructions follow the generated single-word fetch path. -/
-theorem fetch32_of_fetch_bytes {s : Mach} (h : UserConfig s)
-    (pc : BitVec 64) (word : BitVec 32)
+theorem fetch32_of_fetch_bytes
     (hpc : s.regs.get? Register.PC = some pc)
     (halign0 : BitVec.access pc 0 = 0#1) (halign1 : BitVec.access pc 1 = 0#1)
     (halign : is_aligned_vaddr (.Virtaddr pc) 4 = true)
@@ -42,24 +63,9 @@ theorem fetch32_of_fetch_bytes {s : Mach} (h : UserConfig s)
     pure, EStateM.pure, ExceptT.run, ExceptT.mk, ExceptT.bind, ExceptT.bindCont,
     ExceptT.lift, ExceptT.pure, MonadLift.monadLift, monadLift, liftM, Functor.map]
 
-/-- A four-byte aligned address has its two low bits clear. -/
-theorem aligned4_access {a : BitVec 64} (halign : a.toNat % 4 = 0) :
-    BitVec.access a 0 = 0#1 ∧ BitVec.access a 1 = 0#1 := by
-  have hlow : a.extractLsb' 0 2 = 0#2 := by
-    apply _root_.BitVec.eq_of_toNat_eq
-    simpa [_root_.BitVec.extractLsb'_toNat] using halign
-  have hzero : a.getLsbD 0 = false := by
-    have hb := congrArg (fun v : BitVec 2 => v.getLsbD 0) hlow
-    simpa using hb
-  have hone : a.getLsbD 1 = false := by
-    have hb := congrArg (fun v : BitVec 2 => v.getLsbD 1) hlow
-    simpa using hb
-  change _root_.BitVec.ofBool (a.getLsbD 0) = 0#1 ∧ _root_.BitVec.ofBool (a.getLsbD 1) = 0#1
-  simp [-_root_.BitVec.getLsbD_eq_getElem, hzero, hone]
-
 /-- PMA and PMP success suffice to fetch an allocated aligned ordinary user instruction. -/
-theorem fetch32_of_guards {s : Mach} (h : UserConfig s)
-    (pc : BitVec 64) (word : BitVec 32) (info : Phys_Mem_Access_Info)
+theorem fetch32_of_guards
+    (info : Phys_Mem_Access_Info)
     (hpc : s.regs.get? Register.PC = some pc)
     (hram : InUserRam pc 4) (halign : pc.toNat % 4 = 0)
     (hbase : isRVC (Sail.BitVec.extractLsb word 15 0) = false)
@@ -77,19 +83,20 @@ theorem fetch32_of_guards {s : Mach} (h : UserConfig s)
     (fetch_bytes32_of_mem_read h pc word hread)
 
 /-- An allocated aligned ordinary instruction is fetched under the actual user profile. -/
-theorem UserConfig.fetch32 {s : Mach} (h : UserConfig s)
-    (pc : BitVec 64) (word : BitVec 32)
+theorem UserConfig.fetch32
     (hpc : s.regs.get? Register.PC = some pc)
     (hram : InUserRam pc 4) (halign : pc.toNat % 4 = 0)
     (hbase : isRVC (Sail.BitVec.extractLsb word 15 0) = false)
     (hword : Word32At s pc word) :
-    runSail (fetch ()) s = some (.F_Base word, s) := by
-  exact fetch32_of_guards h pc word _ hpc hram halign hbase
+    runSail (fetch ()) s = some (.F_Base word, s) :=
+  fetch32_of_guards h pc word _ hpc hram halign hbase
     (h.check_pma_fetch hram (is_aligned_vaddr_of_mod_eq_zero halign))
     (h.pmp_fetch hram (by decide)) hword
 
-/-- A checked decoder equation returns its instruction under the user-mode profile. -/
-theorem decode_of_guarded {s : Mach} (h : UserConfig s) (word : BitVec 32) (i : instruction)
+end Fetch
+
+/-- A guarded decoder equation decodes in any configured user state. -/
+theorem decode_of_guarded (word : BitVec 32) (i : instruction)
     (hdecode : ext_decode word = guardedDecode i) :
     runSail (ext_decode word) s = some (i, s) := by
   rw [hdecode, runSail_eq_some_iff]

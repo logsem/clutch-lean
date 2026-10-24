@@ -6,6 +6,13 @@ import MetrologyAsm.Examples.Callback.Execution
 namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
+open Sail.BitVec (addInt)
+open BitVec
+
+/-- Any image assembled from the callback source is the callback image. -/
+theorem eq_importToyImage_of_assemble {image : Image} (hi : assemble importToyAsm = .ok image) :
+    image = importToyImage :=
+  Except.ok.inj (hi.symm.trans assemble_importToyImage)
 
 /-- Every byte offset in the installed callback image has its nonwrapping natural address. -/
 theorem importPC_toNat {base : BitVec 64} (hram : InUserRam base 48)
@@ -15,8 +22,8 @@ theorem importPC_toNat {base : BitVec 64} (hram : InUserRam base 48)
   have hs : base.toNat + offset < 2 ^ 64 := by
     obtain ⟨_, hb⟩ := hram
     omega
-  simp only [importPC, Sail.BitVec.addInt, BitVec.ofInt_natCast, BitVec.toNat_add,
-    BitVec.toNat_ofNat]
+  simp only [importPC, addInt, ofInt_natCast, toNat_add,
+    toNat_ofNat]
   rw [Nat.mod_eq_of_lt ho, Nat.mod_eq_of_lt hs]
 
 /-- Each complete instruction within the installed image is mapped into user RAM. -/
@@ -35,36 +42,29 @@ theorem importPC_aligned {base : BitVec 64} (hram : InUserRam base 48)
 /-- A zero image displacement leaves the image base unchanged. -/
 @[simp]
 theorem importPC_zero (base : BitVec 64) : importPC base 0 = base := by
-  simp [importPC, Sail.BitVec.addInt]
+  simp [importPC, addInt]
 
 /-- Every callback instruction is indexed by one of the first ten word offsets. -/
 theorem mem_importToyPCs_iff (base p : BitVec 64) :
-    p ∈ importToyPCs base ↔ ∃ i : Nat, i < 10 ∧ p = importPC base (4 * (i : Int)) := by
+    p ∈ importToyPCs base ↔ ∃ i : Nat, i < 10 ∧ p = importPC base ((4 * i : Nat) : Int) := by
   constructor
   · intro hp
     simp only [importToyPCs, List.mem_cons, List.not_mem_nil, or_false] at hp
     rcases hp with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-    · exact ⟨0, by decide, (importPC_zero _).symm⟩
-    · exact ⟨1, by decide, rfl⟩
-    · exact ⟨2, by decide, rfl⟩
-    · exact ⟨3, by decide, rfl⟩
-    · exact ⟨4, by decide, rfl⟩
-    · exact ⟨5, by decide, rfl⟩
-    · exact ⟨6, by decide, rfl⟩
-    · exact ⟨7, by decide, rfl⟩
-    · exact ⟨8, by decide, rfl⟩
-    · exact ⟨9, by decide, rfl⟩
+    exacts [⟨0, by decide, by simp⟩, ⟨1, by decide, rfl⟩, ⟨2, by decide, rfl⟩,
+      ⟨3, by decide, rfl⟩, ⟨4, by decide, rfl⟩, ⟨5, by decide, rfl⟩, ⟨6, by decide, rfl⟩,
+      ⟨7, by decide, rfl⟩, ⟨8, by decide, rfl⟩, ⟨9, by decide, rfl⟩]
   · rintro ⟨i, hi, rfl⟩
     have hc : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨
         i = 7 ∨ i = 8 ∨ i = 9 := by omega
     rcases hc with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-      simp [importToyPCs, importPC, Sail.BitVec.addInt]
+      simp [importToyPCs, importPC, addInt]
 
-/-- The complete callback image contains forty executable bytes and one eight-byte import slot. -/
+/-- The callback image is forty-eight bytes long. -/
 @[simp]
 theorem importToyImage_length : importToyImage.bytes.length = 48 := by rfl
 
-/-- The callback fragment and its trampoline contain ten uncompressed instructions. -/
+/-- The callback text is forty bytes long. -/
 @[simp]
 theorem importToyImage_textLen : importToyImage.textLen = 40 := by rfl
 
@@ -81,20 +81,16 @@ theorem codeRange_importToy (ι : Placement) (p : BitVec 64) :
     codeRange ι importToyCode p ↔ inSpan ι.codeBase.toNat 40 p.toNat := by
   constructor
   · rintro ⟨image, hi, hp⟩
-    have heq : image = importToyImage := Except.ok.inj (hi.symm.trans assemble_importToyImage)
-    simpa [heq] using hp
-  · intro hp
-    exact ⟨importToyImage, assemble_importToyImage, hp⟩
+    simpa [eq_importToyImage_of_assemble hi] using hp
+  · exact fun hp => ⟨importToyImage, assemble_importToyImage, hp⟩
 
 /-- The full callback image includes the read-only address slot. -/
 theorem imageByte_importToy (ι : Placement) (p : Nat) :
     imageByte ι importToyCode p ↔ inSpan ι.codeBase.toNat 48 p := by
   constructor
   · rintro ⟨image, hi, hp⟩
-    have heq : image = importToyImage := Except.ok.inj (hi.symm.trans assemble_importToyImage)
-    simpa [heq] using hp
-  · intro hp
-    exact ⟨importToyImage, assemble_importToyImage, hp⟩
+    simpa [eq_importToyImage_of_assemble hi] using hp
+  · exact fun hp => ⟨importToyImage, assemble_importToyImage, hp⟩
 
 /-- Every executable callback byte belongs to the complete assembled image. -/
 theorem imageByte_of_codeRange_importToy (ι : Placement) (p : BitVec 64)
@@ -104,69 +100,78 @@ theorem imageByte_of_codeRange_importToy (ι : Placement) (p : BitVec 64)
   simp only [inSpan] at hp ⊢
   omega
 
-/-- The entry image maps the complete callback code and relocation slot into user RAM. -/
-theorem codeImage_importToy_ram (ι : Placement) (s : Mach)
-    (h : codeImage ι importToyCode [] s) : InUserRam ι.codeBase 48 := by
-  obtain ⟨image, hi, hram, _⟩ := h
-  have heq : image = importToyImage := Except.ok.inj (hi.symm.trans assemble_importToyImage)
-  simpa [heq] using hram
+section
 
-/-- The entry image has the ABI's eight-byte code-base alignment. -/
-theorem codeImage_importToy_aligned (ι : Placement) (s : Mach)
-    (h : codeImage ι importToyCode [] s) : ι.codeBase.toNat % 8 = 0 := by
-  obtain ⟨image, hi, hram, halign, _⟩ := h
-  exact halign
+variable (sp : BitVec 64) (hb : 16 ≤ sp.toNat)
 
-/-- The installed callback source fixes its entry PC at the open image base. -/
-theorem codeImage_importToy_pc (ι : Placement) (s : Mach)
-    (h : codeImage ι importToyCode [] s) : pc s = some ι.codeBase := by
-  obtain ⟨image, hi, hram, halign, hentry, hpc, _⟩ := h
-  have heq : image = importToyImage := Except.ok.inj (hi.symm.trans assemble_importToyImage)
-  subst image
-  simpa only [importToyImage_entry, Nat.add_zero, BitVec.ofNat_toNat, BitVec.setWidth_eq] using hpc
+include hb
 
 /-- Subtracting the scratch-save displacement does not wrap an ABI stack pointer. -/
-theorem importSavedAddress_toNat (sp : BitVec 64) (hb : 16 ≤ sp.toNat) :
+theorem importSavedAddress_toNat :
     (importSavedAddress sp).toNat = sp.toNat - 8 := by
   have hsub : importSavedAddress sp = sp - 8#64 := by
-    unfold importSavedAddress Sail.BitVec.addInt
-    rw [BitVec.ofInt_neg, BitVec.sub_eq_add_neg]
+    unfold importSavedAddress addInt
+    rw [ofInt_neg, sub_eq_add_neg]
     rfl
   have hle : 8#64 ≤ sp := by
-    rw [BitVec.le_def]
+    rw [le_def]
     change 8 ≤ sp.toNat
     omega
-  rw [hsub, BitVec.toNat_sub_of_le hle]
+  rw [hsub, toNat_sub_of_le hle]
   rfl
 
 /-- The eight-byte save is mapped whenever the original sixteen-byte scratch frame is mapped. -/
-theorem importSavedAddress_inUserRam (sp : BitVec 64) (hb : 16 ≤ sp.toNat)
+theorem importSavedAddress_inUserRam
     (hram : InUserRam (BitVec.ofNat 64 (sp.toNat - 16)) 16) :
     InUserRam (importSavedAddress sp) 8 := by
   have hsmall : sp.toNat - 16 < 2 ^ 64 := by have := sp.isLt; omega
   have hstart : (BitVec.ofNat 64 (sp.toNat - 16)).toNat = sp.toNat - 16 := by
-    simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsmall]
+    simp only [toNat_ofNat, Nat.mod_eq_of_lt hsmall]
   rw [InUserRam, hstart] at hram
   rw [InUserRam, importSavedAddress_toNat sp hb]
   constructor <;> omega
 
 /-- A sixteen-byte aligned ABI stack pointer gives an eight-byte aligned save slot. -/
-theorem importSavedAddress_aligned (sp : BitVec 64) (hb : 16 ≤ sp.toNat)
+theorem importSavedAddress_aligned
     (ha : sp.toNat % 16 = 0) : (importSavedAddress sp).toNat % 8 = 0 := by
   rw [importSavedAddress_toNat sp hb]
   omega
 
 /-- Every saved-ra byte is inside the scratch interval owned by the original invocation. -/
-theorem importSavedAddress_inStack (sp : BitVec 64) (hb : 16 ≤ sp.toNat) (a : Nat)
+theorem importSavedAddress_inStack (a : Nat)
     (ha : inSpan (importSavedAddress sp).toNat 8 a) : stackByte importToyCode sp a := by
   rw [importSavedAddress_toNat sp hb] at ha
   change sp.toNat - 16 ≤ a ∧ a < sp.toNat - 16 + 16
   obtain ⟨hl, hh⟩ := ha
   constructor <;> omega
 
+end
+
+section
+
+variable (ι : Placement) (s : Mach)
+
+/-- The entry image maps the complete callback code and relocation slot into user RAM. -/
+theorem codeImage_importToy_ram (h : codeImage ι importToyCode [] s) :
+    InUserRam ι.codeBase 48 := by
+  obtain ⟨image, hi, hram, _⟩ := h
+  simpa [eq_importToyImage_of_assemble hi] using hram
+
+/-- The entry image has the ABI's eight-byte code-base alignment. -/
+theorem codeImage_importToy_aligned (h : codeImage ι importToyCode [] s) :
+    ι.codeBase.toNat % 8 = 0 := by
+  obtain ⟨_, _, _, halign, _⟩ := h
+  exact halign
+
+/-- The installed callback source fixes its entry PC at the open image base. -/
+theorem codeImage_importToy_pc (h : codeImage ι importToyCode [] s) : pc s = some ι.codeBase := by
+  obtain ⟨image, hi, _, _, _, hpc, _⟩ := h
+  obtain rfl := eq_importToyImage_of_assemble hi
+  simpa only [importToyImage_entry, Nat.add_zero, ofNat_toNat, setWidth_eq] using hpc
+
 /-- Every actual compatible callback entry supplies the layout required by all ten Sail steps. -/
-theorem ImportToyPlacement.of_RVCompat (ι : Placement) (s : Mach)
-    (heap : LocHeap BoundaryValue) (h : RVCompat ι importToyCode [] heap s) :
+theorem ImportToyPlacement.of_RVCompat (heap : LocHeap BoundaryValue)
+    (h : RVCompat ι importToyCode [] heap s) :
     ∃ sp, s.regs.get? Register.x2 = some sp ∧
       ImportToyPlacement ι.codeBase sp ι.retAddr (ι.importAddr "cb") := by
   obtain ⟨_, _, _, hcode, himports, hreturn, hstack, _⟩ := h
@@ -184,22 +189,18 @@ theorem ImportToyPlacement.of_RVCompat (ι : Placement) (s : Mach)
   change (importSavedAddress sp).toNat + 8 ≤ ι.codeBase.toNat ∨
     ι.codeBase.toNat + 48 ≤ (importSavedAddress sp).toNat at hdisjoint
   have hcallback : (ι.importAddr "cb").toNat % 4 = 0 := by
-    exact (himports.1 "cb" ⟨[], .int 64⟩ (by simp [importToyCode])).2.2
+    exact (himports.1 "cb" _ importToyCode_mem_imports).2.2
   have hslotNat : (importPC ι.codeBase 40).toNat = ι.codeBase.toNat + 40 :=
-    importPC_toNat hram (offset := 40) (by decide)
+    importPC_toNat hram (by decide)
   refine ⟨sp, hsp, ?_⟩
   refine ⟨?_, ?_, importSavedAddress_inUserRam sp hspBound hstackRam,
     importSavedAddress_aligned sp hspBound hspAlign, ?_, ?_, hcallback,
     hreturn.2.1, ?_, ?_⟩
   · intro p hp
     obtain ⟨i, hi, rfl⟩ := (mem_importToyPCs_iff ι.codeBase p).mp hp
-    have hcast : 4 * (i : Int) = ((4 * i : Nat) : Int) := by omega
-    rw [hcast]
     exact importPC_inUserRam hram (by omega)
   · intro p hp
     obtain ⟨i, hi, rfl⟩ := (mem_importToyPCs_iff ι.codeBase p).mp hp
-    have hcast : 4 * (i : Int) = ((4 * i : Nat) : Int) := by omega
-    rw [hcast]
     exact importPC_aligned hram halign4 (by omega) (by omega)
   · rw [InUserRam, hslotNat]
     obtain ⟨hl, hh⟩ := hram
@@ -208,10 +209,11 @@ theorem ImportToyPlacement.of_RVCompat (ι : Placement) (s : Mach)
     omega
   · intro p hp
     obtain ⟨i, hi, rfl⟩ := (mem_importToyPCs_iff ι.codeBase p).mp hp
-    have hcast : 4 * (i : Int) = ((4 * i : Nat) : Int) := by omega
-    rw [hcast, importPC_toNat hram (offset := 4 * i) (by omega)]
+    rw [importPC_toNat hram (by omega)]
     rcases hdisjoint with hdisjoint | hdisjoint <;> omega
   · rw [hslotNat]
     rcases hdisjoint with hdisjoint | hdisjoint <;> omega
+
+end
 
 end MetrologyAsm

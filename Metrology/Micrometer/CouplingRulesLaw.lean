@@ -14,7 +14,8 @@ Couple `rand N ~ K[rand N]` by any `HeadShift`, `SideFree` law, with DP choice a
 -- these rules use the @[discrete] lifting lemmas without being discrete themselves
 set_option linter.discrete false
 
-open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
+open Iris hiding wp_bind
+open Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
 
 namespace ProbLang
@@ -64,20 +65,12 @@ theorem Cfg.exists_of_drawCost_lt_top [Preorder B] [OrderTop B] {σ σ' : State 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
 local bi IProp GF
 
-section Law
-
-variable [AddCommMonoid B] [PartialOrder B]
-    [CanonicallyOrderedAdd B]
-  [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
-  [BudgetCreditGS B GF]
-
-section Wp
-
-variable [MicrometerGS rT hlc GF]
-
 /-- Couple `rand N ~ K[rand N]` by a step of `law`, spending `↯b c` on its head and handing the
 leftover `R n m` to the draws `n` and `m` (Rocq `wp_couple_spend`). -/
-theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree] (N : Int)
+theorem wp_couple_rand_rand_law [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
+    [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
+    [BudgetCreditGS B GF] [MicrometerGS rT hlc GF] (law : L.BindLaw) [law.HeadShift]
+    [law.SideFree] (N : Int)
     (HN : 0 < N) (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c) (K : Ectx rT)
     (hhead : ∀ σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
@@ -128,12 +121,12 @@ theorem wp_couple_rand_rand_law (law : L.BindLaw) [law.HeadShift] [law.SideFree]
   iapply wp_value_of_toVal rfl
   iapply Hcnt $$ %n %m %(lt_of_le_of_lt le_self_add hR) Hfrag Hj'
 
-end Wp
-
 /-- Couple `rand N ~ rand N` by a step of `law`, spending `↯b c` on its head and handing the
 leftover `R r r'` to the draws (relational `wp_couple_rand_rand_law`). -/
-theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.IsSupportLocal]
-    [L.HasBind] (law : L.BindLaw) [law.HeadShift] [law.SideFree] {E : CoPset} {K K' : Ectx rT}
+theorem refines_couple_rands_law [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
+    [OrderTop B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing] {hlc : HasLC}
+    [BudgetCreditGS B GF] [MicrometerRGS rT hlc GF] (law : L.BindLaw) [law.HeadShift]
+    [law.SideFree] {E : CoPset} {K K' : Ectx rT}
     {A : lrel rT GF} (N : Int) (HN : 0 < N) (R : Int → Int → B) (c : B) (hc : IsAddLeftRegular c)
     (hhead : ∀ (K : Ectx rT) σ σ', law.head ((unifInt N HN).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt N HN).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
@@ -144,7 +137,7 @@ theorem refines_couple_rands_law [MicrometerRGS rT hlc GF] [L.IsReflexive] [L.Is
   unfold refines
   iintro ⟨Hc, Hcnt⟩ %K2 %b Hj Hna Herr Hpos
   isimp only [fill_comp K2 K'] at Hj
-  iapply MicrometerWpGS.wp_bind
+  iapply wp_bind
   iapply wp_couple_rand_rand_law law N HN R c hc (K2.comp K') (hhead _) ⊤ _
   iframe Hj Hc
   iintro %r %r' %hR Hr HKres
@@ -158,28 +151,28 @@ macro "rel_couple_UU_law " law:term:max ppSpace R:term:max ppSpace c:term:max pp
     hc:term:max ppSpace hhead:term:max : tactic =>
   `(tactic| rel_apply (refines_couple_rands_law $law _ _ $R $c $hc $hhead))
 
-end Law
-
 /-! ## The DP choice rule
 
 Two DP couplings of the draws, one keeping a set `P` of left draws inside `T` and one keeping its
-complement outside `T`, pay `max (ε₁ + ε₂) (ε₁' + ε₂')` once and leave `ε₂` or `ε₂'` to the
-continuation, by which side of `P` the draw fell (Rocq `GBL_DP_choice`). -/
+complement outside `T`, pay `(max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂)` once and leave
+`(ε₂, δ₂)` or `(ε₂', δ₂)` to the continuation, by which side of `P` the draw fell
+(Rocq `GBL_DP_choice`). -/
 
-section Choice
-
-variable {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
-  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
-
+open Classical in
 /-- The continuation budget of a choice draw: `(ε₂, δ₂)` on `P`, `(ε₂', δ₂)` off it. -/
-noncomputable def choiceBudget (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞) (r : Int) : ℝ≥0∞ × ℝ≥0∞ := by
-  classical exact if r ∈ P then (ε₂, δ₂) else (ε₂', δ₂)
+noncomputable def choiceBudget (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞) (r : Int) : ℝ≥0∞ × ℝ≥0∞ :=
+  if r ∈ P then (ε₂, δ₂) else (ε₂', δ₂)
 
 open Classical in
 /-- The leftover of the choice draws: the choice budget on either coupling, `⊤` elsewhere. -/
 noncomputable def choiceCost (S₁ S₂ : Int → Int → Prop) (P : Set Int) (ε₂ ε₂' δ₂ : ℝ≥0∞)
     (n m : Int) : ℝ≥0∞ × ℝ≥0∞ :=
   if S₁ n m ∨ S₂ n m then choiceBudget P ε₂ ε₂' δ₂ n else (⊤ : ℝ≥0∞ × ℝ≥0∞)
+
+section Choice
+
+variable {ε₁ δ₁ ε₁' δ₁' ε₂ ε₂' δ₂ : ℝ≥0∞} {S₁ S₂ : Int → Int → Prop} {P T : Set Int}
+  [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 
 /-- A finite `choiceCost` forces `S₁ ∨ S₂` and equals the choice budget. -/
 theorem choiceCost_of_lt_top {n m : Int}
@@ -254,10 +247,10 @@ theorem wp_couple_rand_rand_dpChoice {hlc : HasLC} [MicrometerGS rT hlc GF]
   rw [hcost]
   iapply Hcnt $$ %n %m %hS
 
-/-- Couple `rand N ~ rand N` by the DP choice rule, spending the choice budget and handing
-`choiceBudget P ε₂ ε₂' δ₂ r` to the continuation at the left draw `r`. -/
-theorem refines_couple_rands_dpChoice [MicrometerRGS rT .hasNoLC GF] {E : CoPset} {K K' : Ectx rT}
-    {A : lrel rT GF} (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
+/-- Couple `rand N ~ rand N` by the DP choice rule (relational `wp_couple_rand_rand_dpChoice`). -/
+theorem refines_couple_rands_dpChoice {hlc : HasLC} [MicrometerRGS rT hlc GF] {E : CoPset}
+    {K K' : Ectx rT} {A : lrel rT GF}
+    (h₁ : (codensity dp).Rel (ε₁, δ₁) S₁ (unifInt N HN) (unifInt N HN))
     (h₂ : (codensity dp).Rel (ε₁', δ₁') S₂ (unifInt N HN) (unifInt N HN))
     (hPT₁ : ∀ r r', r ∈ P → S₁ r r' → r' ∈ T) (hPT₂ : ∀ r r', r ∉ P → S₂ r r' → r' ∉ T)
     (hc : IsAddLeftRegular ((max (ε₁ + ε₂) (ε₁' + ε₂'), δ₁ + δ₁' + δ₂) : ℝ≥0∞ × ℝ≥0∞)) : iprop%

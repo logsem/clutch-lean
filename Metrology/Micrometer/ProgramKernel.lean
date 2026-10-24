@@ -9,7 +9,7 @@ import Metrology.Iris.LocalBI
 
 open Std Iris Iris.BI Iris.ProofMode OFE ProbLang GradedLifting
 open MeasureTheory (Measure)
-open MeasureTheory.Measure ErasableExpr BindLaw
+open MeasureTheory.Measure ErasableExpr BindLaw Set
 
 namespace ProbLang.MicrometerWpGS
 
@@ -23,7 +23,7 @@ local bi IProp GF
 erasable spec execution by a bind law. -/
 abbrev progCouplFor (step : Cfg rT → Measure (Cfg rT)) (L : GradedLifting B)
     (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
-    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
+    (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) := iprop%
   (∃ (law : L.BindLaw) (n : Nat) (μ₁' : Measure (State rT)) (μ₀ ν₀ : Measure (Cfg rT))
       (f f' : Cfg rT → Cfg rT) (R : Cfg rT → Cfg rT → B),
       ⌜step ⟨e₁, σ₁⟩ ≠ 0⌝ ∗
@@ -134,19 +134,19 @@ theorem progCouplFor_strong_mono {S : Set (Cfg rT)} (hSmeas : MeasurableSet S)
   obtain ⟨hf', hspec⟩ := Hf'
   have hA : MeasurableSet (f ⁻¹' S) := hf hSmeas
   have hμ : μ₀ (f ⁻¹' S)ᶜ = 0 := by
-    rw [← Set.preimage_compl, ← map_apply hf hSmeas.compl, ← hprog]
+    rw [← preimage_compl, ← map_apply hf hSmeas.compl, ← hprog]
     exact hSconc
   iapply progCouplFor_intro_map law Hred hf hprog hf' hspec (law.head_supp hA hμ Hhead) Hside.supp
     Heras
   iintro %ρ %ρ' %hR
   by_cases hmem : ρ ∈ f ⁻¹' S
-  · simp only [Set.piecewise_eq_of_mem _ _ _ hmem] at hR ⊢
+  · simp only [piecewise_eq_of_mem _ _ _ hmem] at hR ⊢
     imod HCont $$ %ρ %ρ' %hR with HZ₁
     imodintro
     iapply Hm
     have hmem' : (⟨(f ρ).expr, (f ρ).state⟩ : Cfg rT) ∈ S := hmem
     iframe %hmem' HZ₁
-  · simp [Set.piecewise_eq_of_notMem _ _ _ hmem] at hR
+  · simp [piecewise_eq_of_notMem _ _ _ hmem] at hR
 
 /-- A context-compatible kernel transports program couplings through evaluation contexts. -/
 theorem progCouplFor_ctx_bind

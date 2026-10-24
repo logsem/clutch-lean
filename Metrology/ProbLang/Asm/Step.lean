@@ -26,8 +26,7 @@ theorem argumentTuple_isValue (args : List BoundaryValue) :
 theorem asm_decomp (code : Code) (args : List BoundaryValue) :
     (Exp.asm (.lit (.code code)) (argumentTuple (rT := rT) args)).decomp =
       ([], .asm (.lit (.code code)) (argumentTuple args)) := by
-  obtain ⟨v, hv⟩ := Exp.toVal?_eq_some_of_isValue (e := argumentTuple (rT := rT) args)
-    (argumentTuple_isValue args)
+  obtain ⟨v, hv⟩ := Exp.toVal?_eq_some_of_isValue (argumentTuple_isValue (rT := rT) args)
   have hd : (Exp.asm (.lit (.code code)) (argumentTuple (rT := rT) args)).decompItem = none := by
     simp only [Exp.decompItem, hv]
     rfl

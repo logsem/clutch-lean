@@ -7,7 +7,7 @@ import MetrologyAsm.ABI.Lemmas
 
 namespace MetrologyAsm
 
-open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
+open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions List
 
 /-- The import prefix preserves the complete configuration frame. -/
 theorem importCallState_configurationFrame (s : Mach) (base sp ra callback : BitVec 64) :
@@ -16,7 +16,7 @@ theorem importCallState_configurationFrame (s : Mach) (base sp ra callback : Bit
   refine ⟨?_, h1, h2, h3, h4⟩
   intro r hscratch hcallee hbookkeeping
   apply importCallState_reg_other
-  simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hbookkeeping ⊢
+  simp only [mem_cons, not_mem_nil, or_false, not_or] at hbookkeeping ⊢
   refine ⟨hbookkeeping.1, hbookkeeping.2.1, hbookkeeping.2.2, ?_, ?_, ?_⟩
   · exact fun heq => hscratch (heq ▸ by decide +kernel)
   · exact fun heq => hcallee (heq ▸ by decide +kernel)
@@ -29,7 +29,7 @@ theorem importReturnState_configurationFrame (s : Mach) (base sp ra : BitVec 64)
   refine ⟨?_, h1, h2, h3, h4⟩
   intro r hscratch hcallee hbookkeeping
   apply importReturnState_reg_other
-  simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hbookkeeping ⊢
+  simp only [mem_cons, not_mem_nil, or_false, not_or] at hbookkeeping ⊢
   refine ⟨hbookkeeping.1, hbookkeeping.2.1, hbookkeeping.2.2, ?_, ?_⟩
   · exact fun heq => hscratch (heq ▸ by decide +kernel)
   · exact fun heq => hcallee (heq ▸ by decide +kernel)
@@ -61,9 +61,9 @@ theorem importReturnState_originalCallee (origin current : Mach)
       (by decide +kernel : ∀ r ∈ calleeSaved,
         r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x28]) r hr
     have hreturn : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2] := by
-      simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
+      simp_all only [mem_cons, not_mem_nil, or_false, not_or, not_false_eq_true]
     have hcall : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x28] := by
-      simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
+      simp_all only [mem_cons, not_mem_nil, or_false, not_or, not_false_eq_true]
     exact (importReturnState_reg_other current base sp ra r hreturn).trans
       ((hresume r hr).trans (importCallState_reg_other origin base sp ra callback r hcall))
 

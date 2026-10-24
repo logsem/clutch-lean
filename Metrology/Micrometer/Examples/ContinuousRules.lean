@@ -21,15 +21,34 @@ open LawfulProbLangℝ
 open Set (Icc inter_subset_left)
 open Exp (lit_isClosedEmpty)
 
-section Generic
+variable {GF : BundledGFunctors}
+local bi IProp GF
+
+/-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
+program's. -/
+theorem wp_urand_floor_real [MicrometerGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF] (N : Int)
+    (hN : 0 < N) :
+    ⤇ pl(rand(#N, #())) ⊢
+      wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
+        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
+  iintro Hj
+  iapply wp_couple_urand_rand (K := []) N hN _ (measurePreserving_floor_mul N hN)
+  simp only [Ectx.fill_nil]
+  iframe Hj
+  iintro %x %hx Hj'
+  iexists x
+  iframe Hj'
+  ipureintro
+  exact ⟨rfl, hx⟩
 
 open MeasureTheory
+
+section Generic
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing]
-  {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+  [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
 
 /-! ## `urand ~ urand` -/
 
@@ -137,35 +156,7 @@ end Generic
 
 /-! ## At `ℝ` -/
 
-section Floor
-
-variable {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
-local bi IProp GF
-
-/-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
-program's. -/
-theorem wp_urand_floor_real (N : Int) (hN : 0 < N) :
-    ⤇ pl(rand(#N, #())) ⊢
-      wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
-        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
-  iintro Hj
-  iapply wp_couple_urand_rand (K := []) N hN _ (measurePreserving_floor_mul N hN)
-  simp only [Ectx.fill_nil]
-  iframe Hj
-  iintro %x %hx Hj'
-  iexists x
-  iframe Hj'
-  ipureintro
-  exact ⟨rfl, hx⟩
-
-end Floor
-
 section Real
-
-open MeasureTheory
-
-variable {GF : BundledGFunctors}
-local bi IProp GF
 
 private theorem lrel_true_lit [MicrometerRGS ℝ .hasNoLC GF] {l₁ l₂ : BaseLit ℝ} :
     ⊢ |={⊤}=> (lrel_true (rT := ℝ) (GF := GF)).car (l₁ : Val ℝ) l₂ := by

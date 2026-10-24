@@ -403,7 +403,7 @@ theorem wp_pure_step_fupd (Hφ : φ) :
     imodintro
     iapply IH Hrest $$ H
 
-/-- `n` pure steps given by a `PureExec` instance, under `n` laters; the form the tactics use. -/
+/-- `n` pure steps under `n` laters, given by a `PureExec` instance. -/
 theorem wp_pure_step_later (Hφ : φ) : ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
   (step_fupdN_intro subset_refl).trans (wp_pure_step_fupd (E' := E) (e₂ := e₂) Hφ)
 

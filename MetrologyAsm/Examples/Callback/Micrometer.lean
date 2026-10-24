@@ -4,7 +4,7 @@ import Metrology.Iris.LocalBI
 
 /-! # The actual Sail import toy under the shared weakest precondition
 
-The evaluator premises describe the actual `rv` machine's initial call and resumed return. -/
+The evaluator premises describe the `rv` machine's initial call and resumed return. -/
 
 namespace MetrologyAsm
 
@@ -12,7 +12,6 @@ open ProbLang ProbLang.Asm
 open Exp (lcb_imp_lc decomp_unfold isValM_some open' openRec asValM toVal?
   asm_toVal?_eq_none asmResume_toVal?_eq_none lam app asmResume)
 open Ectx (fill fillCfg fillCfg_empty fill_asmResume)
-open Std.ExtTreeMap (ext_getElem?)
 open List (map_nil mapM_nil)
 open Finset (sort_empty)
 open BoundaryValue (ofVal toVal)
@@ -23,7 +22,7 @@ variable {rT : Type}
 
 /-- The ordinary ProbLang callback returns the signed integer seven. -/
 def importToyCallback : Val rT :=
-  let hc : (lam (.lit (.int 7)) : Exp rT).IsLocallyClosed := lcb_imp_lc (by rfl)
+  let hc : (lam (.lit (.int 7))).IsLocallyClosed := lcb_imp_lc (by rfl)
   ⟨.lam (.lit (.int 7)), .lam hc, hc⟩
 
 /-- The explicit environment uses actual Sail and the ordinary integer callback. -/
@@ -42,7 +41,7 @@ abbrev importToyPaused : Exp rT :=
 
 private theorem overwrite_empty {V : Type} (heap fragment : LocHeap V) :
     overwrite ∅ heap fragment = heap := by
-  apply ext_getElem?
+  apply Std.ExtTreeMap.ext_getElem?
   intro l
   simp
 
@@ -96,11 +95,11 @@ theorem importToy_start_action :
     start rv importToyCode [] ∅ = .call "cb" [] ∅ importToyArchive := by
   classical
   have hc : validFragment importToyCode [] ∅ ∧ ∃ sig, ("cb", sig) ∈ importToyCode.sig.imports ∧
-        check sig (boundaryArgs []) (valueHeap (rT := Empty) ∅) = true := by
+        check sig (boundaryArgs []) (valueHeap ∅) = true := by
     exact ⟨importToy_valid_empty, ⟨[], .int 64⟩, by simp [importToyCode], by decide +kernel⟩
   simp only [start, importToy_footprint, restrict_empty_heap]
   have hcheck : (importToyCode.sig.valid &&
-      check importToyCode.sig.toCallSig (boundaryArgs []) (valueHeap (rT := Empty) ∅)) = true :=
+      check importToyCode.sig.toCallSig (boundaryArgs []) (valueHeap ∅)) = true :=
     by decide +kernel
   simp only [hcheck, ite_true, snapshot_empty, heval,
     rootAction, ite_eq_left hc]
@@ -160,7 +159,7 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B
 
 local bi IProp GF
 
-/-- The actual Sail import toy calls ProbLang and resumes under the shared weakest precondition. -/
+/-- The actual Sail import toy, given its evaluator premises, satisfies the shared `wp`. -/
 theorem wp_importToy_of_eval : iprop%
     ▷ ▷ ▷ Φ (.int 7) ⊢ wpFor (primStepWith importToyEnv) L E importToyExpression Φ := by
   iintro HΦ
@@ -170,7 +169,7 @@ theorem wp_importToy_of_eval : iprop%
   iintro !>
   iapply wpFor_pure_step asmResume_toVal?_eq_none (fun σ => importToy_resume_step σ heval hnext)
   iintro !>
-  iapply wpFor_value_of_toVal (v := .int 7) (by rfl)
+  iapply wpFor_value_of_toVal (by rfl)
   iexact HΦ
 
 end MetrologyAsm

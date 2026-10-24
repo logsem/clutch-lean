@@ -2,7 +2,7 @@ import MetrologyAsm.Examples.OTP.EvaluationRules
 import MetrologyAsm.Examples.OTP.Specification
 import MetrologyAsm.Examples.OTP.Witness
 
-/-! # The unconditional unique evaluation of the actual compiled Sail-backed OTP -/
+/-! # The unique evaluation of the actual compiled Sail-backed OTP on in-range inputs -/
 
 namespace MetrologyAsm.OTP
 
