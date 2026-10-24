@@ -6,7 +6,8 @@ import Metrology.Iris.LocalBI
 
 /-! # Relational rules: left state steps and coupled draws
 
-Left steps and coupled draws, with main rule `refines_couple_rands_spend`. -/
+Left heap and tape steps, one-sided draws, and coupled draws, with main rule
+`refines_couple_rands_spend`. -/
 
 @[expose] public section
 
@@ -20,7 +21,7 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 section AppRelRules
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
-  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [IR : MicrometerRGS rT hlc GF]
+  {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
   [BudgetCreditGS B GF]
 local bi IProp GF
 
@@ -82,7 +83,7 @@ theorem refines_load_l : iprop%
 
 /-- Left store `l := v'`: update the points-to to `v'`. -/
 theorem refines_store_l {v' : Val rT} : iprop%
-    (∃ v : Val rT, l ↦ v ∗ (l ↦ v' -∗ refines L E (K.fill pl(#())) t A)) ⊢
+    (∃ v, l ↦ v ∗ (l ↦ v' -∗ refines L E (K.fill pl(#())) t A)) ⊢
       refines L E (K.fill (.store pl(#loc l) v'.1)) t A := by
   iintro ⟨%v, Hl, Hlog⟩
   iapply refines_wp_l
@@ -102,8 +103,7 @@ theorem refines_alloctape_l : iprop%
   iintro %l Hl
   iapply Hlog $$ %l Hl
 
-/-- Left tape allocation, giving the fresh tape as an empty `appNatTape` (the form the tape
-couplings consume). -/
+/-- Left tape allocation, giving the fresh tape as an empty `appNatTape`. -/
 theorem refines_alloctape_nat_l : iprop%
     (∀ l, appNatTape l z [] -∗ refines L E (K.fill pl(#lbl l)) t A) ⊢
       refines L E (K.fill pl(tape(#z))) t A := by
@@ -116,16 +116,6 @@ theorem refines_alloctape_nat_l : iprop%
   iexact Hl
 
 /-! ## One-sided draws -/
-
-/-- Left unlabelled draw `rand z`: continue at every outcome `0 ≤ n < z`. -/
-theorem refines_randU_l (Hz : 0 < z) : iprop%
-    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
-      refines L E (K.fill pl(rand(#z, #()))) t A := by
-  iintro Hlog
-  iapply refines_wp_l
-  iapply wp_rand Hz
-  iintro %n %Hbnds
-  iapply Hlog $$ %n %Hbnds
 
 /-- Left draw from a non-empty tape: take its head `n`. -/
 theorem refines_randT_l {n : Int} {ns : List Int} : iprop%
@@ -142,6 +132,16 @@ theorem refines_randT_l {n : Int} {ns : List Int} : iprop%
 section
 variable (Hz : 0 < z)
 include Hz
+
+/-- Left unlabelled draw `rand z`: continue at every outcome `0 ≤ n < z`. -/
+theorem refines_randU_l : iprop%
+    (∀ n, ⌜0 ≤ n ∧ n < z⌝ -∗ refines L E (K.fill pl(#n)) t A) ⊢
+      refines L E (K.fill pl(rand(#z, #()))) t A := by
+  iintro Hlog
+  iapply refines_wp_l
+  iapply wp_rand Hz
+  iintro %n %Hbnds
+  iapply Hlog $$ %n %Hbnds
 
 /-- Left draw from an empty tape: behaves like an unlabelled draw, keeping the tape empty. -/
 theorem refines_randT_empty_l : iprop%
@@ -274,10 +274,9 @@ theorem refines_couple_tapes_bij {α αₛ : Loc} {ns nsₛ : List Int}
   iintro %n %hn HA HS
   iapply Hcnt $$ %n %hn HA HS %K %b Hj Hna Herr Hpos
 
-/-! ## Advanced couplings (tv-style) -/
+/-! ## Couplings that redistribute credit -/
 
-variable {s : ENNReal →+o B}
-variable [L.IsExpectationAdditive s]
+variable {s : ENNReal →+o B} [L.IsExpectationAdditive s]
 
 /-- Couple two unlabelled draws along `f`, redistributing the credit `s ε₁` as `s (ε₂ n)`. -/
 theorem refines_couple_rands_lr_adv
@@ -304,7 +303,6 @@ theorem refines_couple_rands_lr_avoid (bad : Int) (Hz : 0 < z) (habs : L.Absorbi
     ↯b (s (z.toNat : ENNReal)⁻¹) ∗ (∀ n, ⌜(0 ≤ n ∧ n < z) ∧ n ≠ bad⌝ -∗
         refines L E (K.fill pl(#n)) (K'.fill pl(#n)) A) ⊢
       refines L E (K.fill pl(rand(#z, #()))) (K'.fill pl(rand(#z, #()))) A := by
-  classical
   iintro ⟨Hε, Hcnt⟩
   iapply refines_couple_rands_lr_adv id (z.toNat : ENNReal)⁻¹ (fun n => if n = bad then 1 else 0)
     id_dom_range id_bij_range Hz (avoid_one_amort bad) hc

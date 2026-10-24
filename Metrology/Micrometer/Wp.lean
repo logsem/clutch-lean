@@ -27,13 +27,12 @@ section Wp
 variable [BudgetGS B GF] {n : Nat} {E E1 E2 : CoPset} {e : Exp rT} {v : Val rT}
   {Φ Ψ : Val rT → IProp GF}
 open SpecUpdateGS BIFUpdate
-open Exp (ofVal toVal?_ofVal ofVal_of_toVal_some)
-open LawfulSet (empty_subset subset_refl)
+open Exp (ofVal)
 
 variable (L) in
 /-- One unfolding of `wp`: open the invariants, run a spec phase, then either finish at a value or
 take one coupled program step followed by a later and another spec phase (Rocq `wp_pre`). -/
-noncomputable abbrev wpPre (wp : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
+noncomputable abbrev wpPre (wp : WpType)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) :=
   wpPreFor primStep L wp E e₁ Φ
 
@@ -43,7 +42,7 @@ theorem wpPre_ne_aux {wp wp' : WpType} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
     wpPre L wp E e Φ ≡{n}≡ wpPre L wp' E e Ψ :=
   wpPreFor_ne_aux HΦ Hwp
 
-instance wpPre_contractive : Contractive (wpPre L (rT := rT) (GF := GF)) :=
+instance wpPre_contractive : Contractive (wpPre L (GF := GF)) :=
   wpPreFor_contractive
 
 variable (L) in
@@ -113,7 +112,7 @@ theorem wp_value_fupd_of_toVal (h : e.toVal? = some v) : (|={E}=> Φ v) ⊢ wp L
 theorem wp_value_specCoupl_unfold (E : CoPset) (He : e.toVal? = some v) :
     wp L E e Φ ⊢
       ∀ σ₁ e₁' σ₁' b₁,
-        stateInterp (rT := rT) σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
+        stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
           budgetInterp b₁ -∗
           |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
             iprop(|={∅, E}=>
@@ -123,8 +122,7 @@ theorem wp_value_specCoupl_unfold (E : CoPset) (He : e.toVal? = some v) :
 /-! ## The continuation after a program step -/
 
 variable (L) in
-/-- The `none`-branch continuation of `wpPre` with `wp` itself plugged in; `wp_unfold` produces it
-verbatim. -/
+/-- The none-branch continuation of `wpPre` with `wp` plugged in. -/
 noncomputable abbrev wpProgBody (E : CoPset) (Φ : Val rT → IProp GF)
     (e₃ : Exp rT) (σ₃ : State rT) (e₃' : Exp rT) (σ₃' : State rT) (b₃ : B) :=
   wpProgBodyFor primStep L E Φ e₃ σ₃ e₃' σ₃' b₃
@@ -182,9 +180,6 @@ theorem wp_mask_mono (HE : E1 ⊆ E2) : wp L E1 e Φ ⊢ wp L E2 e Φ :=
 theorem wp_wand_l : iprop% □ (∀ v, Φ v -∗ Ψ v) ∗ wp L E e Φ ⊢ wp L E e Ψ :=
   wpFor_wand_l
 
-theorem wp_wand_r : iprop% wp L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wp L E e Ψ :=
-  wpFor_wand_r
-
 /-! ## Non-expansiveness -/
 
 theorem wp_ne_aux (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp L E e Ψ :=
@@ -193,7 +188,7 @@ theorem wp_ne_aux (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wp L E e Φ ≡{n}≡ wp 
 instance wp_ne : NonExpansive (wp L (GF := GF) E e) :=
   wpFor_ne
 
--- TODO: `wp_contractive`, as in Iris
+/- TODO: `wp_contractive`, as in Iris. -/
 
 end Wp
 

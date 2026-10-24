@@ -15,9 +15,9 @@ open scoped ENNReal
 
 namespace ProbLang
 
-open Iris Iris.BI ProbLang.MicrometerWpGS GradedLifting GradedDivergence Set
+open Iris MicrometerWpGS GradedLifting GradedDivergence Set
 open Exp (ofVal)
-open MeasureTheory.Measure (dirac dirac_apply')
+open MeasureTheory.Measure (dirac)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
 local bi IProp GF
@@ -29,9 +29,7 @@ variable [AppPreGS rT GF] [SpecPreGS rT GF] [BudgetCreditPreGS ℝ≥0∞ GF] [I
   (e e' : Exp rT) (σ σ' : State rT)
 
 section
-variable (ε : ENNReal)
-
-variable (φ : Val rT → Val rT → Prop)
+variable (ε : ℝ≥0∞) (φ : Val rT → Val rT → Prop)
 
 /-- A `wp` proof at `codensity tv` with credit `ε` gives an additive coupling of the limit
 executions (`wp_adequacy`). -/
@@ -44,14 +42,14 @@ theorem wp_adequacy_tv
 
 /-- As `wp_adequacy_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_budget_lim`). -/
 theorem wp_adequacy_budget_lim_tv
-    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ℝ≥0∞), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     AddCoupl ε {p | adequacyRel φ p.1 p.2} (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
   (wp_adequacy_budget_lim e e' σ σ' ε φ Hwp).addCoupl
 
-/-- `wp_adequacy_div` at `tv`: programs whose results agree up to `ε` differ by at most `ε` on
-every event. -/
+/-- `wp_adequacy_div` at `tv`: every measurable event has left probability at most its right
+probability plus `ε`. -/
 theorem wp_adequacy_div_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
@@ -62,22 +60,22 @@ theorem wp_adequacy_div_tv
 
 /-- As `wp_adequacy_div_tv`, from proofs at every credit `ε' > ε` (`wp_adequacy_div_budget_lim`). -/
 theorem wp_adequacy_div_budget_lim_tv
-    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ENNReal), ε < ε' →
+    (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF) (ε' : ℝ≥0∞), ε < ε' →
       ⊢ ⤇ e' -∗ ↯b ε' -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝)))
     {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨e, σ⟩ S ≤ limExecV ⟨e', σ'⟩ S + ε :=
   tv_iff.1 (wp_adequacy_div_budget_lim e e' σ σ' ε Hwp) S hS
 
-end
-
 /-- `wp_adequacy_mass` at `tv`: the mass of the left limit is bounded by the right one plus `ε`. -/
-theorem wp_adequacy_mass_tv (φ : Val rT → Val rT → Prop) (ε : ENNReal)
+theorem wp_adequacy_mass_tv
     (Hwp : ∀ (_ : MicrometerGS rT .hasNoLC GF) (_ : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ⤇ e' -∗ ↯b ε -∗
         wp (codensity tv) ⊤ e (fun v => iprop(∃ v', ⤇ ofVal v' ∗ ⌜φ v v'⌝))) :
     limExecV ⟨e, σ⟩ univ ≤ limExecV ⟨e', σ'⟩ univ + ε :=
   wp_adequacy_mass (s := OrderAddMonoidHom.id ℝ≥0∞) e e' σ σ' φ ε Hwp
+
+end
 
 end
 
@@ -90,7 +88,7 @@ variable [RefinesPreGS rT ℝ≥0∞ GF]
 
 /-- A refinement at `codensity tv` from credit `ε` gives an additive coupling with error `ε`
 (`approximates_coupling`). -/
-theorem approximates_coupling_tv (ε : ENNReal)
+theorem approximates_coupling_tv (ε : ℝ≥0∞)
     (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS ℝ≥0∞ GF),
       ⊢ ↯b ε -∗ refines (codensity tv) ⊤ e e' (A IR IBC)) :
@@ -112,10 +110,9 @@ end
 
 /-- Step the left program against a right state that does not move, for an additive coupling
 with the right Dirac measure. -/
-theorem progCoupl_step_l_dret [MicrometerWpGS (rT := rT) GF] {e₁ : Exp rT} {σ₁ : State rT}
-    {e₁' : Exp rT} {σ₁' : State rT}
-    {ε₁ ε₂ ε : ENNReal} {R : Cfg rT → State rT → Prop}
-    {Z : Exp rT → State rT → Exp rT → State rT → ENNReal → IProp GF} (Hε : ε₁ + ε₂ ≤ ε)
+theorem progCoupl_step_l_dret [MicrometerWpGS GF] {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT}
+    {ε₁ ε₂ ε : ℝ≥0∞} {R : Cfg rT → State rT → Prop}
+    {Z : Exp rT → State rT → Exp rT → State rT → ℝ≥0∞ → _} (Hε : ε₁ + ε₂ ≤ ε)
     (Hred : Reducible e₁ σ₁)
     (Hcpl : AddCoupl ε₁ {p | R p.1 p.2} (primStep ⟨e₁, σ₁⟩) (dirac σ₁')) : iprop%
     (∀ e₂ σ₂, ⌜R ⟨e₂, σ₂⟩ σ₁'⌝ -∗ |={∅}=> Z e₂ σ₂ e₁' σ₁' ε₂) ⊢
@@ -123,8 +120,7 @@ theorem progCoupl_step_l_dret [MicrometerWpGS (rT := rT) GF] {e₁ : Exp rT} {σ
   iintro H
   -- A Dirac measure is concentrated on `σ₁'`, so the coupling can be restricted to `p.2 = σ₁'`;
   -- the right side is then the erasable `dret σ₁'`.
-  have hconc : dirac σ₁' {σ₁'}ᶜ = 0 := by
-    rw [dirac_apply' _ (by measurability)]; simp
+  have hconc : dirac σ₁' {σ₁'}ᶜ = 0 := by simp
   have HcplR : AddCoupl ε₁ {p | R p.1 p.2 ∧ p.2 = σ₁'} (primStep ⟨e₁, σ₁⟩) (dirac σ₁') :=
     AddCoupl.concentrated_R (MeasurableSet.singleton σ₁') hconc Hcpl
   iapply progCoupl_step_l_erasable Hε Hred HcplR.codensity (ErasableExpr.dret σ₁')

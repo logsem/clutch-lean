@@ -22,11 +22,10 @@ local bi IProp GF
 
 /-! ## `wpPreFor` and its fixpoint `wpFor` -/
 
-section Wp
 variable [BudgetGS B GF] {n : Nat} {E E1 E2 : CoPset} {e : Exp rT} {v : Val rT}
   {Φ Ψ : Val rT → IProp GF}
 open SpecUpdateGS BIFUpdate
-open Exp (ofVal toVal?_ofVal ofVal_of_toVal_some)
+open Exp (ofVal toVal?_ofVal ofVal_of_toVal_some toVal?_eq_none)
 open LawfulSet (empty_subset subset_refl)
 
 /-- The type of `wpFor` as a function of its mask, expression and postcondition. -/
@@ -34,7 +33,7 @@ abbrev WpType := CoPset → Exp rT → (Val rT → IProp GF) → IProp GF
 
 variable (step L) in
 /-- One guarded weakest-precondition unfolding over an explicit program transition kernel. -/
-abbrev wpPreFor (W : CoPset → Exp rT → (Val rT → IProp GF) → IProp GF)
+abbrev wpPreFor (W : WpType)
     (E : CoPset) (e₁ : Exp rT) (Φ : Val rT → IProp GF) := iprop%
   ∀ σ₁ e₁' σ₁' (b₁ : B),
     stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗ budgetInterp b₁ -∗
@@ -65,7 +64,7 @@ theorem wpPreFor_ne_aux {W W' : WpType} (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v)
       sep_ne.ne (.of_eq rfl) (Hwp m Hm e₃)
 
 /-- The program transition guards recursive weakest preconditions by a later. -/
-instance wpPreFor_contractive : Contractive (wpPreFor step L (rT := rT) (GF := GF)) where
+instance wpPreFor_contractive : Contractive (wpPreFor step L (GF := GF)) where
   distLater_dist Hwp E _ Φ :=
     wpPreFor_ne_aux (fun _ => .of_eq rfl) fun _ Hm e₃ => DistLater.dist_lt (Hwp · · E e₃ Φ) Hm
 
@@ -76,7 +75,7 @@ noncomputable def wpFor (E : CoPset) (e : Exp rT) (Φ : Val rT → IProp GF) :=
 
 /-- `wpFor` is its own one-step unfolding. -/
 theorem wpFor_unfold : wpFor step L E e Φ = wpPreFor step L (wpFor step L) E e Φ :=
-  congrFun (congrFun (congrFun (fixpoint_unfold ⟨wpPreFor step L, ne_of_contractive _⟩) E) e) Φ
+  congrFun₃ (fixpoint_unfold ⟨wpPreFor step L, ne_of_contractive _⟩) E e Φ
 
 /-- The forward direction of `wpFor_unfold`. -/
 theorem wpFor_unfold_mp : wpFor step L E e Φ ⊢ wpPreFor step L (wpFor step L) E e Φ :=
@@ -113,7 +112,7 @@ theorem wpFor_value_fupd_of_toVal (h : e.toVal? = some v) : (|={E}=> Φ v) ⊢ w
 theorem wpFor_value_specCoupl_unfold (E : CoPset) (He : e.toVal? = some v) :
     wpFor step L E e Φ ⊢
       ∀ σ₁ e₁' σ₁' b₁,
-        stateInterp (rT := rT) σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
+        stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
           budgetInterp b₁ -∗
           |={E, ∅}=> specCoupl L ∅ σ₁ e₁' σ₁' b₁ (fun σ₂ ρ' b₂ =>
             iprop(|={∅, E}=>
@@ -159,7 +158,7 @@ theorem wpProgBodyFor_wand {E' : CoPset} {e₃ e₄ : Exp rT}
 /-- The postcondition update `wpFor_strong_mono` asks for, framing the interpretations. -/
 abbrev wpStrongMonoCont (E2 : CoPset) (Φ Ψ : Val rT → IProp GF) := iprop%
   □ ∀ σ ρ v (b : B),
-    stateInterp (rT := rT) σ ∗ specInterp (rT := rT) ρ ∗ budgetInterp b ∗
+    stateInterp σ ∗ specInterp (rT := rT) ρ ∗ budgetInterp b ∗
       Φ v ={E2}=∗
     stateInterp σ ∗ specInterp ρ ∗ budgetInterp b ∗ Ψ v
 
@@ -172,41 +171,39 @@ noncomputable abbrev wpForStrongMonoStmt : IProp GF := iprop%
 /-- The weakest precondition is monotone under framed postcondition updates. -/
 theorem wpFor_strong_mono (HE : E1 ⊆ E2) : iprop%
     wpFor step L E1 e Φ ∗ wpStrongMonoCont (B := B) E2 Φ Ψ ⊢ wpFor step L E2 e Ψ := by
-  iintro ⟨HW, HΦ⟩
-  -- Löb induction on the statement generalized over masks, expression and postconditions: rebind
-  -- the spec phase with `specCoupl_bind`, then recurse under the later after the program step.
-  have Hloeb : ⊢ wpForStrongMonoStmt step L (rT := rT) := by
-    iapply loeb_wand
-    iintro !> IH %E1' %E2' %e' %Φ' %Ψ' %HE' HW' #HΦ'
-    iapply wpFor_unfold
-    iintro %σ₁ %e₁' %σ₁' %b₁ Hres
-    imod subset HE' with Hclose
-    imod wpFor_unfold_mp $$ HW' %σ₁ %e₁' %σ₁' %b₁ Hres with HW'
+  iintro ⟨HW, #HΦ⟩
+  clear wpFor_strong_mono
+  -- Löb induction on the expression: rebind the spec phase with `specCoupl_bind`, then recurse
+  -- under the later after the program step.
+  iloeb as IH generalizing %e HW
+  iapply wpFor_unfold
+  iintro %σ₁ %e₁' %σ₁' %b₁ Hres
+  imod subset HE with Hclose
+  imod wpFor_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ Hres with HW
+  imodintro
+  iapply specCoupl_bind subset_refl
+  iframe HW
+  iintro %σ₂ %ρ₂ %b₂ HZ₁
+  cases htv : e.toVal? with
+  | some v =>
+    iapply specCoupl_ret
+    imod HZ₁ with ⟨Hσ', Hs', Hb', HΦv⟩
+    imod Hclose
+    imod HΦ $$ [Hσ' Hs' Hb' HΦv] with ⟨Hσ', Hs', Hb', HΨv⟩
+    · iframe
     imodintro
-    iapply specCoupl_bind subset_refl
-    iframe HW'
-    iintro %σ₂ %ρ₂ %b₂ HZ₁
-    cases htv : e'.toVal? with
-    | some v =>
-      iapply specCoupl_ret
-      imod HZ₁ with ⟨Hσ', Hs', Hb', HΦv⟩
-      imod Hclose
-      imod HΦ' $$ [Hσ' Hs' Hb' HΦv] with ⟨Hσ', Hs', Hb', HΨv⟩
-      · iframe
-      imodintro
-      iframe
-    | none =>
-      iapply specCoupl_ret
-      iapply progCouplFor_mono
-      iframe HZ₁
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
-      iapply wpProgBodyFor_wand
-      iframe HLater
-      iintro !> HwpInner
-      imod Hclose
-      imodintro
-      iapply IH $$ %E1' %E2' %e₃ %Φ' %Ψ' %HE' HwpInner HΦ'
-  iapply Hloeb $$ %E1 %E2 %e %Φ %Ψ %HE HW HΦ
+    iframe
+  | none =>
+    iapply specCoupl_ret
+    iapply progCouplFor_mono
+    iframe HZ₁
+    iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+    iapply wpProgBodyFor_wand
+    iframe HLater
+    iintro !> HwpInner
+    imod Hclose
+    imodintro
+    iapply IH $$ %e₃ HwpInner
 
 /-- The weakest precondition is monotone in its postcondition, under a persistent wand. -/
 theorem wpFor_wand : iprop% wpFor step L E e Φ ∗ □ (∀ v, Φ v -∗ Ψ v) ⊢ wpFor step L E e Ψ := by
@@ -273,57 +270,49 @@ theorem wpFor_ne_aux (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wpFor step L E e Φ �
 instance wpFor_ne : NonExpansive (wpFor step L (GF := GF) E e) where
   ne _ _ _ H := wpFor_ne_aux H
 
-variable (step L) in
-/-- The contextual bind statement for the shared guarded weakest precondition. -/
-noncomputable abbrev wpForBindStmt (K : Ectx rT) : IProp GF := iprop%
-  ∀ E e Φ, wpFor step L E e (fun v => wpFor step L E (K.fill (ofVal v)) Φ) -∗
-    wpFor step L E (K.fill e) Φ
-
 /-- A context-compatible kernel satisfies the weakest-precondition bind rule. -/
 theorem wpFor_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     (step_fill : ∀ (K : Ectx rT) (e : Exp rT) (σ : State rT), ¬e.isValue →
       step ⟨K.fill e, σ⟩ = (step ⟨e, σ⟩).map K.fillCfg)
-    {K : Ectx rT} {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} :
+    {K : Ectx rT} :
     wpFor step L E e (fun v => wpFor step L E (K.fill (ofVal v)) Φ) ⊢
       wpFor step L E (K.fill e) Φ := by
-  have Hloeb : ⊢ wpForBindStmt step L K := by
-    iapply loeb_wand
-    iintro !> IH %E' %e' %Φ' HW
-    iapply wpFor_unfold
-    iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-    imod wpFor_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
+  iintro HW
+  clear wpFor_bind
+  iloeb as IH generalizing %e HW
+  iapply wpFor_unfold
+  iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
+  imod wpFor_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
+  imodintro
+  iapply specCoupl_bind subset_refl
+  iframe HW'
+  iintro %σ₂ %ρ₂ %b₂ HBody
+  cases htv : e.toVal? with
+  | some v =>
+    -- e is a value: run the inner wp's spec phase in place of the outer one
+    -- (fupd_specCoupl, hence IsTopAbsorbing)
+    iapply fupd_specCoupl
+    rw [← ofVal_of_toVal_some htv]
+    imod HBody with ⟨Hσ', Hs', Hb', HInner⟩
+    imod wpFor_unfold_mp $$ HInner %σ₂ %ρ₂.expr %ρ₂.state %b₂ [$Hσ' $Hs' $Hb'] with HInner'
     imodintro
-    iapply specCoupl_bind subset_refl
-    iframe HW'
-    iintro %σ₂ %ρ₂ %b₂ HBody
-    cases htv : e'.toVal? with
-    | some v =>
-      -- e' is a value: run the inner wp's spec phase in place of the outer one
-      -- (fupd_specCoupl, hence IsTopAbsorbing)
-      iapply fupd_specCoupl
-      rw [show e' = ofVal v from (ofVal_of_toVal_some htv).symm]
-      imod HBody with ⟨Hσ', Hs', Hb', HInner⟩
-      imod wpFor_unfold_mp $$ HInner %σ₂ %ρ₂.expr %ρ₂.state %b₂ [$Hσ' $Hs' $Hb'] with HInner'
-      imodintro
-      iexact HInner'
-    | none =>
-      have hv : ¬ e'.isValue := Exp.toVal?_eq_none.mp htv
-      have hvKfill : ¬ (K.fill e').isValue := fun hKv => hv (Ectx.fill_isValue hKv)
-      have hKfillnone : (K.fill e').toVal? = none := Exp.toVal?_eq_none.mpr hvKfill
-      iapply specCoupl_ret
-      simp only [hKfillnone]
-      -- e' steps: push K through the program step, recurse by Löb
-      iapply progCouplFor_ctx_bind step_fill hv
-      iapply progCouplFor_mono
-      iframe HBody
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
-      iapply wpProgBodyFor_wand
-      iframe HLater
-      iintro !> HwpInner
-      imodintro
-      iapply IH $$ %E' %e₃ %Φ' HwpInner
-  iapply Hloeb $$ %E %e %Φ
+    iexact HInner'
+  | none =>
+    have hv : ¬ e.isValue := toVal?_eq_none.mp htv
+    have hKfillnone : (K.fill e).toVal? = none :=
+      toVal?_eq_none.mpr fun hKv => hv (Ectx.fill_isValue hKv)
+    iapply specCoupl_ret
+    simp only [hKfillnone]
+    -- e steps: push K through the program step, recurse by Löb
+    iapply progCouplFor_ctx_bind step_fill hv
+    iapply progCouplFor_mono
+    iframe HBody
+    iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
+    iapply wpProgBodyFor_wand
+    iframe HLater
+    iintro !> HwpInner
+    imodintro
+    iapply IH $$ %e₃ HwpInner
 
 section Deterministic
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing] {e₁ : Exp rT}
@@ -340,19 +329,16 @@ theorem wpFor_lift_det_step : iprop%
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   imod H $$ %σ₁ Hσ with ⟨%next, %Hstep, Hnext⟩
   imodintro
-  rcases lt_or_eq_of_le (le_top (a := b)) with hb | rfl
-  · iapply specCoupl_ret
-    simp only [Hv]
-    have Hred : step ⟨e₁, σ₁⟩ ≠ 0 := by
-      rw [Hstep]
-      exact dirac_ne_zero
-    iapply progCouplFor_det_step hb Hred Hstep
-    iintro !> !>
-    iapply specCoupl_ret
-    imod Hnext with ⟨Hσ, Hwp⟩
-    imodintro
-    iframe
+  rcases eq_top_or_lt_top b with rfl | hb
   · iapply specCoupl_absorbing IsTopAbsorbing.absorbing_top
+  iapply specCoupl_ret
+  simp only [Hv]
+  iapply progCouplFor_det_step hb (Hstep ▸ dirac_ne_zero) Hstep
+  iintro !> !>
+  iapply specCoupl_ret
+  imod Hnext with ⟨Hσ, Hwp⟩
+  imodintro
+  iframe
 
 /-- Lift one deterministic kernel transition with a specified state-dependent successor. -/
 theorem wpFor_lift_det (next : State rT → Cfg rT)
@@ -393,15 +379,13 @@ theorem wpFor_lift_atomic_det (result : State rT → Val rT) (update : State rT 
     (∀ σ, stateInterp σ -∗ |={E, ∅}=> ▷ |={∅, E}=>
       stateInterp (update σ) ∗ Φ (result σ)) ⊢ wpFor step L E e₁ Φ := by
   iintro H
-  iapply wpFor_lift_det Hv (fun σ => ⟨.ofVal (result σ), update σ⟩) Hstep
+  iapply wpFor_lift_atomic_step Hv
   iintro %σ Hσ
   imod H $$ %σ Hσ with Hnext
   imodintro
-  iintro !>
-  imod Hnext with ⟨Hσ, HΦ⟩
-  imodintro
-  iframe Hσ
-  iapply wpFor_value $$ HΦ
+  iexists result σ, update σ
+  have hdet := Hstep σ
+  iframe %hdet Hnext
 
 /-- A state-preserving deterministic kernel transition consumes one later. -/
 theorem wpFor_pure_step {e₂ : Exp rT}
@@ -419,9 +403,8 @@ theorem wpFor_pure_step {e₂ : Exp rT}
 
 end Deterministic
 
--- TODO: `wp_contractive`, as in Iris
-
-end Wp
+/- TODO: add `wpFor_contractive`, the contractivity of `wpFor` in `Φ` under `▷`, as Iris's
+`wp_contractive`. -/
 
 end MicrometerWpGS
 

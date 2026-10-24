@@ -12,9 +12,6 @@ fundamental theorem. -/
 
 @[expose] public section
 
--- these rules use the @[discrete] lifting lemmas without being discrete themselves
-set_option linter.discrete false
-
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 open scoped AppGS
@@ -25,10 +22,10 @@ namespace ProbLang
 
 section Compatibility
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
-    [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [CanonicallyOrderedAdd B] [L.IsLawful]
-  [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
+  [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+  [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing]
+  [L.HasBind]
 local bi IProp GF
 variable {e e' e1 e2 e1' e2' : Exp rT} {A : lrel rT GF}
 
@@ -174,10 +171,10 @@ theorem refines_store : iprop%
 
 /-! ### Sampling: shared machinery -/
 
-variable {α α' : Loc}
-variable {z : Int}
+variable {α α' : Loc} {z : Int}
 
-/-- Closes the tape invariant again once both tapes are handed back empty. -/
+/-- Two empty nat tapes give, one step later, the empty tape fragments that an `lrel_tape`
+invariant holds. -/
 theorem natTapes_empty_close : iprop%
     appNatTape α z [] ∗ specNatTape α' z [] ⊢
       ▷ (appTapesFrag α ⟨z, []⟩ ∗ specTapesFrag α' ⟨z, []⟩) :=
@@ -185,7 +182,7 @@ theorem natTapes_empty_close : iprop%
 
 /-- Two draws `rand z` from tapes shared through an `lrel_tape` invariant, coupled along the
 identity; the tape bound `N` need not equal `z`. -/
-theorem refines_rand_lbl_of_pos {N z : Int} (hz : 0 < z)
+theorem refines_rand_lbl_of_pos {N : Int} (hz : 0 < z)
     (HA : ∀ m : Int, 0 ≤ m → m < z → ⊢ A.car (.int m) (.int m)) :
     inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
       refines L ⊤ pl(rand(#z, #lbl α)) pl(rand(#z, #lbl α')) A := by
@@ -204,8 +201,9 @@ theorem refines_rand_lbl_of_pos {N z : Int} (hz : 0 < z)
   all_goals
     iframe HαN Hα'N Hr
     iintro %m ⟨HαRet, Hα'Ret, HKRes, %hm⟩
-    ihave HCloseArg := natTapes_empty_close $$ [$HαRet $Hα'Ret]
-    imod Hclose $$ HCloseArg with -
+    imod Hclose $$ [HαRet Hα'Ret] with -
+    · iapply natTapes_empty_close
+      iframe
     imodintro
     iexists pl(#int (id m))
     iframe HKRes
@@ -213,6 +211,31 @@ theorem refines_rand_lbl_of_pos {N z : Int} (hz : 0 < z)
       (v1 := .int m) (v2 := .int m) rfl rfl
     imodintro
     iapply HA m hm.1 hm.2
+
+/-- Draws `rand n` with a non-positive bound from shared tapes return `-1` on both sides. -/
+theorem refines_rand_lbl_nonpos {N n : Int} (hnpos : ¬0 < n) :
+    inv (logN.@ (α, α')) iprop(appTapesFrag α ⟨N, []⟩ ∗ specTapesFrag α' ⟨N, []⟩) ⊢
+      refines L ⊤ pl(rand(#n, #lbl α)) pl(rand(#n, #lbl α')) (lrel_int : lrel rT GF) := by
+  iintro #Hinv
+  rw [eq_fill_nil pl(rand(#n, #lbl α))]
+  iapply refines_atomic_l (of_atomic (.rand_lbl n α))
+  iintro %K' Hr
+  iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
+  imodintro
+  iapply wp_rand_lbl_nonpos_r K' hnpos
+  iframe Hr Hα'
+  iintro Hα'New HKRes
+  iapply wp_rand_lbl_nonpos hnpos
+  iframe Hα
+  iintro HαNew
+  imod Hclose $$ [HαNew Hα'New] with -
+  · iintro !>; iframe HαNew Hα'New
+  imodintro
+  iexists pl(#(-1))
+  iframe HKRes
+  iapply refines_ret (e1 := fill [] pl(#(-1))) (v1 := .int (-1)) (v2 := .int (-1)) rfl rfl
+  imodintro
+  iapply lrel_int_lit (-1)
 
 /-- Two unlabelled draws `rand z #()`, coupled along the identity. -/
 theorem refines_rand_unit_of_pos (hz : 0 < z)
@@ -228,8 +251,7 @@ theorem refines_rand_unit_of_pos (hz : 0 < z)
 
 /-! ### Sampling: compatibility at `nat` -/
 
-/-- Compatibility of `rand` with a tape at `nat`; the fundamental theorem uses
-`refines_rand_tape_int`. -/
+/-- Compatibility of `rand` with a tape at `nat`. -/
 theorem refines_rand_tape : iprop%
     refines L ⊤ e1 e1' lrel_pos_nat ⊢
       refines L ⊤ e2 e2' lrel_tape -∗ refines L ⊤ (.rand e1 e2) (.rand e1' e2') lrel_nat := by
@@ -250,8 +272,7 @@ theorem refines_rand_tape : iprop%
     show fill [randL w'] v'.1 = rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   iapply refines_rand_lbl_of_pos (by exact_mod_cast hM) (fun m h0 _ => lrel_nat_lit h0) $$ Hinv
 
-/-- Compatibility of `rand` without a tape at `nat`; the fundamental theorem uses
-`refines_rand_unit_int`. -/
+/-- Compatibility of `rand` without a tape at `nat`. -/
 theorem refines_rand_unit : iprop%
     refines L ⊤ e e' lrel_pos_nat ⊢
       refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e') lrel_nat := by
@@ -288,28 +309,10 @@ theorem refines_rand_tape_int : iprop%
     show fill [randL w'] v'.1 = rand v'.1 w'.1 from rfl, hv, hv', hw, hw']
   by_cases hnpos : 0 < n
   · iapply refines_rand_lbl_of_pos hnpos (fun m _ _ => lrel_int_lit m) $$ Hinv
-  · rw [eq_fill_nil pl(rand(#n, #lbl α))]
-    iapply refines_atomic_l (of_atomic (.rand_lbl n α))
-    iintro %K' Hr
-    iinv Hinv with ⟨>Hα, >Hα'⟩ Hclose
-    imodintro
-    iapply wp_rand_lbl_nonpos_r K' hnpos
-    iframe Hr Hα'
-    iintro Hα'New HKRes
-    iapply wp_rand_lbl_nonpos hnpos
-    iframe Hα
-    iintro HαNew
-    imod Hclose $$ [HαNew Hα'New] with -
-    · iintro !>; iframe HαNew Hα'New
-    imodintro
-    iexists pl(#(-1))
-    iframe HKRes
-    iapply refines_ret (e1 := fill [] pl(#(-1))) (v1 := .int (-1)) (v2 := .int (-1)) rfl rfl
-    imodintro
-    iapply lrel_int_lit (-1)
+  · iapply refines_rand_lbl_nonpos hnpos $$ Hinv
 
-/-- Compatibility of the unlabelled `rand e #()` at `int`, stated in the hole form that
-`bin_log_related_rand_unit` produces. -/
+/-- Compatibility of the unlabelled `rand e #()` at `int`, in the hole form
+`fill [randL .unit] e`. -/
 theorem refines_rand_unit_int : iprop%
     refines L ⊤ e e' lrel_int ⊢
       refines L ⊤ (fill [randL .unit] e) (fill [randL .unit] e') lrel_int := by

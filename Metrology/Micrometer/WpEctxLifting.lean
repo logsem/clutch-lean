@@ -9,7 +9,7 @@ The step-lifting rules of `WpLifting` restated for `headStep` (Rocq `approxis/ec
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE GradedLifting
+open Iris
 
 namespace ProbLang
 
@@ -28,9 +28,9 @@ open Set (univ)
 
 /-- Head-step form of `wp_lift_step_prog_couple` (Rocq `wp_lift_head_step_prog_couple`). -/
 theorem wp_lift_head_step_prog_couple (Hv : e₁.toVal? = none) : iprop%
-    (∀ σ₁ e₁' σ₁' (b₁ : B), stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
+    (∀ σ₁ e₁' σ₁' b₁, stateInterp σ₁ ∗ specInterp ⟨e₁', σ₁'⟩ ∗
       budgetInterp b₁ -∗ |={E, ∅}=>
-      ⌜∃ ρ : Cfg rT, 0 < headStep ⟨e₁, σ₁⟩ {ρ}⌝ ∗
+      ⌜HeadReducible e₁ σ₁⌝ ∗
       progCoupl L e₁ σ₁ e₁' σ₁' b₁ fun e₂ σ₂ e₂' σ₂' b₂ => iprop% ▷ |={∅, E}=>
         stateInterp σ₂ ∗ specInterp ⟨e₂', σ₂'⟩ ∗ budgetInterp b₂ ∗
           wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
@@ -46,11 +46,11 @@ variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {S : State rT → Set (Cfg rT)}
 
 /-- Atomic head step, discrete form: reducibility and outcomes are read off the support of
-`headStep` (used by `wp_alloc`, `wp_load`, `wp_rand`). -/
+`headStep`. -/
 @[discrete]
 theorem wp_lift_atomic_head_step (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocallyClosed := by is_lc)
     (hne : e₁.decomp.2 ≠ .urand := by no_urand) : iprop%
-    (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜∃ ρ : Cfg rT, 0 < headStep ⟨e₁, σ₁⟩ {ρ}⌝ ∗
+    (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜∃ ρ, 0 < headStep ⟨e₁, σ₁⟩ {ρ}⌝ ∗
       ▷ ∀ e₂ σ₂, ⌜0 < headStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={E}=> stateInterp σ₂ ∗
         (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E e₁ Φ := by
   iintro H
@@ -58,7 +58,9 @@ theorem wp_lift_atomic_head_step (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocally
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hhred, H⟩
   imodintro
-  have Hhr : HeadReducible e₁ σ₁ := fun hz => by obtain ⟨ρ, hρ⟩ := Hhred; simp [hz] at hρ
+  have Hhr : HeadReducible e₁ σ₁ := fun hz => by
+    obtain ⟨ρ, hρ⟩ := Hhred
+    simp [hz] at hρ
   isplitr
   · ipureintro; exact Reducible.toDiscrete hne (reducible_of_headReducible Hlc Hhr)
   iintro !> %e₂ %σ₂ %Hpstep
@@ -66,11 +68,9 @@ theorem wp_lift_atomic_head_step (Hv : e₁.toVal? = none) (Hlc : e₁.IsLocally
     primStep_eq_headStep (decompItem_none_of_lc_headReducible Hlc Hhr) ▸ Hpstep
   iapply H $$ %e₂ %σ₂ %hpos
 
-/-! ## Head-step rules over a carrying set (no countability)
+/-! ## Head-step rules over a carrying set
 
-The head-step rules gate on `headStep`, and head-reducibility is only known inside the assertion.
-Off the head-reducible states the redex may sit under a context and `primStep` moves elsewhere,
-so the carrying set is padded to `Set.univ` there, where concentration is free. -/
+The carrying set is padded to `Set.univ` off the head-reducible states. -/
 
 open scoped Classical in
 /-- The carrying set `S σ₁` at head-reducible states, `univ` elsewhere, is measurable. -/
@@ -95,7 +95,6 @@ variable (Hv : e₁.toVal? = none)
   (hSconc : ∀ σ₁, HeadReducible e₁ σ₁ → Concentrated (headStep ⟨e₁, σ₁⟩) (S σ₁))
 include Hv hSmeas hSconc
 
-open scoped Classical in
 /-- Head step, for any `rT`: outcomes range over a measurable set `S σ₁` carrying `headStep`. -/
 theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=> ⌜HeadReducible e₁ σ₁⌝ ∗ ▷ ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗
@@ -112,7 +111,6 @@ theorem wp_lift_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) 
   rw [ite_eq_left Hhred] at Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
 
-open scoped Classical in
 /-- Atomic head step with a mask change `E1`/`E2`, over a measurable set carrying `headStep`. -/
 theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E1}=> ⌜HeadReducible e₁ σ₁⌝ ∗
@@ -130,7 +128,6 @@ theorem wp_lift_atomic_head_step_fupd_concentrated (Hlc : e₁.IsLocallyClosed :
   rw [ite_eq_left Hhred] at Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
 
-open scoped Classical in
 /-- Atomic head step over a measurable set carrying `headStep`, from the mask-changing rule. -/
 theorem wp_lift_atomic_head_step_concentrated (Hlc : e₁.IsLocallyClosed := by is_lc) : iprop%
     (∀ σ₁, stateInterp σ₁ -∗ |={E}=> ⌜HeadReducible e₁ σ₁⌝ ∗

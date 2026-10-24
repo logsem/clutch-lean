@@ -7,7 +7,7 @@ import Metrology.Iris.LocalBI
 /-! # Pure DP programs are zCDP
 
 A terminating program family refining in both directions from `↯b (ε, 0)` in `codensity dp` is
-`(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`), hence DP in `ε √k` after `k` compositions. -/
+`(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`), hence `(ε, δ)`-DP through zCDP. -/
 
 @[expose] public section
 
@@ -15,9 +15,9 @@ open scoped ENNReal NNReal
 
 namespace ProbabilityTheory.Kernel
 
-open GradedDivergence Real
+open Real
 
-/-- The `√`-style DP budget of an `(0, ε² / 2)`-zCDP mechanism at slack `δ`. -/
+/-- An `(0, ε² / 2)`-zCDP mechanism is `(ε² / 2 + 2 √(ε² / 2 · log (1 / δ)), δ)`-DP. -/
 theorem DP_of_zCDP_sq {X Y : Type} [MeasurableSpace X] [MeasurableSpace Y] {m : Kernel X Y}
     [IsFiniteKernel m] {adj : Adjacency X} {ε : ℝ≥0} {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1)
     (h : m.zCDP adj 0 (ENNReal.ofReal (ε ^ 2 / 2))) :
@@ -30,7 +30,7 @@ end ProbabilityTheory.Kernel
 
 namespace ProbLang
 
-open Iris Iris.BI GradedLifting ProbabilityTheory GradedDivergence Real
+open Iris Iris.BI ProbabilityTheory GradedDivergence Real
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {X : Type}
   [MeasurableSpace X] (GF : BundledGFunctors) [RefinesPreGS rT (ℝ≥0∞ × ℝ≥0∞) GF]
@@ -50,11 +50,9 @@ local bi IProp GF
 /-- A terminating program family whose members on adjacent inputs refine each other in both
 directions at equal results from `↯b (ε, 0)` is `(0, ε² / 2)`-zCDP (Bun–Steinke 2016,
 Prop. 3.3). -/
-theorem progMech_zCDP_of_dp : (progMech p σ hp).zCDP adj 0 (ENNReal.ofReal (ε ^ 2 / 2)) := by
-  have h := progMech_isPrivate GF (D := dp) p σ (hp := hp) _ A HA Hlog
-  have h' := progMech_isPrivate GF (D := dp) p σ (hp := hp)
-    _ A HA fun x x' hx ↦ Hlog' x' x hx
-  exact fun _ _ hx ↦ zcdp_of_dp_two_sided (h hx) (h' hx)
+theorem progMech_zCDP_of_dp : (progMech p σ hp).zCDP adj 0 (ENNReal.ofReal (ε ^ 2 / 2)) :=
+  fun _ _ hx ↦ zcdp_of_dp_two_sided (progMech_isPrivate GF p σ _ A HA Hlog hx)
+    (progMech_isPrivate GF p σ _ A HA (fun x x' hx ↦ Hlog' x' x hx) hx)
 
 /-- A terminating program family refining in both directions from `↯b (ε, 0)` is
 `(ε² / 2 + 2 √(ε² / 2 · log (1 / δ)), δ)`-DP at every slack `0 < δ < 1`, through zCDP. -/

@@ -51,7 +51,7 @@ include HA Hlog
 local bi IProp GF
 
 /-- A refinement at equal results from `↯b b` on adjacent inputs couples the mechanism's
-outputs at `b` along equality (clutch-dp's `adequacy_rel.v`). -/
+outputs at `b` along equality (Rocq `adequacy_rel`). -/
 theorem progMech_rel ⦃x x' : X⦄ (hx : adj x x') :
     L.Rel b (· = ·) (progMech p σ hp x) (progMech p σ hp x') :=
   -- closed-program adequacy gives `L.Rel b (adequacyRel (· = ·))`; weaken that relation to `=`

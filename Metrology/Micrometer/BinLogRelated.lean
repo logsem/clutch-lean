@@ -27,14 +27,19 @@ abbrev RelCtx (rT : Type) (GF : BundledGFunctors) := List (Var × lrel rT GF)
 
 namespace RelCtx
 
-/-- The relation of the deepest entry for `x` in the list, as in `lookup`; callers
-only cons fresh variables, so the order never matters. -/
+/-- The relation bound to `x`, the last matching entry in the list winning. -/
 def lookup : RelCtx rT GF → Var → Option (lrel rT GF)
   | [], _ => none
   | (y, A) :: rest, x =>
     match lookup rest x with
     | some B => some B
     | none => if x = y then some A else none
+
+/-- Lookup in a cons unfolds into the lookup in the tail, falling back to the head. -/
+theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
+    lookup ((y, A) :: Γ) z = match Γ.lookup z with
+      | some B => some B
+      | none => if z = y then some A else none := rfl
 
 variable {Γ : RelCtx rT GF}
 
@@ -49,10 +54,8 @@ theorem lookup_isSome_of_mem {p : Var × lrel rT GF} (h : p ∈ Γ) : (Γ.lookup
     · have := ih hRest
       cases hr : lookup rest p.1 <;> simp_all
 
-variable {y : Var}
-
 /-- A variable that resolves lies in the domain of the context. -/
-theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
+theorem mem_of_lookup_isSome {y : Var} (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).toFinset := by
   induction Γ with
   | nil => simp [lookup] at h
   | cons q rest ih =>
@@ -62,14 +65,9 @@ theorem mem_of_lookup_isSome (h : (Γ.lookup y).isSome) : y ∈ (Γ.map (·.1)).
     | some _ => simp [ih (by rw [hr]; rfl)]
     | none => rw [hr] at h; split_ifs at h <;> simp_all
 
-/-- Lookup in a cons unfolds into the lookup in the tail, falling back to the head. -/
-theorem lookup_cons (y : Var) (A : lrel rT GF) (Γ : RelCtx rT GF) (z : Var) :
-    lookup ((y, A) :: Γ) z = match Γ.lookup z with
-      | some B => some B
-      | none => if z = y then some A else none := rfl
-
 /-- A variable outside the domain of the context does not resolve. -/
-theorem lookup_eq_none_of_notMem (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) : Γ.lookup y = none := by
+theorem lookup_eq_none_of_notMem {y : Var} (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
+    Γ.lookup y = none := by
   cases hΓ : Γ.lookup y with
   | none => rfl
   | some _ => exact absurd (mem_of_lookup_isSome (by rw [hΓ]; rfl)) hyNotDom
@@ -85,8 +83,7 @@ open RelCtx ValSubstMap
 section
 variable (Γ : RelCtx rT GF) (vs : ValSubstMap rT)
 
-/-- `vs` maps the variables of `Γ` to pairs of closed values related at their relations; the
-closedness conjunct also covers shadowed entries, as `SubstMap.AllClosed` needs. -/
+/-- `vs` binds exactly the variables of `Γ`, to closed values related at their relations. -/
 noncomputable def env_ltyped2 := iprop%
   ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ ∗
   ⌜∀ p ∈ vs, p.2.1.1.isClosed .empty ∧ p.2.2.1.isClosed .empty⌝ ∗
@@ -97,7 +94,7 @@ instance env_ltyped2_persistent : Persistent (env_ltyped2 Γ vs) := by
   infer_instance
 
 /-- Related substitutions have the same domain as the context. -/
-theorem env_ltyped2_domEq : env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
+theorem env_ltyped2_dom_eq : env_ltyped2 Γ vs ⊢ ⌜∀ x, (Γ.lookup x).isSome ↔ (vs.lookup x).isSome⌝ :=
   sep_elim_left
 
 /-- Related substitutions consist of closed values. -/
@@ -106,13 +103,13 @@ theorem env_ltyped2_allClosed :
   sep_elim_right.trans sep_elim_left
 
 /-- The left projection of a related substitution is closed. -/
-theorem env_ltyped2_fst_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
+theorem env_ltyped2_fst_allClosed :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.fst⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.fst) fun p hp => (hc p hp).1
 
 /-- The right projection of a related substitution is closed. -/
-theorem env_ltyped2_snd_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
+theorem env_ltyped2_snd_allClosed :
     env_ltyped2 Γ vs ⊢ ⌜SubstMap.AllClosed vs.snd⌝ :=
   (env_ltyped2_allClosed Γ vs).trans <| pure_mono fun hc =>
     proj_allClosed (·.snd) fun p hp => (hc p hp).2
@@ -120,18 +117,13 @@ theorem env_ltyped2_snd_allClosed [MeasurableSpace rT] [LawfulProbLangℝ rT] :
 /-- The domain of the context lies in the domain of a related substitution. -/
 theorem env_ltyped2_domSubset :
     env_ltyped2 Γ vs ⊢ ⌜(Γ.map (·.1)).toFinset ⊆ (vs.map (·.1)).toFinset⌝ := by
-  iintro Hvs
-  ihave %hDom := env_ltyped2_domEq Γ vs $$ Hvs
-  ipureintro
-  intro y hy
+  refine (env_ltyped2_dom_eq Γ vs).trans <| pure_mono fun hDom y hy => ?_
   simp only [mem_toFinset, mem_map] at hy ⊢
   obtain ⟨p, hp, rfl⟩ := hy
-  exact mem_of_lookup_isSome ((hDom p.1).mp (lookup_isSome_of_mem hp))
-
-variable (x : Var) (A : lrel rT GF)
+  exact ValSubstMap.mem_of_lookup_isSome ((hDom p.1).mp (RelCtx.lookup_isSome_of_mem hp))
 
 /-- A variable in the context is bound by a substitution to values related at its relation. -/
-theorem env_ltyped2_lookup (hΓ : Γ.lookup x = some A) :
+theorem env_ltyped2_lookup (x : Var) (A : lrel rT GF) (hΓ : Γ.lookup x = some A) :
     env_ltyped2 Γ vs ⊢ ∃ v1 v2, ⌜vs.lookup x = some (v1, v2)⌝ ∗ A v1 v2 := by
   unfold env_ltyped2
   iintro ⟨%Hdom, -, Hall⟩
@@ -141,7 +133,7 @@ theorem env_ltyped2_lookup (hΓ : Γ.lookup x = some A) :
   iapply Hall $$ %x %A %v1 %v2 %hΓ %hvs_eq
 
 /-- Extend a related substitution by a variable bound to closed related values. -/
-theorem env_ltyped2_insert (v1 v2) (hv1c : v1.1.isClosed .empty)
+theorem env_ltyped2_insert (x : Var) (A : lrel rT GF) (v1 v2) (hv1c : v1.1.isClosed .empty)
     (hv2c : v2.1.isClosed .empty) : iprop%
     A v1 v2 ∗ env_ltyped2 Γ vs ⊢ env_ltyped2 ((x, A) :: Γ) ((x, (v1, v2)) :: vs) := by
   unfold env_ltyped2
@@ -230,17 +222,15 @@ theorem env_ltyped2_empty_inv (vs : ValSubstMap rT) :
   | nil => rfl
   | cons p rest =>
     exfalso
-    have hsome : (ValSubstMap.lookup (p :: rest) p.1).isSome := by
-      simp only [ValSubstMap.lookup]
-      cases ValSubstMap.lookup rest p.1 <;> simp
-    simpa [RelCtx.lookup] using (Hdom p.1).mpr hsome
+    simpa [RelCtx.lookup] using
+      (Hdom p.1).mpr (ValSubstMap.lookup_isSome_of_mem ⟨p.2, List.mem_cons_self⟩)
 
 /-! ## The semantic typing judgement -/
 
 section bin_log_related
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
-    [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 variable (L) in
 /-- The semantic typing judgement: related substitutions give related expressions. -/
 noncomputable def bin_log_related (E : CoPset) (Γ : RelCtx rT GF) (e e' : Exp rT)
@@ -301,12 +291,14 @@ theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
     rw [lookup_cons, lookup_eq_none_of_notMem hyNotDom]; simp
   icases env_ltyped2_lookup _ vs _ _ hyHeadLookup $$ Hvs with ⟨%w1, %w2, %hvsLookupY, HAw⟩
   ihave %hvsClosed := env_ltyped2_allClosed _ vs $$ Hvs
+  ihave %hfst := env_ltyped2_fst_allClosed _ vs $$ Hvs
+  ihave %hsnd := env_ltyped2_snd_allClosed _ vs $$ Hvs
   obtain ⟨hw1c, hw2c⟩ := hvsClosed _ (mem_of_lookup_eq_some hvsLookupY)
   ihave HvsDrop := env_ltyped2_drop_head Γ vs y A hyNotDom $$ Hvs
   ihave Hvs' := env_ltyped2_insert Γ (vs.delete y) x A _ _ hw1c hw2c $$ [$HAw $HvsDrop]
   set vs' : ValSubstMap rT := (x, (w1, w2)) :: vs.delete y
   ihave Hrefines := Hold $$ %vs' Hvs'
-  ihave %hvsDom := env_ltyped2_domEq _ vs $$ Hvs
+  ihave %hvsDom := env_ltyped2_dom_eq _ vs $$ Hvs
   have hvsLookupX : vs.lookup x = none := by
     have hΓheadX : lookup ((y, A) :: Γ) x = none := by
       rw [lookup_cons, lookup_eq_none_of_notMem hxNotDom]; simp [hxy]
@@ -318,11 +310,9 @@ theorem bin_log_related_rename {B : lrel rT GF} (hxy : x ≠ y)
     simp only [mem_toFinset, mem_map] at h
     obtain ⟨p, hpmem, rfl⟩ := h
     simpa [hvsLookupX] using lookup_isSome_of_mem ⟨p.2, hpmem⟩
-  have hswapFst := substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [fst_dom])
-    (proj_allClosed (·.fst) fun p hp => (hvsClosed p hp).1)
+  have hswapFst := substMap_subst_fvar_lookup vs.fst τE x y w1.1 (by rwa [fst_dom]) hfst
     (by rw [fst_lookup, hvsLookupY]; rfl) hyFvE
-  have hswapSnd := substMap_subst_fvar_lookup vs.snd τE' x y w2.1 (by rwa [snd_dom])
-    (proj_allClosed (·.snd) fun p hp => (hvsClosed p hp).2)
+  have hswapSnd := substMap_subst_fvar_lookup vs.snd τE' x y w2.1 (by rwa [snd_dom]) hsnd
     (by rw [snd_lookup, hvsLookupY]; rfl) hyFvE'
   rw [← fst_delete] at hswapFst
   rw [← snd_delete] at hswapSnd
