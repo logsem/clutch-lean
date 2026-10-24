@@ -49,7 +49,7 @@ def swapPCs (base : BitVec 64) : List (BitVec 64) :=
   [base, BitVec.addInt base 4, BitVec.addInt base 8,
     BitVec.addInt base 12, BitVec.addInt base 16]
 
-/-- Aligned RAM placement and byte separation for an exchange invocation. -/
+/-- Placement conditions under which one exchange call runs safely. -/
 structure SwapPlacement (base a b ra : BitVec 64) : Prop where
   /-- Each instruction word is entirely within user RAM. -/
   codeRam : ∀ p ∈ swapPCs base, InUserRam p 4

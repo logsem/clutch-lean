@@ -16,13 +16,18 @@ open MeasureTheory MeasureTheory.Measure
 
 variable {rT : Type}
 
+/-- A boundary tuple of values is a value. -/
+theorem argumentTuple_isValue (args : List BoundaryValue) :
+    (argumentTuple (rT := rT) args).isValue := by
+  rw [argumentTuple_eq]
+  exact (argumentValues args).2.toIsValue
+
 /-- A bare assembly call with value operands has no surrounding evaluation frames. -/
 theorem asm_decomp (code : Code) (args : List BoundaryValue) :
     (Exp.asm (.lit (.code code)) (argumentTuple (rT := rT) args)).decomp =
       ([], .asm (.lit (.code code)) (argumentTuple args)) := by
-  obtain ⟨v, hv⟩ := Exp.toVal?_eq_some_of_isValue (e := argumentTuple (rT := rT) args) (by
-      rw [argumentTuple_eq]
-      exact (argumentValues args).2.toIsValue)
+  obtain ⟨v, hv⟩ := Exp.toVal?_eq_some_of_isValue (e := argumentTuple (rT := rT) args)
+    (argumentTuple_isValue args)
   have hd : (Exp.asm (.lit (.code code)) (argumentTuple (rT := rT) args)).decompItem = none := by
     simp only [Exp.decompItem, hv]
     rfl
@@ -31,14 +36,15 @@ theorem asm_decomp (code : Code) (args : List BoundaryValue) :
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- Perform one observable foreign action and overwrite exactly its footprint. -/
-def actionStep (env : FfiEnv rT) (F : Finset Loc) (σ : State rT) : Action → Measure (Cfg rT)
+def actionStep (env : FfiEnv rT) (F : Finset Loc) (σ : State rT) : Action → Measure (Cfg rT) :=
+  let write (heap : LocHeap BoundaryValue) :=
+    σ.update_heap (fun h => overwrite F h (valueHeap heap))
+  fun
   | .invalid => dirac ⟨.fail, σ⟩
   | .stuck => 0
-  | .ret value heap =>
-    dirac ⟨value.toVal.fst, σ.update_heap (fun h => overwrite F h (valueHeap heap))⟩
+  | .ret value heap => dirac ⟨value.toVal.fst, write heap⟩
   | .call name args heap archive =>
-    dirac ⟨.asmResume archive (.app (env.impls name).fst (argumentTuple args)),
-      σ.update_heap (fun h => overwrite F h (valueHeap heap))⟩
+    dirac ⟨.asmResume archive (.app (env.impls name).fst (argumentTuple args)), write heap⟩
 
 /-- Start an assembly call after its two operands have become values. -/
 def callStep (env : FfiEnv rT) (code args : Exp rT) (σ : State rT) : Measure (Cfg rT) :=
@@ -73,15 +79,13 @@ def primStepWith (env : FfiEnv rT) (cfg : Cfg rT) : Measure (Cfg rT) :=
   let (K, e) := cfg.expr.decomp
   (headStepWith env ⟨e, cfg.state⟩).map K.fillCfg
 
-/-- A literal code and a boundary tuple are ready for head reduction. -/
+/-- Head reduction of a literal assembly call is `callStep`. -/
 theorem headStepWith_asm (env : FfiEnv rT) (code : Code) (args : List BoundaryValue)
     (σ : State rT) :
     headStepWith env ⟨.asm (.lit (.code code)) (argumentTuple args), σ⟩ =
       callStep env (.lit (.code code)) (argumentTuple args) σ := by
-  have hargs : (argumentTuple (rT := rT) args).isValue := by
-    rw [argumentTuple_eq]
-    exact (argumentValues args).2.toIsValue
-  simp only [headStepWith, Exp.isValM_some hargs, Exp.isValM_some (IsVal.lit.toIsValue)]
+  simp only [headStepWith, Exp.isValM_some (argumentTuple_isValue (rT := rT) args),
+    Exp.isValM_some (IsVal.lit.toIsValue)]
 
 /-- A bare assembly call uses the foreign dispatcher as its primitive step. -/
 theorem primStepWith_asm (env : FfiEnv rT) (code : Code) (args : List BoundaryValue)

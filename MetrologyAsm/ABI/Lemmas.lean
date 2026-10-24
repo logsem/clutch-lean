@@ -5,7 +5,7 @@ import Metrology.ProbLang.Asm.Fragments
 
 namespace MetrologyAsm
 
-open ProbLang ProbLang.Asm Sail.ConcurrencyInterfaceV1
+open ProbLang ProbLang.Asm
 
 /-- Decoded footprint and import-argument reads determine an external call observation. -/
 theorem observe_call_of_reads (ι : Placement) (code : Code) (args : List BoundaryValue)
@@ -27,7 +27,7 @@ theorem observe_ret_of_reads (ι : Placement) (code : Code) (args : List Boundar
     observe ι code args F s = some (.ret value heap) := by
   simp [observe, hpc, hheap, hword, hvalue]
 
-/-- An observed call in a one-import image identifies the actual external program counter. -/
+/-- A call observation in a one-import image means the pc is the import address. -/
 theorem observe_call_pc_of_single_import (ι : Placement) (code : Code)
     (args : List BoundaryValue) (F : Finset Loc) (s : Mach) (name : String) (sig : CallSig)
     (values : List BoundaryValue) (heap : LocHeap BoundaryValue)
@@ -108,12 +108,7 @@ theorem decodeCell_signed64 (ι : Placement) (r : Region) (l : Loc) (s : Mach) (
 
 private theorem mapM_eq_some_map {α β : Type} (xs : List α) (f : α → Option β)
     (g : α → β) (h : ∀ x ∈ xs, f x = some (g x)) : xs.mapM f = some (xs.map g) := by
-  induction xs with
-  | nil => rfl
-  | cons x xs ih =>
-    simp only [List.mapM_cons, h x (List.mem_cons_self ..)]
-    rw [ih (fun y hy => h y (List.mem_cons_of_mem _ hy))]
-    rfl
+  induction xs <;> simp_all
 
 /-- Pointwise successful Sail cell reads reconstruct exactly the finite logical integer fragment. -/
 theorem decodeF_integerHeap (ι : Placement) (code : Code) (args : List BoundaryValue)
@@ -143,10 +138,8 @@ theorem rv_eval_ret (code : Code) (args : List BoundaryValue)
     (hentry : ∃ ι s, RVCompat ι code args heap s)
     (hspec : RVSpec code args heap (.ret value output)) :
     rv.eval code args (callFootprint code args) heap = some (.ret value output) := by
-  apply rv.eval_ret_eq_some code args (callFootprint code args) heap output value
-  · exact fun ι s P Q => rv_runs_agree ι code s P Q
-  · exact fun ι s t a b => rv_exit_det ι code args (callFootprint code args) s t a b
-  · exact hentry
-  · exact hspec
+  exact rv.eval_ret_eq_some code args _ heap output value
+    (fun ι s P Q => rv_runs_agree ι code s P Q)
+    (fun ι s t a b => rv_exit_det ι code args _ s t a b) hentry hspec
 
 end MetrologyAsm

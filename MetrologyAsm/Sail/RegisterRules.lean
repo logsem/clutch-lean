@@ -13,70 +13,58 @@ theorem rX_bits_zero (s : Mach) : rX_bits (.Regidx 0#5) s = .ok 0#64 s := by
 
 section Reads
 
+/-- Reduces `rX_bits` at a literal register index, given the register's contents. -/
+local macro "rX_bits_simp " h:term : tactic =>
+  `(tactic| simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq $h,
+    bind, EStateM.bind, pure, EStateM.pure])
+
 variable {s : Mach} {v : BitVec 64}
 
 /-- Reading ra returns its raw architectural register value. -/
 theorem rX_bits_ra
     (h : s.regs.get? Register.x1 = some v) :
     rX_bits (.Regidx 1#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading a0 returns its raw architectural register value. -/
 theorem rX_bits_a0
     (h : s.regs.get? Register.x10 = some v) :
     rX_bits (.Regidx 10#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading a1 returns its raw architectural register value. -/
 theorem rX_bits_a1
     (h : s.regs.get? Register.x11 = some v) :
     rX_bits (.Regidx 11#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading a2 returns its raw architectural register value. -/
 theorem rX_bits_a2
     (h : s.regs.get? Register.x12 = some v) :
     rX_bits (.Regidx 12#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading a3 returns its raw architectural register value. -/
 theorem rX_bits_a3
     (h : s.regs.get? Register.x13 = some v) :
     rX_bits (.Regidx 13#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading s0 returns its raw architectural register value. -/
 theorem rX_bits_s0 (h : s.regs.get? Register.x8 = some v) :
     rX_bits (.Regidx 8#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 /-- Reading s1 returns its raw architectural register value. -/
 theorem rX_bits_s1 (h : s.regs.get? Register.x9 = some v) :
     rX_bits (.Regidx 9#5) s = .ok v s := by
-  simp [rX_bits, rX, BitVec.toNatInt, regval_from_reg, readReg_eq h,
-    bind, EStateM.bind, pure, EStateM.pure]
+  rX_bits_simp h
 
 end Reads
 
 section Writes
 
 variable (s : Mach) (v : BitVec 64)
-
-/-- Writing a2 changes only its raw architectural register. -/
-theorem wX_bits_a2 :
-    wX_bits (.Regidx 12#5) v s = .ok () { s with regs := s.regs.insert Register.x12 v } := by
-  rfl
-
-/-- Writing a3 changes only its raw architectural register. -/
-theorem wX_bits_a3 :
-    wX_bits (.Regidx 13#5) v s = .ok () { s with regs := s.regs.insert Register.x13 v } := by
-  rfl
 
 /-- Writing a0 changes only its raw architectural register. -/
 theorem wX_bits_a0 :
@@ -86,6 +74,16 @@ theorem wX_bits_a0 :
 /-- Writing a1 changes only its raw architectural register. -/
 theorem wX_bits_a1 :
     wX_bits (.Regidx 11#5) v s = .ok () { s with regs := s.regs.insert Register.x11 v } := by
+  rfl
+
+/-- Writing a2 changes only its raw architectural register. -/
+theorem wX_bits_a2 :
+    wX_bits (.Regidx 12#5) v s = .ok () { s with regs := s.regs.insert Register.x12 v } := by
+  rfl
+
+/-- Writing a3 changes only its raw architectural register. -/
+theorem wX_bits_a3 :
+    wX_bits (.Regidx 13#5) v s = .ok () { s with regs := s.regs.insert Register.x13 v } := by
   rfl
 
 /-- Writing s0 changes only its raw architectural register. -/

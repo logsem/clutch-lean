@@ -8,36 +8,21 @@ namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm
 
-/-- The original two-pointer tuple of an exchange call. -/
-def swapArgs (l k : Loc) : List BoundaryValue := [.loc l, .loc k]
-
-/-- A pointer argument owns one signed doubleword cell. -/
-def swapRegion (l : Loc) : Region := ⟨l, 1, 64, true⟩
-
-/-- The scalar exchange arguments describe two signed doubleword regions. -/
-theorem callRegions_swap (l₁ l₂ : Loc) :
-    callRegions swapCode (swapArgs l₁ l₂) = [swapRegion l₁, swapRegion l₂] := by
-  rfl
-
 /-- The raw two-pointer tuple has the exchange's two signed regions. -/
 theorem swap_callRegions (l₁ l₂ : Loc) :
-    callRegions swapCode [.loc l₁, .loc l₂] =
-      [⟨l₁, 1, 64, true⟩, ⟨l₂, 1, 64, true⟩] := callRegions_swap l₁ l₂
+    callRegions swapCode [.loc l₁, .loc l₂] = [⟨l₁, 1, 64, true⟩, ⟨l₂, 1, 64, true⟩] := by
+  rfl
 
 /-- One signed doubleword region owns exactly its base location. -/
 @[simp]
 theorem signed64_cells (l : Loc) : (Region.mk l 1 64 true).cells = {l} := by
   simp [Region.cells]
 
-/-- The exchange footprint consists of its two pointer locations. -/
-theorem callFootprint_swap (l₁ l₂ : Loc) :
-    callFootprint swapCode (swapArgs l₁ l₂) = {l₁, l₂} := by
-  simp [swapArgs, callFootprint, footprint, swapCode, swapSig, regions, boundaryArgs,
-    ArgKind.region, locValue, BoundaryValue.toVal, Region.cells]
-
 /-- The raw two-pointer tuple owns exactly the two supplied locations. -/
 theorem swap_callFootprint (l₁ l₂ : Loc) :
-    callFootprint swapCode [.loc l₁, .loc l₂] = {l₁, l₂} := callFootprint_swap l₁ l₂
+    callFootprint swapCode [.loc l₁, .loc l₂] = {l₁, l₂} := by
+  simp [callFootprint, footprint, swapCode, swapSig, regions, boundaryArgs,
+    ArgKind.region, locValue, BoundaryValue.toVal, Region.cells]
 
 /-- The exchange signature has no ambiguous imports and a supported unit result. -/
 theorem swap_signature_valid : swapCode.sig.valid = true := by
@@ -81,14 +66,8 @@ theorem swap_footprintContents (ι : Placement) (s : Mach) (l₁ l₂ : Loc)
   intro r hr i hi
   rw [swap_callRegions] at hr
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
-  rcases hr with rfl | rfl
-  · have heq : i = 0 := by simpa using hi
-    subst i
-    refine ⟨old l₁, by simp, h₁, ?_⟩
-    simpa using hw₁
-  · have heq : i = 0 := by simpa using hi
-    subst i
-    refine ⟨old l₂, by simp, h₂, ?_⟩
-    simpa using hw₂
+  rcases hr with rfl | rfl <;> obtain rfl : i = 0 := by simpa using hi
+  · exact ⟨old l₁, by simp, h₁, by simpa using hw₁⟩
+  · exact ⟨old l₂, by simp, h₂, by simpa using hw₂⟩
 
 end MetrologyAsm

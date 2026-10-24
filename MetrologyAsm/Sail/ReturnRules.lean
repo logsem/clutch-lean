@@ -7,7 +7,8 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions
 open Sail
 
-/-- A configured aligned jump changes only the next program counter. -/
+/-- A jump to an aligned address under UserConfig retires successfully and sets the next program
+counter. -/
 theorem jump_to_eq {s : Mach} (h : UserConfig s) (ra : BitVec 64)
     (halign0 : BitVec.access ra 0 = 0#1) (halign1 : BitVec.access ra 1 = 0#1) :
     runSail (jump_to ra) s =

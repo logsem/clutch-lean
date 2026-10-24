@@ -11,9 +11,7 @@ continuing `FundamentalCompat`. -/
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting
-open Ectx (fill)
+open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang.MicrometerWpGS GradedLifting
 
 namespace ProbLang
 
@@ -21,8 +19,7 @@ open Cslib Exp Ectx EctxItem Pat
 
 section Fundamental
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
-    [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
+  [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
   [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 local bi IProp GF
 variable {Δ : TyEnv rT GF}
@@ -47,6 +44,10 @@ theorem pat_match_lit {l l' : BaseLit rT} {v v' : Val rT}
     ipureintro
     exact ⟨tryMatch_lit_ne hne, tryMatch_lit_ne hne⟩
 
+/-- Two literals are equal, or their boolean equality test fails. -/
+theorem lit_eq_or_beq_ne (a b : BaseLit rT) : a = b ∨ ¬ (a == b) = true := by
+  by_cases h : a = b <;> simp [h]
+
 /-- Related values at a pattern's type either both match `p`, binding values related at the bound
 type, or both fail. -/
 theorem pat_match_related {τs τb : Ty} {p : Pat rT} (Hpat : PatTyped τs p τb) (v v') :
@@ -67,19 +68,13 @@ theorem pat_match_related {τs τb : Ty} {p : Pat rT} (Hpat : PatTyped τs p τb
     iintro Hv
     iunfold lrel_int at Hv
     icases Hv with ⟨%n, %h⟩
-    have hll : (.int z : BaseLit rT) = .int n ∨
-        ¬ ((.int z : BaseLit rT) == .int n) = true := by
-      by_cases hzn : z = n <;> simp [hzn]
-    iapply pat_match_lit h.1 h.2 hll
+    iapply pat_match_lit h.1 h.2 (lit_eq_or_beq_ne _ _)
   | @lit_bool b =>
     rw [interp_bool]
     iintro Hv
     iunfold lrel_bool at Hv
     icases Hv with ⟨%b', %h⟩
-    have hll : (.bool b : BaseLit rT) = .bool b' ∨
-        ¬ ((.bool b : BaseLit rT) == .bool b') = true := by
-      by_cases hbb : b = b' <;> simp [hbb]
-    iapply pat_match_lit h.1 h.2 hll
+    iapply pat_match_lit h.1 h.2 (lit_eq_or_beq_ne _ _)
   | lit_unit =>
     show iprop(⌜v = .unit ∧ v' = .unit⌝) ⊢ _
     iintro %h
@@ -238,11 +233,8 @@ theorem bin_log_related_bool_binop (op : BinOp) (Hres : op.boolResTy = some τ) 
     cases op <;> simp [BinOp.boolResTy] at Hres <;> subst Hres
     all_goals (rw [interp_bool]; iapply refines_binop_val _ _ _ rfl (lrel_bool_lit _))
 
-section
-variable (op : UnOp)
-
 /-- Unary operators on an integer are compatible. -/
-theorem bin_log_related_int_unop (Hres : op.intResTy = some τ) :
+theorem bin_log_related_int_unop (op : UnOp) (Hres : op.intResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .int ⊢
       bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -256,7 +248,7 @@ theorem bin_log_related_int_unop (Hres : op.intResTy = some τ) :
       | (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
 
 /-- Unary operators on a boolean are compatible. -/
-theorem bin_log_related_bool_unop (Hres : op.boolResTy = some τ) :
+theorem bin_log_related_bool_unop (op : UnOp) (Hres : op.boolResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .bool ⊢
       bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -272,7 +264,7 @@ theorem bin_log_related_bool_unop (Hres : op.boolResTy = some τ) :
 /-! ## Real operators -/
 
 /-- Unary operators on a real are compatible. -/
-theorem bin_log_related_real_unop (Hres : op.realResTy = some τ) :
+theorem bin_log_related_real_unop (op : UnOp) (Hres : op.realResTy = some τ) :
     bin_log_related_ty L ⊤ Δ Γ e e' .real ⊢
       bin_log_related_ty L ⊤ Δ Γ (.unop op e) (.unop op e') τ :=
   bin_log_related_lift1 (fun σ => substMap_unop σ op) fun _ _ => by
@@ -282,8 +274,6 @@ theorem bin_log_related_real_unop (Hres : op.realResTy = some τ) :
     iintro %r
     cases op <;> simp [UnOp.realResTy] at Hres <;> subst Hres
     all_goals (rw [interp_real]; iapply refines_unop_val _ _ rfl (lrel_real_lit _))
-
-end
 
 /-- Binary operators on two reals are compatible. -/
 theorem bin_log_related_real_binop (op : BinOp) (Hres : op.realResTy = some τ) : iprop%

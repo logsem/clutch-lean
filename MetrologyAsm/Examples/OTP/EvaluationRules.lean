@@ -12,8 +12,8 @@ theorem observe_call_pc (ι : Placement) (paused : Mach) (message : Int) (pad : 
     (initial : Int)
     (h : observe ι otpCode (otpArgs message pad) {pad} paused =
       some (.call "randombytes" [.loc pad, .int 1] (padHeap pad initial))) :
-    pc paused = some (ι.importAddr "randombytes") := by
-  exact observe_call_pc_of_single_import ι otpCode (otpArgs message pad) {pad} paused
+    pc paused = some (ι.importAddr "randombytes") :=
+  observe_call_pc_of_single_import ι otpCode (otpArgs message pad) {pad} paused
     "randombytes" ⟨[.array 8 (.arg 1), .uint 64], .unit⟩ [.loc pad, .int 1]
     (padHeap pad initial) rfl h
 

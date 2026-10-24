@@ -24,7 +24,7 @@ def footprintLocations (F : Finset Loc) : List Loc := F.sort (· ≤ ·)
 @[simp] theorem footprintLocations_nodup (F : Finset Loc) : (footprintLocations F).Nodup := by
   simp [footprintLocations]
 
-/-- The integer payload of a boundary value. -/
+/-- The integer payload of a ProbLang value, if it is an integer literal. -/
 def intValue (v : Val rT) : Option Int :=
   match v.fst with
   | .lit (.int z) => some z
@@ -64,40 +64,28 @@ def snapshot (heap : LocHeap BoundaryValue) : Option HeapSnapshot :=
     | .int z => some (l, z)
     | _ => none
 
-private theorem snapshot_list {xs : List (Loc × BoundaryValue)} {ys : HeapSnapshot}
-    (h : xs.mapM (fun (l, v) => match v with
-      | .int z => some (l, z)
-      | _ => none) = some ys) :
-    ys.map (fun (l, z) => (l, BoundaryValue.int z)) = xs := by
-  induction xs generalizing ys with
-  | nil =>
-    cases h
-    rfl
+/-- A snapshot succeeds exactly when the heap lists the same integer cells. -/
+theorem snapshot_eq_some_iff {heap : LocHeap BoundaryValue} {saved : HeapSnapshot} :
+    snapshot heap = some saved ↔
+      saved.map (fun (l, z) => (l, BoundaryValue.int z)) = heap.toList := by
+  unfold snapshot
+  generalize heap.toList = xs
+  induction xs generalizing saved with
+  | nil => cases saved <;> simp
   | cons x xs ih =>
     rcases x with ⟨l, v⟩
-    cases v with
-    | int z =>
-      simp only [List.mapM_cons] at h
-      cases ht : xs.mapM (fun (l, v) => match v with
-        | .int z => some (l, z)
-        | _ => none) with
-      | none => simp [ht] at h
-      | some zs =>
-        simp [ht] at h
-        subst ys
-        simp only [List.map_cons]
-        exact congrArg (List.cons (l, BoundaryValue.int z)) (ih ht)
-    | loc l' => simp at h
-    | unit => simp at h
+    cases v <;> cases saved <;>
+      simp [List.mapM_cons, Option.bind_eq_some_iff, ih, Prod.ext_iff, and_comm]
+    all_goals try (intro _; exact ⟨fun h => ⟨h.1.symm, h.2.symm⟩, fun h => ⟨h.1.symm, h.2.symm⟩⟩)
 
 /-- Restoring a successful snapshot recovers the original boundary heap. -/
 theorem restore_snapshot {heap : LocHeap BoundaryValue} {saved : HeapSnapshot}
     (h : snapshot heap = some saved) : saved.restore = heap := by
   unfold HeapSnapshot.restore
-  rw [snapshot_list h]
+  rw [snapshot_eq_some_iff.mp h]
   exact Iris.Std.LawfulFiniteMap.ofList_toList
 
-/-- The location payload of a boundary value. -/
+/-- The location payload of a ProbLang value, if it is a location literal. -/
 def locValue (v : Val rT) : Option Loc :=
   match v.fst with
   | .lit (.loc l) => some l
@@ -205,23 +193,29 @@ def restrict (F : Finset Loc) (heap : LocHeap V) : LocHeap V :=
   simp only [restrict, getElem?_filter']
   split <;> cases heap[l]? <;> simp_all
 
-/-- Restricting twice to the same footprint has no additional effect. -/
-@[simp] theorem restrict_idem (F : Finset Loc) (heap : LocHeap V) :
-    restrict F (restrict F heap) = restrict F heap := by
+/-- A heap with no cells outside the footprint is its own restriction. -/
+theorem restrict_eq_self_of {F : Finset Loc} {heap : LocHeap V}
+    (h : ∀ l, l ∉ F → heap[l]? = none) : restrict F heap = heap := by
   apply ext_getElem?
   intro l
-  simp only [restrict_get]
-  split <;> rfl
+  rw [restrict_get]
+  split
+  · rfl
+  · exact (h l ‹_›).symm
+
+/-- Restricting twice to the same footprint has no additional effect. -/
+@[simp] theorem restrict_idem (F : Finset Loc) (heap : LocHeap V) :
+    restrict F (restrict F heap) = restrict F heap :=
+  restrict_eq_self_of fun l hl => by simp [hl]
 
 /-- Replace the footprint with a new fragment and retain the surrounding heap. -/
 def overwrite (F : Finset Loc) (heap fragment : LocHeap V) : LocHeap V :=
-  (restrict F fragment).union (heap.filter (fun l _ => decide (l ∉ F)))
+  restrict F fragment ∪ heap.filter (fun l _ => decide (l ∉ F))
 
 /-- The updated heap agrees with the new fragment on the footprint. -/
 @[simp] theorem overwrite_get (F : Finset Loc) (heap fragment : LocHeap V) (l : Loc) :
     (overwrite F heap fragment)[l]? = if l ∈ F then fragment[l]? else heap[l]? := by
-  change ((restrict F fragment) ∪ heap.filter (fun l _ => decide (l ∉ F)))[l]? = _
-  rw [getElem?_union, restrict_get, getElem?_filter']
+  rw [overwrite, getElem?_union, restrict_get, getElem?_filter']
   by_cases hl : l ∈ F <;> cases heap[l]? <;> simp_all
 
 /-- The updated heap exposes precisely the new fragment when restricted. -/
@@ -240,7 +234,7 @@ def responseOK (code : Code) (args : List (Val rT)) (F : Finset Loc)
     ∃ sig, (name, sig) ∈ code.sig.imports ∧ sig.result.validResult = true ∧
       checkResult code.sig.toCallSig args sig.result r = true
 
-/-- Evaluate a machine call using only its signature-derived heap fragment. -/
+/-- Evaluate a machine call over ProbLang values, as `start` does over boundary scalars. -/
 noncomputable def evalCall (M : AsmSemantics Code (Val rT)) (code : Code)
     (args : List (Val rT)) (heap : LocHeap (Val rT)) : Option (Interaction (Val rT)) :=
   let F := footprint code.sig.toCallSig args

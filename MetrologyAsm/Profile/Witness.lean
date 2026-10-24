@@ -2,20 +2,17 @@ import MetrologyAsm.Profile.Initial
 
 /-! # Consistency of the user-mode profile -/
 
-set_option maxRecDepth 100000
-
 namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions
 open Sail
-open Std.ExtDHashMap
 
 /-- Canonical values witnessing the user-mode register constraints. -/
 noncomputable def profileDefault : (r : Register) → RegisterType r
   | .hart_state => .HART_ACTIVE ()
   | .cur_privilege => .User
   | .misa => 0x8000000000141100#64
-  | .mstatus => 0xA00000000#64
+  | .mstatus => 2#64 <<< 32 ||| 2#64 <<< 34
   | .satp => 0#64
   | .mseccfg => 0#64
   | .menvcfg => 0#64
@@ -32,10 +29,12 @@ noncomputable def profileDefault : (r : Register) → RegisterType r
   | .pma_regions => [userRamRegion]
   | r => defaultRegister r
 
+set_option maxRecDepth 100000 in
 /-- Every generated register occurs in the finite register enumeration. -/
 theorem allRegisters_complete (r : Register) : r ∈ allRegisters := by
   cases r <;> simp [allRegisters]
 
+set_option maxRecDepth 100000 in
 /-- Every canonical register value satisfies its user-mode policy. -/
 theorem profileDefault_policy (r : Register) : userRegPolicy r (profileDefault r) := by
   cases r <;> simp [profileDefault, userRegPolicy]
@@ -44,7 +43,7 @@ theorem profileDefault_policy (r : Register) : userRegPolicy r (profileDefault r
 /-- Inserting each listed register returns its assigned value at every listed key. -/
 theorem get?_foldRegisters (f : (r : Register) → RegisterType r) (xs : List Register)
     (m : Std.ExtDHashMap Register RegisterType) (r : Register) :
-    (xs.foldl (fun m q => insert m q (f q)) m).get? r =
+    (xs.foldl (fun m q => m.insert q (f q)) m).get? r =
       if r ∈ xs then some (f r) else m.get? r := by
   induction xs generalizing m with
   | nil => rfl
@@ -55,19 +54,17 @@ theorem get?_foldRegisters (f : (r : Register) → RegisterType r) (xs : List Re
     · by_cases hq : q = r
       · subst q
         simp [hx]
-      · simp [hx, List.mem_cons, get?_insert, hq, Ne.symm hq]
+      · simp [hx, List.mem_cons, Std.ExtDHashMap.get?_insert, hq, Ne.symm hq]
 
 /-- A machine state witnessing consistency of the user-mode register profile. -/
-noncomputable def profileWitness : Mach :=
-  { (default : Mach) with
-    regs := allRegisters.foldl (fun m r => insert m r (profileDefault r)) default }
+noncomputable def profileWitness : Mach := fillRegisters profileDefault
 
 /-- The user-mode register profile has a concrete inhabitant. -/
 theorem profileWitness_config : UserConfig profileWitness := by
   constructor
   intro r
   refine ⟨profileDefault r, ?_, profileDefault_policy r⟩
-  change (allRegisters.foldl (fun m r => insert m r (profileDefault r)) default).get? r = _
+  simp only [profileWitness, fillRegisters]
   rw [get?_foldRegisters]
   simp [allRegisters_complete]
 

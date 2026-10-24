@@ -37,6 +37,12 @@ meta def Side.isL : Side → Bool
   | .l => true
   | .r => false
 
+/-- The index, among the trailing arguments of a `refines` application, of the program on this
+side. -/
+meta def Side.argIdx : Side → Nat
+  | .l => 3
+  | .r => 2
+
 /-- A proof-mode goal `hyps ⊢ refines L E e t A`. -/
 meta structure RelGoal where
   /-- The universe level of the proof-mode propositions. -/
@@ -68,7 +74,7 @@ meta def RelGoal.side (g : RelGoal) : Side → Q(Exp $(g.α))
 /-- The goal with the program on `side` replaced by `x`. -/
 meta def RelGoal.withSide (g : RelGoal) (side : Side) (x : LeanExpr) : LeanExpr :=
   let args := g.app.getAppArgs
-  let i := args.size - (if side.isL then 3 else 2)
+  let i := args.size - side.argIdx
   mkAppN g.app.getAppFn (args.set! i x)
 
 /-- Run `k` on the `refines` goal of the proof-mode context. -/
@@ -209,12 +215,17 @@ meta def elabRule (stx : Term) : ProofModeM LeanExpr := do
       registerSyntheticMVarWithCurrRef m.mvarId! (.typeClass .none)
   return mkAppN val mvs
 
+/-- The conclusion of the entailment `val`, which the rule `stx` elaborated to. -/
+meta def ruleConclusion (tac : Name) (stx : Term) (val : LeanExpr) : MetaM LeanExpr := do
+  let some (_, Q) := entailsParts? (← instantiateMVars (← inferType val))
+    | throwError "{tac}: {stx} does not conclude an entailment"
+  instantiateMVars Q
+
 /-- Close the goal by the rule `stx`, whose conclusion must unify with the goal as it stands. -/
 meta def applyRule (tac : Name) (mvar : MVarId) (g : RelGoal) (stx : Term)
     (pre : LeanExpr → MetaM LeanExpr := pure) : ProofModeM Unit := do
   let val ← elabRule stx
-  let some (_, Q) := entailsParts? (← instantiateMVars (← inferType val))
-    | throwError "{tac}: {stx} does not conclude an entailment"
+  let Q ← ruleConclusion tac stx val
   unless ← isDefEq Q g.app do throwError "{tac}: cannot apply {stx} to {← ppExpr g.app}"
   synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
   finishRule mvar g val pre
@@ -224,25 +235,23 @@ innermost first. -/
 meta partial def relApplyCore (tac : Name) (sides : List Side) (stx : Term) : TacticM Unit :=
   runTacticRel tac fun mvar g => do
     let val ← elabRule stx
-    let some (_, Q) := entailsParts? (← instantiateMVars (← inferType val))
-      | throwError "{tac}: {stx} does not conclude an entailment"
-    let Q ← instantiateMVars Q
+    let Q ← ruleConclusion tac stx val
     unless Q.consumeMData.isAppOf ``refines do
       throwError "{tac}: {stx} does not conclude a refinement"
     let qargs := Q.consumeMData.getAppArgs
     let holes ← sides.filterMapM fun s => do
-      let some h ← fillHole? qargs[qargs.size - (if s.isL then 3 else 2)]! | return none
+      let some h ← fillHole? qargs[qargs.size - s.argIdx]! | return none
       return some (s, h)
     if holes.isEmpty then
       throwError "{tac}: {stx} has no context hole `Ectx.fill ?K _` on the requested side"
     let rec go : List (Side × LeanExpr × LeanExpr) → ProofModeM Unit
       | [] => do unless ← isDefEq Q g.app do failure
       | (s, K, pat) :: rest => do
-        let some _ ← searchSide g s fun Kc e₀ => do
+        let search := searchSide g s fun Kc e₀ => do
           unless ← unifyExp pat e₀ do failure
           unless ← isDefEq K Kc do failure
           go rest
-          | failure
+        let some _ ← search | failure
     unless (← observing? (go holes)).isSome do
       throwError "{tac}: cannot apply {stx} to {← ppExpr g.e} << {← ppExpr g.t}"
     synthesizeSyntheticMVarsNoPostponing (ignoreStuckTC := true)
@@ -353,11 +362,17 @@ meta def asVal? {α : Q(Type)} (e : Q(Exp $α)) : MetaM (Option Q(Val $α)) := d
   | ~q(Val.fst $v) => return some v
   | _ => exprAsVal? e
 
+/-- Both programs of the goal as values. -/
+meta def bothVals? (tac : Name) (g : RelGoal) : MetaM (Q(Val $(g.α)) × Q(Val $(g.α))) := do
+  have α : Q(Type) := g.α
+  let some v₁ ← asVal? (α := α) g.e | throwError "{tac}: {← ppExpr g.e} is not a value"
+  let some v₂ ← asVal? (α := α) g.t | throwError "{tac}: {← ppExpr g.t} is not a value"
+  return (v₁, v₂)
+
 /-- `rel_values_core` reduces `REL v << v' @ E : A` to `|={⊤}=> A v v'` (at `E = ⊤`) or to
-`naOwnP E ={⊤}=∗ naOwnP ⊤ ∗ A v v'`. -/
+`naOwnP E ={⊤}=∗ naOwnP ⊤ ∗ A v v'`, checking that both sides are values by `kernel_rfl`. -/
 elab "rel_values_core" : tactic => runTacticRel `rel_values fun mvar g => do
-  let some v₁ ← asVal? g.e | throwError "rel_values: {← ppExpr g.e} is not a value"
-  let some v₂ ← asVal? g.t | throwError "rel_values: {← ppExpr g.t} is not a value"
+  let (v₁, v₂) ← bothVals? `rel_values g
   let rule := if ← isDefEq g.E q((⊤ : CoPset)) then ``refines_ret else ``refines_ret_na
   let stx ← `($(mkIdent rule) (v1 := $(← exprToSyntax v₁))
     (v2 := $(← exprToSyntax v₂)) (by kernel_rfl) (by kernel_rfl))
@@ -384,7 +399,9 @@ meta def reshapeSide (tac : Name) (g : RelGoal) (side : Side) (focus : Term) :
     ProofModeM (Q(Ectx $(g.α)) × Q(Exp $(g.α)) × LeanExpr) := do
   have α : Q(Type) := g.α
   let f : Q(Exp $α) ← elabTermEnsuringTypeQ focus q(Exp $α)
-  let some K ← searchSide g side fun K e₀ => do guard (← isDefEq e₀ f); return K
+  let some K ← searchSide g side fun K e₀ => do
+      guard (← isDefEq e₀ f)
+      return K
     | throwError "{tac}: cannot find {← ppExpr f} in an evaluation context of \
         {← ppExpr (g.side side)}"
   have K : Q(Ectx $α) := K
@@ -552,41 +569,38 @@ meta def bijArgs (args : Array Term) : MacroM (Array Term) :=
   | #[f, hdom, hbij] => return #[f, hdom, hbij]
   | _ => Macro.throwError "expected `f`, or `f hdom hbij`"
 
+/-- Apply the coupling rule `rule` (with leading arguments `pre`) along the bijection `args`,
+then tidy `id` applications. -/
+meta def coupleWith (rule : Ident) (pre : Array Term) (args : Array Term) :
+    MacroM (TSyntax `tactic) := do
+  let a ← bijArgs args
+  let t ← `(tactic| rel_apply ($rule $pre* $(a[0]!) $(a[1]!) $(a[2]!) ?_))
+  `(tactic| ($t; try simp only [id_eq]))
+
 /-- `rel_couple_UU [f [hdom hbij]]` couples `rand z ~ rand z` along the bijection `f` (default
 `id`); missing proofs are left as goals (Rocq `refines_couple_UU`). -/
 syntax "rel_couple_UU" (ppSpace colGt term:max)* : tactic
 macro_rules
-  | `(tactic| rel_couple_UU $args*) => do
-    let a ← bijArgs args
-    let t ← `(tactic| rel_apply (refines_couple_rands_lr $(a[0]!) $(a[1]!) $(a[2]!) ?_))
-    `(tactic| ($t; try simp only [id_eq]))
+  | `(tactic| rel_couple_UU $args*) => coupleWith (mkIdent ``refines_couple_rands_lr) #[] args
 
 /-- `rel_couple_TU α [f [hdom hbij]]` couples a draw from the empty tape `α` with an
 unlabelled draw (Rocq `refines_couple_TU`). -/
 syntax "rel_couple_TU " term:max (ppSpace colGt term:max)* : tactic
 macro_rules
-  | `(tactic| rel_couple_TU $α $args*) => do
-    let a ← bijArgs args
-    let t ← `(tactic| rel_apply (refines_couple_TU $α $(a[0]!) $(a[1]!) $(a[2]!) ?_))
-    `(tactic| ($t; try simp only [id_eq]))
+  | `(tactic| rel_couple_TU $α $args*) => coupleWith (mkIdent ``refines_couple_TU) #[α] args
 
 /-- `rel_couple_UT α' [f [hdom hbij]]` couples an unlabelled draw with a draw from the empty
 spec tape `α'` (Rocq `refines_couple_UT`). -/
 syntax "rel_couple_UT " term:max (ppSpace colGt term:max)* : tactic
 macro_rules
-  | `(tactic| rel_couple_UT $α $args*) => do
-    let a ← bijArgs args
-    let t ← `(tactic| rel_apply (refines_couple_UT $α $(a[0]!) $(a[1]!) $(a[2]!) ?_))
-    `(tactic| ($t; try simp only [id_eq]))
+  | `(tactic| rel_couple_UT $α $args*) => coupleWith (mkIdent ``refines_couple_UT) #[α] args
 
 /-- `rel_couple_TT α α' [f [hdom hbij]]` couples draws from two empty tapes
 (Rocq `refines_couple_TT`). -/
 syntax "rel_couple_TT " term:max ppSpace term:max (ppSpace colGt term:max)* : tactic
 macro_rules
-  | `(tactic| rel_couple_TT $α $α' $args*) => do
-    let a ← bijArgs args
-    let t ← `(tactic| rel_apply (refines_couple_TT $α $α' $(a[0]!) $(a[1]!) $(a[2]!) ?_))
-    `(tactic| ($t; try simp only [id_eq]))
+  | `(tactic| rel_couple_TT $α $α' $args*) =>
+    coupleWith (mkIdent ``refines_couple_TT) #[α, α'] args
 
 /-- `rel_couple_UU_spend S c hc H` couples `rand N ~ rand N` along `S`, spending `↯b c`
 (relational `wp_couple_rand_rand_spend`). -/
@@ -614,8 +628,7 @@ macro "rel_couple_urands " f:term:max ppSpace hmp:term:max : tactic =>
 
 /-- `rel_arrow_val_core` applies `refines_arrow_val` to a refinement between closures. -/
 elab "rel_arrow_val_core" : tactic => runTacticRel `rel_arrow_val fun mvar g => do
-  let some v₁ ← asVal? g.e | throwError "rel_arrow_val: {← ppExpr g.e} is not a value"
-  let some v₂ ← asVal? g.t | throwError "rel_arrow_val: {← ppExpr g.t} is not a value"
+  let (v₁, v₂) ← bothVals? `rel_arrow_val g
   let stx ← `(refines_arrow_val (v := $(← exprToSyntax v₁)) (v' := $(← exprToSyntax v₂))
     ⟨⟨by is_lc, by simp⟩, ⟨by is_lc, by simp⟩⟩)
   applyRule `rel_arrow_val mvar g stx

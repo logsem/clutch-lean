@@ -7,7 +7,7 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions
 open Sail
 
-/-- The Sail ADDI body writes its immediate when its source is the zero register. -/
+/-- Sail's ADDI x10, x0, 7 retires successfully and sets x10 to 7. -/
 theorem execute_addi_zero_seven
     (s : PreSail.SequentialState RegisterType trivialChoiceSource) :
     (execute_ITYPE 7#12 (.Regidx 0#5) (.Regidx 10#5) .ADDI) s =

@@ -106,12 +106,16 @@ instance inhabited_lrel : Inhabited (lrel rT GF) where
 section SimpleLRels
 local bi IProp GF
 
+/-- Two units are closed. -/
+theorem lrel_unit_closed (v1 v2 : Val rT) :
+    ⌜v1 = .unit ∧ v2 = .unit⌝ ⊢ ⌜v1.1.IsClosedEmpty ∧ v2.1.IsClosedEmpty⌝ := by
+  iintro %h !%
+  exact ⟨h.1 ▸ lit_isClosedEmpty _, h.2 ▸ lit_isClosedEmpty _⟩
+
 /-- Values related when both are `()`. -/
 noncomputable def lrel_unit : lrel rT GF where
   car v1 v2 := iprop% ⌜ v1 = .unit ∧ v2 = .unit ⌝
-  closed v1 v2 := by
-    iintro %h !%
-    exact ⟨h.1 ▸ lit_isClosedEmpty _, h.2 ▸ lit_isClosedEmpty _⟩
+  closed v1 v2 := lrel_unit_closed v1 v2
 
 /-- Values related when both are the same boolean. -/
 noncomputable def lrel_bool : lrel rT GF where
@@ -332,6 +336,7 @@ class MicrometerRGS (rT : Type) [MeasurableSpace rT] [LawfulProbLangℝ rT]
   nais : NaInvPoolName
 
 open MicrometerRGS (naInvG nais)
+open NonAtomicInvariant (own inv)
 
 attribute [reducible, instance] MicrometerRGS.micrometerGS naInvG
 
@@ -342,11 +347,11 @@ variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} [MicrometerRG
 
 /-- Ownership of the non-atomic invariant mask `E`, in the pool of `MicrometerRGS`. -/
 noncomputable abbrev naOwnP (E : CoPset) : IProp GF :=
-  NonAtomicInvariant.own (nais rT GF) E
+  own (nais rT GF) E
 
 /-- The non-atomic invariant `P` at namespace `N`, in the pool of `MicrometerRGS`. -/
 noncomputable abbrev naInvP (N : Namespace) (P : IProp GF) : IProp GF :=
-  NonAtomicInvariant.inv (nais rT GF) N P
+  inv (nais rT GF) N P
 
 /-- The update that closes the non-atomic invariant `P` at `N`, opened from mask `E`. -/
 noncomputable abbrev naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IProp GF :=
@@ -355,6 +360,9 @@ noncomputable abbrev naCloseP (P : IProp GF) (N : Namespace) (E : CoPset) : IPro
 /-! ## Refinement judgement -/
 
 variable (L) in
+-- The right context `K` is quantified so bind rules can work inside a larger spec context;
+-- `naOwnP E` says the non-atomic invariants outside `E` are open and must be closed by the end; the
+-- threaded positive credit `b` must come back as some positive `b'`.
 /-- `REL[L] e << e' @ E : A`: `e` refines `e'` at `A` under the graded lifting `L`. -/
 noncomputable def refines (E : CoPset) (e e' : Exp rT) (A : lrel rT GF) : IProp GF := iprop%
   ∀ (K : Ectx rT) (b : B),

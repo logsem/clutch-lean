@@ -17,9 +17,13 @@ structure FfiEnv (rT : Type) where
 
 /-- An observable action of the foreign-call dispatcher. -/
 inductive Action where
+  /-- The call violated the boundary checks. -/
   | invalid
+  /-- The machine has no evaluation for the call. -/
   | stuck
+  /-- The call returned a value and its final heap fragment. -/
   | ret (value : BoundaryValue) (heap : LocHeap BoundaryValue)
+  /-- The call paused at a named import, with an archive for resuming it. -/
   | call (name : String) (args : List BoundaryValue) (heap : LocHeap BoundaryValue)
       (archive : Replay)
   deriving Countable

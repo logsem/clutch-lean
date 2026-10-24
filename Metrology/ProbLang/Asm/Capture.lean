@@ -8,18 +8,15 @@ public import Metrology.ProbLang.Asm.Boundary
 
 namespace ProbLang.Asm
 
-variable {rT α β : Type}
+variable {rT : Type}
 
-private theorem mapM_congrOn (xs : List α) (f g : α → Option β)
+private theorem mapM_congrOn {α β : Type} (xs : List α) (f g : α → Option β)
     (h : ∀ x ∈ xs, f x = g x) : xs.mapM f = xs.mapM g := by
-  revert h
   induction xs with
-  | nil => intro _; rfl
+  | nil => rfl
   | cons x xs ih =>
-    intro h
-    have hx := h x List.mem_cons_self
-    have hxs := ih (fun y hy => h y (List.mem_cons_of_mem x hy))
-    simp only [List.mapM_cons, hx, hxs]
+    rw [List.forall_mem_cons] at h
+    simp only [List.mapM_cons, h.1, ih h.2]
 
 /-- Read the current integer contents of a finite footprint. -/
 def capture (F : Finset Loc) (heap : LocHeap (Val rT)) : Option HeapSnapshot :=

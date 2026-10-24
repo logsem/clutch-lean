@@ -14,10 +14,10 @@ open Sail.ConcurrencyInterfaceV1
 def WordAt (s : Mach) (a : BitVec 64) (width : Nat) (value : BitVec (8 * width)) : Prop :=
   ∀ i < width, s.mem.get? (a.toNat + i) = some (value.extractLsb' (8 * i) 8)
 
-/-- The little-endian bytes of a doubleword are present at an address. -/
+/-- `WordAt` at width 8 (doubleword). -/
 abbrev Word64At (s : Mach) (a : BitVec 64) (value : BitVec 64) : Prop := WordAt s a 8 value
 
-/-- The little-endian bytes of an instruction word are present at an address. -/
+/-- `WordAt` at width 4 (instruction word). -/
 abbrev Word32At (s : Mach) (a : BitVec 64) (value : BitVec 32) : Prop := WordAt s a 4 value
 
 /-- Writing a doubleword inserts its eight bytes and preserves every other state field. -/
@@ -25,18 +25,67 @@ def write64State (s : Mach) (a : BitVec 64) (value : BitVec 64) : Mach :=
   { s with mem := (List.range 8).foldl (fun mem i =>
       mem.insert (a.toNat + i) (value.extractLsb' (8 * i) 8)) s.mem }
 
+/-- Sail's raw doubleword write has exactly the eight-byte update effect. -/
+theorem writeBytes64_eq (s : Mach) (a : BitVec 64) (value : BitVec 64) :
+    (PreSail.writeBytes (n := 8) a.toNat value : SailM Bool) s =
+      .ok true (write64State s a value) := by
+  rfl
+
+/-- A doubleword write preserves the complete register file. -/
+@[simp] theorem write64State_regs (s : Mach) (a value : BitVec 64) :
+    (write64State s a value).regs = s.regs := rfl
+
+/-- A doubleword write installs exactly its eight little-endian bytes. -/
+theorem word64At_write64State (s : Mach) (a value : BitVec 64) :
+    Word64At (write64State s a value) a value := by
+  intro i hi
+  have hcases : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by omega
+  rcases hcases with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals simp only [write64State, List.range_succ, List.foldl_append, List.foldl_cons,
+    List.foldl_nil, Nat.reduceMul, Nat.add_zero, Std.ExtHashMap.get?_eq_getElem?]
+  all_goals simp only [Std.ExtHashMap.getElem?_insert]
+  all_goals simp
+
+/-- A doubleword write preserves each byte outside its eight-byte interval. -/
+theorem write64State_get?_outside (s : Mach) (a value : BitVec 64) (k : Nat)
+    (h : k < a.toNat ∨ a.toNat + 8 ≤ k) :
+    (write64State s a value).mem.get? k = s.mem.get? k := by
+  have h0 : a.toNat ≠ k := by omega
+  have hk : ∀ i < 8, a.toNat + i ≠ k := by
+    intro i hi
+    omega
+  simp [write64State, List.range_succ, Std.ExtHashMap.get?_eq_getElem?,
+    Std.ExtHashMap.getElem?_insert, h0, hk 1 (by omega), hk 2 (by omega),
+    hk 3 (by omega), hk 4 (by omega), hk 5 (by omega), hk 6 (by omega), hk 7 (by omega)]
+
+/-- Bytewise memory assertions are preserved by equal memory maps. -/
+theorem WordAt.of_mem_eq {s t : Mach} {a : BitVec 64} {width : Nat}
+    {value : BitVec (8 * width)} (h : WordAt s a width value) (heq : t.mem = s.mem) :
+    WordAt t a width value := by
+  unfold WordAt at h ⊢
+  rw [heq]
+  exact h
+
+/-- Plain physical RAM writes perform the eight-byte memory update. -/
+theorem write_ram64_eq (s : Mach) (a value : BitVec 64) :
+    write_ram .Write_plain (.Physaddr a) 8 value () s = .ok true (write64State s a value) := by
+  rfl
+
+/-- Extracting all 64 bits of a doubleword returns it unchanged. -/
+theorem extractLsb_63_zero_eq (value : BitVec 64) : Sail.BitVec.extractLsb value 63 0 = value := by
+  change value.extractLsb' 0 64 = value
+  exact BitVec.extractLsb'_eq_self
+
+section
+
+variable {s : Mach}
+
 /-- Reading an allocated byte preserves the Sail state. -/
 theorem readByte_eq {s : Mach} {a : Nat} {value : BitVec 8}
     (h : s.mem.get? a = some value) : (PreSail.readByte a : SailM (BitVec 8)) s = .ok value s := by
   have h' : s.mem[a]? = some value := h
   simp [PreSail.readByte, h', bind, EStateM.bind, pure, EStateM.pure, EStateM.get,
     get, MonadState.get, getThe, MonadStateOf.get]
-
-/-- Sail's raw doubleword write has exactly the eight-byte update effect. -/
-theorem writeBytes64_eq (s : Mach) (a : BitVec 64) (value : BitVec 64) :
-    (PreSail.writeBytes (n := 8) a.toNat value : SailM Bool) s =
-      .ok true (write64State s a value) := by
-  rfl
 
 /-- Reading eight allocated little-endian bytes returns their doubleword without state changes. -/
 theorem readBytes64_eq {s : Mach} {a : BitVec 64} {value : BitVec 64}
@@ -72,44 +121,6 @@ theorem readBytes32_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
   clear h h0 h1 h2 h3 s a
   bv_normalize
 
-/-- A doubleword write preserves the complete register file. -/
-@[simp] theorem write64State_regs (s : Mach) (a value : BitVec 64) :
-    (write64State s a value).regs = s.regs := rfl
-
-/-- A doubleword write installs exactly its eight little-endian bytes. -/
-theorem word64At_write64State (s : Mach) (a value : BitVec 64) :
-    Word64At (write64State s a value) a value := by
-  intro i hi
-  have hcases : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by omega
-  rcases hcases with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals simp only [write64State, List.range_succ, List.foldl_append, List.foldl_cons,
-    List.foldl_nil, Nat.reduceMul, Nat.add_zero, Std.ExtHashMap.get?_eq_getElem?]
-  all_goals simp only [Std.ExtHashMap.getElem?_insert]
-  all_goals simp
-
-/-- A doubleword write preserves each byte outside its eight-byte interval. -/
-theorem write64State_get?_outside (s : Mach) (a value : BitVec 64) (k : Nat)
-    (h : k < a.toNat ∨ a.toNat + 8 ≤ k) :
-    (write64State s a value).mem.get? k = s.mem.get? k := by
-  have h0 : a.toNat ≠ k := by omega
-  have h1 : a.toNat + 1 ≠ k := by omega
-  have h2 : a.toNat + 2 ≠ k := by omega
-  have h3 : a.toNat + 3 ≠ k := by omega
-  have h4 : a.toNat + 4 ≠ k := by omega
-  have h5 : a.toNat + 5 ≠ k := by omega
-  have h6 : a.toNat + 6 ≠ k := by omega
-  have h7 : a.toNat + 7 ≠ k := by omega
-  simp [write64State, List.range_succ, Std.ExtHashMap.get?_eq_getElem?,
-    Std.ExtHashMap.getElem?_insert, h0, h1, h2, h3,
-    h4, h5, h6, h7]
-
-/-- Bytewise memory assertions are preserved by equal memory maps. -/
-theorem WordAt.of_mem_eq {s t : Mach} {a : BitVec 64} {width : Nat}
-    {value : BitVec (8 * width)} (h : WordAt s a width value) (heq : t.mem = s.mem) :
-    WordAt t a width value := by
-  intro i hi
-  simpa [heq] using h i hi
-
 /-- Writing a doubleword preserves every disjoint bytewise word assertion. -/
 theorem WordAt.write64State {s : Mach} {a b : BitVec 64} {width : Nat}
     {value : BitVec (8 * width)} (h : WordAt s b width value) (data : BitVec 64)
@@ -138,38 +149,6 @@ theorem read_ram32_fetch_eq {s : Mach} {a : BitVec 64} {value : BitVec 32}
     read_ram .Read_ifetch (.Physaddr a) 4 false s = .ok (value, ()) s := by
   simp [RiscvZkvm.Sail.Functions.read_ram, PreSail.sail_mem_read, bind, EStateM.bind,
     pure, EStateM.pure, readBytes32_eq h]
-
-/-- Plain physical RAM writes perform the eight-byte memory update. -/
-theorem write_ram64_eq (s : Mach) (a value : BitVec 64) :
-    write_ram .Write_plain (.Physaddr a) 8 value () s = .ok true (write64State s a value) := by
-  rfl
-
-/-- A successful virtual doubleword load followed by its register write retires successfully. -/
-theorem execute_LOAD64_of_vmem {s t : Mach} (imm : BitVec 12) (rs1 rd : regidx)
-    (value : BitVec 64)
-    (hread : vmem_read rs1 (sign_extend (m := 64) imm) 8 (.Load .Data) false false false s =
-      .ok (.Ok value) s)
-    (hwrite : wX_bits rd value s = .ok () t) :
-    execute_LOAD imm rs1 rd false 8 s = .ok (.Retire_Success ()) t := by
-  have hext : extend_value false value = value := by
-    simp [extend_value, sign_extend, Sail.BitVec.signExtend]
-  simp [execute_LOAD, RiscvZkvm.Sail.Functions.xlen_bytes, bind, EStateM.bind,
-    pure, EStateM.pure, Sail.assert,
-    PreSail.assert, hread, hext, hwrite, RETIRE_SUCCESS]
-
-/-- Reading a store source and successfully writing a virtual doubleword retires successfully. -/
-theorem execute_STORE64_of_vmem {s t : Mach} (imm : BitVec 12) (rs2 rs1 : regidx)
-    (value : BitVec 64)
-    (hvalue : rX_bits rs2 s = .ok value s)
-    (hwrite : vmem_write rs1 (sign_extend (m := 64) imm) 8 value (.Store .Data)
-      false false false s = .ok (.Ok true) t) :
-    execute_STORE imm rs2 rs1 8 s = .ok (.Retire_Success ()) t := by
-  have hdata : Sail.BitVec.extractLsb value 63 0 = value := by
-    change value.extractLsb' 0 64 = value
-    exact BitVec.extractLsb'_eq_self
-  simp [execute_STORE, RiscvZkvm.Sail.Functions.xlen_bytes, bind, EStateM.bind,
-    pure, EStateM.pure, Sail.assert,
-    PreSail.assert, hvalue, hdata, hwrite, RETIRE_SUCCESS]
 
 /-- Successful physical access guards reduce a doubleword read to its allocated RAM bytes. -/
 theorem checked_mem_read64_of_guards {s : Mach} {a value : BitVec 64}
@@ -224,9 +203,7 @@ theorem checked_mem_write64_of_guards {s : Mach} (a value : BitVec 64)
     (hmmio : within_mmio_writable (.Physaddr a) 8 s = .ok false s) :
     checked_mem_write (.Physaddr a) 8 value access .PBMT_PMA priv () false false false s =
       .ok (.Ok true) (write64State s a value) := by
-  have hdata : Sail.BitVec.extractLsb value 63 0 = value := by
-    change value.extractLsb' 0 64 = value
-    exact BitVec.extractLsb'_eq_self
+  have hdata := extractLsb_63_zero_eq value
   simp [checked_mem_write, SailME.run, PreSail.PreSailME.run, hcheck, hsplit,
     write_kind_of_flags, misaligned_order, sys_misaligned_order_decreasing, untilFuelM,
     untilFuelM.go, bind, EStateM.bind, EStateM.map, pure, EStateM.pure, ExceptT.run,
@@ -243,16 +220,6 @@ theorem mem_read_priv_of_checked {s : Mach} {width : Nat} {value : BitVec (8 * w
     mem_read_priv access pbmt priv a width false false false s = .ok (.Ok value) s := by
   simp [mem_read_priv, mem_read_priv_meta, hread, bind, EStateM.bind, pure, EStateM.pure,
     MemoryOpResult_drop_meta]
-
-/-- A successful checked write lifts through the physical-memory metadata wrapper. -/
-theorem mem_write_value_priv_of_checked {s t : Mach} {width : Nat}
-    (value : BitVec (8 * width)) (access : MemoryAccessType mem_payload)
-    (pbmt : page_based_mem_type) (priv : Privilege) (a : physaddr)
-    (hwrite : checked_mem_write a width value access pbmt priv () false false false s =
-      .ok (.Ok true) t) :
-    mem_write_value_priv a width value priv access pbmt false false false s = .ok (.Ok true) t := by
-  simp [mem_write_value_priv, mem_write_value_priv_meta, default_meta, hwrite, bind,
-    EStateM.bind, pure, EStateM.pure]
 
 /-- The user RAM region lies above the platform interrupt-controller window. -/
 theorem within_clint_userRam {s : Mach} {a : BitVec 64} {width : Nat}
@@ -286,6 +253,43 @@ theorem split_misaligned_of_aligned {s : Mach} {a : BitVec 64} {width : Nat}
     simpa only [is_aligned_vaddr, beq_iff_eq] using halign
   simp [split_misaligned, hm, pure, EStateM.pure]
 
+end
+
+/-- A successful virtual doubleword load followed by its register write retires successfully. -/
+theorem execute_LOAD64_of_vmem {s t : Mach} (imm : BitVec 12) (rs1 rd : regidx)
+    (value : BitVec 64)
+    (hread : vmem_read rs1 (sign_extend imm) 8 (.Load .Data) false false false s =
+      .ok (.Ok value) s)
+    (hwrite : wX_bits rd value s = .ok () t) :
+    execute_LOAD imm rs1 rd false 8 s = .ok (.Retire_Success ()) t := by
+  have hext : extend_value false value = value := by
+    simp [extend_value, sign_extend, Sail.BitVec.signExtend]
+  simp [execute_LOAD, RiscvZkvm.Sail.Functions.xlen_bytes, bind, EStateM.bind,
+    pure, EStateM.pure, Sail.assert,
+    PreSail.assert, hread, hext, hwrite, RETIRE_SUCCESS]
+
+/-- Reading a store source and successfully writing a virtual doubleword retires successfully. -/
+theorem execute_STORE64_of_vmem {s t : Mach} (imm : BitVec 12) (rs2 rs1 : regidx)
+    (value : BitVec 64)
+    (hvalue : rX_bits rs2 s = .ok value s)
+    (hwrite : vmem_write rs1 (sign_extend imm) 8 value (.Store .Data)
+      false false false s = .ok (.Ok true) t) :
+    execute_STORE imm rs2 rs1 8 s = .ok (.Retire_Success ()) t := by
+  have hdata := extractLsb_63_zero_eq value
+  simp [execute_STORE, RiscvZkvm.Sail.Functions.xlen_bytes, bind, EStateM.bind,
+    pure, EStateM.pure, Sail.assert,
+    PreSail.assert, hvalue, hdata, hwrite, RETIRE_SUCCESS]
+
+/-- A successful checked write lifts through the physical-memory metadata wrapper. -/
+theorem mem_write_value_priv_of_checked {s t : Mach} {width : Nat}
+    (value : BitVec (8 * width)) (access : MemoryAccessType mem_payload)
+    (pbmt : page_based_mem_type) (priv : Privilege) (a : physaddr)
+    (hwrite : checked_mem_write a width value access pbmt priv () false false false s =
+      .ok (.Ok true) t) :
+    mem_write_value_priv a width value priv access pbmt false false false s = .ok (.Ok true) t := by
+  simp [mem_write_value_priv, mem_write_value_priv_meta, default_meta, hwrite, bind,
+    EStateM.bind, pure, EStateM.pure]
+
 /-- An eight-byte aligned address has zero low three bits. -/
 theorem aligned64_low_bits {a : BitVec 64} (halign : a.toNat % 8 = 0) :
     a.extractLsb' 0 3 = 0#3 := by
@@ -306,7 +310,7 @@ theorem split_on_page_boundary64_eq (s : Mach) (a : BitVec 64)
     rw [BitVec.sub_eq_add_neg, BitVec.add_assoc]
     rfl
   have hmask (x : BitVec 64) : x &&& 0xfffffffffffff000#64 = (x >>> 12) <<< 12 := by
-    exact (BitVec.shiftLeft_ushiftRight (x := x) (n := 12)).symm
+    exact (BitVec.shiftLeft_ushiftRight (n := 12)).symm
   have hpage : (a &&& 0xfffffffffffff000#64) = ((a + 8#64 - 1#64) &&& 0xfffffffffffff000#64) := by
     rw [hmask, hmask, hadd]
     congr 1
@@ -320,7 +324,7 @@ theorem split_on_page_boundary64_eq (s : Mach) (a : BitVec 64)
     apply hcross
     simp only [RiscvZkvm.Sail.Functions.pagesize_bits]
     have hmask' : Sail.BitVec.updateSubrange (ones (n := 64))
-        ((((12 : Nat) : Int) - 1).toNat) 0 zeros = 0xfffffffffffff000#64 := by
+      ((((12 : Nat) : Int) - 1).toNat) 0 zeros = 0xfffffffffffff000#64 := by
       decide
     rw [hmask']
     exact beq_iff_eq.mpr hpage
@@ -335,13 +339,16 @@ include h
 theorem write64State (a value : BitVec 64) :
     UserConfig (write64State s a value) := h.of_regs_eq rfl
 
+/-- A configured state has no HTIF tohost base address. -/
+theorem htif_tohost_base_eq_none : s.regs.get? Register.htif_tohost_base = some none := by
+  obtain ⟨base, hbase, hp⟩ := h.regs .htif_tohost_base
+  simpa only [userRegPolicy] using hp ▸ hbase
+
 /-- Configured user RAM reads use the RAM interface rather than MMIO. -/
 theorem within_mmio_readable
     {a : BitVec 64} {width : Nat} (hram : InUserRam a width) :
     within_mmio_readable (.Physaddr a) width s = .ok false s := by
-  obtain ⟨base, hbase, hp⟩ := h.regs .htif_tohost_base
-  have hnone : s.regs.get? Register.htif_tohost_base = some none := by
-    simpa only [userRegPolicy] using hp ▸ hbase
+  have hnone := h.htif_tohost_base_eq_none
   simp [RiscvZkvm.Sail.Functions.within_mmio_readable, get_config_rvfi, within_clint_userRam hram,
     within_sig_userRam hram, within_htif_readable, within_htif_writable,
     readReg_eq hnone, bind, EStateM.bind, pure, EStateM.pure]
@@ -350,9 +357,7 @@ theorem within_mmio_readable
 theorem within_mmio_writable
     {a : BitVec 64} {width : Nat} (hram : InUserRam a width) :
     within_mmio_writable (.Physaddr a) width s = .ok false s := by
-  obtain ⟨base, hbase, hp⟩ := h.regs .htif_tohost_base
-  have hnone : s.regs.get? Register.htif_tohost_base = some none := by
-    simpa only [userRegPolicy] using hp ▸ hbase
+  have hnone := h.htif_tohost_base_eq_none
   simp [RiscvZkvm.Sail.Functions.within_mmio_writable, get_config_rvfi, within_clint_userRam hram,
     within_sig_userRam hram, within_htif_writable, readReg_eq hnone,
     bind, EStateM.bind, pure, EStateM.pure]
@@ -382,7 +387,7 @@ theorem mem_write_value_of_checked {t : Mach} {width : Nat}
     bind, EStateM.bind, readReg_eq hm, readReg_eq h.privilege, heff] at hplain ⊢
   exact hplain
 
-/-- An aligned user RAM load reduces to the word's allocated bytes under PMA and PMP success. -/
+/-- An aligned user RAM load returns the allocated doubleword under PMA and PMP success. -/
 theorem mem_read64_of_guards
     {a value : BitVec 64} (access : MemoryAccessType mem_payload) (info : Phys_Mem_Access_Info)
     (hram : InUserRam a 8) (halign : a.toNat % 8 = 0)
@@ -442,9 +447,7 @@ theorem vmem_write_addr64_of_mem {t : Mach}
   have heff := (runSail_eq_some_iff _ _ _ _).mp (h.effectivePrivilege_user (.Store .Data) hm)
   have hmode := (runSail_eq_some_iff _ _ _ _).mp h.translationMode_user
   have htranslate := (runSail_eq_some_iff _ _ _ _).mp (h.translateAddr_user a (.Store .Data) rfl)
-  have hdata : Sail.BitVec.extractLsb value 63 0 = value := by
-    change value.extractLsb' 0 64 = value
-    exact BitVec.extractLsb'_eq_self
+  have hdata := extractLsb_63_zero_eq value
   simp [vmem_write_addr, SailME.run, PreSail.PreSailME.run,
     is_aligned_vaddr_of_mod_eq_zero halign, RiscvZkvm.Sail.Functions.not,
     split_on_page_boundary64_eq s a halign, bits_of_virtaddr, readReg_eq hm,
@@ -507,10 +510,10 @@ theorem vmem_write64_of_mem {t : Mach} (rs : regidx)
 /-- A generated doubleword load retires using its pointer register, RAM read, and register write. -/
 theorem execute_LOAD64_of_mem {t : Mach}
     (imm : BitVec 12) (rs1 rd : regidx) (base value : BitVec 64)
-    (halign : (base + sign_extend (m := 64) imm).toNat % 8 = 0)
+    (halign : (base + sign_extend imm).toNat % 8 = 0)
     (hbase : rX_bits rs1 s = .ok base s)
     (hread : mem_read (.Load .Data) .PBMT_PMA
-      (.Physaddr (base + sign_extend (m := 64) imm)) 8 false false false s = .ok (.Ok value) s)
+      (.Physaddr (base + sign_extend imm)) 8 false false false s = .ok (.Ok value) s)
     (hwrite : wX_bits rd value s = .ok () t) :
     execute_LOAD imm rs1 rd false 8 s = .ok (.Retire_Success ()) t := by
   exact execute_LOAD64_of_vmem imm rs1 rd value
@@ -519,11 +522,11 @@ theorem execute_LOAD64_of_mem {t : Mach}
 /-- A generated doubleword store retires using its registers and physical RAM operations. -/
 theorem execute_STORE64_of_mem {t : Mach}
     (imm : BitVec 12) (rs2 rs1 : regidx) (base value : BitVec 64)
-    (halign : (base + sign_extend (m := 64) imm).toNat % 8 = 0)
+    (halign : (base + sign_extend imm).toNat % 8 = 0)
     (hbase : rX_bits rs1 s = .ok base s) (hvalue : rX_bits rs2 s = .ok value s)
-    (hea : mem_write_ea (.Physaddr (base + sign_extend (m := 64) imm)) 8 (.Store .Data)
+    (hea : mem_write_ea (.Physaddr (base + sign_extend imm)) 8 (.Store .Data)
       .PBMT_PMA false false false s = .ok (.Ok ()) s)
-    (hwrite : mem_write_value (.Physaddr (base + sign_extend (m := 64) imm)) 8 value
+    (hwrite : mem_write_value (.Physaddr (base + sign_extend imm)) 8 value
       (.Store .Data) .PBMT_PMA false false false s = .ok (.Ok true) t) :
     execute_STORE imm rs2 rs1 8 s = .ok (.Retire_Success ()) t := by
   exact execute_STORE64_of_vmem imm rs2 rs1 value hvalue
@@ -575,10 +578,11 @@ theorem mem_write_ea64 (a : BitVec 64)
 /-- A configured doubleword load retires with its exact destination-register write. -/
 theorem execute_LOAD64 {t : Mach}
     (imm : BitVec 12) (rs1 rd : regidx) (base value : BitVec 64)
-    (hram : InUserRam (base + sign_extend (m := 64) imm) 8)
-    (halign : (base + sign_extend (m := 64) imm).toNat % 8 = 0)
-    (hbase : rX_bits rs1 s = .ok base s) (hword : Word64At s
-      (base + sign_extend (m := 64) imm) value) (hwrite : wX_bits rd value s = .ok () t) :
+    (hram : InUserRam (base + sign_extend imm) 8)
+    (halign : (base + sign_extend imm).toNat % 8 = 0)
+    (hbase : rX_bits rs1 s = .ok base s)
+    (hword : Word64At s (base + sign_extend imm) value)
+    (hwrite : wX_bits rd value s = .ok () t) :
     execute_LOAD imm rs1 rd false 8 s = .ok (.Retire_Success ()) t := by
   exact h.execute_LOAD64_of_mem imm rs1 rd base value halign hbase
     (h.mem_read64 hram halign hword) hwrite
@@ -586,13 +590,14 @@ theorem execute_LOAD64 {t : Mach}
 /-- A configured doubleword store retires after updating exactly its eight RAM bytes. -/
 theorem execute_STORE64
     (imm : BitVec 12) (rs2 rs1 : regidx) (base value : BitVec 64)
-    (hram : InUserRam (base + sign_extend (m := 64) imm) 8)
-    (halign : (base + sign_extend (m := 64) imm).toNat % 8 = 0)
+    (hram : InUserRam (base + sign_extend imm) 8)
+    (halign : (base + sign_extend imm).toNat % 8 = 0)
     (hbase : rX_bits rs1 s = .ok base s) (hvalue : rX_bits rs2 s = .ok value s) :
     execute_STORE imm rs2 rs1 8 s = .ok (.Retire_Success ())
-      (MetrologyAsm.write64State s (base + sign_extend (m := 64) imm) value) := by
+      (MetrologyAsm.write64State s (base + sign_extend imm) value) := by
   exact h.execute_STORE64_of_mem imm rs2 rs1 base value halign hbase hvalue
     (h.mem_write_ea64 _ hram halign) (h.mem_write64 _ value hram halign)
+
 end UserConfig
 
 end MetrologyAsm

@@ -14,11 +14,8 @@ theorem otp_rvspec (message : Int) (pad : Loc) (initial : Int)
   change Mach at origin
   let a := entryInputs ι origin message pad
   have layout := entryInputs_layout ι origin message pad (padHeap pad initial) hcompat
-  have hbindings := entryInputs_registers ι origin message pad hcompat.2.2.2.2.2.2.2.1
-  have hplacement := hcompat.1
-  have hcontents := hcompat.2.1
-  have hreturn := hcompat.2.2.2.2.2.1
-  have hconfig := hcompat.2.2.2.2.2.2.2
+  obtain ⟨hplacement, hcontents, -, -, -, hreturn, -, hconfig⟩ := id hcompat
+  have hbindings := entryInputs_registers ι origin message pad hconfig.1
   have hprefix := entry_runsTo_call ι origin message pad (padHeap pad initial) hcompat
   have hprefixFrame := a.paused_configurationFrame origin
   have hprefixMemory := a.paused_memoryFrame ι origin message pad hbindings.1 layout.stackLower
@@ -49,7 +46,7 @@ theorem otp_rvspec (message : Int) (pad : Loc) (initial : Int)
       (padHeap pad initial) (padHeap pad byte) .unit hcompat hresume
     have hbyteEq : actualByte = byte := by simpa using hactual.symm
     subst actualByte
-    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, hcurrentContents,
+    obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, hcurrentContents,
       hcurrentProfile, hcallee, hresumeFrame, hresumeMemory⟩ := hresume
     have hcurrentByte := byte_of_footprintContents ι current message pad byte hcurrentContents
     apply hrun.mono
@@ -70,8 +67,7 @@ theorem otp_rvspec (message : Int) (pad : Loc) (initial : Int)
       rw [byte_setWidth64 byte hb, BitVec.xor_comm]
       exact (byteXor_word64 message byte hm hbBounds).symm
     refine ⟨?_, ?_, hfinalFrame, ?_, hplacement, (otp_footprint message pad).symm, ?_⟩
-    · exact observe_ret ι _ message pad byte (byteXor message byte)
-        (returnState_pc _ _ _ _ _ _ _ _)
+    · exact observe_ret ι _ message pad byte (byteXor message byte) (returnState_pc _ _ _ _ _ _ _ _)
         (hfinalRegs.2.2.2.2.trans (congrArg some hxor)) hb hcRange hcurrentByte
     · obtain ⟨stack, hstack, hframe⟩ := hprefixMemory
       refine ⟨stack, hstack, ?_⟩

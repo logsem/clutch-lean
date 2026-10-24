@@ -24,8 +24,7 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 theorem otpGame_beta (message : Int) (pad : Loc) :
     PureStep (rT := rT) (.app (.lam (otpGameBody message)) (.lit (.loc pad)))
       (otpExpression message pad) := by
-  have h := (PureHeadStep.app_lam
-    (body := otpGameBody (rT := rT) message) (v := .lit (.loc pad))
+  have h := (PureHeadStep.app_lam (body := otpGameBody (rT := rT) message) (v := .lit (.loc pad))
     (by unfold otpGameBody; is_lc) (.lit)).toPureStep
   simpa only [otpGameBody, otpExpression, Exp.open', Exp.openRec, ite_true, argumentTuple, otpArgs,
     BoundaryValue.toVal] using h
@@ -47,13 +46,12 @@ theorem wp_otpGame_from_call (message : Int) : iprop%
     (K := [.appR (.lam (otpGameBody message))])
     (fun K e σ hv => primStepWith_fill otpEnv K (e := e) σ hv)
   iapply (show wpFor (primStepWith otpEnv) L E (.alloc (.lit (.int 0)))
-      (fun v => wpFor (primStepWith otpEnv) L E
-        (.app (.lam (otpGameBody message)) v.fst) Φ) ⊢
+      (fun v => wpFor (primStepWith otpEnv) L E (.app (.lam (otpGameBody message)) v.fst) Φ) ⊢
       wpFor (primStepWith otpEnv) L E (otpGame message) Φ from by
     simpa only [Ectx.fill_appR, Exp.ofVal, otpGame] using hbind)
   iapply wp_ffi_of_wp otpEnv
   rw [show (.alloc (.lit (.int 0)) : Exp rT) = .alloc (Exp.ofVal (.int 0)) from rfl]
-  iapply wp_alloc (L := L) (E := E) (v := (.int 0 : Val rT))
+  iapply wp_alloc (L := L) (E := E)
   iintro %pad Hpad
   iapply wpFor_pure_step (by rfl) (pureStep_with otpEnv (otpGame_beta message pad))
   iintro !>

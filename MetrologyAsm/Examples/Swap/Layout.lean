@@ -1,5 +1,4 @@
 import MetrologyAsm.Profile.Config
-import Lean.Elab.Tactic.Omega
 
 /-! # Address arithmetic for the five-instruction exchange -/
 

@@ -21,11 +21,11 @@ theorem followsFrom_ret_unique
     (hother : M.FollowsFrom c entryArgs F origin ι current other) :
     other = .ret value output := by
   cases other with
-  | ret value' output' =>
+  | ret _ _ =>
     obtain ⟨paused, ho, hr⟩ := hagree ι current _ _ hother hret
     cases hdet ι origin paused _ _ ho hr
     rfl
-  | call name args heap next =>
+  | call _ _ _ _ =>
     obtain ⟨paused, ho, hr⟩ := hagree ι current _ _ hother hret
     cases hdet ι origin paused _ _ ho.1 hr
 
@@ -52,10 +52,10 @@ theorem eval_one_call_eq_some (heap : LocHeap V) (name : String) (callArgs : Lis
   have hs := hspec ι origin hcompat
   have ho := hother.2.2 ι origin hcompat
   cases other with
-  | ret value output =>
+  | ret _ _ =>
     obtain ⟨paused, hs, ho⟩ := hagree ι origin _ _ hs ho
     cases hdet ι origin paused _ _ hs.1 ho
-  | call name' args' heap' next' =>
+  | call _ _ _ _ =>
     obtain ⟨paused, hs, ho⟩ := hagree ι origin _ _ hs ho
     have he := hdet ι origin paused _ _ hs.1 ho.1
     cases he

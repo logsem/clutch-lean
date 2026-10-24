@@ -7,7 +7,8 @@ import Metrology.Iris.LocalBI
 /-! # Pure DP programs are zCDP
 
 A terminating program family refining in both directions from `↯b (ε, 0)` in `codensity dp` is
-`(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`), hence `(ε, δ)`-DP through zCDP. -/
+`(0, ε² / 2)`-zCDP (`progMech_zCDP_of_dp`), hence DP with budget
+`ε² / 2 + 2 √(ε² / 2 · log (1 / δ))` (`DP_of_zCDP_sq`). -/
 
 @[expose] public section
 

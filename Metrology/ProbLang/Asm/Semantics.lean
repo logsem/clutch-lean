@@ -32,6 +32,22 @@ inductive Interaction (V : Type) where
   | call (name : String) (args : List V) (heap : LocHeap V)
       (next : V → LocHeap V → Interaction V)
 
+/-- Replay a list of callback responses to select a subtree. -/
+def Interaction.replay : Interaction V → List (V × LocHeap V) → Option (Interaction V)
+  | tree, [] => some tree
+  | .ret _ _, _ :: _ => none
+  | .call _ _ _ next, (r, h) :: rest => (next r h).replay rest
+
+/-- Replaying one more response continues from the previously selected subtree. -/
+theorem Interaction.replay_append (tree : Interaction V) (xs ys : List (V × LocHeap V)) :
+    tree.replay (xs ++ ys) = (tree.replay xs).bind (fun t => t.replay ys) := by
+  induction xs generalizing tree with
+  | nil => cases tree <;> rfl
+  | cons x xs ih =>
+    cases tree with
+    | ret => rfl
+    | call name args heap next => exact ih (next x.1 x.2)
+
 /-- A machine interface for code values and finite heap fragments. -/
 structure AsmSemantics (C V : Type) where
   /-- The machine state. -/
@@ -228,21 +244,5 @@ theorem eval_eq_some {heap : LocHeap V} {T : Interaction V}
   exact followed_unique law hU.2.1 h.2.1 (hU.2.2 ι t ht) (h.2.2 ι t ht)
 
 end AsmSemantics
-
-/-- Replay a list of callback responses to select a subtree. -/
-def Interaction.replay : Interaction V → List (V × LocHeap V) → Option (Interaction V)
-  | tree, [] => some tree
-  | .ret _ _, _ :: _ => none
-  | .call _ _ _ next, (r, h) :: rest => (next r h).replay rest
-
-/-- Replaying one more response continues from the previously selected subtree. -/
-theorem Interaction.replay_append (tree : Interaction V) (xs ys : List (V × LocHeap V)) :
-    tree.replay (xs ++ ys) = (tree.replay xs).bind (fun t => t.replay ys) := by
-  induction xs generalizing tree with
-  | nil => cases tree <;> rfl
-  | cons x xs ih =>
-    cases tree with
-    | ret => rfl
-    | call name args heap next => exact ih (next x.1 x.2)
 
 end ProbLang.Asm

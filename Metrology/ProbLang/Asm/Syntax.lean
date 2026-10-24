@@ -99,7 +99,7 @@ inductive Directive where
   | metadata (name : String) (arguments : String)
   deriving DecidableEq, BEq, Repr, Countable, Inhabited
 
-/-- A labeled instruction or directive in a parsed assembly fragment. -/
+/-- A label, instruction or directive line of a parsed assembly fragment. -/
 inductive Line where
   | label (name : String)
   | instr (instruction : Instr)

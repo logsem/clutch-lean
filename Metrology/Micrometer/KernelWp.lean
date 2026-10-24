@@ -270,6 +270,12 @@ theorem wpFor_ne_aux (HΦ : ∀ v, Φ v ≡{n}≡ Ψ v) : wpFor step L E e Φ �
 instance wpFor_ne : NonExpansive (wpFor step L (GF := GF) E e) where
   ne _ _ _ H := wpFor_ne_aux H
 
+variable (step L) in
+/-- The contextual bind statement for the shared guarded weakest precondition. -/
+noncomputable abbrev wpForBindStmt (K : Ectx rT) : IProp GF := iprop%
+  ∀ E e Φ, wpFor step L E e (fun v => wpFor step L E (K.fill (ofVal v)) Φ) -∗
+    wpFor step L E (K.fill e) Φ
+
 /-- A context-compatible kernel satisfies the weakest-precondition bind rule. -/
 theorem wpFor_bind [Add B] [L.IsLawful] [L.IsTopAbsorbing]
     (step_fill : ∀ (K : Ectx rT) (e : Exp rT) (σ : State rT), ¬e.isValue →

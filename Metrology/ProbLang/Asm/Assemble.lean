@@ -7,12 +7,10 @@ public meta import Metrology.ProbLang.Asm.Parser
 
 open ProbLang.Asm
 
-/-- Assemble a source file to raw image bytes. -/
+/-- Assemble a source file to raw image bytes, printing the section sizes and import slots. -/
 public meta def main (args : List String) : IO Unit := do
   let [source, destination] := args | throw (IO.userError "usage: source.s destination.bin")
-  let raw ← IO.FS.readFile source
-  let result := parse raw >>= assemble
-  match result with
+  match parse (← IO.FS.readFile source) >>= assemble with
   | .error e => throw (IO.userError e)
   | .ok image =>
     IO.FS.writeBinFile destination (ByteArray.mk image.bytes.toArray)

@@ -36,13 +36,6 @@ variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
 
-/-- `wp_rr_of` at the zCDP coupling `rrCoupling_zcdp`: one round against the spec in context `K`,
-spending `(ln 3, 0)`. -/
-theorem wp_rr_step (b b' : Bool) (Φ : Val rT → _) :
-    ⤇ K.fill (rr b') ∗ ↯b budget ∗ (∀ c, ⤇ K.fill pl(#bool c) -∗ Φ (.bool c)) ⊢
-      wp zcdpLifting ⊤ (rr b) Φ :=
-  wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp K b b' Φ
-
 /-- The two-bit program against the spec in context `K`, spending `(ln 3, 0)` per bit: both
 sides report the same pair. -/
 theorem wp_rr2_fill (Φ : Val rT → _) :
@@ -55,14 +48,14 @@ theorem wp_rr2_fill (Φ : Val rT → _) :
   simp only [rr2, close, closeRec, ↓reduceIte]
   wp_bind (rr b₁)
   tp_bind (rr b₁')
-  iapply wp_rr_step
+  iapply wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp _ b₁ b₁'
   iframe Hj Hb₁
   iintro %c₁ Hj
   wp_pures
   tp_pures
   wp_bind (rr b₂)
   tp_bind (rr b₂')
-  iapply wp_rr_step
+  iapply wp_rr_of budget isAddLeftRegular_budget rrCoupling_zcdp _ b₂ b₂'
   iframe Hj Hb₂
   iintro %c₂ Hj
   wp_pures
@@ -150,7 +143,8 @@ theorem rr2_coupling :
     budget_add_budget ▸ wp_rr2 b₁ b₂ b₁' b₂').mono le_rfl adequacyRel_eq_subset
 
 /-- Randomized response on two bits is `(ln 9, 0)`-zCDP, for any two pairs of private bits. -/
-theorem rr2_zcdp : zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) :=
+theorem rr2_zcdpDivergence :
+    zcdpDivergence budget2 (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) :=
   IsSound.sound (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
 
 /-! ## From zCDP to DP -/
@@ -159,7 +153,7 @@ variable {δ : ℝ}
 
 /-- The two-bit program is `(ln 9, δ)`-DP for every `δ > 0`, converting the zCDP coupling with
 `zcdpToDp`. -/
-theorem rr2_dp (hδ : 0 < δ) :
+theorem rr2_dpDivergence (hδ : 0 < δ) :
     dp (ofReal (log 9), ofReal δ) (limExecV ⟨rr2 b₁ b₂, σ⟩) (limExecV ⟨rr2 b₁' b₂', σ'⟩) := by
   have h := codensity_sound <| (zcdpToDp hδ).map_rel (rr2_coupling b₁ b₂ b₁' b₂' σ σ')
   simp only [zcdpToDp_map] at h
@@ -181,7 +175,7 @@ theorem rr2_zCDP : (rr2Mech σ).zCDP ⊤ (ofReal (log 9)) 0 :=
 /-- Randomized response on two bits is `(ln 9, δ)`-DP as a mechanism, for every `δ > 0`
 (Def. 2.1). -/
 theorem rr2_DP (hδ : 0 < δ) : (rr2Mech σ).DP ⊤ (ofReal (log 9)) (ofReal δ) :=
-  fun b b' _ ↦ rr2_dp b.1 b.2 b'.1 b'.2 σ σ hδ
+  fun b b' _ ↦ rr2_dpDivergence b.1 b.2 b'.1 b'.2 σ σ hδ
 
 end Adequacy
 

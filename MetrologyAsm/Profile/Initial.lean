@@ -31,11 +31,15 @@ def allRegisters : List Register := [
   cur_privilege, rvfi_mem_data_present, rvfi_mem_data, rvfi_int_data_present, rvfi_int_data,
   rvfi_pc_data, rvfi_inst_data, rvfi_instruction, fp_rounding_global]
 
-/-- A state with every generated register present. -/
-noncomputable def zeroState : Mach :=
-  allRegisters.foldl (fun s r => { s with regs := s.regs.insert r (defaultRegister r) }) default
+/-- A state whose generated registers all hold the given values. -/
+noncomputable def fillRegisters (f : (r : Register) → RegisterType r) : Mach :=
+  { (default : Mach) with
+    regs := allRegisters.foldl (fun m r => m.insert r (f r)) default }
 
-/-- The upstream model initializer applied without its reset path. -/
+/-- A state with every generated register present. -/
+noncomputable def zeroState : Mach := fillRegisters defaultRegister
+
+/-- The state after running the Sail model initializer on `zeroState`. -/
 noncomputable def modelInitial : Option Mach :=
   (runSail (sail_model_init ()) zeroState).map Prod.snd
 

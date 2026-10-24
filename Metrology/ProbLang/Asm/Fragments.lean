@@ -10,7 +10,7 @@ namespace ProbLang.Asm
 
 variable (F : Finset Loc) (values : Loc → Int)
 
-open Iris.Std Iris.Std.LawfulPartialMap Std.ExtTreeMap Prod Function List BoundaryValue
+open Iris.Std Iris.Std.LawfulPartialMap Std.ExtTreeMap
 
 /-- Archive one integer value for each location in a finite footprint. -/
 def integerSnapshot : HeapSnapshot :=
@@ -22,8 +22,8 @@ def integerHeap : LocHeap BoundaryValue :=
 
 /-- The archived keys are exactly the footprint enumeration. -/
 @[simp] theorem integerSnapshot_keys :
-    (integerSnapshot F values).map fst = footprintLocations F := by
-  simp [integerSnapshot, List.map_map, comp_def]
+    (integerSnapshot F values).map Prod.fst = footprintLocations F := by
+  simp [integerSnapshot, List.map_map, Function.comp_def]
 
 /-- The archived integer fragment has no duplicate locations. -/
 theorem integerSnapshot_nodup :
@@ -33,27 +33,29 @@ theorem integerSnapshot_nodup :
 /-- The restored fragment contains exactly the selected integer cells. -/
 @[simp] theorem integerHeap_get (l : Loc) :
     (integerHeap F values)[l]? = if l ∈ F then some (.int (values l)) else none := by
-  have hnodup : NoDupKeys ((integerSnapshot F values).map (fun (l, z) => (l, int z))) := by
-    simp [NoDupKeys, integerSnapshot, List.map_map, comp_def]
+  have hkeys : ((integerSnapshot F values).map (fun (l, z) => (l, BoundaryValue.int z))).map
+      Prod.fst = footprintLocations F := by
+    simp [integerSnapshot, List.map_map, Function.comp_def]
+  have hnodup : NoDupKeys ((integerSnapshot F values).map
+      (fun (l, z) => (l, BoundaryValue.int z))) := by
+    rw [NoDupKeys, hkeys]
+    exact footprintLocations_nodup F
   unfold integerHeap HeapSnapshot.restore
   by_cases hl : l ∈ F
   · rw [ite_eq_left hl]
-    apply get?_ofList_some (M := LocHeap) ?_ hnodup
-    apply List.mem_map.mpr
-    refine ⟨(l, values l), ?_, rfl⟩
-    exact List.mem_map.mpr ⟨l, (mem_footprintLocations F l).mpr hl, rfl⟩
+    refine get?_ofList_some (M := LocHeap) ?_ hnodup
+    simp [integerSnapshot, hl]
   · rw [ite_eq_right hl]
-    apply get?_ofList_none (M := LocHeap) ?_ hnodup
-    intro ⟨v, hmem⟩
-    have hkey : l ∈ ((integerSnapshot F values).map (fun (l, z) => (l, int z))).map fst :=
-      List.mem_map.mpr ⟨(l, v), hmem, rfl⟩
-    apply hl
-    simpa [integerSnapshot, List.map_map, comp_def] using hkey
+    refine get?_ofList_none (M := LocHeap) ?_ hnodup
+    rintro ⟨v, hmem⟩
+    refine hl ((mem_footprintLocations F l).mp ?_)
+    rw [← hkeys]
+    exact List.mem_map.mpr ⟨(l, v), hmem, rfl⟩
 
 /-- Restricting a constructed fragment to its footprint leaves it unchanged. -/
 @[simp] theorem restrict_integerHeap :
     restrict F (integerHeap F values) = integerHeap F values := by
-  apply Std.ExtTreeMap.ext_getElem?
+  apply ext_getElem?
   intro l
   simp only [restrict_get, integerHeap_get]
   split <;> rfl
@@ -62,11 +64,11 @@ theorem integerSnapshot_nodup :
 @[simp] theorem valueHeap_integerHeap_get {rT : Type} (l : Loc) :
     (valueHeap (rT := rT) (integerHeap F values))[l]? =
       if l ∈ F then some (Val.int (values l)) else none := by
-  simp only [valueHeap, Std.ExtTreeMap.getElem?_map, integerHeap_get]
+  simp only [valueHeap, getElem?_map, integerHeap_get]
   split <;> rfl
 
 private theorem snapshot_list_of_ints (entries : List (Loc × BoundaryValue))
-    (h : ∀ entry ∈ entries, ∃ z, entry.2 = int z) :
+    (h : ∀ entry ∈ entries, ∃ z, entry.2 = .int z) :
     ∃ saved, entries.mapM (fun (l, v) => match v with
       | .int z => some (l, z)
       | _ => none) = some saved := by
@@ -74,9 +76,9 @@ private theorem snapshot_list_of_ints (entries : List (Loc × BoundaryValue))
   | nil => exact ⟨[], rfl⟩
   | cons entry entries ih =>
     obtain ⟨l, v⟩ := entry
-    obtain ⟨z, rfl⟩ := h (l, v) (mem_cons_self ..)
-    obtain ⟨saved, hsaved⟩ := ih (fun entry hmem => h entry (mem_cons_of_mem _ hmem))
-    exact ⟨(l, z) :: saved, by simp [mapM_cons, hsaved]⟩
+    obtain ⟨z, rfl⟩ := h (l, v) List.mem_cons_self
+    obtain ⟨saved, hsaved⟩ := ih (fun entry hmem => h entry (List.mem_cons_of_mem _ hmem))
+    exact ⟨(l, z) :: saved, by simp [List.mapM_cons, hsaved]⟩
 
 /-- Every constructed integer fragment can be archived successfully. -/
 theorem snapshot_integerHeap :

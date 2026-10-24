@@ -34,14 +34,16 @@ theorem zero_refines_one_tv [BudgetCreditGS ℝ≥0∞ GF] :
 
 open CappedCredit
 
-variable [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
-
 /-- In the capped view, a DP credit with `δ ≥ 1` is contradictory, so it proves anything. -/
-theorem capped_dp_exit {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) (P : _) : ↯c (ε, δ) ⊢ P :=
+theorem capped_dp_exit
+    [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
+    {ε δ : ℝ≥0∞} (hδ : 1 ≤ δ) (P : _) : ↯c (ε, δ) ⊢ P :=
   (dp_contradict_of_one_le hδ).trans false_elim
 
 /-- A capped credit entails that its budget is not absorbing. -/
-theorem capped_valid (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢ ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
+theorem capped_valid
+    [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{0}).Absorbing b} GF]
+    (b : ℝ≥0∞ × ℝ≥0∞) : ↯c b ⊢ ⌜¬(codensity dp.{0}).Absorbing b⌝ :=
   valid
 
 end AbsorbingExit

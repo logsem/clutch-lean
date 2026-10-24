@@ -37,7 +37,7 @@ def userRamRegion : PMA_Region :=
 def InUserRam (address : BitVec 64) (width : Nat) : Prop :=
   0x80000000 ≤ address.toNat ∧ address.toNat + width ≤ 0x100000000
 
-/-- Register constraints for user execution with open general-purpose and unrelated CSR values. -/
+/-- Register constraints for user-mode execution; unlisted registers are unconstrained. -/
 def userRegPolicy : (r : Register) → RegisterType r → Prop
   | .hart_state, v => v = .HART_ACTIVE ()
   | .cur_privilege, v => v = .User
@@ -71,28 +71,30 @@ structure UserConfig (s : Mach) : Prop where
 
 namespace UserConfig
 
-variable {s : Mach}
+variable {s : Mach} (h : UserConfig s)
+
+include h
 
 /-- Every register is present in a configured machine state. -/
-theorem present (h : UserConfig s) (r : Register) : ∃ v, s.regs.get? r = some v := by
+theorem present (r : Register) : ∃ v, s.regs.get? r = some v := by
   obtain ⟨v, hv, _⟩ := h.regs r
   exact ⟨v, hv⟩
 
 /-- Configured code executes at user privilege. -/
-theorem privilege (h : UserConfig s) : s.regs.get? Register.cur_privilege = some .User := by
+theorem privilege : s.regs.get? Register.cur_privilege = some .User := by
   obtain ⟨v, hv, hp⟩ := h.regs .cur_privilege
   simp only [userRegPolicy] at hp
   simpa [hp] using hv
 
 /-- Configured code starts in the active hart state. -/
-theorem active (h : UserConfig s) :
+theorem active :
     s.regs.get? Register.hart_state = some (.HART_ACTIVE ()) := by
   obtain ⟨v, hv, hp⟩ := h.regs .hart_state
   simp only [userRegPolicy] at hp
   simpa [hp] using hv
 
 /-- The retirement counter stays disabled for every configured user instruction. -/
-theorem count_disabled (h : UserConfig s) :
+theorem count_disabled :
     runSail (should_inc_minstret .User) s = some (false, s) := by
   obtain ⟨inh, hinh, hp⟩ := h.regs .mcountinhibit
   obtain ⟨cfg, hcfg⟩ := h.present .minstretcfg
@@ -101,13 +103,11 @@ theorem count_disabled (h : UserConfig s) :
     readReg_eq hcfg, pure, EStateM.pure, hp]
 
 /-- Changing memory or other state fields preserves the profile when the register file is fixed. -/
-theorem of_regs_eq (h : UserConfig s) {t : Mach} (heq : t.regs = s.regs) : UserConfig t := by
-  constructor
-  intro r
-  simpa [heq] using h.regs r
+theorem of_regs_eq {t : Mach} (heq : t.regs = s.regs) : UserConfig t :=
+  ⟨heq ▸ h.regs⟩
 
 /-- A register update preserves the profile when its new value satisfies the register policy. -/
-theorem insert (h : UserConfig s) (r : Register) (v : RegisterType r)
+theorem insert (r : Register) (v : RegisterType r)
     (hv : userRegPolicy r v) : UserConfig { s with regs := s.regs.insert r v } := by
   constructor
   intro q
@@ -119,13 +119,13 @@ theorem insert (h : UserConfig s) (r : Register) (v : RegisterType r)
     simp [Std.ExtDHashMap.get?_insert, heq, hw]
 
 /-- Preparing the retirement flag preserves the user-mode profile. -/
-theorem counterState (h : UserConfig s) : UserConfig (MetrologyAsm.counterState s) := by
-  exact h.insert .minstret_increment false trivial
+theorem counterState : UserConfig (MetrologyAsm.counterState s) :=
+  h.insert .minstret_increment false trivial
 
 /-- Preparing a sequential next program counter preserves the user-mode profile. -/
-theorem sequentialState (h : UserConfig s) (pc : BitVec 64) :
-    UserConfig (MetrologyAsm.sequentialState s pc) := by
-  exact h.insert .nextPC (BitVec.addInt pc 4) trivial
+theorem sequentialState (pc : BitVec 64) :
+    UserConfig (MetrologyAsm.sequentialState s pc) :=
+  h.insert .nextPC (BitVec.addInt pc 4) trivial
 
 end UserConfig
 

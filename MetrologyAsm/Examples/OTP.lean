@@ -8,5 +8,4 @@ import MetrologyAsm.Sail.IntegerSteps
 
 /-! # The compiled Sail-backed OTP: guarded game coupling, totality and perfect secrecy
 
-The actual private-pad game has the exact uniform-byte output law. See docs/asm-ffi/OTP-PLAN.md
-for its source, execution, evaluator, logic and probability proof chain. -/
+The private-pad game has the uniform-byte output law; see docs/asm-ffi/OTP-PLAN.md. -/

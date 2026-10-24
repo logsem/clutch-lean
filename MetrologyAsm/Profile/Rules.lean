@@ -10,10 +10,24 @@ open Sail
 
 namespace UserConfig
 
-variable {s : Mach}
+/-- Restoring an extracted supervisor shadow-stack bit leaves its register unchanged. -/
+theorem update_senvcfg_sse_self (v : BitVec 64) :
+    _update_SEnvcfg_SSE v (_get_SEnvcfg_SSE v) = v := by
+  unfold _update_SEnvcfg_SSE _get_SEnvcfg_SSE Sail.BitVec.updateSubrange
+    Sail.BitVec.updateSubrange' Sail.BitVec.extractLsb
+  bv_decide
+
+/-- Extracting all bits of an address preserves that address. -/
+theorem extract_full_address (v : BitVec 64) : Sail.BitVec.extractLsb v 63 0 = v := by
+  unfold Sail.BitVec.extractLsb
+  bv_normalize
+
+variable {s : Mach} (h : UserConfig s)
+
+include h
 
 /-- Supervisor-mode support is enabled in the user-mode profile. -/
-theorem enabled_S (h : UserConfig s) :
+theorem enabled_S :
     runSail (currentlyEnabled .Ext_S) s = some (true, s) := by
   obtain ⟨misa, hmisa, hp⟩ := h.regs .misa
   simp only [userRegPolicy] at hp
@@ -22,28 +36,29 @@ theorem enabled_S (h : UserConfig s) :
     pure, EStateM.pure, hS]
   all_goals rfl
 
-/-- Compressed instructions are disabled in the user-mode profile. -/
-theorem disabled_C (h : UserConfig s) :
-    runSail (currentlyEnabled .Ext_C) s = some (false, s) := by
+/-- The configured misa register has the compressed bit clear. -/
+theorem misa_C : ∃ misa, s.regs.get? Register.misa = some misa ∧ _get_Misa_C misa = 0#1 := by
   obtain ⟨misa, hmisa, hp⟩ := h.regs .misa
-  simp only [userRegPolicy] at hp
-  obtain ⟨_, _, _, _, _, hC⟩ := hp
+  exact ⟨misa, hmisa, hp.2.2.2.2.2⟩
+
+/-- Compressed instructions are disabled in the user-mode profile. -/
+theorem disabled_C :
+    runSail (currentlyEnabled .Ext_C) s = some (false, s) := by
+  obtain ⟨misa, hmisa, hC⟩ := h.misa_C
   simp [runSail, currentlyEnabled, hartSupports, bind, EStateM.bind, readReg_eq hmisa,
     pure, EStateM.pure, hC]
   all_goals rfl
 
 /-- The compressed base extension is disabled in the user-mode profile. -/
-theorem disabled_Zca (h : UserConfig s) :
+theorem disabled_Zca :
     runSail (currentlyEnabled .Ext_Zca) s = some (false, s) := by
-  obtain ⟨misa, hmisa, hp⟩ := h.regs .misa
-  simp only [userRegPolicy] at hp
-  obtain ⟨_, _, _, _, _, hC⟩ := hp
+  obtain ⟨misa, hmisa, hC⟩ := h.misa_C
   simp [runSail, currentlyEnabled, hartSupports, bind, EStateM.bind, readReg_eq hmisa,
     pure, EStateM.pure, hC]
   all_goals rfl
 
-/-- The MPRV constraint keeps effective privilege unchanged for every access. -/
-theorem effectivePrivilege_user (h : UserConfig s) (access : MemoryAccessType mem_payload)
+/-- With MPRV clear, the effective privilege of every access is User. -/
+theorem effectivePrivilege_user (access : MemoryAccessType mem_payload)
     {m : BitVec 64} (hm : s.regs.get? Register.mstatus = some m) :
     runSail (effectivePrivilege access m .User) s = some (.User, s) := by
   obtain ⟨v, hv, hp⟩ := h.regs .mstatus
@@ -53,7 +68,7 @@ theorem effectivePrivilege_user (h : UserConfig s) (access : MemoryAccessType me
   simp [runSail, effectivePrivilege, hp.2.2, pure, EStateM.pure]
 
 /-- Supervisor translation queries use the configured 64-bit architecture. -/
-theorem architecture_supervisor (h : UserConfig s) :
+theorem architecture_supervisor :
     runSail (architecture .Supervisor) s = some (.RV64, s) := by
   obtain ⟨m, hm, hp⟩ := h.regs .mstatus
   simp only [userRegPolicy] at hp
@@ -61,7 +76,7 @@ theorem architecture_supervisor (h : UserConfig s) :
     bind, EStateM.bind, pure, EStateM.pure]
 
 /-- User arithmetic uses the configured 64-bit architecture. -/
-theorem architecture_user (h : UserConfig s) :
+theorem architecture_user :
     runSail (architecture .User) s = some (.RV64, s) := by
   obtain ⟨m, hm, hp⟩ := h.regs .mstatus
   simp only [userRegPolicy] at hp
@@ -69,7 +84,7 @@ theorem architecture_user (h : UserConfig s) :
     bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Configured user code never takes the 32-bit address-arithmetic path. -/
-theorem in32BitMode_false (h : UserConfig s) :
+theorem in32BitMode_false :
     runSail (in32BitMode ()) s = some (false, s) := by
   have harch := (runSail_eq_some_iff _ _ _ _).mp h.architecture_user
   simp [runSail, in32BitMode, readReg_eq h.privilege, harch,
@@ -77,37 +92,18 @@ theorem in32BitMode_false (h : UserConfig s) :
   rfl
 
 /-- User addresses use bare physical translation. -/
-theorem translationMode_user (h : UserConfig s) :
+theorem translationMode_user :
     runSail (translationMode .User) s = some (.Bare, s) := by
   obtain ⟨satp, hsatp, hp⟩ := h.regs .satp
   have harch := (runSail_eq_some_iff _ _ _ _).mp h.architecture_supervisor
   simp only [userRegPolicy] at hp
   simp [runSail, translationMode, harch, readReg_eq hsatp, hp,
-    bind, EStateM.bind, pure, EStateM.pure, Sail.assert, PreSail.assert,
+    bind, EStateM.bind, pure, EStateM.pure, assert, PreSail.assert,
     satpMode_of_bits, show (Privilege.User == Privilege.Machine) = false from rfl,
     RiscvZkvm.Sail.Functions.xlen, Mk_Satp64]
 
-/-- Restoring an extracted supervisor shadow-stack bit leaves its register unchanged. -/
-theorem update_senvcfg_sse_self (v : BitVec 64) :
-    _update_SEnvcfg_SSE v (_get_SEnvcfg_SSE v) = v := by
-  unfold _update_SEnvcfg_SSE _get_SEnvcfg_SSE Sail.BitVec.updateSubrange
-    Sail.BitVec.updateSubrange' Sail.BitVec.extractLsb
-  apply _root_.BitVec.eq_of_getLsbD_eq
-  intro i hi
-  simp only [_root_.BitVec.getLsbD_or, _root_.BitVec.getLsbD_and,
-    _root_.BitVec.getLsbD_not, _root_.BitVec.getLsbD_shiftLeft,
-    _root_.BitVec.zeroExtend_eq_setWidth, _root_.BitVec.getLsbD_setWidth,
-    _root_.BitVec.getLsbD_allOnes, _root_.BitVec.getLsbD_extractLsb]
-  by_cases heq : i = 3
-  · subst i
-    simp
-  · by_cases hlt : i < 3
-    · simp [hi, hlt]
-    · have hlen : ¬i - 3 < 1 := by omega
-      simp [hi, hlt, hlen]
-
-/-- Reading supervisor environment configuration preserves its configured register value. -/
-theorem read_senvcfg_eq (h : UserConfig s) {v : BitVec 64}
+/-- Reading senvcfg returns its register value and leaves the state unchanged. -/
+theorem read_senvcfg_eq {v : BitVec 64}
     (hv : s.regs.get? Register.senvcfg = some v) :
     runSail (read_senvcfg ()) s = some (v, s) := by
   obtain ⟨m, hm, hmp⟩ := h.regs .menvcfg
@@ -122,7 +118,7 @@ theorem read_senvcfg_eq (h : UserConfig s) {v : BitVec 64}
     hupdate, bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Pointer masking is disabled at user privilege. -/
-theorem get_pmm_user (h : UserConfig s) :
+theorem get_pmm_user :
     runSail (get_pmm .User) s = some (.PMM_Disabled, s) := by
   obtain ⟨v, hv, hp⟩ := h.regs .senvcfg
   have hread := (runSail_eq_some_iff _ _ _ _).mp (h.read_senvcfg_eq hv)
@@ -132,7 +128,7 @@ theorem get_pmm_user (h : UserConfig s) :
     bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Every user access has zero pointer-mask length. -/
-theorem get_pmlen_user (h : UserConfig s) (access : MemoryAccessType mem_payload) :
+theorem get_pmlen_user (access : MemoryAccessType mem_payload) :
     runSail (get_pmlen access .User) s = some (0, s) := by
   obtain ⟨m, hm⟩ := h.present .mstatus
   have hpmm := (runSail_eq_some_iff _ _ _ _).mp h.get_pmm_user
@@ -142,13 +138,8 @@ theorem get_pmlen_user (h : UserConfig s) (access : MemoryAccessType mem_payload
   cases b <;> simp [runSail, get_pmlen, hb, hpmm,
     bind, EStateM.bind, pure, EStateM.pure]
 
-/-- Extracting all bits of an address preserves that address. -/
-theorem extract_full_address (v : BitVec 64) : Sail.BitVec.extractLsb v 63 0 = v := by
-  unfold Sail.BitVec.extractLsb
-  bv_normalize
-
 /-- The effective user address is unchanged by privilege, translation, or pointer masking. -/
-theorem transform_effective_address_user (h : UserConfig s) (a : virtaddr)
+theorem transform_effective_address_user (a : virtaddr)
     (access : MemoryAccessType mem_payload) :
     runSail (transform_effective_address a access) s = some (a, s) := by
   obtain ⟨m, hm⟩ := h.present .mstatus
@@ -162,7 +153,7 @@ theorem transform_effective_address_user (h : UserConfig s) (a : virtaddr)
     extract_full_address, show (SATPMode.Bare == SATPMode.Bare) = true from rfl]
 
 /-- User execution does not enable landing-pad enforcement. -/
-theorem get_xLPE_user (h : UserConfig s) :
+theorem get_xLPE_user :
     runSail (get_xLPE .User) s = some (false, s) := by
   obtain ⟨v, hv, hp⟩ := h.regs .senvcfg
   have hread := (runSail_eq_some_iff _ _ _ _).mp (h.read_senvcfg_eq hv)
@@ -172,20 +163,20 @@ theorem get_xLPE_user (h : UserConfig s) :
     bind, EStateM.bind, pure, EStateM.pure]
 
 /-- The control-flow landing-pad extension is disabled for configured user execution. -/
-theorem disabled_Zicfilp (h : UserConfig s) :
+theorem disabled_Zicfilp :
     runSail (currentlyEnabled .Ext_Zicfilp) s = some (false, s) := by
   have hlpe := (runSail_eq_some_iff _ _ _ _).mp h.get_xLPE_user
   simp [runSail, currentlyEnabled, hartSupports, readReg_eq h.privilege, hlpe,
     bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Updating landing-pad state is inert in the configured profile. -/
-theorem update_elp_state_eq (h : UserConfig s) (rs1 : regidx) :
+theorem update_elp_state_eq (rs1 : regidx) :
     runSail (update_elp_state rs1) s = some ((), s) := by
   have hcf := (runSail_eq_some_iff _ _ _ _).mp h.disabled_Zicfilp
   simp [runSail, update_elp_state, hcf, bind, EStateM.bind, pure, EStateM.pure]
 
-/-- Interrupt-pending queries are total and preserve configured state. -/
-theorem read_mip_exists (h : UserConfig s) :
+/-- Reading mip succeeds and leaves the state unchanged. -/
+theorem read_mip_exists :
     ∃ v, read_mip .IncludePlatformInterrupts s = .ok v s := by
   obtain ⟨mip, hmip⟩ := h.present .mip
   obtain ⟨mei, hmei⟩ := h.present .sig_meip
@@ -195,7 +186,7 @@ theorem read_mip_exists (h : UserConfig s) :
     readReg_eq hsei, hS, bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Masked interrupts cannot become pending, even when external signals are asserted. -/
-theorem getPendingSet_none (h : UserConfig s) :
+theorem getPendingSet_none :
     runSail (getPendingSet .User) s = some (none, s) := by
   obtain ⟨deleg, hdeleg⟩ := h.present .mideleg
   obtain ⟨status, hstatus⟩ := h.present .mstatus
@@ -208,13 +199,13 @@ theorem getPendingSet_none (h : UserConfig s) :
     readReg_eq hie, hip, bind, EStateM.bind, pure, EStateM.pure, zeros]
 
 /-- Configured user execution dispatches no interrupt. -/
-theorem dispatchInterrupt_none (h : UserConfig s) :
+theorem dispatchInterrupt_none :
     runSail (dispatchInterrupt .User) s = some (none, s) := by
   have hpending := (runSail_eq_some_iff _ _ _ _).mp h.getPendingSet_none
   simp [runSail, dispatchInterrupt, hpending, bind, EStateM.bind, pure, EStateM.pure]
 
 /-- Bare user translation preserves ordinary addresses and the whole machine state. -/
-theorem translateAddr_user (h : UserConfig s) (a : BitVec 64)
+theorem translateAddr_user (a : BitVec 64)
     (access : MemoryAccessType mem_payload)
     (hshadow : is_shadow_stack_access access s = .ok false s) :
     runSail (translateAddr (.Virtaddr a) access) s =

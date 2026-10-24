@@ -2,7 +2,7 @@ module
 
 public import Metrology.ProbLang.Asm.Step
 
-/-! # Measurability of the explicit foreign-call kernels -/
+/-! # Measurability and mass bounds of the explicit foreign-call kernels -/
 
 @[expose] public section
 noncomputable section
@@ -65,8 +65,7 @@ private theorem measurable_mapM {α β γ : Type} [MeasurableSpace α] [Measurab
   | cons x xs ih =>
     simp only [List.mapM_cons]
     exact Option.measurable_bind_param (hf x)
-      (some_branch := fun p : α × γ =>
-        (xs.mapM (fun b => f b p.1)).bind (fun bs => some (p.2 :: bs)))
+      (some_branch := fun p : α × γ => (xs.mapM (fun b => f b p.1)).bind (some <| p.2 :: ·))
       (Option.measurable_bind_param (ih.comp measurable_fst)
         (some_branch := fun p : (α × γ) × List γ => some (p.1.2 :: p.2))
         (measurable_some.comp ((measurable_of_countable (fun p : γ × List γ => p.1 :: p.2)).comp
@@ -98,7 +97,7 @@ private theorem measurable_mapM {α β γ : Type} [MeasurableSpace α] [Measurab
         (LocHeap.measurable_getElem? l).comp State.measurable_heap
   · exact State.measurable_tapes
 
-/-- An action is countable data; its state-dependent effect is measurable. -/
+/-- The action interpreter is jointly measurable. -/
 @[fun_prop] theorem measurable_actionStep (env : FfiEnv rT) (F : Finset Loc) :
     Measurable (fun p : Action × State rT => actionStep env F p.2 p.1) := by
   apply measurable_from_prod_countable_right
@@ -106,9 +105,7 @@ private theorem measurable_mapM {α β γ : Type} [MeasurableSpace α] [Measurab
   cases action with
   | invalid => exact Cfg.measurable_dirac_mk measurable_const measurable_id
   | stuck => exact measurable_const
-  | ret value heap =>
-    exact Cfg.measurable_dirac_mk measurable_const (measurable_overwriteState F _)
-  | call name args heap archive =>
+  | ret _ _ | call _ _ _ _ =>
     exact Cfg.measurable_dirac_mk measurable_const (measurable_overwriteState F _)
 
 /-- Finite boundary tuples are decoded measurably from expression syntax. -/
@@ -314,11 +311,11 @@ theorem headStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
 @[fun_prop] theorem measurable_primStepWith (env : FfiEnv rT) :
     Measurable (primStepWith env : Cfg rT → Measure (Cfg rT)) := by
   have hk : Measurable (fun cfg : Cfg rT => headStepWith env ⟨cfg.expr.decomp.2, cfg.state⟩) :=
-    (measurable_headStepWith env).comp (by measurability)
+    (measurable_headStepWith env).comp (by fun_prop)
   have hh : Measurable (fun p : Cfg rT × Cfg rT => p.1.expr.decomp.1.fillCfg p.2) := by
     rw [Cfg.measurable_iff]
-    exact ⟨Exp.Ectx_fill.measurable.comp ((by measurability : Measurable _).prodMk
-      (by measurability)), by measurability⟩
+    exact ⟨Exp.Ectx_fill.measurable.comp ((by fun_prop : Measurable _).prodMk
+      (by fun_prop)), by fun_prop⟩
   have : IsFiniteKernel (Kernel.mk _ hk) :=
     ⟨1, ENNReal.one_lt_top, fun _ => headStepWith_univ_le_one _ _⟩
   exact measurable_map_uncurry hh hk
@@ -326,7 +323,7 @@ theorem headStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
 /-- Replugging a foreign head step preserves its subprobability bound. -/
 theorem primStepWith_univ_le_one (env : FfiEnv rT) (cfg : Cfg rT) :
     primStepWith env cfg Set.univ ≤ 1 := by
-  have hfill : Measurable cfg.expr.decomp.1.fillCfg := by measurability
+  have hfill : Measurable cfg.expr.decomp.1.fillCfg := by fun_prop
   rw [primStepWith, map_apply hfill MeasurableSet.univ]
   simpa using headStepWith_univ_le_one env ⟨cfg.expr.decomp.2, cfg.state⟩
 

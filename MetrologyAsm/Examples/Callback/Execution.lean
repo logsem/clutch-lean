@@ -90,42 +90,27 @@ structure ImportToyPlacement (base sp ra callback : BitVec 64) : Prop where
 theorem ImportToyImageAt.of_mem_eq {s t : Mach} {base callback : BitVec 64}
     (h : ImportToyImageAt s base callback) (hm : t.mem = s.mem) :
     ImportToyImageAt t base callback := by
-  constructor
-  · exact h.reserve.of_mem_eq hm
-  · exact h.save.of_mem_eq hm
-  · exact h.callUpper.of_mem_eq hm
-  · exact h.callLink.of_mem_eq hm
-  · exact h.restore.of_mem_eq hm
-  · exact h.release.of_mem_eq hm
-  · exact h.ret.of_mem_eq hm
-  · exact h.stubUpper.of_mem_eq hm
-  · exact h.stubLoad.of_mem_eq hm
-  · exact h.stubJump.of_mem_eq hm
-  · exact h.slot.of_mem_eq hm
+  exact ⟨h.reserve.of_mem_eq hm, h.save.of_mem_eq hm, h.callUpper.of_mem_eq hm,
+    h.callLink.of_mem_eq hm, h.restore.of_mem_eq hm, h.release.of_mem_eq hm, h.ret.of_mem_eq hm,
+    h.stubUpper.of_mem_eq hm, h.stubLoad.of_mem_eq hm, h.stubJump.of_mem_eq hm,
+    h.slot.of_mem_eq hm⟩
 
 /-- The scratch save preserves the full executable image and the relocated callback address. -/
 theorem ImportToyImageAt.write64State {s : Mach} {base sp ra callback : BitVec 64}
     (h : ImportToyImageAt s base callback) (layout : ImportToyPlacement base sp ra callback) :
     ImportToyImageAt (write64State s (importSavedAddress sp) ra) base callback := by
-  constructor
-  · exact h.reserve.write64State ra (layout.codeDisjoint base (by simp [importToyPCs]))
-  · exact h.save.write64State ra (layout.codeDisjoint (importPC base 4) (by simp [importToyPCs]))
-  · exact h.callUpper.write64State ra
-      (layout.codeDisjoint (importPC base 8) (by simp [importToyPCs]))
-  · exact h.callLink.write64State ra
-      (layout.codeDisjoint (importPC base 12) (by simp [importToyPCs]))
-  · exact h.restore.write64State ra
-      (layout.codeDisjoint (importPC base 16) (by simp [importToyPCs]))
-  · exact h.release.write64State ra
-      (layout.codeDisjoint (importPC base 20) (by simp [importToyPCs]))
-  · exact h.ret.write64State ra (layout.codeDisjoint (importPC base 24) (by simp [importToyPCs]))
-  · exact h.stubUpper.write64State ra
-      (layout.codeDisjoint (importPC base 28) (by simp [importToyPCs]))
-  · exact h.stubLoad.write64State ra
-      (layout.codeDisjoint (importPC base 32) (by simp [importToyPCs]))
-  · exact h.stubJump.write64State ra
-      (layout.codeDisjoint (importPC base 36) (by simp [importToyPCs]))
-  · exact h.slot.write64State ra layout.slotDisjoint
+  have hd := layout.codeDisjoint
+  exact ⟨h.reserve.write64State ra (hd _ (by simp [importToyPCs])),
+    h.save.write64State ra (hd _ (by simp [importToyPCs])),
+    h.callUpper.write64State ra (hd _ (by simp [importToyPCs])),
+    h.callLink.write64State ra (hd _ (by simp [importToyPCs])),
+    h.restore.write64State ra (hd _ (by simp [importToyPCs])),
+    h.release.write64State ra (hd _ (by simp [importToyPCs])),
+    h.ret.write64State ra (hd _ (by simp [importToyPCs])),
+    h.stubUpper.write64State ra (hd _ (by simp [importToyPCs])),
+    h.stubLoad.write64State ra (hd _ (by simp [importToyPCs])),
+    h.stubJump.write64State ra (hd _ (by simp [importToyPCs])),
+    h.slot.write64State ra layout.slotDisjoint⟩
 
 /-- The machine after reserving the scratch frame. -/
 def importState1 (s : Mach) (base sp : BitVec 64) : Mach :=
@@ -213,7 +198,7 @@ theorem importCallState_pc (s : Mach) (base sp ra callback : BitVec 64) :
     (importCallState s base sp ra callback).regs.get? Register.PC = some callback := by
   simp [importCallState, commitState]
 
-/-- The first seven actual Sail steps enter the callback with the original ra saved on the stack. -/
+/-- Executing the import prefix reaches the callback entry with the original ra saved. -/
 theorem importToy_runsTo_call {s : Mach} (h : UserConfig s) (base sp ra callback : BitVec 64)
     (layout : ImportToyPlacement base sp ra callback) (image : ImportToyImageAt s base callback)
     (hpc : s.regs.get? Register.PC = some base) (hsp : s.regs.get? Register.x2 = some sp)
@@ -326,16 +311,8 @@ theorem ImportToyImageAt.continuation {s : Mach} {base callback : BitVec 64}
 theorem ImportContinuationImageAt.of_mem_get_eq {s t : Mach} {base : BitVec 64}
     (h : ImportContinuationImageAt s base) (hm : ∀ a, t.mem.get? a = s.mem.get? a) :
     ImportContinuationImageAt t base := by
-  constructor
-  · intro i hi
-    rw [hm]
-    exact h.restore i hi
-  · intro i hi
-    rw [hm]
-    exact h.release i hi
-  · intro i hi
-    rw [hm]
-    exact h.ret i hi
+  exact ⟨fun i hi => by rw [hm]; exact h.restore i hi,
+    fun i hi => by rw [hm]; exact h.release i hi, fun i hi => by rw [hm]; exact h.ret i hi⟩
 
 /-- The resumed machine after restoring the original return address. -/
 def importResumeState1 (s : Mach) (base ra : BitVec 64) : Mach :=
@@ -372,7 +349,7 @@ theorem importReturnState_mem (s : Mach) (base sp ra : BitVec 64) :
     (importReturnState s base sp ra).mem = s.mem := by
   rfl
 
-/-- The continuation restores the original stack pointer regardless of resumed scratch registers. -/
+/-- The continuation restores the original stack pointer. -/
 theorem importReturnState_sp (s : Mach) (base sp ra : BitVec 64) :
     (importReturnState s base sp ra).regs.get? Register.x2 = some sp := by
   simp [importReturnState, importResumeState2, commitState, retBodyState, importSpBodyState,
@@ -383,7 +360,7 @@ theorem importReturnState_pc (s : Mach) (base sp ra : BitVec 64) :
     (importReturnState s base sp ra).regs.get? Register.PC = some ra := by
   simp [importReturnState, commitState]
 
-/-- Three actual Sail steps return from every resumed state preserving the saved stack. -/
+/-- Executing the continuation returns to the original caller. -/
 theorem importToy_runsTo_return {s : Mach} (h : UserConfig s) (base sp ra callback : BitVec 64)
     (layout : ImportToyPlacement base sp ra callback) (image : ImportContinuationImageAt s base)
     (hpc : s.regs.get? Register.PC = some (importPC base 16))
@@ -477,7 +454,7 @@ theorem importCallState_reg_other (s : Mach) (base sp ra callback : BitVec 64) (
     sequentialState, counterState, Std.ExtDHashMap.get?_insert,
     Ne.symm hpc, Ne.symm hn, Ne.symm hf, Ne.symm h1, Ne.symm h2, Ne.symm h28]
 
-/-- The continuation restores ra/sp and preserves the callback result and other registers. -/
+/-- The continuation changes only PC, step bookkeeping, ra and sp. -/
 theorem importReturnState_reg_other (s : Mach) (base sp ra : BitVec 64) (r : Register)
     (hout : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2]) :
     (importReturnState s base sp ra).regs.get? r = s.regs.get? r := by

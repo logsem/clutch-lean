@@ -7,10 +7,9 @@ import Metrology.Iris.LocalBI
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
-open MeasureTheory (Measure measure_univ)
-open MeasureTheory.Measure ErasableExpr BindLaw BindLaw.HeadDiag IsLawful IsTopAbsorbing
-open Set BIFUpdate
+open Std Iris Iris.BI Iris.ProofMode OFE ProbLang GradedLifting
+open MeasureTheory (Measure)
+open MeasureTheory.Measure ErasableExpr BindLaw
 
 namespace ProbLang.MicrometerWpGS
 
@@ -20,7 +19,8 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {step : Cfg rT → Measure (Cfg rT)}
 local bi IProp GF
 
-/-- One program transition coupled with an erasable spec execution by a bind law. -/
+/-- Couple one transition of the kernel `step`, from a configuration it can leave, with an
+erasable spec execution by a bind law. -/
 abbrev progCouplFor (step : Cfg rT → Measure (Cfg rT)) (L : GradedLifting B)
     (e₁ : Exp rT) (σ₁ : State rT) (e₁' : Exp rT) (σ₁' : State rT) (b : B)
     (Z : Exp rT → State rT → Exp rT → State rT → B → IProp GF) : IProp GF := iprop%
@@ -42,12 +42,10 @@ variable {e₁ e₁' : Exp rT} {σ₁ σ₁' : State rT} {b : B}
 /-- `progCouplFor step` is non-expansive in its continuation. -/
 theorem progCouplFor_ne (HZ : ∀ e₂ σ₂ e₂' σ₂' b', Z₁ e₂ σ₂ e₂' σ₂' b' ≡{n}≡ Z₂ e₂ σ₂ e₂' σ₂' b') :
     progCouplFor step L e₁ σ₁ e₁' σ₁' b Z₁ ≡{n}≡ progCouplFor step L e₁ σ₁ e₁' σ₁' b Z₂ := by
-  refine exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ =>
-    exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => exists_ne fun _ => ?_
-  refine sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <|
-    sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) <| sep_ne.ne (.of_eq rfl) ?_
+  repeat' refine exists_ne fun _ => ?_
+  repeat' refine sep_ne.ne (.of_eq rfl) ?_
   exact forall_ne fun _ => forall_ne fun _ =>
-    wand_ne.ne (.of_eq rfl) (ne.ne (HZ _ _ _ _ _))
+    wand_ne.ne (.of_eq rfl) (BIFUpdate.ne.ne (HZ _ _ _ _ _))
 
 /-- `progCouplFor step` is monotone in its continuation. -/
 theorem progCouplFor_mono : iprop%
@@ -63,10 +61,12 @@ theorem progCouplFor_mono : iprop%
   imodintro
   iapply HZ $$ HZ'
 
-/-- A `progCouplFor step` step is only possible from a reducible program configuration. -/
-theorem progCouplFor_reducible : progCouplFor step L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜step ⟨e₁, σ₁⟩ ≠ 0⌝ := by
+/-- A `progCouplFor step` step is only possible from a configuration the kernel can leave. -/
+theorem progCouplFor_step_ne_zero :
+    progCouplFor step L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜step ⟨e₁, σ₁⟩ ≠ 0⌝ := by
   iintro ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, -⟩
-  ipureintro; exact Hred
+  ipureintro
+  exact Hred
 
 /-- Introduce a coupling through measurable images of the head distributions. -/
 theorem progCouplFor_intro_map (law : L.BindLaw) {μ₀ ν₀ : Measure (Cfg rT)} {f f' : Cfg rT → Cfg rT}
@@ -77,7 +77,6 @@ theorem progCouplFor_intro_map (law : L.BindLaw) {μ₀ ν₀ : Measure (Cfg rT)
     (∀ ρ ρ', ⌜R ρ ρ' < (⊤ : B)⌝ -∗ |={∅}=>
         Z (f ρ).expr (f ρ).state (f' ρ').expr (f' ρ').state (R ρ ρ')) ⊢
       progCouplFor step L e₁ σ₁ e₁' σ₁' b Z := by
-  -- paired up so that `iframe %` closes the two `⌜Measurable _ ∧ _ = _.map _⌝` conjuncts
   have hF := (⟨hf, hprog⟩ : _ ∧ _)
   have hF' := (⟨hf', hspec⟩ : _ ∧ _)
   iintro H
@@ -120,7 +119,34 @@ theorem progCouplFor_det_step [Add B] [L.IsLawful] {e₂ : Exp rT} {σ₂ : Stat
   · obtain ⟨rfl, rfl, rfl, rfl⟩ := hS
     rw [hR]
     iexact HZ
-  · simp [R, _root_.and_assoc, hS] at hlt
+  · simp [R, and_assoc, hS] at hlt
+
+/-- Continuations need only cover a set carrying the kernel step (via the law's `head_supp`). -/
+theorem progCouplFor_strong_mono {S : Set (Cfg rT)} (hSmeas : MeasurableSet S)
+    (hSconc : Concentrated (step ⟨e₁, σ₁⟩) S) : iprop%
+    (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
+      progCouplFor step L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCouplFor step L e₁ σ₁ e₁' σ₁' b Z₂ := by
+  classical
+  iintro ⟨Hm, HCpl⟩
+  icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
+    %Heras, HCont⟩
+  obtain ⟨hf, hprog⟩ := Hf
+  obtain ⟨hf', hspec⟩ := Hf'
+  have hA : MeasurableSet (f ⁻¹' S) := hf hSmeas
+  have hμ : μ₀ (f ⁻¹' S)ᶜ = 0 := by
+    rw [← Set.preimage_compl, ← map_apply hf hSmeas.compl, ← hprog]
+    exact hSconc
+  iapply progCouplFor_intro_map law Hred hf hprog hf' hspec (law.head_supp hA hμ Hhead) Hside.supp
+    Heras
+  iintro %ρ %ρ' %hR
+  by_cases hmem : ρ ∈ f ⁻¹' S
+  · simp only [Set.piecewise_eq_of_mem _ _ _ hmem] at hR ⊢
+    imod HCont $$ %ρ %ρ' %hR with HZ₁
+    imodintro
+    iapply Hm
+    have hmem' : (⟨(f ρ).expr, (f ρ).state⟩ : Cfg rT) ∈ S := hmem
+    iframe %hmem' HZ₁
+  · simp [Set.piecewise_eq_of_notMem _ _ _ hmem] at hR
 
 /-- A context-compatible kernel transports program couplings through evaluation contexts. -/
 theorem progCouplFor_ctx_bind

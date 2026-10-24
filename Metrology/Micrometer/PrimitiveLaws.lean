@@ -61,6 +61,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors}
 
 open MicrometerWpGS SpecUpdateGS
 
+/-- A `MicrometerGS` gives a `MicrometerWpGS`. -/
 @[reducible]
 noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) GF where
   hlc := hlc
@@ -193,8 +194,7 @@ theorem wp_store {v v' : Val rT} : iprop%
   imodintro
   isplitr
   · ipureintro
-    exact ⟨_, (StoreS (toVal?_ofVal v)
-        (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
+    exact ⟨_, (StoreS (toVal?_ofVal v) (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -476,7 +476,7 @@ theorem wp_rand_tape_empty_r : iprop%
   ihave HαNat := spec_empty_to_natTape $$ HαB
   iapply Hwp $$ HαNat Hj' %hn
 
-/-- `wp_rand_tape_empty_r` with the tape and spec resources handed back as one `∗` (Rocq form). -/
+/-- Rocq form of `wp_rand_tape_empty_r`. -/
 theorem wp_rand_empty_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z [] ∗
       (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
@@ -488,7 +488,7 @@ theorem wp_rand_empty_r : iprop%
   iapply Hwp $$ [$Hα $Hj']
 
 /-- A spec-side labeled `rand z` on a tape with another bound draws a fresh `n`, tape kept. -/
-theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (HneM : z ≠ M) : iprop%
+theorem wp_rand_wrong_tape_r {M : Int} (HneM : z ≠ M) : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l M ns ∗
       (∀ n, specNatTape l M ns ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
       wp L E e Φ := by
@@ -568,7 +568,7 @@ theorem wp_alloc_tape_r : iprop%
   iapply Hwp $$ %l Hj' HlNat
 
 /-- A spec-side labeled `rand z` on a tape with bound `z` pops the tape's head. -/
-theorem wp_rand_tape_r {n : Int} {ns : List Int} : iprop%
+theorem wp_rand_tape_r {n : Int} : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z (n :: ns) ∗
       (⤇ K.fill pl(#int n) -∗ specNatTape l z ns -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
       wp L E e Φ := by

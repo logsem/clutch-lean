@@ -6,36 +6,30 @@ namespace MetrologyAsm.OTP
 
 open ProbLang ProbLang.Asm Sail
 
+/-- A list of scratch, callee-saved and bookkeeping registers avoids any frame register. -/
+theorem notMem_of_frame (S : List Register)
+    (hS : ∀ r ∈ S, r ∈ scratchRegisters ∨ r ∈ calleeSaved ∨
+      r ∈ [Register.PC, .nextPC, .minstret_increment])
+    (r : Register) (hscratch : r ∉ scratchRegisters) (hcallee : r ∉ calleeSaved)
+    (hbookkeeping : r ∉ [Register.PC, .nextPC, .minstret_increment]) : r ∉ S :=
+  fun h => by rcases hS r h with h | h | h <;> contradiction
+
 /-- The import prefix preserves the full architectural configuration frame. -/
 theorem CallInputs.paused_configurationFrame (a : CallInputs) (s : Mach) :
     configurationFrame s (a.paused s) := by
   have hf := a.paused_fields s
-  refine ⟨?_, hf.1, hf.2.1, hf.2.2.1, hf.2.2.2⟩
-  intro r hscratch hcallee hbookkeeping
-  apply a.paused_reg_other s r
-  intro hbad
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at hbad
-  rcases hbad with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals first
-    | exact hbookkeeping (by decide +kernel)
-    | exact hscratch (by decide +kernel)
-    | exact hcallee (by decide +kernel)
+  exact ⟨fun r hs hc hb =>
+    a.paused_reg_other s r (notMem_of_frame _ (by decide +kernel) r hs hc hb),
+    hf.1, hf.2.1, hf.2.2.1, hf.2.2.2⟩
 
 /-- The seven-instruction continuation preserves the full configuration frame. -/
 theorem returnState_configurationFrame (s : Mach)
     (base sp message ret savedS0 savedS1 : BitVec 64) (byte : BitVec 8) :
     configurationFrame s (returnState s base sp message ret savedS0 savedS1 byte) := by
   have hf := returnState_fields s base sp message ret savedS0 savedS1 byte
-  refine ⟨?_, hf.1, hf.2.1, hf.2.2.1, hf.2.2.2⟩
-  intro r hscratch hcallee hbookkeeping
-  apply returnState_reg_other
-  intro hbad
-  simp only [List.mem_cons, List.not_mem_nil, or_false] at hbad
-  rcases hbad with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  all_goals first
-    | exact hbookkeeping (by decide +kernel)
-    | exact hscratch (by decide +kernel)
-    | exact hcallee (by decide +kernel)
+  exact ⟨fun r hs hc hb => returnState_reg_other s base sp message ret savedS0 savedS1 byte r
+    (notMem_of_frame _ (by decide +kernel) r hs hc hb),
+    hf.1, hf.2.1, hf.2.2.1, hf.2.2.2⟩
 
 /-- The prefix's scratch writes obey the original call's ABI memory frame. -/
 theorem CallInputs.paused_memoryFrame (a : CallInputs) (ι : Placement) (s : Mach)
@@ -67,15 +61,17 @@ theorem CallInputs.return_originalCallee (a : CallInputs) (origin current : Mach
   by_cases h9 : r = .x9
   · subst r
     exact hregs.2.2.2.1.trans hs1.symm
-  have hbase : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x10, .x11, .x28] := by
-    simp only [calleeSaved, List.mem_cons, List.not_mem_nil, or_false] at hr
-    rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
-      rfl | rfl | rfl | rfl | rfl <;> decide +kernel
-  have hreturn : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x8, .x9, .x10] := by
-    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
   have hcall : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2,
-      .x8, .x9, .x10, .x11, .x28] := by
-    simp_all only [List.mem_cons, List.not_mem_nil, or_false, not_or, not_false_eq_true]
+      .x8, .x9, .x10, .x11, .x28] := fun hmem => by
+    have key : ∀ r ∈ [Register.PC, .nextPC, .minstret_increment, .x1, .x2,
+        .x8, .x9, .x10, .x11, .x28], r ∉ calleeSaved ∨ r = .x2 ∨ r = .x8 ∨ r = .x9 := by
+      decide +kernel
+    rcases key r hmem with h | h | h | h <;> contradiction
+  have hreturn : r ∉ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x8, .x9, .x10] :=
+    fun hmem => hcall ((by decide +kernel :
+      ∀ r ∈ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x8, .x9, .x10],
+        r ∈ [Register.PC, .nextPC, .minstret_increment, .x1, .x2, .x8, .x9, .x10, .x11, .x28])
+      r hmem)
   exact (returnState_reg_other current a.base a.sp a.message a.ret a.savedS0 a.savedS1
     byte r hreturn).trans ((hresume r hr).trans (a.paused_reg_other origin r hcall))
 

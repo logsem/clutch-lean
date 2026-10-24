@@ -1,6 +1,6 @@
 import MetrologyAsm.Examples.Callback.Boundary
 
-/-! # Evaluating the callback tree from local Sail resumption witnesses -/
+/-! # Evaluating the callback tree from local Sail witnesses -/
 
 namespace MetrologyAsm
 
@@ -44,7 +44,7 @@ theorem importToy_resume_nonempty (ι : Placement) (origin paused : Mach)
     importToy_regions importToy_valid_empty hconfig.1 (by simp [importToyCode])
     hpc hra hcode hF
 
-/-- A nonvacuous plain callback specification selects its unique canonical Sail evaluation. -/
+/-- A callback specification and a compatible entry give the canonical evaluation. -/
 theorem importToy_eval_of_spec
     (hspec : RVSpec importToyCode [] ∅ importToyTree)
     (hentry : ∃ ι origin, RVCompat ι importToyCode [] ∅ origin) :

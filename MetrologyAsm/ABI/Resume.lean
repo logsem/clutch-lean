@@ -21,15 +21,18 @@ theorem resumeIntState_reg_other (s : Mach) (ra : BitVec 64) (z : Int) (r : Regi
     (resumeIntState s ra z).regs.get? r = s.regs.get? r := by
   simp [resumeIntState, Std.ExtDHashMap.get?_insert, Ne.symm hpc, Ne.symm ha0]
 
+/-- Callee-saved registers are neither the program counter nor the result register. -/
+theorem calleeSaved_ne_PC_x10 (r : Register) (hr : r ∈ calleeSaved) : r ≠ .PC ∧ r ≠ .x10 := by
+  simp only [calleeSaved, List.mem_cons, List.not_mem_nil, or_false] at hr
+  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
+    rfl <;> decide +kernel
+
 /-- Integer resumption preserves every callee-saved integer register. -/
 theorem resumeIntState_calleeSavedRestored (s : Mach) (ra : BitVec 64) (z : Int) :
     calleeSavedRestored s (resumeIntState s ra z) := by
   intro r hr
-  apply resumeIntState_reg_other
-  all_goals
-    simp only [calleeSaved, List.mem_cons, List.not_mem_nil, or_false] at hr
-    rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
-      rfl | rfl | rfl | rfl | rfl <;> decide +kernel
+  have h := calleeSaved_ne_PC_x10 r hr
+  exact resumeIntState_reg_other s ra z r h.1 h.2
 
 /-- Integer resumption preserves the architectural and model configuration frame. -/
 theorem resumeIntState_configurationFrame (s : Mach) (ra : BitVec 64) (z : Int) :
@@ -43,7 +46,8 @@ theorem resumeIntState_configurationFrame (s : Mach) (ra : BitVec 64) (z : Int) 
     subst r
     exact hscratch (by decide +kernel)
 
-/-- A callback with no pointer regions can always resume with an integer and the empty fragment. -/
+/-- Resume at an import call of a callback with no pointer regions with an integer result and the
+empty fragment. -/
 theorem rv_resume_int_empty (ι : Placement) (code : Code) (args : List BoundaryValue)
     (F : Finset Loc) (s : Mach) (name : String) (sig : CallSig) (ra : BitVec 64) (z : Int)
     (hregions : callRegions code args = []) (hvalid : validFragment code args ∅)

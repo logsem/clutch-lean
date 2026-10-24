@@ -37,35 +37,30 @@ theorem valueHeap_eq_empty_iff (heap : LocHeap BoundaryValue) :
     intro l
     simp [valueHeap]
 
-/-- The empty fragment passes the scalar callback fragment's signature checks. -/
+/-- The callback fragment is a valid fragment with no regions. -/
 theorem importToy_valid_empty : validFragment importToyCode [] ∅ := by
-  refine ⟨rfl, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl⟩
 
 /-- A callback response consists exactly of a signed doubleword and the empty heap. -/
 theorem importToy_response_iff (r : BoundaryValue) (heap : LocHeap BoundaryValue) :
     rv.ResponseOK importToyCode [] ∅ "cb" r heap ↔
       ∃ z, r = .int z ∧ heap = ∅ ∧ inRange true 64 z = true := by
   change boundaryResponseOK importToyCode [] ∅ "cb" r heap ↔ _
-  simp only [boundaryResponseOK, responseOK, importToyCode, boundaryArgs, List.map_nil,
-    Sig.valid, List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil,
-    List.nodup_nil, not_false_eq_true, and_self, decide_true, List.all_cons,
-    List.all_nil, Bool.and_true, ArgKind.validResult]
-  simp only [footprint, regions, List.zip_nil_right, List.filterMap_nil, List.foldl_nil,
-    restrict_empty_heap, valueHeap_eq_empty_iff]
-  cases r <;> simp [check, checkResult, ArgKind.check, intFits, intValue,
-    BoundaryValue.toVal, regions, ArgKind.validResult]
+  cases r <;> simp [boundaryResponseOK, responseOK, importToyCode, boundaryArgs, Sig.valid,
+    footprint, regions, restrict_empty_heap, valueHeap_eq_empty_iff, check, checkResult,
+    ArgKind.check, intFits, intValue, BoundaryValue.toVal, ArgKind.validResult]
 
 /-- The finite interaction calls the external function and returns its representable reply. -/
 noncomputable def importToyTree : Interaction BoundaryValue :=
   rv.canonicalize importToyCode [] ∅ (.call "cb" [] ∅ fun r heap => .ret r heap)
 
-/-- The callback continuation returns representable responses and fixes every invalid branch. -/
+/-- Continuation: return a valid response, otherwise the invalid tree. -/
 noncomputable def importToyNext (r : BoundaryValue) (heap : LocHeap BoundaryValue) :
     Interaction BoundaryValue :=
   open Classical in
   if rv.ResponseOK importToyCode [] ∅ "cb" r heap then .ret r heap else rv.invalidTree
 
-/-- The callback tree fixes every unrepresentable continuation. -/
+/-- The canonical callback interaction is canonical for the callback fragment. -/
 theorem importToyTree_canonical : rv.Canonical importToyCode [] ∅ importToyTree :=
   rv.canonicalize_canonical importToyCode [] ∅ _
 

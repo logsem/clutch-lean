@@ -2,9 +2,6 @@ import MetrologyAsm.Profile.Initial
 
 /-! # Sail instruction spike -/
 
-set_option maxHeartbeats 1000000000
-set_option maxRecDepth 1000000
-
 namespace MetrologyAsm
 
 /-- A concrete ADDI image placed in ordinary user-accessible memory. -/

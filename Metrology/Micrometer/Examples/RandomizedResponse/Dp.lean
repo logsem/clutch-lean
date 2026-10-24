@@ -16,7 +16,7 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-open ENNReal (ofReal ofReal_ne_top)
+open ENNReal (ofReal)
 open Real (log)
 
 /-! ## The one-round coupling -/
@@ -28,9 +28,9 @@ theorem rrCoupling_dp : RRCoupling (codensity dp) budget := fun b b' ↦
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
-section OneRound
-
 variable (b b' : Bool) (σ σ' : State rT)
+
+section OneRound
 
 variable {GF : BundledGFunctors} [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
@@ -48,15 +48,6 @@ theorem wp_rr [MicrometerGS rT .hasNoLC GF] :
   iintro %d Hj
   iapply spec_fill_nil_exists (.bool d) $$ Hj
 
-/-- Randomized response is `(ln 3, 0)`-DP for any two private bits, through `wp_rr`. -/
-theorem rr_dp : dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
-  wp_adequacy_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
-
-/-- Every event is at most three times as likely under one private bit as under the other. -/
-theorem rr_event_le (S : Set (Exp rT)) (hS : MeasurableSet S) :
-    limExecV ⟨rr b, σ⟩ S ≤ 3 * limExecV ⟨rr b', σ'⟩ S := by
-  simpa [expBudget_log_three] using (dp_iff ofReal_ne_top).1 (rr_dp b b' σ σ') S hS
-
 /-! ## One round, by refinement -/
 
 /-- One round refines itself at equal reports, spending `(ln 3, 0)`. -/
@@ -64,16 +55,27 @@ theorem rr_refines [MicrometerRGS rT .hasNoLC GF] :
     ⊢ ↯b budget -∗ REL[codensity dp] (rr (rT := rT) b) << (rr b') : lrel_bool :=
   rr_refines_of budget isAddLeftRegular_budget rrCoupling_dp b b'
 
+end OneRound
+
+/-! ## One round, by adequacy -/
+
+/-- Randomized response is `(ln 3, 0)`-DP for any two private bits. -/
+theorem rr_dp : dp budget (limExecV ⟨rr b, σ⟩) (limExecV ⟨rr b', σ'⟩) :=
+  wp_adequacy_div (GF := MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) _ _ σ σ' budget fun _ _ ↦ wp_rr b b'
+
+/-- Every event is at most three times as likely under one private bit as under the other. -/
+theorem rr_event_le (S : Set (Exp rT)) (hS : MeasurableSet S) :
+    limExecV ⟨rr b, σ⟩ S ≤ 3 * limExecV ⟨rr b', σ'⟩ S := by
+  simpa [expBudget_log_three] using (dp_iff ENNReal.ofReal_ne_top).1 (rr_dp b b' σ σ') S hS
+
 /-- Randomized response as a mechanism on private bits, started from state `σ`. -/
 noncomputable abbrev rrMech : Mechanism Bool (Exp rT) :=
   progMech rr σ
 
-/-- Randomized response is `(ln 3, 0)`-DP as a mechanism, through `rr_refines` (Def. 2.1). -/
+/-- Randomized response is `(ln 3, 0)`-DP as a mechanism (Def. 2.1). -/
 theorem rr_DP : (rrMech σ).DP ⊤ (ofReal (log 3)) 0 :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) rr σ budget
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ rr_refines b b'
-
-end OneRound
 
 /-! ## `k` rounds -/
 

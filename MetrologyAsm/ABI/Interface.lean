@@ -23,7 +23,7 @@ def disjointSpans (a n b m : Nat) : Prop := a + n ≤ b ∨ b + m ≤ a
 def footprintByte (ι : Placement) (code : Code) (args : List BoundaryValue) (a : Nat) : Prop :=
   ∃ r ∈ callRegions code args, inSpan (ι.addr r.base).toNat (r.length * (r.width / 8)) a
 
-/-- F1 places each pointer region contiguously with disjoint, aligned physical storage. -/
+/-- Pointer regions sit contiguously in disjoint, aligned physical storage (facet 1). -/
 def footprintPlacement (ι : Placement) (code : Code) (args : List BoundaryValue) : Prop :=
   (∀ r ∈ callRegions code args,
     (ι.addr r.base).toNat % 8 = 0 ∧ ι.addr r.base ≠ 0 ∧
@@ -34,7 +34,7 @@ def footprintPlacement (ι : Placement) (code : Code) (args : List BoundaryValue
       disjointSpans (ι.addr r.base).toNat (r.length * (r.width / 8))
         (ι.addr q.base).toNat (q.length * (q.width / 8))
 
-/-- F2 stores exactly the representable integers of the logical fragment as little-endian bytes. -/
+/-- The footprint stores the representable logical integers as little-endian bytes (facet 2). -/
 def footprintContents (ι : Placement) (code : Code) (args : List BoundaryValue)
     (heap : LocHeap BoundaryValue) (s : Mach) : Prop :=
   validFragment code args heap ∧ ∀ r ∈ callRegions code args, ∀ i < r.length,
@@ -62,7 +62,7 @@ noncomputable def argumentRegister (s : Mach) : Nat → Option (BitVec 64)
   | 7 => s.regs.get? .x17
   | _ => none
 
-/-- F3 fixes the declared scalar arguments and leaves unused argument registers open. -/
+/-- Declared scalar arguments are fixed in registers and the rest stay open (facet 3). -/
 def argumentBindings (ι : Placement) (args : List BoundaryValue) (s : Mach) : Prop :=
   ∀ i v, args[i]? = some v → argumentRegister s i = some (argumentWord ι v)
 
@@ -80,7 +80,7 @@ def decodePointer (ι : Placement) (code : Code) (args : List BoundaryValue)
     (callRegions code args).map (fun r => r.base + (r.length : Int))
   (candidates.find? (fun l => pointerWord ι code args l == some word)).map BoundaryValue.loc
 
-/-- F4 decodes a scalar register using its declared signedness or pointer representation. -/
+/-- A scalar register decodes by its declared signedness or pointer representation (facet 4). -/
 def decodeValue (ι : Placement) (code : Code) (args : List BoundaryValue)
     (kind : ArgKind) (word : BitVec 64) : Option BoundaryValue :=
   match kind with
@@ -97,8 +97,7 @@ def decodeValue (ι : Placement) (code : Code) (args : List BoundaryValue)
 noncomputable def decodeCell (ι : Placement) (r : Region) (l : Loc)
     (s : Mach) : Option BoundaryValue := do
   let ((word, _), _) ← runSail (PreSail.readBytes (r.width / 8) (ι.addr l).toNat) s
-  let z := if r.signed then (word.setWidth r.width).toInt
-    else ((word.setWidth r.width).toNat : Int)
+  let z := if r.signed then (word.setWidth r.width).toInt else ((word.setWidth r.width).toNat : Int)
   if inRange r.signed r.width z then some (.int z) else none
 
 /-- Decode every owned cell in logical order, rejecting unallocated or ill-typed bytes. -/
@@ -124,7 +123,7 @@ def codeRange (ι : Placement) (code : Code) (address : BitVec 64) : Prop :=
 def imageByte (ι : Placement) (code : Code) (address : Nat) : Prop :=
   ∃ image, assemble code.prog = .ok image ∧ inSpan ι.codeBase.toNat image.bytes.length address
 
-/-- F5 installs the assembled image, separates it from the footprint, and fixes the entry PC. -/
+/-- The assembled image is installed apart from the footprint, with the entry PC set (facet 5). -/
 def codeImage (ι : Placement) (code : Code) (args : List BoundaryValue) (s : Mach) : Prop :=
   ∃ image, assemble code.prog = .ok image ∧ InUserRam ι.codeBase image.bytes.length ∧
     ι.codeBase.toNat % 8 = 0 ∧ image.entry < image.textLen ∧
@@ -135,16 +134,15 @@ def codeImage (ι : Placement) (code : Code) (args : List BoundaryValue) (s : Ma
       disjointSpans ι.codeBase.toNat image.bytes.length
         (ι.addr r.base).toNat (r.length * (r.width / 8))
 
-/-- F6 assigns distinct external import addresses outside the code and owned data. -/
+/-- Import addresses are distinct and lie outside the code and owned data (facet 6). -/
 def importPlacement (ι : Placement) (code : Code) (args : List BoundaryValue) : Prop :=
-  (∀ name sig, (name, sig) ∈ code.sig.imports →
-    ¬ imageByte ι code (ι.importAddr name).toNat ∧
+  (∀ name sig, (name, sig) ∈ code.sig.imports → ¬ imageByte ι code (ι.importAddr name).toNat ∧
       ¬ footprintByte ι code args (ι.importAddr name).toNat ∧
       (ι.importAddr name).toNat % 4 = 0) ∧
     ∀ n s m t, (n, s) ∈ code.sig.imports → (m, t) ∈ code.sig.imports → n ≠ m →
       ι.importAddr n ≠ ι.importAddr m
 
-/-- F7 fixes an aligned return address distinct from code, data, and import stops. -/
+/-- The return address is aligned and differs from code, data and import stops (facet 7). -/
 def returnPlacement (ι : Placement) (code : Code) (args : List BoundaryValue) (s : Mach) : Prop :=
   s.regs.get? .x1 = some ι.retAddr ∧ ι.retAddr.toNat % 4 = 0 ∧
     ¬ imageByte ι code ι.retAddr.toNat ∧ ¬ footprintByte ι code args ι.retAddr.toNat ∧
@@ -154,31 +152,30 @@ def returnPlacement (ι : Placement) (code : Code) (args : List BoundaryValue) (
 def stackByte (code : Code) (sp : BitVec 64) (a : Nat) : Prop :=
   inSpan (sp.toNat - code.sig.stackBound) code.sig.stackBound a
 
-/-- F8 reserves a mapped, aligned scratch stack separate from code, data, and stops. -/
+/-- A mapped, aligned scratch stack is separate from code, data and stops (facet 8). -/
 def stackPlacement (ι : Placement) (code : Code) (args : List BoundaryValue) (s : Mach) : Prop :=
-  ∃ sp, s.regs.get? .x2 = some sp ∧ sp.toNat % 16 = 0 ∧
-    code.sig.stackBound ≤ sp.toNat ∧
+  ∃ sp, s.regs.get? .x2 = some sp ∧ sp.toNat % 16 = 0 ∧ code.sig.stackBound ≤ sp.toNat ∧
     InUserRam (BitVec.ofNat 64 (sp.toNat - code.sig.stackBound)) code.sig.stackBound ∧
     (∀ a, stackByte code sp a → ¬ footprintByte ι code args a ∧
       ¬ imageByte ι code a ∧ a ≠ ι.retAddr.toNat ∧
       ∀ name sig, (name, sig) ∈ code.sig.imports → a ≠ (ι.importAddr name).toNat)
 
-/-- F9 lists the integer registers preserved by the psABI, including the stack pointer. -/
+/-- The integer registers preserved by the psABI, including the stack pointer (facet 9). -/
 def calleeSaved : List Register :=
   [.x2, .x3, .x4, .x8, .x9, .x18, .x19, .x20, .x21, .x22, .x23, .x24, .x25, .x26, .x27]
 
-/-- F9 restores every callee-saved integer register at a return. -/
+/-- A return restores every callee-saved integer register (facet 9). -/
 def calleeSavedRestored (s t : Mach) : Prop :=
   ∀ r ∈ calleeSaved, t.regs.get? r = s.regs.get? r
 
-/-- F10 leaves caller-saved integer and floating-point registers unconstrained. -/
+/-- The caller-saved integer and floating-point registers (facet 10). -/
 def scratchRegisters : List Register :=
   [.x1, .x5, .x6, .x7, .x10, .x11, .x12, .x13, .x14, .x15, .x16, .x17, .x28, .x29,
     .x30, .x31, .f0, .f1, .f2, .f3, .f4, .f5, .f6, .f7, .f8, .f9, .f10, .f11, .f12,
     .f13, .f14, .f15, .f16, .f17, .f18, .f19, .f20, .f21, .f22, .f23, .f24, .f25,
     .f26, .f27, .f28, .f29, .f30, .f31]
 
-/-- F11 preserves every memory byte outside the footprint and the reserved scratch stack. -/
+/-- Every memory byte outside the footprint and scratch stack is preserved (facet 11). -/
 def memoryFrame (ι : Placement) (code : Code) (args : List BoundaryValue) (s t : Mach) : Prop :=
   ∃ sp, s.regs.get? .x2 = some sp ∧ ∀ a,
     ¬ footprintByte ι code args a → ¬ stackByte code sp a → t.mem.get? a = s.mem.get? a
@@ -190,7 +187,7 @@ def configurationFrame (s t : Mach) : Prop :=
     t.choiceState = s.choiceState ∧ t.tags = s.tags ∧ t.cycleCount = s.cycleCount ∧
       t.sailOutput = s.sailOutput
 
-/-- F12 selects user execution and places direct trap vectors away from every ordinary stop. -/
+/-- The machine runs in user mode with trap vectors away from every ordinary stop (facet 12). -/
 def machineConfiguration (ι : Placement) (code : Code) (s : Mach) : Prop :=
   UserConfig s ∧ ∀ value ∈ [s.regs.get? .mtvec, s.regs.get? .stvec], ∃ v,
     value = some v ∧ ¬ codeRange ι code v ∧ v ≠ ι.retAddr ∧

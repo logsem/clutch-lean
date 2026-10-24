@@ -17,7 +17,7 @@ theorem otp_byte_certificate : ∀ j : Fin 20, ∀ i : Fin 4,
 /-- Relocation preserves the eighty text bytes and patches the sole eight-byte import slot. -/
 theorem relocatedBytes_otp (ι : Placement) :
     relocatedBytes ι otpImage = otpImage.bytes.take 80 ++
-      (range 8).map (fun i => UInt8.ofNat ((ι.importAddr "randombytes").toNat / 2 ^ (8 * i))) := by
+      (range 8).map (fun i => UInt8.ofNat ((ι.importAddr "randombytes").toNat / 2 ^ (8 * i))) :=
   rfl
 
 /-- Every relocated executable byte equals its retained compiler-output byte. -/
@@ -50,8 +50,7 @@ theorem ImageAt.of_codeImage (ι : Placement) (s : Mach) (message : Int) (pad : 
     simpa only [codePC_toNat hram88 (show j.val ≤ 22 by omega), Nat.add_assoc,
       bitVec_of_importByte] using hlook
   · intro i hi
-    have hlook := hbytes (80 + i)
-      (UInt8.ofNat ((ι.importAddr "randombytes").toNat / 2 ^ (8 * i)))
+    have hlook := hbytes (80 + i) (UInt8.ofNat ((ι.importAddr "randombytes").toNat / 2 ^ (8 * i)))
       (relocatedBytes_otp_slot ι i hi)
     simpa only [codePC_toNat hram88 (show 20 ≤ 22 by decide), Nat.reduceMul, Nat.add_assoc,
       bitVec_of_importByte] using hlook

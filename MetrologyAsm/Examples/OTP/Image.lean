@@ -9,7 +9,7 @@ namespace MetrologyAsm.OTP
 structure ImageAt (s : Mach) (base callback : BitVec 64) : Prop where
   /-- All twenty words have the exact compiler/decoder-certified encodings. -/
   words : ∀ i : Fin 20, Word32At s (codePC base i) (otpWord i)
-  /-- The read-only relocation slot contains the concrete callback entry. -/
+  /-- The relocation slot contains the concrete callback entry. -/
   slot : Word64At s (codePC base 20) callback
 
 /-- Equal memory retains every instruction and import-address byte. -/
@@ -26,8 +26,8 @@ theorem ImageAt.of_mem_eq_on_image {s t : Mach} {base callback : BitVec 64}
   · intro j i hi
     rw [hm]
     · exact h.words j i hi
-    · rw [codePC_toNat hram (by have := j.isLt; omega)]
-      have := j.isLt
+    · have hj := j.isLt
+      rw [codePC_toNat hram (by omega)]
       constructor <;> omega
   · intro i hi
     rw [hm]

@@ -26,7 +26,7 @@ theorem chi2Divergence_rrOut (b : Bool) :
 /-- One round couples at χ² `4/3`, which is Rényi-2 at `log (1 + 4/3)`. -/
 theorem rrCoupling_chi2 : RRCoupling chi2Lifting (.ofReal (4 / 3)) := fun b b' ↦
   chi2Lifting_rel_iff.2 <|
-    rrCoupling_of_renyi (chi2Divergence_iff_renyi.1 <| chi2Divergence_rrOut ·) b b'
+    rrCoupling_of_renyi (fun b ↦ chi2Divergence_iff_renyi.1 (chi2Divergence_rrOut b)) b b'
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 

@@ -7,7 +7,7 @@ namespace MetrologyAsm
 
 open ProbLang.Asm RiscvZkvm.Sail.Functions
 
-/-- Interpret the load, store, and return instructions used by the exchange fragment. -/
+/-- Interpret `ld`, `sd` and `jalr` source instructions, with loads of fixed doubleword width. -/
 def toSailAst (i : Instr) : Option instruction :=
   match i.mnemonic, i.operands with
   | "ld", [.reg rd, .mem (.int offset) rs] =>
@@ -22,14 +22,14 @@ def toSailAst (i : Instr) : Option instruction :=
   | _, _ => none
 
 /-- The actual assembled source matches every checked decoder word and instruction. -/
-theorem swapAssembler_decoderCases :
+theorem swapAssembler_decoder_cases :
     (assemble swapAsm).toOption.map
-        (fun image => image.instructions.map (fun e => (e.word, toSailAst e.instruction))) =
+      (fun image => image.instructions.map (fun e => (e.word, toSailAst e.instruction))) =
       some (swapDecoderCases.map (fun e => (e.1, some e.2))) := by
   rfl
 
-/-- The executable source bytes are exactly the checked decoder words in little-endian order. -/
-theorem swapAssembler_textBytes :
+/-- The assembled text bytes are the checked decoder words in little-endian order. -/
+theorem swapAssembler_text_bytes :
     (assemble swapAsm).toOption.map (fun image => image.bytes.take image.textLen) =
       some (swapDecoderCases.flatMap (fun e => bytesOf 4 e.1.toNat)) := by
   rfl
@@ -38,7 +38,7 @@ theorem swapAssembler_textBytes :
 theorem swapAssembler_decodes (image : Image) (himage : assemble swapAsm = .ok image)
     (e : EncodedInstr) (he : e ∈ image.instructions) :
     ∃ i, toSailAst e.instruction = some i ∧ ext_decode e.word = guardedDecode i := by
-  have h := swapAssembler_decoderCases
+  have h := swapAssembler_decoder_cases
   rw [himage] at h
   have hm : (e.word, toSailAst e.instruction) ∈
       swapDecoderCases.map (fun entry => (entry.1, some entry.2)) := by

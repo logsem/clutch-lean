@@ -307,8 +307,7 @@ theorem refines_pack {C : lrel rT GF → lrel rT GF} (A : lrel rT GF) :
 /-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
 instance. -/
 theorem refines_forall {C : lrel rT GF → lrel rT GF} (he : e.IsLocallyClosed)
-    (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅)
-    (he'_fv : e'.fv = ∅) :
+    (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
     □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
   iintro #H
   iapply refines_ret (v1 := ⟨.lam e, .lam (by is_lc), by is_lc⟩)

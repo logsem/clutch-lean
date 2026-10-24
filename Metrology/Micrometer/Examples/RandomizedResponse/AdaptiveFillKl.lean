@@ -8,14 +8,13 @@ import Metrology.Iris.LocalBI
 
 /-! # Adaptive randomized response in filled KL, with the chain-rule law
 
-`rrAdaptive_fillKl`: adaptive randomized response is within filled KL `(4/9) log 2`, not
-`(2/3) log 2`, as the chain-rule law `fillKl` pays the second round's cost on average. -/
+`rrAdaptive_fillKl`: adaptive randomized response is within filled KL `(4/9) log 2`, by the
+chain-rule law `fillKl`. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi AdaptiveFillKl
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 open MeasureTheory.Measure (map_apply map_map)
 open Set (Ico finite_Ico)
@@ -54,43 +53,22 @@ noncomputable def adaptiveCostKl (n m : Int) : ℝ≥0∞ :=
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The first draws, as configurations, form a chain-rule head at `(4/9) log 2` with continuation
-cost `adaptiveCostKl`: map the draws to reports and use `klDivergence_randResp`. -/
+cost `adaptiveCostKl`. -/
 theorem fillKlHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
-    fillKl.head
-      ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
+    fillKl.head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (drawCost σ σ' K adaptiveCostKl) (ofReal (4 * log 2 / 9)) := by
   classical
   have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
-  -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
-  -- at draw `2`, right reports `true` at draws `0, 1`)
-  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) := measurable_to_bool <| by
-    convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
-    ext
-    simp
-  have hg : Measurable fun (ρ : Cfg rT) ↦
-      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) :=
-    measurable_to_bool <| by
-      convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
-        (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
-      ext
-      simp
-  have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Ico 0 3)ᶜ = 0 := by
-    rw [map_apply .of_discrete ((finite_Ico 0 3).image x).measurableSet.compl]
-    exact measure_mono_null (fun n hn h ↦ hn ⟨n, h, rfl⟩) (unifInt_compl_Ico _)
-  have hμf : ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT)).map
-      (fun ρ ↦ decide (ρ = ⟨pl(#2), σ⟩)) = randResp false := by
-    rw [map_map hf .of_discrete]
-    exact map_unifInt_three (by simp) (by simp) (by simp)
-  have hνg : ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT)).map
-      (fun ρ ↦ decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩)) = randResp true := by
-    rw [map_map hg .of_discrete]
-    exact map_unifInt_three (by simp [hK]) (by simp [hK]) (by simp [hK])
-  refine fillKlHead_of_map (ε := ofReal (log 2 / 3)) hf hg
-    ((finite_Ico 0 3).image _).measurableSet ((finite_Ico 0 3).image _).measurableSet
-    hsupp hsupp (fun c ↦ ?_) stageTwoCostKl ?_ ?_ ?_
-  · rw [← map_apply hf (measurableSet_singleton c),
-      ← map_apply hg (measurableSet_singleton c), hμf, hνg, randResp_singleton, randResp_singleton]
+  have hμf := map_reportL σ
+  have hνg := map_reportR K σ'
+  refine fillKlHead_of_map (ε := ofReal (log 2 / 3)) (measurable_reportL σ)
+    (measurable_reportR K σ') ((finite_Ico 0 3).image _).measurableSet
+    ((finite_Ico 0 3).image _).measurableSet (map_unifInt_three_compl_image _)
+    (map_unifInt_three_compl_image _) (fun c ↦ ?_) stageTwoCostKl ?_ ?_ ?_
+  · rw [← map_apply (measurable_reportL σ) (measurableSet_singleton c),
+      ← map_apply (measurable_reportR K σ') (measurableSet_singleton c), hμf, hνg,
+      randResp_singleton, randResp_singleton]
     split_ifs <;> norm_num
   · rintro _ _ ⟨n, ⟨hn0, hn3⟩, rfl⟩ ⟨m, ⟨hm0, hm3⟩, rfl⟩ hfg
     rw [drawCost_apply]
@@ -145,5 +123,4 @@ theorem rrAdaptive_fillKl (σ σ' : State rT) :
     _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
     fun _ _ ↦ rrAdaptive_refines_fillKl
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

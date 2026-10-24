@@ -69,8 +69,8 @@ noncomputable def witnessRegisters : Mach :=
   { s with regs }
 
 /-- The witness's register installation satisfies the complete open user profile. -/
-theorem witnessRegisters_config : UserConfig witnessRegisters := by
-  exact (((((((profileWitness_config.insert .PC _ trivial).insert .x1 _ trivial).insert
+theorem witnessRegisters_config : UserConfig witnessRegisters :=
+  (((((((profileWitness_config.insert .PC _ trivial).insert .x1 _ trivial).insert
     .x2 _ trivial).insert .x10 _ trivial).insert .x11 _ trivial).insert .mtvec _
     (by simp only [userRegPolicy]; decide +kernel)).insert .stvec _
     (by simp only [userRegPolicy]; decide +kernel))

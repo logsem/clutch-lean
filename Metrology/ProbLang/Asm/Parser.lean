@@ -8,18 +8,11 @@ public import Metrology.ProbLang.Asm.Syntax
 
 namespace ProbLang.Asm
 
-open Int Imm
+open Imm
 
 /-- Convert an optional parse result to a diagnostic. -/
 def optionExcept {α : Type} (x : Option α) (error : String) : Except String α :=
-  match x with
-  | some a => .ok a
-  | none => .error error
-
-variable (s : String)
-
-/-- Remove surrounding ASCII whitespace. -/
-def trim : String := s.trimAscii.toString
+  x.elim (.error error) .ok
 
 /-- The ABI register names in numeric order. -/
 def abiNames : List String :=
@@ -28,7 +21,7 @@ def abiNames : List String :=
     "s10", "s11", "t3", "t4", "t5", "t6"]
 
 /-- Parse a numeric or ABI register name. -/
-def parseReg : Option Reg := do
+def parseReg (s : String) : Option Reg := do
   let n ← if s == "fp" then some 8 else if s.startsWith "x" then
     (s.drop 1).toString.toNat? else List.idxOf? s abiNames
   if h : n < 32 then some ⟨n, h⟩ else none
@@ -40,16 +33,16 @@ def hexDigit (c : Char) : Option Nat :=
   else if 'A' ≤ c ∧ c ≤ 'F' then some (c.toNat - 'A'.toNat + 10) else none
 
 /-- Parse a signed decimal or hexadecimal assembly integer. -/
-def parseInt : Option Int := do
+def parseInt (s : String) : Option Int := do
   let neg := s.startsWith "-"
   let t := if neg then (s.drop 1).toString else s
   let n ← if t.startsWith "0x" then
     (t.drop 2).toString.toList.foldlM (fun n c => do pure (16 * n + (← hexDigit c))) 0
     else t.toNat?
-  pure (if neg then -(ofNat n) else ofNat n)
+  pure (if neg then -(n : Int) else (n : Int))
 
 /-- Read an immediate or symbolic relocation. -/
-def parseImm : Except String Imm := do
+def parseImm (s : String) : Except String Imm := do
   if let some n := parseInt s then return .int n
   for (pre, ctor) in [("%pcrel_hi(", pcrelHi), ("%pcrel_lo(", pcrelLo),
       ("%hi(", hi), ("%lo(", lo)] do
@@ -59,15 +52,15 @@ def parseImm : Except String Imm := do
   return .symbol s
 
 /-- Read a register, immediate, or memory operand. -/
-def parseOperand : Except String Operand := do
-  let s := trim s
+def parseOperand (s : String) : Except String Operand := do
+  let s := s.trimAscii.toString
   if let some r := parseReg s then return .reg r
   let parts := s.splitOn "("
   if parts.length ≥ 2 && s.endsWith ")" then
     let base := ((parts.getLast!).dropEnd 1).toString
     if let some r := parseReg base then
       let offset := "(".intercalate parts.dropLast
-      return .mem (← parseImm (trim offset)) r
+      return .mem (← parseImm offset.trimAscii.toString) r
   return .imm (← parseImm s)
 
 /-- Decode escaped assembler string bytes with a bounded scan. -/
@@ -80,7 +73,7 @@ def quotedBytes : Nat → List Char → Except String (List Int)
       let digits := (c :: cs).take 3 |>.takeWhile (fun d => '0' ≤ d && d ≤ '7')
       let value := digits.foldl (fun n d => 8 * n + d.toNat - '0'.toNat) 0
       if value ≥ 256 then throw "octal string escape exceeds one byte"
-      return (ofNat value) :: (← quotedBytes fuel ((c :: cs).drop digits.length))
+      return (value : Int) :: (← quotedBytes fuel ((c :: cs).drop digits.length))
     let value ← match c with
       | 'n' => pure 10
       | 'r' => pure 13
@@ -96,26 +89,27 @@ def quotedBytes : Nat → List Char → Except String (List Int)
   | fuel + 1, c :: cs => do
     if c == '\\' then throw "unfinished string escape"
     if c.toNat ≥ 128 then throw "non-ASCII source character; use escaped bytes"
-    return ofNat c.toNat :: (← quotedBytes fuel cs)
+    return (c.toNat : Int) :: (← quotedBytes fuel cs)
 
 /-- Parse a quoted assembler byte string. -/
-def parseQuoted : Except String (List Int) := do
+def parseQuoted (s : String) : Except String (List Int) := do
   if !(s.startsWith "\"" && s.endsWith "\"") then throw "expected quoted string"
   let chars := ((s.drop 1).toString.dropEnd 1).toString.toList
   quotedBytes (chars.length + 1) chars
 
 /-- Read a supported GNU assembler directive. -/
 def parseDirective (name args : String) : Except String Directive := do
+  let first := (args.splitOn ",")[0]!.trimAscii.toString
   match name with
   | ".text" => return .section .text
   | ".section" =>
-    let sec :=  trim ((args.splitOn ",")[0]!)
+    let sec := first
     if sec.startsWith ".rodata" || sec.startsWith ".srodata" then
       return .section .rodata
     if sec == ".text" then return .section .text
     throw s!"unsupported section '{sec}'"
   | ".p2align" | ".align" =>
-    let some n := (trim ((args.splitOn ",")[0]!)).toNat? | throw "invalid alignment"
+    let some n := first.toNat? | throw "invalid alignment"
     return .align n
   | ".zero" =>
     let some n := args.toNat? | throw "invalid zero count"
@@ -124,10 +118,13 @@ def parseDirective (name args : String) : Except String Directive := do
     return .data 1 ((← parseQuoted args) ++ if name == ".ascii" then [] else [0])
   | ".byte" | ".half" | ".2byte" | ".word" | ".4byte" | ".dword" | ".8byte"
   | ".quad" =>
-    let width := if name == ".byte" then 1 else if name == ".half" || name == ".2byte"
-      then 2 else if name == ".word" || name == ".4byte" then 4 else 8
+    let width := match name with
+      | ".byte" => 1
+      | ".half" | ".2byte" => 2
+      | ".word" | ".4byte" => 4
+      | _ => 8
     let values ← (args.splitOn ",").mapM fun s =>
-      optionExcept (parseInt (trim s)) s!"invalid data integer '{s}'"
+      optionExcept (parseInt s.trimAscii.toString) s!"invalid data integer '{s}'"
     return .data width values
   | ".globl" | ".global" | ".type" | ".size" | ".attribute" | ".file" | ".option"
   | ".ident" | ".addrsig" | ".addrsig_sym" => return .metadata name args
@@ -145,35 +142,36 @@ def stripComment (raw : String) : String := Id.run do
     escaped := c == '\\' && !escaped
   return String.ofList out.reverse
 
-/-- Read one assembler line after removing its comment. -/
-def parseLine (raw : String) : Except String (List Line) := do
-  let s := trim (stripComment raw)
-  if s.isEmpty then return []
-  if s.endsWith ":" then return [.label ((s.dropEnd 1).toString)]
+/-- Read one assembler line after removing its comment; blank lines give `none`. -/
+def parseLine (raw : String) : Except String (Option Line) := do
+  let s := (stripComment raw).trimAscii.toString
+  if s.isEmpty then return none
+  if s.endsWith ":" then return some (.label ((s.dropEnd 1).toString))
   let words := (s.splitOn "\t").flatMap (·.splitOn " ") |>.filter (!·.isEmpty)
   let name := words[0]!
-  let args := trim ((s.drop name.length).toString)
-  if name.startsWith "." then return [.directive (← parseDirective name args)]
+  let args := (s.drop name.length).toString.trimAscii.toString
+  if name.startsWith "." then return some (.directive (← parseDirective name args))
   let operands ← if args.isEmpty then pure [] else (args.splitOn ",").mapM parseOperand
-  return [.instr ⟨name, operands⟩]
+  return some (.instr ⟨name, operands⟩)
 
-/-- Parse GNU assembly and choose its first global symbol as the entry point. -/
+/-- The symbol declared by a `.globl` or `.global` directive. -/
+def globlName : Line → Option String
+  | .directive (.metadata ".globl" name) | .directive (.metadata ".global" name) => some name
+  | _ => none
+
+/-- The name of a label line. -/
+def labelName : Line → Option String
+  | .label name => some name
+  | _ => none
+
+/-- Parse GNU assembly; the entry is `entry` if given, else the first global symbol, else the
+first label (an explicit `entry` is not checked against the labels). -/
 def parse (source : String) (entry : String := "") : Except String AsmProg := do
-  let mut lines := []
-  let mut selected := entry
-  for (raw, index) in (source.splitOn "\n").zipIdx do
-    let parsed ← (parseLine raw).mapError (fun e => s!"line {index + 1}: {e}")
-    for line in parsed do
-      if selected.isEmpty then
-        match line with
-        | .directive (.metadata ".globl" name) | .directive (.metadata ".global" name) =>
-          selected := name
-        | _ => pure ()
-    lines := lines ++ parsed
-  if selected.isEmpty then
-    selected := (lines.findSome? fun l => match l with
-      | .label name => some name
-      | _ => none).getD ""
+  let parsed ← (source.splitOn "\n").zipIdx.mapM fun (raw, index) =>
+    (parseLine raw).mapError (fun e => s!"line {index + 1}: {e}")
+  let lines := parsed.filterMap id
+  let selected := if entry.isEmpty then
+    (lines.findSome? globlName).getD ((lines.findSome? labelName).getD "") else entry
   if selected.isEmpty then throw "assembly has no entry label"
   return ⟨lines, selected⟩
 

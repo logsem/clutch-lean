@@ -8,7 +8,7 @@ namespace MetrologyAsm
 open RiscvZkvm.Sail.Functions
 open Sail
 
-/-- The state after the wrapper disables retirement counting for this instruction. -/
+/-- The state with minstret_increment cleared. -/
 def counterState (s : Mach) : Mach :=
   { s with regs := s.regs.insert Register.minstret_increment false }
 
@@ -19,11 +19,11 @@ theorem tick_pc_eq {s : Mach} {next : BitVec 64}
   have hpc : ({ s with regs := s.regs.insert Register.PC next } : Mach).regs.get?
       Register.PC = some next := by
     simp
-  have hreadpc := readReg_eq (s := { s with regs := s.regs.insert Register.PC next }) hpc
+  have hreadpc := readReg_eq hpc
   simp [tick_pc, bind, EStateM.bind, readReg_eq hnext, writeReg_eq, hreadpc, pure,
     EStateM.pure, pc_write_callback]
 
-/-- The sequential next-program-counter value prepared before instruction execution. -/
+/-- The machine state with the sequential next program counter set before instruction execution. -/
 def sequentialState (s : Mach) (pc : BitVec 64) : Mach :=
   { s with regs := s.regs.insert Register.nextPC (BitVec.addInt pc 4) }
 
@@ -50,7 +50,8 @@ theorem run_hart_active_of_execute (s t : Mach) (priv : Privilege) (pc : BitVec 
     readReg_eq help, landing_pad_bits_backwards, get_config_print_instr, readReg_eq hpc,
     writeReg_eq, hexec', zero_extend, Sail.BitVec.zeroExtend]
 
-/-- A retired instruction commits its next program counter and preserves the remaining state. -/
+/-- Retirement of one active-hart step yields the retired state with the next program counter
+committed. -/
 theorem rvStep_of_retired (s t : Mach) (priv : Privilege) (word : BitVec 32) (next : BitVec 64)
     (hpriv : s.regs.get? Register.cur_privilege = some priv)
     (hinitial : s.regs.get? Register.hart_state = some (.HART_ACTIVE ()))
@@ -65,12 +66,12 @@ theorem rvStep_of_retired (s t : Mach) (priv : Privilege) (word : BitVec 32) (ne
   have hrun' := (runSail_eq_some_iff _ _ _ _).mp hrun
   have hprepared : (counterState s).regs.get? Register.hart_state = some (.HART_ACTIVE ()) := by
     simp [counterState, Std.ExtDHashMap.get?_insert, hinitial]
-  have hreadyread := readReg_eq (s := counterState s) hprepared
+  have hreadyread := readReg_eq hprepared
   dsimp [counterState] at hreadyread hrun'
   have hflag' : ({ t with regs := t.regs.insert Register.PC next } : Mach).regs.get?
       Register.minstret_increment = some false := by
     simp [Std.ExtDHashMap.get?_insert, hflag]
-  have hreadflag := readReg_eq (s := { t with regs := t.regs.insert Register.PC next }) hflag'
+  have hreadflag := readReg_eq hflag'
   simp [rvStep, runSail, try_step, bind, EStateM.bind, readReg_eq hpriv, hcount',
     writeReg_eq, hreadyread, hrun', readReg_eq hhart, hart_is_active, tick_pc_eq hnext,
     Sail.assert, PreSail.assert, pure, EStateM.pure, hreadflag, get_config_rvfi]

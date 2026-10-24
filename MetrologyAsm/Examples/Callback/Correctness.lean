@@ -15,17 +15,16 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 local bi IProp GF
 
-/-- The assembled Sail code invokes the ordinary ProbLang callback and returns its value. -/
+/-- Weakest precondition of the assembled callback under later credits. -/
 theorem wp_importToy : iprop%
     ▷ ▷ ▷ Φ (.int 7) ⊢ wpFor (primStepWith importToyEnv) L E importToyExpression Φ := by
   apply wp_importToy_of_eval (next := importToyNext)
   · simpa only [importToyTree_eq] using importToy_eval
   · exact importToyNext_valid _ _ importToy_response_ok
 
-/-- The actual assembled callback fragment returns seven under the shared weakest precondition. -/
+/-- The assembled callback fragment returns 7. -/
 theorem wp_importToy_spec : iprop%
-    ⊢ wpFor (primStepWith importToyEnv) L E importToyExpression
-      (fun v => iprop(⌜v = .int 7⌝)) := by
+    ⊢ wpFor (primStepWith importToyEnv) L E importToyExpression (fun v => iprop(⌜v = .int 7⌝)) := by
   iapply wp_importToy
   iintro !> !> !>
   ipureintro

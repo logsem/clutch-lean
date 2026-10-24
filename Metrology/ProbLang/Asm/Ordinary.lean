@@ -20,17 +20,19 @@ theorem primStepWith_eq_primStep_of_nonzero (env : FfiEnv rT) (ρ : Cfg rT)
   cases hd : ρ.expr.decomp with
   | mk K redex =>
     cases redex <;> try rfl
-    all_goals
-      exfalso
-      apply hne
-      simp [primStep, hd, headStep]
+    all_goals exact absurd (by simp [primStep, hd, headStep]) hne
+
+/-- A base-language step that is a point mass stays that point mass under `primStepWith`. -/
+theorem primStepWith_eq_dirac_of_primStep (env : FfiEnv rT) {ρ ρ' : Cfg rT}
+    (h : primStep ρ = dirac ρ') : primStepWith env ρ = dirac ρ' :=
+  h ▸ primStepWith_eq_primStep_of_nonzero env ρ (by rw [h]; exact dirac_ne_zero)
 
 /-- A base-language pure step remains the same pure transition under a foreign-call environment. -/
 theorem pureStep_with (env : FfiEnv rT) {e₁ e₂ : Exp rT} (h : PureStep e₁ e₂) (σ : State rT) :
     primStepWith env ⟨e₁, σ⟩ = dirac ⟨e₂, σ⟩ := by
-  rw [primStepWith_eq_primStep_of_nonzero env _ (h.safe σ), h.det σ]
+  exact primStepWith_eq_dirac_of_primStep env (h.det σ)
 
-/-- A store into an allocated cell retains its actual ordinary-language transition in the FFI. -/
+/-- Storing into an allocated cell steps to unit under `primStepWith`. -/
 theorem store_step_with (env : FfiEnv rT) (σ : State rT) (l : Loc) (old value : Val rT)
     (hlookup : σ.heap[l]? = some old) :
     primStepWith env ⟨.store (.lit (.loc l)) (Exp.ofVal value), σ⟩ =
@@ -42,9 +44,9 @@ theorem store_step_with (env : FfiEnv rT) (σ : State rT) (l : Loc) (old value :
       dirac ⟨.lit .unit, σ.update_heap (·.insert l value)⟩ := by
     rw [primStep_eq_headStep hd]
     simp [headStep, Exp.asValM, Exp.toVal?_ofVal, hlookup]
-  rw [primStepWith_eq_primStep_of_nonzero env _ (by rw [hbase]; exact dirac_ne_zero), hbase]
+  exact primStepWith_eq_dirac_of_primStep env hbase
 
-/-- Fresh allocation has the actual ordinary-language transition under the explicit FFI kernel. -/
+/-- Allocation steps to a fresh location under `primStepWith`. -/
 theorem alloc_step_with (env : FfiEnv rT) (σ : State rT) (value : Val rT) :
     primStepWith env ⟨.alloc (Exp.ofVal value), σ⟩ =
       dirac ⟨.lit (.loc σ.heap.fresh), σ.update_heap (·.insert σ.heap.fresh value)⟩ := by
@@ -54,6 +56,6 @@ theorem alloc_step_with (env : FfiEnv rT) (σ : State rT) (value : Val rT) :
       dirac ⟨.lit (.loc σ.heap.fresh), σ.update_heap (·.insert σ.heap.fresh value)⟩ := by
     rw [primStep_eq_headStep hd]
     simp [headStep, Exp.asValM, Exp.toVal?_ofVal]
-  rw [primStepWith_eq_primStep_of_nonzero env _ (by rw [hbase]; exact dirac_ne_zero), hbase]
+  exact primStepWith_eq_dirac_of_primStep env hbase
 
 end ProbLang.Asm

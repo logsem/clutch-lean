@@ -10,10 +10,9 @@ one-step adequacy lemma consumes. -/
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.BI Iris.ProofMode OFE ProbLang GradedLifting
 open MeasureTheory (Measure measure_univ)
 open MeasureTheory.Measure ErasableExpr BindLaw BindLaw.HeadDiag IsLawful IsTopAbsorbing
-open Set BIFUpdate
 
 namespace ProbLang
 
@@ -54,7 +53,7 @@ theorem progCoupl_mono : iprop%
 
 /-- A `progCoupl` step is only possible from a reducible program configuration. -/
 theorem progCoupl_reducible : progCoupl L e₁ σ₁ e₁' σ₁' b Z ⊢ ⌜Reducible e₁ σ₁⌝ :=
-  progCouplFor_reducible
+  progCouplFor_step_ne_zero
 
 /-! ## Introducing `progCoupl` -/
 
@@ -89,30 +88,8 @@ variable {S : Set (Cfg rT)}
 theorem progCoupl_strong_mono (hSmeas : MeasurableSet S)
     (hSconc : Concentrated (primStep ⟨e₁, σ₁⟩) S) : iprop%
     (∀ e₂ σ₂ e₂' σ₂' b', ⌜⟨e₂, σ₂⟩ ∈ S⌝ ∗ Z₁ e₂ σ₂ e₂' σ₂' b' -∗ Z₂ e₂ σ₂ e₂' σ₂' b') ∗
-      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ := by
-  iintro ⟨Hm, HCpl⟩
-  icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
-    %Heras, HCont⟩
-  classical
-  obtain ⟨hf, hprog⟩ := Hf
-  obtain ⟨hf', hspec⟩ := Hf'
-  have hA : MeasurableSet (f ⁻¹' S) := hf hSmeas
-  have hμ : μ₀ (f ⁻¹' S)ᶜ = 0 := by
-    rw [← preimage_compl, ← map_apply hf hSmeas.compl, ← hprog]
-    exact hSconc
-  -- head_supp: setting the leftover to ⊤ off f⁻¹ S keeps the head, so continuations are only
-  -- needed on S
-  iapply progCoupl_intro_map law Hred hf hprog hf' hspec (law.head_supp hA hμ Hhead) Hside.supp
-    Heras
-  iintro %ρ %ρ' %hR
-  by_cases hmem : ρ ∈ f ⁻¹' S
-  · simp only [piecewise_eq_of_mem _ _ _ hmem] at hR ⊢
-    imod HCont $$ %ρ %ρ' %hR with HZ₁
-    imodintro
-    iapply Hm
-    have hmem' : (⟨(f ρ).expr, (f ρ).state⟩ : Cfg rT) ∈ S := hmem
-    iframe %hmem' HZ₁
-  · simp [piecewise_eq_of_notMem _ _ _ hmem] at hR
+      progCoupl L e₁ σ₁ e₁' σ₁' b Z₁ ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z₂ :=
+  progCouplFor_strong_mono hSmeas hSconc
 
 /-- The continuation may assume the program landed in `S` (Rocq `prog_coupl_strengthen`). -/
 theorem progCoupl_strengthen (hSmeas : MeasurableSet S)
@@ -124,25 +101,17 @@ theorem progCoupl_strengthen (hSmeas : MeasurableSet S)
   iapply progCoupl_strong_mono hSmeas hSconc
   iframe HCpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %b' ⟨%Hmem, HZ⟩
-  isplitr
-  · ipureintro; exact Hmem
+  isplit
+  · ipureintro
+    exact Hmem
   iexact HZ
 
 /-- A program step under an evaluation context, for any bind law: the program-side map is
 composed with `K.fill` (Rocq `prog_coupl_ctx_bind`). -/
 theorem progCoupl_ctx_bind {K : Ectx rT} (hv : ¬ e₁.isValue) :
     progCoupl L e₁ σ₁ e₁' σ₁' b (fun e₂ => Z (K.fill e₂)) ⊢
-      progCoupl L (K.fill e₁) σ₁ e₁' σ₁' b Z := by
-  iintro HCpl
-  icases HCpl with ⟨%law, %n, %μ₁', %μ₀, %ν₀, %f, %f', %R, %Hred, %Hf, %Hf', %Hhead, %Hside,
-    %Heras, HCont⟩
-  obtain ⟨hf, hprog⟩ := Hf
-  obtain ⟨hf', hspec⟩ := Hf'
-  have hK : Measurable fun ρ : Cfg rT => (⟨K.fill ρ.expr, ρ.state⟩ : Cfg rT) := by fun_prop
-  iapply progCoupl_intro_map law (Reducible.fill (K := K) Hred) (hK.comp hf)
-    (by rw [primStep_fill hv, hprog, map_map hK hf]) hf' hspec Hhead Hside Heras
-  simp only [Function.comp_apply]
-  iexact HCont
+      progCoupl L (K.fill e₁) σ₁ e₁' σ₁' b Z :=
+  progCouplFor_ctx_bind (fun _ _ _ hv => primStep_fill hv) hv
 
 /-! ## Steps for a given law -/
 
@@ -188,6 +157,13 @@ theorem progCoupl_det_step [Add B] [L.IsLawful] {e₂ : Exp rT} {σ₂ : State r
     iprop(|={∅}=> Z e₂ σ₂ e₁' σ₁' b) ⊢ progCoupl L e₁ σ₁ e₁' σ₁' b Z :=
   progCouplFor_det_step hb Hred Hdet
 
+/-- A finite leftover plus a slack `c` forces the pair into the relation and leaves just `c`. -/
+private theorem relCost_add_of_lt_top [AddZeroClass B] [CanonicallyOrderedAdd B] {T U : Type}
+    {S' : T → U → Prop} {x : T} {y : U} {c : B} (h : relCost S' x y + c < (⊤ : B)) :
+    S' x y ∧ relCost S' x y + c = c :=
+  have hS := (relCost_add_lt_top_iff.1 h).1
+  ⟨hS, by rw [relCost_of hS, zero_add]⟩
+
 /-- A program step that leaves the spec in place, by a step of any law with diagonal heads: the
 program step against itself, mapped to the spec configuration (Rocq `prog_coupl_step_l`). -/
 theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L.BindLaw)
@@ -202,14 +178,12 @@ theorem progCoupl_step_l_law [AddZeroClass B] [CanonicallyOrderedAdd B] (law : L
     (by rw [dirac_bind (by fun_prop), pexecN_zero, Measure.map_const, measure_univ, one_smul])
     (diag _ hb) (fun _ _ _ _ => side_diag _ _ _ _) (dret σ₁')
   iintro %ρ %ρ' %hR
-  obtain ⟨rfl, -⟩ := relCost_add_lt_top_iff.1 hR
-  rw [relCost_of rfl, zero_add]
+  obtain ⟨rfl, hc⟩ := relCost_add_of_lt_top hR
+  rw [hc]
   simp only [id]
   iapply H $$ %ρ.expr %ρ.state
 
-/-! ## Steps for the canonical law
-
-(`adv`, Rocq's "advanced", marks a per-pair leftover.) -/
+/-! ## Steps for the canonical law -/
 
 section Canonical
 variable [Add B] [L.IsLawful] [L.HasBind] [L.IsSupportLocal] (Hred : Reducible e₁ σ₁)
@@ -257,10 +231,13 @@ theorem progCoupl_step_l_erasable_adv {R : Cfg rT → State rT → B} (Heras : E
 
 end Canonical
 
+section SplitBudget
+variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
+  [L.IsSupportLocal]
+
 /-- Couple one program step against one spec step within `b₁`, adding `b₂` to every
 leftover. -/
-theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawful]
-    [L.IsTopAbsorbing] [L.HasBind] [L.IsSupportLocal] (hb : b₁ + b₂ ≤ b)
+theorem progCoupl_steps_adv (hb : b₁ + b₂ ≤ b)
     (Hred : Reducible e₁ σ₁) (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b₁ R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ + b₂ < (⊤ : B)⌝ -∗ |={∅}=>
@@ -270,12 +247,6 @@ theorem progCoupl_steps_adv [AddCommMagma B] [CanonicallyOrderedAdd B] [L.IsLawf
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
   progCoupl_steps_adv' Hred Hred' (mono (frame Hcpl) hb le_rfl)
-
-section SplitBudget
-variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsTopAbsorbing] [L.HasBind]
-  [L.IsSupportLocal]
-
-variable {b₁ b₂ : B}
 
 /-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
 `b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/
@@ -287,8 +258,8 @@ theorem progCoupl_steps {S : Cfg rT → Cfg rT → Prop} (hb : b₁ + b₂ ≤ b
   iintro Hcnt
   iapply progCoupl_steps_adv hb Hred Hred' Hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR
-  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
-  rw [relCost_of hS, zero_add]
+  obtain ⟨hS, hc⟩ := relCost_add_of_lt_top hR
+  rw [hc]
   iapply Hcnt $$ %e₂ %σ₂ %e₂' %σ₂' %hS
 
 /-- `progCoupl_step_l_erasable_adv` with a relational lifting within `b₁`, leaving `b₂` to the
@@ -303,8 +274,8 @@ theorem progCoupl_step_l_erasable {S : Cfg rT → State rT → Prop}
   iintro Hcnt
   iapply progCoupl_step_l_erasable_adv Hred Heras (mono (frame Hcpl) hb le_rfl)
   iintro %e₂ %σ₂ %σ₂' %hR
-  obtain ⟨hS, -⟩ := relCost_add_lt_top_iff.1 hR
-  rw [relCost_of hS, zero_add]
+  obtain ⟨hS, hc⟩ := relCost_add_of_lt_top hR
+  rw [hc]
   iapply Hcnt $$ %e₂ %σ₂ %σ₂' %hS
 
 /-- A program step that leaves the spec in place, continuing on any set carrying the step. -/

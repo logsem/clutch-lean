@@ -11,7 +11,7 @@ open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
 def swapValues (old : Loc → Int) (l k a : Loc) : Int :=
   if a = l then old k else if a = k then old l else old a
 
-/-- The actual assembled fragment swaps its two cells for every compatible Sail layout and state. -/
+/-- The assembled fragment swaps two distinct cells with 64-bit values on every compatible state. -/
 theorem swap_rvspec (l k : Loc) (old : Loc → Int) (hne : l ≠ k)
     (hl : inRange true 64 (old l) = true) (hk : inRange true 64 (old k) = true) :
     RVSpec swapCode [.loc l, .loc k] (integerHeap {l, k} old)

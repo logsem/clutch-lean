@@ -40,10 +40,12 @@ class BudgetGS (B : Type) (GF : BundledGFunctors) where
   /-- The resource owned for a budget. -/
   interp : B → IProp GF
 
+open BudgetGS
+
 variable {B : Type} {GF : BundledGFunctors}
 
 /-- The resource `wp` owns for budget `b`. -/
-abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF := BudgetGS.interp b
+abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF := interp b
 
 /-- `BudgetGS` of `BudgetCreditGS`, using `bcAuth` as the interpretation. -/
 instance BudgetGS.ofBudgetCredit [AddCommMonoid B] [BudgetCreditGS B GF] : BudgetGS B GF := ⟨bcAuth⟩

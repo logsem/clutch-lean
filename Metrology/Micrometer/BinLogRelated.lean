@@ -174,8 +174,7 @@ theorem env_ltyped2_insert (x : Var) (A : lrel rT GF) (v1 v2) (hv1c : v1.1.isClo
       iexact HA
 
 /-- Drop a fresh head variable from both the context and the substitution. -/
-theorem env_ltyped2_drop_head (y : Var) (A : lrel rT GF)
-    (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
+theorem env_ltyped2_drop_head (y : Var) (A : lrel rT GF) (hyNotDom : y ∉ (Γ.map (·.1)).toFinset) :
     env_ltyped2 ((y, A) :: Γ) vs ⊢ env_ltyped2 Γ (vs.delete y) := by
   unfold env_ltyped2
   iintro ⟨%Hdom, %Hclosed, #Hall⟩

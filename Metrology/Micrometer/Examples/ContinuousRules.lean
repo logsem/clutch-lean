@@ -19,8 +19,11 @@ namespace ContinuousRules
 
 open LawfulProbLangℝ
 open Set (Icc inter_subset_left)
-open OrderAddMonoidHom (coe_id)
 open Exp (lit_isClosedEmpty)
+
+section Generic
+
+open MeasureTheory
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
@@ -63,8 +66,7 @@ section Reflexive
 
 variable [L.IsReflexive] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
 
-open MeasureTheory in
-/-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
+/-- Two draws coupled along the identity, spending `s ε` in expectation, return the same real. -/
 theorem urands_adv (ε : ℝ≥0∞) (hc : IsAddLeftRegular (s ε)) :
     ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
@@ -131,40 +133,18 @@ theorem rands_dpChoice [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) 
   iintro %r %_ %(rfl | rfl) -
   all_goals rel_values
 
+end Generic
+
 /-! ## At `ℝ` -/
 
-section Real
+section Floor
 
-variable {GF : BundledGFunctors} [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
-
-open MeasureTheory in
-/-- A uniform real avoids `0` for free: the point has no mass. -/
-theorem urand_avoid_zero_real :
-    ⊢ ↯b (0 : ℝ≥0∞) -∗
-      REL[codensity tv] (pl(urand) : Exp ℝ) << pl(urand) : lrel_real := by
-  have h0 : unifUnit ({0} : Set ℝ) = 0 := by
-    show volume.restrict (Icc (0 : ℝ) 1) {0} = 0
-    rw [Measure.restrict_apply (measurableSet_singleton 0)]
-    exact measure_mono_null inter_subset_left Real.volume_singleton
-  iintro Hc
-  rel_apply (refines_couple_urands_avoid (s := .id ℝ≥0∞) ({0} : Set ℝ)
-    (measurableSet_singleton 0) absorbing_codensity_tv_one
-    (by
-      simp only [coe_id, id_eq, h0]
-      exact (IsAddRegular.of_ne_top (by simp)).1))
-  simp only [coe_id, id_eq, h0]
-  iframe Hc
-  iintro %x ⟨%_, %hx⟩
-  rel_values
-
-section
-variable (N : Int) (hN : 0 < N)
-include hN
+variable {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+local bi IProp GF
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
 program's. -/
-theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] :
+theorem wp_urand_floor_real (N : Int) (hN : 0 < N) :
     ⤇ pl(rand(#N, #())) ⊢
       wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
         iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
@@ -178,15 +158,44 @@ theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC G
   ipureintro
   exact ⟨rfl, hx⟩
 
+end Floor
+
+section Real
+
+open MeasureTheory
+
+variable {GF : BundledGFunctors}
+local bi IProp GF
+
+private theorem lrel_true_lit [MicrometerRGS ℝ .hasNoLC GF] {l₁ l₂ : BaseLit ℝ} :
+    ⊢ |={⊤}=> (lrel_true (rT := ℝ) (GF := GF)).car (l₁ : Val ℝ) l₂ := by
+  iunfold lrel_true
+  ipureintro
+  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
+
+variable [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+
+/-- A uniform real avoids `0` for free: the point has no mass. -/
+theorem urand_avoid_zero_real :
+    ⊢ ↯b (0 : ℝ≥0∞) -∗
+      REL[codensity tv] (pl(urand) : Exp ℝ) << pl(urand) : lrel_real := by
+  have h0 : unifUnit ({0} : Set ℝ) = 0 := by
+    show volume.restrict (Icc (0 : ℝ) 1) {0} = 0
+    rw [Measure.restrict_apply (measurableSet_singleton 0)]
+    exact measure_mono_null inter_subset_left Real.volume_singleton
+  simpa [h0] using urands_avoid (L := codensity tv) (s := .id ℝ≥0∞) ({0} : Set ℝ)
+    (measurableSet_singleton 0) absorbing_codensity_tv_one (by simp [h0])
+
+variable (N : Int) (hN : 0 < N)
+include hN
+
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem rand_urand_floor_real :
     ⊢ REL[codensity tv] (pl(rand(#N, #())) : Exp ℝ) << pl(urand) : lrel_true := by
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values
-  iunfold lrel_true
-  ipureintro
-  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
+  exact lrel_true_lit
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real :
@@ -194,11 +203,7 @@ theorem urand_rand_floor_real :
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values
-  iunfold lrel_true
-  ipureintro
-  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
-
-end
+  exact lrel_true_lit
 
 end Real
 

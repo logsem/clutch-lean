@@ -23,7 +23,7 @@ theorem otp_game_alloc_step (σ : State rT) (message : Int) :
   rw [map_dirac' (by measurability)]
   rfl
 
-/-- Finite actual game execution is exactly a uniform draw mapped to final states. -/
+/-- Some finite fuel makes the actual game execution a uniform byte draw mapped to finals. -/
 theorem otp_game_finite (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ message < 256) :
     ∃ fuel : Nat, execNWith otpEnv fuel ⟨otpGame message, σ⟩ =
       (unifInt 256 (by norm_num)).map (fun byte =>
@@ -33,12 +33,10 @@ theorem otp_game_finite (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ 
   refine ⟨fuel + 2, ?_⟩
   calc
     execNWith otpEnv (fuel + 2) ⟨otpGame message, σ⟩ =
-        execNWith otpEnv (fuel + 1)
-          ⟨.app (.lam (otpGameBody message)) (.lit (.loc σ.heap.fresh)),
-            storedState σ σ.heap.fresh 0⟩ :=
+        execNWith otpEnv (fuel + 1) ⟨.app (.lam (otpGameBody message)) (.lit (.loc σ.heap.fresh)),
+          storedState σ σ.heap.fresh 0⟩ :=
       execNWith_succ_of_step otpEnv (by rintro ⟨h⟩; cases h) (otp_game_alloc_step σ message) _
-    _ = execNWith otpEnv fuel
-        ⟨otpExpression message σ.heap.fresh, storedState σ σ.heap.fresh 0⟩ :=
+    _ = execNWith otpEnv fuel ⟨otpExpression message σ.heap.fresh, storedState σ σ.heap.fresh 0⟩ :=
       execNWith_succ_of_step otpEnv
         (val_stuck ((otpGame_beta message σ.heap.fresh).safe (storedState σ σ.heap.fresh 0)))
         (pureStep_with otpEnv (otpGame_beta message σ.heap.fresh) (storedState σ σ.heap.fresh 0)) _
@@ -56,12 +54,13 @@ theorem otp_game_finite_terminates (σ : State rT) (message : Int)
 
 /-- The complete actual game distribution is already attained by its finite execution law. -/
 theorem otp_game_limExec (σ : State rT) (message : Int) (hm : 0 ≤ message ∧ message < 256) :
-    limExecWith otpEnv ⟨otpGame message, σ⟩ =
-      (unifInt 256 (by norm_num)).map (fun byte =>
-        (⟨.lit (.int (byteXor message byte)),
-          storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩ : Cfg rT)) := by
+    limExecWith otpEnv ⟨otpGame message, σ⟩ = (unifInt 256 (by norm_num)).map (fun byte =>
+      (⟨.lit (.int (byteXor message byte)),
+        storedState (storedState σ σ.heap.fresh 0) σ.heap.fresh byte⟩ : Cfg rT)) := by
   obtain ⟨fuel, hfinite⟩ := otp_game_finite σ message hm
-  have hterm : execNWith otpEnv fuel ⟨otpGame message, σ⟩ Set.univ = 1 := by rw [hfinite]; simp
+  have hterm : execNWith otpEnv fuel ⟨otpGame message, σ⟩ Set.univ = 1 := by
+    rw [hfinite]
+    simp
   exact (limExecWith_term otpEnv hterm).trans hfinite
 
 end MetrologyAsm.OTP
