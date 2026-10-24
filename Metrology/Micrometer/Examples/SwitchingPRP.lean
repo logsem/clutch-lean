@@ -21,11 +21,11 @@ namespace Switching
 
 open Exp (ofVal store alloc toVal?_ofVal)
 open _root_.Int (ofNat ofNat_eq_natCast eq_ofNat_of_zero_le)
-open Prod (fst snd)
 open Val (isVal_ofVal)
+open Prod (fst snd)
+open _root_.Option (map_some)
 open List (Perm range getD_eq_getElem mem_range mem_map subperm_of_subset perm_middle
   perm_cons_erase nodup_range nodup_cons mem_cons mem_append_right map_cons cons_append)
-open _root_.Option (map)
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
@@ -45,6 +45,11 @@ variable {hlc : HasLC} {GF : BundledGFunctors} [MicrometerGS rT hlc GF] [BudgetC
   {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} (K : Ectx rT) (N : Int)
 local bi IProp GF
 
+/-- The pure permutation invariant: the sampled values `m.map (·.2)` together with the
+fresh list `r` are a permutation of `[0, N)`. -/
+def prpPerm (m : List (Int × Int)) (r : List Int) : Prop :=
+  (m.map snd ++ r).Perm ((range N.toNat).map ofNat)
+
 /-! ## Representation predicates
 
 The postconditions of creation; the query lemmas and the loop work with the unfolded points-to
@@ -61,12 +66,7 @@ def isRandomFunction : IProp GF := iprop%
 def isSRandomFunction : IProp GF := iprop%
   ∃ ℓ : Loc, ⌜f = rfQueryV N ℓ⌝ ∗ (ℓ ↦ₛ assocVal m)
 
-/-- The pure permutation invariant: the sampled values `m.map (·.2)` together with the
-fresh list `r` are a permutation of `[0, N)`. -/
-def prpPerm (m : List (Int × Int)) (r : List Int) : Prop :=
-  (m.map snd ++ r).Perm ((range N.toNat).map ofNat)
-
-variable (f : Val rT) (m : List (Int × Int)) (r : List Int)
+variable (r : List Int)
 
 /-- `f` is an idealised random permutation of `[0, N)` with memo table `m` and fresh
 list `r` (program side). -/
@@ -145,8 +145,8 @@ theorem wp_randomPermutation_r : iprop%
       WP[codensity tv] e @ E {{ Φ }} := by
   iintro ⟨Hj, Hcnt⟩
   tp_bind (alloc (ofVal (intListVal ((range N.toNat).map ofNat))))
-  imod step_alloc_at _ (isVal_ofVal _) (vv := intListVal ((range N.toNat).map ofNat))
-    rfl $$ Hj with ⟨%ℓfv, Hj, Hfv⟩
+  imod step_alloc_at _ (isVal_ofVal _)
+    (vv := intListVal ((range N.toNat).map ofNat)) rfl $$ Hj with ⟨%ℓfv, Hj, Hfv⟩
   tp_pures
   tp_bind (alloc (ofVal (assocVal [])))
   imod step_alloc_at _ (isVal_ofVal _) (vv := assocVal []) rfl $$ Hj with ⟨%ℓm, Hj, Hm⟩
@@ -172,7 +172,7 @@ theorem wp_rfQuery_prev (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
   iapply wp_getMap
   iframe Hl
   iintro Hl
-  simp only [hlk, optIntVal, map]
+  simp only [hlk, optIntVal, map_some]
   wp_pures
   wp_value
   iapply HΦ $$ Hl
@@ -188,7 +188,7 @@ theorem wp_rfQuery_prev_r (ℓ : Loc) (m : List (Int × Int)) (n y : Int)
   tp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap_r
   iframe Hj Hl
-  simp only [hlk, optIntVal, map]
+  simp only [hlk, optIntVal, map_some]
   iintro Hj Hl
   tp_pures
   iapply Hcnt $$ Hj Hl
@@ -204,7 +204,7 @@ theorem wp_prpQuery_prev (ℓm ℓfv : Loc) (m : List (Int × Int)) (n y : Int)
   iapply wp_getMap
   iframe Hl
   iintro Hl
-  simp only [hlk, optIntVal, map]
+  simp only [hlk, optIntVal, map_some]
   wp_pures
   wp_value
   iapply HΦ $$ Hl
@@ -220,7 +220,7 @@ theorem wp_prpQuery_prev_r (ℓm ℓfv : Loc) (m : List (Int × Int))
   tp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap_r
   iframe Hj Hl
-  simp only [hlk, optIntVal, map]
+  simp only [hlk, optIntVal, map_some]
   iintro Hj Hl
   tp_pures
   iapply Hcnt $$ Hj Hl
@@ -253,9 +253,8 @@ theorem prpPerm_length : m.length + r.length = N.toNat := by
 
 variable (n : Int)
 
-/-- The fresh list is nonempty at a fresh in-range query: the map's keys are distinct
-and in `[0, N)`, so they cannot already cover all of `[0, N)`. -/
-theorem prpPerm_fresh_nonempty (hn : 0 ≤ n ∧ n < N)
+/-- The fresh list is nonempty at a fresh in-range query. -/
+theorem prpPerm_length_pos (hn : 0 ≤ n ∧ n < N)
     (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N) (hnodup : (m.map fst).Nodup)
     (hfresh : n ∉ m.map fst) : 0 < r.length := by
   by_contra hr
@@ -286,7 +285,7 @@ theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int
       (∀ i₁ i₂, 0 ≤ i₁ → i₁ < (r.length : Int) → 0 ≤ i₂ → i₂ < (r.length : Int) →
         r.getD i₁.toNat 0 = r.getD i₂.toNat 0 → i₁ = i₂) ∧
       ((N - (r.length : Int)).toNat : ENNReal) / (N.toNat : ENNReal) ≤ ε := by
-  have hrpos := prpPerm_fresh_nonempty hperm n hn hkeys hnodup (alookup_eq_none_iff.mp hfresh)
+  have hrpos := prpPerm_length_pos hperm n hn hkeys hnodup (alookup_eq_none_iff.mp hfresh)
   have hlen := prpPerm_length hperm
   refine ⟨by exact_mod_cast hrpos, by omega, fun i _ hlt => ?_, fun i₁ i₂ _ h₁ _ h₂ heq => ?_, ?_⟩
   · have hi : i.toNat < r.length := by omega
@@ -299,13 +298,7 @@ theorem prpPerm_coupling_conds {N n : Int} {m : List (Int × Int)} {r : List Int
     omega
   · rwa [show (N - (r.length : Int)).toNat = m.length by omega]
 
-/-! ## The coupled fresh query
-
-At a fresh input, the random function's `rand N` draw is coupled with the permutation's
-`rand r.length` draw along `i ↦ r[i]`, for `m.length / N` credits. The injection `i ↦ r[i]` hits
-every unused value; the `m.length` used values have no partner, and their mass
-`(N - r.length) / N = m.length / N` is the cost. Port of the fresh-query case
-of clutch's `wp_prf_prp_couple_eq_err`. -/
+/-! ## The coupled fresh query (clutch `wp_prf_prp_couple_eq_err`, fresh case) -/
 
 /-- A fresh query to the random function against the random permutation costs `m.length / N`. -/
 theorem wp_rfQuery_prpQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int)) (r : List Int) (n : Int)
@@ -325,14 +318,14 @@ theorem wp_rfQuery_prpQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   iapply wp_getMap
   iframe Hl
   iintro Hl
-  simp only [hfresh, optIntVal, map]
+  simp only [hfresh, optIntVal]
   wp_pures
   -- spec side: fresh lookup and fresh-list length
   tp_pure
   tp_bind (pl% &getMap #loc ℓm #int n)
   iapply wp_getMap_r
   iframe Hj Hm
-  simp only [hfresh, optIntVal, map]
+  simp only [hfresh, optIntVal]
   iintro Hj Hm
   tp_pures
   tp_bind (pl% !#loc ℓfv)
@@ -375,9 +368,7 @@ theorem wp_rfQuery_prpQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   rw [← (prpPerm_nodup hperm).erase_getElem j hjN]
   iapply Hcnt $$ %(r[j]) %(r.getElem_mem hjN) Hj Hl Hm Hfv
 
-/-- The mirror of `wp_rfQuery_prpQuery_fresh`: the random permutation on the program
-side against the random function on the spec side, coupling the permutation's index
-draw with `rand N` along `i ↦ r[i]`. -/
+/-- The mirror of `wp_rfQuery_prpQuery_fresh`, with the permutation on the program side. -/
 theorem wp_prpQuery_rfQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int)) (r : List Int) (n : Int)
     (ε : ENNReal) (hn : 0 ≤ n ∧ n < N) (hfresh : alookup n m = none) (hperm : prpPerm N m r)
     (hkeys : ∀ k ∈ m.map fst, 0 ≤ k ∧ k < N) (hnodup : (m.map fst).Nodup)
@@ -395,7 +386,7 @@ theorem wp_prpQuery_rfQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   iapply wp_getMap
   iframe Hm
   iintro Hm
-  simp only [hfresh, optIntVal, map]
+  simp only [hfresh, optIntVal]
   wp_pures
   wp_bind (pl% !#loc ℓfv)
   iapply wp_load
@@ -410,7 +401,7 @@ theorem wp_prpQuery_rfQuery_fresh (ℓ ℓm ℓfv : Loc) (m : List (Int × Int))
   tp_bind (pl% &getMap #loc ℓ #int n)
   iapply wp_getMap_r
   iframe Hj Hl
-  simp only [hfresh, optIntVal, map]
+  simp only [hfresh, optIntVal]
   iintro Hj Hl
   tp_pures
   wp_bind (pl% rand(#int (r.length : Int), #()))

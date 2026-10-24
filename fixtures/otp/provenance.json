@@ -1,0 +1,30 @@
+{
+  "compiler": {
+    "zig": "0.13.0",
+    "clang": "18.1.6",
+    "arguments": [
+      "cc",
+      "-target",
+      "riscv64-linux-musl",
+      "-mcpu=baseline_rv64-c-a-f-d",
+      "-mabi=lp64",
+      "-mno-relax",
+      "-fPIC",
+      "-g0",
+      "-fno-asynchronous-unwind-tables",
+      "-fno-stack-protector",
+      "-fno-builtin",
+      "-Os",
+      "-S",
+      "fixtures/otp/otp.c",
+      "-o",
+      "fixtures/otp/otp.compiler.s"
+    ]
+  },
+  "extraction": "Original .text followed by verbatim .globl encrypt_byte through .size encrypt_byte block; metadata/footer omitted.",
+  "files": {
+    "otp.c": "a7ef0309768d46f09d5b70e7a2934a95f94ed1ef0d9e9bd8b113ad57bacc1f3c",
+    "otp.compiler.s": "8cf56abbd1a154bd557e65349876a1361ed58dd9a41f476f9cfa9fd11b0f3164",
+    "otp.s": "040555f9ed0424eded5938e86eefecaca50bbe499660a377c85d08460b705222"
+  }
+}

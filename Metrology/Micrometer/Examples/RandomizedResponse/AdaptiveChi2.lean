@@ -13,24 +13,19 @@ non-adaptive `5/4` (`chi2_adaptive_lt`), by regrading the escort law of the Rén
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence PowerBudget AdaptiveRenyi
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 open BindLaw (escortPower head_escortPower)
 open Cfg (drawCost)
 
 /-! ## Budgets -/
 
-section Costs
-
-variable (b : Bool) (n m : Int)
-
 /-- The χ² cost of the second stage after each first report: `1/2` after `true`. -/
-noncomputable def stageTwoCostChi2 : PowerBudget :=
+noncomputable def stageTwoCostChi2 (b : Bool) : PowerBudget :=
   cond b (ofReal (1 / 2)) 0
 
 /-- Read as Rényi-2, the χ² stage cost is the Rényi stage cost. -/
-theorem toRenyi_stageTwoCostChi2 : toRenyi 2 (stageTwoCostChi2 b) = stageTwoCost b := by
+theorem toRenyi_stageTwoCostChi2 (b : Bool) : toRenyi 2 (stageTwoCostChi2 b) = stageTwoCost b := by
   cases b
   · simp [stageTwoCostChi2, stageTwoCost]
   · rw [stageTwoCostChi2, stageTwoCost, Bool.cond_true, Bool.cond_true, toRenyi_two,
@@ -38,15 +33,14 @@ theorem toRenyi_stageTwoCostChi2 : toRenyi 2 (stageTwoCostChi2 b) = stageTwoCost
     norm_num
 
 /-- The χ² budget handed to the continuation after first draws `n`, `m`. -/
-noncomputable def adaptiveCostChi2 : PowerBudget :=
+noncomputable def adaptiveCostChi2 (n m : Int) : PowerBudget :=
   if rr3Out false n = rr3Out true m then stageTwoCostChi2 (rr3Out false n) else ⊤
 
 /-- Read as Rényi-2, the χ² adaptive cost is the Rényi adaptive cost. -/
-theorem toRenyi_adaptiveCostChi2 : toRenyi 2 (adaptiveCostChi2 n m) = adaptiveCost n m := by
+theorem toRenyi_adaptiveCostChi2 (n m : Int) :
+    toRenyi 2 (adaptiveCostChi2 n m) = adaptiveCost n m := by
   unfold adaptiveCostChi2 adaptiveCost
   split_ifs <;> simp [toRenyi_stageTwoCostChi2]
-
-end Costs
 
 /-- The second round couples along equal reports at χ² `1/2`, Rényi-2 `log (3/2)`. -/
 theorem rr3_coupling_chi2 :
@@ -67,7 +61,7 @@ theorem escortHead_rr3_chi2 (K : Ectx rT) (σ σ' : State rT) :
   have hR : (fun ρ ρ' ↦ toRenyi 2 (drawCost σ σ' K adaptiveCostChi2 ρ ρ')) =
       drawCost σ σ' K adaptiveCost := by
     ext ρ ρ'
-    unfold drawCost
+    unfold drawCost Cfg.drawCostOf
     split_ifs <;> simp [toRenyi_adaptiveCostChi2]
   rw [head_escortPower, hR, toRenyi_two, log_ofReal (by norm_num),
     show (1 : ℝ) + 7 / 12 = 19 / 12 by norm_num]
@@ -105,8 +99,7 @@ theorem rrAdaptive_refines_chi2 :
     iintro %r %r' %hr
     rel_pures
     by_cases hd : r < 2 <;> by_cases hd' : r' < 2 <;>
-      simp only [rr3Out, hd, hd', ↓reduceIte, decide_true, decide_false, Bool.not_false,
-        Bool.not_true] at hr ⊢ <;> (try simp at hr) <;> rel_pures <;> rel_values
+      simp [rr3Out, hd, hd'] at hr ⊢ <;> rel_pures <;> rel_values
 
 /-! ## Adequacy -/
 
@@ -121,18 +114,11 @@ theorem rrAdaptive_chi2 (σ σ' : State rT) :
 
 /-! ## Adaptivity helps -/
 
-/-- Two rounds at χ² `1/2` compose, non-adaptively, to `(3/2)(3/2) - 1 = 5/4`. -/
-theorem ofReal_half_add_half :
-    (ofReal (1 / 2) : PowerBudget) + ofReal (1 / 2) = ofReal (5 / 4) := by
-  rw [← two_nsmul, nsmul_ofReal (by norm_num)]
-  norm_num
-
-/-- The adaptive χ² budget `7/12` is below the non-adaptive `5/4`. -/
+/-- The adaptive χ² budget `7/12` is below the non-adaptive `(3/2)(3/2) - 1 = 5/4`. -/
 theorem chi2_adaptive_lt : (ofReal (7 / 12) : PowerBudget) < ofReal (1 / 2) + ofReal (1 / 2) := by
-  rw [ofReal_half_add_half]
+  rw [← two_nsmul, nsmul_ofReal (by norm_num)]
   refine toENNReal.lt_iff_lt.1 ?_
   simp only [toENNReal_ofReal]
   exact (ENNReal.ofReal_lt_ofReal_iff (by norm_num)).2 (by norm_num)
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

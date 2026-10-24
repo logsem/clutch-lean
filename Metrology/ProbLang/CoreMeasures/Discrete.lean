@@ -24,3 +24,12 @@ instance instMeasurableSpaceUnOp : MeasurableSpace UnOp := ⊤
 instance instMeasurableSpaceBinOp : MeasurableSpace BinOp := ⊤
 
 instance instMeasurableSpaceTy : MeasurableSpace Ty := ⊤
+
+/-- Assembly code values have the discrete measurable space. -/
+instance instMeasurableSpaceAsmCode : MeasurableSpace Asm.Code := ⊤
+
+/-- Callback replay archives have the discrete measurable space. -/
+instance instMeasurableSpaceAsmReplay : MeasurableSpace Asm.Replay := ⊤
+
+/-- Boundary scalars have the discrete measurable space. -/
+instance instMeasurableSpaceBoundaryValue : MeasurableSpace Asm.BoundaryValue := ⊤

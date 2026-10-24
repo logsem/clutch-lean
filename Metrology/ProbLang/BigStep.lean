@@ -1,6 +1,6 @@
 module
 
-public import Metrology.ProbLang.Syntax.Syntax
+public import Metrology.ProbLang.Syntax.HeapArray
 
 @[expose] public section
 
@@ -105,6 +105,15 @@ def bigStepF (m : EvalOps rT M) (eval : Cfg rT → M) : Cfg rT → M
       let ℓ := σ.heap.fresh
       m.ret ⟨.lit (.loc ℓ), σ.update_heap fun t => t.insert ℓ v⟩
     | none => m.stuck "alloc: not a value"
+  | ⟨.allocN en ev, σ⟩ =>
+    m.bind (eval ⟨ev, σ⟩) fun ⟨v, σ⟩ =>
+    m.bind (eval ⟨en, σ⟩) fun ⟨en, σ⟩ =>
+    match en, v.toVal? with
+    | .lit (.int n), some v =>
+      if 0 < n then
+        m.ret ⟨.lit (.loc σ.heap.fresh), σ.update_heap (fun h => LocHeap.allocN h v n.toNat)⟩
+      else m.stuck "allocN: nonpositive length"
+    | _, _ => m.stuck "allocN: invalid operands"
   | ⟨.load e, σ⟩ =>
     m.bind (eval ⟨e, σ⟩) fun ⟨v, σ⟩ =>
     match v with
@@ -122,6 +131,11 @@ def bigStepF (m : EvalOps rT M) (eval : Cfg rT → M) : Cfg rT → M
       | some _ => m.ret ⟨.lit .unit, σ.update_heap fun t => t.insert ℓ v⟩
       | none => m.stuck "store: dangling location"
     | _, _ => m.stuck "store: not a location"
+  | ⟨.asm ec ea, σ⟩ =>
+    m.bind (eval ⟨ea, σ⟩) fun ⟨_, σ⟩ =>
+    m.bind (eval ⟨ec, σ⟩) fun _ => m.stuck "asm: requires a foreign environment"
+  | ⟨.asmResume _ e, σ⟩ =>
+    m.bind (eval ⟨e, σ⟩) fun _ => m.stuck "asmResume: requires a foreign environment"
   -- Sampling.
   | ⟨.tape e, σ⟩ =>
     m.bind (eval ⟨e, σ⟩) fun ⟨v, σ⟩ =>

@@ -15,7 +15,6 @@ products, sums, conditionals, and polymorphic and recursive types.
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
-open Ectx (fill)
 
 namespace ProbLang
 
@@ -23,15 +22,12 @@ open Cslib Exp Ectx EctxItem
 
 section Fundamental
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
-    [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+  [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] [L.IsLawful]
+  [L.IsTopAbsorbing]
 local bi IProp GF
 variable (Δ : TyEnv rT GF) (Γ : RelCtx rT GF) (S : Finset Var) {e e' e0 e0' e1 e2 e1' e2' : Exp rT}
   {τ τ' τ1 τ2 : Ty}
-
-section Steps
-variable [L.IsLawful] [L.IsTopAbsorbing]
 
 /-! ## Functions and recursion -/
 
@@ -239,8 +235,7 @@ theorem bin_log_related_unfold :
   unfold bin_log_related_ty bin_log_related
   iintro IH %vs #Hvs
   have hru : ∀ σ : SubstMap rT, substMap σ recUnfold = recUnfold := fun σ => by
-    show substMap σ (.lam (.bvar 0)) = _
-    simp [substMap_lam, substMap_bvar, recUnfold]
+    simp [recUnfold]
   rw [substMap_app, substMap_app, hru, hru, ← fill_appR recUnfold,
     ← fill_appR recUnfold]
   iapply refines_bind [appR recUnfold] [appR recUnfold] $$ (IH $$ %vs Hvs)
@@ -274,7 +269,7 @@ theorem bin_log_related_pack :
   iexact Hv
 
 /-- `unpack e1 as x in e2`, encoded as `(λx. e2) e1`, as an entailment from the relation of `e1`;
-the body type `τ2.shift` cannot mention the unpacked variable. -/
+the body type is `τ2.shift`. -/
 theorem bin_log_related_unpack_wand
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
     (he2'_lc : ∀ x ∉ S, (open' e2' (.fvar x)).IsLocallyClosed)
@@ -307,7 +302,8 @@ theorem bin_log_related_unpack_wand
   isimp only [hbridge_fst, hbridge_snd, interp_ren τ2 A Δ] at HBody
   iexact HBody
 
-/-- `unpack` compatibility for `bin_log_related`. -/
+/-- `unpack e1 as x in e2` is related at `τ2` when `e1` is related at `∃ τ` and the body is
+related under a fresh variable. -/
 theorem bin_log_related_unpack
     (HIH1 : ⊢ bin_log_related_ty L ⊤ Δ Γ e1 e1' (.exists' τ))
     (he2_lc : ∀ x ∉ S, (open' e2 (.fvar x)).IsLocallyClosed)
@@ -316,8 +312,6 @@ theorem bin_log_related_unpack
       ((x, interp L τ (.cons A Δ)) :: Γ) (open' e2 (.fvar x)) (open' e2' (.fvar x)) τ2.shift) :
     ⊢ bin_log_related_ty L ⊤ Δ Γ (.app (.lam e2) e1) (.app (.lam e2') e1') τ2 :=
   HIH1.trans (bin_log_related_unpack_wand Δ Γ S he2_lc he2'_lc HIH2)
-
-end Steps
 
 end Fundamental
 

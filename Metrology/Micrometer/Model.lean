@@ -11,15 +11,12 @@ functionality/injectivity of the `ref` and `tape` relations. -/
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting Iris.NonAtomicInvariant MicrometerRGS
+open Std Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.MicrometerWpGS GradedLifting
+  Iris.NonAtomicInvariant MicrometerRGS
 
 namespace ProbLang
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-/-- Values are inhabited by `()`. -/
-instance inhabited_val : Inhabited (Val rT) := ⟨.unit⟩
 
 variable {hlc : HasLC} {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B]
   {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
@@ -60,12 +57,11 @@ instance elim_fupd_refines :
 /-- `refines` eliminates `|==>`. -/
 instance elim_bupd_refines :
     ElimModal True false io false iprop(|==> P) P (refines L E e t A) (refines L E e t A) where
-  elim_modal h :=
-    (sep_mono_left (intuitionisticallyIf_mono BIUpdateFUpdate.fupd_of_bupd)).trans
-      ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
+  elim_modal h := (sep_mono_left (intuitionisticallyIf_mono BIUpdateFUpdate.fupd_of_bupd)).trans
+    ((elim_fupd_refines (io := io) E e t P A).elim_modal h)
 
 /-- `refines` is closed under `◇`. -/
-instance is_except_0_refines (A : lrel rT GF) : IsExcept0 (refines L E e t A) where
+instance is_except_0_refines : IsExcept0 (refines L E e t A) where
   is_except0 := calc
     ◇ refines L E e t A ⊢ ◇ |={⊤}=> refines L E e t A := except0_mono fupd_intro
     _ ⊢ |={⊤}=> refines L E e t A := except0
@@ -197,8 +193,7 @@ section SemtypesProperties
 open LawfulSet (subset_trans)
 open _root_.ProbLang.Val (ext_iff)
 
-/-- If two `logN` invariants have bodies that cannot hold together, they cannot both be opened, so
-their names are equal; `hp` turns that into `l1 = l2`. -/
+/-- `logN` invariants with mutually exclusive bodies have equal names, hence `l1 = l2`. -/
 theorem fupd_eq_of_inv_excl {P1 P2 : _} {p1 p2 : Loc × Loc} {l1 l2 : Loc} (HE : ↑logN ⊆ E)
     (hp : p1 = p2 → l1 = l2) (hfalse : ⊢ P1 -∗ P2 -∗ False) :
     ⊢ inv (logN.@ p1) P1 -∗ inv (logN.@ p2) P2 -∗ |={E}=> ⌜l1 = l2⌝ := by
@@ -229,7 +224,7 @@ theorem lrel_ref_shape (A : lrel rT GF) (v1 v2 : Val rT) :
 variable (A : lrel rT GF) (l l1 l2 : Loc) (HE : ↑logN ⊆ E)
 include HE
 
-/-- Reference type is functional in the program-side location (Rocq `interp_ref_funct`). -/
+/-- Reference type: the program-side location fixes the spec-side one (Rocq `interp_ref_funct`). -/
 theorem lrel_ref_funct :
     ⊢ (lrel_ref A).car (.loc l) (.loc l1) -∗
       (lrel_ref A).car (.loc l) (.loc l2) -∗
@@ -242,7 +237,7 @@ theorem lrel_ref_funct :
     iintro ⟨%wa1, %ws1, Hl1L, -⟩ ⟨%wa2, %ws2, Hl2L, -⟩
     iapply appHeapFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Reference type is injective on the program-side location (Rocq `interp_ref_inj`). -/
+/-- Reference type: the spec-side location fixes the program-side one (Rocq `interp_ref_inj`). -/
 theorem lrel_ref_inj :
     ⊢ (lrel_ref A).car (.loc l1) (.loc l) -∗
       (lrel_ref A).car (.loc l2) (.loc l) -∗
@@ -255,7 +250,7 @@ theorem lrel_ref_inj :
     iintro ⟨%wa1, %ws1, -, Hs1L, -⟩ ⟨%wa2, %ws2, -, Hs2L, -⟩
     iapply specHeapFrag_valid_2 $$ Hs1L Hs2L) $$ Hinv1 Hinv2
 
-/-- Tape type is functional in the program-side location (Rocq `interp_tape_funct`). -/
+/-- Tape type: the program-side location fixes the spec-side one (Rocq `interp_tape_funct`). -/
 theorem lrel_tape_funct :
     ⊢ (lrel_tape : lrel rT GF).car (.lbl l) (.lbl l1) -∗
       (lrel_tape : lrel rT GF).car (.lbl l) (.lbl l2) -∗
@@ -268,7 +263,7 @@ theorem lrel_tape_funct :
     iintro ⟨Hl1L, -⟩ ⟨Hl2L, -⟩
     iapply appTapesFrag_valid_2 $$ Hl1L Hl2L) $$ Hinv1 Hinv2
 
-/-- Tape type is injective on the program-side location (Rocq `interp_tape_inj`). -/
+/-- Tape type: the spec-side location fixes the program-side one (Rocq `interp_tape_inj`). -/
 theorem lrel_tape_inj :
     ⊢ (lrel_tape : lrel rT GF).car (.lbl l1) (.lbl l) -∗
       (lrel_tape : lrel rT GF).car (.lbl l2) (.lbl l) -∗

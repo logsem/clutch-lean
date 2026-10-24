@@ -22,8 +22,6 @@ namespace ProbLang.PublicChoice
 open ENNReal (ofReal)
 open Real (log)
 
-section Terminates
-
 variable {GF : BundledGFunctors} [ErisGS ℝ .hasNoLC GF]
 local bi IProp GF
 
@@ -59,8 +57,6 @@ theorem twp_choice (b : Bool) : ⊢ tglWp ⊤ (choice (rT := ℝ) b) (fun _ ↦ 
       imodintro
       itrivial
 
-end Terminates
-
 open MeasureTheory in
 /-- `choice b` terminates almost surely, from every state. -/
 theorem isProbabilityMeasure_choice (b : Bool) (σ : State ℝ) :
@@ -80,7 +76,7 @@ variable (σ : State ℝ)
 instance isMarkovKernel_choiceMech : IsMarkovKernel (choiceMech σ) :=
   ⟨fun b ↦ isProbabilityMeasure_choice b σ⟩
 
-/-- The public choice is `(0, (ln 3)² / 2)`-zCDP for any two bits (Def. 2.4). -/
+/-- The public choice is `(0, (ln 3)² / 2)`-zCDP over `ℝ` (Def. 2.4). -/
 theorem choice_zCDP_real : (choiceMech σ).zCDP ⊤ 0 (ofReal (log 3 ^ 2 / 2)) :=
   choice_zCDP σ
 

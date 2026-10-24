@@ -21,13 +21,12 @@ open scoped ENNReal
 namespace ProbLang
 namespace LeakyRR
 
-open RandomizedResponse (rr_refines budget)
+open RandomizedResponse (rr_refines rrBudget)
 open ENNReal (ofReal)
 open Real (log)
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
-
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {GF : BundledGFunctors}
+  [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
 
 /-- `leakyRR N b` refines `leakyRR N b'` at equal reports, spending `(ln 3, 1/N)`. -/
@@ -35,7 +34,7 @@ theorem leakyRR_refines (N : Int) (hN : 0 < N) (b b' : Bool) :
     ⊢ ↯b (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) -∗
       REL[codensity dp] (leakyRR (rT := rT) N b) << leakyRR N b' : lrel_bool := by
   -- split the budget: `(0, 1/N)` pays to avoid the leak, `(ln 3, 0)` pays for `rr`
-  rw [show (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) = (0, (N.toNat : ℝ≥0∞)⁻¹) + budget by simp]
+  rw [show (ofReal (log 3), (N.toNat : ℝ≥0∞)⁻¹) = (0, (N.toNat : ℝ≥0∞)⁻¹) + rrBudget by simp]
   iintro Hb
   ihave ⟨Hδ, Hε⟩ := BudgetCredit.split $$ Hb
   -- couple the two draws along "equal and not `0`" at `(0, μ{0}) = (0, 1/N)`
@@ -47,14 +46,12 @@ theorem leakyRR_refines (N : Int) (hN : 0 < N) (b b' : Bool) :
   rel_pures
   iapply rr_refines b b' $$ Hε
 
-variable (N : Int)
-
 /-- `leakyRR N` on private bits, started from state `σ`. -/
-noncomputable abbrev leakyRRMech (σ : State rT) : Mechanism Bool (Exp rT) :=
+noncomputable abbrev leakyRRMech (N : Int) (σ : State rT) : Mechanism Bool (Exp rT) :=
   progMech (leakyRR N) σ
 
 /-- `leakyRR N` is `(ln 3, 1/N)`-differentially private for any two bits (Def. 2.1). -/
-theorem leakyRR_DP (hN : 0 < N) (σ : State rT) :
+theorem leakyRR_DP (N : Int) (hN : 0 < N) (σ : State rT) :
     (leakyRRMech N σ).DP ⊤ (ofReal (log 3)) (N.toNat : ℝ≥0∞)⁻¹ :=
   progMech_isPrivate (MicrometerFunctor rT (ℝ≥0∞ × ℝ≥0∞)) (leakyRR N) σ _
     (fun _ _ ↦ lrel_bool) (fun _ _ ↦ lrel_bool_car_eq) fun b b' _ _ _ ↦ leakyRR_refines N hN b b'

@@ -2,7 +2,7 @@ module
 
 public import Metrology.Code.Retry
 public import Metrology.Micrometer.SpecAdvRules
-public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.AdequacyTV
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
@@ -42,7 +42,7 @@ theorem flipCredit_avg : (∑ n ∈ Finset.Ico 0 2, flipCredit ε n) / (2 : Int)
 variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
 local bi IProp GF
 
-/-- The value `0` refines `retry`, with no budget: the spec terminates almost surely. -/
+/-- The value `0` refines `retry`, with no budget. -/
 theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : lrel_int := by
   -- `hsplit`: halve any positive budget; `hslack`: the budget itself is the seed `ε`; `k = 2`: each
   -- tails doubles the credit (`flipCredit`); the step map is the identity
@@ -72,9 +72,9 @@ theorem zero_refines_retry : ⊢ REL[codensity tv] (pl(#0) : Exp rT) << retry : 
 /-- On every event, `retry` is at least as likely as the value `0`. -/
 theorem zero_le_retry (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨pl(#0), σ⟩ S ≤ limExecV ⟨retry, σ'⟩ S := by
-  simpa using tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (L := codensity tv)
+  simpa using limExecV_le_add_of_refines_tv (GF := MicrometerFunctor rT ℝ≥0∞)
     (fun _ _ ↦ lrel_int) _ _ σ σ' 0 (fun _ _ ↦ lrel_int_car_eq)
-    fun _ _ ↦ by iintro -; iapply zero_refines_retry) S hS
+    (fun _ _ ↦ by iintro -; iapply zero_refines_retry) hS
 
 open MeasureTheory in
 /-- `retry` returns `0` with probability `1`. -/

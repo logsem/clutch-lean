@@ -10,7 +10,7 @@ public import Metrology.Couplings.Divergences.RenyiFillKl
 
 One round is within KL `(log 3) / 2`, so `k` rounds are `k (log 3) / 2`-private in filled KL. -/
 
-open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence
+open ProbabilityTheory GradedLifting GradedDivergence
 open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
@@ -21,7 +21,7 @@ open EReal (coe_ennreal_ofReal coe_le_coe_iff)
 
 /-- The reports on different bits are `(3/4, 1/4)` and `(1/4, 3/4)`, at KL `(log 3) / 2`. -/
 theorem klDivergence_rrOut (b : Bool) :
-    klDivergence (ofReal (log 3 / 2)) (draw.map (rrOut b)) (draw.map (rrOut !b)) := by
+    klDivergence (ofReal (log 3 / 2)) (rrDraw.map (rrOut b)) (rrDraw.map (rrOut !b)) := by
   have hl : log (1 / 3) = - log 3 := by rw [one_div, log_inv]
   rw [klDivergence_iff_fDiv, fDiv_klFun_eq_sum _ _ fun c ↦ by
       rw [map_rrOut_singleton, map_rrOut_singleton]; split_ifs <;> norm_num,
@@ -30,8 +30,7 @@ theorem klDivergence_rrOut (b : Bool) :
     map_rrOut_singleton]
   cases b <;> norm_num [klTerm, div_div_div_cancel_right₀, hl] <;> linarith
 
-/-- One round couples the draws at `(log 3) / 2` in the filled-KL codensity lifting: lift equal
-reports from the KL bound by binding the fibers. -/
+/-- One round couples the draws at `(log 3) / 2` in the filled-KL codensity lifting. -/
 theorem rrCoupling_fillKl :
     RRCoupling (codensity klDivergence.fill) (ofReal (log 3 / 2)) := fun b b' ↦ by
   refine codensity_rel_of_map .of_discrete .of_discrete
@@ -40,14 +39,15 @@ theorem rrCoupling_fillKl :
   rcases Bool.eq_or_eq_not b' b with rfl | rfl
   exacts [IsGraded.mono zero_le (IsReflexive.refl _), klDivergence_rrOut b]
 
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] (α : ℝ) [Fact (1 < α)]
-  (k : ℕ) (σ : State rT)
+variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] (k : ℕ) (σ : State rT)
 
 /-- `k` rounds are `k (log 3) / 2`-private in filled KL. -/
 theorem rrCount_fillKl : (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • ofReal (log 3 / 2)) :=
   rrCount_isPrivate _ (isAddLeftRegular_ofReal _) rrCoupling_fillKl k σ
 
 /-! ## Read off the Rényi and zCDP couplings -/
+
+variable {α : ℝ} [Fact (1 < α)]
 
 /-- One round couples at `ρ_α` in filled KL, read off the Rényi coupling. -/
 theorem rrCoupling_fillKl_of_renyi :
@@ -61,14 +61,14 @@ theorem rrCoupling_fillKl_of_zcdp :
 
 /-- `k` rounds are `k ρ_α`-private in filled KL, for every order `α > 1`. -/
 theorem rrCount_fillKl_of_renyi : (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • rrRenyi α) :=
-  rrCount_isPrivate _ (isAddLeftRegular_ofReal _) (rrCoupling_fillKl_of_renyi α) k σ
+  rrCount_isPrivate _ (isAddLeftRegular_ofReal _) rrCoupling_fillKl_of_renyi k σ
 
 /-- `k` rounds are `k ln 3`-private in filled KL, through zCDP. -/
 theorem rrCount_fillKl_of_zcdp :
     (rrCountMech k σ).IsPrivate klDivergence.fill ⊤ (k • ofReal (log 3)) :=
   rrCount_isPrivate _ (isAddLeftRegular_ofReal _) rrCoupling_fillKl_of_zcdp k σ
 
-/-- The direct filled-KL budget `(log 3) / 2` is half the one read off zCDP. -/
+/-- The direct filled-KL budget `(log 3) / 2` is at most the one read off zCDP. -/
 theorem rrFillKl_le_zcdp : ofReal (log 3 / 2) ≤ ofReal (log 3) :=
   ofReal_le_ofReal (half_le_self (log_nonneg (by norm_num)))
 

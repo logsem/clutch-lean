@@ -1,5 +1,6 @@
 module
 
+public import Metrology.Iris.Array
 public import Metrology.TotalEris.ErisGS
 import Metrology.ProbLang.Syntax.Notation
 public import Metrology.TotalEris.TotalLifting
@@ -48,6 +49,27 @@ theorem twp_alloc {v : Val rT} :
     isimp only [erisWpGS_stateInterp_eq, Std.ExtTreeMap.insert_eq_PartialMap_insert, Exp.toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ %σ₁.heap.fresh Hl
+
+/-- Total weakest precondition of positive block allocation. -/
+theorem twp_allocN {v : Val rT} {n : Int} (hn : 0 < n) : iprop%
+    (∀ l, appArrayFrag l v n.toNat -∗ Φ (.loc l)) ⊢ tglWp E (.allocN pl(#n) v.1) Φ := by
+  iintro HΦ
+  iapply twp_lift_atomic_head_step Exp.allocN_toVal?_eq_none (by is_lc)
+  iintro %σ₁ Hσ !>
+  have hred : HeadReducible (.allocN pl(#n) v.1) σ₁ :=
+    (AllocNS (Exp.toVal?_ofVal v) hn rfl rfl).ne_zero
+  iframe %hred
+  iintro %e₂ %σ₂ %Hstep
+  cases headStepSupport Hstep with
+  | AllocNS hvd _ hl hσ =>
+    rw [show v.fst.toVal? = some v from Exp.toVal?_ofVal v] at hvd
+    cases hvd
+    subst hl hσ
+    imod app_state_heap_allocN v n.toNat $$ Hσ with ⟨Hσ', Hls⟩
+    imodintro
+    isimp only [erisWpGS_stateInterp_eq, Exp.toVal?_lit]
+    iframe Hσ'
+    iapply HΦ $$ %σ₁.heap.fresh Hls
 
 /-- Total weakest precondition of `!l` (Eris `wp_load`). -/
 theorem twp_load {v : Val rT} :

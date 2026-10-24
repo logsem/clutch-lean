@@ -2,7 +2,7 @@ module
 
 public import Metrology.Micrometer.AppWeakestpre
 import Metrology.ProbLang.Syntax.Notation
-public import Metrology.Iris.AppProgram
+public import Metrology.Iris.Array
 public import Metrology.Iris.SpecProgram
 public import Metrology.Iris.SpecUpdate
 public import Metrology.Iris.SpecRules
@@ -61,6 +61,7 @@ variable {hlc : HasLC} {GF : BundledGFunctors}
 
 open MicrometerWpGS SpecUpdateGS
 
+/-- A `MicrometerGS` gives a `MicrometerWpGS`. -/
 @[reducible]
 noncomputable instance micrometerWpGS_of_components : MicrometerWpGS (rT := rT) GF where
   hlc := hlc
@@ -77,18 +78,6 @@ theorem micrometerWpGS_specInterp_eq : (specInterp : _ → IProp GF) = specAuth 
 
 end MicrometerInstance
 
-attribute [simp] insert_eq_PartialMap_insert
-
-/-! ## Head-step facts -/
-
-/-- A non-positive bound on an empty tape steps to `-1`, whether or not it matches the tape's. -/
-theorem HeadStepSupport.rand_lbl_nonpos {σ : State rT} {l : Loc} {z N : Int} (Hz : ¬ 0 < z)
-    (hlook : σ.tapes[l]? = some ⟨N, []⟩) :
-    HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ⟨pl(#(-1)), σ⟩ := by
-  obtain rfl | hN := eq_or_ne N z
-  · exact .RandTapeNonposEmptyS Hz hlook rfl
-  · exact .RandTapeNonposOtherS Hz hlook hN.symm
-
 /-! ## Program-side laws
 
 Each proof lifts one atomic head step (`wp_lift_atomic_head_step`): it exhibits one possible step,
@@ -102,6 +91,16 @@ variable {hlc : HasLC} {B : Type} [AddCommMonoid B]
   {Φ : Val rT → IProp GF} {e : Exp rT} {l : Loc} {z : Int} (K : Ectx rT)
 local bi IProp GF
 open BIFUpdate
+
+/-- Location displacement returns the location at the given integer offset. -/
+theorem wp_offset : ▷ Φ (.loc (l + z)) ⊢ wp L E pl(#loc l +ₗ #z) Φ := by
+  have hs : PureStep (rT := rT) pl(#loc l +ₗ #z) pl(#loc (l + z)) :=
+    (PureHeadStep.binop .lit .lit rfl).toPureStep
+  iintro H
+  iapply wp_pure_step_one hs
+  iintro !>
+  iapply MicrometerWpGS.wp_value_of_toVal (v := .loc (l + z)) rfl
+  iexact H
 
 section HeadSteps
 variable [CanonicallyOrderedAdd B] [L.IsReflexive] [L.IsSupportLocal] [L.HasBind]
@@ -129,6 +128,28 @@ theorem wp_alloc : iprop% (∀ l, appHeapFrag l v -∗ Φ (.loc l)) ⊢ wp L E (
     simp only [micrometerWpGS_stateInterp_eq, insert_eq_PartialMap_insert, toVal?_lit]
     iframe Hσ'
     iapply HΦ $$ %σ₁.heap.fresh Hl
+
+/-- Allocating a positive block yields ownership of its consecutive cells. -/
+theorem wp_allocN {n : Int} (hn : 0 < n) : iprop%
+    (∀ l, appArrayFrag l v n.toNat -∗ Φ (.loc l)) ⊢ wp L E (.allocN pl(#n) v.1) Φ := by
+  iintro HΦ
+  iapply wp_lift_atomic_head_step Exp.allocN_toVal?_eq_none (by is_lc)
+  iintro %σ₁ Hσ !>
+  isplitr
+  · ipureintro
+    exact ⟨_, (AllocNS (toVal?_ofVal v) hn rfl rfl).pos⟩
+  iintro !> %e₂ %σ₂ %hstep
+  replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
+  cases hstep with
+  | AllocNS hvd _ hl hσ =>
+    rw [show v.fst.toVal? = some v from toVal?_ofVal v] at hvd
+    cases hvd
+    subst hl hσ
+    imod app_state_heap_allocN v n.toNat $$ Hσ with ⟨Hσ', Hls⟩
+    imodintro
+    simp only [micrometerWpGS_stateInterp_eq, toVal?_lit]
+    iframe Hσ'
+    iapply HΦ $$ %σ₁.heap.fresh Hls
 
 /-- Loading from `l` returns the value `l` points to. -/
 theorem wp_load : iprop% appHeapFrag l v ∗ (appHeapFrag l v -∗ Φ v) ⊢ wp L E pl(!#loc l) Φ := by
@@ -161,8 +182,7 @@ theorem wp_store {v v' : Val rT} : iprop%
   imodintro
   isplitr
   · ipureintro
-    exact ⟨_, (StoreS (toVal?_ofVal v)
-        (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
+    exact ⟨_, (StoreS (toVal?_ofVal v) (by rw [hlook]; exact Option.isSome_some) rfl).pos⟩
   iintro !> %e₂ %σ₂ %hstep
   replace hstep := headStepSupport (possible_iff_pos.mpr hstep)
   cases hstep with
@@ -444,7 +464,7 @@ theorem wp_rand_tape_empty_r : iprop%
   ihave HαNat := spec_empty_to_natTape $$ HαB
   iapply Hwp $$ HαNat Hj' %hn
 
-/-- `wp_rand_tape_empty_r` with the tape and spec resources handed back as one `∗` (Rocq form). -/
+/-- Spec-side labeled `rand z` on an empty tape, tape and spec resources returned as one `∗`. -/
 theorem wp_rand_empty_r : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l z [] ∗
       (∀ n, specNatTape l z [] ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
@@ -456,7 +476,7 @@ theorem wp_rand_empty_r : iprop%
   iapply Hwp $$ [$Hα $Hj']
 
 /-- A spec-side labeled `rand z` on a tape with another bound draws a fresh `n`, tape kept. -/
-theorem wp_rand_wrong_tape_r {M : Int} {ns : List Int} (HneM : z ≠ M) : iprop%
+theorem wp_rand_wrong_tape_r {M : Int} (HneM : z ≠ M) : iprop%
     ⤇ K.fill pl(rand(#z, #lbl l)) ∗ specNatTape l M ns ∗
       (∀ n, specNatTape l M ns ∗ ⤇ K.fill pl(#int n) -∗ ⌜0 ≤ n ∧ n < z⌝ -∗ wp L E e Φ) ⊢
       wp L E e Φ := by

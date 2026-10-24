@@ -4,13 +4,13 @@ public import Metrology.Micrometer.FundamentalOps
 import Metrology.Iris.LocalBI
 import Metrology.ProbLang.Syntax.Notation
 
-@[expose] public section
-
 /-! # The fundamental theorem
 
 Every well-typed expression is related to itself (`fundamental`), by induction
 on typing with one `bin_log_related_*` lemma per rule; `refines_typed` is the closed form.
 -/
+
+@[expose] public section
 
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
@@ -18,13 +18,18 @@ open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.Microme
 namespace ProbLang
 
 open Cslib Exp RelCtx
-open List (map_cons toFinset_cons)
+
+/-- The body of a cofinitely typed binder is locally closed away from `S` and any finite `D`. -/
+theorem isLocallyClosed_of_cofinite {rT : Type} {e : Exp rT} {Γtc : Tctx}
+    {S D : Finset Var} {τ1 τ2 : Ty}
+    (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
+    ∀ x ∉ S ∪ D, (open' e (.fvar x)).IsLocallyClosed := fun x hx =>
+  (Hbody x (Finset.notMem_union.1 hx).1).isLocallyClosed
 
 section Fundamental
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
-    [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {e : Exp rT} {τ : Ty}
+  [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {e : Exp rT} {τ : Ty}
 local bi IProp GF
 
 /-! ## Typing contexts as relational contexts -/
@@ -35,8 +40,8 @@ def TctxRelated (Δ : TyEnv rT GF) (Γtc : Tctx) (Γrc : RelCtx rT GF) : Prop :=
   ∀ x, (Γtc x).map (fun τ => interp L τ Δ) = Γrc.lookup x
 
 section TctxLemmas
-variable {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF} {x : Var} {τ1 τ2 : Ty}
-  {S : Finset Var} (HCtx : TctxRelated L Δ Γtc Γrc)
+variable {Δ : TyEnv rT GF} {Γtc : Tctx} {Γrc : RelCtx rT GF} {x : Var}
+  (HCtx : TctxRelated L Δ Γtc Γrc)
 include HCtx
 
 /-- A variable typed in `Γtc` is bound in `Γrc`. -/
@@ -68,15 +73,16 @@ theorem TctxRelated.insert (x : Var) (τ : Ty) (hfresh : Γrc.lookup x = none) :
 theorem fv_subset_relCtxDom (Hty : Typed Γtc e τ) : e.fv ⊆ (Γrc.map (·.1)).toFinset :=
   fun x hx => mem_of_lookup_isSome (HCtx.lookup_isSome (Hty.fvSubset x hx))
 
-/-- The same for the body of a binder typed cofinitely: pick one fresh `y` and drop it again. -/
-theorem fv_subset_of_cofinite (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
+/-- The free variables of a cofinitely typed binder body lie in the domain of `Γrc`. -/
+theorem fv_subset_of_cofinite {S : Finset Var} {τ1 τ2 : Ty}
+    (Hbody : ∀ x ∉ S, Typed (Γtc.insert x τ1) (open' e (.fvar x)) τ2) :
     e.fv ⊆ (Γrc.map (·.1)).toFinset := by
   intro z hz
   obtain ⟨y, hy⟩ := HasFresh.fresh_exists (S ∪ (Γrc.map (·.1)).toFinset ∪ {z})
   simp only [Finset.mem_union, Finset.mem_singleton, not_or] at hy
   have hzdom := fv_subset_relCtxDom (HCtx.insert y τ1 (lookup_eq_none_of_notMem hy.1.2))
     (Hbody y hy.1.1) (fv_subset_open e y hz)
-  simp only [map_cons, toFinset_cons, Finset.mem_insert] at hzdom
+  simp only [List.map_cons, List.toFinset_cons, Finset.mem_insert] at hzdom
   exact hzdom.resolve_left fun h => hy.2 h.symm
 
 end TctxLemmas
@@ -133,19 +139,15 @@ theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF) (Γ
   -- Binder cases: enlarge the cofinite set to `S ∪ dom Γrc`, so the fresh variable is also
   -- fresh for `Γrc` and `HCtx.insert` applies.
   | @lam S _ e τ1 τ2 Hbody ih =>
-    let S' : Finset Var := S ∪ (Γrc.map (·.1)).toFinset
     have he_fv := fv_subset_of_cofinite HCtx Hbody
-    have he_lc : ∀ x ∉ S', (open' e (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody x (not_mem_union_dom hx).1).isLocallyClosed
-    exact bin_log_related_lam Δ Γrc S' he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x τ1 (not_mem_union_dom hx).2)
+    have he_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody
+    exact bin_log_related_lam Δ Γrc _ he_lc he_lc he_fv he_fv fun x hx =>
+      ih x (notMem_union_dom hx).1 Δ _ (HCtx.insert x τ1 (notMem_union_dom hx).2)
   | @«fix» S _ e τ1 τ2 Hbody ih =>
-    let S' : Finset Var := S ∪ (Γrc.map (·.1)).toFinset
     have he_fv := fv_subset_of_cofinite HCtx Hbody
-    have he_lc : ∀ x ∉ S', (open' e (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody x (not_mem_union_dom hx).1).isLocallyClosed
-    exact bin_log_related_fix Δ Γrc S' he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x (.arrow τ1 τ2) (not_mem_union_dom hx).2)
+    have he_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody
+    exact bin_log_related_fix Δ Γrc _ he_lc he_lc he_fv he_fv fun x hx =>
+      ih x (notMem_union_dom hx).1 Δ _ (HCtx.insert x (.arrow τ1 τ2) (notMem_union_dom hx).2)
   | @tlam _ e τ Hbody ih =>
     have hLC := Hbody.isLocallyClosed
     have he_fv := fv_subset_relCtxDom (HCtx.shift default) Hbody
@@ -153,12 +155,10 @@ theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF) (Γ
     imodintro
     iapply ih (.cons A Δ) Γrc (HCtx.shift A)
   | @tunpack S _ e1 e2 τ τ2 _ Hbody2 ih1 ih2 =>
-    let S' : Finset Var := S ∪ (Γrc.map (·.1)).toFinset
-    have he2_lc : ∀ x ∉ S', (open' e2 (.fvar x)).IsLocallyClosed := fun x hx =>
-      (Hbody2 x (not_mem_union_dom hx).1).isLocallyClosed
-    exact bin_log_related_unpack Δ Γrc S' (ih1 Δ Γrc HCtx) he2_lc he2_lc fun A x hx =>
-      ih2 x (not_mem_union_dom hx).1 (.cons A Δ) _
-        ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
+    have he2_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody2
+    exact bin_log_related_unpack Δ Γrc _ (ih1 Δ Γrc HCtx) he2_lc he2_lc fun A x hx =>
+      ih2 x (notMem_union_dom hx).1 (.cons A Δ) _
+        ((HCtx.shift A).insert x τ (notMem_union_dom hx).2)
 
 /-- A closed well-typed expression refines itself at its type. -/
 theorem refines_typed (Δ : TyEnv rT GF) (Hty : Typed .empty e τ) :

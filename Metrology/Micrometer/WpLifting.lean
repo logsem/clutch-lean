@@ -9,7 +9,7 @@ Reduce `wp` to one coupled step (Rocq `approxis/lifting.v`); main: `wp_lift_prim
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE GradedLifting
+open Iris Iris.Std Iris.BI Iris.ProofMode GradedLifting
 
 namespace ProbLang
 
@@ -25,7 +25,6 @@ local bi IProp GF
 open SpecUpdateGS BIFUpdate
 open LawfulSet (empty_subset subset_refl)
 open BindLaw
-open IsTopAbsorbing (frame absorbing_top)
 
 /-! ## Unfolding `wp` -/
 
@@ -132,8 +131,6 @@ theorem wp_lift_prim_steps_coupl_law [Add B] (law : L.BindLaw) [law.HeadShift] :
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with
     ⟨%R, %b₁, %b₂, %hb, %hb₂, %Hred, %Hred', %Hhead, %Hside, H⟩
-  have := prim_step_mass Hred
-  have := prim_step_mass Hred'
   have Hhead' := law.mono_out (HeadShift.shift hb₂ Hhead) hb
   imodintro
   iexists fun ρ ρ' => R ρ ρ' + b₂
@@ -157,15 +154,13 @@ theorem wp_lift_prim_steps_coupl [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.
   iapply wp_lift_prim_steps_coupl_of_head Hv (canonical L)
   iintro %σ₁ %e₁' %σ₁' %b Hres
   imod H $$ %σ₁ %e₁' %σ₁' %b Hres with ⟨%S, %b₁, %b₂, %hb, %Hred, %Hred', %Hcpl, H⟩
-  have := prim_step_mass Hred
-  have := prim_step_mass Hred'
   have Hhead : (canonical L).head (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
       (fun ρ ρ' => relCost S ρ ρ' + b₂) b :=
     -- frame `b₂` onto the coupling at `b₁`, then weaken `b₁ + b₂` to `b`
-    IsLawful.mono (frame Hcpl) hb le_rfl
-  have Hside := SideForExec.of_forall (law := canonical L)
-    (μ := primStep ⟨e₁, σ₁⟩) (ν := primStep ⟨e₁', σ₁'⟩) (R := fun ρ ρ' => relCost S ρ ρ' + b₂)
-    (f' := id) fun _ _ => trivial
+    IsLawful.mono (IsTopAbsorbing.frame Hcpl) hb le_rfl
+  have Hside : (canonical L).SideForExec (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)
+      (fun ρ ρ' => relCost S ρ ρ' + b₂) id :=
+    SideForExec.of_forall fun _ _ => trivial
   imodintro
   iexists fun ρ ρ' => relCost S ρ ρ' + b₂
   iframe %Hred %Hred' %Hhead %Hside
@@ -204,20 +199,15 @@ theorem wp_lift_prim_step_l_erasable [AddCommMonoid B] [CanonicallyOrderedAdd B]
   iapply specCoupl_ret
   iexact H
 
-end Coupling
-
 /-! ## Program steps that leave the spec in place
 
-These couple the program step against a Dirac at the spec configuration, at budget `0`.
-`_concentrated` rules take any measurable set carrying the step, so they work for a diffuse `rT`;
-the `@[discrete]` rules use the support `{ρ | 0 < primStep ρ}`, which carries the step only for
-non-`urand` redexes (hence `hne`). -/
+Program steps coupled against a Dirac at the spec configuration, leaving the budget unchanged.
+`_concentrated` rules take any measurable set carrying the step; `@[discrete]` rules use the
+support of a non-`urand` step. -/
 
 section ConcentratedRules
 variable [AddCommMonoid B] [CanonicallyOrderedAdd B] [L.IsLawful] [L.IsReflexive]
   [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind] {S : State rT → Set (Cfg rT)}
-  (Hv : e₁.toVal? = none)
-include Hv
 
 section Concentrated
 variable (hSmeas : ∀ σ₁, MeasurableSet (S σ₁))
@@ -310,13 +300,13 @@ theorem wp_lift_step_later
       ⌜0 < primStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={∅}=> ▷ |={∅, E}=> stateInterp σ₂ ∗ wp L E e₂ Φ) ⊢
     wp L E e₁ Φ := by
   iintro H
-  iapply wp_lift_step_later_concentrated Hv (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
-    (fun σ₁ => concentrated_primStep_support e₁ σ₁ hne)
+  iapply wp_lift_step_later_concentrated Hv (measurableSet_primStep_support e₁)
+    (concentrated_primStep_support e₁ · hne)
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
   imodintro
-  isplitr
-  · ipureintro; exact Hred.toReducible
+  have := Hred.toReducible
+  iframe %this
   iintro %e₂ %σ₂ %Hmem
   iapply H $$ %e₂ %σ₂ %Hmem
 
@@ -328,13 +318,13 @@ theorem wp_lift_atomic_step_fupd
       ∀ e₂ σ₂, ⌜0 < primStep ⟨e₁, σ₁⟩ {⟨e₂, σ₂⟩}⌝ -∗ |={E1}[E2]▷=> stateInterp σ₂ ∗
       (match e₂.toVal? with | some v => Φ v | none => iprop(False))) ⊢ wp L E1 e₁ Φ := by
   iintro H
-  iapply wp_lift_atomic_step_fupd_concentrated Hv (fun σ₁ => measurableSet_primStep_support e₁ σ₁)
-    (fun σ₁ => concentrated_primStep_support e₁ σ₁ hne)
+  iapply wp_lift_atomic_step_fupd_concentrated Hv (measurableSet_primStep_support e₁)
+    (concentrated_primStep_support e₁ · hne)
   iintro %σ₁ Hσ
   imod H $$ %σ₁ [$Hσ] with ⟨%Hred, H⟩
   imodintro
-  isplitr
-  · ipureintro; exact Hred.toReducible
+  have := Hred.toReducible
+  iframe %this
   iintro %e₂ %σ₂ %Hpstep
   iapply H $$ %e₂ %σ₂ %Hpstep
 
@@ -356,45 +346,38 @@ theorem wp_lift_atomic_step
 
 end ConcentratedRules
 
+end Coupling
+
 /-! ## Pure steps
 
-Stated on the measure-theoretic `PureStep` / `PureExec`, so they hold for a diffuse `rT`; a pure
-step is a step of the unit law, so no bind is needed. -/
+Pure steps, stated on the measure-theoretic `PureStep` and `PureExec`, so they hold for a diffuse
+`rT`. -/
 
 section PureSteps
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing] {e₂ : Exp rT} {φ : Prop} {n : Nat}
+  {E' : CoPset}
 
-variable {E' : CoPset}
-
-/-- A pure step, by a step of the unit law; at budget `⊤` the spec coupling is absorbing. -/
+/-- A pure step under a step-update proves `wp` (Rocq `wp_lift_pure_det_step`). -/
 theorem wp_lift_pure_det_step (Hpure : PureStep e₁ e₂) :
     (|={E}[E']▷=> wp L E e₂ Φ) ⊢ wp L E e₁ Φ := by
   iintro H
-  have Hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr (val_stuck (Hpure.safe default))
-  iapply wp_lift_step_couple
-  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  iapply wpFor_lift_det_step (Exp.toVal?_eq_none.mpr (val_stuck (Hpure.safe default)))
+  iintro %σ Hσ
   imod H
   imod subset empty_subset with Hclose
   imodintro
-  -- a finite budget takes the deterministic step; budget `⊤` closes the goal by absorption
-  rcases lt_or_eq_of_le (le_top (a := b)) with hb | rfl
-  · iapply specCoupl_ret
-    simp only [Hv]
-    iapply progCoupl_det_step hb (Hpure.safe σ₁) (Hpure.det σ₁)
-    iintro !> !>
-    iapply specCoupl_ret
-    imod Hclose
-    imod H
-    imodintro
-    iframe
-  · iapply specCoupl_absorbing absorbing_top
+  iexists ⟨e₂, σ⟩
+  have hdet := Hpure.det σ
+  iframe %hdet
+  iintro !>
+  imod Hclose
+  imod H
+  imodintro
+  iframe
 
 /-- One pure step under a later. -/
-theorem wp_pure_step_one (Hstep : PureStep e₁ e₂) : ▷ wp L E e₂ Φ ⊢ wp L E e₁ Φ := by
-  iintro H
-  iapply wp_lift_pure_det_step Hstep
-  iintro !> !> !>
-  iexact H
+theorem wp_pure_step_one (Hstep : PureStep e₁ e₂) : ▷ wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
+  wpFor_pure_step (Exp.toVal?_eq_none.mpr (val_stuck (Hstep.safe default))) Hstep.det
 
 variable [Hex : PureExec φ n e₁ e₂]
 
@@ -420,16 +403,9 @@ theorem wp_pure_step_fupd (Hφ : φ) :
     imodintro
     iapply IH Hrest $$ H
 
-/-- `n` pure steps given by a `PureExec` instance, under `n` laters; the form the tactics use. -/
-theorem wp_pure_step_later (Hφ : φ) : ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ Φ := by
-  refine .trans ?_ (wp_pure_step_fupd (E' := E) (e₂ := e₂) Hφ)
-  induction n with
-  | zero => exact .rfl
-  | succ n ih =>
-    refine (later_mono ih).trans ?_
-    simp only [step_fupdN]
-    iintro H !> !> !>
-    iexact H
+/-- `n` pure steps under `n` laters, given by a `PureExec` instance. -/
+theorem wp_pure_step_later (Hφ : φ) : ▷^[n] wp L E e₂ Φ ⊢ wp L E e₁ Φ :=
+  (step_fupdN_intro subset_refl).trans (wp_pure_step_fupd (E' := E) (e₂ := e₂) Hφ)
 
 end PureSteps
 

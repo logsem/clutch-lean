@@ -238,6 +238,56 @@ theorem erasure_alloc_close {ed : Exp rT} :
           ih_fill _ (σ.update_heap f_heap) t htape_upd hN, halloc σ rfl]
         simp [asValM, hcheck, lintegral_dirac, f_heap]
 
+/-- Block allocation commutes with presampling. -/
+theorem erasure_allocN_close {ed : Exp rT} {n : Int} (hn : 0 < n) :
+    ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+      ∂headStep ⟨.allocN (.lit (.int n)) ed, σ'⟩ ∂tapePresample σ α =
+      ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+        ∂headStep ⟨.allocN (.lit (.int n)) ed, σ⟩ := by
+  have halloc : ∀ σ₀ : State rT, σ₀.heap = σ.heap →
+      headStep (⟨.allocN (.lit (.int n)) ed, σ₀⟩ : Cfg rT) =
+      ed.asValM fun vd =>
+        let ℓ := σ.heap.fresh
+        dirac ⟨.lit (.loc ℓ), σ₀.update_heap fun hp => LocHeap.allocN hp vd n.toNat⟩ := by
+    intro σ₀ hh
+    simp only [headStep, hn, ite_true]
+    show asValM ed (fun vd => let ℓ := σ₀.heap.fresh; _) = _
+    rw [hh]
+  calc ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+        ∂headStep ⟨.allocN (.lit (.int n)) ed, σ'⟩ ∂tapePresample σ α
+    _ = ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S) ∂(ed.asValM fun vd =>
+          let ℓ := σ.heap.fresh
+          dirac ⟨.lit (.loc ℓ), σ'.update_heap fun hp => LocHeap.allocN hp vd n.toNat⟩)
+            ∂tapePresample σ α := by
+      refine lintegral_congr_ae ?_
+      filter_upwards [tapePresample_heap_eq] with σ' hheap
+      rw [halloc σ' hheap]
+    _ = ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)
+        ∂headStep ⟨.allocN (.lit (.int n)) ed, σ⟩ := by
+      cases hcheck : ed.toVal? with
+      | none =>
+        simp only [asValM, hcheck, lintegral_zero_measure]
+        rw [halloc σ rfl]
+        simp [asValM, hcheck, lintegral_zero_measure]
+      | some vd =>
+        simp only [asValM, hcheck]
+        simp_rw [lintegral_dirac]
+        set f_heap : Std.ExtTreeMap Loc (Val rT) compare → Std.ExtTreeMap Loc (Val rT) compare :=
+          (fun hp => LocHeap.allocN hp vd n.toNat)
+        have htape_upd : (σ.update_heap f_heap).tapes[α]? = some t := by
+          simp [update_heap, h]
+        have hg_fheap : Measurable f_heap :=
+          (LocHeap.measurable_allocN n.toNat).comp (measurable_id.prodMk measurable_const)
+        have hf_int : Measurable (fun τ : State rT =>
+            ((execN m ∘ K.fillCfg) ⟨.lit (.loc σ.heap.fresh), τ⟩) ((fun x => x.expr) ⁻¹' S)) :=
+          (erasure_integrand_measurable hS).comp
+            (measurable_mk.comp (measurable_const.prodMk measurable_id))
+        rw [tapePresample_lintegral_update_heap f_heap hg_fheap
+            (fun τ => ((execN m ∘ K.fillCfg) ⟨.lit (.loc σ.heap.fresh), τ⟩)
+              ((fun x => x.expr) ⁻¹' S)) hf_int,
+          ih_fill _ (σ.update_heap f_heap) t htape_upd hN, halloc σ rfl]
+        simp [asValM, hcheck, lintegral_dirac, f_heap]
+
 /-- A heap `store` commutes with presampling. -/
 theorem erasure_store_close {ℓ : Loc} {ev : Exp rT} :
     ∫⁻ σ', ∫⁻ ρ, ((execN m ∘ K.fillCfg) ρ) ((fun x => x.expr) ⁻¹' S)

@@ -9,7 +9,7 @@ public import Metrology.Micrometer.Examples.RandomizedResponse.Dp
 
 @[expose] public section
 
-open Iris Iris.BI Iris.ProofMode GradedLifting GradedDivergence
+open GradedLifting
 open scoped ENNReal
 
 namespace ProbLang

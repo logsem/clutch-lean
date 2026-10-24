@@ -1,10 +1,8 @@
 module
 
-public import Metrology.Micrometer.RelTactics
+import Metrology.Micrometer.RelTactics
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
-
-@[expose] public section
 
 /-! # Smoke tests for the `rel_*` tactics -/
 
@@ -130,7 +128,7 @@ example (K K' : Ectx rT) (H : ∀ e e', ⊢ REL[L] K.fill e << K'.fill e' : lrel
   iapply H
 
 /-- A closed program spliced under binders. -/
-def two : Exp rT := pl(#1 + #1)
+private def two : Exp rT := pl(#1 + #1)
 
 /-- Stepping past `let x := &two` leaves no `openRec`/`closeRec` around the second `two`. -/
 example : ⊢ REL[L] (pl(let x := &two; let y := &two; x + y) : Exp rT) << pl(#4) : lrel_int := by

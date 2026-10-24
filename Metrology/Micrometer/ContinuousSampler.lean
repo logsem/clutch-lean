@@ -12,8 +12,8 @@ Rules for `urand` and its coupling along a measure-preserving map. -/
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
-  GradedLifting
+open Iris hiding wp_bind
+open Iris.Std Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting
 open MeasureTheory (MeasurePreserving IsProbabilityMeasure)
 open scoped AppGS
 
@@ -83,32 +83,35 @@ theorem Cfg.concentrated_primStep_urand :
 
 end Steps
 
-/-! ## Relational coupling of two continuous samplers
+/-! ## Couplings of two continuous samplers -/
 
-A bijection is not enough for continuous samplers: `f` must be measure-preserving for `unifUnit`. -/
+/-- `unifUnit` lifts against its image `μ` along a measure-preserving `g`, on the support. -/
+theorem rel_graph_unifUnit [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [L.IsReflexive] [L.IsSupportLocal] {Y : Type} [MeasurableSpace Y]
+    {μ : MeasureTheory.Measure Y} {g : rT → Y} (hg : MeasurePreserving g unifUnit μ) :
+    L.Rel 0 (fun x y ↦ g x = y ∧ x ∈ unifUnitSupport) unifUnit μ := by
+  have h := (rel_graph (L := L) unifUnit hg.measurable).restrict unifUnitSupportMeasurable
+    unifUnitIsConcentrated
+  rwa [hg.map_eq] at h
 
-/-- Exact coupling of two continuous samplers along a measure-preserving `f`, for any lawful
-reflexive `L`. -/
-theorem Cfg.uniformReal_rel_bij [Zero B] [Add B] [Preorder B] [OrderTop B]
+/-- Exact coupling of two continuous samplers along a measure-preserving `f`. -/
+theorem Cfg.uniformReal_rel_of_measurePreserving [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) :
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨pl(#real (f r)), σ'⟩)
       (uniformReal σ) (uniformReal σ') := by
-  have h := (rel_graph (L := L) unifUnit hmp.measurable).restrict
-    unifUnitSupportMeasurable unifUnitIsConcentrated
-  rw [hmp.map_eq] at h
-  exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (measurable_realLit σ)
-    (measurable_realLit σ')
+  exact (rel_graph_unifUnit (L := L) hmp).map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩)
+    (measurable_realLit σ) (measurable_realLit σ')
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
-of `uniformReal_rel_bij`). -/
-theorem Cfg.uniformReal_addCoupl_bij (σ σ' : State rT) (f : rT → rT)
+of `uniformReal_rel_of_measurePreserving`). -/
+theorem Cfg.uniformReal_addCoupl_of_measurePreserving (σ σ' : State rT) (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) :
     AddCoupl 0 {p : Cfg rT × Cfg rT | ∃ r, r ∈ unifUnitSupport ∧
         p.1 = ⟨pl(#real r), σ⟩ ∧ p.2 = ⟨pl(#real (f r)), σ'⟩}
       (uniformReal σ) (uniformReal σ') :=
-  (uniformReal_rel_bij σ σ' f hmp).addCoupl
+  (uniformReal_rel_of_measurePreserving σ σ' f hmp).addCoupl
 
 /-! ## Program rules -/
 
@@ -118,11 +121,8 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop 
   [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] [L.IsTopAbsorbing] [L.HasBind]
 local bi IProp GF
 
-section Unary
-variable [MicrometerGS rT hlc GF] [BudgetGS B GF]
-
 /-- A program `urand` returns some `r` in the support of `unifUnit`, after a `▷`. -/
-theorem wp_urand {E : CoPset} {Φ : Val rT → _} : iprop%
+theorem wp_urand [MicrometerGS rT hlc GF] [BudgetGS B GF] {E : CoPset} {Φ : Val rT → _} : iprop%
     (▷ ∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ Φ (.real r)) ⊢ wp L E pl(urand) Φ := by
   iintro HΦ
   iapply wp_lift_atomic_step_concentrated urand_toVal?_eq_none
@@ -138,68 +138,43 @@ theorem wp_urand {E : CoPset} {Φ : Val rT → _} : iprop%
   iapply HΦ $$ %r %hr
 
 /-- Couple `urand ~ K[urand]` along a measure-preserving `f`, at no cost. -/
-theorem wp_couple_urand_urand (f : rT → rT) (hmp : MeasurePreserving f unifUnit unifUnit)
-    (K : Ectx rT) (E : CoPset) (Φ : Val rT → _) : iprop%
+theorem wp_couple_urand_urand [MicrometerGS rT hlc GF] [BudgetGS B GF] (f : rT → rT)
+    (hmp : MeasurePreserving f unifUnit unifUnit) (K : Ectx rT) (E : CoPset)
+    (Φ : Val rT → _) : iprop%
     ⤇ K.fill pl(urand) ∗
       (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#real (f r)) -∗ Φ (.real r)) ⊢
       wp L E pl(urand) Φ := by
   iintro ⟨Hj, Hcnt⟩
-  iapply wp_lift_prim_steps_coupl urand_toVal?_eq_none
-  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod subset empty_subset with Hclose
-  imodintro
-  let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
-    c₁ = ⟨pl(#real r), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#real (f r)), σ₁'⟩
-  iexists R, 0, b
-  isplitr
-  · ipureintro; rw [zero_add]
-  isplitr
-  · ipureintro; exact reducible_urand σ₁
-  isplitr
-  · ipureintro; exact (reducible_urand σ₁').fill K
-  isplitr
-  · ipureintro
-    rw [primStep_urand σ₁, primStep_fill urand_not_isValue, primStep_urand σ₁']
-    exact (uniformReal_rel_bij σ₁ σ₁' f hmp).map_right
-      (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (fillCfg.measurable K)
-  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
-  cases heq1
-  cases heq2
-  iintro !> !>
-  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
-  imod Hclose
-  imodintro
-  iframe Hσ Hs' Hb
-  iapply wp_value_of_toVal rfl
-  iapply Hcnt $$ %r %hrsupp Hj'
-
-end Unary
+  iapply wp_couple_prim_lift_zero (ℓ := BaseLit.real) (ℓ' := BaseLit.real)
+    (S := fun r r' ↦ r ∈ unifUnitSupport ∧ r' = f r) urand_toVal?_eq_none reducible_urand
+    reducible_urand K (fun σ σ' ↦ ?_) E Φ
+  · rw [primStep_urand σ, primStep_fill urand_not_isValue, primStep_urand σ']
+    exact (uniformReal_rel_of_measurePreserving σ σ' f hmp).map_right
+      (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, f r, ⟨hr, rfl⟩, rfl, rfl⟩) (fillCfg.measurable K)
+  · iframe Hj
+    iintro %r %r' %⟨hr, rfl⟩ Hj'
+    iapply Hcnt $$ %r %hr Hj'
 
 /-! ## The relational rule -/
 
-section Relational
-variable [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
-
 /-- Relational form of `wp_couple_urand_urand`: couple the two `urand`s along a measure-preserving
 `f`. -/
-theorem refines_couple_urands_lr {E : CoPset} {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
+theorem refines_couple_urands_lr [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {E : CoPset}
+    {K K' : Ectx rT} {A : lrel rT GF} (f : rT → rT)
     (hmp : MeasurePreserving f unifUnit unifUnit) : iprop%
     (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗
         refines L E (K.fill pl(#real r)) (K'.fill pl(#real (f r))) A) ⊢
       refines L E (K.fill pl(urand)) (K'.fill pl(urand)) A := by
   unfold refines
   iintro Hcnt %K2 %b Hj Hna Herr Hpos
-  isimp only [fill_comp K2 K' pl(urand)] at Hj
-  iapply MicrometerWpGS.wp_bind
+  isimp only [fill_comp K2 K'] at Hj
+  iapply wp_bind
   iapply wp_couple_urand_urand f hmp (K2.comp K') _ _
   iframe Hj
   iintro %r %hrsupp HKres
-  isimp only [← fill_comp K2 K' pl(#real (f r))] at HKres
+  isimp only [← fill_comp K2 K'] at HKres
   rw [show ofVal (.real r) = pl(#real r) from rfl]
   iapply Hcnt $$ %r %hrsupp %K2 %b HKres Hna Herr Hpos
-
-end Relational
 
 end Rules
 

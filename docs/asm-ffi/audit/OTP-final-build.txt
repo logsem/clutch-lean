@@ -1,0 +1,23 @@
+⚠ [3877/3914] Replayed Metrology.TotalEris.Examples.RandomWalk
+warning: Metrology/TotalEris/Examples/RandomWalk.lean:85:8: declaration uses `sorry`
+⚠ [6984/7057] Replayed Sail.Sail
+warning: Sail/Sail.lean:34:5: Ambiguous namespace `PreSail`: it is interpreted as `_root_.Sail.ConcurrencyInterfaceV1.PreSail` because this `open` occurs inside `namespace Sail.ConcurrencyInterfaceV1`, while `_root_.PreSail` is silently not opened. Specify the namespace unambiguously, e.g. `_root_.Sail.ConcurrencyInterfaceV1.PreSail`. The warning can sometimes also be addressed by moving the `open` outside of the surrounding `namespace`.
+
+Note: This linter can be disabled with `set_option linter.ambiguousOpen false`
+ℹ [7151/7169] Replayed Tests.SailSpike
+info: Tests/SailSpike.lean:16:0: Compiling 20 definitionally equal execution aliases
+info: Tests/SailSpike.lean:72:0: 'evalStep_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Tests/SailSpike.lean:73:0: 'evalSwap_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [7156/7169] Replayed Tests.Keypair
+info: Tests/Keypair.lean:10:0: 'MetrologyAsm.keypair_stackBound' depends on axioms: [propext]
+✔ [7158/7169] Built Metrology.ProbLang.Asm (2.6s)
+✔ [7159/7169] Built Metrology.Micrometer (3.2s)
+✔ [7160/7169] Built Metrology.ProbLang (2.8s)
+✔ [7161/7169] Built Metrology (3.0s)
+✔ [7163/7169] Built MetrologyAsm.Examples.OTP.CallbackExec (7.6s)
+✔ [7164/7169] Built MetrologyAsm.Examples.OTP.Finite (3.9s)
+✔ [7165/7169] Built MetrologyAsm.Examples.OTP.Security (4.2s)
+✔ [7166/7169] Built MetrologyAsm.Examples.OTP (3.6s)
+✔ [7167/7169] Built MetrologyAsm.Examples (3.5s)
+✔ [7168/7169] Built MetrologyAsm (3.7s)
+Build completed successfully (7169 jobs).

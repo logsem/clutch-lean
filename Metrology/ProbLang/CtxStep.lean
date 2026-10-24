@@ -109,10 +109,16 @@ theorem EctxItem.fillItem.measurableEmbedding (Ki : EctxItem rT) :
   | load => exact Exp.load.measurableEmbedding
   | storeL v2 => exact Exp.store.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
   | storeR e1 => exact Exp.store.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
+  | allocNL v2 => exact Exp.allocN.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | allocNR e1 => exact Exp.allocN.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
   | tape => exact Exp.tape.measurableEmbedding
   | randL v2 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
   | randR e1 => exact Exp.rand.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
   | scrut p => exact Exp.scrut.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | asmL args => exact Exp.asm.measurableEmbedding.comp (measurableEmbedding_prod_mk_right _)
+  | asmR code => exact Exp.asm.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
+  | asmResume archive =>
+    exact Exp.asmResume.measurableEmbedding.comp (measurableEmbedding_prodMk_left _)
 
 /-- `K.fill` is a measurable embedding. -/
 theorem Ectx.fill.measurableEmbedding : MeasurableEmbedding K.fill := by
@@ -399,6 +405,16 @@ theorem primStep_atomic (e : Exp rT) (σ : State rT)
     ext ρ'; simp only [mem_preimage, mem_ofPred_eq, hsingle ρ']
   rw [hpre]
   exact headStep_atomic e.decomp.2 σ hne
+
+/-- Away from `urand`, a step is carried by its support of positive-mass points. -/
+theorem concentrated_primStep_support (e : Exp rT) (σ : State rT) (hne : e.decomp.2 ≠ .urand) :
+    Concentrated (primStep ⟨e, σ⟩) {ρ | 0 < primStep ⟨e, σ⟩ {ρ}} := by
+  have heq : {ρ | 0 < primStep ⟨e, σ⟩ {ρ}}ᶜ = {ρ | primStep ⟨e, σ⟩ {ρ} = 0} := by
+    ext ρ
+    simp [pos_iff_ne_zero]
+  show primStep ⟨e, σ⟩ _ = 0
+  rw [heq]
+  exact primStep_atomic e σ hne
 
 /-- Discharges `e.decomp.2 ≠ .urand` at a concrete redex by computing `decompItem`. -/
 macro "no_urand" : tactic =>

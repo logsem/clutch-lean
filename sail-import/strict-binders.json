@@ -1,0 +1,1093 @@
+{
+  "source_model_sha256": "559bb257093328400e5b47722b0bb8dd004396a8b8c45e32ecaefaa79256d992",
+  "entries": [
+    {
+      "module": "RiscvZkvm.Sail.Vmem",
+      "declaration": "satp_to_asid",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Vmem_satp_to_asid"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Vmem",
+      "declaration": "satp_to_ppn",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Vmem_satp_to_ppn"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Vector",
+      "declaration": "sail_mask",
+      "kind": "def",
+      "binders": [
+        [
+          "k_v",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Vector_sail_mask"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "brev8",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_brev8"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "carryless_mul",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_carryless_mul"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "carryless_mulr",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_carryless_mulr"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "carryless_mul_reversed",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_carryless_mul_reversed"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "rev8",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_rev8"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Arithmetic",
+      "declaration": "count_ones",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Arithmetic_count_ones"
+    },
+    {
+      "module": "RiscvZkvm.Sail.MemUtils",
+      "declaration": "access_within",
+      "kind": "def",
+      "binders": [
+        [
+          "k_width",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_MemUtils_access_within"
+    },
+    {
+      "module": "RiscvZkvm.Sail.HexBitsSigned",
+      "declaration": "hex_bits_signed_forwards",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_HexBitsSigned_hex_bits_signed_forwards"
+    },
+    {
+      "module": "RiscvZkvm.Sail.HexBitsSigned",
+      "declaration": "hex_bits_signed_forwards_matches",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_HexBitsSigned_hex_bits_signed_forwards_matches"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "sail_instr_announce",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common0_sail_instr_announce"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "sail_mark_register",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Common0_sail_mark_register"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "sail_mark_register_pair",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ],
+        [
+          "k_b",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Common0_sail_mark_register_pair"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "sail_ignore_write_to",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Common0_sail_ignore_write_to"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "sail_pick_dependency",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Common0_sail_pick_dependency"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common0",
+      "declaration": "__monomorphize",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common0___monomorphize"
+    },
+    {
+      "module": "RiscvZkvm.Sail.SysControl",
+      "declaration": "MemoryOpResult_add_meta",
+      "kind": "def",
+      "binders": [
+        [
+          "k_t",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_SysControl_MemoryOpResult_add_meta"
+    },
+    {
+      "module": "RiscvZkvm.Sail.SysControl",
+      "declaration": "MemoryOpResult_drop_meta",
+      "kind": "def",
+      "binders": [
+        [
+          "k_t",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_SysControl_MemoryOpResult_drop_meta"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "float_decompose",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_float_decompose"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "float_compose",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Int"
+        ]
+      ],
+      "certificate": "captured_Common_float_compose"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "float_has_max_exp",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_float_has_max_exp"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_lowest_one",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_lowest_one"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_highest_one",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_highest_one"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_all_ones",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_all_ones"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_lowest_zero",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_lowest_zero"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_highest_zero",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_highest_zero"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Common",
+      "declaration": "is_all_zeros",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Common_is_all_zeros"
+    },
+    {
+      "module": "RiscvZkvm.Sail.HexBits",
+      "declaration": "hex_bits_forwards",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_HexBits_hex_bits_forwards"
+    },
+    {
+      "module": "RiscvZkvm.Sail.HexBits",
+      "declaration": "hex_bits_forwards_matches",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_HexBits_hex_bits_forwards_matches"
+    },
+    {
+      "module": "RiscvZkvm.Sail.FdextRegs",
+      "declaration": "nan_box",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_FdextRegs_nan_box"
+    },
+    {
+      "module": "RiscvZkvm.Sail.FdextRegs",
+      "declaration": "nan_unbox",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_FdextRegs_nan_unbox"
+    },
+    {
+      "module": "RiscvZkvm.Sail.ReadWriteV1",
+      "declaration": "mem_read_request_is_exclusive",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ],
+        [
+          "k_vasize",
+          "Nat"
+        ],
+        [
+          "k_pa",
+          "Type"
+        ],
+        [
+          "k_translation_summary",
+          "Type"
+        ],
+        [
+          "k_arch_ak",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_ReadWriteV1_mem_read_request_is_exclusive"
+    },
+    {
+      "module": "RiscvZkvm.Sail.ReadWriteV1",
+      "declaration": "mem_read_request_is_ifetch",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ],
+        [
+          "k_vasize",
+          "Nat"
+        ],
+        [
+          "k_pa",
+          "Type"
+        ],
+        [
+          "k_translation_summary",
+          "Type"
+        ],
+        [
+          "k_arch_ak",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_ReadWriteV1_mem_read_request_is_ifetch"
+    },
+    {
+      "module": "RiscvZkvm.Sail.ReadWriteV1",
+      "declaration": "mem_write_request_is_exclusive",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ],
+        [
+          "k_vasize",
+          "Nat"
+        ],
+        [
+          "k_pa",
+          "Type"
+        ],
+        [
+          "k_translation_summary",
+          "Type"
+        ],
+        [
+          "k_arch_ak",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_ReadWriteV1_mem_write_request_is_exclusive"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Errors",
+      "declaration": "not_implemented",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Errors_not_implemented"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Errors",
+      "declaration": "internal_error",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Errors_internal_error"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Errors",
+      "declaration": "reserved_behavior",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Errors_reserved_behavior"
+    },
+    {
+      "module": "RiscvZkvm.Sail.SplitAccessUtils",
+      "declaration": "split_access",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_SplitAccessUtils_split_access"
+    },
+    {
+      "module": "RiscvZkvm.Sail.SplitAccessUtils",
+      "declaration": "split_on_page_boundary",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_SplitAccessUtils_split_on_page_boundary"
+    },
+    {
+      "module": "RiscvZkvm.Sail.VmemTlb",
+      "declaration": "tlb_set_pte",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_VmemTlb_tlb_set_pte"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "sign_extend",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_sign_extend"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "trunc",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_trunc"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zI_s",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zI_s"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zK_s",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zK_s"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zIzJ_s",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zIzJ_s"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zKzJ_s",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zKzJ_s"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zI_u",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zI_u"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zK_u",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zK_u"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zIzJ_u",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zIzJ_u"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "zopz0zKzJ_u",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_zopz0zKzJ_u"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "shift_bits_right_arith",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ],
+        [
+          "k_m",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_shift_bits_right_arith"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "rotater",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_rotater"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "rotatel",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_rotatel"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "rotate_bits_right",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ],
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_rotate_bits_right"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "rotate_bits_left",
+      "kind": "def",
+      "binders": [
+        [
+          "k_m",
+          "Nat"
+        ],
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_rotate_bits_left"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "reverse_bits",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_reverse_bits"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Prelude",
+      "declaration": "hex_bits_str",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Prelude_hex_bits_str"
+    },
+    {
+      "module": "RiscvZkvm.Sail.RangeUtil",
+      "declaration": "range_subset",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_RangeUtil_range_subset"
+    },
+    {
+      "module": "RiscvZkvm.Sail.VmemPte",
+      "declaration": "ext_bits_of_PTE",
+      "kind": "def",
+      "binders": [
+        [
+          "k_pte_size",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_VmemPte_ext_bits_of_PTE"
+    },
+    {
+      "module": "RiscvZkvm.Sail.VmemPte",
+      "declaration": "PPN_of_PTE",
+      "kind": "def",
+      "binders": [
+        [
+          "k_pte_size",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_VmemPte_PPN_of_PTE"
+    },
+    {
+      "module": "RiscvZkvm.Sail.VmemPte",
+      "declaration": "update_PTE_Bits",
+      "kind": "def",
+      "binders": [
+        [
+          "k_pte_size",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_VmemPte_update_PTE_Bits"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Types",
+      "declaration": "is_load_store",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Types_is_load_store"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Types",
+      "declaration": "is_prefetch_access",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Types_is_prefetch_access"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Types",
+      "declaration": "is_store_conditional",
+      "kind": "def",
+      "binders": [
+        [
+          "k_a",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Types_is_store_conditional"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Callbacks",
+      "declaration": "fetch_callback",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Callbacks_fetch_callback"
+    },
+    {
+      "module": "RiscvZkvm.Sail.BaseInsts",
+      "declaration": "extend_value",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_BaseInsts_extend_value"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Defs",
+      "declaration": "zero_extend",
+      "kind": "def",
+      "binders": [
+        [
+          "k_n",
+          "Nat"
+        ]
+      ],
+      "certificate": "captured_Defs_zero_extend"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sailTryCatch",
+      "kind": "def",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_sailTryCatch"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sailThrow",
+      "kind": "def",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_sailThrow"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "undefined_vector",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_undefined_vector"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "readRegRef",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_readRegRef"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "writeRegRef",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_writeRegRef"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "reg_deref",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_reg_deref"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sail_mem_write",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "n",
+          "Nat"
+        ],
+        [
+          "vasize",
+          "Nat"
+        ],
+        [
+          "pa_size",
+          "Nat"
+        ],
+        [
+          "ts",
+          "Type"
+        ],
+        [
+          "arch",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_sail_mem_write"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sail_mem_read",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "n",
+          "Nat"
+        ],
+        [
+          "vasize",
+          "Nat"
+        ],
+        [
+          "pa_size",
+          "Nat"
+        ],
+        [
+          "ts",
+          "Type"
+        ],
+        [
+          "arch",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_sail_mem_read"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sail_barrier",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "α",
+          "Sort _"
+        ]
+      ],
+      "certificate": "captured_Specialization_sail_barrier"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "SailME.run",
+      "kind": "def",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_SailME_run"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "SailME.throw",
+      "kind": "def",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ],
+        [
+          "β",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_SailME_throw"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "sailTryCatchE",
+      "kind": "abbrev",
+      "binders": [
+        [
+          "β",
+          "Type"
+        ],
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_sailTryCatchE"
+    },
+    {
+      "module": "RiscvZkvm.Sail.Specialization",
+      "declaration": "unwrapValue",
+      "kind": "def",
+      "binders": [
+        [
+          "α",
+          "Type"
+        ]
+      ],
+      "certificate": "captured_Specialization_unwrapValue"
+    }
+  ]
+}

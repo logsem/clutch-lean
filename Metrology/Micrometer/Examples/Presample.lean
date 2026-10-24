@@ -1,7 +1,7 @@
 module
 
 public import Metrology.Code.Presample
-public import Metrology.Micrometer.AdequacyRel
+public import Metrology.Micrometer.AdequacyTV
 public import Metrology.Micrometer.RelTactics
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
@@ -12,7 +12,8 @@ import Metrology.Iris.LocalBI
 /-! # Presampling with tapes: the order of two labelled draws does not matter
 
 Main result: `drawAB_refines_drawBA`, drawing from tape `α` then `β` refines the reverse order,
-with `drawAB_le_drawBA` by adequacy at `codensity tv`. -/
+with `drawAB_le_drawBA` by adequacy at `codensity tv`. `drawTape_refines_draw` shows a tape draw
+refines a plain draw. -/
 
 open Iris Iris.BI Iris.ProofMode ProbLang.MicrometerWpGS GradedLifting GradedDivergence
 open scoped ENNReal
@@ -39,7 +40,7 @@ theorem drawTape_refines_draw : ⊢ REL[L] (drawTape (rT := rT) N) << draw N : l
   iintro %n Hα %_
   rel_values
 
-/-- Drawing from `α` then `β` refines drawing from `β` then `α` at budget `0`. -/
+/-- Drawing from `α` then `β` refines drawing from `β` then `α`. -/
 theorem drawAB_refines_drawBA :
     ⊢ REL[L] (drawAB (rT := rT) N) << drawBA N : lrel_prod lrel_int lrel_int := by
   rel_alloctape_l α as Hα
@@ -69,10 +70,10 @@ theorem drawAB_refines_drawBA :
 /-- On every event, drawing in the order `α, β` is at most as likely as in the order `β, α`. -/
 theorem drawAB_le_drawBA (σ σ' : State rT) {S : Set (Exp rT)} (hS : MeasurableSet S) :
     limExecV ⟨drawAB N, σ⟩ S ≤ limExecV ⟨drawBA N, σ'⟩ S := by
-  simpa using tv_iff.1 (approximates_div (GF := MicrometerFunctor rT ℝ≥0∞) (L := codensity tv)
+  simpa using limExecV_le_add_of_refines_tv (GF := MicrometerFunctor rT ℝ≥0∞)
     (fun _ _ ↦ lrel_prod lrel_int lrel_int) _ _ σ σ' 0
     (fun _ _ ↦ lrel_prod_car_eq lrel_int_car_eq lrel_int_car_eq)
-    fun _ _ ↦ by iintro -; iapply drawAB_refines_drawBA N hN) S hS
+    (fun _ _ ↦ by iintro -; iapply drawAB_refines_drawBA N hN) hS
 
 end Presample
 end ProbLang

@@ -89,7 +89,7 @@ theorem listLength_steps :
     refine (fill [.binopR .plus _] ih).trans ?_
     pure_steps
     rw [length_cons, cast_succ, add_comm]
-    exact ProbLang.PureSteps.refl _
+    exact PureSteps.refl _
 
 /-- `listRemoveNth` removes the `i`-th element, returning `SOME (lᵢ, l \ i)`. -/
 theorem listRemoveNth_steps (i : Nat) (hlen : i < l.length) :
@@ -112,9 +112,7 @@ theorem listRemoveNth_steps (i : Nat) (hlen : i < l.length) :
 
 end Recursions
 
-/-! ## Map operations: `wp` specifications
-
-Rocq source: clutch's `wp_init_map`, `wp_get`, `wp_set` and their `spec_` versions. -/
+/-! ## Map operations: `wp` specifications (Rocq `wp_init_map`, `wp_get`, `wp_set`) -/
 
 section MapOps
 

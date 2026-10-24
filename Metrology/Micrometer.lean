@@ -15,7 +15,10 @@ public import Metrology.Micrometer.Lifting
 
 -- primitive and coupling rules
 public import Metrology.Micrometer.PrimitiveLaws
+public import Metrology.Micrometer.Asm
+public import Metrology.Micrometer.AsmOrdinary
 public import Metrology.Micrometer.UnifInt
+public import Metrology.Micrometer.UnifIntReal
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.SpecAdvRules
@@ -52,7 +55,9 @@ public import Metrology.Micrometer.Mechanism
 public import Metrology.Micrometer.MechanismZcdp
 
 -- examples and tests
+public import Metrology.Micrometer.AsmImports
 public import Metrology.Micrometer.Examples
+public import Metrology.Micrometer.Test.RandomBytes
 public import Metrology.Micrometer.RelTacticsTest
 public import Metrology.Micrometer.BindLawTest
 

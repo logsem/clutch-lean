@@ -15,9 +15,6 @@ One `refines_*` rule per syntactic form of the pure fragment (pairs, sums, appli
 
 @[expose] public section
 
--- these rules use the @[discrete] lifting lemmas without being discrete themselves
-set_option linter.discrete false
-
 open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang ProbLang.MicrometerWpGS
   GradedLifting
 open scoped AppGS
@@ -28,9 +25,8 @@ namespace ProbLang
 
 section Compatibility
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type}
-    [AddCommMonoid B]
-  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
-  [IR : MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
+  [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
+  {GF : BundledGFunctors} [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF]
 
 /-- A related pair of functions sends related arguments to related applications. -/
 theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
@@ -40,17 +36,13 @@ theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
-variable {e e' : Exp rT} {A B : lrel rT GF}
+variable {e e' : Exp rT} {A B C : lrel rT GF} {l : BaseLit rT} {ι : Type _}
 local bi IProp GF
 
 /-! ### Pure steps -/
 
-variable {b t : Exp rT}
-variable {u : Val rT}
-
-/-- β-step on the left for a constant function: the body `b` is locally closed, so it
-ignores the argument. -/
-theorem refines_beta_const_l (hb : b.IsLocallyClosed) : iprop%
+/-- β-step on the left for a constant function, with a locally closed body. -/
+theorem refines_beta_const_l {b t : Exp rT} {u : Val rT} (hb : b.IsLocallyClosed) : iprop%
     ▷ refines L ⊤ b t A ⊢ refines L ⊤ (.app (.lam b) u.1) t A := by
   iintro H
   rw [eq_fill_nil (app (.lam b) u.1)]
@@ -59,9 +51,8 @@ theorem refines_beta_const_l (hb : b.IsLocallyClosed) : iprop%
   inext
   iexact H
 
-/-- β-step on the right for a constant function: the body `b` is locally closed, so it
-ignores the argument. -/
-theorem refines_beta_const_r (hb : b.IsLocallyClosed) :
+/-- β-step on the right for a constant function, with a locally closed body. -/
+theorem refines_beta_const_r {b t : Exp rT} {u : Val rT} (hb : b.IsLocallyClosed) :
     refines L ⊤ t b A ⊢ refines L ⊤ t (.app (.lam b) u.1) A := by
   iintro H
   rw [eq_fill_nil (app (.lam b) u.1)]
@@ -73,9 +64,7 @@ section
 variable {φ : Prop} (hφ : φ) {r : Exp rT} [Hex : PureExec φ 1 e r]
 include hφ
 
-variable {r' : Exp rT}
-variable {φ' : Prop}
-variable [Hex' : PureExec φ' 1 e' r']
+variable {r' : Exp rT} {φ' : Prop} [Hex' : PureExec φ' 1 e' r']
 
 /-- One pure step on each side reduces the goal to the reducts, under a later. -/
 theorem refines_pure_step (hφ' : φ') : iprop% ▷ refines L ⊤ r r' A ⊢ refines L ⊤ e e' A := by
@@ -119,14 +108,63 @@ theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal
     ⊢ refines L ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both ⟨hv.toIsValue, heval⟩ hrv HA
 
+/-- A binary operator on two values that evaluates to a literal is related to itself. -/
+theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) (heval : op.eval w1.1 w2.1 = some (.lit l))
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
+  refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
+
+/-- A unary operator on a value that evaluates to a literal is related to itself. -/
+theorem refines_unop_val (op : UnOp) (w : Val rT) (heval : op.eval w.1 = some (.lit l))
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
+  refines_unop_pure op _ _ w.2 IsVal.lit heval HA
+
 /-! ### Rules that bind their operands -/
 
 section Binding
 variable {e0 e0' e1 e2 e1' e2' : Exp rT}
 
-/-! Each proof restates the goal as `Ectx.fill [item] e` so `refines_bind` unifies, binds the right
-operand first (ProbLang evaluates right to left), then re-reads the same term with the hole in the
-left operand (a definitional `rw [show ... from rfl]`). -/
+-- Each proof restates the goal as `Ectx.fill [item] e` so `refines_bind` unifies, binds the right
+-- operand first (ProbLang evaluates right to left), then re-reads the same term with the hole in
+-- the left operand (a definitional `rw [show ... from rfl]`).
+
+/-- Binds both operands of a binary operator, whose values lie in a family `V`, then continues
+for every pair of indices. -/
+theorem refines_binop_bind (op : BinOp) (V : ι → Val rT)
+    (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
+    refines L ⊤ e1 e1' A ⊢
+      refines L ⊤ e2 e2' A -∗
+      (∀ i1 i2, refines L ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) C) -∗
+      refines L ⊤ (.binop op e1 e2) (.binop op e1' e2') C := by
+  iintro IH1 IH2 Hcont
+  rw [← fill_binopR op e1 e2, ← fill_binopR op e1' e2']
+  iapply refines_bind [binopR op e1] [binopR op e1'] $$ IH2
+  iintro %v2 %v2' Hv2
+  icases hA v2 v2' $$ Hv2 with ⟨%i2, %hv2, %hv2'⟩
+  rw [fill_binopR, fill_binopR, hv2, hv2',
+    show binop op e1 (V i2).1 = fill [binopL op (V i2)] e1 from rfl,
+    show binop op e1' (V i2).1 = fill [binopL op (V i2)] e1' from rfl]
+  iapply refines_bind [binopL op (V i2)] [binopL op (V i2)] $$ IH1
+  iintro %v1 %v1' Hv1
+  icases hA v1 v1' $$ Hv1 with ⟨%i1, %hv1, %hv1'⟩
+  rw [fill_binopL, fill_binopL, ofVal, hv1, hv1']
+  iapply Hcont $$ %i1 %i2
+
+/-- Binds the operand of a unary operator, whose values lie in a family `V`, then continues
+for every index. -/
+theorem refines_unop_bind (op : UnOp) (V : ι → Val rT)
+    (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
+    refines L ⊤ e e' A ⊢
+      (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
+      refines L ⊤ (.unop op e) (.unop op e') C := by
+  iintro IH Hcont
+  rw [← fill_unop op e, ← fill_unop op e']
+  iapply refines_bind [unop op] [unop op] $$ IH
+  iintro %v %v' Hv
+  icases hA v v' $$ Hv with ⟨%i, %hv, %hv'⟩
+  rw [fill_unop, fill_unop, hv, hv']
+  iapply Hcont $$ %i
 
 /-- Pairs `(e1, e2)` are related at the product when the components are. -/
 theorem refines_pair : iprop%
@@ -144,10 +182,8 @@ theorem refines_pair : iprop%
   iapply refines_ret (e1 := fill [pairL v2] v1.1) (e2 := fill [pairL v2'] v1'.1)
     (v1 := .pair v1 v2) (v2 := .pair v1' v2') rfl rfl
   imodintro
-  iunfold lrel_prod
-  iexists v1, v1', v2, v2'
+  iapply lrel_prod_pair
   iframe
-  itrivial
 
 /-- Left injections are related at the sum when the payloads are related at `A`. -/
 theorem refines_injl : iprop%
@@ -304,10 +340,8 @@ end Binding
 
 /-! ### Quantifiers -/
 
-variable {C : lrel rT GF → lrel rT GF}
-
 /-- Packing a witness `A` relates `e` at `∃ C` as soon as it is related at `C A`. -/
-theorem refines_pack (A : lrel rT GF) :
+theorem refines_pack {C : lrel rT GF → lrel rT GF} (A : lrel rT GF) :
     refines L ⊤ e e' (C A) ⊢ refines L ⊤ e e' (lrel_exists C) := by
   iintro IH
   iapply refines_wand $$ IH
@@ -321,8 +355,8 @@ theorem refines_pack (A : lrel rT GF) :
 
 /-- Type abstractions, thunks `λ_. e`, are related at `∀` when their bodies are related at every
 instance. -/
-theorem refines_forall (he : e.IsLocallyClosed) (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅)
-    (he'_fv : e'.fv = ∅) :
+theorem refines_forall {C : lrel rT GF → lrel rT GF} (he : e.IsLocallyClosed)
+    (he' : e'.IsLocallyClosed) (he_fv : e.fv = ∅) (he'_fv : e'.fv = ∅) :
     □ (∀ A, refines L ⊤ e e' (C A)) ⊢ refines L ⊤ (.lam e) (.lam e') (lrel_forall L C) := by
   iintro #H
   iapply refines_ret (v1 := ⟨.lam e, .lam (by is_lc), by is_lc⟩)

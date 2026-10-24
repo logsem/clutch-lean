@@ -76,6 +76,16 @@ def liftBin {β : Type _} (extr : BaseLit rT → Option β)
 @[reducible] def liftII (f : Int → Int → Int) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.intExtract (fun z1 z2 => .int (f z1 z2))
 
+/-- The location of a literal, if it is one. -/
+def _root_.ProbLang.BaseLit.locExtract (l : BaseLit rT) : Option Loc :=
+  match l with | .loc l => some l | _ => none
+
+/-- Location displacement on literals. -/
+def liftOffset (p : Exp rT × Exp rT) : Option (Exp rT) :=
+  ((litExtract p.1).bind BaseLit.locExtract).bind fun l =>
+    ((litExtract p.2).bind BaseLit.intExtract).bind fun z =>
+      some (lit (.loc (l + z)))
+
 /-- Boolean binary operation on literals. -/
 @[reducible] def liftBB (f : Bool → Bool → Bool) : Exp rT × Exp rT → Option (Exp rT) :=
   liftBin BaseLit.boolExtract (fun b1 b2 => .bool (f b1 b2))
@@ -171,29 +181,33 @@ instance _root_.ProbLang.BaseLit.instMeasurableEq
   let Pl (l : Loc) : BaseLit rT × BaseLit rT := (.loc l, .loc l)
   let Pll (l : Lbl) : BaseLit rT × BaseLit rT := (.lbl l, .lbl l)
   let Pr (r : rT) : BaseLit rT × BaseLit rT := (.real r, .real r)
+  let Pc (c : Asm.Code) : BaseLit rT × BaseLit rT := (.code c, .code c)
   have hdecomp : diagonal (BaseLit rT) = range Pi ∪ range Pb ∪ {(BaseLit.unit, BaseLit.unit)}
-      ∪ range Pl ∪ range Pll ∪ range Pr := by
+      ∪ range Pl ∪ range Pll ∪ range Pr ∪ range Pc := by
     ext ⟨a, b⟩
     simp only [mem_diagonal_iff, mem_union, mem_range, mem_singleton_iff,
-      Pi, Pb, Pl, Pll, Pr]
+      Pi, Pb, Pl, Pll, Pr, Pc]
     constructor
     · rintro rfl
       cases a with
-      | int z => exact .inl (.inl (.inl (.inl (.inl ⟨z, rfl⟩))))
-      | bool b => exact .inl (.inl (.inl (.inl (.inr ⟨b, rfl⟩))))
-      | unit => exact .inl (.inl (.inl (.inr rfl)))
-      | loc l => exact .inl (.inl (.inr ⟨l, rfl⟩))
-      | lbl l => exact .inl (.inr ⟨l, rfl⟩)
-      | real r => exact .inr ⟨r, rfl⟩
-    · rintro ((((((⟨_, h⟩) | ⟨_, h⟩) | h) | ⟨_, h⟩) | ⟨_, h⟩) | ⟨_, h⟩) <;> cases h <;> rfl
+      | int z => exact .inl (.inl (.inl (.inl (.inl (.inl ⟨z, rfl⟩)))))
+      | bool b => exact .inl (.inl (.inl (.inl (.inl (.inr ⟨b, rfl⟩)))))
+      | unit => exact .inl (.inl (.inl (.inl (.inr rfl))))
+      | loc l => exact .inl (.inl (.inl (.inr ⟨l, rfl⟩)))
+      | lbl l => exact .inl (.inl (.inr ⟨l, rfl⟩))
+      | real r => exact .inl (.inr ⟨r, rfl⟩)
+      | code c => exact .inr ⟨c, rfl⟩
+    · rintro (((((((⟨_, h⟩) | ⟨_, h⟩) | h) | ⟨_, h⟩) | ⟨_, h⟩) | ⟨_, h⟩) | ⟨_, h⟩) <;>
+        cases h <;> rfl
   rw [hdecomp]
-  refine ((((MeasurableSet.union ?_ ?_).union ?_).union ?_).union ?_).union ?_
+  refine (((((MeasurableSet.union ?_ ?_).union ?_).union ?_).union ?_).union ?_).union ?_
   · exact measurableSet_range_diag BaseLit.int.measurableEmbedding
   · exact measurableSet_range_diag BaseLit.bool.measurableEmbedding
   · exact MeasurableSet.singleton _
   · exact measurableSet_range_diag BaseLit.loc.measurableEmbedding
   · exact measurableSet_range_diag BaseLit.lbl.measurableEmbedding
   · exact measurableSet_range_diag BaseLit.real.measurableEmbedding
+  · exact measurableSet_range_diag BaseLit.code.measurableEmbedding
 
 /-- `liftEq` dispatches on the first operand's constructor, with measurable branches. -/
 private theorem liftEq_dispatch (p : Exp rT × Exp rT) :
@@ -205,7 +219,8 @@ private theorem liftEq_dispatch (p : Exp rT × Exp rT) :
         (fun e1' => liftEqInlK (e1', p.2))
         (fun e1' => liftEqInrK (e1', p.2))
         (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-        (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
+        (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) (fun _ _ => none)
+        (fun _ _ => none) (fun _ _ => none) := by
   obtain ⟨v1, v2⟩ := p
   cases v1 with
   | lit l1 =>
@@ -383,7 +398,8 @@ private theorem measurable_of_lit_only {α : Type _} [MeasurableSpace α]
       (fun _ _ => z) (fun _ _ _ => z) (fun _ _ _ => z)
       (fun _ _ => z) (fun _ => z) (fun _ => z) (fun _ => z) (fun _ => z)
       (fun _ _ _ => z) (fun _ => z) (fun _ => z) (fun _ _ => z)
-      (fun _ => z) (fun _ _ => z) z z (fun _ _ => z) := by
+      (fun _ => z) (fun _ _ => z) z z (fun _ _ => z) (fun _ _ => z)
+      (fun _ _ => z) (fun _ _ => z) := by
     funext v; rw [hg]; cases v <;> rfl
   rw [hrw]
   refine measurable_casesOn (c_bvar := fun _ => z) (c_fvar := fun _ => z) (c_lit := f)
@@ -392,6 +408,9 @@ private theorem measurable_of_lit_only {α : Type _} [MeasurableSpace α]
     (c_pair := fun _ => z) (c_fst := fun _ => z) (c_snd := fun _ => z)
     (c_inl := fun _ => z) (c_inr := fun _ => z) (c_case := fun _ => z)
     (c_alloc := fun _ => z) (c_load := fun _ => z) (c_store := fun _ => z)
+    (c_allocN := fun _ => z) (h_allocN := measurable_const)
+    (c_asm := fun _ => z) (c_asmResume := fun _ => z)
+    (h_asm := measurable_const) (h_asmResume := measurable_const)
     (c_tape := fun _ => z) (c_rand := fun _ => z) (c_fail := fun _ => z)
     (c_urand := fun _ => z) (c_scrut := fun _ => z)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
@@ -430,7 +449,12 @@ theorem fillItem.measurable :
         ((fun pp : Exp rT × Unit => tape pp.1) (p.2, ()))
         (fun v => (fun pp : Exp rT × Val rT => rand pp.1 (ofVal pp.2)) (p.2, v))
         (fun e => (fun pp : Exp rT × Exp rT => rand pp.2 pp.1) (p.2, e))
-        (fun pat => (fun pp : Exp rT × Pat rT => scrut pp.1 pp.2) (p.2, pat)) := by
+        (fun pat => (fun pp : Exp rT × Pat rT => scrut pp.1 pp.2) (p.2, pat))
+        (fun v => (fun pp : Exp rT × Val rT => allocN pp.1 (ofVal pp.2)) (p.2, v))
+        (fun e => (fun pp : Exp rT × Exp rT => allocN pp.2 pp.1) (p.2, e))
+        (fun v => (fun pp : Exp rT × Val rT => asm pp.1 (ofVal pp.2)) (p.2, v))
+        (fun e => (fun pp : Exp rT × Exp rT => asm pp.2 pp.1) (p.2, e))
+        (fun a => (fun pp : Exp rT × Asm.Replay => asmResume pp.2 pp.1) (p.2, a)) := by
     funext q
     cases q.1 <;> simp [EctxItem.fillItem]
   rw [heq]
@@ -452,6 +476,17 @@ theorem fillItem.measurable :
     (c_load := fun p => load p)
     (c_storeL := fun p => store p.1 (ofVal p.2))
     (c_storeR := fun p => store p.2 p.1)
+    (c_allocNL := fun p => allocN p.1 (ofVal p.2))
+    (c_allocNR := fun p => allocN p.2 p.1)
+    (h_allocNL := allocN.measurable.comp
+      (measurable_fst.prodMk (Val.fst.measurable.comp measurable_snd)))
+    (h_allocNR := allocN.measurable.comp (measurable_snd.prodMk measurable_fst))
+    (c_asmL := fun p => asm p.1 (ofVal p.2))
+    (c_asmR := fun p => asm p.2 p.1)
+    (c_asmResume := fun p => asmResume p.2 p.1)
+    (h_asmL := asm.measurable.comp (measurable_fst.prodMk (Val.fst.measurable.comp measurable_snd)))
+    (h_asmR := asm.measurable.comp (measurable_snd.prodMk measurable_fst))
+    (h_asmResume := asmResume.measurable.comp (measurable_snd.prodMk measurable_fst))
     (c_tape := fun p => tape p)
     (c_randL := fun p => rand p.1 (ofVal p.2))
     (c_randR := fun p => rand p.2 p.1)
@@ -620,6 +655,7 @@ macro "exp_zero_lit_apply " ct:term ", " ht:term : tactic =>
         (c_fst := fun _ => 0) (c_snd := fun _ => 0)
         (c_inl := fun _ => 0) (c_inr := fun _ => 0) (c_case := fun _ => 0)
         (c_alloc := fun _ => 0) (c_load := fun _ => 0) (c_store := fun _ => 0)
+        (c_allocN := fun _ => 0) (c_asm := fun _ => 0) (c_asmResume := fun _ => 0)
         (c_tape := fun _ => 0) (c_rand := fun _ => 0)
         (c_fail := fun _ => 0) (c_urand := fun _ => 0) (c_scrut := fun _ => 0)
         (h_bvar := measurable_const) (h_fvar := measurable_const)
@@ -630,6 +666,8 @@ macro "exp_zero_lit_apply " ct:term ", " ht:term : tactic =>
         (h_fst := measurable_const) (h_snd := measurable_const)
         (h_inl := measurable_const) (h_inr := measurable_const) (h_case := measurable_const)
         (h_alloc := measurable_const) (h_load := measurable_const) (h_store := measurable_const)
+        (h_allocN := measurable_const)
+        (h_asm := measurable_const) (h_asmResume := measurable_const)
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
@@ -643,6 +681,7 @@ macro "exp_zero_pair_apply " ct:term ", " ht:term : tactic =>
         (c_fst := fun _ => 0) (c_snd := fun _ => 0)
         (c_inl := fun _ => 0) (c_inr := fun _ => 0) (c_case := fun _ => 0)
         (c_alloc := fun _ => 0) (c_load := fun _ => 0) (c_store := fun _ => 0)
+        (c_allocN := fun _ => 0) (c_asm := fun _ => 0) (c_asmResume := fun _ => 0)
         (c_tape := fun _ => 0) (c_rand := fun _ => 0)
         (c_fail := fun _ => 0) (c_urand := fun _ => 0) (c_scrut := fun _ => 0)
         (h_bvar := measurable_const) (h_fvar := measurable_const)
@@ -654,6 +693,8 @@ macro "exp_zero_pair_apply " ct:term ", " ht:term : tactic =>
         (h_fst := measurable_const) (h_snd := measurable_const)
         (h_inl := measurable_const) (h_inr := measurable_const) (h_case := measurable_const)
         (h_alloc := measurable_const) (h_load := measurable_const) (h_store := measurable_const)
+        (h_allocN := measurable_const)
+        (h_asm := measurable_const) (h_asmResume := measurable_const)
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
@@ -668,6 +709,7 @@ macro "exp_zero_app_apply "
         (c_fst := fun _ => 0) (c_snd := fun _ => 0)
         (c_inl := fun _ => 0) (c_inr := fun _ => 0) (c_case := fun _ => 0)
         (c_alloc := fun _ => 0) (c_load := fun _ => 0) (c_store := fun _ => 0)
+        (c_allocN := fun _ => 0) (c_asm := fun _ => 0) (c_asmResume := fun _ => 0)
         (c_tape := fun _ => 0) (c_rand := fun _ => 0)
         (c_fail := fun _ => 0) (c_urand := fun _ => 0) (c_scrut := fun _ => 0)
         (h_bvar := measurable_const) (h_fvar := measurable_const)
@@ -678,6 +720,8 @@ macro "exp_zero_app_apply "
         (h_fst := measurable_const) (h_snd := measurable_const)
         (h_inl := measurable_const) (h_inr := measurable_const) (h_case := measurable_const)
         (h_alloc := measurable_const) (h_load := measurable_const) (h_store := measurable_const)
+        (h_allocN := measurable_const)
+        (h_asm := measurable_const) (h_asmResume := measurable_const)
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
@@ -692,6 +736,7 @@ macro "exp_zero_case_apply "
         (c_fst := fun _ => 0) (c_snd := fun _ => 0)
         (c_inl := $cinlt) (c_inr := $cinrt) (c_case := fun _ => 0)
         (c_alloc := fun _ => 0) (c_load := fun _ => 0) (c_store := fun _ => 0)
+        (c_allocN := fun _ => 0) (c_asm := fun _ => 0) (c_asmResume := fun _ => 0)
         (c_tape := fun _ => 0) (c_rand := fun _ => 0)
         (c_fail := fun _ => 0) (c_urand := fun _ => 0) (c_scrut := fun _ => 0)
         (h_bvar := measurable_const) (h_fvar := measurable_const)
@@ -702,6 +747,8 @@ macro "exp_zero_case_apply "
         (h_fst := measurable_const) (h_snd := measurable_const)
         (h_inl := $hinlt) (h_inr := $hinrt) (h_case := measurable_const)
         (h_alloc := measurable_const) (h_load := measurable_const) (h_store := measurable_const)
+        (h_allocN := measurable_const)
+        (h_asm := measurable_const) (h_asmResume := measurable_const)
         (h_tape := measurable_const) (h_rand := measurable_const)
         (h_fail := measurable_const) (h_urand := measurable_const) (h_scrut := measurable_const))
 
@@ -709,28 +756,28 @@ macro "exp_zero_case_apply "
 macro "baseLit_zero_int_apply " ct:term ", " ht:term : tactic =>
   `(tactic| apply BaseLit.measurable_casesOn_param
         (c_int := $ct) (c_bool := fun _ => 0) (c_unit := fun _ => 0)
-        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0)
+        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0) (c_code := fun _ => 0)
         (h_int := $ht) (h_bool := measurable_const)
         (h_unit := measurable_const) (h_loc := measurable_const)
-        (h_lbl := measurable_const) (h_real := measurable_const))
+        (h_lbl := measurable_const) (h_real := measurable_const) (h_code := measurable_const))
 
 /-- Only the `.loc` arm is live. -/
 macro "baseLit_zero_loc_apply " ct:term ", " ht:term : tactic =>
   `(tactic| apply BaseLit.measurable_casesOn_param
         (c_int := fun _ => 0) (c_bool := fun _ => 0) (c_unit := fun _ => 0)
-        (c_loc := $ct) (c_lbl := fun _ => 0) (c_real := fun _ => 0)
+        (c_loc := $ct) (c_lbl := fun _ => 0) (c_real := fun _ => 0) (c_code := fun _ => 0)
         (h_int := measurable_const) (h_bool := measurable_const)
         (h_unit := measurable_const) (h_loc := $ht)
-        (h_lbl := measurable_const) (h_real := measurable_const))
+        (h_lbl := measurable_const) (h_real := measurable_const) (h_code := measurable_const))
 
 /-- Only the `.bool` arm is live. -/
 macro "baseLit_zero_bool_apply " ct:term ", " ht:term : tactic =>
   `(tactic| apply BaseLit.measurable_casesOn_param
         (c_int := fun _ => 0) (c_bool := $ct) (c_unit := fun _ => 0)
-        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0)
+        (c_loc := fun _ => 0) (c_lbl := fun _ => 0) (c_real := fun _ => 0) (c_code := fun _ => 0)
         (h_int := measurable_const) (h_bool := $ht)
         (h_unit := measurable_const) (h_loc := measurable_const)
-        (h_lbl := measurable_const) (h_real := measurable_const))
+        (h_lbl := measurable_const) (h_real := measurable_const) (h_code := measurable_const))
 
 /-! ### `Exp.decompItem`, `Exp.decomp` -/
 
@@ -796,6 +843,20 @@ theorem decompItem.measurable :
       (projL := fun q => q.1) (projR := fun q => q.2)
       (EctxItem.storeR.ι.measurable.comp measurable_fst)
       (EctxItem.storeL.ι.measurable.comp measurable_snd)
+      measurable_fst measurable_snd
+  case h_allocN =>
+    exact hbinary (KR := fun q : Exp rT × Exp rT => EctxItem.allocNR q.1)
+      (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.allocNL q.2)
+      (projL := fun q => q.1) (projR := fun q => q.2)
+      (EctxItem.allocNR.ι.measurable.comp measurable_fst)
+      (EctxItem.allocNL.ι.measurable.comp measurable_snd)
+      measurable_fst measurable_snd
+  case h_asm =>
+    exact hbinary (KR := fun q : Exp rT × Exp rT => EctxItem.asmR q.1)
+      (KL := fun (q : (Exp rT × Exp rT) × Val rT) => EctxItem.asmL q.2)
+      (projL := fun q => q.1) (projR := fun q => q.2)
+      (EctxItem.asmR.ι.measurable.comp measurable_fst)
+      (EctxItem.asmL.ι.measurable.comp measurable_snd)
       measurable_fst measurable_snd
   case h_rand =>
     exact hbinary (KR := fun q : Exp rT × Exp rT => EctxItem.randR q.1)
@@ -919,6 +980,40 @@ theorem liftII.measurable (f : Int → Int → Int) :
     Measurable (liftII (rT := rT) f) :=
   liftBin.measurable _ _ BaseLit.intExtract.measurable
     (Measurable.of_discrete.comp (Measurable.of_discrete (β := Int) (f := uncurry f)))
+
+/-- `locExtract` is measurable. -/
+theorem _root_.ProbLang.BaseLit.locExtract.measurable :
+    Measurable (BaseLit.locExtract : BaseLit rT → Option Loc) := by
+  apply_arms BaseLit.measurable_cases
+
+/-- Location displacement is measurable. -/
+theorem liftOffset.measurable : Measurable (liftOffset (rT := rT)) := by
+  unfold liftOffset
+  refine Option.measurable_bind_param (β := Int) (γ := Exp rT)
+    (f := fun p : Exp rT × Exp rT => (litExtract p.1).bind BaseLit.locExtract)
+    (some_branch := fun q : (Exp rT × Exp rT) × Int =>
+      (litExtract q.1.2).bind BaseLit.intExtract |>.bind fun x2 =>
+        some (lit (BaseLit.loc (q.2 + x2)))) ?_ ?_
+  · refine Option.measurable_bind_param (β := BaseLit rT) (γ := Int)
+      (f := fun p : Exp rT × Exp rT => litExtract p.1)
+      (some_branch := fun q : (Exp rT × Exp rT) × BaseLit rT => BaseLit.locExtract q.2) ?_ ?_
+    · exact litExtract.measurable.comp measurable_fst
+    · exact BaseLit.locExtract.measurable.comp measurable_snd
+  · refine Option.measurable_bind_param (β := Int) (γ := Exp rT)
+      (f := fun q : (Exp rT × Exp rT) × Int => (litExtract q.1.2).bind BaseLit.intExtract)
+      (some_branch := fun r : ((Exp rT × Exp rT) × Int) × Int =>
+        some (lit (BaseLit.loc (r.1.2 + r.2)))) ?_ ?_
+    · refine Option.measurable_bind_param (β := BaseLit rT) (γ := Int)
+        (f := fun q : (Exp rT × Exp rT) × Int => litExtract q.1.2)
+        (some_branch := fun r : ((Exp rT × Exp rT) × Int) × BaseLit rT => BaseLit.intExtract r.2)
+        ?_ ?_
+      · exact litExtract.measurable.comp (measurable_snd.comp measurable_fst)
+      · exact BaseLit.intExtract.measurable.comp measurable_snd
+    · refine MeasurableEmbedding.some_mk.measurable.comp ?_
+      refine lit.measurable.comp ?_
+      exact (Measurable.of_discrete (f := fun p : Int × Int =>
+        BaseLit.loc (rT := rT) (p.1 + p.2))).comp
+          ((measurable_snd.comp measurable_fst).prodMk measurable_snd)
 
 /-- `liftBB f` is measurable. -/
 theorem liftBB.measurable (f : Bool → Bool → Bool) :
@@ -1091,7 +1186,11 @@ theorem liftEq.measurable :
     (c_inl := fun q : Exp rT × Exp rT => liftEqInlK (q.2, q.1))
     (c_inr := fun q : Exp rT × Exp rT => liftEqInrK (q.2, q.1))
     (c_case := fun _ => none) (c_alloc := fun _ => none) (c_load := fun _ => none)
-    (c_store := fun _ => none) (c_tape := fun _ => none) (c_rand := fun _ => none)
+    (c_store := fun _ => none)
+    (c_allocN := fun _ => none) (h_allocN := measurable_const)
+    (c_asm := fun _ => none) (c_asmResume := fun _ => none)
+    (h_asm := measurable_const) (h_asmResume := measurable_const)
+    (c_tape := fun _ => none) (c_rand := fun _ => none)
     (c_fail := fun _ => none) (c_urand := fun _ => none) (c_scrut := fun _ => none)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   iterate 2 exact measurable_const
@@ -1114,21 +1213,23 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
     refine measurable_of_lit_only none
       (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun _ => none) (fun b => some (lit (.bool ¬b))) none
-        (fun _ => none) (fun _ => none) (fun _ => none)) ?_
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (fun _ => none)) ?_
       fun v => by
         cases v <;> simp [UnOp.eval]
         rename_i b; cases b <;> simp
     apply BaseLit.measurable_casesOn
       (c_int := fun _ => none) (c_bool := fun b => some (lit (.bool ¬b)))
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
-      (c_real := fun _ => none)
+      (c_real := fun _ => none) (c_code := fun _ => none)
     exact measurable_const
   | minus =>
     refine measurable_of_lit_only none
       (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun z => some (lit (.int z.neg))) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (lit (.real (ProbLangℝ.realNeg r))))) ?_
+        (fun r => some (lit (.real (ProbLangℝ.realNeg r))))
+        (fun _ => none)) ?_
       fun v => by
         cases v <;> simp [UnOp.eval]
         rename_i b; cases b <;> simp
@@ -1136,6 +1237,7 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
       (c_int := fun z => some (lit (.int z.neg))) (c_bool := fun _ => none)
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
       (c_real := fun r => some (lit (.real (ProbLangℝ.realNeg r))))
+      (c_code := fun _ => none)
     exact MeasurableEmbedding.some_mk.measurable.comp
       (lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realNeg))
   | toReal =>
@@ -1143,7 +1245,8 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
       (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun z => some (lit (.real (ProbLangℝ.realOfInt z)))) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (lit (.real r)))) ?_
+        (fun r => some (lit (.real r)))
+        (fun _ => none)) ?_
       fun v => by
         cases v <;> simp [UnOp.eval]
         rename_i l; cases l <;> simp
@@ -1151,19 +1254,22 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
       (c_bool := fun _ => none)
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
       (c_real := fun r => some (lit (.real r)))
+      (c_code := fun _ => none)
     exact MeasurableEmbedding.some_mk.measurable.comp (lit.measurable.comp BaseLit.real.measurable)
   | frac =>
     refine measurable_of_lit_only none
       (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
         (fun _ => none) (fun _ => none) none
         (fun _ => none) (fun _ => none)
-        (fun r => some (lit (.real (ProbLangℝ.realFrac r))))) ?_
+        (fun r => some (lit (.real (ProbLangℝ.realFrac r))))
+        (fun _ => none)) ?_
       fun v => by
         cases v <;> simp [UnOp.eval]
         rename_i l; cases l <;> simp
     apply BaseLit.measurable_casesOn (c_int := fun _ => none) (c_bool := fun _ => none)
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
       (c_real := fun r => some (lit (.real (ProbLangℝ.realFrac r))))
+      (c_code := fun _ => none)
     exact MeasurableEmbedding.some_mk.measurable.comp
       (lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
 
@@ -1213,6 +1319,7 @@ theorem BinOp.eval_eq_lift (op : BinOp) (v1 v2 : Exp rT) :
        | .xor   => liftBB (· ^^ ·)
        | .lt    => liftLtLe (decide <| · < ·) ProbLangℝ.realLt
        | .le    => liftLtLe (decide <| · ≤ ·) ProbLangℝ.realLe
+       | .offset => liftOffset
        | .eq    => liftEq) (v1, v2) := by
   cases op
   all_goals
@@ -1224,6 +1331,9 @@ theorem BinOp.eval_eq_lift (op : BinOp) (v1 v2 : Exp rT) :
       | exact BinOp.eval_lt_eq_liftLtLe v1 v2
       | exact BinOp.eval_le_eq_liftLtLe v1 v2
       | exact BinOp.eval_eq_eq_liftEq v1 v2
+      | (cases v1 <;> cases v2 <;> simp [BinOp.eval, liftOffset, litExtract]
+         rename_i l1 l2
+         cases l1 <;> cases l2 <;> rfl)
 
 /-- `BinOp.eval` is jointly measurable in the operator and the operands. -/
 theorem BinOp_eval.measurable :
@@ -1247,6 +1357,7 @@ theorem BinOp_eval.measurable :
   · exact liftLtLe.measurable _ _ LawfulProbLangℝ.measurable_realLe
   · exact liftII.measurable _
   · exact liftII.measurable _
+  · exact liftOffset.measurable
 
 /-! ### `Pat.tryMatch`
 
@@ -1380,7 +1491,8 @@ theorem tryMatch.measurable_joint :
               (fun _ _ => none) (fun _ _ => none) (fun _ _ _ => none) (fun _ _ _ => none)
               (fun _ _ => none) (fun _ => none) (fun _ => none) (fun _ => none) (fun _ => none)
               (fun _ _ _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
-              (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) := by
+              (fun _ => none) (fun _ _ => none) none none (fun _ _ => none) (fun _ _ => none)
+              (fun _ _ => none) (fun _ _ => none) := by
         funext q; obtain ⟨e, b⟩ := q; cases e <;> rfl
       rw [hrw]
       apply measurable_casesOn_param (β := BaseLit rT)
@@ -1393,6 +1505,7 @@ theorem tryMatch.measurable_joint :
         (c_fst := fun _ => none) (c_snd := fun _ => none)
         (c_inl := fun _ => none) (c_inr := fun _ => none) (c_case := fun _ => none)
         (c_alloc := fun _ => none) (c_load := fun _ => none) (c_store := fun _ => none)
+        (c_allocN := fun _ => none) (c_asm := fun _ => none) (c_asmResume := fun _ => none)
         (c_tape := fun _ => none) (c_rand := fun _ => none) (c_fail := fun _ => none)
         (c_urand := fun _ => none)
         (c_scrut := fun _ => none)

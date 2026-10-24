@@ -10,9 +10,9 @@ A signature change here must be made together with the tactic that applies the l
 /-- info: @ProbLang.MicrometerWpGS.wp_bind : ∀ {rT : Type} [inst : MeasurableSpace rT] [inst_1 :
 ProbLang.LawfulProbLangℝ rT] {B : Type} [inst_2 : PartialOrder B] [inst_3 : OrderTop B] {L :
 GradedLifting B} {GF : Iris.BundledGFunctors} [inst_4 : ProbLang.MicrometerWpGS GF] [inst_5 :
-ProbLang.BudgetGS B GF] [inst_6 : Add B] [L.IsLawful] [L.IsTopAbsorbing] {K : ProbLang.Ectx rT} {E :
-CoPset} {e : ProbLang.Exp rT} {Φ : ProbLang.Val rT → Iris.IProp GF}, WP[L] e @ E {{ v, WP[L] (K.fill
-(ProbLang.Exp.ofVal v)) @ E {{ Φ }} }} ⊢ WP[L] (K.fill e) @ E {{ Φ }} -/
+ProbLang.BudgetGS B GF] {E : CoPset} {e : ProbLang.Exp rT} {K : ProbLang.Ectx rT} {Φ : ProbLang.Val
+rT → Iris.IProp GF} [inst_6 : Add B] [L.IsLawful] [L.IsTopAbsorbing], WP[L] e @ E {{ v, WP[L]
+(K.fill (ProbLang.Exp.ofVal v)) @ E {{ Φ }} }} ⊢ WP[L] (K.fill e) @ E {{ Φ }} -/
 #guard_msgs (whitespace := lax) in
 #check @ProbLang.MicrometerWpGS.wp_bind
 

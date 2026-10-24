@@ -15,6 +15,20 @@ open Lean
 
 namespace ProbLang
 
+/-- Registers travel as their architectural index. -/
+instance : ToJson Asm.Reg := ⟨fun r => toJson r.val⟩
+
+/-- Decoding a register checks its architectural bound. -/
+instance : FromJson Asm.Reg where
+  fromJson? json := do
+    let n ← (fromJson? json : Except String Nat)
+    if h : n < 32 then return ⟨n, h⟩
+    else throw "assembly register index must be less than 32"
+
+deriving instance ToJson, FromJson for Asm.Len, Asm.ArgKind, Asm.CallSig, Asm.Sig,
+  Asm.Imm, Asm.Operand, Asm.Instr, Asm.Section, Asm.Directive, Asm.Line, Asm.AsmProg,
+  Asm.Code, Asm.BoundaryValue, Asm.Replay
+
 deriving instance ToJson, FromJson for Var, BaseLit, UnOp, BinOp, Pat, Exp
 
 namespace Interp.Sample

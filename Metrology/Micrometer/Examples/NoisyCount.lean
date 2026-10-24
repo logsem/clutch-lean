@@ -15,10 +15,8 @@ import Metrology.Iris.LocalBI
 
 /-! # NoisyCount: a Laplace-noised count is `1/b`-DP
 
-Adjacent databases have counts at most `1` apart, so one credit `↯b (1/b, 0)` pays for the Laplace
-sampler call. Main result `noisyCount_DP`, conditional on the sampler spec `LaplaceSpec`. As
-adjacency is symmetric, a terminating noisy count is also `(0, (1/b)² / 2)`-zCDP
-(`noisyCount_zCDP`). -/
+`noisyCount_DP` (conditional on `LaplaceSpec`), with zCDP and √-DP corollaries `noisyCount_zCDP`,
+`noisyCount_DP_sqrt`. -/
 
 open scoped ENNReal NNReal
 
@@ -34,7 +32,7 @@ open ENNReal (ofReal)
 open Kernel (zCDP_of_DP_of_symm DP_of_zCDP_sq)
 open Real (log coe_toNNReal)
 
-variable {lap : Val ℝ} {b : ℝ≥0} {n : ℕ}
+variable {n : ℕ}
 
 /-- Assumed rule for the sampler `lap`: `lap #a` against a spec copy of `lap #a'` is coupled like a
 primitive with law `laplace a b` in the lifting `L`, paying a cancellable credit `↯b c`. -/
@@ -67,14 +65,19 @@ instance : Std.Symm (Adjacent (n := n)) :=
 /-- The privacy budget `(1/b, 0)`. -/
 noncomputable abbrev budget (b : ℝ≥0) : ℝ≥0∞ × ℝ≥0∞ := (ofReal (1 / b), 0)
 
+/-- The noisy count as a mechanism on databases, started from state `σ`. -/
+noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
+    Mechanism (Fin n → Bool) (Exp ℝ) :=
+  progMech (noisyCount lap) σ
+
 section Privacy
 
-variable [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
+variable {lap : Val ℝ} {b : ℝ≥0} [Fact (0 < b)] {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
   [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF]
 local bi IProp GF
 
-/-- The noisy counts of adjacent databases release the same value, spending `↯b (1/b, 0)`.
-Conditional on the sampler spec `hlap`. -/
+/-- The noisy counts of adjacent databases release the same value, spending `↯b (1/b, 0)`,
+conditional on the sampler spec `hlap`. -/
 theorem wp_noisyCount (hlap : LaplaceSpec (GF := GF) (codensity dp) lap b)
     {db db' : Fin n → Bool} (h : Adjacent db db') :
     ⊢ ⤇ noisyCount lap db' -∗ ↯b (budget b) -∗
@@ -92,11 +95,6 @@ theorem wp_noisyCount (hlap : LaplaceSpec (GF := GF) (codensity dp) lap b)
 
 /-! ## Adequacy: the DP statement -/
 
-/-- The noisy count as a mechanism on databases, started from state `σ`. -/
-noncomputable abbrev noisyCountMech (lap : Val ℝ) (n : ℕ) (σ : State ℝ) :
-    Mechanism (Fin n → Bool) (Exp ℝ) :=
-  progMech (noisyCount lap) σ
-
 section Closed
 
 variable
@@ -106,23 +104,22 @@ variable
 
 include hlap
 
-/-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1). Conditional on the
-sampler spec `hlap`, which is assumed for every ghost-state instance because adequacy allocates
-its own. -/
+/-- The noisy count is `(1/b, 0)`-DP for adjacent databases (Def. 2.1), conditional on the sampler
+spec `hlap`. -/
 theorem noisyCount_DP : (noisyCountMech lap n σ).DP Adjacent (ofReal (1 / b)) 0 :=
   fun _ _ h ↦ wp_adequacy_div _ _ σ σ _ fun _ _ ↦ wp_noisyCount (hlap _ _) h
 
-variable [IsMarkovKernel (noisyCountMech lap n σ)]
-
-/-- The noisy count is `(0, (1/b)² / 2)`-zCDP for adjacent databases, given that it terminates
-almost surely (Bun–Steinke 2016, Prop. 3.3). Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_zCDP : (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 / b) ^ 2 / 2)) := by
+/-- The noisy count is `(0, (1/b)² / 2)`-zCDP for adjacent databases given almost sure termination
+(Bun–Steinke 2016, Prop. 3.3), conditional on the sampler spec `hlap`. -/
+theorem noisyCount_zCDP [IsMarkovKernel (noisyCountMech lap n σ)] :
+    (noisyCountMech lap n σ).zCDP Adjacent 0 (ofReal ((1 / b) ^ 2 / 2)) := by
   have := zCDP_of_DP_of_symm (noisyCount_DP (n := n) hlap σ)
   rwa [coe_toNNReal _ (by positivity)] at this
 
 /-- The noisy count is `((1/b)² / 2 + 2 √((1/b)² / 2 · log (1 / δ)), δ)`-DP at every slack
-`0 < δ < 1`, given that it terminates almost surely. Conditional on the sampler spec `hlap`. -/
-theorem noisyCount_DP_sqrt {δ : ℝ} (hδ : 0 < δ) (hδ₁ : δ < 1) :
+`0 < δ < 1`, given almost sure termination and the sampler spec `hlap`. -/
+theorem noisyCount_DP_sqrt [IsMarkovKernel (noisyCountMech lap n σ)] {δ : ℝ} (hδ : 0 < δ)
+    (hδ₁ : δ < 1) :
     (noisyCountMech lap n σ).DP Adjacent
       (ofReal ((1 / b) ^ 2 / 2 + 2 * √((1 / b) ^ 2 / 2 * log (1 / δ))))
       (ofReal δ) := by

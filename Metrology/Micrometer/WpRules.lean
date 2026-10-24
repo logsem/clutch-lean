@@ -9,7 +9,7 @@ The usual Iris rules for Micrometer's `wp`: bind, spec updates, framing, proof-m
 
 @[expose] public section
 
-open Std Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE GradedLifting
+open Iris Iris.Std Iris.BI Iris.ProofMode GradedLifting
 
 namespace ProbLang
 
@@ -20,70 +20,26 @@ variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
   {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF]
 local bi IProp GF
 open BIFUpdate BIUpdateFUpdate
-open Exp (ofVal ofVal_of_toVal_some toVal?_eq_none)
 open LawfulSet (subset_refl empty_subset)
 open BudgetCredit
 
 section Wp
-variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {P R : IProp GF}
+variable [BudgetGS B GF] {E E1 E2 : CoPset} {e : Exp rT} {K : Ectx rT} {P R : IProp GF}
   {Φ Ψ : Val rT → IProp GF} {p : Bool} {io : InOut} {n : Nat}
 
 /-! ## Bind and spec updates -/
 
 variable (L) in
-/-- The statement of `wp_bind` at the context `K`, proved by Löb induction. -/
-noncomputable abbrev wpBindStmt (K : Ectx rT) : IProp GF := iprop%
-  ∀ E e Φ, wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) -∗ wp L E (K.fill e) Φ
-
-variable (L) in
 /-- The statement of `wp_specUpdate`, proved by Löb induction. -/
-noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
+private noncomputable abbrev wpSpecUpdateStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) Φ, wp L E e (fun v => specUpdate rT E (Φ v)) -∗ wp L E e Φ
 
 section Absorbing
 variable [Add B] [L.IsLawful] [L.IsTopAbsorbing]
 
 /-- Bind: a `wp` for `e` whose postcondition is a `wp` for `K[v]` proves the `wp` for `K[e]`. -/
-theorem wp_bind {K : Ectx rT} {E : CoPset} {e : Exp rT}
-    {Φ : Val rT → IProp GF} :
-    wp L E e (fun v => wp L E (K.fill (ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ := by
-  have Hloeb : ⊢ wpBindStmt L K := by
-    iapply loeb_wand
-    iintro !> IH %E' %e' %Φ' HW
-    iapply wp_unfold
-    iintro %σ₁ %e₁' %σ₁' %b₁ ⟨Hσ, Hs, Hb⟩
-    imod wp_unfold_mp $$ HW %σ₁ %e₁' %σ₁' %b₁ [$Hσ $Hs $Hb] with HW'
-    imodintro
-    iapply specCoupl_bind subset_refl
-    iframe HW'
-    iintro %σ₂ %ρ₂ %b₂ HBody
-    cases htv : e'.toVal? with
-    | some v =>
-      -- e' is a value: run the inner wp's spec phase in place of the outer one
-      -- (fupd_specCoupl, hence IsTopAbsorbing)
-      iapply fupd_specCoupl
-      rw [show e' = ofVal v from (ofVal_of_toVal_some htv).symm]
-      imod HBody with ⟨Hσ', Hs', Hb', HInner⟩
-      imod wp_unfold_mp $$ HInner %σ₂ %ρ₂.expr %ρ₂.state %b₂ [$Hσ' $Hs' $Hb'] with HInner'
-      imodintro
-      iexact HInner'
-    | none =>
-      have hv : ¬ e'.isValue := toVal?_eq_none.mp htv
-      have hvKfill : ¬ (K.fill e').isValue := fun hKv => hv (Ectx.fill_isValue hKv)
-      have hKfillnone : (K.fill e').toVal? = none := toVal?_eq_none.mpr hvKfill
-      iapply specCoupl_ret
-      simp only [hKfillnone]
-      -- e' steps: push K through the program step, recurse by Löb
-      iapply progCoupl_ctx_bind hv
-      iapply progCoupl_mono
-      iframe HBody
-      iintro %e₃ %σ₃ %e₃' %σ₃' %b₃ HLater
-      iapply wpProgBody_wand
-      iframe HLater
-      iintro !> HwpInner
-      imodintro
-      iapply IH $$ %E' %e₃ %Φ' HwpInner
-  iapply Hloeb $$ %E %e %Φ
+theorem wp_bind : wp L E e (fun v => wp L E (K.fill (.ofVal v)) Φ) ⊢ wp L E (K.fill e) Φ :=
+  wpFor_bind fun _ _ _ hv => primStep_fill hv
 
 /-- A spec update before a `wp` can be absorbed into it. -/
 theorem specUpdate_wp :
@@ -164,7 +120,7 @@ end Absorbing
 
 variable (L) in
 /-- The statement of `wp_frame_l`, proved by Löb induction. -/
-noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
+private noncomputable abbrev wpFrameLStmt : IProp GF := iprop%
   ∀ E (e : Exp rT) R Φ, R -∗ wp L E e Φ -∗ wp L E e fun v => iprop(R ∗ Φ v)
 
 /-- Frame a resource into the postcondition. -/
@@ -182,7 +138,7 @@ theorem wp_frame_l : iprop% R ∗ wp L E e Φ ⊢ wp L E e fun v => iprop(R ∗ 
     cases htv : e'.toVal? with
     | some v =>
       imod HBody with ⟨Hσ', Hs', Hb', HΦv⟩
-      simp only []
+      dsimp only
       imodintro
       iframe
     | none =>
@@ -205,13 +161,9 @@ theorem wp_frame_r : iprop% wp L E e Φ ∗ R ⊢ wp L E e fun v => iprop(Φ v �
 theorem wp_frame_wand : iprop% R ∗ wp L E e (fun v => iprop(R -∗ Φ v)) ⊢ wp L E e Φ :=
   wp_frame_l.trans (wp_mono fun _ => wand_elim_right)
 
-section
-variable (HE : E2 ⊆ E1) (hv : e.toVal? = none)
-include HE hv
-
 /-- A non-value `e` takes a step, so an update that crosses a later can run around it and hand
 its result to the postcondition. -/
-theorem wp_step_fupd : iprop%
+theorem wp_step_fupd (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> P) ∗ wp L E2 e (fun v => iprop(P -∗ Φ v)) ⊢ wp L E1 e Φ := by
   iintro ⟨HR, HW⟩
   iapply wp_unfold
@@ -239,7 +191,7 @@ theorem wp_step_fupd : iprop%
   iapply HWand $$ HP
 
 /-- Frame a resource available only after one step into the postcondition. -/
-theorem wp_frame_step_l : iprop%
+theorem wp_frame_step_l (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     (|={E1, E2}=> ▷ |={E2, E1}=> R) ∗ wp L E2 e Φ ⊢ wp L E1 e fun v => iprop(R ∗ Φ v) := by
   iintro ⟨HR, HW⟩
   iapply wp_step_fupd HE hv
@@ -250,11 +202,9 @@ theorem wp_frame_step_l : iprop%
   iframe
 
 /-- Frame a resource available only after one step into the postcondition, on the right. -/
-theorem wp_frame_step_r : iprop%
+theorem wp_frame_step_r (HE : E2 ⊆ E1) (hv : e.toVal? = none) : iprop%
     wp L E2 e Φ ∗ (|={E1, E2}=> ▷ |={E2, E1}=> R) ⊢ wp L E1 e fun v => iprop(Φ v ∗ R) :=
   (sep_comm.1.trans (wp_frame_step_l HE hv)).trans (wp_mono fun _ => sep_comm.1)
-
-end
 
 /-! ## Proof-mode instances -/
 
@@ -271,27 +221,23 @@ instance frame_wp [inst : ∀ v, Frame p R (Φ v) (Ψ v)] :
 instance addModal_fupd_wp : AddModal iprop(|={E}=> P) P (wp L E e Φ) where
   add_modal := fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
 
-/-- A `wp` eliminates a leading `|==>`. -/
-instance elimModal_bupd_wp :
-    ElimModal True p io false iprop(|==> P) P (wp L E e Φ) (wp L E e Φ) where
-  elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
-    (sep_mono_left fupd_of_bupd).trans <|
-    fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
-
 /-- A `wp` eliminates a leading `|={E}=>`. -/
 instance elimModal_fupd_wp :
     ElimModal True p io false iprop(|={E}=> P) P (wp L E e Φ) (wp L E e Φ) where
-  elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans <|
-    fupd_frame_right.trans <| (mono wand_elim_right).trans fupd_wp
+  elim_modal _ := (sep_mono_left intuitionisticallyIf_elim).trans addModal_fupd_wp.add_modal
 
+/-- A `wp` eliminates a leading `|==>`. -/
+instance elimModal_bupd_wp :
+    ElimModal True p io false iprop(|==> P) P (wp L E e Φ) (wp L E e Φ) where
+  elim_modal h := (sep_mono_left (intuitionisticallyIf_mono fupd_of_bupd)).trans
+    ((elimModal_fupd_wp (io := io)).elim_modal h)
 
 end Wp
 
-/-! ## Budget credits
+/-! ## Budget credits -/
 
-A local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`, so credit rules sit here. -/
-
-/-- An absorbing credit proves any `wp`: the budget it sits in is absorbing too. -/
+-- Outside `Wp`: the local `[BudgetGS B GF]` would shadow `BudgetGS.ofBudgetCredit`.
+/-- An absorbing credit proves any `wp`. -/
 theorem wp_of_absorbing [AddCommMonoid B] [CanonicallyOrderedAdd B] [BudgetCreditGS B GF]
     [L.IsLawful] {c : B} (hc : L.Absorbing c) {E : CoPset} {e : Exp rT}
     {Φ : Val rT → IProp GF} : ↯b c ⊢ wp L E e Φ := by

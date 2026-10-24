@@ -8,7 +8,7 @@ import Metrology.Iris.LocalBI
 /-! # Absorbing budgets and DP capped credits
 
 Which budgets are absorbing for dp, tv and Rényi, and that the others cancel, so capped credits
-can always be spent (Rocq `gccredit_top_False`). `wp` uses `BudgetCredit`, not this layer. -/
+can always be spent (Rocq `gccredit_top_False`). -/
 
 @[expose] public section
 
@@ -24,22 +24,19 @@ open MeasureTheory
 
 variable {B : Type*} {L : GradedLifting.{u} B}
 
-section UpperSet
-
-variable [Add B] [Preorder B] [Top B] [L.IsLawful]
-
 /-- Absorbing budgets form an upper set. -/
-theorem isUpperSet_absorbing : IsUpperSet {b | L.Absorbing b} :=
+theorem isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
+    IsUpperSet {b | L.Absorbing b} :=
   fun _ _ hb h ↦ Absorbing.mono h hb
 
 /-- Absorbing budgets form an upper set, as a `Fact`. -/
-instance fact_isUpperSet_absorbing : Fact (IsUpperSet {b | L.Absorbing b}) :=
+instance fact_isUpperSet_absorbing [Add B] [Preorder B] [Top B] [L.IsLawful] :
+    Fact (IsUpperSet {b | L.Absorbing b}) :=
   ⟨isUpperSet_absorbing⟩
 
-end UpperSet
-
-/-- A budget is not absorbing for a sound lifting once the divergence fails there. -/
-theorem not_absorbing_of_not_sound [Zero B] [Top B] {D : GradedDivergence.{u} B} [L.IsSound D]
+/-- A budget at which the divergence fails for some pair of measures is not absorbing for a sound
+lifting. -/
+theorem not_absorbing_of_not_divergence [Zero B] [Top B] {D : GradedDivergence.{u} B} [L.IsSound D]
     {X : Type u} [MeasurableSpace X] {b : B} {μ ν : Measure X} [IsSubProbabilityMeasure μ]
     [IsSubProbabilityMeasure ν] (h : ¬D b μ ν) : ¬L.Absorbing b :=
   fun hb ↦ h (IsSound.sound (hb _ μ ν))
@@ -48,7 +45,7 @@ end GradedLifting
 
 namespace GradedDivergence
 
-open MeasureTheory GradedLifting IsTopAbsorbing
+open GradedLifting IsTopAbsorbing
 open Prod (mk_le_mk isAddLeftRegular_mk)
 open IsAddRegular (of_ne_top)
 open Function (update)
@@ -70,8 +67,7 @@ variable {δ : ℝ≥0∞}
 theorem absorbing_codensity_tv_iff : (codensity tv.{u}).Absorbing δ ↔ 1 ≤ δ :=
   ⟨fun h ↦ codensity_tv_rel_false_iff.1 (h _ _ _), absorbing_codensity_tv_one.mono⟩
 
-variable {α : ℝ}
-variable {ρ : ℝ≥0∞}
+variable {α : ℝ} {ρ : ℝ≥0∞}
 
 /-- A Rényi budget is absorbing exactly at `⊤`. -/
 theorem absorbing_codensity_renyi_iff (hα : 1 < α) :
@@ -94,22 +90,19 @@ instance fact_not_absorbing_codensity_renyi_zero [hα : Fact (1 < α)] :
     Fact ((0 : ℝ≥0∞) ∉ {b | (codensity (renyiDivergence.{u} α)).Absorbing b}) :=
   ⟨fun h ↦ by simpa using (absorbing_codensity_renyi_iff hα.out).1 h⟩
 
-/-! ## Valid budgets cancel
-
-A budget that is not absorbing is left-cancellative, which is what spending a credit needs. -/
+/-! ## Valid budgets cancel -/
 
 /-- A DP budget that is not absorbing cancels: both coordinates are finite. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_dp {b : ℝ≥0∞ × ℝ≥0∞}
     (h : ¬(codensity dp.{u}).Absorbing b) : IsAddLeftRegular b := by
   obtain ⟨ε, δ⟩ := b
   obtain ⟨hε, hδ⟩ := not_or.1 (absorbing_codensity_dp_iff.not.1 h)
-  have hδ' : δ ≠ (⊤ : ℝ≥0∞) := ne_top_of_lt (not_le.1 hδ)
-  exact isAddLeftRegular_mk.2 ⟨(of_ne_top hε).1, (of_ne_top hδ').1⟩
+  exact isAddLeftRegular_mk.2 ⟨(of_ne_top hε).1, (of_ne_top (not_le.1 hδ).ne_top).1⟩
 
 /-- A total variation budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_tv
     (h : ¬(codensity tv.{u}).Absorbing δ) : IsAddLeftRegular δ :=
-  (of_ne_top fun hδ ↦ h (absorbing_codensity_tv_iff.2 (by simp [hδ]))).1
+  (of_ne_top fun hδ ↦ h (absorbing_codensity_tv_iff.2 (hδ ▸ le_top))).1
 
 /-- A Rényi budget that is not absorbing cancels. -/
 theorem isAddLeftRegular_of_not_absorbing_codensity_renyi
@@ -119,7 +112,6 @@ theorem isAddLeftRegular_of_not_absorbing_codensity_renyi
 /-- Some Rényi curve is valid but does not cancel: `⊤` at order `2` and `0` elsewhere. -/
 theorem exists_not_absorbing_not_isAddLeftRegular_renyiCurve :
     ∃ ρ : RenyiBudget, ¬(codensity renyiCurve.{u}).Absorbing ρ ∧ ¬IsAddLeftRegular ρ := by
-  classical
   -- Absorbing means `⊤` at every order, which fails at `three`; adding `1` at `two` is
   -- invisible because the curve is `⊤` there.
   let two : Set.Ioi (1 : ℝ) := ⟨2, by norm_num⟩
@@ -145,10 +137,10 @@ variable {GF : BundledGFunctors}
   [CappedCreditGS (ℝ≥0∞ × ℝ≥0∞) {b | (codensity dp.{u}).Absorbing b} GF]
 local bi IProp GF
 
-/-- Any DP credit can be spent: valid DP budgets cancel. -/
+/-- Spending a DP credit takes it out of the supply. -/
 theorem dp_supply_decrease {s c : ℝ≥0∞ × ℝ≥0∞} :
     ⊢ ●↯c s -∗ ↯c c -∗ |==> ∃ r, ⌜s = c + r⌝ ∗ ●↯c r :=
-  supply_decrease_of_valid (bad := {b | (codensity dp.{u}).Absorbing b}) fun _ ↦
+  supply_decrease_of_valid fun _ ↦
     isAddLeftRegular_of_not_absorbing_codensity_dp
 
 /-- A DP credit with slack at least `1` is contradictory. -/

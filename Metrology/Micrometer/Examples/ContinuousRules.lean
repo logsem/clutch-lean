@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.ContinuousCouplings
+public import Metrology.Micrometer.UnifIntReal
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI
@@ -19,14 +20,36 @@ namespace ContinuousRules
 
 open LawfulProbLangℝ
 open Set (Icc inter_subset_left)
-open OrderAddMonoidHom (coe_id)
 open Exp (lit_isClosedEmpty)
+
+variable {GF : BundledGFunctors}
+local bi IProp GF
+
+/-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
+program's. -/
+theorem wp_urand_floor_real [MicrometerGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF] (N : Int)
+    (hN : 0 < N) :
+    ⤇ pl(rand(#N, #())) ⊢
+      wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
+        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
+  iintro Hj
+  iapply wp_couple_urand_rand (K := []) N hN _ (measurePreserving_floor_mul N hN)
+  simp only [Ectx.fill_nil]
+  iframe Hj
+  iintro %x %hx Hj'
+  iexists x
+  iframe Hj'
+  ipureintro
+  exact ⟨rfl, hx⟩
+
+open MeasureTheory
+
+section Generic
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] [CanonicallyOrderedAdd B]
   {L : GradedLifting.{0} B} [L.IsLawful] [L.IsTopAbsorbing]
-  {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+  [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
 
 /-! ## `urand ~ urand` -/
 
@@ -63,8 +86,7 @@ section Reflexive
 
 variable [L.IsReflexive] {s : ℝ≥0∞ →+o B} [L.IsExpectationAdditive s]
 
-open MeasureTheory in
-/-- Coupling along the identity, the credit `s ε` is handed on at each draw. -/
+/-- Two draws coupled along the identity, spending `s ε` in expectation, return the same real. -/
 theorem urands_adv (ε : ℝ≥0∞) (hc : IsAddLeftRegular (s ε)) :
     ⊢ ↯b (s ε) -∗
       REL[L] (pl(urand) : Exp rT) << pl(urand) : lrel_real := by
@@ -131,13 +153,20 @@ theorem rands_dpChoice [BudgetCreditGS (ℝ≥0∞ × ℝ≥0∞) GF] (N : Int) 
   iintro %r %_ %(rfl | rfl) -
   all_goals rel_values
 
+end Generic
+
 /-! ## At `ℝ` -/
 
 section Real
 
-variable {GF : BundledGFunctors} [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+private theorem lrel_true_lit [MicrometerRGS ℝ .hasNoLC GF] {l₁ l₂ : BaseLit ℝ} :
+    ⊢ |={⊤}=> (lrel_true (rT := ℝ) (GF := GF)).car (l₁ : Val ℝ) l₂ := by
+  iunfold lrel_true
+  ipureintro
+  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
 
-open MeasureTheory in
+variable [MicrometerRGS ℝ .hasNoLC GF] [BudgetCreditGS ℝ≥0∞ GF]
+
 /-- A uniform real avoids `0` for free: the point has no mass. -/
 theorem urand_avoid_zero_real :
     ⊢ ↯b (0 : ℝ≥0∞) -∗
@@ -146,37 +175,11 @@ theorem urand_avoid_zero_real :
     show volume.restrict (Icc (0 : ℝ) 1) {0} = 0
     rw [Measure.restrict_apply (measurableSet_singleton 0)]
     exact measure_mono_null inter_subset_left Real.volume_singleton
-  iintro Hc
-  rel_apply (refines_couple_urands_avoid (s := .id ℝ≥0∞) ({0} : Set ℝ)
-    (measurableSet_singleton 0) absorbing_codensity_tv_one
-    (by
-      simp only [coe_id, id_eq, h0]
-      exact (IsAddRegular.of_ne_top (by simp)).1))
-  simp only [coe_id, id_eq, h0]
-  iframe Hc
-  iintro %x ⟨%_, %hx⟩
-  rel_values
+  simpa [h0] using urands_avoid (L := codensity tv) (s := .id ℝ≥0∞) ({0} : Set ℝ)
+    (measurableSet_singleton 0) absorbing_codensity_tv_one (by simp [h0])
 
-section
 variable (N : Int) (hN : 0 < N)
 include hN
-
-/-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`: the spec draw is the floor of `N` times the
-program's. -/
-theorem wp_urand_floor_real {GF : BundledGFunctors} [MicrometerGS ℝ .hasNoLC GF]
-    [BudgetCreditGS ℝ≥0∞ GF] :
-    ⤇ pl(rand(#N, #())) ⊢
-      wp (codensity tv) ⊤ (pl(urand) : Exp ℝ) fun v ↦
-        iprop(∃ x : ℝ, ⌜v = .real x ∧ 0 < x ∧ x < 1⌝ ∗ ⤇ pl(#int (⌊(N : ℝ) * x⌋))) := by
-  iintro Hj
-  iapply wp_couple_urand_rand (K := []) N hN _ (measurePreserving_floor_mul N hN)
-  simp only [Ectx.fill_nil]
-  iframe Hj
-  iintro %x %hx Hj'
-  iexists x
-  iframe Hj'
-  ipureintro
-  exact ⟨rfl, hx⟩
 
 /-- At `ℝ`, `rand N ~ urand` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem rand_urand_floor_real :
@@ -184,9 +187,7 @@ theorem rand_urand_floor_real :
   rel_couple_rand_urand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values
-  iunfold lrel_true
-  ipureintro
-  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
+  exact lrel_true_lit
 
 /-- At `ℝ`, `urand ~ rand N` along `u ↦ ⌊N u⌋`, as a refinement. -/
 theorem urand_rand_floor_real :
@@ -194,11 +195,7 @@ theorem urand_rand_floor_real :
   rel_couple_urand_rand _ (measurePreserving_floor_mul N hN)
   iintro %x %_
   rel_values
-  iunfold lrel_true
-  ipureintro
-  exact ⟨lit_isClosedEmpty _, lit_isClosedEmpty _⟩
-
-end
+  exact lrel_true_lit
 
 end Real
 

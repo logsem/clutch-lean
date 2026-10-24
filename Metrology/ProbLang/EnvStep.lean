@@ -1,6 +1,6 @@
 module
 
-public import Metrology.ProbLang.Syntax.Syntax
+public import Metrology.ProbLang.Syntax.HeapArray
 
 @[expose] public section
 
@@ -59,6 +59,11 @@ inductive Frame (rT : Type _) where
   | tape
   | randR (env : Env rT) (e1 : Exp rT)
   | randL (v2 : RVal rT)
+  | allocNR (env : Env rT) (en : Exp rT)
+  | allocNL (v : RVal rT)
+  | asmR (env : Env rT) (code : Exp rT)
+  | asmL (args : RVal rT)
+  | asmResume (archive : Asm.Replay)
 
 /-- A configuration of the machine: a call of the evaluator. -/
 inductive EnvCfg (rT : Type _) where
@@ -119,6 +124,9 @@ def Exp.substEnv (k : Nat) (vs : List (Exp rT)) : Exp rT → Exp rT
   | .alloc e => .alloc (substEnv k vs e)
   | .load e => .load (substEnv k vs e)
   | .store e1 e2 => .store (substEnv k vs e1) (substEnv k vs e2)
+  | .asm ec ea => .asm (substEnv k vs ec) (substEnv k vs ea)
+  | .asmResume a e => .asmResume a (substEnv k vs e)
+  | .allocN e1 e2 => .allocN (substEnv k vs e1) (substEnv k vs e2)
   | .tape e => .tape (substEnv k vs e)
   | .rand e1 e2 => .rand (substEnv k vs e1) (substEnv k vs e2)
   | .fail => .fail
@@ -163,7 +171,12 @@ def Frame.fill : Frame rT → Exp rT → Exp rT
   | .alloc, e => .alloc e
   | .load, e => .load e
   | .storeR env e1, e => .store (e1.substEnv 0 (RVal.rbEnv env)) e
+  | .allocNR env e1, e => .allocN (e1.substEnv 0 (RVal.rbEnv env)) e
   | .storeL v2, e => .store e v2.rb
+  | .asmR env ec, e => .asm (ec.substEnv 0 (RVal.rbEnv env)) e
+  | .asmL args, e => .asm e args.rb
+  | .asmResume a, e => .asmResume a e
+  | .allocNL v2, e => .allocN e v2.rb
   | .tape, e => .tape e
   | .randR env e1, e => .rand (e1.substEnv 0 (RVal.rbEnv env)) e
   | .randL v2, e => .rand e v2.rb
@@ -246,6 +259,17 @@ take the head step once every subterm is a value. -/
       let ℓ := σ.heap.fresh
       k.ret (.lit (.loc ℓ)) (σ.update_heap fun t => t.insert ℓ v)
     | none => k.stuck "alloc: not a value"
+  | .asmR env ec, args, σ => k.evalThen env ec σ (.asmL args)
+  | .asmL _, _, _ => k.stuck "asm: requires a foreign environment"
+  | .asmResume _, _, _ => k.stuck "asmResume: requires a foreign environment"
+  | .allocNR env en, v, σ => k.evalThen env en σ (.allocNL v)
+  | .allocNL v, en, σ =>
+    match en, v.rb.toVal? with
+    | .lit (.int n), some v =>
+      if 0 < n then
+        k.ret (.lit (.loc σ.heap.fresh)) (σ.update_heap (fun h => LocHeap.allocN h v n.toNat))
+      else k.stuck "allocN: nonpositive length"
+    | _, _ => k.stuck "allocN: invalid operands"
   | .load, v, σ =>
     match v with
     | .lit (.loc ℓ) =>
@@ -308,6 +332,9 @@ evaluate, or evaluate its rightmost subterm under the matching frame. -/
   | .alloc e, σ => k.evalThen env e σ .alloc
   | .load e, σ => k.evalThen env e σ .load
   | .store e1 e2, σ => k.evalThen env e2 σ (.storeR env e1)
+  | .asm ec ea, σ => k.evalThen env ea σ (.asmR env ec)
+  | .asmResume a e, σ => k.evalThen env e σ (.asmResume a)
+  | .allocN e1 e2, σ => k.evalThen env e2 σ (.allocNR env e1)
   | .tape e, σ => k.evalThen env e σ .tape
   | .rand e1 e2, σ => k.evalThen env e2 σ (.randR env e1)
   | .urand, σ => k.uniformReal σ

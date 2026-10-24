@@ -30,8 +30,8 @@ theorem rrCount_tCDP : (rrCountMech k σ).tCDP ⊤ ω (k * ofReal (log 3)) := by
   simpa [nsmul_eq_mul] using rrCount_isPrivate (ofReal (log 3))
     (isAddLeftRegular_ofReal _) (rrCoupling_tcdp ω) k σ
 
-/-- Randomized response in a loop of `k` rounds is DP at every slack `δ > 0`: map its tCDP
-coupling along `tcdpToDp`, at the best order below `ω` ([t/D]). -/
+/-- Randomized response in a loop of `k` rounds is DP at every slack `δ > 0` (Def. 2.1): map its
+tCDP coupling along `tcdpToDp`, minimising over the orders `α` strictly between `1` and `ω`. -/
 theorem rrCount_DP_of_tCDP {δ : ℝ} (hδ : 0 < δ) :
     (rrCountMech k σ).DP ⊤
       (⨅ α ∈ Set.Ioo 1 ω, ofReal α * (k * ofReal (log 3)) + ofReal (log (1 / δ) / (α - 1)))

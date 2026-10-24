@@ -242,7 +242,7 @@ theorem primStep_tape_persists_support
   obtain ⟨K, e₁', e₂', _hfill1, _hfill2, hhs⟩ := prim_step_imp hρ
   replace hhs := Possible.headStepSupport hhs
   cases hhs with
-  | AllocS _ _ hσ' =>
+  | AllocS _ _ hσ' | AllocNS _ _ _ hσ' =>
     subst hσ'
     exact ⟨t, by simp [State.update_heap, h], rfl⟩
   | StoreS _ _ hσ' =>

@@ -60,9 +60,8 @@ end TyEnv
 
 end TyEnvSetup
 
--- The sum cases are unused here because `UnboxedType` has no sums; the equality proof uses
--- `unboxed_type_lit_shape` instead.
-/-- Unboxed expressions are literals, possibly under a sum injection (Rocq's `val_is_unboxed`). -/
+-- `UnboxedType` has no sums; the sum cases are kept to match Rocq's `val_is_unboxed`.
+/-- Unboxed expressions are literals or sum injections of literals (Rocq `val_is_unboxed`). -/
 @[simp] def Exp.isUnboxedV : Exp rT → Prop
   | .lit _ => True
   | .inl (.lit _) => True
@@ -77,9 +76,8 @@ open TyEnv
 open Val (ext ext_iff isUnboxed)
 open CoPset (subseteq_top)
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT] {hlc : HasLC} {B : Type} [AddCommMonoid B]
-    [PartialOrder B]
-  [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors} [MicrometerRGS rT hlc GF]
-  [BudgetCreditGS B GF] {n : Nat} {Δ Δ' : TyEnv rT GF}
+  [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B} {GF : BundledGFunctors}
+  [MicrometerRGS rT hlc GF] [BudgetCreditGS B GF] {n : Nat} {Δ Δ' : TyEnv rT GF}
 local bi IProp GF
 
 /-! ## Interpreting types -/
@@ -104,23 +102,19 @@ namespace NEFun
 /-- Apply a binary relation constructor pointwise. -/
 @[reducible] noncomputable def map2 (F : lrel rT GF → lrel rT GF → lrel rT GF)
     [NonExpansive₂ F] (A B : NEFun rT GF) : NEFun rT GF :=
-  { fn := fun Δ => F (A.fn Δ) (B.fn Δ)
-    ne := fun h => NonExpansive₂.ne (A.ne h) (B.ne h) }
+  { fn := fun Δ => F (A.fn Δ) (B.fn Δ), ne := fun h => NonExpansive₂.ne (A.ne h) (B.ne h) }
 
 /-- Apply a unary relation constructor pointwise. -/
 @[reducible] noncomputable def map1 (F : lrel rT GF → lrel rT GF)
     [NonExpansive F] (A : NEFun rT GF) : NEFun rT GF :=
-  { fn := fun Δ => F (A.fn Δ)
-    ne := fun h => NonExpansive.ne (A.ne h) }
+  { fn := fun Δ => F (A.fn Δ), ne := fun h => NonExpansive.ne (A.ne h) }
 
 section
 variable (A : NEFun rT GF)
 
 /-- The recursive relation binding the innermost type variable. -/
 @[reducible] noncomputable def rec' : NEFun rT GF :=
-  { fn := fun Δ => lrel_rec
-      { f := fun X => A.fn (cons X Δ)
-        ne := ⟨fun {_ _ _} hXY => A.ne (cons_ne_head hXY)⟩ }
+  { fn := fun Δ => lrel_rec ⟨fun X => A.fn (cons X Δ), ⟨fun {_ _ _} hXY => A.ne (cons_ne_head hXY)⟩⟩
     ne := fun h => lrel_rec_ne (fun _ => A.ne (cons_ne_tail h)) }
 
 variable (L) in
@@ -192,7 +186,8 @@ theorem interp_prod : interp L (.prod τ1 τ2) Δ = lrel_prod (interp L τ1 Δ) 
 theorem interp_sum : interp L (.sum τ1 τ2) Δ = lrel_sum (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 /-- Arrows are interpreted as `lrel_arr`. -/
-theorem interp_arrow : interp L (.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
+theorem interp_arrow :
+    interp L (.arrow τ1 τ2) Δ = lrel_arr L (interp L τ1 Δ) (interp L τ2 Δ) := rfl
 
 end
 
@@ -209,7 +204,7 @@ theorem interp_rec_car :
     (interp L (.rec' τ) Δ).car v v' = iprop(⌜v.1.IsClosedEmpty ∧ v'.1.IsClosedEmpty⌝ ∗
       ▷ (interp L τ (cons (interp L (.rec' τ) Δ) Δ)).car v v') :=
   congrArg (fun A => A.car v v') (lrel_rec_unfold
-    { f := fun X => interp L τ (cons X Δ)
+    { f := fun X => interp L τ (cons X Δ),
       ne := ⟨fun {_ _ _} hXY => (interpNE L τ).ne (cons_ne_head hXY)⟩ })
 
 /-- `⟦∃X.τ⟧` relates closed values related at some instance. -/

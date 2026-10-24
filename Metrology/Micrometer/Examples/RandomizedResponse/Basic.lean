@@ -50,50 +50,51 @@ variable (b c : Bool)
 def rrOut (r : Int) : Bool := if r < 3 then b else !b
 
 /-- The draw of one round, uniform on `{0, 1, 2, 3}`. -/
-noncomputable abbrev draw : Measure Int :=
+noncomputable abbrev rrDraw : Measure Int :=
   unifInt 4 (by norm_num)
 
 /-- Each of the four draws has mass `1/4`. -/
-theorem draw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : draw {k} = 4⁻¹ := by
-  rw [draw, unifInt, Measure.uniformOfFinset_apply_singleton_of_mem (mem_Ico.2 ⟨h0, h4⟩)]
+theorem rrDraw_singleton {k : Int} (h0 : 0 ≤ k) (h4 : k < 4) : rrDraw {k} = 4⁻¹ := by
+  rw [rrDraw, unifInt, Measure.uniformOfFinset_apply_singleton_of_mem (mem_Ico.2 ⟨h0, h4⟩)]
   rfl
 
 /-- One round reports its bit with probability `3/4`. -/
-theorem map_rrOut_singleton : draw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
+theorem map_rrOut_singleton : rrDraw.map (rrOut b) {c} = if b = c then 3 / 4 else 1 / 4 := by
   rw [Measure.map_apply .of_discrete (measurableSet_singleton c), unifInt_apply,
     show Finset.Ico (0 : Int) 4 = {0, 1, 2, 3} by decide]
   cases b <;> cases c <;> norm_num [rrOut, indicator, filter_insert, filter_singleton,
     div_eq_inv_mul, mul_comm]
 
-/-- Draws `0` and `3` report different bits, so each report is hit by one and missed by the
-other. -/
-theorem rrOut_zero_three : rrOut b 0 = c ∧ rrOut b 3 ≠ c ∨ rrOut b 3 = c ∧ rrOut b 0 ≠ c := by
-  decide +revert
+/-- Some draw reports `c`. -/
+theorem exists_rrOut_eq : ∃ k : Int, 0 ≤ k ∧ k < 4 ∧ rrOut b k = c := by
+  by_cases h : rrOut b 0 = c
+  · exact ⟨0, by norm_num, by norm_num, h⟩
+  · exact ⟨3, by norm_num, by norm_num, by revert h; decide +revert⟩
 
-/-- One fiber of the reported bit misses a draw, so it has mass at most `3/4`. -/
-theorem rrOut_fiber_le : draw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
-  obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k ≠ c := by
-    rcases rrOut_zero_three b c with ⟨-, h⟩ | ⟨-, h⟩
-    · exact ⟨3, by norm_num, by norm_num, h⟩
-    · exact ⟨0, by norm_num, by norm_num, h⟩
-  calc _ ≤ draw {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
+/-- Some draw does not report `c`. -/
+theorem exists_rrOut_ne : ∃ k : Int, 0 ≤ k ∧ k < 4 ∧ rrOut b k ≠ c := by
+  by_cases h : rrOut b 0 = c
+  · exact ⟨3, by norm_num, by norm_num, by revert h; decide +revert⟩
+  · exact ⟨0, by norm_num, by norm_num, h⟩
+
+/-- One fiber of the reported bit has mass at most `3/4`. -/
+theorem rrOut_fiber_le : rrDraw (rrOut b ⁻¹' {c}) ≤ 1 - 4⁻¹ := by
+  obtain ⟨k, hk0, hk4, hk⟩ := exists_rrOut_ne b c
+  calc _ ≤ rrDraw {k}ᶜ := measure_mono fun r hr hrk ↦ hk (hrk ▸ hr)
     _ = 1 - 4⁻¹ := by
-      rw [prob_compl_eq_one_sub (measurableSet_singleton k), draw_singleton hk0 hk4]
+      rw [prob_compl_eq_one_sub (measurableSet_singleton k), rrDraw_singleton hk0 hk4]
 
 /-- Every fiber of the reported bit contains a draw, so it has mass at least `1/4`. -/
-theorem rrOut_fiber_ge : 4⁻¹ ≤ draw (rrOut b ⁻¹' {c}) := by
-  obtain ⟨k, hk0, hk4, hk⟩ : ∃ k, 0 ≤ k ∧ k < 4 ∧ rrOut b k = c := by
-    rcases rrOut_zero_three b c with ⟨h, -⟩ | ⟨h, -⟩
-    · exact ⟨0, by norm_num, by norm_num, h⟩
-    · exact ⟨3, by norm_num, by norm_num, h⟩
-  rw [← draw_singleton hk0 hk4]
+theorem rrOut_fiber_ge : 4⁻¹ ≤ rrDraw (rrOut b ⁻¹' {c}) := by
+  obtain ⟨k, hk0, hk4, hk⟩ := exists_rrOut_eq b c
+  rw [← rrDraw_singleton hk0 hk4]
   exact measure_mono (singleton_subset_iff.2 hk)
 
 end Fibers
 
 /-- Each fiber's mass under one bit is at most three times its mass under the other. -/
 theorem rrOut_fiber_le_three (b b' c : Bool) :
-    draw (rrOut b ⁻¹' {c}) ≤ 3 * draw (rrOut b' ⁻¹' {c}) :=
+    rrDraw (rrOut b ⁻¹' {c}) ≤ 3 * rrDraw (rrOut b' ⁻¹' {c}) :=
   calc _ ≤ 1 - 4⁻¹ := rrOut_fiber_le b c
     _ ≤ 3 * 4⁻¹ := by
       rw [tsub_le_iff_right, ← add_one_mul, show (3 + 1 : ℝ≥0∞) = 4 by norm_num,
@@ -102,17 +103,15 @@ theorem rrOut_fiber_le_three (b b' c : Bool) :
 
 /-- The `α`-th moment between rounds on different bits is `(3^α + 3^{1-α}) / 4`. -/
 theorem fDiv_rrOut {α : ℝ} (hα : 1 < α) (b : Bool) :
-    fDiv (· ^ α) (draw.map (rrOut b)) (draw.map (rrOut !b)) = ((3 ^ α + 3 ^ (1 - α)) / 4 : ℝ) := by
+    fDiv (· ^ α) (rrDraw.map (rrOut b)) (rrDraw.map (rrOut !b)) =
+      ((3 ^ α + 3 ^ (1 - α)) / 4 : ℝ) := by
   rw [fDiv_eq_sum (convexOn_rpow hα.le) (continuousWithinAt_rpow_zero (by linarith)),
     Fintype.sum_bool, map_rrOut_singleton, map_rrOut_singleton, map_rrOut_singleton,
     map_rrOut_singleton, rpow_sub (by norm_num), rpow_one]
-  -- the two perspectives are `(3/4)^α (1/4)^{1-α}` and `(1/4)^α (3/4)^{1-α}`; move to ℝ and
-  -- clear denominators
-  cases b
-  all_goals
-    norm_num [persp_rpow_of_pos, div_rpow]
-    rw [← coe_mul, ← coe_mul, ← coe_add, coe_eq_coe_iff]
-    field_simp
+  -- the perspectives are `(3/4)^α (1/4)^{1-α}` and `(1/4)^α (3/4)^{1-α}`; move to ℝ, clear
+  -- denominators
+  cases b <;> norm_num [persp_rpow_of_pos, div_rpow] <;>
+    rw [← coe_mul, ← coe_mul, ← coe_add, coe_eq_coe_iff] <;> field_simp
   ring
 
 end Distribution
@@ -121,7 +120,7 @@ end Distribution
 
 /-- `L` couples the draws of rounds on any two bits along equal reports at budget `c`. -/
 def RRCoupling {B : Type} [Zero B] [Top B] (L : GradedLifting.{0} B) (c : B) : Prop :=
-  ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') draw draw
+  ∀ b b', L.Rel c (fun r r' ↦ rrOut b r = rrOut b' r') rrDraw rrDraw
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
   {B : Type} [AddCommMonoid B] [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
@@ -129,26 +128,24 @@ variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-! ## The same round, against a spec -/
 
+variable {GF : BundledGFunctors} [BudgetCreditGS B GF]
+local bi IProp GF
+
 section Wp
 
-variable {GF : BundledGFunctors} [MicrometerGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+variable [MicrometerGS rT .hasNoLC GF]
 
 /-- The program reports `bif d then b else !b`. -/
 theorem wp_report (d b : Bool) (Φ : Val rT → _) :
     Φ (.bool (bif d then b else !b)) ⊢
       wp L ⊤ pl(if #bool d then #b else ~#b) Φ := by
-  cases d <;> cases b <;>
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
-    iintro H <;> wp_pures <;> wp_value <;> imodintro <;> iexact H
+  cases d <;> cases b <;> simp <;> iintro H <;> wp_pures <;> wp_value <;> imodintro <;> iexact H
 
 /-- The spec reports `bif d then b else !b`, under any evaluation context. -/
 theorem tp_report (K : Ectx rT) (d b : Bool) (e : Exp rT) (Φ : Val rT → _) :
     ⤇ K.fill pl(if #bool d then #b else ~#b) ∗
       (⤇ K.fill pl(#bool (bif d then b else !b)) -∗ wp L ⊤ e Φ) ⊢ wp L ⊤ e Φ := by
-  cases d <;> cases b <;>
-    simp only [Bool.cond_false, Bool.cond_true, Bool.not_false, Bool.not_true] <;>
-    iintro ⟨Hj, H⟩ <;> tp_pures <;> iapply H <;> iexact Hj
+  cases d <;> cases b <;> simp <;> iintro ⟨Hj, H⟩ <;> tp_pures <;> iapply H <;> iexact Hj
 
 /-- One round against the spec in context `K`, spending `↯b c` given a coupling of the two
 draws at `c`: both sides report the same bit. -/
@@ -178,8 +175,7 @@ end Wp
 
 /-! ## One round, refined against itself -/
 
-variable {GF : BundledGFunctors} [MicrometerRGS rT .hasNoLC GF] [BudgetCreditGS B GF]
-local bi IProp GF
+variable [MicrometerRGS rT .hasNoLC GF]
 
 /-- One round refines itself at equal reports, spending `↯b c`, given a coupling of the two draws
 at `c`. -/
@@ -262,7 +258,7 @@ theorem rrCount_div : D (k • c) (limExecV ⟨rrCount b k, σ⟩) (limExecV ⟨
   IsSound.sound (rrCount_rel c hc hcpl b b' k σ σ')
 
 /-- The loop as a mechanism is `k • c`-private in every divergence `L` is sound for. -/
-theorem rrCount_isPrivate (k : ℕ) (σ : State rT) : (rrCountMech k σ).IsPrivate D ⊤ (k • c) :=
+theorem rrCount_isPrivate : (rrCountMech k σ).IsPrivate D ⊤ (k • c) :=
   fun b b' _ ↦ rrCount_div c hc hcpl b b' k σ σ
 
 end Adequacy
@@ -276,9 +272,9 @@ theorem expBudget_log_three : expBudget (ofReal (log 3)) = 3 := by
   norm_num
 
 /-- The privacy budget `(ln 3, 0)`, shared by the dp and zCDP liftings. -/
-noncomputable abbrev budget : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 3), 0)
+noncomputable abbrev rrBudget : ℝ≥0∞ × ℝ≥0∞ := (ofReal (log 3), 0)
 
-/-- The budget `(ln 3, 0)` is finite, so it can be spent. -/
-theorem isAddLeftRegular_budget : IsAddLeftRegular budget := by simp
+/-- The budget `(ln 3, 0)` is finite. -/
+theorem rrBudget_isAddLeftRegular : IsAddLeftRegular rrBudget := by simp
 
 end ProbLang.RandomizedResponse

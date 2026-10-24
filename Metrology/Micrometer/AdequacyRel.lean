@@ -19,8 +19,8 @@ A closed refinement relates the two limit outputs at budget `b` and bounds their
 namespace ProbLang
 
 open Iris hiding wp_mono
-open Iris.BI Iris.ProofMode OFE COFE Iris.Std DisjointLeibnizSet Auth HeapView
-open ProbLang.MicrometerWpGS
+open Iris.BI Iris.ProofMode Auth
+open MicrometerWpGS
 open GradedLifting
 open MeasureTheory.Measure (dirac map_dirac')
 open Ectx (fill)
@@ -61,18 +61,18 @@ section Spec
 variable [SpecGS rT GF]
 
 /-- Spec ownership of `e` is that of `e` in the empty context. -/
-theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fill ([] : Ectx rT) e) :=
+theorem spec_eq_fill_nil (e : Exp rT) : (iprop(⤇ e) : IProp GF) = iprop(⤇ fill [] e) :=
   rfl
 
 variable (v : Val rT)
 
 /-- Spec ownership of a value in the empty context is that of the value. -/
 theorem spec_fill_nil_eq_ofVal :
-    (iprop(⤇ fill ([] : Ectx rT) v.1) : IProp GF) = iprop(⤇ ofVal v) :=
+    (iprop(⤇ fill [] v.1) : IProp GF) = iprop(⤇ ofVal v) :=
   rfl
 
 /-- Spec ownership of a value in the empty context gives the postcondition of `wp_adequacy`. -/
-theorem spec_fill_nil_exists : ⤇ fill ([] : Ectx rT) v.1 ⊢ ∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝ := by
+theorem spec_fill_nil_exists : ⤇ fill [] v.1 ⊢ ∃ v', ⤇ ofVal v' ∗ ⌜v = v'⌝ := by
   rw [spec_fill_nil_eq_ofVal]
   iintro Hj
   iexists v
@@ -88,7 +88,7 @@ section Coupling
 
 variable {B : Type} [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B] [OrderTop B]
   [Nontrivial B] {L : GradedLifting.{0} B} [L.IsLawful] [L.IsZeroLeft] [L.IsLeftContinuous]
-  [L.IsBudgetClosed] {GF : BundledGFunctors} [RefinesPreGS rT B GF]
+  [L.IsBudgetClosed] [RefinesPreGS rT B GF]
   (A : ∀ (_ : MicrometerRGS rT .hasNoLC GF) (_ : BudgetCreditGS B GF), lrel rT GF)
 
 variable (φ : Val rT → Val rT → Prop) (e e' : Exp rT) (σ σ' : State rT)
@@ -123,7 +123,7 @@ theorem approximates_coupling (b : B) (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car 
   iframe Hspec
   iapply HA IR IBC v v' $$ HAv
 
-/-- `approximates_coupling` without budget credits. -/
+/-- The lifting at budget `0` of `approximates_coupling`, with no budget credits. -/
 theorem refines_coupling (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜φ v v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ refines L ⊤ e e' (A IR IBC)) :
@@ -134,8 +134,8 @@ theorem refines_coupling (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜
 
 /-- A refinement at equal results from `↯b b` bounds the output divergence by `b`
 (clutch-dp's `adequacy_rel.v`). -/
-theorem approximates_div {D : GradedDivergence.{0} B} [L.IsSound D] (e e' : Exp rT)
-    (σ σ' : State rT) (b : B) (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
+theorem approximates_div {D : GradedDivergence.{0} B} [L.IsSound D] (b : B)
+    (HA : ∀ IR IBC v v', ⊢ (A IR IBC).car v v' -∗ ⌜v = v'⌝)
     (Hlog : ∀ (IR : MicrometerRGS rT .hasNoLC GF) (IBC : BudgetCreditGS B GF),
       ⊢ ↯b b -∗ refines L ⊤ e e' (A IR IBC)) :
     D b (limExecV ⟨e, σ⟩) (limExecV ⟨e', σ'⟩) :=
@@ -155,12 +155,26 @@ variable {hlc : HasLC}
 /-- `lrel_int` relates only equal values. -/
 theorem lrel_int_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
     ⊢ lrel_int.car v v' -∗ ⌜v = v'⌝ := by
-  unfold lrel_int; iintro ⟨%n, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+  unfold lrel_int
+  iintro ⟨%n, %⟨rfl, rfl⟩⟩
+  ipureintro
+  rfl
 
 /-- `lrel_bool` relates only equal values. -/
 theorem lrel_bool_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
     ⊢ lrel_bool.car v v' -∗ ⌜v = v'⌝ := by
-  unfold lrel_bool; iintro ⟨%b, %⟨rfl, rfl⟩⟩; ipureintro; rfl
+  unfold lrel_bool
+  iintro ⟨%b, %⟨rfl, rfl⟩⟩
+  ipureintro
+  rfl
+
+/-- `lrel_real` relates only equal values. -/
+theorem lrel_real_car_eq [MicrometerRGS rT hlc GF] (v v' : Val rT) :
+    ⊢ lrel_real.car v v' -∗ ⌜v = v'⌝ := by
+  unfold lrel_real
+  iintro ⟨%r, %⟨rfl, rfl⟩⟩
+  ipureintro
+  rfl
 
 /-- A product of relations between equal values relates only equal values. -/
 theorem lrel_prod_car_eq [MicrometerRGS rT hlc GF] {A A' : lrel rT GF}
@@ -207,36 +221,34 @@ noncomputable def MicrometerFunctor : BundledGFunctors := fun
 
 /-! ### `RefinesPreGS` instances for `MicrometerFunctor` -/
 
-instance MicrometerFunctor_WsatGpreS : WsatGpreS (MicrometerFunctor rT B) where
-  inv := ⟨0, rfl⟩
-  enabled := ⟨1, rfl⟩
-  disabled := ⟨2, rfl⟩
-
-instance MicrometerFunctor_LcGpreS : LcGpreS (MicrometerFunctor rT B) where
-  lc_elem := ⟨3, rfl⟩
-
-instance MicrometerFunctor_InvGpreS : InvGpreS (MicrometerFunctor rT B) where
-  toWsatGpreS := MicrometerFunctor_WsatGpreS rT B
-  toLcGpreS := MicrometerFunctor_LcGpreS rT B
+/-- The invariant and credit ghost state sit in slots `0` to `3`. -/
+instance : InvGpreS (MicrometerFunctor rT B) where
+  toWsatGpreS := { inv := ⟨0, rfl⟩, enabled := ⟨1, rfl⟩, disabled := ⟨2, rfl⟩ }
+  toLcGpreS := { lc_elem := ⟨3, rfl⟩ }
 
 -- The program and spec heaps (and tapes) use the same camera, so they share slots 4 and 5;
 -- separate ghost names keep them apart.
-instance MicrometerFunctor_AppPreGS : AppPreGS rT (MicrometerFunctor rT B) where
+/-- The program heap and tapes sit in slots `4` and `5`. -/
+instance : AppPreGS rT (MicrometerFunctor rT B) where
   heap := ⟨4, rfl⟩
   tapes := ⟨5, rfl⟩
 
-instance MicrometerFunctor_SpecPreGS : SpecPreGS rT (MicrometerFunctor rT B) where
+/-- The spec thread, heap and tapes sit in slots `6`, `4` and `5`. -/
+instance : SpecPreGS rT (MicrometerFunctor rT B) where
   prog := ⟨6, rfl⟩
   heap := ⟨4, rfl⟩
   tapes := ⟨5, rfl⟩
 
-instance MicrometerFunctor_BudgetCreditPreGS : BudgetCreditPreGS B (MicrometerFunctor rT B) where
+/-- The budget camera sits in slot `7`. -/
+instance : BudgetCreditPreGS B (MicrometerFunctor rT B) where
   bc := ⟨7, rfl⟩
 
-instance MicrometerFunctor_NaInvG : NaInvG (MicrometerFunctor rT B) where
+/-- The non-atomic invariant ghost state sits in slot `8`. -/
+instance : NaInvG (MicrometerFunctor rT B) where
   inv := ⟨8, rfl⟩
 
-instance MicrometerFunctor_RefinesPreGS : RefinesPreGS rT B (MicrometerFunctor rT B) where
+/-- `MicrometerFunctor` carries every camera that refinement adequacy allocates. -/
+instance : RefinesPreGS rT B (MicrometerFunctor rT B) where
 
 end MicrometerFunctor
 

@@ -13,14 +13,13 @@ import Metrology.Iris.LocalBI
 
 /-! # Adaptive randomized response, with the escort law
 
-`rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, not
-`log (9/4)`, as the escort law pays the second round's cost on average. -/
+`rrAdaptive_renyi`: adaptive randomized response is within Rényi-2 budget `log (19/12)`, by the
+escort law. -/
 
 open MeasureTheory ProbabilityTheory GradedLifting GradedDivergence AdaptiveRenyi
 open scoped ENNReal
 
-namespace ProbLang
-namespace RandomizedResponse
+namespace ProbLang.RandomizedResponse
 
 open MeasureTheory.Measure (ext_iff_singleton map_apply map_map id_comp)
 open Set (Ico indicator finite_Ico)
@@ -32,7 +31,7 @@ open Cfg (drawCost drawCost_apply)
 
 /-! ## The second round: one `rr3` draw at `log (3/2)` -/
 
-/-- The report of `rr3 b` as a function of its draw. -/
+/-- The report of `rr3 b` as a function of its draw on `[0, 3)`: `b` on `0, 1` and `!b` on `2`. -/
 def rr3Out (b : Bool) (r : Int) : Bool := if r < 2 then b else !b
 
 /-- A draw from `[0, 3)` read by `h`, which takes the value `d` at two of the three draws, is
@@ -63,37 +62,64 @@ noncomputable def adaptiveCost (n m : Int) : ℝ≥0∞ :=
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
+open scoped Classical in
+/-- The left report of the first draws, read off the configuration: `true` only at draw `2`. -/
+theorem measurable_reportL (σ : State rT) :
+    Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) :=
+  measurable_to_bool <| by
+    convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
+    ext
+    simp
+
+open scoped Classical in
+/-- The right report of the first draws, read off the configuration: `true` at draws `0, 1`. -/
+theorem measurable_reportR (K : Ectx rT) (σ' : State rT) :
+    Measurable fun (ρ : Cfg rT) ↦
+      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) :=
+  measurable_to_bool <| by
+    convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
+      (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
+    ext
+    simp
+
+/-- The first draws, mapped into configurations by `x`, are supported on the image of `[0, 3)`. -/
+theorem map_unifInt_three_compl_image (x : Int → Cfg rT) :
+    (unifInt 3 (by norm_num)).map x (x '' Ico 0 3)ᶜ = 0 := by
+  rw [map_apply .of_discrete ((finite_Ico 0 3).image x).measurableSet.compl]
+  exact measure_mono_null (fun n hn h ↦ hn ⟨n, h, rfl⟩) (unifInt_compl_Ico _)
+
+open scoped Classical in
+/-- The left report of the first draws is randomized response on `false`. -/
+theorem map_reportL (σ : State rT) :
+    ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT)).map
+      (fun ρ ↦ decide (ρ = ⟨pl(#2), σ⟩)) = randResp false := by
+  rw [map_map (measurable_reportL σ) .of_discrete]
+  exact map_unifInt_three (by simp) (by simp) (by simp)
+
+open scoped Classical in
+/-- The right report of the first draws is randomized response on `true`. -/
+theorem map_reportR (K : Ectx rT) (σ' : State rT) :
+    ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT)).map
+      (fun ρ ↦ decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩)) = randResp true := by
+  have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
+  rw [map_map (measurable_reportR K σ') .of_discrete]
+  exact map_unifInt_three (by simp [hK]) (by simp [hK]) (by simp [hK])
+
 /-- The first draws, as configurations, form an escort head at `log (19/12)` with continuation
-cost `adaptiveCost`: map the draws to reports and use `renyiDivergence_randResp_escort`. -/
+cost `adaptiveCost`. -/
 theorem escortHead_rr3 (K : Ectx rT) (σ σ' : State rT) :
     (escort 2).head ((unifInt 3 (by norm_num)).map fun n ↦ (⟨pl(#int n), σ⟩ : Cfg rT))
       ((unifInt 3 (by norm_num)).map fun m ↦ (⟨K.fill pl(#int m), σ'⟩ : Cfg rT))
       (drawCost σ σ' K adaptiveCost) (ofReal (log (19 / 12))) := by
   classical
   have hK (a b) : K.fill a = K.fill b ↔ a = b := (Ectx.fill_injective K).eq_iff
-  -- `hf`, `hg`: the left and right reports, read off the configurations (left reports `true` only
-  -- at draw `2`, right reports `true` at draws `0, 1`)
-  have hf : Measurable fun (ρ : Cfg rT) ↦ decide (ρ = ⟨pl(#2), σ⟩) := measurable_to_bool <| by
-    convert measurableSet_singleton (⟨pl(#2), σ⟩ : Cfg rT)
-    ext
-    simp
-  have hg : Measurable fun (ρ : Cfg rT) ↦
-      decide (ρ = ⟨K.fill pl(#0), σ'⟩ ∨ ρ = ⟨K.fill pl(#1), σ'⟩) := measurable_to_bool <| by
-    convert (measurableSet_singleton (⟨K.fill pl(#1), σ'⟩ : Cfg rT)).insert
-      (⟨K.fill pl(#0), σ'⟩ : Cfg rT)
-    ext
-    simp
-  have hsupp {x : Int → Cfg rT} : (unifInt 3 (by norm_num)).map x (x '' Ico 0 3)ᶜ = 0 := by
-    rw [map_apply .of_discrete ((finite_Ico 0 3).image x).measurableSet.compl]
-    exact measure_mono_null (fun n hn h ↦ hn ⟨n, h, rfl⟩) (unifInt_compl_Ico _)
-  refine escortHead_of_map hf hg ((finite_Ico 0 3).image _).measurableSet
-    ((finite_Ico 0 3).image _).measurableSet hsupp hsupp stageTwoCost ?_ ?_
+  refine escortHead_of_map (measurable_reportL σ) (measurable_reportR K σ')
+    ((finite_Ico 0 3).image _).measurableSet ((finite_Ico 0 3).image _).measurableSet
+    (map_unifInt_three_compl_image _) (map_unifInt_three_compl_image _) stageTwoCost ?_ ?_
   · rintro _ _ ⟨n, ⟨hn0, hn3⟩, rfl⟩ ⟨m, ⟨hm0, hm3⟩, rfl⟩ hfg
     rw [drawCost_apply]
     interval_cases n <;> interval_cases m <;> simp_all [adaptiveCost, rr3Out]
-  · rw [map_map hf .of_discrete, map_map hg .of_discrete,
-      map_unifInt_three (d := false) (by simp) (by simp) (by simp),
-      map_unifInt_three (d := true) (by simp [hK]) (by simp [hK]) (by simp [hK])]
+  · rw [map_reportL, map_reportR]
     simpa [id_comp] using renyiDivergence_randResp_escort
 
 /-! ## The relational proof -/
@@ -142,5 +168,4 @@ theorem rrAdaptive_renyi (σ σ' : State rT) :
     _ _ σ σ' _ (fun _ _ ↦ lrel_prod_car_eq lrel_bool_car_eq lrel_bool_car_eq)
     fun _ _ ↦ rrAdaptive_refines
 
-end RandomizedResponse
-end ProbLang
+end ProbLang.RandomizedResponse

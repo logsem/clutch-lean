@@ -1,10 +1,12 @@
 name = "metrology"
 testDriver = "ProbLangTest"
-defaultTargets = ["Metrology", "ProbLangSampleWidget"]
+defaultTargets = ["Metrology", "ProbLangSampleWidget", "MetrologyAsm",
+  "Tests.SailSpike", "Tests.StrictBinders", "Tests.Keypair"]
 
 [leanOptions]
 pp.unicode.fun = true
 autoImplicit = false
+relaxedAutoImplicit = false
 
 [[require]]
 name = "mathlib"
@@ -54,3 +56,39 @@ root = "ProbLangSample"
 [[lean_lib]]
 name = "ProbLangSampleWidget"
 needs = ["problang-sample"]
+
+# Pinned Sail runtime and architecture for the assembly FFI examples.
+[[require]]
+name = "Sail"
+path = "runtime/lean-sail"
+
+[[lean_lib]]
+name = "RiscvZkvm.Sail"
+moreLeanArgs = ["--tstack=400000"]
+moreLeancArgs = ["-fbracket-depth=500"]
+
+# Only this diagnostic module needs Lean's legacy do elaborator.
+[[lean_lib]]
+name = "RiscvZkvm.Sail.RvfiDii"
+moreLeanArgs = ["--tstack=400000"]
+leanOptions.backward.do.legacy = true
+
+[[lean_lib]]
+name = "MetrologyAsm"
+moreLeanArgs = ["--tstack=400000"]
+
+[[lean_lib]]
+name = "Tests.SailSpike"
+moreLeanArgs = ["--tstack=400000"]
+
+[[lean_lib]]
+name = "Tests.StrictBinders"
+moreLeanArgs = ["--tstack=400000"]
+
+[[lean_lib]]
+name = "Tests.StrictSourceEquivalence"
+moreLeanArgs = ["--tstack=400000"]
+
+[[lean_lib]]
+name = "Tests.Keypair"
+moreLeanArgs = ["--tstack=400000"]

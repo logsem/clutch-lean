@@ -19,8 +19,7 @@ namespace ProbLang
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 variable {B : Type} [PartialOrder B] [OrderTop B] {L : GradedLifting.{0} B}
 
-/-- A `wp` of `e` may open invariants around it, so a mask-changing update before `e` can be
-closed after its step (`of_atomic`). -/
+/-- `wp` of `e` may open invariants around it (`of_atomic`). -/
 def OpenInv (L : GradedLifting.{0} B) (e : Exp rT) : Prop :=
   ∀ {GF : BundledGFunctors} [MicrometerWpGS (rT := rT) GF] [BudgetGS B GF] {E1 E2 : CoPset}
     {Φ : Val rT → IProp GF}, iprop%
@@ -92,7 +91,7 @@ theorem specCoupl_close_step_of_atomic [L.IsLawful] [L.IsSupportLocal] [L.HasBin
   iframe
   iintro %σ₅ %ρ''' %b₅ HInnerBody
   cases htv : e₃.toVal? with
-  | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim -- impossible: e₃ is a value
+  | none => exact (Exp.toVal?_eq_none.mp htv he₃val).elim
   | some _ =>
     imod HInnerBody with ⟨Hσ5, Hs5, Hb5, >HΦv⟩
     imodintro
@@ -152,7 +151,7 @@ variable (z : Int)
 instance isOpenInv_rand_unit : IsOpenInv L (rT := rT) pl(rand(#z, #())) where
   out := of_atomic (rand_unit z)
 
-instance isOpenInv_rand_lbl (l : Loc) : IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
+instance isOpenInv_rand_lbl : IsOpenInv L (rT := rT) pl(rand(#z, #lbl l)) where
   out := of_atomic (rand_lbl z l)
 
 end Instances
@@ -172,6 +171,17 @@ theorem elimAcc_close {β : X → IProp GF} {γ : X → Option (IProp GF)} {x : 
     dsimp only [BIBase.wandM]
     iexact HΦ
   | some P => iapply HΦ $$ Hcl
+
+/-- The shared tail of the `iinv` instances: `wp` of the accessor's postcondition with the closing
+wand framed in. -/
+theorem wp_elimAcc_core {β : X → IProp GF} {γ : X → Option (IProp GF)} {x : X} : iprop%
+    (β x ={E2, E1}=∗ (γ x).getD iprop(emp)) ∗
+      wp L E2 e (fun v => iprop(|={E2}=> β x ∗ (γ x -∗? Φ v))) ⊢
+      wp L E2 e (fun v => iprop(|={E2, E1}=> Φ v)) := by
+  iintro ⟨Hclose, Hinner⟩
+  iapply MicrometerWpGS.wp_frame_wand
+  iframe Hclose
+  iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
 
 variable [h : IsOpenInv L e]
 
@@ -193,9 +203,7 @@ instance (priority := low) elimAcc_wp_atomic (E₁ E₂ : CoPset) (α β : X →
     imod Hacc with ⟨%x, Hα, Hclose⟩
     imodintro
     ispecialize Hinner $$ %x Hα
-    iapply MicrometerWpGS.wp_frame_wand
-    iframe Hclose
-    iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
+    iapply wp_elimAcc_core $$ [$Hclose $Hinner]
 
 /-- `iinv` with an accessor that keeps the mask `E` works around any `wp`. -/
 instance elimAcc_wp_nonatomic (E : CoPset) (α β : X → _) (γ : X → _) :
@@ -209,9 +217,7 @@ instance elimAcc_wp_nonatomic (E : CoPset) (α β : X → _) (γ : X → _) :
     imodintro
     ispecialize Hinner $$ %x Hα
     iapply MicrometerWpGS.wp_fupd
-    iapply MicrometerWpGS.wp_frame_wand
-    iframe Hclose
-    iapply MicrometerWpGS.wp_mono (fun _ => elimAcc_close) $$ Hinner
+    iapply wp_elimAcc_core $$ [$Hclose $Hinner]
 
 end Wp
 

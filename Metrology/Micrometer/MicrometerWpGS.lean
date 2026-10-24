@@ -14,11 +14,9 @@ public import Iris.ProofMode.InstancesUpdates
 
 @[expose] public section
 
-open Std Iris Iris.BI Iris.ProofMode OFE COFE ProbLang GradedLifting
+open Std Iris Iris.BI Iris.ProofMode OFE COFE GradedLifting
 
 namespace ProbLang
-
-variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
 /-- The ghost state of `wp`. -/
 class MicrometerWpGS {rT : outParam Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
@@ -30,10 +28,9 @@ class MicrometerWpGS {rT : outParam Type} [MeasurableSpace rT] [LawfulProbLang�
   /-- The interpretation of the program state. -/
   stateInterp : State rT → IProp GF
 
-/-- `MicrometerWpGS.invGS`, with the measurable space and language read off the instance, not
-searched for first. -/
+/-- The invariant ghost state of a `MicrometerWpGS` instance, as an `InvGS_gen` instance. -/
 @[reducible]
-instance MicrometerWpGS.instInvGS {R : Type} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+instance MicrometerWpGS.instInvGS {R : Type} [MeasurableSpace R] [LawfulProbLangℝ R]
     {GF : BundledGFunctors} [w : MicrometerWpGS (rT := R) GF] : InvGS_gen w.hlc GF := w.invGS
 
 /-! ## Budget -/
@@ -43,9 +40,9 @@ class BudgetGS (B : Type) (GF : BundledGFunctors) where
   /-- The resource owned for a budget. -/
   interp : B → IProp GF
 
-variable {B : Type} {GF : BundledGFunctors}
-
 open BudgetGS
+
+variable {B : Type} {GF : BundledGFunctors}
 
 /-- The resource `wp` owns for budget `b`. -/
 abbrev budgetInterp [BudgetGS B GF] (b : B) : IProp GF := interp b

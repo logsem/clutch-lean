@@ -15,8 +15,9 @@ open scoped ENNReal
 
 namespace ProbLang.RandomizedResponse
 
-open ENNReal (ofReal ofReal_ne_top toReal_ofReal isAddLeftRegular_ofReal)
-open Real (log rpow_le_rpow_of_exponent_le rpow_sub rpow_one log_nonneg exp_log)
+open ENNReal (ofReal ofReal_ne_top ofReal_le_ofReal toReal_ofReal isAddLeftRegular_ofReal)
+open Real (log rpow_sub rpow_one log_nonneg exp_log rpow_le_rpow_of_exponent_le log_rpow log_le_log
+  rpow_sub_one)
 
 /-- The exact order-`α` Rényi cost `ρ_α` of one round, between the reports on different bits. -/
 noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
@@ -25,19 +26,29 @@ noncomputable def rrRenyi (α : ℝ) : ℝ≥0∞ :=
 /-- The `α`-th moment `(3^α + 3^{1-α}) / 4` of one round is at least `1`: with `t = 3^α ≥ 3`, it is
 `1 + (t - 1)(t - 3) / (4 t)`. -/
 theorem one_le_rrMoment {α : ℝ} (hα : 1 ≤ α) : 1 ≤ ((3 : ℝ) ^ α + 3 ^ (1 - α)) / 4 := by
-  have ht : (3 : ℝ) ≤ 3 ^ α := by
-    simpa using rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 3) hα
+  have ht : (3 : ℝ) ≤ 3 ^ α := Real.self_le_rpow_of_one_le (by norm_num) hα
   rw [rpow_sub (by norm_num), rpow_one, le_div_iff₀ (by norm_num), ← sub_nonneg,
     show 3 ^ α + 3 / 3 ^ α - 1 * 4 = ((3 : ℝ) ^ α - 1) * (3 ^ α - 3) / 3 ^ α by
       field_simp; ring]
   exact div_nonneg (mul_nonneg (by linarith) (by linarith)) (by positivity)
+
+/-- Every Rényi order `α > 1` of the round profile is at most `ln 3`. -/
+theorem rrRenyi_le_log_three {α : ℝ} (hα : 1 < α) : rrRenyi α ≤ ofReal (log 3) := by
+  have ht : (3 : ℝ) ≤ 3 ^ α := by
+    simpa using rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 3) hα.le
+  refine ofReal_le_ofReal ((div_le_iff₀ (by linarith)).2 ?_)
+  rw [mul_comm, ← log_rpow (by norm_num)]
+  refine log_le_log (by positivity) ?_
+  rw [rpow_sub (by norm_num), rpow_sub_one (by norm_num), rpow_one]
+  -- with `t = 3^α ≥ 3`, `3 / t ≤ 1`
+  linarith [(div_le_one (by positivity : (0 : ℝ) < 3 ^ α)).2 ht]
 
 variable {α : ℝ} [hα : Fact (1 < α)]
 
 /-- A Rényi bound between the reports on different bits couples the draws: condition on the
 report. -/
 theorem rrCoupling_of_renyi {ρ : ℝ≥0∞}
-    (h : ∀ b, renyiDivergence α ρ (draw.map (rrOut b)) (draw.map (rrOut !b))) :
+    (h : ∀ b, renyiDivergence α ρ (rrDraw.map (rrOut b)) (rrDraw.map (rrOut !b))) :
     RRCoupling (codensity (renyiDivergence α)) ρ := fun b b' ↦
   codensity_renyi_rel_of_map .of_discrete .of_discrete <| by
     rcases Bool.eq_or_eq_not b' b with rfl | rfl
@@ -46,12 +57,13 @@ theorem rrCoupling_of_renyi {ρ : ℝ≥0∞}
 /-- One round couples at `ρ_α`. -/
 theorem rrCoupling_renyi : RRCoupling (codensity (renyiDivergence α)) (rrRenyi α) :=
   rrCoupling_of_renyi fun b ↦ by
+    have h1 : 0 < α - 1 := sub_pos.2 hα.out
     have := one_le_rrMoment hα.out.le
     -- unfold to `M ≤ exp ((α-1) · log M / (α-1))`; `1 ≤ M` makes `toReal ∘ ofReal` the identity,
     -- leaving `M ≤ M`
     rw [rrRenyi, renyiDivergence_iff_of_ne_top hα.out.le ofReal_ne_top, fDiv_rrOut hα.out,
-      toReal_ofReal (div_nonneg (log_nonneg this) (by linarith [hα.out])),
-      mul_div_cancel₀ _ (by linarith [hα.out]), exp_log (by linarith)]
+      toReal_ofReal (div_nonneg (log_nonneg this) h1.le),
+      mul_div_cancel₀ _ h1.ne', exp_log (zero_lt_one.trans_le this)]
 
 variable {rT : Type} [MeasurableSpace rT] [LawfulProbLangℝ rT]
 
