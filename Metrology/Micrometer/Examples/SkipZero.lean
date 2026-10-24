@@ -46,7 +46,7 @@ theorem unif_le_skipZero (N : Int) (hN : 0 < N) (σ σ' : State rT) {S : Set (Ex
     (hS : MeasurableSet S) :
     limExecV ⟨unif N, σ⟩ S ≤ limExecV ⟨skipZero N, σ'⟩ S + (N.toNat : ℝ≥0∞)⁻¹ :=
   limExecV_le_add_of_refines_tv (GF := MicrometerFunctor rT ℝ≥0∞)
-    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ _ _ ↦ lrel_int_car_eq)
+    (fun _ _ ↦ lrel_int) _ _ σ σ' _ (fun _ _ ↦ lrel_int_car_eq)
     (fun _ _ ↦ unif_refines_skipZero N hN) hS
 
 end SkipZero

@@ -72,7 +72,7 @@ theorem drawAB_le_drawBA (σ σ' : State rT) {S : Set (Exp rT)} (hS : Measurable
     limExecV ⟨drawAB N, σ⟩ S ≤ limExecV ⟨drawBA N, σ'⟩ S := by
   simpa using limExecV_le_add_of_refines_tv (GF := MicrometerFunctor rT ℝ≥0∞)
     (fun _ _ ↦ lrel_prod lrel_int lrel_int) _ _ σ σ' 0
-    (fun _ _ _ _ ↦ lrel_prod_car_eq lrel_int_car_eq lrel_int_car_eq)
+    (fun _ _ ↦ lrel_prod_car_eq lrel_int_car_eq lrel_int_car_eq)
     (fun _ _ ↦ by iintro -; iapply drawAB_refines_drawBA N hN) hS
 
 end Presample
