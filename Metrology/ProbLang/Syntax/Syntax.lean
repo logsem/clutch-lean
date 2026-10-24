@@ -855,6 +855,9 @@ abbrev Val.lbl  (l : Lbl) : Val rT  := Val.ofBaseLit (.lbl l)
 /-- The real value `r`. -/
 abbrev Val.real (r : rT) : Val rT   := Val.ofBaseLit (.real r)
 
+/-- Values are inhabited by `()`. -/
+instance : Inhabited (Val rT) := ⟨.unit⟩
+
 /-- The pair of two values. -/
 @[reducible] def Val.pair (v w : Val rT) : Val rT :=
   ⟨.pair v.1 w.1, .pair v.2 w.2, .pair v.lc w.lc⟩

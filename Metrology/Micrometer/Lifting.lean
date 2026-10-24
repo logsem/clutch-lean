@@ -42,7 +42,7 @@ theorem wp_lift_prim_steps_coupl_adv' [Add B] [L.IsLawful] [L.HasBind] [L.IsSupp
   iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
   imod H $$ %σ₁ %e₁' %σ₁' %b [$Hσ $Hs $Hb] with ⟨%R, %hred, %hred', %hcpl, H⟩
   imodintro
-  iapply progCoupl_steps_adv' hred hred' hcpl
+  iapply progCoupl_steps_canonical hred hred' hcpl
   iintro %e₂ %σ₂ %e₂' %σ₂' %hR !>
   iapply H $$ %e₂ %σ₂ %e₂' %σ₂' %hR
 

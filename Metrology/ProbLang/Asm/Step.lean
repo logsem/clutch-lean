@@ -1,6 +1,6 @@
 module
 
-public import Metrology.ProbLang.Asm.Execution
+public import Metrology.ProbLang.Asm.Dispatch
 public import Metrology.ProbLang.Asm.Capture
 public import Metrology.ProbLang.CtxStep
 

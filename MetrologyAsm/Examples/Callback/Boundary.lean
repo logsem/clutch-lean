@@ -14,12 +14,6 @@ open ProbLang ProbLang.Asm Std.ExtTreeMap
 /-- The scalar callback fragment owns the empty logical footprint. -/
 @[simp] theorem importToy_footprint : callFootprint importToyCode [] = ∅ := rfl
 
-/-- Restricting a logical heap to the empty footprint removes every cell. -/
-theorem restrict_empty_heap {V : Type} (heap : LocHeap V) : restrict ∅ heap = ∅ := by
-  apply ext_getElem?
-  intro l
-  simp [restrict_get]
-
 /-- The callback fragment is a valid fragment with no regions. -/
 theorem importToy_valid_empty : validFragment importToyCode [] ∅ := by
   exact ⟨rfl, rfl, rfl⟩

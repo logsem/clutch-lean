@@ -80,7 +80,7 @@ are separately identified in WS9 and REPORT-KEYPAIR.md, not presented as a keypa
 | `Metrology.ProbLang.Asm.Boundary` | FFI semantics | 58/126 | 58/126 |
 | `Metrology.ProbLang.Asm.Capture` | FFI semantics | 1/6 | 1/6 |
 | `MetrologyAsm.Examples.Swap.Source` | Assembler/source | 3/14 | — |
-| `Metrology.ProbLang.Asm.Execution` | FFI semantics | 33/85 | 33/85 |
+| `Metrology.ProbLang.Asm.Dispatch` | FFI semantics | 33/85 | 33/85 |
 | `Metrology.ProbLang.Asm.Parser` | Assembler/source | 2/5 | 2/5 |
 | `Metrology.ProbLang.Asm.Semantics` | FFI semantics | 41/70 | 41/70 |
 | `Metrology.ProbLang.Asm.Step` | FFI semantics | 16/38 | 16/38 |

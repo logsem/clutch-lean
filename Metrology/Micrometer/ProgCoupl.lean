@@ -200,7 +200,7 @@ theorem progCoupl_intro (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (μ₁'.bind 
 
 /-- `progCoupl_steps_law` for the canonical law: a lifting with per-pair leftover `R` at the whole
 budget `b`. -/
-theorem progCoupl_steps_adv' (Hred' : Reducible e₁' σ₁')
+theorem progCoupl_steps_canonical (Hred' : Reducible e₁' σ₁')
     (Hcpl : L b R (primStep ⟨e₁, σ₁⟩) (primStep ⟨e₁', σ₁'⟩)) : iprop%
     (∀ e₂ σ₂ e₂' σ₂', ⌜R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩ < (⊤ : B)⌝ -∗ |={∅}=>
         Z e₂ σ₂ e₂' σ₂' (R ⟨e₂, σ₂⟩ ⟨e₂', σ₂'⟩)) ⊢
@@ -246,7 +246,7 @@ theorem progCoupl_steps_adv (hb : b₁ + b₂ ≤ b)
   -- `IsTopAbsorbing.frame` needs both primitive steps to be probability measures
   have := prim_step_mass Hred
   have := prim_step_mass Hred'
-  progCoupl_steps_adv' Hred Hred' (mono (frame Hcpl) hb le_rfl)
+  progCoupl_steps_canonical Hred Hred' (mono (frame Hcpl) hb le_rfl)
 
 /-- Couple one program step against one spec step by a relational lifting within `b₁`, leaving
 `b₂` to the continuation: the step spends `b₁` out of the budget `b`. -/

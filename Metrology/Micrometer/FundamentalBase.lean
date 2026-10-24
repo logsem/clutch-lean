@@ -183,7 +183,7 @@ theorem exists_fresh_var (S : Finset Var) (e e' : Exp rT) (vs : ValSubstMap rT) 
   exact ⟨x, hx.1.1.1, hx.1.1.2, hx.1.2, hx.2⟩
 
 /-- A variable outside the set and the context domain is unbound in the context. -/
-theorem not_mem_union_dom {S : Finset Var} {Γrc : RelCtx rT GF} {x : Var}
+theorem notMem_union_dom {S : Finset Var} {Γrc : RelCtx rT GF} {x : Var}
     (hx : x ∉ S ∪ (Γrc.map (·.1)).toFinset) : x ∉ S ∧ Γrc.lookup x = none :=
   (Finset.notMem_union.1 hx).imp_right lookup_eq_none_of_notMem
 

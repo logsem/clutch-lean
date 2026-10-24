@@ -62,7 +62,7 @@ theorem escortHead_rr3_chi2 (K : Ectx rT) (σ σ' : State rT) :
   have hR : (fun ρ ρ' ↦ toRenyi 2 (drawCost σ σ' K adaptiveCostChi2 ρ ρ')) =
       drawCost σ σ' K adaptiveCost := by
     ext ρ ρ'
-    unfold drawCost
+    unfold drawCost Cfg.drawCostOf
     split_ifs <;> simp [toRenyi_adaptiveCostChi2]
   rw [head_escortPower, hR, toRenyi_two, log_ofReal (by norm_num),
     show (1 : ℝ) + 7 / 12 = 19 / 12 by norm_num]

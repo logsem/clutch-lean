@@ -193,6 +193,12 @@ def restrict (F : Finset Loc) (heap : LocHeap V) : LocHeap V :=
   simp only [restrict, getElem?_filter']
   split <;> cases heap[l]? <;> simp_all
 
+/-- Restricting a logical heap to the empty footprint removes every cell. -/
+theorem restrict_empty_heap (heap : LocHeap V) : restrict ∅ heap = ∅ := by
+  apply ext_getElem?
+  intro l
+  simp [restrict_get]
+
 /-- A heap with no cells outside the footprint is its own restriction. -/
 theorem restrict_eq_self_of {F : Finset Loc} {heap : LocHeap V}
     (h : ∀ l, l ∉ F → heap[l]? = none) : restrict F heap = heap := by

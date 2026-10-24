@@ -1,4 +1,4 @@
-import Metrology.ProbLang.Asm.Execution
+import Metrology.ProbLang.Asm.Dispatch
 import Metrology.ProbLang.Asm.Assembler
 import MetrologyAsm.Sail.MemoryRules
 

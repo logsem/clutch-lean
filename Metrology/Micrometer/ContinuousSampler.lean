@@ -85,6 +85,15 @@ end Steps
 
 /-! ## Couplings of two continuous samplers -/
 
+/-- `unifUnit` lifts against its image `μ` along a measure-preserving `g`, on the support. -/
+theorem rel_graph_unifUnit [Zero B] [Add B] [Preorder B] [OrderTop B] [L.IsLawful]
+    [L.IsReflexive] [L.IsSupportLocal] {Y : Type} [MeasurableSpace Y]
+    {μ : MeasureTheory.Measure Y} {g : rT → Y} (hg : MeasurePreserving g unifUnit μ) :
+    L.Rel 0 (fun x y ↦ g x = y ∧ x ∈ unifUnitSupport) unifUnit μ := by
+  have h := (rel_graph (L := L) unifUnit hg.measurable).restrict unifUnitSupportMeasurable
+    unifUnitIsConcentrated
+  rwa [hg.map_eq] at h
+
 /-- Exact coupling of two continuous samplers along a measure-preserving `f`. -/
 theorem Cfg.uniformReal_rel_of_measurePreserving [Zero B] [Add B] [Preorder B] [OrderTop B]
     [L.IsLawful] [L.IsReflexive] [L.IsSupportLocal] (σ σ' : State rT) (f : rT → rT)
@@ -92,11 +101,8 @@ theorem Cfg.uniformReal_rel_of_measurePreserving [Zero B] [Add B] [Preorder B] [
     L.Rel 0 (fun c₁ c₂ : Cfg rT => ∃ r, r ∈ unifUnitSupport ∧
         c₁ = ⟨pl(#real r), σ⟩ ∧ c₂ = ⟨pl(#real (f r)), σ'⟩)
       (uniformReal σ) (uniformReal σ') := by
-  have h := (rel_graph (L := L) unifUnit hmp.measurable).restrict
-    unifUnitSupportMeasurable unifUnitIsConcentrated
-  rw [hmp.map_eq] at h
-  exact h.map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩) (measurable_realLit σ)
-    (measurable_realLit σ')
+  exact (rel_graph_unifUnit (L := L) hmp).map (fun r _ ⟨hrr', hr⟩ => ⟨r, hr, rfl, hrr' ▸ rfl⟩)
+    (measurable_realLit σ) (measurable_realLit σ')
 
 /-- Exact coupling of two continuous samplers along a measure-preserving `f` (the `tv` instance
 of `uniformReal_rel_of_measurePreserving`). -/
@@ -139,32 +145,15 @@ theorem wp_couple_urand_urand [MicrometerGS rT hlc GF] [BudgetGS B GF] (f : rT �
       (∀ r, ⌜r ∈ unifUnitSupport⌝ -∗ ⤇ K.fill pl(#real (f r)) -∗ Φ (.real r)) ⊢
       wp L E pl(urand) Φ := by
   iintro ⟨Hj, Hcnt⟩
-  iapply wp_lift_prim_steps_coupl urand_toVal?_eq_none
-  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod subset empty_subset with Hclose
-  imodintro
-  let R : Cfg rT → Cfg rT → Prop := fun c₁ c₂ => ∃ r, r ∈ unifUnitSupport ∧
-    c₁ = ⟨pl(#real r), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#real (f r)), σ₁'⟩
-  iexists R, 0, b
-  have hb : 0 + b ≤ b := (zero_add b).le
-  have hredL := reducible_urand σ₁
-  have hredR := (reducible_urand σ₁').fill K
-  have hcpl : L.Rel 0 R (primStep ⟨pl(urand), σ₁⟩) (primStep ⟨K.fill pl(urand), σ₁'⟩) := by
-    rw [primStep_urand σ₁, primStep_fill urand_not_isValue, primStep_urand σ₁']
-    exact (uniformReal_rel_of_measurePreserving σ₁ σ₁' f hmp).map_right
-      (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, hr, rfl, rfl⟩) (fillCfg.measurable K)
-  iframe %hb %hredL %hredR %hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨r, hrsupp, heq1, heq2⟩
-  cases heq1
-  cases heq2
-  iintro !> !>
-  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
-  imod Hclose
-  imodintro
-  iframe Hσ Hs' Hb
-  iapply wp_value_of_toVal rfl
-  iapply Hcnt $$ %r %hrsupp Hj'
+  iapply wp_couple_prim_lift_zero (ℓ := BaseLit.real) (ℓ' := BaseLit.real)
+    (S := fun r r' ↦ r ∈ unifUnitSupport ∧ r' = f r) urand_toVal?_eq_none reducible_urand
+    reducible_urand K (fun σ σ' ↦ ?_) E Φ
+  · rw [primStep_urand σ, primStep_fill urand_not_isValue, primStep_urand σ']
+    exact (uniformReal_rel_of_measurePreserving σ σ' f hmp).map_right
+      (by rintro _ _ ⟨r, hr, rfl, rfl⟩; exact ⟨r, f r, ⟨hr, rfl⟩, rfl, rfl⟩) (fillCfg.measurable K)
+  · iframe Hj
+    iintro %r %r' %⟨hr, rfl⟩ Hj'
+    iapply Hcnt $$ %r %hr Hj'
 
 /-! ## The relational rule -/
 

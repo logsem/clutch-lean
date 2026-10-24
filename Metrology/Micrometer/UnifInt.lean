@@ -315,6 +315,10 @@ theorem primStep_rand_unit (_Hz : 0 < z) (σ : State rT) :
   have h : headStep ⟨pl(rand(#z, #())), σ⟩ = uniform z σ := rfl
   exact primStep_eq_uniform_of_headStep h
 
+/-- `rand z` on the unit label is reducible in every state. -/
+theorem reducible_rand_unit (σ : State rT) : Reducible pl(rand(#z, #())) σ :=
+  reducible_of_headReducible (by is_lc) (show uniform z σ ≠ 0 from uniform_ne_zero z σ)
+
 /-- `primStep_rand_unit` together with discrete reducibility of `rand z`. -/
 @[discrete]
 theorem randUnit_uniform_step (Hz : 0 < z) (σ : State rT) :

@@ -51,6 +51,81 @@ variable [AddCommMonoid B] [PartialOrder B] [CanonicallyOrderedAdd B]
   [OrderTop B] [MicrometerGS rT hlc GF] [L.IsLawful] [L.IsSupportLocal] [L.IsTopAbsorbing]
   [L.HasBind]
 
+/-! ## General rules for primitive draws
+
+Couple a program draw `e` to a spec draw `K[e']` along any lifting of their primitive steps; the
+program draw returns the literal `ℓ a` and the spec draw the literal `ℓ' b`. -/
+
+/-- Couple the primitive draws `e ~ K[e']` along `S`, given a lifting of their steps at no cost. -/
+theorem wp_couple_prim_lift_zero [BudgetGS B GF] {α β : Type} {ℓ : α → BaseLit rT}
+    {ℓ' : β → BaseLit rT} {e e' : Exp rT} (he : e.toVal? = none) (hred : ∀ σ, Reducible e σ)
+    (hred' : ∀ σ, Reducible e' σ) (S : α → β → Prop) (K : Ectx rT)
+    (hcpl : ∀ σ σ', L.Rel 0 (fun (c₁ c₂ : Cfg rT) ↦
+        ∃ x y, S x y ∧ c₁ = ⟨.lit (ℓ x), σ⟩ ∧ c₂ = ⟨K.fill (.lit (ℓ' y)), σ'⟩)
+      (primStep ⟨e, σ⟩) (primStep ⟨K.fill e', σ'⟩))
+    (E : CoPset) (Φ : Val rT → _) : iprop%
+    ⤇ K.fill e' ∗ (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill (.lit (ℓ' y)) -∗ Φ (.ofBaseLit (ℓ x))) ⊢
+      wp L E e Φ := by
+  iintro ⟨Hj, Hcnt⟩
+  iapply wp_lift_prim_steps_coupl he
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
+  imod subset empty_subset with Hclose
+  imodintro
+  iexists _, 0, b
+  have hb : 0 + b ≤ b := (zero_add b).le
+  have hredL := hred σ₁
+  have hredR := (hred' σ₁').fill K
+  have hcpl := hcpl σ₁ σ₁'
+  iframe %hb %hredL %hredR %hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨x, y, hS, heq1, heq2⟩
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq1
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq2
+  iintro !> !>
+  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
+  imod Hclose
+  imodintro
+  iframe Hσ Hs' Hb
+  iapply wp_value_of_toVal rfl
+  iapply Hcnt $$ %x %y %hS Hj'
+
+/-- Couple the primitive draws `e ~ K[e']` along `S`, given a lifting of their steps within the
+cancelable budget `c`; spends `↯b c`. -/
+theorem wp_couple_prim_lift [BudgetCreditGS B GF] {α β : Type} {ℓ : α → BaseLit rT}
+    {ℓ' : β → BaseLit rT} {e e' : Exp rT} (he : e.toVal? = none) (hred : ∀ σ, Reducible e σ)
+    (hred' : ∀ σ, Reducible e' σ) (S : α → β → Prop) (c : B) (hc : IsAddLeftRegular c)
+    (K : Ectx rT)
+    (hcpl : ∀ σ σ', L.Rel c (fun (c₁ c₂ : Cfg rT) ↦
+        ∃ x y, S x y ∧ c₁ = ⟨.lit (ℓ x), σ⟩ ∧ c₂ = ⟨K.fill (.lit (ℓ' y)), σ'⟩)
+      (primStep ⟨e, σ⟩) (primStep ⟨K.fill e', σ'⟩))
+    (E : CoPset) (Φ : Val rT → _) : iprop%
+    ⤇ K.fill e' ∗ ↯b c ∗
+      (∀ x y, ⌜S x y⌝ -∗ ⤇ K.fill (.lit (ℓ' y)) -∗ Φ (.ofBaseLit (ℓ x))) ⊢
+      wp L E e Φ := by
+  iintro ⟨Hj, Hc, Hcnt⟩
+  iapply wp_lift_prim_steps_coupl he
+  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
+  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
+  imod supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hdec⟩
+  imod subset empty_subset with Hclose
+  imodintro
+  iexists _, c, r
+  have hsum : c + r ≤ b := hr.ge
+  have hredL := hred σ₁
+  have hredR := (hred' σ₁').fill K
+  have hcpl := hcpl σ₁ σ₁'
+  iframe %hsum %hredL %hredR %hcpl
+  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨x, y, hS, heq1, heq2⟩
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq1
+  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq2
+  iintro !> !>
+  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
+  imod Hclose
+  imodintro
+  iframe Hσ Hs' Hdec
+  iapply wp_value_of_toVal rfl
+  iapply Hcnt $$ %x %y %hS Hj'
+
 /-! ## Coupling two draws along a bijection, at no cost -/
 
 section CouplingRules
@@ -295,34 +370,11 @@ theorem wp_couple_rand_rand_lift (zL zR : Int) (HzL : 0 < zL) (HzR : 0 < zR) (S 
     ⤇ K.fill pl(rand(#zR, #())) ∗ ↯b c ∗
       (∀ n m, ⌜S n m⌝ -∗ ⤇ K.fill pl(#m) -∗ Φ (.int n)) ⊢
       wp L E pl(rand(#zL, #())) Φ := by
-  iintro ⟨Hj, Hc, Hcnt⟩
-  iapply wp_lift_prim_steps_coupl rand_toVal?_eq_none
-  iintro %σ₁ %e₁' %σ₁' %b ⟨Hσ, Hs, Hb⟩
-  ihave %rfl := specAuth_specFrag_agree $$ Hs Hj
-  imod supply_decrease hc $$ Hb Hc with ⟨%r, %hr, Hdec⟩
-  imod subset empty_subset with Hclose
-  imodintro
-  let S' : Cfg rT → Cfg rT → Prop := fun c₁ c₂ =>
-    ∃ n m, S n m ∧ c₁ = ⟨pl(#n), σ₁⟩ ∧ c₂ = ⟨K.fill pl(#m), σ₁'⟩
-  iexists S', c, r
-  have hsum : c + r ≤ b := hr.ge
-  have hredL := (randUnit_uniform_step HzL σ₁).1.toReducible
-  have hredR := ((randUnit_uniform_step HzR σ₁').1.toReducible).fill K
-  have hcpl : L.Rel c S' (primStep ⟨pl(rand(#zL, #())), σ₁⟩)
-      (primStep ⟨K.fill pl(rand(#zR, #())), σ₁'⟩) := by
-    rw [primStep_rand_unit HzL, primStep_fill rand_not_isValue, primStep_rand_unit HzR]
-    exact uniform_rel_fill HzL HzR σ₁ σ₁' K Hcpl fun n m h => ⟨n, m, h, rfl, rfl⟩
-  iframe %hsum %hredL %hredR %hcpl
-  iintro %e₂ %σ₂ %e₂' %σ₂' %⟨n, m, hS, heq1, heq2⟩
-  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq1
-  obtain ⟨rfl, rfl⟩ := (mk.injEq ..).mp heq2
-  iintro !> !>
-  imod specProg_update $$ Hs Hj with ⟨Hs', Hj'⟩
-  imod Hclose
-  imodintro
-  iframe Hσ Hs' Hdec
-  iapply wp_value_of_toVal rfl
-  iapply Hcnt $$ %n %m %hS Hj'
+  refine wp_couple_prim_lift (ℓ := BaseLit.int) (ℓ' := BaseLit.int) rand_toVal?_eq_none
+    (fun σ ↦ (randUnit_uniform_step HzL σ).1.toReducible)
+    (fun σ ↦ (randUnit_uniform_step HzR σ).1.toReducible) S c hc K (fun σ σ' ↦ ?_) E Φ
+  rw [primStep_rand_unit HzL, primStep_fill rand_not_isValue, primStep_rand_unit HzR]
+  exact uniform_rel_fill HzL HzR σ σ' K Hcpl fun n m h ↦ ⟨n, m, h, rfl, rfl⟩
 
 /-- Specialization of `wp_couple_rand_rand_lift` to equal bounds `N` (clutch-dp's
 `hoare_couple_laplace`). -/

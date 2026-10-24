@@ -46,7 +46,6 @@ def storedState (σ : State rT) (pad : Loc) (byte : Int) : State rT :=
 @[simp] theorem storedState_lookup (σ : State rT) (pad : Loc) (byte : Int) :
     (storedState σ pad byte).heap[pad]? = some (.int byte) := by
   simp [storedState, State.update_heap]
-  simp [← Std.ExtTreeMap.insert_eq_PartialMap_insert]
 
 variable [MeasurableSpace rT] [LawfulProbLangℝ rT]
 

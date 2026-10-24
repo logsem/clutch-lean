@@ -18,6 +18,7 @@ public import Metrology.Micrometer.PrimitiveLaws
 public import Metrology.Micrometer.Asm
 public import Metrology.Micrometer.AsmOrdinary
 public import Metrology.Micrometer.UnifInt
+public import Metrology.Micrometer.UnifIntReal
 public import Metrology.Micrometer.CouplingRules
 public import Metrology.Micrometer.CouplingRulesLaw
 public import Metrology.Micrometer.SpecAdvRules

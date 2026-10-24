@@ -40,7 +40,7 @@ theorem importToy_resume_nonempty (ι : Placement) (origin paused : Mach)
   obtain ⟨_, _, _, hconfig, _, hF, ra, hra, hcode⟩ := h
   obtain ⟨z, rfl, rfl, _⟩ := (importToy_response_iff r heap).mp hr
   refine ⟨resumeIntState paused ra z, ?_⟩
-  exact rv_resume_int_empty ι importToyCode [] ∅ paused "cb" ⟨[], .int 64⟩ ra z
+  exact rv_resume_int_empty ι importToyCode [] paused "cb" ⟨[], .int 64⟩ ra z
     importToy_regions importToy_valid_empty hconfig.1 (by simp [importToyCode])
     hpc hra hcode hF
 

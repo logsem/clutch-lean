@@ -78,18 +78,6 @@ theorem micrometerWpGS_specInterp_eq : (specInterp : _ → IProp GF) = specAuth 
 
 end MicrometerInstance
 
-attribute [simp] insert_eq_PartialMap_insert
-
-/-! ## Head-step facts -/
-
-/-- A non-positive bound on an empty tape steps to `-1`, whether or not it matches the tape's. -/
-theorem HeadStepSupport.rand_lbl_nonpos {σ : State rT} {l : Loc} {z N : Int} (Hz : ¬ 0 < z)
-    (hlook : σ.tapes[l]? = some ⟨N, []⟩) :
-    HeadStepSupport ⟨pl(rand(#z, #lbl l)), σ⟩ ⟨pl(#(-1)), σ⟩ := by
-  obtain rfl | hN := eq_or_ne N z
-  · exact .RandTapeNonposEmptyS Hz hlook rfl
-  · exact .RandTapeNonposOtherS Hz hlook hN.symm
-
 /-! ## Program-side laws
 
 Each proof lifts one atomic head step (`wp_lift_atomic_head_step`): it exhibits one possible step,

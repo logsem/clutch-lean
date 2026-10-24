@@ -7,13 +7,6 @@ namespace MetrologyAsm
 
 open RiscvZkvm.Sail.Functions
 
-/-- Proves a decoder equation that holds once the extension query has been answered. -/
-local macro "decode_guarded" : tactic =>
-  `(tactic| (unfold ext_decode encdec_backwards guardedDecode
-             apply congrArg (Bind.bind (currentlyEnabled extension.Ext_Zicfilp))
-             funext enabled
-             cases enabled <;> rfl))
-
 /-- The ten actual instructions of the assembled callback fragment and trampoline. -/
 def importToyCases : List (BitVec 32 × instruction) :=
   [(0xff010113#32, .ITYPE (0xff0#12, .Regidx 2#5, .Regidx 2#5, .ADDI)),

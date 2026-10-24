@@ -1,3 +1,4 @@
+import MetrologyAsm.ABI.Lemmas
 import MetrologyAsm.ABI.Resume
 import MetrologyAsm.Sail.ByteRules
 
@@ -6,13 +7,6 @@ import MetrologyAsm.Sail.ByteRules
 namespace MetrologyAsm
 
 open ProbLang ProbLang.Asm RiscvZkvm.Sail.Functions
-
-/-- A single byte region occupies exactly the physical address of its logical base. -/
-theorem footprintByte_single_byte (ι : Placement) (code : Code) (args : List BoundaryValue)
-    (l : Loc) (hregions : callRegions code args = [⟨l, 1, 8, false⟩]) (a : Nat) :
-    footprintByte ι code args a ↔ a = (ι.addr l).toNat := by
-  simp [footprintByte, hregions, inSpan]
-  omega
 
 /-- Installing a representable byte realizes a valid single-cell logical fragment. -/
 theorem footprintContents_write8State (ι : Placement) (code : Code) (args : List BoundaryValue)

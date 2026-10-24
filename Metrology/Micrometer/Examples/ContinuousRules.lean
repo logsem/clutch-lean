@@ -1,6 +1,7 @@
 module
 
 public import Metrology.Micrometer.ContinuousCouplings
+public import Metrology.Micrometer.UnifIntReal
 public import Metrology.Couplings.Divergences.Tv
 import Metrology.ProbLang.Syntax.Notation
 import Metrology.Iris.LocalBI

@@ -1662,6 +1662,14 @@ inductive HeadStepSupport : Cfg rT → Cfg rT → Prop
     LawfulProbLangℝ.unifUnitSupport r →
     HeadStepSupport ⟨.urand, σ⟩ ⟨.lit (.real r), σ⟩
 
+/-- A non-positive bound on an empty tape steps to `-1`, whether or not it matches the tape's. -/
+theorem HeadStepSupport.rand_lbl_nonpos {σ : State rT} {l : Loc} {z N : Int} (Hz : ¬ 0 < z)
+    (hlook : σ.tapes[l]? = some ⟨N, []⟩) :
+    HeadStepSupport ⟨.rand (.lit (.int z)) (.lit (.lbl l)), σ⟩ ⟨.lit (.int (-1)), σ⟩ := by
+  obtain rfl | hN := eq_or_ne N z
+  · exact .RandTapeNonposEmptyS Hz hlook rfl
+  · exact .RandTapeNonposOtherS Hz hlook hN.symm
+
 /-- A Dirac measure charges a singleton exactly when the points agree. -/
 @[simp]
 theorem dirac_singleton_pos

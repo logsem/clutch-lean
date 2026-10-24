@@ -70,4 +70,43 @@ theorem profileWitness_config : UserConfig profileWitness := by
   rw [get?_foldRegisters]
   simp [allRegisters_complete]
 
+/-- Install consecutive image bytes into a finite Sail byte memory. -/
+def witnessImageBytes : List UInt8 → Nat → Std.ExtHashMap Nat (BitVec 8) →
+    Std.ExtHashMap Nat (BitVec 8)
+  | [], _, mem => mem
+  | byte :: bytes, base, mem =>
+    (witnessImageBytes bytes (base + 1) mem).insert base (BitVec.ofNat 8 byte.toNat)
+
+/-- Every installed image byte is available at its consecutive physical address. -/
+theorem witnessImageBytes_get (bytes : List UInt8) (base : Nat)
+    (mem : Std.ExtHashMap Nat (BitVec 8)) (i : Nat) (byte : UInt8)
+    (hi : bytes[i]? = some byte) :
+    (witnessImageBytes bytes base mem).get? (base + i) = some (BitVec.ofNat 8 byte.toNat) := by
+  induction bytes generalizing base i with
+  | nil => simp at hi
+  | cons head bytes ih =>
+    cases i with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hi
+      subst byte
+      simp [witnessImageBytes]
+    | succ i =>
+      have hne : base ≠ base + (i + 1) := by omega
+      have htail := ih (base + 1) i (by simpa using hi)
+      simpa [witnessImageBytes, Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert,
+        hne, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using htail
+
+/-- Installing consecutive image bytes preserves every memory address outside their interval. -/
+theorem witnessImageBytes_get_outside (bytes : List UInt8) (base : Nat)
+    (mem : Std.ExtHashMap Nat (BitVec 8)) (address : Nat)
+    (hout : address < base ∨ base + bytes.length ≤ address) :
+    (witnessImageBytes bytes base mem).get? address = mem.get? address := by
+  induction bytes generalizing base with
+  | nil => rfl
+  | cons byte bytes ih =>
+    have hne : base ≠ address := by simp only [List.length_cons] at hout; omega
+    rw [witnessImageBytes]
+    simpa [Std.ExtHashMap.get?_eq_getElem?, Std.ExtHashMap.getElem?_insert, hne] using
+      ih (base + 1) (by simp only [List.length_cons] at hout; omega)
+
 end MetrologyAsm

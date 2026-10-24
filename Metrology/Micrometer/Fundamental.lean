@@ -142,12 +142,12 @@ theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF) (Γ
     have he_fv := fv_subset_of_cofinite HCtx Hbody
     have he_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody
     exact bin_log_related_lam Δ Γrc _ he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x τ1 (not_mem_union_dom hx).2)
+      ih x (notMem_union_dom hx).1 Δ _ (HCtx.insert x τ1 (notMem_union_dom hx).2)
   | @«fix» S _ e τ1 τ2 Hbody ih =>
     have he_fv := fv_subset_of_cofinite HCtx Hbody
     have he_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody
     exact bin_log_related_fix Δ Γrc _ he_lc he_lc he_fv he_fv fun x hx =>
-      ih x (not_mem_union_dom hx).1 Δ _ (HCtx.insert x (.arrow τ1 τ2) (not_mem_union_dom hx).2)
+      ih x (notMem_union_dom hx).1 Δ _ (HCtx.insert x (.arrow τ1 τ2) (notMem_union_dom hx).2)
   | @tlam _ e τ Hbody ih =>
     have hLC := Hbody.isLocallyClosed
     have he_fv := fv_subset_relCtxDom (HCtx.shift default) Hbody
@@ -157,8 +157,8 @@ theorem fundamental {Γtc : Tctx} (Hty : Typed Γtc e τ) (Δ : TyEnv rT GF) (Γ
   | @tunpack S _ e1 e2 τ τ2 _ Hbody2 ih1 ih2 =>
     have he2_lc := isLocallyClosed_of_cofinite (D := (Γrc.map (·.1)).toFinset) Hbody2
     exact bin_log_related_unpack Δ Γrc _ (ih1 Δ Γrc HCtx) he2_lc he2_lc fun A x hx =>
-      ih2 x (not_mem_union_dom hx).1 (.cons A Δ) _
-        ((HCtx.shift A).insert x τ (not_mem_union_dom hx).2)
+      ih2 x (notMem_union_dom hx).1 (.cons A Δ) _
+        ((HCtx.shift A).insert x τ (notMem_union_dom hx).2)
 
 /-- A closed well-typed expression refines itself at its type. -/
 theorem refines_typed (Δ : TyEnv rT GF) (Hty : Typed .empty e τ) :

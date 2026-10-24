@@ -89,6 +89,13 @@ theorem machineConfiguration.of_configurationFrame (ι : Placement) (code : Code
     decodeF ι code args ∅ s = some ∅ := by
   simp [decodeF, footprintLocations, Iris.Std.PartialMap.ofList]
 
+/-- A single byte region occupies exactly the physical address of its logical base. -/
+theorem footprintByte_single_byte (ι : Placement) (code : Code) (args : List BoundaryValue)
+    (l : Loc) (hregions : callRegions code args = [⟨l, 1, 8, false⟩]) (a : Nat) :
+    footprintByte ι code args a ↔ a = (ι.addr l).toNat := by
+  simp [footprintByte, hregions, inSpan]
+  omega
+
 /-- Reading a representable signed doubleword recovers its original logical integer. -/
 theorem decodeCell_signed64 (ι : Placement) (r : Region) (l : Loc) (s : Mach) (z : Int)
     (hwidth : r.width = 64) (hsigned : r.signed = true)

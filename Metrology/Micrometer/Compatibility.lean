@@ -36,7 +36,7 @@ theorem lrel_arr_unfold_wand (A B : lrel rT GF) (v v' : Val rT) :
 
 section Steps
 variable [L.IsLawful] [L.IsTopAbsorbing]
-variable {e e' : Exp rT} {A B : lrel rT GF}
+variable {e e' : Exp rT} {A B C : lrel rT GF} {l : BaseLit rT} {ι : Type _}
 local bi IProp GF
 
 /-! ### Pure steps -/
@@ -108,6 +108,18 @@ theorem refines_unop_pure (op : UnOp) (v r : Exp rT) (hv : IsVal v) (hrv : IsVal
     ⊢ refines L ⊤ (.unop op v) (.unop op v) A :=
   refines_pure_both ⟨hv.toIsValue, heval⟩ hrv HA
 
+/-- A binary operator on two values that evaluates to a literal is related to itself. -/
+theorem refines_binop_val (op : BinOp) (w1 w2 : Val rT) (heval : op.eval w1.1 w2.1 = some (.lit l))
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.binop op w1.1 w2.1) (.binop op w1.1 w2.1) A :=
+  refines_binop_pure op _ _ _ w1.2 w2.2 IsVal.lit heval HA
+
+/-- A unary operator on a value that evaluates to a literal is related to itself. -/
+theorem refines_unop_val (op : UnOp) (w : Val rT) (heval : op.eval w.1 = some (.lit l))
+    (HA : ⊢ A.car (.ofBaseLit l) (.ofBaseLit l)) :
+    ⊢ refines L ⊤ (.unop op w.1) (.unop op w.1) A :=
+  refines_unop_pure op _ _ w.2 IsVal.lit heval HA
+
 /-! ### Rules that bind their operands -/
 
 section Binding
@@ -116,6 +128,43 @@ variable {e0 e0' e1 e2 e1' e2' : Exp rT}
 -- Each proof restates the goal as `Ectx.fill [item] e` so `refines_bind` unifies, binds the right
 -- operand first (ProbLang evaluates right to left), then re-reads the same term with the hole in
 -- the left operand (a definitional `rw [show ... from rfl]`).
+
+/-- Binds both operands of a binary operator, whose values lie in a family `V`, then continues
+for every pair of indices. -/
+theorem refines_binop_bind (op : BinOp) (V : ι → Val rT)
+    (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
+    refines L ⊤ e1 e1' A ⊢
+      refines L ⊤ e2 e2' A -∗
+      (∀ i1 i2, refines L ⊤ (.binop op (V i1).1 (V i2).1) (.binop op (V i1).1 (V i2).1) C) -∗
+      refines L ⊤ (.binop op e1 e2) (.binop op e1' e2') C := by
+  iintro IH1 IH2 Hcont
+  rw [← fill_binopR op e1 e2, ← fill_binopR op e1' e2']
+  iapply refines_bind [binopR op e1] [binopR op e1'] $$ IH2
+  iintro %v2 %v2' Hv2
+  icases hA v2 v2' $$ Hv2 with ⟨%i2, %hv2, %hv2'⟩
+  rw [fill_binopR, fill_binopR, hv2, hv2',
+    show binop op e1 (V i2).1 = fill [binopL op (V i2)] e1 from rfl,
+    show binop op e1' (V i2).1 = fill [binopL op (V i2)] e1' from rfl]
+  iapply refines_bind [binopL op (V i2)] [binopL op (V i2)] $$ IH1
+  iintro %v1 %v1' Hv1
+  icases hA v1 v1' $$ Hv1 with ⟨%i1, %hv1, %hv1'⟩
+  rw [fill_binopL, fill_binopL, ofVal, hv1, hv1']
+  iapply Hcont $$ %i1 %i2
+
+/-- Binds the operand of a unary operator, whose values lie in a family `V`, then continues
+for every index. -/
+theorem refines_unop_bind (op : UnOp) (V : ι → Val rT)
+    (hA : ∀ v v', A.car v v' ⊢ ∃ i, ⌜v = V i ∧ v' = V i⌝) : iprop%
+    refines L ⊤ e e' A ⊢
+      (∀ i, refines L ⊤ (.unop op (V i).1) (.unop op (V i).1) C) -∗
+      refines L ⊤ (.unop op e) (.unop op e') C := by
+  iintro IH Hcont
+  rw [← fill_unop op e, ← fill_unop op e']
+  iapply refines_bind [unop op] [unop op] $$ IH
+  iintro %v %v' Hv
+  icases hA v v' $$ Hv with ⟨%i, %hv, %hv'⟩
+  rw [fill_unop, fill_unop, hv, hv']
+  iapply Hcont $$ %i
 
 /-- Pairs `(e1, e2)` are related at the product when the components are. -/
 theorem refines_pair : iprop%

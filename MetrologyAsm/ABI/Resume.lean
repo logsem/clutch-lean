@@ -54,12 +54,12 @@ theorem UserConfig.resumeIntState {s : Mach} (h : UserConfig s) (ra : BitVec 64)
 /-- Resume an import call of a callback with no pointer regions, returning an integer and the empty
 fragment. -/
 theorem rv_resume_int_empty (ι : Placement) (code : Code) (args : List BoundaryValue)
-    (F : Finset Loc) (s : Mach) (name : String) (sig : CallSig) (ra : BitVec 64) (z : Int)
+    (s : Mach) (name : String) (sig : CallSig) (ra : BitVec 64) (z : Int)
     (hregions : callRegions code args = []) (hvalid : validFragment code args ∅)
     (hprofile : UserConfig s) (himport : (name, sig) ∈ code.sig.imports)
     (hpc : pc s = some (ι.importAddr name)) (hra : s.regs.get? .x1 = some ra)
-    (hcode : codeRange ι code ra) (hF : F = callFootprint code args) :
-    rv.Resume ι code args F s (.int z) ∅ (resumeIntState s ra z) := by
+    (hcode : codeRange ι code ra) (hF : ∅ = callFootprint code args) :
+    rv.Resume ι code args ∅ s (.int z) ∅ (resumeIntState s ra z) := by
   refine ⟨name, sig, ra, BitVec.ofInt 64 z, himport, hpc, hra, hcode, ?_, rfl, ?_, hF,
     ⟨hvalid, ?_⟩, hprofile.resumeIntState ra z, resumeIntState_calleeSavedRestored s ra z,
     resumeIntState_configurationFrame s ra z, fun _ _ => rfl⟩
