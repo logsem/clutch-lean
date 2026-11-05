@@ -1,0 +1,224 @@
+module
+
+public import Metrology.TotalEris.TotalLifting
+public import Metrology.ProbLang.EctxTactic
+public meta import Metrology.ProbLang.EctxTactic
+public meta import Metrology.Meta.AppByName
+public import Metrology.ProbLang.Syntax.Notation
+public import Iris.ProofMode.ProofModeM
+public import Iris.ProofMode.Tactics.Basic
+public import Lean
+public import Qq
+
+/-!
+# `twp_*` tactics
+
+The `twp_*` tactics for `tglWp` goals.
+-/
+
+namespace ProbLang.TotalEris
+
+open Lean hiding Expr
+open Lean renaming Expr → LeanExpr
+open Meta Elab Tactic Qq Iris Iris.ProofMode ErisWpGS
+
+/-! ## Context-lifted pure step -/
+
+/-- A pure step under an evaluation context `K`; the lemma behind `twp_pure`. -/
+public theorem ErisWpGS.twp_pure_step_ctx {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    [ProbLangDist rT] [ProbLangFFI rT] [ProbLangObs rT] {GF : BundledGFunctors} [ErisWpGS (rT := rT)
+    GF] (K : Ectx rT) (φ : Prop)
+    {n : ℕ} {e₁ e₂ : Exp rT} [PureExec φ n e₁ e₂] (Hφ : φ) {E : CoPset} {Φ : Val rT → IProp GF} :
+    tglWp E (K.fill e₂) Φ ⊢ tglWp E (K.fill e₁) Φ := by
+  let : PureExec φ n (K.fill e₁) (K.fill e₂) := PureExec.fill K
+  exact twp_pure_step_fupd φ Hφ
+
+/-! ## Goal parsing -/
+
+/-- The pieces of a `tglWp E e Φ` proof-mode goal, with its typeclass instances. -/
+meta structure TglWpGoal where
+  /-- The universe level of the proof-mode carrier. -/
+  {u : Level}
+  /-- The type of the probabilistic language. -/
+  {α : Q(Type)}
+  /-- The `MeasurableSpace` instance on `α`. -/
+  instMS : Q(MeasurableSpace $α)
+  /-- The `LawfulProbLangℝ` instance on `α`. -/
+  instPL : Q(@LawfulProbLangℝ $α $instMS)
+  /-- The `ProbLangDist` instance on `α`. -/
+  instPD : Q(@ProbLangDist $α $instMS)
+  /-- The `ProbLangFFI` instance on `α`. -/
+  instFFI : Q(@ProbLangFFI $α $instMS)
+  /-- The `ProbLangObs` instance on `α`. -/
+  instObs : Q(@ProbLangObs $α $instMS)
+  /-- The global functors. -/
+  {GF : Q(BundledGFunctors.{0, 0, 0})}
+  /-- The `ErisWpGS` instance for `GF`. -/
+  instWp : Q(ErisWpGS (rT := $α) $GF)
+  /-- The carrier type of the hypotheses. -/
+  {prop : Q(Type u)}
+  /-- The `BI` structure on the carrier. -/
+  {bi : Q(BI $prop)}
+  /-- The hypotheses as an expression. -/
+  {ehyps : Q($prop)}
+  /-- The proof-mode hypotheses. -/
+  hyps : Hyps bi ehyps
+  /-- The mask of the `tglWp`. -/
+  E : Q(CoPset)
+  /-- The expression under `tglWp`. -/
+  e : Q(Exp $α)
+  /-- The postcondition of the `tglWp`. -/
+  Φ : Q(Val $α → IProp $GF)
+  /-- Proof that the universe level is `0`. -/
+  hu : QuotedLevelDefEq u 0
+  /-- Proof that the carrier is `IProp GF`. -/
+  hprop : $prop =Q IProp $GF
+  /-- Proof that the `BI` is the one of `IProp`. -/
+  hbi : $bi =Q UPred.instBIUPred
+
+/-- Run `k` on the main goal, parsed as a `tglWp` goal. -/
+meta def runTacticTglWp {β : Type} (k : MVarId → TglWpGoal → ProofModeM β) : TacticM β := do
+  ProofModeM.runTactic `tglWp fun mvar {u, prop, bi, hyps, goal, ..} => do
+    let .defEq _ ← isLevelDefEqQ u 0
+      | throwError "the goal {goal} must be an `IProp` at universe level 0"
+    -- Binding `$GF` refines `prop`, so `hyps`' carrier is concrete for `addBIGoal`.
+    let ~q(IProp $GF) := prop
+      | throwError "the goal {goal} must be an `IProp`"
+    let ~q(UPred.instBIUPred) := bi
+      | throwError "expected the BI of `IProp` to be `UPred.instBIUPred`"
+    -- `tglWp` is `@[reducible]`, so a `~q` match would not refine; read the spine.
+    let goalE : LeanExpr := (← instantiateMVars goal).consumeMData
+    unless goalE.getAppFn.consumeMData.isConstOf ``ErisWpGS.tglWp do
+      throwError "the goal {goal} must be a `tglWp`"
+    let args := goalE.getAppArgs
+    unless args.size == 11 do
+      throwError "unexpected `tglWp` arity ({args.size}) in goal {goal}"
+    have α : Q(Type) := args[0]!
+    have instMS : Q(MeasurableSpace $α) := args[1]!
+    have instPL : Q(@LawfulProbLangℝ $α $instMS) := args[2]!
+    have instPD : Q(@ProbLangDist $α $instMS) := args[3]!
+    have instFFI : Q(@ProbLangFFI $α $instMS) := args[4]!
+    have instObs : Q(@ProbLangObs $α $instMS) := args[5]!
+    have instWp : Q(ErisWpGS (rT := $α) $GF) := args[7]!
+    have E : Q(CoPset) := args[8]!
+    have e : Q(Exp $α) := args[9]!
+    have Φ : Q(Val $α → IProp $GF) := args[10]!
+    k mvar { instMS, instPL, instPD, instFFI, instObs, instWp, hyps, E, e, Φ, hu := ⟨⟩,
+             hprop := ⟨⟩, hbi := ⟨⟩ }
+
+/-! ## `twp_bind` -/
+
+/-- `twp_bind e` rebases `tglWp E (K.fill e) Φ` to `tglWp E e (…)`, finding `K`. -/
+elab "twp_bind" colGt ppSpace focus:term:max : tactic =>
+  runTacticTglWp fun mvar
+      { α, GF, instMS, instPL, instPD, instFFI, instObs, instWp, hyps, E, e, Φ, .. } => do
+    let focus ← elabTermEnsuringTypeQ focus q(Exp $α)
+    let some res ← findECtx e (fun e => do guard (← isDefEq e focus))
+      | throwTacticEx `twp_bind mvar
+          m!"cannot unify {← ppExpr focus} with any evaluation context of {← ppExpr e}"
+    have K : Q(Ectx $α) := res.K
+    -- Use the user's term, not the matched `res.e'`: a recursive call then stays folded
+    -- (`geometric ()`) and unifies syntactically with an IH.
+    have e' : Q(Exp $α) := focus
+    let Φc : Q(Val $α → IProp $GF) ← withLocalDeclDQ `v q(Val $α) fun v => do
+        let body : Q(Exp $α) ← fillQ K q(Exp.ofVal $v)
+        mkLambdaFVars #[v]
+          q(@tglWp $α $instMS $instPL $instPD $instFFI $instObs $GF $instWp $E $body $Φ)
+    let pf ← addBIGoal hyps
+      q(@tglWp $α $instMS $instPL $instPD $instFFI $instObs $GF $instWp $E $e' $Φc)
+    -- `mkAppByName`, not `q(…)`: Qq would `whnf` the reducible `tglWp` into
+    -- `bi_least_fixpoint` (heartbeat blow-up).
+    let bindPf ← mkAppByName ``ErisWpGS.tglWp_bind
+      [(`rT, α), (`GF, GF), (`K, K), (`E, E), (`e, e'), (`Φ, Φ)]
+      [instMS, instPL, instPD, instFFI, instObs, instWp]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, bindPf]
+    mvar.assign transPf
+
+/-! ## `twp_pure` -/
+
+/-- `twp_pure_core [e]` takes one `PureExec` step, at `e` if given, and leaves the `PureExec`
+side condition as a goal unless `is_value` closes it. -/
+elab "twp_pure_core" focus:(ppSpace colGt term:max)? : tactic =>
+  runTacticTglWp fun mvar
+      { α, GF, instMS, instPL, instPD, instFFI, instObs, instWp, hyps, E, e, Φ, .. } => do
+    let focus? : Option Q(Exp $α) ← focus.mapM fun f => elabTermEnsuringTypeQ f q(Exp $α)
+    let some res ← findPureStep instMS instPL instPD instFFI instObs e focus?
+      | throwTacticEx `twp_pure mvar m!"no pure step applies"
+    have K : Q(Ectx $α) := res.K
+    let step := res.result
+    let φ : Q(Prop) ← instantiateMVars step.φ
+    let n : Q(Nat) ← instantiateMVars step.n
+    let e₁ : Q(Exp $α) ← instantiateMVars step.e₁
+    let e₂syn : Q(Exp $α) ← instantiateMVars step.e₂syn
+    let e₂ ← displayReduct e₂syn step.names
+    -- An `Ectx.fill` redex would hide the next redex from `twp_pures`.
+    let inner : Q(Exp $α) ← fillQ K e₂
+    let pf ← addBIGoal hyps
+      q(@tglWp $α $instMS $instPL $instPD $instFFI $instObs $GF $instWp $E $inner $Φ)
+    let HΦ : Q($φ) ← mkFreshExprSyntheticOpaqueMVar q($φ)
+    (← evalTacticAt (← `(tactic| (try is_value))) HΦ.mvarId!).forM addMVarGoal
+    let stepPf ← mkAppByName ``ErisWpGS.twp_pure_step_ctx
+      [(`rT, α), (`GF, GF), (`K, K), (`φ, φ), (`n, n), (`e₁, e₁), (`e₂, e₂), (`Hφ, HΦ),
+        (`E, E), (`Φ, Φ)] [instMS, instPL, instPD, instFFI, instObs, instWp, step.inst]
+    let transPf ← mkAppM ``BI.BIBase.Entails.trans #[pf, stepPf]
+    mvar.assign transPf
+
+/-! ## `twp_value` -/
+
+/-- `twp_value` reduces `tglWp E e Φ` to `Φ v` when `e.toVal? = some v`. -/
+elab "twp_value" : tactic =>
+  runTacticTglWp fun mvar
+      { α, GF, instMS, instPL, instPD, instFFI, instObs, instWp, hyps, E, e, Φ, .. } => do
+    -- A closure's value check is structural (`closedFunVal?`).
+    let (v, hproof) ← show ProofModeM (Q(Val $α) × LeanExpr) from do
+      let r ← Exp.closedFunVal? α e
+      if let some (some v) := r then
+        have v : Q(Val $α) := v
+        return (v, q(Exp.toVal?_ofVal $v))
+      let tv : Q(Option (Val $α)) ← if r.isSome then pure q(none) else whnf q(Exp.toVal? $e)
+      let ~q(some $v) := tv
+        | throwTacticEx `twp_value mvar m!"{← ppExpr e} is not a value"
+      let hproof : Q(Exp.toVal? $e = some $v) ← mkFreshExprSyntheticOpaqueMVar
+        q(Exp.toVal? $e = some $v)
+      (← evalTacticAt (← `(tactic| kernel_rfl)) hproof.mvarId!).forM addMVarGoal
+      return (v, hproof)
+    have goal : Q(IProp $GF) := Expr.headBeta q($Φ $v)
+    -- Iris's `iWpValueHead`: drop the `|={E}=>` only if the postcondition absorbs it.
+    let c : Q(Prop) ← mkFreshExprMVarQ q(Prop)
+    let p' : Q(Bool) ← mkFreshExprMVarQ q(Bool)
+    let A' : Q(IProp $GF) ← mkFreshExprMVarQ q(IProp $GF)
+    let Q' : Q(IProp $GF) ← mkFreshExprMVarQ q(IProp $GF)
+    let useNoFupd : Bool ← if (← ProofModeM.trySynthInstanceQ
+            q(ElimModal $c false .out $p' iprop(|={$E}=> $goal) $A' $goal $Q')).isSome then
+        pure (← observing? (iSolveSidecondition c)).isSome
+      else pure false
+    have target : Q(IProp $GF) := if useNoFupd then goal else q(iprop(|={$E}=> $goal))
+    let valLemma := if useNoFupd then ``ErisWpGS.tglWp_value_of_toVal
+      else ``ErisWpGS.tglWp_value_fupd_of_toVal
+    let pf ← addBIGoal hyps target
+    let valPf ← mkAppByName valLemma
+      [(`rT, α), (`GF, GF), (`E, E), (`e, e), (`v, v), (`Φ, Φ), (`h, hproof)]
+      [instMS, instPL, instPD, instFFI, instObs, instWp]
+    mvar.assign (← mkAppM ``BI.BIBase.Entails.trans #[pf, valPf])
+
+/-! ## Composite tactics -/
+
+-- `pl_step_simp` is propositional, so it cannot live in the defeq-only `reduceExp`.
+/-- `twp_pure [e]` takes one pure step. -/
+macro "twp_pure" focus:(ppSpace colGt term:max)? : tactic =>
+  `(tactic| (twp_pure_core $[$focus]?; try simp only [pl_step_simp]))
+
+/-- `twp_pure_at e₁ ↦ e₂` takes one `PureExec` step from `e₁` to `e₂`, given explicitly, for when
+synthesis cannot see through an opaque definition in `e₁`. -/
+macro "twp_pure_at " e1:term:max " ↦ " e2:term:max : tactic =>
+  `(tactic| iapply (twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ (by is_value)))
+
+/-- `twp_pure_at e₁ ↦ e₂ by hφ` supplies the precondition `is_value` cannot close. -/
+macro "twp_pure_at " e1:term:max " ↦ " e2:term:max " by " h:term : tactic =>
+  `(tactic| iapply (twp_pure_step_fupd (n := 1) (e₁ := $e1) (e₂ := $e2) _ $h))
+
+/-- `twp_pures` takes pure steps until none applies. -/
+macro "twp_pures" : tactic =>
+  `(tactic| ((repeat (twp_pure_core; try simp only [pl_step_simp])); try simp only [pl_step_simp]))
+
+end ProbLang.TotalEris

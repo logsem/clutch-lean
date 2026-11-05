@@ -1,0 +1,48 @@
+name = "clutch-lean"
+testDriver = "ProbLangTest"
+defaultTargets = ["Metrology", "ProbLangSampleWidget"]
+
+[leanOptions]
+pp.unicode.fun = true
+autoImplicit = false
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.35.0"
+
+[[require]]
+name = "cslib"
+git = "https://github.com/leanprover/cslib"
+rev = "v4.35.0"
+
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean.git"
+rev = "38194312b4e1bb3007ab0002bfce0a89572d0d1e"
+subDir = "Iris"
+
+[[require]]
+name = "iris-fix"
+git = "https://github.com/markusdemedeiros/IrisFix"
+rev = "main"
+
+[[lean_lib]]
+name = "Metrology"
+
+[[lean_exe]]
+name = "ProbLangTest"
+root = "ProbLangTest"
+
+[[lean_exe]]
+name = "bench"
+root = "BigStepBench"
+
+# Draws the samples for `#sample`.
+[[lean_exe]]
+name = "problang-sample"
+root = "ProbLangSample"
+
+# The `#sample` widget, which runs `problang-sample`: building the widget builds it first.
+[[lean_lib]]
+name = "ProbLangSampleWidget"

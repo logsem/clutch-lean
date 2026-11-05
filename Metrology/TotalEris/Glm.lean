@@ -1,0 +1,409 @@
+module
+
+public import Metrology.Iris.ErrorCredits
+public import Metrology.ProbLang.Exec
+public import Metrology.ProbLang.Erasure
+public import Metrology.ProbLang.CtxStep
+public import Metrology.ProbLang.Metatheory
+public import IrisFix.ProofMode.Lib.Fixpoint
+public import Iris.ProofMode.Classes
+public import Iris.ProofMode.InstancesUpdates
+
+/-!
+# Graded lifting modality
+
+The error-graded lifting modality `glm'`: erasable steps and credit bumps, then one prim step.
+-/
+
+@[expose] public section
+
+open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang Ectx Set
+open MeasureTheory (Measure measure_mono lintegral_map_le lintegral_congr_ae)
+
+namespace ProbLang
+
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+
+namespace TotalEris
+
+/-! ## Probability of good lifting -/
+
+/-- The predicate `φ` fails with `μ`-probability at most `ε` (Eris `pgl`, probability of good
+lifting). -/
+def Pgl {α : Type _} [MeasurableSpace α] (ε : ENNReal) (φ : α → Prop)
+    (μ : Measure α) : Prop := μ {x | ¬ φ x} ≤ ε
+
+namespace Pgl
+
+variable {α β : Type _} [MeasurableSpace α] [MeasurableSpace β]
+variable {μ : Measure α}
+
+/-- Raising the failure bound `ε` preserves `Pgl`. -/
+theorem mono_grading {ε ε' : ENNReal} {φ : α → Prop}
+    (hε : ε ≤ ε') (h : Pgl ε φ μ) : Pgl ε' φ μ := h.trans hε
+
+/-- Weakening the predicate preserves `Pgl`. -/
+theorem mono_pred {ε : ENNReal} {φ ψ : α → Prop}
+    (hφψ : ∀ a, φ a → ψ a) (h : Pgl ε φ μ) : Pgl ε ψ μ := by
+  refine .trans (measure_mono ?_) h
+  intro x hx hxφ; exact hx (hφψ x hxφ)
+
+/-- A measure that gives the complement of `φ` zero mass satisfies `Pgl 0 φ`. -/
+theorem zero_of_null {φ : α → Prop} (μ : Measure α)
+    (Hnull : μ {x | ¬φ x} = 0) : Pgl 0 φ μ :=
+  Hnull.le
+
+/-- A measure whose atoms are all possible satisfies `Pgl 0` of `Possible`. -/
+theorem zero_possible [MeasurableSingletonClass α]
+    (h : IsAtomicSupport μ) : Pgl 0 (fun a => Possible a μ) μ := by
+  show μ {x | ¬ Possible x μ} ≤ 0
+  have hset : {x : α | ¬ Possible x μ} = {x | μ {x} = 0} := by
+    ext x; simp [possible_iff_pos, pos_iff_ne_zero]
+  rw [hset]; exact h.le
+
+/-- A measure concentrated on `{x | φ x}` satisfies `Pgl 0 φ`. -/
+theorem of_concentrated {φ : α → Prop}
+    (h : Concentrated μ {x | φ x}) : Pgl 0 φ μ :=
+  h.le
+
+end Pgl
+
+/-! ## Ghost state and the stutter -/
+
+/-- Ghost state for the total Eris weakest precondition: state and error-credit interpretations. -/
+class ErisWpGS {rT : outParam (Type _)} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+    (GF : BundledGFunctors) where
+  /-- Whether the model has later credits. -/
+  hlc : HasLC
+  /-- The invariant ghost state. -/
+  invGS : InvGS_gen hlc GF
+  /-- The interpretation of the program state. -/
+  stateInterp : State rT → IProp GF
+  /-- The interpretation of the error-credit budget. -/
+  errInterp : ENNReal → IProp GF
+
+/-- `ErisWpGS.invGS`, with the measurable space and language read off the instance, not searched
+for first. -/
+@[reducible]
+instance ErisWpGS.instInvGS {R : Type _} {M : MeasurableSpace R} {P : LawfulProbLangℝ R}
+    {GF : BundledGFunctors} [w : ErisWpGS (rT := R) GF] : InvGS_gen w.hlc GF := w.invGS
+
+namespace ErisWpGS
+variable {GF : BundledGFunctors}
+
+/-- Either the budget `ε` already reaches `1` (vacuous), or `P ε` holds. -/
+abbrev execStutter (P : ENNReal → IProp GF) (ε : ENNReal) : IProp GF :=
+  iprop(⌜1 ≤ ε⌝ ∨ P ε)
+
+/-- Stuttering at no cost is available for any `ε`. -/
+theorem execStutter_free {P : ENNReal → IProp GF} {ε : ENNReal} :
+    P ε ⊢ execStutter P ε :=
+  or_intro_r
+
+/-- Stuttering may spend one unit of error credit. -/
+theorem execStutter_spend {P : ENNReal → IProp GF} {ε : ENNReal} (hε : 1 ≤ ε) :
+    ⊢ execStutter P ε :=
+  (pure_intro hε).trans or_intro_l
+
+/-- `execStutter` is monotone in the credit budget. -/
+theorem execStutter_mono {P Q : ENNReal → IProp GF} {ε ε' : ENNReal} (hε : ε ≤ ε') :
+    ((P ε -∗ Q ε') ∗ execStutter P ε) ⊢ execStutter Q ε' := by
+  iintro ⟨HM, HS⟩
+  icases HS with ⟨%HVac | HP⟩
+  · ileft; ipureintro; exact HVac.trans hε
+  · iright; iapply HM $$ HP
+
+/-- `execStutter` is monotone in the continuation predicate. -/
+theorem execStutter_mono_pred {P Q : ENNReal → IProp GF} {ε : ENNReal} :
+    ((P ε -∗ Q ε) ∗ execStutter P ε) ⊢ execStutter Q ε :=
+  execStutter_mono le_rfl
+
+variable [ErisWpGS (rT := rT) GF]
+variable {e : Exp rT} {σ : State rT} {ε : ENNReal} {Z : Cfg rT → ENNReal → IProp GF}
+variable {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF}
+
+/-! ## The three step kinds -/
+
+/-! ## The three step kinds -/
+
+/-- Assume any strictly larger error budget. -/
+abbrev glmCreditBump' (ρ : Cfg rT) (ε : ENNReal)
+    (Φ : Cfg rT → ENNReal → IProp GF) : IProp GF :=
+  iprop(∀ ε', ⌜ε < ε'⌝ -∗ |={∅}=> execStutter (Φ ρ) ε')
+
+/-- `glmCreditBump'` is monotone in its continuation, under the wand. -/
+theorem glmCreditBump'_strong_mono {ρ : Cfg rT}
+    {Φ Ψ : Cfg rT → ENNReal → IProp GF} :
+    iprop((∀ ρ ε, Φ ρ ε -∗ Ψ ρ ε) ∗ glmCreditBump' ρ ε Φ) ⊢ glmCreditBump' ρ ε Ψ := by
+  iintro ⟨HΦΨ, HBump⟩
+  iintro %ε' %Hlt
+  imod HBump $$ %ε' %Hlt with HS
+  imodintro
+  iapply execStutter_mono_pred
+  iframe HS
+  iintro HΦ
+  iapply HΦΨ $$ HΦ
+
+variable [ProbLangDist rT] [ProbLangFFI rT] [ProbLangObs rT]
+
+/-- Take a real program step, splitting the budget over the outcomes: kept outcomes fail with
+probability at most `ε₁`, and each outcome gets budget `X₂ ρ`. -/
+abbrev glmPrimStep' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
+    (Z : Cfg rT → ENNReal → IProp GF) : IProp GF :=
+  iprop(∃ (R : Cfg rT → Prop) (ε₁ : ENNReal) (X₂ : Cfg rT → ENNReal),
+    ⌜Reducible e₁ σ₁⌝ ∗
+    ⌜MeasurableSet {ρ | R ρ}⌝ ∗
+    ⌜ε₁ + (∫⁻ ρ, X₂ ρ ∂(primStep ⟨e₁, σ₁⟩)) ≤ ε⌝ ∗
+    ⌜Pgl ε₁ R (primStep ⟨e₁, σ₁⟩)⌝ ∗
+    (∀ ρ, ⌜R ρ⌝ -∗ |={∅}=> execStutter (Z ρ) (X₂ ρ)))
+
+/-- Advance only the state by an expression-erasable measure `μ`, with per-outcome credit `X₂` on
+the kept outcomes `R` (as in `glmPrimStep'`). -/
+abbrev glmErasable' (e₁ : Exp rT) (σ₁ : State rT) (ε : ENNReal)
+    (Φ : Cfg rT → ENNReal → IProp GF) : IProp GF :=
+  iprop(∃ (μ : Measure (State rT)) (R : State rT → Prop) (ε₁ : ENNReal)
+      (X₂ : State rT → ENNReal),
+    ⌜ErasableExpr μ σ₁⌝ ∗
+    ⌜MeasurableSet {σ' | R σ'}⌝ ∗
+    ⌜ε₁ + (∫⁻ σ', X₂ σ' ∂μ) ≤ ε⌝ ∗
+    ⌜Pgl ε₁ R μ⌝ ∗
+    (∀ σ', ⌜R σ'⌝ -∗ |={∅}=> execStutter (Φ ⟨e₁, σ'⟩) (X₂ σ')))
+
+/-- `glmPrimStep'` is monotone in its continuation, under the wand. -/
+theorem glmPrimStep'_strong_mono {e₁ : Exp rT} {σ₁ : State rT} :
+    iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glmPrimStep' e₁ σ₁ ε Z₁) ⊢ glmPrimStep' e₁ σ₁ ε Z₂ := by
+  iintro ⟨HZ, HPrim⟩
+  icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
+  iexists R, ε₁, X₂
+  iframe %Hred %HRmeas %Hexp %Hpgl
+  iintro %ρ HR
+  imod HCont $$ %ρ HR with HS
+  imodintro
+  iapply execStutter_mono_pred
+  iframe HS
+  iintro HZ₁
+  iapply HZ $$ HZ₁
+
+/-- `glmErasable'` is monotone in its continuation, under the wand. -/
+theorem glmErasable'_strong_mono {e₁ : Exp rT} {σ₁ : State rT}
+    {Φ Ψ : Cfg rT → ENNReal → IProp GF} :
+    iprop((∀ ρ ε, Φ ρ ε -∗ Ψ ρ ε) ∗ glmErasable' e₁ σ₁ ε Φ) ⊢ glmErasable' e₁ σ₁ ε Ψ := by
+  iintro ⟨HΦΨ, HEras⟩
+  icases HEras with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hexp, %Hpgl, HCont⟩
+  iexists μ, R, ε₁, X₂
+  iframe %Heras %HRmeas %Hexp %Hpgl
+  iintro %σ' %HR
+  imod HCont $$ %σ' %HR with HS
+  imodintro
+  iapply execStutter_mono_pred
+  iframe HS
+  iintro HΦ
+  iapply HΦΨ $$ HΦ
+
+/-! ## The modality `glm'` -/
+
+/-- The graded lifting modality, least: a credit bump or an erasable step, which recurse, or one
+prim step, which ends in the continuation `Z`. -/
+ifix glm' (e : Exp rT) (σ : State rT) (ε : ENNReal) (Z : Cfg rT → ENNReal → IProp GF) :
+    IProp GF := iprop%
+  glmCreditBump' ⟨e, σ⟩ ε (fun ρ ε' => glm' ρ.expr ρ.state ε' Z) ∨
+    glmPrimStep' e σ ε Z ∨
+    glmErasable' e σ ε (fun ρ ε' => glm' ρ.expr ρ.state ε' Z)
+
+/-! ## Monotonicity -/
+
+/-- `glm'` is monotone in its continuation `Z`, under the wand. -/
+theorem glm'_strong_mono :
+    iprop((∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε') ∗ glm' e σ ε Z₁) ⊢
+      glm' e σ ε Z₂ := by
+  iintro ⟨HZ, HG⟩
+  iapply glm'.iter (fun e σ ε Z => iprop((∀ ρ ε', Z ρ ε' -∗ Z₂ ρ ε') -∗ glm' e σ ε Z₂))
+    $$ [] %e %σ %ε %Z₁ HG HZ
+  iintro !> %e %σ %ε %Z HF Hwand
+  iapply glm'.unfold_mpr
+  icases HF with ⟨HBump | HPrim | HEras⟩
+  · ileft
+    iapply glmCreditBump'_strong_mono
+    iframe HBump
+    iintro %ρ %ε' HP
+    iapply HP $$ Hwand
+  · iright; ileft
+    iapply glmPrimStep'_strong_mono
+    iframe HPrim
+    iintro %ρ' %ε' HC
+    iapply Hwand $$ HC
+  · iright; iright
+    iapply glmErasable'_strong_mono
+    iframe HEras
+    iintro %ρ %ε' HP
+    iapply HP $$ Hwand
+
+/-- `glm'` is monotone in the credit budget. -/
+theorem glm'_mono_grading
+    {ε ε' : ENNReal}
+    (hε : ε ≤ ε') :
+    glm' e σ ε Z ⊢ glm' e σ ε' Z := by
+  iintro HG
+  ihave HG' := glm'.unfold_mp $$ HG
+  iapply glm'.unfold_mpr
+  icases HG' with ⟨HBump | HPrim | HEras⟩
+  · ileft
+    iintro %ε'' %Hlt
+    iapply HBump $$ %ε'' %(hε.trans_lt Hlt)
+  · iright; ileft
+    icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
+    replace Hexp := Hexp.trans hε
+    iexists R, ε₁, X₂
+    iframe %Hred %HRmeas %Hexp %Hpgl
+    iexact HCont
+  · iright; iright
+    icases HEras with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hexp, %Hpgl, HCont⟩
+    replace Hexp := Hexp.trans hε
+    iexists μ, R, ε₁, X₂
+    iframe %Heras %HRmeas %Hexp %Hpgl
+    iexact HCont
+
+/-- `glm'` is monotone in the credit budget, under the wand. -/
+theorem glm'_strong_mono_grading {ε ε' : ENNReal} (hε : ε ≤ ε') :
+    iprop((∀ ρ ε'', Z₁ ρ ε'' -∗ Z₂ ρ ε'') ∗ glm' e σ ε Z₁) ⊢
+      glm' e σ ε' Z₂ := by
+  iintro ⟨HZ, HG⟩
+  iapply glm'_mono_grading hε
+  iapply glm'_strong_mono
+  iframe
+
+/-- `glm'` is monotone in its continuation `Z`. -/
+theorem glm'_mono_pred :
+    iprop((□ (∀ ρ ε', Z₁ ρ ε' -∗ Z₂ ρ ε')) ∗ glm' e σ ε Z₁) ⊢
+      glm' e σ ε Z₂ := by
+  iintro ⟨#HZ, HG⟩
+  iapply glm'_strong_mono
+  iframe HG
+  iexact HZ
+
+/-- `glm'` is monotone in its continuation, for `imono`. -/
+@[imono] theorem IMonoPred.glm' {R : IProp GF} {Z₁ Z₂ : Cfg rT → ENNReal → IProp GF}
+    (h : ∀ ρ ε', IMonoPred R (Z₁ ρ ε') (Z₂ ρ ε')) :
+    IMonoPred R (glm' e σ ε Z₁) (glm' e σ ε Z₂) := by
+  unfold IMonoPred at h ⊢
+  iintro #HR HG
+  iapply glm'_mono_pred
+  iframe HG
+  iintro !> %ρ %ε' HZ
+  iapply h ρ ε' $$ HR HZ
+
+/-! ## Bind -/
+
+/-- Bind rule: run `e` under `glm'` with the continuation `Z` composed with the context `K`. -/
+theorem glm'_bind
+    {K : Ectx rT} :
+    glm' e σ ε (fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε') ⊢
+      glm' (K.fill e) σ ε Z := by
+  iintro HG
+  classical
+  -- Induct on `glm' e` (least fixpoint); a prim step of `e` lifts to one of `K.fill e` via
+  -- `primStep_fill`, pushing `R` and `X₂` forward along `K.fillCfg` (`X₂'` is `0` off its image).
+  let Kinv : Exp rT → Option (Exp rT) := Function.partialInv K.fill
+  have Kinv_left : ∀ e', Kinv (K.fill e') = some e' :=
+    Function.partialInv_left (fill_injective K)
+  let Z' : Cfg rT → ENNReal → IProp GF := fun ρ ε' => Z ⟨K.fill ρ.expr, ρ.state⟩ ε'
+  iapply glm'.iter (fun e σ ε Z'' => iprop(⌜Z'' = Z'⌝ -∗ glm' (K.fill e) σ ε Z))
+    $$ [] %e %σ %ε %Z' HG %rfl
+  iintro !> %e₀ %σ₀ %ε' %Z'' HF %rfl
+  iapply glm'.unfold_mpr
+  icases HF with ⟨HBump | HPrim | HEras⟩
+  · ileft
+    iintro %ε'' %Hlt
+    imod HBump $$ %ε'' %Hlt with HS
+    imodintro
+    iapply execStutter_mono_pred
+    iframe HS
+    iintro H
+    iapply H $$ %rfl
+  · iright; ileft
+    icases HPrim with ⟨%R, %ε₁, %X₂, %Hred, %HRmeas, %Hexp, %Hpgl, HCont⟩
+    have Hsv : ¬ e₀.isValue := val_stuck Hred
+    set R' : Cfg rT → Prop := fun ρ' => ∃ ρ'', ρ' = K.fillCfg ρ'' ∧ R ρ'' with hR'def
+    set X₂' : Cfg rT → ENNReal :=
+      fun ρ' => (Kinv ρ'.expr).elim 0 (fun e' => X₂ ⟨e', ρ'.state⟩) with hX₂'def
+    have hR'set : {ρ' | R' ρ'} = K.fillCfg '' {ρ'' | R ρ''} := by
+      ext ρ'
+      simp only [hR'def, mem_ofPred_eq, mem_image]
+      exact ⟨fun ⟨ρ'', heq, hR⟩ => ⟨ρ'', hR, heq.symm⟩,
+        fun ⟨ρ'', hR, heq⟩ => ⟨ρ'', heq.symm, hR⟩⟩
+    have hR'meas : MeasurableSet {ρ' | R' ρ'} :=
+      hR'set ▸ measurableSet_fillCfg_image K HRmeas
+    have hX₂'fill : ∀ a : Cfg rT, X₂' (K.fillCfg a) = X₂ a := fun a => by
+      simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
+    have hredK : Reducible (K.fill e₀) σ₀ := Hred.fill K
+    have hexp' : ε₁ + (∫⁻ a, X₂' a ∂ primStep ⟨K.fill e₀, σ₀⟩) ≤ ε' := by
+      rw [primStep_fill Hsv]
+      refine le_trans ?_ Hexp
+      gcongr ε₁ + ?_
+      refine (lintegral_map_le _ (fillCfg.measurable K).aemeasurable).trans
+        (Eq.le ?_)
+      exact lintegral_congr_ae (Filter.Eventually.of_forall fun a => hX₂'fill a)
+    have hpgl' : Pgl ε₁ R' (primStep ⟨K.fill e₀, σ₀⟩) := by
+      show primStep ⟨K.fill e₀, σ₀⟩ {x | ¬ R' x} ≤ ε₁
+      have hcompl : MeasurableSet {x : Cfg rT | ¬ R' x} := hR'meas.compl
+      rw [primStep_fill Hsv,
+        Measure.map_apply (by measurability) hcompl]
+      refine (Eq.le ?_).trans Hpgl
+      congr 1
+      ext a
+      simp only [hR'def, mem_preimage, mem_ofPred_eq, not_exists, not_and]
+      refine ⟨fun h hR => h a rfl hR, fun hR ρ₃ hEq hR₃ => ?_⟩
+      exact hR (fillCfg_injective K hEq.symm ▸ hR₃)
+    iexists R', ε₁, X₂'
+    iframe %hredK %hR'meas %hexp' %hpgl'
+    iintro %ρ' ⟨%ρ'', %rfl, %HR⟩
+    imod HCont $$ %ρ'' %HR with HS
+    imodintro
+    simp only [hX₂'def, fillCfg, Kinv_left, Option.elim]
+    iexact HS
+  · iright; iright
+    icases HEras with ⟨%μ, %R, %ε₁, %X₂, %Heras, %HRmeas, %Hexp, %Hpgl, HCont⟩
+    iexists μ, R, ε₁, X₂
+    iframe %Heras %HRmeas %Hexp %Hpgl
+    iintro %σ' %HR
+    imod HCont $$ %σ' %HR with HS
+    imodintro
+    iapply execStutter_mono_pred
+    iframe HS
+    iintro H
+    iapply H $$ %rfl
+
+/-! ## Introduction rules for `glm'` -/
+
+/-- A `glm'` goal follows from a primitive-step obligation. -/
+theorem glm'_prim_step :
+    glmPrimStep' e σ ε Z ⊢ glm' e σ ε Z := by
+  iintro HPrim
+  iapply glm'.unfold_mpr
+  iright
+  ileft
+  iexact HPrim
+
+/-- A `glm'` goal follows from an erasable-step obligation. -/
+theorem glm'_erasable_step :
+    glmErasable' e σ ε (fun ρ ε' => glm' ρ.expr ρ.state ε' Z) ⊢
+      glm' e σ ε Z := by
+  iintro HES
+  iapply glm'.unfold_mpr
+  iright
+  iright
+  iexact HES
+
+/-- Thin-air credit rule: a client may always assume a strictly larger error budget. -/
+theorem glm'_credit_bump :
+    glmCreditBump' ⟨e, σ⟩ ε (fun ρ ε' => glm' ρ.expr ρ.state ε' Z) ⊢
+      glm' e σ ε Z := by
+  iintro HBump
+  iapply glm'.unfold_mpr
+  ileft
+  iexact HBump
+
+end ErisWpGS
+
+end TotalEris
+end ProbLang

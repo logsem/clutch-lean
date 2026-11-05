@@ -1,0 +1,386 @@
+module
+
+public import Metrology.TotalEris.ErisGS
+import Metrology.ProbLang.Syntax.Notation
+public import Metrology.TotalEris.TotalPrimitiveLaws
+import Metrology.Iris.LocalBI
+
+@[expose] public section
+
+/-! # Error credit rules -/
+
+open Iris Iris.Std Iris.BI Iris.ProofMode ProbLang ProbLang.TotalEris
+  ProbLang.TotalEris.ErisWpGS Finset Filter Cfg
+open scoped ENNReal AppGS
+
+namespace ProbLang
+
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT]
+
+namespace TotalEris
+
+variable {hlc : HasLC} {GF : BundledGFunctors} [ErisGS rT hlc GF]
+local bi (IProp GF)
+
+open ErrorCredit
+
+variable {E : CoPset} {e : Exp rT} {Φ : Val rT → IProp GF} {ε₁ : ℝ≥0∞}
+
+/-- Supplying a credit `ε` decreases the supply `εₛ` by `ε`. -/
+theorem errInterp_supply_decrease {εₛ ε : ℝ≥0∞} :
+    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ |==> errInterp (rT := rT) (εₛ - ε) := by
+  iintro ⟨Hs, Hε⟩
+  iapply supply_decrease $$ Hs Hε
+
+/-- The supply bounds any credit drawn from it. -/
+theorem errInterp_supply_bound {εₛ ε : ℝ≥0∞} :
+    iprop(errInterp (rT := rT) εₛ ∗ ↯ε) ⊢ errInterp (rT := rT) εₛ ∗ ↯ε ∗ ⌜ε ≤ εₛ⌝ := by
+  iintro ⟨Hs, Hε⟩
+  ihave %hLe := supply_bound $$ Hs Hε
+  iframe Hs Hε %hLe
+
+/-- The supply can mint a credit `δ` while staying below `1`. -/
+theorem errInterp_supply_increase {ε δ : ℝ≥0∞} (h : ε + δ < 1) :
+    iprop(errInterp (rT := rT) ε) ⊢ |==> (errInterp (rT := rT) (ε + δ) ∗ ↯δ) :=
+  supply_increase h
+
+variable [ProbLangDist rT] [ProbLangFFI rT] [ProbLangObs rT]
+
+section nv
+variable (Hnv : e.toVal? = none)
+include Hnv
+
+/-- A client may assume any strictly larger error credit. -/
+theorem twp_err_incr {ε : ℝ≥0∞} :
+    iprop(↯ε ∗ ∀ ε', ⌜ε < ε'⌝ -∗ ↯ε' -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
+  iintro ⟨Herr, Hwp⟩
+  iapply twp_lift_step_fupd_glm Hnv
+  iintro %σ₁ %ε₂ ⟨Hσ₁, Hε₂⟩
+  imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
+  imodintro
+  iapply glm'_credit_bump
+  iintro %ε' %Hε'
+  by_cases hlt : ε' < 1
+  case neg =>
+    push Not at hlt
+    imodintro
+    iapply execStutter_spend hlt
+  case pos =>
+    imod Hclose with -
+    have hbnd : ε₂ + (ε' - ε₂) < 1 := by rw [add_tsub_cancel_of_le Hε'.le]; exact hlt
+    conv_rhs => rw [← add_tsub_cancel_of_le Hε'.le]
+    imod errInterp_supply_increase hbnd $$ Hε₂ with ⟨HsuppNew, Hfrag⟩
+    icombine Herr Hfrag as Herr'
+    ihave %hValid := valid $$ Herr'
+    ispecialize Hwp $$ %(ε + (ε' - ε₂)) %?bound Herr'
+    case bound =>
+      refine ENNReal.lt_add_right ?_ ?_
+      · intro hε_top; simp [hε_top] at hValid
+      · rw [Ne, tsub_eq_zero_iff_le]; exact not_le.mpr Hε'
+    isimp only [tglWp_unfold_step Hnv] at Hwp
+    imod Hwp $$ %σ₁ %(ε₂ + (ε' - ε₂)) [$] with HGlm
+    imodintro
+    iapply execStutter_free
+    iexact HGlm
+
+/-- A client may assume an arbitrarily small positive error credit (thin air). -/
+theorem twp_err_pos :
+    iprop(∀ ε, ⌜0 < ε⌝ -∗ ↯ε -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
+  iintro Hwp
+  iapply fupd_tglWp
+  imod zero with Herr
+  imodintro
+  iapply twp_err_incr Hnv
+  iframe
+
+/-- A client holding `↯ a` may assume an arbitrarily small extra positive credit. -/
+theorem twp_err_pos_add {a : ℝ≥0∞} :
+    ⊢ ↯ a -∗ (∀ ε, ⌜0 < ε⌝ -∗ ↯ (a + ε) -∗ tglWp E e Φ) -∗ tglWp E e Φ := by
+  iintro Ha Hwp
+  iapply twp_err_pos Hnv
+  iintro %ε %Hε Hε
+  icombine Ha Hε as H
+  iapply Hwp $$ %ε %Hε H
+
+/-- If a spec holds at every credit cost in a set, paying the infimum of the costs suffices. -/
+theorem twp_err_biInf {ι : Type _} {S : Set ι} {ε : ι → ℝ≥0∞} :
+    iprop(↯(⨅ i ∈ S, ε i) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
+  iintro ⟨Herr, Hwp⟩
+  iapply twp_err_incr Hnv
+  iframe Herr
+  iintro %ε' %Hlt Hε'
+  obtain ⟨i, hi⟩ := iInf_lt_iff.mp Hlt
+  obtain ⟨hiS, hlt⟩ := iInf_lt_iff.mp hi
+  iapply Hwp $$ %i %hiS
+  iapply weaken hlt.le $$ Hε'
+
+end nv
+
+/-- If a spec holds at cost `ε i` on a set in `l`, paying `liminf ε` along `l` suffices. -/
+theorem twp_err_liminf {ι : Type _} {l : Filter ι} {S : Set ι} {ε : ι → ℝ≥0∞} (hS : S ∈ l)
+    (Hnv : e.toVal? = none) :
+    iprop(↯(liminf ε l) ∗ ∀ i, ⌜i ∈ S⌝ -∗ ↯(ε i) -∗ tglWp E e Φ) ⊢ tglWp E e Φ := by
+  iintro ⟨Herr, Hwp⟩
+  iapply twp_err_biInf (S := S) Hnv
+  iframe Hwp
+  iapply weaken (le_liminf_of_le (h := mem_of_superset hS fun i hi => biInf_le ε hi)) $$ Herr
+
+/-- Spend `↯ε₁` on a primitive step whose outcomes `ρ` (all in `R`) each receive `↯(f ρ)`, when
+`f` averages to at most `ε₁`. -/
+theorem twp_glm_spend {e₁ : Exp rT} {R : State rT → Cfg rT → Prop} {f : Cfg rT → ℝ≥0∞}
+    (hv : e₁.toVal? = none)
+    (Hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁)
+    (Hred : ∀ σ₁, Reducible e₁ σ₁)
+    (hRmeas : ∀ σ₁, MeasurableSet {ρ : Cfg rT | R σ₁ ρ})
+    (hPgl : ∀ σ₁, Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩))
+    (HInt : ∀ σ₁, (∫⁻ ρ, f ρ ∂(primStep ⟨e₁, σ₁⟩)) ≤ ε₁) :
+    iprop(↯ε₁) ⊢
+      iprop((∀ σ₁ ρ, ⌜R σ₁ ρ⌝ -∗ ↯(f ρ) -∗ tglWp E ρ.expr Φ) -∗
+      tglWp E e₁ Φ) := by
+  iintro Herr Hcont
+  iapply twp_lift_step_fupd_glm hv
+  iintro %σ₁ %ε_now ⟨Hσ, Hε_now⟩
+  imod (BIFUpdate.subset Std.LawfulSet.empty_subset) with Hclose
+  imodintro
+  ihave ⟨Hε_now, Herr, %hLe⟩ := errInterp_supply_bound $$ [$Hε_now $Herr]
+  iapply glm'_prim_step
+  iexists (R σ₁), 0, (fun ρ : Cfg rT => (ε_now - ε₁) + f ρ)
+  specialize Hred σ₁
+  specialize hRmeas σ₁
+  specialize hPgl σ₁
+  have hexp : 0 + ∫⁻ ρ, ((ε_now - ε₁) + f ρ) ∂(primStep ⟨e₁, σ₁⟩) ≤ ε_now := by
+    rw [zero_add, MeasureTheory.lintegral_add_left measurable_const,
+        MeasureTheory.lintegral_const]
+    calc _ ≤ (ε_now - ε₁) * 1 + ε₁ := by gcongr; exacts [primStep_univ_le_one _, HInt σ₁]
+      _ = ε_now := by rw [mul_one]; exact tsub_add_cancel_of_le hLe
+  iframe %Hred %hRmeas %hexp %hPgl
+  iintro %ρ %HRρ
+  imod errInterp_supply_decrease $$ [$Hε_now $Herr] with Hε_minus
+  imodintro
+  by_cases hlt : (ε_now - ε₁) + f ρ < 1
+  case neg =>
+    push Not at hlt
+    iapply execStutter_spend hlt
+  case pos =>
+    iapply execStutter_free
+    imod errInterp_supply_increase hlt $$ Hε_minus with ⟨Hε_new, Hcr⟩
+    imod Hclose with -
+    imodintro
+    rw [Hstate HRρ]
+    iframe Hσ Hε_new
+    iapply Hcont $$ %σ₁ %ρ %HRρ Hcr
+
+/-- Spend expected error credit on a fresh family sample over a measurable carrier. -/
+theorem twp_sample_exp {m : ℕ} {ea : Exp rT} {v : Val rT} {S : Set (Val rT)}
+    {ε₂ : Val rT → ℝ≥0∞} (hv : ea.toVal? = some v) (hS : MeasurableSet S)
+    (hconc : Concentrated (ProbLangDist.dist m v) S)
+    (hdist : ProbLangDist.dist m v ≠ 0) (hε₂ : Measurable ε₂)
+    (HInt : (∫⁻ w, ε₂ w ∂ProbLangDist.dist m v) ≤ ε₁) :
+    iprop(↯ε₁) ⊢
+      iprop((∀ w, ⌜w ∈ S⌝ ∗ ↯(ε₂ w) -∗ Φ w) -∗
+        tglWp E (.sample m ea pl(#())) Φ) := by
+  let es : Exp rT := .sample m ea pl(#())
+  have hnv : es.toVal? = none := by
+    change (Exp.sample m ea pl(#())).toVal? = none
+    exact Exp.sample_toVal?_eq_none
+  have hhead : ∀ σ : State rT, HeadReducible es σ := fun σ => by
+    change HeadReducible (.sample m ea pl(#())) σ
+    rw [HeadReducible, headStep_sample hv]
+    exact fun hzero => hdist (Cfg.sample_eq_zero_iff.mp hzero)
+  have hd : es.decompItem = none :=
+    Exp.decompItem_none_of_lc_headReducible (by
+      change (Exp.sample m ea pl(#())).IsLocallyClosed
+      rw [← Exp.ofVal_of_toVal_some hv]
+      is_lc) (hhead default)
+  have hg : ∀ σ : State rT, Measurable (fun w : Val rT => (⟨.ofVal w, σ⟩ : Cfg rT)) :=
+    fun _ => Cfg.measurable_iff.mpr ⟨Exp.ofVal.measurable, measurable_const⟩
+  have hps : ∀ σ : State rT, primStep ⟨es, σ⟩ = Cfg.sample m v σ := fun σ => by
+    rw [primStep_eq_headStep hd]
+    change headStep ⟨.sample m ea pl(#()), σ⟩ = Cfg.sample m v σ
+    rw [headStep_sample hv]
+  set R : State rT → Cfg rT → Prop :=
+    fun σ ρ => ρ ∈ Cfg.sampleSetOn S σ with hR
+  set f : Cfg rT → ℝ≥0∞ := fun ρ =>
+    match ρ.expr.toVal? with | some w => ε₂ w | none => 0 with hf
+  have hstate : ∀ {σ : State rT} {ρ : Cfg rT}, R σ ρ → ρ.state = σ := by
+    rintro σ ρ ⟨w, _, rfl⟩
+    rfl
+  have hred : ∀ σ, Reducible es σ := fun σ =>
+    reducible_of_headReducible (by
+      change (Exp.sample m ea pl(#())).IsLocallyClosed
+      rw [← Exp.ofVal_of_toVal_some hv]
+      is_lc) (hhead σ)
+  have hrmeas : ∀ σ : State rT, MeasurableSet {ρ : Cfg rT | R σ ρ} := fun σ => by
+    change MeasurableSet (Cfg.sampleSetOn S σ)
+    exact Cfg.measurableSet_sampleSetOn hS σ
+  have hpgl : ∀ σ : State rT, Pgl 0 (R σ) (primStep ⟨es, σ⟩) := fun σ => by
+    apply Pgl.of_concentrated
+    rw [hps σ]
+    change Concentrated (Cfg.sample m v σ) (Cfg.sampleSetOn S σ)
+    exact Cfg.concentrated_sampleSetOn hS hconc σ
+  have hfmeas : Measurable f := by
+    rw [hf]
+    have h := Option.measurable_elim_param_zero
+      (Exp.toVal_question.measurable.comp Cfg.measurable_expr) (hε₂.comp measurable_snd)
+    convert h using 1
+    funext ρ
+    rcases hopt : ρ.expr.toVal? with _ | w <;> simp [hopt]
+  have hint : ∀ σ : State rT, (∫⁻ ρ, f ρ ∂primStep ⟨es, σ⟩) ≤ ε₁ := fun σ => by
+    rw [hps σ, Cfg.sample, MeasureTheory.lintegral_map hfmeas (hg σ)]
+    simpa only [hf, Exp.toVal?_ofVal] using HInt
+  iintro Herr Hcont
+  iapply (twp_glm_spend hnv hstate hred hrmeas hpgl hint) $$ Herr
+  iintro %σ %ρ %HRρ Hcr
+  obtain ⟨w, hw, rfl⟩ := HRρ
+  have hfe : f (⟨.ofVal w, σ⟩ : Cfg rT) = ε₂ w := by
+    simp only [hf, Exp.toVal?_ofVal]
+  iapply tglWp_value_of_toVal (Exp.toVal?_ofVal w)
+  iapply Hcont $$ %w
+  iframe %hw
+  iapply (ext hfe) $$ Hcr
+
+/-- Spend `↯ε₁` on `rand(#z, #())`, giving outcome `n` the credit `ε₂ n` when the `ε₂` average to
+at most `ε₁`. -/
+theorem twp_rand_exp {z : Int} {ε₂ : ℕ → ℝ≥0∞} (Hz : 0 < z)
+    [ProbLangDist.IsUniformInt rT]
+    (HSum : (∑ n ∈ range z.toNat, ε₂ n) / z.toNat ≤ ε₁) :
+    iprop(↯ε₁) ⊢
+      iprop((∀ n, ⌜0 ≤ n ∧ n < z⌝ ∗ ↯(ε₂ n.toNat) -∗
+        Φ (.int n : Val rT)) -∗
+      tglWp E (pl(rand(#z, #()))) Φ) := by
+  have Hnv : (pl(rand(#z, #())) : Exp rT).toVal? = none := solve_not_value
+  have hhead : ∀ σ₁ : State rT, HeadReducible (pl(rand(#int z, #()))) σ₁ :=
+    fun σ₁ => (HeadStepSupport.rand_pos rfl Hz le_rfl Hz).ne_zero
+  set R : State rT → Cfg rT → Prop :=
+    fun σ₁ ρ => ∃ n : Int, 0 ≤ n ∧ n < z ∧ ρ = (⟨.lit (.int n), σ₁⟩ : Cfg rT)
+  set f : Cfg rT → ℝ≥0∞ := fun ρ => match ρ.expr with
+    | .lit (.int n) => if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0
+    | _ => 0 with hf
+  have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
+    rintro σ₁ ρ ⟨n, _, _, rfl⟩; rfl
+  have hred : ∀ σ₁, Reducible (pl(rand(#int z, #()))) σ₁ :=
+    fun σ₁ => reducible_of_headReducible (by is_lc) (hhead σ₁)
+  have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
+    apply Set.Countable.measurableSet
+    apply Set.Countable.mono (s₂ := (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) '' Set.univ)
+    · rintro ρ ⟨n, _, _, rfl⟩; exact ⟨n, trivial, rfl⟩
+    · exact Set.countable_univ.image _
+  have hpgl : ∀ σ₁ : State rT,
+      Pgl 0 (R σ₁) (primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩) := fun σ₁ => by
+    show (primStep ⟨pl(rand(#z, #())), σ₁⟩) {ρ : Cfg rT | ¬ R σ₁ ρ} ≤ 0
+    refine le_of_eq ?_
+    rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁)),
+      headStep_sample rfl, Cfg.sample_unifInt]
+    have hg : Measurable (fun n : Int => (⟨.lit (.int n), σ₁⟩ : Cfg rT)) := Measurable.of_discrete
+    have hRc : MeasurableSet {ρ : Cfg rT | ¬ R σ₁ ρ} := (hrmeas σ₁).compl
+    rw [uniform_eq_map_uniformOfFinset Hz σ₁, MeasureTheory.Measure.map_apply hg hRc,
+      MeasureTheory.Measure.uniformOfFinset_apply_eq_zero_iff, Set.disjoint_left]
+    intro n hn hcontra
+    rw [mem_coe, mem_Ico] at hn
+    exact hcontra ⟨n, hn.1, hn.2, rfl⟩
+  have hint : ∀ σ₁ : State rT,
+      (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.rand (.lit (.int z)) (.lit .unit), σ₁⟩)) ≤ ε₁ := fun σ₁ => by
+    have hφ : Measurable f := (measurable_litInt_elim _).comp measurable_expr
+    rw [primStep_eq_headStep (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁)),
+      headStep_sample rfl, Cfg.sample_unifInt]
+    show (∫⁻ ρ, f ρ ∂(uniform z σ₁)) ≤ ε₁
+    rw [lintegral_uniform Hz σ₁ hφ, ← ENNReal.div_eq_inv_mul]
+    convert HSum using 2
+    refine sum_nbij' (i := fun n : Int => n.toNat) (j := (Nat.cast : ℕ → Int))
+      ?_ ?_ (fun n hn => Int.toNat_of_nonneg (mem_Ico.mp hn).1)
+      (fun k _ => Int.toNat_natCast k) ?_
+    · intro n hn
+      simp only [mem_Ico, mem_range] at hn ⊢
+      omega
+    · intro k hk
+      simp only [mem_Ico, mem_range] at hk ⊢
+      omega
+    · intro n hn
+      simp only [mem_Ico] at hn
+      show (if h : 0 ≤ n ∧ n < z then ε₂ n.toNat else 0) = ε₂ n.toNat
+      exact dite_eq_left ⟨hn.1, hn.2⟩
+  iintro Herr Hcont
+  iapply (twp_glm_spend Hnv hstate hred hrmeas hpgl hint) $$ Herr
+  iintro %σ₁ %ρ %HRρ Hcr
+  obtain ⟨n, Hn₁, Hn₂, rfl⟩ := HRρ
+  have hfe : f (⟨pl(#n), σ₁⟩ : Cfg rT) = ε₂ n.toNat := by
+    simp only [hf]; exact dite_eq_left ⟨Hn₁, Hn₂⟩
+  iapply (tglWp_value_of_toVal rfl)
+  have hn : 0 ≤ n ∧ n < z := ⟨Hn₁, Hn₂⟩
+  iapply Hcont $$ %n
+  iframe %hn
+  iapply (ext hfe) $$ Hcr
+
+/-- Spend `↯ε₁` on `urand`, giving outcome `r` the credit `ε₂ r` when the `ε₂` integrate to at most
+`ε₁`. -/
+theorem twp_urand_exp {ε₂ : rT → ℝ≥0∞} (hε₂ : Measurable ε₂)
+    [ProbLangDist.IsUniformReal rT]
+    (HInt : (∫⁻ r, ε₂ r ∂(LawfulProbLangℝ.unifUnit)) ≤ ε₁) :
+    iprop(↯ε₁) ⊢
+      iprop((∀ r, (⌜r ∈ LawfulProbLangℝ.unifUnitSupport⌝ ∗ ↯(ε₂ r)) -∗ Φ (.real r)) -∗
+      tglWp E pl(urand) Φ) := by
+  have Hnv : (pl(urand) : Exp rT).toVal? = none := solve_not_value
+  have hhead : ∀ σ₁ : State rT, HeadReducible (pl(urand) : Exp rT) σ₁ :=
+    fun σ₁ => by
+      rw [HeadReducible, headStep_sample rfl, Cfg.sample_unifReal]
+      exact MeasureTheory.IsProbabilityMeasure.ne_zero _
+  have hps : ∀ σ₁ : State rT, primStep (⟨pl(urand), σ₁⟩ : Cfg rT) =
+      (LawfulProbLangℝ.unifUnit).map (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
+    fun σ₁ => by
+      rw [primStep_eq_headStep
+        (Exp.decompItem_none_of_lc_headReducible (by is_lc) (hhead σ₁)),
+        headStep_sample rfl, Cfg.sample_unifReal]
+      rfl
+  have hg : ∀ σ₁ : State rT, Measurable (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) :=
+    fun σ₁ => measurable_iff.mpr
+      ⟨Exp.lit.measurable.comp BaseLit.real.measurable, measurable_const⟩
+  have hgemb : ∀ σ₁ : State rT,
+      MeasurableEmbedding (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) := fun σ₁ => by
+    have hcomp : (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) =
+        measurableEquivProd.symm ∘ (fun e : Exp rT => (e, σ₁)) ∘ Exp.lit ∘ BaseLit.real := rfl
+    rw [hcomp]
+    exact measurableEquivProd.symm.measurableEmbedding.comp
+      ((measurableEmbedding_prod_mk_right σ₁).comp
+        (Exp.lit.measurableEmbedding.comp BaseLit.real.measurableEmbedding))
+  set R : State rT → Cfg rT → Prop :=
+    fun σ₁ ρ => ∃ r : rT, ρ = (⟨.lit (.real r), σ₁⟩ : Cfg rT) ∧ r ∈ LawfulProbLangℝ.unifUnitSupport
+    with hR
+  set f : Cfg rT → ℝ≥0∞ := fun ρ => match ρ.expr with
+    | .lit (.real r) => ε₂ r
+    | _ => 0 with hf
+  have hrange : ∀ σ₁ : State rT, {ρ : Cfg rT | R σ₁ ρ} =
+      (fun r : rT => (⟨.lit (.real r), σ₁⟩ : Cfg rT)) ''
+        LawfulProbLangℝ.unifUnitSupport := fun σ₁ => by
+    ext ρ
+    simp only [Set.mem_image, Set.mem_ofPred_eq, hR]
+    exact ⟨fun ⟨r, h, hr⟩ => ⟨r, hr, h.symm⟩, fun ⟨r, hr, h⟩ => ⟨r, h.symm, hr⟩⟩
+  have hstate : ∀ {σ₁ : State rT} {ρ : Cfg rT}, R σ₁ ρ → ρ.state = σ₁ := by
+    rintro σ₁ ρ ⟨r, rfl, _⟩; rfl
+  have hred : ∀ σ₁, Reducible (pl(urand) : Exp rT) σ₁ :=
+    fun σ₁ => reducible_of_headReducible (by is_lc) (hhead σ₁)
+  have hrmeas : ∀ σ₁ : State rT, MeasurableSet {ρ : Cfg rT | R σ₁ ρ} := fun σ₁ => by
+    rw [hrange σ₁]
+    exact (hgemb σ₁).measurableSet_image.mpr LawfulProbLangℝ.unifUnitSupportMeasurable
+  have hpgl : ∀ σ₁ : State rT, Pgl 0 (R σ₁) (primStep ⟨Exp.urand, σ₁⟩) := fun σ₁ => by
+    apply Pgl.of_concentrated
+    rw [hps σ₁, hrange σ₁]
+    exact Concentrated.map (hg σ₁)
+      ((hgemb σ₁).measurableSet_image.mpr LawfulProbLangℝ.unifUnitSupportMeasurable)
+      LawfulProbLangℝ.unifUnitIsConcentrated
+  have hint : ∀ σ₁ : State rT,
+      (∫⁻ ρ, f ρ ∂(primStep ⟨Exp.urand, σ₁⟩)) ≤ ε₁ := fun σ₁ => by
+    have hφ : Measurable f := (measurable_litReal_elim ε₂ hε₂).comp measurable_expr
+    rw [hps σ₁, MeasureTheory.lintegral_map hφ (hg σ₁)]
+    exact HInt
+  iintro Herr Hcont
+  iapply (twp_glm_spend Hnv hstate hred hrmeas hpgl hint) $$ Herr
+  iintro %σ₁ %ρ %HRρ Hcr
+  obtain ⟨r, rfl, hrsupp⟩ := HRρ
+  have hfe : f (⟨pl(#r), σ₁⟩ : Cfg rT) = ε₂ r := by simp only [hf]
+  iapply (tglWp_value_of_toVal rfl)
+  iapply Hcont $$ %r
+  iframe %hrsupp
+  iapply (ext hfe) $$ Hcr
+
+end TotalEris
+end ProbLang

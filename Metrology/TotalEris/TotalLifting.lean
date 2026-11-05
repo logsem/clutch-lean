@@ -1,0 +1,275 @@
+module
+
+public import Metrology.TotalEris.TotalWeakestpre
+
+/-!
+# Total-WP lifting lemmas
+
+Rules proving `tglWp` of a non-value from its prim step: general, atomic, pure, head, `PureExec`.
+-/
+
+@[expose] public section
+
+open Iris Iris.Std Iris.BI Iris.ProofMode OFE COFE ProbLang
+open scoped ENNReal
+
+namespace ProbLang
+namespace TotalEris
+namespace ErisWpGS
+
+variable {rT : Type _} [MeasurableSpace rT] [LawfulProbLangℝ rT] [ProbLangDist rT] [ProbLangFFI rT]
+  [ProbLangObs rT]
+variable {GF : BundledGFunctors} [ErisWpGS (rT := rT) GF]
+variable {E : CoPset} {Φ : Val rT → IProp GF} {e₁ e₂ : Exp rT}
+
+section
+
+variable (hv : e₁.toVal? = none)
+include hv
+
+/-! ## From the step modality `glm'` to prim-step rules -/
+
+/-- Prove `tglWp` of a non-value from `glm'` on its state and error interpretations. -/
+theorem twp_lift_step_fupd_glm : iprop(
+    ∀ σ₁ ε₁, stateInterp σ₁ ∗ errInterp (rT := rT) ε₁ -∗
+        |={E, ∅}=> glm' e₁ σ₁ ε₁ (fun ρ ε₂ =>
+          iprop(|={∅, E}=>
+            stateInterp ρ.state ∗ errInterp (rT := rT) ε₂ ∗ tglWp E ρ.expr Φ)))
+    ⊢ tglWp E e₁ Φ := by
+  iintro HG
+  iapply tglWp.unfold_mpr
+  isimp only [tglWp_pre_eq_step hv]
+  iintro %σ %ε ⟨Hσ, Hε⟩
+  iapply HG $$ %σ %ε [$Hσ $Hε]
+
+/-- Lift a prim step whose outcomes are concentrated on a measurable relation `R`. -/
+theorem twp_lift_step_fupd_gen
+    (R : State rT → Cfg rT → Prop)
+    (hRmeas : ∀ σ₁, MeasurableSet {ρ | R σ₁ ρ})
+    (hconc : ∀ σ₁, Concentrated (primStep ⟨e₁, σ₁⟩) {ρ | R σ₁ ρ}) : iprop(
+    ∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=>
+      ⌜Reducible e₁ σ₁⌝ ∗
+      ∀ e₂ σ₂, ⌜R σ₁ ⟨e₂, σ₂⟩⌝ -∗
+        |={∅}=> |={∅, E}=> stateInterp σ₂ ∗ tglWp E e₂ Φ)
+    ⊢ tglWp E e₁ Φ := by
+  iintro H
+  iapply twp_lift_step_fupd_glm hv
+  iintro %σ₁ %ε₁ ⟨Hσ, Hε⟩
+  imod H $$ %σ₁ Hσ with ⟨%Hred, HCont⟩
+  imodintro
+  iapply glm'_prim_step
+  specialize hRmeas σ₁
+  -- No failure mass (`R` is concentrated); every outcome keeps the full budget `ε₁`, whose
+  -- expectation is `≤ ε₁` since `primStep` has mass `≤ 1`.
+  have hpgl : Pgl 0 (R σ₁) (primStep ⟨e₁, σ₁⟩) := Pgl.of_concentrated (hconc σ₁)
+  have hexp : 0 + ∫⁻ ρ, (fun _ => ε₁) ρ ∂primStep ⟨e₁, σ₁⟩ ≤ ε₁ := by
+    rw [zero_add, MeasureTheory.lintegral_const]
+    calc ε₁ * primStep ⟨e₁, σ₁⟩ .univ ≤ ε₁ * 1 := by gcongr; exact primStep_univ_le_one _
+      _ = ε₁ := mul_one ε₁
+  iexists (R σ₁), 0, (fun _ => ε₁)
+  iframe %Hred %hRmeas %hexp %hpgl
+  iintro %ρ %HR
+  imod HCont $$ %ρ.expr %ρ.state %HR with HC
+  imodintro
+  iright
+  imod HC with ⟨Hσ', HW⟩
+  iframe
+
+section
+
+variable (hatom : ∀ σ₁, IsAtomicSupport (primStep ⟨e₁, σ₁⟩))
+include hatom
+
+/-- Lift a prim step with atomic support. -/
+theorem twp_lift_step_fupd : iprop(
+    ∀ σ₁, stateInterp σ₁ -∗ |={E, ∅}=>
+      ⌜Reducible e₁ σ₁⌝ ∗
+      ∀ e₂ σ₂, ⌜Possible ⟨e₂, σ₂⟩ (primStep ⟨e₁, σ₁⟩)⌝ -∗
+        |={∅}=> |={∅, E}=> stateInterp σ₂ ∗ tglWp E e₂ Φ)
+    ⊢ tglWp E e₁ Φ :=
+  twp_lift_step_fupd_gen hv (fun σ₁ ρ => Possible ρ (primStep ⟨e₁, σ₁⟩))
+    (fun σ₁ => measurableSet_possible_support)
+    (fun σ₁ => by
+      have hset : {ρ : Cfg rT | Possible ρ (primStep ⟨e₁, σ₁⟩)} =
+          {ρ | 0 < primStep ⟨e₁, σ₁⟩ {ρ}} := Set.ext fun ρ => possible_iff_pos
+      rw [hset]; exact (hatom σ₁).concentrated_atoms)
+
+/-! ## Atomic steps -/
+
+/-- Lift an atomic prim step whose results are values. -/
+theorem twp_lift_atomic_step_fupd {E₁ : CoPset} : iprop(
+    ∀ σ₁, stateInterp σ₁ -∗ |={E₁}=>
+      ⌜Reducible e₁ σ₁⌝ ∗
+      ∀ e₂ σ₂, ⌜Possible ⟨e₂, σ₂⟩ (primStep ⟨e₁, σ₁⟩)⌝ -∗ |={E₁}=>
+          stateInterp σ₂ ∗ match e₂.toVal? with | some v => Φ v | none => iprop(False))
+      ⊢ tglWp E₁ e₁ Φ := by
+  iintro H
+  iapply twp_lift_step_fupd hv hatom
+  iintro %σ₁ Hσ
+  imod H $$ %σ₁ Hσ with ⟨%Hred, HCont⟩
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imodintro
+  iframe %Hred
+  iintro %e₂ %σ₂ %hstep
+  imodintro
+  imod Hclose with -
+  imod HCont $$ %e₂ %σ₂ %hstep with ⟨Hσ', HΦv⟩
+  imodintro
+  iframe Hσ'
+  cases htv : e₂.toVal? with
+  | some v => iapply tglWp_value_of_toVal htv $$ [$]
+  | none => iexfalso; iexact HΦv
+
+/-! ## Pure steps -/
+
+/-- Lift a pure prim step, which leaves the state unchanged. -/
+theorem twp_lift_pure_step
+    (hsafe : ∀ σ₁, Reducible e₁ σ₁)
+    (hstep : ∀ σ₁ e₂ σ₂,
+      Possible (⟨e₂, σ₂⟩ : Cfg rT) (primStep ⟨e₁, σ₁⟩) → σ₂ = σ₁) :
+    iprop(|={E}=> ∀ e₂ σ, ⌜Possible ⟨e₂, σ⟩ (primStep ⟨e₁, σ⟩)⌝ -∗ tglWp E e₂ Φ)
+      ⊢ tglWp E e₁ Φ := by
+  iintro H
+  iapply twp_lift_step_fupd hv hatom
+  iintro %σ₁ Hσ
+  imod H
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imodintro
+  specialize hsafe σ₁
+  iframe %hsafe
+  iintro %e₂ %σ₂ %hstep'
+  imodintro
+  imod Hclose
+  imodintro
+  obtain rfl := hstep _ _ _ hstep'
+  iframe Hσ
+  iapply H $$ %_ %_ %hstep'
+
+/-- Lift a deterministic pure prim step to `e₂`. -/
+theorem twp_lift_pure_det_step
+    (hsafe : ∀ σ₁, Reducible e₁ σ₁)
+    (hpuredet : ∀ σ₁ e₂' σ₂,
+      Possible ⟨e₂', σ₂⟩ (primStep ⟨e₁, σ₁⟩) → σ₂ = σ₁ ∧ e₂' = e₂) :
+    iprop(|={E}=> tglWp E e₂ Φ) ⊢ tglWp E e₁ Φ := by
+  iintro H
+  iapply twp_lift_pure_step hv hatom hsafe (fun σ e₂' σ₂ hstep => (hpuredet σ e₂' σ₂ hstep).1)
+  imod H
+  imodintro
+  iintro %e₂' %σ %hstep
+  obtain ⟨_, rfl⟩ := hpuredet σ e₂' σ hstep
+  iexact H
+
+end
+
+/-! ## Head steps -/
+
+/-- Lift an atomic head step. -/
+theorem twp_lift_atomic_head_step
+    [ProbLangDist.IsIntValued rT]
+    (hlc : e₁.IsLocallyClosed)
+    (hd : e₁.decompItem = none := by simp [Exp.decompItem, Exp.toVal?_lit, Exp.toVal?_ofVal])
+    (hns : ¬ e₁.IsSampler := by problang_side) : iprop(
+    ∀ σ₁, stateInterp σ₁ -∗ |={E}=>
+      ⌜HeadReducible e₁ σ₁⌝ ∗
+      ∀ e₂ σ₂, ⌜Possible ⟨e₂, σ₂⟩ (headStep ⟨e₁, σ₁⟩)⌝ -∗ |={E}=>
+          stateInterp σ₂ ∗ match e₂.toVal? with | some v => Φ v | none => iprop(False))
+      ⊢ tglWp E e₁ Φ := by
+  iintro H
+  iapply twp_lift_atomic_step_fupd hv
+    (fun σ => by rw [primStep_eq_headStep hd]; exact headStep_atomic e₁ σ hns)
+  iintro %σ₁ Hσ
+  imod H $$ %σ₁ Hσ with ⟨%Hhred, HCont⟩
+  rw [← primStep_eq_headStep hd]
+  replace Hhred := reducible_of_headReducible hlc Hhred
+  imodintro
+  iframe %Hhred
+  iintro %e₂ %σ₂ %Hpstep
+  iapply HCont $$ %e₂ %σ₂ %_
+  exact Hpstep
+
+/-- Lift a deterministic pure head step to `e₂`. -/
+theorem twp_lift_pure_det_head_step
+    [ProbLangDist.IsIntValued rT]
+    (hlc : e₁.IsLocallyClosed)
+    (hsafe : ∀ σ₁, ∃ ρ : Cfg rT, Possible ρ (headStep ⟨e₁, σ₁⟩))
+    (hdet : ∀ σ₁ e₂' σ₂,
+      Possible (⟨e₂', σ₂⟩ : Cfg rT) (headStep ⟨e₁, σ₁⟩) → σ₂ = σ₁ ∧ e₂' = e₂)
+    (hns : ¬ e₁.IsSampler := by problang_side) :
+    iprop(|={E}=> tglWp E e₂ Φ) ⊢ tglWp E e₁ Φ := by
+  have hhr : ∀ σ, HeadReducible e₁ σ := fun σ => (hsafe σ).elim fun _ hρ => hρ.ne_zero
+  have hd : e₁.decompItem = none := Exp.decompItem_none_of_lc_headReducible hlc (hhr default)
+  iapply twp_lift_pure_det_step hv
+    (fun σ => by rw [primStep_eq_headStep hd]; exact headStep_atomic e₁ σ hns)
+    (hsafe := fun σ => reducible_of_headReducible hlc (hhr σ))
+  refine fun σ e₂' σ₂ hp => hdet σ e₂' σ₂ ?_
+  rwa [← primStep_eq_headStep hd]
+
+end
+
+/-- Lift an atomic head step over a measurable carrier of all its outcomes. -/
+theorem twp_lift_atomic_head_step_concentrated
+    (hv : e₁.toVal? = none)
+    (hd : e₁.decompItem = none)
+    (S : State rT → Set (Cfg rT))
+    (hSmeas : ∀ σ, MeasurableSet (S σ))
+    (hSconc : ∀ σ, Concentrated (headStep ⟨e₁, σ⟩) (S σ))
+    (hlc : e₁.IsLocallyClosed) : iprop%
+    (∀ σ₁, stateInterp σ₁ -∗ |={E}=>
+      ⌜HeadReducible e₁ σ₁⌝ ∗
+      ∀ e₂ σ₂, ⌜⟨e₂, σ₂⟩ ∈ S σ₁⌝ -∗ |={E}=>
+        stateInterp σ₂ ∗ match e₂.toVal? with | some v => Φ v | none => iprop(False)) ⊢
+      tglWp E e₁ Φ := by
+  iintro H
+  iapply twp_lift_step_fupd_gen hv S hSmeas (fun σ => by
+    rw [primStep_eq_headStep hd]
+    exact hSconc σ)
+  iintro %σ₁ Hσ
+  imod H $$ %σ₁ Hσ with ⟨%Hred, Hcont⟩
+  imod BIFUpdate.subset Std.LawfulSet.empty_subset with Hclose
+  imodintro
+  have Hred' := reducible_of_headReducible hlc Hred
+  iframe %Hred'
+  iintro %e₂ %σ₂ %Hmem
+  imodintro
+  imod Hclose with -
+  imod Hcont $$ %e₂ %σ₂ %Hmem with ⟨Hσ', HΦ⟩
+  imodintro
+  iframe Hσ'
+  cases htv : e₂.toVal? with
+  | some v => iapply tglWp_value_of_toVal htv $$ HΦ
+  | none => iexfalso; iexact HΦ
+
+/-! ## `PureStep` and `PureExec` -/
+
+/-- Lift a `PureStep`. -/
+theorem twp_lift_pure_det_step_of_pureStep
+    (h : PureStep e₁ e₂) : iprop(|={E}=> tglWp E e₂ Φ) ⊢ tglWp E e₁ Φ := by
+  have hv : e₁.toVal? = none := Exp.toVal?_eq_none.mpr <| val_stuck <| h.safe default
+  iapply twp_lift_pure_det_step hv
+    (hatom := fun σ => by rw [h.det σ]; exact isAtomicSupport_dirac _) (hsafe := h.safe)
+  intro σ e₂' σ₂ hp
+  rw [h.det σ, possible_iff_pos, dirac_singleton_pos] at hp
+  cases hp
+  exact ⟨rfl, rfl⟩
+
+/-- Lift `n` pure steps given by `PureExec`. -/
+theorem twp_pure_step_fupd {n : ℕ}
+    (φ : Prop) [HEx : PureExec φ n e₁ e₂] (Hφ : φ := by is_value) :
+    tglWp E e₂ Φ ⊢ tglWp E e₁ Φ := by
+  have Hex := HEx.pure_exec Hφ
+  clear HEx
+  induction n generalizing e₁ with
+  | zero =>
+    simp only [nsteps] at Hex
+    subst Hex
+    exact .rfl
+  | succ n ih =>
+    obtain ⟨c, hstep, hrest⟩ := Hex
+    iintro H
+    iapply twp_lift_pure_det_step_of_pureStep hstep
+    imodintro
+    iapply ih hrest $$ [$]
+
+end ErisWpGS
+end TotalEris
+end ProbLang
