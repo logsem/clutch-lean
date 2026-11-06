@@ -68,5 +68,15 @@ example
   twp_pure pl(#1 + #2)
   exact hcont
 
+open ProbLangℝ in
+/-- `twp_pures` steps the real operators: arithmetic, `floor`, the elementary functions and `π`. -/
+example (r : rT) :
+    ⊢ tglWp E pl(floor(log(#real r) - sqrt(#real r) * exp(#real r) / sin(cos(atan(#pi)))))
+      (fun w : Val rT => iprop(⌜w = .int (realFloor (realAdd (realLog r) (realNeg (realDiv
+        (realMul (realSqrt r) (realExp r)) (realSin (realCos (realAtan realPi)))))))⌝)) := by
+  twp_pures
+  twp_value
+  itrivial
+
 end TotalEris
 end ProbLang

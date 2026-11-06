@@ -135,6 +135,10 @@ class ProbLangℝ (T : Type _) extends BEq T, Inhabited T where
   realAdd : T → T → T
   /-- Negation of reals. -/
   realNeg : T → T
+  /-- Multiplication of reals. -/
+  realMul : T → T → T
+  /-- Division of reals, total (at `ℝ`, `r / 0 = 0`). -/
+  realDiv : T → T → T
   /-- The real for an integer. -/
   realOfInt : Int → T
   /-- Lets a program generic in the reals write a constant such as `1/2`. -/
@@ -142,6 +146,39 @@ class ProbLangℝ (T : Type _) extends BEq T, Inhabited T where
   /-- The fractional part, intended to land in `[0,1)` with `r - realFrac r` integral (the class
   demands only measurability, and laws needing more are proved per instance). -/
   realFrac : T → T
+  /-- The greatest integer below a real. -/
+  realFloor : T → Int
+  /-- The natural logarithm, total (at `ℝ`, `Real.log`: `log 0 = 0`, `log (-r) = log r`). -/
+  realLog : T → T
+  /-- The square root, total (at `ℝ`, Mathlib's `Real.sqrt`: `0` on negative reals). -/
+  realSqrt : T → T
+  /-- The exponential function. -/
+  realExp : T → T
+  /-- The sine function. -/
+  realSin : T → T
+  /-- The cosine function. -/
+  realCos : T → T
+  /-- The arctangent, landing in `(-π/2, π/2)`. -/
+  realAtan : T → T
+  /-- The constant `π`. -/
+  realPi : T
+
+namespace ProbLangℝ
+
+variable {T : Type _} [ProbLangℝ T]
+
+/-- The least integer above a real, derived from floor as `-⌊-r⌋`. -/
+def realCeil (r : T) : Int := -realFloor (realNeg r)
+
+/-- The tangent, derived as `sin r / cos r` (at `ℝ`, `0` where `cos r = 0`). -/
+def realTan (r : T) : T := realDiv (realSin r) (realCos r)
+
+/-- The power `x ^ y`, derived as `exp (y * log x)`: the real power for `x > 0`. With the total
+`log`, a zero base gives `0 ^ y = 1` for every `y` (unlike `Real.rpow`, where `0 ^ y = 0` for
+`y ≠ 0`) and a negative base gives `|x| ^ y`. -/
+def realPow (x y : T) : T := realExp (realMul y (realLog x))
+
+end ProbLangℝ
 
 /-- A type of reals with a σ-algebra and the laws the semantics needs. -/
 class LawfulProbLangℝ (T : Type _) [MeasurableSpace T] extends ProbLangℝ T, LawfulBEq T,
@@ -168,6 +205,24 @@ class LawfulProbLangℝ (T : Type _) [MeasurableSpace T] extends ProbLangℝ T, 
   measurable_realNeg : Measurable realNeg
   /-- `realFrac` is measurable. -/
   measurable_realFrac : Measurable realFrac
+  /-- `realMul` is measurable. -/
+  measurable_realMul : Measurable (uncurry realMul)
+  /-- `realDiv` is measurable. -/
+  measurable_realDiv : Measurable (uncurry realDiv)
+  /-- `realFloor` is measurable. -/
+  measurable_realFloor : Measurable realFloor
+  /-- `realLog` is measurable. -/
+  measurable_realLog : Measurable realLog
+  /-- `realSqrt` is measurable. -/
+  measurable_realSqrt : Measurable realSqrt
+  /-- `realExp` is measurable. -/
+  measurable_realExp : Measurable realExp
+  /-- `realSin` is measurable. -/
+  measurable_realSin : Measurable realSin
+  /-- `realCos` is measurable. -/
+  measurable_realCos : Measurable realCos
+  /-- `realAtan` is measurable. -/
+  measurable_realAtan : Measurable realAtan
 
 attribute [reducible, instance] LawfulProbLangℝ.instDecidableEq
 attribute [instance] LawfulProbLangℝ.unifUnit_isProbabilityMeasure
@@ -222,6 +277,20 @@ inductive UnOp
   | toReal
   /-- Fractional part of a real. -/
   | frac
+  /-- Floor of a real, an integer. -/
+  | floor
+  /-- Natural logarithm of a real. -/
+  | log
+  /-- Square root of a real. -/
+  | sqrt
+  /-- Exponential of a real. -/
+  | exp
+  /-- Sine of a real. -/
+  | sin
+  /-- Cosine of a real. -/
+  | cos
+  /-- Arctangent of a real. -/
+  | atan
   deriving Inhabited, Countable, DecidableEq, Repr, BEq
 
 /-- Binary operators; `and`, `or`, `xor` are boolean only, and `eq` works on literals and on
@@ -1219,6 +1288,13 @@ def UnOp.eval [ProbLangℝ α] (op : UnOp) (v : Exp α) : Option (Exp α) :=
   | toReal, .lit (.real r) => some <| .lit <| .real r
   -- Integer literals must be coerced with `toReal` first.
   | frac, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realFrac r
+  | floor, .lit (.real r) => some <| .lit <| .int <| ProbLangℝ.realFloor r
+  | log, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realLog r
+  | sqrt, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realSqrt r
+  | exp, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realExp r
+  | sin, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realSin r
+  | cos, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realCos r
+  | atan, .lit (.real r) => some <| .lit <| .real <| ProbLangℝ.realAtan r
   | _, _ => none
 
 /-- Evaluates a binary operator on two values. -/
@@ -1245,6 +1321,10 @@ def BinOp.eval (op : BinOp) (v1 v2 : Exp rT) : Option (Exp rT) :=
   | le,    .lit (.real r1), .lit (.real r2) => some <| .lit <| .bool (ProbLangℝ.realLe r1 r2)
   -- Mixed int/real operands are stuck: programs coerce with `UnOp.toReal`.
   | plus,  .lit (.real r1), .lit (.real r2) => some <| .lit <| .real (ProbLangℝ.realAdd r1 r2)
+  | minus, .lit (.real r1), .lit (.real r2) =>
+    some <| .lit <| .real (ProbLangℝ.realAdd r1 (ProbLangℝ.realNeg r2))
+  | mult,  .lit (.real r1), .lit (.real r2) => some <| .lit <| .real (ProbLangℝ.realMul r1 r2)
+  | div,   .lit (.real r1), .lit (.real r2) => some <| .lit <| .real (ProbLangℝ.realDiv r1 r2)
   -- A negative shift amount counts as 0.
   | shl,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 * 2 ^ z2.toNat)
   | shr,   .lit (.int z1),  .lit (.int z2)  => some <| .lit <| .int (z1 / 2 ^ z2.toNat)

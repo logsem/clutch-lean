@@ -1152,7 +1152,26 @@ end
 
 variable [LawfulProbLangℝ rT]
 
-open ProbLangℝ (realNeg realOfInt realFrac realAdd realLt realLe)
+open ProbLangℝ (realNeg realOfInt realAdd realMul realDiv realLt realLe)
+
+/-- A unary operator acting only on real literals, through a measurable `g`, is measurable. -/
+private theorem measurable_of_real_only {op : UnOp} {g : rT → Exp rT} (hg : Measurable g)
+    (h : ∀ v, UnOp.eval op v = match v with | .lit (.real r) => some (g r) | _ => none) :
+    Measurable (fun v : Exp rT => UnOp.eval op v) := by
+  refine measurable_of_lit_only none
+    (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
+      (fun _ => none) (fun _ => none) none (fun _ => none) (fun _ => none)
+      (fun r => some (g r)) (fun _ => none)) ?_
+    fun v => by
+      rw [h v]
+      cases v with | lit l => cases l <;> rfl | _ => rfl
+  apply BaseLit.measurable_casesOn (c_int := fun _ => none) (c_bool := fun _ => none)
+    (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
+  exact MeasurableEmbedding.some_mk.measurable.comp hg
+
+/-- Proves the `measurable_of_real_only` premise by cases on the operand. -/
+local macro "real_only_cases" : tactic =>
+  `(tactic| (intro v; cases v with | lit l => cases l <;> rfl | _ => rfl))
 
 /-- Each unary operator's evaluation is measurable in its operand. -/
 theorem UnOp.eval_op_measurable (op : UnOp) :
@@ -1198,19 +1217,22 @@ theorem UnOp.eval_op_measurable (op : UnOp) :
       (c_bool := fun _ => none)
       (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
     exact MeasurableEmbedding.some_mk.measurable.comp (lit.measurable.comp BaseLit.real.measurable)
-  | frac =>
-    refine measurable_of_lit_only none
-      (f := fun l => BaseLit.casesOn (motive := fun _ => Option (Exp rT)) l
-        (fun _ => none) (fun _ => none) none
-        (fun _ => none) (fun _ => none)
-        (fun r => some (lit (.real (realFrac r)))) (fun _ => none)) ?_
-      fun v => by
-        cases v <;> simp [UnOp.eval]
-        rename_i l; cases l <;> simp
-    apply BaseLit.measurable_casesOn (c_int := fun _ => none) (c_bool := fun _ => none)
-      (c_unit := fun _ => none) (c_loc := fun _ => none) (c_lbl := fun _ => none)
-    exact MeasurableEmbedding.some_mk.measurable.comp
-      (lit.measurable.comp (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac))
+  | frac => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realFrac)) (by real_only_cases)
+  | floor => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.int.measurable.comp LawfulProbLangℝ.measurable_realFloor)) (by real_only_cases)
+  | log => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realLog)) (by real_only_cases)
+  | sqrt => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realSqrt)) (by real_only_cases)
+  | exp => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realExp)) (by real_only_cases)
+  | sin => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realSin)) (by real_only_cases)
+  | cos => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realCos)) (by real_only_cases)
+  | atan => exact measurable_of_real_only (lit.measurable.comp
+      (BaseLit.real.measurable.comp LawfulProbLangℝ.measurable_realAtan)) (by real_only_cases)
 
 /-- `UnOp.eval` is jointly measurable in the operator and the operand. -/
 theorem UnOp_eval.measurable :
@@ -1221,6 +1243,25 @@ theorem UnOp_eval.measurable :
 /-- `BinOp.eval` on `plus` is `liftIIorRR`. -/
 private theorem BinOp.eval_plus_eq_liftIIorRR (v1 v2 : Exp rT) :
     BinOp.eval .plus v1 v2 = liftIIorRR (· + ·) realAdd (v1, v2) := by
+  rw [liftIIorRR_def_eq]
+  lit_pair_cases v1 v2
+
+/-- `BinOp.eval` on `minus` is `liftIIorRR`, real subtraction adding the negation. -/
+private theorem BinOp.eval_minus_eq_liftIIorRR (v1 v2 : Exp rT) :
+    BinOp.eval .minus v1 v2 =
+      liftIIorRR (· - ·) (fun r1 r2 => realAdd r1 (realNeg r2)) (v1, v2) := by
+  rw [liftIIorRR_def_eq]
+  lit_pair_cases v1 v2
+
+/-- `BinOp.eval` on `mult` is `liftIIorRR`. -/
+private theorem BinOp.eval_mult_eq_liftIIorRR (v1 v2 : Exp rT) :
+    BinOp.eval .mult v1 v2 = liftIIorRR (· * ·) realMul (v1, v2) := by
+  rw [liftIIorRR_def_eq]
+  lit_pair_cases v1 v2
+
+/-- `BinOp.eval` on `div` is `liftIIorRR`. -/
+private theorem BinOp.eval_div_eq_liftIIorRR (v1 v2 : Exp rT) :
+    BinOp.eval .div v1 v2 = liftIIorRR (· / ·) realDiv (v1, v2) := by
   rw [liftIIorRR_def_eq]
   lit_pair_cases v1 v2
 
@@ -1256,9 +1297,9 @@ private theorem BinOp.eval_offset_eq_liftOffset (v1 v2 : Exp rT) :
 theorem BinOp.eval_eq_lift (op : BinOp) (v1 v2 : Exp rT) :
     BinOp.eval op v1 v2 = (match op with
        | .plus  => liftIIorRR (· + ·) realAdd
-       | .minus => liftII (· - ·)
-       | .mult  => liftII (· * ·)
-       | .div   => liftII (· / ·)
+       | .minus => liftIIorRR (· - ·) (fun r1 r2 => realAdd r1 (realNeg r2))
+       | .mult  => liftIIorRR (· * ·) realMul
+       | .div   => liftIIorRR (· / ·) realDiv
        | .mod   => liftII (· % ·)
        | .shl   => liftII (fun z1 z2 => z1 * 2 ^ z2.toNat)
        | .shr   => liftII (fun z1 z2 => z1 / 2 ^ z2.toNat)
@@ -1276,6 +1317,9 @@ theorem BinOp.eval_eq_lift (op : BinOp) (v1 v2 : Exp rT) :
       | (rw [liftII_def_eq]; lit_pair_cases v1 v2)
       | (rw [liftBB_def_eq]; lit_pair_cases v1 v2)
       | exact BinOp.eval_plus_eq_liftIIorRR v1 v2
+      | exact BinOp.eval_minus_eq_liftIIorRR v1 v2
+      | exact BinOp.eval_mult_eq_liftIIorRR v1 v2
+      | exact BinOp.eval_div_eq_liftIIorRR v1 v2
       | exact BinOp.eval_lt_eq_liftLtLe v1 v2
       | exact BinOp.eval_le_eq_liftLtLe v1 v2
       | exact BinOp.eval_eq_eq_liftEq v1 v2
@@ -1291,9 +1335,10 @@ theorem BinOp_eval.measurable :
   cases op
   all_goals dsimp only
   · exact liftIIorRR.measurable _ _ LawfulProbLangℝ.measurable_realAdd
-  · exact liftII.measurable _
-  · exact liftII.measurable _
-  · exact liftII.measurable _
+  · exact liftIIorRR.measurable _ _ (LawfulProbLangℝ.measurable_realAdd.comp
+      (measurable_fst.prodMk (LawfulProbLangℝ.measurable_realNeg.comp measurable_snd)))
+  · exact liftIIorRR.measurable _ _ LawfulProbLangℝ.measurable_realMul
+  · exact liftIIorRR.measurable _ _ LawfulProbLangℝ.measurable_realDiv
   · exact liftII.measurable _
   · exact liftBB.measurable _
   · exact liftBB.measurable _

@@ -116,27 +116,28 @@ def UnOp.intResTy : UnOp → Option Ty
   | .neg   => none
   | .minus => some .int
   | .toReal => some .real
-  | .frac  => none
+  | .frac | .floor | .log | .sqrt | .exp | .sin | .cos | .atan => none
 
 /-- Result type of a unary operation on a boolean operand. -/
 def UnOp.boolResTy : UnOp → Option Ty
   | .neg   => some .bool
   | .minus => none
   | .toReal => none
-  | .frac  => none
+  | .frac | .floor | .log | .sqrt | .exp | .sin | .cos | .atan => none
 
 /-- Result type of a unary operation on a real operand. -/
 def UnOp.realResTy : UnOp → Option Ty
   | .neg    => none
   | .minus  => some .real
   | .toReal => some .real
-  | .frac   => some .real
+  | .floor  => some .int
+  | .frac | .log | .sqrt | .exp | .sin | .cos | .atan => some .real
 
 /-- Result type of a binary operation when both operands are real; mixed int/real operands stay
 stuck, so programs coerce with `UnOp.toReal`. -/
 def BinOp.realResTy : BinOp → Option Ty
-  | .plus                                => some .real
-  | .minus | .mult | .div | .mod         => none
+  | .plus  | .minus | .mult | .div       => some .real
+  | .mod                                 => none
   | .shl   | .shr                        => none
   | .and   | .or   | .xor | .offset      => none
   | .eq    | .lt   | .le                 => some .bool

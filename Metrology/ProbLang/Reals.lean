@@ -4,6 +4,8 @@ public import Metrology.ProbLang.Syntax.Syntax
 public import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 public import Mathlib.MeasureTheory.Measure.Restrict
 public import Mathlib.MeasureTheory.Function.Floor
+public import Mathlib.MeasureTheory.Function.SpecialFunctions.Arctan
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-! # The real-number model `LawfulProbLangℝ ℝ`
 
@@ -16,7 +18,8 @@ open MeasureTheory.Measure (map_apply restrict_apply restrict_apply' restrict_ap
 open Int (fract fract_add_floor fract_eq_self fract_lt_one fract_nonneg fract_sub_intCast
   fract_sub_one)
 open Function (uncurry)
-open ProbLangℝ (realAdd realFrac realNeg realOfInt realOfRat)
+open ProbLangℝ (realAdd realFrac realNeg realOfInt realOfRat realMul realDiv realFloor realLog
+  realSqrt realExp realSin realCos realAtan realPi realCeil realTan realPow)
 open LawfulProbLangℝ (unifUnit unifUnitSupport)
 
 /-! ## The instance -/
@@ -66,6 +69,25 @@ public noncomputable instance instLawfulProbLangℝReal : LawfulProbLangℝ ℝ 
   measurable_realAdd := measurable_add
   measurable_realNeg := measurable_neg
   measurable_realFrac := measurable_fract
+  realMul a b := a * b
+  realDiv a b := a / b
+  realFloor r := ⌊r⌋
+  realLog := Real.log
+  realSqrt := Real.sqrt
+  realExp := Real.exp
+  realSin := Real.sin
+  realCos := Real.cos
+  realAtan := Real.arctan
+  realPi := Real.pi
+  measurable_realMul := measurable_mul
+  measurable_realDiv := measurable_div
+  measurable_realFloor := Int.measurable_floor
+  measurable_realLog := Real.measurable_log
+  measurable_realSqrt := Real.continuous_sqrt.measurable
+  measurable_realExp := Real.measurable_exp
+  measurable_realSin := Real.measurable_sin
+  measurable_realCos := Real.measurable_cos
+  measurable_realAtan := Real.measurable_arctan
 
 /-! ## Reduction lemmas
 
@@ -85,6 +107,74 @@ At `rT = ℝ` the `ProbLangℝ` operations are Lean's own; these let `twp_pures`
 
 /-- At `ℝ`, `realFrac` is the fractional part. -/
 @[simp] public theorem realFrac_real (r : ℝ) : realFrac r = fract r := rfl
+
+/-- At `ℝ`, `realMul` is ordinary multiplication. -/
+@[simp] public theorem realMul_real (a b : ℝ) : realMul a b = a * b := rfl
+
+/-- At `ℝ`, `realDiv` is Mathlib's total division. -/
+@[simp] public theorem realDiv_real (a b : ℝ) : realDiv a b = a / b := rfl
+
+/-- At `ℝ`, `realFloor` is `Int.floor`. -/
+@[simp] public theorem realFloor_real (r : ℝ) : realFloor r = ⌊r⌋ := rfl
+
+/-- At `ℝ`, `realLog` is `Real.log`. -/
+@[simp] public theorem realLog_real (r : ℝ) : realLog r = Real.log r := rfl
+
+/-- At `ℝ`, `realSqrt` is `Real.sqrt`. -/
+@[simp] public theorem realSqrt_real (r : ℝ) : realSqrt r = Real.sqrt r := rfl
+
+/-- At `ℝ`, `realExp` is `Real.exp`. -/
+@[simp] public theorem realExp_real (r : ℝ) : realExp r = Real.exp r := rfl
+
+/-- At `ℝ`, `realSin` is `Real.sin`. -/
+@[simp] public theorem realSin_real (r : ℝ) : realSin r = Real.sin r := rfl
+
+/-- At `ℝ`, `realCos` is `Real.cos`. -/
+@[simp] public theorem realCos_real (r : ℝ) : realCos r = Real.cos r := rfl
+
+/-- At `ℝ`, `realAtan` is `Real.arctan`. -/
+@[simp] public theorem realAtan_real (r : ℝ) : realAtan r = Real.arctan r := rfl
+
+/-- At `ℝ`, `realPi` is `Real.pi`. -/
+@[simp] public theorem realPi_real : (realPi : ℝ) = Real.pi := rfl
+
+/-- At `ℝ`, `realCeil` is `Int.ceil`. -/
+@[simp] public theorem realCeil_real (r : ℝ) : realCeil r = ⌈r⌉ := by
+  simp [realCeil, Int.floor_neg]
+
+/-- At `ℝ`, `realTan` is `Real.tan`. -/
+@[simp] public theorem realTan_real (r : ℝ) : realTan r = Real.tan r :=
+  (Real.tan_eq_sin_div_cos r).symm
+
+/-! ### Guarded laws
+
+`realLog` and `realSqrt` are total at `ℝ`; their intended meaning holds on the domain only. -/
+
+/-- On a positive base, `realPow` is the real power. -/
+public theorem realPow_real_of_pos {x : ℝ} (hx : 0 < x) (y : ℝ) : realPow x y = x ^ y := by
+  simp [realPow, Real.rpow_def_of_pos hx, mul_comm]
+
+/-- On a zero base, `realPow` is `1` (from `log 0 = 0`). -/
+@[simp] public theorem realPow_zero_real (y : ℝ) : realPow 0 y = 1 := by
+  simp [realPow]
+
+/-- `exp` inverts `log` on positive reals. -/
+public theorem realExp_realLog_real {r : ℝ} (hr : 0 < r) : realExp (realLog r) = r :=
+  Real.exp_log hr
+
+/-- `log 0 = 0`, by Mathlib's convention. -/
+@[simp] public theorem realLog_zero_real : realLog (0 : ℝ) = 0 := Real.log_zero
+
+/-- The square root squares back on nonnegative reals. -/
+public theorem realSqrt_mul_self_real {r : ℝ} (hr : 0 ≤ r) : realSqrt r * realSqrt r = r :=
+  Real.mul_self_sqrt hr
+
+/-- The square root of a negative real is `0`, by Mathlib's convention. -/
+public theorem realSqrt_of_neg_real {r : ℝ} (hr : r < 0) : realSqrt r = 0 :=
+  Real.sqrt_eq_zero_of_nonpos hr.le
+
+/-- Division by zero is `0`, by Mathlib's convention. -/
+@[simp] public theorem realDiv_zero_real (r : ℝ) : realDiv r 0 = 0 := div_zero r
 
 /-- Membership in the support of `unifUnit` at `ℝ` means lying in the open interval `(0, 1)`. -/
 public theorem mem_unifUnitSupport_real {r : ℝ} : r ∈ unifUnitSupport ↔ 0 < r ∧ r < 1 := mem_Ioo

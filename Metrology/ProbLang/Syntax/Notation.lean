@@ -120,6 +120,19 @@ syntax:10 "if " pl_exp " then " pl_exp " else " pl_exp : pl_exp
 syntax:75 "~" pl_exp:75 : pl_exp
 syntax:100 "toReal(" pl_exp ")" : pl_exp
 syntax:100 "frac(" pl_exp ")" : pl_exp
+syntax:100 "floor(" pl_exp ")" : pl_exp
+syntax:100 "log(" pl_exp ")" : pl_exp
+syntax:100 "sqrt(" pl_exp ")" : pl_exp
+syntax:100 "exp(" pl_exp ")" : pl_exp
+syntax:100 "sin(" pl_exp ")" : pl_exp
+syntax:100 "cos(" pl_exp ")" : pl_exp
+syntax:100 "atan(" pl_exp ")" : pl_exp
+-- Derived operations, expanded into the native ones (`ProbLangℝ.realCeil` etc. state their laws).
+syntax:100 "ceil(" pl_exp ")" : pl_exp
+syntax:100 "tan(" pl_exp ")" : pl_exp
+syntax:100 "pow(" pl_exp ", " pl_exp ")" : pl_exp
+-- `#pi` is the real literal `ProbLangℝ.realPi`; the priority beats the `#` term escape.
+syntax:max (priority := high) "#" noWs &"pi" : pl_exp
 syntax:75 "-" pl_exp:75 : pl_exp
 syntax:100 pl_exp:100 colGt ppSpace pl_exp:101 : pl_exp
 syntax:10 "let " pl_arg " := " pl_exp:10 "; " pl_exp:1 : pl_exp
@@ -328,6 +341,7 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) : TSyntax `pl_ex
   | `(pl_exp|#int $t) => `(Exp.lit (.int $t))
   | `(pl_exp|#bool $t) => `(Exp.lit (.bool $t))
   | `(pl_exp|#real $t) => `(Exp.lit (.real $t))
+  | `(pl_exp|#pi) => `(Exp.lit (.real ProbLangℝ.realPi))
   | `(pl_exp|#loc $t) => `(Exp.lit (.loc $t))
   | `(pl_exp|#lbl $t) => `(Exp.lit (.lbl $t))
   | `(pl_exp|#code $t) => `(Exp.lit (.code $t))
@@ -353,6 +367,16 @@ meta partial def elabPL (env : NameEnv) (st : IO.Ref AtomState) : TSyntax `pl_ex
   | `(pl_exp|-$e) => do `(Exp.unop .minus $(← elabPL env st e))
   | `(pl_exp|toReal($e)) => do `(Exp.unop .toReal $(← elabPL env st e))
   | `(pl_exp|frac($e)) => do `(Exp.unop .frac $(← elabPL env st e))
+  | `(pl_exp|floor($e)) => do `(Exp.unop .floor $(← elabPL env st e))
+  | `(pl_exp|log($e)) => do `(Exp.unop .log $(← elabPL env st e))
+  | `(pl_exp|sqrt($e)) => do `(Exp.unop .sqrt $(← elabPL env st e))
+  | `(pl_exp|exp($e)) => do `(Exp.unop .exp $(← elabPL env st e))
+  | `(pl_exp|sin($e)) => do `(Exp.unop .sin $(← elabPL env st e))
+  | `(pl_exp|cos($e)) => do `(Exp.unop .cos $(← elabPL env st e))
+  | `(pl_exp|atan($e)) => do `(Exp.unop .atan $(← elabPL env st e))
+  | `(pl_exp|ceil($e)) => do elabPL env st (← `(pl_exp|-floor(-$e)))
+  | `(pl_exp|tan($e)) => do elabPL env st (← `(pl_exp|let t := $e; sin(t) / cos(t)))
+  | `(pl_exp|pow($e1, $e2)) => do elabPL env st (← `(pl_exp|exp($e2 * log($e1))))
   | `(pl_exp|if $ec then $et else $ef) => do
       `(Exp.cond $(← elabPL env st ec) $(← elabPL env st et) $(← elabPL env st ef))
   | `(pl_exp|$e1 $e2) => do `(Exp.app $(← elabPL env st e1) $(← elabPL env st e2))
@@ -713,6 +737,13 @@ meta def unexpUnop : Unexpander
   | `($_ UnOp.minus $e) => do `(pl(- $(← unpackPLExp e)))
   | `($_ UnOp.toReal $e) => do `(pl(toReal($(← unpackPLExp e))))
   | `($_ UnOp.frac $e) => do `(pl(frac($(← unpackPLExp e))))
+  | `($_ UnOp.floor $e) => do `(pl(floor($(← unpackPLExp e))))
+  | `($_ UnOp.log $e) => do `(pl(log($(← unpackPLExp e))))
+  | `($_ UnOp.sqrt $e) => do `(pl(sqrt($(← unpackPLExp e))))
+  | `($_ UnOp.exp $e) => do `(pl(exp($(← unpackPLExp e))))
+  | `($_ UnOp.sin $e) => do `(pl(sin($(← unpackPLExp e))))
+  | `($_ UnOp.cos $e) => do `(pl(cos($(← unpackPLExp e))))
+  | `($_ UnOp.atan $e) => do `(pl(atan($(← unpackPLExp e))))
   | _ => throw ()
 
 /-- Prints `Exp.cond` as `pl(if … then … else …)`. -/

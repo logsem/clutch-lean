@@ -15,16 +15,38 @@ public import Metrology.ProbLang.Comp
 namespace ProbLang
 namespace Interp
 
+/-- The floor of a float as an exact integer, or `0` for `NaN` and the infinities. -/
+def floatFloor (a : Float) : Int :=
+  let f := a.floor
+  if !f.isFinite then 0
+  -- below `2^53` the integral float fits an `Int64`; above it, scale its mantissa to 53 bits
+  else if f.abs < 9007199254740992 then f.toInt64.toInt
+  else
+    let (m, e) := f.frExp
+    (m.scaleB 53).toInt64.toInt * 2 ^ (e - 53).toNat
+
 /-- The lawless IEEE `Float` model, where `NaN = NaN` is false and `LawfulProbLangℝ` results do
-not apply. -/
+not apply. Runtime results round, and leave the ℝ conventions at domain boundaries: `log 0` is
+`-∞`, `log` and `sqrt` of a negative are `NaN`, `r / 0` is `±∞` or `NaN`, and `floor` of a
+nonfinite float is `0`. The interpreter does not raise on these; `NaN` and `±∞` flow on. -/
 instance : ProbLangℝ Float where
   realLt a b := decide (a < b)
   realLe a b := decide (a ≤ b)
   realAdd a b := a + b
   realNeg a := -a
+  realMul a b := a * b
+  realDiv a b := a / b
   realOfInt z := Float.ofInt z
   realOfRat q := Float.ofInt q.num / Float.ofNat q.den
   realFrac a := a - a.floor
+  realFloor := floatFloor
+  realLog := Float.log
+  realSqrt := Float.sqrt
+  realExp := Float.exp
+  realSin := Float.sin
+  realCos := Float.cos
+  realAtan := Float.atan
+  realPi := 3.141592653589793
 
 /-- Draw from the unit interval: `k · 2^-53` for `k` uniform on `[0, 2^53)`. -/
 def sampleUnit : IO Float := return (Float.ofNat (← IO.rand 0 (2 ^ 53 - 1))).scaleB (-53)

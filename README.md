@@ -7,7 +7,9 @@ distribution specifications of probabilistic programs with error credits.
 ## Contents
 
 - `Metrology/ProbLang`: syntax, notation, small-step and measure-theoretic semantics, execution,
-  erasure of presampling tapes, an executable interpreter and sampler.
+  erasure of presampling tapes, an executable interpreter and sampler. Reals support exact
+  arithmetic, `floor` and the elementary functions (`log`, `sqrt`, `exp`, `sin`, `cos`, `atan`,
+  `π`), for samplers such as inverse transforms and Box–Muller.
 - `Metrology/Iris`: program-state ghost state and error credits.
 - `Metrology/TotalEris`: the total weakest precondition, its adequacy, error and presampling
   rules, distribution adequacy, and the reduction of distribution specifications.

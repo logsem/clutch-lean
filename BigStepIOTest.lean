@@ -1165,5 +1165,52 @@ private def checkErrorMsg (name : String) (prog : Exp Float) (needle : String) :
       throw (IO.userError s!"FAIL [urand range]: got {r}, expected a value in [0, 1)")
   | e => throw (IO.userError s!"FAIL [urand type]: got {repr e}")
 
+-- ---------------------------------------------------------------------------
+-- Real operators
+-- ---------------------------------------------------------------------------
+
+#eval check "real 2.5 * 4 = 10" pl(#real 2.5 * #real 4) pl(#real 10)
+#eval check "real 1 / 4 = 0.25" pl(#real 1 / #real 4) pl(#real 0.25)
+#eval check "real 5 - 2 = 3" pl(#real 5 - #real 2) pl(#real 3)
+#eval check "floor 2.5 = 2" pl(floor(#real 2.5)) pl(#2)
+#eval check "floor -2.5 = -3" pl(floor(#real (-2.5))) pl(#(-3))
+#eval check "floor -3 = -3" pl(floor(#real (-3))) pl(#(-3))
+#eval check "floor 2^60" pl(floor(#real 1152921504606846976.0)) pl(#1152921504606846976)
+#eval check "floor -2^60 - 2^8" pl(floor(#real (-1152921504606847232.0)))
+  pl(#(-1152921504606847232))
+#eval check "ceil -2.5 = -2" pl(ceil(#real (-2.5))) pl(#(-2))
+#eval check "ceil 2.5 = 3" pl(ceil(#real 2.5)) pl(#3)
+#eval check "log 1 = 0" pl(log(#real 1)) pl(#real 0)
+#eval check "exp 0 = 1" pl(exp(#real 0)) pl(#real 1)
+#eval check "sqrt 9 = 3" pl(sqrt(#real 9)) pl(#real 3)
+#eval check "sin 0 = 0" pl(sin(#real 0)) pl(#real 0)
+#eval check "cos 0 = 1" pl(cos(#real 0)) pl(#real 1)
+#eval check "atan 0 = 0" pl(atan(#real 0)) pl(#real 0)
+#eval check "tan 0 = 0" pl(tan(#real 0)) pl(#real 0)
+#eval check "4 atan 1 = pi" pl(#real 4 * atan(#real 1)) pl(#pi)
+#eval check "pow 2 10 = 1024" pl(floor(pow(#real 2, #real 10) + #real 0.5)) pl(#1024)
+-- Integer operands and mixed operands are stuck.
+#eval checkError "floor of int" pl(floor(#2))
+#eval checkError "log of int" pl(log(#2))
+#eval checkError "real times int" pl(#real 2 * #3)
+#eval checkError "real mod" pl(#real 5 % #real 2)
+
+/-- Both engines return a real literal satisfying `p`. -/
+private def checkReal (name : String) (prog : Exp Float) (p : Float → Bool) : IO Unit := do
+  for (engine, runner) in [("env", runTest), ("subst", runTestSubst)] do
+    match (← runner prog).1 with
+    | .lit (.real r) =>
+      if !p r then throw (IO.userError s!"FAIL [{name}, {engine}]: got {r}")
+    | e => throw (IO.userError s!"FAIL [{name}, {engine}]: got {repr e}")
+
+-- Runtime domain failures: IEEE results flow on instead of the ℝ model's total conventions.
+#eval checkReal "log 0 = -inf" pl(log(#real 0)) fun r => r.isInf && r < 0
+#eval checkReal "log -1 = NaN" pl(log(#real (-1))) Float.isNaN
+#eval checkReal "sqrt -1 = NaN" pl(sqrt(#real (-1))) Float.isNaN
+#eval checkReal "1 / 0 = inf" pl(#real 1 / #real 0) Float.isInf
+-- The ℝ model has `pow(0, y) = 1` via `log 0 = 0`; at runtime `exp (3 * -∞) = 0`.
+#eval check "pow 0 3 = 0 at runtime" pl(pow(#real 0, #real 3)) pl(#real 0)
+#eval check "floor NaN = 0" pl(floor(sqrt(#real (-1)))) pl(#0)
+
 def main : IO Unit :=
   IO.println "All big-step interpreter tests passed."
